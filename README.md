@@ -1,4 +1,4 @@
-# Cthulhu Prompt - An Agentic AI Workflow Builder
+# Cthulhu Prompt - An AI Prompt Manager for Software Developers
 
 Ever feel like you're prompting an eldritch abomination? Cthulhu Prompt can help!
 
