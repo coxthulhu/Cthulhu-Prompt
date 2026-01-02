@@ -1,0 +1,218 @@
+<script lang="ts">
+  import type { PromptFolder } from '@shared/ipc'
+  import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
+  import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
+  import {
+    getPromptData,
+    lookupPromptEditorMeasuredHeight
+  } from '@renderer/data/PromptDataStore.svelte.ts'
+  import PromptDivider from '../prompt-editor/PromptDivider.svelte'
+  import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
+  import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
+  import {
+    defineVirtualWindowRowRegistry,
+    type VirtualWindowItem
+  } from '../virtualizer/virtualWindowTypes'
+  import {
+    getPromptFolderData,
+    loadPromptFolder,
+    createPromptInFolder,
+    deletePromptInFolder,
+    movePromptDownInFolder,
+    movePromptUpInFolder
+  } from '@renderer/data/PromptFolderDataStore.svelte.ts'
+
+  let { folder } = $props<{ folder: PromptFolder }>()
+
+  // Side effect: always reload prompts when the selected folder changes.
+  $effect(() => {
+    void loadPromptFolder(folder.folderName)
+  })
+
+  const folderData = $derived(getPromptFolderData(folder.folderName))
+
+  type PromptFolderRow =
+    | { kind: 'header'; promptCount: number; isLoading: boolean; folder: PromptFolder }
+    | { kind: 'placeholder'; messageKind: 'loading' | 'empty' }
+    | { kind: 'prompt-divider'; previousPromptId: string | null }
+    | { kind: 'prompt-editor'; promptId: string }
+    | { kind: 'bottom-spacer' }
+
+  const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
+    header: {
+      estimateHeight: () => 164,
+      snippet: headerRow
+    },
+    placeholder: {
+      estimateHeight: () => 120,
+      snippet: placeholderRow
+    },
+    'prompt-divider': {
+      // Match the xs button height so the divider row doesn't clip.
+      estimateHeight: () => 28,
+      snippet: dividerRow
+    },
+    'prompt-editor': {
+      estimateHeight: (row, widthPx, heightPx) =>
+        estimatePromptEditorHeight(getPromptData(row.promptId).draft.text, widthPx, heightPx),
+      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
+        lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio),
+      snippet: promptEditorRow
+    },
+    'bottom-spacer': {
+      estimateHeight: (_row, _widthPx, heightPx) => getBottomSpacerHeightPx(heightPx),
+      snippet: bottomSpacerRow
+    }
+  })
+
+  const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
+    const promptIds = folderData?.promptIds ?? []
+    const isLoading = folderData?.isLoading ?? true
+    const rows: VirtualWindowItem<PromptFolderRow>[] = [
+      {
+        id: 'header',
+        row: {
+          kind: 'header',
+          promptCount: promptIds.length,
+          isLoading,
+          folder
+        }
+      }
+    ]
+
+    if (isLoading) {
+      rows.push({
+        id: 'placeholder-loading',
+        row: { kind: 'placeholder', messageKind: 'loading' }
+      })
+    } else if (promptIds.length === 0) {
+      rows.push({
+        id: 'divider-initial',
+        row: { kind: 'prompt-divider', previousPromptId: null }
+      })
+      rows.push({
+        id: 'placeholder-empty',
+        row: { kind: 'placeholder', messageKind: 'empty' }
+      })
+    } else {
+      rows.push({
+        id: 'divider-initial',
+        row: { kind: 'prompt-divider', previousPromptId: null }
+      })
+
+      promptIds.forEach((promptId) => {
+        rows.push({ id: `${promptId}-editor`, row: { kind: 'prompt-editor', promptId } })
+        rows.push({
+          id: `${promptId}-divider`,
+          row: { kind: 'prompt-divider', previousPromptId: promptId }
+        })
+      })
+    }
+
+    rows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+    return rows
+  })
+
+  const handleAddPrompt = (previousPromptId: string | null) => {
+    void createPromptInFolder(folder.folderName, previousPromptId)
+  }
+
+  const handleDeletePrompt = (promptId: string) => {
+    void deletePromptInFolder(folder.folderName, promptId)
+  }
+
+  const handleMovePromptUp = (promptId: string) => {
+    void movePromptUpInFolder(folder.folderName, promptId)
+  }
+
+  const handleMovePromptDown = (promptId: string) => {
+    void movePromptDownInFolder(folder.folderName, promptId)
+  }
+</script>
+
+<main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
+  {#if folderData && folderData.errorMessage}
+    <div class="flex-1 min-h-0 overflow-y-auto">
+      <div class="pt-6 pl-6">
+        <h1 class="text-2xl font-bold">{folder.displayName}</h1>
+        <p class="mt-4 text-muted-foreground">
+          Edit prompts in the "{folder.displayName}" folder.
+        </p>
+        <h2 class="mt-6 text-lg font-semibold mb-4">
+          Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
+        </h2>
+        <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
+      </div>
+    </div>
+  {:else}
+    <div class="flex-1 min-h-0 flex">
+      <SvelteVirtualWindow
+        items={virtualItems}
+        {rowRegistry}
+        getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
+      />
+    </div>
+  {/if}
+</main>
+
+{#snippet headerRow({ row })}
+  <div class="pt-6">
+    <h1 class="text-2xl font-bold">{row.folder.displayName}</h1>
+    <p class="mt-4 text-muted-foreground">
+      Edit prompts in the "{row.folder.displayName}" folder.
+    </p>
+    <h2 class="mt-6 text-lg font-semibold mb-4">
+      Prompts ({row.isLoading ? 0 : row.promptCount})
+    </h2>
+  </div>
+{/snippet}
+
+{#snippet placeholderRow({ row })}
+  <div class="text-center py-12 text-muted-foreground">
+    {#if row.messageKind === 'loading'}
+      <p>Loading prompts...</p>
+    {:else}
+      <p>No prompts found in this folder.</p>
+      <p class="text-sm mt-2">Click the + button to create your first prompt.</p>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet dividerRow({ row })}
+  <PromptDivider
+    disabled={folderData?.isCreatingPrompt ?? false}
+    onAddPrompt={() => handleAddPrompt(row.previousPromptId)}
+    testId={
+      row.previousPromptId
+        ? `prompt-divider-add-after-${row.previousPromptId}`
+        : 'prompt-divider-add-initial'
+    }
+  />
+{/snippet}
+
+{#snippet promptEditorRow({
+  row,
+  virtualWindowWidthPx,
+  virtualWindowHeightPx,
+  devicePixelRatio,
+  measuredHeightPx,
+  hydrationPriority,
+  shouldDehydrate
+})}
+  <PromptEditorRow
+    promptId={row.promptId}
+    {virtualWindowWidthPx}
+    {virtualWindowHeightPx}
+    {devicePixelRatio}
+    {measuredHeightPx}
+    {hydrationPriority}
+    {shouldDehydrate}
+    onDelete={() => handleDeletePrompt(row.promptId)}
+    onMoveUp={() => handleMovePromptUp(row.promptId)}
+    onMoveDown={() => handleMovePromptDown(row.promptId)}
+  />
+{/snippet}
+
+{#snippet bottomSpacerRow({ virtualWindowHeightPx })}
+  <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
+{/snippet}

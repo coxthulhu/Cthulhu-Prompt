@@ -1,0 +1,21 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": [
+    "tests/**/*",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "src/shared/**/*"
+  ],
+  "exclude": [
+    "tests/legacy/**"
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "types": ["vitest/globals", "@playwright/test", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": ["./src/renderer/src/*"],
+      "@shared/*": ["./src/shared/*"]
+    }
+  }
+}

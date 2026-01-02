@@ -1,0 +1,290 @@
+import { ipcMain } from 'electron'
+import * as path from 'path'
+import { randomUUID } from 'crypto'
+import { getFs } from './fs-provider'
+import { WorkspaceManager } from './workspace'
+import { FileOperationQueue } from './file-operation-queue'
+import type {
+  LoadPromptsResult as SharedLoadPromptsResult,
+  Prompt as SharedPrompt,
+  PromptResult as SharedPromptResult,
+  WorkspaceResult as SharedWorkspaceResult
+} from '@shared/ipc'
+
+export type Prompt = SharedPrompt
+export type PromptResult = SharedPromptResult
+export type LoadPromptsResult = SharedLoadPromptsResult
+export type WorkspaceResult = SharedWorkspaceResult
+
+export interface PromptsFileMetadata {
+  version: number
+}
+
+export interface PromptsFile {
+  metadata: PromptsFileMetadata
+  prompts: Prompt[]
+}
+
+export interface CreatePromptRequest {
+  workspacePath: string
+  folderName: string
+  title: string
+  promptText: string
+  previousPromptId?: string | null
+}
+
+export interface UpdatePromptRequest {
+  workspacePath: string
+  folderName: string
+  id: string
+  title: string
+  promptText: string
+}
+
+export interface DeletePromptRequest {
+  workspacePath: string
+  folderName: string
+  id: string
+}
+
+export interface ReorderPromptRequest {
+  workspacePath: string
+  folderName: string
+  promptId: string
+  previousPromptId: string | null
+}
+
+export interface LoadPromptsRequest {
+  workspacePath: string
+  folderName: string
+}
+
+export class PromptAPI {
+  private static readonly fileQueue = new FileOperationQueue()
+
+  private static runExclusiveFileOperation<T>(
+    filePath: string,
+    task: () => Promise<T>
+  ): Promise<T> {
+    return this.fileQueue.run(filePath, task)
+  }
+
+  static setupIpcHandlers(): void {
+    ipcMain.handle('create-prompt', async (_, request: CreatePromptRequest) => {
+      return await this.createPrompt(request)
+    })
+
+    ipcMain.handle('update-prompt', async (_, request: UpdatePromptRequest) => {
+      return await this.updatePrompt(request)
+    })
+
+    ipcMain.handle('delete-prompt', async (_, request: DeletePromptRequest) => {
+      return await this.deletePrompt(request)
+    })
+
+    ipcMain.handle('reorder-prompt', async (_, request: ReorderPromptRequest) => {
+      return await this.reorderPrompt(request)
+    })
+
+    ipcMain.handle('load-prompts', async (_, request: LoadPromptsRequest) => {
+      return await this.loadPrompts(request)
+    })
+  }
+
+  private static getPromptsFilePath(workspacePath: string, folderName: string): string {
+    return path.join(workspacePath, 'prompts', folderName, 'prompts.json')
+  }
+
+  private static async readPromptsFile(filePath: string): Promise<PromptsFile> {
+    const fs = getFs()
+    if (!fs.existsSync(filePath)) {
+      const emptyFile: PromptsFile = {
+        metadata: { version: 1 },
+        prompts: []
+      }
+      fs.writeFileSync(filePath, JSON.stringify(emptyFile, null, 2), 'utf8')
+      return emptyFile
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8')
+    return JSON.parse(content) as PromptsFile
+  }
+
+  private static async writePromptsFile(filePath: string, data: PromptsFile): Promise<void> {
+    const fs = getFs()
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+  }
+
+  static async createPrompt(request: CreatePromptRequest): Promise<PromptResult> {
+    if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
+      return { success: false, error: 'Invalid workspace path' }
+    }
+
+    const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+
+    try {
+      return await this.runExclusiveFileOperation(filePath, async () => {
+        const promptsFile = await this.readPromptsFile(filePath)
+
+        const now = new Date().toISOString()
+        const newPrompt: Prompt = {
+          id: randomUUID(),
+          title: request.title,
+          creationDate: now,
+          lastModifiedDate: now,
+          promptText: request.promptText
+        }
+
+        let insertIndex = promptsFile.prompts.length
+
+        if (request.previousPromptId !== undefined) {
+          if (request.previousPromptId === null) {
+            insertIndex = 0
+          } else {
+            const previousIndex = promptsFile.prompts.findIndex(
+              (prompt) => prompt.id === request.previousPromptId
+            )
+            if (previousIndex === -1) {
+              return { success: false, error: 'Previous prompt not found' }
+            }
+            insertIndex = previousIndex + 1
+          }
+        }
+
+        promptsFile.prompts.splice(insertIndex, 0, newPrompt)
+        await this.writePromptsFile(filePath, promptsFile)
+
+        return { success: true, prompt: newPrompt }
+      })
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async updatePrompt(request: UpdatePromptRequest): Promise<PromptResult> {
+    if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
+      return { success: false, error: 'Invalid workspace path' }
+    }
+
+    const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+
+    try {
+      return await this.runExclusiveFileOperation(filePath, async () => {
+        const promptsFile = await this.readPromptsFile(filePath)
+
+        const promptIndex = promptsFile.prompts.findIndex((p) => p.id === request.id)
+        if (promptIndex === -1) {
+          return { success: false, error: 'Prompt not found' }
+        }
+
+        const updatedPrompt: Prompt = {
+          ...promptsFile.prompts[promptIndex],
+          title: request.title,
+          promptText: request.promptText,
+          lastModifiedDate: new Date().toISOString()
+        }
+
+        promptsFile.prompts[promptIndex] = updatedPrompt
+        await this.writePromptsFile(filePath, promptsFile)
+
+        return { success: true, prompt: updatedPrompt }
+      })
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async deletePrompt(request: DeletePromptRequest): Promise<WorkspaceResult> {
+    if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
+      return { success: false, error: 'Invalid workspace path' }
+    }
+
+    const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+
+    try {
+      return await this.runExclusiveFileOperation(filePath, async () => {
+        const promptsFile = await this.readPromptsFile(filePath)
+
+        const promptIndex = promptsFile.prompts.findIndex((p) => p.id === request.id)
+        if (promptIndex === -1) {
+          return { success: false, error: 'Prompt not found' }
+        }
+
+        promptsFile.prompts.splice(promptIndex, 1)
+        await this.writePromptsFile(filePath, promptsFile)
+
+        return { success: true }
+      })
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async reorderPrompt(request: ReorderPromptRequest): Promise<WorkspaceResult> {
+    if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
+      return { success: false, error: 'Invalid workspace path' }
+    }
+
+    const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+
+    try {
+      return await this.runExclusiveFileOperation(filePath, async () => {
+        const promptsFile = await this.readPromptsFile(filePath)
+
+        const promptIndex = promptsFile.prompts.findIndex((p) => p.id === request.promptId)
+        if (promptIndex === -1) {
+          return { success: false, error: 'Prompt not found' }
+        }
+
+        const [prompt] = promptsFile.prompts.splice(promptIndex, 1)
+        let insertIndex = 0
+
+        if (request.previousPromptId != null) {
+          const previousIndex = promptsFile.prompts.findIndex(
+            (p) => p.id === request.previousPromptId
+          )
+          if (previousIndex === -1) {
+            return { success: false, error: 'Previous prompt not found' }
+          }
+          insertIndex = previousIndex + 1
+        }
+
+        promptsFile.prompts.splice(insertIndex, 0, prompt)
+        await this.writePromptsFile(filePath, promptsFile)
+
+        return { success: true }
+      })
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async loadPrompts(request: LoadPromptsRequest): Promise<LoadPromptsResult> {
+    if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
+      return { success: false, error: 'Invalid workspace path' }
+    }
+
+    const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+
+    try {
+      return await this.runExclusiveFileOperation(filePath, async () => {
+        const promptsFile = await this.readPromptsFile(filePath)
+
+        return { success: true, prompts: promptsFile.prompts }
+      })
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static createInitialPromptsFile(folderPath: string): void {
+    const fs = getFs()
+    const promptsFilePath = path.join(folderPath, 'prompts.json')
+    const promptsFile: PromptsFile = {
+      metadata: { version: 1 },
+      prompts: []
+    }
+    const promptsContent = JSON.stringify(promptsFile, null, 2)
+    fs.writeFileSync(promptsFilePath, promptsContent, 'utf8')
+  }
+}
