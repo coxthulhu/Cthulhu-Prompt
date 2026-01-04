@@ -35,15 +35,15 @@ jobs:
         shell: bash
         run: |
           TAG="${{ steps.release.outputs.tag }}"
-          API="https://api.github.com/repos/coxthulhu/Cthulhu-Prompt/releases/tags/$TAG"
-          RESPONSE_FILE="release.json"
+          API="https://api.github.com/repos/coxthulhu/Cthulhu-Prompt/releases?per_page=100"
+          RESPONSE_FILE="releases.json"
           STATUS=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" "$API")
           if [ "$STATUS" != "200" ]; then
-            echo "Release with tag $TAG not found (status $STATUS)." >&2
+            echo "Failed to list releases (status $STATUS)." >&2
             cat "$RESPONSE_FILE" >&2 || true
             exit 1
           fi
-          node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('$RESPONSE_FILE','utf8')); if(!r.draft){ console.error('Release with tag $TAG is not a draft.'); process.exit(1); }"
+          node -e "const fs=require('fs'); const releases=JSON.parse(fs.readFileSync('$RESPONSE_FILE','utf8')); const tag='$TAG'; const match=releases.find(r=>r.tag_name===tag); if(!match){ console.error('Release with tag '+tag+' not found.'); process.exit(1); } if(!match.draft){ console.error('Release with tag '+tag+' is not a draft.'); process.exit(1); }"
       - name: Build and publish (Windows)
         shell: bash
         run: |
