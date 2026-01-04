@@ -18,10 +18,12 @@ win:
     - nsis
     - portable
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: CthulhuPrompt_${version}_Windows_Setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+portable:
+  artifactName: CthulhuPrompt_${version}_Windows_Portable.${ext}
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
