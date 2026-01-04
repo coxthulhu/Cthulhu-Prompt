@@ -1,0 +1,51 @@
+name: Publish Windows Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Verify draft release
+        shell: bash
+        run: |
+          TAG="${{ steps.release.outputs.tag }}"
+          API="https://api.github.com/repos/coxthulhu/Cthulhu-Prompt/releases/tags/$TAG"
+          RESPONSE_FILE="release.json"
+          STATUS=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" "$API")
+          if [ "$STATUS" != "200" ]; then
+            echo "Release with tag $TAG not found (status $STATUS)." >&2
+            cat "$RESPONSE_FILE" >&2 || true
+            exit 1
+          fi
+          node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('$RESPONSE_FILE','utf8')); if(!r.draft){ console.error('Release with tag $TAG is not a draft.'); process.exit(1); }"
+      - name: Build and publish (Windows)
+        shell: bash
+        run: |
+          npm run build
+          npx electron-builder --win --publish=always
