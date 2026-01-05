@@ -62,17 +62,17 @@
 </script>
 
 <div class="flex h-screen w-full overflow-hidden" style={`--sidebar-width: ${width}px`}>
-  <div class="relative flex-shrink-0" style={`width: ${width}px`}>
+  <div class="relative flex-shrink-0 border-r border-border" style={`width: ${width}px`}>
     {@render sidebar()}
-  </div>
 
-  <button
-    type="button"
-    class="w-1 cursor-ew-resize flex-shrink-0 bg-transparent"
-    data-testid="resizable-sidebar-handle"
-    aria-label="Resize sidebar"
-    onmousedown={handleMouseDown}
-  ></button>
+    <button
+      type="button"
+      class="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-transparent z-10"
+      data-testid="resizable-sidebar-handle"
+      aria-label="Resize sidebar"
+      onmousedown={handleMouseDown}
+    ></button>
+  </div>
 
   <div class="flex-1 min-w-0 min-h-0 flex">
     {@render content()}
