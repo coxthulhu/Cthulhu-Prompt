@@ -1,7 +1,7 @@
 <script lang="ts">
   import { screens, type ScreenId } from '@renderer/app/screens'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { Home, FileText, Loader } from 'lucide-svelte'
+  import { Home, FolderClosed, Loader } from 'lucide-svelte'
   import { skipToken } from '@tanstack/svelte-query'
   import { usePromptFoldersQuery } from '@renderer/api/promptFolders'
   import type { PromptFolder } from '@shared/ipc'
@@ -160,7 +160,7 @@
               >
                 <SidebarButton
                   testId={`regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`}
-                  icon={FileText}
+                  icon={FolderClosed}
                   label={folder.displayName}
                   active={selectedPromptFolder?.folderName === folder.folderName &&
                     activeScreen === 'prompt-folders'}
