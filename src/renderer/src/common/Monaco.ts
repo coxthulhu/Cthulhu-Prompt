@@ -9,6 +9,12 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
 const PROMPT_EDITOR_THEME_ID = 'cthulhu-prompt-dark'
+const DISABLED_FIND_COMMANDS = [
+  'actions.find',
+  'actions.findWithSelection',
+  'editor.actions.findWithArgs',
+  'editor.action.startFindReplaceAction'
+] as const
 
 // Tell Monaco how to spawn a worker for each language/feature
 self.MonacoEnvironment = {
@@ -43,6 +49,16 @@ monaco.editor.defineTheme(PROMPT_EDITOR_THEME_ID, {
     'editorActiveLineNumber.foreground': '#D4D4D4'
   }
 })
+
+// Disable Monaco's built-in find/replace widget so we can use our external dialog.
+DISABLED_FIND_COMMANDS.forEach((id) => {
+  monaco.editor.addCommand({ id, run: () => {} })
+})
+monaco.editor.addKeybindingRules([
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, command: null },
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, command: null },
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, command: null }
+])
 
 // (Optionally) export monaco to reuse elsewhere
 export const PROMPT_EDITOR_THEME = PROMPT_EDITOR_THEME_ID
