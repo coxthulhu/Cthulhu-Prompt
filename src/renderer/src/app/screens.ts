@@ -23,7 +23,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     label: 'Settings',
     testId: 'nav-button-settings',
     requiresWorkspace: true,
-    // showInNav: true, // Temporarily hidden in the sidebar.
+    showInNav: true,
     icon: Settings
   },
   'test-screen': {

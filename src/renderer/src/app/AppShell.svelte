@@ -202,7 +202,7 @@
       {:else if activeScreen === 'settings'}
         <section class="flex-1 p-6" data-testid="settings-screen">
           <h1 class="text-2xl font-bold">Settings</h1>
-          <p class="mt-4 text-muted-foreground">Workspace required.</p>
+          <p class="mt-4 text-muted-foreground">Coming Soon.</p>
         </section>
       {:else if activeScreen === 'prompt-folders'}
         {#if selectedPromptFolder && workspacePath}
