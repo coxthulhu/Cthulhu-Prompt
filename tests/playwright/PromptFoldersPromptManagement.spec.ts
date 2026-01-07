@@ -12,6 +12,10 @@ const promptTitleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} ${PROMPT_TITLE_SELECTOR}`
 const dividerAddSelector = (promptId: string) =>
   `[data-testid="prompt-divider-add-after-${promptId}"]`
+const moveUpSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
+const moveDownSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
   return await page.evaluate((selector: string) => {
@@ -30,6 +34,20 @@ const waitForPromptCount = async (page: any, count: number) => {
 
 const clickAddAfter = async (page: any, promptId: string) => {
   const button = page.locator(dividerAddSelector(promptId))
+  await button.scrollIntoViewIfNeeded()
+  await expect(button).toBeEnabled()
+  await button.click()
+}
+
+const clickMoveUp = async (page: any, promptId: string) => {
+  const button = page.locator(moveUpSelector(promptId))
+  await button.scrollIntoViewIfNeeded()
+  await expect(button).toBeEnabled()
+  await button.click()
+}
+
+const clickMoveDown = async (page: any, promptId: string) => {
+  const button = page.locator(moveDownSelector(promptId))
   await button.scrollIntoViewIfNeeded()
   await expect(button).toBeEnabled()
   await button.click()
@@ -63,6 +81,42 @@ const expectPromptContent = async (
 }
 
 describe('Prompt folder prompt management', () => {
+  test('reorders prompts with move buttons', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+
+    const initialIds = await getPromptEditorIds(mainWindow)
+    await clickAddAfter(mainWindow, 'dev-2')
+    await waitForPromptCount(mainWindow, 3)
+
+    const idsAfterAdd = await getPromptEditorIds(mainWindow)
+    const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))!
+    expect(newPromptId).toBeTruthy()
+
+    // Step 1-2: move the second prompt to the top.
+    await clickMoveUp(mainWindow, 'dev-2')
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['dev-2', 'dev-1', newPromptId])
+
+    // Step 3-4: move the current second prompt to the third slot.
+    await clickMoveDown(mainWindow, 'dev-1')
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['dev-2', newPromptId, 'dev-1'])
+
+    // Step 5-6: try moving the first prompt up (it should stay put).
+    await clickMoveUp(mainWindow, 'dev-2')
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['dev-2', newPromptId, 'dev-1'])
+  })
+
   test('preserves prompt order after navigating away', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }

@@ -11,6 +11,7 @@
     size="icon"
     class="flex-1 w-5 rounded-none border-none !px-0 py-1 bg-muted/30 hover:bg-accent/30 shadow-none"
     aria-label="Move prompt up"
+    data-testid="prompt-move-up"
     onclick={onMoveUp}
   >
     <ChevronUp class="size-4 stroke-[3]" />
@@ -20,6 +21,7 @@
     size="icon"
     class="flex-1 w-5 rounded-none border-none !px-0 py-1 bg-muted/30 hover:bg-accent/30 shadow-none"
     aria-label="Move prompt down"
+    data-testid="prompt-move-down"
     onclick={onMoveDown}
   >
     <ChevronDown class="size-4 stroke-[3]" />
