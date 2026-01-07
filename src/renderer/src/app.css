@@ -146,3 +146,9 @@
     background: var(--foreground);
   }
 }
+
+/* Monaco suggest empty message inherits editor font size; keep it compact to avoid overflow. */
+.monaco-editor .suggest-widget > .message {
+  font-size: 16px;
+  line-height: 16px;
+}
