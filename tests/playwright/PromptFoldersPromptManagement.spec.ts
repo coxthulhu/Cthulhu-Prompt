@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { stubClipboard } from '../helpers/ClipboardHelpers'
 import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   PROMPT_EDITOR_PREFIX_SELECTOR,
@@ -65,7 +66,11 @@ const replacePromptText = async (page: any, promptId: string, text: string) => {
   await page.keyboard.press('Control+A')
   await page.keyboard.press('Backspace')
   await page.keyboard.type(text, { delay: 20 })
-  await expect.poll(async () => getMonacoEditorText(page, editorSelector)).toContain(text)
+  // Monaco text helper collapses whitespace, so normalize the expected text to match.
+  const normalizedText = text.replace(/\s+/g, ' ').trim()
+  await expect
+    .poll(async () => getMonacoEditorText(page, editorSelector))
+    .toContain(normalizedText)
 }
 
 const expectPromptContent = async (
@@ -199,6 +204,45 @@ describe('Prompt folder prompt management', () => {
     for (const promptId of fiveNewIds) {
       await expectPromptContent(mainWindow, promptId, expectedById.get(promptId)!)
     }
+  })
+
+  test('copies prompt text to clipboard', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+
+    await stubClipboard(mainWindow)
+
+    const initialIds = await getPromptEditorIds(mainWindow)
+    await clickAddAfter(mainWindow, 'dev-1')
+    await waitForPromptCount(mainWindow, 3)
+
+    const idsAfterAdd = await getPromptEditorIds(mainWindow)
+    const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
+    expect(newPromptId).toBeTruthy()
+
+    const promptText = 'Copy line 1\nCopy line 2\nCopy line 3'
+    await replacePromptText(mainWindow, newPromptId!, promptText)
+
+    const copyButton = mainWindow.locator(
+      `${promptEditorSelector(newPromptId!)} [data-testid="prompt-copy-button"]`
+    )
+    await copyButton.scrollIntoViewIfNeeded()
+    await copyButton.click()
+
+    // Normalize clipboard line endings so the assertion stays stable on Windows.
+    const normalizeNewlines = (value: string) => value.replace(/\r\n?/g, '\n')
+
+    await expect.poll(async () => {
+      const clipboardText = await mainWindow.evaluate(
+        () => (window as any).__testClipboardText ?? ''
+      )
+      return normalizeNewlines(clipboardText)
+    }).toBe(promptText)
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {

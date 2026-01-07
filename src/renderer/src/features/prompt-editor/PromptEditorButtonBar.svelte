@@ -64,7 +64,7 @@
   >
     Delete
   </Button>
-  <Button variant="outline" size="xs" onclick={handleCopyClick}>
+  <Button variant="outline" size="xs" onclick={handleCopyClick} data-testid="prompt-copy-button">
     <span class="relative inline-flex items-center">
       <span
         class={`absolute inset-0 transition-opacity duration-[140ms] ${isCopied ? 'opacity-0 delay-0' : 'opacity-100 delay-[140ms]'}`}
