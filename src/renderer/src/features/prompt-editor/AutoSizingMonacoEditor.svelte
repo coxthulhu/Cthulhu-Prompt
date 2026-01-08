@@ -64,23 +64,12 @@
     emitChange(nextValue, didResize, monacoHeightPx)
   }
 
-  // Side effect: mount Monaco and its overflow widget host once the container is ready.
+  // Create Monaco once the container is ready and keep height in sync with content/width.
   onMount(() => {
     if (!container) return
 
     const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
     if (measuredWidthPx <= 0) return
-
-    const overflowHost = document.createElement('div')
-    overflowHost.style.position = 'fixed'
-    overflowHost.style.top = '0'
-    overflowHost.style.left = '0'
-    overflowHost.style.width = '0'
-    overflowHost.style.height = '0'
-    overflowHost.style.overflow = 'visible'
-    // Monaco scopes widget styles to these classes; keep them in sync with the editor.
-    overflowHost.className = 'monaco-editor no-user-select showUnused showDeprecated vs-dark'
-    document.body.appendChild(overflowHost)
 
     editor = monaco.editor.create(container, {
       value: initialValue,
@@ -100,8 +89,6 @@
       cursorSmoothCaretAnimation: 'off',
       smoothScrolling: false,
       renderLineHighlightOnlyWhenFocus: true,
-      overflowWidgetsDomNode: overflowHost,
-      fixedOverflowWidgets: true,
       dimension: { width: measuredWidthPx, height: MIN_MONACO_HEIGHT_PX }
     })
 
@@ -124,7 +111,6 @@
         unregisterMonacoEditor(editor)
       }
       editor = null
-      overflowHost.remove()
     }
   })
 
