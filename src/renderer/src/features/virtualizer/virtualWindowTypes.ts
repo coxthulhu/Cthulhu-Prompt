@@ -15,9 +15,19 @@ export type VirtualWindowRowComponentProps<TRow> = {
   measuredHeightPx: number | null
   hydrationPriority: number
   shouldDehydrate: boolean
+  scrollToWithinWindowBand?: ScrollToWithinWindowBand
+  reportHydrationState?: (isHydrated: boolean) => void
 }
 
 export type VirtualWindowRowSnippet<TRow> = Snippet<[VirtualWindowRowComponentProps<TRow>]>
+
+export type ScrollToWithinWindowBandType = 'center' | 'minimal'
+
+export type ScrollToWithinWindowBand = (
+  rowId: string,
+  offsetPx: number,
+  scrollType: ScrollToWithinWindowBandType
+) => void
 
 export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   estimateHeight: (row: TRow, widthPx: number, heightPx: number) => number

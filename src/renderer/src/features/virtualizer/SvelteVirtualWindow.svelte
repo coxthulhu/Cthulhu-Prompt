@@ -5,7 +5,9 @@
   import {
     type VirtualWindowItem,
     type VirtualWindowRowSnippet,
-    type VirtualWindowRowTypeRegistry
+    type VirtualWindowRowTypeRegistry,
+    type ScrollToWithinWindowBand,
+    type ScrollToWithinWindowBandType
   } from './virtualWindowTypes'
 
   type VirtualWindowProps = {
@@ -40,6 +42,7 @@
 
   const LEFT_SCROLL_PADDING_PX = 24
   const RIGHT_SCROLL_PADDING_PX = 8
+  const WINDOW_BAND_PADDING_PX = 100
 
   // Subtract internal padding so width-based height measurements match the row content width.
   const measurementWidth = $derived(
@@ -61,13 +64,15 @@
   const computeAnchoredScrollTop = (
     previousRows: readonly RowState[],
     nextRows: readonly RowState[],
-    scrollTop: number
+    scrollTop: number,
+    anchorOffsetPx: number
   ): number => {
-    const anchorRow = previousRows[findIndexAtOffset(previousRows, scrollTop)]
+    const anchorPositionPx = scrollTop + anchorOffsetPx
+    const anchorRow = previousRows[findIndexAtOffset(previousRows, anchorPositionPx)]
     if (!anchorRow) return scrollTop
-    const offsetInRow = scrollTop - anchorRow.offset
+    const offsetInRow = anchorPositionPx - anchorRow.offset
     const nextRow = nextRows.find((row) => row.id === anchorRow.id)
-    return nextRow ? nextRow.offset + offsetInRow : scrollTop
+    return nextRow ? nextRow.offset + offsetInRow - anchorOffsetPx : scrollTop
   }
 
   const resolveRowHeight = (estimated: number, measured: number | null): number => {
@@ -123,13 +128,20 @@
     rowHeightsPx.length === 0 ? 0 : rowHeightsPx.reduce((sum, height) => sum + height, 0)
   )
 
+  const hydrationStateByRowId = new SvelteMap<string, boolean>()
+
   let scrollTopPx = $state(0)
   let viewportHeight = $state(0)
   let previousRowStates = $state<RowState[]>([])
+  let scrollAnchorMode = $state<'top' | 'center'>('top')
+  let programmaticScroll = false
+  let programmaticScrollVersion = 0
+
+  const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? viewportHeight / 2 : 0)
 
   // Anchor viewport math to the scroll position we will apply after layout changes.
   const anchoredScrollTopPx = $derived.by(() =>
-    computeAnchoredScrollTop(previousRowStates, rowStates, scrollTopPx)
+    computeAnchoredScrollTop(previousRowStates, rowStates, scrollTopPx, anchorOffsetPx)
   )
   const anchoredScrollBottomPx = $derived(anchoredScrollTopPx + viewportHeight)
 
@@ -197,6 +209,83 @@
 
   const shouldDehydrateRow = (row: RowState): boolean =>
     widthResizeActive && row.rowData.kind === 'prompt-editor' && !rowTouchesViewport(row)
+
+  const markProgrammaticScroll = () => {
+    programmaticScroll = true
+    const version = (programmaticScrollVersion += 1)
+    window.requestAnimationFrame(() => {
+      if (programmaticScrollVersion !== version) return
+      programmaticScroll = false
+    })
+  }
+
+  const clampScrollTop = (nextScrollTop: number): number => {
+    const maxScrollTop = Math.max(0, totalHeightPx - viewportHeight)
+    return Math.min(Math.max(0, nextScrollTop), maxScrollTop)
+  }
+
+  const getRowAtOffset = (offsetPx: number): RowState | null => {
+    if (rowStates.length === 0) return null
+    const index = findIndexAtOffset(rowStates, offsetPx)
+    if (index < 0) return null
+    return rowStates[index] ?? null
+  }
+
+  const isRowHydrated = (row: RowState | null): boolean => {
+    if (!row) return true
+    if (!getHydrationPriorityEligibility?.(row.rowData)) return true
+    return hydrationStateByRowId.get(row.id) ?? false
+  }
+
+  const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
+    rowId: string,
+    offsetPx: number,
+    scrollType: ScrollToWithinWindowBandType
+  ) => {
+    if (!scrollContainer) return
+    if (viewportHeight <= 0) return
+
+    const row = rowStates.find((candidate) => candidate.id === rowId)
+    if (!row) return
+
+    const targetOffsetPx = row.offset + offsetPx
+    const bandTopPx = scrollTopPx + WINDOW_BAND_PADDING_PX
+    const bandBottomPx = scrollTopPx + viewportHeight - WINDOW_BAND_PADDING_PX
+
+    if (targetOffsetPx >= bandTopPx && targetOffsetPx <= bandBottomPx) return
+
+    let nextScrollTop = scrollTopPx
+
+    if (scrollType === 'center') {
+      nextScrollTop = targetOffsetPx - viewportHeight / 2
+    } else if (targetOffsetPx < bandTopPx) {
+      nextScrollTop = targetOffsetPx - WINDOW_BAND_PADDING_PX
+    } else {
+      nextScrollTop = targetOffsetPx + WINDOW_BAND_PADDING_PX - viewportHeight
+    }
+
+    nextScrollTop = clampScrollTop(nextScrollTop)
+    if (nextScrollTop === scrollTopPx) return
+
+    markProgrammaticScroll()
+    scrollContainer.scrollTop = nextScrollTop
+    scrollTopPx = nextScrollTop
+
+    if (scrollType === 'center') {
+      const topEdgeRow = getRowAtOffset(nextScrollTop)
+      scrollAnchorMode = isRowHydrated(topEdgeRow) ? 'top' : 'center'
+    }
+  }
+
+  // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.
+  $effect(() => {
+    if (scrollAnchorMode !== 'center') return
+    const topEdgeRow = getRowAtOffset(anchoredScrollTopPx)
+    if (!topEdgeRow) return
+    if (isRowHydrated(topEdgeRow)) {
+      scrollAnchorMode = 'top'
+    }
+  })
 
   const scheduleWidthResizeIdleReset = (version: number) => {
     window.requestAnimationFrame(() => {
@@ -266,11 +355,19 @@
   const handleScroll = (event: Event) => {
     const target = event.currentTarget as HTMLDivElement
     scrollTopPx = target.scrollTop
+    if (programmaticScroll) {
+      programmaticScroll = false
+      return
+    }
+    if (scrollAnchorMode === 'center') {
+      scrollAnchorMode = 'top'
+    }
   }
 
-  // Side effect: anchor scroll position to the top-intersecting row when layout or viewport changes.
+  // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
   $effect(() => {
     if (scrollContainer && anchoredScrollTopPx !== scrollTopPx) {
+      markProgrammaticScroll()
       scrollContainer.scrollTop = anchoredScrollTopPx
       scrollTopPx = anchoredScrollTopPx
     }
@@ -307,7 +404,9 @@
           devicePixelRatio,
           measuredHeightPx: row.measuredHeightPx,
           hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
-          shouldDehydrate: shouldDehydrateRow(row)
+          shouldDehydrate: shouldDehydrateRow(row),
+          scrollToWithinWindowBand,
+          reportHydrationState: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
         })}
       </div>
     </div>

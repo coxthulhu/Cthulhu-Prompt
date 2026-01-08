@@ -190,15 +190,17 @@
   />
 {/snippet}
 
-{#snippet promptEditorRow({
-  row,
-  virtualWindowWidthPx,
-  virtualWindowHeightPx,
-  devicePixelRatio,
-  measuredHeightPx,
-  hydrationPriority,
-  shouldDehydrate
-})}
+{#snippet promptEditorRow(props)}
+  {@const {
+    row,
+    virtualWindowWidthPx,
+    virtualWindowHeightPx,
+    devicePixelRatio,
+    measuredHeightPx,
+    hydrationPriority,
+    shouldDehydrate,
+    reportHydrationState
+  } = props}
   <PromptEditorRow
     promptId={row.promptId}
     {virtualWindowWidthPx}
@@ -207,6 +209,7 @@
     {measuredHeightPx}
     {hydrationPriority}
     {shouldDehydrate}
+    {reportHydrationState}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}

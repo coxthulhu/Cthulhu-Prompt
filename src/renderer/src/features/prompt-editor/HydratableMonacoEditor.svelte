@@ -16,6 +16,7 @@
     placeholderHeightPx: number
     hydrationPriority: number
     shouldDehydrate: boolean
+    reportHydrationState?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     class?: string
@@ -27,6 +28,7 @@
     placeholderHeightPx,
     hydrationPriority,
     shouldDehydrate,
+    reportHydrationState,
     onChange,
     onBlur,
     class: className
@@ -69,6 +71,11 @@
     if (!queuedEntry) return
     if (shouldDehydrate) return
     updateMonacoHydrationPriority(queuedEntry, hydrationPriority)
+  })
+
+  // Side effect: report hydration transitions for virtual window anchoring.
+  $effect(() => {
+    reportHydrationState?.(isHydrated)
   })
 </script>
 
