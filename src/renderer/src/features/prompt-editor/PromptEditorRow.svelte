@@ -57,6 +57,7 @@
       : Math.max(MIN_MONACO_HEIGHT_PX, getMonacoHeightFromRowPx(estimatedRowHeightPx))
   let monacoHeightPx = $state<number>(placeholderMonacoHeightPx)
   let overflowHost = $state<HTMLDivElement | null>(null)
+  let overflowPaddingHost = $state<HTMLDivElement | null>(null)
 
   const SIDEBAR_WIDTH_PX = 24
   const ROW_GAP_PX = 8
@@ -77,34 +78,40 @@
   // Side effect: keep the Monaco overflow host aligned with the prompt editor chrome.
   $effect(() => {
     if (!overlayRowElement) {
-      if (overflowHost) {
-        overflowHost.remove()
-        overflowHost = null
-      }
+      overflowPaddingHost?.remove()
+      overflowPaddingHost = null
+      overflowHost = null
       return
     }
 
+    const paddingHost = overflowPaddingHost ?? document.createElement('div')
+    paddingHost.style.overflow = 'visible'
+    paddingHost.style.boxSizing = 'border-box'
+    paddingHost.style.pointerEvents = 'none'
+    paddingHost.style.padding = `${OVERFLOW_TOP_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
+
     const host = overflowHost ?? document.createElement('div')
     host.className = 'monaco-editor no-user-select showUnused showDeprecated vs-dark'
-    host.style.position = 'absolute'
-    host.style.inset = '0'
+    host.style.position = 'relative'
+    host.style.width = '0'
+    host.style.height = '0'
     host.style.overflow = 'visible'
-    host.style.pointerEvents = 'none'
-    host.style.boxSizing = 'border-box'
-    host.style.padding = `${OVERFLOW_TOP_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
+    host.style.pointerEvents = 'auto'
 
-    if (host.parentElement !== overlayRowElement) {
-      overlayRowElement.appendChild(host)
+    if (host.parentElement !== paddingHost) {
+      paddingHost.appendChild(host)
+    }
+
+    if (paddingHost.parentElement !== overlayRowElement) {
+      overlayRowElement.appendChild(paddingHost)
+    }
+
+    if (overflowPaddingHost !== paddingHost) {
+      overflowPaddingHost = paddingHost
     }
 
     if (overflowHost !== host) {
       overflowHost = host
-    }
-
-    return () => {
-      if (host.parentElement === overlayRowElement) {
-        host.remove()
-      }
     }
   })
 </script>
