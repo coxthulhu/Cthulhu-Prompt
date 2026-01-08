@@ -2,9 +2,9 @@ export const LINE_HEIGHT_PX = 20
 export const MIN_MONACO_HEIGHT_PX = 60
 const MAX_VISIBLE_LINES = 40
 const MAX_MONACO_HEIGHT_PX = MAX_VISIBLE_LINES * LINE_HEIGHT_PX
-const TITLE_BAR_HEIGHT_PX = 32
-const MONACO_PADDING_PX = 10
-const ADDITIONAL_GAP_PX = 2
+export const TITLE_BAR_HEIGHT_PX = 32
+export const MONACO_PADDING_PX = 10
+export const ADDITIONAL_GAP_PX = 2
 const ROW_CHROME_HEIGHT_PX = TITLE_BAR_HEIGHT_PX + MONACO_PADDING_PX + ADDITIONAL_GAP_PX
 
 export const clampMonacoHeightPx = (heightPx: number): number => {

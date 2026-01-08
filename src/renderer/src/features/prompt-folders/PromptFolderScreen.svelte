@@ -62,6 +62,7 @@
         estimatePromptEditorHeight(getPromptData(row.promptId).draft.text, widthPx, heightPx),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
         lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio),
+      needsOverlayRow: true,
       snippet: promptEditorRow
     },
     'bottom-spacer': {
@@ -204,6 +205,7 @@
   measuredHeightPx,
   hydrationPriority,
   shouldDehydrate,
+  overlayRowElement,
   scrollToWithinWindowBand,
   onHydrationChange
 }: PromptEditorRowProps)}
@@ -216,6 +218,7 @@
     {measuredHeightPx}
     {hydrationPriority}
     {shouldDehydrate}
+    {overlayRowElement}
     {onHydrationChange}
     {scrollToWithinWindowBand}
     onDelete={() => handleDeletePrompt(row.promptId)}

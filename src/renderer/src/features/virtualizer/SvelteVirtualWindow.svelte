@@ -129,6 +129,7 @@
   )
 
   const hydrationStateByRowId = new SvelteMap<string, boolean>()
+  const overlayRowElements = new SvelteMap<string, HTMLDivElement>()
 
   let scrollTopPx = $state(0)
   let viewportHeight = $state(0)
@@ -203,6 +204,32 @@
       `min-height:${row.height}px`,
       `max-height:${row.height}px`
     ].join(';')
+
+  const overlayRowWrapperStyle = (row: RowState): string =>
+    [
+      'position:absolute',
+      'top:0',
+      'left:0',
+      'width:100%',
+      `transform:translate3d(0, ${row.offset}px, 0)`,
+      'overflow:visible',
+      'pointer-events:none',
+      `height:${row.height}px`,
+      `min-height:${row.height}px`,
+      `max-height:${row.height}px`
+    ].join(';')
+
+  const rowNeedsOverlay = (row: RowState): boolean =>
+    rowRegistry[row.rowData.kind].needsOverlayRow ?? false
+
+  const registerOverlayRow = (node: HTMLDivElement, rowId: string) => {
+    overlayRowElements.set(rowId, node)
+    return {
+      destroy: () => {
+        overlayRowElements.delete(rowId)
+      }
+    }
+  }
 
   const rowTouchesViewport = (row: RowState): boolean =>
     row.offset + row.height >= anchoredScrollTopPx && row.offset <= anchoredScrollBottomPx
@@ -389,25 +416,41 @@
     style={`height:${totalHeightPx}px; width:1px; pointer-events:none;`}
   ></div>
 
-  {#each visibleRows as row (row.id)}
-    <div style={rowWrapperStyle(row)}>
-      <div
-        style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
-      >
-        {@render row.snippet({
-          index: row.index,
-          row: row.rowData,
-          rowId: row.id,
-          virtualWindowWidthPx: measurementWidth,
-          virtualWindowHeightPx: viewportHeight,
-          devicePixelRatio,
-          measuredHeightPx: row.measuredHeightPx,
-          hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
-          shouldDehydrate: shouldDehydrateRow(row),
-          scrollToWithinWindowBand,
-          onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
-        })}
+  <div style="position:absolute; inset:0;">
+    {#each visibleRows as row (row.id)}
+      <div style={rowWrapperStyle(row)}>
+        <div
+          style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+        >
+          {@render row.snippet({
+            index: row.index,
+            row: row.rowData,
+            rowId: row.id,
+            virtualWindowWidthPx: measurementWidth,
+            virtualWindowHeightPx: viewportHeight,
+            devicePixelRatio,
+            measuredHeightPx: row.measuredHeightPx,
+            hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
+            shouldDehydrate: shouldDehydrateRow(row),
+            overlayRowElement: overlayRowElements.get(row.id) ?? null,
+            scrollToWithinWindowBand,
+            onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+          })}
+        </div>
       </div>
-    </div>
-  {/each}
+    {/each}
+  </div>
+
+  <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
+    {#each visibleRows as row (row.id)}
+      {#if rowNeedsOverlay(row)}
+        <div style={overlayRowWrapperStyle(row)}>
+          <div
+            use:registerOverlayRow={row.id}
+            style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+          ></div>
+        </div>
+      {/if}
+    {/each}
+  </div>
 </div>

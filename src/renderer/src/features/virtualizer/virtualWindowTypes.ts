@@ -15,6 +15,7 @@ export type VirtualWindowRowComponentProps<TRow> = {
   measuredHeightPx: number | null
   hydrationPriority: number
   shouldDehydrate: boolean
+  overlayRowElement?: HTMLDivElement | null
   scrollToWithinWindowBand?: ScrollToWithinWindowBand
   onHydrationChange?: (isHydrated: boolean) => void
 }
@@ -33,6 +34,7 @@ export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   estimateHeight: (row: TRow, widthPx: number, heightPx: number) => number
   lookupMeasuredHeight?: (row: TRow, widthPx: number, devicePixelRatio: number) => number | null
   snippet: VirtualWindowRowSnippet<TRow>
+  needsOverlayRow?: boolean
 }
 
 export type VirtualWindowRowTypeRegistry<TRow extends { kind: string }> = {

@@ -7,17 +7,20 @@
   type Props = {
     initialValue: string
     containerWidthPx: number
+    overflowWidgetsDomNode?: HTMLElement | null
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
   }
 
-  let { initialValue, containerWidthPx, onChange, onBlur }: Props = $props()
+  let { initialValue, containerWidthPx, overflowWidgetsDomNode, onChange, onBlur }: Props = $props()
 
   let container: HTMLDivElement | null = null
   let editor: monaco.editor.IStandaloneCodeEditor | null = null
   let monacoHeightPx = MIN_MONACO_HEIGHT_PX
   let lastContainerWidthPx = 0
   let isLayingOut = false
+  let changeDisposable: monaco.IDisposable | null = null
+  let blurDisposable: monaco.IDisposable | null = null
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
@@ -64,9 +67,23 @@
     emitChange(nextValue, didResize, monacoHeightPx)
   }
 
-  // Create Monaco once the container is ready and keep height in sync with content/width.
-  onMount(() => {
+  const destroyEditor = () => {
+    changeDisposable?.dispose()
+    blurDisposable?.dispose()
+    if (editor) {
+      unregisterMonacoEditor(editor)
+      editor.dispose()
+    }
+    changeDisposable = null
+    blurDisposable = null
+    editor = null
+  }
+
+  // Side effect: create Monaco once the container and overflow host are ready.
+  $effect(() => {
+    if (editor) return
     if (!container) return
+    if (overflowWidgetsDomNode === null) return
 
     const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
     if (measuredWidthPx <= 0) return
@@ -89,29 +106,23 @@
       cursorSmoothCaretAnimation: 'off',
       smoothScrolling: false,
       renderLineHighlightOnlyWhenFocus: true,
+      overflowWidgetsDomNode: overflowWidgetsDomNode ?? undefined,
       dimension: { width: measuredWidthPx, height: MIN_MONACO_HEIGHT_PX }
     })
 
     registerMonacoEditor({ container, editor })
 
-    const changeDisposable = editor.onDidChangeModelContent(handleContentChange)
-
-    const blurDisposable = editor.onDidBlurEditorWidget(() => onBlur?.())
+    changeDisposable = editor.onDidChangeModelContent(handleContentChange)
+    blurDisposable = editor.onDidBlurEditorWidget(() => onBlur?.())
 
     layoutEditor()
     lastContainerWidthPx = containerWidthPx
     emitChange(editor.getValue(), false, monacoHeightPx)
+  })
 
-    // Dispose Monaco/editor resources on unmount.
-    return () => {
-      changeDisposable.dispose()
-      blurDisposable.dispose()
-      editor?.dispose()
-      if (editor) {
-        unregisterMonacoEditor(editor)
-      }
-      editor = null
-    }
+  // Side effect: dispose Monaco/editor resources on unmount.
+  onMount(() => {
+    return () => destroyEditor()
   })
 
   // Side effect: when the virtualized container width changes, relayout Monaco and sync cached height.
@@ -125,6 +136,7 @@
     const nextHeightPx = layoutEditor()
     emitChange(editor.getValue(), nextHeightPx !== previousHeightPx, nextHeightPx)
   })
+
 </script>
 
 <div

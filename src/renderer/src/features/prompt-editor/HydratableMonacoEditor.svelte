@@ -14,6 +14,7 @@
     initialValue: string
     containerWidthPx: number
     placeholderHeightPx: number
+    overflowWidgetsDomNode?: HTMLElement | null
     hydrationPriority: number
     shouldDehydrate: boolean
     onHydrationChange?: (isHydrated: boolean) => void
@@ -26,6 +27,7 @@
     initialValue,
     containerWidthPx,
     placeholderHeightPx,
+    overflowWidgetsDomNode,
     hydrationPriority,
     shouldDehydrate,
     onHydrationChange,
@@ -79,7 +81,13 @@
 
 <div class={cn('border border-border rounded-md bg-[#1e1e1e] pl-3 py-1', className)}>
   {#if isHydrated}
-    <AutoSizingMonacoEditor {initialValue} {containerWidthPx} {onChange} {onBlur} />
+    <AutoSizingMonacoEditor
+      {initialValue}
+      {containerWidthPx}
+      {overflowWidgetsDomNode}
+      {onChange}
+      {onBlur}
+    />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />
   {/if}
