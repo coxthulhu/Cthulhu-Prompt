@@ -197,16 +197,19 @@
 
 {#snippet promptEditorRow({
   row,
+  rowId,
   virtualWindowWidthPx,
   virtualWindowHeightPx,
   devicePixelRatio,
   measuredHeightPx,
   hydrationPriority,
   shouldDehydrate,
+  scrollToWithinWindowBand,
   onHydrationChange
 }: PromptEditorRowProps)}
   <PromptEditorRow
     promptId={row.promptId}
+    {rowId}
     {virtualWindowWidthPx}
     {virtualWindowHeightPx}
     {devicePixelRatio}
@@ -214,6 +217,7 @@
     {hydrationPriority}
     {shouldDehydrate}
     {onHydrationChange}
+    {scrollToWithinWindowBand}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}

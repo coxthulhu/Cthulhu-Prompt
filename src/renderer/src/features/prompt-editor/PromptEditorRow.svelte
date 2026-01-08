@@ -2,6 +2,7 @@
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
+  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import {
     estimatePromptEditorHeight,
@@ -12,6 +13,7 @@
 
   let {
     promptId,
+    rowId,
     virtualWindowWidthPx,
     virtualWindowHeightPx,
     devicePixelRatio,
@@ -19,11 +21,13 @@
     hydrationPriority,
     shouldDehydrate,
     onHydrationChange,
+    scrollToWithinWindowBand,
     onDelete,
     onMoveUp,
     onMoveDown
   }: {
     promptId: string
+    rowId: string
     virtualWindowWidthPx: number
     virtualWindowHeightPx: number
     devicePixelRatio: number
@@ -31,6 +35,7 @@
     hydrationPriority: number
     shouldDehydrate: boolean
     onHydrationChange?: (isHydrated: boolean) => void
+    scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete: () => void
     onMoveUp: () => void
     onMoveDown: () => void
@@ -55,6 +60,7 @@
   class="flex items-stretch gap-2"
   style={`height:${rowHeightPx}px; min-height:${rowHeightPx}px; max-height:${rowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
+  data-prompt-editor-row
 >
   <PromptEditorSidebar {onMoveUp} {onMoveDown} />
 
@@ -65,6 +71,8 @@
           title={promptData.draft.title}
           draftText={promptData.draft.text}
           onTitleChange={promptData.setTitle}
+          {rowId}
+          {scrollToWithinWindowBand}
           {onDelete}
         />
 
