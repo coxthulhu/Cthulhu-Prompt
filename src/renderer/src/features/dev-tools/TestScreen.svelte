@@ -1,28 +1,6 @@
-<script lang="ts">
-  import { onMount } from 'svelte'
-  import { monaco } from '@renderer/common/Monaco'
-
-  let container: HTMLDivElement | null = null
-  let editor: monaco.editor.IStandaloneCodeEditor | null = null
-
-  onMount(() => {
-    if (!container) return
-
-    // Create Monaco when the container is ready; mirror legacy behavior.
-    editor = monaco.editor.create(container, {
-      value: '',
-      language: 'markdown',
-      theme: 'vs-dark'
-    })
-
-    // Dispose the editor when the component unmounts.
-    return () => {
-      editor?.dispose()
-      editor = null
-    }
-  })
-</script>
-
-<div class="h-full w-full overflow-auto">
-  <div bind:this={container} class="w-full" style="height: 1000px;"></div>
+<div class="h-full w-full overflow-auto p-6" data-testid="test-screen">
+  <h1 class="text-2xl font-semibold">Test Screen</h1>
+  <p class="mt-3 text-muted-foreground">
+    Monaco has been removed from this screen. Use this space for lightweight dev-only content.
+  </p>
 </div>
