@@ -11,7 +11,8 @@
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
-    type VirtualWindowItem
+    type VirtualWindowItem,
+    type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import {
     getPromptFolderData,
@@ -37,6 +38,10 @@
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
     | { kind: 'bottom-spacer' }
+
+  type PromptEditorRowProps = VirtualWindowRowComponentProps<
+    Extract<PromptFolderRow, { kind: 'prompt-editor' }>
+  >
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     header: {
@@ -190,17 +195,16 @@
   />
 {/snippet}
 
-{#snippet promptEditorRow(props)}
-  {@const {
-    row,
-    virtualWindowWidthPx,
-    virtualWindowHeightPx,
-    devicePixelRatio,
-    measuredHeightPx,
-    hydrationPriority,
-    shouldDehydrate,
-    reportHydrationState
-  } = props}
+{#snippet promptEditorRow({
+  row,
+  virtualWindowWidthPx,
+  virtualWindowHeightPx,
+  devicePixelRatio,
+  measuredHeightPx,
+  hydrationPriority,
+  shouldDehydrate,
+  onHydrationChange
+}: PromptEditorRowProps)}
   <PromptEditorRow
     promptId={row.promptId}
     {virtualWindowWidthPx}
@@ -209,7 +213,7 @@
     {measuredHeightPx}
     {hydrationPriority}
     {shouldDehydrate}
-    {reportHydrationState}
+    {onHydrationChange}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}

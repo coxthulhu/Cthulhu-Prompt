@@ -16,7 +16,7 @@
     placeholderHeightPx: number
     hydrationPriority: number
     shouldDehydrate: boolean
-    reportHydrationState?: (isHydrated: boolean) => void
+    onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     class?: string
@@ -28,7 +28,7 @@
     placeholderHeightPx,
     hydrationPriority,
     shouldDehydrate,
-    reportHydrationState,
+    onHydrationChange,
     onChange,
     onBlur,
     class: className
@@ -46,7 +46,7 @@
     }
   })
 
-  // Side effect: dehydrate offscreen editors while width resizing is active.
+  // Side effect: manage hydration and report state for virtual window anchoring.
   $effect(() => {
     if (shouldDehydrate) {
       if (queuedEntry) {
@@ -56,6 +56,7 @@
       if (isHydrated) {
         isHydrated = false
       }
+      onHydrationChange?.(isHydrated)
       return
     }
     if (!queuedEntry && !isHydrated) {
@@ -64,6 +65,7 @@
         isHydrated = true
       })
     }
+    onHydrationChange?.(isHydrated)
   })
 
   // Side effect: keep queued hydration priority aligned with scroll updates.
@@ -73,10 +75,6 @@
     updateMonacoHydrationPriority(queuedEntry, hydrationPriority)
   })
 
-  // Side effect: report hydration transitions for virtual window anchoring.
-  $effect(() => {
-    reportHydrationState?.(isHydrated)
-  })
 </script>
 
 <div class={cn('border border-border rounded-md bg-[#1e1e1e] pl-3 py-1', className)}>

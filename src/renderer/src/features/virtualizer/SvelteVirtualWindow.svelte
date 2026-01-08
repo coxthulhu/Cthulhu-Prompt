@@ -219,15 +219,19 @@
     })
   }
 
+  const applyScrollTop = (container: HTMLDivElement, nextScrollTop: number) => {
+    markProgrammaticScroll()
+    container.scrollTop = nextScrollTop
+    scrollTopPx = nextScrollTop
+  }
+
   const clampScrollTop = (nextScrollTop: number): number => {
     const maxScrollTop = Math.max(0, totalHeightPx - viewportHeight)
     return Math.min(Math.max(0, nextScrollTop), maxScrollTop)
   }
 
   const getRowAtOffset = (offsetPx: number): RowState | null => {
-    if (rowStates.length === 0) return null
     const index = findIndexAtOffset(rowStates, offsetPx)
-    if (index < 0) return null
     return rowStates[index] ?? null
   }
 
@@ -242,8 +246,7 @@
     offsetPx: number,
     scrollType: ScrollToWithinWindowBandType
   ) => {
-    if (!scrollContainer) return
-    if (viewportHeight <= 0) return
+    if (!scrollContainer || viewportHeight <= 0) return
 
     const row = rowStates.find((candidate) => candidate.id === rowId)
     if (!row) return
@@ -267,9 +270,7 @@
     nextScrollTop = clampScrollTop(nextScrollTop)
     if (nextScrollTop === scrollTopPx) return
 
-    markProgrammaticScroll()
-    scrollContainer.scrollTop = nextScrollTop
-    scrollTopPx = nextScrollTop
+    applyScrollTop(scrollContainer, nextScrollTop)
 
     if (scrollType === 'center') {
       const topEdgeRow = getRowAtOffset(nextScrollTop)
@@ -367,9 +368,7 @@
   // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
   $effect(() => {
     if (scrollContainer && anchoredScrollTopPx !== scrollTopPx) {
-      markProgrammaticScroll()
-      scrollContainer.scrollTop = anchoredScrollTopPx
-      scrollTopPx = anchoredScrollTopPx
+      applyScrollTop(scrollContainer, anchoredScrollTopPx)
     }
 
     previousRowStates = rowStates
@@ -406,7 +405,7 @@
           hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
           shouldDehydrate: shouldDehydrateRow(row),
           scrollToWithinWindowBand,
-          reportHydrationState: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+          onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
         })}
       </div>
     </div>

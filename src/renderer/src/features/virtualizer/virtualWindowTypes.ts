@@ -16,7 +16,7 @@ export type VirtualWindowRowComponentProps<TRow> = {
   hydrationPriority: number
   shouldDehydrate: boolean
   scrollToWithinWindowBand?: ScrollToWithinWindowBand
-  reportHydrationState?: (isHydrated: boolean) => void
+  onHydrationChange?: (isHydrated: boolean) => void
 }
 
 export type VirtualWindowRowSnippet<TRow> = Snippet<[VirtualWindowRowComponentProps<TRow>]>

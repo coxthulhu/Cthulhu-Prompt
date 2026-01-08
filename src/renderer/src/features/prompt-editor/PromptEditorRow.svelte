@@ -18,7 +18,7 @@
     measuredHeightPx,
     hydrationPriority,
     shouldDehydrate,
-    reportHydrationState,
+    onHydrationChange,
     onDelete,
     onMoveUp,
     onMoveDown
@@ -30,7 +30,7 @@
     measuredHeightPx: number | null
     hydrationPriority: number
     shouldDehydrate: boolean
-    reportHydrationState?: (isHydrated: boolean) => void
+    onHydrationChange?: (isHydrated: boolean) => void
     onDelete: () => void
     onMoveUp: () => void
     onMoveDown: () => void
@@ -76,7 +76,7 @@
               placeholderHeightPx={placeholderMonacoHeightPx}
               {hydrationPriority}
               {shouldDehydrate}
-              {reportHydrationState}
+              {onHydrationChange}
               onChange={(text, meta) => {
                 if (meta.heightPx !== monacoHeightPx) {
                   monacoHeightPx = meta.heightPx
