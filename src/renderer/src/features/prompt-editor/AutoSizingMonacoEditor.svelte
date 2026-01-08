@@ -67,18 +67,6 @@
     emitChange(nextValue, didResize, monacoHeightPx)
   }
 
-  const destroyEditor = () => {
-    changeDisposable?.dispose()
-    blurDisposable?.dispose()
-    if (editor) {
-      unregisterMonacoEditor(editor)
-      editor.dispose()
-    }
-    changeDisposable = null
-    blurDisposable = null
-    editor = null
-  }
-
   // Side effect: create Monaco once the container and overflow host are ready.
   $effect(() => {
     if (editor) return
@@ -122,7 +110,17 @@
 
   // Side effect: dispose Monaco/editor resources on unmount.
   onMount(() => {
-    return () => destroyEditor()
+    return () => {
+      changeDisposable?.dispose()
+      blurDisposable?.dispose()
+      if (editor) {
+        unregisterMonacoEditor(editor)
+        editor.dispose()
+      }
+      changeDisposable = null
+      blurDisposable = null
+      editor = null
+    }
   })
 
   // Side effect: when the virtualized container width changes, relayout Monaco and sync cached height.
