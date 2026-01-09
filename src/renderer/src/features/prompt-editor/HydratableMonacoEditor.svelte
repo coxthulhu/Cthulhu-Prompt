@@ -3,6 +3,7 @@
   import { cn } from '@renderer/common/Cn'
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
+  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import {
     cancelMonacoHydration,
     enqueueMonacoHydration,
@@ -17,6 +18,8 @@
     overflowWidgetsDomNode: HTMLElement
     hydrationPriority: number
     shouldDehydrate: boolean
+    rowId: string
+    scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -30,6 +33,8 @@
     overflowWidgetsDomNode,
     hydrationPriority,
     shouldDehydrate,
+    rowId,
+    scrollToWithinWindowBand,
     onHydrationChange,
     onChange,
     onBlur,
@@ -85,6 +90,8 @@
       {initialValue}
       {containerWidthPx}
       {overflowWidgetsDomNode}
+      {rowId}
+      {scrollToWithinWindowBand}
       {onChange}
       {onBlur}
     />

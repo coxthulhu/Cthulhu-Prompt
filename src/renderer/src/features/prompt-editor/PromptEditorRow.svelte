@@ -147,6 +147,8 @@
                 overflowWidgetsDomNode={overflowHost}
                 {hydrationPriority}
                 {shouldDehydrate}
+                {rowId}
+                {scrollToWithinWindowBand}
                 {onHydrationChange}
                 onChange={(text, meta) => {
                   if (meta.heightPx !== monacoHeightPx) {
