@@ -14,7 +14,7 @@
     initialValue: string
     containerWidthPx: number
     placeholderHeightPx: number
-    overflowWidgetsDomNode?: HTMLElement | null
+    overflowWidgetsDomNode: HTMLElement
     hydrationPriority: number
     shouldDehydrate: boolean
     onHydrationChange?: (isHydrated: boolean) => void

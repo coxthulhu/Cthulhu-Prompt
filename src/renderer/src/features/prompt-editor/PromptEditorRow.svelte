@@ -2,6 +2,7 @@
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
+  import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import {
@@ -137,27 +138,31 @@
         />
 
         <div class="flex-1 min-w-0 mt-0.5">
-          {#key promptId}
-            <HydratableMonacoEditor
-              initialValue={promptData.draft.text}
-              containerWidthPx={virtualWindowWidthPx}
-              placeholderHeightPx={placeholderMonacoHeightPx}
-              overflowWidgetsDomNode={overflowHost}
-              {hydrationPriority}
-              {shouldDehydrate}
-              {onHydrationChange}
-              onChange={(text, meta) => {
-                if (meta.heightPx !== monacoHeightPx) {
-                  monacoHeightPx = meta.heightPx
-                }
-                promptData.setText(text, {
-                  measuredHeightPx: rowHeightPx,
-                  widthPx: virtualWindowWidthPx,
-                  devicePixelRatio
-                })
-              }}
-            />
-          {/key}
+          {#if overflowHost}
+            {#key promptId}
+              <HydratableMonacoEditor
+                initialValue={promptData.draft.text}
+                containerWidthPx={virtualWindowWidthPx}
+                placeholderHeightPx={placeholderMonacoHeightPx}
+                overflowWidgetsDomNode={overflowHost}
+                {hydrationPriority}
+                {shouldDehydrate}
+                {onHydrationChange}
+                onChange={(text, meta) => {
+                  if (meta.heightPx !== monacoHeightPx) {
+                    monacoHeightPx = meta.heightPx
+                  }
+                  promptData.setText(text, {
+                    measuredHeightPx: rowHeightPx,
+                    widthPx: virtualWindowWidthPx,
+                    devicePixelRatio
+                  })
+                }}
+              />
+            {/key}
+          {:else}
+            <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
+          {/if}
         </div>
       </div>
     </div>

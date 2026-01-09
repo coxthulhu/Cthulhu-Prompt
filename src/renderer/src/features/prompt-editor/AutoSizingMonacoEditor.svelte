@@ -7,7 +7,7 @@
   type Props = {
     initialValue: string
     containerWidthPx: number
-    overflowWidgetsDomNode?: HTMLElement | null
+    overflowWidgetsDomNode: HTMLElement
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
   }
@@ -19,8 +19,6 @@
   let monacoHeightPx = MIN_MONACO_HEIGHT_PX
   let lastContainerWidthPx = 0
   let isLayingOut = false
-  let changeDisposable: monaco.IDisposable | null = null
-  let blurDisposable: monaco.IDisposable | null = null
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
@@ -67,16 +65,14 @@
     emitChange(nextValue, didResize, monacoHeightPx)
   }
 
-  // Side effect: create Monaco once the container and overflow host are ready.
-  $effect(() => {
-    if (editor) return
+  // Side effect: create Monaco once the container is ready; dispose on unmount.
+  onMount(() => {
     if (!container) return
-    if (overflowWidgetsDomNode === null) return
 
     const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
     if (measuredWidthPx <= 0) return
 
-    editor = monaco.editor.create(container, {
+    const nextEditor = monaco.editor.create(container, {
       value: initialValue,
       language: 'markdown',
       automaticLayout: false,
@@ -94,31 +90,25 @@
       cursorSmoothCaretAnimation: 'off',
       smoothScrolling: false,
       renderLineHighlightOnlyWhenFocus: true,
-      overflowWidgetsDomNode: overflowWidgetsDomNode ?? undefined,
+      overflowWidgetsDomNode,
       dimension: { width: measuredWidthPx, height: MIN_MONACO_HEIGHT_PX }
     })
 
-    registerMonacoEditor({ container, editor })
+    editor = nextEditor
+    registerMonacoEditor({ container, editor: nextEditor })
 
-    changeDisposable = editor.onDidChangeModelContent(handleContentChange)
-    blurDisposable = editor.onDidBlurEditorWidget(() => onBlur?.())
+    const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
+    const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
 
     layoutEditor()
     lastContainerWidthPx = containerWidthPx
-    emitChange(editor.getValue(), false, monacoHeightPx)
-  })
+    emitChange(nextEditor.getValue(), false, monacoHeightPx)
 
-  // Side effect: dispose Monaco/editor resources on unmount.
-  onMount(() => {
     return () => {
-      changeDisposable?.dispose()
-      blurDisposable?.dispose()
-      if (editor) {
-        unregisterMonacoEditor(editor)
-        editor.dispose()
-      }
-      changeDisposable = null
-      blurDisposable = null
+      changeDisposable.dispose()
+      blurDisposable.dispose()
+      unregisterMonacoEditor(nextEditor)
+      nextEditor.dispose()
       editor = null
     }
   })
