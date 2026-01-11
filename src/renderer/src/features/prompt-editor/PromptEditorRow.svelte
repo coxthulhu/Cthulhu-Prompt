@@ -55,9 +55,11 @@
     const baseHeightPx = measuredHeightPx ?? estimatedRowHeightPx
     return Math.max(MIN_MONACO_HEIGHT_PX, getMonacoHeightFromRowPx(baseHeightPx))
   })
-  let monacoHeightPx = $state<number>(placeholderMonacoHeightPx)
+  const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
+  let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
+  let isHydrated = $state(false)
 
   const SIDEBAR_WIDTH_PX = 24
   const ROW_GAP_PX = 8
@@ -114,6 +116,17 @@
       overflowHost = host
     }
   })
+
+  // Side effect: keep row height aligned with placeholder sizing while the editor is not hydrated.
+  $effect(() => {
+    if (isHydrated) return
+    monacoHeightPx = placeholderMonacoHeightPx
+  })
+
+  const handleHydrationChange = (nextIsHydrated: boolean) => {
+    isHydrated = nextIsHydrated
+    onHydrationChange?.(nextIsHydrated)
+  }
 </script>
 
 <div
@@ -148,7 +161,7 @@
                 {shouldDehydrate}
                 {rowId}
                 {scrollToWithinWindowBand}
-                {onHydrationChange}
+                onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {
                   if (meta.heightPx !== monacoHeightPx) {
                     monacoHeightPx = meta.heightPx
