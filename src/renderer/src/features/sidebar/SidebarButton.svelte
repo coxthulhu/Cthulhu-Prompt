@@ -31,16 +31,30 @@
     children?: () => unknown
   }>()
 
-  const normalizedBuilderProps =
+  // Derived builder props so handler/class updates stay reactive.
+  const normalizedBuilderProps = $derived.by(() =>
     typeof builderProps === 'object' && builderProps !== null ? builderProps : {}
-  const {
-    class: builderClass = '',
-    onclick: builderOnclick,
-    ...restBuilderProps
-  } = normalizedBuilderProps as Record<string, unknown>
-  const handleClick =
-    onclick ??
-    (typeof builderOnclick === 'function' ? (builderOnclick as typeof onclick) : undefined)
+  )
+  const builderClass = $derived.by(() => {
+    const props = normalizedBuilderProps as Record<string, unknown>
+    return (props.class as string) ?? ''
+  })
+  const builderOnclick = $derived.by(() => {
+    const props = normalizedBuilderProps as Record<string, unknown>
+    return props.onclick
+  })
+  const restBuilderProps = $derived.by(() => {
+    const props = normalizedBuilderProps as Record<string, unknown>
+    const rest = { ...props }
+    delete rest.class
+    delete rest.onclick
+    return rest
+  })
+  const handleClick = $derived.by(
+    () =>
+      onclick ??
+      (typeof builderOnclick === 'function' ? (builderOnclick as typeof onclick) : undefined)
+  )
   const resolvedDisabled = $derived(Boolean(disabled))
   const resolvedAriaDisabled = $derived(ariaDisabled ?? resolvedDisabled)
 </script>

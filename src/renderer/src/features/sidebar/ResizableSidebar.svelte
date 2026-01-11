@@ -15,7 +15,9 @@
     content: () => unknown
   }>()
 
-  let width = $state(defaultWidth)
+  // Snapshot the initial width so prop updates don't override drag changes.
+  const getInitialWidth = () => defaultWidth
+  let width = $state(getInitialWidth())
   let isDragging = $state(false)
   let startMouseX = 0
   let startWidth = 0

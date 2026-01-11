@@ -46,16 +46,15 @@
     onMoveUp: () => void
     onMoveDown: () => void
   } = $props()
-  const promptData = getPromptData(promptId)
-  const estimatedRowHeightPx = estimatePromptEditorHeight(
-    promptData.draft.text,
-    virtualWindowWidthPx,
-    virtualWindowHeightPx
+  // Derived prompt state and sizing so the row updates with virtual window changes.
+  const promptData = $derived.by(() => getPromptData(promptId))
+  const estimatedRowHeightPx = $derived.by(() =>
+    estimatePromptEditorHeight(promptData.draft.text, virtualWindowWidthPx, virtualWindowHeightPx)
   )
-  const placeholderMonacoHeightPx =
-    measuredHeightPx != null
-      ? Math.max(MIN_MONACO_HEIGHT_PX, getMonacoHeightFromRowPx(measuredHeightPx))
-      : Math.max(MIN_MONACO_HEIGHT_PX, getMonacoHeightFromRowPx(estimatedRowHeightPx))
+  const placeholderMonacoHeightPx = $derived.by(() => {
+    const baseHeightPx = measuredHeightPx ?? estimatedRowHeightPx
+    return Math.max(MIN_MONACO_HEIGHT_PX, getMonacoHeightFromRowPx(baseHeightPx))
+  })
   let monacoHeightPx = $state<number>(placeholderMonacoHeightPx)
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
