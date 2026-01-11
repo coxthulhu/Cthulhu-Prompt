@@ -9,11 +9,25 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
 const PROMPT_EDITOR_THEME_ID = 'cthulhu-prompt-dark'
+// Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
 const DISABLED_FIND_COMMANDS = [
   'actions.find',
   'actions.findWithSelection',
   'editor.actions.findWithArgs',
-  'editor.action.startFindReplaceAction'
+  'editor.action.startFindReplaceAction',
+  'editor.action.nextMatchFindAction',
+  'editor.action.previousMatchFindAction',
+  'editor.action.goToMatchFindAction',
+  'editor.action.nextSelectionMatchFindAction',
+  'editor.action.previousSelectionMatchFindAction',
+  'toggleFindCaseSensitive',
+  'toggleFindWholeWord',
+  'toggleFindRegex',
+  'toggleFindInSelection',
+  'togglePreserveCase',
+  'editor.action.replaceOne',
+  'editor.action.replaceAll',
+  'editor.action.selectAllMatches'
 ] as const
 
 // Tell Monaco how to spawn a worker for each language/feature
@@ -57,7 +71,19 @@ DISABLED_FIND_COMMANDS.forEach((id) => {
 monaco.editor.addKeybindingRules([
   { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, command: null },
   { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, command: null },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, command: null }
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, command: null },
+  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyC, command: null },
+  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyW, command: null },
+  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyR, command: null },
+  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyL, command: null },
+  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyP, command: null },
+  { keybinding: monaco.KeyCode.F3, command: null },
+  { keybinding: monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.F3, command: null },
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Digit1, command: null },
+  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null },
+  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null }
 ])
 
 // (Optionally) export monaco to reuse elsewhere
