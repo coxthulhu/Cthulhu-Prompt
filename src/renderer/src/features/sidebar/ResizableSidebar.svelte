@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte'
 
   let {
-    defaultWidth = 256,
+    defaultWidth = 240,
     minWidth = 200,
     maxWidth = 400,
     sidebar,
