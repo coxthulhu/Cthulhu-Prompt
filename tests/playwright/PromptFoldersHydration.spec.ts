@@ -15,6 +15,9 @@ const PLACEHOLDER_FOLDER_NAME = 'Placeholder Height'
 const PLACEHOLDER_PROMPT_SELECTOR = promptEditorSelector(PLACEHOLDER_PROMPT_ID)
 const PLACEHOLDER_SELECTOR = `${PLACEHOLDER_PROMPT_SELECTOR} ${MONACO_PLACEHOLDER_SELECTOR}`
 const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
+const MEASUREMENT_PROMPT_ID = 'measurement-1'
+const MEASUREMENT_PROMPT_SELECTOR = promptEditorSelector(MEASUREMENT_PROMPT_ID)
+const MEASUREMENT_PLACEHOLDER_SELECTOR = `${MEASUREMENT_PROMPT_SELECTOR} ${MONACO_PLACEHOLDER_SELECTOR}`
 const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 
 describe('Prompt Folder Hydration', () => {
@@ -137,6 +140,61 @@ describe('Prompt Folder Hydration', () => {
         })
       }
     }
+  })
+
+  test('shrinks hydrated prompt rows after expanding and shrinking the virtual window', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'long-wrapped-lines' }
+    })
+
+    await testHelpers.openPromptFolderAndWaitForHydrationReady({
+      folderName: LONG_SINGLE_LINE_FOLDER_NAME,
+      hostSelector: HOST_SELECTOR,
+      promptSelector: MEASUREMENT_PROMPT_SELECTOR,
+      placeholderSelector: MEASUREMENT_PLACEHOLDER_SELECTOR
+    })
+
+    const getEditorContentWidth = async (): Promise<number> => {
+      const width = await mainWindow.evaluate((selector) => {
+        const row = document.querySelector<HTMLElement>(selector)
+        if (!row) return null
+        const editor = row.children.item(1) as HTMLElement | null
+        if (!editor) return null
+        return Math.round(editor.getBoundingClientRect().width)
+      }, MEASUREMENT_PROMPT_SELECTOR)
+
+      if (width == null) {
+        throw new Error('Failed to read prompt editor content width')
+      }
+
+      return width
+    }
+
+    const initialWidth = await getEditorContentWidth()
+
+    const dragDistance = 180
+    await testHelpers.dragSidebarHandleBy(dragDistance)
+    await mainWindow.waitForTimeout(300)
+
+    const narrowedWidth = await getEditorContentWidth()
+    expect(narrowedWidth).toBeLessThan(initialWidth)
+    expect(initialWidth - narrowedWidth).toBeGreaterThan(20)
+
+    await testHelpers.dragSidebarHandleBy(-dragDistance)
+    await mainWindow.waitForTimeout(300)
+
+    const expandedWidth = await getEditorContentWidth()
+    expect(expandedWidth).toBeGreaterThan(narrowedWidth)
+    expect(expandedWidth - narrowedWidth).toBeGreaterThan(20)
+
+    await testHelpers.dragSidebarHandleBy(dragDistance)
+    await mainWindow.waitForTimeout(300)
+
+    const resizedWidth = await getEditorContentWidth()
+    expect(resizedWidth).toBeLessThan(expandedWidth)
+    expect(expandedWidth - resizedWidth).toBeGreaterThan(20)
   })
 
   test('retains scroll anchor offset after hydration in long wrapped singles', async ({

@@ -137,7 +137,7 @@
 >
   <PromptEditorSidebar {onMoveUp} {onMoveDown} />
 
-  <div class="bg-background flex-1">
+  <div class="bg-background flex-1 min-w-0">
     <div class="flex min-w-0">
       <div class="flex-1 flex flex-col min-w-0">
         <PromptEditorTitleBar
