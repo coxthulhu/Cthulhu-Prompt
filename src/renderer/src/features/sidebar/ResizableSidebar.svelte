@@ -2,15 +2,15 @@
   import { onDestroy } from 'svelte'
 
   let {
-    defaultWidth = 240,
-    minWidth = 200,
-    maxWidth = 400,
+    defaultWidth,
+    minWidth,
+    maxWidth,
     sidebar,
     content
   } = $props<{
-    defaultWidth?: number
-    minWidth?: number
-    maxWidth?: number
+    defaultWidth: number
+    minWidth: number
+    maxWidth: number
     sidebar: () => unknown
     content: () => unknown
   }>()
