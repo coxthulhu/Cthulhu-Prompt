@@ -200,6 +200,13 @@ export function setupWorkspaceScenario(
         promptText: 'one line'
       }))
 
+      // Empty: many empty prompts for Monaco autoscroll tests
+      const emptyPrompts = Array.from({ length: 80 }, (_, i) => ({
+        id: `empty-${i + 1}`,
+        title: `Empty ${i + 1}`,
+        promptText: ''
+      }))
+
       // Mixed: small + medium + large examples
       const mixedPrompts = [
         heightTestPrompts.singleLine,
@@ -239,6 +246,7 @@ export function setupWorkspaceScenario(
 
       return createWorkspaceWithFolders(workspacePath, [
         { folderName: 'Short', displayName: 'Short', prompts: shortPrompts },
+        { folderName: 'Empty', displayName: 'Empty', prompts: emptyPrompts },
         { folderName: 'Mixed', displayName: 'Mixed', prompts: mixedPrompts },
         { folderName: 'Long', displayName: 'Long', prompts: longPrompts },
         { folderName: 'LongMixed', displayName: 'Long Mixed', prompts: longMixedPrompts }
