@@ -73,6 +73,24 @@
       ?.focus(options)
   }
 
+  const scrollCursorIntoBand = (position: monaco.IPosition | null) => {
+    if (!editor || !scrollToWithinWindowBand || !position) return
+
+    const domNode = editor.getDomNode()
+    if (!domNode) return
+    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
+    if (!rowElement) return
+
+    const visiblePosition = editor.getScrolledVisiblePosition(position)
+    if (!visiblePosition) return
+
+    const rowRect = rowElement.getBoundingClientRect()
+    const editorRect = domNode.getBoundingClientRect()
+    const centerOffsetPx =
+      editorRect.top - rowRect.top + visiblePosition.top + visiblePosition.height / 2
+    scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
+  }
+
   const handleContentChange = () => {
     if (!editor) return
     const nextValue = editor.getValue()
@@ -81,6 +99,7 @@
 
     if (didResize) {
       layoutEditor(nextHeightPx)
+      scrollCursorIntoBand(editor.getPosition())
     }
 
     emitChange(nextValue, didResize, monacoHeightPx)
@@ -94,19 +113,7 @@
     if (event.source === 'api') return
     if (event.source === 'mouse' && event.reason === monaco.editor.CursorChangeReason.Explicit) return
 
-    const domNode = editor.getDomNode()
-    if (!domNode) return
-    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
-    if (!rowElement) return
-
-    const visiblePosition = editor.getScrolledVisiblePosition(event.position)
-    if (!visiblePosition) return
-
-    const rowRect = rowElement.getBoundingClientRect()
-    const editorRect = domNode.getBoundingClientRect()
-    const centerOffsetPx =
-      editorRect.top - rowRect.top + visiblePosition.top + visiblePosition.height / 2
-    scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
+    scrollCursorIntoBand(event.position)
   }
 
   // Side effect: create Monaco once the container is ready; dispose on unmount.
