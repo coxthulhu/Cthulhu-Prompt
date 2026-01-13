@@ -228,66 +228,85 @@
 {#if isFindOpen && isFindAvailable}
   <div
     class="monaco-editor vs-dark"
-    style="position: fixed; top: 10px; right: 10px; width: 320px; z-index: 40;"
+    style="position: fixed; top: 0; right: 14px; width: 320px; z-index: 40;"
   >
     <div class="editor-widget find-widget visible" style="width: 320px; transition: none;">
       <div class="find-part">
         <div class="monaco-findInput">
-          <div
-            class="monaco-inputbox idle"
-            class:synthetic-focus={isFindInputFocused}
-            style="background-color: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent);"
-          >
-            <div class="ibwrapper">
-              <textarea
-                bind:this={findInput}
-                bind:value={promptFolderFindState.query}
-                class="input"
-                class:empty={!promptFolderFindState.query}
-                rows="1"
-                wrap="off"
-                placeholder="Find"
-                aria-label="Find"
-                spellcheck="false"
-                onfocus={() => {
-                  isFindInputFocused = true
-                }}
-                onblur={() => {
-                  isFindInputFocused = false
-                }}
-              ></textarea>
-              <div class="mirror">{promptFolderFindState.query || ' '}</div>
+          <div class="monaco-scrollable-element" role="presentation" style="position: relative; overflow: hidden;">
+            <div
+              class="monaco-inputbox idle"
+              class:synthetic-focus={isFindInputFocused}
+              style="background-color: var(--vscode-input-background, #3c3c3c); color: var(--vscode-input-foreground, #cccccc); border: 1px solid var(--vscode-input-border, transparent);"
+            >
+              <div class="ibwrapper">
+                <textarea
+                  bind:this={findInput}
+                  bind:value={promptFolderFindState.query}
+                  class="input"
+                  class:empty={!promptFolderFindState.query}
+                  rows="1"
+                  wrap="off"
+                  placeholder="Find"
+                  aria-label="Find"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  style="background-color: inherit;"
+                  onfocus={() => {
+                    isFindInputFocused = true
+                  }}
+                  onblur={() => {
+                    isFindInputFocused = false
+                  }}
+                ></textarea>
+                <div class="mirror">{promptFolderFindState.query || ' '}</div>
+              </div>
             </div>
           </div>
+          <div class="controls" style="display: none;"></div>
         </div>
         <div class="find-actions">
-          <div class="matchesCount">0 of 0</div>
-          <button
-            class="button previous codicon codicon-arrow-up"
-            type="button"
+          <div class="matchesCount" style="min-width: 69px;">0 of 0</div>
+          <div
+            class="button previous codicon codicon-find-previous-match"
+            role="button"
+            tabindex="0"
             title="Find Previous"
             aria-label="Find Previous"
-            style="background: none; border: none;"
             onclick={() => {}}
-          ></button>
-          <button
-            class="button next codicon codicon-arrow-down"
-            type="button"
+            onkeydown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+            }}
+          ></div>
+          <div
+            class="button next codicon codicon-find-next-match"
+            role="button"
+            tabindex="0"
             title="Find Next"
             aria-label="Find Next"
-            style="background: none; border: none;"
             onclick={() => {}}
-          ></button>
+            onkeydown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+            }}
+          ></div>
         </div>
       </div>
-      <button
+      <div
         class="button codicon codicon-widget-close"
-        type="button"
+        role="button"
+        tabindex="0"
         title="Close"
         aria-label="Close"
-        style="background: none; border: none;"
         onclick={closeFindDialog}
-      ></button>
+        onkeydown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          closeFindDialog()
+        }}
+      ></div>
     </div>
   </div>
 {/if}
