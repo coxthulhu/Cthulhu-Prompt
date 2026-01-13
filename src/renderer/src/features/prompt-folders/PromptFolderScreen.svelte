@@ -24,11 +24,11 @@
     movePromptUpInFolder
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import { promptFolderFindState } from './promptFolderFindState.svelte.ts'
+  import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
   let findInput = $state<HTMLTextAreaElement | null>(null)
-  let isFindInputFocused = $state(false)
 
   // Side effect: reload prompts and close the find dialog when the selected folder changes.
   $effect(() => {
@@ -228,93 +228,12 @@
 </main>
 
 {#if isFindOpen && isFindAvailable}
-  <div
-    class="monaco-editor vs-dark monaco-find-widget-host"
-    style="position: fixed; top: 0; right: 18px; width: 320px; z-index: 40;"
-  >
-    <div
-      class="editor-widget find-widget visible"
-      class:no-results={hasNoFindResults}
-      style="width: 320px; transition: none;"
-    >
-      <div class="find-part">
-        <div class="monaco-findInput">
-          <div class="monaco-scrollable-element" role="presentation" style="position: relative; overflow: hidden;">
-            <div
-              class="monaco-inputbox idle"
-              class:synthetic-focus={isFindInputFocused}
-              style="background-color: var(--vscode-input-background, #3c3c3c); color: var(--vscode-input-foreground, #cccccc); border: 1px solid var(--vscode-input-border, transparent);"
-            >
-              <div class="ibwrapper">
-                <textarea
-                  bind:this={findInput}
-                  bind:value={promptFolderFindState.query}
-                  class="input"
-                  class:empty={!promptFolderFindState.query}
-                  rows="1"
-                  wrap="off"
-                  placeholder="Find"
-                  aria-label="Find"
-                  autocorrect="off"
-                  autocapitalize="off"
-                  spellcheck="false"
-                  style="background-color: inherit;"
-                  onfocus={() => {
-                    isFindInputFocused = true
-                  }}
-                  onblur={() => {
-                    isFindInputFocused = false
-                  }}
-                ></textarea>
-                <div class="mirror">{promptFolderFindState.query || ' '}</div>
-              </div>
-            </div>
-          </div>
-          <div class="controls" style="display: none;"></div>
-        </div>
-        <div class="find-actions">
-          <div class="matchesCount" style="min-width: 69px;">{matchesLabel}</div>
-          <div
-            class="button previous codicon codicon-find-previous-match"
-            role="button"
-            tabindex="0"
-            title="Find Previous"
-            aria-label="Find Previous"
-            onclick={() => {}}
-            onkeydown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return
-              event.preventDefault()
-            }}
-          ></div>
-          <div
-            class="button next codicon codicon-find-next-match"
-            role="button"
-            tabindex="0"
-            title="Find Next"
-            aria-label="Find Next"
-            onclick={() => {}}
-            onkeydown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return
-              event.preventDefault()
-            }}
-          ></div>
-        </div>
-      </div>
-      <div
-        class="button codicon codicon-widget-close"
-        role="button"
-        tabindex="0"
-        title="Close"
-        aria-label="Close"
-        onclick={closeFindDialog}
-        onkeydown={(event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return
-          event.preventDefault()
-          closeFindDialog()
-        }}
-      ></div>
-    </div>
-  </div>
+  <PromptFolderFindWidget
+    bind:inputEl={findInput}
+    {matchesLabel}
+    hasNoResults={hasNoFindResults}
+    onClose={closeFindDialog}
+  />
 {/if}
 
 {#snippet headerRow({ row })}

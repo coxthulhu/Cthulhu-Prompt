@@ -152,18 +152,3 @@
   font-size: 16px;
   line-height: 16px;
 }
-
-/* Monaco find widget buttons assume content-box so padding doesn't shrink icon size. */
-.monaco-editor .find-widget .button,
-.monaco-editor .find-widget .codicon-find-selection {
-  box-sizing: content-box;
-}
-
-/* Monaco default theme leaves widget border unset; provide a visible fallback for the find widget. */
-.monaco-editor.monaco-find-widget-host {
-  --vscode-widget-border: var(--vscode-editorWidget-border, #454545);
-  --vscode-input-border: var(--vscode-editorWidget-border, #454545);
-  --vscode-input-background: #313131;
-  --vscode-input-foreground: #cccccc;
-  --vscode-editorWidget-background: #202020;
-}
