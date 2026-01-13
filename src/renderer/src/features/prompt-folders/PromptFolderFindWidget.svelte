@@ -19,7 +19,11 @@
 </script>
 
 <div class="prompt-find-widget-host">
-  <div class="prompt-find-widget" class:prompt-find-widget--no-results={hasNoResults}>
+  <div
+    class="prompt-find-widget"
+    class:prompt-find-widget--no-results={hasNoResults}
+    data-testid="prompt-find-widget"
+  >
     <div class="prompt-find-widget__find-part">
       <div class="prompt-find-input">
         <div class="prompt-find-input__scroll" role="presentation">
@@ -30,6 +34,7 @@
                 bind:value={promptFolderFindState.query}
                 class="prompt-find-input__field"
                 class:empty={!promptFolderFindState.query}
+                data-testid="prompt-find-input"
                 rows="1"
                 wrap="off"
                 placeholder="Find"
@@ -53,6 +58,7 @@
         <div
           class="prompt-find-widget__button codicon codicon-find-previous-match"
           class:prompt-find-widget__button--disabled={isQueryEmpty}
+          data-testid="prompt-find-prev"
           role="button"
           tabindex={isQueryEmpty ? -1 : 0}
           title="Find Previous"
@@ -70,6 +76,7 @@
         <div
           class="prompt-find-widget__button codicon codicon-find-next-match"
           class:prompt-find-widget__button--disabled={isQueryEmpty}
+          data-testid="prompt-find-next"
           role="button"
           tabindex={isQueryEmpty ? -1 : 0}
           title="Find Next"
@@ -88,6 +95,7 @@
     </div>
     <div
       class="prompt-find-widget__button prompt-find-widget__close codicon codicon-widget-close"
+      data-testid="prompt-find-close"
       role="button"
       tabindex="0"
       title="Close"
