@@ -117,18 +117,20 @@
     position: fixed;
     top: 0;
     right: 18px;
-    width: 320px;
+    width: 400px;
     z-index: 40;
   }
 
   .prompt-find-widget {
     position: relative;
-    width: 320px;
+    width: 400px;
     height: 33px;
     overflow: hidden;
     line-height: 19px;
     padding: 0 4px;
     box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
     transition: none;
     transform: translateY(0);
     box-shadow: 0 0 8px 2px var(--prompt-find-widget-shadow);
@@ -144,9 +146,11 @@
   }
 
   .prompt-find-widget__find-part {
-    margin: 3px 25px 0 17px;
+    /* No toggle buttons on either side, so keep padding tight. */
+    margin: 3px 4px 0 4px;
     font-size: 12px;
     display: flex;
+    flex: 1;
   }
 
   .prompt-find-input {
@@ -279,9 +283,7 @@
   }
 
   .prompt-find-widget__close {
-    position: absolute;
-    top: 5px;
-    right: 4px;
+    margin: 5px 0 0 0;
   }
 
   .prompt-find-widget--no-results .prompt-find-widget__matches {
