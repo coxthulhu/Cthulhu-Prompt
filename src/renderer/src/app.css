@@ -160,9 +160,10 @@
 }
 
 /* Monaco default theme leaves widget border unset; provide a visible fallback for the find widget. */
-.monaco-find-widget-host {
+.monaco-editor.monaco-find-widget-host {
   --vscode-widget-border: var(--vscode-editorWidget-border, #454545);
   --vscode-input-border: var(--vscode-editorWidget-border, #454545);
-  --vscode-input-background: #3c3c3c;
+  --vscode-input-background: #313131;
   --vscode-input-foreground: #cccccc;
+  --vscode-editorWidget-background: #202020;
 }
