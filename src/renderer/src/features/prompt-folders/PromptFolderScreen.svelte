@@ -40,6 +40,8 @@
   const isFindAvailable = $derived(
     Boolean(folderData && !folderData.isLoading && !folderData.errorMessage)
   )
+  const hasNoFindResults = $derived(Boolean(promptFolderFindState.query))
+  const matchesLabel = $derived.by(() => (hasNoFindResults ? 'No results' : '0 of 0'))
 
   const focusFindInput = async () => {
     // Side effect: wait for the dialog to render before focusing the input.
@@ -230,7 +232,11 @@
     class="monaco-editor vs-dark monaco-find-widget-host"
     style="position: fixed; top: 0; right: 18px; width: 320px; z-index: 40;"
   >
-    <div class="editor-widget find-widget visible" style="width: 320px; transition: none;">
+    <div
+      class="editor-widget find-widget visible"
+      class:no-results={hasNoFindResults}
+      style="width: 320px; transition: none;"
+    >
       <div class="find-part">
         <div class="monaco-findInput">
           <div class="monaco-scrollable-element" role="presentation" style="position: relative; overflow: hidden;">
@@ -267,7 +273,7 @@
           <div class="controls" style="display: none;"></div>
         </div>
         <div class="find-actions">
-          <div class="matchesCount" style="min-width: 69px;">0 of 0</div>
+          <div class="matchesCount" style="min-width: 69px;">{matchesLabel}</div>
           <div
             class="button previous codicon codicon-find-previous-match"
             role="button"
