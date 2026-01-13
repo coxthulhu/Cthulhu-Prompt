@@ -27,7 +27,7 @@
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
-  let findInput = $state<HTMLInputElement | null>(null)
+  let findInput = $state<HTMLTextAreaElement | null>(null)
   let isFindInputFocused = $state(false)
 
   // Side effect: reload prompts and close the find dialog when the selected folder changes.
@@ -230,20 +230,24 @@
     class="monaco-editor vs-dark"
     style="position: fixed; top: 10px; right: 10px; width: 320px; z-index: 40;"
   >
-    <div class="find-widget visible" style="width: 320px; transition: none;">
+    <div class="editor-widget find-widget visible" style="width: 320px; transition: none;">
       <div class="find-part">
         <div class="monaco-findInput">
-          <div class="monaco-inputbox" class:synthetic-focus={isFindInputFocused}>
+          <div
+            class="monaco-inputbox idle"
+            class:synthetic-focus={isFindInputFocused}
+            style="background-color: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent);"
+          >
             <div class="ibwrapper">
-              <input
+              <textarea
                 bind:this={findInput}
                 bind:value={promptFolderFindState.query}
                 class="input"
-                type="text"
+                class:empty={!promptFolderFindState.query}
+                rows="1"
+                wrap="off"
                 placeholder="Find"
                 aria-label="Find"
-                autocorrect="off"
-                autocapitalize="off"
                 spellcheck="false"
                 onfocus={() => {
                   isFindInputFocused = true
@@ -251,7 +255,8 @@
                 onblur={() => {
                   isFindInputFocused = false
                 }}
-              />
+              ></textarea>
+              <div class="mirror">{promptFolderFindState.query || ' '}</div>
             </div>
           </div>
         </div>
