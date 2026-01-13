@@ -138,6 +138,9 @@
   let programmaticScroll = false
   let programmaticScrollVersion = 0
 
+  // Derived fade for the top scroll decoration so it eases in like Monaco's shadow.
+  const scrollDecorationOpacity = $derived(Math.max(0, Math.min(1, scrollTopPx / 12)))
+
   const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? viewportHeight / 2 : 0)
 
   // Anchor viewport math to the scroll position we will apply after layout changes.
@@ -403,54 +406,74 @@
   })
 </script>
 
-<div
-  bind:this={scrollContainer}
-  class="h-full w-full"
-  style="overflow-anchor: none; overflow-y: scroll; overflow-x: hidden; position: relative;"
-  data-testid="virtual-window"
-  onscroll={handleScroll}
->
+<div class="relative h-full w-full">
+  <div
+    bind:this={scrollContainer}
+    class="h-full w-full"
+    style="overflow-anchor: none; overflow-y: scroll; overflow-x: hidden; position: relative;"
+    data-testid="virtual-window"
+    onscroll={handleScroll}
+  >
+    <div
+      aria-hidden="true"
+      data-testid="virtual-window-spacer"
+      style={`height:${totalHeightPx}px; width:1px; pointer-events:none;`}
+    ></div>
+
+    <div style="position:absolute; inset:0;">
+      {#each visibleRows as row (row.id)}
+        <div style={rowWrapperStyle(row)}>
+          <div
+            style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+          >
+            {@render row.snippet({
+              index: row.index,
+              row: row.rowData,
+              rowId: row.id,
+              virtualWindowWidthPx: measurementWidth,
+              virtualWindowHeightPx: viewportHeight,
+              devicePixelRatio,
+              measuredHeightPx: row.measuredHeightPx,
+              hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
+              shouldDehydrate: shouldDehydrateRow(row),
+              overlayRowElement: overlayRowElements.get(row.id) ?? null,
+              scrollToWithinWindowBand,
+              onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+            })}
+          </div>
+        </div>
+      {/each}
+    </div>
+
+    <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
+      {#each visibleRows as row (row.id)}
+        {#if rowNeedsOverlay(row)}
+          <div style={overlayRowWrapperStyle(row)}>
+            <div
+              use:registerOverlayRow={row.id}
+              style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+            ></div>
+          </div>
+        {/if}
+      {/each}
+    </div>
+  </div>
+
   <div
     aria-hidden="true"
-    data-testid="virtual-window-spacer"
-    style={`height:${totalHeightPx}px; width:1px; pointer-events:none;`}
+    class="virtual-window-scroll-decoration"
+    style={`opacity:${scrollDecorationOpacity};`}
   ></div>
-
-  <div style="position:absolute; inset:0;">
-    {#each visibleRows as row (row.id)}
-      <div style={rowWrapperStyle(row)}>
-        <div
-          style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
-        >
-          {@render row.snippet({
-            index: row.index,
-            row: row.rowData,
-            rowId: row.id,
-            virtualWindowWidthPx: measurementWidth,
-            virtualWindowHeightPx: viewportHeight,
-            devicePixelRatio,
-            measuredHeightPx: row.measuredHeightPx,
-            hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
-            shouldDehydrate: shouldDehydrateRow(row),
-            overlayRowElement: overlayRowElements.get(row.id) ?? null,
-            scrollToWithinWindowBand,
-            onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
-          })}
-        </div>
-      </div>
-    {/each}
-  </div>
-
-  <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
-    {#each visibleRows as row (row.id)}
-      {#if rowNeedsOverlay(row)}
-        <div style={overlayRowWrapperStyle(row)}>
-          <div
-            use:registerOverlayRow={row.id}
-            style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
-          ></div>
-        </div>
-      {/if}
-    {/each}
-  </div>
 </div>
+
+<style>
+  .virtual-window-scroll-decoration {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 8px;
+    pointer-events: none;
+    z-index: 10;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0));
+    transition: opacity 120ms ease-out;
+  }
+</style>
