@@ -228,7 +228,7 @@
 {#if isFindOpen && isFindAvailable}
   <div
     class="monaco-editor vs-dark monaco-find-widget-host"
-    style="position: fixed; top: 0; right: 14px; width: 320px; z-index: 40;"
+    style="position: fixed; top: 0; right: 18px; width: 320px; z-index: 40;"
   >
     <div class="editor-widget find-widget visible" style="width: 320px; transition: none;">
       <div class="find-part">
