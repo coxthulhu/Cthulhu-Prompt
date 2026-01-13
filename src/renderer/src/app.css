@@ -158,3 +158,8 @@
 .monaco-editor .find-widget .codicon-find-selection {
   box-sizing: content-box;
 }
+
+/* Monaco default theme leaves widget border unset; provide a visible fallback for the find widget. */
+.monaco-find-widget-host {
+  --vscode-widget-border: var(--vscode-editorWidget-border, #454545);
+}
