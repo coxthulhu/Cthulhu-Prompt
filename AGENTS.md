@@ -2,7 +2,7 @@
 
 ## Project Description
 
-This repository contains Cthulhu Prompt, a Windows application that stores and helps the user to handle their AI prompts. These prompts are typically used for coding, and can be created, formatted, and organized. Ultimately, these prompts are copied out of the Cthulhu Prompt into an AI coding application like Claude Code, Codex CLI, or other online or on-device AI interfaces.
+This repository contains Cthulhu Prompt, an Electron application that stores and helps the user to handle their AI prompts. These prompts are typically used for coding, and can be created, formatted, and organized. Ultimately, these prompts are copied out of the Cthulhu Prompt into an AI coding application like Claude Code, Codex CLI, or other online or on-device AI interfaces.
 
 ## Coding Guidelines
 
@@ -14,6 +14,7 @@ This repository contains Cthulhu Prompt, a Windows application that stores and h
 - Always follow Svelte 5 best practices. Avoid Svelte 4 styled code.
 - Avoid deprecated `<slot>` rendering; prefer `{@render ...}` or explicit children functions to keep Svelte 5 warnings clean.
 - When using render functions/snippets, declare `{#snippet ...}` inline inside the consumer’s component tags instead of passing snippet props where possible, to keep markup concise and consistent.
+- We are only building for Windows. Other operating systems are not yet supported and support should not be programmed for them.
 
 ## Project Structure & Module Organization
 
