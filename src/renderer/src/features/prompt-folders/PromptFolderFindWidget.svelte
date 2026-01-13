@@ -14,6 +14,8 @@
   }>()
 
   let isInputFocused = $state(false)
+  // Derived state: disable navigation buttons when there is no active query.
+  const isQueryEmpty = $derived(promptFolderFindState.query.length === 0)
 </script>
 
 <div class="prompt-find-widget-host">
@@ -50,24 +52,34 @@
         <div class="prompt-find-widget__matches">{matchesLabel}</div>
         <div
           class="prompt-find-widget__button codicon codicon-find-previous-match"
+          class:prompt-find-widget__button--disabled={isQueryEmpty}
           role="button"
-          tabindex="0"
+          tabindex={isQueryEmpty ? -1 : 0}
           title="Find Previous"
           aria-label="Find Previous"
-          onclick={() => {}}
+          aria-disabled={isQueryEmpty}
+          onclick={() => {
+            if (isQueryEmpty) return
+          }}
           onkeydown={(event) => {
+            if (isQueryEmpty) return
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()
           }}
         ></div>
         <div
           class="prompt-find-widget__button codicon codicon-find-next-match"
+          class:prompt-find-widget__button--disabled={isQueryEmpty}
           role="button"
-          tabindex="0"
+          tabindex={isQueryEmpty ? -1 : 0}
           title="Find Next"
           aria-label="Find Next"
-          onclick={() => {}}
+          aria-disabled={isQueryEmpty}
+          onclick={() => {
+            if (isQueryEmpty) return
+          }}
           onkeydown={(event) => {
+            if (isQueryEmpty) return
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()
           }}
@@ -258,6 +270,12 @@
 
   .prompt-find-widget__button:hover {
     background-color: var(--prompt-find-toolbar-hover);
+  }
+
+  .prompt-find-widget__button--disabled {
+    cursor: default;
+    opacity: 0.4;
+    pointer-events: none;
   }
 
   .prompt-find-widget__close {
