@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, tick } from 'svelte'
   import type { PromptFolder } from '@shared/ipc'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
@@ -22,15 +23,78 @@
     movePromptDownInFolder,
     movePromptUpInFolder
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
+  import { promptFolderFindState } from './promptFolderFindState.svelte.ts'
 
   let { folder } = $props<{ folder: PromptFolder }>()
+  let isFindOpen = $state(false)
+  let findInput = $state<HTMLInputElement | null>(null)
+  let isFindInputFocused = $state(false)
 
-  // Side effect: always reload prompts when the selected folder changes.
+  // Side effect: reload prompts and close the find dialog when the selected folder changes.
   $effect(() => {
+    isFindOpen = false
     void loadPromptFolder(folder.folderName)
   })
 
   const folderData = $derived(getPromptFolderData(folder.folderName))
+  const isFindAvailable = $derived(
+    Boolean(folderData && !folderData.isLoading && !folderData.errorMessage)
+  )
+
+  const focusFindInput = async () => {
+    // Side effect: wait for the dialog to render before focusing the input.
+    await tick()
+    if (!findInput) return
+    findInput.focus()
+    findInput.select()
+  }
+
+  const openFindDialog = () => {
+    if (!isFindAvailable) return
+    isFindOpen = true
+    void focusFindInput()
+  }
+
+  const closeFindDialog = () => {
+    isFindOpen = false
+  }
+
+  // Side effect: close the find dialog when the screen is loading or errored.
+  $effect(() => {
+    if (!isFindAvailable && isFindOpen) {
+      isFindOpen = false
+    }
+  })
+
+  // Side effect: capture global find/escape shortcuts while the prompt folder screen is active.
+  onMount(() => {
+    const handleGlobalKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (!isFindOpen) return
+        event.preventDefault()
+        event.stopPropagation()
+        closeFindDialog()
+        return
+      }
+
+      if (
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === 'f'
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        openFindDialog()
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeydown, { capture: true })
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeydown, { capture: true })
+    }
+  })
 
   type PromptFolderRow =
     | { kind: 'header'; promptCount: number; isLoading: boolean; folder: PromptFolder }
@@ -160,6 +224,68 @@
     </div>
   {/if}
 </main>
+
+{#if isFindOpen && isFindAvailable}
+  <div
+    class="monaco-editor vs-dark"
+    style="position: fixed; top: 10px; right: 10px; width: 320px; z-index: 40;"
+  >
+    <div class="find-widget visible" style="width: 320px; transition: none;">
+      <div class="find-part">
+        <div class="monaco-findInput">
+          <div class="monaco-inputbox" class:synthetic-focus={isFindInputFocused}>
+            <div class="ibwrapper">
+              <input
+                bind:this={findInput}
+                bind:value={promptFolderFindState.query}
+                class="input"
+                type="text"
+                placeholder="Find"
+                aria-label="Find"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                onfocus={() => {
+                  isFindInputFocused = true
+                }}
+                onblur={() => {
+                  isFindInputFocused = false
+                }}
+              />
+            </div>
+          </div>
+        </div>
+        <div class="find-actions">
+          <div class="matchesCount">0 of 0</div>
+          <button
+            class="button previous codicon codicon-arrow-up"
+            type="button"
+            title="Find Previous"
+            aria-label="Find Previous"
+            style="background: none; border: none;"
+            onclick={() => {}}
+          ></button>
+          <button
+            class="button next codicon codicon-arrow-down"
+            type="button"
+            title="Find Next"
+            aria-label="Find Next"
+            style="background: none; border: none;"
+            onclick={() => {}}
+          ></button>
+        </div>
+      </div>
+      <button
+        class="button codicon codicon-widget-close"
+        type="button"
+        title="Close"
+        aria-label="Close"
+        style="background: none; border: none;"
+        onclick={closeFindDialog}
+      ></button>
+    </div>
+  </div>
+{/if}
 
 {#snippet headerRow({ row })}
   <div class="pt-6">
