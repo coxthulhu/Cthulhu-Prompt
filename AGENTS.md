@@ -10,11 +10,11 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - When adding Svelte lifecycle or reactivity (e.g., `onMount`, `onDestroy`, `tick`, reactive statements), include a short comment explaining its side effect/purpose; in Svelte 5 prefer runes/reactivity and avoid `beforeUpdate`/`afterUpdate`.
 - Always use Svelte 5 Runes.
 - Always use Svelte 5 Runes to store state instead of using Svelte's stores.
-- Always use Svelte 5 snippets. Do not use slots.
+- Always use Svelte 5 snippets. Never use slots.
 - Always follow Svelte 5 best practices. Avoid Svelte 4 styled code.
 - Avoid deprecated `<slot>` rendering; prefer `{@render ...}` or explicit children functions to keep Svelte 5 warnings clean.
 - When using render functions/snippets, declare `{#snippet ...}` inline inside the consumer’s component tags instead of passing snippet props where possible, to keep markup concise and consistent.
-- We are only building for Windows. Other operating systems are not yet supported and support should not be programmed for them.
+- We are only developing support for Windows. Never develop support for other operating systems.
 
 ## Project Structure & Module Organization
 
