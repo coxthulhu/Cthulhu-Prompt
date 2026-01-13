@@ -170,7 +170,7 @@
   }
 </script>
 
-<ResizableSidebar defaultWidth={220} minWidth={220} maxWidth={400}>
+<ResizableSidebar defaultWidth={200} minWidth={200} maxWidth={400}>
   {#snippet sidebar()}
     <AppSidebar
       {activeScreen}
