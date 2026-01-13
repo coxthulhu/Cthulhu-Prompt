@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -43,8 +44,8 @@
     onHydrationChange?: (isHydrated: boolean) => void
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete: () => void
-    onMoveUp: () => void
-    onMoveDown: () => void
+    onMoveUp: () => Promise<boolean>
+    onMoveDown: () => Promise<boolean>
   } = $props()
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => getPromptData(promptId))
@@ -127,6 +128,17 @@
     isHydrated = nextIsHydrated
     onHydrationChange?.(nextIsHydrated)
   }
+
+  const handleMovePrompt = async (offsetPx: number, moveAction: () => Promise<boolean>) => {
+    const didMove = await moveAction()
+    if (!didMove) return
+    // Side effect: wait for virtual row positions to update before scrolling to the moved prompt.
+    await tick()
+    scrollToWithinWindowBand!(rowId, offsetPx, 'minimal')
+  }
+
+  const handleMoveUp = () => handleMovePrompt(0, onMoveUp)
+  const handleMoveDown = () => handleMovePrompt(rowHeightPx, onMoveDown)
 </script>
 
 <div
@@ -135,7 +147,7 @@
   data-testid={`prompt-editor-${promptId}`}
   data-prompt-editor-row
 >
-  <PromptEditorSidebar {onMoveUp} {onMoveDown} />
+  <PromptEditorSidebar onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
 
   <div class="bg-background flex-1 min-w-0">
     <div class="flex min-w-0">

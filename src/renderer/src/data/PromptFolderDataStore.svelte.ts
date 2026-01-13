@@ -172,12 +172,12 @@ const reorderPromptInFolder = async (
   folderName: string,
   promptId: string,
   previousPromptId: string | null
-): Promise<void> => {
+): Promise<boolean> => {
   const folderData = promptFolderDataByFolderName.get(folderName)
-  if (!folderData) return
+  if (!folderData) return false
 
   const nextPromptIds = reorderPromptIds(folderData.promptIds, promptId, previousPromptId)
-  if (!nextPromptIds) return
+  if (!nextPromptIds) return false
 
   try {
     await ipcInvoke<WorkspaceResult, ReorderPromptRequestPayload>('reorder-prompt', {
@@ -188,39 +188,41 @@ const reorderPromptInFolder = async (
     })
 
     folderData.promptIds = nextPromptIds
+    return true
   } catch {
     // Intentionally ignore reorder errors to keep the UI quiet.
+    return false
   }
 }
 
 export const movePromptUpInFolder = async (
   folderName: string,
   promptId: string
-): Promise<void> => {
+): Promise<boolean> => {
   const folderData = promptFolderDataByFolderName.get(folderName)
-  if (!folderData) return
+  if (!folderData) return false
 
   const { promptIds } = folderData
   const currentIndex = promptIds.indexOf(promptId)
-  if (currentIndex <= 0) return
+  if (currentIndex <= 0) return false
 
   const previousPromptId = currentIndex <= 1 ? null : promptIds[currentIndex - 2]
-  await reorderPromptInFolder(folderName, promptId, previousPromptId)
+  return await reorderPromptInFolder(folderName, promptId, previousPromptId)
 }
 
 export const movePromptDownInFolder = async (
   folderName: string,
   promptId: string
-): Promise<void> => {
+): Promise<boolean> => {
   const folderData = promptFolderDataByFolderName.get(folderName)
-  if (!folderData) return
+  if (!folderData) return false
 
   const { promptIds } = folderData
   const currentIndex = promptIds.indexOf(promptId)
-  if (currentIndex === -1 || currentIndex >= promptIds.length - 1) return
+  if (currentIndex === -1 || currentIndex >= promptIds.length - 1) return false
 
   const previousPromptId = promptIds[currentIndex + 1]
-  await reorderPromptInFolder(folderName, promptId, previousPromptId)
+  return await reorderPromptInFolder(folderName, promptId, previousPromptId)
 }
 
 export const deletePromptInFolder = async (folderName: string, promptId: string): Promise<void> => {

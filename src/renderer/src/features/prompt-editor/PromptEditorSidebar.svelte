@@ -2,7 +2,10 @@
   import Button from '@renderer/common/ui/button/button.svelte'
   import { ChevronDown, ChevronUp } from 'lucide-svelte'
 
-  let { onMoveUp, onMoveDown }: { onMoveUp: () => void; onMoveDown: () => void } = $props()
+  let {
+    onMoveUp,
+    onMoveDown
+  }: { onMoveUp: () => void | Promise<void>; onMoveDown: () => void | Promise<void> } = $props()
 </script>
 
 <div class="w-6 flex-shrink-0 flex flex-col">

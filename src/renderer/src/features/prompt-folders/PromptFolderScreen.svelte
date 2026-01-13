@@ -128,11 +128,11 @@
   }
 
   const handleMovePromptUp = (promptId: string) => {
-    void movePromptUpInFolder(folder.folderName, promptId)
+    return movePromptUpInFolder(folder.folderName, promptId)
   }
 
   const handleMovePromptDown = (promptId: string) => {
-    void movePromptDownInFolder(folder.folderName, promptId)
+    return movePromptDownInFolder(folder.folderName, promptId)
   }
 </script>
 
