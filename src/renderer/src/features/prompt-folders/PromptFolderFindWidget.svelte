@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { promptFolderFindState } from './promptFolderFindState.svelte.ts'
+  import {
+    promptFolderFindState,
+    setFindQuery
+  } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
 
   let {
     matchesLabel,
@@ -31,7 +34,7 @@
             <div class="prompt-find-input__wrapper">
               <textarea
                 bind:this={inputEl}
-                bind:value={promptFolderFindState.query}
+                value={promptFolderFindState.query}
                 class="prompt-find-input__field"
                 class:empty={!promptFolderFindState.query}
                 data-testid="prompt-find-input"
@@ -40,6 +43,10 @@
                 placeholder="Find"
                 aria-label="Find"
                 spellcheck="false"
+                oninput={(event) => {
+                  const target = event.currentTarget as HTMLTextAreaElement
+                  setFindQuery(target.value)
+                }}
                 onfocus={() => {
                   isInputFocused = true
                 }}

@@ -23,25 +23,41 @@
     movePromptDownInFolder,
     movePromptUpInFolder
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
-  import { promptFolderFindState } from './promptFolderFindState.svelte.ts'
+  import {
+    promptFolderFindState,
+    setActivePromptFolder,
+    syncActivePromptFolderPromptIds
+  } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
   let findInput = $state<HTMLTextAreaElement | null>(null)
 
-  // Side effect: reload prompts and close the find dialog when the selected folder changes.
+  // Side effect: reload prompts, close the find dialog, and update the find scope when the folder changes.
   $effect(() => {
     isFindOpen = false
+    setActivePromptFolder(folder.folderName)
     void loadPromptFolder(folder.folderName)
+  })
+
+  // Side effect: keep the find results aligned with the active folder's prompt list.
+  $effect(() => {
+    const promptIds = folderData?.promptIds ?? []
+    syncActivePromptFolderPromptIds(folder.folderName, promptIds)
   })
 
   const folderData = $derived(getPromptFolderData(folder.folderName))
   const isFindAvailable = $derived(
     Boolean(folderData && !folderData.isLoading && !folderData.errorMessage)
   )
-  const hasNoFindResults = $derived(Boolean(promptFolderFindState.query))
-  const matchesLabel = $derived.by(() => (hasNoFindResults ? 'No results' : '0 of 0'))
+  const hasFindQuery = $derived(promptFolderFindState.query.length > 0)
+  const hasNoFindResults = $derived(hasFindQuery && promptFolderFindState.totalMatches === 0)
+  const matchesLabel = $derived.by(() => {
+    if (!hasFindQuery) return 'No results'
+    if (promptFolderFindState.totalMatches === 0) return 'No results'
+    return `0 of ${promptFolderFindState.totalMatches}`
+  })
 
   const focusFindInput = async () => {
     // Side effect: wait for the dialog to render before focusing the input.

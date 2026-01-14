@@ -1,4 +1,4 @@
-import { SvelteMap } from 'svelte/reactivity'
+import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 import type { Prompt, PromptResult } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
@@ -27,6 +27,8 @@ export type PromptData = {
   saveNow: () => Promise<void>
 }
 
+type PromptDraftChangeListener = (promptId: string) => void
+
 export type PromptEditorTextMeasurement = {
   measuredHeightPx: number | null
   widthPx: number
@@ -45,6 +47,7 @@ const AUTOSAVE_MS = 2000
 
 let currentWorkspacePath: string | null = null
 const promptDataById = new SvelteMap<string, PromptData>()
+const promptDraftChangeListeners = new SvelteSet<PromptDraftChangeListener>()
 
 type PromptEditorMeasuredHeightsByKey = SvelteMap<string, number>
 const promptEditorMeasuredHeightsByPromptId = new SvelteMap<
@@ -93,6 +96,21 @@ const clearAutosaveTimeout = (draft: PromptDraft) => {
   if (draft.autosaveTimeoutId == null) return
   window.clearTimeout(draft.autosaveTimeoutId)
   draft.autosaveTimeoutId = null
+}
+
+const notifyPromptDraftChange = (promptId: string) => {
+  for (const listener of promptDraftChangeListeners) {
+    listener(promptId)
+  }
+}
+
+export const subscribeToPromptDraftChanges = (
+  listener: PromptDraftChangeListener
+): (() => void) => {
+  promptDraftChangeListeners.add(listener)
+  return () => {
+    promptDraftChangeListeners.delete(listener)
+  }
 }
 
 export const removePromptData = (promptId: string): void => {
@@ -186,12 +204,14 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     if (draft.title === title) return
     draft.title = title
     markDirtyAndScheduleAutosave()
+    notifyPromptDraftChange(prompt.id)
   }
 
   const setTextWithoutAutosave = (text: string) => {
     if (draft.text === text) return
     draft.text = text
     clearPromptEditorMeasuredHeights(prompt.id)
+    notifyPromptDraftChange(prompt.id)
   }
 
   const setText = (text: string, measurement: PromptEditorTextMeasurement) => {
@@ -224,6 +244,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
 
     if (textChanged) {
       markDirtyAndScheduleAutosave()
+      notifyPromptDraftChange(prompt.id)
     }
   }
 
@@ -272,7 +293,10 @@ export const ingestPromptFolderPrompts = (folderName: string, prompts: Prompt[])
     applyPromptContent(promptData.persisted, prompt)
     promptData.persisted.lastModifiedDate = prompt.lastModifiedDate
 
-    promptData.draft.title = prompt.title
+    if (promptData.draft.title !== prompt.title) {
+      promptData.draft.title = prompt.title
+      notifyPromptDraftChange(prompt.id)
+    }
     promptData.setTextWithoutAutosave(prompt.promptText)
     promptData.draft.dirty = false
   })
