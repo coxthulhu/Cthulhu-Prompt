@@ -16,6 +16,12 @@ const promptMatchesById = new SvelteMap<string, number>()
 const activePromptIds = new SvelteSet<string>()
 let searchModel: monaco.editor.ITextModel | null = null
 
+const resetFindState = (): void => {
+  promptMatchesById.clear()
+  activePromptIds.clear()
+  promptFolderFindState.totalMatches = 0
+}
+
 const ensureSearchModel = (): monaco.editor.ITextModel => {
   if (searchModel) return searchModel
   searchModel = monaco.editor.createModel('', 'plaintext')
@@ -23,14 +29,12 @@ const ensureSearchModel = (): monaco.editor.ITextModel => {
 }
 
 const countMatchesInText = (query: string, text: string): number => {
-  if (!query) return 0
   const model = ensureSearchModel()
   model.setValue(text)
   return model.findMatches(query, false, false, false, null, false).length
 }
 
 const countMatchesForPrompt = (promptId: string, query: string): number => {
-  if (!query) return 0
   const promptData = getPromptData(promptId)
   return (
     countMatchesInText(query, promptData.draft.title) +
@@ -47,6 +51,7 @@ const setPromptMatchCount = (promptId: string, nextCount: number): void => {
 
 const addPrompt = (promptId: string, query: string): void => {
   activePromptIds.add(promptId)
+  if (!query) return
   setPromptMatchCount(promptId, countMatchesForPrompt(promptId, query))
 }
 
@@ -60,9 +65,7 @@ const removePrompt = (promptId: string): void => {
 }
 
 const rebuildPromptMatches = (promptIds: string[], query: string): void => {
-  promptMatchesById.clear()
-  activePromptIds.clear()
-  promptFolderFindState.totalMatches = 0
+  resetFindState()
 
   promptIds.forEach((promptId) => {
     activePromptIds.add(promptId)
@@ -80,9 +83,7 @@ const rebuildPromptMatches = (promptIds: string[], query: string): void => {
 export const setActivePromptFolder = (folderName: string | null): void => {
   if (activeFolderName === folderName) return
   activeFolderName = folderName
-  promptMatchesById.clear()
-  activePromptIds.clear()
-  promptFolderFindState.totalMatches = 0
+  resetFindState()
 }
 
 export const setFindQuery = (query: string): void => {
@@ -90,9 +91,7 @@ export const setFindQuery = (query: string): void => {
   promptFolderFindState.query = query
 
   if (!activeFolderName) {
-    promptMatchesById.clear()
-    activePromptIds.clear()
-    promptFolderFindState.totalMatches = 0
+    resetFindState()
     return
   }
 
@@ -125,6 +124,7 @@ export const syncActivePromptFolderPromptIds = (
 const updatePromptMatchesForPrompt = (promptId: string): void => {
   if (!activePromptIds.has(promptId)) return
   const query = promptFolderFindState.query
+  if (!query) return
   setPromptMatchCount(promptId, countMatchesForPrompt(promptId, query))
 }
 
