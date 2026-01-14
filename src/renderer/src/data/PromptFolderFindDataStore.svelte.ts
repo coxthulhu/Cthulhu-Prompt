@@ -49,12 +49,6 @@ const setPromptMatchCount = (promptId: string, nextCount: number): void => {
   promptFolderFindState.totalMatches += nextCount - previousCount
 }
 
-const addPrompt = (promptId: string, query: string): void => {
-  activePromptIds.add(promptId)
-  if (!query) return
-  setPromptMatchCount(promptId, countMatchesForPrompt(promptId, query))
-}
-
 const removePrompt = (promptId: string): void => {
   const previousCount = promptMatchesById.get(promptId) ?? 0
   if (previousCount) {
@@ -66,47 +60,34 @@ const removePrompt = (promptId: string): void => {
 
 const rebuildPromptMatches = (promptIds: string[], query: string): void => {
   resetFindState()
+  const hasQuery = query.length > 0
 
-  promptIds.forEach((promptId) => {
+  for (const promptId of promptIds) {
     activePromptIds.add(promptId)
-  })
-
-  if (!query) return
-
-  promptIds.forEach((promptId) => {
-    const count = countMatchesForPrompt(promptId, query)
-    promptMatchesById.set(promptId, count)
-    promptFolderFindState.totalMatches += count
-  })
-}
-
-export const setActivePromptFolder = (folderName: string | null): void => {
-  if (activeFolderName === folderName) return
-  activeFolderName = folderName
-  resetFindState()
+    if (!hasQuery) continue
+    setPromptMatchCount(promptId, countMatchesForPrompt(promptId, query))
+  }
 }
 
 export const setFindQuery = (query: string): void => {
   if (promptFolderFindState.query === query) return
   promptFolderFindState.query = query
-
-  if (!activeFolderName) {
-    resetFindState()
-    return
-  }
-
-  const promptIds = Array.from(activePromptIds)
-  rebuildPromptMatches(promptIds, query)
+  rebuildPromptMatches(Array.from(activePromptIds), query)
 }
 
-export const syncActivePromptFolderPromptIds = (
+export const syncPromptFolderFindScope = (
   folderName: string,
   promptIds: string[]
 ): void => {
-  if (activeFolderName !== folderName) return
+  if (activeFolderName !== folderName) {
+    activeFolderName = folderName
+    rebuildPromptMatches(promptIds, promptFolderFindState.query)
+    return
+  }
 
-  const nextPromptIds = new SvelteSet<string>(promptIds)
   const query = promptFolderFindState.query
+  const hasQuery = query.length > 0
+  const nextPromptIds = new SvelteSet<string>(promptIds)
 
   for (const promptId of activePromptIds) {
     if (!nextPromptIds.has(promptId)) {
@@ -116,19 +97,21 @@ export const syncActivePromptFolderPromptIds = (
 
   for (const promptId of nextPromptIds) {
     if (!activePromptIds.has(promptId)) {
-      addPrompt(promptId, query)
+      activePromptIds.add(promptId)
+      if (!hasQuery) continue
+      setPromptMatchCount(promptId, countMatchesForPrompt(promptId, query))
     }
   }
 }
 
-const updatePromptMatchesForPrompt = (promptId: string): void => {
+const updatePromptMatchesForPrompt = (promptId: string, query: string): void => {
   if (!activePromptIds.has(promptId)) return
-  const query = promptFolderFindState.query
-  if (!query) return
   setPromptMatchCount(promptId, countMatchesForPrompt(promptId, query))
 }
 
 // Side effect: update matches for prompts as their draft content changes.
 subscribeToPromptDraftChanges((promptId) => {
-  updatePromptMatchesForPrompt(promptId)
+  const query = promptFolderFindState.query
+  if (!query) return
+  updatePromptMatchesForPrompt(promptId, query)
 })
