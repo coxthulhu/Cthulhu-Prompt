@@ -22,6 +22,7 @@ export type PromptData = {
   draft: PromptDraft
   persisted: PromptPersisted
   setTitle: (title: string) => void
+  setTitleWithoutAutosave: (title: string) => void
   setText: (text: string, measurement: PromptEditorTextMeasurement) => void
   setTextWithoutAutosave: (text: string) => void
   saveNow: () => Promise<void>
@@ -200,11 +201,20 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     scheduleAutosave()
   }
 
-  const setTitle = (title: string) => {
-    if (draft.title === title) return
+  const applyDraftTitle = (title: string): boolean => {
+    if (draft.title === title) return false
     draft.title = title
-    markDirtyAndScheduleAutosave()
     notifyPromptDraftChange(prompt.id)
+    return true
+  }
+
+  const setTitle = (title: string) => {
+    if (!applyDraftTitle(title)) return
+    markDirtyAndScheduleAutosave()
+  }
+
+  const setTitleWithoutAutosave = (title: string) => {
+    applyDraftTitle(title)
   }
 
   const setTextWithoutAutosave = (text: string) => {
@@ -252,6 +262,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     draft,
     persisted,
     setTitle,
+    setTitleWithoutAutosave,
     setText,
     setTextWithoutAutosave,
     saveNow
@@ -293,10 +304,7 @@ export const ingestPromptFolderPrompts = (folderName: string, prompts: Prompt[])
     applyPromptContent(promptData.persisted, prompt)
     promptData.persisted.lastModifiedDate = prompt.lastModifiedDate
 
-    if (promptData.draft.title !== prompt.title) {
-      promptData.draft.title = prompt.title
-      notifyPromptDraftChange(prompt.id)
-    }
+    promptData.setTitleWithoutAutosave(prompt.title)
     promptData.setTextWithoutAutosave(prompt.promptText)
     promptData.draft.dirty = false
   })
