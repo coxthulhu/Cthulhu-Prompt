@@ -30,6 +30,7 @@
   let monacoHeightPx = MIN_MONACO_HEIGHT_PX
   let lastContainerWidthPx = 0
   let isLayingOut = false
+  let pendingCursorPosition: monaco.IPosition | null = null
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
@@ -73,6 +74,32 @@
       ?.focus(options)
   }
 
+  const getCursorMetrics = (position: monaco.IPosition | null) => {
+    if (!editor || !position) return null
+    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
+    const lineTop = editor.getTopForLineNumber(position.lineNumber)
+    const scrollTop = editor.getScrollTop()
+    const viewportHeight = editor.getLayoutInfo().height
+    const viewportBottom = scrollTop + viewportHeight
+    const lineBottom = lineTop + lineHeight
+    const isVisible = lineBottom > scrollTop && lineTop < viewportBottom
+    const topInViewport = Math.min(
+      Math.max(lineTop - scrollTop, 0),
+      Math.max(0, viewportHeight - lineHeight)
+    )
+
+    return {
+      lineHeight,
+      lineTop,
+      lineBottom,
+      scrollTop,
+      viewportHeight,
+      viewportBottom,
+      topInViewport,
+      isVisible
+    }
+  }
+
   const scrollCursorIntoBand = (position: monaco.IPosition | null) => {
     if (!editor || !scrollToWithinWindowBand || !position) return
 
@@ -81,13 +108,13 @@
     const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
     if (!rowElement) return
 
-    const visiblePosition = editor.getScrolledVisiblePosition(position)
-    if (!visiblePosition) return
+    const metrics = getCursorMetrics(position)
+    if (!metrics) return
 
     const rowRect = rowElement.getBoundingClientRect()
     const editorRect = domNode.getBoundingClientRect()
     const centerOffsetPx =
-      editorRect.top - rowRect.top + visiblePosition.top + visiblePosition.height / 2
+      editorRect.top - rowRect.top + metrics.topInViewport + metrics.lineHeight / 2
     scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
   }
 
@@ -113,7 +140,24 @@
     if (event.source === 'api') return
     if (event.source === 'mouse' && event.reason === monaco.editor.CursorChangeReason.Explicit) return
 
+    const metrics = getCursorMetrics(event.position)
+    const isVisible = metrics?.isVisible ?? false
+    if (!isVisible) {
+      pendingCursorPosition = event.position
+      return
+    }
+
+    pendingCursorPosition = null
     scrollCursorIntoBand(event.position)
+  }
+
+  const handleEditorScroll = () => {
+    if (!pendingCursorPosition) return
+    const metrics = getCursorMetrics(pendingCursorPosition)
+    const isVisible = metrics?.isVisible ?? false
+    if (!isVisible) return
+    scrollCursorIntoBand(pendingCursorPosition)
+    pendingCursorPosition = null
   }
 
   // Side effect: create Monaco once the container is ready; dispose on unmount.
@@ -152,6 +196,7 @@
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
     const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
     const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
+    const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
     layoutEditor()
     lastContainerWidthPx = containerWidthPx
@@ -162,6 +207,7 @@
       blurDisposable.dispose()
       focusDisposable.dispose()
       cursorDisposable.dispose()
+      scrollDisposable.dispose()
       unregisterMonacoEditor(nextEditor)
       nextEditor.dispose()
       editor = null
