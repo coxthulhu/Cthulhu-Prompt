@@ -7,34 +7,17 @@
     title: string
     draftText: string
     onTitleChange: (value: string) => void
-    onFindFocus?: (cursorOffset: number) => void
-    onFindBlur?: () => void
-    onFindCursorChange?: (cursorOffset: number) => void
     rowId: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete: () => void
   }
 
-  let {
-    title,
-    draftText,
-    onTitleChange,
-    onFindFocus,
-    onFindBlur,
-    onFindCursorChange,
-    rowId,
-    scrollToWithinWindowBand,
-    onDelete
-  }: Props = $props()
-
-  const getCursorOffset = (input: HTMLInputElement): number => {
-    return input.selectionStart ?? input.value.length
-  }
+  let { title, draftText, onTitleChange, rowId, scrollToWithinWindowBand, onDelete }: Props =
+    $props()
 
   const handleTitleInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
     onTitleChange(input.value)
-    onFindCursorChange?.(getCursorOffset(input))
 
     if (!scrollToWithinWindowBand) return
     const rowElement = input.closest('[data-prompt-editor-row]') as HTMLElement | null
@@ -49,12 +32,6 @@
   const handleTitleFocus = (event: FocusEvent) => {
     const input = event.currentTarget as HTMLInputElement
     input.focus({ preventScroll: true })
-    onFindFocus?.(getCursorOffset(input))
-  }
-
-  const handleTitleCursorChange = (event: Event) => {
-    const input = event.currentTarget as HTMLInputElement
-    onFindCursorChange?.(getCursorOffset(input))
   }
 </script>
 
@@ -65,10 +42,6 @@
     value={title}
     oninput={handleTitleInput}
     onfocus={handleTitleFocus}
-    onblur={() => onFindBlur?.()}
-    onkeyup={handleTitleCursorChange}
-    onmouseup={handleTitleCursorChange}
-    onselect={handleTitleCursorChange}
     class="flex-1 h-[28px] font-mono text-[16px] leading-[20px] md:text-[16px] md:leading-[20px] text-[#D4D4D4] placeholder:text-[#D4D4D4]"
   />
   <PromptEditorButtonBar {title} {draftText} {onDelete} />

@@ -19,16 +19,10 @@
     hydrationPriority: number
     shouldDehydrate: boolean
     rowId: string
-    findQuery: string
-    isFindOpen: boolean
-    currentFindMatchIndex: number | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
-    onFindFocus?: (cursorOffset: number) => void
-    onFindBlur?: () => void
-    onFindCursorChange?: (cursorOffset: number) => void
     class?: string
   }
 
@@ -40,16 +34,10 @@
     hydrationPriority,
     shouldDehydrate,
     rowId,
-    findQuery,
-    isFindOpen,
-    currentFindMatchIndex,
     scrollToWithinWindowBand,
     onHydrationChange,
     onChange,
     onBlur,
-    onFindFocus,
-    onFindBlur,
-    onFindCursorChange,
     class: className
   }: Props = $props()
 
@@ -103,15 +91,9 @@
       {containerWidthPx}
       {overflowWidgetsDomNode}
       {rowId}
-      {findQuery}
-      {isFindOpen}
-      {currentFindMatchIndex}
       {scrollToWithinWindowBand}
       {onChange}
       {onBlur}
-      {onFindFocus}
-      {onFindBlur}
-      {onFindCursorChange}
     />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />

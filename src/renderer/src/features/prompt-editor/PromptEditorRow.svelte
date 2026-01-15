@@ -6,7 +6,6 @@
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
-  import type { FindSelection } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
   import {
     ADDITIONAL_GAP_PX,
     estimatePromptEditorHeight,
@@ -26,15 +25,6 @@
     measuredHeightPx,
     hydrationPriority,
     shouldDehydrate,
-    findQuery,
-    isFindOpen,
-    currentFindSelection,
-    onFindTitleFocus,
-    onFindTitleBlur,
-    onFindTitleCursorChange,
-    onFindBodyFocus,
-    onFindBodyBlur,
-    onFindBodyCursorChange,
     overlayRowElement,
     onHydrationChange,
     scrollToWithinWindowBand,
@@ -50,15 +40,6 @@
     measuredHeightPx: number | null
     hydrationPriority: number
     shouldDehydrate: boolean
-    findQuery: string
-    isFindOpen: boolean
-    currentFindSelection: FindSelection | null
-    onFindTitleFocus: (cursorOffset: number) => void
-    onFindTitleBlur: () => void
-    onFindTitleCursorChange: (cursorOffset: number) => void
-    onFindBodyFocus: (cursorOffset: number) => void
-    onFindBodyBlur: () => void
-    onFindBodyCursorChange: (cursorOffset: number) => void
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
@@ -158,13 +139,6 @@
 
   const handleMoveUp = () => handleMovePrompt(0, onMoveUp)
   const handleMoveDown = () => handleMovePrompt(rowHeightPx, onMoveDown)
-
-  const currentBodyMatchIndex = $derived.by(() => {
-    if (!currentFindSelection) return null
-    if (currentFindSelection.promptId !== promptId) return null
-    if (currentFindSelection.field !== 'body') return null
-    return currentFindSelection.matchIndex
-  })
 </script>
 
 <div
@@ -182,9 +156,6 @@
           title={promptData.draft.title}
           draftText={promptData.draft.text}
           onTitleChange={promptData.setTitle}
-          onFindFocus={onFindTitleFocus}
-          onFindBlur={onFindTitleBlur}
-          onFindCursorChange={onFindTitleCursorChange}
           {rowId}
           {scrollToWithinWindowBand}
           {onDelete}
@@ -201,12 +172,6 @@
                 {hydrationPriority}
                 {shouldDehydrate}
                 {rowId}
-                {findQuery}
-                {isFindOpen}
-                currentFindMatchIndex={currentBodyMatchIndex}
-                onFindFocus={onFindBodyFocus}
-                onFindBlur={onFindBodyBlur}
-                onFindCursorChange={onFindBodyCursorChange}
                 {scrollToWithinWindowBand}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {
