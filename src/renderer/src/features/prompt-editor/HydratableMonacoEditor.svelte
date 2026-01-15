@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import type { monaco } from '@renderer/common/Monaco'
   import { cn } from '@renderer/common/Cn'
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
@@ -23,6 +24,7 @@
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
+    onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     class?: string
   }
 
@@ -38,6 +40,7 @@
     onHydrationChange,
     onChange,
     onBlur,
+    onEditorLifecycle,
     class: className
   }: Props = $props()
 
@@ -94,6 +97,7 @@
       {scrollToWithinWindowBand}
       {onChange}
       {onBlur}
+      {onEditorLifecycle}
     />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />

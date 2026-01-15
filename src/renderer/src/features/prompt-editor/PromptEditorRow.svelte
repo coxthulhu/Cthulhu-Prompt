@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
+  import type { monaco } from '@renderer/common/Monaco'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -28,6 +29,7 @@
     overlayRowElement,
     onHydrationChange,
     scrollToWithinWindowBand,
+    onEditorLifecycle,
     onDelete,
     onMoveUp,
     onMoveDown
@@ -43,6 +45,7 @@
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
+    onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     onDelete: () => void
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
@@ -171,11 +174,12 @@
                 overflowWidgetsDomNode={overflowHost}
                 {hydrationPriority}
                 {shouldDehydrate}
-                {rowId}
-                {scrollToWithinWindowBand}
-                onHydrationChange={handleHydrationChange}
-                onChange={(text, meta) => {
-                  if (meta.heightPx !== monacoHeightPx) {
+            {rowId}
+            {scrollToWithinWindowBand}
+            {onEditorLifecycle}
+            onHydrationChange={handleHydrationChange}
+            onChange={(text, meta) => {
+              if (meta.heightPx !== monacoHeightPx) {
                     monacoHeightPx = meta.heightPx
                   }
                   promptData.setText(text, {

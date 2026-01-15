@@ -13,6 +13,7 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
+    onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
   }
 
   let {
@@ -22,7 +23,8 @@
     rowId,
     scrollToWithinWindowBand,
     onChange,
-    onBlur
+    onBlur,
+    onEditorLifecycle
   }: Props = $props()
 
   let container: HTMLDivElement | null = null
@@ -191,6 +193,7 @@
 
     editor = nextEditor
     registerMonacoEditor({ container, editor: nextEditor })
+    onEditorLifecycle?.(nextEditor, true)
 
     const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
@@ -209,6 +212,7 @@
       cursorDisposable.dispose()
       scrollDisposable.dispose()
       unregisterMonacoEditor(nextEditor)
+      onEditorLifecycle?.(nextEditor, false)
       nextEditor.dispose()
       editor = null
     }

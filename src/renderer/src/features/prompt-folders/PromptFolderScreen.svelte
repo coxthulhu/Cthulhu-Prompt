@@ -28,10 +28,16 @@
     syncPromptFolderFindScope
   } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
+  import { createPromptFolderFindHighlighter } from './promptFolderFindHighlighter.svelte.ts'
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
   let findInput = $state<HTMLTextAreaElement | null>(null)
+
+  const findHighlighter = createPromptFolderFindHighlighter({
+    getIsFindOpen: () => isFindOpen,
+    getQuery: () => promptFolderFindState.query
+  })
 
   // Side effect: reload prompts and close the find dialog when the folder changes.
   $effect(() => {
@@ -311,6 +317,7 @@
     {overlayRowElement}
     {onHydrationChange}
     {scrollToWithinWindowBand}
+    onEditorLifecycle={findHighlighter.handleEditorLifecycle}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}
