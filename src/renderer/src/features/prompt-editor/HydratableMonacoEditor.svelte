@@ -19,6 +19,8 @@
     hydrationPriority: number
     shouldDehydrate: boolean
     rowId: string
+    findQuery: string
+    isFindOpen: boolean
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
@@ -34,6 +36,8 @@
     hydrationPriority,
     shouldDehydrate,
     rowId,
+    findQuery,
+    isFindOpen,
     scrollToWithinWindowBand,
     onHydrationChange,
     onChange,
@@ -91,6 +95,8 @@
       {containerWidthPx}
       {overflowWidgetsDomNode}
       {rowId}
+      {findQuery}
+      {isFindOpen}
       {scrollToWithinWindowBand}
       {onChange}
       {onBlur}

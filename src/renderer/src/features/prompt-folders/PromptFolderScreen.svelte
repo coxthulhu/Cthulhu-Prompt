@@ -308,6 +308,8 @@
     {measuredHeightPx}
     {hydrationPriority}
     {shouldDehydrate}
+    findQuery={promptFolderFindState.query}
+    {isFindOpen}
     {overlayRowElement}
     {onHydrationChange}
     {scrollToWithinWindowBand}

@@ -25,6 +25,8 @@
     measuredHeightPx,
     hydrationPriority,
     shouldDehydrate,
+    findQuery,
+    isFindOpen,
     overlayRowElement,
     onHydrationChange,
     scrollToWithinWindowBand,
@@ -40,6 +42,8 @@
     measuredHeightPx: number | null
     hydrationPriority: number
     shouldDehydrate: boolean
+    findQuery: string
+    isFindOpen: boolean
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
@@ -172,6 +176,8 @@
                 {hydrationPriority}
                 {shouldDehydrate}
                 {rowId}
+                {findQuery}
+                {isFindOpen}
                 {scrollToWithinWindowBand}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {

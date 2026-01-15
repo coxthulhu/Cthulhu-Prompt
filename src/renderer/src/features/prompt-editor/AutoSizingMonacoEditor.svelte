@@ -10,6 +10,8 @@
     containerWidthPx: number
     overflowWidgetsDomNode: HTMLElement
     rowId: string
+    findQuery: string
+    isFindOpen: boolean
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -20,6 +22,8 @@
     containerWidthPx,
     overflowWidgetsDomNode,
     rowId,
+    findQuery,
+    isFindOpen,
     scrollToWithinWindowBand,
     onChange,
     onBlur
@@ -31,6 +35,52 @@
   let lastContainerWidthPx = 0
   let isLayingOut = false
   let pendingCursorPosition: monaco.IPosition | null = null
+  let findDecorationIds: string[] = []
+
+  const findDecorationOptions: monaco.editor.IModelDecorationOptions = {
+    // Use the same stickiness as Monaco's find matches (NeverGrowsWhenTypingAtEdges = 1).
+    stickiness: 1,
+    className: 'findMatch',
+    inlineClassName: 'findMatchInline',
+    showIfCollapsed: true,
+    overviewRuler: {
+      color: { id: 'editorOverviewRuler.findMatchForeground' },
+      // OverviewRulerLane.Center = 2.
+      position: 2
+    },
+    minimap: {
+      color: { id: 'minimap.findMatchHighlight' },
+      // MinimapPosition.Inline = 1.
+      position: 1
+    }
+  }
+
+  const clearFindDecorations = () => {
+    if (!editor) {
+      findDecorationIds = []
+      return
+    }
+    if (findDecorationIds.length === 0) return
+    findDecorationIds = editor.deltaDecorations(findDecorationIds, [])
+  }
+
+  const applyFindDecorations = () => {
+    if (!editor) return
+    if (!isFindOpen || !findQuery.length) {
+      clearFindDecorations()
+      return
+    }
+
+    const model = editor.getModel()
+    if (!model) return
+
+    const matches = model.findMatches(findQuery, false, false, false, null, false)
+    const decorations = matches.map((match) => ({
+      range: match.range,
+      options: findDecorationOptions
+    }))
+    findDecorationIds = editor.deltaDecorations(findDecorationIds, decorations)
+  }
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
@@ -130,6 +180,7 @@
     }
 
     emitChange(nextValue, didResize, monacoHeightPx)
+    applyFindDecorations()
   }
 
   // Keep the virtual window centered on the primary cursor after Monaco reveals it.
@@ -201,6 +252,7 @@
     layoutEditor()
     lastContainerWidthPx = containerWidthPx
     emitChange(nextEditor.getValue(), false, monacoHeightPx)
+    applyFindDecorations()
 
     return () => {
       changeDisposable.dispose()
@@ -211,6 +263,7 @@
       unregisterMonacoEditor(nextEditor)
       nextEditor.dispose()
       editor = null
+      findDecorationIds = []
     }
   })
 
@@ -224,6 +277,12 @@
     const previousHeightPx = monacoHeightPx
     const nextHeightPx = layoutEditor()
     emitChange(editor.getValue(), nextHeightPx !== previousHeightPx, nextHeightPx)
+  })
+
+  // Side effect: refresh find highlights when the query or dialog state changes.
+  $effect(() => {
+    if (!editor) return
+    applyFindDecorations()
   })
 
 </script>
