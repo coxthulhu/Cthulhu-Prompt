@@ -25,7 +25,13 @@
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import {
     promptFolderFindState,
-    syncPromptFolderFindScope
+    syncPromptFolderFindScope,
+    findNextMatch,
+    findPreviousMatch,
+    updateFindFocusLocation,
+    updateFindCursorLocation,
+    clearFindFocusLocation,
+    type FindField
   } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
 
@@ -55,7 +61,10 @@
   const matchesLabel = $derived.by(() => {
     if (!promptFolderFindState.query.length) return 'No results'
     if (promptFolderFindState.totalMatches === 0) return 'No results'
-    return `0 of ${promptFolderFindState.totalMatches}`
+    if (!promptFolderFindState.currentSelection) {
+      return `? of ${promptFolderFindState.totalMatches}`
+    }
+    return `${promptFolderFindState.currentMatchOrdinal} of ${promptFolderFindState.totalMatches}`
   })
 
   const focusFindInput = async () => {
@@ -215,6 +224,18 @@
   const handleMovePromptDown = (promptId: string) => {
     return movePromptDownInFolder(folder.folderName, promptId)
   }
+
+  const setFindFocusForPrompt = (promptId: string, field: FindField, cursorOffset: number) => {
+    updateFindFocusLocation({ promptId, field, cursorOffset })
+  }
+
+  const updateFindCursorForPrompt = (promptId: string, field: FindField, cursorOffset: number) => {
+    updateFindCursorLocation({ promptId, field, cursorOffset })
+  }
+
+  const clearFindFocusForPrompt = (promptId: string, field: FindField) => {
+    clearFindFocusLocation(promptId, field)
+  }
 </script>
 
 <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
@@ -248,6 +269,8 @@
     {matchesLabel}
     hasNoResults={hasNoFindResults}
     onClose={closeFindDialog}
+    onFindNext={findNextMatch}
+    onFindPrevious={findPreviousMatch}
   />
 {/if}
 
@@ -310,6 +333,21 @@
     {shouldDehydrate}
     findQuery={promptFolderFindState.query}
     {isFindOpen}
+    currentFindSelection={promptFolderFindState.currentSelection}
+    onFindTitleFocus={(cursorOffset) =>
+      setFindFocusForPrompt(row.promptId, 'title', cursorOffset)
+    }
+    onFindTitleBlur={() => clearFindFocusForPrompt(row.promptId, 'title')}
+    onFindTitleCursorChange={(cursorOffset) =>
+      updateFindCursorForPrompt(row.promptId, 'title', cursorOffset)
+    }
+    onFindBodyFocus={(cursorOffset) =>
+      setFindFocusForPrompt(row.promptId, 'body', cursorOffset)
+    }
+    onFindBodyBlur={() => clearFindFocusForPrompt(row.promptId, 'body')}
+    onFindBodyCursorChange={(cursorOffset) =>
+      updateFindCursorForPrompt(row.promptId, 'body', cursorOffset)
+    }
     {overlayRowElement}
     {onHydrationChange}
     {scrollToWithinWindowBand}

@@ -12,9 +12,13 @@
     rowId: string
     findQuery: string
     isFindOpen: boolean
+    currentFindMatchIndex: number | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
+    onFindFocus?: (cursorOffset: number) => void
+    onFindBlur?: () => void
+    onFindCursorChange?: (cursorOffset: number) => void
   }
 
   let {
@@ -24,9 +28,13 @@
     rowId,
     findQuery,
     isFindOpen,
+    currentFindMatchIndex,
     scrollToWithinWindowBand,
     onChange,
-    onBlur
+    onBlur,
+    onFindFocus,
+    onFindBlur,
+    onFindCursorChange
   }: Props = $props()
 
   let container: HTMLDivElement | null = null
@@ -36,6 +44,7 @@
   let isLayingOut = false
   let pendingCursorPosition: monaco.IPosition | null = null
   let findDecorationIds: string[] = []
+  let currentFindDecorationIds: string[] = []
 
   const findDecorationOptions: monaco.editor.IModelDecorationOptions = {
     // Use the same stickiness as Monaco's find matches (NeverGrowsWhenTypingAtEdges = 1).
@@ -58,16 +67,27 @@
   const clearFindDecorations = () => {
     if (!editor) {
       findDecorationIds = []
+      currentFindDecorationIds = []
       return
     }
     if (findDecorationIds.length === 0) return
     findDecorationIds = editor.deltaDecorations(findDecorationIds, [])
   }
 
+  const clearCurrentFindDecoration = () => {
+    if (!editor) {
+      currentFindDecorationIds = []
+      return
+    }
+    if (currentFindDecorationIds.length === 0) return
+    currentFindDecorationIds = editor.deltaDecorations(currentFindDecorationIds, [])
+  }
+
   const applyFindDecorations = () => {
     if (!editor) return
     if (!isFindOpen || !findQuery.length) {
       clearFindDecorations()
+      clearCurrentFindDecoration()
       return
     }
 
@@ -80,6 +100,31 @@
       options: findDecorationOptions
     }))
     findDecorationIds = editor.deltaDecorations(findDecorationIds, decorations)
+
+    if (currentFindMatchIndex == null || !matches[currentFindMatchIndex]) {
+      clearCurrentFindDecoration()
+      return
+    }
+
+    currentFindDecorationIds = editor.deltaDecorations(currentFindDecorationIds, [
+      {
+        range: matches[currentFindMatchIndex].range,
+        options: {
+          stickiness: 1,
+          className: 'currentFindMatch',
+          inlineClassName: 'currentFindMatchInline',
+          showIfCollapsed: true,
+          overviewRuler: {
+            color: { id: 'editorOverviewRuler.findMatchForeground' },
+            position: 2
+          },
+          minimap: {
+            color: { id: 'minimap.findMatchHighlight' },
+            position: 1
+          }
+        }
+      }
+    ])
   }
 
   const measureContentHeightPx = (): number => {
@@ -122,6 +167,13 @@
       .getDomNode()
       ?.querySelector<HTMLTextAreaElement>('.inputarea.monaco-mouse-cursor-text')
       ?.focus(options)
+  }
+
+  const getCursorOffset = (targetEditor: monaco.editor.IStandaloneCodeEditor): number | null => {
+    const model = targetEditor.getModel()
+    const position = targetEditor.getPosition()
+    if (!model || !position) return null
+    return model.getOffsetAt(position)
   }
 
   const getCursorMetrics = (position: monaco.IPosition | null) => {
@@ -185,12 +237,20 @@
 
   // Keep the virtual window centered on the primary cursor after Monaco reveals it.
   const handleCursorChange = (event: monaco.editor.ICursorPositionChangedEvent) => {
-    if (!editor || !scrollToWithinWindowBand) return
+    if (!editor) return
     if (event.reason === monaco.editor.CursorChangeReason.RecoverFromMarkers) return
     if (event.reason === monaco.editor.CursorChangeReason.ContentFlush) return
     if (event.source === 'api') return
     if (event.source === 'mouse' && event.reason === monaco.editor.CursorChangeReason.Explicit) return
 
+    if (editor.hasTextFocus()) {
+      const cursorOffset = getCursorOffset(editor)
+      if (cursorOffset != null) {
+        onFindCursorChange?.(cursorOffset)
+      }
+    }
+
+    if (!scrollToWithinWindowBand) return
     const metrics = getCursorMetrics(event.position)
     const isVisible = metrics?.isVisible ?? false
     if (!isVisible) {
@@ -245,7 +305,14 @@
 
     const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
-    const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
+    const focusDisposable = nextEditor.onDidFocusEditorWidget(() => {
+      focusEditor(nextEditor)
+      const cursorOffset = getCursorOffset(nextEditor)
+      if (cursorOffset != null) {
+        onFindFocus?.(cursorOffset)
+      }
+    })
+    const findBlurDisposable = nextEditor.onDidBlurEditorWidget(() => onFindBlur?.())
     const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
     const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
@@ -258,12 +325,14 @@
       changeDisposable.dispose()
       blurDisposable.dispose()
       focusDisposable.dispose()
+      findBlurDisposable.dispose()
       cursorDisposable.dispose()
       scrollDisposable.dispose()
       unregisterMonacoEditor(nextEditor)
       nextEditor.dispose()
       editor = null
       findDecorationIds = []
+      currentFindDecorationIds = []
     }
   })
 

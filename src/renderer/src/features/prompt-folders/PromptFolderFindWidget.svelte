@@ -8,17 +8,31 @@
     matchesLabel,
     hasNoResults,
     onClose,
+    onFindNext,
+    onFindPrevious,
     inputEl = $bindable(null)
   } = $props<{
     matchesLabel: string
     hasNoResults: boolean
     onClose: () => void
+    onFindNext: () => void
+    onFindPrevious: () => void
     inputEl?: HTMLTextAreaElement | null
   }>()
 
   let isInputFocused = $state(false)
   // Derived state: disable navigation buttons when there is no active query.
   const isQueryEmpty = $derived(promptFolderFindState.query.length === 0)
+
+  const handleFindNext = () => {
+    if (isQueryEmpty) return
+    onFindNext()
+  }
+
+  const handleFindPrevious = () => {
+    if (isQueryEmpty) return
+    onFindPrevious()
+  }
 </script>
 
 <div class="prompt-find-widget-host">
@@ -47,6 +61,15 @@
                   const target = event.currentTarget as HTMLTextAreaElement
                   setFindQuery(target.value)
                 }}
+                onkeydown={(event) => {
+                  if (event.key !== 'Enter') return
+                  event.preventDefault()
+                  if (event.shiftKey) {
+                    handleFindPrevious()
+                  } else {
+                    handleFindNext()
+                  }
+                }}
                 onfocus={() => {
                   isInputFocused = true
                 }}
@@ -72,12 +95,13 @@
           aria-label="Find Previous"
           aria-disabled={isQueryEmpty}
           onclick={() => {
-            if (isQueryEmpty) return
+            handleFindPrevious()
           }}
           onkeydown={(event) => {
             if (isQueryEmpty) return
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()
+            handleFindPrevious()
           }}
         ></div>
         <div
@@ -90,12 +114,13 @@
           aria-label="Find Next"
           aria-disabled={isQueryEmpty}
           onclick={() => {
-            if (isQueryEmpty) return
+            handleFindNext()
           }}
           onkeydown={(event) => {
             if (isQueryEmpty) return
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()
+            handleFindNext()
           }}
         ></div>
       </div>
