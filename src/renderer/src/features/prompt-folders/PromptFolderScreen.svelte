@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
   import type { PromptFolder } from '@shared/ipc'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
@@ -24,10 +23,9 @@
     movePromptUpInFolder,
     type PromptFolderData
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
-  import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
+  import PromptFolderFindIntegration from './PromptFolderFindIntegration.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
-  let isFindOpen = $state(false)
   let folderData = $state<PromptFolderData>({
     promptIds: [],
     isLoading: true,
@@ -47,44 +45,6 @@
     if (previousFolderName !== folderName) {
       previousFolderName = folderName
       void loadPromptFolder(folderName)
-    }
-  })
-
-  const openFindDialog = () => {
-    isFindOpen = true
-  }
-
-  const closeFindDialog = () => {
-    isFindOpen = false
-  }
-
-  // Side effect: capture global find/escape shortcuts while the prompt folder screen is active.
-  onMount(() => {
-    const handleGlobalKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (!isFindOpen) return
-        event.preventDefault()
-        event.stopPropagation()
-        closeFindDialog()
-        return
-      }
-
-      if (
-        event.ctrlKey &&
-        !event.altKey &&
-        !event.metaKey &&
-        !event.shiftKey &&
-        event.key.toLowerCase() === 'f'
-      ) {
-        event.preventDefault()
-        event.stopPropagation()
-        openFindDialog()
-      }
-    }
-
-    window.addEventListener('keydown', handleGlobalKeydown, { capture: true })
-    return () => {
-      window.removeEventListener('keydown', handleGlobalKeydown, { capture: true })
     }
   })
 
@@ -217,9 +177,7 @@
   {/if}
 </main>
 
-{#if isFindOpen}
-  <PromptFolderFindWidget onClose={closeFindDialog} />
-{/if}
+<PromptFolderFindIntegration promptIds={folderData.promptIds} />
 
 {#snippet headerRow({ row })}
   <div class="pt-6">

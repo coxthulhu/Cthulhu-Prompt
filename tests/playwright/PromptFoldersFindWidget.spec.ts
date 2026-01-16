@@ -34,7 +34,7 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveCount(0)
   })
 
-  test.skip('reopens with previous query and selection', async ({ testSetup }) => {
+  test('reopens with previous query and selection', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
