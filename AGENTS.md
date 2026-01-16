@@ -27,7 +27,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint**, **typecheck**, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds).
+Use Windows `cmd.exe` for **lint**, **typecheck**, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory (or the WSL converted equivalent).
 
 ### Windows Command Execution
 
@@ -36,8 +36,8 @@ Use Windows `cmd.exe` for **lint**, **typecheck**, and Playwright runs via the s
 - Reusable template (swap the trailing command as needed):
   ```ts
   await shell({
-    command: ['cmd.exe', '/C', 'cd /d C:\\Source\\PromptApps\\CthulhuPrompt && <command>'],
-    workdir: '/mnt/c/Source/PromptApps/CthulhuPrompt',
+    command: ['cmd.exe', '/C', 'cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && <command>'],
+    workdir: '/mnt/c/Source/PromptApps/CthulhuPromptPublic',
     with_escalated_permissions: true,
     justification: 'Windows cmd.exe run needs sandbox access to project artifacts',
     timeout_ms: 300000
@@ -54,11 +54,11 @@ Use Windows `cmd.exe` for **lint**, **typecheck**, and Playwright runs via the s
 
 Run via Windows `cmd.exe`; reuse the template and set `<command>` to the desired Playwright invocation (e.g., `npm run test:playwright -- --reporter=dot`). Always keep the 300000 ms timeout. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
 
-- All tests: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPrompt && npm run test:playwright -- --reporter=dot"`
-- Single file: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPrompt && npm run test:playwright -- --reporter=dot tests/playwright/TestInfrastructure.test.ts"`
-- Single test (recommended): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPrompt && npm run test:playwright -- --reporter=dot tests/playwright/TestInfrastructure.test.ts --grep=no.*window"`
-- Single test (keyword): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPrompt && npm run test:playwright -- --reporter=dot tests/playwright/TestInfrastructure.test.ts -g hung"` (avoid spaces; prefer `--grep`)
-- Filter across all files: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPrompt && npm run test:playwright -- --reporter=dot --grep=hydrate"`
+- All tests: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- --reporter=dot"`
+- Single file: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- --reporter=dot tests/playwright/TestInfrastructure.test.ts"`
+- Single test (recommended): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- --reporter=dot tests/playwright/TestInfrastructure.test.ts --grep=no.*window"`
+- Single test (keyword): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- --reporter=dot tests/playwright/TestInfrastructure.test.ts -g hung"` (avoid spaces; prefer `--grep`)
+- Filter across all files: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- --reporter=dot --grep=hydrate"`
 
 ## Coding Style & Naming Conventions
 
