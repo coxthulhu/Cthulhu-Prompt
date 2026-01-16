@@ -21,7 +21,8 @@
     createPromptInFolder,
     deletePromptInFolder,
     movePromptDownInFolder,
-    movePromptUpInFolder
+    movePromptUpInFolder,
+    type PromptFolderData
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import {
     promptFolderFindState,
@@ -33,28 +34,22 @@
   let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
   let findInput = $state<HTMLTextAreaElement | null>(null)
+  let folderData = $state<PromptFolderData>({
+    promptIds: [],
+    isLoading: true,
+    isCreatingPrompt: false,
+    errorMessage: null,
+    requestId: 0
+  })
 
   const findHighlighter = createPromptFolderFindHighlighter({
     getIsFindOpen: () => isFindOpen,
     getQuery: () => promptFolderFindState.query
   })
 
-  // Side effect: reload prompts and close the find dialog when the folder changes.
-  $effect(() => {
-    isFindOpen = false
-    void loadPromptFolder(folder.folderName)
-  })
+  let previousFolderName = $state<string | null>(null)
 
-  // Side effect: keep the find scope aligned with the active folder's prompt list.
-  $effect(() => {
-    const promptIds = folderData?.promptIds ?? []
-    syncPromptFolderFindScope(folder.folderName, promptIds)
-  })
-
-  const folderData = $derived(getPromptFolderData(folder.folderName))
-  const isFindAvailable = $derived(
-    Boolean(folderData && !folderData.isLoading && !folderData.errorMessage)
-  )
+  const isFindAvailable = $derived(!folderData.isLoading && !folderData.errorMessage)
   const hasNoFindResults = $derived(
     promptFolderFindState.query.length > 0 && promptFolderFindState.totalMatches === 0
   )
@@ -62,6 +57,21 @@
     if (!promptFolderFindState.query.length) return 'No results'
     if (promptFolderFindState.totalMatches === 0) return 'No results'
     return `0 of ${promptFolderFindState.totalMatches}`
+  })
+
+  // Side effect: reload prompts on folder change and keep the find scope aligned with the active prompt list.
+  $effect(() => {
+    const folderName = folder.folderName
+    const nextFolderData = getPromptFolderData(folderName)
+    folderData = nextFolderData
+
+    if (previousFolderName !== folderName) {
+      previousFolderName = folderName
+      isFindOpen = false
+      void loadPromptFolder(folderName)
+    }
+
+    syncPromptFolderFindScope(folderName, nextFolderData.promptIds)
   })
 
   const focusFindInput = async () => {
@@ -159,8 +169,8 @@
   })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
-    const promptIds = folderData?.promptIds ?? []
-    const isLoading = folderData?.isLoading ?? true
+    const promptIds = folderData.promptIds
+    const isLoading = folderData.isLoading
     const rows: VirtualWindowItem<PromptFolderRow>[] = [
       {
         id: 'header',
@@ -224,7 +234,7 @@
 </script>
 
 <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-  {#if folderData && folderData.errorMessage}
+  {#if folderData.errorMessage}
     <div class="flex-1 min-h-0 overflow-y-auto">
       <div class="pt-6 pl-6">
         <h1 class="text-2xl font-bold">{folder.displayName}</h1>
@@ -282,7 +292,7 @@
 
 {#snippet dividerRow({ row })}
   <PromptDivider
-    disabled={folderData?.isCreatingPrompt ?? false}
+    disabled={folderData.isCreatingPrompt}
     onAddPrompt={() => handleAddPrompt(row.previousPromptId)}
     testId={
       row.previousPromptId
