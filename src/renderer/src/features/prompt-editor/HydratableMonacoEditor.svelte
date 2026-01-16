@@ -51,6 +51,13 @@
 
   let isHydrated = $state(false)
   let queuedEntry: MonacoHydrationEntry | null = null
+  let lastReportedHydration = $state<boolean | null>(null)
+
+  const reportHydrationIfChanged = () => {
+    if (lastReportedHydration === isHydrated) return
+    lastReportedHydration = isHydrated
+    onHydrationChange?.(isHydrated)
+  }
 
   // Side effect: ensure queued entries are cleaned up on unmount.
   onMount(() => {
@@ -71,16 +78,17 @@
       if (isHydrated) {
         isHydrated = false
       }
-      onHydrationChange?.(isHydrated)
+      reportHydrationIfChanged()
       return
     }
     if (!queuedEntry && !isHydrated) {
       queuedEntry = enqueueMonacoHydration(hydrationPriority, () => {
         queuedEntry = null
         isHydrated = true
+        reportHydrationIfChanged()
       })
     }
-    onHydrationChange?.(isHydrated)
+    reportHydrationIfChanged()
   })
 
   // Side effect: keep queued hydration priority aligned with scroll updates.
