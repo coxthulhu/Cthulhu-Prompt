@@ -18,22 +18,37 @@
   let matchText = $state('')
   let totalMatches = $state(0)
   let currentMatchIndex = $state(0)
-  let lastQuery = $state('')
-  let matches = $state<PromptFolderFindMatch[]>([])
+  let matchGroups = $state<PromptFolderFindGroup[]>([])
+
+  let lastQuery = ''
+  let lastScopeKey = ''
+  // Shared Monaco model for counting matches to avoid per-search model churn.
+  let searchModel: monaco.editor.ITextModel | null = null
 
   const hydratedPromptIds = new SvelteSet<string>()
   const bodyMatchCountsByPromptId = new SvelteMap<string, { query: string; count: number }>()
 
+  // Reset search state and show the widget.
   const openFindDialog = () => {
     isFindOpen = true
     currentMatchIndex = 0
+    lastQuery = ''
+    lastScopeKey = ''
   }
 
+  // Close the widget and clear the active selection.
   const closeFindDialog = () => {
     isFindOpen = false
     currentMatchIndex = 0
   }
 
+  type PromptFolderFindGroup = {
+    promptId: string
+    titleCount: number
+    bodyCount: number
+  }
+
+  // Snapshot the prompt data used by the current search run.
   const buildSearchScope = () => {
     return promptIds.map((promptId) => {
       const promptData = getPromptData(promptId)
@@ -45,66 +60,69 @@
     })
   }
 
-  const countMatchesInText = (text: string, query: string): number => {
-    if (query.length === 0) return 0
-    const model = monaco.editor.createModel(text, 'plaintext')
-    try {
-      return model.findMatches(query, false, false, false, null, false).length
-    } finally {
-      model.dispose()
+  // Lazily initialize and return the shared search model.
+  const getSearchModel = () => {
+    if (!searchModel) {
+      searchModel = monaco.editor.createModel('', 'plaintext')
     }
+    return searchModel
   }
 
-  const buildMatchList = (query: string): PromptFolderFindMatch[] => {
+  // Count matches in a string using the shared Monaco model.
+  const countMatchesInText = (text: string, query: string): number => {
+    if (query.length === 0) return 0
+    const model = getSearchModel()
+    model.setValue(text)
+    return model.findMatches(query, false, false, false, null, false).length
+  }
+
+  // Build aggregated match counts per prompt instead of per-match entries.
+  const buildMatchGroups = (query: string): PromptFolderFindGroup[] => {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length === 0) return []
 
     const scope = buildSearchScope()
-    const nextMatches: PromptFolderFindMatch[] = []
+    return scope.map((entry) => {
+      const titleCount = countMatchesInText(entry.title, trimmedQuery)
 
-    scope.forEach((entry) => {
-      const titleMatches = countMatchesInText(entry.title, trimmedQuery)
-      for (let i = 0; i < titleMatches; i += 1) {
-        nextMatches.push({ promptId: entry.id, kind: 'title' })
-      }
-
-      let bodyMatchCount = 0
+      let bodyCount = 0
       if (hydratedPromptIds.has(entry.id)) {
         const tracked = bodyMatchCountsByPromptId.get(entry.id)
         if (tracked?.query === trimmedQuery) {
-          bodyMatchCount = tracked.count
+          bodyCount = tracked.count
+        } else {
+          bodyCount = countMatchesInText(entry.text, trimmedQuery)
         }
       } else {
-        bodyMatchCount = countMatchesInText(entry.text, trimmedQuery)
+        bodyCount = countMatchesInText(entry.text, trimmedQuery)
       }
 
-      for (let i = 0; i < bodyMatchCount; i += 1) {
-        nextMatches.push({
-          promptId: entry.id,
-          kind: 'body',
-          bodyMatchIndex: i
-        })
+      return {
+        promptId: entry.id,
+        titleCount,
+        bodyCount
       }
     })
-
-    return nextMatches
   }
 
-  const runSearch = (query: string, resetSelection: boolean) => {
-    const trimmedQuery = query.trim()
-    const nextMatches = buildMatchList(trimmedQuery)
-    matches = nextMatches
-    totalMatches = nextMatches.length
-
+  // Run a full search pass and update derived counts/indexes.
+  const runSearch = (trimmedQuery: string, resetSelection: boolean) => {
     if (trimmedQuery.length === 0) {
+      matchGroups = []
+      totalMatches = 0
       currentMatchIndex = 0
-      lastQuery = trimmedQuery
       return
     }
 
+    const nextGroups = buildMatchGroups(trimmedQuery)
+    matchGroups = nextGroups
+    totalMatches = nextGroups.reduce(
+      (sum, entry) => sum + entry.titleCount + entry.bodyCount,
+      0
+    )
+
     if (resetSelection) {
       currentMatchIndex = 0
-      lastQuery = trimmedQuery
       return
     }
 
@@ -115,27 +133,57 @@
       currentMatchIndex = 0
     }
 
-    lastQuery = trimmedQuery
   }
 
+  // Map a 1-based match index into the grouped counts without allocating per-match entries.
+  const getMatchForIndex = (
+    matchIndex: number,
+    groups: PromptFolderFindGroup[]
+  ): PromptFolderFindMatch | null => {
+    if (matchIndex <= 0) return null
+    let remaining = matchIndex
+    for (const group of groups) {
+      if (remaining <= group.titleCount) {
+        return { promptId: group.promptId, kind: 'title' }
+      }
+      remaining -= group.titleCount
+      if (remaining <= group.bodyCount) {
+        return {
+          promptId: group.promptId,
+          kind: 'body',
+          bodyMatchIndex: remaining - 1
+        }
+      }
+      remaining -= group.bodyCount
+    }
+    return null
+  }
+
+  // Derived current match based on the 1-based index and grouped counts.
   const currentMatch = $derived.by(() => {
     if (currentMatchIndex <= 0) return null
-    return matches[currentMatchIndex - 1] ?? null
+    return getMatchForIndex(currentMatchIndex, matchGroups)
   })
 
+  // Placeholder for auto-revealing the selected match in the virtual list.
   const revealMatch = (match: PromptFolderFindMatch) => {
     void match
     // TODO: scroll the virtual window so the active match is visible.
   }
 
+  // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
     if (totalMatches === 0 || matchText.trim().length === 0) return
     const nextIndex =
       currentMatchIndex <= 1 ? totalMatches : Math.max(1, currentMatchIndex - 1)
     currentMatchIndex = nextIndex
-    revealMatch(matches[nextIndex - 1])
+    const match = getMatchForIndex(nextIndex, matchGroups)
+    if (match) {
+      revealMatch(match)
+    }
   }
 
+  // Move selection to the next match and reveal it.
   const handleNext = () => {
     if (totalMatches === 0 || matchText.trim().length === 0) return
     const nextIndex =
@@ -143,18 +191,29 @@
         ? 1
         : currentMatchIndex + 1
     currentMatchIndex = nextIndex
-    revealMatch(matches[nextIndex - 1])
+    const match = getMatchForIndex(nextIndex, matchGroups)
+    if (match) {
+      revealMatch(match)
+    }
   }
 
   // Side effect: refresh the placeholder search state while the find widget is open.
   $effect(() => {
     if (!isFindOpen) return
     const trimmedQuery = matchText.trim()
-    const shouldResetSelection = trimmedQuery !== lastQuery
-    runSearch(matchText, shouldResetSelection)
-    void promptIds
+    // Scope key guards the full rescan against changes in prompt IDs or query.
+    const scopeKey = promptIds.join('|')
+    const queryChanged = trimmedQuery !== lastQuery
+    const scopeChanged = scopeKey !== lastScopeKey
+
+    if (!queryChanged && !scopeChanged) return
+
+    runSearch(trimmedQuery, queryChanged || scopeChanged)
+    lastQuery = trimmedQuery
+    lastScopeKey = scopeKey
   })
 
+  // Track which prompts are hydrated so we can prefer editor-reported counts.
   const reportHydration = (promptId: string, isHydrated: boolean) => {
     if (isHydrated) {
       hydratedPromptIds.add(promptId)
@@ -162,18 +221,30 @@
       hydratedPromptIds.delete(promptId)
       bodyMatchCountsByPromptId.delete(promptId)
     }
-
-    if (!isFindOpen) return
-    runSearch(matchText, false)
   }
 
+  // Receive match counts from hydrated editors and update totals incrementally.
   const reportBodyMatchCount = (promptId: string, query: string, count: number) => {
     const trimmedQuery = matchText.trim()
     if (query !== trimmedQuery) return
     bodyMatchCountsByPromptId.set(promptId, { query, count })
 
     if (!isFindOpen) return
-    runSearch(matchText, false)
+    // Update just the affected prompt counts instead of rescanning everything.
+    const groupIndex = matchGroups.findIndex((group) => group.promptId === promptId)
+    if (groupIndex < 0) return
+
+    const group = matchGroups[groupIndex]
+    if (group.bodyCount === count) return
+
+    const nextGroups = matchGroups.slice()
+    nextGroups[groupIndex] = { ...group, bodyCount: count }
+    matchGroups = nextGroups
+
+    totalMatches = Math.max(0, totalMatches + (count - group.bodyCount))
+    if (currentMatchIndex > totalMatches) {
+      currentMatchIndex = totalMatches
+    }
   }
 
   const findState = $state<PromptFolderFindState>({
@@ -195,6 +266,7 @@
 
   // Side effect: capture global find/escape shortcuts while the prompt folder screen is active.
   onMount(() => {
+    // Handle global find/escape shortcuts while the widget is mounted.
     const handleGlobalKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (!isFindOpen) return
@@ -220,6 +292,9 @@
     window.addEventListener('keydown', handleGlobalKeydown, { capture: true })
     return () => {
       window.removeEventListener('keydown', handleGlobalKeydown, { capture: true })
+      // Side effect: dispose the shared Monaco find model on teardown.
+      searchModel?.dispose()
+      searchModel = null
     }
   })
 </script>
