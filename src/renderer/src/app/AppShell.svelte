@@ -7,6 +7,11 @@
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import {
+    getOrCreatePromptFolderData,
+    loadPromptFolder
+  } from '@renderer/data/PromptFolderDataStore.svelte.ts'
+  import type { PromptFolderData } from '@renderer/data/PromptFolderDataStore.svelte.ts'
+  import {
     useCheckWorkspaceFolderExistsMutation,
     useCreateWorkspaceMutation
   } from '@renderer/api/workspace'
@@ -26,6 +31,8 @@
   let activeScreen = $state<ScreenId>('home')
   let workspacePath = $state<string | null>(null)
   let selectedPromptFolder = $state<PromptFolder | null>(null)
+  let selectedPromptFolderData = $state<PromptFolderData | null>(null)
+  let lastLoadedFolderName = $state<string | null>(null)
   const isWorkspaceReady = $derived(Boolean(workspacePath))
   let isWorkspaceLoading = $state(false)
   let hasAttemptedAutoSelect = false
@@ -51,6 +58,21 @@
     workspacePath = null
     clearPromptFolderSelection()
   }
+
+  // Side effect: load prompt folder data once per folder selection.
+  $effect(() => {
+    if (!workspacePath || !selectedPromptFolder) {
+      selectedPromptFolderData = null
+      lastLoadedFolderName = null
+      return
+    }
+
+    const folderName = selectedPromptFolder.folderName
+    if (lastLoadedFolderName === folderName) return
+    lastLoadedFolderName = folderName
+    selectedPromptFolderData = getOrCreatePromptFolderData(folderName)
+    void loadPromptFolder(folderName, selectedPromptFolderData)
+  })
 
   const handleWorkspaceSuccess = async (path: string) => {
     await switchWorkspaceStores(path)
@@ -206,7 +228,7 @@
         </section>
       {:else if activeScreen === 'prompt-folders'}
         {#if selectedPromptFolder && workspacePath}
-          <PromptFolderScreen folder={selectedPromptFolder} />
+          <PromptFolderScreen folder={selectedPromptFolder} folderData={selectedPromptFolderData} />
         {/if}
       {:else if activeScreen === 'test-screen'}
         <TestScreen />

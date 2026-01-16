@@ -17,6 +17,7 @@ declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
         moveCursor: boolean,
         updateHistory?: boolean
       ) => void
+      matchesCount: number
     }
   }
 }

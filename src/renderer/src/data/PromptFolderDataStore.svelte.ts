@@ -38,6 +38,25 @@ let nextRequestId = 0
 const promptFolderDataByFolderName = new SvelteMap<string, PromptFolderData>()
 const inFlightRequests = new SvelteSet<Promise<void>>()
 
+const ensurePromptFolderData = (folderName: string): PromptFolderData => {
+  const existing = promptFolderDataByFolderName.get(folderName)
+  if (existing) return existing
+
+  const created = $state<PromptFolderData>({
+    promptIds: [],
+    isLoading: true,
+    isCreatingPrompt: false,
+    errorMessage: null,
+    requestId: 0
+  })
+  promptFolderDataByFolderName.set(folderName, created)
+  return created
+}
+
+export const getOrCreatePromptFolderData = (folderName: string): PromptFolderData => {
+  return ensurePromptFolderData(folderName)
+}
+
 export const flushPromptFolderRequests = async (): Promise<void> => {
   await Promise.all(Array.from(inFlightRequests))
 }
@@ -51,25 +70,15 @@ export const getPromptFolderData = (folderName: string): PromptFolderData | null
   return promptFolderDataByFolderName.get(folderName) ?? null
 }
 
-export const loadPromptFolder = async (folderName: string): Promise<void> => {
+export const loadPromptFolder = async (
+  folderName: string,
+  folderDataOverride?: PromptFolderData
+): Promise<void> => {
   const task = (async () => {
     const workspacePath = currentWorkspacePath!
     const requestId = (nextRequestId += 1)
-
     // Clear prior folder data on selection change so the UI never shows stale prompt ids.
-    let folderData = promptFolderDataByFolderName.get(folderName)
-
-    if (!folderData) {
-      const created = $state<PromptFolderData>({
-        promptIds: [],
-        isLoading: true,
-        isCreatingPrompt: false,
-        errorMessage: null,
-        requestId
-      })
-      promptFolderDataByFolderName.set(folderName, created)
-      folderData = created
-    }
+    const folderData = folderDataOverride ?? ensurePromptFolderData(folderName)
 
     folderData.promptIds = []
     folderData.isLoading = true
