@@ -5,6 +5,7 @@
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import type { PromptFolderFindRequest } from '../prompt-folders/promptFolderFindTypes'
   import {
     cancelMonacoHydration,
     enqueueMonacoHydration,
@@ -25,6 +26,8 @@
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
+    findRequest?: PromptFolderFindRequest | null
+    onFindMatches?: (query: string, count: number) => void
     class?: string
   }
 
@@ -41,6 +44,8 @@
     onChange,
     onBlur,
     onEditorLifecycle,
+    findRequest,
+    onFindMatches,
     class: className
   }: Props = $props()
 
@@ -98,6 +103,8 @@
       {onChange}
       {onBlur}
       {onEditorLifecycle}
+      {findRequest}
+      {onFindMatches}
     />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />

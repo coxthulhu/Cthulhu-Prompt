@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
+  import { FindController } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
+  import { FindModelBoundToEditorModel } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findModel'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
   import { clampMonacoHeightPx, LINE_HEIGHT_PX, MIN_MONACO_HEIGHT_PX } from './promptEditorSizing'
+  import type { PromptFolderFindRequest } from '../prompt-folders/promptFolderFindTypes'
 
   type Props = {
     initialValue: string
@@ -14,6 +17,8 @@
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
+    findRequest?: PromptFolderFindRequest | null
+    onFindMatches?: (query: string, count: number) => void
   }
 
   let {
@@ -24,7 +29,9 @@
     scrollToWithinWindowBand,
     onChange,
     onBlur,
-    onEditorLifecycle
+    onEditorLifecycle,
+    findRequest,
+    onFindMatches
   }: Props = $props()
 
   let container: HTMLDivElement | null = null
@@ -33,6 +40,34 @@
   let lastContainerWidthPx = 0
   let isLayingOut = false
   let pendingCursorPosition: monaco.IPosition | null = null
+  let findController: FindController | null = null
+  let findModel: FindModelBoundToEditorModel | null = null
+  let lastFindQuery = ''
+  let lastActiveMatchIndex: number | null = null
+  let lastReportedFindQuery = ''
+  let lastReportedFindCount = -1
+
+  const resetFindModel = () => {
+    if (!editor || !findController) return
+    findModel?.dispose()
+    findModel = new FindModelBoundToEditorModel(editor, findController.getState())
+  }
+
+  const clearFindState = () => {
+    findModel?.dispose()
+    findModel = null
+    lastFindQuery = ''
+    lastActiveMatchIndex = null
+    lastReportedFindQuery = ''
+    lastReportedFindCount = -1
+  }
+
+  const reportFindMatches = (query: string, count: number) => {
+    if (query === lastReportedFindQuery && count === lastReportedFindCount) return
+    lastReportedFindQuery = query
+    lastReportedFindCount = count
+    onFindMatches?.(query, count)
+  }
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
@@ -194,6 +229,7 @@
     editor = nextEditor
     registerMonacoEditor({ container, editor: nextEditor })
     onEditorLifecycle?.(nextEditor, true)
+    findController = FindController.get(nextEditor)
 
     const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
@@ -215,6 +251,8 @@
       onEditorLifecycle?.(nextEditor, false)
       nextEditor.dispose()
       editor = null
+      findController = null
+      clearFindState()
     }
   })
 
@@ -228,6 +266,58 @@
     const previousHeightPx = monacoHeightPx
     const nextHeightPx = layoutEditor()
     emitChange(editor.getValue(), nextHeightPx !== previousHeightPx, nextHeightPx)
+  })
+
+  // Side effect: sync Monaco find highlights + match reporting with the external find widget state.
+  $effect(() => {
+    if (!editor) return
+    const trimmedQuery = findRequest?.query.trim() ?? ''
+    if (!findRequest?.isOpen || trimmedQuery.length === 0) {
+      clearFindState()
+      return
+    }
+
+    if (!findController) {
+      findController = FindController.get(editor)
+    }
+    if (!findController) return
+
+    const queryChanged = trimmedQuery !== lastFindQuery
+    const shouldClearSelection =
+      findRequest.activeBodyMatchIndex == null && lastActiveMatchIndex != null
+
+    if (queryChanged) {
+      lastFindQuery = trimmedQuery
+      lastActiveMatchIndex = null
+    }
+
+    findController.getState().change(
+      {
+        searchString: trimmedQuery,
+        isRegex: false,
+        matchCase: false,
+        wholeWord: false,
+        preserveCase: false
+      },
+      false,
+      false
+    )
+
+    if (!findModel || queryChanged || shouldClearSelection) {
+      resetFindModel()
+    }
+
+    findModel?.research(false)
+    reportFindMatches(trimmedQuery, findController.getState().matchesCount)
+
+    if (findRequest.activeBodyMatchIndex != null && findRequest.activeBodyMatchIndex >= 0) {
+      if (findRequest.activeBodyMatchIndex !== lastActiveMatchIndex) {
+        findModel?.moveToMatch(findRequest.activeBodyMatchIndex)
+        lastActiveMatchIndex = findRequest.activeBodyMatchIndex
+      }
+    } else {
+      lastActiveMatchIndex = null
+    }
   })
 
 </script>

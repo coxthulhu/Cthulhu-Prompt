@@ -152,32 +152,32 @@
   }
 </script>
 
-<main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-  {#if folderData.errorMessage}
-    <div class="flex-1 min-h-0 overflow-y-auto">
-      <div class="pt-6 pl-6">
-        <h1 class="text-2xl font-bold">{folder.displayName}</h1>
-        <p class="mt-4 text-muted-foreground">
-          Edit prompts in the "{folder.displayName}" folder.
-        </p>
-        <h2 class="mt-6 text-lg font-semibold mb-4">
-          Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
-        </h2>
-        <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
+<PromptFolderFindIntegration promptIds={folderData.promptIds}>
+  <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
+    {#if folderData.errorMessage}
+      <div class="flex-1 min-h-0 overflow-y-auto">
+        <div class="pt-6 pl-6">
+          <h1 class="text-2xl font-bold">{folder.displayName}</h1>
+          <p class="mt-4 text-muted-foreground">
+            Edit prompts in the "{folder.displayName}" folder.
+          </p>
+          <h2 class="mt-6 text-lg font-semibold mb-4">
+            Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
+          </h2>
+          <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
+        </div>
       </div>
-    </div>
-  {:else}
-    <div class="flex-1 min-h-0 flex">
-      <SvelteVirtualWindow
-        items={virtualItems}
-        {rowRegistry}
-        getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
-      />
-    </div>
-  {/if}
-</main>
-
-<PromptFolderFindIntegration promptIds={folderData.promptIds} />
+    {:else}
+      <div class="flex-1 min-h-0 flex">
+        <SvelteVirtualWindow
+          items={virtualItems}
+          {rowRegistry}
+          getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
+        />
+      </div>
+    {/if}
+  </main>
+</PromptFolderFindIntegration>
 
 {#snippet headerRow({ row })}
   <div class="pt-6">

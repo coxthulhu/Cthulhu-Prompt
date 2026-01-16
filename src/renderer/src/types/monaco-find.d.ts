@@ -17,6 +17,7 @@ declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
         moveCursor: boolean,
         updateHistory?: boolean
       ) => void
+      matchesCount: number
     }
   }
 }
@@ -26,6 +27,10 @@ declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findModel' {
 
   export class FindModelBoundToEditorModel {
     constructor(editor: editor.IStandaloneCodeEditor, state: unknown)
+    research(moveCursor: boolean, newFindScope?: unknown): void
     dispose(): void
+    moveToNextMatch(): void
+    moveToPrevMatch(): void
+    moveToMatch(index: number): void
   }
 }

@@ -7,6 +7,8 @@
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
+  import { getPromptFolderFindContext } from '../prompt-folders/promptFolderFindContext'
+  import type { PromptFolderFindRequest } from '../prompt-folders/promptFolderFindTypes'
   import {
     ADDITIONAL_GAP_PX,
     estimatePromptEditorHeight,
@@ -64,6 +66,7 @@
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
   let isHydrated = $state(false)
+  const findContext = getPromptFolderFindContext()
 
   const SIDEBAR_WIDTH_PX = 24
   const ROW_GAP_PX = 8
@@ -130,6 +133,25 @@
   const handleHydrationChange = (nextIsHydrated: boolean) => {
     isHydrated = nextIsHydrated
     onHydrationChange?.(nextIsHydrated)
+    findContext?.reportHydration(promptId, nextIsHydrated)
+  }
+
+  const findRequest = $derived.by<PromptFolderFindRequest | null>(() => {
+    if (!findContext) return null
+    const activeBodyMatchIndex =
+      findContext.currentMatch?.kind === 'body' && findContext.currentMatch.promptId === promptId
+        ? findContext.currentMatch.bodyMatchIndex ?? null
+        : null
+
+    return {
+      isOpen: findContext.isFindOpen,
+      query: findContext.query,
+      activeBodyMatchIndex
+    }
+  })
+
+  const handleFindMatches = (query: string, count: number) => {
+    findContext?.reportBodyMatchCount(promptId, query, count)
   }
 
   const handleMovePrompt = async (offsetPx: number, moveAction: () => Promise<boolean>) => {
@@ -174,12 +196,14 @@
                 overflowWidgetsDomNode={overflowHost}
                 {hydrationPriority}
                 {shouldDehydrate}
-            {rowId}
-            {scrollToWithinWindowBand}
-            {onEditorLifecycle}
-            onHydrationChange={handleHydrationChange}
-            onChange={(text, meta) => {
-              if (meta.heightPx !== monacoHeightPx) {
+                {rowId}
+                {scrollToWithinWindowBand}
+                {onEditorLifecycle}
+                {findRequest}
+                onFindMatches={handleFindMatches}
+                onHydrationChange={handleHydrationChange}
+                onChange={(text, meta) => {
+                  if (meta.heightPx !== monacoHeightPx) {
                     monacoHeightPx = meta.heightPx
                   }
                   promptData.setText(text, {
