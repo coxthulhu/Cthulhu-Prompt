@@ -1,30 +1,17 @@
 <script lang="ts">
-  import {
-    promptFolderFindState,
-    setFindQuery
-  } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
-
-  let {
-    matchesLabel,
-    hasNoResults,
-    onClose,
-    inputEl = $bindable(null)
-  } = $props<{
-    matchesLabel: string
-    hasNoResults: boolean
+  let { onClose } = $props<{
     onClose: () => void
-    inputEl?: HTMLTextAreaElement | null
   }>()
 
   let isInputFocused = $state(false)
-  // Derived state: disable navigation buttons when there is no active query.
-  const isQueryEmpty = $derived(promptFolderFindState.query.length === 0)
+  let inputValue = $state('')
+  // Derived state: keep empty styling in sync with the local input value.
+  const isInputEmpty = $derived(inputValue.length === 0)
 </script>
 
 <div class="prompt-find-widget-host">
   <div
-    class="prompt-find-widget"
-    class:prompt-find-widget--no-results={hasNoResults}
+    class="prompt-find-widget prompt-find-widget--no-results"
     data-testid="prompt-find-widget"
   >
     <div class="prompt-find-widget__find-part">
@@ -33,10 +20,8 @@
           <div class="prompt-find-input__box" class:synthetic-focus={isInputFocused}>
             <div class="prompt-find-input__wrapper">
               <textarea
-                bind:this={inputEl}
-                value={promptFolderFindState.query}
                 class="prompt-find-input__field"
-                class:empty={!promptFolderFindState.query}
+                class:empty={isInputEmpty}
                 data-testid="prompt-find-input"
                 rows="1"
                 wrap="off"
@@ -44,8 +29,7 @@
                 aria-label="Find"
                 spellcheck="false"
                 oninput={(event) => {
-                  const target = event.currentTarget as HTMLTextAreaElement
-                  setFindQuery(target.value)
+                  inputValue = (event.currentTarget as HTMLTextAreaElement).value
                 }}
                 onfocus={() => {
                   isInputFocused = true
@@ -54,49 +38,27 @@
                   isInputFocused = false
                 }}
               ></textarea>
-              <div class="prompt-find-input__mirror">{promptFolderFindState.query || ' '}</div>
+              <div class="prompt-find-input__mirror">{inputValue || ' '}</div>
             </div>
           </div>
         </div>
         <div class="prompt-find-input__controls"></div>
       </div>
       <div class="prompt-find-widget__actions">
-        <div class="prompt-find-widget__matches">{matchesLabel}</div>
+        <div class="prompt-find-widget__matches">No results</div>
         <div
-          class="prompt-find-widget__button codicon codicon-find-previous-match"
-          class:prompt-find-widget__button--disabled={isQueryEmpty}
+          class="prompt-find-widget__button prompt-find-widget__button--disabled codicon codicon-find-previous-match"
           data-testid="prompt-find-prev"
-          role="button"
-          tabindex={isQueryEmpty ? -1 : 0}
           title="Find Previous"
           aria-label="Find Previous"
-          aria-disabled={isQueryEmpty}
-          onclick={() => {
-            if (isQueryEmpty) return
-          }}
-          onkeydown={(event) => {
-            if (isQueryEmpty) return
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-          }}
+          aria-disabled="true"
         ></div>
         <div
-          class="prompt-find-widget__button codicon codicon-find-next-match"
-          class:prompt-find-widget__button--disabled={isQueryEmpty}
+          class="prompt-find-widget__button prompt-find-widget__button--disabled codicon codicon-find-next-match"
           data-testid="prompt-find-next"
-          role="button"
-          tabindex={isQueryEmpty ? -1 : 0}
           title="Find Next"
           aria-label="Find Next"
-          aria-disabled={isQueryEmpty}
-          onclick={() => {
-            if (isQueryEmpty) return
-          }}
-          onkeydown={(event) => {
-            if (isQueryEmpty) return
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-          }}
+          aria-disabled="true"
         ></div>
       </div>
     </div>

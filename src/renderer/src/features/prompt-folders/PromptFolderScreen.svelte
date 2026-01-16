@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onMount } from 'svelte'
   import type { PromptFolder } from '@shared/ipc'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
@@ -24,16 +24,10 @@
     movePromptUpInFolder,
     type PromptFolderData
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
-  import {
-    promptFolderFindState,
-    syncPromptFolderFindScope
-  } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
-  import { createPromptFolderFindHighlighter } from './promptFolderFindHighlighter.svelte.ts'
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
-  let findInput = $state<HTMLTextAreaElement | null>(null)
   let folderData = $state<PromptFolderData>({
     promptIds: [],
     isLoading: true,
@@ -42,24 +36,9 @@
     requestId: 0
   })
 
-  const findHighlighter = createPromptFolderFindHighlighter({
-    getIsFindOpen: () => isFindOpen,
-    getQuery: () => promptFolderFindState.query
-  })
-
   let previousFolderName = $state<string | null>(null)
 
-  const isFindAvailable = $derived(!folderData.isLoading && !folderData.errorMessage)
-  const hasNoFindResults = $derived(
-    promptFolderFindState.query.length > 0 && promptFolderFindState.totalMatches === 0
-  )
-  const matchesLabel = $derived.by(() => {
-    if (!promptFolderFindState.query.length) return 'No results'
-    if (promptFolderFindState.totalMatches === 0) return 'No results'
-    return `0 of ${promptFolderFindState.totalMatches}`
-  })
-
-  // Side effect: reload prompts on folder change and keep the find scope aligned with the active prompt list.
+  // Side effect: reload prompts on folder change.
   $effect(() => {
     const folderName = folder.folderName
     const nextFolderData = getPromptFolderData(folderName)
@@ -67,37 +46,17 @@
 
     if (previousFolderName !== folderName) {
       previousFolderName = folderName
-      isFindOpen = false
       void loadPromptFolder(folderName)
     }
-
-    syncPromptFolderFindScope(folderName, nextFolderData.promptIds)
   })
 
-  const focusFindInput = async () => {
-    // Side effect: wait for the dialog to render before focusing the input.
-    await tick()
-    if (!findInput) return
-    findInput.focus()
-    findInput.select()
-  }
-
   const openFindDialog = () => {
-    if (!isFindAvailable) return
     isFindOpen = true
-    void focusFindInput()
   }
 
   const closeFindDialog = () => {
     isFindOpen = false
   }
-
-  // Side effect: close the find dialog when the screen is loading or errored.
-  $effect(() => {
-    if (!isFindAvailable && isFindOpen) {
-      isFindOpen = false
-    }
-  })
 
   // Side effect: capture global find/escape shortcuts while the prompt folder screen is active.
   onMount(() => {
@@ -258,13 +217,8 @@
   {/if}
 </main>
 
-{#if isFindOpen && isFindAvailable}
-  <PromptFolderFindWidget
-    bind:inputEl={findInput}
-    {matchesLabel}
-    hasNoResults={hasNoFindResults}
-    onClose={closeFindDialog}
-  />
+{#if isFindOpen}
+  <PromptFolderFindWidget onClose={closeFindDialog} />
 {/if}
 
 {#snippet headerRow({ row })}
@@ -327,7 +281,6 @@
     {overlayRowElement}
     {onHydrationChange}
     {scrollToWithinWindowBand}
-    onEditorLifecycle={findHighlighter.handleEditorLifecycle}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}
