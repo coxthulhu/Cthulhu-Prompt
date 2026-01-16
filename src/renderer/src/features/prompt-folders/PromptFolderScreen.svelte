@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { PromptFolder } from '@shared/ipc'
-  import type { monaco } from '@renderer/common/Monaco'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import {
@@ -17,37 +16,33 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import {
+    getPromptFolderData,
+    loadPromptFolder,
     createPromptInFolder,
     deletePromptInFolder,
     movePromptDownInFolder,
     movePromptUpInFolder
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
-  import type { PromptFolderData } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import {
     promptFolderFindState,
-    refreshPromptFolderFindMatches,
-    setFindDialogOpen,
     syncPromptFolderFindScope
   } from '@renderer/data/PromptFolderFindDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { createPromptFolderFindHighlighter } from './promptFolderFindHighlighter.svelte.ts'
 
-  let { folder, folderData } = $props<{ folder: PromptFolder; folderData: PromptFolderData | null }>()
+  let { folder } = $props<{ folder: PromptFolder }>()
   let isFindOpen = $state(false)
   let findInput = $state<HTMLTextAreaElement | null>(null)
-  let lastFolderName = $state<string | null>(null)
 
   const findHighlighter = createPromptFolderFindHighlighter({
     getIsFindOpen: () => isFindOpen,
     getQuery: () => promptFolderFindState.query
   })
 
-  // Side effect: close the find dialog when the folder changes.
+  // Side effect: reload prompts and close the find dialog when the folder changes.
   $effect(() => {
-    if (lastFolderName === folder.folderName) return
-    lastFolderName = folder.folderName
     isFindOpen = false
-    setFindDialogOpen(false)
+    void loadPromptFolder(folder.folderName)
   })
 
   // Side effect: keep the find scope aligned with the active folder's prompt list.
@@ -56,6 +51,7 @@
     syncPromptFolderFindScope(folder.folderName, promptIds)
   })
 
+  const folderData = $derived(getPromptFolderData(folder.folderName))
   const isFindAvailable = $derived(
     Boolean(folderData && !folderData.isLoading && !folderData.errorMessage)
   )
@@ -79,20 +75,17 @@
   const openFindDialog = () => {
     if (!isFindAvailable) return
     isFindOpen = true
-    setFindDialogOpen(true)
     void focusFindInput()
   }
 
   const closeFindDialog = () => {
     isFindOpen = false
-    setFindDialogOpen(false)
   }
 
   // Side effect: close the find dialog when the screen is loading or errored.
   $effect(() => {
     if (!isFindAvailable && isFindOpen) {
       isFindOpen = false
-      setFindDialogOpen(false)
     }
   })
 
@@ -228,13 +221,6 @@
   const handleMovePromptDown = (promptId: string) => {
     return movePromptDownInFolder(folder.folderName, promptId)
   }
-
-  const handleFindEditorLifecycle = (promptId: string) => {
-    return (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => {
-      findHighlighter.handleEditorLifecycle(promptId, editor, isActive)
-      refreshPromptFolderFindMatches(promptId)
-    }
-  }
 </script>
 
 <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
@@ -331,7 +317,7 @@
     {overlayRowElement}
     {onHydrationChange}
     {scrollToWithinWindowBand}
-    onEditorLifecycle={handleFindEditorLifecycle(row.promptId)}
+    onEditorLifecycle={findHighlighter.handleEditorLifecycle}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}
