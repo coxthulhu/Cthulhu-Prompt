@@ -1,17 +1,74 @@
 <script lang="ts">
-  let { onClose } = $props<{
+  import { onMount } from 'svelte'
+
+  type FindWidgetProps = {
     onClose: () => void
-  }>()
+    matchText?: string
+    totalMatches?: number
+    currentMatchIndex?: number
+    onNext?: () => void
+    onPrevious?: () => void
+  }
+
+  let {
+    onClose,
+    matchText = $bindable(''),
+    totalMatches = 0,
+    currentMatchIndex = 0,
+    onNext,
+    onPrevious
+  }: FindWidgetProps = $props()
 
   let isInputFocused = $state(false)
-  let inputValue = $state('')
+  let inputRef = $state<HTMLTextAreaElement | null>(null)
   // Derived state: keep empty styling in sync with the local input value.
-  const isInputEmpty = $derived(inputValue.length === 0)
+  const isInputEmpty = $derived(matchText.length === 0)
+  const hasNoResults = $derived(matchText.length > 0 && totalMatches === 0)
+  const isNavigationDisabled = $derived(matchText.length === 0 || totalMatches === 0)
+  const matchesLabel = $derived.by(() => {
+    if (matchText.length === 0) return 'No results'
+    if (totalMatches === 0) return 'No results'
+    return `${currentMatchIndex} of ${totalMatches}`
+  })
+
+  const handlePrevious = () => {
+    if (isNavigationDisabled) return
+    onPrevious?.()
+  }
+
+  const handleNext = () => {
+    if (isNavigationDisabled) return
+    onNext?.()
+  }
+
+  const handleInputKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (event.shiftKey) {
+        handlePrevious()
+      } else {
+        handleNext()
+      }
+      return
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onClose()
+    }
+  }
+
+  // Side effect: focus and select the find input when the widget mounts.
+  onMount(() => {
+    inputRef?.focus()
+    inputRef?.select()
+  })
 </script>
 
 <div class="prompt-find-widget-host">
   <div
-    class="prompt-find-widget prompt-find-widget--no-results"
+    class="prompt-find-widget"
+    class:prompt-find-widget--no-results={hasNoResults}
     data-testid="prompt-find-widget"
   >
     <div class="prompt-find-widget__find-part">
@@ -28,9 +85,9 @@
                 placeholder="Find"
                 aria-label="Find"
                 spellcheck="false"
-                oninput={(event) => {
-                  inputValue = (event.currentTarget as HTMLTextAreaElement).value
-                }}
+                bind:this={inputRef}
+                bind:value={matchText}
+                onkeydown={handleInputKeydown}
                 onfocus={() => {
                   isInputFocused = true
                 }}
@@ -38,27 +95,45 @@
                   isInputFocused = false
                 }}
               ></textarea>
-              <div class="prompt-find-input__mirror">{inputValue || ' '}</div>
+              <div class="prompt-find-input__mirror">{matchText || ' '}</div>
             </div>
           </div>
         </div>
         <div class="prompt-find-input__controls"></div>
       </div>
       <div class="prompt-find-widget__actions">
-        <div class="prompt-find-widget__matches">No results</div>
+        <div class="prompt-find-widget__matches">{matchesLabel}</div>
         <div
-          class="prompt-find-widget__button prompt-find-widget__button--disabled codicon codicon-find-previous-match"
+          class="prompt-find-widget__button codicon codicon-find-previous-match"
+          class:prompt-find-widget__button--disabled={isNavigationDisabled}
           data-testid="prompt-find-prev"
           title="Find Previous"
           aria-label="Find Previous"
-          aria-disabled="true"
+          role="button"
+          tabindex={isNavigationDisabled ? -1 : 0}
+          aria-disabled={isNavigationDisabled}
+          onclick={handlePrevious}
+          onkeydown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            handlePrevious()
+          }}
         ></div>
         <div
-          class="prompt-find-widget__button prompt-find-widget__button--disabled codicon codicon-find-next-match"
+          class="prompt-find-widget__button codicon codicon-find-next-match"
+          class:prompt-find-widget__button--disabled={isNavigationDisabled}
           data-testid="prompt-find-next"
           title="Find Next"
           aria-label="Find Next"
-          aria-disabled="true"
+          role="button"
+          tabindex={isNavigationDisabled ? -1 : 0}
+          aria-disabled={isNavigationDisabled}
+          onclick={handleNext}
+          onkeydown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            handleNext()
+          }}
         ></div>
       </div>
     </div>
