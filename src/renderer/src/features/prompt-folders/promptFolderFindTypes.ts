@@ -1,9 +1,14 @@
-export type PromptFolderFindMatch = {
-  promptId: string
-  kind: 'title' | 'body'
-  bodyMatchIndex?: number
-  titleMatchIndex?: number
-}
+export type PromptFolderFindMatch =
+  | {
+      promptId: string
+      kind: 'title'
+      titleMatchIndex: number
+    }
+  | {
+      promptId: string
+      kind: 'body'
+      bodyMatchIndex: number
+    }
 
 export type PromptFolderFindState = {
   isFindOpen: boolean

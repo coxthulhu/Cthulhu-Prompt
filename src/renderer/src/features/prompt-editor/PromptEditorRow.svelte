@@ -143,7 +143,7 @@
     if (!findContext) return null
     const activeBodyMatchIndex =
       findContext.currentMatch?.kind === 'body' && findContext.currentMatch.promptId === promptId
-        ? findContext.currentMatch.bodyMatchIndex ?? null
+        ? findContext.currentMatch.bodyMatchIndex
         : null
 
     return {
@@ -197,10 +197,13 @@
       const input = rowElement?.querySelector<HTMLInputElement>('[data-testid="prompt-title"]')
       if (!input) return
       input.focus({ preventScroll: true })
-      const trimmedQuery = findContext.focusMatchQuery.trim()
-      if (trimmedQuery.length === 0) return
-      const matchIndex = focusMatch.titleMatchIndex ?? 0
-      const selection = findMatchSelection(promptData.draft.title, trimmedQuery, matchIndex)
+      const focusQuery = findContext.focusMatchQuery
+      if (focusQuery.length === 0) return
+      const selection = findMatchSelection(
+        promptData.draft.title,
+        focusQuery,
+        focusMatch.titleMatchIndex
+      )
       if (!selection) return
       input.setSelectionRange(selection.start, selection.end)
       return

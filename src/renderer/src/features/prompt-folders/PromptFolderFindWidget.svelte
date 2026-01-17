@@ -3,22 +3,22 @@
 
   type FindWidgetProps = {
     onClose: () => void
-    matchText?: string
-    totalMatches?: number
-    currentMatchIndex?: number
-    onNext?: () => void
-    onPrevious?: () => void
-    focusRequestId?: number
+    matchText: string
+    totalMatches: number
+    currentMatchIndex: number
+    onNext: () => void
+    onPrevious: () => void
+    focusRequestId: number
   }
 
   let {
     onClose,
     matchText = $bindable(''),
-    totalMatches = 0,
-    currentMatchIndex = 0,
+    totalMatches,
+    currentMatchIndex,
     onNext,
     onPrevious,
-    focusRequestId = 0
+    focusRequestId
   }: FindWidgetProps = $props()
 
   let isInputFocused = $state(false)
@@ -36,12 +36,12 @@
 
   const handlePrevious = () => {
     if (isNavigationDisabled) return
-    onPrevious?.()
+    onPrevious()
   }
 
   const handleNext = () => {
     if (isNavigationDisabled) return
-    onNext?.()
+    onNext()
   }
 
   const handleInputKeydown = (event: KeyboardEvent) => {

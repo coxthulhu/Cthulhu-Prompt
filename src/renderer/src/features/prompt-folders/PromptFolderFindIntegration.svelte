@@ -18,16 +18,15 @@
   let matchText = $state('')
   let totalMatches = $state(0)
   let currentMatchIndex = $state(0)
-  let matchGroups = $state<PromptFolderFindGroup[]>([])
+  let matchCountsByPrompt = $state<PromptFolderFindCounts[]>([])
   let focusFindRequestId = $state(0)
   let focusMatchRequestId = $state(0)
   let focusMatch = $state<PromptFolderFindMatch | null>(null)
   let focusMatchQuery = $state('')
-  let searchRefreshToken = $state(0)
-
+  let searchRevision = $state(0)
   let lastQueryKey = ''
   let lastScopeKey = ''
-  let lastSearchRefreshToken = 0
+  let lastSearchRevision = 0
   // Shared Monaco model for counting matches to avoid per-search model churn.
   let searchModel: monaco.editor.ITextModel | null = null
 
@@ -38,7 +37,7 @@
   const openFindDialog = () => {
     if (!isFindOpen) {
       isFindOpen = true
-      searchRefreshToken += 1
+      searchRevision += 1
     }
     focusFindRequestId += 1
   }
@@ -48,12 +47,12 @@
     isFindOpen = false
     if (currentMatch) {
       focusMatch = currentMatch
-      focusMatchQuery = matchText
+      focusMatchQuery = matchText.trim()
       focusMatchRequestId += 1
     }
   }
 
-  type PromptFolderFindGroup = {
+  type PromptFolderFindCounts = {
     promptId: string
     titleCount: number
     bodyCount: number
@@ -88,7 +87,7 @@
   }
 
   // Build aggregated match counts per prompt instead of per-match entries.
-  const buildMatchGroups = (query: string): PromptFolderFindGroup[] => {
+  const buildMatchCounts = (query: string): PromptFolderFindCounts[] => {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length === 0) return []
 
@@ -119,15 +118,15 @@
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (trimmedQuery: string, resetSelection: boolean) => {
     if (trimmedQuery.length === 0) {
-      matchGroups = []
+      matchCountsByPrompt = []
       totalMatches = 0
       currentMatchIndex = 0
       return
     }
 
-    const nextGroups = buildMatchGroups(trimmedQuery)
-    matchGroups = nextGroups
-    totalMatches = nextGroups.reduce(
+    const nextCounts = buildMatchCounts(trimmedQuery)
+    matchCountsByPrompt = nextCounts
+    totalMatches = nextCounts.reduce(
       (sum, entry) => sum + entry.titleCount + entry.bodyCount,
       0
     )
@@ -143,13 +142,12 @@
     if (currentMatchIndex < 0) {
       currentMatchIndex = 0
     }
-
   }
 
   // Map a 1-based match index into the grouped counts without allocating per-match entries.
   const getMatchForIndex = (
     matchIndex: number,
-    groups: PromptFolderFindGroup[]
+    groups: PromptFolderFindCounts[]
   ): PromptFolderFindMatch | null => {
     if (matchIndex <= 0) return null
     let remaining = matchIndex
@@ -177,7 +175,7 @@
   // Derived current match based on the 1-based index and grouped counts.
   const currentMatch = $derived.by(() => {
     if (currentMatchIndex <= 0) return null
-    return getMatchForIndex(currentMatchIndex, matchGroups)
+    return getMatchForIndex(currentMatchIndex, matchCountsByPrompt)
   })
 
   const findMatchStartIndex = (text: string, query: string, matchIndex: number): number | null => {
@@ -204,7 +202,6 @@
     const promptData = getPromptData(match.promptId)
     const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
     const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
-    if (matchIndex == null) return null
 
     const startIndex = findMatchStartIndex(targetText, trimmedQuery, matchIndex)
     if (startIndex == null) return null
@@ -218,16 +215,17 @@
     // TODO: scroll the virtual window so the active match is visible.
   }
 
+  const setCurrentMatchIndex = (nextIndex: number) => {
+    currentMatchIndex = nextIndex
+    revealMatch(getMatchForIndex(nextIndex, matchCountsByPrompt)!)
+  }
+
   // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
     if (totalMatches === 0 || matchText.trim().length === 0) return
     const nextIndex =
       currentMatchIndex <= 1 ? totalMatches : Math.max(1, currentMatchIndex - 1)
-    currentMatchIndex = nextIndex
-    const match = getMatchForIndex(nextIndex, matchGroups)
-    if (match) {
-      revealMatch(match)
-    }
+    setCurrentMatchIndex(nextIndex)
   }
 
   // Move selection to the next match and reveal it.
@@ -237,11 +235,7 @@
       currentMatchIndex <= 0 || currentMatchIndex >= totalMatches
         ? 1
         : currentMatchIndex + 1
-    currentMatchIndex = nextIndex
-    const match = getMatchForIndex(nextIndex, matchGroups)
-    if (match) {
-      revealMatch(match)
-    }
+    setCurrentMatchIndex(nextIndex)
   }
 
   // Side effect: refresh the placeholder search state while the find widget is open.
@@ -253,14 +247,14 @@
     const scopeKey = promptIds.join('|')
     const queryChanged = queryKey !== lastQueryKey
     const scopeChanged = scopeKey !== lastScopeKey
-    const refreshRequested = searchRefreshToken !== lastSearchRefreshToken
+    const refreshRequested = searchRevision !== lastSearchRevision
 
     if (!queryChanged && !scopeChanged && !refreshRequested) return
 
     runSearch(trimmedQuery, queryChanged || scopeChanged)
     lastQueryKey = queryKey
     lastScopeKey = scopeKey
-    lastSearchRefreshToken = searchRefreshToken
+    lastSearchRevision = searchRevision
   })
 
   // Track which prompts are hydrated so we can prefer editor-reported counts.
@@ -281,15 +275,15 @@
 
     if (!isFindOpen) return
     // Update just the affected prompt counts instead of rescanning everything.
-    const groupIndex = matchGroups.findIndex((group) => group.promptId === promptId)
+    const groupIndex = matchCountsByPrompt.findIndex((group) => group.promptId === promptId)
     if (groupIndex < 0) return
 
-    const group = matchGroups[groupIndex]
+    const group = matchCountsByPrompt[groupIndex]
     if (group.bodyCount === count) return
 
-    const nextGroups = matchGroups.slice()
+    const nextGroups = matchCountsByPrompt.slice()
     nextGroups[groupIndex] = { ...group, bodyCount: count }
-    matchGroups = nextGroups
+    matchCountsByPrompt = nextGroups
 
     totalMatches = Math.max(0, totalMatches + (count - group.bodyCount))
     if (currentMatchIndex > totalMatches) {
