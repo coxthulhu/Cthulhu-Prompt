@@ -10,13 +10,17 @@ export type PromptFolderFindMatch =
       bodyMatchIndex: number
     }
 
+export type PromptFolderFindFocusRequest = {
+  requestId: number
+  match: PromptFolderFindMatch
+  query: string
+}
+
 export type PromptFolderFindState = {
   isFindOpen: boolean
   query: string
   currentMatch: PromptFolderFindMatch | null
-  focusMatchRequestId: number
-  focusMatch: PromptFolderFindMatch | null
-  focusMatchQuery: string
+  focusRequest: PromptFolderFindFocusRequest | null
   reportHydration: (promptId: string, isHydrated: boolean) => void
   reportBodyMatchCount: (promptId: string, query: string, count: number) => void
 }

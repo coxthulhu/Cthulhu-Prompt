@@ -28,19 +28,15 @@
   const isInputEmpty = $derived(matchText.length === 0)
   const hasNoResults = $derived(matchText.length > 0 && totalMatches === 0)
   const isNavigationDisabled = $derived(matchText.length === 0 || totalMatches === 0)
-  const matchesLabel = $derived.by(() => {
-    if (matchText.length === 0) return 'No results'
-    if (totalMatches === 0) return 'No results'
-    return `${currentMatchIndex} of ${totalMatches}`
-  })
+  const matchesLabel = $derived.by(() =>
+    totalMatches === 0 ? 'No results' : `${currentMatchIndex} of ${totalMatches}`
+  )
 
   const handlePrevious = () => {
-    if (isNavigationDisabled) return
     onPrevious()
   }
 
   const handleNext = () => {
-    if (isNavigationDisabled) return
     onNext()
   }
 

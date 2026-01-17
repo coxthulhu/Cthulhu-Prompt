@@ -8,6 +8,7 @@
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/promptFolderFindContext'
+  import { findMatchRange } from '../prompt-folders/promptFolderFindText'
   import type { PromptFolderFindRequest } from '../prompt-folders/promptFolderFindTypes'
   import {
     ADDITIONAL_GAP_PX,
@@ -65,7 +66,7 @@
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
-  let rowElement = $state<HTMLDivElement | null>(null)
+  let titleInputRef = $state<HTMLInputElement | null>(null)
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let lastFocusRequestId = $state(0)
   let isHydrated = $state(false)
@@ -153,22 +154,6 @@
     }
   })
 
-  const findMatchSelection = (text: string, query: string, matchIndex: number) => {
-    if (query.length === 0 || matchIndex < 0) return null
-    const normalizedText = text.toLowerCase()
-    const normalizedQuery = query.toLowerCase()
-    let startIndex = -1
-    let fromIndex = 0
-
-    for (let i = 0; i <= matchIndex; i += 1) {
-      startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
-      if (startIndex < 0) return null
-      fromIndex = startIndex + normalizedQuery.length
-    }
-
-    return { start: startIndex, end: startIndex + query.length }
-  }
-
   const handleFindMatches = (query: string, count: number) => {
     findContext?.reportBodyMatchCount(promptId, query, count)
   }
@@ -188,24 +173,25 @@
   // Side effect: focus the match target after the find widget closes.
   $effect(() => {
     if (!findContext) return
-    if (findContext.focusMatchRequestId === lastFocusRequestId) return
-    lastFocusRequestId = findContext.focusMatchRequestId
-    const focusMatch = findContext.focusMatch
-    if (!focusMatch || focusMatch.promptId !== promptId) return
+    const focusRequest = findContext.focusRequest
+    if (!focusRequest || focusRequest.requestId === lastFocusRequestId) return
+    lastFocusRequestId = focusRequest.requestId
+    const focusMatch = focusRequest.match
+    if (focusMatch.promptId !== promptId) return
 
     if (focusMatch.kind === 'title') {
-      const input = rowElement?.querySelector<HTMLInputElement>('[data-testid="prompt-title"]')
+      const input = titleInputRef
       if (!input) return
       input.focus({ preventScroll: true })
-      const focusQuery = findContext.focusMatchQuery
+      const focusQuery = focusRequest.query
       if (focusQuery.length === 0) return
-      const selection = findMatchSelection(
+      const matchRange = findMatchRange(
         promptData.draft.title,
         focusQuery,
         focusMatch.titleMatchIndex
       )
-      if (!selection) return
-      input.setSelectionRange(selection.start, selection.end)
+      if (!matchRange) return
+      input.setSelectionRange(matchRange.start, matchRange.end)
       return
     }
 
@@ -225,7 +211,6 @@
 </script>
 
 <div
-  bind:this={rowElement}
   class="flex items-stretch gap-2"
   style={`height:${rowHeightPx}px; min-height:${rowHeightPx}px; max-height:${rowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
@@ -240,6 +225,7 @@
           title={promptData.draft.title}
           draftText={promptData.draft.text}
           onTitleChange={promptData.setTitle}
+          bind:inputRef={titleInputRef}
           {rowId}
           {scrollToWithinWindowBand}
           {onDelete}

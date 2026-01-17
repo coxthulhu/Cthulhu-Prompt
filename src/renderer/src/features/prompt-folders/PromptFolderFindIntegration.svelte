@@ -5,7 +5,12 @@
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
-  import type { PromptFolderFindMatch, PromptFolderFindState } from './promptFolderFindTypes'
+  import { findMatchRange } from './promptFolderFindText'
+  import type {
+    PromptFolderFindFocusRequest,
+    PromptFolderFindMatch,
+    PromptFolderFindState
+  } from './promptFolderFindTypes'
 
   type PromptFolderFindIntegrationProps = {
     promptIds: string[]
@@ -20,9 +25,7 @@
   let currentMatchIndex = $state(0)
   let matchCountsByPrompt = $state<PromptFolderFindCounts[]>([])
   let focusFindRequestId = $state(0)
-  let focusMatchRequestId = $state(0)
-  let focusMatch = $state<PromptFolderFindMatch | null>(null)
-  let focusMatchQuery = $state('')
+  let focusRequest = $state<PromptFolderFindFocusRequest | null>(null)
   let searchRevision = $state(0)
   let lastQueryKey = ''
   let lastScopeKey = ''
@@ -46,9 +49,11 @@
   const closeFindDialog = () => {
     isFindOpen = false
     if (currentMatch) {
-      focusMatch = currentMatch
-      focusMatchQuery = matchText.trim()
-      focusMatchRequestId += 1
+      focusRequest = {
+        requestId: (focusRequest?.requestId ?? 0) + 1,
+        match: currentMatch,
+        query: matchText.trim()
+      }
     }
   }
 
@@ -56,18 +61,6 @@
     promptId: string
     titleCount: number
     bodyCount: number
-  }
-
-  // Snapshot the prompt data used by the current search run.
-  const buildSearchScope = () => {
-    return promptIds.map((promptId) => {
-      const promptData = getPromptData(promptId)
-      return {
-        id: promptId,
-        title: promptData.draft.title,
-        text: promptData.draft.text
-      }
-    })
   }
 
   // Lazily initialize and return the shared search model.
@@ -91,24 +84,26 @@
     const trimmedQuery = query.trim()
     if (trimmedQuery.length === 0) return []
 
-    const scope = buildSearchScope()
-    return scope.map((entry) => {
-      const titleCount = countMatchesInText(entry.title, trimmedQuery)
+    return promptIds.map((promptId) => {
+      const promptData = getPromptData(promptId)
+      const title = promptData.draft.title
+      const text = promptData.draft.text
+      const titleCount = countMatchesInText(title, trimmedQuery)
 
       let bodyCount = 0
-      if (hydratedPromptIds.has(entry.id)) {
-        const tracked = bodyMatchCountsByPromptId.get(entry.id)
+      if (hydratedPromptIds.has(promptId)) {
+        const tracked = bodyMatchCountsByPromptId.get(promptId)
         if (tracked?.query === trimmedQuery) {
           bodyCount = tracked.count
         } else {
-          bodyCount = countMatchesInText(entry.text, trimmedQuery)
+          bodyCount = countMatchesInText(text, trimmedQuery)
         }
       } else {
-        bodyCount = countMatchesInText(entry.text, trimmedQuery)
+        bodyCount = countMatchesInText(text, trimmedQuery)
       }
 
       return {
-        promptId: entry.id,
+        promptId,
         titleCount,
         bodyCount
       }
@@ -178,22 +173,6 @@
     return getMatchForIndex(currentMatchIndex, matchCountsByPrompt)
   })
 
-  const findMatchStartIndex = (text: string, query: string, matchIndex: number): number | null => {
-    if (query.length === 0 || matchIndex < 0) return null
-    const normalizedText = text.toLowerCase()
-    const normalizedQuery = query.toLowerCase()
-    let startIndex = -1
-    let fromIndex = 0
-
-    for (let i = 0; i <= matchIndex; i += 1) {
-      startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
-      if (startIndex < 0) return null
-      fromIndex = startIndex + normalizedQuery.length
-    }
-
-    return startIndex
-  }
-
   const getMatchTextForCurrentMatch = (match: PromptFolderFindMatch | null, query: string) => {
     if (!match) return null
     const trimmedQuery = query.trim()
@@ -203,10 +182,10 @@
     const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
     const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
 
-    const startIndex = findMatchStartIndex(targetText, trimmedQuery, matchIndex)
-    if (startIndex == null) return null
+    const matchRange = findMatchRange(targetText, trimmedQuery, matchIndex)
+    if (!matchRange) return null
 
-    return targetText.slice(startIndex, startIndex + trimmedQuery.length)
+    return targetText.slice(matchRange.start, matchRange.end)
   }
 
   // Placeholder for auto-revealing the selected match in the virtual list.
@@ -222,7 +201,7 @@
 
   // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
-    if (totalMatches === 0 || matchText.trim().length === 0) return
+    if (totalMatches === 0) return
     const nextIndex =
       currentMatchIndex <= 1 ? totalMatches : Math.max(1, currentMatchIndex - 1)
     setCurrentMatchIndex(nextIndex)
@@ -230,7 +209,7 @@
 
   // Move selection to the next match and reveal it.
   const handleNext = () => {
-    if (totalMatches === 0 || matchText.trim().length === 0) return
+    if (totalMatches === 0) return
     const nextIndex =
       currentMatchIndex <= 0 || currentMatchIndex >= totalMatches
         ? 1
@@ -285,7 +264,7 @@
     nextGroups[groupIndex] = { ...group, bodyCount: count }
     matchCountsByPrompt = nextGroups
 
-    totalMatches = Math.max(0, totalMatches + (count - group.bodyCount))
+    totalMatches = totalMatches + (count - group.bodyCount)
     if (currentMatchIndex > totalMatches) {
       currentMatchIndex = totalMatches
     }
@@ -295,9 +274,7 @@
     isFindOpen: false,
     query: '',
     currentMatch: null,
-    focusMatchRequestId: 0,
-    focusMatch: null,
-    focusMatchQuery: '',
+    focusRequest: null,
     reportHydration,
     reportBodyMatchCount
   })
@@ -307,9 +284,7 @@
     findState.isFindOpen = isFindOpen
     findState.query = matchText
     findState.currentMatch = currentMatch
-    findState.focusMatchRequestId = focusMatchRequestId
-    findState.focusMatch = focusMatch
-    findState.focusMatchQuery = focusMatchQuery
+    findState.focusRequest = focusRequest
   })
 
   setPromptFolderFindContext(findState)

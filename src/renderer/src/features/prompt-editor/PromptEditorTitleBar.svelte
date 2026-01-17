@@ -10,10 +10,18 @@
     rowId: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete: () => void
+    inputRef?: HTMLInputElement | null
   }
 
-  let { title, draftText, onTitleChange, rowId, scrollToWithinWindowBand, onDelete }: Props =
-    $props()
+  let {
+    title,
+    draftText,
+    onTitleChange,
+    rowId,
+    scrollToWithinWindowBand,
+    onDelete,
+    inputRef = $bindable(null)
+  }: Props = $props()
 
   const handleTitleInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
@@ -40,6 +48,7 @@
     data-testid="prompt-title"
     placeholder="Title"
     value={title}
+    bind:ref={inputRef}
     oninput={handleTitleInput}
     onfocus={handleTitleFocus}
     class="flex-1 h-[28px] font-mono text-[16px] leading-[20px] md:text-[16px] md:leading-[20px] text-[#D4D4D4] placeholder:text-[#D4D4D4]"
