@@ -8,6 +8,7 @@
     currentMatchIndex?: number
     onNext?: () => void
     onPrevious?: () => void
+    focusRequestId?: number
   }
 
   let {
@@ -16,11 +17,13 @@
     totalMatches = 0,
     currentMatchIndex = 0,
     onNext,
-    onPrevious
+    onPrevious,
+    focusRequestId = 0
   }: FindWidgetProps = $props()
 
   let isInputFocused = $state(false)
   let inputRef = $state<HTMLTextAreaElement | null>(null)
+  let lastFocusRequestId = $state(0)
   // Derived state: keep empty styling in sync with the local input value.
   const isInputEmpty = $derived(matchText.length === 0)
   const hasNoResults = $derived(matchText.length > 0 && totalMatches === 0)
@@ -60,6 +63,14 @@
 
   // Side effect: focus and select the find input when the widget mounts.
   onMount(() => {
+    inputRef?.focus()
+    inputRef?.select()
+  })
+
+  // Side effect: refocus and select the find input on demand.
+  $effect(() => {
+    if (focusRequestId === lastFocusRequestId) return
+    lastFocusRequestId = focusRequestId
     inputRef?.focus()
     inputRef?.select()
   })

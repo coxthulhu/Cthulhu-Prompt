@@ -19,27 +19,38 @@
   let totalMatches = $state(0)
   let currentMatchIndex = $state(0)
   let matchGroups = $state<PromptFolderFindGroup[]>([])
+  let focusFindRequestId = $state(0)
+  let focusMatchRequestId = $state(0)
+  let focusMatch = $state<PromptFolderFindMatch | null>(null)
+  let focusMatchQuery = $state('')
+  let searchRefreshToken = $state(0)
 
-  let lastQuery = ''
+  let lastQueryKey = ''
   let lastScopeKey = ''
+  let lastSearchRefreshToken = 0
   // Shared Monaco model for counting matches to avoid per-search model churn.
   let searchModel: monaco.editor.ITextModel | null = null
 
   const hydratedPromptIds = new SvelteSet<string>()
   const bodyMatchCountsByPromptId = new SvelteMap<string, { query: string; count: number }>()
 
-  // Reset search state and show the widget.
+  // Show the widget and request a fresh scan for the current query.
   const openFindDialog = () => {
-    isFindOpen = true
-    currentMatchIndex = 0
-    lastQuery = ''
-    lastScopeKey = ''
+    if (!isFindOpen) {
+      isFindOpen = true
+      searchRefreshToken += 1
+    }
+    focusFindRequestId += 1
   }
 
-  // Close the widget and clear the active selection.
+  // Close the widget and return focus to the current match.
   const closeFindDialog = () => {
     isFindOpen = false
-    currentMatchIndex = 0
+    if (currentMatch) {
+      focusMatch = currentMatch
+      focusMatchQuery = matchText
+      focusMatchRequestId += 1
+    }
   }
 
   type PromptFolderFindGroup = {
@@ -144,7 +155,11 @@
     let remaining = matchIndex
     for (const group of groups) {
       if (remaining <= group.titleCount) {
-        return { promptId: group.promptId, kind: 'title' }
+        return {
+          promptId: group.promptId,
+          kind: 'title',
+          titleMatchIndex: remaining - 1
+        }
       }
       remaining -= group.titleCount
       if (remaining <= group.bodyCount) {
@@ -164,6 +179,38 @@
     if (currentMatchIndex <= 0) return null
     return getMatchForIndex(currentMatchIndex, matchGroups)
   })
+
+  const findMatchStartIndex = (text: string, query: string, matchIndex: number): number | null => {
+    if (query.length === 0 || matchIndex < 0) return null
+    const normalizedText = text.toLowerCase()
+    const normalizedQuery = query.toLowerCase()
+    let startIndex = -1
+    let fromIndex = 0
+
+    for (let i = 0; i <= matchIndex; i += 1) {
+      startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
+      if (startIndex < 0) return null
+      fromIndex = startIndex + normalizedQuery.length
+    }
+
+    return startIndex
+  }
+
+  const getMatchTextForCurrentMatch = (match: PromptFolderFindMatch | null, query: string) => {
+    if (!match) return null
+    const trimmedQuery = query.trim()
+    if (trimmedQuery.length === 0) return null
+
+    const promptData = getPromptData(match.promptId)
+    const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
+    const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
+    if (matchIndex == null) return null
+
+    const startIndex = findMatchStartIndex(targetText, trimmedQuery, matchIndex)
+    if (startIndex == null) return null
+
+    return targetText.slice(startIndex, startIndex + trimmedQuery.length)
+  }
 
   // Placeholder for auto-revealing the selected match in the virtual list.
   const revealMatch = (match: PromptFolderFindMatch) => {
@@ -201,16 +248,19 @@
   $effect(() => {
     if (!isFindOpen) return
     const trimmedQuery = matchText.trim()
+    const queryKey = trimmedQuery.toLowerCase()
     // Scope key guards the full rescan against changes in prompt IDs or query.
     const scopeKey = promptIds.join('|')
-    const queryChanged = trimmedQuery !== lastQuery
+    const queryChanged = queryKey !== lastQueryKey
     const scopeChanged = scopeKey !== lastScopeKey
+    const refreshRequested = searchRefreshToken !== lastSearchRefreshToken
 
-    if (!queryChanged && !scopeChanged) return
+    if (!queryChanged && !scopeChanged && !refreshRequested) return
 
     runSearch(trimmedQuery, queryChanged || scopeChanged)
-    lastQuery = trimmedQuery
+    lastQueryKey = queryKey
     lastScopeKey = scopeKey
+    lastSearchRefreshToken = searchRefreshToken
   })
 
   // Track which prompts are hydrated so we can prefer editor-reported counts.
@@ -251,6 +301,9 @@
     isFindOpen: false,
     query: '',
     currentMatch: null,
+    focusMatchRequestId: 0,
+    focusMatch: null,
+    focusMatchQuery: '',
     reportHydration,
     reportBodyMatchCount
   })
@@ -260,6 +313,9 @@
     findState.isFindOpen = isFindOpen
     findState.query = matchText
     findState.currentMatch = currentMatch
+    findState.focusMatchRequestId = focusMatchRequestId
+    findState.focusMatch = focusMatch
+    findState.focusMatchQuery = focusMatchQuery
   })
 
   setPromptFolderFindContext(findState)
@@ -285,6 +341,10 @@
       ) {
         event.preventDefault()
         event.stopPropagation()
+        const nextMatchText = getMatchTextForCurrentMatch(currentMatch, matchText)
+        if (nextMatchText && nextMatchText !== matchText) {
+          matchText = nextMatchText
+        }
         openFindDialog()
       }
     }
@@ -304,6 +364,7 @@
 {#if isFindOpen}
   <PromptFolderFindWidget
     bind:matchText
+    focusRequestId={focusFindRequestId}
     {totalMatches}
     {currentMatchIndex}
     onClose={closeFindDialog}

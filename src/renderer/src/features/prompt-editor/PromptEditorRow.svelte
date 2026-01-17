@@ -65,6 +65,9 @@
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
+  let rowElement = $state<HTMLDivElement | null>(null)
+  let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
+  let lastFocusRequestId = $state(0)
   let isHydrated = $state(false)
   const findContext = getPromptFolderFindContext()
 
@@ -150,9 +153,61 @@
     }
   })
 
+  const findMatchSelection = (text: string, query: string, matchIndex: number) => {
+    if (query.length === 0 || matchIndex < 0) return null
+    const normalizedText = text.toLowerCase()
+    const normalizedQuery = query.toLowerCase()
+    let startIndex = -1
+    let fromIndex = 0
+
+    for (let i = 0; i <= matchIndex; i += 1) {
+      startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
+      if (startIndex < 0) return null
+      fromIndex = startIndex + normalizedQuery.length
+    }
+
+    return { start: startIndex, end: startIndex + query.length }
+  }
+
   const handleFindMatches = (query: string, count: number) => {
     findContext?.reportBodyMatchCount(promptId, query, count)
   }
+
+  const handleEditorLifecycle = (
+    editor: monaco.editor.IStandaloneCodeEditor,
+    isActive: boolean
+  ) => {
+    if (isActive) {
+      editorInstance = editor
+    } else if (editorInstance === editor) {
+      editorInstance = null
+    }
+    onEditorLifecycle?.(editor, isActive)
+  }
+
+  // Side effect: focus the match target after the find widget closes.
+  $effect(() => {
+    if (!findContext) return
+    if (findContext.focusMatchRequestId === lastFocusRequestId) return
+    lastFocusRequestId = findContext.focusMatchRequestId
+    const focusMatch = findContext.focusMatch
+    if (!focusMatch || focusMatch.promptId !== promptId) return
+
+    if (focusMatch.kind === 'title') {
+      const input = rowElement?.querySelector<HTMLInputElement>('[data-testid="prompt-title"]')
+      if (!input) return
+      input.focus({ preventScroll: true })
+      const trimmedQuery = findContext.focusMatchQuery.trim()
+      if (trimmedQuery.length === 0) return
+      const matchIndex = focusMatch.titleMatchIndex ?? 0
+      const selection = findMatchSelection(promptData.draft.title, trimmedQuery, matchIndex)
+      if (!selection) return
+      input.setSelectionRange(selection.start, selection.end)
+      return
+    }
+
+    editorInstance?.focus()
+  })
 
   const handleMovePrompt = async (offsetPx: number, moveAction: () => Promise<boolean>) => {
     const didMove = await moveAction()
@@ -167,6 +222,7 @@
 </script>
 
 <div
+  bind:this={rowElement}
   class="flex items-stretch gap-2"
   style={`height:${rowHeightPx}px; min-height:${rowHeightPx}px; max-height:${rowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
@@ -198,7 +254,7 @@
                 {shouldDehydrate}
                 {rowId}
                 {scrollToWithinWindowBand}
-                {onEditorLifecycle}
+                onEditorLifecycle={handleEditorLifecycle}
                 {findRequest}
                 onFindMatches={handleFindMatches}
                 onHydrationChange={handleHydrationChange}
