@@ -1,11 +1,19 @@
 <script lang="ts">
   import { onMount, tick, type Snippet } from 'svelte'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
-  import { monaco } from '@renderer/common/Monaco'
-  import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
-  import { findMatchRange } from './promptFolderFindText'
+  import {
+    buildPromptFolderFindCounts,
+    buildSearchInputs,
+    getMatchTextForCurrentMatch,
+    getPromptFolderFindMatchForIndex,
+    hasSearchInputsChanged,
+    type PromptFolderFindCounts,
+    type SearchInputs
+  } from './promptFolderFindSearch'
+  import { createPromptFolderFindSearchModel } from './promptFolderFindSearchModel'
+  import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { revealPromptFolderMatch } from './promptFolderFindReveal'
   import type {
@@ -36,14 +44,13 @@
   let focusRequest = $state<PromptFolderFindFocusRequest | null>(null)
   let searchRevision = $state(0)
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
-  // Shared Monaco model for counting matches to avoid per-search model churn.
-  let searchModel: monaco.editor.ITextModel | null = null
   const trimmedQuery = $derived(matchText.trim())
   const normalizedQuery = $derived(trimmedQuery.toLowerCase())
 
   const hydratedPromptIds = new SvelteSet<string>()
   const bodyMatchCountsByPromptId = new SvelteMap<string, { query: string; count: number }>()
   const rowHandlesByPromptId = new SvelteMap<string, PromptFolderFindRowHandle>()
+  const searchModel = createPromptFolderFindSearchModel()
 
   // Show the widget and request a fresh scan for the current query.
   const openFindDialog = () => {
@@ -66,75 +73,6 @@
     }
   }
 
-  type PromptFolderFindCounts = {
-    promptId: string
-    titleCount: number
-    bodyCount: number
-  }
-
-  type SearchInputs = {
-    queryKey: string
-    scopeKey: string
-    searchRevision: number
-  }
-
-  const buildSearchInputs = (): SearchInputs => ({
-    queryKey: normalizedQuery,
-    scopeKey: promptIds.join('|'),
-    searchRevision
-  })
-
-  const hasSearchInputsChanged = (next: SearchInputs, prev: SearchInputs) =>
-    next.queryKey !== prev.queryKey ||
-    next.scopeKey !== prev.scopeKey ||
-    next.searchRevision !== prev.searchRevision
-
-  // Lazily initialize and return the shared search model.
-  const getSearchModel = () => {
-    if (!searchModel) {
-      searchModel = monaco.editor.createModel('', 'plaintext')
-    }
-    return searchModel
-  }
-
-  // Count matches in a string using the shared Monaco model.
-  const countMatchesInText = (text: string, query: string): number => {
-    if (query.length === 0) return 0
-    const model = getSearchModel()
-    model.setValue(text)
-    return model.findMatches(query, false, false, false, null, false).length
-  }
-
-  // Build aggregated match counts per prompt instead of per-match entries.
-  const buildMatchCounts = (): PromptFolderFindCounts[] => {
-    if (trimmedQuery.length === 0) return []
-
-    return promptIds.map((promptId) => {
-      const promptData = getPromptData(promptId)
-      const title = promptData.draft.title
-      const text = promptData.draft.text
-      const titleCount = countMatchesInText(title, trimmedQuery)
-
-      let bodyCount = 0
-      if (hydratedPromptIds.has(promptId)) {
-        const tracked = bodyMatchCountsByPromptId.get(promptId)
-        if (tracked?.query === trimmedQuery) {
-          bodyCount = tracked.count
-        } else {
-          bodyCount = countMatchesInText(text, trimmedQuery)
-        }
-      } else {
-        bodyCount = countMatchesInText(text, trimmedQuery)
-      }
-
-      return {
-        promptId,
-        titleCount,
-        bodyCount
-      }
-    })
-  }
-
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (resetSelection: boolean) => {
     if (trimmedQuery.length === 0) {
@@ -144,7 +82,13 @@
       return
     }
 
-    const nextCounts = buildMatchCounts()
+    const nextCounts = buildPromptFolderFindCounts({
+      promptIds,
+      trimmedQuery,
+      hydratedPromptIds,
+      bodyMatchCountsByPromptId,
+      countMatchesInText: searchModel.countMatchesInText
+    })
     matchCountsByPrompt = nextCounts
     totalMatches = nextCounts.reduce(
       (sum, entry) => sum + entry.titleCount + entry.bodyCount,
@@ -164,51 +108,12 @@
     }
   }
 
-  // Map a 1-based match index into the grouped counts without allocating per-match entries.
-  const getMatchForIndex = (
-    matchIndex: number,
-    groups: PromptFolderFindCounts[]
-  ): PromptFolderFindMatch => {
-    let remaining = matchIndex
-    for (const group of groups) {
-      if (remaining <= group.titleCount) {
-        return {
-          promptId: group.promptId,
-          kind: 'title',
-          titleMatchIndex: remaining - 1
-        }
-      }
-      remaining -= group.titleCount
-      if (remaining <= group.bodyCount) {
-        return {
-          promptId: group.promptId,
-          kind: 'body',
-          bodyMatchIndex: remaining - 1
-        }
-      }
-      remaining -= group.bodyCount
-    }
-    throw new Error('Match index out of range')
-  }
-
   // Derived current match based on the 1-based index and grouped counts.
   const currentMatch = $derived.by(() =>
-    currentMatchIndex <= 0 ? null : getMatchForIndex(currentMatchIndex, matchCountsByPrompt)
+    currentMatchIndex <= 0
+      ? null
+      : getPromptFolderFindMatchForIndex(currentMatchIndex, matchCountsByPrompt)
   )
-
-  const getMatchTextForCurrentMatch = (match: PromptFolderFindMatch | null) => {
-    if (!match) return null
-    if (trimmedQuery.length === 0) return null
-
-    const promptData = getPromptData(match.promptId)
-    const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
-    const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
-
-    const matchRange = findMatchRange(targetText, trimmedQuery, matchIndex)
-    if (!matchRange) return null
-
-    return targetText.slice(matchRange.start, matchRange.end)
-  }
 
   const revealMatch = async (match: PromptFolderFindMatch) => {
     if (!scrollToWithinWindowBand) return
@@ -222,7 +127,7 @@
 
   const setCurrentMatchIndex = (nextIndex: number) => {
     currentMatchIndex = nextIndex
-    void revealMatch(getMatchForIndex(nextIndex, matchCountsByPrompt))
+    void revealMatch(getPromptFolderFindMatchForIndex(nextIndex, matchCountsByPrompt))
   }
 
   // Move selection to the previous match and reveal it.
@@ -247,7 +152,11 @@
   $effect(() => {
     if (!isFindOpen) return
     // Scope key guards the full rescan against changes in prompt IDs or query.
-    const nextInputs = buildSearchInputs()
+    const nextInputs = buildSearchInputs({
+      normalizedQuery,
+      promptIds,
+      searchRevision
+    })
     if (!hasSearchInputsChanged(nextInputs, lastSearchInputs)) return
 
     const shouldResetSelection =
@@ -322,39 +231,22 @@
 
   // Side effect: capture global find/escape shortcuts while the prompt folder screen is active.
   onMount(() => {
-    // Handle global find/escape shortcuts while the widget is mounted.
-    const handleGlobalKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (!isFindOpen) return
-        event.preventDefault()
-        event.stopPropagation()
-        closeFindDialog()
-        return
-      }
+    const unregisterShortcuts = registerPromptFolderFindShortcuts({
+      getIsFindOpen: () => isFindOpen,
+      getCurrentMatch: () => currentMatch,
+      getMatchText: () => matchText,
+      setMatchText: (value) => {
+        matchText = value
+      },
+      getMatchTextForCurrentMatch: (match) => getMatchTextForCurrentMatch(match, trimmedQuery),
+      openFindDialog,
+      closeFindDialog
+    })
 
-      if (
-        event.ctrlKey &&
-        !event.altKey &&
-        !event.metaKey &&
-        !event.shiftKey &&
-        event.key.toLowerCase() === 'f'
-      ) {
-        event.preventDefault()
-        event.stopPropagation()
-        const nextMatchText = getMatchTextForCurrentMatch(currentMatch)
-        if (nextMatchText && nextMatchText !== matchText) {
-          matchText = nextMatchText
-        }
-        openFindDialog()
-      }
-    }
-
-    window.addEventListener('keydown', handleGlobalKeydown, { capture: true })
     return () => {
-      window.removeEventListener('keydown', handleGlobalKeydown, { capture: true })
+      unregisterShortcuts()
       // Side effect: dispose the shared Monaco find model on teardown.
-      searchModel?.dispose()
-      searchModel = null
+      searchModel.dispose()
     }
   })
 </script>
