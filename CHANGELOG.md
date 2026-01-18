@@ -2,10 +2,10 @@
 
 ## 0.0.2
 
-### Added
+### New Features
 - Auto-scrolls the virtualized prompt list to keep the focused title/cursor in view while editing.
 
-### Changed
+### Changes
 - Sidebar width/resize handle styling and prompt folder icons updated.
 
 ### Fixed
@@ -16,7 +16,7 @@
 
 ## 0.0.1
 
-### Added
+### New Features
 - Initial Release!
 - Workspace selection and setup.
 - Familiar, code-like prompt editor.
