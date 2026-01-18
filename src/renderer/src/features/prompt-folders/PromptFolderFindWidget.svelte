@@ -32,21 +32,13 @@
     totalMatches === 0 ? 'No results' : `${currentMatchIndex} of ${totalMatches}`
   )
 
-  const handlePrevious = () => {
-    onPrevious()
-  }
-
-  const handleNext = () => {
-    onNext()
-  }
-
   const handleInputKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
       event.preventDefault()
       if (event.shiftKey) {
-        handlePrevious()
+        onPrevious()
       } else {
-        handleNext()
+        onNext()
       }
       return
     }
@@ -119,11 +111,11 @@
           role="button"
           tabindex={isNavigationDisabled ? -1 : 0}
           aria-disabled={isNavigationDisabled}
-          onclick={handlePrevious}
+          onclick={onPrevious}
           onkeydown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()
-            handlePrevious()
+            onPrevious()
           }}
         ></div>
         <div
@@ -135,11 +127,11 @@
           role="button"
           tabindex={isNavigationDisabled ? -1 : 0}
           aria-disabled={isNavigationDisabled}
-          onclick={handleNext}
+          onclick={onNext}
           onkeydown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()
-            handleNext()
+            onNext()
           }}
         ></div>
       </div>
