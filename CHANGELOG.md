@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.3
+
+### New Features
+- Prompt folder find widget with match navigation and highlighting in prompt titles/bodies (including Monaco editor highlights).
+
+### Changes
+- Refined auto-scroll behavior in the prompt editor and prompt folder list (reordering/cursor jumps/find match reveal).
+- Small UI polish for the find dialog and list chrome (e.g., sidebar sizing/scroll decoration).
+
+### Fixed
+- Auto-scroll offset when adding new lines in the prompt editor.
+- Prompt editor row resizing regression after overflow changes.
+- Repeated hydration event firing.
+- Concurrency issue in prompt folder screen loading.
+
 ## 0.0.2
 
 ### New Features
