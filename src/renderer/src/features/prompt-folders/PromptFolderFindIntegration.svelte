@@ -6,6 +6,7 @@
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
   import { findMatchRange } from './promptFolderFindText'
+  import { promptEditorRowId } from './promptFolderRowIds'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import type {
     PromptFolderFindFocusRequest,
@@ -210,46 +211,50 @@
   }
 
   const ensureRowHandle = async (
-    match: PromptFolderFindMatch
+    match: PromptFolderFindMatch,
+    scrollToBand: ScrollToWithinWindowBand
   ): Promise<PromptFolderFindRowHandle | null> => {
     const existing = rowHandlesByPromptId.get(match.promptId)
     if (existing) return existing
-    const rowId = `${match.promptId}-editor`
-    scrollToWithinWindowBand?.(rowId, 0, 'center')
+    const rowId = promptEditorRowId(match.promptId)
+    scrollToBand(rowId, 0, 'center')
     // Side effect: wait for virtualized rows to mount after scrolling.
     await tick()
     return rowHandlesByPromptId.get(match.promptId) ?? null
   }
 
   const revealTitleMatch = async (
-    match: Extract<PromptFolderFindMatch, { kind: 'title' }>
+    match: Extract<PromptFolderFindMatch, { kind: 'title' }>,
+    scrollToBand: ScrollToWithinWindowBand
   ) => {
-    const rowHandle = await ensureRowHandle(match)
-    if (!rowHandle || !scrollToWithinWindowBand) return
+    const rowHandle = await ensureRowHandle(match, scrollToBand)
+    if (!rowHandle) return
     const centerOffsetPx = rowHandle.getTitleCenterOffset()
     if (centerOffsetPx == null) return
-    scrollToWithinWindowBand(rowHandle.rowId, centerOffsetPx, 'center')
+    scrollToBand(rowHandle.rowId, centerOffsetPx, 'center')
   }
 
   const revealBodyMatch = async (
-    match: Extract<PromptFolderFindMatch, { kind: 'body' }>
+    match: Extract<PromptFolderFindMatch, { kind: 'body' }>,
+    scrollToBand: ScrollToWithinWindowBand
   ) => {
-    const rowHandle = await ensureRowHandle(match)
-    if (!rowHandle || !scrollToWithinWindowBand) return
+    const rowHandle = await ensureRowHandle(match, scrollToBand)
+    if (!rowHandle) return
     if (!rowHandle.isHydrated()) {
       const didHydrate = await rowHandle.ensureHydrated()
       if (!didHydrate) return
     }
     const centerOffsetPx = rowHandle.revealBodyMatch(trimmedQuery, match.bodyMatchIndex)
     if (centerOffsetPx == null) return
-    scrollToWithinWindowBand(rowHandle.rowId, centerOffsetPx, 'center')
+    scrollToBand(rowHandle.rowId, centerOffsetPx, 'center')
   }
 
   const revealMatch = async (match: PromptFolderFindMatch) => {
+    if (!scrollToWithinWindowBand) return
     if (match.kind === 'title') {
-      await revealTitleMatch(match)
+      await revealTitleMatch(match, scrollToWithinWindowBand)
     } else {
-      await revealBodyMatch(match)
+      await revealBodyMatch(match, scrollToWithinWindowBand)
     }
   }
 

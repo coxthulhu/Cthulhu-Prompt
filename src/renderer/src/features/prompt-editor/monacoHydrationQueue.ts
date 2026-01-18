@@ -42,19 +42,12 @@ export const setMonacoHydrationQueuePaused = (paused: boolean): void => {
 
 export const pauseMonacoHydrationForFrame = (): (() => void) => {
   const wasPaused = hydrationPaused
-  hydrationPaused = true
-  if (rafHandle != null) {
-    window.cancelAnimationFrame(rafHandle)
-    rafHandle = null
-  }
+  setMonacoHydrationQueuePaused(true)
   let resumed = false
   return () => {
     if (resumed) return
     resumed = true
-    hydrationPaused = wasPaused
-    if (!hydrationPaused && activationQueue.length > 0) {
-      scheduleActivation()
-    }
+    setMonacoHydrationQueuePaused(wasPaused)
   }
 }
 

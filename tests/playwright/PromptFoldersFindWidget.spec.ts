@@ -1,5 +1,10 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import {
+  VIRTUAL_FIND_FIRST_PROMPT_ID,
+  VIRTUAL_FIND_LAST_PROMPT_ID,
+  VIRTUAL_FIND_MARKER
+} from '../helpers/VirtualFindTestConstants'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -91,15 +96,14 @@ describe('Prompt folder find dialog', () => {
       state: 'attached'
     })
 
-    const targetPromptId = 'virtualization-test-50'
-    const targetSelector = promptEditorSelector(targetPromptId)
+    const targetSelector = promptEditorSelector(VIRTUAL_FIND_LAST_PROMPT_ID)
     await expect(mainWindow.locator(targetSelector)).toHaveCount(0)
 
     const findInput = mainWindow.locator(FIND_INPUT)
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
 
-    const uniqueQuery = 'UNIQUE_FIND_TARGET_VIRTUAL_LAST'
+    const uniqueQuery = VIRTUAL_FIND_MARKER
     await findInput.fill(uniqueQuery)
     await expect(mainWindow.locator('[data-testid="prompt-find-widget"]')).not.toContainText(
       'No results'
@@ -107,7 +111,7 @@ describe('Prompt folder find dialog', () => {
 
     await findInput.press('Enter')
 
-    const firstSelector = promptEditorSelector('virtualization-test-1')
+    const firstSelector = promptEditorSelector(VIRTUAL_FIND_FIRST_PROMPT_ID)
     await expect
       .poll(async () => {
         return await mainWindow.evaluate(

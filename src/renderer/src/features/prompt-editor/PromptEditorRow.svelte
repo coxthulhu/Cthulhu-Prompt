@@ -73,7 +73,7 @@
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let lastFocusRequestId = $state(0)
   let isHydrated = $state(false)
-  let instantHydrateRequestId = $state(0)
+  let requestImmediateHydration: (() => void) | null = null
   let revealBodyMatch: ((query: string, matchIndex: number) => number | null) | null = null
   const findContext = getPromptFolderFindContext()
 
@@ -169,6 +169,10 @@
     revealBodyMatch = handler
   }
 
+  const handleImmediateHydrationRequest = (request: (() => void) | null) => {
+    requestImmediateHydration = request
+  }
+
   const handleEditorLifecycle = (
     editor: monaco.editor.IStandaloneCodeEditor,
     isActive: boolean
@@ -193,7 +197,7 @@
 
   const ensureHydrated = async (): Promise<boolean> => {
     if (isHydrated) return true
-    instantHydrateRequestId += 1
+    requestImmediateHydration?.()
     // Side effect: wait for immediate hydration to mount the editor.
     await tick()
     return isHydrated
@@ -290,7 +294,7 @@
                 {findRequest}
                 onFindMatches={handleFindMatches}
                 onFindMatchReveal={handleFindMatchReveal}
-                {instantHydrateRequestId}
+                onImmediateHydrationRequest={handleImmediateHydrationRequest}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {
                   if (meta.heightPx !== monacoHeightPx) {

@@ -1,4 +1,10 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
+import {
+  VIRTUAL_FIND_FIRST_PROMPT_INDEX,
+  VIRTUAL_FIND_LAST_PROMPT_INDEX,
+  VIRTUAL_FIND_MARKER,
+  virtualFindPromptId
+} from '../helpers/VirtualFindTestConstants'
 
 /**
  * Configuration for creating a prompt folder
@@ -219,12 +225,13 @@ export function setupWorkspaceScenario(
       // Long: many large prompts; keep IDs to match existing tests
       const longPrompts = Array.from({ length: 50 }, (_, i) => {
         const base = heightTestPrompts.twoHundredLine
-        const marker = 'UNIQUE_FIND_TARGET_VIRTUAL_LAST'
-        const uniquePrefix = i === 0 ? `${marker}\n` : ''
-        const uniqueSuffix = i === 49 ? `\n${marker}` : ''
+        const uniquePrefix =
+          i === VIRTUAL_FIND_FIRST_PROMPT_INDEX - 1 ? `${VIRTUAL_FIND_MARKER}\n` : ''
+        const uniqueSuffix =
+          i === VIRTUAL_FIND_LAST_PROMPT_INDEX - 1 ? `\n${VIRTUAL_FIND_MARKER}` : ''
         return {
           ...base,
-          id: `virtualization-test-${i + 1}`,
+          id: virtualFindPromptId(i + 1),
           title: `Large Prompt ${i + 1}`,
           promptText: `${uniquePrefix}${base.promptText}${uniqueSuffix}`
         }

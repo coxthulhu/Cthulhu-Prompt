@@ -25,6 +25,7 @@
     type PromptFolderData
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import PromptFolderFindIntegration from './PromptFolderFindIntegration.svelte'
+  import { promptEditorRowId } from './promptFolderRowIds'
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let folderData = $state<PromptFolderData>({
@@ -125,7 +126,7 @@
       })
 
       promptIds.forEach((promptId) => {
-        rows.push({ id: `${promptId}-editor`, row: { kind: 'prompt-editor', promptId } })
+        rows.push({ id: promptEditorRowId(promptId), row: { kind: 'prompt-editor', promptId } })
         rows.push({
           id: `${promptId}-divider`,
           row: { kind: 'prompt-divider', previousPromptId: promptId }

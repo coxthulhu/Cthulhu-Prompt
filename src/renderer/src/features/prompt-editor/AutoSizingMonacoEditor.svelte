@@ -142,28 +142,30 @@
   }
 
   const scrollCursorIntoBand = (position: monaco.IPosition | null) => {
-    if (!editor || !scrollToWithinWindowBand || !position) return
-
-    const domNode = editor.getDomNode()
-    if (!domNode) return
-    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
-    if (!rowElement) return
-
-    const metrics = getCursorMetrics(position)
-    if (!metrics) return
-
-    const rowRect = rowElement.getBoundingClientRect()
-    const editorRect = domNode.getBoundingClientRect()
-    const centerOffsetPx =
-      editorRect.top - rowRect.top + metrics.topInViewport + metrics.lineHeight / 2
+    if (!scrollToWithinWindowBand) return
+    const centerOffsetPx = getRowCenterOffset(position)
+    if (centerOffsetPx == null) return
     scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
   }
 
-  const revealFindMatch = (query: string, matchIndex: number): number | null => {
-    if (!editor) return null
-    const trimmedQuery = query.trim()
-    if (trimmedQuery.length === 0) return null
+  const getRowCenterOffset = (position: monaco.IPosition | null): number | null => {
+    if (!editor || !position) return null
+    const domNode = editor.getDomNode()
+    if (!domNode) return null
+    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
+    if (!rowElement) return null
+    const metrics = getCursorMetrics(position)
+    if (!metrics) return null
+    const rowRect = rowElement.getBoundingClientRect()
+    const editorRect = domNode.getBoundingClientRect()
+    return editorRect.top - rowRect.top + metrics.topInViewport + metrics.lineHeight / 2
+  }
 
+  const syncFindState = (
+    trimmedQuery: string,
+    options: { shouldClearSelection?: boolean } = {}
+  ): monaco.editor.IStandaloneCodeEditor | null => {
+    if (!editor) return null
     if (!findController) {
       findController = FindController.get(editor)
     }
@@ -187,32 +189,34 @@
       false
     )
 
-    if (!findModel || queryChanged) {
+    const shouldResetModel = !findModel || queryChanged || options.shouldClearSelection
+    if (shouldResetModel) {
       resetFindModel()
     }
 
     findModel?.research(false)
     reportFindMatches(trimmedQuery, findController.getState().matchesCount)
+    return editor
+  }
+
+  const revealFindMatch = (query: string, matchIndex: number): number | null => {
+    const trimmedQuery = query.trim()
+    if (trimmedQuery.length === 0) return null
+
+    const activeEditor = syncFindState(trimmedQuery)
+    if (!activeEditor) return null
 
     if (matchIndex >= 0) {
       findModel?.moveToMatch(matchIndex)
       lastActiveMatchIndex = matchIndex
     }
 
-    const selection = editor.getSelection()
+    const selection = activeEditor.getSelection()
     if (!selection) return null
-    const domNode = editor.getDomNode()
-    if (!domNode) return null
-    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
-    if (!rowElement) return null
-
-    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
-    const lineTop = editor.getTopForLineNumber(selection.startLineNumber)
-    const scrollTop = editor.getScrollTop()
-    const lineTopInEditor = lineTop - scrollTop
-    const rowRect = rowElement.getBoundingClientRect()
-    const editorRect = domNode.getBoundingClientRect()
-    return editorRect.top - rowRect.top + lineTopInEditor + lineHeight / 2
+    return getRowCenterOffset({
+      lineNumber: selection.startLineNumber,
+      column: selection.startColumn
+    })
   }
 
   const handleContentChange = () => {
@@ -339,39 +343,10 @@
       return
     }
 
-    if (!findController) {
-      findController = FindController.get(editor)
-    }
-    if (!findController) return
-
-    const queryChanged = trimmedQuery !== lastFindQuery
     const shouldClearSelection =
       findRequest.activeBodyMatchIndex == null && lastActiveMatchIndex != null
 
-    if (queryChanged) {
-      lastFindQuery = trimmedQuery
-      lastActiveMatchIndex = null
-    }
-
-    findController.getState().change(
-      {
-        searchString: trimmedQuery,
-        isRegex: false,
-        matchCase: false,
-        wholeWord: false,
-        preserveCase: false
-      },
-      false,
-      false
-    )
-
-    const didResetFindModel = !findModel || queryChanged || shouldClearSelection
-    if (didResetFindModel) {
-      resetFindModel()
-    }
-
-    findModel?.research(false)
-    reportFindMatches(trimmedQuery, findController.getState().matchesCount)
+    if (!syncFindState(trimmedQuery, { shouldClearSelection })) return
 
     if (findRequest.activeBodyMatchIndex != null && findRequest.activeBodyMatchIndex >= 0) {
       findModel?.moveToMatch(findRequest.activeBodyMatchIndex)

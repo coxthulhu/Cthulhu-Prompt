@@ -24,7 +24,7 @@
     shouldDehydrate: boolean
     rowId: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    instantHydrateRequestId?: number
+    onImmediateHydrationRequest?: (request: (() => void) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -46,7 +46,7 @@
     shouldDehydrate,
     rowId,
     scrollToWithinWindowBand,
-    instantHydrateRequestId = 0,
+    onImmediateHydrationRequest,
     onHydrationChange,
     onChange,
     onBlur,
@@ -60,7 +60,6 @@
   let isHydrated = $state(false)
   let queuedEntry: MonacoHydrationEntry | null = null
   let lastReportedHydration = $state<boolean | null>(null)
-  let lastInstantHydrateRequestId = $state(0)
 
   const reportHydrationIfChanged = () => {
     if (lastReportedHydration === isHydrated) return
@@ -68,12 +67,27 @@
     onHydrationChange?.(isHydrated)
   }
 
-  // Side effect: ensure queued entries are cleaned up on unmount.
+  const requestImmediateHydration = () => {
+    if (shouldDehydrate || isHydrated) return
+    if (isMonacoHydrationQueuePaused()) return
+    if (queuedEntry) {
+      cancelMonacoHydration(queuedEntry)
+      queuedEntry = null
+    }
+    const resumeHydration = pauseMonacoHydrationForFrame()
+    isHydrated = true
+    reportHydrationIfChanged()
+    resumeHydration()
+  }
+
+  // Side effect: expose immediate hydration and clean up queued entries on unmount.
   onMount(() => {
+    onImmediateHydrationRequest?.(requestImmediateHydration)
     return () => {
       if (queuedEntry) {
         cancelMonacoHydration(queuedEntry)
       }
+      onImmediateHydrationRequest?.(null)
     }
   })
 
@@ -98,23 +112,6 @@
       })
     }
     reportHydrationIfChanged()
-  })
-
-  // Side effect: hydrate immediately for find navigation without using the queue.
-  $effect(() => {
-    if (instantHydrateRequestId === lastInstantHydrateRequestId) return
-    lastInstantHydrateRequestId = instantHydrateRequestId
-    if (instantHydrateRequestId <= 0) return
-    if (shouldDehydrate || isHydrated) return
-    if (isMonacoHydrationQueuePaused()) return
-    if (queuedEntry) {
-      cancelMonacoHydration(queuedEntry)
-      queuedEntry = null
-    }
-    const resumeHydration = pauseMonacoHydrationForFrame()
-    isHydrated = true
-    reportHydrationIfChanged()
-    resumeHydration()
   })
 
   // Side effect: keep queued hydration priority aligned with scroll updates.
