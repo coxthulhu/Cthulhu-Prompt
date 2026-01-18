@@ -217,11 +217,18 @@ export function setupWorkspaceScenario(
       ]
 
       // Long: many large prompts; keep IDs to match existing tests
-      const longPrompts = Array.from({ length: 50 }, (_, i) => ({
-        ...heightTestPrompts.twoHundredLine,
-        id: `virtualization-test-${i + 1}`,
-        title: `Large Prompt ${i + 1}`
-      }))
+      const longPrompts = Array.from({ length: 50 }, (_, i) => {
+        const base = heightTestPrompts.twoHundredLine
+        const marker = 'UNIQUE_FIND_TARGET_VIRTUAL_LAST'
+        const uniquePrefix = i === 0 ? `${marker}\n` : ''
+        const uniqueSuffix = i === 49 ? `\n${marker}` : ''
+        return {
+          ...base,
+          id: `virtualization-test-${i + 1}`,
+          title: `Large Prompt ${i + 1}`,
+          promptText: `${uniquePrefix}${base.promptText}${uniqueSuffix}`
+        }
+      })
 
       // Long Mixed: 100 prompts with varying lengths to stress virtualization
       const longMixedTemplates = [

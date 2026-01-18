@@ -7,6 +7,8 @@ const activationQueue: MonacoHydrationEntry[] = []
 let rafHandle: number | null = null
 let hydrationPaused = false
 
+export const isMonacoHydrationQueuePaused = (): boolean => hydrationPaused
+
 const scheduleActivation = (): void => {
   if (hydrationPaused || rafHandle != null) return
   rafHandle = window.requestAnimationFrame(() => {
@@ -35,6 +37,24 @@ export const setMonacoHydrationQueuePaused = (paused: boolean): void => {
   }
   if (activationQueue.length > 0) {
     scheduleActivation()
+  }
+}
+
+export const pauseMonacoHydrationForFrame = (): (() => void) => {
+  const wasPaused = hydrationPaused
+  hydrationPaused = true
+  if (rafHandle != null) {
+    window.cancelAnimationFrame(rafHandle)
+    rafHandle = null
+  }
+  let resumed = false
+  return () => {
+    if (resumed) return
+    resumed = true
+    hydrationPaused = wasPaused
+    if (!hydrationPaused && activationQueue.length > 0) {
+      scheduleActivation()
+    }
   }
 }
 

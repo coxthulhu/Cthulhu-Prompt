@@ -1,5 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -79,5 +79,137 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(async () => getSelectionInfo(mainWindow), { timeout: 2000 })
       .toEqual({ start: 0, end: longQuery.length, value: longQuery })
+  })
+
+  test('scrolls to a virtualized match and highlights it immediately', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Long')
+    await mainWindow.waitForSelector(promptEditorSelector('virtualization-test-1'), {
+      state: 'attached'
+    })
+
+    const targetPromptId = 'virtualization-test-50'
+    const targetSelector = promptEditorSelector(targetPromptId)
+    await expect(mainWindow.locator(targetSelector)).toHaveCount(0)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+
+    const uniqueQuery = 'UNIQUE_FIND_TARGET_VIRTUAL_LAST'
+    await findInput.fill(uniqueQuery)
+    await expect(mainWindow.locator('[data-testid="prompt-find-widget"]')).not.toContainText(
+      'No results'
+    )
+
+    await findInput.press('Enter')
+
+    const firstSelector = promptEditorSelector('virtualization-test-1')
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate(
+          ({ selector, expected }) => {
+            const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+            if (!monacoNode) return null
+
+            const registry = (
+              window as unknown as {
+                __cthulhuMonacoEditors?: Array<{
+                  container: HTMLElement | null
+                  editor: {
+                    getSelection: () => any
+                    getModel: () => {
+                      getValueInRange: (range: any) => string
+                    } | null
+                  }
+                }>
+              }
+            ).__cthulhuMonacoEditors
+
+            if (!registry?.length) return null
+
+            const entry = registry.find((item) => {
+              if (!item?.container) return false
+              return item.container === monacoNode || item.container.contains(monacoNode)
+            })
+
+            if (!entry) return null
+            const model = entry.editor.getModel()
+            const selection = entry.editor.getSelection()
+            if (!model || !selection) return null
+            const text = model.getValueInRange(selection)
+            return text === expected
+          },
+          { selector: firstSelector, expected: uniqueQuery }
+        )
+      })
+      .toBe(true)
+
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate((selector) => {
+          return document.querySelector(selector) != null
+        }, `${firstSelector} .monaco-editor .currentFindMatch`)
+      })
+      .toBe(true)
+
+    await expect(mainWindow.locator(targetSelector)).toHaveCount(0)
+
+    await findInput.press('Enter')
+    await mainWindow.waitForSelector(targetSelector, { state: 'attached' })
+
+    const scrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+    expect(scrollTop).toBeGreaterThan(0)
+
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate(
+          ({ selector, expected }) => {
+            const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+            if (!monacoNode) return null
+
+            const registry = (
+              window as unknown as {
+                __cthulhuMonacoEditors?: Array<{
+                  container: HTMLElement | null
+                  editor: {
+                    getSelection: () => any
+                    getModel: () => {
+                      getValueInRange: (range: any) => string
+                    } | null
+                  }
+                }>
+              }
+            ).__cthulhuMonacoEditors
+
+            if (!registry?.length) return null
+
+            const entry = registry.find((item) => {
+              if (!item?.container) return false
+              return item.container === monacoNode || item.container.contains(monacoNode)
+            })
+
+            if (!entry) return null
+            const model = entry.editor.getModel()
+            const selection = entry.editor.getSelection()
+            if (!model || !selection) return null
+            const text = model.getValueInRange(selection)
+            return text === expected
+          },
+          { selector: targetSelector, expected: uniqueQuery }
+        )
+      })
+      .toBe(true)
+
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate((selector) => {
+          return document.querySelector(selector) != null
+        }, `${targetSelector} .monaco-editor .currentFindMatch`)
+      })
+      .toBe(true)
   })
 })

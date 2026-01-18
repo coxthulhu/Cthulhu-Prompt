@@ -9,6 +9,8 @@
   import {
     cancelMonacoHydration,
     enqueueMonacoHydration,
+    isMonacoHydrationQueuePaused,
+    pauseMonacoHydrationForFrame,
     updateMonacoHydrationPriority,
     type MonacoHydrationEntry
   } from './monacoHydrationQueue'
@@ -22,12 +24,16 @@
     shouldDehydrate: boolean
     rowId: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
+    instantHydrateRequestId?: number
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findRequest?: PromptFolderFindRequest | null
     onFindMatches?: (query: string, count: number) => void
+    onFindMatchReveal?: (
+      handler: ((query: string, matchIndex: number) => number | null) | null
+    ) => void
     class?: string
   }
 
@@ -40,18 +46,21 @@
     shouldDehydrate,
     rowId,
     scrollToWithinWindowBand,
+    instantHydrateRequestId = 0,
     onHydrationChange,
     onChange,
     onBlur,
     onEditorLifecycle,
     findRequest,
     onFindMatches,
+    onFindMatchReveal,
     class: className
   }: Props = $props()
 
   let isHydrated = $state(false)
   let queuedEntry: MonacoHydrationEntry | null = null
   let lastReportedHydration = $state<boolean | null>(null)
+  let lastInstantHydrateRequestId = $state(0)
 
   const reportHydrationIfChanged = () => {
     if (lastReportedHydration === isHydrated) return
@@ -91,6 +100,23 @@
     reportHydrationIfChanged()
   })
 
+  // Side effect: hydrate immediately for find navigation without using the queue.
+  $effect(() => {
+    if (instantHydrateRequestId === lastInstantHydrateRequestId) return
+    lastInstantHydrateRequestId = instantHydrateRequestId
+    if (instantHydrateRequestId <= 0) return
+    if (shouldDehydrate || isHydrated) return
+    if (isMonacoHydrationQueuePaused()) return
+    if (queuedEntry) {
+      cancelMonacoHydration(queuedEntry)
+      queuedEntry = null
+    }
+    const resumeHydration = pauseMonacoHydrationForFrame()
+    isHydrated = true
+    reportHydrationIfChanged()
+    resumeHydration()
+  })
+
   // Side effect: keep queued hydration priority aligned with scroll updates.
   $effect(() => {
     if (!queuedEntry) return
@@ -113,6 +139,7 @@
       {onEditorLifecycle}
       {findRequest}
       {onFindMatches}
+      {onFindMatchReveal}
     />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />

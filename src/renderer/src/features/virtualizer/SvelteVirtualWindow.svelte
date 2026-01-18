@@ -14,10 +14,16 @@
     items: VirtualWindowItem<TRow>[]
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
     getHydrationPriorityEligibility?: (row: TRow) => boolean
+    onScrollToWithinWindowBand?: (scrollToWithinWindowBand: ScrollToWithinWindowBand) => void
   }
 
   // Generic over row shape; callers provide the concrete discriminated union.
-  let { items, rowRegistry, getHydrationPriorityEligibility }: VirtualWindowProps = $props()
+  let {
+    items,
+    rowRegistry,
+    getHydrationPriorityEligibility,
+    onScrollToWithinWindowBand
+  }: VirtualWindowProps = $props()
 
   type VirtualRowState<TRow extends { kind: string }> = {
     id: string
@@ -307,6 +313,11 @@
       scrollAnchorMode = isRowHydrated(topEdgeRow) ? 'top' : 'center'
     }
   }
+
+  // Side effect: expose the scroll helper so parent components can drive virtualized navigation.
+  $effect(() => {
+    onScrollToWithinWindowBand?.(scrollToWithinWindowBand)
+  })
 
   // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.
   $effect(() => {

@@ -1,23 +1,30 @@
 <script lang="ts">
-  import { onMount, type Snippet } from 'svelte'
+  import { onMount, tick, type Snippet } from 'svelte'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import { monaco } from '@renderer/common/Monaco'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
   import { findMatchRange } from './promptFolderFindText'
+  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import type {
     PromptFolderFindFocusRequest,
     PromptFolderFindMatch,
+    PromptFolderFindRowHandle,
     PromptFolderFindState
   } from './promptFolderFindTypes'
 
   type PromptFolderFindIntegrationProps = {
     promptIds: string[]
     children?: Snippet
+    scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
   }
 
-  let { promptIds, children }: PromptFolderFindIntegrationProps = $props()
+  let {
+    promptIds,
+    children,
+    scrollToWithinWindowBand
+  }: PromptFolderFindIntegrationProps = $props()
 
   let isFindOpen = $state(false)
   let matchText = $state('')
@@ -35,6 +42,7 @@
 
   const hydratedPromptIds = new SvelteSet<string>()
   const bodyMatchCountsByPromptId = new SvelteMap<string, { query: string; count: number }>()
+  const rowHandlesByPromptId = new SvelteMap<string, PromptFolderFindRowHandle>()
 
   // Show the widget and request a fresh scan for the current query.
   const openFindDialog = () => {
@@ -201,15 +209,53 @@
     return targetText.slice(matchRange.start, matchRange.end)
   }
 
-  // Placeholder for auto-revealing the selected match in the virtual list.
-  const revealMatch = (match: PromptFolderFindMatch) => {
-    void match
-    // TODO: scroll the virtual window so the active match is visible.
+  const ensureRowHandle = async (
+    match: PromptFolderFindMatch
+  ): Promise<PromptFolderFindRowHandle | null> => {
+    const existing = rowHandlesByPromptId.get(match.promptId)
+    if (existing) return existing
+    const rowId = `${match.promptId}-editor`
+    scrollToWithinWindowBand?.(rowId, 0, 'center')
+    // Side effect: wait for virtualized rows to mount after scrolling.
+    await tick()
+    return rowHandlesByPromptId.get(match.promptId) ?? null
+  }
+
+  const revealTitleMatch = async (
+    match: Extract<PromptFolderFindMatch, { kind: 'title' }>
+  ) => {
+    const rowHandle = await ensureRowHandle(match)
+    if (!rowHandle || !scrollToWithinWindowBand) return
+    const centerOffsetPx = rowHandle.getTitleCenterOffset()
+    if (centerOffsetPx == null) return
+    scrollToWithinWindowBand(rowHandle.rowId, centerOffsetPx, 'center')
+  }
+
+  const revealBodyMatch = async (
+    match: Extract<PromptFolderFindMatch, { kind: 'body' }>
+  ) => {
+    const rowHandle = await ensureRowHandle(match)
+    if (!rowHandle || !scrollToWithinWindowBand) return
+    if (!rowHandle.isHydrated()) {
+      const didHydrate = await rowHandle.ensureHydrated()
+      if (!didHydrate) return
+    }
+    const centerOffsetPx = rowHandle.revealBodyMatch(trimmedQuery, match.bodyMatchIndex)
+    if (centerOffsetPx == null) return
+    scrollToWithinWindowBand(rowHandle.rowId, centerOffsetPx, 'center')
+  }
+
+  const revealMatch = async (match: PromptFolderFindMatch) => {
+    if (match.kind === 'title') {
+      await revealTitleMatch(match)
+    } else {
+      await revealBodyMatch(match)
+    }
   }
 
   const setCurrentMatchIndex = (nextIndex: number) => {
     currentMatchIndex = nextIndex
-    revealMatch(getMatchForIndex(nextIndex, matchCountsByPrompt))
+    void revealMatch(getMatchForIndex(nextIndex, matchCountsByPrompt))
   }
 
   // Move selection to the previous match and reveal it.
@@ -277,13 +323,24 @@
     }
   }
 
+  const registerRow = (handle: PromptFolderFindRowHandle) => {
+    rowHandlesByPromptId.set(handle.promptId, handle)
+    return () => {
+      const current = rowHandlesByPromptId.get(handle.promptId)
+      if (current === handle) {
+        rowHandlesByPromptId.delete(handle.promptId)
+      }
+    }
+  }
+
   const findState = $state<PromptFolderFindState>({
     isFindOpen: false,
     query: '',
     currentMatch: null,
     focusRequest: null,
     reportHydration,
-    reportBodyMatchCount
+    reportBodyMatchCount,
+    registerRow
   })
 
   // Side effect: keep the find context in sync with the local widget state.

@@ -19,6 +19,9 @@
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findRequest?: PromptFolderFindRequest | null
     onFindMatches?: (query: string, count: number) => void
+    onFindMatchReveal?: (
+      handler: ((query: string, matchIndex: number) => number | null) | null
+    ) => void
   }
 
   let {
@@ -31,7 +34,8 @@
     onBlur,
     onEditorLifecycle,
     findRequest,
-    onFindMatches
+    onFindMatches,
+    onFindMatchReveal
   }: Props = $props()
 
   let container: HTMLDivElement | null = null
@@ -155,6 +159,62 @@
     scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
   }
 
+  const revealFindMatch = (query: string, matchIndex: number): number | null => {
+    if (!editor) return null
+    const trimmedQuery = query.trim()
+    if (trimmedQuery.length === 0) return null
+
+    if (!findController) {
+      findController = FindController.get(editor)
+    }
+    if (!findController) return null
+
+    const queryChanged = trimmedQuery !== lastFindQuery
+    if (queryChanged) {
+      lastFindQuery = trimmedQuery
+      lastActiveMatchIndex = null
+    }
+
+    findController.getState().change(
+      {
+        searchString: trimmedQuery,
+        isRegex: false,
+        matchCase: false,
+        wholeWord: false,
+        preserveCase: false
+      },
+      false,
+      false
+    )
+
+    if (!findModel || queryChanged) {
+      resetFindModel()
+    }
+
+    findModel?.research(false)
+    reportFindMatches(trimmedQuery, findController.getState().matchesCount)
+
+    if (matchIndex >= 0) {
+      findModel?.moveToMatch(matchIndex)
+      lastActiveMatchIndex = matchIndex
+    }
+
+    const selection = editor.getSelection()
+    if (!selection) return null
+    const domNode = editor.getDomNode()
+    if (!domNode) return null
+    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
+    if (!rowElement) return null
+
+    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
+    const lineTop = editor.getTopForLineNumber(selection.startLineNumber)
+    const scrollTop = editor.getScrollTop()
+    const lineTopInEditor = lineTop - scrollTop
+    const rowRect = rowElement.getBoundingClientRect()
+    const editorRect = domNode.getBoundingClientRect()
+    return editorRect.top - rowRect.top + lineTopInEditor + lineHeight / 2
+  }
+
   const handleContentChange = () => {
     if (!editor) return
     const nextValue = editor.getValue()
@@ -240,6 +300,7 @@
     layoutEditor()
     lastContainerWidthPx = containerWidthPx
     emitChange(nextEditor.getValue(), false, monacoHeightPx)
+    onFindMatchReveal?.(revealFindMatch)
 
     return () => {
       changeDisposable.dispose()
@@ -249,6 +310,7 @@
       scrollDisposable.dispose()
       unregisterMonacoEditor(nextEditor)
       onEditorLifecycle?.(nextEditor, false)
+      onFindMatchReveal?.(null)
       nextEditor.dispose()
       editor = null
       findController = null
@@ -303,7 +365,8 @@
       false
     )
 
-    if (!findModel || queryChanged || shouldClearSelection) {
+    const didResetFindModel = !findModel || queryChanged || shouldClearSelection
+    if (didResetFindModel) {
       resetFindModel()
     }
 
@@ -311,10 +374,8 @@
     reportFindMatches(trimmedQuery, findController.getState().matchesCount)
 
     if (findRequest.activeBodyMatchIndex != null && findRequest.activeBodyMatchIndex >= 0) {
-      if (findRequest.activeBodyMatchIndex !== lastActiveMatchIndex) {
-        findModel?.moveToMatch(findRequest.activeBodyMatchIndex)
-        lastActiveMatchIndex = findRequest.activeBodyMatchIndex
-      }
+      findModel?.moveToMatch(findRequest.activeBodyMatchIndex)
+      lastActiveMatchIndex = findRequest.activeBodyMatchIndex
     } else {
       lastActiveMatchIndex = null
     }

@@ -11,6 +11,7 @@
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
+    type ScrollToWithinWindowBand,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
@@ -35,6 +36,7 @@
   })
 
   let previousFolderName = $state<string | null>(null)
+  let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
 
   // Side effect: reload prompts on folder change.
   $effect(() => {
@@ -152,7 +154,10 @@
   }
 </script>
 
-<PromptFolderFindIntegration promptIds={folderData.promptIds}>
+<PromptFolderFindIntegration
+  promptIds={folderData.promptIds}
+  scrollToWithinWindowBand={scrollToWithinWindowBand}
+>
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
     {#if folderData.errorMessage}
       <div class="flex-1 min-h-0 overflow-y-auto">
@@ -173,6 +178,9 @@
           items={virtualItems}
           {rowRegistry}
           getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
+          onScrollToWithinWindowBand={(next) => {
+            scrollToWithinWindowBand = next
+          }}
         />
       </div>
     {/if}

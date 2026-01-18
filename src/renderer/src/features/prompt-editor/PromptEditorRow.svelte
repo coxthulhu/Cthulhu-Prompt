@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import type { monaco } from '@renderer/common/Monaco'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
@@ -9,7 +9,10 @@
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/promptFolderFindContext'
   import { findMatchRange } from '../prompt-folders/promptFolderFindText'
-  import type { PromptFolderFindRequest } from '../prompt-folders/promptFolderFindTypes'
+  import type {
+    PromptFolderFindRequest,
+    PromptFolderFindRowHandle
+  } from '../prompt-folders/promptFolderFindTypes'
   import {
     ADDITIONAL_GAP_PX,
     estimatePromptEditorHeight,
@@ -70,6 +73,8 @@
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let lastFocusRequestId = $state(0)
   let isHydrated = $state(false)
+  let instantHydrateRequestId = $state(0)
+  let revealBodyMatch: ((query: string, matchIndex: number) => number | null) | null = null
   const findContext = getPromptFolderFindContext()
 
   const SIDEBAR_WIDTH_PX = 24
@@ -158,6 +163,12 @@
     findContext?.reportBodyMatchCount(promptId, query, count)
   }
 
+  const handleFindMatchReveal = (
+    handler: ((query: string, matchIndex: number) => number | null) | null
+  ) => {
+    revealBodyMatch = handler
+  }
+
   const handleEditorLifecycle = (
     editor: monaco.editor.IStandaloneCodeEditor,
     isActive: boolean
@@ -169,6 +180,38 @@
     }
     onEditorLifecycle?.(editor, isActive)
   }
+
+  const getTitleCenterOffset = () => {
+    const input = titleInputRef
+    if (!input) return null
+    const rowElement = input.closest('[data-prompt-editor-row]') as HTMLElement | null
+    if (!rowElement) return null
+    const inputRect = input.getBoundingClientRect()
+    const rowRect = rowElement.getBoundingClientRect()
+    return inputRect.top - rowRect.top + inputRect.height / 2
+  }
+
+  const ensureHydrated = async (): Promise<boolean> => {
+    if (isHydrated) return true
+    instantHydrateRequestId += 1
+    // Side effect: wait for immediate hydration to mount the editor.
+    await tick()
+    return isHydrated
+  }
+
+  // Side effect: register this row with the find integration for navigation.
+  onMount(() => {
+    if (!findContext) return
+    const handle: PromptFolderFindRowHandle = {
+      promptId,
+      rowId,
+      isHydrated: () => isHydrated,
+      ensureHydrated,
+      revealBodyMatch: (query, matchIndex) => revealBodyMatch?.(query, matchIndex) ?? null,
+      getTitleCenterOffset
+    }
+    return findContext.registerRow(handle)
+  })
 
   // Side effect: focus the match target after the find widget closes.
   $effect(() => {
@@ -246,6 +289,8 @@
                 onEditorLifecycle={handleEditorLifecycle}
                 {findRequest}
                 onFindMatches={handleFindMatches}
+                onFindMatchReveal={handleFindMatchReveal}
+                {instantHydrateRequestId}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {
                   if (meta.heightPx !== monacoHeightPx) {
