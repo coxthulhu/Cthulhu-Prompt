@@ -1,15 +1,21 @@
-import { normalizeRuntimeEnvironment, type RuntimeConfig } from '@shared/runtimeConfig'
+import {
+  normalizeRuntimeEnvironment,
+  normalizeRuntimeSystemSettings,
+  type RuntimeConfig
+} from '@shared/runtimeConfig'
 
 const fallbackRuntimeConfig: RuntimeConfig = {
   devWorkspacePath: null,
-  environment: ''
+  environment: '',
+  systemSettings: normalizeRuntimeSystemSettings(undefined)
 }
 
 export const getRuntimeConfig = (): RuntimeConfig => {
   const config = window.runtimeConfig ?? fallbackRuntimeConfig
   return {
     devWorkspacePath: config.devWorkspacePath,
-    environment: normalizeRuntimeEnvironment(config.environment)
+    environment: normalizeRuntimeEnvironment(config.environment),
+    systemSettings: normalizeRuntimeSystemSettings(config.systemSettings)
   }
 }
 

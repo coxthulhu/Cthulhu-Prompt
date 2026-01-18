@@ -2,6 +2,10 @@ export const queryKeys = {
   promptFolders: {
     all: () => ['promptFolders'] as const,
     list: (workspacePath: string | null) => ['promptFolders', 'list', workspacePath] as const
+  },
+  systemSettings: {
+    all: () => ['systemSettings'] as const,
+    detail: () => ['systemSettings', 'detail'] as const
   }
 } as const
 

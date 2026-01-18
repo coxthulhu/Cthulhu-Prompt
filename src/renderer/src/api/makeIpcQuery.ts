@@ -6,6 +6,7 @@ type MakeIpcQueryConfig<TQueryFnData, TPayload, TData> = {
   key: QueryKey | ((payload: TPayload) => QueryKey)
   channel: string
   select?: (data: TQueryFnData, payload: TPayload) => TData
+  initialData?: TData | ((payload: TPayload) => TData)
 }
 
 type PayloadOrSkip<TPayload> = TPayload | typeof skipToken
@@ -17,7 +18,7 @@ type HookPayload<TPayload> = TPayload extends void
 export function makeIpcQuery<TQueryFnData, TPayload = void, TData = TQueryFnData>(
   cfg: MakeIpcQueryConfig<TQueryFnData, TPayload, TData>
 ) {
-  const { key, channel, select } = cfg
+  const { key, channel, select, initialData } = cfg
 
   return function useIpcQuery(payload: HookPayload<TPayload>) {
     const shouldSkip = payload === skipToken
@@ -38,9 +39,17 @@ export function makeIpcQuery<TQueryFnData, TPayload = void, TData = TQueryFnData
       return select ? select(result, payload as TPayload) : (result as unknown as TData)
     }
 
+    const resolvedInitialData =
+      !shouldSkip && initialData
+        ? typeof initialData === 'function'
+          ? (initialData as (payload: TPayload) => TData)(payload as TPayload)
+          : initialData
+        : undefined
+
     return createQuery<TData>(() => ({
       queryKey: resolvedKey,
-      queryFn: shouldSkip ? skipToken : queryFn
+      queryFn: shouldSkip ? skipToken : queryFn,
+      initialData: resolvedInitialData
     }))
   }
 }

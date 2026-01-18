@@ -5,6 +5,8 @@ import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
 import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
+import { SystemSettingsManager } from './system-settings'
+import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -29,7 +31,7 @@ function encodeRuntimeConfig(config: RuntimeConfig): string {
   return `${RUNTIME_ARG_PREFIX}${Buffer.from(payload, 'utf8').toString('base64')}`
 }
 
-function buildRuntimeConfig(): RuntimeConfig {
+async function buildRuntimeConfig(): Promise<RuntimeConfig> {
   const devEnvironment = isDevEnvironment()
   const playwrightEnvironment = isPlaywrightEnvironment()
   const environment: RuntimeEnvironment = devEnvironment
@@ -38,10 +40,13 @@ function buildRuntimeConfig(): RuntimeConfig {
       ? 'PLAYWRIGHT'
       : ''
   const devWorkspacePath = devEnvironment ? resolveDevWorkspacePath() : null
+  const systemSettingsResult = await SystemSettingsManager.loadSystemSettings()
+  const systemSettings = systemSettingsResult.settings ?? DEFAULT_SYSTEM_SETTINGS
 
   return {
     devWorkspacePath,
-    environment
+    environment,
+    systemSettings
   }
 }
 
@@ -107,7 +112,10 @@ export function startupNormally(): void {
     // Setup prompt API handlers
     PromptAPI.setupIpcHandlers()
 
-    const runtimeConfig = buildRuntimeConfig()
+    // Setup system settings IPC handlers
+    SystemSettingsManager.setupIpcHandlers()
+
+    const runtimeConfig = await buildRuntimeConfig()
 
     createWindow(runtimeConfig)
 

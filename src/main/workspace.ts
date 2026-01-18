@@ -16,6 +16,8 @@ export type PromptFolder = SharedPromptFolder
 export type PromptFolderResult = SharedPromptFolderResult
 export type LoadPromptFoldersResult = SharedLoadPromptFoldersResult
 
+const WORKSPACE_SETTINGS_FILENAME = 'WorkspaceSettings.json'
+
 export class WorkspaceManager {
   static setupIpcHandlers(): void {
     ipcMain.handle('select-workspace-folder', async () => {
@@ -62,7 +64,7 @@ export class WorkspaceManager {
   static async createWorkspace(workspacePath: string): Promise<WorkspaceResult> {
     try {
       const promptsPath = path.join(workspacePath, 'prompts')
-      const settingsPath = path.join(workspacePath, 'WorkspaceSettings.json')
+      const settingsPath = path.join(workspacePath, WORKSPACE_SETTINGS_FILENAME)
 
       const fs = getFs()
 
@@ -84,7 +86,7 @@ export class WorkspaceManager {
 
   static validateWorkspace(workspacePath: string): boolean {
     const promptsPath = path.join(workspacePath, 'prompts')
-    const settingsPath = path.join(workspacePath, 'WorkspaceSettings.json')
+    const settingsPath = path.join(workspacePath, WORKSPACE_SETTINGS_FILENAME)
     return this.checkFolderExists(promptsPath) && this.checkFolderExists(settingsPath)
   }
 

@@ -6,6 +6,7 @@
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
+  import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import {
     useCheckWorkspaceFolderExistsMutation,
     useCreateWorkspaceMutation
@@ -200,10 +201,7 @@
           onWorkspaceClear={() => void resetWorkspaceState()}
         />
       {:else if activeScreen === 'settings'}
-        <section class="flex-1 p-6" data-testid="settings-screen">
-          <h1 class="text-2xl font-bold">Settings</h1>
-          <p class="mt-4 text-muted-foreground">Coming Soon.</p>
-        </section>
+        <SettingsScreen />
       {:else if activeScreen === 'prompt-folders'}
         {#if selectedPromptFolder && workspacePath}
           <PromptFolderScreen folder={selectedPromptFolder} />

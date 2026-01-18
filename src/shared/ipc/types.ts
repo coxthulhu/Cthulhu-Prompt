@@ -3,6 +3,22 @@ export interface WorkspaceResult {
   error?: string
 }
 
+export interface SystemSettings {
+  promptFontSize: number
+}
+
+export interface LoadSystemSettingsResult extends WorkspaceResult {
+  settings?: SystemSettings
+}
+
+export interface UpdateSystemSettingsRequest {
+  settings: Partial<SystemSettings>
+}
+
+export interface UpdateSystemSettingsResult extends WorkspaceResult {
+  settings?: SystemSettings
+}
+
 export interface PromptFolder {
   folderName: string
   displayName: string
