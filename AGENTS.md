@@ -27,11 +27,11 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint**, **typecheck**, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory (or the WSL converted equivalent).
+Use Windows `cmd.exe` for **lint + typecheck** (run together) and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory (or the WSL converted equivalent).
 
 ### Windows Command Execution
 
-- Required for Windows-side runs (lint, typecheck, Playwright). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
+- Required for Windows-side runs (lint + typecheck together, Playwright). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
 - Include a short justification string explaining why elevation is needed.
 - Reusable template (swap the trailing command as needed):
   ```ts
@@ -46,7 +46,7 @@ Use Windows `cmd.exe` for **lint**, **typecheck**, and Playwright runs via the s
 
 ### Common npm Scripts
 
-- Lint / Typecheck (Windows interop): use the template above with `<command>` set to `npm run lint` or `npm run typecheck`; keep `timeout_ms` at 300000.
+- Lint + Typecheck (Windows interop): use the template above with `<command>` set to `npm run lint && npm run typecheck`; keep `timeout_ms` at 300000.
 - Format: `npm run format` — can run in WSL; applies Prettier styling.
 - Unit/integration tests: `npm run test:vitest` — can run in WSL.
 
@@ -102,7 +102,7 @@ describe('My Feature', () => {
 
 - Commits: short, imperative present tense (e.g., “Fix tests”, “Add virtualization test”); group related changes; reference issues.
 - PRs: include summary, rationale, testing steps, and screenshots/GIFs for UI changes.
-- Checks must pass: `lint`, `typecheck`, `test`. Keep PRs focused and reviewable.
+- Checks must pass: `lint` + `typecheck` (run together), `test`. Keep PRs focused and reviewable.
 
 ## Security & Configuration Tips
 
