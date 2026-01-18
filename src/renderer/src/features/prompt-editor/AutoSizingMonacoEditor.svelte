@@ -51,10 +51,15 @@
   let lastReportedFindQuery = ''
   let lastReportedFindCount = -1
 
-  const resetFindModel = () => {
-    if (!editor || !findController) return
+  const getFindController = () => {
+    if (!editor) return null
+    findController ??= FindController.get(editor)
+    return findController
+  }
+
+  const resetFindModel = (controller: FindController) => {
     findModel?.dispose()
-    findModel = new FindModelBoundToEditorModel(editor, findController.getState())
+    findModel = new FindModelBoundToEditorModel(editor!, controller.getState())
   }
 
   const clearFindState = () => {
@@ -115,8 +120,8 @@
       ?.focus(options)
   }
 
-  const getCursorMetrics = (position: monaco.IPosition | null) => {
-    if (!editor || !position) return null
+  const getCursorMetrics = (position: monaco.IPosition) => {
+    if (!editor) return null
     const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
     const lineTop = editor.getTopForLineNumber(position.lineNumber)
     const scrollTop = editor.getScrollTop()
@@ -142,15 +147,14 @@
   }
 
   const scrollCursorIntoBand = (position: monaco.IPosition | null) => {
-    if (!scrollToWithinWindowBand) return
+    if (!scrollToWithinWindowBand || !position) return
     const centerOffsetPx = getRowCenterOffset(position)
     if (centerOffsetPx == null) return
     scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
   }
 
-  const getRowCenterOffset = (position: monaco.IPosition | null): number | null => {
-    if (!editor || !position) return null
-    const domNode = editor.getDomNode()
+  const getRowCenterOffset = (position: monaco.IPosition): number | null => {
+    const domNode = editor?.getDomNode()
     if (!domNode) return null
     const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
     if (!rowElement) return null
@@ -164,12 +168,9 @@
   const syncFindState = (
     trimmedQuery: string,
     options: { shouldClearSelection?: boolean } = {}
-  ): monaco.editor.IStandaloneCodeEditor | null => {
-    if (!editor) return null
-    if (!findController) {
-      findController = FindController.get(editor)
-    }
-    if (!findController) return null
+  ): boolean => {
+    const controller = getFindController()
+    if (!editor || !controller) return false
 
     const queryChanged = trimmedQuery !== lastFindQuery
     if (queryChanged) {
@@ -177,7 +178,7 @@
       lastActiveMatchIndex = null
     }
 
-    findController.getState().change(
+    controller.getState().change(
       {
         searchString: trimmedQuery,
         isRegex: false,
@@ -189,29 +190,27 @@
       false
     )
 
-    const shouldResetModel = !findModel || queryChanged || options.shouldClearSelection
-    if (shouldResetModel) {
-      resetFindModel()
+    if (!findModel || queryChanged || options.shouldClearSelection) {
+      resetFindModel(controller)
     }
 
     findModel?.research(false)
-    reportFindMatches(trimmedQuery, findController.getState().matchesCount)
-    return editor
+    reportFindMatches(trimmedQuery, controller.getState().matchesCount)
+    return true
   }
 
   const revealFindMatch = (query: string, matchIndex: number): number | null => {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length === 0) return null
 
-    const activeEditor = syncFindState(trimmedQuery)
-    if (!activeEditor) return null
+    if (!syncFindState(trimmedQuery)) return null
 
     if (matchIndex >= 0) {
       findModel?.moveToMatch(matchIndex)
       lastActiveMatchIndex = matchIndex
     }
 
-    const selection = activeEditor.getSelection()
+    const selection = editor?.getSelection()
     if (!selection) return null
     return getRowCenterOffset({
       lineNumber: selection.startLineNumber,

@@ -38,6 +38,9 @@
   type RowState = VirtualRowState<TRow>
 
   let scrollContainer: HTMLDivElement | null = null
+  let lastScrollToWithinWindowBandCallback:
+    | ((scrollToWithinWindowBand: ScrollToWithinWindowBand) => void)
+    | null = null
 
   let containerWidth = $state(0)
   let devicePixelRatio = $state(1)
@@ -314,9 +317,15 @@
     }
   }
 
-  // Side effect: expose the scroll helper so parent components can drive virtualized navigation.
+  // Side effect: expose the scroll helper once per callback change.
   $effect(() => {
-    onScrollToWithinWindowBand?.(scrollToWithinWindowBand)
+    if (!onScrollToWithinWindowBand) {
+      lastScrollToWithinWindowBandCallback = null
+      return
+    }
+    if (onScrollToWithinWindowBand === lastScrollToWithinWindowBandCallback) return
+    lastScrollToWithinWindowBandCallback = onScrollToWithinWindowBand
+    onScrollToWithinWindowBand(scrollToWithinWindowBand)
   })
 
   // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.

@@ -73,8 +73,14 @@
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let lastFocusRequestId = $state(0)
   let isHydrated = $state(false)
-  let requestImmediateHydration: (() => void) | null = null
-  let revealBodyMatch: ((query: string, matchIndex: number) => number | null) | null = null
+  type FindRowHandlers = {
+    requestImmediateHydration: (() => void) | null
+    revealBodyMatch: ((query: string, matchIndex: number) => number | null) | null
+  }
+  let findRowHandlers = $state<FindRowHandlers>({
+    requestImmediateHydration: null,
+    revealBodyMatch: null
+  })
   const findContext = getPromptFolderFindContext()
 
   const SIDEBAR_WIDTH_PX = 24
@@ -163,16 +169,6 @@
     findContext?.reportBodyMatchCount(promptId, query, count)
   }
 
-  const handleFindMatchReveal = (
-    handler: ((query: string, matchIndex: number) => number | null) | null
-  ) => {
-    revealBodyMatch = handler
-  }
-
-  const handleImmediateHydrationRequest = (request: (() => void) | null) => {
-    requestImmediateHydration = request
-  }
-
   const handleEditorLifecycle = (
     editor: monaco.editor.IStandaloneCodeEditor,
     isActive: boolean
@@ -197,7 +193,7 @@
 
   const ensureHydrated = async (): Promise<boolean> => {
     if (isHydrated) return true
-    requestImmediateHydration?.()
+    findRowHandlers.requestImmediateHydration?.()
     // Side effect: wait for immediate hydration to mount the editor.
     await tick()
     return isHydrated
@@ -211,7 +207,8 @@
       rowId,
       isHydrated: () => isHydrated,
       ensureHydrated,
-      revealBodyMatch: (query, matchIndex) => revealBodyMatch?.(query, matchIndex) ?? null,
+      revealBodyMatch: (query, matchIndex) =>
+        findRowHandlers.revealBodyMatch?.(query, matchIndex) ?? null,
       getTitleCenterOffset
     }
     return findContext.registerRow(handle)
@@ -293,8 +290,12 @@
                 onEditorLifecycle={handleEditorLifecycle}
                 {findRequest}
                 onFindMatches={handleFindMatches}
-                onFindMatchReveal={handleFindMatchReveal}
-                onImmediateHydrationRequest={handleImmediateHydrationRequest}
+                onFindMatchReveal={(handler) => {
+                  findRowHandlers.revealBodyMatch = handler
+                }}
+                onImmediateHydrationRequest={(request) => {
+                  findRowHandlers.requestImmediateHydration = request
+                }}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {
                   if (meta.heightPx !== monacoHeightPx) {
