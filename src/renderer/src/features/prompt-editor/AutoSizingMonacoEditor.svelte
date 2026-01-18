@@ -22,6 +22,7 @@
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
+    onSelectionChange?: (startOffset: number, endOffset: number) => void
   }
 
   let {
@@ -35,7 +36,8 @@
     onEditorLifecycle,
     findRequest,
     onFindMatches,
-    onFindMatchReveal
+    onFindMatchReveal,
+    onSelectionChange
   }: Props = $props()
 
   let container: HTMLDivElement | null = null
@@ -298,6 +300,15 @@
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
     const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
     const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
+    const selectionDisposable = nextEditor.onDidChangeCursorSelection((event) => {
+      if (!onSelectionChange) return
+      if (event.source === 'api') return
+      const model = nextEditor.getModel()
+      if (!model) return
+      const startOffset = model.getOffsetAt(event.selection.getStartPosition())
+      const endOffset = model.getOffsetAt(event.selection.getEndPosition())
+      onSelectionChange(startOffset, endOffset)
+    })
     const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
     layoutEditor()
@@ -310,6 +321,7 @@
       blurDisposable.dispose()
       focusDisposable.dispose()
       cursorDisposable.dispose()
+      selectionDisposable.dispose()
       scrollDisposable.dispose()
       unregisterMonacoEditor(nextEditor)
       onEditorLifecycle?.(nextEditor, false)

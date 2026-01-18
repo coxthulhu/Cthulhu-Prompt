@@ -3,6 +3,7 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
+  import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import {
     buildPromptFolderFindCounts,
     buildSearchInputs,
@@ -16,7 +17,9 @@
   import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { revealPromptFolderMatch } from './promptFolderFindReveal'
+  import { findMatchIndexAtOrAfter, findMatchIndexBefore, findMatchRange } from './promptFolderFindText'
   import type {
+    PromptFolderFindAnchor,
     PromptFolderFindFocusRequest,
     PromptFolderFindMatch,
     PromptFolderFindRowHandle,
@@ -43,6 +46,7 @@
   let focusFindRequestId = $state(0)
   let focusRequest = $state<PromptFolderFindFocusRequest | null>(null)
   let searchRevision = $state(0)
+  let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
   const trimmedQuery = $derived(matchText.trim())
   const normalizedQuery = $derived(trimmedQuery.toLowerCase())
@@ -125,26 +129,205 @@
     })
   }
 
+  const recordSelectionAnchor = (anchor: PromptFolderFindAnchor) => {
+    const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
+    const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
+    lastSelectionAnchor = { ...anchor, startOffset, endOffset }
+  }
+
+  const recordSelectionFromMatch = (match: PromptFolderFindMatch) => {
+    if (trimmedQuery.length === 0) return
+    const promptData = getPromptData(match.promptId)
+    const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
+    const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
+    const matchRange = findMatchRange(targetText, trimmedQuery, matchIndex)
+    if (!matchRange) return
+    recordSelectionAnchor({
+      promptId: match.promptId,
+      kind: match.kind,
+      startOffset: matchRange.start,
+      endOffset: matchRange.end
+    })
+  }
+
   const setCurrentMatchIndex = (nextIndex: number) => {
     currentMatchIndex = nextIndex
-    void revealMatch(getPromptFolderFindMatchForIndex(nextIndex, matchCountsByPrompt))
+    const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByPrompt)
+    recordSelectionFromMatch(match)
+    void revealMatch(match)
+  }
+
+  const getGlobalMatchIndex = (
+    promptId: string,
+    kind: 'title' | 'body',
+    matchIndex: number
+  ) => {
+    let runningIndex = 0
+    for (const group of matchCountsByPrompt) {
+      if (group.promptId === promptId) {
+        if (kind === 'title') {
+          return runningIndex + matchIndex + 1
+        }
+        runningIndex += group.titleCount
+        if (kind === 'body') {
+          return runningIndex + matchIndex + 1
+        }
+      }
+      runningIndex += group.titleCount + group.bodyCount
+    }
+    return null
+  }
+
+  const findFirstMatchInPrompt = (promptId: string) => {
+    const promptData = getPromptData(promptId)
+    const titleIndex = findMatchIndexAtOrAfter(promptData.draft.title, trimmedQuery, 0)
+    if (titleIndex != null) {
+      return { kind: 'title' as const, matchIndex: titleIndex }
+    }
+    const bodyIndex = findMatchIndexAtOrAfter(promptData.draft.text, trimmedQuery, 0)
+    if (bodyIndex != null) {
+      return { kind: 'body' as const, matchIndex: bodyIndex }
+    }
+    return null
+  }
+
+  const getNextMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
+    if (trimmedQuery.length === 0 || totalMatches === 0) return null
+    const startIndex = promptIds.indexOf(anchor.promptId)
+    if (startIndex < 0) return null
+
+    const promptData = getPromptData(anchor.promptId)
+    if (anchor.kind === 'title') {
+      const titleIndex = findMatchIndexAtOrAfter(
+        promptData.draft.title,
+        trimmedQuery,
+        anchor.endOffset
+      )
+      if (titleIndex != null) {
+        return getGlobalMatchIndex(anchor.promptId, 'title', titleIndex)
+      }
+      const bodyIndex = findMatchIndexAtOrAfter(promptData.draft.text, trimmedQuery, 0)
+      if (bodyIndex != null) {
+        return getGlobalMatchIndex(anchor.promptId, 'body', bodyIndex)
+      }
+    } else {
+      const bodyIndex = findMatchIndexAtOrAfter(
+        promptData.draft.text,
+        trimmedQuery,
+        anchor.endOffset
+      )
+      if (bodyIndex != null) {
+        return getGlobalMatchIndex(anchor.promptId, 'body', bodyIndex)
+      }
+    }
+
+    for (let i = startIndex + 1; i < promptIds.length; i += 1) {
+      const match = findFirstMatchInPrompt(promptIds[i])
+      if (!match) continue
+      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+    }
+
+    for (let i = 0; i <= startIndex; i += 1) {
+      const match = findFirstMatchInPrompt(promptIds[i])
+      if (!match) continue
+      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+    }
+
+    return null
+  }
+
+  const findLastMatchInPrompt = (promptId: string) => {
+    const promptData = getPromptData(promptId)
+    const bodyIndex = findMatchIndexBefore(
+      promptData.draft.text,
+      trimmedQuery,
+      Number.POSITIVE_INFINITY
+    )
+    if (bodyIndex != null) {
+      return { kind: 'body' as const, matchIndex: bodyIndex }
+    }
+    const titleIndex = findMatchIndexBefore(
+      promptData.draft.title,
+      trimmedQuery,
+      Number.POSITIVE_INFINITY
+    )
+    if (titleIndex != null) {
+      return { kind: 'title' as const, matchIndex: titleIndex }
+    }
+    return null
+  }
+
+  const getPreviousMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
+    if (trimmedQuery.length === 0 || totalMatches === 0) return null
+    const startIndex = promptIds.indexOf(anchor.promptId)
+    if (startIndex < 0) return null
+
+    const promptData = getPromptData(anchor.promptId)
+    if (anchor.kind === 'body') {
+      const bodyIndex = findMatchIndexBefore(
+        promptData.draft.text,
+        trimmedQuery,
+        anchor.startOffset
+      )
+      if (bodyIndex != null) {
+        return getGlobalMatchIndex(anchor.promptId, 'body', bodyIndex)
+      }
+      const titleIndex = findMatchIndexBefore(
+        promptData.draft.title,
+        trimmedQuery,
+        Number.POSITIVE_INFINITY
+      )
+      if (titleIndex != null) {
+        return getGlobalMatchIndex(anchor.promptId, 'title', titleIndex)
+      }
+    } else {
+      const titleIndex = findMatchIndexBefore(
+        promptData.draft.title,
+        trimmedQuery,
+        anchor.startOffset
+      )
+      if (titleIndex != null) {
+        return getGlobalMatchIndex(anchor.promptId, 'title', titleIndex)
+      }
+    }
+
+    for (let i = startIndex - 1; i >= 0; i -= 1) {
+      const match = findLastMatchInPrompt(promptIds[i])
+      if (!match) continue
+      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+    }
+
+    for (let i = promptIds.length - 1; i >= startIndex; i -= 1) {
+      const match = findLastMatchInPrompt(promptIds[i])
+      if (!match) continue
+      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+    }
+
+    return null
   }
 
   // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
     if (totalMatches === 0) return
+    const anchorIndex = lastSelectionAnchor
+      ? getPreviousMatchIndexFromAnchor(lastSelectionAnchor)
+      : null
     const nextIndex =
-      currentMatchIndex <= 1 ? totalMatches : Math.max(1, currentMatchIndex - 1)
+      anchorIndex ?? (currentMatchIndex <= 1 ? totalMatches : Math.max(1, currentMatchIndex - 1))
     setCurrentMatchIndex(nextIndex)
   }
 
   // Move selection to the next match and reveal it.
   const handleNext = () => {
     if (totalMatches === 0) return
+    const anchorIndex = lastSelectionAnchor
+      ? getNextMatchIndexFromAnchor(lastSelectionAnchor)
+      : null
     const nextIndex =
-      currentMatchIndex <= 0 || currentMatchIndex >= totalMatches
+      anchorIndex ??
+      (currentMatchIndex <= 0 || currentMatchIndex >= totalMatches
         ? 1
-        : currentMatchIndex + 1
+        : currentMatchIndex + 1)
     setCurrentMatchIndex(nextIndex)
   }
 
@@ -214,6 +397,7 @@
     query: '',
     currentMatch: null,
     focusRequest: null,
+    reportSelection: recordSelectionAnchor,
     reportHydration,
     reportBodyMatchCount,
     registerRow

@@ -34,6 +34,7 @@
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
+    onSelectionChange?: (startOffset: number, endOffset: number) => void
     class?: string
   }
 
@@ -54,6 +55,7 @@
     findRequest,
     onFindMatches,
     onFindMatchReveal,
+    onSelectionChange,
     class: className
   }: Props = $props()
 
@@ -137,6 +139,7 @@
       {findRequest}
       {onFindMatches}
       {onFindMatchReveal}
+      {onSelectionChange}
     />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />

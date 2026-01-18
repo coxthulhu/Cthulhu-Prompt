@@ -10,6 +10,13 @@ export type PromptFolderFindMatch =
       bodyMatchIndex: number
     }
 
+export type PromptFolderFindAnchor = {
+  promptId: string
+  kind: 'title' | 'body'
+  startOffset: number
+  endOffset: number
+}
+
 export type PromptFolderFindFocusRequest = {
   requestId: number
   match: PromptFolderFindMatch
@@ -30,6 +37,7 @@ export type PromptFolderFindState = {
   query: string
   currentMatch: PromptFolderFindMatch | null
   focusRequest: PromptFolderFindFocusRequest | null
+  reportSelection: (anchor: PromptFolderFindAnchor) => void
   reportHydration: (promptId: string, isHydrated: boolean) => void
   reportBodyMatchCount: (promptId: string, query: string, count: number) => void
   registerRow: (handle: PromptFolderFindRowHandle) => () => void

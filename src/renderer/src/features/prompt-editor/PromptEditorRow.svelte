@@ -181,6 +181,24 @@
     onEditorLifecycle?.(editor, isActive)
   }
 
+  const reportTitleSelection = (startOffset: number, endOffset: number) => {
+    findContext?.reportSelection({
+      promptId,
+      kind: 'title',
+      startOffset,
+      endOffset
+    })
+  }
+
+  const reportBodySelection = (startOffset: number, endOffset: number) => {
+    findContext?.reportSelection({
+      promptId,
+      kind: 'body',
+      startOffset,
+      endOffset
+    })
+  }
+
   const getTitleCenterOffset = () => {
     const input = titleInputRef
     if (!input) return null
@@ -269,6 +287,7 @@
           title={promptData.draft.title}
           draftText={promptData.draft.text}
           onTitleChange={promptData.setTitle}
+          onSelectionChange={reportTitleSelection}
           bind:inputRef={titleInputRef}
           {rowId}
           {scrollToWithinWindowBand}
@@ -293,6 +312,7 @@
                 onFindMatchReveal={(handler) => {
                   findRowHandlers.revealBodyMatch = handler
                 }}
+                onSelectionChange={reportBodySelection}
                 onImmediateHydrationRequest={(request) => {
                   findRowHandlers.requestImmediateHydration = request
                 }}
