@@ -4,7 +4,7 @@ const { test, expect } = createPlaywrightTestSuite()
 
 // Sidebar navigation and state coverage.
 test.describe('Sidebar Tests', () => {
-  test('home selected on startup and settings disabled', async ({ testSetup }) => {
+  test('home selected on startup and settings enabled', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -15,13 +15,8 @@ test.describe('Sidebar Tests', () => {
     const isHomeActive = await testHelpers.isNavButtonActive('Home')
     expect(isHomeActive).toBe(true)
 
-    const settingsDisabled = await mainWindow.evaluate(() => {
-      const button = document.querySelector(
-        '[data-testid="nav-button-settings"]'
-      ) as HTMLButtonElement | null
-      return button?.hasAttribute('disabled') ?? false
-    })
-    expect(settingsDisabled).toBe(true)
+    const settingsButton = mainWindow.locator('[data-testid="nav-button-settings"]')
+    await expect(settingsButton).toBeEnabled()
   })
 
   test('keeps Home active on startup and when re-clicked', async ({ testSetup }) => {
@@ -33,7 +28,7 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.assertHomeActive()
   })
 
-  test('blocks Settings until a workspace is ready', async ({ testSetup }) => {
+  test('allows Settings without a workspace', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -43,11 +38,11 @@ test.describe('Sidebar Tests', () => {
 
     const settingsButton = mainWindow.locator('[data-testid="nav-button-settings"]')
     await expect(settingsButton).toBeVisible()
-    await expect(settingsButton).toBeDisabled()
-    await expect(testHelpers.navigateToSettingsScreen()).rejects.toThrow()
+    await expect(settingsButton).toBeEnabled()
+    await testHelpers.navigateToSettingsScreen()
+    expect(await testHelpers.getActiveScreen()).toBe('settings')
 
-    await testHelpers.assertHomeActive()
-    expect(await testHelpers.isNavButtonActive('Settings')).toBe(false)
+    expect(await testHelpers.isNavButtonActive('Settings')).toBe(true)
   })
 
   test('allows navigating to Settings after workspace setup', async ({ testSetup }) => {
