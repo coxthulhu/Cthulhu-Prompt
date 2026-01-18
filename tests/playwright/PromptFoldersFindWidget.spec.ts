@@ -1,5 +1,9 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_TITLE_SELECTOR,
+  promptEditorSelector
+} from '../helpers/PromptFolderSelectors'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,
@@ -84,6 +88,115 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(async () => getSelectionInfo(mainWindow), { timeout: 2000 })
       .toEqual({ start: 0, end: longQuery.length, value: longQuery })
+  })
+
+  test('focuses the current match after closing the find widget', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(promptEditorSelector('dev-1'), { state: 'attached' })
+    await mainWindow.waitForSelector(promptEditorSelector('dev-2'), { state: 'attached' })
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    const findClose = mainWindow.locator(FIND_CLOSE)
+    const devOneSelector = promptEditorSelector('dev-1')
+    const devTwoTitleSelector = `${promptEditorSelector('dev-2')} ${PROMPT_TITLE_SELECTOR}`
+
+    const getMonacoSelectionInfo = async (editorSelector: string) => {
+      return await mainWindow.evaluate((selector) => {
+        const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+        if (!monacoNode) return null
+
+        const active = document.activeElement
+        const hasDomFocus = !!active && monacoNode.contains(active)
+
+        const registry = (
+          window as unknown as {
+            __cthulhuMonacoEditors?: Array<{
+              container: HTMLElement | null
+              editor: {
+                getSelection: () => any
+                getModel: () => {
+                  getValueInRange: (range: any) => string
+                } | null
+              }
+            }>
+          }
+        ).__cthulhuMonacoEditors
+
+        if (!registry?.length) return null
+
+        const entry = registry.find((item) => {
+          if (!item?.container) return false
+          return item.container === monacoNode || item.container.contains(monacoNode)
+        })
+
+        if (!entry) return null
+        const model = entry.editor.getModel()
+        const selection = entry.editor.getSelection()
+        if (!model || !selection) return null
+        return {
+          text: model.getValueInRange(selection),
+          hasDomFocus
+        }
+      }, editorSelector)
+    }
+
+    const getTitleSelectionInfo = async () => {
+      return await mainWindow.evaluate((selector) => {
+        const input = document.querySelector<HTMLInputElement>(selector)
+        if (!input) return null
+        const start = input.selectionStart ?? 0
+        const end = input.selectionEnd ?? 0
+        return {
+          selectedText: input.value.slice(start, end),
+          hasFocus: document.activeElement === input
+        }
+      }, devTwoTitleSelector)
+    }
+
+    const openFind = async () => {
+      await mainWindow.keyboard.press('Control+F')
+      await expect(findInput).toBeVisible()
+    }
+
+    const selectMatch = async (query: string) => {
+      await findInput.fill(query)
+      await findInput.press('Enter')
+    }
+
+    const bodyQuery = 'best practices'
+
+    await openFind()
+    await selectMatch(bodyQuery)
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+
+    await expect
+      .poll(async () => getMonacoSelectionInfo(devOneSelector), { timeout: 2000 })
+      .toEqual({ text: bodyQuery, hasDomFocus: true })
+
+    await openFind()
+    await selectMatch(bodyQuery)
+    await findClose.click()
+    await expect(findInput).toHaveCount(0)
+
+    await expect
+      .poll(async () => getMonacoSelectionInfo(devOneSelector), { timeout: 2000 })
+      .toEqual({ text: bodyQuery, hasDomFocus: true })
+
+    const titleQuery = 'Analysis'
+
+    await openFind()
+    await selectMatch(titleQuery)
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+
+    await expect
+      .poll(async () => getTitleSelectionInfo(), { timeout: 2000 })
+      .toEqual({ selectedText: titleQuery, hasFocus: true })
   })
 
   test('scrolls to a virtualized match and highlights it immediately', async ({ testSetup }) => {
