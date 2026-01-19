@@ -14,10 +14,11 @@ export interface PromptFolderConfig {
   displayName: string
   prompts?: Array<{
     id: string
-    title: string
+    title?: string
     promptText: string
     creationDate?: string
     lastModifiedDate?: string
+    promptFolderCount?: number
   }>
 }
 
@@ -27,12 +28,13 @@ function createSinglePromptFoldersFromPromptCollection(
   promptCollection: Record<string, PromptTemplate>
 ): PromptFolderConfig[] {
   return Object.values(promptCollection).map((prompt) => {
-    const sanitizedTitle = prompt.title.replace(/[^A-Za-z0-9]/g, '')
+    const safeTitle = prompt.title?.trim() ?? ''
+    const sanitizedTitle = safeTitle.replace(/[^A-Za-z0-9]/g, '')
     const folderName = sanitizedTitle || prompt.id
 
     return {
       folderName,
-      displayName: prompt.title,
+      displayName: safeTitle || prompt.id,
       prompts: [{ ...prompt }]
     }
   })
@@ -43,6 +45,17 @@ function createSinglePromptFoldersFromPromptCollection(
  */
 export interface WorkspaceOptions {
   settings?: Record<string, any>
+}
+
+const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
+  // Normalize prompt counts for test fixtures.
+  const normalized = (prompts ?? []).map((prompt, index) => {
+    const promptFolderCount = index + 1
+    const title = typeof prompt.title === 'string' ? prompt.title : ''
+    return { ...prompt, title, promptFolderCount }
+  })
+
+  return { prompts: normalized, promptCount: normalized.length }
 }
 
 /**
@@ -148,11 +161,13 @@ export function createWorkspaceWithFolders(
   // Add each folder
   for (const folder of folderConfigs) {
     const folderPath = `${workspacePath}/prompts/${folder.folderName}`
+    const { prompts, promptCount } = normalizePrompts(folder.prompts)
 
     // Create folder metadata
     structure[`${folderPath}/promptfolder.json`] = JSON.stringify(
       {
-        foldername: folder.displayName
+        foldername: folder.displayName,
+        promptCount
       },
       null,
       2
@@ -161,7 +176,7 @@ export function createWorkspaceWithFolders(
     // Create prompts file
     const promptsData = {
       metadata: { version: 1 },
-      prompts: folder.prompts || []
+      prompts
     }
     structure[`${folderPath}/prompts.json`] = JSON.stringify(promptsData, null, 2)
   }
@@ -322,11 +337,13 @@ export function addFolderToWorkspace(
   folderConfig: PromptFolderConfig
 ): Record<string, string | null> {
   const folderPath = `${workspacePath}/prompts/${folderConfig.folderName}`
+  const { prompts, promptCount } = normalizePrompts(folderConfig.prompts)
 
   return {
     [`${folderPath}/promptfolder.json`]: JSON.stringify(
       {
-        foldername: folderConfig.displayName
+        foldername: folderConfig.displayName,
+        promptCount
       },
       null,
       2
@@ -334,7 +351,7 @@ export function addFolderToWorkspace(
     [`${folderPath}/prompts.json`]: JSON.stringify(
       {
         metadata: { version: 1 },
-        prompts: folderConfig.prompts || []
+        prompts
       },
       null,
       2
