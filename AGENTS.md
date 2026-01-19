@@ -28,6 +28,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Build, Test, and Development Commands
 
 Use Windows `cmd.exe` for **lint + typecheck** (run together) and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory (or the WSL converted equivalent).
+Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
 
