@@ -1,6 +1,7 @@
 <script lang="ts">
   import { FolderOpen, X } from 'lucide-svelte'
   import { Button } from '@renderer/common/ui/button'
+  import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
   import {
     Dialog,
     DialogContent,
@@ -32,7 +33,10 @@
     isWorkspaceReady: boolean
     isWorkspaceLoading: boolean
     onWorkspaceSelect: (path: string) => Promise<WorkspaceSelectionResult>
-    onWorkspaceCreate: (path: string) => Promise<WorkspaceCreationResult>
+    onWorkspaceCreate: (
+      path: string,
+      includeExamplePrompts: boolean
+    ) => Promise<WorkspaceCreationResult>
     onWorkspaceClear: () => void
   }>()
 
@@ -42,6 +46,7 @@
   let showSetupDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
+  let includeExamplePrompts = $state(true)
 
   const handleSelectFolder = async () => {
     try {
@@ -59,6 +64,7 @@
         if (!selectionResult.success) {
           if (selectionResult.reason === 'workspace-missing') {
             selectedFolderPath = selectedPath
+            includeExamplePrompts = true
             showSetupDialog = true
           } else if (selectionResult.message) {
             console.error('Error selecting workspace:', selectionResult.message)
@@ -74,7 +80,10 @@
 
   const handleSetupWorkspace = async () => {
     if (selectedFolderPath) {
-      const creationResult = await onWorkspaceCreate(selectedFolderPath)
+      const creationResult = await onWorkspaceCreate(
+        selectedFolderPath,
+        includeExamplePrompts
+      )
 
       if (creationResult.success) {
         showSetupDialog = false
@@ -90,6 +99,7 @@
   const handleCancelSetup = () => {
     showSetupDialog = false
     selectedFolderPath = null
+    includeExamplePrompts = true
   }
 </script>
 
@@ -164,6 +174,16 @@
           will create the necessary files and subfolders.
         </DialogDescription>
       </DialogHeader>
+      <div class="mt-4 flex items-center gap-2">
+        <Checkbox
+          id="include-example-prompts"
+          data-testid="include-example-prompts-checkbox"
+          bind:checked={includeExamplePrompts}
+        />
+        <label for="include-example-prompts" class="text-sm text-muted-foreground">
+          Include example prompts in a "My Prompts" folder.
+        </label>
+      </div>
       <DialogFooter>
         <Button variant="outline" onclick={handleCancelSetup}>Cancel</Button>
         <Button data-testid="setup-workspace-button" onclick={handleSetupWorkspace}>

@@ -94,12 +94,15 @@
     }
   }
 
-  const createWorkspace = async (path: string): Promise<WorkspaceCreationResult> => {
+  const createWorkspace = async (
+    path: string,
+    includeExamplePrompts: boolean
+  ): Promise<WorkspaceCreationResult> => {
     clearPromptFolderSelection()
     setWorkspaceLoading(true)
 
     try {
-      const result = await createWorkspaceAtPath(path)
+      const result = await createWorkspaceAtPath({ workspacePath: path, includeExamplePrompts })
 
       if (result?.success) {
         await handleWorkspaceSuccess(path)

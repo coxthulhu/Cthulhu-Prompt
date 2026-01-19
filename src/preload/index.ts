@@ -55,8 +55,11 @@ const workspaceAPI = {
   openSelectWorkspaceFolderDialog: () => electronAPI.ipcRenderer.invoke('select-workspace-folder'),
   checkFolderExists: (folderPath: string) =>
     electronAPI.ipcRenderer.invoke('check-folder-exists', folderPath),
-  createWorkspace: (workspacePath: string) =>
-    electronAPI.ipcRenderer.invoke('create-workspace', workspacePath),
+  createWorkspace: (workspacePath: string, includeExamplePrompts: boolean) =>
+    electronAPI.ipcRenderer.invoke('create-workspace', {
+      workspacePath,
+      includeExamplePrompts
+    }),
   createPromptFolder: (workspacePath: string, displayName: string) =>
     electronAPI.ipcRenderer.invoke('create-prompt-folder', {
       workspacePath,

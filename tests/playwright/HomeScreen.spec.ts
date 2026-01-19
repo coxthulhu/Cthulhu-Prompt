@@ -67,5 +67,41 @@ describe('Home Screen', () => {
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
     })
+
+    test('adds example prompts when setting up a new workspace', async ({ testSetup }) => {
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'empty', path: '/empty-with-examples', autoSetup: false }
+      })
+
+      await mainWindow.click('[data-testid="select-workspace-folder-button"]')
+
+      const setupDialog = mainWindow.locator('[role="dialog"]')
+      await expect(setupDialog).toBeVisible()
+
+      const includeExamplesCheckbox = mainWindow.locator(
+        '[data-testid="include-example-prompts-checkbox"]'
+      )
+      await expect(includeExamplesCheckbox).toBeVisible()
+      await expect(includeExamplesCheckbox).toHaveAttribute('data-state', 'checked')
+
+      await mainWindow.click('[data-testid="setup-workspace-button"]')
+      await mainWindow.waitForTimeout(1000)
+
+      expect(await testHelpers.isWorkspaceReady()).toBe(true)
+
+      await testHelpers.navigateToPromptFolders('My Prompts')
+      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', { state: 'visible' })
+      await mainWindow.waitForSelector('[data-testid^="prompt-editor-"]', {
+        state: 'attached'
+      })
+
+      const firstPrompt = await testHelpers.verifyPromptVisible('Example: Add a Feature')
+      const secondPrompt = await testHelpers.verifyPromptVisible('Example: Fix a Bug')
+      expect(firstPrompt.found).toBe(true)
+      expect(secondPrompt.found).toBe(true)
+
+      const screenInfo = await testHelpers.getPromptFolderScreenInfo()
+      expect(screenInfo.promptCount).toBe(2)
+    })
   })
 })

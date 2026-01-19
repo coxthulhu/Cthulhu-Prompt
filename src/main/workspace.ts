@@ -1,9 +1,11 @@
 import { ipcMain } from 'electron'
+import { randomUUID } from 'crypto'
 import * as path from 'path'
 import { getFs } from './fs-provider'
 import { getDialogProvider } from './dialog-provider'
 import { PromptAPI } from './prompt-api'
 import type {
+  CreateWorkspaceRequest as SharedCreateWorkspaceRequest,
   LoadPromptFoldersResult as SharedLoadPromptFoldersResult,
   PromptFolder as SharedPromptFolder,
   PromptFolderResult as SharedPromptFolderResult,
@@ -13,6 +15,7 @@ import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/prom
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 
 export type WorkspaceResult = SharedWorkspaceResult
+export type CreateWorkspaceRequest = SharedCreateWorkspaceRequest
 export type PromptFolder = SharedPromptFolder
 export type PromptFolderResult = SharedPromptFolderResult
 export type LoadPromptFoldersResult = SharedLoadPromptFoldersResult
@@ -29,8 +32,11 @@ export class WorkspaceManager {
       return this.checkFolderExists(folderPath)
     })
 
-    ipcMain.handle('create-workspace', async (_, workspacePath: string) => {
-      return await this.createWorkspace(workspacePath)
+    ipcMain.handle('create-workspace', async (_, request: CreateWorkspaceRequest | undefined) => {
+      if (!request?.workspacePath) {
+        return { success: false, error: 'Invalid request payload' }
+      }
+      return await this.createWorkspace(request.workspacePath, request.includeExamplePrompts)
     })
 
     ipcMain.handle(
@@ -62,7 +68,10 @@ export class WorkspaceManager {
     }
   }
 
-  static async createWorkspace(workspacePath: string): Promise<WorkspaceResult> {
+  static async createWorkspace(
+    workspacePath: string,
+    includeExamplePrompts: boolean
+  ): Promise<WorkspaceResult> {
     try {
       // Avoid creating workspaces at the drive root.
       if (isWorkspaceRootPath(workspacePath)) {
@@ -81,6 +90,58 @@ export class WorkspaceManager {
       // Create WorkspaceSettings.json
       if (!fs.existsSync(settingsPath)) {
         fs.writeFileSync(settingsPath, '{}', 'utf8')
+      }
+
+      if (includeExamplePrompts) {
+        const exampleFolderResult = await this.createPromptFolder(workspacePath, 'My Prompts')
+
+        if (!exampleFolderResult.success || !exampleFolderResult.folder) {
+          return {
+            success: false,
+            error: exampleFolderResult.error ?? 'Failed to create example prompts'
+          }
+        }
+
+        const exampleFolderPath = path.join(
+          promptsPath,
+          exampleFolderResult.folder.folderName
+        )
+        const now = new Date().toISOString()
+        const examplePrompts = [
+          {
+            id: randomUUID(),
+            title: 'Example: Add a Feature',
+            creationDate: now,
+            lastModifiedDate: now,
+            promptText: 'Placeholder prompt text.',
+            promptFolderCount: 1
+          },
+          {
+            id: randomUUID(),
+            title: 'Example: Fix a Bug',
+            creationDate: now,
+            lastModifiedDate: now,
+            promptText: 'Placeholder prompt text.',
+            promptFolderCount: 2
+          }
+        ]
+
+        const promptsContent = JSON.stringify(
+          { metadata: { version: 1 }, prompts: examplePrompts },
+          null,
+          2
+        )
+        fs.writeFileSync(path.join(exampleFolderPath, 'prompts.json'), promptsContent, 'utf8')
+
+        const configContent = JSON.stringify(
+          {
+            foldername: exampleFolderResult.folder.displayName,
+            promptCount: examplePrompts.length
+          },
+          null,
+          2
+        )
+        fs.writeFileSync(path.join(exampleFolderPath, 'promptfolder.json'), configContent, 'utf8')
       }
 
       return { success: true }

@@ -1,4 +1,4 @@
-import type { WorkspaceResult } from '@shared/ipc'
+import type { CreateWorkspaceRequest, WorkspaceResult } from '@shared/ipc'
 
 import { makeIpcMutation } from './makeIpcMutation'
 import { mutationKeys } from './queryKeys'
@@ -8,7 +8,7 @@ export type OpenSelectWorkspaceFolderDialogResult = {
   filePaths: string[]
 }
 
-type CreateWorkspaceInput = string
+type CreateWorkspaceInput = CreateWorkspaceRequest
 
 type CheckWorkspaceFolderExistsInput = string
 

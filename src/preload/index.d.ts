@@ -17,7 +17,7 @@ type LoadPromptsResult = SharedLoadPromptsResult
 interface WorkspaceAPI {
   openSelectWorkspaceFolderDialog: () => Promise<{ dialogCancelled: boolean; filePaths: string[] }>
   checkFolderExists: (folderPath: string) => Promise<boolean>
-  createWorkspace: (workspacePath: string) => Promise<WorkspaceResult>
+  createWorkspace: (workspacePath: string, includeExamplePrompts: boolean) => Promise<WorkspaceResult>
   createPromptFolder: (workspacePath: string, displayName: string) => Promise<PromptFolderResult>
   loadPromptFolders: (workspacePath: string) => Promise<LoadPromptFoldersResult>
 }

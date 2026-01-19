@@ -3,6 +3,11 @@ export interface WorkspaceResult {
   error?: string
 }
 
+export interface CreateWorkspaceRequest {
+  workspacePath: string
+  includeExamplePrompts: boolean
+}
+
 export interface SystemSettings {
   promptFontSize: number
 }
