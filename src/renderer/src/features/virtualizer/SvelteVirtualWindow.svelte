@@ -15,8 +15,17 @@
     items: VirtualWindowItem<TRow>[]
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
     getHydrationPriorityEligibility?: (row: TRow) => boolean
+    getCenterRowEligibility?: (row: TRow) => boolean
     onScrollToWithinWindowBand?: (scrollToWithinWindowBand: ScrollToWithinWindowBand) => void
     onScrollToRowCentered?: (scrollToRowCentered: ScrollToRowCentered) => void
+    onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
+    onViewportMetricsChange?: (metrics: {
+      widthPx: number
+      heightPx: number
+      devicePixelRatio: number
+    }) => void
+    testId?: string
+    spacerTestId?: string
   }
 
   // Generic over row shape; callers provide the concrete discriminated union.
@@ -24,8 +33,13 @@
     items,
     rowRegistry,
     getHydrationPriorityEligibility,
+    getCenterRowEligibility,
     onScrollToWithinWindowBand,
-    onScrollToRowCentered
+    onScrollToRowCentered,
+    onCenterRowChange,
+    onViewportMetricsChange,
+    testId = 'virtual-window',
+    spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
 
   type VirtualRowState<TRow extends { kind: string }> = {
@@ -46,6 +60,14 @@
     | null = null
   let lastScrollToRowCenteredCallback: ((scrollToRowCentered: ScrollToRowCentered) => void) | null =
     null
+  let lastCenterRowChangeCallback: ((row: TRow | null, rowId: string | null) => void) | null = null
+  let lastCenterRowId: string | null = null
+  let lastViewportMetricsCallback:
+    | ((metrics: { widthPx: number; heightPx: number; devicePixelRatio: number }) => void)
+    | null = null
+  let lastViewportMetrics:
+    | { widthPx: number; heightPx: number; devicePixelRatio: number }
+    | null = null
 
   let containerWidth = $state(0)
   let devicePixelRatio = $state(1)
@@ -97,6 +119,29 @@
   const normalizeEstimatedHeight = (estimatedHeight: number): number => {
     if (estimatedHeight <= 0) return 0
     return Math.ceil(estimatedHeight / 4) * 4
+  }
+
+  const findNearestEligibleRow = (
+    rows: readonly RowState[],
+    centerPx: number,
+    isEligible?: (row: TRow) => boolean
+  ): RowState | null => {
+    if (rows.length === 0) return null
+
+    let candidate: RowState | null = null
+    let bestDistance = Number.POSITIVE_INFINITY
+
+    rows.forEach((row) => {
+      if (isEligible && !isEligible(row.rowData)) return
+      const rowCenterPx = row.offset + row.height / 2
+      const distance = Math.abs(rowCenterPx - centerPx)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        candidate = row
+      }
+    })
+
+    return candidate
   }
 
   const buildRows = (
@@ -208,6 +253,14 @@
 
     return priorities
   })
+
+  const centerRow = $derived.by(() => {
+    if (rowStates.length === 0 || viewportHeight <= 0) return null
+    const viewportCenterPx = anchoredScrollTopPx + viewportHeight / 2
+    return findNearestEligibleRow(rowStates, viewportCenterPx, getCenterRowEligibility)
+  })
+  const centerRowId = $derived(centerRow?.id ?? null)
+  const centerRowData = $derived(centerRow?.rowData ?? null)
 
   const rowWrapperStyle = (row: RowState): string =>
     [
@@ -360,6 +413,56 @@
     onScrollToRowCentered(scrollToRowCentered)
   })
 
+  // Side effect: notify consumers when the centered eligible row changes.
+  $effect(() => {
+    if (!onCenterRowChange) {
+      lastCenterRowChangeCallback = null
+      lastCenterRowId = null
+      return
+    }
+
+    if (onCenterRowChange !== lastCenterRowChangeCallback) {
+      lastCenterRowChangeCallback = onCenterRowChange
+      lastCenterRowId = null
+    }
+
+    if (centerRowId === lastCenterRowId) return
+    lastCenterRowId = centerRowId
+    onCenterRowChange(centerRowData, centerRowId)
+  })
+
+  // Side effect: share viewport metrics so callers can align measurements.
+  $effect(() => {
+    if (!onViewportMetricsChange) {
+      lastViewportMetricsCallback = null
+      lastViewportMetrics = null
+      return
+    }
+
+    const metrics = {
+      widthPx: measurementWidth,
+      heightPx: viewportHeight,
+      devicePixelRatio
+    }
+
+    if (onViewportMetricsChange !== lastViewportMetricsCallback) {
+      lastViewportMetricsCallback = onViewportMetricsChange
+      lastViewportMetrics = null
+    }
+
+    if (
+      lastViewportMetrics &&
+      lastViewportMetrics.widthPx === metrics.widthPx &&
+      lastViewportMetrics.heightPx === metrics.heightPx &&
+      lastViewportMetrics.devicePixelRatio === metrics.devicePixelRatio
+    ) {
+      return
+    }
+
+    lastViewportMetrics = metrics
+    onViewportMetricsChange(metrics)
+  })
+
   // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.
   $effect(() => {
     if (scrollAnchorMode !== 'center') return
@@ -463,12 +566,12 @@
     bind:this={scrollContainer}
     class="h-full w-full"
     style="overflow-anchor: none; overflow-y: scroll; overflow-x: hidden; position: relative;"
-    data-testid="virtual-window"
+    data-testid={testId}
     onscroll={handleScroll}
   >
     <div
       aria-hidden="true"
-      data-testid="virtual-window-spacer"
+      data-testid={spacerTestId}
       style={`height:${totalHeightPx}px; width:1px; pointer-events:none;`}
     ></div>
 

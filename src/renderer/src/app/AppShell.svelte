@@ -184,7 +184,12 @@
   }
 </script>
 
-<ResizableSidebar defaultWidth={200} minWidth={200} maxWidth={400}>
+<ResizableSidebar
+  defaultWidth={200}
+  minWidth={200}
+  maxWidth={400}
+  handleTestId="app-sidebar-resize-handle"
+>
   {#snippet sidebar()}
     <AppSidebar
       {activeScreen}

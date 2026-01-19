@@ -9,9 +9,11 @@
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
   import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
+  import ResizableSidebar from '../sidebar/ResizableSidebar.svelte'
   import {
     defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
+    type ScrollToRowCentered,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
@@ -26,6 +28,7 @@
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { promptEditorRowId } from './promptFolderRowIds'
+  import PromptFolderOutliner from './PromptFolderOutliner.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
   let folderData = $state<PromptFolderData>({
@@ -38,6 +41,13 @@
 
   let previousFolderName = $state<string | null>(null)
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
+  let scrollToRowCentered = $state<ScrollToRowCentered | null>(null)
+  let activePromptId = $state<string | null>(null)
+  let mainWindowMetrics = $state({
+    widthPx: 0,
+    heightPx: 0,
+    devicePixelRatio: 1
+  })
 
   // Side effect: reload prompts on folder change.
   $effect(() => {
@@ -138,6 +148,28 @@
     return rows
   })
 
+  const getPromptRowHeightPx = (promptId: string): number => {
+    const promptData = getPromptData(promptId)
+    const measuredHeight = lookupPromptEditorMeasuredHeight(
+      promptId,
+      mainWindowMetrics.widthPx,
+      mainWindowMetrics.devicePixelRatio
+    )
+    if (measuredHeight != null) return measuredHeight
+    return estimatePromptEditorHeight(
+      promptData.draft.text,
+      mainWindowMetrics.widthPx,
+      mainWindowMetrics.heightPx
+    )
+  }
+
+  const handleOutlinerClick = (promptId: string) => {
+    if (!scrollToRowCentered) return
+    activePromptId = promptId
+    const rowCenterOffset = getPromptRowHeightPx(promptId) / 2
+    scrollToRowCentered(promptEditorRowId(promptId), rowCenterOffset)
+  }
+
   const handleAddPrompt = (previousPromptId: string | null) => {
     void createPromptInFolder(folder.folderName, previousPromptId)
   }
@@ -160,31 +192,63 @@
   scrollToWithinWindowBand={scrollToWithinWindowBand}
 >
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    {#if folderData.errorMessage}
-      <div class="flex-1 min-h-0 overflow-y-auto">
-        <div class="pt-6 pl-6">
-          <h1 class="text-2xl font-bold">{folder.displayName}</h1>
-          <p class="mt-4 text-muted-foreground">
-            Edit prompts in the "{folder.displayName}" folder.
-          </p>
-          <h2 class="mt-6 text-lg font-semibold mb-4">
-            Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
-          </h2>
-          <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
-        </div>
-      </div>
-    {:else}
-      <div class="flex-1 min-h-0 flex">
-        <SvelteVirtualWindow
-          items={virtualItems}
-          {rowRegistry}
-          getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
-          onScrollToWithinWindowBand={(next) => {
-            scrollToWithinWindowBand = next
-          }}
-        />
-      </div>
-    {/if}
+    <div class="flex-1 min-h-0 flex">
+      <ResizableSidebar
+        defaultWidth={200}
+        minWidth={200}
+        maxWidth={400}
+        containerClass="h-full"
+        handleTestId="prompt-outliner-resize-handle"
+      >
+        {#snippet sidebar()}
+          <PromptFolderOutliner
+            promptIds={folderData.promptIds}
+            isLoading={folderData.isLoading}
+            errorMessage={folderData.errorMessage}
+            {activePromptId}
+            onSelectPrompt={handleOutlinerClick}
+          />
+        {/snippet}
+
+        {#snippet content()}
+          {#if folderData.errorMessage}
+            <div class="flex-1 min-h-0 overflow-y-auto">
+              <div class="pt-6 pl-6">
+                <h1 class="text-2xl font-bold">{folder.displayName}</h1>
+                <p class="mt-4 text-muted-foreground">
+                  Edit prompts in the "{folder.displayName}" folder.
+                </p>
+                <h2 class="mt-6 text-lg font-semibold mb-4">
+                  Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
+                </h2>
+                <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
+              </div>
+            </div>
+          {:else}
+            <SvelteVirtualWindow
+              items={virtualItems}
+              {rowRegistry}
+              testId="prompt-folder-virtual-window"
+              spacerTestId="prompt-folder-virtual-window-spacer"
+              getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
+              getCenterRowEligibility={(row) => row.kind === 'prompt-editor'}
+              onScrollToWithinWindowBand={(next) => {
+                scrollToWithinWindowBand = next
+              }}
+              onScrollToRowCentered={(next) => {
+                scrollToRowCentered = next
+              }}
+              onCenterRowChange={(row) => {
+                activePromptId = row?.kind === 'prompt-editor' ? row.promptId : null
+              }}
+              onViewportMetricsChange={(metrics) => {
+                mainWindowMetrics = metrics
+              }}
+            />
+          {/if}
+        {/snippet}
+      </ResizableSidebar>
+    </div>
   </main>
 </PromptFolderFindIntegration>
 

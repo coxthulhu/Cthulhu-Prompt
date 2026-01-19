@@ -196,7 +196,7 @@ export async function openPromptFolderAndWaitForHydrationReady(
 }
 
 export async function dragSidebarHandleBy(window: any, distance: number): Promise<void> {
-  const sidebarHandle = window.locator('[data-testid="resizable-sidebar-handle"]')
+  const sidebarHandle = window.locator('[data-testid="app-sidebar-resize-handle"]')
   await sidebarHandle.waitFor({ state: 'visible' })
 
   const handleBox = (await sidebarHandle.boundingBox())!

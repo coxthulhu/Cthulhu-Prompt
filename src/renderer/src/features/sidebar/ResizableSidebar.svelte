@@ -6,13 +6,17 @@
     minWidth,
     maxWidth,
     sidebar,
-    content
+    content,
+    containerClass = 'h-screen',
+    handleTestId = 'resizable-sidebar-handle'
   } = $props<{
     defaultWidth: number
     minWidth: number
     maxWidth: number
     sidebar: () => unknown
     content: () => unknown
+    containerClass?: string
+    handleTestId?: string
   }>()
 
   // Snapshot the initial width so prop updates don't override drag changes.
@@ -63,14 +67,14 @@
   onDestroy(stopDragging)
 </script>
 
-<div class="flex h-screen w-full overflow-hidden" style={`--sidebar-width: ${width}px`}>
+<div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
   <div class="relative flex-shrink-0 border-r border-border" style={`width: ${width}px`}>
     {@render sidebar()}
 
     <button
       type="button"
       class="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-transparent z-10"
-      data-testid="resizable-sidebar-handle"
+      data-testid={handleTestId}
       aria-label="Resize sidebar"
       onmousedown={handleMouseDown}
     ></button>

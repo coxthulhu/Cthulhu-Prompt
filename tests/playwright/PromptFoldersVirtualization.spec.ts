@@ -1,13 +1,14 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_FOLDER_SPACER_SELECTOR,
   PROMPT_TITLE_SELECTOR
 } from '../helpers/PromptFolderSelectors'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
-const SPACER_SELECTOR = '[data-testid="prompt-folder-screen"] [data-testid="virtual-window-spacer"]'
+const SPACER_SELECTOR = PROMPT_FOLDER_SPACER_SELECTOR
 
 const FIRST_PROMPT_SELECTOR = '[data-testid="prompt-editor-virtualization-test-1"]'
 const LAST_PROMPT_SELECTOR = '[data-testid="prompt-editor-virtualization-test-50"]'
