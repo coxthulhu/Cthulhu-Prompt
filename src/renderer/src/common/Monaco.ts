@@ -1,5 +1,7 @@
 // src/renderer/src/common/Monaco.ts
 import * as monaco from 'monaco-editor'
+import darkModernRaw from './monacoThemes/dark_modern.json?raw'
+import darkPlusRaw from './monacoThemes/dark_plus.json?raw'
 
 // Import Monaco's workers as *module workers* (bundled by Vite)
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
@@ -9,6 +11,92 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
 const PROMPT_EDITOR_THEME_ID = 'cthulhu-prompt-dark'
+
+type VSCodeTokenColor = {
+  scope?: string | string[]
+  settings?: { foreground?: string; background?: string; fontStyle?: string }
+}
+
+type VSCodeTheme = {
+  colors?: Record<string, string>
+  tokenColors?: VSCodeTokenColor[]
+}
+
+const stripJsonComments = (raw: string): string => {
+  let output = ''
+  let inString = false
+  let inLineComment = false
+  let inBlockComment = false
+
+  for (let i = 0; i < raw.length; i += 1) {
+    const char = raw[i]
+    const next = raw[i + 1]
+
+    if (inLineComment) {
+      if (char === '\n') {
+        inLineComment = false
+        output += char
+      }
+      continue
+    }
+
+    if (inBlockComment) {
+      if (char === '*' && next === '/') {
+        inBlockComment = false
+        i += 1
+      }
+      continue
+    }
+
+    if (!inString && char === '/' && next === '/') {
+      inLineComment = true
+      i += 1
+      continue
+    }
+
+    if (!inString && char === '/' && next === '*') {
+      inBlockComment = true
+      i += 1
+      continue
+    }
+
+    if (char === '"') {
+      let backslashes = 0
+      for (let j = i - 1; j >= 0 && raw[j] === '\\'; j -= 1) {
+        backslashes += 1
+      }
+      if (backslashes % 2 === 0) {
+        inString = !inString
+      }
+    }
+
+    output += char
+  }
+
+  return output
+}
+
+const parseThemeJson = (raw: string): VSCodeTheme => {
+  const withoutComments = stripJsonComments(raw)
+  const withoutTrailingCommas = withoutComments.replace(/,\s*([}\]])/g, '$1')
+  return JSON.parse(withoutTrailingCommas) as VSCodeTheme
+}
+
+const normalizeTokenColor = (value?: string): string | undefined =>
+  value ? value.replace(/^#/, '') : undefined
+
+const toMonacoRules = (tokenColors: VSCodeTokenColor[]): monaco.editor.ITokenThemeRule[] =>
+  tokenColors.flatMap((entry) => {
+    const scopes = entry.scope ? (Array.isArray(entry.scope) ? entry.scope : [entry.scope]) : []
+    const settings = entry.settings ?? {}
+    const ruleBase = {
+      foreground: normalizeTokenColor(settings.foreground),
+      background: normalizeTokenColor(settings.background),
+      fontStyle: settings.fontStyle
+    }
+
+    return scopes.map((token) => ({ token, ...ruleBase }))
+  })
 // Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
 const DISABLED_FIND_COMMANDS = [
   'actions.find',
@@ -53,16 +141,21 @@ self.MonacoEnvironment = {
   }
 } as any
 
+const darkModernTheme = parseThemeJson(darkModernRaw)
+const darkPlusTheme = parseThemeJson(darkPlusRaw)
+
 monaco.editor.defineTheme(PROMPT_EDITOR_THEME_ID, {
   base: 'vs-dark',
   inherit: true,
-  rules: [],
+  rules: toMonacoRules(darkPlusTheme.tokenColors ?? []),
   colors: {
-    'editor.foreground': '#D4D4D4',
-    'editorLineNumber.foreground': '#D4D4D4',
-    'editorActiveLineNumber.foreground': '#D4D4D4'
+    ...(darkPlusTheme.colors ?? {}),
+    ...(darkModernTheme.colors ?? {})
   }
 })
+
+// Side effect: apply the Dark Modern theme to all Monaco editors globally.
+monaco.editor.setTheme(PROMPT_EDITOR_THEME_ID)
 
 // Disable Monaco's built-in find/replace widget so we can use our external dialog.
 DISABLED_FIND_COMMANDS.forEach((id) => {
