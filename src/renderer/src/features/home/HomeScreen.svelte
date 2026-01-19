@@ -7,9 +7,14 @@
     DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogTitle
+    DialogTitle,
+    ErrorDialog
   } from '@renderer/common/ui/dialog'
   import { useOpenSelectWorkspaceFolderDialogMutation } from '@renderer/api/workspace'
+  import {
+    isWorkspaceRootPath,
+    workspaceRootPathErrorMessage
+  } from '@shared/workspacePath'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -36,6 +41,7 @@
 
   let showSetupDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
+  let showRootPathDialog = $state(false)
 
   const handleSelectFolder = async () => {
     try {
@@ -43,6 +49,11 @@
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]
+        // Block root selections before checking for workspace files.
+        if (isWorkspaceRootPath(selectedPath)) {
+          showRootPathDialog = true
+          return
+        }
         const selectionResult = await onWorkspaceSelect(selectedPath)
 
         if (!selectionResult.success) {
@@ -161,4 +172,11 @@
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ErrorDialog
+    bind:open={showRootPathDialog}
+    title="Invalid workspace folder"
+    message={workspaceRootPathErrorMessage}
+    confirmLabel="OK"
+  />
 </main>

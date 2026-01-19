@@ -10,6 +10,7 @@ import type {
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
 import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
+import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 
 export type WorkspaceResult = SharedWorkspaceResult
 export type PromptFolder = SharedPromptFolder
@@ -63,6 +64,10 @@ export class WorkspaceManager {
 
   static async createWorkspace(workspacePath: string): Promise<WorkspaceResult> {
     try {
+      // Avoid creating workspaces at the drive root.
+      if (isWorkspaceRootPath(workspacePath)) {
+        return { success: false, error: workspaceRootPathErrorMessage }
+      }
       const promptsPath = path.join(workspacePath, 'prompts')
       const settingsPath = path.join(workspacePath, WORKSPACE_SETTINGS_FILENAME)
 
@@ -85,6 +90,9 @@ export class WorkspaceManager {
   }
 
   static validateWorkspace(workspacePath: string): boolean {
+    if (isWorkspaceRootPath(workspacePath)) {
+      return false
+    }
     const promptsPath = path.join(workspacePath, 'prompts')
     const settingsPath = path.join(workspacePath, WORKSPACE_SETTINGS_FILENAME)
     return this.checkFolderExists(promptsPath) && this.checkFolderExists(settingsPath)

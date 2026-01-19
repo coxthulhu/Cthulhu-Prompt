@@ -8,6 +8,7 @@ import Content from './dialog-content.svelte'
 import Description from './dialog-description.svelte'
 import Trigger from './dialog-trigger.svelte'
 import Close from './dialog-close.svelte'
+import ErrorDialog from './error-dialog.svelte'
 
 export {
   Root,
@@ -20,6 +21,7 @@ export {
   Content,
   Description,
   Close,
+  ErrorDialog,
   //
   Root as Dialog,
   Title as DialogTitle,
