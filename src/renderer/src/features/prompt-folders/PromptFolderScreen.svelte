@@ -24,20 +24,18 @@
     deletePromptInFolder,
     movePromptDownInFolder,
     movePromptUpInFolder,
-    type PromptFolderData
+    lookupPromptFolderDescriptionMeasuredHeight
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { promptEditorRowId } from './promptFolderRowIds'
+  import PromptFolderHeaderRow from './PromptFolderHeaderRow.svelte'
+  import { estimatePromptFolderHeaderHeight } from './promptFolderDescriptionSizing'
   import PromptFolderOutliner from './PromptFolderOutliner.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
-  let folderData = $state<PromptFolderData>({
-    promptIds: [],
-    isLoading: true,
-    isCreatingPrompt: false,
-    errorMessage: null,
-    requestId: 0
-  })
+  const folderName = $derived(folder.folderName)
+  const getInitialFolderData = () => getPromptFolderData(folder.folderName)
+  let folderData = $state(getInitialFolderData())
 
   let previousFolderName = $state<string | null>(null)
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
@@ -51,13 +49,16 @@
 
   // Side effect: reload prompts on folder change.
   $effect(() => {
-    const folderName = folder.folderName
-    const nextFolderData = getPromptFolderData(folderName)
-    folderData = nextFolderData
+    const nextFolderName = folderName
 
-    if (previousFolderName !== folderName) {
-      previousFolderName = folderName
-      void loadPromptFolder(folderName)
+    if (previousFolderName !== nextFolderName) {
+      previousFolderName = nextFolderName
+      void loadPromptFolder(nextFolderName)
+    }
+
+    const nextFolderData = getPromptFolderData(nextFolderName)
+    if (folderData !== nextFolderData) {
+      folderData = nextFolderData
     }
   })
 
@@ -74,7 +75,14 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     header: {
-      estimateHeight: () => 164,
+      estimateHeight: () => estimatePromptFolderHeaderHeight(folderData.descriptionDraft.text),
+      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
+        lookupPromptFolderDescriptionMeasuredHeight(
+          row.folder.folderName,
+          widthPx,
+          devicePixelRatio
+        ),
+      needsOverlayRow: true,
       snippet: headerRow
     },
     placeholder: {
@@ -215,9 +223,6 @@
             <div class="flex-1 min-h-0 overflow-y-auto">
               <div class="pt-6 pl-6">
                 <h1 class="text-2xl font-bold">{folder.displayName}</h1>
-                <p class="mt-4 text-muted-foreground">
-                  Edit prompts in the "{folder.displayName}" folder.
-                </p>
                 <h2 class="mt-6 text-lg font-semibold mb-4">
                   Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
                 </h2>
@@ -252,16 +257,20 @@
   </main>
 </PromptFolderFindIntegration>
 
-{#snippet headerRow({ row })}
-  <div class="pt-6">
-    <h1 class="text-2xl font-bold">{row.folder.displayName}</h1>
-    <p class="mt-4 text-muted-foreground">
-      Edit prompts in the "{row.folder.displayName}" folder.
-    </p>
-    <h2 class="mt-6 text-lg font-semibold mb-4">
-      Prompts ({row.isLoading ? 0 : row.promptCount})
-    </h2>
-  </div>
+{#snippet headerRow(props)}
+  <PromptFolderHeaderRow
+    folder={props.row.folder}
+    promptCount={props.row.promptCount}
+    isLoading={props.row.isLoading}
+    rowId={props.rowId}
+    virtualWindowWidthPx={props.virtualWindowWidthPx}
+    devicePixelRatio={props.devicePixelRatio}
+    hydrationPriority={props.hydrationPriority}
+    shouldDehydrate={props.shouldDehydrate}
+    overlayRowElement={props.overlayRowElement ?? null}
+    onHydrationChange={props.onHydrationChange}
+    {folderData}
+  />
 {/snippet}
 
 {#snippet placeholderRow({ row })}

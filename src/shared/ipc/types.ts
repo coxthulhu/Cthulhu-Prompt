@@ -52,4 +52,5 @@ export interface PromptResult extends WorkspaceResult {
 
 export interface LoadPromptsResult extends WorkspaceResult {
   prompts?: Prompt[]
+  folderDescription?: string
 }

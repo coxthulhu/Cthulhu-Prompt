@@ -2,7 +2,20 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 import type { LoadPromptsResult, PromptResult, WorkspaceResult } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
-import { ingestPromptFolderPrompts, removePromptData } from '@renderer/data/PromptDataStore.svelte.ts'
+import {
+  ingestPromptFolderPrompts,
+  removePromptData,
+  PROMPT_AUTOSAVE_MS
+} from '@renderer/data/PromptDataStore.svelte.ts'
+import {
+  clearAutosaveTimeout,
+  createAutosaveController,
+  type AutosaveDraft
+} from '@renderer/data/draftAutosave'
+import {
+  createMeasuredHeightCache,
+  type TextMeasurement
+} from '@renderer/data/measuredHeightCache'
 
 type CreatePromptRequestPayload = {
   workspacePath: string
@@ -25,38 +38,126 @@ type ReorderPromptRequestPayload = {
   previousPromptId: string | null
 }
 
+type UpdatePromptFolderDescriptionRequestPayload = {
+  workspacePath: string
+  folderName: string
+  folderDescription: string
+}
+
+type PromptFolderDescriptionDraft = AutosaveDraft & {
+  text: string
+}
+
+export type PromptFolderDescriptionMeasurement = TextMeasurement
+
 export type PromptFolderData = {
   promptIds: string[]
   isLoading: boolean
   isCreatingPrompt: boolean
   errorMessage: string | null
   requestId: number
+  descriptionDraft: PromptFolderDescriptionDraft
+  setDescriptionText: (text: string, measurement: PromptFolderDescriptionMeasurement) => void
+  setDescriptionTextWithoutAutosave: (text: string) => void
+  saveDescriptionNow: () => Promise<void>
 }
 
 let currentWorkspacePath: string | null = null
 let nextRequestId = 0
 const promptFolderDataByFolderName = new SvelteMap<string, PromptFolderData>()
+const promptFolderDescriptionMeasuredHeights = createMeasuredHeightCache()
 const inFlightRequests = new SvelteSet<Promise<void>>()
+
+export const lookupPromptFolderDescriptionMeasuredHeight = (
+  folderName: string,
+  widthPx: number,
+  devicePixelRatio: number
+): number | null => {
+  return promptFolderDescriptionMeasuredHeights.lookup(folderName, widthPx, devicePixelRatio)
+}
+
+const clearPromptFolderDescriptionMeasuredHeights = (folderName: string): void => {
+  promptFolderDescriptionMeasuredHeights.clear(folderName)
+}
 
 export const flushPromptFolderRequests = async (): Promise<void> => {
   await Promise.all(Array.from(inFlightRequests))
 }
 
+export const flushPromptFolderAutosaves = async (): Promise<void> => {
+  const tasks = Array.from(promptFolderDataByFolderName.values(), (folderData) => {
+    clearAutosaveTimeout(folderData.descriptionDraft)
+    return folderData.saveDescriptionNow()
+  })
+
+  await Promise.all(tasks)
+}
+
 export const resetPromptFolderDataStoreForWorkspace = (nextWorkspacePath: string | null): void => {
   currentWorkspacePath = nextWorkspacePath
   promptFolderDataByFolderName.clear()
+  promptFolderDescriptionMeasuredHeights.clearAll()
 }
 
 export const getPromptFolderData = (folderName: string): PromptFolderData => {
   const existing = promptFolderDataByFolderName.get(folderName)
   if (existing) return existing
 
+  const descriptionDraft = $state<PromptFolderDescriptionDraft>({
+    text: '',
+    dirty: false,
+    saving: false,
+    autosaveTimeoutId: null
+  })
+
+  const autosave = createAutosaveController({
+    draft: descriptionDraft,
+    autosaveMs: PROMPT_AUTOSAVE_MS,
+    save: async () => {
+      const descriptionToSave = descriptionDraft.text
+
+      await ipcInvoke<WorkspaceResult, UpdatePromptFolderDescriptionRequestPayload>(
+        'update-prompt-folder-description',
+        {
+          workspacePath: currentWorkspacePath!,
+          folderName,
+          folderDescription: descriptionToSave
+        }
+      )
+
+      if (descriptionDraft.text === descriptionToSave) {
+        descriptionDraft.dirty = false
+      }
+    }
+  })
+
+  const setDescriptionText = (text: string, measurement: PromptFolderDescriptionMeasurement) => {
+    const textChanged = descriptionDraft.text !== text
+    if (textChanged) {
+      descriptionDraft.text = text
+    }
+    promptFolderDescriptionMeasuredHeights.record(folderName, measurement, textChanged)
+    if (textChanged) {
+      autosave.markDirtyAndScheduleAutosave()
+    }
+  }
+
+  const setDescriptionTextWithoutAutosave = (text: string) => {
+    if (descriptionDraft.text === text) return
+    descriptionDraft.text = text
+    clearPromptFolderDescriptionMeasuredHeights(folderName)
+  }
+
   const created = $state<PromptFolderData>({
     promptIds: [],
     isLoading: true,
     isCreatingPrompt: false,
     errorMessage: null,
-    requestId: 0
+    requestId: 0,
+    descriptionDraft,
+    setDescriptionText,
+    setDescriptionTextWithoutAutosave,
+    saveDescriptionNow: autosave.saveNow
   })
   promptFolderDataByFolderName.set(folderName, created)
   return created
@@ -75,6 +176,10 @@ export const loadPromptFolder = async (folderName: string): Promise<void> => {
     folderData.isCreatingPrompt = false
     folderData.errorMessage = null
     folderData.requestId = requestId
+    folderData.descriptionDraft.dirty = false
+    folderData.descriptionDraft.saving = false
+    clearAutosaveTimeout(folderData.descriptionDraft)
+    folderData.setDescriptionTextWithoutAutosave('')
 
     const isLatestRequest = () =>
       promptFolderDataByFolderName.get(folderName)?.requestId === requestId
@@ -90,7 +195,10 @@ export const loadPromptFolder = async (folderName: string): Promise<void> => {
 
       if (!isLatestRequest()) return
 
+      const nextDescription = result.folderDescription ?? ''
       folderData.promptIds = ingestPromptFolderPrompts(folderName, result.prompts ?? [])
+      folderData.setDescriptionTextWithoutAutosave(nextDescription)
+      folderData.descriptionDraft.dirty = false
       folderData.isLoading = false
     } catch (error) {
       if (!isLatestRequest()) return

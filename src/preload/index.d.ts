@@ -39,6 +39,11 @@ interface PromptAPI {
   ) => Promise<PromptResult>
   deletePrompt: (workspacePath: string, folderName: string, id: string) => Promise<WorkspaceResult>
   loadPrompts: (workspacePath: string, folderName: string) => Promise<LoadPromptsResult>
+  updatePromptFolderDescription: (
+    workspacePath: string,
+    folderName: string,
+    folderDescription: string
+  ) => Promise<WorkspaceResult>
 }
 
 // Combined API for backward compatibility

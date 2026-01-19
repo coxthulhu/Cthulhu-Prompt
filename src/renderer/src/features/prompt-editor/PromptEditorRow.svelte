@@ -5,6 +5,7 @@
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
+  import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
@@ -101,42 +102,14 @@
 
   // Side effect: keep the Monaco overflow host aligned with the prompt editor chrome.
   $effect(() => {
-    if (!overlayRowElement) {
-      overflowPaddingHost?.remove()
-      overflowPaddingHost = null
-      overflowHost = null
-      return
-    }
-
-    const paddingHost = overflowPaddingHost ?? document.createElement('div')
-    paddingHost.style.overflow = 'visible'
-    paddingHost.style.boxSizing = 'border-box'
-    paddingHost.style.pointerEvents = 'none'
-    paddingHost.style.padding = `${OVERFLOW_TOP_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
-
-    const host = overflowHost ?? document.createElement('div')
-    host.className = 'monaco-editor no-user-select showUnused showDeprecated vs-dark'
-    host.style.position = 'relative'
-    host.style.width = '0'
-    host.style.height = '0'
-    host.style.overflow = 'visible'
-    host.style.pointerEvents = 'auto'
-
-    if (host.parentElement !== paddingHost) {
-      paddingHost.appendChild(host)
-    }
-
-    if (paddingHost.parentElement !== overlayRowElement) {
-      overlayRowElement.appendChild(paddingHost)
-    }
-
-    if (overflowPaddingHost !== paddingHost) {
-      overflowPaddingHost = paddingHost
-    }
-
-    if (overflowHost !== host) {
-      overflowHost = host
-    }
+    const next = syncMonacoOverflowHost({
+      overlayRowElement,
+      overflowHost,
+      overflowPaddingHost,
+      padding: `${OVERFLOW_TOP_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
+    })
+    overflowPaddingHost = next.overflowPaddingHost
+    overflowHost = next.overflowHost
   })
 
   // Side effect: keep row height aligned with placeholder sizing while the editor is not hydrated.

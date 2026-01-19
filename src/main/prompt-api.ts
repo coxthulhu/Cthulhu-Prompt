@@ -28,6 +28,7 @@ export interface PromptsFile {
 interface PromptFolderConfig {
   foldername: string
   promptCount: number
+  folderDescription: string
 }
 
 export interface CreatePromptRequest {
@@ -64,6 +65,12 @@ export interface LoadPromptsRequest {
   folderName: string
 }
 
+export interface UpdatePromptFolderDescriptionRequest {
+  workspacePath: string
+  folderName: string
+  folderDescription: string
+}
+
 export class PromptAPI {
   private static readonly fileQueue = new FileOperationQueue()
 
@@ -94,6 +101,13 @@ export class PromptAPI {
     ipcMain.handle('load-prompts', async (_, request: LoadPromptsRequest) => {
       return await this.loadPrompts(request)
     })
+
+    ipcMain.handle(
+      'update-prompt-folder-description',
+      async (_, request: UpdatePromptFolderDescriptionRequest) => {
+        return await this.updatePromptFolderDescription(request)
+      }
+    )
   }
 
   private static getPromptsFilePath(workspacePath: string, folderName: string): string {
@@ -130,7 +144,7 @@ export class PromptAPI {
   ): PromptFolderConfig {
     const fs = getFs()
     if (!fs.existsSync(filePath)) {
-      const config = { foldername: fallbackName, promptCount: 0 }
+      const config = { foldername: fallbackName, promptCount: 0, folderDescription: '' }
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf8')
       return config
     }
@@ -139,11 +153,13 @@ export class PromptAPI {
     const config = JSON.parse(content) as Partial<PromptFolderConfig>
     const normalized: PromptFolderConfig = {
       foldername: config.foldername ?? fallbackName,
-      promptCount: typeof config.promptCount === 'number' ? config.promptCount : 0
+      promptCount: typeof config.promptCount === 'number' ? config.promptCount : 0,
+      folderDescription: typeof config.folderDescription === 'string' ? config.folderDescription : ''
     }
     if (
       normalized.foldername !== config.foldername ||
-      typeof config.promptCount !== 'number'
+      typeof config.promptCount !== 'number' ||
+      typeof config.folderDescription !== 'string'
     ) {
       fs.writeFileSync(filePath, JSON.stringify(normalized, null, 2), 'utf8')
     }
@@ -348,7 +364,32 @@ export class PromptAPI {
           this.writePromptFolderConfig(configPath, folderConfig)
         }
 
-        return { success: true, prompts: didUpdatePrompts ? nextPrompts : promptsFile.prompts }
+        return {
+          success: true,
+          prompts: didUpdatePrompts ? nextPrompts : promptsFile.prompts,
+          folderDescription: folderConfig.folderDescription
+        }
+      })
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async updatePromptFolderDescription(
+    request: UpdatePromptFolderDescriptionRequest
+  ): Promise<WorkspaceResult> {
+    if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
+      return { success: false, error: 'Invalid workspace path' }
+    }
+
+    const configPath = this.getPromptFolderConfigPath(request.workspacePath, request.folderName)
+
+    try {
+      return await this.runExclusiveFileOperation(configPath, async () => {
+        const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
+        folderConfig.folderDescription = request.folderDescription
+        this.writePromptFolderConfig(configPath, folderConfig)
+        return { success: true }
       })
     } catch (error) {
       return { success: false, error: (error as Error).message }

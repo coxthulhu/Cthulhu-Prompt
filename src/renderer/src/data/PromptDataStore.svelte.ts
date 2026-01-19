@@ -2,17 +2,22 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 import type { Prompt, PromptResult } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
+import {
+  clearAutosaveTimeout,
+  createAutosaveController,
+  type AutosaveDraft
+} from '@renderer/data/draftAutosave'
+import {
+  createMeasuredHeightCache,
+  type TextMeasurement
+} from '@renderer/data/measuredHeightCache'
 
 type PromptContent = {
   title: string
   text: string
 }
 
-type PromptDraft = PromptContent & {
-  dirty: boolean
-  saving: boolean
-  autosaveTimeoutId: number | null
-}
+type PromptDraft = PromptContent & AutosaveDraft
 
 type PromptPersisted = PromptContent & {
   lastModifiedDate: string
@@ -31,11 +36,7 @@ export type PromptData = {
 
 type PromptDraftChangeListener = (promptId: string) => void
 
-export type PromptEditorTextMeasurement = {
-  measuredHeightPx: number | null
-  widthPx: number
-  devicePixelRatio: number
-}
+export type PromptEditorTextMeasurement = TextMeasurement
 
 type UpdatePromptRequestPayload = {
   workspacePath: string
@@ -45,59 +46,32 @@ type UpdatePromptRequestPayload = {
   promptText: string
 }
 
-const AUTOSAVE_MS = 2000
+export const PROMPT_AUTOSAVE_MS = 2000
 
 let currentWorkspacePath: string | null = null
 const promptDataById = new SvelteMap<string, PromptData>()
 const promptDraftChangeListeners = new SvelteSet<PromptDraftChangeListener>()
-
-type PromptEditorMeasuredHeightsByKey = SvelteMap<string, number>
-const promptEditorMeasuredHeightsByPromptId = new SvelteMap<
-  string,
-  PromptEditorMeasuredHeightsByKey
->()
-
-const clampToTwoDecimalPlaces = (value: number): number => {
-  return Math.round(value * 100) / 100
-}
-
-export const roundDevicePixelRatio = (value: number): number => {
-  return clampToTwoDecimalPlaces(value)
-}
-
-const measurementKey = (widthPx: number, devicePixelRatio: number): string => {
-  return `${widthPx}:${roundDevicePixelRatio(devicePixelRatio)}`
-}
+const promptEditorMeasuredHeights = createMeasuredHeightCache()
 
 export const lookupPromptEditorMeasuredHeight = (
   promptId: string,
   widthPx: number,
   devicePixelRatio: number
 ): number | null => {
-  const measurements = promptEditorMeasuredHeightsByPromptId.get(promptId)
-  if (!measurements) return null
-  const height = measurements.get(measurementKey(widthPx, devicePixelRatio))
-  return typeof height === 'number' ? height : null
+  return promptEditorMeasuredHeights.lookup(promptId, widthPx, devicePixelRatio)
 }
 
 export const clearPromptEditorMeasuredHeights = (promptId: string): void => {
-  promptEditorMeasuredHeightsByPromptId.delete(promptId)
+  promptEditorMeasuredHeights.clear(promptId)
 }
 
 export const clearAllPromptEditorMeasuredHeights = (): void => {
-  promptEditorMeasuredHeightsByPromptId.clear()
+  promptEditorMeasuredHeights.clearAll()
 }
-
 
 const applyPromptContent = (target: PromptContent, prompt: Prompt) => {
   target.title = prompt.title
   target.text = prompt.promptText
-}
-
-const clearAutosaveTimeout = (draft: PromptDraft) => {
-  if (draft.autosaveTimeoutId == null) return
-  window.clearTimeout(draft.autosaveTimeoutId)
-  draft.autosaveTimeoutId = null
 }
 
 const notifyPromptDraftChange = (promptId: string) => {
@@ -119,7 +93,7 @@ export const removePromptData = (promptId: string): void => {
   const promptData = promptDataById.get(promptId)!
   clearAutosaveTimeout(promptData.draft)
   promptDataById.delete(promptId)
-  promptEditorMeasuredHeightsByPromptId.delete(promptId)
+  promptEditorMeasuredHeights.clear(promptId)
 }
 
 const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData => {
@@ -144,64 +118,30 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     lastModifiedDate: prompt.lastModifiedDate
   })
 
-  let saveInFlight: Promise<void> | null = null
+  const autosave = createAutosaveController({
+    draft,
+    autosaveMs: PROMPT_AUTOSAVE_MS,
+    save: async () => {
+      const contentToSave: PromptContent = { title: draft.title, text: draft.text }
 
-  const saveNow = async (): Promise<void> => {
-    if (!draft.dirty) return
-    if (saveInFlight) {
-      await saveInFlight
-      if (draft.dirty) {
-        await saveNow()
+      const result = await ipcInvoke<PromptResult, UpdatePromptRequestPayload>('update-prompt', {
+        workspacePath: currentWorkspacePath!,
+        folderName,
+        id: prompt.id,
+        title: contentToSave.title,
+        promptText: contentToSave.text
+      })
+
+      const updated = result.prompt!
+
+      applyPromptContent(persisted, updated)
+      persisted.lastModifiedDate = updated.lastModifiedDate
+
+      if (draft.title === contentToSave.title && draft.text === contentToSave.text) {
+        draft.dirty = false
       }
-      return
     }
-
-    clearAutosaveTimeout(draft)
-
-    const contentToSave: PromptContent = { title: draft.title, text: draft.text }
-
-    draft.saving = true
-
-    saveInFlight = (async () => {
-      try {
-        const result = await ipcInvoke<PromptResult, UpdatePromptRequestPayload>('update-prompt', {
-          workspacePath: currentWorkspacePath!,
-          folderName,
-          id: prompt.id,
-          title: contentToSave.title,
-          promptText: contentToSave.text
-        })
-
-        const updated = result.prompt!
-
-        applyPromptContent(persisted, updated)
-        persisted.lastModifiedDate = updated.lastModifiedDate
-
-        if (draft.title === contentToSave.title && draft.text === contentToSave.text) {
-          draft.dirty = false
-        }
-      } finally {
-        draft.saving = false
-        saveInFlight = null
-      }
-    })()
-
-    await saveInFlight
-  }
-
-  const scheduleAutosave = () => {
-    clearAutosaveTimeout(draft)
-
-    draft.autosaveTimeoutId = window.setTimeout(() => {
-      draft.autosaveTimeoutId = null
-      void saveNow()
-    }, AUTOSAVE_MS)
-  }
-
-  const markDirtyAndScheduleAutosave = () => {
-    draft.dirty = true
-    scheduleAutosave()
-  }
+  })
 
   const applyDraftTitle = (title: string): boolean => {
     if (draft.title === title) return false
@@ -212,7 +152,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
 
   const setTitle = (title: string) => {
     if (!applyDraftTitle(title)) return
-    markDirtyAndScheduleAutosave()
+    autosave.markDirtyAndScheduleAutosave()
   }
 
   const setTitleWithoutAutosave = (title: string) => {
@@ -231,31 +171,9 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     if (textChanged) {
       draft.text = text
     }
-
-    const key = measurementKey(measurement.widthPx, measurement.devicePixelRatio)
-    let measurements = promptEditorMeasuredHeightsByPromptId.get(prompt.id)
-    if (!measurements && measurement.measuredHeightPx != null) {
-      measurements = new SvelteMap()
-      promptEditorMeasuredHeightsByPromptId.set(prompt.id, measurements)
-    }
-
-    if (measurements) {
-      if (textChanged) {
-        // Side effect: when prompt text changes, keep only the current width:DPR measurement and drop the rest.
-        for (const existingKey of measurements.keys()) {
-          if (existingKey !== key) {
-            measurements.delete(existingKey)
-          }
-        }
-      }
-
-      if (measurement.measuredHeightPx != null) {
-        measurements.set(key, measurement.measuredHeightPx)
-      }
-    }
-
+    promptEditorMeasuredHeights.record(prompt.id, measurement, textChanged)
     if (textChanged) {
-      markDirtyAndScheduleAutosave()
+      autosave.markDirtyAndScheduleAutosave()
       notifyPromptDraftChange(prompt.id)
     }
   }
@@ -268,7 +186,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     setTitleWithoutAutosave,
     setText,
     setTextWithoutAutosave,
-    saveNow
+    saveNow: autosave.saveNow
   }
 
   promptDataById.set(prompt.id, promptData)
@@ -287,7 +205,7 @@ export const flushPromptWorkspaceAutosaves = async (): Promise<void> => {
 export const resetPromptDataStoreForWorkspace = (nextWorkspacePath: string | null): void => {
   currentWorkspacePath = nextWorkspacePath
   promptDataById.clear()
-  promptEditorMeasuredHeightsByPromptId.clear()
+  promptEditorMeasuredHeights.clearAll()
 }
 
 export const ingestPromptFolderPrompts = (folderName: string, prompts: Prompt[]): string[] => {

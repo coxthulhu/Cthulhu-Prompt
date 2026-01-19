@@ -102,7 +102,17 @@ const promptAPI = {
   deletePrompt: (workspacePath: string, folderName: string, id: string) =>
     electronAPI.ipcRenderer.invoke('delete-prompt', { workspacePath, folderName, id }),
   loadPrompts: (workspacePath: string, folderName: string) =>
-    electronAPI.ipcRenderer.invoke('load-prompts', { workspacePath, folderName })
+    electronAPI.ipcRenderer.invoke('load-prompts', { workspacePath, folderName }),
+  updatePromptFolderDescription: (
+    workspacePath: string,
+    folderName: string,
+    folderDescription: string
+  ) =>
+    electronAPI.ipcRenderer.invoke('update-prompt-folder-description', {
+      workspacePath,
+      folderName,
+      folderDescription
+    })
 }
 
 // Combined API for backward compatibility

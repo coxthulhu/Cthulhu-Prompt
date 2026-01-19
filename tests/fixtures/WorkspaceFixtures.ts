@@ -167,7 +167,8 @@ export function createWorkspaceWithFolders(
     structure[`${folderPath}/promptfolder.json`] = JSON.stringify(
       {
         foldername: folder.displayName,
-        promptCount
+        promptCount,
+        folderDescription: ''
       },
       null,
       2
@@ -343,7 +344,8 @@ export function addFolderToWorkspace(
     [`${folderPath}/promptfolder.json`]: JSON.stringify(
       {
         foldername: folderConfig.displayName,
-        promptCount
+        promptCount,
+        folderDescription: ''
       },
       null,
       2
