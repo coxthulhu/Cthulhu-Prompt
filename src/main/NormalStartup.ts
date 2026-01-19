@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow } from 'electron'
-import { join, resolve } from 'path'
+import { basename, join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
@@ -26,6 +26,15 @@ function resolveDevWorkspacePath(): string | null {
   }
 }
 
+function resolveExecutionFolderName(): string | null {
+  try {
+    return basename(process.cwd())
+  } catch (error) {
+    console.error('Error resolving execution folder name:', error)
+    return null
+  }
+}
+
 function encodeRuntimeConfig(config: RuntimeConfig): string {
   const payload = JSON.stringify(config)
   return `${RUNTIME_ARG_PREFIX}${Buffer.from(payload, 'utf8').toString('base64')}`
@@ -40,11 +49,13 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
       ? 'PLAYWRIGHT'
       : ''
   const devWorkspacePath = devEnvironment ? resolveDevWorkspacePath() : null
+  const executionFolderName = resolveExecutionFolderName()
   const systemSettingsResult = await SystemSettingsManager.loadSystemSettings()
   const systemSettings = systemSettingsResult.settings ?? DEFAULT_SYSTEM_SETTINGS
 
   return {
     devWorkspacePath,
+    executionFolderName,
     environment,
     systemSettings
   }

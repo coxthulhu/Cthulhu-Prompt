@@ -20,6 +20,8 @@
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
+  const baseWindowTitle = 'Cthulhu Prompt'
+  const executionFolderName = runtimeConfig.executionFolderName
 
   const { mutateAsync: checkWorkspaceFolderExists } = useCheckWorkspaceFolderExistsMutation()
   const { mutateAsync: createWorkspaceAtPath } = useCreateWorkspaceMutation()
@@ -30,6 +32,9 @@
   const isWorkspaceReady = $derived(Boolean(workspacePath))
   let isWorkspaceLoading = $state(false)
   let hasAttemptedAutoSelect = false
+  const windowTitle = $derived(
+    isDevMode && executionFolderName ? `${baseWindowTitle} — ${executionFolderName}` : baseWindowTitle
+  )
 
   const extractErrorMessage = (error: unknown): string | undefined =>
     error instanceof Error ? error.message : typeof error === 'string' ? error : undefined
@@ -145,6 +150,11 @@
         logWorkspaceError('select', selectionResult.message)
       }
     })()
+  })
+
+  // Side effect: keep the browser window title in sync with dev mode state.
+  $effect(() => {
+    document.title = windowTitle
   })
 
   const navigateToScreen = (screen: ScreenId) => {

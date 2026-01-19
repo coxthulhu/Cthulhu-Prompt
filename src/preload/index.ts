@@ -10,6 +10,7 @@ import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
 
 const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
   devWorkspacePath: null,
+  executionFolderName: null,
   environment: '',
   systemSettings: DEFAULT_SYSTEM_SETTINGS
 })
@@ -30,11 +31,14 @@ function loadRuntimeConfig(): RuntimeConfig {
 
     const devWorkspacePath =
       typeof parsed.devWorkspacePath === 'string' ? parsed.devWorkspacePath : null
+    const executionFolderName =
+      typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
     const systemSettings = normalizeRuntimeSystemSettings(parsed.systemSettings)
 
     return Object.freeze({
       devWorkspacePath,
+      executionFolderName,
       environment,
       systemSettings
     })
