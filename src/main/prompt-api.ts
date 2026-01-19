@@ -25,6 +25,11 @@ export interface PromptsFile {
   prompts: Prompt[]
 }
 
+interface PromptFolderConfig {
+  foldername: string
+  promptCount: number
+}
+
 export interface CreatePromptRequest {
   workspacePath: string
   folderName: string
@@ -95,6 +100,10 @@ export class PromptAPI {
     return path.join(workspacePath, 'prompts', folderName, 'prompts.json')
   }
 
+  private static getPromptFolderConfigPath(workspacePath: string, folderName: string): string {
+    return path.join(workspacePath, 'prompts', folderName, 'promptfolder.json')
+  }
+
   private static async readPromptsFile(filePath: string): Promise<PromptsFile> {
     const fs = getFs()
     if (!fs.existsSync(filePath)) {
@@ -115,16 +124,50 @@ export class PromptAPI {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
   }
 
+  private static readPromptFolderConfig(
+    filePath: string,
+    fallbackName: string
+  ): PromptFolderConfig {
+    const fs = getFs()
+    if (!fs.existsSync(filePath)) {
+      const config = { foldername: fallbackName, promptCount: 0 }
+      fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf8')
+      return config
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8')
+    const config = JSON.parse(content) as Partial<PromptFolderConfig>
+    const normalized: PromptFolderConfig = {
+      foldername: config.foldername ?? fallbackName,
+      promptCount: typeof config.promptCount === 'number' ? config.promptCount : 0
+    }
+    if (
+      normalized.foldername !== config.foldername ||
+      typeof config.promptCount !== 'number'
+    ) {
+      fs.writeFileSync(filePath, JSON.stringify(normalized, null, 2), 'utf8')
+    }
+    return normalized
+  }
+
+  private static writePromptFolderConfig(filePath: string, data: PromptFolderConfig): void {
+    const fs = getFs()
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+  }
+
   static async createPrompt(request: CreatePromptRequest): Promise<PromptResult> {
     if (!WorkspaceManager.validateWorkspace(request.workspacePath)) {
       return { success: false, error: 'Invalid workspace path' }
     }
 
     const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+    const configPath = this.getPromptFolderConfigPath(request.workspacePath, request.folderName)
 
     try {
       return await this.runExclusiveFileOperation(filePath, async () => {
         const promptsFile = await this.readPromptsFile(filePath)
+        const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
+        const nextPromptCount = folderConfig.promptCount + 1
 
         const now = new Date().toISOString()
         const newPrompt: Prompt = {
@@ -132,7 +175,8 @@ export class PromptAPI {
           title: request.title,
           creationDate: now,
           lastModifiedDate: now,
-          promptText: request.promptText
+          promptText: request.promptText,
+          promptFolderCount: nextPromptCount
         }
 
         let insertIndex = promptsFile.prompts.length
@@ -153,6 +197,8 @@ export class PromptAPI {
 
         promptsFile.prompts.splice(insertIndex, 0, newPrompt)
         await this.writePromptsFile(filePath, promptsFile)
+        folderConfig.promptCount = nextPromptCount
+        this.writePromptFolderConfig(configPath, folderConfig)
 
         return { success: true, prompt: newPrompt }
       })
@@ -265,12 +311,44 @@ export class PromptAPI {
     }
 
     const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+    const configPath = this.getPromptFolderConfigPath(request.workspacePath, request.folderName)
 
     try {
       return await this.runExclusiveFileOperation(filePath, async () => {
         const promptsFile = await this.readPromptsFile(filePath)
+        const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
+        let maxExistingCount = 0
 
-        return { success: true, prompts: promptsFile.prompts }
+        for (const prompt of promptsFile.prompts) {
+          if (typeof prompt.promptFolderCount === 'number' && prompt.promptFolderCount > 0) {
+            maxExistingCount = Math.max(maxExistingCount, prompt.promptFolderCount)
+          }
+        }
+
+        let nextCount = Math.max(folderConfig.promptCount, maxExistingCount)
+        let didUpdatePrompts = false
+        const nextPrompts = promptsFile.prompts.map((prompt) => {
+          if (typeof prompt.promptFolderCount === 'number' && prompt.promptFolderCount > 0) {
+            return prompt
+          }
+
+          nextCount += 1
+          didUpdatePrompts = true
+          return { ...prompt, promptFolderCount: nextCount }
+        })
+
+        const nextPromptCount = Math.max(folderConfig.promptCount, nextCount)
+        if (didUpdatePrompts) {
+          promptsFile.prompts = nextPrompts
+          await this.writePromptsFile(filePath, promptsFile)
+        }
+
+        if (nextPromptCount !== folderConfig.promptCount) {
+          folderConfig.promptCount = nextPromptCount
+          this.writePromptFolderConfig(configPath, folderConfig)
+        }
+
+        return { success: true, prompts: didUpdatePrompts ? nextPrompts : promptsFile.prompts }
       })
     } catch (error) {
       return { success: false, error: (error as Error).message }

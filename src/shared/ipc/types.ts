@@ -38,6 +38,7 @@ export interface Prompt {
   creationDate: string
   lastModifiedDate: string
   promptText: string
+  promptFolderCount: number
 }
 
 export interface PromptResult extends WorkspaceResult {

@@ -7,6 +7,7 @@
     title: string
     draftText: string
     onTitleChange: (value: string) => void
+    promptFolderCount: number
     rowId: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete: () => void
@@ -18,12 +19,18 @@
     title,
     draftText,
     onTitleChange,
+    promptFolderCount,
     rowId,
     scrollToWithinWindowBand,
     onDelete,
     onSelectionChange,
     inputRef = $bindable(null)
   }: Props = $props()
+
+  // Derived placeholder text shows the prompt count when the title is empty.
+  const titlePlaceholder = $derived.by(() =>
+    title.trim().length === 0 ? `Title (Prompt ${promptFolderCount})` : 'Title'
+  )
 
   const handleTitleInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
@@ -55,7 +62,7 @@
 <div class="flex items-center gap-2 py-0.5">
   <Input
     data-testid="prompt-title"
-    placeholder="Title"
+    placeholder={titlePlaceholder}
     value={title}
     bind:ref={inputRef}
     oninput={(event) => {

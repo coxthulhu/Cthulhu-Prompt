@@ -21,6 +21,7 @@ type PromptPersisted = PromptContent & {
 export type PromptData = {
   draft: PromptDraft
   persisted: PromptPersisted
+  promptFolderCount: number
   setTitle: (title: string) => void
   setTitleWithoutAutosave: (title: string) => void
   setText: (text: string, measurement: PromptEditorTextMeasurement) => void
@@ -124,6 +125,7 @@ export const removePromptData = (promptId: string): void => {
 const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData => {
   const existing = promptDataById.get(prompt.id)
   if (existing) {
+    existing.promptFolderCount = prompt.promptFolderCount
     return existing
   }
 
@@ -261,6 +263,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
   const promptData: PromptData = {
     draft,
     persisted,
+    promptFolderCount: prompt.promptFolderCount,
     setTitle,
     setTitleWithoutAutosave,
     setText,

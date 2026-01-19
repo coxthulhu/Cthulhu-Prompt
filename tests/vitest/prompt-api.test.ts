@@ -31,6 +31,7 @@ describe('PromptAPI', () => {
       expect(result.prompt?.id).toBeDefined()
       expect(result.prompt?.creationDate).toBeDefined()
       expect(result.prompt?.lastModifiedDate).toBeDefined()
+      expect(result.prompt?.promptFolderCount).toBe(1)
 
       // Verify file was created
       const filePath = '/workspace/prompts/TestFolder/prompts.json'
@@ -75,6 +76,8 @@ describe('PromptAPI', () => {
       expect(result.prompts).toHaveLength(2)
       expect(result.prompts![0].title).toBe(samplePrompts.simple.title)
       expect(result.prompts![1].title).toBe(samplePrompts.complex.title)
+      expect(result.prompts![0].promptFolderCount).toBe(1)
+      expect(result.prompts![1].promptFolderCount).toBe(2)
     })
 
     it('should create empty prompts file when none exists', async () => {

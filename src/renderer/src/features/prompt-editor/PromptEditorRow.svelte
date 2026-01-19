@@ -286,6 +286,7 @@
         <PromptEditorTitleBar
           title={promptData.draft.title}
           draftText={promptData.draft.text}
+          promptFolderCount={promptData.promptFolderCount}
           onTitleChange={promptData.setTitle}
           onSelectionChange={reportTitleSelection}
           bind:inputRef={titleInputRef}

@@ -133,7 +133,7 @@ export class WorkspaceManager {
 
       // Create the promptfolder.json file
       const configPath = path.join(folderPath, 'promptfolder.json')
-      const configContent = JSON.stringify({ foldername: displayName }, null, 2)
+      const configContent = JSON.stringify({ foldername: displayName, promptCount: 0 }, null, 2)
       fs.writeFileSync(configPath, configContent, 'utf8')
 
       // Create the prompts.json file
