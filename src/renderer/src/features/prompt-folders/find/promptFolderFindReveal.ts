@@ -1,6 +1,6 @@
 import type { PromptFolderFindMatch, PromptFolderFindRowHandle } from './promptFolderFindTypes'
-import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-import { promptEditorRowId } from './promptFolderRowIds'
+import type { ScrollToWithinWindowBand } from '../../virtualizer/virtualWindowTypes'
+import { promptEditorRowId } from '../promptFolderRowIds'
 
 type RowHandleMap = {
   get: (promptId: string) => PromptFolderFindRowHandle | undefined

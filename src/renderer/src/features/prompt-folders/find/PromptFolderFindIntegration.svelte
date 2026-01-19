@@ -15,7 +15,7 @@
   } from './promptFolderFindSearch'
   import { createPromptFolderFindSearchModel } from './promptFolderFindSearchModel'
   import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import type { ScrollToWithinWindowBand } from '../../virtualizer/virtualWindowTypes'
   import { revealPromptFolderMatch } from './promptFolderFindReveal'
   import { findMatchIndexAtOrAfter, findMatchIndexBefore, findMatchRange } from './promptFolderFindText'
   import type {

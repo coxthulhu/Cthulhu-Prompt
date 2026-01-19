@@ -24,7 +24,7 @@
     movePromptUpInFolder,
     type PromptFolderData
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
-  import PromptFolderFindIntegration from './PromptFolderFindIntegration.svelte'
+  import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { promptEditorRowId } from './promptFolderRowIds'
 
   let { folder } = $props<{ folder: PromptFolder }>()

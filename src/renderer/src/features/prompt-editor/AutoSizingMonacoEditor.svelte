@@ -6,7 +6,7 @@
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
   import { clampMonacoHeightPx, LINE_HEIGHT_PX, MIN_MONACO_HEIGHT_PX } from './promptEditorSizing'
-  import type { PromptFolderFindRequest } from '../prompt-folders/promptFolderFindTypes'
+  import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
 
   type Props = {
     initialValue: string

@@ -7,12 +7,12 @@
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
-  import { getPromptFolderFindContext } from '../prompt-folders/promptFolderFindContext'
-  import { findMatchRange } from '../prompt-folders/promptFolderFindText'
+  import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
+  import { findMatchRange } from '../prompt-folders/find/promptFolderFindText'
   import type {
     PromptFolderFindRequest,
     PromptFolderFindRowHandle
-  } from '../prompt-folders/promptFolderFindTypes'
+  } from '../prompt-folders/find/promptFolderFindTypes'
   import {
     ADDITIONAL_GAP_PX,
     estimatePromptEditorHeight,
