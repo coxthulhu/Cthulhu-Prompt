@@ -3,6 +3,7 @@
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
+    type ScrollToWithinWindowBand,
     type VirtualWindowItem
   } from '../virtualizer/virtualWindowTypes'
 
@@ -17,6 +18,9 @@
   let { promptIds, isLoading, errorMessage, activePromptId, onSelectPrompt }: Props = $props()
 
   type OutlinerRow = { kind: 'loading' } | { kind: 'prompt'; promptId: string }
+  const OUTLINER_ROW_HEIGHT_PX = 28
+  const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
+  let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
 
   const outlinerRowRegistry = defineVirtualWindowRowRegistry<OutlinerRow>({
     loading: {
@@ -46,6 +50,16 @@
     const trimmedTitle = promptData.draft.title.trim()
     return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptData.promptFolderCount}`
   }
+
+  // Side effect: keep the active prompt row within the outliner scroll band.
+  $effect(() => {
+    if (!scrollToWithinWindowBand || !activePromptId || outlinerItems.length === 0) return
+    scrollToWithinWindowBand(
+      `outliner-${activePromptId}`,
+      OUTLINER_ROW_CENTER_OFFSET_PX,
+      'minimal'
+    )
+  })
 </script>
 
 <div class="flex h-full flex-col bg-muted/10">
@@ -58,6 +72,9 @@
       rowRegistry={outlinerRowRegistry}
       testId="prompt-outliner-virtual-window"
       spacerTestId="prompt-outliner-virtual-window-spacer"
+      onScrollToWithinWindowBand={(next) => {
+        scrollToWithinWindowBand = next
+      }}
     />
   </div>
 </div>
