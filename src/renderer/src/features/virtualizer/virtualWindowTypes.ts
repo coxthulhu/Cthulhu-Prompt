@@ -17,6 +17,7 @@ export type VirtualWindowRowComponentProps<TRow> = {
   shouldDehydrate: boolean
   overlayRowElement?: HTMLDivElement | null
   scrollToWithinWindowBand?: ScrollToWithinWindowBand
+  scrollToRowCentered?: ScrollToRowCentered
   onHydrationChange?: (isHydrated: boolean) => void
 }
 
@@ -29,6 +30,8 @@ export type ScrollToWithinWindowBand = (
   offsetPx: number,
   scrollType: ScrollToWithinWindowBandType
 ) => void
+
+export type ScrollToRowCentered = (rowId: string, offsetPx: number) => void
 
 export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   estimateHeight: (row: TRow, widthPx: number, heightPx: number) => number

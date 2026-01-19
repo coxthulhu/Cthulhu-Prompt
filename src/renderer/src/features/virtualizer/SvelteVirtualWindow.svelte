@@ -7,7 +7,8 @@
     type VirtualWindowRowSnippet,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
-    type ScrollToWithinWindowBandType
+    type ScrollToWithinWindowBandType,
+    type ScrollToRowCentered
   } from './virtualWindowTypes'
 
   type VirtualWindowProps = {
@@ -15,6 +16,7 @@
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
     getHydrationPriorityEligibility?: (row: TRow) => boolean
     onScrollToWithinWindowBand?: (scrollToWithinWindowBand: ScrollToWithinWindowBand) => void
+    onScrollToRowCentered?: (scrollToRowCentered: ScrollToRowCentered) => void
   }
 
   // Generic over row shape; callers provide the concrete discriminated union.
@@ -22,7 +24,8 @@
     items,
     rowRegistry,
     getHydrationPriorityEligibility,
-    onScrollToWithinWindowBand
+    onScrollToWithinWindowBand,
+    onScrollToRowCentered
   }: VirtualWindowProps = $props()
 
   type VirtualRowState<TRow extends { kind: string }> = {
@@ -41,6 +44,8 @@
   let lastScrollToWithinWindowBandCallback:
     | ((scrollToWithinWindowBand: ScrollToWithinWindowBand) => void)
     | null = null
+  let lastScrollToRowCenteredCallback: ((scrollToRowCentered: ScrollToRowCentered) => void) | null =
+    null
 
   let containerWidth = $state(0)
   let devicePixelRatio = $state(1)
@@ -317,6 +322,22 @@
     }
   }
 
+  const scrollToRowCentered: ScrollToRowCentered = (rowId: string, offsetPx: number) => {
+    if (!scrollContainer || viewportHeight <= 0) return
+
+    const row = rowStates.find((candidate) => candidate.id === rowId)
+    if (!row) return
+
+    const targetOffsetPx = row.offset + offsetPx
+    const nextScrollTop = clampScrollTop(targetOffsetPx - viewportHeight / 2)
+    if (nextScrollTop === scrollTopPx) return
+
+    applyScrollTop(scrollContainer, nextScrollTop)
+
+    const topEdgeRow = getRowAtOffset(nextScrollTop)
+    scrollAnchorMode = isRowHydrated(topEdgeRow) ? 'top' : 'center'
+  }
+
   // Side effect: expose the scroll helper once per callback change.
   $effect(() => {
     if (!onScrollToWithinWindowBand) {
@@ -326,6 +347,17 @@
     if (onScrollToWithinWindowBand === lastScrollToWithinWindowBandCallback) return
     lastScrollToWithinWindowBandCallback = onScrollToWithinWindowBand
     onScrollToWithinWindowBand(scrollToWithinWindowBand)
+  })
+
+  // Side effect: expose the centered scroll helper once per callback change.
+  $effect(() => {
+    if (!onScrollToRowCentered) {
+      lastScrollToRowCenteredCallback = null
+      return
+    }
+    if (onScrollToRowCentered === lastScrollToRowCenteredCallback) return
+    lastScrollToRowCenteredCallback = onScrollToRowCentered
+    onScrollToRowCentered(scrollToRowCentered)
   })
 
   // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.
@@ -458,6 +490,7 @@
               shouldDehydrate: shouldDehydrateRow(row),
               overlayRowElement: overlayRowElements.get(row.id) ?? null,
               scrollToWithinWindowBand,
+              scrollToRowCentered,
               onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
             })}
           </div>
