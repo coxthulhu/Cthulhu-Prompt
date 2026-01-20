@@ -150,20 +150,7 @@ export class PromptAPI {
     }
 
     const content = fs.readFileSync(filePath, 'utf8')
-    const config = JSON.parse(content) as Partial<PromptFolderConfig>
-    const normalized: PromptFolderConfig = {
-      foldername: config.foldername ?? fallbackName,
-      promptCount: typeof config.promptCount === 'number' ? config.promptCount : 0,
-      folderDescription: typeof config.folderDescription === 'string' ? config.folderDescription : ''
-    }
-    if (
-      normalized.foldername !== config.foldername ||
-      typeof config.promptCount !== 'number' ||
-      typeof config.folderDescription !== 'string'
-    ) {
-      fs.writeFileSync(filePath, JSON.stringify(normalized, null, 2), 'utf8')
-    }
-    return normalized
+    return JSON.parse(content) as PromptFolderConfig
   }
 
   private static writePromptFolderConfig(filePath: string, data: PromptFolderConfig): void {

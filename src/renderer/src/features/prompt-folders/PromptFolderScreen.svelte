@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import type { PromptFolder } from '@shared/ipc'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
@@ -34,8 +35,8 @@
 
   let { folder } = $props<{ folder: PromptFolder }>()
   const folderName = $derived(folder.folderName)
-  const getInitialFolderData = () => getPromptFolderData(folder.folderName)
-  let folderData = $state(getInitialFolderData())
+  const initialFolderData = getPromptFolderData(untrack(() => folder.folderName))
+  let folderData = $state(initialFolderData)
 
   let previousFolderName = $state<string | null>(null)
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
@@ -51,15 +52,10 @@
   $effect(() => {
     const nextFolderName = folderName
 
-    if (previousFolderName !== nextFolderName) {
-      previousFolderName = nextFolderName
-      void loadPromptFolder(nextFolderName)
-    }
-
-    const nextFolderData = getPromptFolderData(nextFolderName)
-    if (folderData !== nextFolderData) {
-      folderData = nextFolderData
-    }
+    if (previousFolderName === nextFolderName) return
+    previousFolderName = nextFolderName
+    folderData = getPromptFolderData(nextFolderName)
+    void loadPromptFolder(nextFolderName)
   })
 
   type PromptFolderRow =

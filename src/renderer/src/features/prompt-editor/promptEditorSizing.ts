@@ -11,7 +11,7 @@ export const clampMonacoHeightPx = (heightPx: number): number => {
   return Math.min(Math.max(heightPx, MIN_MONACO_HEIGHT_PX), MAX_MONACO_HEIGHT_PX)
 }
 
-const estimateMonacoHeightPx = (text: string): number => {
+export const estimateMonacoHeightPx = (text: string): number => {
   const lineCount = Math.max(1, text.split('\n').length)
   return clampMonacoHeightPx(lineCount * LINE_HEIGHT_PX)
 }

@@ -5,7 +5,6 @@ export type AutosaveDraft = {
 }
 
 type AutosaveController = {
-  clearAutosaveTimeout: () => void
   saveNow: () => Promise<void>
   markDirtyAndScheduleAutosave: () => void
 }
@@ -14,6 +13,12 @@ export const clearAutosaveTimeout = (draft: AutosaveDraft): void => {
   if (draft.autosaveTimeoutId == null) return
   window.clearTimeout(draft.autosaveTimeoutId)
   draft.autosaveTimeoutId = null
+}
+
+export const resetAutosaveDraft = (draft: AutosaveDraft): void => {
+  clearAutosaveTimeout(draft)
+  draft.dirty = false
+  draft.saving = false
 }
 
 export const createAutosaveController = ({
@@ -66,7 +71,6 @@ export const createAutosaveController = ({
   }
 
   return {
-    clearAutosaveTimeout: () => clearAutosaveTimeout(draft),
     saveNow,
     markDirtyAndScheduleAutosave
   }

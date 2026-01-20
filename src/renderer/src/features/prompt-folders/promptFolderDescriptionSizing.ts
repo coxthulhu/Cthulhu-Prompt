@@ -1,8 +1,6 @@
 import {
-  LINE_HEIGHT_PX,
-  MIN_MONACO_HEIGHT_PX,
+  estimateMonacoHeightPx,
   MONACO_PADDING_PX,
-  clampMonacoHeightPx
 } from '../prompt-editor/promptEditorSizing'
 
 const HEADER_TOP_PADDING_PX = 24
@@ -38,13 +36,8 @@ export const HEADER_EDITOR_TOP_OFFSET_PX =
 
 export const HEADER_EDITOR_LEFT_OFFSET_PX = 13
 
-const estimateMonacoHeightPx = (text: string): number => {
-  const lineCount = Math.max(1, text.split('\n').length)
-  return clampMonacoHeightPx(lineCount * LINE_HEIGHT_PX)
-}
-
 export const estimatePromptFolderDescriptionMonacoHeight = (text: string): number => {
-  return Math.max(MIN_MONACO_HEIGHT_PX, estimateMonacoHeightPx(text))
+  return estimateMonacoHeightPx(text)
 }
 
 export const getPromptFolderHeaderHeightPx = (monacoHeightPx: number): number => {

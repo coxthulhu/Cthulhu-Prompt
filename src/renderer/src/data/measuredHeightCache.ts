@@ -30,25 +30,22 @@ export const createMeasuredHeightCache = () => {
 
   const record = (id: string, measurement: TextMeasurement, textChanged: boolean): void => {
     const key = measurementKey(measurement.widthPx, measurement.devicePixelRatio)
-    let measurements = measuredHeightsById.get(id)
-    if (!measurements && measurement.measuredHeightPx != null) {
-      measurements = new SvelteMap()
-      measuredHeightsById.set(id, measurements)
-    }
-
-    if (!measurements) return
-
     if (textChanged) {
-      for (const existingKey of measurements.keys()) {
-        if (existingKey !== key) {
-          measurements.delete(existingKey)
-        }
+      if (measurement.measuredHeightPx == null) {
+        measuredHeightsById.delete(id)
+        return
       }
+      const nextMeasurements = new SvelteMap<string, number>()
+      nextMeasurements.set(key, measurement.measuredHeightPx)
+      measuredHeightsById.set(id, nextMeasurements)
+      return
     }
 
-    if (measurement.measuredHeightPx != null) {
-      measurements.set(key, measurement.measuredHeightPx)
-    }
+    if (measurement.measuredHeightPx == null) return
+
+    const measurements = measuredHeightsById.get(id) ?? new SvelteMap<string, number>()
+    measurements.set(key, measurement.measuredHeightPx)
+    measuredHeightsById.set(id, measurements)
   }
 
   const clear = (id: string): void => {

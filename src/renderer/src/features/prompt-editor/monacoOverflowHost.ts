@@ -20,18 +20,24 @@ export const syncMonacoOverflowHost = ({
   }
 
   const paddingHost = overflowPaddingHost ?? document.createElement('div')
-  paddingHost.style.overflow = 'visible'
-  paddingHost.style.boxSizing = 'border-box'
-  paddingHost.style.pointerEvents = 'none'
-  paddingHost.style.padding = padding
+  if (!overflowPaddingHost) {
+    paddingHost.style.overflow = 'visible'
+    paddingHost.style.boxSizing = 'border-box'
+    paddingHost.style.pointerEvents = 'none'
+  }
+  if (paddingHost.style.padding !== padding) {
+    paddingHost.style.padding = padding
+  }
 
   const host = overflowHost ?? document.createElement('div')
-  host.className = 'monaco-editor no-user-select showUnused showDeprecated vs-dark'
-  host.style.position = 'relative'
-  host.style.width = '0'
-  host.style.height = '0'
-  host.style.overflow = 'visible'
-  host.style.pointerEvents = 'auto'
+  if (!overflowHost) {
+    host.className = 'monaco-editor no-user-select showUnused showDeprecated vs-dark'
+    host.style.position = 'relative'
+    host.style.width = '0'
+    host.style.height = '0'
+    host.style.overflow = 'visible'
+    host.style.pointerEvents = 'auto'
+  }
 
   if (host.parentElement !== paddingHost) {
     paddingHost.appendChild(host)

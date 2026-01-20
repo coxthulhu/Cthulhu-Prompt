@@ -10,6 +10,7 @@ import {
 import {
   clearAutosaveTimeout,
   createAutosaveController,
+  resetAutosaveDraft,
   type AutosaveDraft
 } from '@renderer/data/draftAutosave'
 import {
@@ -176,9 +177,7 @@ export const loadPromptFolder = async (folderName: string): Promise<void> => {
     folderData.isCreatingPrompt = false
     folderData.errorMessage = null
     folderData.requestId = requestId
-    folderData.descriptionDraft.dirty = false
-    folderData.descriptionDraft.saving = false
-    clearAutosaveTimeout(folderData.descriptionDraft)
+    resetAutosaveDraft(folderData.descriptionDraft)
     folderData.setDescriptionTextWithoutAutosave('')
 
     const isLatestRequest = () =>
@@ -198,7 +197,6 @@ export const loadPromptFolder = async (folderName: string): Promise<void> => {
       const nextDescription = result.folderDescription ?? ''
       folderData.promptIds = ingestPromptFolderPrompts(folderName, result.prompts ?? [])
       folderData.setDescriptionTextWithoutAutosave(nextDescription)
-      folderData.descriptionDraft.dirty = false
       folderData.isLoading = false
     } catch (error) {
       if (!isLatestRequest()) return
