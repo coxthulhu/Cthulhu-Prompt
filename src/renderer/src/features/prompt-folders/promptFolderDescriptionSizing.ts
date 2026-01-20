@@ -1,6 +1,6 @@
 import {
   estimateMonacoHeightPx,
-  MONACO_PADDING_PX,
+  MONACO_PADDING_PX
 } from '../prompt-editor/promptEditorSizing'
 
 const HEADER_TOP_PADDING_PX = 24
@@ -45,5 +45,5 @@ export const getPromptFolderHeaderHeightPx = (monacoHeightPx: number): number =>
 }
 
 export const estimatePromptFolderHeaderHeight = (text: string): number => {
-  return getPromptFolderHeaderHeightPx(estimateMonacoHeightPx(text))
+  return getPromptFolderHeaderHeightPx(estimatePromptFolderDescriptionMonacoHeight(text))
 }

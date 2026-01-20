@@ -3,6 +3,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { Prompt, PromptResult } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
+  AUTOSAVE_MS,
   clearAutosaveTimeout,
   createAutosaveController,
   type AutosaveDraft
@@ -29,14 +30,12 @@ export type PromptData = {
   promptFolderCount: number
   setTitle: (title: string) => void
   setTitleWithoutAutosave: (title: string) => void
-  setText: (text: string, measurement: PromptEditorTextMeasurement) => void
+  setText: (text: string, measurement: TextMeasurement) => void
   setTextWithoutAutosave: (text: string) => void
   saveNow: () => Promise<void>
 }
 
 type PromptDraftChangeListener = (promptId: string) => void
-
-export type PromptEditorTextMeasurement = TextMeasurement
 
 type UpdatePromptRequestPayload = {
   workspacePath: string
@@ -45,8 +44,6 @@ type UpdatePromptRequestPayload = {
   title: string
   promptText: string
 }
-
-export const PROMPT_AUTOSAVE_MS = 2000
 
 let currentWorkspacePath: string | null = null
 const promptDataById = new SvelteMap<string, PromptData>()
@@ -120,7 +117,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
 
   const autosave = createAutosaveController({
     draft,
-    autosaveMs: PROMPT_AUTOSAVE_MS,
+    autosaveMs: AUTOSAVE_MS,
     save: async () => {
       const contentToSave: PromptContent = { title: draft.title, text: draft.text }
 
@@ -166,7 +163,7 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     notifyPromptDraftChange(prompt.id)
   }
 
-  const setText = (text: string, measurement: PromptEditorTextMeasurement) => {
+  const setText = (text: string, measurement: TextMeasurement) => {
     const textChanged = draft.text !== text
     if (textChanged) {
       draft.text = text

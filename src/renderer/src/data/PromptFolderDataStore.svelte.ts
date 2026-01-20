@@ -4,10 +4,10 @@ import type { LoadPromptsResult, PromptResult, WorkspaceResult } from '@shared/i
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
   ingestPromptFolderPrompts,
-  removePromptData,
-  PROMPT_AUTOSAVE_MS
+  removePromptData
 } from '@renderer/data/PromptDataStore.svelte.ts'
 import {
+  AUTOSAVE_MS,
   clearAutosaveTimeout,
   createAutosaveController,
   resetAutosaveDraft,
@@ -49,8 +49,6 @@ type PromptFolderDescriptionDraft = AutosaveDraft & {
   text: string
 }
 
-export type PromptFolderDescriptionMeasurement = TextMeasurement
-
 export type PromptFolderData = {
   promptIds: string[]
   isLoading: boolean
@@ -58,7 +56,7 @@ export type PromptFolderData = {
   errorMessage: string | null
   requestId: number
   descriptionDraft: PromptFolderDescriptionDraft
-  setDescriptionText: (text: string, measurement: PromptFolderDescriptionMeasurement) => void
+  setDescriptionText: (text: string, measurement: TextMeasurement) => void
   setDescriptionTextWithoutAutosave: (text: string) => void
   saveDescriptionNow: () => Promise<void>
 }
@@ -79,6 +77,15 @@ export const lookupPromptFolderDescriptionMeasuredHeight = (
 
 const clearPromptFolderDescriptionMeasuredHeights = (folderName: string): void => {
   promptFolderDescriptionMeasuredHeights.clear(folderName)
+}
+
+const resetDescriptionDraft = (
+  folderName: string,
+  draft: PromptFolderDescriptionDraft
+): void => {
+  resetAutosaveDraft(draft)
+  draft.text = ''
+  clearPromptFolderDescriptionMeasuredHeights(folderName)
 }
 
 export const flushPromptFolderRequests = async (): Promise<void> => {
@@ -113,7 +120,7 @@ export const getPromptFolderData = (folderName: string): PromptFolderData => {
 
   const autosave = createAutosaveController({
     draft: descriptionDraft,
-    autosaveMs: PROMPT_AUTOSAVE_MS,
+    autosaveMs: AUTOSAVE_MS,
     save: async () => {
       const descriptionToSave = descriptionDraft.text
 
@@ -132,7 +139,7 @@ export const getPromptFolderData = (folderName: string): PromptFolderData => {
     }
   })
 
-  const setDescriptionText = (text: string, measurement: PromptFolderDescriptionMeasurement) => {
+  const setDescriptionText = (text: string, measurement: TextMeasurement) => {
     const textChanged = descriptionDraft.text !== text
     if (textChanged) {
       descriptionDraft.text = text
@@ -177,8 +184,7 @@ export const loadPromptFolder = async (folderName: string): Promise<void> => {
     folderData.isCreatingPrompt = false
     folderData.errorMessage = null
     folderData.requestId = requestId
-    resetAutosaveDraft(folderData.descriptionDraft)
-    folderData.setDescriptionTextWithoutAutosave('')
+    resetDescriptionDraft(folderName, folderData.descriptionDraft)
 
     const isLatestRequest = () =>
       promptFolderDataByFolderName.get(folderName)?.requestId === requestId

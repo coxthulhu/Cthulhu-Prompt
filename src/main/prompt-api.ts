@@ -10,6 +10,10 @@ import type {
   PromptResult as SharedPromptResult,
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
+import {
+  createPromptFolderConfig,
+  type PromptFolderConfig
+} from '@shared/promptFolderConfig'
 
 export type Prompt = SharedPrompt
 export type PromptResult = SharedPromptResult
@@ -23,12 +27,6 @@ export interface PromptsFileMetadata {
 export interface PromptsFile {
   metadata: PromptsFileMetadata
   prompts: Prompt[]
-}
-
-interface PromptFolderConfig {
-  foldername: string
-  promptCount: number
-  folderDescription: string
 }
 
 export interface CreatePromptRequest {
@@ -144,7 +142,7 @@ export class PromptAPI {
   ): PromptFolderConfig {
     const fs = getFs()
     if (!fs.existsSync(filePath)) {
-      const config = { foldername: fallbackName, promptCount: 0, folderDescription: '' }
+      const config = createPromptFolderConfig(fallbackName, 0)
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf8')
       return config
     }

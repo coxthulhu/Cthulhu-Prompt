@@ -1,3 +1,5 @@
+export const AUTOSAVE_MS = 2000
+
 export type AutosaveDraft = {
   dirty: boolean
   saving: boolean

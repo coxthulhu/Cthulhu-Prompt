@@ -5,6 +5,7 @@ import {
   VIRTUAL_FIND_MARKER,
   virtualFindPromptId
 } from '../helpers/VirtualFindTestConstants'
+import { createPromptFolderConfig } from '../../src/shared/promptFolderConfig'
 
 /**
  * Configuration for creating a prompt folder
@@ -165,11 +166,7 @@ export function createWorkspaceWithFolders(
 
     // Create folder metadata
     structure[`${folderPath}/promptfolder.json`] = JSON.stringify(
-      {
-        foldername: folder.displayName,
-        promptCount,
-        folderDescription: ''
-      },
+      createPromptFolderConfig(folder.displayName, promptCount),
       null,
       2
     )
@@ -342,11 +339,7 @@ export function addFolderToWorkspace(
 
   return {
     [`${folderPath}/promptfolder.json`]: JSON.stringify(
-      {
-        foldername: folderConfig.displayName,
-        promptCount,
-        folderDescription: ''
-      },
+      createPromptFolderConfig(folderConfig.displayName, promptCount),
       null,
       2
     ),

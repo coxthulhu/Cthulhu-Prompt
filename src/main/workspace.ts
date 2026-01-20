@@ -11,6 +11,7 @@ import type {
   PromptFolderResult as SharedPromptFolderResult,
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
+import { createPromptFolderConfig } from '@shared/promptFolderConfig'
 import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 
@@ -134,11 +135,10 @@ export class WorkspaceManager {
         fs.writeFileSync(path.join(exampleFolderPath, 'prompts.json'), promptsContent, 'utf8')
 
         const configContent = JSON.stringify(
-          {
-            foldername: exampleFolderResult.folder.displayName,
-            promptCount: examplePrompts.length,
-            folderDescription: ''
-          },
+          createPromptFolderConfig(
+            exampleFolderResult.folder.displayName,
+            examplePrompts.length
+          ),
           null,
           2
         )
@@ -196,7 +196,7 @@ export class WorkspaceManager {
       // Create the promptfolder.json file
       const configPath = path.join(folderPath, 'promptfolder.json')
       const configContent = JSON.stringify(
-        { foldername: displayName, promptCount: 0, folderDescription: '' },
+        createPromptFolderConfig(displayName, 0),
         null,
         2
       )

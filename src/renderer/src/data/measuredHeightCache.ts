@@ -6,16 +6,9 @@ export type TextMeasurement = {
   devicePixelRatio: number
 }
 
-const clampToTwoDecimalPlaces = (value: number): number => {
-  return Math.round(value * 100) / 100
-}
-
-export const roundDevicePixelRatio = (value: number): number => {
-  return clampToTwoDecimalPlaces(value)
-}
-
 const measurementKey = (widthPx: number, devicePixelRatio: number): string => {
-  return `${widthPx}:${roundDevicePixelRatio(devicePixelRatio)}`
+  const roundedDevicePixelRatio = Math.round(devicePixelRatio * 100) / 100
+  return `${widthPx}:${roundedDevicePixelRatio}`
 }
 
 export const createMeasuredHeightCache = () => {
@@ -24,8 +17,7 @@ export const createMeasuredHeightCache = () => {
   const lookup = (id: string, widthPx: number, devicePixelRatio: number): number | null => {
     const measurements = measuredHeightsById.get(id)
     if (!measurements) return null
-    const height = measurements.get(measurementKey(widthPx, devicePixelRatio))
-    return typeof height === 'number' ? height : null
+    return measurements.get(measurementKey(widthPx, devicePixelRatio)) ?? null
   }
 
   const record = (id: string, measurement: TextMeasurement, textChanged: boolean): void => {
