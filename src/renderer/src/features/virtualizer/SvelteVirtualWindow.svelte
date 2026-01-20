@@ -288,8 +288,13 @@
   const centerRowId = $derived(centerRow?.id ?? null)
   const centerRowData = $derived(centerRow?.rowData ?? null)
 
+  const snapToDevicePixels = (value: number, dpr: number): number => {
+    if (!Number.isFinite(value) || !Number.isFinite(dpr) || dpr <= 0) return value
+    return Math.round(value * dpr) / dpr
+  }
+
   const rowWrapperStyle = (row: RowState): string => {
-    const translateY = row.offset - clampedAnchoredScrollTopPx
+    const translateY = snapToDevicePixels(row.offset - clampedAnchoredScrollTopPx, devicePixelRatio)
     return [
       'position:absolute',
       'top:0',
@@ -304,7 +309,7 @@
   }
 
   const overlayRowWrapperStyle = (row: RowState): string => {
-    const translateY = row.offset - clampedAnchoredScrollTopPx
+    const translateY = snapToDevicePixels(row.offset - clampedAnchoredScrollTopPx, devicePixelRatio)
     return [
       'position:absolute',
       'top:0',
