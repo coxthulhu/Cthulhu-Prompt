@@ -351,11 +351,6 @@
     }
   }
 
-  const getRowAtOffset = (offsetPx: number): RowState | null => {
-    const index = findIndexAtOffset(rowStates, offsetPx)
-    return rowStates[index] ?? null
-  }
-
   const isRowHydrated = (row: RowState | null): boolean => {
     if (!row) return true
     if (!getHydrationPriorityEligibility?.(row.rowData)) return true
@@ -394,8 +389,7 @@
     applyProgrammaticScrollTop(nextScrollTop)
 
     if (scrollType === 'center') {
-      const topEdgeRow = getRowAtOffset(nextScrollTop)
-      scrollAnchorMode = isRowHydrated(topEdgeRow) ? 'top' : 'center'
+      scrollAnchorMode = 'center'
     }
   }
 
@@ -411,8 +405,7 @@
 
     applyProgrammaticScrollTop(nextScrollTop)
 
-    const topEdgeRow = getRowAtOffset(nextScrollTop)
-    scrollAnchorMode = isRowHydrated(topEdgeRow) ? 'top' : 'center'
+    scrollAnchorMode = 'center'
   }
 
   // Side effect: expose the scroll helper once per callback change.
@@ -487,12 +480,15 @@
     onViewportMetricsChange(metrics)
   })
 
-  // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.
+  // Side effect: revert to top anchoring once rendered prompt editor rows hydrate during center anchoring.
   $effect(() => {
     if (scrollAnchorMode !== 'center') return
-    const topEdgeRow = getRowAtOffset(clampedAnchoredScrollTopPx)
-    if (!topEdgeRow) return
-    if (isRowHydrated(topEdgeRow)) {
+    const hasUnhydratedVisibleRows = visibleRows.some(
+      (row) =>
+        getHydrationPriorityEligibility?.(row.rowData) &&
+        !isRowHydrated(row)
+    )
+    if (!hasUnhydratedVisibleRows) {
       scrollAnchorMode = 'top'
     }
   })
