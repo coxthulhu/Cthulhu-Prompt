@@ -6,6 +6,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+  reporter: [['dot'], ['./tests/helpers/RendererErrorReporter.ts']],
   use: {
     trace: 'on-first-retry',
     headless: true // Run in headless mode
