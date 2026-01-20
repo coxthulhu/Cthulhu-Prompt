@@ -10,6 +10,7 @@
     type ScrollToWithinWindowBandType,
     type ScrollToRowCentered
   } from './virtualWindowTypes'
+  import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
 
   type VirtualWindowProps = {
     items: VirtualWindowItem<TRow>[]
@@ -54,7 +55,7 @@
 
   type RowState = VirtualRowState<TRow>
 
-  let scrollContainer: HTMLDivElement | null = null
+  let viewportFrame: HTMLDivElement | null = null
   let lastScrollToWithinWindowBandCallback:
     | ((scrollToWithinWindowBand: ScrollToWithinWindowBand) => void)
     | null = null
@@ -79,10 +80,14 @@
   const LEFT_SCROLL_PADDING_PX = 24
   const RIGHT_SCROLL_PADDING_PX = 8
   const WINDOW_BAND_PADDING_PX = 100
+  const SCROLLBAR_WIDTH_PX = 12
 
   // Subtract internal padding so width-based height measurements match the row content width.
   const measurementWidth = $derived(
-    Math.max(0, containerWidth - LEFT_SCROLL_PADDING_PX - RIGHT_SCROLL_PADDING_PX)
+    Math.max(
+      0,
+      containerWidth - LEFT_SCROLL_PADDING_PX - RIGHT_SCROLL_PADDING_PX - SCROLLBAR_WIDTH_PX
+    )
   )
 
   const findIndexAtOffset = (rows: readonly RowState[], offset: number): number => {
@@ -178,6 +183,11 @@
     return rows
   }
 
+  let scrollTopPx = $state(0)
+  let viewportHeight = $state(0)
+  let previousRowStates = $state<RowState[]>([])
+  let scrollAnchorMode = $state<'top' | 'center'>('top')
+
   const rowStates = $derived.by(() => {
     if (measurementWidth <= 0) return []
     return buildRows(items, rowRegistry, measurementWidth, viewportHeight, devicePixelRatio)
@@ -186,16 +196,31 @@
   const totalHeightPx = $derived(
     rowHeightsPx.length === 0 ? 0 : rowHeightsPx.reduce((sum, height) => sum + height, 0)
   )
+  const maxScrollTopPx = $derived(Math.max(0, totalHeightPx - viewportHeight))
+
+  const clampScrollTop = (nextScrollTop: number): number => {
+    return Math.min(Math.max(0, nextScrollTop), maxScrollTopPx)
+  }
+
+  const applyScrollTop = (nextScrollTop: number, isUserScroll: boolean) => {
+    const clampedScrollTop = clampScrollTop(nextScrollTop)
+    if (clampedScrollTop === scrollTopPx) return
+    scrollTopPx = clampedScrollTop
+    if (isUserScroll && scrollAnchorMode === 'center') {
+      scrollAnchorMode = 'top'
+    }
+  }
+
+  const applyUserScrollTop = (nextScrollTop: number) => {
+    applyScrollTop(nextScrollTop, true)
+  }
+
+  const applyProgrammaticScrollTop = (nextScrollTop: number) => {
+    applyScrollTop(nextScrollTop, false)
+  }
 
   const hydrationStateByRowId = new SvelteMap<string, boolean>()
   const overlayRowElements = new SvelteMap<string, HTMLDivElement>()
-
-  let scrollTopPx = $state(0)
-  let viewportHeight = $state(0)
-  let previousRowStates = $state<RowState[]>([])
-  let scrollAnchorMode = $state<'top' | 'center'>('top')
-  let programmaticScroll = false
-  let programmaticScrollVersion = 0
 
   // Derived fade for the top scroll decoration so it eases in like Monaco's shadow.
   const scrollDecorationOpacity = $derived(Math.max(0, Math.min(1, scrollTopPx / 12)))
@@ -206,12 +231,13 @@
   const anchoredScrollTopPx = $derived.by(() =>
     computeAnchoredScrollTop(previousRowStates, rowStates, scrollTopPx, anchorOffsetPx)
   )
-  const anchoredScrollBottomPx = $derived(anchoredScrollTopPx + viewportHeight)
+  const clampedAnchoredScrollTopPx = $derived(clampScrollTop(anchoredScrollTopPx))
+  const anchoredScrollBottomPx = $derived(clampedAnchoredScrollTopPx + viewportHeight)
 
   const OVERSCAN_PX = 1000
 
   // Overscan the viewport so rows above/below are rendered ahead of scroll.
-  const overscannedTopPx = $derived(Math.max(0, anchoredScrollTopPx - OVERSCAN_PX))
+  const overscannedTopPx = $derived(Math.max(0, clampedAnchoredScrollTopPx - OVERSCAN_PX))
   const overscannedBottomPx = $derived(anchoredScrollBottomPx + OVERSCAN_PX)
 
   const visibleStartIndex = $derived(findIndexAtOffset(rowStates, overscannedTopPx))
@@ -232,7 +258,7 @@
     if (!getHydrationPriorityEligibility) return new SvelteMap<string, number>()
     if (visibleRows.length === 0) return new SvelteMap<string, number>()
 
-    const viewportCenterPx = anchoredScrollTopPx + viewportHeight / 2
+    const viewportCenterPx = clampedAnchoredScrollTopPx + viewportHeight / 2
     const candidates = visibleRows
       .filter((row) => getHydrationPriorityEligibility(row.rowData))
       .map((row) => ({
@@ -256,38 +282,42 @@
 
   const centerRow = $derived.by(() => {
     if (rowStates.length === 0 || viewportHeight <= 0) return null
-    const viewportCenterPx = anchoredScrollTopPx + viewportHeight / 2
+    const viewportCenterPx = clampedAnchoredScrollTopPx + viewportHeight / 2
     return findNearestEligibleRow(rowStates, viewportCenterPx, getCenterRowEligibility)
   })
   const centerRowId = $derived(centerRow?.id ?? null)
   const centerRowData = $derived(centerRow?.rowData ?? null)
 
-  const rowWrapperStyle = (row: RowState): string =>
-    [
+  const rowWrapperStyle = (row: RowState): string => {
+    const translateY = row.offset - clampedAnchoredScrollTopPx
+    return [
       'position:absolute',
       'top:0',
       'left:0',
       'width:100%',
-      `transform:translate3d(0, ${row.offset}px, 0)`,
+      `transform:translate3d(0, ${translateY}px, 0)`,
       'contain:layout paint style',
       `height:${row.height}px`,
       `min-height:${row.height}px`,
       `max-height:${row.height}px`
     ].join(';')
+  }
 
-  const overlayRowWrapperStyle = (row: RowState): string =>
-    [
+  const overlayRowWrapperStyle = (row: RowState): string => {
+    const translateY = row.offset - clampedAnchoredScrollTopPx
+    return [
       'position:absolute',
       'top:0',
       'left:0',
       'width:100%',
-      `transform:translate3d(0, ${row.offset}px, 0)`,
+      `transform:translate3d(0, ${translateY}px, 0)`,
       'overflow:visible',
       'pointer-events:none',
       `height:${row.height}px`,
       `min-height:${row.height}px`,
       `max-height:${row.height}px`
     ].join(';')
+  }
 
   const rowNeedsOverlay = (row: RowState): boolean =>
     rowRegistry[row.rowData.kind].needsOverlayRow ?? false
@@ -302,29 +332,23 @@
   }
 
   const rowTouchesViewport = (row: RowState): boolean =>
-    row.offset + row.height >= anchoredScrollTopPx && row.offset <= anchoredScrollBottomPx
+    row.offset + row.height >= clampedAnchoredScrollTopPx && row.offset <= anchoredScrollBottomPx
 
   const shouldDehydrateRow = (row: RowState): boolean =>
     widthResizeActive && row.rowData.kind === 'prompt-editor' && !rowTouchesViewport(row)
 
-  const markProgrammaticScroll = () => {
-    programmaticScroll = true
-    const version = (programmaticScrollVersion += 1)
-    window.requestAnimationFrame(() => {
-      if (programmaticScrollVersion !== version) return
-      programmaticScroll = false
+
+  const registerTestScroller = (): (() => void) | null => {
+    const controls = window.svelteVirtualWindowTestControls
+    if (!controls?.registerVirtualWindowScroller) return null
+    controls.registerVirtualWindowScroller(testId, {
+      scrollTo: (nextScrollTop) => applyUserScrollTop(nextScrollTop),
+      getScrollTop: () => scrollTopPx,
+      getScrollHeight: () => totalHeightPx
     })
-  }
-
-  const applyScrollTop = (container: HTMLDivElement, nextScrollTop: number) => {
-    markProgrammaticScroll()
-    container.scrollTop = nextScrollTop
-    scrollTopPx = nextScrollTop
-  }
-
-  const clampScrollTop = (nextScrollTop: number): number => {
-    const maxScrollTop = Math.max(0, totalHeightPx - viewportHeight)
-    return Math.min(Math.max(0, nextScrollTop), maxScrollTop)
+    return () => {
+      controls.unregisterVirtualWindowScroller?.(testId)
+    }
   }
 
   const getRowAtOffset = (offsetPx: number): RowState | null => {
@@ -343,7 +367,7 @@
     offsetPx: number,
     scrollType: ScrollToWithinWindowBandType
   ) => {
-    if (!scrollContainer || viewportHeight <= 0) return
+    if (viewportHeight <= 0) return
 
     const row = rowStates.find((candidate) => candidate.id === rowId)
     if (!row) return
@@ -367,7 +391,7 @@
     nextScrollTop = clampScrollTop(nextScrollTop)
     if (nextScrollTop === scrollTopPx) return
 
-    applyScrollTop(scrollContainer, nextScrollTop)
+    applyProgrammaticScrollTop(nextScrollTop)
 
     if (scrollType === 'center') {
       const topEdgeRow = getRowAtOffset(nextScrollTop)
@@ -376,7 +400,7 @@
   }
 
   const scrollToRowCentered: ScrollToRowCentered = (rowId: string, offsetPx: number) => {
-    if (!scrollContainer || viewportHeight <= 0) return
+    if (viewportHeight <= 0) return
 
     const row = rowStates.find((candidate) => candidate.id === rowId)
     if (!row) return
@@ -385,7 +409,7 @@
     const nextScrollTop = clampScrollTop(targetOffsetPx - viewportHeight / 2)
     if (nextScrollTop === scrollTopPx) return
 
-    applyScrollTop(scrollContainer, nextScrollTop)
+    applyProgrammaticScrollTop(nextScrollTop)
 
     const topEdgeRow = getRowAtOffset(nextScrollTop)
     scrollAnchorMode = isRowHydrated(topEdgeRow) ? 'top' : 'center'
@@ -466,7 +490,7 @@
   // Side effect: revert to top anchoring once the top-edge row hydrates during center anchoring.
   $effect(() => {
     if (scrollAnchorMode !== 'center') return
-    const topEdgeRow = getRowAtOffset(anchoredScrollTopPx)
+    const topEdgeRow = getRowAtOffset(clampedAnchoredScrollTopPx)
     if (!topEdgeRow) return
     if (isRowHydrated(topEdgeRow)) {
       scrollAnchorMode = 'top'
@@ -497,12 +521,11 @@
     scheduleWidthResizeIdleReset(version)
   }
 
-  // Track scroll host size so virtualization math stays aligned with the viewport and width.
+  // Side effect: track viewport sizing and register test scroll hooks.
   onMount(() => {
-    if (scrollContainer) {
-      viewportHeight = scrollContainer.clientHeight
-      scrollTopPx = scrollContainer.scrollTop
-      applyContainerWidth(Math.round(scrollContainer.clientWidth))
+    if (viewportFrame) {
+      viewportHeight = viewportFrame.clientHeight
+      applyContainerWidth(Math.round(viewportFrame.clientWidth))
     }
 
     const resizeObserver = new ResizeObserver((entries) => {
@@ -512,12 +535,15 @@
       applyContainerWidth(Math.round(entry.contentRect.width))
     })
 
-    if (scrollContainer) {
-      resizeObserver.observe(scrollContainer)
+    if (viewportFrame) {
+      resizeObserver.observe(viewportFrame)
     }
+
+    const unregisterScroller = registerTestScroller()
 
     return () => {
       resizeObserver.disconnect()
+      unregisterScroller?.()
     }
   })
 
@@ -538,22 +564,15 @@
     }
   })
 
-  const handleScroll = (event: Event) => {
-    const target = event.currentTarget as HTMLDivElement
-    scrollTopPx = target.scrollTop
-    if (programmaticScroll) {
-      programmaticScroll = false
-      return
-    }
-    if (scrollAnchorMode === 'center') {
-      scrollAnchorMode = 'top'
-    }
+  const handleWheel = (event: WheelEvent) => {
+    if (viewportHeight <= 0) return
+    applyUserScrollTop(scrollTopPx + event.deltaY)
   }
 
   // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
   $effect(() => {
-    if (scrollContainer && anchoredScrollTopPx !== scrollTopPx) {
-      applyScrollTop(scrollContainer, anchoredScrollTopPx)
+    if (clampedAnchoredScrollTopPx !== scrollTopPx) {
+      applyProgrammaticScrollTop(clampedAnchoredScrollTopPx)
     }
 
     previousRowStates = rowStates
@@ -562,57 +581,69 @@
 </script>
 
 <div class="relative h-full w-full">
-  <div
-    bind:this={scrollContainer}
-    class="h-full w-full"
-    style="overflow-anchor: none; overflow-y: scroll; overflow-x: hidden; position: relative;"
-    data-testid={testId}
-    onscroll={handleScroll}
-  >
+  <div bind:this={viewportFrame} class="flex h-full w-full">
     <div
-      aria-hidden="true"
-      data-testid={spacerTestId}
-      style={`height:${totalHeightPx}px; width:1px; pointer-events:none;`}
-    ></div>
+      class="h-full flex-1 min-w-0"
+      style="overflow-anchor: none; overflow: hidden; position: relative;"
+      data-testid={testId}
+      onwheel={(event) => {
+        event.preventDefault()
+        handleWheel(event)
+      }}
+    >
+      <div
+        aria-hidden="true"
+        data-testid={spacerTestId}
+        style={`height:${totalHeightPx}px; width:1px; pointer-events:none;`}
+      ></div>
 
-    <div style="position:absolute; inset:0;">
-      {#each visibleRows as row (row.id)}
-        <div style={rowWrapperStyle(row)}>
-          <div
-            style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
-          >
-            {@render row.snippet({
-              index: row.index,
-              row: row.rowData,
-              rowId: row.id,
-              virtualWindowWidthPx: measurementWidth,
-              virtualWindowHeightPx: viewportHeight,
-              devicePixelRatio,
-              measuredHeightPx: row.measuredHeightPx,
-              hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
-              shouldDehydrate: shouldDehydrateRow(row),
-              overlayRowElement: overlayRowElements.get(row.id) ?? null,
-              scrollToWithinWindowBand,
-              scrollToRowCentered,
-              onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
-            })}
-          </div>
-        </div>
-      {/each}
-    </div>
-
-    <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
-      {#each visibleRows as row (row.id)}
-        {#if rowNeedsOverlay(row)}
-          <div style={overlayRowWrapperStyle(row)}>
+      <div style="position:absolute; inset:0;">
+        {#each visibleRows as row (row.id)}
+          <div style={rowWrapperStyle(row)}>
             <div
-              use:registerOverlayRow={row.id}
-              style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
-            ></div>
+              style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+            >
+              {@render row.snippet({
+                index: row.index,
+                row: row.rowData,
+                rowId: row.id,
+                virtualWindowWidthPx: measurementWidth,
+                virtualWindowHeightPx: viewportHeight,
+                devicePixelRatio,
+                measuredHeightPx: row.measuredHeightPx,
+                hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
+                shouldDehydrate: shouldDehydrateRow(row),
+                overlayRowElement: overlayRowElements.get(row.id) ?? null,
+                scrollToWithinWindowBand,
+                scrollToRowCentered,
+                onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+              })}
+            </div>
           </div>
-        {/if}
-      {/each}
+        {/each}
+      </div>
+
+      <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
+        {#each visibleRows as row (row.id)}
+          {#if rowNeedsOverlay(row)}
+            <div style={overlayRowWrapperStyle(row)}>
+              <div
+                use:registerOverlayRow={row.id}
+                style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+              ></div>
+            </div>
+          {/if}
+        {/each}
+      </div>
     </div>
+
+    <VirtualWindowScrollbar
+      scrollTopPx={scrollTopPx}
+      viewportHeightPx={viewportHeight}
+      totalHeightPx={totalHeightPx}
+      widthPx={SCROLLBAR_WIDTH_PX}
+      onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
+    />
   </div>
 
   <div

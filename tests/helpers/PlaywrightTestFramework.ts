@@ -295,6 +295,12 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               promptFolderHelpers.getPromptRowWidth(mainWindow, selector),
             getElementScrollTop: (selector: string) =>
               promptFolderHelpers.getElementScrollTop(mainWindow, selector),
+            getVirtualWindowScrollHeight: (selector: string) =>
+              promptFolderHelpers.getVirtualWindowScrollHeight(mainWindow, selector),
+            scrollVirtualWindowTo: (selector: string, scrollTopPx: number) =>
+              promptFolderHelpers.scrollVirtualWindowTo(mainWindow, selector, scrollTopPx),
+            scrollVirtualWindowBy: (selector: string, deltaPx: number) =>
+              promptFolderHelpers.scrollVirtualWindowBy(mainWindow, selector, deltaPx),
             openPromptFolderAndWaitForHydrationReady: (options: {
               folderName: string
               hostSelector: string

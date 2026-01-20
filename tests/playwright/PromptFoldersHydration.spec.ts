@@ -53,13 +53,8 @@ describe('Prompt Folder Hydration', () => {
 
     const hydratedHeight = await testHelpers.getPromptRowHeight(PLACEHOLDER_PROMPT_SELECTOR)
 
-    await mainWindow.evaluate(
-      ({ selector }) => {
-        const host = document.querySelector<HTMLElement>(selector)
-        host?.scrollTo({ top: host.scrollHeight })
-      },
-      { selector: HOST_SELECTOR }
-    )
+    const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, scrollHeight)
 
     await mainWindow.waitForSelector(PLACEHOLDER_PROMPT_SELECTOR, { state: 'detached' })
 
@@ -68,13 +63,7 @@ describe('Prompt Folder Hydration', () => {
     })
 
     try {
-      await mainWindow.evaluate(
-        ({ selector }) => {
-          const host = document.querySelector<HTMLElement>(selector)
-          host?.scrollTo({ top: 0 })
-        },
-        { selector: HOST_SELECTOR }
-      )
+      await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
 
       await mainWindow.waitForSelector(PLACEHOLDER_PROMPT_SELECTOR, { state: 'attached' })
       await mainWindow.waitForSelector(PLACEHOLDER_SELECTOR, { state: 'attached' })
@@ -228,13 +217,7 @@ describe('Prompt Folder Hydration', () => {
         throw new Error('Failed to measure virtual window viewport height')
       }
 
-      await mainWindow.evaluate(
-        ({ selector, viewportHeight: height }) => {
-          const host = document.querySelector<HTMLElement>(selector)
-          host?.scrollBy({ top: height * 3 })
-        },
-        { selector: HOST_SELECTOR, viewportHeight }
-      )
+      await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, viewportHeight * 3)
 
       await mainWindow.waitForTimeout(500)
 
@@ -248,10 +231,15 @@ describe('Prompt Folder Hydration', () => {
             if (!row.querySelector(placeholderSelector)) continue
             const rect = row.getBoundingClientRect()
             if (rect.top <= hostTop && rect.bottom >= hostTop) {
+              const testId = host.getAttribute('data-testid')
+              const scrollTop =
+                testId && window.svelteVirtualWindowTestControls?.getScrollTop
+                  ? window.svelteVirtualWindowTestControls.getScrollTop(testId)
+                  : host.scrollTop
               return {
                 rowId: row.getAttribute('data-testid'),
                 offset: Math.round(hostTop - rect.top),
-                scrollTop: Math.round(host.scrollTop)
+                scrollTop: Math.round(scrollTop ?? 0)
               }
             }
           }
@@ -290,8 +278,13 @@ describe('Prompt Folder Hydration', () => {
             }))
             .filter((row) => Boolean(row.rowId))
 
+          const testId = host.getAttribute('data-testid')
+          const scrollTop =
+            testId && window.svelteVirtualWindowTestControls?.getScrollTop
+              ? window.svelteVirtualWindowTestControls.getScrollTop(testId)
+              : host.scrollTop
           return {
-            scrollTopBefore: Math.round(host.scrollTop),
+            scrollTopBefore: Math.round(scrollTop ?? 0),
             rows: rowsAboveViewport
           }
         },
@@ -337,8 +330,13 @@ describe('Prompt Folder Hydration', () => {
             return { ...row, hydratedHeight, isPlaceholder }
           })
 
+          const testId = host.getAttribute('data-testid')
+          const scrollTop =
+            testId && window.svelteVirtualWindowTestControls?.getScrollTop
+              ? window.svelteVirtualWindowTestControls.getScrollTop(testId)
+              : host.scrollTop
           return {
-            scrollTopAfter: Math.round(host.scrollTop),
+            scrollTopAfter: Math.round(scrollTop ?? 0),
             rows: verifiedRows
           }
         },
@@ -378,13 +376,7 @@ describe('Prompt Folder Hydration', () => {
 
       expect(Math.abs(scrollShift - totalMeasuredDelta)).toBeLessThanOrEqual(2)
 
-      await mainWindow.evaluate(
-        ({ selector, scrollTop }) => {
-          const host = document.querySelector<HTMLElement>(selector)
-          host?.scrollTo({ top: scrollTop })
-        },
-        { selector: HOST_SELECTOR, scrollTop: anchoringVerification.scrollTopAfter }
-      )
+      await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, anchoringVerification.scrollTopAfter)
 
       await mainWindow.waitForTimeout(200)
 

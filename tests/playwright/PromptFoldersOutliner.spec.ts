@@ -29,17 +29,9 @@ describe('Prompt folder outliner', () => {
     await mainWindow.waitForSelector(OUTLINER_HOST_SELECTOR, { state: 'attached' })
 
     // Scroll the outliner so the 30th row is rendered before clicking it.
-    await mainWindow.evaluate(
-      ({ hostSelector, index, rowHeight }) => {
-        const host = document.querySelector<HTMLElement>(hostSelector)
-        if (!host) return
-        host.scrollTo({ top: (index - 1) * rowHeight })
-      },
-      {
-        hostSelector: OUTLINER_HOST_SELECTOR,
-        index: TARGET_INDEX,
-        rowHeight: OUTLINER_ROW_HEIGHT_PX
-      }
+    await testHelpers.scrollVirtualWindowTo(
+      OUTLINER_HOST_SELECTOR,
+      (TARGET_INDEX - 1) * OUTLINER_ROW_HEIGHT_PX
     )
 
     const outlinerButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {

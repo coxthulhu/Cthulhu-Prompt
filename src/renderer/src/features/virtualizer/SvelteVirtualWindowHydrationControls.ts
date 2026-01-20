@@ -19,6 +19,12 @@ export const resumeMonacoHydration = (): void => {
 }
 
 let controlsInitialized = false
+type VirtualWindowScrollApi = {
+  scrollTo: (scrollTopPx: number) => void
+  getScrollTop: () => number
+  getScrollHeight: () => number
+}
+const virtualWindowScrollApis = new Map<string, VirtualWindowScrollApi>()
 
 export const initializeSvelteVirtualWindowHydrationControls = (): void => {
   if (controlsInitialized || !isDevOrPlaywrightEnvironment()) return
@@ -27,6 +33,21 @@ export const initializeSvelteVirtualWindowHydrationControls = (): void => {
   window.svelteVirtualWindowTestControls = {
     pauseMonacoHydration: () => pauseMonacoHydration(),
     resumeMonacoHydration: () => resumeMonacoHydration(),
-    setMonacoHydrationPaused: (next: boolean) => setMonacoHydrationPaused(next)
+    setMonacoHydrationPaused: (next: boolean) => setMonacoHydrationPaused(next),
+    registerVirtualWindowScroller: (testId, api) => {
+      virtualWindowScrollApis.set(testId, api)
+    },
+    unregisterVirtualWindowScroller: (testId) => {
+      virtualWindowScrollApis.delete(testId)
+    },
+    scrollTo: (testId, scrollTopPx) => {
+      virtualWindowScrollApis.get(testId)?.scrollTo(scrollTopPx)
+    },
+    getScrollTop: (testId) => {
+      return virtualWindowScrollApis.get(testId)?.getScrollTop() ?? null
+    },
+    getScrollHeight: (testId) => {
+      return virtualWindowScrollApis.get(testId)?.getScrollHeight() ?? null
+    }
   }
 }

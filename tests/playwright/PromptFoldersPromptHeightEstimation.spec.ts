@@ -24,6 +24,7 @@ type PromptFoldersTestContext = {
   mainWindow: Page
   testHelpers: {
     navigateToPromptFolders: (folderDisplayName: string) => Promise<void>
+    scrollVirtualWindowTo: (selector: string, scrollTopPx: number) => Promise<void>
   }
   workspaceSetupResult: { workspaceReady: boolean }
 }
@@ -49,20 +50,12 @@ function expectPromptFoldersHeights(
 
 async function scrollPromptFoldersListToIndex(
   mainWindow: Page,
+  testHelpers: PromptFoldersTestContext['testHelpers'],
   index: number,
   rowHeight: number
 ): Promise<void> {
   await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-
-  await mainWindow.evaluate(
-    ({ hostSelector, targetIndex, estimatedHeight }) => {
-      const host = document.querySelector<HTMLElement>(hostSelector)
-      if (host) {
-        host.scrollTo({ top: targetIndex * estimatedHeight })
-      }
-    },
-    { hostSelector: HOST_SELECTOR, targetIndex: index, estimatedHeight: rowHeight }
-  )
+  await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, index * rowHeight)
 }
 
 async function pauseMonacoHydration(mainWindow: Page): Promise<void> {
@@ -103,7 +96,7 @@ async function measurePromptFolders(
       await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     }
 
-    await scrollPromptFoldersListToIndex(mainWindow, 0, estimatedRowHeight)
+    await scrollPromptFoldersListToIndex(mainWindow, testHelpers, 0, estimatedRowHeight)
 
     await mainWindow.waitForSelector(rowSelector, { state: 'attached' })
     await mainWindow.waitForSelector(placeholderSelector, { state: 'attached' })

@@ -45,16 +45,18 @@ describe('Prompt Folders Autoscroll', () => {
         const promptTestId = row?.getAttribute('data-testid')
         if (!promptTestId) return null
 
-        host.scrollTop += candidate.rect.bottom - hostRect.bottom
+        const scrollDelta = Math.round(candidate.rect.bottom - hostRect.bottom)
 
-        return { promptTestId }
+        return { promptTestId, scrollDelta }
       },
       { hostSelector: HOST_SELECTOR, titleSelector: TITLE_SELECTOR }
     )
 
-    if (!target?.promptTestId) {
+    if (!target?.promptTestId || typeof target.scrollDelta !== 'number') {
       throw new Error('Failed to find a prompt title below the viewport.')
     }
+
+    await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, target.scrollDelta)
 
     const targetSelector = `[data-testid="${target.promptTestId}"] ${TITLE_SELECTOR}`
 
@@ -143,7 +145,27 @@ describe('Prompt Folders Autoscroll', () => {
 
     const rowSelector = `[data-testid="${target.promptTestId}"]`
 
-    await mainWindow.locator(rowSelector).scrollIntoViewIfNeeded()
+    const rowScrollDelta = await mainWindow.evaluate(
+      ({ hostSelector, rowSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        const row = document.querySelector<HTMLElement>(rowSelector)
+        if (!host || !row) return null
+        const hostRect = host.getBoundingClientRect()
+        const rowRect = row.getBoundingClientRect()
+        if (rowRect.bottom > hostRect.bottom) {
+          return Math.round(rowRect.bottom - hostRect.bottom)
+        }
+        if (rowRect.top < hostRect.top) {
+          return Math.round(rowRect.top - hostRect.top)
+        }
+        return 0
+      },
+      { hostSelector: HOST_SELECTOR, rowSelector }
+    )
+
+    if (typeof rowScrollDelta === 'number' && rowScrollDelta !== 0) {
+      await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, rowScrollDelta)
+    }
     await waitForMonacoEditor(mainWindow, rowSelector)
 
     await focusMonacoEditor(mainWindow, rowSelector)
@@ -156,19 +178,23 @@ describe('Prompt Folders Autoscroll', () => {
     )
 
     // Align the first Monaco line to the bottom of the viewport.
-    await mainWindow.evaluate(
+    const lineScrollDelta = await mainWindow.evaluate(
       ({ hostSelector, rowSelector, lineSelector }) => {
         const host = document.querySelector<HTMLElement>(hostSelector)
         const line = document.querySelector<HTMLElement>(`${rowSelector} ${lineSelector}`)
-        if (!host || !line) return
+        if (!host || !line) return null
 
         const hostRect = host.getBoundingClientRect()
         const lineRect = line.getBoundingClientRect()
         const lineCenter = lineRect.top + lineRect.height / 2
-        host.scrollTop += lineCenter - hostRect.bottom
+        return Math.round(lineCenter - hostRect.bottom)
       },
       { hostSelector: HOST_SELECTOR, rowSelector, lineSelector: MONACO_CURSOR_LINE_SELECTOR }
     )
+
+    if (typeof lineScrollDelta === 'number') {
+      await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, lineScrollDelta)
+    }
 
     await mainWindow.waitForFunction(
       ({ hostSelector, rowSelector, lineSelector }) => {

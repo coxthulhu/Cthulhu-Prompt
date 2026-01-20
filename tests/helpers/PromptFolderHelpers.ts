@@ -26,6 +26,23 @@ async function getBoundingClientRectDimension(
   return result
 }
 
+async function waitForVirtualWindowControls(window: any): Promise<void> {
+  await window.waitForFunction(() => Boolean(window.svelteVirtualWindowTestControls))
+}
+
+async function getVirtualWindowTestId(window: any, selector: string): Promise<string> {
+  const testId = await window.evaluate(({ targetSelector }) => {
+    const element = document.querySelector<HTMLElement>(targetSelector)
+    return element?.getAttribute('data-testid') ?? null
+  }, { targetSelector: selector })
+
+  if (!testId) {
+    throw new Error(`Failed to resolve data-testid for selector: ${selector}`)
+  }
+
+  return testId
+}
+
 export async function getPromptRowHeight(window: any, selector: string): Promise<number> {
   return getBoundingClientRectDimension(window, selector, 'height')
 }
@@ -35,10 +52,17 @@ export async function getPromptRowWidth(window: any, selector: string): Promise<
 }
 
 export async function getElementScrollTop(window: any, selector: string): Promise<number> {
+  await waitForVirtualWindowControls(window)
   const scrollTop = await window.evaluate(
     ({ targetSelector }) => {
       const element = document.querySelector<HTMLElement>(targetSelector)
       if (!element) return null
+      const testId = element.getAttribute('data-testid')
+      const controls = window.svelteVirtualWindowTestControls
+      if (testId && controls?.getScrollTop) {
+        const value = controls.getScrollTop(testId)
+        if (typeof value === 'number') return Math.round(value)
+      }
       return Math.round(element.scrollTop)
     },
     { targetSelector: selector }
@@ -49,6 +73,78 @@ export async function getElementScrollTop(window: any, selector: string): Promis
   }
 
   return scrollTop
+}
+
+export async function getVirtualWindowScrollHeight(window: any, selector: string): Promise<number> {
+  await waitForVirtualWindowControls(window)
+  const scrollHeight = await window.evaluate(
+    ({ targetSelector }) => {
+      const element = document.querySelector<HTMLElement>(targetSelector)
+      if (!element) return null
+      const testId = element.getAttribute('data-testid')
+      const controls = window.svelteVirtualWindowTestControls
+      if (testId && controls?.getScrollHeight) {
+        const value = controls.getScrollHeight(testId)
+        if (typeof value === 'number') return Math.round(value)
+      }
+      return Math.round(element.scrollHeight)
+    },
+    { targetSelector: selector }
+  )
+
+  if (scrollHeight == null) {
+    throw new Error(`Failed to read scrollHeight for selector: ${selector}`)
+  }
+
+  return scrollHeight
+}
+
+export async function scrollVirtualWindowTo(
+  window: any,
+  selector: string,
+  scrollTopPx: number
+): Promise<void> {
+  await waitForVirtualWindowControls(window)
+  const testId = await getVirtualWindowTestId(window, selector)
+
+  const didScroll = await window.evaluate(
+    ({ targetTestId, targetScrollTopPx }) => {
+      const controls = window.svelteVirtualWindowTestControls
+      if (!controls?.scrollTo) return false
+      controls.scrollTo(targetTestId, Math.round(targetScrollTopPx))
+      return true
+    },
+    { targetTestId: testId, targetScrollTopPx: scrollTopPx }
+  )
+
+  if (!didScroll) {
+    throw new Error(`Failed to scroll virtual window for selector: ${selector}`)
+  }
+}
+
+export async function scrollVirtualWindowBy(
+  window: any,
+  selector: string,
+  deltaPx: number
+): Promise<void> {
+  await waitForVirtualWindowControls(window)
+  const testId = await getVirtualWindowTestId(window, selector)
+
+  const didScroll = await window.evaluate(
+    ({ targetTestId, targetDeltaPx }) => {
+      const controls = window.svelteVirtualWindowTestControls
+      if (!controls?.getScrollTop || !controls?.scrollTo) return false
+      const currentTop = controls.getScrollTop(targetTestId)
+      if (typeof currentTop !== 'number') return false
+      controls.scrollTo(targetTestId, currentTop + targetDeltaPx)
+      return true
+    },
+    { targetTestId: testId, targetDeltaPx: deltaPx }
+  )
+
+  if (!didScroll) {
+    throw new Error(`Failed to scroll virtual window for selector: ${selector}`)
+  }
 }
 
 type PromptHydrationReadyOptions = {

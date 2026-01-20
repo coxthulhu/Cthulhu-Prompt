@@ -61,13 +61,8 @@ describe('Prompt Folders Virtualization', () => {
     }, PROMPT_PREFIX_SELECTOR)
     expect(initialEditorCount).toBeLessThan(50)
 
-    await mainWindow.evaluate(
-      ({ selector }) => {
-        const host = document.querySelector<HTMLElement>(selector)
-        host?.scrollTo({ top: host.scrollHeight })
-      },
-      { selector: HOST_SELECTOR }
-    )
+    const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, scrollHeight)
 
     await mainWindow.waitForFunction(({ selector }) => Boolean(document.querySelector(selector)), {
       selector: LAST_PROMPT_SELECTOR
