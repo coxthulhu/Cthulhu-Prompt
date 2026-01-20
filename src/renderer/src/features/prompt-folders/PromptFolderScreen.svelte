@@ -42,6 +42,7 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToRowCentered = $state<ScrollToRowCentered | null>(null)
   let activePromptId = $state<string | null>(null)
+  let outlinerAutoScrollRequestId = $state(0)
   let mainWindowMetrics = $state({
     widthPx: 0,
     heightPx: 0,
@@ -170,6 +171,7 @@
   const handleOutlinerClick = (promptId: string) => {
     if (!scrollToRowCentered) return
     activePromptId = promptId
+    outlinerAutoScrollRequestId += 1
     const rowCenterOffset = getPromptRowHeightPx(promptId) / 2
     scrollToRowCentered(promptEditorRowId(promptId), rowCenterOffset)
   }
@@ -210,6 +212,7 @@
             isLoading={folderData.isLoading}
             errorMessage={folderData.errorMessage}
             {activePromptId}
+            autoScrollRequestId={outlinerAutoScrollRequestId}
             onSelectPrompt={handleOutlinerClick}
           />
         {/snippet}
@@ -241,6 +244,9 @@
               }}
               onCenterRowChange={(row) => {
                 activePromptId = row?.kind === 'prompt-editor' ? row.promptId : null
+              }}
+              onUserScroll={() => {
+                outlinerAutoScrollRequestId += 1
               }}
               onViewportMetricsChange={(metrics) => {
                 mainWindowMetrics = metrics

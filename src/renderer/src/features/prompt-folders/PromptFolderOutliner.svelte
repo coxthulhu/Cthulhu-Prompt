@@ -12,15 +12,24 @@
     isLoading: boolean
     errorMessage: string | null
     activePromptId: string | null
+    autoScrollRequestId: number
     onSelectPrompt: (promptId: string) => void
   }
 
-  let { promptIds, isLoading, errorMessage, activePromptId, onSelectPrompt }: Props = $props()
+  let {
+    promptIds,
+    isLoading,
+    errorMessage,
+    activePromptId,
+    autoScrollRequestId,
+    onSelectPrompt
+  }: Props = $props()
 
   type OutlinerRow = { kind: 'loading' } | { kind: 'prompt'; promptId: string }
   const OUTLINER_ROW_HEIGHT_PX = 28
   const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
+  let lastAutoScrollRequestId = $state(0)
 
   const outlinerRowRegistry = defineVirtualWindowRowRegistry<OutlinerRow>({
     loading: {
@@ -51,9 +60,11 @@
     return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptData.promptFolderCount}`
   }
 
-  // Side effect: keep the active prompt row within the outliner scroll band.
+  // Side effect: keep the active prompt row within the outliner scroll band when requested.
   $effect(() => {
     if (!scrollToWithinWindowBand || !activePromptId || outlinerItems.length === 0) return
+    if (autoScrollRequestId === lastAutoScrollRequestId) return
+    lastAutoScrollRequestId = autoScrollRequestId
     scrollToWithinWindowBand(
       `outliner-${activePromptId}`,
       OUTLINER_ROW_CENTER_OFFSET_PX,

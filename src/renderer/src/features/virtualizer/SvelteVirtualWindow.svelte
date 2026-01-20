@@ -20,6 +20,7 @@
     onScrollToWithinWindowBand?: (scrollToWithinWindowBand: ScrollToWithinWindowBand) => void
     onScrollToRowCentered?: (scrollToRowCentered: ScrollToRowCentered) => void
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
+    onUserScroll?: (scrollTopPx: number) => void
     onViewportMetricsChange?: (metrics: {
       widthPx: number
       heightPx: number
@@ -38,6 +39,7 @@
     onScrollToWithinWindowBand,
     onScrollToRowCentered,
     onCenterRowChange,
+    onUserScroll,
     onViewportMetricsChange,
     testId = 'virtual-window',
     spacerTestId = 'virtual-window-spacer'
@@ -202,17 +204,21 @@
     return Math.min(Math.max(0, nextScrollTop), maxScrollTopPx)
   }
 
-  const applyScrollTop = (nextScrollTop: number, isUserScroll: boolean) => {
+  const applyScrollTop = (nextScrollTop: number, isUserScroll: boolean): boolean => {
     const clampedScrollTop = clampScrollTop(nextScrollTop)
-    if (clampedScrollTop === scrollTopPx) return
+    if (clampedScrollTop === scrollTopPx) return false
     scrollTopPx = clampedScrollTop
     if (isUserScroll && scrollAnchorMode === 'center') {
       scrollAnchorMode = 'top'
     }
+    return true
   }
 
   const applyUserScrollTop = (nextScrollTop: number) => {
-    applyScrollTop(nextScrollTop, true)
+    const didScroll = applyScrollTop(nextScrollTop, true)
+    if (didScroll) {
+      onUserScroll?.(scrollTopPx)
+    }
   }
 
   const applyProgrammaticScrollTop = (nextScrollTop: number) => {
