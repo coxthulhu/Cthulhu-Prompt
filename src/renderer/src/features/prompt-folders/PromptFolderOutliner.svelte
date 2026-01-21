@@ -108,7 +108,7 @@
 </div>
 
 {#snippet outlinerLoadingRow({ row })}
-  <div class="px-3 py-2 text-xs text-muted-foreground text-left" data-kind={row.kind}>
+  <div class="px-3 py-2 text-sm text-muted-foreground text-left" data-kind={row.kind}>
     Loading prompts...
   </div>
 {/snippet}
@@ -117,7 +117,7 @@
   {@const isActive = activeRow?.kind === 'folder-description'}
   <button
     type="button"
-    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left text-white ${
+    class={`flex h-7 w-full cursor-pointer items-center rounded-sm px-3 text-sm text-left text-white ${
       isActive ? 'bg-accent' : 'hover:bg-muted/60'
     }`}
     aria-current={isActive ? 'true' : undefined}
@@ -131,7 +131,7 @@
   {@const isActive = activeRow?.kind === 'prompt' && activeRow.promptId === row.promptId}
   <button
     type="button"
-    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left text-white ${
+    class={`flex h-7 w-full cursor-pointer items-center rounded-sm px-3 text-sm text-left text-white ${
       isActive ? 'bg-accent' : 'hover:bg-muted/60'
     }`}
     aria-current={isActive ? 'true' : undefined}

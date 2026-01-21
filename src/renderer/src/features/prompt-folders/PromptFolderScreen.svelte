@@ -235,7 +235,7 @@
     <div class="flex-1 min-h-0 flex">
       <ResizableSidebar
         defaultWidth={200}
-        minWidth={200}
+        minWidth={100}
         maxWidth={400}
         containerClass="h-full"
         handleTestId="prompt-outliner-resize-handle"
