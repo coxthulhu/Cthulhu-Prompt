@@ -125,14 +125,16 @@
   const getCursorMetrics = (position: monaco.IPosition) => {
     if (!editor) return null
     const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
-    const lineTop = editor.getTopForLineNumber(position.lineNumber)
+    const visiblePosition = editor.getScrolledVisiblePosition(position)
+    if (!visiblePosition) return null
     const scrollTop = editor.getScrollTop()
     const viewportHeight = editor.getLayoutInfo().height
     const viewportBottom = scrollTop + viewportHeight
+    const lineTop = scrollTop + visiblePosition.top
     const lineBottom = lineTop + lineHeight
-    const isVisible = lineBottom > scrollTop && lineTop < viewportBottom
+    const isVisible = visiblePosition.top + lineHeight > 0 && visiblePosition.top < viewportHeight
     const topInViewport = Math.min(
-      Math.max(lineTop - scrollTop, 0),
+      Math.max(visiblePosition.top, 0),
       Math.max(0, viewportHeight - lineHeight)
     )
 
@@ -161,7 +163,7 @@
     const rowElement = domNode.closest('[data-virtual-window-row]') as HTMLElement | null
     if (!rowElement) return null
     const metrics = getCursorMetrics(position)
-    if (!metrics) return null
+    if (!metrics || !metrics.isVisible) return null
     const rowRect = rowElement.getBoundingClientRect()
     const editorRect = domNode.getBoundingClientRect()
     return editorRect.top - rowRect.top + metrics.topInViewport + metrics.lineHeight / 2
