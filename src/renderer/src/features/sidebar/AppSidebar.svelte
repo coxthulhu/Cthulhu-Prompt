@@ -179,6 +179,8 @@
               <CreatePromptFolderDialog
                 {isWorkspaceReady}
                 {workspacePath}
+                {promptFolders}
+                isPromptFolderListLoading={areFoldersLoading}
                 onCreated={onPromptFolderSelect}
               />
             </li>

@@ -12,16 +12,20 @@
   } from '@renderer/common/ui/dialog'
   import { useCreatePromptFolderMutation } from '@renderer/api/promptFolders'
   import type { PromptFolder } from '@shared/ipc'
-  import { validatePromptFolderName } from '@shared/promptFolderName'
+  import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
 
   let {
     isWorkspaceReady,
     workspacePath = null,
+    promptFolders = [],
+    isPromptFolderListLoading = false,
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
     workspacePath?: string | null
+    promptFolders: PromptFolder[]
+    isPromptFolderListLoading: boolean
     onCreated?: (folder: PromptFolder) => void
   }>()
 
@@ -34,11 +38,30 @@
   let hasInteractedWithInput = $state(false)
 
   const validation = $derived(validatePromptFolderName(folderName))
-  const validationMessage = $derived(validation.isValid ? null : (validation.errorMessage ?? null))
+  // Derive a sanitized name to detect duplicate prompt folders by on-disk folder name.
+  const sanitizedFolderName = $derived(sanitizePromptFolderName(folderName).toLowerCase())
+  const hasDuplicateFolderName = $derived.by(
+    () =>
+      validation.isValid &&
+      !isPromptFolderListLoading &&
+      Boolean(sanitizedFolderName) &&
+      promptFolders.some(
+        (folder) => sanitizePromptFolderName(folder.folderName).toLowerCase() === sanitizedFolderName
+      )
+  )
+  const validationMessage = $derived(
+    !validation.isValid
+      ? (validation.errorMessage ?? null)
+      : hasDuplicateFolderName
+        ? 'A folder with this name already exists'
+        : null
+  )
   const errorMessage = $derived(
     submissionError ?? (hasInteractedWithInput ? validationMessage : null)
   )
-  const isValid = $derived(Boolean(!validationMessage && validation.isValid && workspacePath))
+  const isValid = $derived(
+    Boolean(!validationMessage && validation.isValid && workspacePath && !isPromptFolderListLoading)
+  )
 
   const closeDialog = () => {
     isDialogOpen = false
@@ -64,7 +87,8 @@
       closeDialog()
     } catch (error) {
       console.error('Error creating prompt folder:', error)
-      submissionError = 'Failed to create folder. Please try again.'
+      submissionError =
+        error instanceof Error ? error.message : 'Failed to create folder. Please try again.'
     }
   }
 
@@ -100,6 +124,7 @@
         bind:value={folderName}
         oninput={() => {
           hasInteractedWithInput = true
+          submissionError = null
         }}
         onkeydown={(event) => {
           if (event.key === 'Enter' && isValid) {
