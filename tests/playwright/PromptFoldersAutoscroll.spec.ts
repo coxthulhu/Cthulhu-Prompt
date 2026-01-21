@@ -41,7 +41,7 @@ describe('Prompt Folders Autoscroll', () => {
           .sort((a, b) => a.rect.top - b.rect.top)[0]
         if (!candidate) return null
 
-        const row = candidate.input.closest('[data-prompt-editor-row]') as HTMLElement | null
+        const row = candidate.input.closest('[data-virtual-window-row]') as HTMLElement | null
         const promptTestId = row?.getAttribute('data-testid')
         if (!promptTestId) return null
 
@@ -126,7 +126,7 @@ describe('Prompt Folders Autoscroll', () => {
       const host = document.querySelector<HTMLElement>(hostSelector)
       if (!host) return null
       const hostRect = host.getBoundingClientRect()
-      const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-prompt-editor-row]'))
+      const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
       const candidate = rows
         .map((row) => ({ row, rect: row.getBoundingClientRect() }))
         .filter(({ rect }) => rect.top >= hostRect.bottom)

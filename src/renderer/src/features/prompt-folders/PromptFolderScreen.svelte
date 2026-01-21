@@ -286,6 +286,7 @@
     hydrationPriority={props.hydrationPriority}
     shouldDehydrate={props.shouldDehydrate}
     overlayRowElement={props.overlayRowElement ?? null}
+    scrollToWithinWindowBand={props.scrollToWithinWindowBand}
     onHydrationChange={props.onHydrationChange}
     {folderData}
   />

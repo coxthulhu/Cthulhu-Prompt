@@ -158,7 +158,7 @@
   const getRowCenterOffset = (position: monaco.IPosition): number | null => {
     const domNode = editor?.getDomNode()
     if (!domNode) return null
-    const rowElement = domNode.closest('[data-prompt-editor-row]') as HTMLElement | null
+    const rowElement = domNode.closest('[data-virtual-window-row]') as HTMLElement | null
     if (!rowElement) return null
     const metrics = getCursorMetrics(position)
     if (!metrics) return null

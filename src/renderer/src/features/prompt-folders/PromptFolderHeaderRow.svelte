@@ -4,6 +4,7 @@
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
+  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import {
     HEADER_EDITOR_LEFT_OFFSET_PX,
     HEADER_EDITOR_TOP_OFFSET_PX,
@@ -21,6 +22,7 @@
     hydrationPriority: number
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
+    scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onHydrationChange?: (isHydrated: boolean) => void
     folderData: PromptFolderData
   }
@@ -35,6 +37,7 @@
     hydrationPriority,
     shouldDehydrate,
     overlayRowElement,
+    scrollToWithinWindowBand,
     onHydrationChange,
     folderData
   }: Props = $props()
@@ -58,7 +61,7 @@
   })
 </script>
 
-<div class="pt-6">
+<div class="pt-6" data-virtual-window-row>
   <h1 class="text-2xl font-bold">{folder.displayName}</h1>
   <div class="mt-4">
     <p class="text-sm font-semibold text-muted-foreground">Folder Description</p>
@@ -72,6 +75,7 @@
           {hydrationPriority}
           {shouldDehydrate}
           {rowId}
+          {scrollToWithinWindowBand}
           {onHydrationChange}
           onChange={(text, meta) => {
             folderData.setDescriptionText(text, {

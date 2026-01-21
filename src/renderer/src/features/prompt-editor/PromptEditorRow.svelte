@@ -175,7 +175,7 @@
   const getTitleCenterOffset = () => {
     const input = titleInputRef
     if (!input) return null
-    const rowElement = input.closest('[data-prompt-editor-row]') as HTMLElement | null
+    const rowElement = input.closest('[data-virtual-window-row]') as HTMLElement | null
     if (!rowElement) return null
     const inputRect = input.getBoundingClientRect()
     const rowRect = rowElement.getBoundingClientRect()
@@ -249,7 +249,7 @@
   class="flex items-stretch gap-2"
   style={`height:${rowHeightPx}px; min-height:${rowHeightPx}px; max-height:${rowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
-  data-prompt-editor-row
+  data-virtual-window-row
 >
   <PromptEditorSidebar onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
 

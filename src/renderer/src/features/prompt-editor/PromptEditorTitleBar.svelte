@@ -37,7 +37,7 @@
     onTitleChange(input.value)
 
     if (!scrollToWithinWindowBand) return
-    const rowElement = input.closest('[data-prompt-editor-row]') as HTMLElement | null
+    const rowElement = input.closest('[data-virtual-window-row]') as HTMLElement | null
     if (!rowElement) return
 
     const inputRect = input.getBoundingClientRect()
