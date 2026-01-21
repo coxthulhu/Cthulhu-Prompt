@@ -113,7 +113,7 @@
         CTHULHU PROMPT
       </h1>
 
-      <div class="flex w-full max-w-lg flex-col items-center gap-4">
+      <div class="flex w-full max-w-[28rem] flex-col items-center gap-4">
         {#if !isWorkspaceReady}
           <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
             <h2 class="text-base font-semibold">Get Started</h2>
