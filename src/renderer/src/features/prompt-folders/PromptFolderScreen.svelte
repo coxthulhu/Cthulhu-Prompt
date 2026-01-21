@@ -43,7 +43,7 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToRowCentered = $state<ScrollToRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
-  let activePromptId = $state<string | null>(null)
+  let activeOutlinerRow = $state<ActiveOutlinerRow | null>(null)
   let outlinerAutoScrollRequestId = $state(0)
   let mainWindowMetrics = $state({
     widthPx: 0,
@@ -82,6 +82,9 @@
   type PromptEditorRowProps = VirtualWindowRowComponentProps<
     Extract<PromptFolderRow, { kind: 'prompt-editor' }>
   >
+  type ActiveOutlinerRow =
+    | { kind: 'folder-description' }
+    | { kind: 'prompt'; promptId: string }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     header: {
@@ -181,12 +184,30 @@
     )
   }
 
+  const getHeaderRowHeightPx = (): number => {
+    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
+      folder.folderName,
+      mainWindowMetrics.widthPx,
+      mainWindowMetrics.devicePixelRatio
+    )
+    if (measuredHeight != null) return measuredHeight
+    return estimatePromptFolderHeaderHeight(folderData.descriptionDraft.text)
+  }
+
   const handleOutlinerClick = (promptId: string) => {
     if (!scrollToRowCentered) return
-    activePromptId = promptId
+    activeOutlinerRow = { kind: 'prompt', promptId }
     outlinerAutoScrollRequestId += 1
     const rowCenterOffset = getPromptRowHeightPx(promptId) / 2
     scrollToRowCentered(promptEditorRowId(promptId), rowCenterOffset)
+  }
+
+  const handleOutlinerFolderDescriptionClick = () => {
+    if (!scrollToRowCentered) return
+    activeOutlinerRow = { kind: 'folder-description' }
+    outlinerAutoScrollRequestId += 1
+    const rowCenterOffset = getHeaderRowHeightPx() / 2
+    scrollToRowCentered('header', rowCenterOffset)
   }
 
   const handleAddPrompt = (previousPromptId: string | null) => {
@@ -222,15 +243,16 @@
         sidebarBorderClass="border-border/50"
       >
         {#snippet sidebar()}
-          <PromptFolderOutliner
-            promptIds={folderData.promptIds}
-            isLoading={folderData.isLoading}
-            errorMessage={folderData.errorMessage}
-            {activePromptId}
-            autoScrollRequestId={outlinerAutoScrollRequestId}
-            onSelectPrompt={handleOutlinerClick}
-          />
-        {/snippet}
+            <PromptFolderOutliner
+              promptIds={folderData.promptIds}
+              isLoading={folderData.isLoading}
+              errorMessage={folderData.errorMessage}
+              activeRow={activeOutlinerRow}
+              autoScrollRequestId={outlinerAutoScrollRequestId}
+              onSelectPrompt={handleOutlinerClick}
+              onSelectFolderDescription={handleOutlinerFolderDescriptionClick}
+            />
+          {/snippet}
 
         {#snippet content()}
           {#if folderData.errorMessage}
@@ -250,7 +272,8 @@
               testId="prompt-folder-virtual-window"
               spacerTestId="prompt-folder-virtual-window-spacer"
               getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
-              getCenterRowEligibility={(row) => row.kind === 'prompt-editor'}
+              getCenterRowEligibility={(row) =>
+                row.kind === 'prompt-editor' || row.kind === 'header'}
               onScrollToWithinWindowBand={(next) => {
                 scrollToWithinWindowBand = next
               }}
@@ -261,7 +284,15 @@
                 scrollApi = next
               }}
               onCenterRowChange={(row) => {
-                activePromptId = row?.kind === 'prompt-editor' ? row.promptId : null
+                if (row?.kind === 'prompt-editor') {
+                  activeOutlinerRow = { kind: 'prompt', promptId: row.promptId }
+                  return
+                }
+                if (row?.kind === 'header') {
+                  activeOutlinerRow = { kind: 'folder-description' }
+                  return
+                }
+                activeOutlinerRow = null
               }}
               onUserScroll={() => {
                 outlinerAutoScrollRequestId += 1

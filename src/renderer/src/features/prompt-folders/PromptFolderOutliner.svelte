@@ -11,23 +11,32 @@
     promptIds: string[]
     isLoading: boolean
     errorMessage: string | null
-    activePromptId: string | null
+    activeRow: OutlinerActiveRow | null
     autoScrollRequestId: number
     onSelectPrompt: (promptId: string) => void
+    onSelectFolderDescription: () => void
   }
 
   let {
     promptIds,
     isLoading,
     errorMessage,
-    activePromptId,
+    activeRow,
     autoScrollRequestId,
-    onSelectPrompt
+    onSelectPrompt,
+    onSelectFolderDescription
   }: Props = $props()
 
-  type OutlinerRow = { kind: 'loading' } | { kind: 'prompt'; promptId: string }
+  type OutlinerRow =
+    | { kind: 'loading' }
+    | { kind: 'folder-description' }
+    | { kind: 'prompt'; promptId: string }
+  type OutlinerActiveRow =
+    | { kind: 'folder-description' }
+    | { kind: 'prompt'; promptId: string }
   const OUTLINER_ROW_HEIGHT_PX = 28
   const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
+  const OUTLINER_FOLDER_DESCRIPTION_ROW_ID = 'outliner-folder-description'
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastAutoScrollRequestId = $state(0)
 
@@ -35,6 +44,10 @@
     loading: {
       estimateHeight: () => 32,
       snippet: outlinerLoadingRow
+    },
+    'folder-description': {
+      estimateHeight: () => 28,
+      snippet: outlinerFolderDescriptionRow
     },
     prompt: {
       estimateHeight: () => 28,
@@ -48,10 +61,13 @@
       return [{ id: 'outliner-loading', row: { kind: 'loading' } }]
     }
 
-    return promptIds.map((promptId) => ({
-      id: `outliner-${promptId}`,
-      row: { kind: 'prompt', promptId }
-    }))
+    const items: VirtualWindowItem<OutlinerRow>[] = [
+      { id: OUTLINER_FOLDER_DESCRIPTION_ROW_ID, row: { kind: 'folder-description' } }
+    ]
+    promptIds.forEach((promptId) => {
+      items.push({ id: `outliner-${promptId}`, row: { kind: 'prompt', promptId } })
+    })
+    return items
   })
 
   const getPromptDisplayTitle = (promptId: string): string => {
@@ -60,16 +76,20 @@
     return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptData.promptFolderCount}`
   }
 
-  // Side effect: keep the active prompt row within the outliner scroll band when requested.
+  const getActiveOutlinerRowId = (row: OutlinerActiveRow | null): string | null => {
+    if (!row) return null
+    if (row.kind === 'folder-description') return OUTLINER_FOLDER_DESCRIPTION_ROW_ID
+    return `outliner-${row.promptId}`
+  }
+
+  // Side effect: keep the active outliner row within the outliner scroll band when requested.
   $effect(() => {
-    if (!scrollToWithinWindowBand || !activePromptId || outlinerItems.length === 0) return
+    if (!scrollToWithinWindowBand || outlinerItems.length === 0) return
     if (autoScrollRequestId === lastAutoScrollRequestId) return
+    const activeRowId = getActiveOutlinerRowId(activeRow)
+    if (!activeRowId) return
     lastAutoScrollRequestId = autoScrollRequestId
-    scrollToWithinWindowBand(
-      `outliner-${activePromptId}`,
-      OUTLINER_ROW_CENTER_OFFSET_PX,
-      'minimal'
-    )
+    scrollToWithinWindowBand(activeRowId, OUTLINER_ROW_CENTER_OFFSET_PX, 'minimal')
   })
 </script>
 
@@ -93,8 +113,22 @@
   </div>
 {/snippet}
 
+{#snippet outlinerFolderDescriptionRow()}
+  {@const isActive = activeRow?.kind === 'folder-description'}
+  <button
+    type="button"
+    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left text-white ${
+      isActive ? 'bg-accent' : 'hover:bg-muted/60'
+    }`}
+    aria-current={isActive ? 'true' : undefined}
+    onclick={onSelectFolderDescription}
+  >
+    <span class="min-w-0 flex-1 truncate">Folder Description</span>
+  </button>
+{/snippet}
+
 {#snippet outlinerPromptRow({ row })}
-  {@const isActive = activePromptId === row.promptId}
+  {@const isActive = activeRow?.kind === 'prompt' && activeRow.promptId === row.promptId}
   <button
     type="button"
     class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left text-white ${
