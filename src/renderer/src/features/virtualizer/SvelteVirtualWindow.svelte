@@ -4,12 +4,19 @@
 
   import {
     type VirtualWindowItem,
-    type VirtualWindowRowSnippet,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
     type ScrollToWithinWindowBandType,
     type ScrollToRowCentered
   } from './virtualWindowTypes'
+  import { buildRows, type VirtualRowState } from './virtualWindowRows'
+  import {
+    computeAnchoredScrollTop,
+    findIndexAtOffset,
+    findNearestEligibleRow,
+    rowTouchesViewport
+  } from './virtualWindowRowUtils'
+  import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
   import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
 
   type VirtualWindowProps = {
@@ -44,16 +51,6 @@
     testId = 'virtual-window',
     spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
-
-  type VirtualRowState<TRow extends { kind: string }> = {
-    id: string
-    index: number
-    offset: number
-    height: number
-    measuredHeightPx: number | null
-    rowData: TRow
-    snippet: VirtualWindowRowSnippet<TRow>
-  }
 
   type RowState = VirtualRowState<TRow>
 
@@ -91,99 +88,6 @@
       containerWidth - LEFT_SCROLL_PADDING_PX - RIGHT_SCROLL_PADDING_PX - SCROLLBAR_WIDTH_PX
     )
   )
-
-  const findIndexAtOffset = (rows: readonly RowState[], offset: number): number => {
-    if (rows.length === 0) return -1
-
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i]
-      const end = row.offset + row.height
-      if (offset < end) return i
-    }
-
-    return rows.length - 1
-  }
-
-  const computeAnchoredScrollTop = (
-    previousRows: readonly RowState[],
-    nextRows: readonly RowState[],
-    scrollTop: number,
-    anchorOffsetPx: number
-  ): number => {
-    const anchorPositionPx = scrollTop + anchorOffsetPx
-    const anchorRow = previousRows[findIndexAtOffset(previousRows, anchorPositionPx)]
-    if (!anchorRow) return scrollTop
-    const offsetInRow = anchorPositionPx - anchorRow.offset
-    const nextRow = nextRows.find((row) => row.id === anchorRow.id)
-    return nextRow ? nextRow.offset + offsetInRow - anchorOffsetPx : scrollTop
-  }
-
-  const resolveRowHeight = (estimated: number, measured: number | null): number => {
-    if (measured != null && Number.isFinite(measured)) return measured
-    return estimated
-  }
-
-  const normalizeEstimatedHeight = (estimatedHeight: number): number => {
-    if (estimatedHeight <= 0) return 0
-    return Math.ceil(estimatedHeight / 4) * 4
-  }
-
-  const findNearestEligibleRow = (
-    rows: readonly RowState[],
-    centerPx: number,
-    isEligible?: (row: TRow) => boolean
-  ): RowState | null => {
-    if (rows.length === 0) return null
-
-    let candidate: RowState | null = null
-    let bestDistance = Number.POSITIVE_INFINITY
-
-    rows.forEach((row) => {
-      if (isEligible && !isEligible(row.rowData)) return
-      const rowCenterPx = row.offset + row.height / 2
-      const distance = Math.abs(rowCenterPx - centerPx)
-      if (distance < bestDistance) {
-        bestDistance = distance
-        candidate = row
-      }
-    })
-
-    return candidate
-  }
-
-  const buildRows = (
-    nextItems: VirtualWindowItem<TRow>[],
-    registry: VirtualWindowRowTypeRegistry<TRow>,
-    width: number,
-    viewportHeightPx: number,
-    dpr: number
-  ): RowState[] => {
-    const rows: RowState[] = []
-    let offset = 0
-
-    nextItems.forEach((item, index) => {
-      const entry = registry[item.row.kind]
-      const estimatedHeight = normalizeEstimatedHeight(
-        entry.estimateHeight(item.row, width, viewportHeightPx)
-      )
-      const measuredHeightPx = entry.lookupMeasuredHeight?.(item.row, width, dpr) ?? null
-      const height = resolveRowHeight(estimatedHeight, measuredHeightPx)
-
-      rows.push({
-        id: item.id,
-        index,
-        offset,
-        height,
-        measuredHeightPx,
-        rowData: item.row,
-        snippet: entry.snippet
-      })
-
-      offset += height
-    })
-
-    return rows
-  }
 
   let scrollTopPx = $state(0)
   let viewportHeight = $state(0)
@@ -296,42 +200,6 @@
   const centerRowId = $derived(centerRow?.id ?? null)
   const centerRowData = $derived(centerRow?.rowData ?? null)
 
-  const snapToDevicePixels = (value: number, dpr: number): number => {
-    if (!Number.isFinite(value) || !Number.isFinite(dpr) || dpr <= 0) return value
-    return Math.round(value * dpr) / dpr
-  }
-
-  const rowWrapperStyle = (row: RowState): string => {
-    const translateY = snapToDevicePixels(row.offset - clampedAnchoredScrollTopPx, devicePixelRatio)
-    return [
-      'position:absolute',
-      'top:0',
-      'left:0',
-      'width:100%',
-      `transform:translate3d(0, ${translateY}px, 0)`,
-      'contain:layout paint style',
-      `height:${row.height}px`,
-      `min-height:${row.height}px`,
-      `max-height:${row.height}px`
-    ].join(';')
-  }
-
-  const overlayRowWrapperStyle = (row: RowState): string => {
-    const translateY = snapToDevicePixels(row.offset - clampedAnchoredScrollTopPx, devicePixelRatio)
-    return [
-      'position:absolute',
-      'top:0',
-      'left:0',
-      'width:100%',
-      `transform:translate3d(0, ${translateY}px, 0)`,
-      'overflow:visible',
-      'pointer-events:none',
-      `height:${row.height}px`,
-      `min-height:${row.height}px`,
-      `max-height:${row.height}px`
-    ].join(';')
-  }
-
   const rowNeedsOverlay = (row: RowState): boolean =>
     rowRegistry[row.rowData.kind].needsOverlayRow ?? false
 
@@ -344,11 +212,10 @@
     }
   }
 
-  const rowTouchesViewport = (row: RowState): boolean =>
-    row.offset + row.height >= clampedAnchoredScrollTopPx && row.offset <= anchoredScrollBottomPx
-
   const shouldDehydrateRow = (row: RowState): boolean =>
-    widthResizeActive && row.rowData.kind === 'prompt-editor' && !rowTouchesViewport(row)
+    widthResizeActive &&
+    row.rowData.kind === 'prompt-editor' &&
+    !rowTouchesViewport(row, clampedAnchoredScrollTopPx, anchoredScrollBottomPx)
 
 
   const registerTestScroller = (): (() => void) | null => {
@@ -624,7 +491,7 @@
 
       <div style="position:absolute; inset:0;">
         {#each visibleRows as row (row.id)}
-          <div style={rowWrapperStyle(row)}>
+          <div style={rowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
             <div
               style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
             >
@@ -651,7 +518,7 @@
       <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
         {#each visibleRows as row (row.id)}
           {#if rowNeedsOverlay(row)}
-            <div style={overlayRowWrapperStyle(row)}>
+            <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
               <div
                 use:registerOverlayRow={row.id}
                 style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
