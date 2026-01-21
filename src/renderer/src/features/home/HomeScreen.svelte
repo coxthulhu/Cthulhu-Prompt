@@ -104,66 +104,80 @@
 </script>
 
 <main class="flex-1 p-6" data-testid="home-screen">
-  <h1 class="text-2xl font-bold" data-testid="home-title">Welcome to Cthulhu Prompt</h1>
-  <p class="mt-4 text-muted-foreground">Your prompt management application.</p>
-
-  {#if !isWorkspaceReady}
-    <div class="mt-8 p-6 border rounded-lg bg-muted/50">
-      <h2 class="text-lg font-semibold mb-2">Get Started</h2>
-      <p class="text-muted-foreground mb-4">
-        Select a folder to set up your workspace and start managing prompts.
-      </p>
-      <Button
-        data-testid="select-workspace-folder-button"
-        onclick={handleSelectFolder}
-        disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
-        class="flex items-center gap-2"
+  <div class="flex h-full w-full items-center justify-center">
+    <div class="flex w-full flex-col items-center gap-6 text-center">
+      <h1
+        class="w-full max-w-lg text-4xl font-bold font-mono tracking-[0.12em] md:text-5xl"
+        data-testid="home-title"
       >
-        <FolderOpen class="w-4 h-4" />
-        {isWorkspaceLoading
-          ? 'Setting up...'
-          : isOpeningWorkspaceFolderDialog
-            ? 'Selecting...'
-            : 'Select Workspace Folder'}
-      </Button>
-    </div>
-  {/if}
+        CTHULHU PROMPT
+      </h1>
 
-  {#if isWorkspaceReady}
-    <div
-      class="mt-8 p-6 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-    >
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex-1 min-w-0">
-          <h2
-            class="text-lg font-semibold mb-2 text-green-800 dark:text-green-200"
-            data-testid="workspace-ready-title"
+      <div class="flex w-full max-w-lg flex-col items-center gap-4">
+        {#if !isWorkspaceReady}
+          <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
+            <h2 class="text-lg font-semibold">Get Started</h2>
+            <p class="text-muted-foreground text-sm">
+              Select a folder to set up your workspace and start managing prompts.
+            </p>
+          </div>
+        {/if}
+
+        {#if isWorkspaceReady}
+          <div
+            class="w-full rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950"
           >
-            Workspace Ready
-          </h2>
-          <p class="text-green-700 dark:text-green-300 flex min-w-0">
-            <span class="shrink-0">Workspace:</span>
-            <span class="ml-1 min-w-0 flex-1 truncate" title={workspacePath ?? undefined}>
-              {workspacePath}
-            </span>
-          </p>
-          <p class="text-green-600 dark:text-green-400 text-sm mt-2">
-            You can now use all features of the application.
-          </p>
+            <h2
+              class="text-lg font-semibold text-green-800 dark:text-green-200"
+              data-testid="workspace-ready-title"
+            >
+              Workspace Ready
+            </h2>
+            <div class="mt-1 flex w-full justify-center text-sm text-green-700 dark:text-green-300">
+              <span class="shrink-0">Workspace:</span>
+              <span
+                class="ml-2 min-w-0 max-w-[420px] truncate"
+                title={workspacePath ?? undefined}
+                data-testid="workspace-ready-path"
+              >
+                {workspacePath}
+              </span>
+            </div>
+          </div>
+        {/if}
+
+        <div class="flex w-full gap-4">
+          {#if !isWorkspaceReady}
+            <Button
+              data-testid="select-workspace-folder-button"
+              onclick={handleSelectFolder}
+              disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
+              class="flex h-12 flex-1 items-center gap-2"
+            >
+              <FolderOpen class="w-4 h-4" />
+              {isWorkspaceLoading
+                ? 'Setting up...'
+                : isOpeningWorkspaceFolderDialog
+                  ? 'Selecting...'
+                  : 'Select Workspace Folder'}
+            </Button>
+          {/if}
+
+          {#if isWorkspaceReady}
+            <Button
+              data-testid="close-workspace-button"
+              variant="outline"
+              onclick={onWorkspaceClear}
+              class="flex h-12 flex-1 items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+            >
+              <X class="w-4 h-4" />
+              Close Workspace
+            </Button>
+          {/if}
         </div>
-        <Button
-          data-testid="close-workspace-button"
-          variant="outline"
-          size="sm"
-          onclick={onWorkspaceClear}
-          class="ml-4 shrink-0 flex items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-        >
-          <X class="w-4 h-4" />
-          Close Workspace
-        </Button>
       </div>
     </div>
-  {/if}
+  </div>
 
   <Dialog bind:open={showSetupDialog}>
     <DialogContent>

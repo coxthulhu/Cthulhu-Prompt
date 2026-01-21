@@ -86,19 +86,8 @@ export async function isWorkspaceGetStarted(window: any): Promise<boolean> {
  */
 export async function getDisplayedWorkspacePath(window: any): Promise<string | null> {
   return await window.evaluate(() => {
-    // Look for workspace path in the "Workspace Ready" section
-    const workspaceReadySection = document
-      .querySelector('[data-testid="workspace-ready-title"]')
-      ?.closest('div')
-    if (workspaceReadySection) {
-      const paragraphs = workspaceReadySection.querySelectorAll('p')
-      for (const element of Array.from(paragraphs)) {
-        const text = element.textContent || ''
-        if (text.startsWith('Workspace: ')) {
-          return text.replace('Workspace: ', '')
-        }
-      }
-    }
-    return null
+    return (
+      document.querySelector('[data-testid="workspace-ready-path"]')?.textContent ?? null
+    )
   })
 }
