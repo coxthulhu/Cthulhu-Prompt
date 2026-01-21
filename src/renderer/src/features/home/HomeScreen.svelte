@@ -116,7 +116,7 @@
       <div class="flex w-full max-w-lg flex-col items-center gap-4">
         {#if !isWorkspaceReady}
           <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
-            <h2 class="text-lg font-semibold">Get Started</h2>
+            <h2 class="text-base font-semibold">Get Started</h2>
             <p class="text-muted-foreground text-sm">
               Select a folder to set up your workspace and start managing prompts.
             </p>
@@ -153,8 +153,9 @@
               onclick={handleSelectFolder}
               disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
               class="flex h-12 flex-1 items-center gap-2"
+              style="font-size: 1rem; line-height: 1.5rem;"
             >
-              <FolderOpen class="w-4 h-4" />
+              <FolderOpen class="relative top-[1px] size-5" />
               {isWorkspaceLoading
                 ? 'Setting up...'
                 : isOpeningWorkspaceFolderDialog
@@ -169,8 +170,9 @@
               variant="outline"
               onclick={onWorkspaceClear}
               class="flex h-12 flex-1 items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+              style="font-size: 1rem; line-height: 1.5rem;"
             >
-              <X class="w-4 h-4" />
+              <X class="relative top-[1px] size-5" />
               Close Workspace
             </Button>
           {/if}
