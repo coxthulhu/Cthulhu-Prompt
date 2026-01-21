@@ -82,7 +82,7 @@
   const LEFT_SCROLL_PADDING_PX = 24
   const RIGHT_SCROLL_PADDING_PX = 8
   const WINDOW_BAND_PADDING_PX = 100
-  const SCROLLBAR_WIDTH_PX = 12
+  const SCROLLBAR_WIDTH_PX = 10
 
   // Subtract internal padding so width-based height measurements match the row content width.
   const measurementWidth = $derived(
@@ -189,6 +189,9 @@
   let viewportHeight = $state(0)
   let previousRowStates = $state<RowState[]>([])
   let scrollAnchorMode = $state<'top' | 'center'>('top')
+  let isPointerOverWindow = $state(false)
+  let scrollbarRevealVersion = $state(0)
+  let lastScrollTop = 0
 
   const rowStates = $derived.by(() => {
     if (measurementWidth <= 0) return []
@@ -228,8 +231,7 @@
   const hydrationStateByRowId = new SvelteMap<string, boolean>()
   const overlayRowElements = new SvelteMap<string, HTMLDivElement>()
 
-  // Derived fade for the top scroll decoration so it eases in like Monaco's shadow.
-  const scrollDecorationOpacity = $derived(Math.max(0, Math.min(1, scrollTopPx / 12)))
+  const scrollShadowActive = $derived(scrollTopPx > 0)
 
   const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? viewportHeight / 2 : 0)
 
@@ -585,9 +587,25 @@
     previousRowStates = rowStates
     void viewportHeight
   })
+
+  // Side effect: reveal the scrollbar briefly after scroll changes.
+  $effect(() => {
+    if (scrollTopPx === lastScrollTop) return
+    lastScrollTop = scrollTopPx
+    scrollbarRevealVersion += 1
+  })
 </script>
 
-<div class="relative h-full w-full">
+<div
+  class="relative h-full w-full virtual-window-scrollbar-theme"
+  role="presentation"
+  onmouseenter={() => {
+    isPointerOverWindow = true
+  }}
+  onmouseleave={() => {
+    isPointerOverWindow = false
+  }}
+>
   <div bind:this={viewportFrame} class="flex h-full w-full">
     <div
       class="h-full flex-1 min-w-0"
@@ -649,25 +667,40 @@
       viewportHeightPx={viewportHeight}
       totalHeightPx={totalHeightPx}
       widthPx={SCROLLBAR_WIDTH_PX}
+      isPointerOverWindow={isPointerOverWindow}
+      revealVersion={scrollbarRevealVersion}
       onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
     />
   </div>
 
   <div
     aria-hidden="true"
-    class="virtual-window-scroll-decoration"
-    style={`opacity:${scrollDecorationOpacity};`}
+    class="virtual-window-scroll-shadow"
+    class:virtual-window-scroll-shadow--active={scrollShadowActive}
   ></div>
 </div>
 
 <style>
-  .virtual-window-scroll-decoration {
+  .virtual-window-scrollbar-theme {
+    --vscode-scrollbar-shadow: #000000;
+    --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
+    --vscode-scrollbarSlider-hoverBackground: rgba(100, 100, 100, 0.7);
+    --vscode-scrollbarSlider-activeBackground: rgba(191, 191, 191, 0.4);
+  }
+
+  .virtual-window-scroll-shadow {
     position: absolute;
-    inset: 0 0 auto 0;
-    height: 8px;
+    top: 0;
+    left: 3px;
+    height: 3px;
+    width: 100%;
+    display: none;
     pointer-events: none;
     z-index: 10;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0));
-    transition: opacity 120ms ease-out;
+    box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px inset;
+  }
+
+  .virtual-window-scroll-shadow--active {
+    display: block;
   }
 </style>
