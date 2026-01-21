@@ -97,10 +97,8 @@
   {@const isActive = activePromptId === row.promptId}
   <button
     type="button"
-    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left ${
-      isActive
-        ? 'bg-accent text-accent-foreground'
-        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left text-white ${
+      isActive ? 'bg-accent' : 'hover:bg-muted/60'
     }`}
     aria-current={isActive ? 'true' : undefined}
     onclick={() => onSelectPrompt(row.promptId)}
