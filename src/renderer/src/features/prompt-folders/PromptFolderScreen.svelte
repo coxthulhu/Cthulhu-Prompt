@@ -45,6 +45,7 @@
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(null)
   let outlinerAutoScrollRequestId = $state(0)
+  let sidebarWidthPx = $state(200)
   let mainWindowMetrics = $state({
     widthPx: 0,
     heightPx: 0,
@@ -232,6 +233,12 @@
   scrollToWithinWindowBand={scrollToWithinWindowBand}
 >
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
+    <div class="flex h-9 border-b border-border bg-background">
+      <div class="h-full shrink-0" style={`width: ${sidebarWidthPx}px`} aria-hidden="true"></div>
+      <div class="flex-1 min-w-0 flex items-center pl-6">
+        <div class="truncate text-lg font-bold">{folder.displayName}</div>
+      </div>
+    </div>
     <div class="flex-1 min-h-0 flex">
       <ResizableSidebar
         defaultWidth={200}
@@ -241,6 +248,9 @@
         handleTestId="prompt-outliner-resize-handle"
         sidebarInsetYPx={16}
         sidebarBorderClass="border-border/50"
+        onWidthChange={(nextWidth) => {
+          sidebarWidthPx = nextWidth
+        }}
       >
         {#snippet sidebar()}
             <PromptFolderOutliner
@@ -258,8 +268,7 @@
           {#if folderData.errorMessage}
             <div class="flex-1 min-h-0 overflow-y-auto">
               <div class="pt-6 pl-6">
-                <h1 class="text-2xl font-bold">{folder.displayName}</h1>
-                <h2 class="mt-6 text-lg font-semibold mb-4">
+                <h2 class="text-lg font-semibold mb-4">
                   Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
                 </h2>
                 <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
@@ -310,7 +319,6 @@
 
 {#snippet headerRow(props)}
   <PromptFolderHeaderRow
-    folder={props.row.folder}
     promptCount={props.row.promptCount}
     isLoading={props.row.isLoading}
     rowId={props.rowId}

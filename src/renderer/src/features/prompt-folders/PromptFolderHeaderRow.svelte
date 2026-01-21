@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { PromptFolder } from '@shared/ipc'
   import type { PromptFolderData } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
@@ -13,7 +12,6 @@
   } from './promptFolderDescriptionSizing'
 
   type Props = {
-    folder: PromptFolder
     promptCount: number
     isLoading: boolean
     rowId: string
@@ -28,7 +26,6 @@
   }
 
   let {
-    folder,
     promptCount,
     isLoading,
     rowId,
@@ -62,8 +59,7 @@
 </script>
 
 <div class="pt-6" data-virtual-window-row>
-  <h1 class="text-2xl font-bold">{folder.displayName}</h1>
-  <div class="mt-4">
+  <div>
     <p class="text-sm font-semibold text-muted-foreground">Folder Description</p>
     <div class="mt-2">
       {#if overflowHost && !isLoading}

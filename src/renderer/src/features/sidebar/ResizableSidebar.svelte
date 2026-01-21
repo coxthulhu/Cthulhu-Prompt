@@ -10,7 +10,8 @@
     containerClass = 'h-screen',
     handleTestId = 'resizable-sidebar-handle',
     sidebarInsetYPx = 0,
-    sidebarBorderClass = 'border-border'
+    sidebarBorderClass = 'border-border',
+    onWidthChange
   } = $props<{
     defaultWidth: number
     minWidth: number
@@ -21,6 +22,7 @@
     handleTestId?: string
     sidebarInsetYPx?: number
     sidebarBorderClass?: string
+    onWidthChange?: (widthPx: number) => void
   }>()
 
   // Snapshot the initial width so prop updates don't override drag changes.
@@ -65,6 +67,11 @@
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', stopDragging)
     }
+  })
+
+  // Side effect: keep external layouts in sync with the current sidebar width.
+  $effect(() => {
+    onWidthChange?.(width)
   })
 
   // Ensure drag state is cleared if the component unmounts mid-drag.
