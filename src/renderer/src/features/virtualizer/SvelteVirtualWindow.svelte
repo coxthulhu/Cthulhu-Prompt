@@ -1,23 +1,18 @@
 <script lang="ts" generics="TRow extends { kind: string }">
-  import { onMount } from 'svelte'
-  import { SvelteMap } from 'svelte/reactivity'
-
   import {
     type VirtualWindowItem,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
-    type ScrollToWithinWindowBandType,
     type ScrollToRowCentered
   } from './virtualWindowTypes'
-  import { buildRows, type VirtualRowState } from './virtualWindowRows'
-  import {
-    computeAnchoredScrollTop,
-    findIndexAtOffset,
-    findNearestEligibleRow,
-    rowTouchesViewport
-  } from './virtualWindowRowUtils'
   import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
   import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
+  import { useVirtualWindowCallbacks } from './virtualWindowCallbacks.svelte.ts'
+  import { createVirtualWindowHydrationState } from './virtualWindowHydrationState.svelte.ts'
+  import { createVirtualWindowMeasurements } from './virtualWindowMeasurements.svelte.ts'
+  import { createVirtualWindowRowsState } from './virtualWindowRowsState.svelte.ts'
+  import { createVirtualWindowScrollState } from './virtualWindowScrollState.svelte.ts'
+  import { useVirtualWindowTestScroller } from './virtualWindowTestScroller.svelte.ts'
 
   type VirtualWindowProps = {
     items: VirtualWindowItem<TRow>[]
@@ -52,392 +47,109 @@
     spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
 
-  type RowState = VirtualRowState<TRow>
-
   let viewportFrame: HTMLDivElement | null = null
-  let lastScrollToWithinWindowBandCallback:
-    | ((scrollToWithinWindowBand: ScrollToWithinWindowBand) => void)
-    | null = null
-  let lastScrollToRowCenteredCallback: ((scrollToRowCentered: ScrollToRowCentered) => void) | null =
-    null
-  let lastCenterRowChangeCallback: ((row: TRow | null, rowId: string | null) => void) | null = null
-  let lastCenterRowId: string | null = null
-  let lastViewportMetricsCallback:
-    | ((metrics: { widthPx: number; heightPx: number; devicePixelRatio: number }) => void)
-    | null = null
-  let lastViewportMetrics:
-    | { widthPx: number; heightPx: number; devicePixelRatio: number }
-    | null = null
-
-  let containerWidth = $state(0)
-  let devicePixelRatio = $state(1)
-  let hasInitializedWidth = false
-  let previousWidthPx = 0
-  let widthResizeActive = $state(false)
-  let widthResizeVersion = 0
 
   const LEFT_SCROLL_PADDING_PX = 24
   const RIGHT_SCROLL_PADDING_PX = 8
   const WINDOW_BAND_PADDING_PX = 100
   const SCROLLBAR_WIDTH_PX = 10
 
-  // Subtract internal padding so width-based height measurements match the row content width.
-  const measurementWidth = $derived(
-    Math.max(
-      0,
-      containerWidth - LEFT_SCROLL_PADDING_PX - RIGHT_SCROLL_PADDING_PX - SCROLLBAR_WIDTH_PX
-    )
-  )
-
-  let scrollTopPx = $state(0)
-  let viewportHeight = $state(0)
-  let previousRowStates = $state<RowState[]>([])
-  let scrollAnchorMode = $state<'top' | 'center'>('top')
   let isPointerOverWindow = $state(false)
-  let scrollbarRevealVersion = $state(0)
-  let lastScrollTop = 0
 
-  const rowStates = $derived.by(() => {
-    if (measurementWidth <= 0) return []
-    return buildRows(items, rowRegistry, measurementWidth, viewportHeight, devicePixelRatio)
-  })
-  const rowHeightsPx = $derived(rowStates.map((row) => row.height))
-  const totalHeightPx = $derived(
-    rowHeightsPx.length === 0 ? 0 : rowHeightsPx.reduce((sum, height) => sum + height, 0)
-  )
-  const maxScrollTopPx = $derived(Math.max(0, totalHeightPx - viewportHeight))
-
-  const clampScrollTop = (nextScrollTop: number): number => {
-    return Math.min(Math.max(0, nextScrollTop), maxScrollTopPx)
-  }
-
-  const applyScrollTop = (nextScrollTop: number, isUserScroll: boolean): boolean => {
-    const clampedScrollTop = clampScrollTop(nextScrollTop)
-    if (clampedScrollTop === scrollTopPx) return false
-    scrollTopPx = clampedScrollTop
-    if (isUserScroll && scrollAnchorMode === 'center') {
-      scrollAnchorMode = 'top'
-    }
-    return true
-  }
-
-  const applyUserScrollTop = (nextScrollTop: number) => {
-    const didScroll = applyScrollTop(nextScrollTop, true)
-    if (didScroll) {
-      onUserScroll?.(scrollTopPx)
-    }
-  }
-
-  const applyProgrammaticScrollTop = (nextScrollTop: number) => {
-    applyScrollTop(nextScrollTop, false)
-  }
-
-  const hydrationStateByRowId = new SvelteMap<string, boolean>()
-  const overlayRowElements = new SvelteMap<string, HTMLDivElement>()
-
-  const scrollShadowActive = $derived(scrollTopPx > 0)
-
-  const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? viewportHeight / 2 : 0)
-
-  // Anchor viewport math to the scroll position we will apply after layout changes.
-  const anchoredScrollTopPx = $derived.by(() =>
-    computeAnchoredScrollTop(previousRowStates, rowStates, scrollTopPx, anchorOffsetPx)
-  )
-  const clampedAnchoredScrollTopPx = $derived(clampScrollTop(anchoredScrollTopPx))
-  const anchoredScrollBottomPx = $derived(clampedAnchoredScrollTopPx + viewportHeight)
-
-  const OVERSCAN_PX = 1000
-
-  // Overscan the viewport so rows above/below are rendered ahead of scroll.
-  const overscannedTopPx = $derived(Math.max(0, clampedAnchoredScrollTopPx - OVERSCAN_PX))
-  const overscannedBottomPx = $derived(anchoredScrollBottomPx + OVERSCAN_PX)
-
-  const visibleStartIndex = $derived(findIndexAtOffset(rowStates, overscannedTopPx))
-  const visibleEndIndex = $derived.by(() => {
-    if (rowStates.length === 0) return -1
-    const end = findIndexAtOffset(rowStates, overscannedBottomPx)
-    if (visibleStartIndex < 0) return end
-    return Math.max(visibleStartIndex, end)
-  })
-
-  const visibleRows = $derived.by(() => {
-    if (visibleStartIndex < 0 || visibleEndIndex < visibleStartIndex) return []
-    return rowStates.slice(visibleStartIndex, visibleEndIndex + 1)
-  })
-
-  // Derive hydration priorities so rows closest to the viewport center hydrate first.
-  const hydrationPriorityByRowId = $derived.by(() => {
-    if (!getHydrationPriorityEligibility) return new SvelteMap<string, number>()
-    if (visibleRows.length === 0) return new SvelteMap<string, number>()
-
-    const viewportCenterPx = clampedAnchoredScrollTopPx + viewportHeight / 2
-    const candidates = visibleRows
-      .filter((row) => getHydrationPriorityEligibility(row.rowData))
-      .map((row) => ({
-        id: row.id,
-        index: row.index,
-        distance: Math.abs(row.offset + row.height / 2 - viewportCenterPx)
-      }))
-
-    candidates.sort((a, b) => {
-      if (a.distance !== b.distance) return a.distance - b.distance
-      return a.index - b.index
+  const {
+    getMeasurementWidth,
+    getViewportHeight,
+    getDevicePixelRatio,
+    getWidthResizeActive
+  } = createVirtualWindowMeasurements({
+      getViewportFrame: () => viewportFrame,
+      leftScrollPaddingPx: LEFT_SCROLL_PADDING_PX,
+      rightScrollPaddingPx: RIGHT_SCROLL_PADDING_PX,
+      scrollbarWidthPx: SCROLLBAR_WIDTH_PX
     })
 
-    const priorities = new SvelteMap<string, number>()
-    candidates.forEach((candidate, priority) => {
-      priorities.set(candidate.id, priority)
-    })
+  const measurementWidth = $derived(getMeasurementWidth())
+  const viewportHeight = $derived(getViewportHeight())
+  const devicePixelRatio = $derived(getDevicePixelRatio())
 
-    return priorities
+  const { getRowStates, getTotalHeightPx } = createVirtualWindowRowsState({
+    getItems: () => items,
+    getRowRegistry: () => rowRegistry,
+    getMeasurementWidth,
+    getViewportHeight,
+    getDevicePixelRatio
   })
 
-  const centerRow = $derived.by(() => {
-    if (rowStates.length === 0 || viewportHeight <= 0) return null
-    const viewportCenterPx = clampedAnchoredScrollTopPx + viewportHeight / 2
-    return findNearestEligibleRow(rowStates, viewportCenterPx, getCenterRowEligibility)
-  })
-  const centerRowId = $derived(centerRow?.id ?? null)
-  const centerRowData = $derived(centerRow?.rowData ?? null)
-
-  const rowNeedsOverlay = (row: RowState): boolean =>
-    rowRegistry[row.rowData.kind].needsOverlayRow ?? false
-
-  const registerOverlayRow = (node: HTMLDivElement, rowId: string) => {
-    overlayRowElements.set(rowId, node)
-    return {
-      destroy: () => {
-        overlayRowElements.delete(rowId)
-      }
-    }
-  }
-
-  const shouldDehydrateRow = (row: RowState): boolean =>
-    widthResizeActive &&
-    row.rowData.kind === 'prompt-editor' &&
-    !rowTouchesViewport(row, clampedAnchoredScrollTopPx, anchoredScrollBottomPx)
-
-
-  const registerTestScroller = (): (() => void) | null => {
-    const controls = window.svelteVirtualWindowTestControls
-    if (!controls?.registerVirtualWindowScroller) return null
-    controls.registerVirtualWindowScroller(testId, {
-      scrollTo: (nextScrollTop) => applyUserScrollTop(nextScrollTop),
-      getScrollTop: () => scrollTopPx,
-      getScrollHeight: () => totalHeightPx
-    })
-    return () => {
-      controls.unregisterVirtualWindowScroller?.(testId)
-    }
-  }
-
-  const isRowHydrated = (row: RowState | null): boolean => {
-    if (!row) return true
-    if (!getHydrationPriorityEligibility?.(row.rowData)) return true
-    return hydrationStateByRowId.get(row.id) ?? false
-  }
-
-  const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
-    rowId: string,
-    offsetPx: number,
-    scrollType: ScrollToWithinWindowBandType
-  ) => {
-    if (viewportHeight <= 0) return
-
-    const row = rowStates.find((candidate) => candidate.id === rowId)
-    if (!row) return
-
-    const targetOffsetPx = row.offset + offsetPx
-    const bandTopPx = scrollTopPx + WINDOW_BAND_PADDING_PX
-    const bandBottomPx = scrollTopPx + viewportHeight - WINDOW_BAND_PADDING_PX
-
-    if (targetOffsetPx >= bandTopPx && targetOffsetPx <= bandBottomPx) return
-
-    let nextScrollTop = scrollTopPx
-
-    if (scrollType === 'center') {
-      nextScrollTop = targetOffsetPx - viewportHeight / 2
-    } else if (targetOffsetPx < bandTopPx) {
-      nextScrollTop = targetOffsetPx - WINDOW_BAND_PADDING_PX
-    } else {
-      nextScrollTop = targetOffsetPx + WINDOW_BAND_PADDING_PX - viewportHeight
-    }
-
-    nextScrollTop = clampScrollTop(nextScrollTop)
-    if (nextScrollTop === scrollTopPx) return
-
-    applyProgrammaticScrollTop(nextScrollTop)
-
-    if (scrollType === 'center') {
-      scrollAnchorMode = 'center'
-    }
-  }
-
-  const scrollToRowCentered: ScrollToRowCentered = (rowId: string, offsetPx: number) => {
-    if (viewportHeight <= 0) return
-
-    const row = rowStates.find((candidate) => candidate.id === rowId)
-    if (!row) return
-
-    const targetOffsetPx = row.offset + offsetPx
-    const nextScrollTop = clampScrollTop(targetOffsetPx - viewportHeight / 2)
-    if (nextScrollTop === scrollTopPx) return
-
-    applyProgrammaticScrollTop(nextScrollTop)
-
-    scrollAnchorMode = 'center'
-  }
-
-  // Side effect: expose the scroll helper once per callback change.
-  $effect(() => {
-    if (!onScrollToWithinWindowBand) {
-      lastScrollToWithinWindowBandCallback = null
-      return
-    }
-    if (onScrollToWithinWindowBand === lastScrollToWithinWindowBandCallback) return
-    lastScrollToWithinWindowBandCallback = onScrollToWithinWindowBand
-    onScrollToWithinWindowBand(scrollToWithinWindowBand)
+  const {
+    getScrollTopPx,
+    getScrollAnchorMode,
+    setScrollAnchorMode,
+    applyUserScrollTop,
+    getClampedAnchoredScrollTopPx,
+    getAnchoredScrollBottomPx,
+    getVisibleRows,
+    getScrollShadowActive,
+    getScrollbarRevealVersion,
+    scrollToWithinWindowBand,
+    scrollToRowCentered
+  } = createVirtualWindowScrollState({
+    getRowStates,
+    getTotalHeightPx,
+    getViewportHeight,
+    getOnUserScroll: () => onUserScroll,
+    windowBandPaddingPx: WINDOW_BAND_PADDING_PX
   })
 
-  // Side effect: expose the centered scroll helper once per callback change.
-  $effect(() => {
-    if (!onScrollToRowCentered) {
-      lastScrollToRowCenteredCallback = null
-      return
-    }
-    if (onScrollToRowCentered === lastScrollToRowCenteredCallback) return
-    lastScrollToRowCenteredCallback = onScrollToRowCentered
-    onScrollToRowCentered(scrollToRowCentered)
+  const {
+    getHydrationPriorityByRowId,
+    hydrationStateByRowId,
+    overlayRowElements,
+    registerOverlayRow,
+    rowNeedsOverlay,
+    shouldDehydrateRow,
+    getCenterRowId,
+    getCenterRowData
+  } = createVirtualWindowHydrationState({
+    getRowStates,
+    getVisibleRows,
+    getRowRegistry: () => rowRegistry,
+    getViewportHeight,
+    getClampedAnchoredScrollTopPx,
+    getAnchoredScrollBottomPx,
+    getWidthResizeActive,
+    getScrollAnchorMode,
+    setScrollAnchorMode,
+    getHydrationPriorityEligibility: () => getHydrationPriorityEligibility,
+    getCenterRowEligibility: () => getCenterRowEligibility
   })
 
-  // Side effect: notify consumers when the centered eligible row changes.
-  $effect(() => {
-    if (!onCenterRowChange) {
-      lastCenterRowChangeCallback = null
-      lastCenterRowId = null
-      return
-    }
+  const totalHeightPx = $derived(getTotalHeightPx())
+  const scrollTopPx = $derived(getScrollTopPx())
+  const clampedAnchoredScrollTopPx = $derived(getClampedAnchoredScrollTopPx())
+  const visibleRows = $derived(getVisibleRows())
+  const scrollShadowActive = $derived(getScrollShadowActive())
+  const scrollbarRevealVersion = $derived(getScrollbarRevealVersion())
+  const hydrationPriorityByRowId = $derived(getHydrationPriorityByRowId())
 
-    if (onCenterRowChange !== lastCenterRowChangeCallback) {
-      lastCenterRowChangeCallback = onCenterRowChange
-      lastCenterRowId = null
-    }
-
-    if (centerRowId === lastCenterRowId) return
-    lastCenterRowId = centerRowId
-    onCenterRowChange(centerRowData, centerRowId)
+  useVirtualWindowCallbacks({
+    getOnScrollToWithinWindowBand: () => onScrollToWithinWindowBand,
+    scrollToWithinWindowBand,
+    getOnScrollToRowCentered: () => onScrollToRowCentered,
+    scrollToRowCentered,
+    getOnCenterRowChange: () => onCenterRowChange,
+    getCenterRowId,
+    getCenterRowData,
+    getOnViewportMetricsChange: () => onViewportMetricsChange,
+    getMeasurementWidth,
+    getViewportHeight,
+    getDevicePixelRatio
   })
 
-  // Side effect: share viewport metrics so callers can align measurements.
-  $effect(() => {
-    if (!onViewportMetricsChange) {
-      lastViewportMetricsCallback = null
-      lastViewportMetrics = null
-      return
-    }
-
-    const metrics = {
-      widthPx: measurementWidth,
-      heightPx: viewportHeight,
-      devicePixelRatio
-    }
-
-    if (onViewportMetricsChange !== lastViewportMetricsCallback) {
-      lastViewportMetricsCallback = onViewportMetricsChange
-      lastViewportMetrics = null
-    }
-
-    if (
-      lastViewportMetrics &&
-      lastViewportMetrics.widthPx === metrics.widthPx &&
-      lastViewportMetrics.heightPx === metrics.heightPx &&
-      lastViewportMetrics.devicePixelRatio === metrics.devicePixelRatio
-    ) {
-      return
-    }
-
-    lastViewportMetrics = metrics
-    onViewportMetricsChange(metrics)
-  })
-
-  // Side effect: revert to top anchoring once rendered prompt editor rows hydrate during center anchoring.
-  $effect(() => {
-    if (scrollAnchorMode !== 'center') return
-    const hasUnhydratedVisibleRows = visibleRows.some(
-      (row) =>
-        getHydrationPriorityEligibility?.(row.rowData) &&
-        !isRowHydrated(row)
-    )
-    if (!hasUnhydratedVisibleRows) {
-      scrollAnchorMode = 'top'
-    }
-  })
-
-  const scheduleWidthResizeIdleReset = (version: number) => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        if (widthResizeVersion !== version) return
-        widthResizeActive = false
-      })
-    })
-  }
-
-  const applyContainerWidth = (nextWidth: number) => {
-    containerWidth = nextWidth
-    if (nextWidth <= 0) return
-    if (!hasInitializedWidth) {
-      hasInitializedWidth = true
-      previousWidthPx = nextWidth
-      return
-    }
-    if (nextWidth === previousWidthPx) return
-    previousWidthPx = nextWidth
-    widthResizeActive = true
-    const version = (widthResizeVersion += 1)
-    scheduleWidthResizeIdleReset(version)
-  }
-
-  // Side effect: track viewport sizing and register test scroll hooks.
-  onMount(() => {
-    if (viewportFrame) {
-      viewportHeight = viewportFrame.clientHeight
-      applyContainerWidth(Math.round(viewportFrame.clientWidth))
-    }
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      viewportHeight = entry.contentRect.height
-      applyContainerWidth(Math.round(entry.contentRect.width))
-    })
-
-    if (viewportFrame) {
-      resizeObserver.observe(viewportFrame)
-    }
-
-    const unregisterScroller = registerTestScroller()
-
-    return () => {
-      resizeObserver.disconnect()
-      unregisterScroller?.()
-    }
-  })
-
-  // Capture device pixel ratio so measurements stay in sync with zoom changes.
-  onMount(() => {
-    const applyDevicePixelRatio = () => {
-      devicePixelRatio = window.devicePixelRatio
-    }
-
-    const dprQuery = window.matchMedia('(resolution: 1dppx)')
-    applyDevicePixelRatio()
-    window.addEventListener('resize', applyDevicePixelRatio)
-    dprQuery.addEventListener('change', applyDevicePixelRatio)
-
-    return () => {
-      window.removeEventListener('resize', applyDevicePixelRatio)
-      dprQuery.removeEventListener('change', applyDevicePixelRatio)
-    }
+  useVirtualWindowTestScroller({
+    getTestId: () => testId,
+    getScrollTopPx,
+    getTotalHeightPx,
+    applyUserScrollTop
   })
 
   const handleWheel = (event: WheelEvent) => {
@@ -445,22 +157,6 @@
     applyUserScrollTop(scrollTopPx + event.deltaY)
   }
 
-  // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
-  $effect(() => {
-    if (clampedAnchoredScrollTopPx !== scrollTopPx) {
-      applyProgrammaticScrollTop(clampedAnchoredScrollTopPx)
-    }
-
-    previousRowStates = rowStates
-    void viewportHeight
-  })
-
-  // Side effect: reveal the scrollbar briefly after scroll changes.
-  $effect(() => {
-    if (scrollTopPx === lastScrollTop) return
-    lastScrollTop = scrollTopPx
-    scrollbarRevealVersion += 1
-  })
 </script>
 
 <div

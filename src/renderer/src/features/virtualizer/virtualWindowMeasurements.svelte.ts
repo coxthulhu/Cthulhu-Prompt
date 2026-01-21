@@ -1,0 +1,97 @@
+import { onMount } from 'svelte'
+
+type VirtualWindowMeasurementsOptions = {
+  getViewportFrame: () => HTMLDivElement | null
+  leftScrollPaddingPx: number
+  rightScrollPaddingPx: number
+  scrollbarWidthPx: number
+}
+
+export const createVirtualWindowMeasurements = (options: VirtualWindowMeasurementsOptions) => {
+  const { getViewportFrame, leftScrollPaddingPx, rightScrollPaddingPx, scrollbarWidthPx } = options
+
+  let containerWidth = $state(0)
+  let viewportHeight = $state(0)
+  let devicePixelRatio = $state(1)
+  let widthResizeActive = $state(false)
+  let hasInitializedWidth = false
+  let previousWidthPx = 0
+  let widthResizeVersion = 0
+
+  // Subtract internal padding so width-based height measurements match the row content width.
+  const measurementWidth = $derived(
+    Math.max(0, containerWidth - leftScrollPaddingPx - rightScrollPaddingPx - scrollbarWidthPx)
+  )
+
+  const scheduleWidthResizeIdleReset = (version: number) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (widthResizeVersion !== version) return
+        widthResizeActive = false
+      })
+    })
+  }
+
+  const applyContainerWidth = (nextWidth: number) => {
+    containerWidth = nextWidth
+    if (nextWidth <= 0) return
+    if (!hasInitializedWidth) {
+      hasInitializedWidth = true
+      previousWidthPx = nextWidth
+      return
+    }
+    if (nextWidth === previousWidthPx) return
+    previousWidthPx = nextWidth
+    widthResizeActive = true
+    const version = (widthResizeVersion += 1)
+    scheduleWidthResizeIdleReset(version)
+  }
+
+  // Side effect: track viewport sizing and width changes to drive row measurement.
+  onMount(() => {
+    const viewportFrame = getViewportFrame()
+    if (viewportFrame) {
+      viewportHeight = viewportFrame.clientHeight
+      applyContainerWidth(Math.round(viewportFrame.clientWidth))
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      viewportHeight = entry.contentRect.height
+      applyContainerWidth(Math.round(entry.contentRect.width))
+    })
+
+    if (viewportFrame) {
+      resizeObserver.observe(viewportFrame)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  })
+
+  // Side effect: capture device pixel ratio so measurements stay in sync with zoom changes.
+  onMount(() => {
+    const applyDevicePixelRatio = () => {
+      devicePixelRatio = window.devicePixelRatio
+    }
+
+    const dprQuery = window.matchMedia('(resolution: 1dppx)')
+    applyDevicePixelRatio()
+    window.addEventListener('resize', applyDevicePixelRatio)
+    dprQuery.addEventListener('change', applyDevicePixelRatio)
+
+    return () => {
+      window.removeEventListener('resize', applyDevicePixelRatio)
+      dprQuery.removeEventListener('change', applyDevicePixelRatio)
+    }
+  })
+
+  return {
+    getMeasurementWidth: () => measurementWidth,
+    getViewportHeight: () => viewportHeight,
+    getDevicePixelRatio: () => devicePixelRatio,
+    getWidthResizeActive: () => widthResizeActive
+  }
+}
