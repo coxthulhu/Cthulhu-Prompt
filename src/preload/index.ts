@@ -50,6 +50,22 @@ function loadRuntimeConfig(): RuntimeConfig {
 
 const runtimeConfig = loadRuntimeConfig()
 
+const windowControls = {
+  minimize: () => electronAPI.ipcRenderer.invoke('window-minimize'),
+  toggleMaximize: () => electronAPI.ipcRenderer.invoke('window-toggle-maximize'),
+  close: () => electronAPI.ipcRenderer.invoke('window-close'),
+  isMaximized: () => electronAPI.ipcRenderer.invoke('window-is-maximized'),
+  onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
+    const listener = (_event: unknown, isMaximized: boolean) => {
+      callback(isMaximized)
+    }
+    electronAPI.ipcRenderer.on('window-maximize-changed', listener)
+    return () => {
+      electronAPI.ipcRenderer.removeListener('window-maximize-changed', listener)
+    }
+  }
+}
+
 // Workspace APIs for renderer
 const workspaceAPI = {
   openSelectWorkspaceFolderDialog: () => electronAPI.ipcRenderer.invoke('select-workspace-folder'),
@@ -131,6 +147,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('promptAPI', promptAPI)
     contextBridge.exposeInMainWorld('api', api) // Backward compatibility
     contextBridge.exposeInMainWorld('runtimeConfig', runtimeConfig)
+    contextBridge.exposeInMainWorld('windowControls', windowControls)
   } catch (error) {
     console.error(error)
   }
@@ -145,4 +162,6 @@ if (process.contextIsolated) {
   window.api = api // Backward compatibility
   // @ts-expect-error (define in dts)
   window.runtimeConfig = runtimeConfig
+  // @ts-expect-error (define in dts)
+  window.windowControls = windowControls
 }

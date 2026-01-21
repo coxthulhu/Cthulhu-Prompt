@@ -49,6 +49,14 @@ interface PromptAPI {
 // Combined API for backward compatibility
 interface CombinedAPI extends WorkspaceAPI, PromptAPI {}
 
+interface WindowControls {
+  minimize: () => Promise<void>
+  toggleMaximize: () => Promise<void>
+  close: () => Promise<void>
+  isMaximized: () => Promise<boolean>
+  onMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -56,5 +64,6 @@ declare global {
     promptAPI: PromptAPI
     api: CombinedAPI // Backward compatibility
     runtimeConfig: RuntimeConfig
+    windowControls: WindowControls
   }
 }

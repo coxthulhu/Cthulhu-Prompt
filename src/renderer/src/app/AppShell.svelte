@@ -1,6 +1,7 @@
 <script lang="ts">
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
+  import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
@@ -35,6 +36,7 @@
   const windowTitle = $derived(
     isDevMode && executionFolderName ? `${baseWindowTitle} — ${executionFolderName}` : baseWindowTitle
   )
+  const isWindows = window.electron?.process?.platform === 'win32'
 
   const extractErrorMessage = (error: unknown): string | undefined =>
     error instanceof Error ? error.message : typeof error === 'string' ? error : undefined
@@ -184,49 +186,56 @@
   }
 </script>
 
-<ResizableSidebar
-  defaultWidth={200}
-  minWidth={200}
-  maxWidth={400}
-  handleTestId="app-sidebar-resize-handle"
->
-  {#snippet sidebar()}
-    <AppSidebar
-      {activeScreen}
-      {isWorkspaceReady}
-      {isDevMode}
-      {workspacePath}
-      {selectedPromptFolder}
-      onNavigate={navigateToScreen}
-      onPromptFolderSelect={(folder) => {
-        navigateToPromptFolder(folder)
-      }}
-    />
-  {/snippet}
+<div class="flex h-screen w-full flex-col">
+  {#if isWindows}
+    <WindowsTitleBar title={windowTitle} />
+  {/if}
 
-  {#snippet content()}
-    <div
-      data-slot="sidebar-inset"
-      class="bg-background relative flex w-full flex-1 flex-col min-h-0"
-    >
-      {#if activeScreen === 'home'}
-        <HomeScreen
-          {workspacePath}
-          {isWorkspaceReady}
-          {isWorkspaceLoading}
-          onWorkspaceSelect={selectWorkspace}
-          onWorkspaceCreate={createWorkspace}
-          onWorkspaceClear={() => void resetWorkspaceState()}
-        />
-      {:else if activeScreen === 'settings'}
-        <SettingsScreen />
-      {:else if activeScreen === 'prompt-folders'}
-        {#if selectedPromptFolder && workspacePath}
-          <PromptFolderScreen folder={selectedPromptFolder} />
+  <ResizableSidebar
+    defaultWidth={200}
+    minWidth={200}
+    maxWidth={400}
+    handleTestId="app-sidebar-resize-handle"
+    containerClass="flex-1 min-h-0"
+  >
+    {#snippet sidebar()}
+      <AppSidebar
+        {activeScreen}
+        {isWorkspaceReady}
+        {isDevMode}
+        {workspacePath}
+        {selectedPromptFolder}
+        onNavigate={navigateToScreen}
+        onPromptFolderSelect={(folder) => {
+          navigateToPromptFolder(folder)
+        }}
+      />
+    {/snippet}
+
+    {#snippet content()}
+      <div
+        data-slot="sidebar-inset"
+        class="bg-background relative flex w-full flex-1 flex-col min-h-0"
+      >
+        {#if activeScreen === 'home'}
+          <HomeScreen
+            {workspacePath}
+            {isWorkspaceReady}
+            {isWorkspaceLoading}
+            onWorkspaceSelect={selectWorkspace}
+            onWorkspaceCreate={createWorkspace}
+            onWorkspaceClear={() => void resetWorkspaceState()}
+          />
+        {:else if activeScreen === 'settings'}
+          <SettingsScreen />
+        {:else if activeScreen === 'prompt-folders'}
+          {#if selectedPromptFolder && workspacePath}
+            <PromptFolderScreen folder={selectedPromptFolder} />
+          {/if}
+        {:else if activeScreen === 'test-screen'}
+          <TestScreen />
         {/if}
-      {:else if activeScreen === 'test-screen'}
-        <TestScreen />
-      {/if}
-    </div>
-  {/snippet}
-</ResizableSidebar>
+      </div>
+    {/snippet}
+  </ResizableSidebar>
+</div>

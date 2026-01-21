@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { basename, join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
@@ -40,6 +40,40 @@ function encodeRuntimeConfig(config: RuntimeConfig): string {
   return `${RUNTIME_ARG_PREFIX}${Buffer.from(payload, 'utf8').toString('base64')}`
 }
 
+let windowControlsInitialized = false
+
+function setupWindowControlHandlers(): void {
+  if (windowControlsInitialized) {
+    return
+  }
+
+  windowControlsInitialized = true
+
+  const withWindow = (event: IpcMainInvokeEvent) => BrowserWindow.fromWebContents(event.sender)
+
+  ipcMain.handle('window-minimize', (event) => {
+    withWindow(event)?.minimize()
+  })
+
+  ipcMain.handle('window-toggle-maximize', (event) => {
+    const window = withWindow(event)
+    if (!window) return
+    if (window.isMaximized()) {
+      window.unmaximize()
+      return
+    }
+    window.maximize()
+  })
+
+  ipcMain.handle('window-close', (event) => {
+    withWindow(event)?.close()
+  })
+
+  ipcMain.handle('window-is-maximized', (event) => {
+    return Boolean(withWindow(event)?.isMaximized())
+  })
+}
+
 async function buildRuntimeConfig(): Promise<RuntimeConfig> {
   const devEnvironment = isDevEnvironment()
   const playwrightEnvironment = isPlaywrightEnvironment()
@@ -71,6 +105,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     show: false,
     autoHideMenuBar: true,
     title: 'Cthulhu Prompt',
+    frame: process.platform !== 'win32',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -82,6 +117,13 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
+
+  const emitMaximizeState = () => {
+    mainWindow.webContents.send('window-maximize-changed', mainWindow.isMaximized())
+  }
+
+  mainWindow.on('maximize', emitMaximizeState)
+  mainWindow.on('unmaximize', emitMaximizeState)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -125,6 +167,7 @@ export function startupNormally(): void {
 
     // Setup system settings IPC handlers
     SystemSettingsManager.setupIpcHandlers()
+    setupWindowControlHandlers()
 
     const runtimeConfig = await buildRuntimeConfig()
 
