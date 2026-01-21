@@ -218,6 +218,8 @@
         maxWidth={400}
         containerClass="h-full"
         handleTestId="prompt-outliner-resize-handle"
+        sidebarInsetYPx={16}
+        sidebarBorderClass="border-border/50"
       >
         {#snippet sidebar()}
           <PromptFolderOutliner

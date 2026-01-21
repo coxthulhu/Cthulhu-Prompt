@@ -8,7 +8,9 @@
     sidebar,
     content,
     containerClass = 'h-screen',
-    handleTestId = 'resizable-sidebar-handle'
+    handleTestId = 'resizable-sidebar-handle',
+    sidebarInsetYPx = 0,
+    sidebarBorderClass = 'border-border'
   } = $props<{
     defaultWidth: number
     minWidth: number
@@ -17,6 +19,8 @@
     content: () => unknown
     containerClass?: string
     handleTestId?: string
+    sidebarInsetYPx?: number
+    sidebarBorderClass?: string
   }>()
 
   // Snapshot the initial width so prop updates don't override drag changes.
@@ -68,16 +72,20 @@
 </script>
 
 <div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
-  <div class="relative flex-shrink-0 border-r border-border" style={`width: ${width}px`}>
-    {@render sidebar()}
+  <div class="relative flex-shrink-0" style={`width: ${width}px`}>
+    <div class="h-full" style={`padding: ${sidebarInsetYPx}px 0;`}>
+      <div class={`relative h-full border-r ${sidebarBorderClass}`}>
+        {@render sidebar()}
 
-    <button
-      type="button"
-      class="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-transparent z-10"
-      data-testid={handleTestId}
-      aria-label="Resize sidebar"
-      onmousedown={handleMouseDown}
-    ></button>
+        <button
+          type="button"
+          class="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-transparent z-10"
+          data-testid={handleTestId}
+          aria-label="Resize sidebar"
+          onmousedown={handleMouseDown}
+        ></button>
+      </div>
+    </div>
   </div>
 
   <div class="flex-1 min-w-0 min-h-0 flex">

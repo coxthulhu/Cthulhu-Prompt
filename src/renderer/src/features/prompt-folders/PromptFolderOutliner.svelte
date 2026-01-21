@@ -73,10 +73,7 @@
   })
 </script>
 
-<div class="flex h-full flex-col bg-muted/10">
-  <div class="px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-    Outliner
-  </div>
+<div class="flex h-full flex-col bg-background text-left">
   <div class="flex-1 min-h-0">
     <SvelteVirtualWindow
       items={outlinerItems}
@@ -91,7 +88,7 @@
 </div>
 
 {#snippet outlinerLoadingRow({ row })}
-  <div class="px-3 py-2 text-xs text-muted-foreground" data-kind={row.kind}>
+  <div class="px-3 py-2 text-xs text-muted-foreground text-left" data-kind={row.kind}>
     Loading prompts...
   </div>
 {/snippet}
@@ -100,7 +97,7 @@
   {@const isActive = activePromptId === row.promptId}
   <button
     type="button"
-    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs ${
+    class={`flex h-7 w-full items-center rounded-sm px-3 text-xs text-left ${
       isActive
         ? 'bg-accent text-accent-foreground'
         : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
