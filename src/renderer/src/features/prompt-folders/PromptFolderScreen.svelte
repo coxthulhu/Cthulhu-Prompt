@@ -16,6 +16,7 @@
     type ScrollToWithinWindowBand,
     type ScrollToRowCentered,
     type VirtualWindowItem,
+    type VirtualWindowScrollApi,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import {
@@ -41,6 +42,7 @@
   let previousFolderName = $state<string | null>(null)
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToRowCentered = $state<ScrollToRowCentered | null>(null)
+  let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let activePromptId = $state<string | null>(null)
   let outlinerAutoScrollRequestId = $state(0)
   let mainWindowMetrics = $state({
@@ -48,6 +50,8 @@
     heightPx: 0,
     devicePixelRatio: 1
   })
+  let scrollResetVersion = $state(0)
+  let lastScrollResetVersion = 0
 
   // Side effect: reload prompts on folder change.
   $effect(() => {
@@ -57,6 +61,15 @@
     previousFolderName = nextFolderName
     folderData = getPromptFolderData(nextFolderName)
     void loadPromptFolder(nextFolderName)
+    scrollResetVersion += 1
+  })
+
+  // Side effect: reset the virtual window scroll position after folder changes.
+  $effect(() => {
+    if (!scrollApi) return
+    if (scrollResetVersion === lastScrollResetVersion) return
+    lastScrollResetVersion = scrollResetVersion
+    scrollApi.scrollTo(0)
   })
 
   type PromptFolderRow =
@@ -241,6 +254,9 @@
               }}
               onScrollToRowCentered={(next) => {
                 scrollToRowCentered = next
+              }}
+              onScrollApi={(next) => {
+                scrollApi = next
               }}
               onCenterRowChange={(row) => {
                 activePromptId = row?.kind === 'prompt-editor' ? row.promptId : null

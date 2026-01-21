@@ -33,6 +33,11 @@ export type ScrollToWithinWindowBand = (
 
 export type ScrollToRowCentered = (rowId: string, offsetPx: number) => void
 
+export type VirtualWindowScrollApi = {
+  scrollTo: (scrollTopPx: number) => void
+  getScrollTop: () => number
+}
+
 export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   estimateHeight: (row: TRow, widthPx: number, heightPx: number) => number
   lookupMeasuredHeight?: (row: TRow, widthPx: number, devicePixelRatio: number) => number | null

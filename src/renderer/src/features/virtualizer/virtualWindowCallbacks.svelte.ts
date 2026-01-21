@@ -1,6 +1,7 @@
 import type {
   ScrollToWithinWindowBand,
-  ScrollToRowCentered
+  ScrollToRowCentered,
+  VirtualWindowScrollApi
 } from './virtualWindowTypes'
 
 type VirtualWindowCallbacksOptions<TRow extends { kind: string }> = {
@@ -13,6 +14,8 @@ type VirtualWindowCallbacksOptions<TRow extends { kind: string }> = {
   getOnCenterRowChange: () => ((row: TRow | null, rowId: string | null) => void) | undefined
   getCenterRowId: () => string | null
   getCenterRowData: () => TRow | null
+  getOnScrollApi: () => ((api: VirtualWindowScrollApi) => void) | undefined
+  getScrollApi: () => VirtualWindowScrollApi
   getOnViewportMetricsChange: () =>
     | ((metrics: { widthPx: number; heightPx: number; devicePixelRatio: number }) => void)
     | undefined
@@ -32,6 +35,8 @@ export const useVirtualWindowCallbacks = <TRow extends { kind: string }>(
     getOnCenterRowChange,
     getCenterRowId,
     getCenterRowData,
+    getOnScrollApi,
+    getScrollApi,
     getOnViewportMetricsChange,
     getMeasurementWidth,
     getViewportHeight,
@@ -45,6 +50,7 @@ export const useVirtualWindowCallbacks = <TRow extends { kind: string }>(
     null
   let lastCenterRowChangeCallback: ((row: TRow | null, rowId: string | null) => void) | null = null
   let lastCenterRowId: string | null = null
+  let lastScrollApiCallback: ((api: VirtualWindowScrollApi) => void) | null = null
   let lastViewportMetricsCallback:
     | ((metrics: { widthPx: number; heightPx: number; devicePixelRatio: number }) => void)
     | null = null
@@ -94,6 +100,18 @@ export const useVirtualWindowCallbacks = <TRow extends { kind: string }>(
     if (centerRowId === lastCenterRowId) return
     lastCenterRowId = centerRowId
     onCenterRowChange(getCenterRowData(), centerRowId)
+  })
+
+  // Side effect: expose the scroll API once per callback change.
+  $effect(() => {
+    const onScrollApi = getOnScrollApi()
+    if (!onScrollApi) {
+      lastScrollApiCallback = null
+      return
+    }
+    if (onScrollApi === lastScrollApiCallback) return
+    lastScrollApiCallback = onScrollApi
+    onScrollApi(getScrollApi())
   })
 
   // Side effect: share viewport metrics so callers can align measurements.

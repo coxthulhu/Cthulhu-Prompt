@@ -14,6 +14,7 @@ type VirtualWindowScrollStateOptions<TRow extends { kind: string }> = {
   getTotalHeightPx: () => number
   getViewportHeight: () => number
   getOnUserScroll: () => ((scrollTopPx: number) => void) | undefined
+  getOnScrollTopChange: () => ((scrollTopPx: number) => void) | undefined
   windowBandPaddingPx: number
 }
 
@@ -25,6 +26,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getTotalHeightPx,
     getViewportHeight,
     getOnUserScroll,
+    getOnScrollTopChange,
     windowBandPaddingPx
   } = options
 
@@ -51,6 +53,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     if (isUserScroll && scrollAnchorMode === 'center') {
       scrollAnchorMode = 'top'
     }
+    getOnScrollTopChange()?.(scrollTopPx)
     return true
   }
 

@@ -3,7 +3,8 @@
     type VirtualWindowItem,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
-    type ScrollToRowCentered
+    type ScrollToRowCentered,
+    type VirtualWindowScrollApi
   } from './virtualWindowTypes'
   import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
   import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
@@ -23,6 +24,8 @@
     onScrollToRowCentered?: (scrollToRowCentered: ScrollToRowCentered) => void
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
     onUserScroll?: (scrollTopPx: number) => void
+    onScrollTopChange?: (scrollTopPx: number) => void
+    onScrollApi?: (api: VirtualWindowScrollApi) => void
     onViewportMetricsChange?: (metrics: {
       widthPx: number
       heightPx: number
@@ -42,6 +45,8 @@
     onScrollToRowCentered,
     onCenterRowChange,
     onUserScroll,
+    onScrollTopChange,
+    onScrollApi,
     onViewportMetricsChange,
     testId = 'virtual-window',
     spacerTestId = 'virtual-window-spacer'
@@ -85,6 +90,7 @@
     getScrollAnchorMode,
     setScrollAnchorMode,
     applyUserScrollTop,
+    applyProgrammaticScrollTop,
     getClampedAnchoredScrollTopPx,
     getAnchoredScrollBottomPx,
     getVisibleRows,
@@ -97,6 +103,7 @@
     getTotalHeightPx,
     getViewportHeight,
     getOnUserScroll: () => onUserScroll,
+    getOnScrollTopChange: () => onScrollTopChange,
     windowBandPaddingPx: WINDOW_BAND_PADDING_PX
   })
 
@@ -131,6 +138,11 @@
   const scrollbarRevealVersion = $derived(getScrollbarRevealVersion())
   const hydrationPriorityByRowId = $derived(getHydrationPriorityByRowId())
 
+  const scrollApi: VirtualWindowScrollApi = {
+    scrollTo: (scrollTopPx: number) => applyProgrammaticScrollTop(scrollTopPx),
+    getScrollTop: () => getScrollTopPx()
+  }
+
   useVirtualWindowCallbacks({
     getOnScrollToWithinWindowBand: () => onScrollToWithinWindowBand,
     scrollToWithinWindowBand,
@@ -139,6 +151,8 @@
     getOnCenterRowChange: () => onCenterRowChange,
     getCenterRowId,
     getCenterRowData,
+    getOnScrollApi: () => onScrollApi,
+    getScrollApi: () => scrollApi,
     getOnViewportMetricsChange: () => onViewportMetricsChange,
     getMeasurementWidth,
     getViewportHeight,
@@ -155,6 +169,16 @@
   const handleWheel = (event: WheelEvent) => {
     if (viewportHeight <= 0) return
     applyUserScrollTop(scrollTopPx + event.deltaY)
+  }
+
+  const handleNativeScroll = (event: Event) => {
+    const target = event.currentTarget as HTMLElement | null
+    if (!target) return
+    const delta = target.scrollTop
+    if (delta === 0) return
+    // Convert browser-driven scrollTop changes (focus/tab reveal) into virtual scroll updates.
+    target.scrollTop = 0
+    applyUserScrollTop(getScrollTopPx() + delta)
   }
 
 </script>
@@ -178,6 +202,7 @@
         event.preventDefault()
         handleWheel(event)
       }}
+      onscroll={handleNativeScroll}
     >
       <div
         aria-hidden="true"
