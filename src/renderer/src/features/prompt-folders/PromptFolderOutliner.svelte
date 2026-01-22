@@ -14,7 +14,7 @@
     activeRow: OutlinerActiveRow | null
     autoScrollRequestId: number
     onSelectPrompt: (promptId: string) => void
-    onSelectFolderDescription: () => void
+    onSelectFolderSettings: () => void
   }
 
   let {
@@ -24,19 +24,19 @@
     activeRow,
     autoScrollRequestId,
     onSelectPrompt,
-    onSelectFolderDescription
+    onSelectFolderSettings
   }: Props = $props()
 
   type OutlinerRow =
     | { kind: 'loading' }
-    | { kind: 'folder-description' }
+    | { kind: 'folder-settings' }
     | { kind: 'prompt'; promptId: string }
   type OutlinerActiveRow =
-    | { kind: 'folder-description' }
+    | { kind: 'folder-settings' }
     | { kind: 'prompt'; promptId: string }
   const OUTLINER_ROW_HEIGHT_PX = 28
   const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
-  const OUTLINER_FOLDER_DESCRIPTION_ROW_ID = 'outliner-folder-description'
+  const OUTLINER_FOLDER_SETTINGS_ROW_ID = 'outliner-folder-settings'
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastAutoScrollRequestId = $state(0)
 
@@ -45,9 +45,9 @@
       estimateHeight: () => 32,
       snippet: outlinerLoadingRow
     },
-    'folder-description': {
+    'folder-settings': {
       estimateHeight: () => 28,
-      snippet: outlinerFolderDescriptionRow
+      snippet: outlinerFolderSettingsRow
     },
     prompt: {
       estimateHeight: () => 28,
@@ -62,7 +62,7 @@
     }
 
     const items: VirtualWindowItem<OutlinerRow>[] = [
-      { id: OUTLINER_FOLDER_DESCRIPTION_ROW_ID, row: { kind: 'folder-description' } }
+      { id: OUTLINER_FOLDER_SETTINGS_ROW_ID, row: { kind: 'folder-settings' } }
     ]
     promptIds.forEach((promptId) => {
       items.push({ id: `outliner-${promptId}`, row: { kind: 'prompt', promptId } })
@@ -78,7 +78,7 @@
 
   const getActiveOutlinerRowId = (row: OutlinerActiveRow | null): string | null => {
     if (!row) return null
-    if (row.kind === 'folder-description') return OUTLINER_FOLDER_DESCRIPTION_ROW_ID
+    if (row.kind === 'folder-settings') return OUTLINER_FOLDER_SETTINGS_ROW_ID
     return `outliner-${row.promptId}`
   }
 
@@ -111,17 +111,17 @@
   </div>
 {/snippet}
 
-{#snippet outlinerFolderDescriptionRow()}
-  {@const isActive = activeRow?.kind === 'folder-description'}
+{#snippet outlinerFolderSettingsRow()}
+  {@const isActive = activeRow?.kind === 'folder-settings'}
   <button
     type="button"
     class={`flex h-7 w-full cursor-pointer items-center rounded-sm px-3 text-sm text-left text-white ${
       isActive ? 'bg-accent' : 'hover:bg-muted/60'
     }`}
     aria-current={isActive ? 'true' : undefined}
-    onclick={onSelectFolderDescription}
+    onclick={onSelectFolderSettings}
   >
-    <span class="min-w-0 flex-1 truncate">Folder Description</span>
+    <span class="min-w-0 flex-1 truncate">Folder Settings</span>
   </button>
 {/snippet}
 

@@ -5,14 +5,13 @@
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import {
-    HEADER_EDITOR_LEFT_OFFSET_PX,
-    HEADER_EDITOR_TOP_OFFSET_PX,
-    estimatePromptFolderDescriptionMonacoHeight,
-    getPromptFolderHeaderHeightPx
-  } from './promptFolderDescriptionSizing'
+    SETTINGS_EDITOR_LEFT_OFFSET_PX,
+    SETTINGS_EDITOR_TOP_OFFSET_PX,
+    estimatePromptFolderSettingsMonacoHeight,
+    getPromptFolderSettingsHeightPx
+  } from './promptFolderSettingsSizing'
 
   type Props = {
-    promptCount: number
     isLoading: boolean
     rowId: string
     virtualWindowWidthPx: number
@@ -26,7 +25,6 @@
   }
 
   let {
-    promptCount,
     isLoading,
     rowId,
     virtualWindowWidthPx,
@@ -43,7 +41,7 @@
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
 
   const descriptionValue = $derived(folderData.descriptionDraft.text)
-  const placeholderHeightPx = $derived(estimatePromptFolderDescriptionMonacoHeight(descriptionValue))
+  const placeholderHeightPx = $derived(estimatePromptFolderSettingsMonacoHeight(descriptionValue))
 
   // Side effect: align Monaco overflow widgets with the description editor inside the virtualized row.
   $effect(() => {
@@ -51,7 +49,7 @@
       overlayRowElement,
       overflowHost,
       overflowPaddingHost,
-      padding: `${HEADER_EDITOR_TOP_OFFSET_PX}px 0 0 ${HEADER_EDITOR_LEFT_OFFSET_PX}px`
+      padding: `${SETTINGS_EDITOR_TOP_OFFSET_PX}px 0 0 ${SETTINGS_EDITOR_LEFT_OFFSET_PX}px`
     })
     overflowPaddingHost = next.overflowPaddingHost
     overflowHost = next.overflowHost
@@ -60,7 +58,8 @@
 
 <div class="pt-6" data-virtual-window-row>
   <div>
-    <p class="text-sm font-semibold text-muted-foreground">Folder Description</p>
+    <h2 class="text-lg font-semibold">Folder Settings</h2>
+    <p class="mt-2 text-sm font-semibold text-muted-foreground">Folder Description</p>
     <div class="mt-2">
       {#if overflowHost && !isLoading}
         <HydratableMonacoEditor
@@ -75,7 +74,7 @@
           {onHydrationChange}
           onChange={(text, meta) => {
             folderData.setDescriptionText(text, {
-              measuredHeightPx: getPromptFolderHeaderHeightPx(meta.heightPx),
+              measuredHeightPx: getPromptFolderSettingsHeightPx(meta.heightPx),
               widthPx: virtualWindowWidthPx,
               devicePixelRatio
             })
@@ -86,7 +85,4 @@
       {/if}
     </div>
   </div>
-  <h2 class="mt-6 text-lg font-semibold mb-4">
-    Prompts ({isLoading ? 0 : promptCount})
-  </h2>
 </div>

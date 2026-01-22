@@ -31,8 +31,11 @@
   } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { promptEditorRowId } from './promptFolderRowIds'
-  import PromptFolderHeaderRow from './PromptFolderHeaderRow.svelte'
-  import { estimatePromptFolderHeaderHeight } from './promptFolderDescriptionSizing'
+  import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
+  import {
+    estimatePromptFolderSettingsHeight,
+    PROMPT_HEADER_ROW_HEIGHT_PX
+  } from './promptFolderSettingsSizing'
   import PromptFolderOutliner from './PromptFolderOutliner.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
@@ -71,7 +74,8 @@
   })
 
   type PromptFolderRow =
-    | { kind: 'header'; promptCount: number; isLoading: boolean; folder: PromptFolder }
+    | { kind: 'folder-settings'; isLoading: boolean; folder: PromptFolder }
+    | { kind: 'prompt-header'; promptCount: number; isLoading: boolean }
     | { kind: 'placeholder'; messageKind: 'loading' | 'empty' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
@@ -81,12 +85,12 @@
     Extract<PromptFolderRow, { kind: 'prompt-editor' }>
   >
   type ActiveOutlinerRow =
-    | { kind: 'folder-description' }
+    | { kind: 'folder-settings' }
     | { kind: 'prompt'; promptId: string }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
-    header: {
-      estimateHeight: () => estimatePromptFolderHeaderHeight(folderData.descriptionDraft.text),
+    'folder-settings': {
+      estimateHeight: () => estimatePromptFolderSettingsHeight(folderData.descriptionDraft.text),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeight(
           row.folder.folderName,
@@ -94,7 +98,11 @@
           devicePixelRatio
         ),
       needsOverlayRow: true,
-      snippet: headerRow
+      snippet: folderSettingsRow
+    },
+    'prompt-header': {
+      estimateHeight: () => PROMPT_HEADER_ROW_HEIGHT_PX,
+      snippet: promptHeaderRow
     },
     placeholder: {
       estimateHeight: () => 120,
@@ -124,12 +132,19 @@
     const isLoading = folderData.isLoading
     const rows: VirtualWindowItem<PromptFolderRow>[] = [
       {
-        id: 'header',
+        id: 'folder-settings',
         row: {
-          kind: 'header',
-          promptCount: promptIds.length,
+          kind: 'folder-settings',
           isLoading,
           folder
+        }
+      },
+      {
+        id: 'prompt-header',
+        row: {
+          kind: 'prompt-header',
+          promptCount: promptIds.length,
+          isLoading
         }
       }
     ]
@@ -174,11 +189,11 @@
     scrollToAndTrackRowCentered(promptEditorRowId(promptId))
   }
 
-  const handleOutlinerFolderDescriptionClick = () => {
+  const handleOutlinerFolderSettingsClick = () => {
     if (!scrollToAndTrackRowCentered) return
-    activeOutlinerRow = { kind: 'folder-description' }
+    activeOutlinerRow = { kind: 'folder-settings' }
     outlinerAutoScrollRequestId += 1
-    scrollToAndTrackRowCentered('header')
+    scrollToAndTrackRowCentered('folder-settings')
   }
 
   const handleAddPrompt = (previousPromptId: string | null) => {
@@ -230,7 +245,7 @@
               activeRow={activeOutlinerRow}
               autoScrollRequestId={outlinerAutoScrollRequestId}
               onSelectPrompt={handleOutlinerClick}
-              onSelectFolderDescription={handleOutlinerFolderDescriptionClick}
+              onSelectFolderSettings={handleOutlinerFolderSettingsClick}
             />
           {/snippet}
 
@@ -252,7 +267,7 @@
               spacerTestId="prompt-folder-virtual-window-spacer"
               getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
               getCenterRowEligibility={(row) =>
-                row.kind === 'prompt-editor' || row.kind === 'header'}
+                row.kind === 'prompt-editor' || row.kind === 'folder-settings'}
               bind:scrollToWithinWindowBand
               bind:scrollToAndTrackRowCentered
               bind:scrollApi
@@ -262,8 +277,8 @@
                   activeOutlinerRow = { kind: 'prompt', promptId: row.promptId }
                   return
                 }
-                if (row?.kind === 'header') {
-                  activeOutlinerRow = { kind: 'folder-description' }
+                if (row?.kind === 'folder-settings') {
+                  activeOutlinerRow = { kind: 'folder-settings' }
                   return
                 }
                 activeOutlinerRow = null
@@ -279,9 +294,8 @@
   </main>
 </PromptFolderFindIntegration>
 
-{#snippet headerRow(props)}
-  <PromptFolderHeaderRow
-    promptCount={props.row.promptCount}
+{#snippet folderSettingsRow(props)}
+  <PromptFolderSettingsRow
     isLoading={props.row.isLoading}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
@@ -293,6 +307,12 @@
     onHydrationChange={props.onHydrationChange}
     {folderData}
   />
+{/snippet}
+
+{#snippet promptHeaderRow({ row })}
+  <div class="pt-6 pb-4" data-virtual-window-row>
+    <h2 class="text-lg font-semibold">Prompts ({row.isLoading ? 0 : row.promptCount})</h2>
+  </div>
 {/snippet}
 
 {#snippet placeholderRow({ row })}
