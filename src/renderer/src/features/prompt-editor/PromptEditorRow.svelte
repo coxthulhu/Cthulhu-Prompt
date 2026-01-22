@@ -8,6 +8,7 @@
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
+  import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
   import { findMatchRange } from '../prompt-folders/find/promptFolderFindText'
   import type {
@@ -19,7 +20,7 @@
     estimatePromptEditorHeight,
     getMonacoHeightFromRowPx,
     getRowHeightPx,
-    MIN_MONACO_HEIGHT_PX,
+    getMinMonacoHeightPx,
     MONACO_PADDING_PX,
     TITLE_BAR_HEIGHT_PX
   } from './promptEditorSizing'
@@ -57,14 +58,21 @@
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
   } = $props()
+  const systemSettings = getSystemSettingsContext()
+  const promptFontSize = $derived(systemSettings.promptFontSize)
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => getPromptData(promptId))
   const estimatedRowHeightPx = $derived.by(() =>
-    estimatePromptEditorHeight(promptData.draft.text, virtualWindowWidthPx, virtualWindowHeightPx)
+    estimatePromptEditorHeight(
+      promptData.draft.text,
+      virtualWindowWidthPx,
+      virtualWindowHeightPx,
+      promptFontSize
+    )
   )
   const placeholderMonacoHeightPx = $derived.by(() => {
     const baseHeightPx = measuredHeightPx ?? estimatedRowHeightPx
-    return Math.max(MIN_MONACO_HEIGHT_PX, getMonacoHeightFromRowPx(baseHeightPx))
+    return Math.max(getMinMonacoHeightPx(promptFontSize), getMonacoHeightFromRowPx(baseHeightPx))
   })
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())

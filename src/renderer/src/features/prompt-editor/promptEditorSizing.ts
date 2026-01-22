@@ -1,19 +1,30 @@
-export const LINE_HEIGHT_PX = 20
-export const MIN_MONACO_HEIGHT_PX = 60
+const LINE_HEIGHT_RATIO = 1.25
+const MIN_VISIBLE_LINES = 3
 const MAX_VISIBLE_LINES = 40
-const MAX_MONACO_HEIGHT_PX = MAX_VISIBLE_LINES * LINE_HEIGHT_PX
 export const TITLE_BAR_HEIGHT_PX = 32
 export const MONACO_PADDING_PX = 10
 export const ADDITIONAL_GAP_PX = 2
 const ROW_CHROME_HEIGHT_PX = TITLE_BAR_HEIGHT_PX + MONACO_PADDING_PX + ADDITIONAL_GAP_PX
 
-export const clampMonacoHeightPx = (heightPx: number): number => {
-  return Math.min(Math.max(heightPx, MIN_MONACO_HEIGHT_PX), MAX_MONACO_HEIGHT_PX)
+export const getLineHeightPx = (fontSize: number): number =>
+  Math.round(fontSize * LINE_HEIGHT_RATIO)
+
+export const getMinMonacoHeightPx = (fontSize: number): number =>
+  getLineHeightPx(fontSize) * MIN_VISIBLE_LINES
+
+const getMaxMonacoHeightPx = (fontSize: number): number =>
+  getLineHeightPx(fontSize) * MAX_VISIBLE_LINES
+
+export const clampMonacoHeightPx = (heightPx: number, fontSize: number): number => {
+  return Math.min(
+    Math.max(heightPx, getMinMonacoHeightPx(fontSize)),
+    getMaxMonacoHeightPx(fontSize)
+  )
 }
 
-export const estimateMonacoHeightPx = (text: string): number => {
+export const estimateMonacoHeightPx = (text: string, fontSize: number): number => {
   const lineCount = Math.max(1, text.split('\n').length)
-  return clampMonacoHeightPx(lineCount * LINE_HEIGHT_PX)
+  return clampMonacoHeightPx(lineCount * getLineHeightPx(fontSize), fontSize)
 }
 
 export const getRowHeightPx = (monacoHeightPx: number): number => {
@@ -27,9 +38,10 @@ export const getMonacoHeightFromRowPx = (rowHeightPx: number): number => {
 export const estimatePromptEditorHeight = (
   promptText: string,
   _widthPx: number,
-  _heightPx: number
+  _heightPx: number,
+  fontSize: number
 ): number => {
   void _widthPx
   void _heightPx
-  return getRowHeightPx(estimateMonacoHeightPx(promptText))
+  return getRowHeightPx(estimateMonacoHeightPx(promptText, fontSize))
 }

@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { estimatePromptEditorHeight } from '@renderer/features/prompt-editor/promptEditorSizing'
+import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
@@ -79,7 +80,12 @@ async function measurePromptFolders(
   const folderDisplayName = prompt.title
   const rowSelector = promptEditorSelector(prompt.id)
   const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
-  const estimatedRowHeight = estimatePromptEditorHeight(prompt.promptText, 0)
+  const estimatedRowHeight = estimatePromptEditorHeight(
+    prompt.promptText,
+    0,
+    0,
+    DEFAULT_SYSTEM_SETTINGS.promptFontSize
+  )
   const setupPrompt =
     folderDisplayName === heightTestPrompts.singleLine.title
       ? heightTestPrompts.tenLine

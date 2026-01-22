@@ -8,6 +8,8 @@
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
+  import { useSystemSettingsQuery } from '@renderer/api/systemSettings'
+  import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
   import {
     useCheckWorkspaceFolderExistsMutation,
     useCreateWorkspaceMutation
@@ -18,14 +20,24 @@
   } from '@renderer/features/workspace/types'
   import type { PromptFolder } from '@shared/ipc'
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
+  import { setSystemSettingsContext } from './systemSettingsContext'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
+  const systemSettingsQuery = $derived(useSystemSettingsQuery())
+  const promptFontSize = $derived(
+    systemSettingsQuery.data?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
+  )
+  const systemSettings = $state({
+    promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize
+  })
 
   const { mutateAsync: checkWorkspaceFolderExists } = useCheckWorkspaceFolderExistsMutation()
   const { mutateAsync: createWorkspaceAtPath } = useCreateWorkspaceMutation()
+
+  setSystemSettingsContext(systemSettings)
 
   let activeScreen = $state<ScreenId>('home')
   let workspacePath = $state<string | null>(null)
@@ -45,6 +57,11 @@
     const suffix = message ? `: ${message}` : ''
     console.error(`Workspace ${context} error${suffix}`)
   }
+
+  // Side effect: keep the settings context aligned with the latest persisted values.
+  $effect(() => {
+    systemSettings.promptFontSize = promptFontSize
+  })
 
   const setWorkspaceLoading = (value: boolean) => {
     isWorkspaceLoading = value

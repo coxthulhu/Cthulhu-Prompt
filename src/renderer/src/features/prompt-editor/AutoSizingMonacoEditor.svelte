@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
+  import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { FindController } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
   import { FindModelBoundToEditorModel } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findModel'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
-  import { clampMonacoHeightPx, LINE_HEIGHT_PX, MIN_MONACO_HEIGHT_PX } from './promptEditorSizing'
+  import { clampMonacoHeightPx, getMinMonacoHeightPx } from './promptEditorSizing'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
 
   type Props = {
@@ -40,9 +41,13 @@
     onSelectionChange
   }: Props = $props()
 
+  const systemSettings = getSystemSettingsContext()
+  const promptFontSize = $derived(systemSettings.promptFontSize)
+  const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize))
+
   let container: HTMLDivElement | null = null
   let editor: monaco.editor.IStandaloneCodeEditor | null = null
-  let monacoHeightPx = MIN_MONACO_HEIGHT_PX
+  let monacoHeightPx = $state(0)
   let lastContainerWidthPx = 0
   let isLayingOut = false
   let pendingCursorPosition: monaco.IPosition | null = null
@@ -82,7 +87,7 @@
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
-    return clampMonacoHeightPx(Math.ceil(editor.getContentHeight()))
+    return clampMonacoHeightPx(Math.ceil(editor.getContentHeight()), promptFontSize)
   }
 
   const layoutEditor = (nextHeightPx?: number): number => {
@@ -264,6 +269,12 @@
     pendingCursorPosition = null
   }
 
+  // Side effect: keep the initial Monaco height aligned with the current font size.
+  $effect(() => {
+    if (editor) return
+    monacoHeightPx = minMonacoHeightPx
+  })
+
   // Side effect: create Monaco once the container is ready; dispose on unmount.
   onMount(() => {
     if (!container) return
@@ -280,8 +291,7 @@
       scrollBeyondLastLine: false,
       wordWrap: 'on',
       wordWrapColumn: 80,
-      fontSize: 16,
-      lineHeight: LINE_HEIGHT_PX,
+      fontSize: promptFontSize,
       lineNumbers: 'on',
       lineNumbersMinChars: 3,
       scrollbar: { alwaysConsumeMouseWheel: false },
@@ -290,7 +300,7 @@
       smoothScrolling: false,
       renderLineHighlightOnlyWhenFocus: true,
       overflowWidgetsDomNode,
-      dimension: { width: measuredWidthPx, height: MIN_MONACO_HEIGHT_PX }
+      dimension: { width: measuredWidthPx, height: minMonacoHeightPx }
     })
 
     editor = nextEditor
@@ -335,6 +345,16 @@
     }
   })
 
+  // Side effect: keep Monaco font size aligned with system settings.
+  $effect(() => {
+    if (!editor) return
+    editor.updateOptions({ fontSize: promptFontSize })
+    const previousHeightPx = monacoHeightPx
+    const nextHeightPx = measureContentHeightPx()
+    const updatedHeightPx = layoutEditor(nextHeightPx)
+    emitChange(editor.getValue(), updatedHeightPx !== previousHeightPx, updatedHeightPx)
+  })
+
   // Side effect: when the virtualized container width changes, relayout Monaco and sync cached height.
   $effect(() => {
     if (!editor) return
@@ -373,5 +393,5 @@
 
 <div
   bind:this={container}
-  style={`min-height:${MIN_MONACO_HEIGHT_PX}px; position: relative;`}
+  style={`min-height:${minMonacoHeightPx}px; position: relative;`}
 ></div>

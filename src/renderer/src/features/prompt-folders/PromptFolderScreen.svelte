@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import type { PromptFolder } from '@shared/ipc'
+  import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import {
@@ -39,6 +40,8 @@
   import PromptFolderOutliner from './PromptFolderOutliner.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
+  const systemSettings = getSystemSettingsContext()
+  const promptFontSize = $derived(systemSettings.promptFontSize)
   const folderName = $derived(folder.folderName)
   const initialFolderData = getPromptFolderData(untrack(() => folder.folderName))
   let folderData = $state(initialFolderData)
@@ -90,7 +93,8 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
-      estimateHeight: () => estimatePromptFolderSettingsHeight(folderData.descriptionDraft.text),
+      estimateHeight: () =>
+        estimatePromptFolderSettingsHeight(folderData.descriptionDraft.text, promptFontSize),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeight(
           row.folder.folderName,
@@ -115,7 +119,12 @@
     },
     'prompt-editor': {
       estimateHeight: (row, widthPx, heightPx) =>
-        estimatePromptEditorHeight(getPromptData(row.promptId).draft.text, widthPx, heightPx),
+        estimatePromptEditorHeight(
+          getPromptData(row.promptId).draft.text,
+          widthPx,
+          heightPx,
+          promptFontSize
+        ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
         lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio),
       needsOverlayRow: true,
