@@ -152,7 +152,8 @@
               data-testid="select-workspace-folder-button"
               onclick={handleSelectFolder}
               disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
-              class="flex h-12 flex-1 items-center gap-2"
+              variant="outline"
+              class="flex h-12 flex-1 items-center gap-2 text-white hover:text-white"
               style="font-size: 1rem; line-height: 1.5rem;"
             >
               <FolderOpen class="relative top-[1px] size-5" />
