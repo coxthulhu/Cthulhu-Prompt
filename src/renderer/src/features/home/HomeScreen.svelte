@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FolderOpen, X } from 'lucide-svelte'
+  import { FolderOpen, FolderPlus, X } from 'lucide-svelte'
   import { Button } from '@renderer/common/ui/button'
   import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
   import {
@@ -11,7 +11,10 @@
     DialogTitle,
     ErrorDialog
   } from '@renderer/common/ui/dialog'
-  import { useOpenSelectWorkspaceFolderDialogMutation } from '@renderer/api/workspace'
+  import {
+    useCheckWorkspaceFolderExistsMutation,
+    useOpenSelectWorkspaceFolderDialogMutation
+  } from '@renderer/api/workspace'
   import {
     isWorkspaceRootPath,
     workspaceRootPathErrorMessage
@@ -42,13 +45,25 @@
 
   const { mutateAsync: openWorkspaceFolderDialog, isPending: isOpeningWorkspaceFolderDialog } =
     useOpenSelectWorkspaceFolderDialogMutation()
+  const { mutateAsync: checkWorkspaceFolderExists } = useCheckWorkspaceFolderExistsMutation()
 
   let showSetupDialog = $state(false)
+  let showExistingWorkspaceDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
+  let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
+
+  const checkWorkspaceExists = async (path: string) => {
+    const promptsPath = `${path}/prompts`
+    const settingsPath = `${path}/WorkspaceSettings.json`
+    const promptsExists = await checkWorkspaceFolderExists(promptsPath)
+    const settingsExists = await checkWorkspaceFolderExists(settingsPath)
+    return promptsExists && settingsExists
+  }
 
   const handleSelectFolder = async () => {
+    activeWorkspaceAction = 'select'
     try {
       const result = await openWorkspaceFolderDialog()
 
@@ -75,23 +90,92 @@
       }
     } catch (error) {
       console.error('Error selecting folder:', error)
+    } finally {
+      if (activeWorkspaceAction === 'select') {
+        activeWorkspaceAction = null
+      }
+    }
+  }
+
+  const handleCreateFolder = async () => {
+    activeWorkspaceAction = 'create'
+    try {
+      const result = await openWorkspaceFolderDialog()
+
+      if (!result.dialogCancelled && result.filePaths.length > 0) {
+        const selectedPath = result.filePaths[0]
+        // Block root selections before checking for workspace files.
+        if (isWorkspaceRootPath(selectedPath)) {
+          showRootPathDialog = true
+          return
+        }
+
+        if (await checkWorkspaceExists(selectedPath)) {
+          selectedFolderPath = selectedPath
+          showExistingWorkspaceDialog = true
+          return
+        }
+
+        selectedFolderPath = selectedPath
+        includeExamplePrompts = true
+        showSetupDialog = true
+      }
+    } catch (error) {
+      console.error('Error selecting folder for creation:', error)
+    } finally {
+      if (activeWorkspaceAction === 'create') {
+        activeWorkspaceAction = null
+      }
     }
   }
 
   const handleSetupWorkspace = async () => {
     if (selectedFolderPath) {
-      const creationResult = await onWorkspaceCreate(
-        selectedFolderPath,
-        includeExamplePrompts
-      )
+      activeWorkspaceAction = 'create'
+      try {
+        const creationResult = await onWorkspaceCreate(
+          selectedFolderPath,
+          includeExamplePrompts
+        )
 
-      if (creationResult.success) {
-        showSetupDialog = false
-        selectedFolderPath = null
-      } else if (creationResult.message) {
-        console.error('Failed to create workspace:', creationResult.message)
-      } else {
-        console.error('Failed to create workspace')
+        if (creationResult.success) {
+          showSetupDialog = false
+          selectedFolderPath = null
+        } else if (creationResult.message) {
+          console.error('Failed to create workspace:', creationResult.message)
+        } else {
+          console.error('Failed to create workspace')
+        }
+      } finally {
+        if (activeWorkspaceAction === 'create') {
+          activeWorkspaceAction = null
+        }
+      }
+    }
+  }
+
+  const handleSelectExistingWorkspace = async () => {
+    if (selectedFolderPath) {
+      activeWorkspaceAction = 'select'
+      try {
+        const selectionResult = await onWorkspaceSelect(selectedFolderPath)
+
+        if (selectionResult.success) {
+          showExistingWorkspaceDialog = false
+          selectedFolderPath = null
+        } else if (selectionResult.reason === 'workspace-missing') {
+          showExistingWorkspaceDialog = false
+          includeExamplePrompts = true
+          showSetupDialog = true
+        } else if (selectionResult.message) {
+          console.error('Error selecting workspace:', selectionResult.message)
+        } else {
+          console.error('Error selecting workspace')
+        }
+      } finally {
+        if (activeWorkspaceAction === 'select') {
+          activeWorkspaceAction = null
+        }
       }
     }
   }
@@ -101,19 +185,44 @@
     selectedFolderPath = null
     includeExamplePrompts = true
   }
+
+  const handleCancelExistingWorkspace = () => {
+    showExistingWorkspaceDialog = false
+    selectedFolderPath = null
+  }
+
+  const getSelectButtonLabel = () => {
+    if (isWorkspaceLoading && activeWorkspaceAction === 'select') {
+      return 'Setting up...'
+    }
+    if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'select') {
+      return 'Selecting...'
+    }
+    return 'Select Workspace Folder'
+  }
+
+  const getCreateButtonLabel = () => {
+    if (isWorkspaceLoading && activeWorkspaceAction === 'create') {
+      return 'Creating...'
+    }
+    if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'create') {
+      return 'Choosing...'
+    }
+    return 'Create Workspace Folder'
+  }
 </script>
 
 <main class="flex-1 p-6" data-testid="home-screen">
   <div class="flex h-full w-full items-center justify-center">
     <div class="flex w-full flex-col items-center gap-6 text-center">
       <h1
-        class="w-full max-w-lg text-4xl font-bold font-mono tracking-[0.12em] md:text-5xl"
+        class="w-full max-w-none whitespace-nowrap text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
         data-testid="home-title"
       >
         CTHULHU PROMPT
       </h1>
 
-      <div class="flex w-full max-w-[28rem] flex-col items-center gap-4">
+      <div class="flex w-full max-w-[36rem] flex-col items-center gap-4">
         {#if !isWorkspaceReady}
           <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
             <h2 class="text-base font-semibold">Get Started</h2>
@@ -147,25 +256,33 @@
         {/if}
 
         <div class="flex w-full gap-4">
-          {#if !isWorkspaceReady}
-            <Button
-              data-testid="select-workspace-folder-button"
-              onclick={handleSelectFolder}
-              disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
-              variant="outline"
-              class="flex h-12 flex-1 items-center gap-2 text-white hover:text-white"
-              style="font-size: 1rem; line-height: 1.5rem;"
-            >
-              <FolderOpen class="relative top-[1px] size-5" />
-              {isWorkspaceLoading
-                ? 'Setting up...'
-                : isOpeningWorkspaceFolderDialog
-                  ? 'Selecting...'
-                  : 'Select Workspace Folder'}
-            </Button>
-          {/if}
+          <Button
+            data-testid="select-workspace-folder-button"
+            onclick={handleSelectFolder}
+            disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
+            variant="outline"
+            class="flex h-12 flex-1 items-center gap-2 text-white hover:text-white"
+            style="font-size: 1rem; line-height: 1.5rem;"
+          >
+            <FolderOpen class="relative top-[1px] size-5" />
+            {getSelectButtonLabel()}
+          </Button>
 
-          {#if isWorkspaceReady}
+          <Button
+            data-testid="create-workspace-folder-button"
+            onclick={handleCreateFolder}
+            disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
+            variant="outline"
+            class="flex h-12 flex-1 items-center gap-2 text-white hover:text-white"
+            style="font-size: 1rem; line-height: 1.5rem;"
+          >
+            <FolderPlus class="relative top-[1px] size-5" />
+            {getCreateButtonLabel()}
+          </Button>
+        </div>
+
+        {#if isWorkspaceReady}
+          <div class="flex w-full">
             <Button
               data-testid="close-workspace-button"
               variant="outline"
@@ -176,8 +293,8 @@
               <X class="relative top-[1px] size-5" />
               Close Workspace
             </Button>
-          {/if}
-        </div>
+          </div>
+        {/if}
       </div>
     </div>
   </div>
@@ -205,6 +322,32 @@
         <Button variant="outline" onclick={handleCancelSetup}>Cancel</Button>
         <Button data-testid="setup-workspace-button" onclick={handleSetupWorkspace}>
           Setup Workspace
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog bind:open={showExistingWorkspaceDialog}>
+    <DialogContent data-testid="existing-workspace-dialog">
+      <DialogHeader>
+        <DialogTitle>Workspace already exists</DialogTitle>
+        <DialogDescription>
+          This folder already has a Cthulhu Prompt workspace. Would you like to select it?
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button
+          data-testid="cancel-existing-workspace-button"
+          variant="outline"
+          onclick={handleCancelExistingWorkspace}
+        >
+          Cancel
+        </Button>
+        <Button
+          data-testid="select-existing-workspace-button"
+          onclick={handleSelectExistingWorkspace}
+        >
+          Select Workspace
         </Button>
       </DialogFooter>
     </DialogContent>

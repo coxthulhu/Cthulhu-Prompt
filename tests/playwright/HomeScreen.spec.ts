@@ -10,6 +10,9 @@ describe('Home Screen', () => {
 
     // Confirm the app rendered the home screen before checking state.
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="create-workspace-folder-button"]')
+    ).toBeVisible()
 
     expect(await testHelpers.isWorkspaceGetStarted()).toBe(true)
     expect(await testHelpers.isWorkspaceReady()).toBe(false)

@@ -14,6 +14,7 @@ export async function isButtonVisible(window: any, buttonText: string): Promise<
   // Map common button text to their data-testid
   const buttonMap: Record<string, string> = {
     'Select Workspace Folder': 'select-workspace-folder-button',
+    'Create Workspace Folder': 'create-workspace-folder-button',
     'Close Workspace': 'close-workspace-button',
     'New Prompt Folder': 'new-prompt-folder-button',
     'Test Folder': 'regular-prompt-folder-TestFolder', // Created folders use folderName without spaces
