@@ -58,6 +58,7 @@
   let sidebarWidthPx = $state(200)
   let scrollResetVersion = $state(0)
   let lastScrollResetVersion = 0
+  let scrollTopPx = $state(0)
 
   const clearOutlinerManualSelection = () => {
     outlinerManualSelectionActive = false
@@ -237,6 +238,33 @@
   const handleMovePromptDown = (promptId: string) => {
     return movePromptDownInFolder(folder.folderName, promptId)
   }
+
+  const folderSettingsHeightPx = $derived.by(() => {
+    const baseHeight = estimatePromptFolderSettingsHeight(
+      folderData.descriptionDraft.text,
+      promptFontSize
+    )
+    if (!viewportMetrics) return baseHeight
+    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
+      folderName,
+      viewportMetrics.widthPx,
+      viewportMetrics.devicePixelRatio
+    )
+    return measuredHeight ?? baseHeight
+  })
+
+  const activeHeaderRowId = $derived(
+    scrollTopPx < folderSettingsHeightPx ? 'folder-settings' : 'prompt-header'
+  )
+  const activeHeaderSection = $derived(
+    activeHeaderRowId === 'prompt-header' ? 'Prompts' : 'Folder Settings'
+  )
+
+  const handleHeaderSegmentClick = (rowId: 'folder-settings' | 'prompt-header') => {
+    if (!scrollToWithinWindowBand) return
+    clearOutlinerManualSelection()
+    scrollToWithinWindowBand(rowId, 0, 'minimal')
+  }
 </script>
 
 <PromptFolderFindIntegration
@@ -244,10 +272,26 @@
   scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
 >
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    <div class="flex h-9 border-b border-border bg-background">
+    <div class="flex h-9 border-b border-border" style="background-color: #1F1F1F;">
       <div class="h-full shrink-0" style={`width: ${sidebarWidthPx}px`} aria-hidden="true"></div>
       <div class="flex-1 min-w-0 flex items-center pl-6">
-        <div class="truncate text-lg font-bold">{folder.displayName}</div>
+        <div class="flex min-w-0 items-center text-lg font-semibold">
+          <button
+            type="button"
+            class="min-w-0 truncate underline text-foreground/85 transition-colors hover:text-foreground"
+            onclick={() => handleHeaderSegmentClick('folder-settings')}
+          >
+            {folder.displayName}
+          </button>
+          <span class="mx-2">/</span>
+          <button
+            type="button"
+            class="underline whitespace-nowrap text-foreground/85 transition-colors hover:text-foreground"
+            onclick={() => handleHeaderSegmentClick(activeHeaderRowId)}
+          >
+            {activeHeaderSection}
+          </button>
+        </div>
       </div>
     </div>
     <div class="flex-1 min-h-0 flex">
@@ -298,6 +342,9 @@
               bind:scrollToAndTrackRowCentered
               bind:scrollApi
               bind:viewportMetrics
+              onScrollTopChange={(nextScrollTop) => {
+                scrollTopPx = nextScrollTop
+              }}
               onCenterRowChange={(row) => {
                 if (outlinerManualSelectionActive) return
                 if (row?.kind === 'prompt-editor') {
