@@ -13,6 +13,8 @@ const OUTLINER_ROW_HEIGHT_PX = 28
 const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
+const SHORT_FOLDER_NAME = 'Short'
+const SHORT_SCROLL_TARGET_PX = 2000
 
 describe('Prompt folder outliner', () => {
   test('keeps selected prompt centered after hydration for long wrapped singles', async ({
@@ -74,5 +76,31 @@ describe('Prompt folder outliner', () => {
     expect(centeredRowId).toBe(expectedCenteredRowId)
 
     await expect(outlinerButton).toHaveAttribute('aria-current', 'true')
+  })
+
+  test('keeps folder settings selected after outliner scroll to top', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(OUTLINER_HOST_SELECTOR, { state: 'attached' })
+
+    await testHelpers.scrollVirtualWindowTo(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      SHORT_SCROLL_TARGET_PX
+    )
+
+    const folderSettingsButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
+      hasText: 'Folder Settings'
+    })
+    await folderSettingsButton.click()
+
+    await mainWindow.waitForTimeout(2000)
+
+    await expect(folderSettingsButton).toHaveAttribute('aria-current', 'true')
   })
 })
