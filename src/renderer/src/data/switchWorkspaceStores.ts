@@ -2,6 +2,7 @@ import {
   flushPromptWorkspaceAutosaves,
   resetPromptDataStoreForWorkspace
 } from '@renderer/data/PromptDataStore.svelte.ts'
+import { flushSystemSettingsAutosaves } from '@renderer/data/systemSettingsAutosave'
 import {
   flushPromptFolderRequests,
   flushPromptFolderAutosaves,
@@ -19,7 +20,8 @@ export const switchWorkspaceStores = async (nextWorkspacePath: string | null): P
     await Promise.allSettled([
       flushPromptFolderRequests(),
       flushPromptFolderAutosaves(),
-      flushPromptWorkspaceAutosaves()
+      flushPromptWorkspaceAutosaves(),
+      flushSystemSettingsAutosaves()
     ])
 
     currentWorkspacePath = nextWorkspacePath

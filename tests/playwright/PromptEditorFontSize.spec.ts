@@ -10,16 +10,24 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 async function setPromptFontSize(
   mainWindow: any,
-  testHelpers: { navigateToSettingsScreen: () => Promise<void> },
+  testHelpers: { navigateToSettingsScreen: () => Promise<void>; navigateToHomeScreen: () => Promise<void> },
   value: number
 ): Promise<void> {
   await testHelpers.navigateToSettingsScreen()
   const input = mainWindow.locator('[data-testid="font-size-input"]')
   await input.fill(String(value))
-  const saveButton = mainWindow.locator('[data-testid="font-size-save"]')
-  await saveButton.click()
   await expect(input).toHaveValue(String(value))
-  await expect(saveButton).toBeDisabled()
+  await testHelpers.navigateToHomeScreen()
+  await mainWindow.waitForFunction(
+    (expected) => {
+      const ipc = window.electron?.ipcRenderer
+      if (!ipc?.invoke) return false
+      return ipc.invoke('load-system-settings').then((result) => {
+        return result?.settings?.promptFontSize === expected
+      })
+    },
+    value
+  )
 }
 
 async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Promise<number> {

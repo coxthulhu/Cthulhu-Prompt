@@ -10,6 +10,13 @@
     MAX_PROMPT_FONT_SIZE,
     MIN_PROMPT_FONT_SIZE
   } from '@shared/systemSettings'
+  import {
+    AUTOSAVE_MS,
+    clearAutosaveTimeout,
+    createAutosaveController,
+    type AutosaveDraft
+  } from '@renderer/data/draftAutosave'
+  import { registerSystemSettingsAutosave } from '@renderer/data/systemSettingsAutosave'
 
   const settingsQuery = $derived(useSystemSettingsQuery())
   const { mutateAsync: updateSystemSettings, isPending: isUpdating } =
@@ -22,12 +29,49 @@
 
   let fontSizeInput = $state(String(DEFAULT_SYSTEM_SETTINGS.promptFontSize))
   let hasInteracted = $state(false)
-  let isDirty = $state(false)
   let errorMessage = $state<string | null>(null)
+  const autosaveDraft = $state<AutosaveDraft>({
+    dirty: false,
+    saving: false,
+    autosaveTimeoutId: null
+  })
+
+  const autosave = createAutosaveController({
+    draft: autosaveDraft,
+    autosaveMs: AUTOSAVE_MS,
+    save: async () => {
+      const validationError = validateFontSize(fontSizeInput)
+
+      if (validationError) {
+        return
+      }
+
+      const valueToSave = fontSizeInput
+      const parsed = Math.round(Number(valueToSave))
+
+      try {
+        await updateSystemSettings({
+          settings: {
+            promptFontSize: parsed
+          }
+        })
+
+        if (fontSizeInput === valueToSave) {
+          fontSizeInput = String(parsed)
+          autosaveDraft.dirty = false
+          hasInteracted = false
+          errorMessage = null
+        }
+      } catch (error) {
+        console.error('Failed to update system settings:', error)
+        errorMessage = 'Unable to save settings. Please try again.'
+      }
+    }
+  })
 
   // Side effect: keep the local input in sync with persisted settings when not editing.
   $effect(() => {
-    if (isDirty) return
+    if (autosaveDraft.dirty) return
     fontSizeInput = String(currentFontSize)
     hasInteracted = false
     errorMessage = null
@@ -52,43 +96,18 @@
   }
 
   const handleInput = (value: string) => {
+    if (fontSizeInput === value) return
     fontSizeInput = value
     hasInteracted = true
-    isDirty = value !== String(currentFontSize)
     if (errorMessage) {
       errorMessage = null
     }
-  }
-
-  const handleSave = async () => {
-    const validationError = validateFontSize(fontSizeInput)
-
-    if (validationError) {
-      errorMessage = validationError
-      return
-    }
-
-    const parsed = Math.round(Number(fontSizeInput))
-
-    try {
-      await updateSystemSettings({
-        settings: {
-          promptFontSize: parsed
-        }
-      })
-
-      fontSizeInput = String(parsed)
-      isDirty = false
-      hasInteracted = false
-      errorMessage = null
-    } catch (error) {
-      console.error('Failed to update system settings:', error)
-      errorMessage = 'Unable to save settings. Please try again.'
-    }
+    autosave.markDirtyAndScheduleAutosave()
   }
 
   const handleReset = async () => {
     const defaultValue = DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    clearAutosaveTimeout(autosaveDraft)
 
     try {
       await updateSystemSettings({
@@ -98,7 +117,7 @@
       })
 
       fontSizeInput = String(defaultValue)
-      isDirty = false
+      autosaveDraft.dirty = false
       hasInteracted = false
       errorMessage = null
     } catch (error) {
@@ -109,12 +128,25 @@
 
   const validationMessage = $derived(hasInteracted ? validateFontSize(fontSizeInput) : null)
   const displayError = $derived(errorMessage ?? validationMessage)
-  const isSaveDisabled = $derived(isLoading || isUpdating || !isDirty || Boolean(displayError))
   const isResetDisabled = $derived(
     isLoading ||
       isUpdating ||
       fontSizeInput === String(DEFAULT_SYSTEM_SETTINGS.promptFontSize)
   )
+
+  const flushAutosave = async (): Promise<void> => {
+    clearAutosaveTimeout(autosaveDraft)
+    await autosave.saveNow()
+  }
+
+  // Side effect: register autosave flush hooks and save before leaving the settings screen.
+  $effect(() => {
+    const unregister = registerSystemSettingsAutosave(flushAutosave)
+    return () => {
+      unregister()
+      void flushAutosave()
+    }
+  })
 </script>
 
 <section
@@ -150,14 +182,6 @@
           />
           <Button size="sm" onclick={handleReset} disabled={isResetDisabled}>
             Reset to Default
-          </Button>
-          <Button
-            data-testid="font-size-save"
-            size="sm"
-            onclick={handleSave}
-            disabled={isSaveDisabled}
-          >
-            {isUpdating ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
