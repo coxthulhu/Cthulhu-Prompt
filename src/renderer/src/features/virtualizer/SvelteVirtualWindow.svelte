@@ -4,7 +4,8 @@
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
     type ScrollToAndTrackRowCentered,
-    type VirtualWindowScrollApi
+    type VirtualWindowScrollApi,
+    type VirtualWindowViewportMetrics
   } from './virtualWindowTypes'
   import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
   import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
@@ -20,19 +21,13 @@
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
     getHydrationPriorityEligibility?: (row: TRow) => boolean
     getCenterRowEligibility?: (row: TRow) => boolean
-    onScrollToWithinWindowBand?: (scrollToWithinWindowBand: ScrollToWithinWindowBand) => void
-    onScrollToAndTrackRowCentered?: (
-      scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered
-    ) => void
+    scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
+    scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
     onUserScroll?: (scrollTopPx: number) => void
     onScrollTopChange?: (scrollTopPx: number) => void
-    onScrollApi?: (api: VirtualWindowScrollApi) => void
-    onViewportMetricsChange?: (metrics: {
-      widthPx: number
-      heightPx: number
-      devicePixelRatio: number
-    }) => void
+    scrollApi?: VirtualWindowScrollApi | null
+    viewportMetrics?: VirtualWindowViewportMetrics | null
     testId?: string
     spacerTestId?: string
   }
@@ -43,13 +38,13 @@
     rowRegistry,
     getHydrationPriorityEligibility,
     getCenterRowEligibility,
-    onScrollToWithinWindowBand,
-    onScrollToAndTrackRowCentered,
+    scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
+    scrollToAndTrackRowCentered = $bindable<ScrollToAndTrackRowCentered | null>(null),
     onCenterRowChange,
     onUserScroll,
     onScrollTopChange,
-    onScrollApi,
-    onViewportMetricsChange,
+    scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
+    viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
     testId = 'virtual-window',
     spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
@@ -98,8 +93,8 @@
     getVisibleRows,
     getScrollShadowActive,
     getScrollbarRevealVersion,
-    scrollToWithinWindowBand,
-    scrollToAndTrackRowCentered
+    scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
+    scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal
   } = createVirtualWindowScrollState({
     getRowStates,
     getTotalHeightPx,
@@ -140,22 +135,22 @@
   const scrollbarRevealVersion = $derived(getScrollbarRevealVersion())
   const hydrationPriorityByRowId = $derived(getHydrationPriorityByRowId())
 
-  const scrollApi: VirtualWindowScrollApi = {
+  const scrollApiInternal: VirtualWindowScrollApi = {
     scrollTo: (scrollTopPx: number) => applyProgrammaticScrollTop(scrollTopPx),
     getScrollTop: () => getScrollTopPx()
   }
 
+  scrollToWithinWindowBand = scrollToWithinWindowBandInternal
+  scrollToAndTrackRowCentered = scrollToAndTrackRowCenteredInternal
+  scrollApi = scrollApiInternal
+
   useVirtualWindowCallbacks({
-    getOnScrollToWithinWindowBand: () => onScrollToWithinWindowBand,
-    scrollToWithinWindowBand,
-    getOnScrollToAndTrackRowCentered: () => onScrollToAndTrackRowCentered,
-    scrollToAndTrackRowCentered,
     getOnCenterRowChange: () => onCenterRowChange,
     getCenterRowId,
     getCenterRowData,
-    getOnScrollApi: () => onScrollApi,
-    getScrollApi: () => scrollApi,
-    getOnViewportMetricsChange: () => onViewportMetricsChange,
+    setViewportMetrics: (metrics) => {
+      viewportMetrics = metrics
+    },
     getMeasurementWidth,
     getViewportHeight,
     getDevicePixelRatio
@@ -229,8 +224,8 @@
                 hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
                 shouldDehydrate: shouldDehydrateRow(row),
                 overlayRowElement: overlayRowElements.get(row.id) ?? null,
-                scrollToWithinWindowBand,
-                scrollToAndTrackRowCentered,
+                scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
+                scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
                 onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
               })}
             </div>

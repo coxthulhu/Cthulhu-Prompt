@@ -17,6 +17,7 @@
     type ScrollToAndTrackRowCentered,
     type VirtualWindowItem,
     type VirtualWindowScrollApi,
+    type VirtualWindowViewportMetrics,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import {
@@ -43,6 +44,7 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
+  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(null)
   let outlinerAutoScrollRequestId = $state(0)
   let sidebarWidthPx = $state(200)
@@ -251,15 +253,10 @@
               getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
               getCenterRowEligibility={(row) =>
                 row.kind === 'prompt-editor' || row.kind === 'header'}
-              onScrollToWithinWindowBand={(next) => {
-                scrollToWithinWindowBand = next
-              }}
-              onScrollToAndTrackRowCentered={(next) => {
-                scrollToAndTrackRowCentered = next
-              }}
-              onScrollApi={(next) => {
-                scrollApi = next
-              }}
+              bind:scrollToWithinWindowBand
+              bind:scrollToAndTrackRowCentered
+              bind:scrollApi
+              bind:viewportMetrics
               onCenterRowChange={(row) => {
                 if (row?.kind === 'prompt-editor') {
                   activeOutlinerRow = { kind: 'prompt', promptId: row.promptId }

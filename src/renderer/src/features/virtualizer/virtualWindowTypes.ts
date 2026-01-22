@@ -38,6 +38,12 @@ export type VirtualWindowScrollApi = {
   getScrollTop: () => number
 }
 
+export type VirtualWindowViewportMetrics = {
+  widthPx: number
+  heightPx: number
+  devicePixelRatio: number
+}
+
 export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   estimateHeight: (row: TRow, widthPx: number, heightPx: number) => number
   lookupMeasuredHeight?: (row: TRow, widthPx: number, devicePixelRatio: number) => number | null

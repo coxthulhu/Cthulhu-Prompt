@@ -100,9 +100,7 @@
       rowRegistry={outlinerRowRegistry}
       testId="prompt-outliner-virtual-window"
       spacerTestId="prompt-outliner-virtual-window-spacer"
-      onScrollToWithinWindowBand={(next) => {
-        scrollToWithinWindowBand = next
-      }}
+      bind:scrollToWithinWindowBand
     />
   </div>
 </div>
