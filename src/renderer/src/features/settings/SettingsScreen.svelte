@@ -87,51 +87,84 @@
     }
   }
 
+  const handleReset = async () => {
+    const defaultValue = DEFAULT_SYSTEM_SETTINGS.promptFontSize
+
+    try {
+      await updateSystemSettings({
+        settings: {
+          promptFontSize: defaultValue
+        }
+      })
+
+      fontSizeInput = String(defaultValue)
+      isDirty = false
+      hasInteracted = false
+      errorMessage = null
+    } catch (error) {
+      console.error('Failed to reset system settings:', error)
+      errorMessage = 'Unable to reset settings. Please try again.'
+    }
+  }
+
   const validationMessage = $derived(hasInteracted ? validateFontSize(fontSizeInput) : null)
   const displayError = $derived(errorMessage ?? validationMessage)
   const isSaveDisabled = $derived(isLoading || isUpdating || !isDirty || Boolean(displayError))
+  const isResetDisabled = $derived(
+    isLoading ||
+      isUpdating ||
+      fontSizeInput === String(DEFAULT_SYSTEM_SETTINGS.promptFontSize)
+  )
 </script>
 
-<section class="flex-1 p-6 space-y-6" data-testid="settings-screen">
-  <div>
-    <h1 class="text-2xl font-bold">Settings</h1>
-    <p class="mt-2 text-muted-foreground">Customize how Cthulhu Prompt behaves.</p>
-  </div>
-
-  <div class="border rounded-lg bg-muted/30 p-4">
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div class="space-y-1">
-        <h2 class="text-lg font-semibold">Prompt editor font size</h2>
-        <p class="text-sm text-muted-foreground">
-          Sets the default font size used in the prompt editor.
-        </p>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <Input
-          data-testid="font-size-input"
-          type="number"
-          min={MIN_PROMPT_FONT_SIZE}
-          max={MAX_PROMPT_FONT_SIZE}
-          step={1}
-          class="w-24"
-          value={fontSizeInput}
-          disabled={isLoading}
-          oninput={(event) => handleInput((event.currentTarget as HTMLInputElement).value)}
-        />
-        <Button
-          data-testid="font-size-save"
-          size="sm"
-          onclick={handleSave}
-          disabled={isSaveDisabled}
-        >
-          {isUpdating ? 'Saving...' : 'Save'}
-        </Button>
-      </div>
+<section
+  class="flex-1 p-6 flex flex-col items-center justify-start"
+  data-testid="settings-screen"
+>
+  <div class="w-full max-w-2xl space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold">Settings</h1>
+      <p class="mt-2 text-muted-foreground">Customize how Cthulhu Prompt behaves.</p>
     </div>
 
-    {#if displayError}
-      <p class="mt-3 text-sm text-red-500" data-testid="font-size-error">{displayError}</p>
-    {/if}
+    <div class="border rounded-lg bg-muted/30 p-4">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="space-y-1">
+          <h2 class="text-lg font-semibold">Prompt editor font size</h2>
+          <p class="text-sm text-muted-foreground">
+            Sets the default font size used in the prompt editor.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <Input
+            data-testid="font-size-input"
+            type="number"
+            min={MIN_PROMPT_FONT_SIZE}
+            max={MAX_PROMPT_FONT_SIZE}
+            step={1}
+            class="w-24"
+            value={fontSizeInput}
+            disabled={isLoading}
+            oninput={(event) => handleInput((event.currentTarget as HTMLInputElement).value)}
+          />
+          <Button size="sm" onclick={handleReset} disabled={isResetDisabled}>
+            Reset to Default
+          </Button>
+          <Button
+            data-testid="font-size-save"
+            size="sm"
+            onclick={handleSave}
+            disabled={isSaveDisabled}
+          >
+            {isUpdating ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </div>
+
+      {#if displayError}
+        <p class="mt-3 text-sm text-red-500" data-testid="font-size-error">{displayError}</p>
+      {/if}
+    </div>
   </div>
 </section>
