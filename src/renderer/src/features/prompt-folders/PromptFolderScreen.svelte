@@ -52,10 +52,25 @@
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(null)
+  // Manual selection keeps the outliner highlight on the clicked row until the user scrolls.
+  let outlinerManualSelectionActive = $state(false)
   let outlinerAutoScrollRequestId = $state(0)
   let sidebarWidthPx = $state(200)
   let scrollResetVersion = $state(0)
   let lastScrollResetVersion = 0
+
+  const clearOutlinerManualSelection = () => {
+    outlinerManualSelectionActive = false
+  }
+
+  const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
+    rowId,
+    offsetPx,
+    scrollType
+  ) => {
+    clearOutlinerManualSelection()
+    scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
+  }
 
   // Side effect: reload prompts on folder change.
   $effect(() => {
@@ -193,6 +208,7 @@
 
   const handleOutlinerClick = (promptId: string) => {
     if (!scrollToAndTrackRowCentered) return
+    outlinerManualSelectionActive = true
     activeOutlinerRow = { kind: 'prompt', promptId }
     outlinerAutoScrollRequestId += 1
     scrollToAndTrackRowCentered(promptEditorRowId(promptId))
@@ -200,6 +216,7 @@
 
   const handleOutlinerFolderSettingsClick = () => {
     if (!scrollToAndTrackRowCentered) return
+    outlinerManualSelectionActive = true
     activeOutlinerRow = { kind: 'folder-settings' }
     outlinerAutoScrollRequestId += 1
     scrollToAndTrackRowCentered('folder-settings')
@@ -224,7 +241,7 @@
 
 <PromptFolderFindIntegration
   promptIds={folderData.promptIds}
-  scrollToWithinWindowBand={scrollToWithinWindowBand}
+  scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
 >
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
     <div class="flex h-9 border-b border-border bg-background">
@@ -282,6 +299,7 @@
               bind:scrollApi
               bind:viewportMetrics
               onCenterRowChange={(row) => {
+                if (outlinerManualSelectionActive) return
                 if (row?.kind === 'prompt-editor') {
                   activeOutlinerRow = { kind: 'prompt', promptId: row.promptId }
                   return
@@ -293,6 +311,7 @@
                 activeOutlinerRow = null
               }}
               onUserScroll={() => {
+                clearOutlinerManualSelection()
                 outlinerAutoScrollRequestId += 1
               }}
             />
@@ -312,7 +331,7 @@
     hydrationPriority={props.hydrationPriority}
     shouldDehydrate={props.shouldDehydrate}
     overlayRowElement={props.overlayRowElement ?? null}
-    scrollToWithinWindowBand={props.scrollToWithinWindowBand}
+    scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
     onHydrationChange={props.onHydrationChange}
     {folderData}
   />
@@ -357,7 +376,6 @@
   hydrationPriority,
   shouldDehydrate,
   overlayRowElement,
-  scrollToWithinWindowBand,
   onHydrationChange
 }: PromptEditorRowProps)}
   <PromptEditorRow
@@ -371,7 +389,7 @@
     {shouldDehydrate}
     {overlayRowElement}
     {onHydrationChange}
-    {scrollToWithinWindowBand}
+    scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}
