@@ -3,7 +3,7 @@
     type VirtualWindowItem,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
-    type ScrollToRowCentered,
+    type ScrollToAndTrackRowCentered,
     type VirtualWindowScrollApi
   } from './virtualWindowTypes'
   import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
@@ -21,7 +21,9 @@
     getHydrationPriorityEligibility?: (row: TRow) => boolean
     getCenterRowEligibility?: (row: TRow) => boolean
     onScrollToWithinWindowBand?: (scrollToWithinWindowBand: ScrollToWithinWindowBand) => void
-    onScrollToRowCentered?: (scrollToRowCentered: ScrollToRowCentered) => void
+    onScrollToAndTrackRowCentered?: (
+      scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered
+    ) => void
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
     onUserScroll?: (scrollTopPx: number) => void
     onScrollTopChange?: (scrollTopPx: number) => void
@@ -42,7 +44,7 @@
     getHydrationPriorityEligibility,
     getCenterRowEligibility,
     onScrollToWithinWindowBand,
-    onScrollToRowCentered,
+    onScrollToAndTrackRowCentered,
     onCenterRowChange,
     onUserScroll,
     onScrollTopChange,
@@ -97,7 +99,7 @@
     getScrollShadowActive,
     getScrollbarRevealVersion,
     scrollToWithinWindowBand,
-    scrollToRowCentered
+    scrollToAndTrackRowCentered
   } = createVirtualWindowScrollState({
     getRowStates,
     getTotalHeightPx,
@@ -146,8 +148,8 @@
   useVirtualWindowCallbacks({
     getOnScrollToWithinWindowBand: () => onScrollToWithinWindowBand,
     scrollToWithinWindowBand,
-    getOnScrollToRowCentered: () => onScrollToRowCentered,
-    scrollToRowCentered,
+    getOnScrollToAndTrackRowCentered: () => onScrollToAndTrackRowCentered,
+    scrollToAndTrackRowCentered,
     getOnCenterRowChange: () => onCenterRowChange,
     getCenterRowId,
     getCenterRowData,
@@ -228,7 +230,7 @@
                 shouldDehydrate: shouldDehydrateRow(row),
                 overlayRowElement: overlayRowElements.get(row.id) ?? null,
                 scrollToWithinWindowBand,
-                scrollToRowCentered,
+                scrollToAndTrackRowCentered,
                 onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
               })}
             </div>

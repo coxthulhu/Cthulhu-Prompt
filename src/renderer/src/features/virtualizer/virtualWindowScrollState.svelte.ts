@@ -6,7 +6,7 @@ import type { VirtualRowState } from './virtualWindowRows'
 import type {
   ScrollToWithinWindowBand,
   ScrollToWithinWindowBandType,
-  ScrollToRowCentered
+  ScrollToAndTrackRowCentered
 } from './virtualWindowTypes'
 
 type VirtualWindowScrollStateOptions<TRow extends { kind: string }> = {
@@ -35,6 +35,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   let previousRowStates = $state<VirtualRowState<TRow>[]>([])
   let scrollbarRevealVersion = $state(0)
   let lastScrollTop = 0
+  let trackedRowId = $state<string | null>(null)
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
   const scrollShadowActive = $derived(scrollTopPx > 0)
@@ -58,6 +59,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   }
 
   const applyUserScrollTop = (nextScrollTop: number) => {
+    trackedRowId = null
     const didScroll = applyScrollTop(nextScrollTop, true)
     if (didScroll) {
       getOnUserScroll()?.(scrollTopPx)
@@ -137,7 +139,19 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     }
   }
 
-  const scrollToRowCentered: ScrollToRowCentered = (rowId: string, offsetPx: number) => {
+  const TRACKED_ROW_TOP_PADDING_PX = 100
+
+  const getTrackedRowScrollTop = (
+    row: VirtualRowState<TRow>,
+    viewportHeight: number
+  ): number => {
+    if (row.height + TRACKED_ROW_TOP_PADDING_PX > viewportHeight) {
+      return row.offset - TRACKED_ROW_TOP_PADDING_PX
+    }
+    return row.offset + row.height / 2 - viewportHeight / 2
+  }
+
+  const scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered = (rowId: string) => {
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
 
@@ -145,8 +159,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     const row = rowStates.find((candidate) => candidate.id === rowId)
     if (!row) return
 
-    const targetOffsetPx = row.offset + offsetPx
-    const nextScrollTop = clampScrollTop(targetOffsetPx - viewportHeight / 2)
+    trackedRowId = rowId
+    const nextScrollTop = clampScrollTop(getTrackedRowScrollTop(row, viewportHeight))
     if (nextScrollTop === scrollTopPx) return
 
     applyProgrammaticScrollTop(nextScrollTop)
@@ -162,6 +176,21 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
     previousRowStates = getRowStates()
     void getViewportHeight()
+  })
+
+  // Side effect: keep the tracked row aligned as measurements change.
+  $effect(() => {
+    const rowId = trackedRowId
+    if (!rowId) return
+    const viewportHeight = getViewportHeight()
+    if (viewportHeight <= 0) return
+
+    const row = getRowStates().find((candidate) => candidate.id === rowId)
+    if (!row) return
+
+    const nextScrollTop = clampScrollTop(getTrackedRowScrollTop(row, viewportHeight))
+    if (nextScrollTop === scrollTopPx) return
+    applyProgrammaticScrollTop(nextScrollTop)
   })
 
   // Side effect: reveal the scrollbar briefly after scroll changes.
@@ -183,6 +212,6 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getScrollShadowActive: () => scrollShadowActive,
     getScrollbarRevealVersion: () => scrollbarRevealVersion,
     scrollToWithinWindowBand,
-    scrollToRowCentered
+    scrollToAndTrackRowCentered
   }
 }

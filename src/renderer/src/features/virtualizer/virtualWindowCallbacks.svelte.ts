@@ -1,6 +1,6 @@
 import type {
   ScrollToWithinWindowBand,
-  ScrollToRowCentered,
+  ScrollToAndTrackRowCentered,
   VirtualWindowScrollApi
 } from './virtualWindowTypes'
 
@@ -9,8 +9,10 @@ type VirtualWindowCallbacksOptions<TRow extends { kind: string }> = {
     | ((scrollToWithinWindowBand: ScrollToWithinWindowBand) => void)
     | undefined
   scrollToWithinWindowBand: ScrollToWithinWindowBand
-  getOnScrollToRowCentered: () => ((scrollToRowCentered: ScrollToRowCentered) => void) | undefined
-  scrollToRowCentered: ScrollToRowCentered
+  getOnScrollToAndTrackRowCentered: () =>
+    | ((scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered) => void)
+    | undefined
+  scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered
   getOnCenterRowChange: () => ((row: TRow | null, rowId: string | null) => void) | undefined
   getCenterRowId: () => string | null
   getCenterRowData: () => TRow | null
@@ -30,8 +32,8 @@ export const useVirtualWindowCallbacks = <TRow extends { kind: string }>(
   const {
     getOnScrollToWithinWindowBand,
     scrollToWithinWindowBand,
-    getOnScrollToRowCentered,
-    scrollToRowCentered,
+    getOnScrollToAndTrackRowCentered,
+    scrollToAndTrackRowCentered,
     getOnCenterRowChange,
     getCenterRowId,
     getCenterRowData,
@@ -46,8 +48,9 @@ export const useVirtualWindowCallbacks = <TRow extends { kind: string }>(
   let lastScrollToWithinWindowBandCallback:
     | ((scrollToWithinWindowBand: ScrollToWithinWindowBand) => void)
     | null = null
-  let lastScrollToRowCenteredCallback: ((scrollToRowCentered: ScrollToRowCentered) => void) | null =
-    null
+  let lastScrollToAndTrackRowCenteredCallback:
+    | ((scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered) => void)
+    | null = null
   let lastCenterRowChangeCallback: ((row: TRow | null, rowId: string | null) => void) | null = null
   let lastCenterRowId: string | null = null
   let lastScrollApiCallback: ((api: VirtualWindowScrollApi) => void) | null = null
@@ -70,16 +73,16 @@ export const useVirtualWindowCallbacks = <TRow extends { kind: string }>(
     onScrollToWithinWindowBand(scrollToWithinWindowBand)
   })
 
-  // Side effect: expose the centered scroll helper once per callback change.
+  // Side effect: expose the tracked centered scroll helper once per callback change.
   $effect(() => {
-    const onScrollToRowCentered = getOnScrollToRowCentered()
-    if (!onScrollToRowCentered) {
-      lastScrollToRowCenteredCallback = null
+    const onScrollToAndTrackRowCentered = getOnScrollToAndTrackRowCentered()
+    if (!onScrollToAndTrackRowCentered) {
+      lastScrollToAndTrackRowCenteredCallback = null
       return
     }
-    if (onScrollToRowCentered === lastScrollToRowCenteredCallback) return
-    lastScrollToRowCenteredCallback = onScrollToRowCentered
-    onScrollToRowCentered(scrollToRowCentered)
+    if (onScrollToAndTrackRowCentered === lastScrollToAndTrackRowCenteredCallback) return
+    lastScrollToAndTrackRowCenteredCallback = onScrollToAndTrackRowCentered
+    onScrollToAndTrackRowCentered(scrollToAndTrackRowCentered)
   })
 
   // Side effect: notify consumers when the centered eligible row changes.

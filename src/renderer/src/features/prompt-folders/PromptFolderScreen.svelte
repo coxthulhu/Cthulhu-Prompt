@@ -14,7 +14,7 @@
   import {
     defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
-    type ScrollToRowCentered,
+    type ScrollToAndTrackRowCentered,
     type VirtualWindowItem,
     type VirtualWindowScrollApi,
     type VirtualWindowRowComponentProps
@@ -41,16 +41,11 @@
 
   let previousFolderName = $state<string | null>(null)
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
-  let scrollToRowCentered = $state<ScrollToRowCentered | null>(null)
+  let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(null)
   let outlinerAutoScrollRequestId = $state(0)
   let sidebarWidthPx = $state(200)
-  let mainWindowMetrics = $state({
-    widthPx: 0,
-    heightPx: 0,
-    devicePixelRatio: 1
-  })
   let scrollResetVersion = $state(0)
   let lastScrollResetVersion = 0
 
@@ -170,45 +165,18 @@
     return rows
   })
 
-  const getPromptRowHeightPx = (promptId: string): number => {
-    const promptData = getPromptData(promptId)
-    const measuredHeight = lookupPromptEditorMeasuredHeight(
-      promptId,
-      mainWindowMetrics.widthPx,
-      mainWindowMetrics.devicePixelRatio
-    )
-    if (measuredHeight != null) return measuredHeight
-    return estimatePromptEditorHeight(
-      promptData.draft.text,
-      mainWindowMetrics.widthPx,
-      mainWindowMetrics.heightPx
-    )
-  }
-
-  const getHeaderRowHeightPx = (): number => {
-    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
-      folder.folderName,
-      mainWindowMetrics.widthPx,
-      mainWindowMetrics.devicePixelRatio
-    )
-    if (measuredHeight != null) return measuredHeight
-    return estimatePromptFolderHeaderHeight(folderData.descriptionDraft.text)
-  }
-
   const handleOutlinerClick = (promptId: string) => {
-    if (!scrollToRowCentered) return
+    if (!scrollToAndTrackRowCentered) return
     activeOutlinerRow = { kind: 'prompt', promptId }
     outlinerAutoScrollRequestId += 1
-    const rowCenterOffset = getPromptRowHeightPx(promptId) / 2
-    scrollToRowCentered(promptEditorRowId(promptId), rowCenterOffset)
+    scrollToAndTrackRowCentered(promptEditorRowId(promptId))
   }
 
   const handleOutlinerFolderDescriptionClick = () => {
-    if (!scrollToRowCentered) return
+    if (!scrollToAndTrackRowCentered) return
     activeOutlinerRow = { kind: 'folder-description' }
     outlinerAutoScrollRequestId += 1
-    const rowCenterOffset = getHeaderRowHeightPx() / 2
-    scrollToRowCentered('header', rowCenterOffset)
+    scrollToAndTrackRowCentered('header')
   }
 
   const handleAddPrompt = (previousPromptId: string | null) => {
@@ -286,8 +254,8 @@
               onScrollToWithinWindowBand={(next) => {
                 scrollToWithinWindowBand = next
               }}
-              onScrollToRowCentered={(next) => {
-                scrollToRowCentered = next
+              onScrollToAndTrackRowCentered={(next) => {
+                scrollToAndTrackRowCentered = next
               }}
               onScrollApi={(next) => {
                 scrollApi = next
@@ -305,9 +273,6 @@
               }}
               onUserScroll={() => {
                 outlinerAutoScrollRequestId += 1
-              }}
-              onViewportMetricsChange={(metrics) => {
-                mainWindowMetrics = metrics
               }}
             />
           {/if}
