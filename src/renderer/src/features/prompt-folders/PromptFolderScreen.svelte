@@ -273,7 +273,11 @@
 >
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
     <div class="flex h-9 border-b border-border" style="background-color: #1F1F1F;">
-      <div class="h-full shrink-0" style={`width: ${sidebarWidthPx}px`} aria-hidden="true"></div>
+      <div
+        class="h-full shrink-0 border-r border-border"
+        style={`width: ${sidebarWidthPx}px`}
+        aria-hidden="true"
+      ></div>
       <div class="flex-1 min-w-0 flex items-center pl-6">
         <div class="flex min-w-0 items-center text-lg font-semibold">
           <button
