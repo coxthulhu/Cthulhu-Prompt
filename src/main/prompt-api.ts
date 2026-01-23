@@ -139,7 +139,7 @@ export class PromptAPI {
   ): PromptFolderConfig {
     const fs = getFs()
     if (!fs.existsSync(filePath)) {
-      const config = createPromptFolderConfig(fallbackName, 0)
+      const config = createPromptFolderConfig(fallbackName, 0, randomUUID())
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf8')
       return config
     }

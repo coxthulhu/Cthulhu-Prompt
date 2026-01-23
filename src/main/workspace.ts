@@ -88,9 +88,10 @@ export class WorkspaceManager {
         fs.mkdirSync(promptsPath, { recursive: true })
       }
 
-      // Create WorkspaceSettings.json
+      // Create WorkspaceSettings.json with a workspace GUID.
       if (!fs.existsSync(settingsPath)) {
-        fs.writeFileSync(settingsPath, '{}', 'utf8')
+        const settingsContent = JSON.stringify({ workspaceId: randomUUID() }, null, 2)
+        fs.writeFileSync(settingsPath, settingsContent, 'utf8')
       }
 
       if (includeExamplePrompts) {
@@ -132,7 +133,11 @@ export class WorkspaceManager {
         fs.writeFileSync(path.join(exampleFolderPath, 'prompts.json'), promptsContent, 'utf8')
 
         const configContent = JSON.stringify(
-          createPromptFolderConfig(exampleFolderResult.folder.displayName, examplePrompts.length),
+          createPromptFolderConfig(
+            exampleFolderResult.folder.displayName,
+            examplePrompts.length,
+            randomUUID()
+          ),
           null,
           2
         )
@@ -189,7 +194,11 @@ export class WorkspaceManager {
 
       // Create the promptfolder.json file
       const configPath = path.join(folderPath, 'promptfolder.json')
-      const configContent = JSON.stringify(createPromptFolderConfig(displayName, 0), null, 2)
+      const configContent = JSON.stringify(
+        createPromptFolderConfig(displayName, 0, randomUUID()),
+        null,
+        2
+      )
       fs.writeFileSync(configPath, configContent, 'utf8')
 
       // Create the prompts.json file

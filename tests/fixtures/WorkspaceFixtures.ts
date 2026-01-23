@@ -13,6 +13,7 @@ import { createPromptFolderConfig } from '../../src/shared/promptFolderConfig'
 export interface PromptFolderConfig {
   folderName: string
   displayName: string
+  promptFolderId?: string
   prompts?: Array<{
     id: string
     title?: string
@@ -46,6 +47,15 @@ function createSinglePromptFoldersFromPromptCollection(
  */
 export interface WorkspaceOptions {
   settings?: Record<string, any>
+}
+
+const createDeterministicId = (seed: string): string => {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000-0000-0000-0000-${suffix}`
 }
 
 const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
@@ -133,11 +143,16 @@ export function createBasicWorkspace(
   workspacePath: string,
   options: WorkspaceOptions = {}
 ): Record<string, string | null> {
-  const { settings = { version: 1 } } = options
+  const { settings = {} } = options
+  const workspaceId =
+    typeof settings.workspaceId === 'string'
+      ? settings.workspaceId
+      : createDeterministicId(workspacePath)
+  const settingsPayload = { ...settings, workspaceId }
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/prompts`]: null,
-    [`${workspacePath}/WorkspaceSettings.json`]: JSON.stringify(settings, null, 2)
+    [`${workspacePath}/WorkspaceSettings.json`]: JSON.stringify(settingsPayload, null, 2)
   }
 
   return structure
@@ -163,10 +178,14 @@ export function createWorkspaceWithFolders(
   for (const folder of folderConfigs) {
     const folderPath = `${workspacePath}/prompts/${folder.folderName}`
     const { prompts, promptCount } = normalizePrompts(folder.prompts)
+    const promptFolderId =
+      typeof folder.promptFolderId === 'string'
+        ? folder.promptFolderId
+        : createDeterministicId(`${workspacePath}:${folder.folderName}`)
 
     // Create folder metadata
     structure[`${folderPath}/promptfolder.json`] = JSON.stringify(
-      createPromptFolderConfig(folder.displayName, promptCount),
+      createPromptFolderConfig(folder.displayName, promptCount, promptFolderId),
       null,
       2
     )
@@ -336,10 +355,14 @@ export function addFolderToWorkspace(
 ): Record<string, string | null> {
   const folderPath = `${workspacePath}/prompts/${folderConfig.folderName}`
   const { prompts, promptCount } = normalizePrompts(folderConfig.prompts)
+  const promptFolderId =
+    typeof folderConfig.promptFolderId === 'string'
+      ? folderConfig.promptFolderId
+      : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   return {
     [`${folderPath}/promptfolder.json`]: JSON.stringify(
-      createPromptFolderConfig(folderConfig.displayName, promptCount),
+      createPromptFolderConfig(folderConfig.displayName, promptCount, promptFolderId),
       null,
       2
     ),
@@ -457,7 +480,11 @@ export function createCorruptedWorkspace(
       break
 
     case 'missing-prompts':
-      structure[`${workspacePath}/WorkspaceSettings.json`] = JSON.stringify({ version: 1 }, null, 2)
+      structure[`${workspacePath}/WorkspaceSettings.json`] = JSON.stringify(
+        { workspaceId: createDeterministicId(workspacePath) },
+        null,
+        2
+      )
       // Missing prompts directory
       break
   }
