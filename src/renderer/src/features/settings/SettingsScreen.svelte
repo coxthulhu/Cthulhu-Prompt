@@ -159,7 +159,7 @@
         <div class="space-y-1">
           <h2 class="text-lg font-semibold">Prompt editor font size</h2>
           <p class="text-sm text-muted-foreground">
-            Sets the default font size used in the prompt editor.
+            Sets the font size used in the prompt editor.
           </p>
         </div>
 
