@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from '@renderer/common/ui/button'
-  import { Input } from '@renderer/common/ui/input'
+  import { NumericInput } from '@renderer/common/ui/numeric-input'
   import {
     useSystemSettingsQuery,
     useUpdateSystemSettingsMutation
@@ -164,12 +164,8 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <Input
+          <NumericInput
             data-testid="font-size-input"
-            type="number"
-            min={MIN_PROMPT_FONT_SIZE}
-            max={MAX_PROMPT_FONT_SIZE}
-            step={1}
             class="w-24"
             value={fontSizeInput}
             disabled={isLoading}
