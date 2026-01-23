@@ -21,6 +21,7 @@
   import type { PromptFolder } from '@shared/ipc'
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
   import { setSystemSettingsContext } from './systemSettingsContext'
+  import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
@@ -33,6 +34,7 @@
   const systemSettings = $state({
     promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize
   })
+  const windowControls = window.windowControls
 
   const { mutateAsync: checkWorkspaceFolderExists } = useCheckWorkspaceFolderExistsMutation()
   const { mutateAsync: createWorkspaceAtPath } = useCreateWorkspaceMutation()
@@ -179,6 +181,20 @@
   // Side effect: keep the browser window title in sync with dev mode state.
   $effect(() => {
     document.title = windowTitle
+  })
+
+  // Side effect: flush pending autosaves before allowing the main process to close the window.
+  $effect(() => {
+    const unsubscribe = windowControls.onCloseRequested(() => {
+      void (async () => {
+        await flushPendingSaves()
+        await windowControls.confirmClose()
+      })()
+    })
+
+    return () => {
+      unsubscribe()
+    }
   })
 
   const navigateToScreen = (screen: ScreenId) => {

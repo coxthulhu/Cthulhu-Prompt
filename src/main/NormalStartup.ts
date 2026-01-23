@@ -41,6 +41,7 @@ function encodeRuntimeConfig(config: RuntimeConfig): string {
 }
 
 let windowControlsInitialized = false
+const windowCloseGuards = new WeakMap<BrowserWindow, { allowClose: boolean }>()
 
 function setupWindowControlHandlers(): void {
   if (windowControlsInitialized) {
@@ -67,6 +68,16 @@ function setupWindowControlHandlers(): void {
 
   ipcMain.handle('window-close', (event) => {
     withWindow(event)?.close()
+  })
+
+  ipcMain.handle('window-confirm-close', (event) => {
+    const window = withWindow(event)
+    if (!window) return
+    const guard = windowCloseGuards.get(window)
+    if (guard) {
+      guard.allowClose = true
+    }
+    window.close()
   })
 
   ipcMain.handle('window-is-maximized', (event) => {
@@ -112,6 +123,19 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
       sandbox: false,
       additionalArguments: [encodeRuntimeConfig(runtimeConfig)]
     }
+  })
+
+  const closeGuard = { allowClose: false }
+  windowCloseGuards.set(mainWindow, closeGuard)
+
+  mainWindow.on('close', (event) => {
+    if (closeGuard.allowClose) {
+      closeGuard.allowClose = false
+      return
+    }
+
+    event.preventDefault()
+    mainWindow.webContents.send('window-close-requested')
   })
 
   mainWindow.on('ready-to-show', () => {

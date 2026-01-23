@@ -13,5 +13,5 @@ export const registerSystemSettingsAutosave = (
 
 export const flushSystemSettingsAutosaves = async (): Promise<void> => {
   const tasks = Array.from(autosaveHandlers, (handler) => handler())
-  await Promise.all(tasks)
+  await Promise.allSettled(tasks)
 }

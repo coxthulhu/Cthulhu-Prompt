@@ -54,6 +54,7 @@ const windowControls = {
   minimize: () => electronAPI.ipcRenderer.invoke('window-minimize'),
   toggleMaximize: () => electronAPI.ipcRenderer.invoke('window-toggle-maximize'),
   close: () => electronAPI.ipcRenderer.invoke('window-close'),
+  confirmClose: () => electronAPI.ipcRenderer.invoke('window-confirm-close'),
   isMaximized: () => electronAPI.ipcRenderer.invoke('window-is-maximized'),
   onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
     const listener = (_event: unknown, isMaximized: boolean) => {
@@ -62,6 +63,15 @@ const windowControls = {
     electronAPI.ipcRenderer.on('window-maximize-changed', listener)
     return () => {
       electronAPI.ipcRenderer.removeListener('window-maximize-changed', listener)
+    }
+  },
+  onCloseRequested: (callback: () => void) => {
+    const listener = () => {
+      callback()
+    }
+    electronAPI.ipcRenderer.on('window-close-requested', listener)
+    return () => {
+      electronAPI.ipcRenderer.removeListener('window-close-requested', listener)
     }
   }
 }

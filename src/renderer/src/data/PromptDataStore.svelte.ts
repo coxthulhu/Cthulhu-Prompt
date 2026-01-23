@@ -193,7 +193,7 @@ export const flushPromptWorkspaceAutosaves = async (): Promise<void> => {
     return promptData.saveNow()
   })
 
-  await Promise.all(tasks)
+  await Promise.allSettled(tasks)
 }
 
 export const resetPromptDataStoreForWorkspace = (nextWorkspacePath: string | null): void => {

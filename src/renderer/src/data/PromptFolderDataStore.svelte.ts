@@ -92,7 +92,7 @@ export const flushPromptFolderAutosaves = async (): Promise<void> => {
     return folderData.saveDescriptionNow()
   })
 
-  await Promise.all(tasks)
+  await Promise.allSettled(tasks)
 }
 
 export const resetPromptFolderDataStoreForWorkspace = (nextWorkspacePath: string | null): void => {
