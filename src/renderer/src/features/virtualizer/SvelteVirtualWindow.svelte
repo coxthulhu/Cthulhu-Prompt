@@ -91,6 +91,7 @@
     getClampedAnchoredScrollTopPx,
     getAnchoredScrollBottomPx,
     getVisibleRows,
+    getViewportRows,
     getScrollShadowActive,
     getScrollbarRevealVersion,
     scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
@@ -116,6 +117,7 @@
   } = createVirtualWindowHydrationState({
     getRowStates,
     getVisibleRows,
+    getViewportRows,
     getRowRegistry: () => rowRegistry,
     getViewportHeight,
     getClampedAnchoredScrollTopPx,

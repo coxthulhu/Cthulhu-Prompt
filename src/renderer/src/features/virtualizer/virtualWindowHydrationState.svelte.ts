@@ -10,6 +10,7 @@ import type { VirtualRowState } from './virtualWindowRows'
 type VirtualWindowHydrationStateOptions<TRow extends { kind: string }> = {
   getRowStates: () => VirtualRowState<TRow>[]
   getVisibleRows: () => VirtualRowState<TRow>[]
+  getViewportRows: () => VirtualRowState<TRow>[]
   getRowRegistry: () => VirtualWindowRowTypeRegistry<TRow>
   getViewportHeight: () => number
   getClampedAnchoredScrollTopPx: () => number
@@ -27,6 +28,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
   const {
     getRowStates,
     getVisibleRows,
+    getViewportRows,
     getRowRegistry,
     getViewportHeight,
     getClampedAnchoredScrollTopPx,
@@ -107,7 +109,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
   $effect(() => {
     if (getScrollAnchorMode() !== 'center') return
     const isEligible = getHydrationPriorityEligibility?.()
-    const visibleRows = getVisibleRows()
+    const visibleRows = getViewportRows()
     const hasUnhydratedVisibleRows = visibleRows.some(
       (row) => isEligible?.(row.rowData) && !isRowHydrated(row)
     )

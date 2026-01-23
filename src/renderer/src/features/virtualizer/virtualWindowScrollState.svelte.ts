@@ -97,6 +97,21 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     return getRowStates().slice(visibleStartIndex, visibleEndIndex + 1)
   })
 
+  const viewportStartIndex = $derived(
+    findIndexAtOffset(getRowStates(), clampedAnchoredScrollTopPx)
+  )
+  const viewportEndIndex = $derived.by(() => {
+    const rowStates = getRowStates()
+    if (rowStates.length === 0) return -1
+    const end = findIndexAtOffset(rowStates, anchoredScrollBottomPx)
+    if (viewportStartIndex < 0) return end
+    return Math.max(viewportStartIndex, end)
+  })
+  const viewportRows = $derived.by(() => {
+    if (viewportStartIndex < 0 || viewportEndIndex < viewportStartIndex) return []
+    return getRowStates().slice(viewportStartIndex, viewportEndIndex + 1)
+  })
+
   const setScrollAnchorMode = (next: 'top' | 'center') => {
     scrollAnchorMode = next
   }
@@ -168,6 +183,13 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     scrollAnchorMode = 'center'
   }
 
+  // Side effect: stop tracking once we leave center anchoring (e.g., after hydration completes).
+  $effect(() => {
+    if (!trackedRowId) return
+    if (scrollAnchorMode === 'center') return
+    trackedRowId = null
+  })
+
   // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
   $effect(() => {
     if (clampedAnchoredScrollTopPx !== scrollTopPx) {
@@ -209,6 +231,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getClampedAnchoredScrollTopPx: () => clampedAnchoredScrollTopPx,
     getAnchoredScrollBottomPx: () => anchoredScrollBottomPx,
     getVisibleRows: () => visibleRows,
+    getViewportRows: () => viewportRows,
     getScrollShadowActive: () => scrollShadowActive,
     getScrollbarRevealVersion: () => scrollbarRevealVersion,
     scrollToWithinWindowBand,
