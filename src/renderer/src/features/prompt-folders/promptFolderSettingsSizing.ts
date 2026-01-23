@@ -1,7 +1,4 @@
-import {
-  estimateMonacoHeightPx,
-  MONACO_PADDING_PX
-} from '../prompt-editor/promptEditorSizing'
+import { estimateMonacoHeightPx, MONACO_PADDING_PX } from '../prompt-editor/promptEditorSizing'
 
 const SETTINGS_TOP_PADDING_PX = 24
 const SETTINGS_TITLE_HEIGHT_PX = 28
@@ -25,9 +22,7 @@ const PROMPT_HEADER_TEXT_HEIGHT_PX = 28
 const PROMPT_HEADER_PADDING_BOTTOM_PX = 16
 
 export const PROMPT_HEADER_ROW_HEIGHT_PX =
-  PROMPT_HEADER_PADDING_TOP_PX +
-  PROMPT_HEADER_TEXT_HEIGHT_PX +
-  PROMPT_HEADER_PADDING_BOTTOM_PX
+  PROMPT_HEADER_PADDING_TOP_PX + PROMPT_HEADER_TEXT_HEIGHT_PX + PROMPT_HEADER_PADDING_BOTTOM_PX
 
 export const SETTINGS_EDITOR_TOP_OFFSET_PX =
   SETTINGS_TOP_PADDING_PX +
@@ -51,7 +46,5 @@ export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number): number 
 }
 
 export const estimatePromptFolderSettingsHeight = (text: string, fontSize: number): number => {
-  return getPromptFolderSettingsHeightPx(
-    estimatePromptFolderSettingsMonacoHeight(text, fontSize)
-  )
+  return getPromptFolderSettingsHeightPx(estimatePromptFolderSettingsMonacoHeight(text, fontSize))
 }

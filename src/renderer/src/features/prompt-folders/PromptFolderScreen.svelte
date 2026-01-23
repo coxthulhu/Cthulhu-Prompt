@@ -103,9 +103,7 @@
   type PromptEditorRowProps = VirtualWindowRowComponentProps<
     Extract<PromptFolderRow, { kind: 'prompt-editor' }>
   >
-  type ActiveOutlinerRow =
-    | { kind: 'folder-settings' }
-    | { kind: 'prompt'; promptId: string }
+  type ActiveOutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
@@ -312,16 +310,16 @@
         }}
       >
         {#snippet sidebar()}
-            <PromptFolderOutliner
-              promptIds={folderData.promptIds}
-              isLoading={folderData.isLoading}
-              errorMessage={folderData.errorMessage}
-              activeRow={activeOutlinerRow}
-              autoScrollRequestId={outlinerAutoScrollRequestId}
-              onSelectPrompt={handleOutlinerClick}
-              onSelectFolderSettings={handleOutlinerFolderSettingsClick}
-            />
-          {/snippet}
+          <PromptFolderOutliner
+            promptIds={folderData.promptIds}
+            isLoading={folderData.isLoading}
+            errorMessage={folderData.errorMessage}
+            activeRow={activeOutlinerRow}
+            autoScrollRequestId={outlinerAutoScrollRequestId}
+            onSelectPrompt={handleOutlinerClick}
+            onSelectFolderSettings={handleOutlinerFolderSettingsClick}
+          />
+        {/snippet}
 
         {#snippet content()}
           {#if folderData.errorMessage}
@@ -409,11 +407,9 @@
   <PromptDivider
     disabled={folderData.isCreatingPrompt}
     onAddPrompt={() => handleAddPrompt(row.previousPromptId)}
-    testId={
-      row.previousPromptId
-        ? `prompt-divider-add-after-${row.previousPromptId}`
-        : 'prompt-divider-add-initial'
-    }
+    testId={row.previousPromptId
+      ? `prompt-divider-add-after-${row.previousPromptId}`
+      : 'prompt-divider-add-initial'}
   />
 {/snippet}
 

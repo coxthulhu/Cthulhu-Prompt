@@ -1,6 +1,10 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
-import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import {
+  focusMonacoEditor,
+  getMonacoEditorText,
+  waitForMonacoEditor
+} from '../helpers/MonacoHelpers'
 import {
   PROMPT_EDITOR_PREFIX_SELECTOR,
   PROMPT_TITLE_SELECTOR,
@@ -68,9 +72,7 @@ const replacePromptText = async (page: any, promptId: string, text: string) => {
   await page.keyboard.type(text, { delay: 20 })
   // Monaco text helper collapses whitespace, so normalize the expected text to match.
   const normalizedText = text.replace(/\s+/g, ' ').trim()
-  await expect
-    .poll(async () => getMonacoEditorText(page, editorSelector))
-    .toContain(normalizedText)
+  await expect.poll(async () => getMonacoEditorText(page, editorSelector)).toContain(normalizedText)
 }
 
 const expectPromptContent = async (
@@ -141,9 +143,7 @@ describe('Prompt folder prompt management', () => {
 
     await addPromptAfter('dev-1')
     const orderAfterFirstAdd = await getPromptEditorIds(mainWindow)
-    const firstNewPromptId = orderAfterFirstAdd.find(
-      (id) => id !== 'dev-1' && id !== 'dev-2'
-    )
+    const firstNewPromptId = orderAfterFirstAdd.find((id) => id !== 'dev-1' && id !== 'dev-2')
     expect(firstNewPromptId).toBeTruthy()
 
     const firstPromptContent = { title: 'Inserted A', text: 'Inserted A text' }
@@ -237,12 +237,14 @@ describe('Prompt folder prompt management', () => {
     // Normalize clipboard line endings so the assertion stays stable on Windows.
     const normalizeNewlines = (value: string) => value.replace(/\r\n?/g, '\n')
 
-    await expect.poll(async () => {
-      const clipboardText = await mainWindow.evaluate(
-        () => (window as any).__testClipboardText ?? ''
-      )
-      return normalizeNewlines(clipboardText)
-    }).toBe(promptText)
+    await expect
+      .poll(async () => {
+        const clipboardText = await mainWindow.evaluate(
+          () => (window as any).__testClipboardText ?? ''
+        )
+        return normalizeNewlines(clipboardText)
+      })
+      .toBe(promptText)
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {

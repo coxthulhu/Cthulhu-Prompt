@@ -247,7 +247,8 @@
     if (event.reason === monaco.editor.CursorChangeReason.RecoverFromMarkers) return
     if (event.reason === monaco.editor.CursorChangeReason.ContentFlush) return
     if (event.source === 'api') return
-    if (event.source === 'mouse' && event.reason === monaco.editor.CursorChangeReason.Explicit) return
+    if (event.source === 'mouse' && event.reason === monaco.editor.CursorChangeReason.Explicit)
+      return
 
     const metrics = getCursorMetrics(event.position)
     const isVisible = metrics?.isVisible ?? false
@@ -388,10 +389,6 @@
       lastActiveMatchIndex = null
     }
   })
-
 </script>
 
-<div
-  bind:this={container}
-  style={`min-height:${minMonacoHeightPx}px; position: relative;`}
-></div>
+<div bind:this={container} style={`min-height:${minMonacoHeightPx}px; position: relative;`}></div>

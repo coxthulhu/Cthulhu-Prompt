@@ -57,8 +57,7 @@ export const rowTouchesViewport = <TRow extends { kind: string }>(
   row: VirtualRowState<TRow>,
   viewportTopPx: number,
   viewportBottomPx: number
-): boolean =>
-  row.offset + row.height >= viewportTopPx && row.offset <= viewportBottomPx
+): boolean => row.offset + row.height >= viewportTopPx && row.offset <= viewportBottomPx
 
 export const snapToDevicePixels = (value: number, dpr: number): number => {
   if (!Number.isFinite(value) || !Number.isFinite(dpr) || dpr <= 0) return value

@@ -46,7 +46,9 @@
   let isWorkspaceLoading = $state(false)
   let hasAttemptedAutoSelect = false
   const windowTitle = $derived(
-    isDevMode && executionFolderName ? `${baseWindowTitle} — ${executionFolderName}` : baseWindowTitle
+    isDevMode && executionFolderName
+      ? `${baseWindowTitle} — ${executionFolderName}`
+      : baseWindowTitle
   )
   const isWindows = window.electron?.process?.platform === 'win32'
 

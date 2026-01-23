@@ -28,9 +28,7 @@ export const normalizeRuntimeEnvironment = (
   return ''
 }
 
-export const normalizeRuntimeSystemSettings = (
-  value: unknown
-): SystemSettings => {
+export const normalizeRuntimeSystemSettings = (value: unknown): SystemSettings => {
   if (value && typeof value === 'object') {
     return normalizeSystemSettings(value as Record<string, unknown>)
   }

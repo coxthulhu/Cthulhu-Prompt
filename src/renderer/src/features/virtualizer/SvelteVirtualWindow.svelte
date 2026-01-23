@@ -58,12 +58,8 @@
 
   let isPointerOverWindow = $state(false)
 
-  const {
-    getMeasurementWidth,
-    getViewportHeight,
-    getDevicePixelRatio,
-    getWidthResizeActive
-  } = createVirtualWindowMeasurements({
+  const { getMeasurementWidth, getViewportHeight, getDevicePixelRatio, getWidthResizeActive } =
+    createVirtualWindowMeasurements({
       getViewportFrame: () => viewportFrame,
       leftScrollPaddingPx: LEFT_SCROLL_PADDING_PX,
       rightScrollPaddingPx: RIGHT_SCROLL_PADDING_PX,
@@ -179,7 +175,6 @@
     target.scrollTop = 0
     applyUserScrollTop(getScrollTopPx() + delta)
   }
-
 </script>
 
 <div
@@ -250,11 +245,11 @@
     </div>
 
     <VirtualWindowScrollbar
-      scrollTopPx={scrollTopPx}
+      {scrollTopPx}
       viewportHeightPx={viewportHeight}
-      totalHeightPx={totalHeightPx}
+      {totalHeightPx}
       widthPx={SCROLLBAR_WIDTH_PX}
-      isPointerOverWindow={isPointerOverWindow}
+      {isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
       onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
     />

@@ -8,10 +8,7 @@ import {
   createAutosaveController,
   type AutosaveDraft
 } from '@renderer/data/draftAutosave'
-import {
-  createMeasuredHeightCache,
-  type TextMeasurement
-} from '@renderer/data/measuredHeightCache'
+import { createMeasuredHeightCache, type TextMeasurement } from '@renderer/data/measuredHeightCache'
 
 type PromptContent = {
   title: string

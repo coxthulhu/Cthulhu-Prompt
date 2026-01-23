@@ -457,11 +457,7 @@ export function createCorruptedWorkspace(
       break
 
     case 'missing-prompts':
-      structure[`${workspacePath}/WorkspaceSettings.json`] = JSON.stringify(
-        { version: 1 },
-        null,
-        2
-      )
+      structure[`${workspacePath}/WorkspaceSettings.json`] = JSON.stringify({ version: 1 }, null, 2)
       // Missing prompts directory
       break
   }

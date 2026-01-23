@@ -13,10 +13,7 @@ import {
   resetAutosaveDraft,
   type AutosaveDraft
 } from '@renderer/data/draftAutosave'
-import {
-  createMeasuredHeightCache,
-  type TextMeasurement
-} from '@renderer/data/measuredHeightCache'
+import { createMeasuredHeightCache, type TextMeasurement } from '@renderer/data/measuredHeightCache'
 
 type CreatePromptRequestPayload = {
   workspacePath: string
@@ -79,10 +76,7 @@ const clearPromptFolderDescriptionMeasuredHeights = (folderName: string): void =
   promptFolderDescriptionMeasuredHeights.clear(folderName)
 }
 
-const resetDescriptionDraft = (
-  folderName: string,
-  draft: PromptFolderDescriptionDraft
-): void => {
+const resetDescriptionDraft = (folderName: string, draft: PromptFolderDescriptionDraft): void => {
   resetAutosaveDraft(draft)
   draft.text = ''
   clearPromptFolderDescriptionMeasuredHeights(folderName)
@@ -243,9 +237,7 @@ export const createPromptInFolder = async (
 
     ingestPromptFolderPrompts(folderName, [prompt])
 
-    const insertIndex = previousPromptId
-      ? folderData.promptIds.indexOf(previousPromptId) + 1
-      : 0
+    const insertIndex = previousPromptId ? folderData.promptIds.indexOf(previousPromptId) + 1 : 0
     const nextPromptIds = [...folderData.promptIds]
     nextPromptIds.splice(insertIndex, 0, prompt.id)
     folderData.promptIds = nextPromptIds

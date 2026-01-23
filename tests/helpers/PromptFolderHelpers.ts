@@ -31,10 +31,13 @@ async function waitForVirtualWindowControls(window: any): Promise<void> {
 }
 
 async function getVirtualWindowTestId(window: any, selector: string): Promise<string> {
-  const testId = await window.evaluate(({ targetSelector }) => {
-    const element = document.querySelector<HTMLElement>(targetSelector)
-    return element?.getAttribute('data-testid') ?? null
-  }, { targetSelector: selector })
+  const testId = await window.evaluate(
+    ({ targetSelector }) => {
+      const element = document.querySelector<HTMLElement>(targetSelector)
+      return element?.getAttribute('data-testid') ?? null
+    },
+    { targetSelector: selector }
+  )
 
   if (!testId) {
     throw new Error(`Failed to resolve data-testid for selector: ${selector}`)
@@ -248,19 +251,22 @@ export async function getPromptFolderScreenInfo(window: any): Promise<{
   promptCount: number
   firstPromptTitle?: string
 }> {
-  return await window.evaluate(({ editorSelector, titleSelector }) => {
-    const promptEditors = document.querySelectorAll(editorSelector)
-    const promptTitles = document.querySelectorAll(titleSelector)
+  return await window.evaluate(
+    ({ editorSelector, titleSelector }) => {
+      const promptEditors = document.querySelectorAll(editorSelector)
+      const promptTitles = document.querySelectorAll(titleSelector)
 
-    return {
-      hasPromptEditors: promptEditors.length > 0,
-      promptCount: promptEditors.length,
-      firstPromptTitle: promptTitles[0]?.textContent || undefined
+      return {
+        hasPromptEditors: promptEditors.length > 0,
+        promptCount: promptEditors.length,
+        firstPromptTitle: promptTitles[0]?.textContent || undefined
+      }
+    },
+    {
+      editorSelector: PROMPT_EDITOR_PREFIX_SELECTOR,
+      titleSelector: PROMPT_TITLE_SELECTOR
     }
-  }, {
-    editorSelector: PROMPT_EDITOR_PREFIX_SELECTOR,
-    titleSelector: PROMPT_TITLE_SELECTOR
-  })
+  )
 }
 
 /**

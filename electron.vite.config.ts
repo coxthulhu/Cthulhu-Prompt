@@ -33,7 +33,7 @@ export default defineConfig({
   renderer: {
     // Purpose: renderer build is the noisiest; suppress when needed.
     logLevel,
-	server: {
+    server: {
       host: '127.0.0.1',
       port: 8080,
       strictPort: true

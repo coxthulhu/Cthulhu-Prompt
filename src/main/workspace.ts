@@ -103,10 +103,7 @@ export class WorkspaceManager {
           }
         }
 
-        const exampleFolderPath = path.join(
-          promptsPath,
-          exampleFolderResult.folder.folderName
-        )
+        const exampleFolderPath = path.join(promptsPath, exampleFolderResult.folder.folderName)
         const now = new Date().toISOString()
         const examplePrompts = [
           {
@@ -135,10 +132,7 @@ export class WorkspaceManager {
         fs.writeFileSync(path.join(exampleFolderPath, 'prompts.json'), promptsContent, 'utf8')
 
         const configContent = JSON.stringify(
-          createPromptFolderConfig(
-            exampleFolderResult.folder.displayName,
-            examplePrompts.length
-          ),
+          createPromptFolderConfig(exampleFolderResult.folder.displayName, examplePrompts.length),
           null,
           2
         )
@@ -195,11 +189,7 @@ export class WorkspaceManager {
 
       // Create the promptfolder.json file
       const configPath = path.join(folderPath, 'promptfolder.json')
-      const configContent = JSON.stringify(
-        createPromptFolderConfig(displayName, 0),
-        null,
-        2
-      )
+      const configContent = JSON.stringify(createPromptFolderConfig(displayName, 0), null, 2)
       fs.writeFileSync(configPath, configContent, 'utf8')
 
       // Create the prompts.json file

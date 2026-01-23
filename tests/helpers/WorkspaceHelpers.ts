@@ -86,8 +86,6 @@ export async function isWorkspaceGetStarted(window: any): Promise<boolean> {
  */
 export async function getDisplayedWorkspacePath(window: any): Promise<string | null> {
   return await window.evaluate(() => {
-    return (
-      document.querySelector('[data-testid="workspace-ready-path"]')?.textContent ?? null
-    )
+    return document.querySelector('[data-testid="workspace-ready-path"]')?.textContent ?? null
   })
 }

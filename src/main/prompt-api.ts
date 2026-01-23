@@ -10,10 +10,7 @@ import type {
   PromptResult as SharedPromptResult,
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
-import {
-  createPromptFolderConfig,
-  type PromptFolderConfig
-} from '@shared/promptFolderConfig'
+import { createPromptFolderConfig, type PromptFolderConfig } from '@shared/promptFolderConfig'
 
 export type Prompt = SharedPrompt
 export type PromptResult = SharedPromptResult

@@ -76,13 +76,9 @@
   const workspaceTitle = $derived(workspaceSegment ?? 'Cthulhu Prompt')
 
   // Support middle truncation by splitting the path into a prefix + suffix.
-  const workspaceSeparator = $derived.by(() =>
-    workspacePath?.includes('\\') ? '\\' : '/'
-  )
+  const workspaceSeparator = $derived.by(() => (workspacePath?.includes('\\') ? '\\' : '/'))
   const workspacePathPrefix = $derived.by(() =>
-    workspaceSegments.length > 1
-      ? workspaceSegments.slice(0, -1).join(workspaceSeparator)
-      : ''
+    workspaceSegments.length > 1 ? workspaceSegments.slice(0, -1).join(workspaceSeparator) : ''
   )
   const workspacePathSuffix = $derived.by(() =>
     workspaceSegments.length ? workspaceSegments[workspaceSegments.length - 1] : ''

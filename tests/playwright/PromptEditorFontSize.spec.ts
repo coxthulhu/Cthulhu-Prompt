@@ -10,7 +10,10 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 async function setPromptFontSize(
   mainWindow: any,
-  testHelpers: { navigateToSettingsScreen: () => Promise<void>; navigateToHomeScreen: () => Promise<void> },
+  testHelpers: {
+    navigateToSettingsScreen: () => Promise<void>
+    navigateToHomeScreen: () => Promise<void>
+  },
   value: number
 ): Promise<void> {
   await testHelpers.navigateToSettingsScreen()
@@ -18,16 +21,13 @@ async function setPromptFontSize(
   await input.fill(String(value))
   await expect(input).toHaveValue(String(value))
   await testHelpers.navigateToHomeScreen()
-  await mainWindow.waitForFunction(
-    (expected) => {
-      const ipc = window.electron?.ipcRenderer
-      if (!ipc?.invoke) return false
-      return ipc.invoke('load-system-settings').then((result) => {
-        return result?.settings?.promptFontSize === expected
-      })
-    },
-    value
-  )
+  await mainWindow.waitForFunction((expected) => {
+    const ipc = window.electron?.ipcRenderer
+    if (!ipc?.invoke) return false
+    return ipc.invoke('load-system-settings').then((result) => {
+      return result?.settings?.promptFontSize === expected
+    })
+  }, value)
 }
 
 async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Promise<number> {
@@ -35,12 +35,15 @@ async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Pro
   await mainWindow.waitForSelector(monacoSelector, { state: 'visible' })
   await mainWindow.waitForSelector(`${monacoSelector} .view-line`, { state: 'attached' })
 
-  const lineHeight = await mainWindow.evaluate(({ selector }) => {
-    const editor = document.querySelector(selector)
-    const line = editor?.querySelector<HTMLElement>('.view-lines .view-line')
-    if (!line) return null
-    return Math.round(line.getBoundingClientRect().height)
-  }, { selector: monacoSelector })
+  const lineHeight = await mainWindow.evaluate(
+    ({ selector }) => {
+      const editor = document.querySelector(selector)
+      const line = editor?.querySelector<HTMLElement>('.view-lines .view-line')
+      if (!line) return null
+      return Math.round(line.getBoundingClientRect().height)
+    },
+    { selector: monacoSelector }
+  )
 
   if (lineHeight == null) {
     throw new Error('Failed to measure Monaco line height.')

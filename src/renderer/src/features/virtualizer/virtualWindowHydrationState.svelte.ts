@@ -1,10 +1,7 @@
 import { SvelteMap } from 'svelte/reactivity'
 
 import type { VirtualWindowRowTypeRegistry } from './virtualWindowTypes'
-import {
-  findNearestEligibleRow,
-  rowTouchesViewport
-} from './virtualWindowRowUtils'
+import { findNearestEligibleRow, rowTouchesViewport } from './virtualWindowRowUtils'
 import type { VirtualRowState } from './virtualWindowRows'
 
 type VirtualWindowHydrationStateOptions<TRow extends { kind: string }> = {

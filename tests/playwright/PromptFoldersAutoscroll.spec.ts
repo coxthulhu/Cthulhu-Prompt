@@ -123,24 +123,30 @@ describe('Prompt Folders Autoscroll', () => {
     await testHelpers.navigateToPromptFolders(EMPTY_FOLDER_NAME)
 
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.waitForSelector(FIRST_EMPTY_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await mainWindow.waitForSelector(FIRST_EMPTY_PROMPT_SELECTOR, {
+      state: 'attached',
+      timeout: 6000
+    })
 
-    const target = await mainWindow.evaluate(({ hostSelector }) => {
-      const host = document.querySelector<HTMLElement>(hostSelector)
-      if (!host) return null
-      const hostRect = host.getBoundingClientRect()
-      const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
-      const candidate = rows
-        .map((row) => ({ row, rect: row.getBoundingClientRect() }))
-        .filter(({ rect }) => rect.top >= hostRect.bottom)
-        .sort((a, b) => a.rect.top - b.rect.top)[0]
-      if (!candidate) return null
+    const target = await mainWindow.evaluate(
+      ({ hostSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        if (!host) return null
+        const hostRect = host.getBoundingClientRect()
+        const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
+        const candidate = rows
+          .map((row) => ({ row, rect: row.getBoundingClientRect() }))
+          .filter(({ rect }) => rect.top >= hostRect.bottom)
+          .sort((a, b) => a.rect.top - b.rect.top)[0]
+        if (!candidate) return null
 
-      const promptTestId = candidate.row.getAttribute('data-testid')
-      if (!promptTestId) return null
+        const promptTestId = candidate.row.getAttribute('data-testid')
+        if (!promptTestId) return null
 
-      return { promptTestId }
-    }, { hostSelector: HOST_SELECTOR })
+        return { promptTestId }
+      },
+      { hostSelector: HOST_SELECTOR }
+    )
 
     if (!target?.promptTestId) {
       throw new Error('Failed to find a prompt editor below the viewport.')
@@ -281,22 +287,25 @@ describe('Prompt Folders Autoscroll', () => {
       timeout: 6000
     })
 
-    const target = await mainWindow.evaluate(({ hostSelector }) => {
-      const host = document.querySelector<HTMLElement>(hostSelector)
-      if (!host) return null
-      const hostRect = host.getBoundingClientRect()
-      const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
-      const candidate = rows
-        .map((row) => ({ row, rect: row.getBoundingClientRect() }))
-        .filter(({ rect }) => rect.top >= hostRect.bottom)
-        .sort((a, b) => a.rect.top - b.rect.top)[0]
-      if (!candidate) return null
+    const target = await mainWindow.evaluate(
+      ({ hostSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        if (!host) return null
+        const hostRect = host.getBoundingClientRect()
+        const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
+        const candidate = rows
+          .map((row) => ({ row, rect: row.getBoundingClientRect() }))
+          .filter(({ rect }) => rect.top >= hostRect.bottom)
+          .sort((a, b) => a.rect.top - b.rect.top)[0]
+        if (!candidate) return null
 
-      const promptTestId = candidate.row.getAttribute('data-testid')
-      if (!promptTestId) return null
+        const promptTestId = candidate.row.getAttribute('data-testid')
+        if (!promptTestId) return null
 
-      return { promptTestId }
-    }, { hostSelector: HOST_SELECTOR })
+        return { promptTestId }
+      },
+      { hostSelector: HOST_SELECTOR }
+    )
 
     if (!target?.promptTestId) {
       throw new Error('Failed to find a prompt editor below the viewport.')
@@ -328,28 +337,34 @@ describe('Prompt Folders Autoscroll', () => {
 
     await waitForMonacoEditor(mainWindow, rowSelector)
 
-    const didFocus = await mainWindow.evaluate(({ rowSelector }) => {
-      const monacoNode = document.querySelector(`${rowSelector} .monaco-editor`)
-      if (!monacoNode) return false
-      const registry = (
-        window as unknown as {
-          __cthulhuMonacoEditors?: Array<{
-            container: HTMLElement | null
-            editor: { focus: () => void; setPosition: (pos: { lineNumber: number; column: number }) => void }
-          }>
-        }
-      ).__cthulhuMonacoEditors
+    const didFocus = await mainWindow.evaluate(
+      ({ rowSelector }) => {
+        const monacoNode = document.querySelector(`${rowSelector} .monaco-editor`)
+        if (!monacoNode) return false
+        const registry = (
+          window as unknown as {
+            __cthulhuMonacoEditors?: Array<{
+              container: HTMLElement | null
+              editor: {
+                focus: () => void
+                setPosition: (pos: { lineNumber: number; column: number }) => void
+              }
+            }>
+          }
+        ).__cthulhuMonacoEditors
 
-      if (!registry?.length) return false
-      const entry = registry.find((item) => {
-        if (!item?.container) return false
-        return item.container === monacoNode || item.container.contains(monacoNode)
-      })
-      if (!entry) return false
-      entry.editor.focus()
-      entry.editor.setPosition({ lineNumber: 1, column: 1 })
-      return true
-    }, { rowSelector })
+        if (!registry?.length) return false
+        const entry = registry.find((item) => {
+          if (!item?.container) return false
+          return item.container === monacoNode || item.container.contains(monacoNode)
+        })
+        if (!entry) return false
+        entry.editor.focus()
+        entry.editor.setPosition({ lineNumber: 1, column: 1 })
+        return true
+      },
+      { rowSelector }
+    )
 
     if (!didFocus) {
       throw new Error('Failed to focus Monaco editor.')

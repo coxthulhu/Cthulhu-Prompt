@@ -17,7 +17,11 @@
   import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
   import type { ScrollToWithinWindowBand } from '../../virtualizer/virtualWindowTypes'
   import { revealPromptFolderMatch } from './promptFolderFindReveal'
-  import { findMatchIndexAtOrAfter, findMatchIndexBefore, findMatchRange } from './promptFolderFindText'
+  import {
+    findMatchIndexAtOrAfter,
+    findMatchIndexBefore,
+    findMatchRange
+  } from './promptFolderFindText'
   import type {
     PromptFolderFindAnchor,
     PromptFolderFindFocusRequest,
@@ -32,11 +36,7 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
   }
 
-  let {
-    promptIds,
-    children,
-    scrollToWithinWindowBand
-  }: PromptFolderFindIntegrationProps = $props()
+  let { promptIds, children, scrollToWithinWindowBand }: PromptFolderFindIntegrationProps = $props()
 
   let isFindOpen = $state(false)
   let matchText = $state('')
@@ -94,10 +94,7 @@
       countMatchesInText: searchModel.countMatchesInText
     })
     matchCountsByPrompt = nextCounts
-    totalMatches = nextCounts.reduce(
-      (sum, entry) => sum + entry.titleCount + entry.bodyCount,
-      0
-    )
+    totalMatches = nextCounts.reduce((sum, entry) => sum + entry.titleCount + entry.bodyCount, 0)
 
     if (resetSelection) {
       currentMatchIndex = 0
@@ -157,11 +154,7 @@
     void revealMatch(match)
   }
 
-  const getGlobalMatchIndex = (
-    promptId: string,
-    kind: 'title' | 'body',
-    matchIndex: number
-  ) => {
+  const getGlobalMatchIndex = (promptId: string, kind: 'title' | 'body', matchIndex: number) => {
     let runningIndex = 0
     for (const group of matchCountsByPrompt) {
       if (group.promptId === promptId) {
@@ -325,9 +318,7 @@
       : null
     const nextIndex =
       anchorIndex ??
-      (currentMatchIndex <= 0 || currentMatchIndex >= totalMatches
-        ? 1
-        : currentMatchIndex + 1)
+      (currentMatchIndex <= 0 || currentMatchIndex >= totalMatches ? 1 : currentMatchIndex + 1)
     setCurrentMatchIndex(nextIndex)
   }
 

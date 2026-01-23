@@ -1,7 +1,4 @@
-import {
-  computeAnchoredScrollTop,
-  findIndexAtOffset
-} from './virtualWindowRowUtils'
+import { computeAnchoredScrollTop, findIndexAtOffset } from './virtualWindowRowUtils'
 import type { VirtualRowState } from './virtualWindowRows'
 import type {
   ScrollToWithinWindowBand,
@@ -39,9 +36,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
   const scrollShadowActive = $derived(scrollTopPx > 0)
-  const anchorOffsetPx = $derived(
-    scrollAnchorMode === 'center' ? getViewportHeight() / 2 : 0
-  )
+  const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? getViewportHeight() / 2 : 0)
 
   const clampScrollTop = (nextScrollTop: number): number => {
     return Math.min(Math.max(0, nextScrollTop), maxScrollTopPx)
@@ -97,9 +92,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     return getRowStates().slice(visibleStartIndex, visibleEndIndex + 1)
   })
 
-  const viewportStartIndex = $derived(
-    findIndexAtOffset(getRowStates(), clampedAnchoredScrollTopPx)
-  )
+  const viewportStartIndex = $derived(findIndexAtOffset(getRowStates(), clampedAnchoredScrollTopPx))
   const viewportEndIndex = $derived.by(() => {
     const rowStates = getRowStates()
     if (rowStates.length === 0) return -1
@@ -156,10 +149,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   const TRACKED_ROW_TOP_PADDING_PX = 100
 
-  const getTrackedRowScrollTop = (
-    row: VirtualRowState<TRow>,
-    viewportHeight: number
-  ): number => {
+  const getTrackedRowScrollTop = (row: VirtualRowState<TRow>, viewportHeight: number): number => {
     if (row.height + TRACKED_ROW_TOP_PADDING_PX > viewportHeight) {
       return row.offset - TRACKED_ROW_TOP_PADDING_PX
     }

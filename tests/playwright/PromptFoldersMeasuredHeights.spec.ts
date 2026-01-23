@@ -47,9 +47,8 @@ describe('Prompt folders measured heights', () => {
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(FIRST_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
 
-    const scrollHeightAfterNavigation = await testHelpers.getVirtualWindowScrollHeight(
-      HOST_SELECTOR
-    )
+    const scrollHeightAfterNavigation =
+      await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
     expect(scrollHeightAfterNavigation).toBe(scrollHeightAfterScroll)
   })
 
@@ -85,9 +84,8 @@ describe('Prompt folders measured heights', () => {
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
 
-    const scrollHeightAfterNavigation = await testHelpers.getVirtualWindowScrollHeight(
-      HOST_SELECTOR
-    )
+    const scrollHeightAfterNavigation =
+      await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
     expect(scrollHeightAfterNavigation).toBe(scrollHeightAfterEdit)
   })
 })

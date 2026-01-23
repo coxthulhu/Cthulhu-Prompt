@@ -31,9 +31,7 @@
     | { kind: 'loading' }
     | { kind: 'folder-settings' }
     | { kind: 'prompt'; promptId: string }
-  type OutlinerActiveRow =
-    | { kind: 'folder-settings' }
-    | { kind: 'prompt'; promptId: string }
+  type OutlinerActiveRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
   const OUTLINER_ROW_HEIGHT_PX = 28
   const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
   const OUTLINER_FOLDER_SETTINGS_ROW_ID = 'outliner-folder-settings'

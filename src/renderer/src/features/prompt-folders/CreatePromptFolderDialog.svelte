@@ -46,7 +46,8 @@
       !isPromptFolderListLoading &&
       Boolean(sanitizedFolderName) &&
       promptFolders.some(
-        (folder) => sanitizePromptFolderName(folder.folderName).toLowerCase() === sanitizedFolderName
+        (folder) =>
+          sanitizePromptFolderName(folder.folderName).toLowerCase() === sanitizedFolderName
       )
   )
   const validationMessage = $derived(

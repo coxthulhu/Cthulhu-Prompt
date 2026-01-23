@@ -70,7 +70,7 @@
         <HydratableMonacoEditor
           initialValue={descriptionValue}
           containerWidthPx={virtualWindowWidthPx}
-          placeholderHeightPx={placeholderHeightPx}
+          {placeholderHeightPx}
           overflowWidgetsDomNode={overflowHost}
           {hydrationPriority}
           {shouldDehydrate}

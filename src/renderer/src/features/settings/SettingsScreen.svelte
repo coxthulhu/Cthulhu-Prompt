@@ -129,9 +129,7 @@
   const validationMessage = $derived(hasInteracted ? validateFontSize(fontSizeInput) : null)
   const displayError = $derived(errorMessage ?? validationMessage)
   const isResetDisabled = $derived(
-    isLoading ||
-      isUpdating ||
-      fontSizeInput === String(DEFAULT_SYSTEM_SETTINGS.promptFontSize)
+    isLoading || isUpdating || fontSizeInput === String(DEFAULT_SYSTEM_SETTINGS.promptFontSize)
   )
 
   const flushAutosave = async (): Promise<void> => {
@@ -149,10 +147,7 @@
   })
 </script>
 
-<section
-  class="flex-1 p-6 flex flex-col items-center justify-start"
-  data-testid="settings-screen"
->
+<section class="flex-1 p-6 flex flex-col items-center justify-start" data-testid="settings-screen">
   <div class="w-full max-w-2xl space-y-6">
     <div>
       <h1 class="text-2xl font-bold">Settings</h1>

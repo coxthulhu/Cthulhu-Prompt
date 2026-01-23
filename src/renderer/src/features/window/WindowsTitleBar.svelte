@@ -61,7 +61,7 @@
   onkeydown={handleKeyDown}
 >
   <div class="titlebar__spacer"></div>
-  <div class="titlebar__title" title={title}>{title}</div>
+  <div class="titlebar__title" {title}>{title}</div>
   <div class="titlebar__controls">
     <button
       type="button"

@@ -56,12 +56,7 @@
 </script>
 
 <div class="flex gap-1 shrink-0">
-  <Button
-    variant="outline"
-    size="xs"
-    class="text-[rgb(248,128,112)]"
-    onclick={handleDeleteClick}
-  >
+  <Button variant="outline" size="xs" class="text-[rgb(248,128,112)]" onclick={handleDeleteClick}>
     Delete
   </Button>
   <Button variant="outline" size="xs" onclick={handleCopyClick} data-testid="prompt-copy-button">

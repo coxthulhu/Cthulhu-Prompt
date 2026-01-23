@@ -122,7 +122,6 @@
     if (shouldDehydrate) return
     updateMonacoHydrationPriority(queuedEntry, hydrationPriority)
   })
-
 </script>
 
 <div class={cn('border border-border rounded-md bg-[#1e1e1e] pl-3 py-1', className)}>

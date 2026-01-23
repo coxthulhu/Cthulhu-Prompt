@@ -15,10 +15,7 @@
     useCheckWorkspaceFolderExistsMutation,
     useOpenSelectWorkspaceFolderDialogMutation
   } from '@renderer/api/workspace'
-  import {
-    isWorkspaceRootPath,
-    workspaceRootPathErrorMessage
-  } from '@shared/workspacePath'
+  import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -133,10 +130,7 @@
     if (selectedFolderPath) {
       activeWorkspaceAction = 'create'
       try {
-        const creationResult = await onWorkspaceCreate(
-          selectedFolderPath,
-          includeExamplePrompts
-        )
+        const creationResult = await onWorkspaceCreate(selectedFolderPath, includeExamplePrompts)
 
         if (creationResult.success) {
           showSetupDialog = false

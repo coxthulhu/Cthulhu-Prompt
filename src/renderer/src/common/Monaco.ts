@@ -174,7 +174,10 @@ monaco.editor.addKeybindingRules([
   { keybinding: monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
   { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.F3, command: null },
   { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Digit1, command: null },
+  {
+    keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Digit1,
+    command: null
+  },
   { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null },
   { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null }
 ])

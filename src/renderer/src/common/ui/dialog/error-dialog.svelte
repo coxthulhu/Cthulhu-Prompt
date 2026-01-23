@@ -29,7 +29,9 @@
   <DialogContent class="border-destructive/40 shadow-red-500/10" showCloseButton={false}>
     <DialogHeader>
       <div class="flex items-center gap-3">
-        <span class="flex size-8 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+        <span
+          class="flex size-8 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+        >
           <AlertTriangle class="size-4" />
         </span>
         <DialogTitle class="text-destructive">{title}</DialogTitle>
