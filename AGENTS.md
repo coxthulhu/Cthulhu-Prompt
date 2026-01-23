@@ -19,7 +19,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Project Structure & Module Organization
 
 - `src/main/` — Electron main process (IPC handlers, workspace/prompt APIs).
-- `src/preload/` — Safe bridge via `contextBridge` exposing `workspaceAPI`/`promptAPI`.
+- `src/preload/` — Safe bridge via `contextBridge` exposing `promptAPI`.
 - `src/renderer/` — Svelte + TypeScript UI. App source in `src/renderer/src` (components, stores, actions, contexts, styles).
 - `tests/vitest/` — Unit/integration tests (logic, filesystem with `memfs`).
 - `tests/playwright/` — End‑to‑end UI tests; helpers/fixtures under `tests/helpers` and `tests/fixtures`.
