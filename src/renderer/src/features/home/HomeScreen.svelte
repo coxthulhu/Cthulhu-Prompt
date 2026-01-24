@@ -11,10 +11,7 @@
     DialogTitle,
     ErrorDialog
   } from '@renderer/common/ui/dialog'
-  import {
-    useCheckWorkspaceFolderExistsMutation,
-    useOpenSelectWorkspaceFolderDialogMutation
-  } from '@renderer/api/workspace'
+  import { ipcInvoke } from '@renderer/api/ipcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
     WorkspaceCreationResult,
@@ -40,16 +37,31 @@
     onWorkspaceClear: () => void
   }>()
 
-  const { mutateAsync: openWorkspaceFolderDialog, isPending: isOpeningWorkspaceFolderDialog } =
-    useOpenSelectWorkspaceFolderDialogMutation()
-  const { mutateAsync: checkWorkspaceFolderExists } = useCheckWorkspaceFolderExistsMutation()
+  type OpenSelectWorkspaceFolderDialogResult = {
+    dialogCancelled: boolean
+    filePaths: string[]
+  }
 
+  let isOpeningWorkspaceFolderDialog = $state(false)
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
+
+  const openWorkspaceFolderDialog = async (): Promise<OpenSelectWorkspaceFolderDialogResult> => {
+    isOpeningWorkspaceFolderDialog = true
+    try {
+      return await ipcInvoke<OpenSelectWorkspaceFolderDialogResult>('select-workspace-folder')
+    } finally {
+      isOpeningWorkspaceFolderDialog = false
+    }
+  }
+
+  const checkWorkspaceFolderExists = async (path: string): Promise<boolean> => {
+    return await ipcInvoke<boolean, string>('check-folder-exists', path)
+  }
 
   const checkWorkspaceExists = async (path: string) => {
     const promptsPath = `${path}/Prompts`

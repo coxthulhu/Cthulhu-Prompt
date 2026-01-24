@@ -8,12 +8,9 @@
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
-  import { useSystemSettingsQuery } from '@renderer/api/systemSettings'
   import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
-  import {
-    useCheckWorkspaceFolderExistsMutation,
-    useCreateWorkspaceMutation
-  } from '@renderer/api/workspace'
+  import { ipcInvoke } from '@renderer/api/ipcInvoke'
+  import type { CreateWorkspaceRequest, WorkspaceResult } from '@shared/ipc'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -22,22 +19,34 @@
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
+  import {
+    getSystemSettingsState,
+    loadSystemSettingsOnce
+  } from '@renderer/data/SystemSettingsStore.svelte.ts'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
-  const systemSettingsQuery = $derived(useSystemSettingsQuery())
+  const systemSettingsState = getSystemSettingsState()
+  void loadSystemSettingsOnce()
   const promptFontSize = $derived(
-    systemSettingsQuery.data?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    systemSettingsState.settings?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
   const systemSettings = $state({
     promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize
   })
   const windowControls = window.windowControls
 
-  const { mutateAsync: checkWorkspaceFolderExists } = useCheckWorkspaceFolderExistsMutation()
-  const { mutateAsync: createWorkspaceAtPath } = useCreateWorkspaceMutation()
+  const checkWorkspaceFolderExists = async (folderPath: string): Promise<boolean> => {
+    return await ipcInvoke<boolean, string>('check-folder-exists', folderPath)
+  }
+
+  const createWorkspaceAtPath = async (
+    request: CreateWorkspaceRequest
+  ): Promise<WorkspaceResult> => {
+    return await ipcInvoke<WorkspaceResult, CreateWorkspaceRequest>('create-workspace', request)
+  }
 
   setSystemSettingsContext(systemSettings)
 

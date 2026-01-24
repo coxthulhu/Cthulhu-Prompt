@@ -2,9 +2,9 @@
   import { Button } from '@renderer/common/ui/button'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import {
-    useSystemSettingsQuery,
-    useUpdateSystemSettingsMutation
-  } from '@renderer/api/systemSettings'
+    getSystemSettingsState,
+    updateSystemSettings
+  } from '@renderer/data/SystemSettingsStore.svelte.ts'
   import {
     DEFAULT_SYSTEM_SETTINGS,
     MAX_PROMPT_FONT_SIZE,
@@ -18,14 +18,13 @@
   } from '@renderer/data/draftAutosave'
   import { registerSystemSettingsAutosave } from '@renderer/data/systemSettingsAutosave'
 
-  const settingsQuery = $derived(useSystemSettingsQuery())
-  const { mutateAsync: updateSystemSettings, isPending: isUpdating } =
-    useUpdateSystemSettingsMutation()
+  const systemSettingsState = getSystemSettingsState()
+  const isUpdating = $derived(systemSettingsState.isSaving)
 
   const currentFontSize = $derived(
-    settingsQuery.data?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    systemSettingsState.settings?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
-  const isLoading = $derived(!settingsQuery.data && settingsQuery.isFetching)
+  const isLoading = $derived(systemSettingsState.isLoading && !systemSettingsState.settings)
 
   let fontSizeInput = $state(String(DEFAULT_SYSTEM_SETTINGS.promptFontSize))
   let hasInteracted = $state(false)

@@ -10,7 +10,7 @@
     DialogTitle,
     DialogTrigger
   } from '@renderer/common/ui/dialog'
-  import { useCreatePromptFolderMutation } from '@renderer/api/promptFolders'
+  import { createPromptFolder } from '@renderer/data/PromptFolderListStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
   import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
@@ -29,13 +29,11 @@
     onCreated?: (folder: PromptFolder) => void
   }>()
 
-  const { mutateAsync: createPromptFolder, isPending: isCreatingPromptFolder } =
-    useCreatePromptFolderMutation()
-
   let isDialogOpen = $state(false)
   let folderName = $state('')
   let submissionError = $state<string | null>(null)
   let hasInteractedWithInput = $state(false)
+  let isCreatingPromptFolder = $state(false)
 
   const validation = $derived(validatePromptFolderName(folderName))
   // Derive a sanitized name to detect duplicate prompt folders by on-disk folder name.
@@ -76,6 +74,7 @@
 
     try {
       submissionError = null
+      isCreatingPromptFolder = true
       const result = await createPromptFolder({
         displayName: folderName.trim(),
         workspacePath
@@ -90,6 +89,8 @@
       console.error('Error creating prompt folder:', error)
       submissionError =
         error instanceof Error ? error.message : 'Failed to create folder. Please try again.'
+    } finally {
+      isCreatingPromptFolder = false
     }
   }
 

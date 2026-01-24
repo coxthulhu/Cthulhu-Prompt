@@ -28,7 +28,6 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
-    "@tanstack/svelte-query": "^6.0.9",
     "electron-updater": "^6.3.9",
     "lucide-svelte": "^0.555.0",
     "monaco-editor": "^0.52.2",
