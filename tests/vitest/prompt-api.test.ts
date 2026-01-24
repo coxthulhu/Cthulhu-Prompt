@@ -34,7 +34,7 @@ describe('PromptAPI', () => {
       expect(result.prompt?.promptFolderCount).toBe(1)
 
       // Verify file was created
-      const filePath = '/workspace/prompts/TestFolder/prompts.json'
+      const filePath = '/workspace/prompts/TestFolder/Prompts.json'
       expect(vol.existsSync(filePath)).toBe(true)
     })
 
@@ -62,7 +62,7 @@ describe('PromptAPI', () => {
       }
 
       vol.fromJSON({
-        '/workspace/prompts/TestFolder/prompts.json': JSON.stringify(promptsData, null, 2)
+        '/workspace/prompts/TestFolder/Prompts.json': JSON.stringify(promptsData, null, 2)
       })
 
       const request = {
@@ -92,7 +92,7 @@ describe('PromptAPI', () => {
       expect(result.prompts).toEqual([])
 
       // Verify empty file was created
-      const filePath = '/workspace/prompts/TestFolder/prompts.json'
+      const filePath = '/workspace/prompts/TestFolder/Prompts.json'
       expect(vol.existsSync(filePath)).toBe(true)
       const content = JSON.parse(vol.readFileSync(filePath, 'utf8'))
       expect(content.prompts).toEqual([])
@@ -109,7 +109,7 @@ describe('PromptAPI', () => {
       }
 
       vol.fromJSON({
-        '/workspace/prompts/TestFolder/prompts.json': JSON.stringify(promptsData, null, 2)
+        '/workspace/prompts/TestFolder/Prompts.json': JSON.stringify(promptsData, null, 2)
       })
     })
 
@@ -159,7 +159,7 @@ describe('PromptAPI', () => {
       }
 
       vol.fromJSON({
-        '/workspace/prompts/TestFolder/prompts.json': JSON.stringify(promptsData, null, 2)
+        '/workspace/prompts/TestFolder/Prompts.json': JSON.stringify(promptsData, null, 2)
       })
     })
 
@@ -207,7 +207,7 @@ describe('PromptAPI', () => {
 
       PromptAPI.createInitialPromptsFile('/test-folder')
 
-      const filePath = '/test-folder/prompts.json'
+      const filePath = '/test-folder/Prompts.json'
       expect(vol.existsSync(filePath)).toBe(true)
 
       const content = JSON.parse(vol.readFileSync(filePath, 'utf8'))

@@ -21,7 +21,7 @@ export type PromptFolder = SharedPromptFolder
 export type PromptFolderResult = SharedPromptFolderResult
 export type LoadPromptFoldersResult = SharedLoadPromptFoldersResult
 
-const WORKSPACE_SETTINGS_FILENAME = 'WorkspaceSettings.json'
+const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 
 export class WorkspaceManager {
   static setupIpcHandlers(): void {
@@ -79,7 +79,7 @@ export class WorkspaceManager {
         return { success: false, error: workspaceRootPathErrorMessage }
       }
       const promptsPath = path.join(workspacePath, 'prompts')
-      const settingsPath = path.join(workspacePath, WORKSPACE_SETTINGS_FILENAME)
+      const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
 
       const fs = getFs()
 
@@ -88,7 +88,7 @@ export class WorkspaceManager {
         fs.mkdirSync(promptsPath, { recursive: true })
       }
 
-      // Create WorkspaceSettings.json with a workspace GUID.
+      // Create WorkspaceInfo.json with a workspace GUID.
       if (!fs.existsSync(settingsPath)) {
         const settingsContent = JSON.stringify({ workspaceId: randomUUID() }, null, 2)
         fs.writeFileSync(settingsPath, settingsContent, 'utf8')
@@ -130,7 +130,7 @@ export class WorkspaceManager {
           null,
           2
         )
-        fs.writeFileSync(path.join(exampleFolderPath, 'prompts.json'), promptsContent, 'utf8')
+        fs.writeFileSync(path.join(exampleFolderPath, 'Prompts.json'), promptsContent, 'utf8')
 
         const configContent = JSON.stringify(
           createPromptFolderConfig(
@@ -141,7 +141,7 @@ export class WorkspaceManager {
           null,
           2
         )
-        fs.writeFileSync(path.join(exampleFolderPath, 'promptfolder.json'), configContent, 'utf8')
+        fs.writeFileSync(path.join(exampleFolderPath, 'PromptFolder.json'), configContent, 'utf8')
       }
 
       return { success: true }
@@ -155,7 +155,7 @@ export class WorkspaceManager {
       return false
     }
     const promptsPath = path.join(workspacePath, 'prompts')
-    const settingsPath = path.join(workspacePath, WORKSPACE_SETTINGS_FILENAME)
+    const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
     return this.checkFolderExists(promptsPath) && this.checkFolderExists(settingsPath)
   }
 
@@ -192,8 +192,8 @@ export class WorkspaceManager {
       // Create the folder
       fs.mkdirSync(folderPath, { recursive: true })
 
-      // Create the promptfolder.json file
-      const configPath = path.join(folderPath, 'promptfolder.json')
+      // Create the PromptFolder.json file
+      const configPath = path.join(folderPath, 'PromptFolder.json')
       const configContent = JSON.stringify(
         createPromptFolderConfig(displayName, 0, randomUUID()),
         null,
@@ -201,7 +201,7 @@ export class WorkspaceManager {
       )
       fs.writeFileSync(configPath, configContent, 'utf8')
 
-      // Create the prompts.json file
+      // Create the Prompts.json file
       PromptAPI.createInitialPromptsFile(folderPath)
 
       return {
@@ -241,7 +241,7 @@ export class WorkspaceManager {
         try {
           const stat = fs.statSync(entryPath)
           if (stat.isDirectory()) {
-            const configPath = path.join(entryPath, 'promptfolder.json')
+            const configPath = path.join(entryPath, 'PromptFolder.json')
 
             try {
               if (fs.existsSync(configPath)) {

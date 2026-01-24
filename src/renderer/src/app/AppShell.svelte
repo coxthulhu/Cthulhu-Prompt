@@ -92,7 +92,7 @@
 
     try {
       const promptsPath = `${path}/prompts`
-      const settingsPath = `${path}/WorkspaceSettings.json`
+      const settingsPath = `${path}/WorkspaceInfo.json`
       const promptsExists = await checkWorkspaceFolderExists(promptsPath)
       const settingsExists = await checkWorkspaceFolderExists(settingsPath)
 

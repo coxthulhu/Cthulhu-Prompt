@@ -106,11 +106,11 @@ export class PromptAPI {
   }
 
   private static getPromptsFilePath(workspacePath: string, folderName: string): string {
-    return path.join(workspacePath, 'prompts', folderName, 'prompts.json')
+    return path.join(workspacePath, 'prompts', folderName, 'Prompts.json')
   }
 
   private static getPromptFolderConfigPath(workspacePath: string, folderName: string): string {
-    return path.join(workspacePath, 'prompts', folderName, 'promptfolder.json')
+    return path.join(workspacePath, 'prompts', folderName, 'PromptFolder.json')
   }
 
   private static async readPromptsFile(filePath: string): Promise<PromptsFile> {
@@ -380,7 +380,7 @@ export class PromptAPI {
 
   static createInitialPromptsFile(folderPath: string): void {
     const fs = getFs()
-    const promptsFilePath = path.join(folderPath, 'prompts.json')
+    const promptsFilePath = path.join(folderPath, 'Prompts.json')
     const promptsFile: PromptsFile = {
       metadata: { version: 1 },
       prompts: []

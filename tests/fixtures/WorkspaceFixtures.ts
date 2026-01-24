@@ -152,7 +152,7 @@ export function createBasicWorkspace(
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/prompts`]: null,
-    [`${workspacePath}/WorkspaceSettings.json`]: JSON.stringify(settingsPayload, null, 2)
+    [`${workspacePath}/WorkspaceInfo.json`]: JSON.stringify(settingsPayload, null, 2)
   }
 
   return structure
@@ -184,7 +184,7 @@ export function createWorkspaceWithFolders(
         : createDeterministicId(`${workspacePath}:${folder.folderName}`)
 
     // Create folder metadata
-    structure[`${folderPath}/promptfolder.json`] = JSON.stringify(
+    structure[`${folderPath}/PromptFolder.json`] = JSON.stringify(
       createPromptFolderConfig(folder.displayName, promptCount, promptFolderId),
       null,
       2
@@ -195,7 +195,7 @@ export function createWorkspaceWithFolders(
       metadata: { version: 1 },
       prompts
     }
-    structure[`${folderPath}/prompts.json`] = JSON.stringify(promptsData, null, 2)
+    structure[`${folderPath}/Prompts.json`] = JSON.stringify(promptsData, null, 2)
   }
 
   return structure
@@ -361,12 +361,12 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   return {
-    [`${folderPath}/promptfolder.json`]: JSON.stringify(
+    [`${folderPath}/PromptFolder.json`]: JSON.stringify(
       createPromptFolderConfig(folderConfig.displayName, promptCount, promptFolderId),
       null,
       2
     ),
-    [`${folderPath}/prompts.json`]: JSON.stringify(
+    [`${folderPath}/Prompts.json`]: JSON.stringify(
       {
         metadata: { version: 1 },
         prompts
@@ -471,16 +471,16 @@ export function createCorruptedWorkspace(
   switch (corruptionType) {
     case 'missing-settings':
       structure[`${workspacePath}/prompts`] = null
-      // Missing WorkspaceSettings.json
+      // Missing WorkspaceInfo.json
       break
 
     case 'invalid-json':
       structure[`${workspacePath}/prompts`] = null
-      structure[`${workspacePath}/WorkspaceSettings.json`] = '{ invalid json'
+      structure[`${workspacePath}/WorkspaceInfo.json`] = '{ invalid json'
       break
 
     case 'missing-prompts':
-      structure[`${workspacePath}/WorkspaceSettings.json`] = JSON.stringify(
+      structure[`${workspacePath}/WorkspaceInfo.json`] = JSON.stringify(
         { workspaceId: createDeterministicId(workspacePath) },
         null,
         2
