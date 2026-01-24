@@ -151,7 +151,7 @@ export function createBasicWorkspace(
   const settingsPayload = { ...settings, workspaceId }
 
   const structure: Record<string, string | null> = {
-    [`${workspacePath}/prompts`]: null,
+    [`${workspacePath}/Prompts`]: null,
     [`${workspacePath}/WorkspaceInfo.json`]: JSON.stringify(settingsPayload, null, 2)
   }
 
@@ -176,7 +176,7 @@ export function createWorkspaceWithFolders(
 
   // Add each folder
   for (const folder of folderConfigs) {
-    const folderPath = `${workspacePath}/prompts/${folder.folderName}`
+    const folderPath = `${workspacePath}/Prompts/${folder.folderName}`
     const { prompts, promptCount } = normalizePrompts(folder.prompts)
     const promptFolderId =
       typeof folder.promptFolderId === 'string'
@@ -353,7 +353,7 @@ export function addFolderToWorkspace(
   workspacePath: string,
   folderConfig: PromptFolderConfig
 ): Record<string, string | null> {
-  const folderPath = `${workspacePath}/prompts/${folderConfig.folderName}`
+  const folderPath = `${workspacePath}/Prompts/${folderConfig.folderName}`
   const { prompts, promptCount } = normalizePrompts(folderConfig.prompts)
   const promptFolderId =
     typeof folderConfig.promptFolderId === 'string'
@@ -470,12 +470,12 @@ export function createCorruptedWorkspace(
 
   switch (corruptionType) {
     case 'missing-settings':
-      structure[`${workspacePath}/prompts`] = null
+      structure[`${workspacePath}/Prompts`] = null
       // Missing WorkspaceInfo.json
       break
 
     case 'invalid-json':
-      structure[`${workspacePath}/prompts`] = null
+      structure[`${workspacePath}/Prompts`] = null
       structure[`${workspacePath}/WorkspaceInfo.json`] = '{ invalid json'
       break
 

@@ -78,12 +78,12 @@ export class WorkspaceManager {
       if (isWorkspaceRootPath(workspacePath)) {
         return { success: false, error: workspaceRootPathErrorMessage }
       }
-      const promptsPath = path.join(workspacePath, 'prompts')
+      const promptsPath = path.join(workspacePath, 'Prompts')
       const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
 
       const fs = getFs()
 
-      // Create prompts subfolder
+      // Create Prompts subfolder
       if (!fs.existsSync(promptsPath)) {
         fs.mkdirSync(promptsPath, { recursive: true })
       }
@@ -154,7 +154,7 @@ export class WorkspaceManager {
     if (isWorkspaceRootPath(workspacePath)) {
       return false
     }
-    const promptsPath = path.join(workspacePath, 'prompts')
+    const promptsPath = path.join(workspacePath, 'Prompts')
     const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
     return this.checkFolderExists(promptsPath) && this.checkFolderExists(settingsPath)
   }
@@ -179,7 +179,7 @@ export class WorkspaceManager {
       const folderName = sanitizePromptFolderName(displayName)
 
       // Create the folder path
-      const promptsPath = path.join(workspacePath, 'prompts')
+      const promptsPath = path.join(workspacePath, 'Prompts')
       const folderPath = path.join(promptsPath, folderName)
 
       const fs = getFs()
@@ -224,7 +224,7 @@ export class WorkspaceManager {
       }
 
       const fs = getFs()
-      const promptsPath = path.join(workspacePath, 'prompts')
+      const promptsPath = path.join(workspacePath, 'Prompts')
 
       // Check if prompts directory exists
       if (!fs.existsSync(promptsPath)) {

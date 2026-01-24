@@ -106,11 +106,11 @@ export class PromptAPI {
   }
 
   private static getPromptsFilePath(workspacePath: string, folderName: string): string {
-    return path.join(workspacePath, 'prompts', folderName, 'Prompts.json')
+    return path.join(workspacePath, 'Prompts', folderName, 'Prompts.json')
   }
 
   private static getPromptFolderConfigPath(workspacePath: string, folderName: string): string {
-    return path.join(workspacePath, 'prompts', folderName, 'PromptFolder.json')
+    return path.join(workspacePath, 'Prompts', folderName, 'PromptFolder.json')
   }
 
   private static async readPromptsFile(filePath: string): Promise<PromptsFile> {

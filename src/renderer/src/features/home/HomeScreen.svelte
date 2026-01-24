@@ -52,7 +52,7 @@
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
 
   const checkWorkspaceExists = async (path: string) => {
-    const promptsPath = `${path}/prompts`
+    const promptsPath = `${path}/Prompts`
     const settingsPath = `${path}/WorkspaceInfo.json`
     const promptsExists = await checkWorkspaceFolderExists(promptsPath)
     const settingsExists = await checkWorkspaceFolderExists(settingsPath)
