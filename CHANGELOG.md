@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.0.4
+
+### New Features
+
+- Added a prompt outliner panel for navigating prompts.
+- Added prompt folder settings with a folder description editor.
+- Added a custom Windows window title bar.
+- Added optional example prompts during workspace creation.
+
+### Changes
+
+- Updated workspace storage to use the `Prompts/` folder plus workspace/folder IDs and renamed prompt files.
+- Refreshed home screen and settings layouts; settings now autosave and prompt font size applies across the editor.
+- Refined virtual list styling to better match Monaco.
+
+### Fixed
+
+- Improved virtualized list scrolling stability (anchoring, DPI snapping, centering) and auto-scroll edge cases.
+- Fixed outliner selection behavior on click.
+- Prevented root drive workspace selection and duplicate prompt folder names.
+- Flushed autosaves on close to avoid losing recent edits.
+
 ## 0.0.3
 
 ### New Features
