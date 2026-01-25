@@ -19,17 +19,13 @@
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
-  import {
-    getSystemSettingsState,
-    loadSystemSettingsOnce
-  } from '@renderer/data/SystemSettingsStore.svelte.ts'
+  import { getSystemSettingsState } from '@renderer/data/SystemSettingsStore.svelte.ts'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
-  void loadSystemSettingsOnce()
   const promptFontSize = $derived(
     systemSettingsState.settings?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
