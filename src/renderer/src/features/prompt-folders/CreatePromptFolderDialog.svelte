@@ -12,10 +12,7 @@
   } from '@renderer/common/ui/dialog'
   import { createPromptFolder } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
-  import {
-    normalizePromptFolderDisplayName,
-    validatePromptFolderName
-  } from '@shared/promptFolderName'
+  import { preparePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
 
   let {
@@ -36,10 +33,11 @@
   let hasInteractedWithInput = $state(false)
   let isCreatingPromptFolder = $state(false)
 
-  const validation = $derived(validatePromptFolderName(displayName))
-  const normalizedInput = $derived(normalizePromptFolderDisplayName(displayName))
+  const preparedName = $derived(preparePromptFolderName(displayName))
+  const validation = $derived(preparedName.validation)
+  const normalizedDisplayName = $derived(preparedName.displayName)
   // Derive a sanitized name to detect duplicate prompt folders by on-disk folder name.
-  const sanitizedFolderName = $derived(normalizedInput.folderName.toLowerCase())
+  const sanitizedFolderName = $derived(preparedName.folderName.toLowerCase())
   const hasDuplicateFolderName = $derived.by(
     () =>
       validation.isValid &&
@@ -81,7 +79,7 @@
     try {
       submissionError = null
       isCreatingPromptFolder = true
-      const created = await createPromptFolder(displayName)
+      const created = await createPromptFolder(normalizedDisplayName)
 
       if (created) {
         onCreated?.(created)

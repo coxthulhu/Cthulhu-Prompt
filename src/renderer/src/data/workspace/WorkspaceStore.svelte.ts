@@ -9,7 +9,7 @@ import type {
   WorkspaceData
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
-import { normalizePromptFolderDisplayName } from '@shared/promptFolderName'
+import { preparePromptFolderName } from '@shared/promptFolderName'
 import {
   createVersionedDataStore,
   type VersionedDataState,
@@ -41,13 +41,10 @@ const workspaceStatesById = new SvelteMap<string, WorkspaceState>()
 const workspaceIdByPath = new SvelteMap<string, string>()
 let nextRequestId = 0
 
-const cloneFolders = (folders: PromptFolder[]): PromptFolder[] =>
-  folders.map((folder) => ({ ...folder }))
-
 const cloneWorkspaceData = (data: WorkspaceData): WorkspaceData => ({
   workspaceId: data.workspaceId,
   workspacePath: data.workspacePath,
-  folders: cloneFolders(data.folders)
+  folders: data.folders.map((folder) => ({ ...folder }))
 })
 
 const createSnapshot = (
@@ -105,6 +102,19 @@ const isLatestRequest = (workspacePath: string, requestId: number): boolean =>
   activeWorkspaceState.workspacePath === workspacePath &&
   activeWorkspaceState.requestId === requestId
 
+const finishWorkspaceLoad = (
+  workspacePath: string,
+  requestId: number,
+  apply: () => void
+): void => {
+  if (!isLatestRequest(workspacePath, requestId)) {
+    return
+  }
+
+  apply()
+  activeWorkspaceState.isLoading = false
+}
+
 const replaceWorkspaceState = (
   workspaceId: string,
   snapshot: VersionedSnapshot<WorkspaceData>
@@ -149,25 +159,20 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
       }
     )
 
-    if (!isLatestRequest(workspacePath, requestId)) {
-      return
-    }
+    finishWorkspaceLoad(workspacePath, requestId, () => {
+      if (!result.success) {
+        activeWorkspaceState.errorMessage = result.error
+        return
+      }
 
-    if (!result.success) {
-      throw new Error(result.error)
-    }
-
-    const snapshot = createSnapshot(result.workspace, result.version)
-    replaceWorkspaceState(result.workspace.workspaceId, snapshot)
-    activeWorkspaceState.isLoading = false
+      const snapshot = createSnapshot(result.workspace, result.version)
+      replaceWorkspaceState(result.workspace.workspaceId, snapshot)
+    })
   } catch (error) {
-    if (!isLatestRequest(workspacePath, requestId)) {
-      return
-    }
-
-    activeWorkspaceState.errorMessage =
-      error instanceof Error ? error.message : 'Failed to load workspace data'
-    activeWorkspaceState.isLoading = false
+    finishWorkspaceLoad(workspacePath, requestId, () => {
+      activeWorkspaceState.errorMessage =
+        error instanceof Error ? error.message : 'Failed to load workspace data'
+    })
   }
 }
 
@@ -196,7 +201,7 @@ const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
 export const createPromptFolder = async (displayName: string): Promise<PromptFolder | null> => {
   const state = activeWorkspaceState.dataState!
   const { displayName: normalizedDisplayName, folderName } =
-    normalizePromptFolderDisplayName(displayName)
+    preparePromptFolderName(displayName)
 
   state.draftSnapshot.folders = [
     ...state.draftSnapshot.folders,

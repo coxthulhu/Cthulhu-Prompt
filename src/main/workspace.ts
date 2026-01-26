@@ -17,10 +17,7 @@ import type {
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
 import { createPromptFolderConfig } from '@shared/promptFolderConfig'
-import {
-  normalizePromptFolderDisplayName,
-  validatePromptFolderName
-} from '@shared/promptFolderName'
+import { preparePromptFolderName } from '@shared/promptFolderName'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 
 export type WorkspaceResult = SharedWorkspaceResult
@@ -234,14 +231,12 @@ export class WorkspaceManager {
         return { success: false, error: 'Invalid workspace path' }
       }
 
-      const validation = validatePromptFolderName(displayName)
+      const { validation, displayName: normalizedDisplayName, folderName } =
+        preparePromptFolderName(displayName)
 
       if (!validation.isValid) {
         return { success: false, error: validation.errorMessage }
       }
-
-      const { displayName: normalizedDisplayName, folderName } =
-        normalizePromptFolderDisplayName(displayName)
 
       // Create the folder path
       const promptsPath = path.join(workspacePath, 'Prompts')
@@ -415,12 +410,14 @@ export class WorkspaceManager {
         }
       }
 
-      const desiredFolders = new Map<string, string>()
+      const desiredFoldersByName = new Map<string, string>()
 
       for (const folder of folders) {
-        const { displayName, folderName } = normalizePromptFolderDisplayName(folder.displayName)
-        if (!desiredFolders.has(folderName)) {
-          desiredFolders.set(folderName, displayName)
+        const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(
+          folder.displayName
+        )
+        if (!desiredFoldersByName.has(folderName)) {
+          desiredFoldersByName.set(folderName, normalizedDisplayName)
         }
       }
 
@@ -436,12 +433,12 @@ export class WorkspaceManager {
         const entryName = entry.name
         const entryPath = path.join(promptsPath, entryName)
 
-        if (!desiredFolders.has(entryName)) {
+        if (!desiredFoldersByName.has(entryName)) {
           fs.rmSync(entryPath, { recursive: true, force: true })
         }
       }
 
-      for (const [folderName, displayName] of desiredFolders) {
+      for (const [folderName, displayName] of desiredFoldersByName) {
         const folderPath = path.join(promptsPath, folderName)
 
         if (!fs.existsSync(folderPath)) {
@@ -458,10 +455,6 @@ export class WorkspaceManager {
         }
 
         const configPath = path.join(folderPath, 'PromptFolder.json')
-
-        if (!fs.existsSync(configPath)) {
-          continue
-        }
 
         try {
           const configContent = fs.readFileSync(configPath, 'utf8')

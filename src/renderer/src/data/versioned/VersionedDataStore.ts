@@ -1,3 +1,5 @@
+import type { VersionedDataResult } from '@shared/ipc'
+
 export type VersionedSnapshot<T> = {
   data: T
   version: number
@@ -11,10 +13,7 @@ export type VersionedSaveResult<TData> =
   | { type: 'unchanged' }
   | { type: 'error'; message: string }
 
-export type VersionedSaveResponse<TData> =
-  | { success: true; data: TData; version: number }
-  | { success: false; conflict: true; data: TData; version: number }
-  | { success: false; error: string; conflict?: false }
+export type VersionedSaveResponse<TData> = VersionedDataResult<TData>
 
 export type VersionedDataState<TDraft, TData> = {
   baseSnapshot: VersionedSnapshot<TData>

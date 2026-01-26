@@ -85,3 +85,16 @@ export const validatePromptFolderName = (name: string): FolderNameValidation => 
 
   return { isValid: true }
 }
+
+export type PreparedPromptFolderName = NormalizedPromptFolderName & {
+  validation: FolderNameValidation
+}
+
+export const preparePromptFolderName = (displayName: string): PreparedPromptFolderName => {
+  const validation = validatePromptFolderName(displayName)
+  const normalized = normalizePromptFolderDisplayName(displayName)
+  return {
+    ...normalized,
+    validation
+  }
+}

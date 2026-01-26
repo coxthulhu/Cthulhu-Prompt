@@ -1,6 +1,7 @@
 type SuccessEnvelope = {
   success: boolean
   error?: string
+  conflict?: boolean
 }
 
 const isSuccessEnvelope = (value: unknown): value is SuccessEnvelope => {
@@ -13,18 +14,6 @@ const isSuccessEnvelope = (value: unknown): value is SuccessEnvelope => {
   }
 
   return typeof (value as { success: unknown }).success === 'boolean'
-}
-
-const isConflictEnvelope = (value: unknown): boolean => {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  if (!('conflict' in value)) {
-    return false
-  }
-
-  return Boolean((value as { conflict?: boolean }).conflict)
 }
 
 type IpcInvokeErrorOptions = {
@@ -69,7 +58,7 @@ export async function ipcInvoke<TResponse, TPayload = unknown>(
         ? await ipcRenderer.invoke(channel)
         : await ipcRenderer.invoke(channel, payload)
 
-    if (isSuccessEnvelope(result) && !result.success && !isConflictEnvelope(result)) {
+    if (isSuccessEnvelope(result) && !result.success && !result.conflict) {
       throw new IpcInvokeError(result.error ?? 'Unknown IPC error', {
         channel,
         payload,
