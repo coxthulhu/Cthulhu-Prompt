@@ -65,8 +65,8 @@
   const { getMeasurementWidth, getViewportHeight, getDevicePixelRatio, getWidthResizeActive } =
     createVirtualWindowMeasurements({
       getViewportFrame: () => viewportFrame,
-      leftScrollPaddingPx,
-      rightScrollPaddingPx,
+      getLeftScrollPaddingPx: () => leftScrollPaddingPx,
+      getRightScrollPaddingPx: () => rightScrollPaddingPx,
       scrollbarWidthPx: SCROLLBAR_WIDTH_PX
     })
 

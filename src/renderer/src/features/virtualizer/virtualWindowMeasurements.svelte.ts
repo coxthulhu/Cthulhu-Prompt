@@ -2,13 +2,18 @@ import { onMount } from 'svelte'
 
 type VirtualWindowMeasurementsOptions = {
   getViewportFrame: () => HTMLDivElement | null
-  leftScrollPaddingPx: number
-  rightScrollPaddingPx: number
+  getLeftScrollPaddingPx: () => number
+  getRightScrollPaddingPx: () => number
   scrollbarWidthPx: number
 }
 
 export const createVirtualWindowMeasurements = (options: VirtualWindowMeasurementsOptions) => {
-  const { getViewportFrame, leftScrollPaddingPx, rightScrollPaddingPx, scrollbarWidthPx } = options
+  const {
+    getViewportFrame,
+    getLeftScrollPaddingPx,
+    getRightScrollPaddingPx,
+    scrollbarWidthPx
+  } = options
 
   let containerWidth = $state(0)
   let viewportHeight = $state(0)
@@ -22,7 +27,10 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
 
   // Subtract internal padding so width-based height measurements match the row content width.
   const measurementWidth = $derived(
-    Math.max(0, containerWidth - leftScrollPaddingPx - rightScrollPaddingPx - scrollbarWidthPx)
+    Math.max(
+      0,
+      containerWidth - getLeftScrollPaddingPx() - getRightScrollPaddingPx() - scrollbarWidthPx
+    )
   )
 
   const scheduleWidthResizeIdleReset = (version: number) => {
