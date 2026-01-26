@@ -17,6 +17,8 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
   let hasInitializedWidth = false
   let previousWidthPx = 0
   let widthResizeVersion = 0
+  let widthResizeResetHandle: number | null = null
+  const WIDTH_RESIZE_IDLE_DELAY_MS = 100
 
   // Subtract internal padding so width-based height measurements match the row content width.
   const measurementWidth = $derived(
@@ -24,12 +26,15 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
   )
 
   const scheduleWidthResizeIdleReset = (version: number) => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        if (widthResizeVersion !== version) return
-        widthResizeActive = false
-      })
-    })
+    if (widthResizeResetHandle != null) {
+      window.clearTimeout(widthResizeResetHandle)
+      widthResizeResetHandle = null
+    }
+    widthResizeResetHandle = window.setTimeout(() => {
+      if (widthResizeVersion !== version) return
+      widthResizeActive = false
+      widthResizeResetHandle = null
+    }, WIDTH_RESIZE_IDLE_DELAY_MS)
   }
 
   const applyContainerWidth = (nextWidth: number) => {
@@ -68,6 +73,10 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
 
     return () => {
       resizeObserver.disconnect()
+      if (widthResizeResetHandle != null) {
+        window.clearTimeout(widthResizeResetHandle)
+        widthResizeResetHandle = null
+      }
     }
   })
 
