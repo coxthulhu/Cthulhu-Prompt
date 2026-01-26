@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
+  import { onDestroy, untrack } from 'svelte'
+  import {
+    registerSidebar,
+    updateSidebar,
+    unregisterSidebar,
+    getSidebarWidth
+  } from './sidebarSizingState.svelte.ts'
 
   let {
     defaultWidth,
@@ -27,7 +33,13 @@
 
   // Snapshot the initial width so prop updates don't override drag changes.
   const getInitialWidth = () => defaultWidth
-  let width = $state(getInitialWidth())
+  let desiredWidth = $state(getInitialWidth())
+  const sidebarId = registerSidebar({
+    desiredWidth: getInitialWidth(),
+    minWidth: untrack(() => minWidth),
+    maxWidth: untrack(() => maxWidth)
+  })
+  const width = $derived.by(() => getSidebarWidth(sidebarId) ?? desiredWidth)
   let isDragging = $state(false)
   let startMouseX = 0
   let startWidth = 0
@@ -43,7 +55,7 @@
     if (!isDragging) return
     const deltaX = event.clientX - startMouseX
     const nextWidth = startWidth + deltaX
-    width = Math.min(Math.max(nextWidth, minWidth), maxWidth)
+    desiredWidth = Math.min(Math.max(nextWidth, minWidth), maxWidth)
   }
 
   const handleMouseDown = (event: MouseEvent) => {
@@ -69,13 +81,21 @@
     }
   })
 
+  // Side effect: sync this sidebar's sizing preferences with the global coordinator.
+  $effect(() => {
+    updateSidebar(sidebarId, { desiredWidth, minWidth, maxWidth })
+  })
+
   // Side effect: keep external layouts in sync with the current sidebar width.
   $effect(() => {
     onWidthChange?.(width)
   })
 
-  // Ensure drag state is cleared if the component unmounts mid-drag.
-  onDestroy(stopDragging)
+  // Ensure drag state is cleared and the sidebar unregisters if the component unmounts mid-drag.
+  onDestroy(() => {
+    stopDragging()
+    unregisterSidebar(sidebarId)
+  })
 </script>
 
 <div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
