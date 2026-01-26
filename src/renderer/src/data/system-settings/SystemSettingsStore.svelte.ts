@@ -7,6 +7,7 @@ import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
   applyServerSnapshot,
+  applyServerSnapshotBase,
   createVersionedDataState,
   type VersionedDataState,
   type VersionedSnapshot
@@ -17,6 +18,7 @@ export type SystemSettingsDraft = {
 }
 
 export type SystemSettingsState = VersionedDataState<SystemSettingsDraft, SystemSettings>
+export type SystemSettingsSaveOutcome = 'saved' | 'conflict' | 'unchanged'
 
 const runtimeConfig = getRuntimeConfig()
 const initialSettings = runtimeConfig.systemSettings
@@ -50,15 +52,15 @@ export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
 }
 
 export const saveSystemSettings = async (
-  settings: SystemSettings,
-  draftInputSnapshot: string
-): Promise<UpdateSystemSettingsResult> => {
+  settings: SystemSettings
+): Promise<SystemSettingsSaveOutcome> => {
   systemSettingsState.isSaving = true
   systemSettingsState.errorMessage = null
 
   const baseVersion = systemSettingsState.base.version
-  const pendingSnapshot = createSnapshot(settings, baseVersion)
-  systemSettingsState.pending = pendingSnapshot
+  systemSettingsState.pending = createSnapshot(settings, baseVersion)
+  const draftInputAtSave = systemSettingsState.draft.promptFontSizeInput
+  const expectedDraftInput = String(settings.promptFontSize)
 
   try {
     const result = await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
@@ -69,29 +71,29 @@ export const saveSystemSettings = async (
       }
     )
 
-    if (result.success && result.settings && typeof result.version === 'number') {
-      const serverSnapshot = createSnapshot(result.settings, result.version)
-      systemSettingsState.base = serverSnapshot
-      systemSettingsState.pending = null
-
-      if (systemSettingsState.draft.promptFontSizeInput === draftInputSnapshot) {
-        systemSettingsState.draft = createDraft(serverSnapshot)
+    if (result.success && result.settings) {
+      const serverSnapshot = createSnapshot(result.settings, result.version as number)
+      if (systemSettingsState.draft.promptFontSizeInput === draftInputAtSave) {
+        applyServerSnapshot(systemSettingsState, serverSnapshot, createDraft)
+      } else {
+        applyServerSnapshotBase(systemSettingsState, serverSnapshot)
       }
-
-      return result
+      return systemSettingsState.draft.promptFontSizeInput === expectedDraftInput
+        ? 'saved'
+        : 'unchanged'
     }
 
-    if (result.conflict && result.settings && typeof result.version === 'number') {
+    if (result.conflict && result.settings) {
       applyServerSnapshot(
         systemSettingsState,
-        createSnapshot(result.settings, result.version),
+        createSnapshot(result.settings, result.version as number),
         createDraft
       )
-      return result
+      return 'conflict'
     }
 
     systemSettingsState.pending = null
-    return result
+    return 'unchanged'
   } catch (error) {
     systemSettingsState.errorMessage = error instanceof Error ? error.message : String(error)
     systemSettingsState.pending = null

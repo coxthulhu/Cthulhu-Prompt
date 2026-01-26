@@ -4,9 +4,9 @@
   import {
     getSystemSettingsState,
     saveSystemSettings,
-    setSystemSettingsDraftFontSizeInput
+    setSystemSettingsDraftFontSizeInput,
+    type SystemSettingsSaveOutcome
   } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
-  import type { UpdateSystemSettingsResult } from '@shared/ipc'
   import {
     DEFAULT_SYSTEM_SETTINGS,
     MAX_PROMPT_FONT_SIZE,
@@ -37,18 +37,20 @@
     errorMessage = null
   }
 
-  const applySaveResult = (
-    result: UpdateSystemSettingsResult,
-    expectedInput: string
-  ): void => {
-    if (result.conflict) {
+  const handleSaveOutcome = (outcome: SystemSettingsSaveOutcome): void => {
+    if (outcome !== 'unchanged') {
       clearSaveState()
-      return
     }
+  }
 
-    if (result.success && systemSettingsState.draft.promptFontSizeInput === expectedInput) {
-      clearSaveState()
-    }
+  const parseFontSizeInput = (value: string): number => {
+    return Math.round(Number(value))
+  }
+
+  const saveFontSizeInput = async (value: string): Promise<void> => {
+    const parsed = parseFontSizeInput(value)
+    const outcome = await saveSystemSettings({ promptFontSize: parsed })
+    handleSaveOutcome(outcome)
   }
 
   const autosave = createAutosaveController({
@@ -61,13 +63,8 @@
         return
       }
 
-      const draftInput = systemSettingsState.draft.promptFontSizeInput
-      const parsed = Math.round(Number(draftInput))
-      const normalizedInput = String(parsed)
-
       try {
-        const result = await saveSystemSettings({ promptFontSize: parsed }, draftInput)
-        applySaveResult(result, normalizedInput)
+        await saveFontSizeInput(systemSettingsState.draft.promptFontSizeInput)
       } catch (error) {
         console.error('Failed to update system settings:', error)
         errorMessage = 'Unable to save settings. Please try again.'
@@ -108,13 +105,7 @@
     try {
       setSystemSettingsDraftFontSizeInput(defaultFontSizeInput)
       autosaveDraft.dirty = true
-      const result = await saveSystemSettings(
-        {
-          promptFontSize: defaultFontSize
-        },
-        defaultFontSizeInput
-      )
-      applySaveResult(result, defaultFontSizeInput)
+      await saveFontSizeInput(defaultFontSizeInput)
     } catch (error) {
       console.error('Failed to reset system settings:', error)
       errorMessage = 'Unable to reset settings. Please try again.'

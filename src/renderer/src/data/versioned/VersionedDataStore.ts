@@ -22,12 +22,19 @@ export const createVersionedDataState = <TDraft, TData>(
   errorMessage: null
 })
 
+export const applyServerSnapshotBase = <TDraft, TData>(
+  state: VersionedDataState<TDraft, TData>,
+  snapshot: VersionedSnapshot<TData>
+): void => {
+  state.base = snapshot
+  state.pending = null
+}
+
 export const applyServerSnapshot = <TDraft, TData>(
   state: VersionedDataState<TDraft, TData>,
   snapshot: VersionedSnapshot<TData>,
   createDraft: (snapshot: VersionedSnapshot<TData>) => TDraft
 ): void => {
-  state.base = snapshot
-  state.pending = null
+  applyServerSnapshotBase(state, snapshot)
   state.draft = createDraft(snapshot)
 }

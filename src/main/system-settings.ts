@@ -71,11 +71,7 @@ export class SystemSettingsManager {
 
     ipcMain.handle(
       'update-system-settings',
-      async (_, request: UpdateSystemSettingsRequest | undefined) => {
-        if (!request?.settings || typeof request.version !== 'number') {
-          return { success: false, error: 'Invalid request payload' }
-        }
-
+      async (_, request: UpdateSystemSettingsRequest) => {
         return await this.updateSystemSettings(request.settings, request.version)
       }
     )
