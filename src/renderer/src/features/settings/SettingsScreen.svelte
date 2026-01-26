@@ -25,7 +25,6 @@
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
   const defaultFontSizeInput = String(defaultFontSize)
 
-  let errorMessage = $state<string | null>(null)
   const autosaveDraft = $state<AutosaveDraft>({
     dirty: false,
     saving: false,
@@ -34,11 +33,10 @@
 
   const clearSaveState = () => {
     autosaveDraft.dirty = false
-    errorMessage = null
   }
 
   const handleSaveOutcome = (outcome: SystemSettingsSaveOutcome): void => {
-    if (outcome !== 'unchanged') {
+    if (outcome === 'saved' || outcome === 'conflict') {
       clearSaveState()
     }
   }
@@ -49,8 +47,8 @@
 
   const saveFontSizeInput = async (value: string): Promise<void> => {
     const parsed = parseFontSizeInput(value)
-    const outcome = await saveSystemSettings({ promptFontSize: parsed })
-    handleSaveOutcome(outcome)
+    await saveSystemSettings({ promptFontSize: parsed })
+    handleSaveOutcome(systemSettingsState.saveOutcome)
   }
 
   const autosave = createAutosaveController({
@@ -67,7 +65,6 @@
         await saveFontSizeInput(systemSettingsState.draft.promptFontSizeInput)
       } catch (error) {
         console.error('Failed to update system settings:', error)
-        errorMessage = 'Unable to save settings. Please try again.'
       }
     }
   })
@@ -93,9 +90,6 @@
   const handleInput = (value: string) => {
     if (systemSettingsState.draft.promptFontSizeInput === value) return
     setSystemSettingsDraftFontSizeInput(value)
-    if (errorMessage) {
-      errorMessage = null
-    }
     autosave.markDirtyAndScheduleAutosave()
   }
 
@@ -108,14 +102,13 @@
       await saveFontSizeInput(defaultFontSizeInput)
     } catch (error) {
       console.error('Failed to reset system settings:', error)
-      errorMessage = 'Unable to reset settings. Please try again.'
     }
   }
 
   const validationMessage = $derived(
     validateFontSize(systemSettingsState.draft.promptFontSizeInput)
   )
-  const displayError = $derived(errorMessage ?? validationMessage)
+  const displayError = $derived(systemSettingsState.errorMessage ?? validationMessage)
   const isResetDisabled = $derived(
     isUpdating ||
       systemSettingsState.draft.promptFontSizeInput ===

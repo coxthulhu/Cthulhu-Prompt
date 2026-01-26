@@ -6,10 +6,12 @@ import type {
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
-  applyServerSnapshot,
-  applyServerSnapshotBase,
   createVersionedDataState,
+  markDraftUpdated,
+  saveVersionedData,
   type VersionedDataState,
+  type VersionedSaveOutcome,
+  type VersionedSaveResult,
   type VersionedSnapshot
 } from '@renderer/data/versioned/VersionedDataStore'
 
@@ -18,7 +20,7 @@ export type SystemSettingsDraft = {
 }
 
 export type SystemSettingsState = VersionedDataState<SystemSettingsDraft, SystemSettings>
-export type SystemSettingsSaveOutcome = 'saved' | 'conflict' | 'unchanged'
+export type SystemSettingsSaveOutcome = VersionedSaveOutcome
 
 const runtimeConfig = getRuntimeConfig()
 const initialSettings = runtimeConfig.systemSettings
@@ -36,69 +38,64 @@ const createDraft = (snapshot: VersionedSnapshot<SystemSettings>): SystemSetting
   promptFontSizeInput: String(snapshot.data.promptFontSize)
 })
 
+const isDraftDirty = (
+  draft: SystemSettingsDraft,
+  snapshot: VersionedSnapshot<SystemSettings>
+): boolean => {
+  return draft.promptFontSizeInput !== String(snapshot.data.promptFontSize)
+}
+
 const initialSnapshot = createSnapshot(initialSettings, initialVersion)
 
 const systemSettingsState = $state<SystemSettingsState>(
   createVersionedDataState<SystemSettingsDraft, SystemSettings>(
     initialSnapshot,
-    createDraft(initialSnapshot)
+    createDraft(initialSnapshot),
+    isDraftDirty
   )
 )
 
 export const getSystemSettingsState = (): SystemSettingsState => systemSettingsState
 
 export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
+  if (systemSettingsState.draft.promptFontSizeInput === value) return
   systemSettingsState.draft.promptFontSizeInput = value
+  markDraftUpdated(systemSettingsState, isDraftDirty)
 }
 
 export const saveSystemSettings = async (
   settings: SystemSettings
-): Promise<SystemSettingsSaveOutcome> => {
-  systemSettingsState.isSaving = true
-  systemSettingsState.errorMessage = null
-
+): Promise<void> => {
   const baseVersion = systemSettingsState.base.version
-  systemSettingsState.pending = createSnapshot(settings, baseVersion)
-  const draftInputAtSave = systemSettingsState.draft.promptFontSizeInput
-  const expectedDraftInput = String(settings.promptFontSize)
-
-  try {
-    const result = await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
-      'update-system-settings',
-      {
-        settings,
-        version: baseVersion
-      }
-    )
-
-    if (result.success && result.settings) {
-      const serverSnapshot = createSnapshot(result.settings, result.version as number)
-      if (systemSettingsState.draft.promptFontSizeInput === draftInputAtSave) {
-        applyServerSnapshot(systemSettingsState, serverSnapshot, createDraft)
-      } else {
-        applyServerSnapshotBase(systemSettingsState, serverSnapshot)
-      }
-      return systemSettingsState.draft.promptFontSizeInput === expectedDraftInput
-        ? 'saved'
-        : 'unchanged'
-    }
-
-    if (result.conflict && result.settings) {
-      applyServerSnapshot(
-        systemSettingsState,
-        createSnapshot(result.settings, result.version as number),
-        createDraft
+  await saveVersionedData(
+    systemSettingsState,
+    createSnapshot(settings, baseVersion),
+    createDraft,
+    isDraftDirty,
+    async (): Promise<VersionedSaveResult<SystemSettings>> => {
+      const result = await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
+        'update-system-settings',
+        {
+          settings,
+          version: baseVersion
+        }
       )
-      return 'conflict'
-    }
 
-    systemSettingsState.pending = null
-    return 'unchanged'
-  } catch (error) {
-    systemSettingsState.errorMessage = error instanceof Error ? error.message : String(error)
-    systemSettingsState.pending = null
-    throw error
-  } finally {
-    systemSettingsState.isSaving = false
-  }
+      if (result.success && result.settings) {
+        return {
+          type: 'saved',
+          snapshot: createSnapshot(result.settings, result.version as number)
+        }
+      }
+
+      if (result.conflict && result.settings) {
+        return {
+          type: 'conflict',
+          snapshot: createSnapshot(result.settings, result.version as number)
+        }
+      }
+
+      return { type: 'error', message: result.error as string }
+    }
+  )
 }
