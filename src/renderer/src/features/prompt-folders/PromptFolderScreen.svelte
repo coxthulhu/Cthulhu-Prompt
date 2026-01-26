@@ -52,6 +52,7 @@
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(null)
+  let latestCenteredOutlinerRow = $state<ActiveOutlinerRow | null>(null)
   // Manual selection keeps the outliner highlight on the clicked row until the user scrolls.
   let outlinerManualSelectionActive = $state(false)
   let outlinerAutoScrollRequestId = $state(0)
@@ -73,7 +74,7 @@
     scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
   }
 
-  // Side effect: reload prompts on folder change.
+  // Side effect: reload prompts and select the folder settings row after folder changes.
   $effect(() => {
     const nextFolderName = folderName
 
@@ -82,6 +83,9 @@
     folderData = getPromptFolderData(nextFolderName)
     void loadPromptFolder(nextFolderName)
     scrollResetVersion += 1
+    activeOutlinerRow = { kind: 'folder-settings' }
+    outlinerManualSelectionActive = true
+    outlinerAutoScrollRequestId += 1
   })
 
   // Side effect: reset the virtual window scroll position after folder changes.
@@ -348,20 +352,22 @@
                 scrollTopPx = nextScrollTop
               }}
               onCenterRowChange={(row) => {
-                if (outlinerManualSelectionActive) return
                 if (row?.kind === 'prompt-editor') {
-                  activeOutlinerRow = { kind: 'prompt', promptId: row.promptId }
-                  return
+                  latestCenteredOutlinerRow = { kind: 'prompt', promptId: row.promptId }
+                } else if (row?.kind === 'folder-settings') {
+                  latestCenteredOutlinerRow = { kind: 'folder-settings' }
+                } else {
+                  latestCenteredOutlinerRow = null
                 }
-                if (row?.kind === 'folder-settings') {
-                  activeOutlinerRow = { kind: 'folder-settings' }
-                  return
-                }
-                activeOutlinerRow = null
+                if (outlinerManualSelectionActive) return
+                activeOutlinerRow = latestCenteredOutlinerRow
               }}
               onUserScroll={() => {
                 clearOutlinerManualSelection()
                 outlinerAutoScrollRequestId += 1
+                if (latestCenteredOutlinerRow) {
+                  activeOutlinerRow = latestCenteredOutlinerRow
+                }
               }}
             />
           {/if}
