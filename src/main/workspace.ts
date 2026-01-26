@@ -7,8 +7,13 @@ import { PromptAPI } from './prompt-api'
 import type {
   CreateWorkspaceRequest as SharedCreateWorkspaceRequest,
   LoadPromptFoldersResult as SharedLoadPromptFoldersResult,
+  LoadWorkspaceDataRequest as SharedLoadWorkspaceDataRequest,
+  LoadWorkspaceDataResult as SharedLoadWorkspaceDataResult,
   PromptFolder as SharedPromptFolder,
   PromptFolderResult as SharedPromptFolderResult,
+  UpdateWorkspaceDataRequest as SharedUpdateWorkspaceDataRequest,
+  UpdateWorkspaceDataResult as SharedUpdateWorkspaceDataResult,
+  WorkspaceData as SharedWorkspaceData,
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
 import { createPromptFolderConfig } from '@shared/promptFolderConfig'
@@ -20,8 +25,33 @@ export type CreateWorkspaceRequest = SharedCreateWorkspaceRequest
 export type PromptFolder = SharedPromptFolder
 export type PromptFolderResult = SharedPromptFolderResult
 export type LoadPromptFoldersResult = SharedLoadPromptFoldersResult
+export type WorkspaceData = SharedWorkspaceData
+export type LoadWorkspaceDataRequest = SharedLoadWorkspaceDataRequest
+export type LoadWorkspaceDataResult = SharedLoadWorkspaceDataResult
+export type UpdateWorkspaceDataRequest = SharedUpdateWorkspaceDataRequest
+export type UpdateWorkspaceDataResult = SharedUpdateWorkspaceDataResult
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
+const workspaceVersions = new Map<string, number>()
+
+const getWorkspaceVersion = (workspaceId: string): number =>
+  workspaceVersions.get(workspaceId) ?? 0
+
+const setWorkspaceVersion = (workspaceId: string, version: number): void => {
+  workspaceVersions.set(workspaceId, version)
+}
+
+const readWorkspaceId = (workspacePath: string): string | null => {
+  try {
+    const fs = getFs()
+    const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
+    const content = fs.readFileSync(settingsPath, 'utf8')
+    const parsed = JSON.parse(content)
+    return typeof parsed?.workspaceId === 'string' ? parsed.workspaceId : null
+  } catch {
+    return null
+  }
+}
 
 export class WorkspaceManager {
   static setupIpcHandlers(): void {
@@ -54,6 +84,28 @@ export class WorkspaceManager {
     ipcMain.handle('load-prompt-folders', async (_, workspacePath: string) => {
       return await this.loadPromptFolders(workspacePath)
     })
+
+    ipcMain.handle(
+      'load-workspace-data',
+      async (_, request: LoadWorkspaceDataRequest | undefined) => {
+        if (!request?.workspacePath) {
+          return { success: false, error: 'Invalid request payload' }
+        }
+
+        return await this.loadWorkspaceData(request.workspacePath)
+      }
+    )
+
+    ipcMain.handle(
+      'update-workspace-data',
+      async (_, request: UpdateWorkspaceDataRequest | undefined) => {
+        if (!request?.workspacePath || !request.folders) {
+          return { success: false, error: 'Invalid request payload' }
+        }
+
+        return await this.updateWorkspaceData(request)
+      }
+    )
   }
   static async selectFolder(): Promise<{ dialogCancelled: boolean; filePaths: string[] }> {
     const dialogProvider = getDialogProvider()
@@ -274,6 +326,162 @@ export class WorkspaceManager {
       }
 
       return { success: true, folders }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async loadWorkspaceData(workspacePath: string): Promise<LoadWorkspaceDataResult> {
+    try {
+      const promptFolderResult = await this.loadPromptFolders(workspacePath)
+
+      if (!promptFolderResult.success) {
+        return { success: false, error: promptFolderResult.error }
+      }
+
+      const workspaceId = readWorkspaceId(workspacePath)
+
+      if (!workspaceId) {
+        return { success: false, error: 'Invalid workspace info' }
+      }
+
+      const workspace: WorkspaceData = {
+        workspaceId,
+        workspacePath,
+        folders: promptFolderResult.folders ?? []
+      }
+
+      return {
+        success: true,
+        workspace,
+        version: getWorkspaceVersion(workspaceId)
+      }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  }
+
+  static async updateWorkspaceData(
+    request: UpdateWorkspaceDataRequest
+  ): Promise<UpdateWorkspaceDataResult> {
+    const { workspacePath, folders, version: requestVersion } = request
+
+    try {
+      if (!this.validateWorkspace(workspacePath)) {
+        return { success: false, error: 'Invalid workspace path' }
+      }
+
+      const workspaceId = readWorkspaceId(workspacePath)
+
+      if (!workspaceId) {
+        return { success: false, error: 'Invalid workspace info' }
+      }
+
+      const currentVersion = getWorkspaceVersion(workspaceId)
+
+      if (requestVersion !== currentVersion) {
+        const promptFolderResult = await this.loadPromptFolders(workspacePath)
+
+        if (!promptFolderResult.success) {
+          return { success: false, error: promptFolderResult.error }
+        }
+
+        return {
+          success: false,
+          conflict: true,
+          workspace: {
+            workspaceId,
+            workspacePath,
+            folders: promptFolderResult.folders ?? []
+          },
+          version: currentVersion
+        }
+      }
+
+      const desiredFolders = new Map<string, string>()
+
+      for (const folder of folders) {
+        const displayName = folder.displayName.trim()
+        const folderName = sanitizePromptFolderName(displayName)
+        if (!desiredFolders.has(folderName)) {
+          desiredFolders.set(folderName, displayName)
+        }
+      }
+
+      const fs = getFs()
+      const promptsPath = path.join(workspacePath, 'Prompts')
+      const entries = fs.readdirSync(promptsPath, 'utf8')
+
+      for (const entryName of entries) {
+        const entryPath = path.join(promptsPath, entryName)
+
+        try {
+          const stat = fs.statSync(entryPath)
+          if (!stat.isDirectory()) {
+            continue
+          }
+        } catch {
+          continue
+        }
+
+        if (!desiredFolders.has(entryName)) {
+          fs.rmSync(entryPath, { recursive: true, force: true })
+        }
+      }
+
+      for (const [folderName, displayName] of desiredFolders) {
+        const folderPath = path.join(promptsPath, folderName)
+
+        if (!fs.existsSync(folderPath)) {
+          const createResult = await this.createPromptFolder(workspacePath, displayName)
+
+          if (!createResult.success) {
+            return {
+              success: false,
+              error: createResult.error ?? 'Failed to create prompt folder'
+            }
+          }
+
+          continue
+        }
+
+        const configPath = path.join(folderPath, 'PromptFolder.json')
+
+        if (!fs.existsSync(configPath)) {
+          continue
+        }
+
+        try {
+          const configContent = fs.readFileSync(configPath, 'utf8')
+          const config = JSON.parse(configContent) as Record<string, unknown>
+
+          if (config.foldername !== displayName) {
+            const updatedConfig = { ...config, foldername: displayName }
+            fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2), 'utf8')
+          }
+        } catch {
+          // Ignore unreadable configs.
+        }
+      }
+
+      const nextVersion = currentVersion + 1
+      setWorkspaceVersion(workspaceId, nextVersion)
+
+      const promptFolderResult = await this.loadPromptFolders(workspacePath)
+
+      if (!promptFolderResult.success) {
+        return { success: false, error: promptFolderResult.error }
+      }
+
+      return {
+        success: true,
+        workspace: {
+          workspaceId,
+          workspacePath,
+          folders: promptFolderResult.folders ?? []
+        },
+        version: nextVersion
+      }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }

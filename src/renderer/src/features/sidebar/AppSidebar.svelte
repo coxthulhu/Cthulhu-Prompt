@@ -2,11 +2,7 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { Home, FolderClosed, Loader } from 'lucide-svelte'
-  import {
-    getPromptFolderListState,
-    loadPromptFolderList,
-    resetPromptFolderListStoreForWorkspace
-  } from '@renderer/data/PromptFolderListStore.svelte.ts'
+  import { getActiveWorkspaceState } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import SidebarButton from './SidebarButton.svelte'
@@ -50,9 +46,10 @@
       }))
   )
 
-  const promptFolderListState = getPromptFolderListState()
-  const promptFolders = $derived(promptFolderListState.folders)
-  const areFoldersLoading = $derived(promptFolderListState.isLoading)
+  const workspaceStoreState = getActiveWorkspaceState()
+  const workspaceState = $derived(workspaceStoreState.dataState)
+  const promptFolders = $derived(workspaceState?.draftSnapshot.folders ?? [])
+  const areFoldersLoading = $derived(workspaceStoreState.isLoading)
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     !isWorkspaceReady
       ? 'no-workspace'
@@ -62,17 +59,6 @@
           ? 'empty'
           : 'ready'
   )
-
-  // Side effect: keep the prompt folder list in sync with the active workspace.
-  $effect(() => {
-    if (!isWorkspaceReady || !workspacePath) {
-      resetPromptFolderListStoreForWorkspace(null)
-      return
-    }
-
-    resetPromptFolderListStoreForWorkspace(workspacePath)
-    void loadPromptFolderList(workspacePath)
-  })
 
   // Derive workspace display strings for the sidebar header.
   const workspaceSegments = $derived.by(() =>

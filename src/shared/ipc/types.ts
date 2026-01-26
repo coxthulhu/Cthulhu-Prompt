@@ -41,6 +41,37 @@ export interface LoadPromptFoldersResult extends WorkspaceResult {
   folders?: PromptFolder[]
 }
 
+export interface WorkspaceFolderDraft {
+  displayName: string
+}
+
+export interface WorkspaceData {
+  workspaceId: string
+  workspacePath: string
+  folders: PromptFolder[]
+}
+
+export interface LoadWorkspaceDataRequest {
+  workspacePath: string
+}
+
+export interface LoadWorkspaceDataResult extends WorkspaceResult {
+  workspace?: WorkspaceData
+  version?: number
+}
+
+export interface UpdateWorkspaceDataRequest {
+  workspacePath: string
+  folders: WorkspaceFolderDraft[]
+  version: number
+}
+
+export interface UpdateWorkspaceDataResult extends WorkspaceResult {
+  workspace?: WorkspaceData
+  version?: number
+  conflict?: boolean
+}
+
 export interface Prompt {
   id: string
   title: string

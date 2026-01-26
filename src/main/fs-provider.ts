@@ -9,6 +9,7 @@ interface UnifiedFs {
   readdirSync: typeof nodeFs.readdirSync
   statSync: typeof nodeFs.statSync
   mkdirSync: typeof nodeFs.mkdirSync
+  rmSync: typeof nodeFs.rmSync
   writeFileSync: typeof nodeFs.writeFileSync
   // Add other fs methods as needed
 }
@@ -39,6 +40,7 @@ export function getFs(): UnifiedFs {
       readdirSync: fs.readdirSync.bind(fs) as typeof nodeFs.readdirSync,
       statSync: fs.statSync.bind(fs) as typeof nodeFs.statSync,
       mkdirSync: fs.mkdirSync.bind(fs) as typeof nodeFs.mkdirSync,
+      rmSync: fs.rmSync.bind(fs) as typeof nodeFs.rmSync,
       writeFileSync: fs.writeFileSync.bind(fs) as typeof nodeFs.writeFileSync
     }
   }

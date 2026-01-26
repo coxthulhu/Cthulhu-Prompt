@@ -57,7 +57,13 @@ export async function ipcInvoke<TResponse, TPayload = unknown>(
         ? await ipcRenderer.invoke(channel)
         : await ipcRenderer.invoke(channel, payload)
 
-    if (isSuccessEnvelope(result) && !result.success) {
+    const hasConflict =
+      typeof result === 'object' &&
+      result !== null &&
+      'conflict' in result &&
+      Boolean((result as { conflict?: boolean }).conflict)
+
+    if (isSuccessEnvelope(result) && !result.success && !hasConflict) {
       throw new IpcInvokeError(result.error ?? 'Unknown IPC error', {
         channel,
         payload,

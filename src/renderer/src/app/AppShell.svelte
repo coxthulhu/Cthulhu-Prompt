@@ -20,12 +20,14 @@
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
   import { getSystemSettingsState } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
+  import { getActiveWorkspaceState } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
+  const workspaceStoreState = getActiveWorkspaceState()
   const promptFontSize = $derived(
     systemSettingsState.baseSnapshot.data.promptFontSize ??
       DEFAULT_SYSTEM_SETTINGS.promptFontSize
@@ -48,7 +50,7 @@
   setSystemSettingsContext(systemSettings)
 
   let activeScreen = $state<ScreenId>('home')
-  let workspacePath = $state<string | null>(null)
+  const workspacePath = $derived(workspaceStoreState.workspacePath)
   let selectedPromptFolder = $state<PromptFolder | null>(null)
   const isWorkspaceReady = $derived(Boolean(workspacePath))
   let isWorkspaceLoading = $state(false)
@@ -83,13 +85,11 @@
 
   const resetWorkspaceState = async () => {
     await switchWorkspaceStores(null)
-    workspacePath = null
     clearPromptFolderSelection()
   }
 
   const handleWorkspaceSuccess = async (path: string) => {
     await switchWorkspaceStores(path)
-    workspacePath = path
   }
 
   const selectWorkspace = async (path: string): Promise<WorkspaceSelectionResult> => {

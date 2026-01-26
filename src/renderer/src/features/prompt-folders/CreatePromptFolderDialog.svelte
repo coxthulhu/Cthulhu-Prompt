@@ -10,7 +10,7 @@
     DialogTitle,
     DialogTrigger
   } from '@renderer/common/ui/dialog'
-  import { createPromptFolder } from '@renderer/data/PromptFolderListStore.svelte.ts'
+  import { createPromptFolder } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
   import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
@@ -75,13 +75,10 @@
     try {
       submissionError = null
       isCreatingPromptFolder = true
-      const result = await createPromptFolder({
-        displayName: folderName.trim(),
-        workspacePath
-      })
+      const created = await createPromptFolder(folderName.trim())
 
-      if (result?.folder) {
-        onCreated?.(result.folder)
+      if (created) {
+        onCreated?.(created)
       }
 
       closeDialog()

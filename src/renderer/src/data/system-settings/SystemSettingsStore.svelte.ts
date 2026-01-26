@@ -81,7 +81,14 @@ export const saveSystemSettings = (
         }
       )
 
-      return toVersionedSaveResult(result, createSnapshot)
+      return toVersionedSaveResult(
+        result,
+        (payload) => ({
+          data: payload.settings!,
+          version: payload.version!
+        }),
+        createSnapshot
+      )
     }
   )
 }

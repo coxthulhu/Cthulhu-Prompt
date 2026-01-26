@@ -8,7 +8,7 @@ import {
   flushPromptFolderAutosaves,
   resetPromptFolderDataStoreForWorkspace
 } from '@renderer/data/PromptFolderDataStore.svelte.ts'
-import { resetPromptFolderListStoreForWorkspace } from '@renderer/data/PromptFolderListStore.svelte.ts'
+import { setActiveWorkspacePath } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
 
 let currentWorkspacePath: string | null = null
 let switchQueue: Promise<void> = Promise.resolve()
@@ -26,8 +26,8 @@ export const switchWorkspaceStores = async (nextWorkspacePath: string | null): P
     ])
 
     currentWorkspacePath = nextWorkspacePath
+    await setActiveWorkspacePath(nextWorkspacePath)
     resetPromptFolderDataStoreForWorkspace(nextWorkspacePath)
-    resetPromptFolderListStoreForWorkspace(nextWorkspacePath)
     resetPromptDataStoreForWorkspace(nextWorkspacePath)
   })
 
