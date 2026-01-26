@@ -3,7 +3,6 @@ import type {
   UpdateSystemSettingsRequest,
   UpdateSystemSettingsResult
 } from '@shared/ipc'
-import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
@@ -15,14 +14,13 @@ import {
 
 export type SystemSettingsDraft = {
   promptFontSizeInput: string
-  version: number
 }
 
 export type SystemSettingsState = VersionedDataState<SystemSettingsDraft, SystemSettings>
 
 const runtimeConfig = getRuntimeConfig()
-const initialSettings = runtimeConfig.systemSettings ?? DEFAULT_SYSTEM_SETTINGS
-const initialVersion = runtimeConfig.systemSettingsVersion ?? 0
+const initialSettings = runtimeConfig.systemSettings
+const initialVersion = runtimeConfig.systemSettingsVersion
 
 const createSnapshot = (
   settings: SystemSettings,
@@ -33,18 +31,17 @@ const createSnapshot = (
 })
 
 const createDraft = (snapshot: VersionedSnapshot<SystemSettings>): SystemSettingsDraft => ({
-  promptFontSizeInput: String(snapshot.data.promptFontSize),
-  version: snapshot.version
+  promptFontSizeInput: String(snapshot.data.promptFontSize)
 })
 
 const initialSnapshot = createSnapshot(initialSettings, initialVersion)
 
-const systemSettingsState = $state<SystemSettingsState>({
-  ...createVersionedDataState<SystemSettingsDraft, SystemSettings>(
+const systemSettingsState = $state<SystemSettingsState>(
+  createVersionedDataState<SystemSettingsDraft, SystemSettings>(
     initialSnapshot,
     createDraft(initialSnapshot)
   )
-})
+)
 
 export const getSystemSettingsState = (): SystemSettingsState => systemSettingsState
 
@@ -79,8 +76,6 @@ export const saveSystemSettings = async (
 
       if (systemSettingsState.draft.promptFontSizeInput === draftInputSnapshot) {
         systemSettingsState.draft = createDraft(serverSnapshot)
-      } else {
-        systemSettingsState.draft.version = serverSnapshot.version
       }
 
       return result
