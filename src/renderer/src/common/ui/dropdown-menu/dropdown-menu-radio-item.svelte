@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
-	import CircleIcon from "@lucide/svelte/icons/circle";
-	import { cn, type WithoutChild } from "@renderer/common/Cn.js";
+	import { Circle } from "lucide-svelte";
+	import { cn, type WithoutChildrenOrChild } from "@renderer/common/Cn.js";
+	import type { Snippet } from "svelte";
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		children: childrenProp,
 		...restProps
-	}: WithoutChild<DropdownMenuPrimitive.RadioItemProps> = $props();
+	}: WithoutChildrenOrChild<DropdownMenuPrimitive.RadioItemProps> & {
+		children?: Snippet;
+	} = $props();
 </script>
 
 <DropdownMenuPrimitive.RadioItem
@@ -25,7 +28,7 @@
 			class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center"
 		>
 			{#if checked}
-				<CircleIcon class="size-2 fill-current" />
+				<Circle class="size-2 fill-current" />
 			{/if}
 		</span>
 		{@render childrenProp?.({ checked })}

@@ -1,7 +1,13 @@
 <script lang="ts">
   import { screens, type ScreenId } from '@renderer/app/screens'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { Home, FolderClosed, Loader } from 'lucide-svelte'
+  import { Home, FolderClosed, Loader, MoreHorizontal } from 'lucide-svelte'
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+  } from '@renderer/common/ui/dropdown-menu'
   import { getActiveWorkspaceState } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
@@ -25,6 +31,8 @@
     onNavigate: (screen: ScreenId) => void
     onPromptFolderSelect: (folder: PromptFolder) => void
   }>()
+
+  let openFolderMenuName = $state<string | null>(null)
 
   type NavItem = {
     id: ScreenId
@@ -149,16 +157,46 @@
               <li
                 data-slot="sidebar-menu-item"
                 data-sidebar="menu-item"
+                data-menu-open={openFolderMenuName === folder.folderName}
                 class="group/menu-item relative"
               >
+                {#snippet folderMenuTrigger({ props })}
+                  <button
+                    {...props}
+                    type="button"
+                    data-sidebar="menu-action"
+                  aria-label={`More actions for ${folder.displayName}`}
+                    class="absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground opacity-0 pointer-events-none transition-opacity cursor-pointer group-hover/menu-item:opacity-100 group-hover/menu-item:pointer-events-auto group-has-[:focus-visible]/menu-item:opacity-100 group-has-[:focus-visible]/menu-item:pointer-events-auto group-data-[menu-open=true]/menu-item:opacity-100 group-data-[menu-open=true]/menu-item:pointer-events-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  >
+                    <MoreHorizontal class="size-4" />
+                  </button>
+                {/snippet}
                 <SidebarButton
                   testId={`regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`}
                   icon={FolderClosed}
                   label={folder.displayName}
                   active={selectedPromptFolder?.folderName === folder.folderName &&
                     activeScreen === 'prompt-folders'}
+                  class="group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground group-data-[menu-open=true]/menu-item:bg-sidebar-accent group-data-[menu-open=true]/menu-item:text-sidebar-accent-foreground"
                   onclick={() => onPromptFolderSelect(folder)}
                 />
+                <DropdownMenu
+                  open={openFolderMenuName === folder.folderName}
+                  onOpenChange={(nextOpen) => {
+                    openFolderMenuName = nextOpen
+                      ? folder.folderName
+                      : openFolderMenuName === folder.folderName
+                        ? null
+                        : openFolderMenuName
+                  }}
+                >
+                  <DropdownMenuTrigger child={folderMenuTrigger} />
+                  <DropdownMenuContent side="right" align="center" sideOffset={6}>
+                    <DropdownMenuItem variant="destructive" class="cursor-pointer">
+                      Delete Folder
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </li>
             {/each}
           {/if}
