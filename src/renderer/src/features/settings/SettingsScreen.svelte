@@ -25,7 +25,6 @@
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
   const defaultFontSizeInput = String(defaultFontSize)
 
-  let hasInteracted = $state(false)
   let errorMessage = $state<string | null>(null)
   const autosaveDraft = $state<AutosaveDraft>({
     dirty: false,
@@ -35,7 +34,6 @@
 
   const clearSaveState = () => {
     autosaveDraft.dirty = false
-    hasInteracted = false
     errorMessage = null
   }
 
@@ -98,7 +96,6 @@
   const handleInput = (value: string) => {
     if (systemSettingsState.draft.promptFontSizeInput === value) return
     setSystemSettingsDraftFontSizeInput(value)
-    hasInteracted = true
     if (errorMessage) {
       errorMessage = null
     }
@@ -125,7 +122,7 @@
   }
 
   const validationMessage = $derived(
-    hasInteracted ? validateFontSize(systemSettingsState.draft.promptFontSizeInput) : null
+    validateFontSize(systemSettingsState.draft.promptFontSizeInput)
   )
   const displayError = $derived(errorMessage ?? validationMessage)
   const isResetDisabled = $derived(
