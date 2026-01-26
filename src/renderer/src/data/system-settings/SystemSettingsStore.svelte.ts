@@ -6,21 +6,19 @@ import type {
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
-  createVersionedDataState,
-  markDraftUpdated,
-  saveVersionedData,
+  createVersionedDataStore,
   type VersionedDataState,
   type VersionedSaveOutcome,
   type VersionedSaveResult,
   type VersionedSnapshot
 } from '@renderer/data/versioned/VersionedDataStore'
+import { formatPromptFontSizeInput } from '@renderer/data/system-settings/systemSettingsFormat'
 
 export type SystemSettingsDraft = {
   promptFontSizeInput: string
 }
 
 export type SystemSettingsState = VersionedDataState<SystemSettingsDraft, SystemSettings>
-export type SystemSettingsSaveOutcome = VersionedSaveOutcome
 
 const runtimeConfig = getRuntimeConfig()
 const initialSettings = runtimeConfig.systemSettings
@@ -35,24 +33,28 @@ const createSnapshot = (
 })
 
 const createDraft = (snapshot: VersionedSnapshot<SystemSettings>): SystemSettingsDraft => ({
-  promptFontSizeInput: String(snapshot.data.promptFontSize)
+  promptFontSizeInput: formatPromptFontSizeInput(snapshot.data.promptFontSize)
 })
 
 const isDraftDirty = (
   draft: SystemSettingsDraft,
   snapshot: VersionedSnapshot<SystemSettings>
 ): boolean => {
-  return draft.promptFontSizeInput !== String(snapshot.data.promptFontSize)
+  return (
+    draft.promptFontSizeInput !==
+    formatPromptFontSizeInput(snapshot.data.promptFontSize)
+  )
 }
 
 const initialSnapshot = createSnapshot(initialSettings, initialVersion)
 
+const systemSettingsStore = createVersionedDataStore<SystemSettingsDraft, SystemSettings>({
+  createDraft,
+  isDraftDirty
+})
+
 const systemSettingsState = $state<SystemSettingsState>(
-  createVersionedDataState<SystemSettingsDraft, SystemSettings>(
-    initialSnapshot,
-    createDraft(initialSnapshot),
-    isDraftDirty
-  )
+  systemSettingsStore.createState(initialSnapshot)
 )
 
 export const getSystemSettingsState = (): SystemSettingsState => systemSettingsState
@@ -60,19 +62,37 @@ export const getSystemSettingsState = (): SystemSettingsState => systemSettingsS
 export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
   if (systemSettingsState.draft.promptFontSizeInput === value) return
   systemSettingsState.draft.promptFontSizeInput = value
-  markDraftUpdated(systemSettingsState, isDraftDirty)
+  systemSettingsStore.markDraftUpdated(systemSettingsState)
 }
 
-export const saveSystemSettings = async (
+const toSaveResult = (
+  result: UpdateSystemSettingsResult
+): VersionedSaveResult<SystemSettings> => {
+  if (result.success) {
+    return {
+      type: 'saved',
+      snapshot: createSnapshot(result.settings!, result.version!)
+    }
+  }
+
+  if (result.conflict) {
+    return {
+      type: 'conflict',
+      snapshot: createSnapshot(result.settings!, result.version!)
+    }
+  }
+
+  return { type: 'error', message: result.error! }
+}
+
+export const saveSystemSettings = (
   settings: SystemSettings
-): Promise<void> => {
+): Promise<VersionedSaveOutcome> => {
   const baseVersion = systemSettingsState.base.version
-  await saveVersionedData(
+  return systemSettingsStore.saveVersionedData(
     systemSettingsState,
     createSnapshot(settings, baseVersion),
-    createDraft,
-    isDraftDirty,
-    async (): Promise<VersionedSaveResult<SystemSettings>> => {
+    async () => {
       const result = await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
         'update-system-settings',
         {
@@ -81,21 +101,7 @@ export const saveSystemSettings = async (
         }
       )
 
-      if (result.success && result.settings) {
-        return {
-          type: 'saved',
-          snapshot: createSnapshot(result.settings, result.version as number)
-        }
-      }
-
-      if (result.conflict && result.settings) {
-        return {
-          type: 'conflict',
-          snapshot: createSnapshot(result.settings, result.version as number)
-        }
-      }
-
-      return { type: 'error', message: result.error as string }
+      return toSaveResult(result)
     }
   )
 }

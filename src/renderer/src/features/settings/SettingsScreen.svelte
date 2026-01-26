@@ -4,9 +4,13 @@
   import {
     getSystemSettingsState,
     saveSystemSettings,
-    setSystemSettingsDraftFontSizeInput,
-    type SystemSettingsSaveOutcome
+    setSystemSettingsDraftFontSizeInput
   } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
+  import {
+    formatPromptFontSizeInput,
+    parsePromptFontSizeInput,
+    roundPromptFontSizeInput
+  } from '@renderer/data/system-settings/systemSettingsFormat'
   import {
     DEFAULT_SYSTEM_SETTINGS,
     MAX_PROMPT_FONT_SIZE,
@@ -23,7 +27,7 @@
   const systemSettingsState = getSystemSettingsState()
   const isUpdating = $derived(systemSettingsState.isSaving)
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
-  const defaultFontSizeInput = String(defaultFontSize)
+  const defaultFontSizeInput = formatPromptFontSizeInput(defaultFontSize)
 
   const autosaveDraft = $state<AutosaveDraft>({
     dirty: false,
@@ -31,24 +35,12 @@
     autosaveTimeoutId: null
   })
 
-  const clearSaveState = () => {
-    autosaveDraft.dirty = false
-  }
-
-  const handleSaveOutcome = (outcome: SystemSettingsSaveOutcome): void => {
-    if (outcome === 'saved' || outcome === 'conflict') {
-      clearSaveState()
-    }
-  }
-
-  const parseFontSizeInput = (value: string): number => {
-    return Math.round(Number(value))
-  }
-
   const saveFontSizeInput = async (value: string): Promise<void> => {
-    const parsed = parseFontSizeInput(value)
-    await saveSystemSettings({ promptFontSize: parsed })
-    handleSaveOutcome(systemSettingsState.saveOutcome)
+    const parsed = roundPromptFontSizeInput(value)
+    const outcome = await saveSystemSettings({ promptFontSize: parsed })
+    if (outcome === 'saved' || outcome === 'conflict') {
+      autosaveDraft.dirty = false
+    }
   }
 
   const autosave = createAutosaveController({
@@ -74,7 +66,7 @@
       return 'Enter a font size.'
     }
 
-    const parsed = Number(value)
+    const parsed = parsePromptFontSizeInput(value)
 
     if (!Number.isFinite(parsed)) {
       return 'Font size must be a number.'
