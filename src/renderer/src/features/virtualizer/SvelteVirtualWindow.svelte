@@ -28,11 +28,18 @@
     onScrollTopChange?: (scrollTopPx: number) => void
     scrollApi?: VirtualWindowScrollApi | null
     viewportMetrics?: VirtualWindowViewportMetrics | null
+    leftScrollPaddingPx?: number
+    rightScrollPaddingPx?: number
     testId?: string
     spacerTestId?: string
   }
 
   // Generic over row shape; callers provide the concrete discriminated union.
+  const DEFAULT_LEFT_SCROLL_PADDING_PX = 24
+  const DEFAULT_RIGHT_SCROLL_PADDING_PX = 8
+  const WINDOW_BAND_PADDING_PX = 100
+  const SCROLLBAR_WIDTH_PX = 10
+
   let {
     items,
     rowRegistry,
@@ -45,24 +52,21 @@
     onScrollTopChange,
     scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
+    leftScrollPaddingPx = DEFAULT_LEFT_SCROLL_PADDING_PX,
+    rightScrollPaddingPx = DEFAULT_RIGHT_SCROLL_PADDING_PX,
     testId = 'virtual-window',
     spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
 
   let viewportFrame: HTMLDivElement | null = null
 
-  const LEFT_SCROLL_PADDING_PX = 24
-  const RIGHT_SCROLL_PADDING_PX = 8
-  const WINDOW_BAND_PADDING_PX = 100
-  const SCROLLBAR_WIDTH_PX = 10
-
   let isPointerOverWindow = $state(false)
 
   const { getMeasurementWidth, getViewportHeight, getDevicePixelRatio, getWidthResizeActive } =
     createVirtualWindowMeasurements({
       getViewportFrame: () => viewportFrame,
-      leftScrollPaddingPx: LEFT_SCROLL_PADDING_PX,
-      rightScrollPaddingPx: RIGHT_SCROLL_PADDING_PX,
+      leftScrollPaddingPx,
+      rightScrollPaddingPx,
       scrollbarWidthPx: SCROLLBAR_WIDTH_PX
     })
 
@@ -208,7 +212,7 @@
         {#each visibleRows as row (row.id)}
           <div style={rowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
             <div
-              style={`width:100%; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+              style={`width:100%; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
             >
               {@render row.snippet({
                 index: row.index,
@@ -236,7 +240,7 @@
             <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
               <div
                 use:registerOverlayRow={row.id}
-                style={`width:100%; position:relative; overflow:visible; padding-left:${LEFT_SCROLL_PADDING_PX}px; padding-right:${RIGHT_SCROLL_PADDING_PX}px;`}
+                style={`width:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
               ></div>
             </div>
           {/if}

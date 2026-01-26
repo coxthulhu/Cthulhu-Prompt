@@ -96,6 +96,7 @@
     <SvelteVirtualWindow
       items={outlinerItems}
       rowRegistry={outlinerRowRegistry}
+      leftScrollPaddingPx={12}
       testId="prompt-outliner-virtual-window"
       spacerTestId="prompt-outliner-virtual-window-spacer"
       bind:scrollToWithinWindowBand
