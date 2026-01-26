@@ -217,10 +217,10 @@ export const loadPromptFolder = async (folderName: string): Promise<void> => {
 export const createPromptInFolder = async (
   folderName: string,
   previousPromptId: string | null
-): Promise<void> => {
+): Promise<string | null> => {
   const folderData = promptFolderDataByFolderName.get(folderName)!
 
-  if (folderData.isCreatingPrompt) return
+  if (folderData.isCreatingPrompt) return null
 
   folderData.isCreatingPrompt = true
 
@@ -241,8 +241,10 @@ export const createPromptInFolder = async (
     const nextPromptIds = [...folderData.promptIds]
     nextPromptIds.splice(insertIndex, 0, prompt.id)
     folderData.promptIds = nextPromptIds
+    return prompt.id
   } catch {
     // Intentionally ignore create errors to keep the UI quiet.
+    return null
   } finally {
     folderData.isCreatingPrompt = false
   }

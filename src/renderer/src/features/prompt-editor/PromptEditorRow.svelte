@@ -25,6 +25,8 @@
     TITLE_BAR_HEIGHT_PX
   } from './promptEditorSizing'
 
+  type PromptFocusRequest = { promptId: string; requestId: number }
+
   let {
     promptId,
     rowId,
@@ -37,6 +39,7 @@
     overlayRowElement,
     onHydrationChange,
     scrollToWithinWindowBand,
+    focusRequest,
     onEditorLifecycle,
     onDelete,
     onMoveUp,
@@ -53,6 +56,7 @@
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
+    focusRequest?: PromptFocusRequest | null
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     onDelete: () => void
     onMoveUp: () => Promise<boolean>
@@ -76,11 +80,13 @@
   })
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
+  let rowElement = $state<HTMLDivElement | null>(null)
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
   let titleInputRef = $state<HTMLInputElement | null>(null)
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let lastFocusRequestId = $state(0)
+  let lastEditorFocusRequestId = $state(0)
   let isHydrated = $state(false)
   type FindRowHandlers = {
     requestImmediateHydration: (() => void) | null
@@ -216,17 +222,17 @@
   // Side effect: focus the match target after the find widget closes.
   $effect(() => {
     if (!findContext) return
-    const focusRequest = findContext.focusRequest
-    if (!focusRequest || focusRequest.requestId === lastFocusRequestId) return
-    lastFocusRequestId = focusRequest.requestId
-    const focusMatch = focusRequest.match
+    const findFocusRequest = findContext.focusRequest
+    if (!findFocusRequest || findFocusRequest.requestId === lastFocusRequestId) return
+    lastFocusRequestId = findFocusRequest.requestId
+    const focusMatch = findFocusRequest.match
     if (focusMatch.promptId !== promptId) return
 
     if (focusMatch.kind === 'title') {
       const input = titleInputRef
       if (!input) return
       input.focus({ preventScroll: true })
-      const focusQuery = focusRequest.query
+      const focusQuery = findFocusRequest.query
       if (focusQuery.length === 0) return
       const matchRange = findMatchRange(
         promptData.draft.title,
@@ -239,6 +245,37 @@
     }
 
     editorInstance?.focus()
+  })
+
+  // Side effect: scroll newly added prompts into view and focus Monaco once hydrated.
+  $effect(() => {
+    if (!focusRequest) return
+    if (focusRequest.requestId === lastEditorFocusRequestId) return
+    if (focusRequest.promptId !== promptId) return
+    if (!isHydrated || !editorInstance) return
+
+    lastEditorFocusRequestId = focusRequest.requestId
+
+    if (scrollToWithinWindowBand && rowElement) {
+      const viewport = rowElement.closest(
+        '[data-testid="prompt-folder-virtual-window"]'
+      ) as HTMLElement | null
+      if (viewport) {
+        const rowRect = rowElement.getBoundingClientRect()
+        const viewportRect = viewport.getBoundingClientRect()
+        const distanceFromViewport = (edgePx: number) => {
+          if (edgePx < viewportRect.top) return viewportRect.top - edgePx
+          if (edgePx > viewportRect.bottom) return edgePx - viewportRect.bottom
+          return 0
+        }
+        const topDistance = distanceFromViewport(rowRect.top)
+        const bottomDistance = distanceFromViewport(rowRect.bottom)
+        const offsetPx = topDistance >= bottomDistance ? 0 : rowRect.height
+        scrollToWithinWindowBand(rowId, offsetPx, 'minimal')
+      }
+    }
+
+    editorInstance.focus()
   })
 
   const handleMovePrompt = async (offsetPx: number, moveAction: () => Promise<boolean>) => {
@@ -254,6 +291,7 @@
 </script>
 
 <div
+  bind:this={rowElement}
   class="flex items-stretch gap-2"
   style={`height:${rowHeightPx}px; min-height:${rowHeightPx}px; max-height:${rowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}

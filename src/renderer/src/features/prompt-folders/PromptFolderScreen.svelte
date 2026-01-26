@@ -60,6 +60,9 @@
   let scrollResetVersion = $state(0)
   let lastScrollResetVersion = 0
   let scrollTopPx = $state(0)
+  type PromptFocusRequest = { promptId: string; requestId: number }
+  let promptFocusRequest = $state<PromptFocusRequest | null>(null)
+  let promptFocusRequestId = $state(0)
 
   const clearOutlinerManualSelection = () => {
     outlinerManualSelectionActive = false
@@ -225,8 +228,11 @@
     scrollToAndTrackRowCentered('folder-settings')
   }
 
-  const handleAddPrompt = (previousPromptId: string | null) => {
-    void createPromptInFolder(folder.folderName, previousPromptId)
+  const handleAddPrompt = async (previousPromptId: string | null) => {
+    const promptId = await createPromptInFolder(folder.folderName, previousPromptId)
+    if (!promptId) return
+    promptFocusRequestId += 1
+    promptFocusRequest = { promptId, requestId: promptFocusRequestId }
   }
 
   const handleDeletePrompt = (promptId: string) => {
@@ -443,6 +449,7 @@
     {overlayRowElement}
     {onHydrationChange}
     scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
+    focusRequest={promptFocusRequest}
     onDelete={() => handleDeletePrompt(row.promptId)}
     onMoveUp={() => handleMovePromptUp(row.promptId)}
     onMoveDown={() => handleMovePromptDown(row.promptId)}
