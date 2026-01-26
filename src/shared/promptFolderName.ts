@@ -32,6 +32,21 @@ export type FolderNameValidation = { isValid: boolean; errorMessage?: string }
 
 export const sanitizePromptFolderName = (name: string): string => name.replace(/\s+/g, '')
 
+export type NormalizedPromptFolderName = {
+  displayName: string
+  folderName: string
+}
+
+export const normalizePromptFolderDisplayName = (
+  displayName: string
+): NormalizedPromptFolderName => {
+  const trimmedDisplayName = displayName.trim()
+  return {
+    displayName: trimmedDisplayName,
+    folderName: sanitizePromptFolderName(trimmedDisplayName)
+  }
+}
+
 export const validatePromptFolderName = (name: string): FolderNameValidation => {
   if (!name.trim()) {
     return { isValid: false, errorMessage: 'Folder name cannot be empty' }

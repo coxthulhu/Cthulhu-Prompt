@@ -75,7 +75,7 @@
     try {
       submissionError = null
       isCreatingPromptFolder = true
-      const created = await createPromptFolder(folderName.trim())
+      const created = await createPromptFolder(folderName)
 
       if (created) {
         onCreated?.(created)

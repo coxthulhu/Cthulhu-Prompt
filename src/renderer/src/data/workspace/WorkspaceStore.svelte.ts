@@ -9,7 +9,7 @@ import type {
   WorkspaceData
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
-import { sanitizePromptFolderName } from '@shared/promptFolderName'
+import { normalizePromptFolderDisplayName } from '@shared/promptFolderName'
 import {
   createVersionedDataStore,
   type VersionedDataState,
@@ -44,23 +44,22 @@ let nextRequestId = 0
 const cloneFolders = (folders: PromptFolder[]): PromptFolder[] =>
   folders.map((folder) => ({ ...folder }))
 
+const cloneWorkspaceData = (data: WorkspaceData): WorkspaceData => ({
+  workspaceId: data.workspaceId,
+  workspacePath: data.workspacePath,
+  folders: cloneFolders(data.folders)
+})
+
 const createSnapshot = (
   data: WorkspaceData,
   version: number
 ): VersionedSnapshot<WorkspaceData> => ({
-  data: {
-    workspaceId: data.workspaceId,
-    workspacePath: data.workspacePath,
-    folders: cloneFolders(data.folders)
-  },
+  data: cloneWorkspaceData(data),
   version
 })
 
-const createDraft = (snapshot: VersionedSnapshot<WorkspaceData>): WorkspaceDraft => ({
-  workspaceId: snapshot.data.workspaceId,
-  workspacePath: snapshot.data.workspacePath,
-  folders: cloneFolders(snapshot.data.folders)
-})
+const createDraft = (snapshot: VersionedSnapshot<WorkspaceData>): WorkspaceDraft =>
+  cloneWorkspaceData(snapshot.data)
 
 const areFoldersEqual = (left: PromptFolder[], right: PromptFolder[]): boolean => {
   if (left.length !== right.length) {
@@ -105,6 +104,11 @@ const workspaceDataStore = createVersionedDataStore<WorkspaceDraft, WorkspaceDat
 const isLatestRequest = (workspacePath: string, requestId: number): boolean =>
   activeWorkspaceState.workspacePath === workspacePath &&
   activeWorkspaceState.requestId === requestId
+
+const extractLoadWorkspacePayload = (
+  result: LoadWorkspaceDataResult
+): { workspace: WorkspaceData; version: number } =>
+  result as { workspace: WorkspaceData; version: number }
 
 const replaceWorkspaceState = (
   workspaceId: string,
@@ -154,8 +158,9 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
       return
     }
 
-    const snapshot = createSnapshot(result.workspace!, result.version!)
-    replaceWorkspaceState(result.workspace!.workspaceId, snapshot)
+    const { workspace, version } = extractLoadWorkspacePayload(result)
+    const snapshot = createSnapshot(workspace, version)
+    replaceWorkspaceState(workspace.workspaceId, snapshot)
     activeWorkspaceState.isLoading = false
   } catch (error) {
     if (!isLatestRequest(workspacePath, requestId)) {
@@ -172,14 +177,7 @@ const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
   const state = activeWorkspaceState.dataState!
   const baseVersion = state.baseSnapshot.version
 
-  const savingSnapshot = createSnapshot(
-    {
-      workspaceId: state.draftSnapshot.workspaceId,
-      workspacePath: state.draftSnapshot.workspacePath,
-      folders: state.draftSnapshot.folders
-    },
-    baseVersion
-  )
+  const savingSnapshot = createSnapshot(state.draftSnapshot, baseVersion)
 
   return workspaceDataStore.saveVersionedData(state, savingSnapshot, async () => {
     const result = await ipcInvoke<UpdateWorkspaceDataResult, UpdateWorkspaceDataRequest>(
@@ -193,26 +191,20 @@ const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
       }
     )
 
-    return toVersionedSaveResult(
-      result,
-      (payload) => ({
-        data: payload.workspace!,
-        version: payload.version!
-      }),
-      createSnapshot
-    )
+    return toVersionedSaveResult(result, createSnapshot)
   })
 }
 
 export const createPromptFolder = async (displayName: string): Promise<PromptFolder | null> => {
   const state = activeWorkspaceState.dataState!
-  const folderName = sanitizePromptFolderName(displayName)
+  const { displayName: normalizedDisplayName, folderName } =
+    normalizePromptFolderDisplayName(displayName)
 
   state.draftSnapshot.folders = [
     ...state.draftSnapshot.folders,
     {
       folderName,
-      displayName
+      displayName: normalizedDisplayName
     }
   ]
 

@@ -11,9 +11,11 @@ export type VersionedSaveResult<TData> =
   | { type: 'unchanged' }
   | { type: 'error'; message: string }
 
-export type VersionedSaveResponse = {
+export type VersionedSaveResponse<TData> = {
   success: boolean
   conflict?: boolean
+  data?: TData
+  version?: number
   error?: string
 }
 
@@ -41,32 +43,25 @@ export type VersionedDataStore<TDraft, TData> = {
   ) => Promise<VersionedSaveOutcome>
 }
 
-type VersionedSavePayload<TData> = {
-  data: TData
-  version: number
-}
-
-type VersionedSaveErrorPayload = VersionedSaveResponse & {
-  error: string
-}
-
-export const toVersionedSaveResult = <TData, TResult extends VersionedSaveResponse>(
-  result: TResult,
-  extractPayload: (payload: TResult) => VersionedSavePayload<TData>,
-  createSnapshot: (settings: TData, version: number) => VersionedSnapshot<TData>
+export const toVersionedSaveResult = <TData>(
+  result: VersionedSaveResponse<TData>,
+  createSnapshot: (data: TData, version: number) => VersionedSnapshot<TData>
 ): VersionedSaveResult<TData> => {
   if (result.success) {
-    const { data, version } = extractPayload(result)
-    return { type: 'saved', snapshot: createSnapshot(data, version) }
+    return {
+      type: 'saved',
+      snapshot: createSnapshot(result.data as TData, result.version as number)
+    }
   }
 
   if (result.conflict) {
-    const { data, version } = extractPayload(result)
-    return { type: 'conflict', snapshot: createSnapshot(data, version) }
+    return {
+      type: 'conflict',
+      snapshot: createSnapshot(result.data as TData, result.version as number)
+    }
   }
 
-  const { error } = result as VersionedSaveErrorPayload
-  return { type: 'error', message: error }
+  return { type: 'error', message: (result as { error: string }).error }
 }
 
 const createVersionedDataState = <TDraft, TData>(

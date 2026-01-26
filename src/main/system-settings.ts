@@ -107,7 +107,7 @@ export class SystemSettingsManager {
         return {
           success: false,
           conflict: true,
-          settings: currentSettings,
+          data: currentSettings,
           version: systemSettingsVersion
         }
       }
@@ -124,7 +124,7 @@ export class SystemSettingsManager {
       writeSystemSettingsPayload(nextPayload)
       systemSettingsVersion += 1
 
-      return { success: true, settings: nextSettings, version: systemSettingsVersion }
+      return { success: true, data: nextSettings, version: systemSettingsVersion }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }

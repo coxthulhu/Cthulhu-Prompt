@@ -23,7 +23,7 @@ export interface UpdateSystemSettingsRequest {
 }
 
 export interface UpdateSystemSettingsResult extends WorkspaceResult {
-  settings?: SystemSettings
+  data?: SystemSettings
   version?: number
   conflict?: boolean
 }
@@ -67,7 +67,7 @@ export interface UpdateWorkspaceDataRequest {
 }
 
 export interface UpdateWorkspaceDataResult extends WorkspaceResult {
-  workspace?: WorkspaceData
+  data?: WorkspaceData
   version?: number
   conflict?: boolean
 }
