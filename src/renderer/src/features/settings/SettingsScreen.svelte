@@ -8,8 +8,7 @@
   } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
   import {
     formatPromptFontSizeInput,
-    parsePromptFontSizeInput,
-    roundPromptFontSizeInput
+    normalizePromptFontSizeInput
   } from '@renderer/data/system-settings/systemSettingsFormat'
   import {
     DEFAULT_SYSTEM_SETTINGS,
@@ -36,8 +35,8 @@
   })
 
   const saveFontSizeInput = async (value: string): Promise<void> => {
-    const parsed = roundPromptFontSizeInput(value)
-    const outcome = await saveSystemSettings({ promptFontSize: parsed })
+    const { rounded } = normalizePromptFontSizeInput(value)
+    const outcome = await saveSystemSettings({ promptFontSize: rounded })
     if (outcome === 'saved' || outcome === 'conflict') {
       autosaveDraft.dirty = false
     }
@@ -66,7 +65,7 @@
       return 'Enter a font size.'
     }
 
-    const parsed = parsePromptFontSizeInput(value)
+    const { parsed } = normalizePromptFontSizeInput(value)
 
     if (!Number.isFinite(parsed)) {
       return 'Font size must be a number.'

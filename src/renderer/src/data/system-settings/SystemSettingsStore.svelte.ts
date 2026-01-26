@@ -9,8 +9,8 @@ import {
   createVersionedDataStore,
   type VersionedDataState,
   type VersionedSaveOutcome,
-  type VersionedSaveResult,
-  type VersionedSnapshot
+  type VersionedSnapshot,
+  toVersionedSaveResult
 } from '@renderer/data/versioned/VersionedDataStore'
 import { formatPromptFontSizeInput } from '@renderer/data/system-settings/systemSettingsFormat'
 
@@ -62,27 +62,7 @@ export const getSystemSettingsState = (): SystemSettingsState => systemSettingsS
 export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
   if (systemSettingsState.draft.promptFontSizeInput === value) return
   systemSettingsState.draft.promptFontSizeInput = value
-  systemSettingsStore.markDraftUpdated(systemSettingsState)
-}
-
-const toSaveResult = (
-  result: UpdateSystemSettingsResult
-): VersionedSaveResult<SystemSettings> => {
-  if (result.success) {
-    return {
-      type: 'saved',
-      snapshot: createSnapshot(result.settings!, result.version!)
-    }
-  }
-
-  if (result.conflict) {
-    return {
-      type: 'conflict',
-      snapshot: createSnapshot(result.settings!, result.version!)
-    }
-  }
-
-  return { type: 'error', message: result.error! }
+  systemSettingsStore.markDraftChanged(systemSettingsState)
 }
 
 export const saveSystemSettings = (
@@ -101,7 +81,7 @@ export const saveSystemSettings = (
         }
       )
 
-      return toSaveResult(result)
+      return toVersionedSaveResult(result, createSnapshot)
     }
   )
 }
