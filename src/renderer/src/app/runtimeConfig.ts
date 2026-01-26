@@ -8,7 +8,8 @@ const fallbackRuntimeConfig: RuntimeConfig = {
   devWorkspacePath: null,
   executionFolderName: null,
   environment: '',
-  systemSettings: normalizeRuntimeSystemSettings(undefined)
+  systemSettings: normalizeRuntimeSystemSettings(undefined),
+  systemSettingsVersion: 0
 }
 
 export const getRuntimeConfig = (): RuntimeConfig => {
@@ -17,7 +18,9 @@ export const getRuntimeConfig = (): RuntimeConfig => {
     devWorkspacePath: config.devWorkspacePath,
     executionFolderName: config.executionFolderName ?? null,
     environment: normalizeRuntimeEnvironment(config.environment),
-    systemSettings: normalizeRuntimeSystemSettings(config.systemSettings)
+    systemSettings: normalizeRuntimeSystemSettings(config.systemSettings),
+    systemSettingsVersion:
+      typeof config.systemSettingsVersion === 'number' ? config.systemSettingsVersion : 0
   }
 }
 

@@ -8,6 +8,7 @@ export type RuntimeConfig = {
   executionFolderName: string | null
   environment: RuntimeEnvironment
   systemSettings: SystemSettings
+  systemSettingsVersion: number
 }
 
 export const RUNTIME_ARG_PREFIX = '--cthulhu-runtime='

@@ -19,7 +19,7 @@
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
-  import { getSystemSettingsState } from '@renderer/data/SystemSettingsStore.svelte.ts'
+  import { getSystemSettingsState } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
@@ -27,7 +27,7 @@
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
   const promptFontSize = $derived(
-    systemSettingsState.settings?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    systemSettingsState.base.data.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
   const systemSettings = $state({
     promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize

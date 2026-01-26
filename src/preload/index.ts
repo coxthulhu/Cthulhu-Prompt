@@ -12,7 +12,8 @@ const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
   devWorkspacePath: null,
   executionFolderName: null,
   environment: '',
-  systemSettings: DEFAULT_SYSTEM_SETTINGS
+  systemSettings: DEFAULT_SYSTEM_SETTINGS,
+  systemSettingsVersion: 0
 })
 
 function loadRuntimeConfig(): RuntimeConfig {
@@ -35,12 +36,15 @@ function loadRuntimeConfig(): RuntimeConfig {
       typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
     const systemSettings = normalizeRuntimeSystemSettings(parsed.systemSettings)
+    const systemSettingsVersion =
+      typeof parsed.systemSettingsVersion === 'number' ? parsed.systemSettingsVersion : 0
 
     return Object.freeze({
       devWorkspacePath,
       executionFolderName,
       environment,
-      systemSettings
+      systemSettings,
+      systemSettingsVersion
     })
   } catch (error) {
     console.error('Failed to parse runtime config payload:', error)

@@ -14,14 +14,18 @@ export interface SystemSettings {
 
 export interface LoadSystemSettingsResult extends WorkspaceResult {
   settings?: SystemSettings
+  version?: number
 }
 
 export interface UpdateSystemSettingsRequest {
-  settings: Partial<SystemSettings>
+  settings: SystemSettings
+  version: number
 }
 
 export interface UpdateSystemSettingsResult extends WorkspaceResult {
   settings?: SystemSettings
+  version?: number
+  conflict?: boolean
 }
 
 export interface PromptFolder {

@@ -97,12 +97,14 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
   const executionFolderName = resolveExecutionFolderName()
   const systemSettingsResult = await SystemSettingsManager.loadSystemSettings()
   const systemSettings = systemSettingsResult.settings ?? DEFAULT_SYSTEM_SETTINGS
+  const systemSettingsVersion = systemSettingsResult.version ?? 0
 
   return {
     devWorkspacePath,
     executionFolderName,
     environment,
-    systemSettings
+    systemSettings,
+    systemSettingsVersion
   }
 }
 

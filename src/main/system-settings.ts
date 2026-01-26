@@ -10,6 +10,7 @@ import type {
 import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/systemSettings'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
+let systemSettingsVersion = 0
 
 const resolveSystemSettingsPath = (): string => {
   return path.join(app.getPath('userData'), SYSTEM_SETTINGS_FILENAME)
@@ -71,11 +72,11 @@ export class SystemSettingsManager {
     ipcMain.handle(
       'update-system-settings',
       async (_, request: UpdateSystemSettingsRequest | undefined) => {
-        if (!request?.settings) {
+        if (!request?.settings || typeof request.version !== 'number') {
           return { success: false, error: 'Invalid request payload' }
         }
 
-        return await this.updateSystemSettings(request.settings)
+        return await this.updateSystemSettings(request.settings, request.version)
       }
     )
   }
@@ -92,21 +93,31 @@ export class SystemSettingsManager {
         })
       }
 
-      return { success: true, settings }
+      return { success: true, settings, version: systemSettingsVersion }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }
   }
 
   static async updateSystemSettings(
-    settingsUpdate: Partial<SystemSettings>
+    settingsUpdate: SystemSettings,
+    requestVersion: number
   ): Promise<UpdateSystemSettingsResult> {
     try {
       ensureSystemSettingsDirectory()
       const { payload, settings: currentSettings } = readSystemSettingsPayload()
+
+      if (requestVersion !== systemSettingsVersion) {
+        return {
+          success: false,
+          conflict: true,
+          settings: currentSettings,
+          version: systemSettingsVersion
+        }
+      }
+
       const nextSettings = normalizeSystemSettings({
         ...payload,
-        ...currentSettings,
         ...settingsUpdate
       })
       const nextPayload = {
@@ -115,8 +126,9 @@ export class SystemSettingsManager {
       }
 
       writeSystemSettingsPayload(nextPayload)
+      systemSettingsVersion += 1
 
-      return { success: true, settings: nextSettings }
+      return { success: true, settings: nextSettings, version: systemSettingsVersion }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }

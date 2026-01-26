@@ -2,7 +2,7 @@ import {
   flushPromptWorkspaceAutosaves,
   resetPromptDataStoreForWorkspace
 } from '@renderer/data/PromptDataStore.svelte.ts'
-import { flushSystemSettingsAutosaves } from '@renderer/data/systemSettingsAutosave'
+import { flushSystemSettingsAutosaves } from '@renderer/data/system-settings/systemSettingsAutosave'
 import {
   flushPromptFolderRequests,
   flushPromptFolderAutosaves,

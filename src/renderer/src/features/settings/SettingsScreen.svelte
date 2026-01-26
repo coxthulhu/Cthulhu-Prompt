@@ -3,8 +3,9 @@
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import {
     getSystemSettingsState,
-    updateSystemSettings
-  } from '@renderer/data/SystemSettingsStore.svelte.ts'
+    saveSystemSettings,
+    setSystemSettingsDraftFontSizeInput
+  } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
   import {
     DEFAULT_SYSTEM_SETTINGS,
     MAX_PROMPT_FONT_SIZE,
@@ -16,17 +17,11 @@
     createAutosaveController,
     type AutosaveDraft
   } from '@renderer/data/draftAutosave'
-  import { registerSystemSettingsAutosave } from '@renderer/data/systemSettingsAutosave'
+  import { registerSystemSettingsAutosave } from '@renderer/data/system-settings/systemSettingsAutosave'
 
   const systemSettingsState = getSystemSettingsState()
   const isUpdating = $derived(systemSettingsState.isSaving)
 
-  const currentFontSize = $derived(
-    systemSettingsState.settings?.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
-  )
-  const isLoading = $derived(systemSettingsState.isLoading && !systemSettingsState.settings)
-
-  let fontSizeInput = $state(String(DEFAULT_SYSTEM_SETTINGS.promptFontSize))
   let hasInteracted = $state(false)
   let errorMessage = $state<string | null>(null)
   const autosaveDraft = $state<AutosaveDraft>({
@@ -39,24 +34,26 @@
     draft: autosaveDraft,
     autosaveMs: AUTOSAVE_MS,
     save: async () => {
-      const validationError = validateFontSize(fontSizeInput)
+      const validationError = validateFontSize(systemSettingsState.draft.promptFontSizeInput)
 
       if (validationError) {
         return
       }
 
-      const valueToSave = fontSizeInput
+      const valueToSave = systemSettingsState.draft.promptFontSizeInput
       const parsed = Math.round(Number(valueToSave))
 
       try {
-        await updateSystemSettings({
-          settings: {
-            promptFontSize: parsed
-          }
-        })
+        const result = await saveSystemSettings({ promptFontSize: parsed }, valueToSave)
 
-        if (fontSizeInput === valueToSave) {
-          fontSizeInput = String(parsed)
+        if (result.conflict) {
+          autosaveDraft.dirty = false
+          hasInteracted = false
+          errorMessage = null
+          return
+        }
+
+        if (result.success && systemSettingsState.draft.promptFontSizeInput === String(parsed)) {
           autosaveDraft.dirty = false
           hasInteracted = false
           errorMessage = null
@@ -66,14 +63,6 @@
         errorMessage = 'Unable to save settings. Please try again.'
       }
     }
-  })
-
-  // Side effect: keep the local input in sync with persisted settings when not editing.
-  $effect(() => {
-    if (autosaveDraft.dirty) return
-    fontSizeInput = String(currentFontSize)
-    hasInteracted = false
-    errorMessage = null
   })
 
   const validateFontSize = (value: string): string | null => {
@@ -95,8 +84,8 @@
   }
 
   const handleInput = (value: string) => {
-    if (fontSizeInput === value) return
-    fontSizeInput = value
+    if (systemSettingsState.draft.promptFontSizeInput === value) return
+    setSystemSettingsDraftFontSizeInput(value)
     hasInteracted = true
     if (errorMessage) {
       errorMessage = null
@@ -109,26 +98,41 @@
     clearAutosaveTimeout(autosaveDraft)
 
     try {
-      await updateSystemSettings({
-        settings: {
+      setSystemSettingsDraftFontSizeInput(String(defaultValue))
+      autosaveDraft.dirty = true
+      const result = await saveSystemSettings(
+        {
           promptFontSize: defaultValue
-        }
-      })
+        },
+        String(defaultValue)
+      )
 
-      fontSizeInput = String(defaultValue)
-      autosaveDraft.dirty = false
-      hasInteracted = false
-      errorMessage = null
+      if (result.conflict) {
+        autosaveDraft.dirty = false
+        hasInteracted = false
+        errorMessage = null
+        return
+      }
+
+      if (result.success && systemSettingsState.draft.promptFontSizeInput === String(defaultValue)) {
+        autosaveDraft.dirty = false
+        hasInteracted = false
+        errorMessage = null
+      }
     } catch (error) {
       console.error('Failed to reset system settings:', error)
       errorMessage = 'Unable to reset settings. Please try again.'
     }
   }
 
-  const validationMessage = $derived(hasInteracted ? validateFontSize(fontSizeInput) : null)
+  const validationMessage = $derived(
+    hasInteracted ? validateFontSize(systemSettingsState.draft.promptFontSizeInput) : null
+  )
   const displayError = $derived(errorMessage ?? validationMessage)
   const isResetDisabled = $derived(
-    isLoading || isUpdating || fontSizeInput === String(DEFAULT_SYSTEM_SETTINGS.promptFontSize)
+    isUpdating ||
+      systemSettingsState.draft.promptFontSizeInput ===
+        String(DEFAULT_SYSTEM_SETTINGS.promptFontSize)
   )
 
   const flushAutosave = async (): Promise<void> => {
@@ -166,8 +170,7 @@
           <NumericInput
             data-testid="font-size-input"
             class="w-24"
-            value={fontSizeInput}
-            disabled={isLoading}
+            value={systemSettingsState.draft.promptFontSizeInput}
             oninput={(event) => handleInput((event.currentTarget as HTMLInputElement).value)}
           />
           <Button size="sm" onclick={handleReset} disabled={isResetDisabled}>
