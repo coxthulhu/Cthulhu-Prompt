@@ -56,6 +56,16 @@ const readWorkspaceId = (workspacePath: string): string | null => {
   }
 }
 
+const buildWorkspaceData = (
+  workspaceId: string,
+  workspacePath: string,
+  folders: PromptFolder[]
+): WorkspaceData => ({
+  workspaceId,
+  workspacePath,
+  folders
+})
+
 export class WorkspaceManager {
   static setupIpcHandlers(): void {
     ipcMain.handle('select-workspace-folder', async () => {
@@ -339,7 +349,10 @@ export class WorkspaceManager {
       const promptFolderResult = await this.loadPromptFolders(workspacePath)
 
       if (!promptFolderResult.success) {
-        return { success: false, error: promptFolderResult.error }
+        return {
+          success: false,
+          error: promptFolderResult.error ?? 'Failed to load prompt folders'
+        }
       }
 
       const workspaceId = readWorkspaceId(workspacePath)
@@ -348,11 +361,11 @@ export class WorkspaceManager {
         return { success: false, error: 'Invalid workspace info' }
       }
 
-      const workspace: WorkspaceData = {
+      const workspace = buildWorkspaceData(
         workspaceId,
         workspacePath,
-        folders: promptFolderResult.folders ?? []
-      }
+        promptFolderResult.folders ?? []
+      )
 
       return {
         success: true,
@@ -386,17 +399,18 @@ export class WorkspaceManager {
         const promptFolderResult = await this.loadPromptFolders(workspacePath)
 
         if (!promptFolderResult.success) {
-          return { success: false, error: promptFolderResult.error }
+          return {
+            success: false,
+            error: promptFolderResult.error ?? 'Failed to load prompt folders'
+          }
         }
+
+        const conflictFolders = promptFolderResult.folders ?? []
 
         return {
           success: false,
           conflict: true,
-          data: {
-            workspaceId,
-            workspacePath,
-            folders: promptFolderResult.folders ?? []
-          },
+          data: buildWorkspaceData(workspaceId, workspacePath, conflictFolders),
           version: currentVersion
         }
       }
@@ -468,16 +482,17 @@ export class WorkspaceManager {
       const promptFolderResult = await this.loadPromptFolders(workspacePath)
 
       if (!promptFolderResult.success) {
-        return { success: false, error: promptFolderResult.error }
+        return {
+          success: false,
+          error: promptFolderResult.error ?? 'Failed to load prompt folders'
+        }
       }
+
+      const updatedFolders = promptFolderResult.folders ?? []
 
       return {
         success: true,
-        data: {
-          workspaceId,
-          workspacePath,
-          folders: promptFolderResult.folders ?? []
-        },
+        data: buildWorkspaceData(workspaceId, workspacePath, updatedFolders),
         version: nextVersion
       }
     } catch (error) {

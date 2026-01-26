@@ -11,13 +11,10 @@ export type VersionedSaveResult<TData> =
   | { type: 'unchanged' }
   | { type: 'error'; message: string }
 
-export type VersionedSaveResponse<TData> = {
-  success: boolean
-  conflict?: boolean
-  data?: TData
-  version?: number
-  error?: string
-}
+export type VersionedSaveResponse<TData> =
+  | { success: true; data: TData; version: number }
+  | { success: false; conflict: true; data: TData; version: number }
+  | { success: false; error: string; conflict?: false }
 
 export type VersionedDataState<TDraft, TData> = {
   baseSnapshot: VersionedSnapshot<TData>
@@ -50,18 +47,18 @@ export const toVersionedSaveResult = <TData>(
   if (result.success) {
     return {
       type: 'saved',
-      snapshot: createSnapshot(result.data as TData, result.version as number)
+      snapshot: createSnapshot(result.data, result.version)
     }
   }
 
   if (result.conflict) {
     return {
       type: 'conflict',
-      snapshot: createSnapshot(result.data as TData, result.version as number)
+      snapshot: createSnapshot(result.data, result.version)
     }
   }
 
-  return { type: 'error', message: (result as { error: string }).error }
+  return { type: 'error', message: result.error }
 }
 
 const createVersionedDataState = <TDraft, TData>(

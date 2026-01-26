@@ -105,11 +105,6 @@ const isLatestRequest = (workspacePath: string, requestId: number): boolean =>
   activeWorkspaceState.workspacePath === workspacePath &&
   activeWorkspaceState.requestId === requestId
 
-const extractLoadWorkspacePayload = (
-  result: LoadWorkspaceDataResult
-): { workspace: WorkspaceData; version: number } =>
-  result as { workspace: WorkspaceData; version: number }
-
 const replaceWorkspaceState = (
   workspaceId: string,
   snapshot: VersionedSnapshot<WorkspaceData>
@@ -158,9 +153,12 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
       return
     }
 
-    const { workspace, version } = extractLoadWorkspacePayload(result)
-    const snapshot = createSnapshot(workspace, version)
-    replaceWorkspaceState(workspace.workspaceId, snapshot)
+    if (!result.success) {
+      throw new Error(result.error)
+    }
+
+    const snapshot = createSnapshot(result.workspace, result.version)
+    replaceWorkspaceState(result.workspace.workspaceId, snapshot)
     activeWorkspaceState.isLoading = false
   } catch (error) {
     if (!isLatestRequest(workspacePath, requestId)) {

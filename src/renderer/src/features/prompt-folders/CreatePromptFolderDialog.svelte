@@ -12,40 +12,41 @@
   } from '@renderer/common/ui/dialog'
   import { createPromptFolder } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
-  import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
+  import {
+    normalizePromptFolderDisplayName,
+    validatePromptFolderName
+  } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
 
   let {
     isWorkspaceReady,
-    workspacePath = null,
     promptFolders = [],
     isPromptFolderListLoading = false,
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
-    workspacePath?: string | null
     promptFolders: PromptFolder[]
     isPromptFolderListLoading: boolean
     onCreated?: (folder: PromptFolder) => void
   }>()
 
   let isDialogOpen = $state(false)
-  let folderName = $state('')
+  let displayName = $state('')
   let submissionError = $state<string | null>(null)
   let hasInteractedWithInput = $state(false)
   let isCreatingPromptFolder = $state(false)
 
-  const validation = $derived(validatePromptFolderName(folderName))
+  const validation = $derived(validatePromptFolderName(displayName))
+  const normalizedInput = $derived(normalizePromptFolderDisplayName(displayName))
   // Derive a sanitized name to detect duplicate prompt folders by on-disk folder name.
-  const sanitizedFolderName = $derived(sanitizePromptFolderName(folderName).toLowerCase())
+  const sanitizedFolderName = $derived(normalizedInput.folderName.toLowerCase())
   const hasDuplicateFolderName = $derived.by(
     () =>
       validation.isValid &&
       !isPromptFolderListLoading &&
       Boolean(sanitizedFolderName) &&
       promptFolders.some(
-        (folder) =>
-          sanitizePromptFolderName(folder.folderName).toLowerCase() === sanitizedFolderName
+        (folder) => folder.folderName.toLowerCase() === sanitizedFolderName
       )
   )
   const validationMessage = $derived(
@@ -59,23 +60,28 @@
     submissionError ?? (hasInteractedWithInput ? validationMessage : null)
   )
   const isValid = $derived(
-    Boolean(!validationMessage && validation.isValid && workspacePath && !isPromptFolderListLoading)
+    Boolean(
+      !validationMessage &&
+        validation.isValid &&
+        isWorkspaceReady &&
+        !isPromptFolderListLoading
+    )
   )
 
   const closeDialog = () => {
     isDialogOpen = false
-    folderName = ''
+    displayName = ''
     submissionError = null
     hasInteractedWithInput = false
   }
 
   const handleCreateFolder = async () => {
-    if (!isValid || !workspacePath) return
+    if (!isValid) return
 
     try {
       submissionError = null
       isCreatingPromptFolder = true
-      const created = await createPromptFolder(folderName)
+      const created = await createPromptFolder(displayName)
 
       if (created) {
         onCreated?.(created)
@@ -120,7 +126,7 @@
       <input
         data-testid="folder-name-input"
         placeholder="Enter folder name..."
-        bind:value={folderName}
+        bind:value={displayName}
         oninput={() => {
           hasInteractedWithInput = true
           submissionError = null
