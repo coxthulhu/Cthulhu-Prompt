@@ -46,14 +46,16 @@
     draft: autosaveDraft,
     autosaveMs: AUTOSAVE_MS,
     save: async () => {
-      const validationError = validateFontSize(systemSettingsState.draft.promptFontSizeInput)
+      const validationError = validateFontSize(
+        systemSettingsState.draftSnapshot.promptFontSizeInput
+      )
 
       if (validationError) {
         return
       }
 
       try {
-        await saveFontSizeInput(systemSettingsState.draft.promptFontSizeInput)
+        await saveFontSizeInput(systemSettingsState.draftSnapshot.promptFontSizeInput)
       } catch (error) {
         console.error('Failed to update system settings:', error)
       }
@@ -79,7 +81,7 @@
   }
 
   const handleInput = (value: string) => {
-    if (systemSettingsState.draft.promptFontSizeInput === value) return
+    if (systemSettingsState.draftSnapshot.promptFontSizeInput === value) return
     setSystemSettingsDraftFontSizeInput(value)
     autosave.markDirtyAndScheduleAutosave()
   }
@@ -97,12 +99,12 @@
   }
 
   const validationMessage = $derived(
-    validateFontSize(systemSettingsState.draft.promptFontSizeInput)
+    validateFontSize(systemSettingsState.draftSnapshot.promptFontSizeInput)
   )
   const displayError = $derived(systemSettingsState.errorMessage ?? validationMessage)
   const isResetDisabled = $derived(
     isUpdating ||
-      systemSettingsState.draft.promptFontSizeInput ===
+      systemSettingsState.draftSnapshot.promptFontSizeInput ===
         defaultFontSizeInput
   )
 
@@ -141,7 +143,7 @@
           <NumericInput
             data-testid="font-size-input"
             class="w-24"
-            value={systemSettingsState.draft.promptFontSizeInput}
+            value={systemSettingsState.draftSnapshot.promptFontSizeInput}
             oninput={(event) => handleInput((event.currentTarget as HTMLInputElement).value)}
           />
           <Button size="sm" onclick={handleReset} disabled={isResetDisabled}>

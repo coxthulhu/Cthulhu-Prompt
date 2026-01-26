@@ -27,7 +27,8 @@
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
   const promptFontSize = $derived(
-    systemSettingsState.base.data.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    systemSettingsState.baseSnapshot.data.promptFontSize ??
+      DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
   const systemSettings = $state({
     promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize

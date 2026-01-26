@@ -60,15 +60,15 @@ const systemSettingsState = $state<SystemSettingsState>(
 export const getSystemSettingsState = (): SystemSettingsState => systemSettingsState
 
 export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
-  if (systemSettingsState.draft.promptFontSizeInput === value) return
-  systemSettingsState.draft.promptFontSizeInput = value
+  if (systemSettingsState.draftSnapshot.promptFontSizeInput === value) return
+  systemSettingsState.draftSnapshot.promptFontSizeInput = value
   systemSettingsStore.markDraftChanged(systemSettingsState)
 }
 
 export const saveSystemSettings = (
   settings: SystemSettings
 ): Promise<VersionedSaveOutcome> => {
-  const baseVersion = systemSettingsState.base.version
+  const baseVersion = systemSettingsState.baseSnapshot.version
   return systemSettingsStore.saveVersionedData(
     systemSettingsState,
     createSnapshot(settings, baseVersion),

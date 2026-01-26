@@ -20,9 +20,9 @@ export type VersionedSaveResponse<TData> = {
 }
 
 export type VersionedDataState<TDraft, TData> = {
-  base: VersionedSnapshot<TData>
-  draft: TDraft
-  pending: VersionedSnapshot<TData> | null
+  baseSnapshot: VersionedSnapshot<TData>
+  draftSnapshot: TDraft
+  savingSnapshot: VersionedSnapshot<TData> | null
   dirty: boolean
   isSaving: boolean
   errorMessage: string | null
@@ -38,9 +38,36 @@ export type VersionedDataStore<TDraft, TData> = {
   markDraftChanged: (state: VersionedDataState<TDraft, TData>) => void
   saveVersionedData: (
     state: VersionedDataState<TDraft, TData>,
-    pending: VersionedSnapshot<TData>,
+    savingSnapshot: VersionedSnapshot<TData>,
     save: () => Promise<VersionedSaveResult<TData>>
   ) => Promise<VersionedSaveOutcome>
+}
+
+type VersionedSavePayload<TData> = VersionedSaveResponse<TData> & {
+  settings: TData
+  version: number
+}
+
+type VersionedSaveErrorPayload<TData> = VersionedSaveResponse<TData> & {
+  error: string
+}
+
+export const toVersionedSaveResult = <TData>(
+  result: VersionedSaveResponse<TData>,
+  createSnapshot: (settings: TData, version: number) => VersionedSnapshot<TData>
+): VersionedSaveResult<TData> => {
+  if (result.success) {
+    const { settings, version } = result as VersionedSavePayload<TData>
+    return { type: 'saved', snapshot: createSnapshot(settings, version) }
+  }
+
+  if (result.conflict) {
+    const { settings, version } = result as VersionedSavePayload<TData>
+    return { type: 'conflict', snapshot: createSnapshot(settings, version) }
+  }
+
+  const { error } = result as VersionedSaveErrorPayload<TData>
+  return { type: 'error', message: error }
 }
 
 const createVersionedDataState = <TDraft, TData>(
@@ -48,9 +75,9 @@ const createVersionedDataState = <TDraft, TData>(
   draft: TDraft,
   isDraftDirty: (draft: TDraft, base: VersionedSnapshot<TData>) => boolean
 ): VersionedDataState<TDraft, TData> => ({
-  base,
-  draft,
-  pending: null,
+  baseSnapshot: base,
+  draftSnapshot: draft,
+  savingSnapshot: null,
   dirty: isDraftDirty(draft, base),
   isSaving: false,
   errorMessage: null,
@@ -65,9 +92,20 @@ const markDraftChanged = <TDraft, TData>(
 ): void => {
   // Track draft changes so we can avoid overwriting user edits during saves.
   state.draftRevision += 1
-  state.dirty = isDraftDirty(state.draft, state.base)
+  state.dirty = isDraftDirty(state.draftSnapshot, state.baseSnapshot)
   state.saveOutcome = 'idle'
   state.errorMessage = null
+}
+
+const beginSave = <TDraft, TData>(
+  state: VersionedDataState<TDraft, TData>,
+  savingSnapshot: VersionedSnapshot<TData>
+): void => {
+  state.isSaving = true
+  state.errorMessage = null
+  state.saveOutcome = 'idle'
+  state.savingSnapshot = savingSnapshot
+  state.draftRevisionAtSave = state.draftRevision
 }
 
 const finishSave = <TDraft, TData>(
@@ -77,21 +115,10 @@ const finishSave = <TDraft, TData>(
 ): VersionedSaveOutcome => {
   state.errorMessage = errorMessage
   state.saveOutcome = outcome
-  state.pending = null
+  state.savingSnapshot = null
   state.draftRevisionAtSave = null
   state.isSaving = false
   return outcome
-}
-
-const beginSave = <TDraft, TData>(
-  state: VersionedDataState<TDraft, TData>,
-  pending: VersionedSnapshot<TData>
-): void => {
-  state.isSaving = true
-  state.errorMessage = null
-  state.saveOutcome = 'idle'
-  state.pending = pending
-  state.draftRevisionAtSave = state.draftRevision
 }
 
 const applyServerSnapshot = <TDraft, TData>(
@@ -101,11 +128,11 @@ const applyServerSnapshot = <TDraft, TData>(
   isDraftDirty: (draft: TDraft, base: VersionedSnapshot<TData>) => boolean,
   replaceDraft: boolean
 ): void => {
-  state.base = snapshot
+  state.baseSnapshot = snapshot
   if (replaceDraft) {
-    state.draft = createDraft(snapshot)
+    state.draftSnapshot = createDraft(snapshot)
   }
-  state.dirty = isDraftDirty(state.draft, state.base)
+  state.dirty = isDraftDirty(state.draftSnapshot, state.baseSnapshot)
 }
 
 const applySaveSuccess = <TDraft, TData>(
@@ -131,12 +158,12 @@ const applySaveConflict = <TDraft, TData>(
 
 const saveVersionedData = async <TDraft, TData>(
   state: VersionedDataState<TDraft, TData>,
-  pending: VersionedSnapshot<TData>,
+  savingSnapshot: VersionedSnapshot<TData>,
   createDraft: (snapshot: VersionedSnapshot<TData>) => TDraft,
   isDraftDirty: (draft: TDraft, base: VersionedSnapshot<TData>) => boolean,
   save: () => Promise<VersionedSaveResult<TData>>
 ): Promise<VersionedSaveOutcome> => {
-  beginSave(state, pending)
+  beginSave(state, savingSnapshot)
 
   try {
     const result = await save()
@@ -170,35 +197,8 @@ export const createVersionedDataStore = <TDraft, TData>(params: {
     markDraftChanged: (state) => {
       markDraftChanged(state, isDraftDirty)
     },
-    saveVersionedData: (state, pending, save) => {
-      return saveVersionedData(state, pending, createDraft, isDraftDirty, save)
+    saveVersionedData: (state, savingSnapshot, save) => {
+      return saveVersionedData(state, savingSnapshot, createDraft, isDraftDirty, save)
     }
   }
-}
-
-type VersionedSavePayload<TData> = VersionedSaveResponse<TData> & {
-  settings: TData
-  version: number
-}
-
-type VersionedSaveErrorPayload<TData> = VersionedSaveResponse<TData> & {
-  error: string
-}
-
-export const toVersionedSaveResult = <TData>(
-  result: VersionedSaveResponse<TData>,
-  createSnapshot: (settings: TData, version: number) => VersionedSnapshot<TData>
-): VersionedSaveResult<TData> => {
-  if (result.success) {
-    const { settings, version } = result as VersionedSavePayload<TData>
-    return { type: 'saved', snapshot: createSnapshot(settings, version) }
-  }
-
-  if (result.conflict) {
-    const { settings, version } = result as VersionedSavePayload<TData>
-    return { type: 'conflict', snapshot: createSnapshot(settings, version) }
-  }
-
-  const { error } = result as VersionedSaveErrorPayload<TData>
-  return { type: 'error', message: error }
 }
