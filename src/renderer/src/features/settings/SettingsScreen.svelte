@@ -126,8 +126,10 @@
 <section class="flex-1 p-6 flex flex-col items-center justify-start" data-testid="settings-screen">
   <div class="w-full max-w-2xl space-y-6">
     <div>
-      <h1 class="text-2xl font-bold">Settings</h1>
-      <p class="mt-2 text-muted-foreground">Customize how Cthulhu Prompt behaves.</p>
+      <h1 class="text-2xl font-bold">System Settings</h1>
+      <p class="mt-2 text-muted-foreground">
+        Global settings saved on your local machine.
+      </p>
     </div>
 
     <div class="border rounded-lg bg-muted/30 p-4">
