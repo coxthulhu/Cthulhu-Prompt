@@ -10,7 +10,7 @@ import type {
 import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/systemSettings'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
-let systemSettingsVersion = 0
+let systemSettingsRevision = 0
 
 const resolveSystemSettingsPath = (): string => {
   return path.join(app.getPath('userData'), SYSTEM_SETTINGS_FILENAME)
@@ -72,7 +72,7 @@ export class SystemSettingsManager {
     ipcMain.handle(
       'update-system-settings',
       async (_, request: UpdateSystemSettingsRequest) => {
-        return await this.updateSystemSettings(request.settings, request.version)
+        return await this.updateSystemSettings(request.settings, request.revision)
       }
     )
   }
@@ -89,7 +89,7 @@ export class SystemSettingsManager {
         })
       }
 
-      return { success: true, settings, version: systemSettingsVersion }
+      return { success: true, settings, revision: systemSettingsRevision }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }
@@ -97,18 +97,18 @@ export class SystemSettingsManager {
 
   static async updateSystemSettings(
     settingsUpdate: SystemSettings,
-    requestVersion: number
+    requestRevision: number
   ): Promise<UpdateSystemSettingsResult> {
     try {
       ensureSystemSettingsDirectory()
       const { payload, settings: currentSettings } = readSystemSettingsPayload()
 
-      if (requestVersion !== systemSettingsVersion) {
+      if (requestRevision !== systemSettingsRevision) {
         return {
           success: false,
           conflict: true,
           data: currentSettings,
-          version: systemSettingsVersion
+          revision: systemSettingsRevision
         }
       }
 
@@ -122,9 +122,9 @@ export class SystemSettingsManager {
       }
 
       writeSystemSettingsPayload(nextPayload)
-      systemSettingsVersion += 1
+      systemSettingsRevision += 1
 
-      return { success: true, data: nextSettings, version: systemSettingsVersion }
+      return { success: true, data: nextSettings, revision: systemSettingsRevision }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }

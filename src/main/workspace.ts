@@ -32,13 +32,13 @@ export type UpdateWorkspaceDataRequest = SharedUpdateWorkspaceDataRequest
 export type UpdateWorkspaceDataResult = SharedUpdateWorkspaceDataResult
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-const workspaceVersions = new Map<string, number>()
+const workspaceRevisions = new Map<string, number>()
 
-const getWorkspaceVersion = (workspaceId: string): number =>
-  workspaceVersions.get(workspaceId) ?? 0
+const getWorkspaceRevision = (workspaceId: string): number =>
+  workspaceRevisions.get(workspaceId) ?? 0
 
-const setWorkspaceVersion = (workspaceId: string, version: number): void => {
-  workspaceVersions.set(workspaceId, version)
+const setWorkspaceRevision = (workspaceId: string, revision: number): void => {
+  workspaceRevisions.set(workspaceId, revision)
 }
 
 const readWorkspaceId = (workspacePath: string): string | null => {
@@ -365,7 +365,7 @@ export class WorkspaceManager {
       return {
         success: true,
         workspace,
-        version: getWorkspaceVersion(workspaceId)
+        revision: getWorkspaceRevision(workspaceId)
       }
     } catch (error) {
       return { success: false, error: (error as Error).message }
@@ -375,7 +375,7 @@ export class WorkspaceManager {
   static async updateWorkspaceData(
     request: UpdateWorkspaceDataRequest
   ): Promise<UpdateWorkspaceDataResult> {
-    const { workspacePath, folders, version: requestVersion } = request
+    const { workspacePath, folders, revision: requestRevision } = request
 
     try {
       if (!this.validateWorkspace(workspacePath)) {
@@ -388,9 +388,9 @@ export class WorkspaceManager {
         return { success: false, error: 'Invalid workspace info' }
       }
 
-      const currentVersion = getWorkspaceVersion(workspaceId)
+      const currentRevision = getWorkspaceRevision(workspaceId)
 
-      if (requestVersion !== currentVersion) {
+      if (requestRevision !== currentRevision) {
         const promptFolderResult = await this.loadPromptFolders(workspacePath)
 
         if (!promptFolderResult.success) {
@@ -406,7 +406,7 @@ export class WorkspaceManager {
           success: false,
           conflict: true,
           data: buildWorkspaceData(workspaceId, workspacePath, conflictFolders),
-          version: currentVersion
+          revision: currentRevision
         }
       }
 
@@ -469,8 +469,8 @@ export class WorkspaceManager {
         }
       }
 
-      const nextVersion = currentVersion + 1
-      setWorkspaceVersion(workspaceId, nextVersion)
+      const nextRevision = currentRevision + 1
+      setWorkspaceRevision(workspaceId, nextRevision)
 
       const promptFolderResult = await this.loadPromptFolders(workspacePath)
 
@@ -486,7 +486,7 @@ export class WorkspaceManager {
       return {
         success: true,
         data: buildWorkspaceData(workspaceId, workspacePath, updatedFolders),
-        version: nextVersion
+        revision: nextRevision
       }
     } catch (error) {
       return { success: false, error: (error as Error).message }

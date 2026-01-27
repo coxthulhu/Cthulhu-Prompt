@@ -12,15 +12,15 @@ import type {
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import {
-  createVersionedDataStore,
-  type VersionedDataState,
-  type VersionedSaveOutcome,
-  type VersionedSnapshot,
-  toVersionedSaveResult
-} from '@renderer/data/versioned/VersionedDataStore'
+  createRevisionDataStore,
+  type RevisionDataState,
+  type RevisionSaveOutcome,
+  type RevisionSnapshot,
+  toRevisionSaveResult
+} from '@renderer/data/revisioned/RevisionDataStore'
 
 export type WorkspaceDraft = WorkspaceData
-export type WorkspaceState = VersionedDataState<WorkspaceDraft, WorkspaceData>
+export type WorkspaceState = RevisionDataState<WorkspaceDraft, WorkspaceData>
 
 let activeWorkspaceState = $state<WorkspaceState | null>(null)
 
@@ -36,14 +36,14 @@ const cloneWorkspaceData = (data: WorkspaceData): WorkspaceData => ({
 
 const createSnapshot = (
   data: WorkspaceData,
-  version: number
-): VersionedSnapshot<WorkspaceData> => ({
+  revision: number
+): RevisionSnapshot<WorkspaceData> => ({
   data: cloneWorkspaceData(data),
-  version
+  revision
 })
 
 // Workspace drafts mirror persisted data, so cloning the snapshot is enough.
-const createDraft = (snapshot: VersionedSnapshot<WorkspaceData>): WorkspaceDraft =>
+const createDraft = (snapshot: RevisionSnapshot<WorkspaceData>): WorkspaceDraft =>
   cloneWorkspaceData(snapshot.data)
 
 const areFoldersEqual = (left: PromptFolder[], right: PromptFolder[]): boolean => {
@@ -68,7 +68,7 @@ const areFoldersEqual = (left: PromptFolder[], right: PromptFolder[]): boolean =
 
 const isDraftDirty = (
   draft: WorkspaceDraft,
-  snapshot: VersionedSnapshot<WorkspaceData>
+  snapshot: RevisionSnapshot<WorkspaceData>
 ): boolean => {
   if (draft.workspaceId !== snapshot.data.workspaceId) {
     return true
@@ -81,26 +81,26 @@ const isDraftDirty = (
   return !areFoldersEqual(draft.folders, snapshot.data.folders)
 }
 
-const workspaceDataStore = createVersionedDataStore<
+const workspaceDataStore = createRevisionDataStore<
   WorkspaceDraft,
   WorkspaceData,
   LoadWorkspaceDataSuccess
 >({
   createDraft,
   isDraftDirty,
-  createSnapshotFromLoad: (result) => createSnapshot(result.workspace, result.version),
+  createSnapshotFromLoad: (result) => createSnapshot(result.workspace, result.revision),
   applyLoadedSnapshot: (snapshot) =>
     replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
 })
 
-const createWorkspaceState = (snapshot: VersionedSnapshot<WorkspaceData>): WorkspaceState => {
+const createWorkspaceState = (snapshot: RevisionSnapshot<WorkspaceData>): WorkspaceState => {
   const state = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
   return state
 }
 
 const replaceWorkspaceState = (
   workspaceId: string,
-  snapshot: VersionedSnapshot<WorkspaceData>
+  snapshot: RevisionSnapshot<WorkspaceData>
 ): WorkspaceState => {
   const nextState = createWorkspaceState(snapshot)
   workspaceStatesById.set(workspaceId, nextState)
@@ -144,7 +144,7 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   const state = cachedState ?? createLoadingState(workspacePath)
   activeWorkspaceState = state
 
-  const loadOutcome = await workspaceDataStore.loadVersionedData(state, async () => {
+  const loadOutcome = await workspaceDataStore.loadRevisionData(state, async () => {
     return await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
       'load-workspace-data',
       {
@@ -159,13 +159,13 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   }
 }
 
-const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
+const saveWorkspaceData = async (): Promise<RevisionSaveOutcome> => {
   const state = requireActiveWorkspaceState()
-  const baseVersion = state.baseSnapshot.version
+  const baseRevision = state.baseSnapshot.revision
 
-  const savingSnapshot = createSnapshot(state.draftSnapshot, baseVersion)
+  const savingSnapshot = createSnapshot(state.draftSnapshot, baseRevision)
 
-  return workspaceDataStore.saveVersionedData(state, savingSnapshot, async () => {
+  return workspaceDataStore.saveRevisionData(state, savingSnapshot, async () => {
     const result = await ipcInvoke<UpdateWorkspaceDataResult, UpdateWorkspaceDataRequest>(
       'update-workspace-data',
       {
@@ -173,11 +173,11 @@ const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
         folders: state.draftSnapshot.folders.map((folder) => ({
           displayName: folder.displayName
         })),
-        version: baseVersion
+        revision: baseRevision
       }
     )
 
-    return toVersionedSaveResult(result, createSnapshot)
+    return toRevisionSaveResult(result, createSnapshot)
   })
 }
 

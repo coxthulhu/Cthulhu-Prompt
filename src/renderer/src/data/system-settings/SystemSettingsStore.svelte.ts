@@ -6,39 +6,39 @@ import type {
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
-  createVersionedDataStore,
-  type VersionedDataState,
-  type VersionedSaveOutcome,
-  type VersionedSnapshot,
-  toVersionedSaveResult
-} from '@renderer/data/versioned/VersionedDataStore'
+  createRevisionDataStore,
+  type RevisionDataState,
+  type RevisionSaveOutcome,
+  type RevisionSnapshot,
+  toRevisionSaveResult
+} from '@renderer/data/revisioned/RevisionDataStore'
 import { formatPromptFontSizeInput } from '@renderer/data/system-settings/systemSettingsFormat'
 
 export type SystemSettingsDraft = {
   promptFontSizeInput: string
 }
 
-export type SystemSettingsState = VersionedDataState<SystemSettingsDraft, SystemSettings>
+export type SystemSettingsState = RevisionDataState<SystemSettingsDraft, SystemSettings>
 
 const runtimeConfig = getRuntimeConfig()
 const initialSettings = runtimeConfig.systemSettings
-const initialVersion = runtimeConfig.systemSettingsVersion
+const initialRevision = runtimeConfig.systemSettingsRevision
 
 const createSnapshot = (
   settings: SystemSettings,
-  version: number
-): VersionedSnapshot<SystemSettings> => ({
+  revision: number
+): RevisionSnapshot<SystemSettings> => ({
   data: settings,
-  version
+  revision
 })
 
-const createDraft = (snapshot: VersionedSnapshot<SystemSettings>): SystemSettingsDraft => ({
+const createDraft = (snapshot: RevisionSnapshot<SystemSettings>): SystemSettingsDraft => ({
   promptFontSizeInput: formatPromptFontSizeInput(snapshot.data.promptFontSize)
 })
 
 const isDraftDirty = (
   draft: SystemSettingsDraft,
-  snapshot: VersionedSnapshot<SystemSettings>
+  snapshot: RevisionSnapshot<SystemSettings>
 ): boolean => {
   return (
     draft.promptFontSizeInput !==
@@ -46,9 +46,9 @@ const isDraftDirty = (
   )
 }
 
-const initialSnapshot = createSnapshot(initialSettings, initialVersion)
+const initialSnapshot = createSnapshot(initialSettings, initialRevision)
 
-const systemSettingsStore = createVersionedDataStore<SystemSettingsDraft, SystemSettings>({
+const systemSettingsStore = createRevisionDataStore<SystemSettingsDraft, SystemSettings>({
   createDraft,
   isDraftDirty
 })
@@ -67,21 +67,21 @@ export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
 
 export const saveSystemSettings = (
   settings: SystemSettings
-): Promise<VersionedSaveOutcome> => {
-  const baseVersion = systemSettingsState.baseSnapshot.version
-  return systemSettingsStore.saveVersionedData(
+): Promise<RevisionSaveOutcome> => {
+  const baseRevision = systemSettingsState.baseSnapshot.revision
+  return systemSettingsStore.saveRevisionData(
     systemSettingsState,
-    createSnapshot(settings, baseVersion),
+    createSnapshot(settings, baseRevision),
     async () => {
       const result = await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
         'update-system-settings',
         {
           settings,
-          version: baseVersion
+          revision: baseRevision
         }
       )
 
-      return toVersionedSaveResult(result, createSnapshot)
+      return toRevisionSaveResult(result, createSnapshot)
     }
   )
 }

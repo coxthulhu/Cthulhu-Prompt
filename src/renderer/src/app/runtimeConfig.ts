@@ -9,7 +9,7 @@ const fallbackRuntimeConfig: RuntimeConfig = {
   executionFolderName: null,
   environment: '',
   systemSettings: normalizeRuntimeSystemSettings(undefined),
-  systemSettingsVersion: 0
+  systemSettingsRevision: 0
 }
 
 export const getRuntimeConfig = (): RuntimeConfig => {
@@ -19,8 +19,8 @@ export const getRuntimeConfig = (): RuntimeConfig => {
     executionFolderName: config.executionFolderName ?? null,
     environment: normalizeRuntimeEnvironment(config.environment),
     systemSettings: normalizeRuntimeSystemSettings(config.systemSettings),
-    systemSettingsVersion:
-      typeof config.systemSettingsVersion === 'number' ? config.systemSettingsVersion : 0
+    systemSettingsRevision:
+      typeof config.systemSettingsRevision === 'number' ? config.systemSettingsRevision : 0
   }
 }
 

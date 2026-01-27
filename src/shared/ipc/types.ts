@@ -14,24 +14,24 @@ export interface SystemSettings {
 
 export interface LoadSystemSettingsResult extends WorkspaceResult {
   settings?: SystemSettings
-  version?: number
+  revision?: number
 }
 
 export interface UpdateSystemSettingsRequest {
   settings: SystemSettings
-  version: number
+  revision: number
 }
 
-export type VersionedDataResult<TData> =
-  | { success: true; data: TData; version: number }
-  | { success: false; conflict: true; data: TData; version: number }
+export type RevisionDataResult<TData> =
+  | { success: true; data: TData; revision: number }
+  | { success: false; conflict: true; data: TData; revision: number }
   | { success: false; error: string; conflict?: false }
 
 export type LoadResult<TSuccess> =
   | ({ success: true } & TSuccess)
   | { success: false; error: string }
 
-export type UpdateSystemSettingsResult = VersionedDataResult<SystemSettings>
+export type UpdateSystemSettingsResult = RevisionDataResult<SystemSettings>
 
 export interface PromptFolder {
   folderName: string
@@ -60,17 +60,17 @@ export interface LoadWorkspaceDataRequest {
   workspacePath: string
 }
 
-export type LoadWorkspaceDataSuccess = { workspace: WorkspaceData; version: number }
+export type LoadWorkspaceDataSuccess = { workspace: WorkspaceData; revision: number }
 
 export type LoadWorkspaceDataResult = LoadResult<LoadWorkspaceDataSuccess>
 
 export interface UpdateWorkspaceDataRequest {
   workspacePath: string
   folders: WorkspaceFolderDraft[]
-  version: number
+  revision: number
 }
 
-export type UpdateWorkspaceDataResult = VersionedDataResult<WorkspaceData>
+export type UpdateWorkspaceDataResult = RevisionDataResult<WorkspaceData>
 
 export interface Prompt {
   id: string
