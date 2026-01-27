@@ -192,7 +192,7 @@ export function createWorkspaceWithFolders(
 
     // Create prompts file
     const promptsData = {
-      metadata: { version: 1 },
+      metadata: { schemaVersion: 1 },
       prompts
     }
     structure[`${folderPath}/Prompts.json`] = JSON.stringify(promptsData, null, 2)
@@ -368,7 +368,7 @@ export function addFolderToWorkspace(
     ),
     [`${folderPath}/Prompts.json`]: JSON.stringify(
       {
-        metadata: { version: 1 },
+        metadata: { schemaVersion: 1 },
         prompts
       },
       null,

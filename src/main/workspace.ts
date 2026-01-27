@@ -188,7 +188,7 @@ export class WorkspaceManager {
         ]
 
         const promptsContent = JSON.stringify(
-          { metadata: { version: 1 }, prompts: examplePrompts },
+          { metadata: { schemaVersion: 1 }, prompts: examplePrompts },
           null,
           2
         )

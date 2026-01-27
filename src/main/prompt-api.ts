@@ -18,7 +18,7 @@ export type LoadPromptsResult = SharedLoadPromptsResult
 export type WorkspaceResult = SharedWorkspaceResult
 
 export interface PromptsFileMetadata {
-  version: number
+  schemaVersion: number
 }
 
 export interface PromptsFile {
@@ -117,7 +117,7 @@ export class PromptAPI {
     const fs = getFs()
     if (!fs.existsSync(filePath)) {
       const emptyFile: PromptsFile = {
-        metadata: { version: 1 },
+        metadata: { schemaVersion: 1 },
         prompts: []
       }
       fs.writeFileSync(filePath, JSON.stringify(emptyFile, null, 2), 'utf8')
@@ -382,7 +382,7 @@ export class PromptAPI {
     const fs = getFs()
     const promptsFilePath = path.join(folderPath, 'Prompts.json')
     const promptsFile: PromptsFile = {
-      metadata: { version: 1 },
+      metadata: { schemaVersion: 1 },
       prompts: []
     }
     const promptsContent = JSON.stringify(promptsFile, null, 2)

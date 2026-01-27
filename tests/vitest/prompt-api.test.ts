@@ -57,7 +57,7 @@ describe('PromptAPI', () => {
     it('should load prompts from existing file', async () => {
       // Use sample prompts from fixtures
       const promptsData = {
-        metadata: { version: 1 },
+        metadata: { schemaVersion: 1 },
         prompts: [samplePrompts.simple, samplePrompts.complex]
       }
 
@@ -104,7 +104,7 @@ describe('PromptAPI', () => {
       // Use sample prompt for consistency
       const testPrompt = { ...samplePrompts.simple, id: 'existing-id' }
       const promptsData = {
-        metadata: { version: 1 },
+        metadata: { schemaVersion: 1 },
         prompts: [testPrompt]
       }
 
@@ -154,7 +154,7 @@ describe('PromptAPI', () => {
       const promptToKeep = { ...samplePrompts.complex, id: 'to-keep' }
 
       const promptsData = {
-        metadata: { version: 1 },
+        metadata: { schemaVersion: 1 },
         prompts: [promptToDelete, promptToKeep]
       }
 
@@ -211,7 +211,7 @@ describe('PromptAPI', () => {
       expect(vol.existsSync(filePath)).toBe(true)
 
       const content = JSON.parse(vol.readFileSync(filePath, 'utf8'))
-      expect(content.metadata.version).toBe(1)
+      expect(content.metadata.schemaVersion).toBe(1)
       expect(content.prompts).toEqual([])
     })
   })
