@@ -1,4 +1,4 @@
-import type { VersionedDataResult } from '@shared/ipc'
+import type { LoadResult, VersionedDataResult } from '@shared/ipc'
 
 export type VersionedSnapshot<T> = {
   data: T
@@ -13,10 +13,6 @@ export type VersionedSaveResult<TData> =
   | { type: 'unchanged' }
   | { type: 'error'; message: string }
 
-export type VersionedLoadResponse<TSuccess extends object> =
-  | ({ success: true } & TSuccess)
-  | { success: false; error: string }
-
 export type VersionedSaveResponse<TData> = VersionedDataResult<TData>
 
 export type VersionedDataState<TDraft, TData> = {
@@ -26,9 +22,9 @@ export type VersionedDataState<TDraft, TData> = {
   dirty: boolean
   isSaving: boolean
   isLoading: boolean
-  requestId: number
-  loadErrorMessage: string | null
-  saveErrorMessage: string | null
+  loadRequestId: number
+  loadError: string | null
+  saveError: string | null
   saveOutcome: VersionedSaveOutcome
   draftRevision: number
   draftRevisionAtSave: number | null
@@ -58,7 +54,7 @@ export type VersionedDataStoreWithLoad<
 > = VersionedDataStoreBase<TDraft, TData> & {
   loadVersionedData: (
     state: VersionedDataState<TDraft, TData>,
-    load: () => Promise<VersionedLoadResponse<TLoadSuccess>>
+    load: () => Promise<LoadResult<TLoadSuccess>>
   ) => Promise<VersionedLoadResult<TDraft, TData>>
 }
 
@@ -94,9 +90,9 @@ const createVersionedDataState = <TDraft, TData>(
   dirty: isDraftDirty(draft, base),
   isSaving: false,
   isLoading: false,
-  requestId: 0,
-  loadErrorMessage: null,
-  saveErrorMessage: null,
+  loadRequestId: 0,
+  loadError: null,
+  saveError: null,
   saveOutcome: 'idle',
   draftRevision: 0,
   draftRevisionAtSave: null
@@ -110,45 +106,45 @@ const markDraftChanged = <TDraft, TData>(
   state.draftRevision += 1
   state.dirty = isDraftDirty(state.draftSnapshot, state.baseSnapshot)
   state.saveOutcome = 'idle'
-  state.saveErrorMessage = null
+  state.saveError = null
 }
 
 const loadVersionedData = async <TDraft, TData, TLoadSuccess extends object>(
   state: VersionedDataState<TDraft, TData>,
-  load: () => Promise<VersionedLoadResponse<TLoadSuccess>>,
+  load: () => Promise<LoadResult<TLoadSuccess>>,
   createSnapshotFromLoad: (result: TLoadSuccess) => VersionedSnapshot<TData>,
   applySnapshot: (snapshot: VersionedSnapshot<TData>) => VersionedDataState<TDraft, TData>
 ): Promise<VersionedLoadResult<TDraft, TData>> => {
-  const requestId = state.requestId + 1
-  state.requestId = requestId
+  const loadRequestId = state.loadRequestId + 1
+  state.loadRequestId = loadRequestId
   state.isLoading = true
-  state.loadErrorMessage = null
+  state.loadError = null
 
   try {
     const response = await load()
 
-    if (state.requestId !== requestId) {
+    if (state.loadRequestId !== loadRequestId) {
       return { type: 'stale' }
     }
 
     if (!response.success) {
       state.isLoading = false
-      state.loadErrorMessage = response.error
+      state.loadError = response.error
       return { type: 'error', message: response.error }
     }
 
     const nextState = applySnapshot(createSnapshotFromLoad(response))
     nextState.isLoading = false
-    nextState.loadErrorMessage = null
+    nextState.loadError = null
     return { type: 'loaded', state: nextState }
   } catch (error) {
-    if (state.requestId !== requestId) {
+    if (state.loadRequestId !== loadRequestId) {
       return { type: 'stale' }
     }
 
     const message = error instanceof Error ? error.message : String(error)
     state.isLoading = false
-    state.loadErrorMessage = message
+    state.loadError = message
     return { type: 'error', message }
   }
 }
@@ -158,7 +154,7 @@ const beginSave = <TDraft, TData>(
   savingSnapshot: VersionedSnapshot<TData>
 ): void => {
   state.isSaving = true
-  state.saveErrorMessage = null
+  state.saveError = null
   state.saveOutcome = 'idle'
   state.savingSnapshot = savingSnapshot
   state.draftRevisionAtSave = state.draftRevision
@@ -167,9 +163,9 @@ const beginSave = <TDraft, TData>(
 const finishSave = <TDraft, TData>(
   state: VersionedDataState<TDraft, TData>,
   outcome: VersionedSaveOutcome,
-  saveErrorMessage: string | null = null
+  saveError: string | null = null
 ): VersionedSaveOutcome => {
-  state.saveErrorMessage = saveErrorMessage
+  state.saveError = saveError
   state.saveOutcome = outcome
   state.savingSnapshot = null
   state.draftRevisionAtSave = null

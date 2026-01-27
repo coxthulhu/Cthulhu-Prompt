@@ -69,26 +69,29 @@
           : 'ready'
   )
 
-  // Derive workspace display strings for the sidebar header.
-  const workspaceSegments = $derived.by(() =>
-    workspacePath ? workspacePath.split(/[\\/]+/).filter(Boolean) : []
-  )
+  // Support middle truncation by deriving the workspace title + path segments.
+  const workspaceDisplay = $derived.by(() => {
+    if (!workspacePath) {
+      return {
+        title: 'Cthulhu Prompt',
+        prefix: '',
+        suffix: '',
+        separator: '/'
+      }
+    }
 
-  const workspaceSegment = $derived.by(() => {
-    const lastIndex = workspaceSegments.length - 1
-    return lastIndex >= 0 ? workspaceSegments[lastIndex] : null
+    const segments = workspacePath.split(/[\\/]+/).filter(Boolean)
+    const separator = workspacePath.includes('\\') ? '\\' : '/'
+    const suffix = segments.length ? segments[segments.length - 1] : ''
+    const prefix = segments.length > 1 ? segments.slice(0, -1).join(separator) : ''
+
+    return {
+      title: suffix || 'Cthulhu Prompt',
+      prefix,
+      suffix,
+      separator
+    }
   })
-
-  const workspaceTitle = $derived(workspaceSegment ?? 'Cthulhu Prompt')
-
-  // Support middle truncation by splitting the path into a prefix + suffix.
-  const workspaceSeparator = $derived.by(() => (workspacePath?.includes('\\') ? '\\' : '/'))
-  const workspacePathPrefix = $derived.by(() =>
-    workspaceSegments.length > 1 ? workspaceSegments.slice(0, -1).join(workspaceSeparator) : ''
-  )
-  const workspacePathSuffix = $derived.by(() =>
-    workspaceSegments.length ? workspaceSegments[workspaceSegments.length - 1] : ''
-  )
 </script>
 
 <aside
@@ -100,14 +103,14 @@
     <div class="flex items-center gap-2 px-2 py-1">
       <img class="size-8 shrink-0" src={appIcon} alt="Cthulhu Prompt icon" />
       <div class="flex min-w-0 flex-col">
-        <span class="font-semibold text-sm truncate">{workspaceTitle}</span>
+        <span class="font-semibold text-sm truncate">{workspaceDisplay.title}</span>
         <span class="text-xs text-muted-foreground flex min-w-0" title={workspacePath ?? undefined}>
           {#if workspacePath}
-            <span class="min-w-0 truncate">{workspacePathPrefix}</span>
-            {#if workspacePathPrefix}
-              <span class="shrink-0">{workspaceSeparator}</span>
+            <span class="min-w-0 truncate">{workspaceDisplay.prefix}</span>
+            {#if workspaceDisplay.prefix}
+              <span class="shrink-0">{workspaceDisplay.separator}</span>
             {/if}
-            <span class="min-w-0 truncate max-w-[60%]">{workspacePathSuffix}</span>
+            <span class="min-w-0 truncate max-w-[60%]">{workspaceDisplay.suffix}</span>
           {:else}
             No Workspace Selected
           {/if}

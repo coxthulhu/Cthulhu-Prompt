@@ -3,6 +3,7 @@ import { SvelteMap } from 'svelte/reactivity'
 import type {
   LoadWorkspaceDataRequest,
   LoadWorkspaceDataResult,
+  LoadWorkspaceDataSuccess,
   PromptFolder,
   UpdateWorkspaceDataRequest,
   UpdateWorkspaceDataResult,
@@ -20,7 +21,6 @@ import {
 
 export type WorkspaceDraft = WorkspaceData
 export type WorkspaceState = VersionedDataState<WorkspaceDraft, WorkspaceData>
-type WorkspaceLoadSuccess = { workspace: WorkspaceData; version: number }
 
 let activeWorkspaceState = $state<WorkspaceState | null>(null)
 
@@ -84,7 +84,7 @@ const isDraftDirty = (
 const workspaceDataStore = createVersionedDataStore<
   WorkspaceDraft,
   WorkspaceData,
-  WorkspaceLoadSuccess
+  LoadWorkspaceDataSuccess
 >({
   createDraft,
   isDraftDirty,
@@ -130,6 +130,8 @@ export const getActiveWorkspaceFolders = (): PromptFolder[] =>
 export const getActiveWorkspaceLoadingState = (): boolean =>
   activeWorkspaceState?.isLoading ?? false
 
+const requireActiveWorkspaceState = (): WorkspaceState => activeWorkspaceState!
+
 export const setActiveWorkspacePath = async (workspacePath: string | null): Promise<void> => {
   if (!workspacePath) {
     activeWorkspaceState = null
@@ -158,7 +160,7 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
 }
 
 const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
-  const state = activeWorkspaceState!
+  const state = requireActiveWorkspaceState()
   const baseVersion = state.baseSnapshot.version
 
   const savingSnapshot = createSnapshot(state.draftSnapshot, baseVersion)
@@ -180,7 +182,7 @@ const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
 }
 
 export const createPromptFolder = async (displayName: string): Promise<PromptFolder | null> => {
-  const state = activeWorkspaceState!
+  const state = requireActiveWorkspaceState()
   const { displayName: normalizedDisplayName, folderName } =
     preparePromptFolderName(displayName)
 

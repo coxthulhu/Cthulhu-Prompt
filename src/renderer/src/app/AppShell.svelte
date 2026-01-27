@@ -20,7 +20,10 @@
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
   import { getSystemSettingsState } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
-  import { getActiveWorkspacePath } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
+  import {
+    getActiveWorkspaceLoadingState,
+    getActiveWorkspacePath
+  } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
@@ -52,7 +55,7 @@
   const workspacePath = $derived(getActiveWorkspacePath())
   let selectedPromptFolder = $state<PromptFolder | null>(null)
   const isWorkspaceReady = $derived(Boolean(workspacePath))
-  let isWorkspaceLoading = $state(false)
+  const isWorkspaceLoading = $derived(getActiveWorkspaceLoadingState())
   let hasAttemptedAutoSelect = false
   const windowTitle = $derived(
     isDevMode && executionFolderName
@@ -74,10 +77,6 @@
     systemSettings.promptFontSize = promptFontSize
   })
 
-  const setWorkspaceLoading = (value: boolean) => {
-    isWorkspaceLoading = value
-  }
-
   const clearPromptFolderSelection = () => {
     selectedPromptFolder = null
   }
@@ -93,7 +92,6 @@
 
   const selectWorkspace = async (path: string): Promise<WorkspaceSelectionResult> => {
     clearPromptFolderSelection()
-    setWorkspaceLoading(true)
 
     try {
       const promptsPath = `${path}/Prompts`
@@ -117,8 +115,6 @@
         reason: 'unknown-error',
         message
       }
-    } finally {
-      setWorkspaceLoading(false)
     }
   }
 
@@ -127,7 +123,6 @@
     includeExamplePrompts: boolean
   ): Promise<WorkspaceCreationResult> => {
     clearPromptFolderSelection()
-    setWorkspaceLoading(true)
 
     try {
       const result = await createWorkspaceAtPath({ workspacePath: path, includeExamplePrompts })
@@ -152,8 +147,6 @@
         reason: 'unknown-error',
         message
       }
-    } finally {
-      setWorkspaceLoading(false)
     }
   }
 

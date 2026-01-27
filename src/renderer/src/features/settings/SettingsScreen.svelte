@@ -101,7 +101,7 @@
   const validationMessage = $derived(
     validateFontSize(systemSettingsState.draftSnapshot.promptFontSizeInput)
   )
-  const displayError = $derived(systemSettingsState.saveErrorMessage ?? validationMessage)
+  const displayError = $derived(systemSettingsState.saveError ?? validationMessage)
   const isResetDisabled = $derived(
     isUpdating ||
       systemSettingsState.draftSnapshot.promptFontSizeInput ===

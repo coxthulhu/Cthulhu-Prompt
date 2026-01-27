@@ -27,6 +27,10 @@ export type VersionedDataResult<TData> =
   | { success: false; conflict: true; data: TData; version: number }
   | { success: false; error: string; conflict?: false }
 
+export type LoadResult<TSuccess> =
+  | ({ success: true } & TSuccess)
+  | { success: false; error: string }
+
 export type UpdateSystemSettingsResult = VersionedDataResult<SystemSettings>
 
 export interface PromptFolder {
@@ -56,9 +60,9 @@ export interface LoadWorkspaceDataRequest {
   workspacePath: string
 }
 
-export type LoadWorkspaceDataResult =
-  | { success: true; workspace: WorkspaceData; version: number }
-  | { success: false; error: string }
+export type LoadWorkspaceDataSuccess = { workspace: WorkspaceData; version: number }
+
+export type LoadWorkspaceDataResult = LoadResult<LoadWorkspaceDataSuccess>
 
 export interface UpdateWorkspaceDataRequest {
   workspacePath: string
