@@ -25,8 +25,6 @@ let activeWorkspaceState = $state<WorkspaceState | null>(null)
 
 const workspaceStatesById = new SvelteMap<string, WorkspaceState>()
 const workspaceIdByPath = new SvelteMap<string, string>()
-let nextRequestId = 0
-let latestRequestId = 0
 
 const cloneWorkspaceData = (data: WorkspaceData): WorkspaceData => ({
   workspaceId: data.workspaceId,
@@ -96,10 +94,10 @@ const replaceWorkspaceState = (
   return nextState
 }
 
-const createLoadingState = (workspacePath: string, requestId: number): WorkspaceState => {
+const createLoadingState = (workspacePath: string): WorkspaceState => {
   const snapshot = createSnapshot(
     {
-      workspaceId: `loading-${requestId}`,
+      workspaceId: 'loading',
       workspacePath,
       folders: []
     },
@@ -107,17 +105,12 @@ const createLoadingState = (workspacePath: string, requestId: number): Workspace
   )
 
   const state = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
-  state.isLoading = true
-  state.requestId = requestId
   return state
 }
 
 export const getActiveWorkspaceState = (): WorkspaceState | null => activeWorkspaceState
 
 export const setActiveWorkspacePath = async (workspacePath: string | null): Promise<void> => {
-  const requestId = (nextRequestId += 1)
-  latestRequestId = requestId
-
   if (!workspacePath) {
     activeWorkspaceState = null
     return
@@ -126,14 +119,9 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   const cachedWorkspaceId = workspaceIdByPath.get(workspacePath) ?? null
   const cachedState = cachedWorkspaceId ? workspaceStatesById.get(cachedWorkspaceId) ?? null : null
 
-  if (cachedState) {
-    cachedState.requestId = requestId
-    cachedState.isLoading = true
-    cachedState.loadErrorMessage = null
-    activeWorkspaceState = cachedState
-  } else {
-    activeWorkspaceState = createLoadingState(workspacePath, requestId)
-  }
+  const state = cachedState ?? createLoadingState(workspacePath)
+  const requestId = workspaceDataStore.beginLoad(state)
+  activeWorkspaceState = state
 
   try {
     const result = await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
@@ -143,31 +131,31 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
       }
     )
 
-    if (latestRequestId !== requestId) {
+    if (!workspaceDataStore.isLatestRequest(state, requestId)) {
       return
     }
 
     if (!result.success) {
-      activeWorkspaceState!.loadErrorMessage = result.error
-      activeWorkspaceState!.isLoading = false
+      workspaceDataStore.finishLoadError(state, result.error)
       return
     }
 
     const snapshot = createSnapshot(result.workspace, result.version)
     const nextState = replaceWorkspaceState(result.workspace.workspaceId, snapshot)
-    nextState.requestId = requestId
-    nextState.isLoading = false
-    nextState.loadErrorMessage = null
+    workspaceDataStore.finishLoadSuccess(nextState)
 
-    activeWorkspaceState = nextState
+    // Only swap the active state if this request still targets it.
+    if (activeWorkspaceState === state) {
+      activeWorkspaceState = nextState
+    }
   } catch (error) {
-    if (latestRequestId !== requestId) {
+    if (!workspaceDataStore.isLatestRequest(state, requestId)) {
       return
     }
 
-    activeWorkspaceState!.loadErrorMessage =
+    const errorMessage =
       error instanceof Error ? error.message : 'Failed to load workspace data'
-    activeWorkspaceState!.isLoading = false
+    workspaceDataStore.finishLoadError(state, errorMessage)
   }
 }
 

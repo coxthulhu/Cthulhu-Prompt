@@ -35,6 +35,10 @@ export type VersionedDataStore<TDraft, TData> = {
     base: VersionedSnapshot<TData>
   ) => VersionedDataState<TDraft, TData>
   markDraftChanged: (state: VersionedDataState<TDraft, TData>) => void
+  beginLoad: (state: VersionedDataState<TDraft, TData>) => number
+  isLatestRequest: (state: VersionedDataState<TDraft, TData>, requestId: number) => boolean
+  finishLoadSuccess: (state: VersionedDataState<TDraft, TData>) => void
+  finishLoadError: (state: VersionedDataState<TDraft, TData>, message: string) => void
   saveVersionedData: (
     state: VersionedDataState<TDraft, TData>,
     savingSnapshot: VersionedSnapshot<TData>,
@@ -91,6 +95,31 @@ const markDraftChanged = <TDraft, TData>(
   state.dirty = isDraftDirty(state.draftSnapshot, state.baseSnapshot)
   state.saveOutcome = 'idle'
   state.saveErrorMessage = null
+}
+
+const beginLoad = <TDraft, TData>(state: VersionedDataState<TDraft, TData>): number => {
+  state.requestId += 1
+  state.isLoading = true
+  state.loadErrorMessage = null
+  return state.requestId
+}
+
+const isLatestRequest = <TDraft, TData>(
+  state: VersionedDataState<TDraft, TData>,
+  requestId: number
+): boolean => state.requestId === requestId
+
+const finishLoadSuccess = <TDraft, TData>(state: VersionedDataState<TDraft, TData>): void => {
+  state.isLoading = false
+  state.loadErrorMessage = null
+}
+
+const finishLoadError = <TDraft, TData>(
+  state: VersionedDataState<TDraft, TData>,
+  message: string
+): void => {
+  state.isLoading = false
+  state.loadErrorMessage = message
 }
 
 const beginSave = <TDraft, TData>(
@@ -192,6 +221,18 @@ export const createVersionedDataStore = <TDraft, TData>(params: {
     },
     markDraftChanged: (state) => {
       markDraftChanged(state, isDraftDirty)
+    },
+    beginLoad: (state) => {
+      return beginLoad(state)
+    },
+    isLatestRequest: (state, requestId) => {
+      return isLatestRequest(state, requestId)
+    },
+    finishLoadSuccess: (state) => {
+      finishLoadSuccess(state)
+    },
+    finishLoadError: (state, message) => {
+      finishLoadError(state, message)
     },
     saveVersionedData: (state, savingSnapshot, save) => {
       return saveVersionedData(state, savingSnapshot, createDraft, isDraftDirty, save)
