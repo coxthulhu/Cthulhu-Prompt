@@ -16,6 +16,7 @@ import {
   type VersionedLoadResult,
   type VersionedSaveOutcome,
   type VersionedSnapshot,
+  toVersionedLoadResult,
   toVersionedSaveResult
 } from '@renderer/data/versioned/VersionedDataStore'
 
@@ -133,11 +134,9 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
         }
       )
 
-      if (!result.success) {
-        return { type: 'error', message: result.error }
-      }
-
-      return { type: 'loaded', snapshot: createSnapshot(result.workspace, result.version) }
+      return toVersionedLoadResult(result, (loaded) =>
+        createSnapshot(loaded.workspace, loaded.version)
+      )
     },
     (snapshot) => replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
   )

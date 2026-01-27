@@ -13,6 +13,10 @@ export type VersionedSaveResult<TData> =
   | { type: 'unchanged' }
   | { type: 'error'; message: string }
 
+export type VersionedLoadResponse =
+  | { success: true }
+  | { success: false; error: string }
+
 export type VersionedLoadResult<TData> =
   | { type: 'loaded'; snapshot: VersionedSnapshot<TData> }
   | { type: 'error'; message: string }
@@ -76,6 +80,18 @@ export const toVersionedSaveResult = <TData>(
   }
 
   return { type: 'error', message: result.error }
+}
+
+export const toVersionedLoadResult = <TResponse extends VersionedLoadResponse, TData>(
+  result: TResponse,
+  createSnapshot: (result: Extract<TResponse, { success: true }>) => VersionedSnapshot<TData>
+): VersionedLoadResult<TData> => {
+  if (!result.success) {
+    return { type: 'error', message: result.error }
+  }
+
+  const successResult = result as Extract<TResponse, { success: true }>
+  return { type: 'loaded', snapshot: createSnapshot(successResult) }
 }
 
 const createVersionedDataState = <TDraft, TData>(
