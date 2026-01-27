@@ -27,7 +27,7 @@
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
-  const workspaceStoreState = getActiveWorkspaceState()
+  const workspaceState = $derived(getActiveWorkspaceState())
   const promptFontSize = $derived(
     systemSettingsState.baseSnapshot.data.promptFontSize ??
       DEFAULT_SYSTEM_SETTINGS.promptFontSize
@@ -50,7 +50,7 @@
   setSystemSettingsContext(systemSettings)
 
   let activeScreen = $state<ScreenId>('home')
-  const workspacePath = $derived(workspaceStoreState.workspacePath)
+  const workspacePath = $derived(workspaceState?.baseSnapshot.data.workspacePath ?? null)
   let selectedPromptFolder = $state<PromptFolder | null>(null)
   const isWorkspaceReady = $derived(Boolean(workspacePath))
   let isWorkspaceLoading = $state(false)

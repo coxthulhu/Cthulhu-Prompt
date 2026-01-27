@@ -21,25 +21,12 @@ import {
 export type WorkspaceDraft = WorkspaceData
 export type WorkspaceState = VersionedDataState<WorkspaceDraft, WorkspaceData>
 
-export type WorkspaceStoreState = {
-  workspacePath: string | null
-  dataState: WorkspaceState | null
-  isLoading: boolean
-  errorMessage: string | null
-  requestId: number
-}
-
-const activeWorkspaceState = $state<WorkspaceStoreState>({
-  workspacePath: null,
-  dataState: null,
-  isLoading: false,
-  errorMessage: null,
-  requestId: 0
-})
+let activeWorkspaceState = $state<WorkspaceState | null>(null)
 
 const workspaceStatesById = new SvelteMap<string, WorkspaceState>()
 const workspaceIdByPath = new SvelteMap<string, string>()
 let nextRequestId = 0
+let latestRequestId = 0
 
 const cloneWorkspaceData = (data: WorkspaceData): WorkspaceData => ({
   workspaceId: data.workspaceId,
@@ -55,6 +42,7 @@ const createSnapshot = (
   version
 })
 
+// Workspace drafts mirror persisted data, so cloning the snapshot is enough.
 const createDraft = (snapshot: VersionedSnapshot<WorkspaceData>): WorkspaceDraft =>
   cloneWorkspaceData(snapshot.data)
 
@@ -98,58 +86,54 @@ const workspaceDataStore = createVersionedDataStore<WorkspaceDraft, WorkspaceDat
   isDraftDirty
 })
 
-const isLatestRequest = (workspacePath: string, requestId: number): boolean =>
-  activeWorkspaceState.workspacePath === workspacePath &&
-  activeWorkspaceState.requestId === requestId
-
-const finishWorkspaceLoad = (
-  workspacePath: string,
-  requestId: number,
-  apply: () => void
-): void => {
-  if (!isLatestRequest(workspacePath, requestId)) {
-    return
-  }
-
-  apply()
-  activeWorkspaceState.isLoading = false
-}
-
 const replaceWorkspaceState = (
   workspaceId: string,
   snapshot: VersionedSnapshot<WorkspaceData>
 ): WorkspaceState => {
-  const nextState = workspaceDataStore.createState(snapshot)
+  const nextState = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
   workspaceStatesById.set(workspaceId, nextState)
   workspaceIdByPath.set(snapshot.data.workspacePath, workspaceId)
-
-  if (activeWorkspaceState.workspacePath === snapshot.data.workspacePath) {
-    activeWorkspaceState.dataState = nextState
-  }
-
   return nextState
 }
 
-export const getActiveWorkspaceState = (): WorkspaceStoreState => activeWorkspaceState
+const createLoadingState = (workspacePath: string, requestId: number): WorkspaceState => {
+  const snapshot = createSnapshot(
+    {
+      workspaceId: `loading-${requestId}`,
+      workspacePath,
+      folders: []
+    },
+    0
+  )
+
+  const state = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
+  state.isLoading = true
+  state.requestId = requestId
+  return state
+}
+
+export const getActiveWorkspaceState = (): WorkspaceState | null => activeWorkspaceState
 
 export const setActiveWorkspacePath = async (workspacePath: string | null): Promise<void> => {
-  activeWorkspaceState.workspacePath = workspacePath
-  activeWorkspaceState.errorMessage = null
+  const requestId = (nextRequestId += 1)
+  latestRequestId = requestId
 
   if (!workspacePath) {
-    activeWorkspaceState.dataState = null
-    activeWorkspaceState.isLoading = false
-    activeWorkspaceState.requestId = 0
+    activeWorkspaceState = null
     return
   }
 
-  const requestId = (nextRequestId += 1)
-  activeWorkspaceState.requestId = requestId
-  activeWorkspaceState.isLoading = true
-
   const cachedWorkspaceId = workspaceIdByPath.get(workspacePath) ?? null
   const cachedState = cachedWorkspaceId ? workspaceStatesById.get(cachedWorkspaceId) ?? null : null
-  activeWorkspaceState.dataState = cachedState
+
+  if (cachedState) {
+    cachedState.requestId = requestId
+    cachedState.isLoading = true
+    cachedState.loadErrorMessage = null
+    activeWorkspaceState = cachedState
+  } else {
+    activeWorkspaceState = createLoadingState(workspacePath, requestId)
+  }
 
   try {
     const result = await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
@@ -159,25 +143,36 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
       }
     )
 
-    finishWorkspaceLoad(workspacePath, requestId, () => {
-      if (!result.success) {
-        activeWorkspaceState.errorMessage = result.error
-        return
-      }
+    if (latestRequestId !== requestId) {
+      return
+    }
 
-      const snapshot = createSnapshot(result.workspace, result.version)
-      replaceWorkspaceState(result.workspace.workspaceId, snapshot)
-    })
+    if (!result.success) {
+      activeWorkspaceState!.loadErrorMessage = result.error
+      activeWorkspaceState!.isLoading = false
+      return
+    }
+
+    const snapshot = createSnapshot(result.workspace, result.version)
+    const nextState = replaceWorkspaceState(result.workspace.workspaceId, snapshot)
+    nextState.requestId = requestId
+    nextState.isLoading = false
+    nextState.loadErrorMessage = null
+
+    activeWorkspaceState = nextState
   } catch (error) {
-    finishWorkspaceLoad(workspacePath, requestId, () => {
-      activeWorkspaceState.errorMessage =
-        error instanceof Error ? error.message : 'Failed to load workspace data'
-    })
+    if (latestRequestId !== requestId) {
+      return
+    }
+
+    activeWorkspaceState!.loadErrorMessage =
+      error instanceof Error ? error.message : 'Failed to load workspace data'
+    activeWorkspaceState!.isLoading = false
   }
 }
 
 const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
-  const state = activeWorkspaceState.dataState!
+  const state = activeWorkspaceState!
   const baseVersion = state.baseSnapshot.version
 
   const savingSnapshot = createSnapshot(state.draftSnapshot, baseVersion)
@@ -199,7 +194,7 @@ const saveWorkspaceData = async (): Promise<VersionedSaveOutcome> => {
 }
 
 export const createPromptFolder = async (displayName: string): Promise<PromptFolder | null> => {
-  const state = activeWorkspaceState.dataState!
+  const state = activeWorkspaceState!
   const { displayName: normalizedDisplayName, folderName } =
     preparePromptFolderName(displayName)
 

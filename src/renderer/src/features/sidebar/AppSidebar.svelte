@@ -54,10 +54,9 @@
       }))
   )
 
-  const workspaceStoreState = getActiveWorkspaceState()
-  const workspaceDataState = $derived(workspaceStoreState.dataState)
-  const promptFolders = $derived(workspaceDataState?.draftSnapshot.folders ?? [])
-  const areFoldersLoading = $derived(workspaceStoreState.isLoading)
+  const workspaceState = $derived(getActiveWorkspaceState())
+  const promptFolders = $derived(workspaceState?.draftSnapshot.folders ?? [])
+  const areFoldersLoading = $derived(workspaceState?.isLoading ?? false)
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     !isWorkspaceReady
       ? 'no-workspace'

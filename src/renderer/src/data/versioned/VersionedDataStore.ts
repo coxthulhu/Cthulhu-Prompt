@@ -21,7 +21,10 @@ export type VersionedDataState<TDraft, TData> = {
   savingSnapshot: VersionedSnapshot<TData> | null
   dirty: boolean
   isSaving: boolean
-  errorMessage: string | null
+  isLoading: boolean
+  requestId: number
+  loadErrorMessage: string | null
+  saveErrorMessage: string | null
   saveOutcome: VersionedSaveOutcome
   draftRevision: number
   draftRevisionAtSave: number | null
@@ -70,7 +73,10 @@ const createVersionedDataState = <TDraft, TData>(
   savingSnapshot: null,
   dirty: isDraftDirty(draft, base),
   isSaving: false,
-  errorMessage: null,
+  isLoading: false,
+  requestId: 0,
+  loadErrorMessage: null,
+  saveErrorMessage: null,
   saveOutcome: 'idle',
   draftRevision: 0,
   draftRevisionAtSave: null
@@ -84,7 +90,7 @@ const markDraftChanged = <TDraft, TData>(
   state.draftRevision += 1
   state.dirty = isDraftDirty(state.draftSnapshot, state.baseSnapshot)
   state.saveOutcome = 'idle'
-  state.errorMessage = null
+  state.saveErrorMessage = null
 }
 
 const beginSave = <TDraft, TData>(
@@ -92,7 +98,7 @@ const beginSave = <TDraft, TData>(
   savingSnapshot: VersionedSnapshot<TData>
 ): void => {
   state.isSaving = true
-  state.errorMessage = null
+  state.saveErrorMessage = null
   state.saveOutcome = 'idle'
   state.savingSnapshot = savingSnapshot
   state.draftRevisionAtSave = state.draftRevision
@@ -101,9 +107,9 @@ const beginSave = <TDraft, TData>(
 const finishSave = <TDraft, TData>(
   state: VersionedDataState<TDraft, TData>,
   outcome: VersionedSaveOutcome,
-  errorMessage: string | null = null
+  saveErrorMessage: string | null = null
 ): VersionedSaveOutcome => {
-  state.errorMessage = errorMessage
+  state.saveErrorMessage = saveErrorMessage
   state.saveOutcome = outcome
   state.savingSnapshot = null
   state.draftRevisionAtSave = null
