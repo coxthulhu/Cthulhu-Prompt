@@ -13,10 +13,8 @@ import { preparePromptFolderName } from '@shared/promptFolderName'
 import {
   createVersionedDataStore,
   type VersionedDataState,
-  type VersionedLoadResult,
   type VersionedSaveOutcome,
   type VersionedSnapshot,
-  toVersionedLoadResult,
   toVersionedSaveResult
 } from '@renderer/data/versioned/VersionedDataStore'
 
@@ -81,9 +79,16 @@ const isDraftDirty = (
   return !areFoldersEqual(draft.folders, snapshot.data.folders)
 }
 
-const workspaceDataStore = createVersionedDataStore<WorkspaceDraft, WorkspaceData>({
+const workspaceDataStore = createVersionedDataStore<
+  WorkspaceDraft,
+  WorkspaceData,
+  LoadWorkspaceDataResult
+>({
   createDraft,
-  isDraftDirty
+  isDraftDirty,
+  createSnapshotFromLoad: (result) => createSnapshot(result.workspace, result.version),
+  applyLoadedSnapshot: (snapshot) =>
+    replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
 })
 
 const replaceWorkspaceState = (
@@ -124,22 +129,14 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   const state = cachedState ?? createLoadingState(workspacePath)
   activeWorkspaceState = state
 
-  const loadOutcome = await workspaceDataStore.loadVersionedData(
-    state,
-    async (): Promise<VersionedLoadResult<WorkspaceData>> => {
-      const result = await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
-        'load-workspace-data',
-        {
-          workspacePath
-        }
-      )
-
-      return toVersionedLoadResult(result, (loaded) =>
-        createSnapshot(loaded.workspace, loaded.version)
-      )
-    },
-    (snapshot) => replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
-  )
+  const loadOutcome = await workspaceDataStore.loadVersionedData(state, async () => {
+    return await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
+      'load-workspace-data',
+      {
+        workspacePath
+      }
+    )
+  })
 
   // Only swap the active state if this request still targets it.
   if (loadOutcome.type === 'loaded' && activeWorkspaceState === state) {

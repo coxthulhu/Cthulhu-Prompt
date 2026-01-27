@@ -38,27 +38,32 @@ export type VersionedDataState<TDraft, TData> = {
   draftRevisionAtSave: number | null
 }
 
-export type VersionedDataStore<TDraft, TData> = {
+export type VersionedLoadOutcome<TDraft, TData> =
+  | { type: 'loaded'; state: VersionedDataState<TDraft, TData> }
+  | { type: 'error' }
+  | { type: 'stale' }
+
+export type VersionedDataStoreBase<TDraft, TData> = {
   createState: (
     base: VersionedSnapshot<TData>
   ) => VersionedDataState<TDraft, TData>
   markDraftChanged: (state: VersionedDataState<TDraft, TData>) => void
-  loadVersionedData: (
-    state: VersionedDataState<TDraft, TData>,
-    load: () => Promise<VersionedLoadResult<TData>>,
-    applySnapshot: (
-      snapshot: VersionedSnapshot<TData>
-    ) => VersionedDataState<TDraft, TData>
-  ) => Promise<
-    | { type: 'loaded'; state: VersionedDataState<TDraft, TData> }
-    | { type: 'error' }
-    | { type: 'stale' }
-  >
   saveVersionedData: (
     state: VersionedDataState<TDraft, TData>,
     savingSnapshot: VersionedSnapshot<TData>,
     save: () => Promise<VersionedSaveResult<TData>>
   ) => Promise<VersionedSaveOutcome>
+}
+
+export type VersionedDataStoreWithLoad<
+  TDraft,
+  TData,
+  TLoadResponse extends VersionedLoadResponse
+> = VersionedDataStoreBase<TDraft, TData> & {
+  loadVersionedData: (
+    state: VersionedDataState<TDraft, TData>,
+    load: () => Promise<TLoadResponse>
+  ) => Promise<VersionedLoadOutcome<TDraft, TData>>
 }
 
 export const toVersionedSaveResult = <TData>(
@@ -149,23 +154,24 @@ const finishLoadError = <TDraft, TData>(
   state.loadErrorMessage = message
 }
 
-const loadVersionedData = async <TDraft, TData>(
+const loadVersionedData = async <TDraft, TData, TLoadResponse extends VersionedLoadResponse>(
   state: VersionedDataState<TDraft, TData>,
-  load: () => Promise<VersionedLoadResult<TData>>,
+  load: () => Promise<TLoadResponse>,
+  createSnapshotFromLoad: (
+    result: Extract<TLoadResponse, { success: true }>
+  ) => VersionedSnapshot<TData>,
   applySnapshot: (snapshot: VersionedSnapshot<TData>) => VersionedDataState<TDraft, TData>
-): Promise<
-  | { type: 'loaded'; state: VersionedDataState<TDraft, TData> }
-  | { type: 'error' }
-  | { type: 'stale' }
-> => {
+): Promise<VersionedLoadOutcome<TDraft, TData>> => {
   const requestId = beginLoad(state)
 
   try {
-    const result = await load()
+    const response = await load()
 
     if (!isLatestRequest(state, requestId)) {
       return { type: 'stale' }
     }
+
+    const result = toVersionedLoadResult(response, createSnapshotFromLoad)
 
     if (result.type === 'error') {
       finishLoadError(state, result.message)
@@ -272,24 +278,63 @@ const saveVersionedData = async <TDraft, TData>(
   }
 }
 
-export const createVersionedDataStore = <TDraft, TData>(params: {
+type VersionedLoadConfig<TDraft, TData, TLoadResponse extends VersionedLoadResponse> = {
+  createSnapshotFromLoad: (
+    result: Extract<TLoadResponse, { success: true }>
+  ) => VersionedSnapshot<TData>
+  applyLoadedSnapshot: (snapshot: VersionedSnapshot<TData>) => VersionedDataState<TDraft, TData>
+}
+
+export function createVersionedDataStore<TDraft, TData>(params: {
   createDraft: (snapshot: VersionedSnapshot<TData>) => TDraft
   isDraftDirty: (draft: TDraft, base: VersionedSnapshot<TData>) => boolean
-}): VersionedDataStore<TDraft, TData> => {
+}): VersionedDataStoreBase<TDraft, TData>
+export function createVersionedDataStore<
+  TDraft,
+  TData,
+  TLoadResponse extends VersionedLoadResponse
+>(params: {
+  createDraft: (snapshot: VersionedSnapshot<TData>) => TDraft
+  isDraftDirty: (draft: TDraft, base: VersionedSnapshot<TData>) => boolean
+} & VersionedLoadConfig<TDraft, TData, TLoadResponse>): VersionedDataStoreWithLoad<
+  TDraft,
+  TData,
+  TLoadResponse
+>
+export function createVersionedDataStore<
+  TDraft,
+  TData,
+  TLoadResponse extends VersionedLoadResponse
+>(
+  params: {
+    createDraft: (snapshot: VersionedSnapshot<TData>) => TDraft
+    isDraftDirty: (draft: TDraft, base: VersionedSnapshot<TData>) => boolean
+  } & Partial<VersionedLoadConfig<TDraft, TData, TLoadResponse>>
+): VersionedDataStoreBase<TDraft, TData> | VersionedDataStoreWithLoad<TDraft, TData, TLoadResponse> {
   const { createDraft, isDraftDirty } = params
 
-  return {
+  const baseStore: VersionedDataStoreBase<TDraft, TData> = {
     createState: (base) => {
       return createVersionedDataState(base, createDraft(base), isDraftDirty)
     },
     markDraftChanged: (state) => {
       markDraftChanged(state, isDraftDirty)
     },
-    loadVersionedData: (state, load, applySnapshot) => {
-      return loadVersionedData(state, load, applySnapshot)
-    },
     saveVersionedData: (state, savingSnapshot, save) => {
       return saveVersionedData(state, savingSnapshot, createDraft, isDraftDirty, save)
+    }
+  }
+
+  if (!params.createSnapshotFromLoad || !params.applyLoadedSnapshot) {
+    return baseStore
+  }
+
+  const { createSnapshotFromLoad, applyLoadedSnapshot } = params
+
+  return {
+    ...baseStore,
+    loadVersionedData: (state, load) => {
+      return loadVersionedData(state, load, createSnapshotFromLoad, applyLoadedSnapshot)
     }
   }
 }
