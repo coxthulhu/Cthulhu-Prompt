@@ -13,6 +13,10 @@ export type VersionedSaveResult<TData> =
   | { type: 'unchanged' }
   | { type: 'error'; message: string }
 
+export type VersionedLoadResult<TData> =
+  | { type: 'loaded'; snapshot: VersionedSnapshot<TData> }
+  | { type: 'error'; message: string }
+
 export type VersionedSaveResponse<TData> = VersionedDataResult<TData>
 
 export type VersionedDataState<TDraft, TData> = {
@@ -35,10 +39,17 @@ export type VersionedDataStore<TDraft, TData> = {
     base: VersionedSnapshot<TData>
   ) => VersionedDataState<TDraft, TData>
   markDraftChanged: (state: VersionedDataState<TDraft, TData>) => void
-  beginLoad: (state: VersionedDataState<TDraft, TData>) => number
-  isLatestRequest: (state: VersionedDataState<TDraft, TData>, requestId: number) => boolean
-  finishLoadSuccess: (state: VersionedDataState<TDraft, TData>) => void
-  finishLoadError: (state: VersionedDataState<TDraft, TData>, message: string) => void
+  loadVersionedData: (
+    state: VersionedDataState<TDraft, TData>,
+    load: () => Promise<VersionedLoadResult<TData>>,
+    applySnapshot: (
+      snapshot: VersionedSnapshot<TData>
+    ) => VersionedDataState<TDraft, TData>
+  ) => Promise<
+    | { type: 'loaded'; state: VersionedDataState<TDraft, TData> }
+    | { type: 'error' }
+    | { type: 'stale' }
+  >
   saveVersionedData: (
     state: VersionedDataState<TDraft, TData>,
     savingSnapshot: VersionedSnapshot<TData>,
@@ -120,6 +131,42 @@ const finishLoadError = <TDraft, TData>(
 ): void => {
   state.isLoading = false
   state.loadErrorMessage = message
+}
+
+const loadVersionedData = async <TDraft, TData>(
+  state: VersionedDataState<TDraft, TData>,
+  load: () => Promise<VersionedLoadResult<TData>>,
+  applySnapshot: (snapshot: VersionedSnapshot<TData>) => VersionedDataState<TDraft, TData>
+): Promise<
+  | { type: 'loaded'; state: VersionedDataState<TDraft, TData> }
+  | { type: 'error' }
+  | { type: 'stale' }
+> => {
+  const requestId = beginLoad(state)
+
+  try {
+    const result = await load()
+
+    if (!isLatestRequest(state, requestId)) {
+      return { type: 'stale' }
+    }
+
+    if (result.type === 'error') {
+      finishLoadError(state, result.message)
+      return { type: 'error' }
+    }
+
+    const nextState = applySnapshot(result.snapshot)
+    finishLoadSuccess(nextState)
+    return { type: 'loaded', state: nextState }
+  } catch (error) {
+    if (!isLatestRequest(state, requestId)) {
+      return { type: 'stale' }
+    }
+
+    finishLoadError(state, error instanceof Error ? error.message : String(error))
+    return { type: 'error' }
+  }
 }
 
 const beginSave = <TDraft, TData>(
@@ -222,17 +269,8 @@ export const createVersionedDataStore = <TDraft, TData>(params: {
     markDraftChanged: (state) => {
       markDraftChanged(state, isDraftDirty)
     },
-    beginLoad: (state) => {
-      return beginLoad(state)
-    },
-    isLatestRequest: (state, requestId) => {
-      return isLatestRequest(state, requestId)
-    },
-    finishLoadSuccess: (state) => {
-      finishLoadSuccess(state)
-    },
-    finishLoadError: (state, message) => {
-      finishLoadError(state, message)
+    loadVersionedData: (state, load, applySnapshot) => {
+      return loadVersionedData(state, load, applySnapshot)
     },
     saveVersionedData: (state, savingSnapshot, save) => {
       return saveVersionedData(state, savingSnapshot, createDraft, isDraftDirty, save)

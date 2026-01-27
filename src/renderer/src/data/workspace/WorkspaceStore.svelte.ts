@@ -13,6 +13,7 @@ import { preparePromptFolderName } from '@shared/promptFolderName'
 import {
   createVersionedDataStore,
   type VersionedDataState,
+  type VersionedLoadResult,
   type VersionedSaveOutcome,
   type VersionedSnapshot,
   toVersionedSaveResult
@@ -120,42 +121,30 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   const cachedState = cachedWorkspaceId ? workspaceStatesById.get(cachedWorkspaceId) ?? null : null
 
   const state = cachedState ?? createLoadingState(workspacePath)
-  const requestId = workspaceDataStore.beginLoad(state)
   activeWorkspaceState = state
 
-  try {
-    const result = await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
-      'load-workspace-data',
-      {
-        workspacePath
+  const loadOutcome = await workspaceDataStore.loadVersionedData(
+    state,
+    async (): Promise<VersionedLoadResult<WorkspaceData>> => {
+      const result = await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
+        'load-workspace-data',
+        {
+          workspacePath
+        }
+      )
+
+      if (!result.success) {
+        return { type: 'error', message: result.error }
       }
-    )
 
-    if (!workspaceDataStore.isLatestRequest(state, requestId)) {
-      return
-    }
+      return { type: 'loaded', snapshot: createSnapshot(result.workspace, result.version) }
+    },
+    (snapshot) => replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
+  )
 
-    if (!result.success) {
-      workspaceDataStore.finishLoadError(state, result.error)
-      return
-    }
-
-    const snapshot = createSnapshot(result.workspace, result.version)
-    const nextState = replaceWorkspaceState(result.workspace.workspaceId, snapshot)
-    workspaceDataStore.finishLoadSuccess(nextState)
-
-    // Only swap the active state if this request still targets it.
-    if (activeWorkspaceState === state) {
-      activeWorkspaceState = nextState
-    }
-  } catch (error) {
-    if (!workspaceDataStore.isLatestRequest(state, requestId)) {
-      return
-    }
-
-    const errorMessage =
-      error instanceof Error ? error.message : 'Failed to load workspace data'
-    workspaceDataStore.finishLoadError(state, errorMessage)
+  // Only swap the active state if this request still targets it.
+  if (loadOutcome.type === 'loaded' && activeWorkspaceState === state) {
+    activeWorkspaceState = loadOutcome.state
   }
 }
 
