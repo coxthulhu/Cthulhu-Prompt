@@ -11,7 +11,10 @@
   let { heightPx, class: className }: Props = $props()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
-  const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize))
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const minMonacoHeightPx = $derived(
+    getMinMonacoHeightPx(promptFontSize, promptEditorMinLines)
+  )
 
   // Derive a stable placeholder height that matches Monaco's minimum.
   const clampedHeightPx = $derived(Math.max(minMonacoHeightPx, Math.ceil(heightPx)))

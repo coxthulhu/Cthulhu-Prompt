@@ -34,8 +34,13 @@
     systemSettingsState.baseSnapshot.data.promptFontSize ??
       DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
+  const promptEditorMinLines = $derived(
+    systemSettingsState.baseSnapshot.data.promptEditorMinLines ??
+      DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
+  )
   const systemSettings = $state({
-    promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize,
+    promptEditorMinLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   })
   const windowControls = window.windowControls
 
@@ -75,6 +80,7 @@
   // Side effect: keep the settings context aligned with the latest persisted values.
   $effect(() => {
     systemSettings.promptFontSize = promptFontSize
+    systemSettings.promptEditorMinLines = promptEditorMinLines
   })
 
   const clearPromptFolderSelection = () => {

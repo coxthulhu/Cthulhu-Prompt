@@ -10,6 +10,7 @@ export interface CreateWorkspaceRequest {
 
 export interface SystemSettings {
   promptFontSize: number
+  promptEditorMinLines: number
 }
 
 export interface LoadSystemSettingsResult extends WorkspaceResult {

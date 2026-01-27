@@ -42,6 +42,7 @@
   let { folder } = $props<{ folder: PromptFolder }>()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const folderName = $derived(folder.folderName)
   const initialFolderData = getPromptFolderData(untrack(() => folder.folderName))
   let folderData = $state(initialFolderData)
@@ -115,7 +116,11 @@
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
-        estimatePromptFolderSettingsHeight(folderData.descriptionDraft.text, promptFontSize),
+        estimatePromptFolderSettingsHeight(
+          folderData.descriptionDraft.text,
+          promptFontSize,
+          promptEditorMinLines
+        ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeight(
           row.folder.folderName,
@@ -144,7 +149,8 @@
           getPromptData(row.promptId).draft.text,
           widthPx,
           heightPx,
-          promptFontSize
+          promptFontSize,
+          promptEditorMinLines
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
         lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio),
@@ -250,7 +256,8 @@
   const folderSettingsHeightPx = $derived.by(() => {
     const baseHeight = estimatePromptFolderSettingsHeight(
       folderData.descriptionDraft.text,
-      promptFontSize
+      promptFontSize,
+      promptEditorMinLines
     )
     if (!viewportMetrics) return baseHeight
     const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(

@@ -40,12 +40,17 @@
 
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
 
   const descriptionValue = $derived(folderData.descriptionDraft.text)
   const placeholderHeightPx = $derived(
-    estimatePromptFolderSettingsMonacoHeight(descriptionValue, promptFontSize)
+    estimatePromptFolderSettingsMonacoHeight(
+      descriptionValue,
+      promptFontSize,
+      promptEditorMinLines
+    )
   )
 
   // Side effect: align Monaco overflow widgets with the description editor inside the virtualized row.

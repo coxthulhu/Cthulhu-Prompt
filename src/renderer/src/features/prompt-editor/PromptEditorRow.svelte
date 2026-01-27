@@ -64,6 +64,7 @@
   } = $props()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => getPromptData(promptId))
   const estimatedRowHeightPx = $derived.by(() =>
@@ -71,12 +72,16 @@
       promptData.draft.text,
       virtualWindowWidthPx,
       virtualWindowHeightPx,
-      promptFontSize
+      promptFontSize,
+      promptEditorMinLines
     )
   )
   const placeholderMonacoHeightPx = $derived.by(() => {
     const baseHeightPx = measuredHeightPx ?? estimatedRowHeightPx
-    return Math.max(getMinMonacoHeightPx(promptFontSize), getMonacoHeightFromRowPx(baseHeightPx))
+    return Math.max(
+      getMinMonacoHeightPx(promptFontSize, promptEditorMinLines),
+      getMonacoHeightFromRowPx(baseHeightPx)
+    )
   })
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())

@@ -4,6 +4,7 @@ const SYSTEM_SETTINGS_CONTEXT = Symbol('system-settings')
 
 export type SystemSettingsContext = {
   promptFontSize: number
+  promptEditorMinLines: number
 }
 
 export const setSystemSettingsContext = (value: SystemSettingsContext): void => {

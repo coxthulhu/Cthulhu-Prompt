@@ -43,7 +43,10 @@
 
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
-  const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize))
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const minMonacoHeightPx = $derived(
+    getMinMonacoHeightPx(promptFontSize, promptEditorMinLines)
+  )
 
   let container: HTMLDivElement | null = null
   let editor: monaco.editor.IStandaloneCodeEditor | null = null
@@ -87,7 +90,11 @@
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
-    return clampMonacoHeightPx(Math.ceil(editor.getContentHeight()), promptFontSize)
+    return clampMonacoHeightPx(
+      Math.ceil(editor.getContentHeight()),
+      promptFontSize,
+      promptEditorMinLines
+    )
   }
 
   const layoutEditor = (nextHeightPx?: number): number => {

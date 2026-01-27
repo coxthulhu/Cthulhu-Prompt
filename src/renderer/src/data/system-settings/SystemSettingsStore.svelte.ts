@@ -12,10 +12,14 @@ import {
   type RevisionSnapshot
 } from '@renderer/data/revisioned/RevisionDataStore'
 import { createRevisionMutation } from '@renderer/data/revisioned/GlobalMutationsQueue'
-import { formatPromptFontSizeInput } from '@renderer/data/system-settings/systemSettingsFormat'
+import {
+  formatPromptEditorMinLinesInput,
+  formatPromptFontSizeInput
+} from '@renderer/data/system-settings/systemSettingsFormat'
 
 export type SystemSettingsDraft = {
   promptFontSizeInput: string
+  promptEditorMinLinesInput: string
 }
 
 export type SystemSettingsState = RevisionDataState<SystemSettingsDraft, SystemSettings>
@@ -33,7 +37,10 @@ const createSnapshot = (
 })
 
 const createDraft = (snapshot: RevisionSnapshot<SystemSettings>): SystemSettingsDraft => ({
-  promptFontSizeInput: formatPromptFontSizeInput(snapshot.data.promptFontSize)
+  promptFontSizeInput: formatPromptFontSizeInput(snapshot.data.promptFontSize),
+  promptEditorMinLinesInput: formatPromptEditorMinLinesInput(
+    snapshot.data.promptEditorMinLines
+  )
 })
 
 const isDraftDirty = (
@@ -42,7 +49,9 @@ const isDraftDirty = (
 ): boolean => {
   return (
     draft.promptFontSizeInput !==
-    formatPromptFontSizeInput(snapshot.data.promptFontSize)
+    formatPromptFontSizeInput(snapshot.data.promptFontSize) ||
+    draft.promptEditorMinLinesInput !==
+      formatPromptEditorMinLinesInput(snapshot.data.promptEditorMinLines)
   )
 }
 
@@ -62,6 +71,12 @@ export const getSystemSettingsState = (): SystemSettingsState => systemSettingsS
 export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
   if (systemSettingsState.draftSnapshot.promptFontSizeInput === value) return
   systemSettingsState.draftSnapshot.promptFontSizeInput = value
+  systemSettingsStore.markDraftChanged(systemSettingsState)
+}
+
+export const setSystemSettingsDraftPromptEditorMinLinesInput = (value: string): void => {
+  if (systemSettingsState.draftSnapshot.promptEditorMinLinesInput === value) return
+  systemSettingsState.draftSnapshot.promptEditorMinLinesInput = value
   systemSettingsStore.markDraftChanged(systemSettingsState)
 }
 

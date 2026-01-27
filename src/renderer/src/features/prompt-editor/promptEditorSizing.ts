@@ -1,5 +1,5 @@
-const LINE_HEIGHT_RATIO = 1.25
-const MIN_VISIBLE_LINES = 3
+// Match Monaco's default Windows line height ratio when lineHeight=0.
+const LINE_HEIGHT_RATIO = 1.35
 const MAX_VISIBLE_LINES = 40
 export const TITLE_BAR_HEIGHT_PX = 32
 export const MONACO_PADDING_PX = 10
@@ -9,22 +9,30 @@ const ROW_CHROME_HEIGHT_PX = TITLE_BAR_HEIGHT_PX + MONACO_PADDING_PX + ADDITIONA
 export const getLineHeightPx = (fontSize: number): number =>
   Math.round(fontSize * LINE_HEIGHT_RATIO)
 
-export const getMinMonacoHeightPx = (fontSize: number): number =>
-  getLineHeightPx(fontSize) * MIN_VISIBLE_LINES
+export const getMinMonacoHeightPx = (fontSize: number, minLines: number): number =>
+  getLineHeightPx(fontSize) * minLines
 
 const getMaxMonacoHeightPx = (fontSize: number): number =>
   getLineHeightPx(fontSize) * MAX_VISIBLE_LINES
 
-export const clampMonacoHeightPx = (heightPx: number, fontSize: number): number => {
+export const clampMonacoHeightPx = (
+  heightPx: number,
+  fontSize: number,
+  minLines: number
+): number => {
   return Math.min(
-    Math.max(heightPx, getMinMonacoHeightPx(fontSize)),
+    Math.max(heightPx, getMinMonacoHeightPx(fontSize, minLines)),
     getMaxMonacoHeightPx(fontSize)
   )
 }
 
-export const estimateMonacoHeightPx = (text: string, fontSize: number): number => {
+export const estimateMonacoHeightPx = (
+  text: string,
+  fontSize: number,
+  minLines: number
+): number => {
   const lineCount = Math.max(1, text.split('\n').length)
-  return clampMonacoHeightPx(lineCount * getLineHeightPx(fontSize), fontSize)
+  return clampMonacoHeightPx(lineCount * getLineHeightPx(fontSize), fontSize, minLines)
 }
 
 export const getRowHeightPx = (monacoHeightPx: number): number => {
@@ -39,9 +47,10 @@ export const estimatePromptEditorHeight = (
   promptText: string,
   _widthPx: number,
   _heightPx: number,
-  fontSize: number
+  fontSize: number,
+  minLines: number
 ): number => {
   void _widthPx
   void _heightPx
-  return getRowHeightPx(estimateMonacoHeightPx(promptText, fontSize))
+  return getRowHeightPx(estimateMonacoHeightPx(promptText, fontSize, minLines))
 }

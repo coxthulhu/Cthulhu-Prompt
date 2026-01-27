@@ -36,15 +36,22 @@ export const SETTINGS_EDITOR_LEFT_OFFSET_PX = 13
 
 export const estimatePromptFolderSettingsMonacoHeight = (
   text: string,
-  fontSize: number
+  fontSize: number,
+  minLines: number
 ): number => {
-  return estimateMonacoHeightPx(text, fontSize)
+  return estimateMonacoHeightPx(text, fontSize, minLines)
 }
 
 export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number): number => {
   return Math.ceil(SETTINGS_FIXED_HEIGHT_PX + monacoHeightPx)
 }
 
-export const estimatePromptFolderSettingsHeight = (text: string, fontSize: number): number => {
-  return getPromptFolderSettingsHeightPx(estimatePromptFolderSettingsMonacoHeight(text, fontSize))
+export const estimatePromptFolderSettingsHeight = (
+  text: string,
+  fontSize: number,
+  minLines: number
+): number => {
+  return getPromptFolderSettingsHeightPx(
+    estimatePromptFolderSettingsMonacoHeight(text, fontSize, minLines)
+  )
 }
