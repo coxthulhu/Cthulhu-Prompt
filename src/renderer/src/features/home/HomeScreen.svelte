@@ -198,8 +198,8 @@
   }
 
   const getSelectButtonLabel = () => {
-    if (isWorkspaceLoading && activeWorkspaceAction === 'select') {
-      return 'Setting up...'
+    if (isWorkspaceLoading) {
+      return activeWorkspaceAction === 'select' ? 'Setting up...' : 'Loading...'
     }
     if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'select') {
       return 'Selecting...'
@@ -208,8 +208,8 @@
   }
 
   const getCreateButtonLabel = () => {
-    if (isWorkspaceLoading && activeWorkspaceAction === 'create') {
-      return 'Creating...'
+    if (isWorkspaceLoading) {
+      return activeWorkspaceAction === 'create' ? 'Creating...' : 'Loading...'
     }
     if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'create') {
       return 'Choosing...'
