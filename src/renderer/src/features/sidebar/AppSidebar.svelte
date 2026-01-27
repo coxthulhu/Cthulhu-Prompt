@@ -8,7 +8,10 @@
     DropdownMenuItem,
     DropdownMenuTrigger
   } from '@renderer/common/ui/dropdown-menu'
-  import { getActiveWorkspaceState } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
+  import {
+    getActiveWorkspaceFolders,
+    getActiveWorkspaceLoadingState
+  } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
   import type { PromptFolder } from '@shared/ipc'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import SidebarButton from './SidebarButton.svelte'
@@ -54,9 +57,8 @@
       }))
   )
 
-  const workspaceState = $derived(getActiveWorkspaceState())
-  const promptFolders = $derived(workspaceState?.draftSnapshot.folders ?? [])
-  const areFoldersLoading = $derived(workspaceState?.isLoading ?? false)
+  const promptFolders = $derived(getActiveWorkspaceFolders())
+  const areFoldersLoading = $derived(getActiveWorkspaceLoadingState())
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     !isWorkspaceReady
       ? 'no-workspace'

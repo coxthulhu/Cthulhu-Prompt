@@ -20,14 +20,13 @@
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
   import { getSystemSettingsState } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
-  import { getActiveWorkspaceState } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
+  import { getActiveWorkspacePath } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
-  const workspaceState = $derived(getActiveWorkspaceState())
   const promptFontSize = $derived(
     systemSettingsState.baseSnapshot.data.promptFontSize ??
       DEFAULT_SYSTEM_SETTINGS.promptFontSize
@@ -50,7 +49,7 @@
   setSystemSettingsContext(systemSettings)
 
   let activeScreen = $state<ScreenId>('home')
-  const workspacePath = $derived(workspaceState?.baseSnapshot.data.workspacePath ?? null)
+  const workspacePath = $derived(getActiveWorkspacePath())
   let selectedPromptFolder = $state<PromptFolder | null>(null)
   const isWorkspaceReady = $derived(Boolean(workspacePath))
   let isWorkspaceLoading = $state(false)

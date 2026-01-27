@@ -20,11 +20,13 @@ import {
 
 export type WorkspaceDraft = WorkspaceData
 export type WorkspaceState = VersionedDataState<WorkspaceDraft, WorkspaceData>
+type WorkspaceLoadSuccess = { workspace: WorkspaceData; version: number }
 
 let activeWorkspaceState = $state<WorkspaceState | null>(null)
 
 const workspaceStatesById = new SvelteMap<string, WorkspaceState>()
 const workspaceIdByPath = new SvelteMap<string, string>()
+const LOADING_WORKSPACE_ID = 'loading'
 
 const cloneWorkspaceData = (data: WorkspaceData): WorkspaceData => ({
   workspaceId: data.workspaceId,
@@ -82,7 +84,7 @@ const isDraftDirty = (
 const workspaceDataStore = createVersionedDataStore<
   WorkspaceDraft,
   WorkspaceData,
-  LoadWorkspaceDataResult
+  WorkspaceLoadSuccess
 >({
   createDraft,
   isDraftDirty,
@@ -91,11 +93,16 @@ const workspaceDataStore = createVersionedDataStore<
     replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
 })
 
+const createWorkspaceState = (snapshot: VersionedSnapshot<WorkspaceData>): WorkspaceState => {
+  const state = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
+  return state
+}
+
 const replaceWorkspaceState = (
   workspaceId: string,
   snapshot: VersionedSnapshot<WorkspaceData>
 ): WorkspaceState => {
-  const nextState = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
+  const nextState = createWorkspaceState(snapshot)
   workspaceStatesById.set(workspaceId, nextState)
   workspaceIdByPath.set(snapshot.data.workspacePath, workspaceId)
   return nextState
@@ -104,18 +111,24 @@ const replaceWorkspaceState = (
 const createLoadingState = (workspacePath: string): WorkspaceState => {
   const snapshot = createSnapshot(
     {
-      workspaceId: 'loading',
+      workspaceId: LOADING_WORKSPACE_ID,
       workspacePath,
       folders: []
     },
     0
   )
 
-  const state = $state<WorkspaceState>(workspaceDataStore.createState(snapshot))
-  return state
+  return createWorkspaceState(snapshot)
 }
 
-export const getActiveWorkspaceState = (): WorkspaceState | null => activeWorkspaceState
+export const getActiveWorkspacePath = (): string | null =>
+  activeWorkspaceState?.baseSnapshot.data.workspacePath ?? null
+
+export const getActiveWorkspaceFolders = (): PromptFolder[] =>
+  activeWorkspaceState?.draftSnapshot.folders ?? []
+
+export const getActiveWorkspaceLoadingState = (): boolean =>
+  activeWorkspaceState?.isLoading ?? false
 
 export const setActiveWorkspacePath = async (workspacePath: string | null): Promise<void> => {
   if (!workspacePath) {
