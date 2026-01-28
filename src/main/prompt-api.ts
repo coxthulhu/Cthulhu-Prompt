@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { getFs } from './fs-provider'
 import { WorkspaceManager } from './workspace'
 import { FileOperationQueue } from './file-operation-queue'
+import { revisions } from './revisions'
 import type {
   LoadPromptsResult as SharedLoadPromptsResult,
   Prompt as SharedPrompt,
@@ -16,27 +17,6 @@ export type Prompt = SharedPrompt
 export type PromptResult = SharedPromptResult
 export type LoadPromptsResult = SharedLoadPromptsResult
 export type WorkspaceResult = SharedWorkspaceResult
-
-// In-memory revisions for upcoming revisioned prompt stores.
-const promptFolderRevisions = new Map<string, number>()
-const promptRevisions = new Map<string, number>()
-
-const getPromptFolderRevisionKey = (workspacePath: string, folderName: string): string => {
-  return path.join(workspacePath, 'Prompts', folderName)
-}
-
-const getPromptRevisionKey = (
-  workspacePath: string,
-  folderName: string,
-  promptId: string
-): string => {
-  return `${getPromptFolderRevisionKey(workspacePath, folderName)}::${promptId}`
-}
-
-const bumpRevision = (revisions: Map<string, number>, key: string): void => {
-  const nextRevision = (revisions.get(key) ?? 0) + 1
-  revisions.set(key, nextRevision)
-}
 
 export interface PromptsFileMetadata {
   schemaVersion: number
@@ -218,14 +198,8 @@ export class PromptAPI {
         await this.writePromptsFile(filePath, promptsFile)
         folderConfig.promptCount = nextPromptCount
         this.writePromptFolderConfig(configPath, folderConfig)
-        bumpRevision(
-          promptRevisions,
-          getPromptRevisionKey(request.workspacePath, request.folderName, newPrompt.id)
-        )
-        bumpRevision(
-          promptFolderRevisions,
-          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
-        )
+        revisions.prompt.bump(newPrompt.id)
+        revisions.promptFolder.bump(folderConfig.promptFolderId)
 
         return { success: true, prompt: newPrompt }
       })
@@ -259,10 +233,7 @@ export class PromptAPI {
 
         promptsFile.prompts[promptIndex] = updatedPrompt
         await this.writePromptsFile(filePath, promptsFile)
-        bumpRevision(
-          promptRevisions,
-          getPromptRevisionKey(request.workspacePath, request.folderName, request.id)
-        )
+        revisions.prompt.bump(request.id)
 
         return { success: true, prompt: updatedPrompt }
       })
@@ -277,6 +248,7 @@ export class PromptAPI {
     }
 
     const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+    const configPath = this.getPromptFolderConfigPath(request.workspacePath, request.folderName)
 
     try {
       return await this.runExclusiveFileOperation(filePath, async () => {
@@ -289,13 +261,11 @@ export class PromptAPI {
 
         promptsFile.prompts.splice(promptIndex, 1)
         await this.writePromptsFile(filePath, promptsFile)
-        promptRevisions.delete(
-          getPromptRevisionKey(request.workspacePath, request.folderName, request.id)
-        )
-        bumpRevision(
-          promptFolderRevisions,
-          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
-        )
+        revisions.prompt.delete(request.id)
+        // TODO: include promptFolderId in IPC payloads to avoid reading config here.
+        // Read the config to get the folder GUID for revisions.
+        const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
+        revisions.promptFolder.bump(folderConfig.promptFolderId)
 
         return { success: true }
       })
@@ -310,6 +280,7 @@ export class PromptAPI {
     }
 
     const filePath = this.getPromptsFilePath(request.workspacePath, request.folderName)
+    const configPath = this.getPromptFolderConfigPath(request.workspacePath, request.folderName)
 
     try {
       return await this.runExclusiveFileOperation(filePath, async () => {
@@ -335,10 +306,10 @@ export class PromptAPI {
 
         promptsFile.prompts.splice(insertIndex, 0, prompt)
         await this.writePromptsFile(filePath, promptsFile)
-        bumpRevision(
-          promptFolderRevisions,
-          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
-        )
+        // TODO: include promptFolderId in IPC payloads to avoid reading config here.
+        // Read the config to get the folder GUID for revisions.
+        const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
+        revisions.promptFolder.bump(folderConfig.promptFolderId)
 
         return { success: true }
       })
@@ -415,10 +386,7 @@ export class PromptAPI {
         const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
         folderConfig.folderDescription = request.folderDescription
         this.writePromptFolderConfig(configPath, folderConfig)
-        bumpRevision(
-          promptFolderRevisions,
-          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
-        )
+        revisions.promptFolder.bump(folderConfig.promptFolderId)
         return { success: true }
       })
     } catch (error) {

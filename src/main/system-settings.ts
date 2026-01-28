@@ -1,6 +1,7 @@
 import { app, ipcMain } from 'electron'
 import * as path from 'path'
 import { getFs } from './fs-provider'
+import { revisions } from './revisions'
 import type {
   LoadSystemSettingsResult,
   SystemSettings,
@@ -10,7 +11,6 @@ import type {
 import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/systemSettings'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
-let systemSettingsRevision = 0
 
 const resolveSystemSettingsPath = (): string => {
   return path.join(app.getPath('userData'), SYSTEM_SETTINGS_FILENAME)
@@ -89,7 +89,7 @@ export class SystemSettingsManager {
         })
       }
 
-      return { success: true, settings, revision: systemSettingsRevision }
+      return { success: true, settings, revision: revisions.systemSettings.get() }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }
@@ -103,12 +103,14 @@ export class SystemSettingsManager {
       ensureSystemSettingsDirectory()
       const { payload, settings: currentSettings } = readSystemSettingsPayload()
 
-      if (requestRevision !== systemSettingsRevision) {
+      const currentRevision = revisions.systemSettings.get()
+
+      if (requestRevision !== currentRevision) {
         return {
           success: false,
           conflict: true,
           data: currentSettings,
-          revision: systemSettingsRevision
+          revision: currentRevision
         }
       }
 
@@ -122,9 +124,9 @@ export class SystemSettingsManager {
       }
 
       writeSystemSettingsPayload(nextPayload)
-      systemSettingsRevision += 1
+      const nextRevision = revisions.systemSettings.bump()
 
-      return { success: true, data: nextSettings, revision: systemSettingsRevision }
+      return { success: true, data: nextSettings, revision: nextRevision }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }

@@ -4,6 +4,7 @@ import * as path from 'path'
 import { getFs } from './fs-provider'
 import { getDialogProvider } from './dialog-provider'
 import { PromptAPI } from './prompt-api'
+import { revisions } from './revisions'
 import type {
   CreateWorkspaceRequest as SharedCreateWorkspaceRequest,
   LoadPromptFoldersResult as SharedLoadPromptFoldersResult,
@@ -32,14 +33,6 @@ export type UpdateWorkspaceDataRequest = SharedUpdateWorkspaceDataRequest
 export type UpdateWorkspaceDataResult = SharedUpdateWorkspaceDataResult
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-const workspaceRevisions = new Map<string, number>()
-
-const getWorkspaceRevision = (workspaceId: string): number =>
-  workspaceRevisions.get(workspaceId) ?? 0
-
-const setWorkspaceRevision = (workspaceId: string, revision: number): void => {
-  workspaceRevisions.set(workspaceId, revision)
-}
 
 const readWorkspaceId = (workspacePath: string): string | null => {
   try {
@@ -365,7 +358,7 @@ export class WorkspaceManager {
       return {
         success: true,
         workspace,
-        revision: getWorkspaceRevision(workspaceId)
+        revision: revisions.workspace.get(workspaceId)
       }
     } catch (error) {
       return { success: false, error: (error as Error).message }
@@ -388,7 +381,7 @@ export class WorkspaceManager {
         return { success: false, error: 'Invalid workspace info' }
       }
 
-      const currentRevision = getWorkspaceRevision(workspaceId)
+      const currentRevision = revisions.workspace.get(workspaceId)
 
       if (requestRevision !== currentRevision) {
         const promptFolderResult = await this.loadPromptFolders(workspacePath)
@@ -469,8 +462,7 @@ export class WorkspaceManager {
         }
       }
 
-      const nextRevision = currentRevision + 1
-      setWorkspaceRevision(workspaceId, nextRevision)
+      const nextRevision = revisions.workspace.bump(workspaceId)
 
       const promptFolderResult = await this.loadPromptFolders(workspacePath)
 
