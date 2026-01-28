@@ -77,12 +77,12 @@ export const applyFetchUpdatedWorkspace = (
   trackWorkspacePath(workspaceId, data)
 }
 
-export const syncUpdatedWorkspace = (
+export const applyOptimisticUpdatedWorkspace = (
   workspaceId: string,
   data: WorkspaceData,
   revision: number
 ): void => {
-  workspaceStore.applySync(workspaceId, { data, revision })
+  workspaceStore.applyOptimisticChanges(workspaceId, { data, revision })
   trackWorkspacePath(workspaceId, data)
 }
 

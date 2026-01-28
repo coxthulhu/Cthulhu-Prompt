@@ -50,12 +50,12 @@ export const applyFetchUpdatedPromptFolder = (
   promptFolderStore.applyFetch(promptFolderId, { data, revision })
 }
 
-export const syncUpdatedPromptFolder = (
+export const applyOptimisticUpdatedPromptFolder = (
   promptFolderId: string,
   data: UpdatedPromptFolder,
   revision: number
 ): void => {
-  promptFolderStore.applySync(promptFolderId, { data, revision })
+  promptFolderStore.applyOptimisticChanges(promptFolderId, { data, revision })
 }
 
 export const refetchUpdatedPromptFolder = (promptFolderId: string): Promise<void> =>

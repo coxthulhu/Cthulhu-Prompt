@@ -43,8 +43,12 @@ export const applyFetchUpdatedPrompt = (
   promptStore.applyFetch(promptId, { data, revision })
 }
 
-export const syncUpdatedPrompt = (promptId: string, data: Prompt, revision: number): void => {
-  promptStore.applySync(promptId, { data, revision })
+export const applyOptimisticUpdatedPrompt = (
+  promptId: string,
+  data: Prompt,
+  revision: number
+): void => {
+  promptStore.applyOptimisticChanges(promptId, { data, revision })
 }
 
 export const refetchUpdatedPrompt = (promptId: string): Promise<void> =>

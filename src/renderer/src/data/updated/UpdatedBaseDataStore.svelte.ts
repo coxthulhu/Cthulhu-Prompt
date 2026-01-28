@@ -19,7 +19,7 @@ export type UpdatedBaseDataStore<T> = {
   restoreDraftFromBase: (id: string) => void
   completeDeletion: (id: string) => void
   applyFetch: (id: string, base: UpdatedSnapshot<T>) => void
-  applySync: (id: string, base: UpdatedSnapshot<T>) => void
+  applyOptimisticChanges: (id: string, base: UpdatedSnapshot<T>) => void
 }
 
 const cloneData = <T>(data: T): T => structuredClone(data)
@@ -92,7 +92,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     entries.set(id, entry)
   }
 
-  const applySync = (id: string, base: UpdatedSnapshot<T>): void => {
+  const applyOptimisticChanges = (id: string, base: UpdatedSnapshot<T>): void => {
     const entry = entries.get(id) ?? createEntry<T>(null, null)
     entry.baseSnapshot = base
     entries.set(id, entry)
@@ -107,6 +107,6 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     restoreDraftFromBase,
     completeDeletion,
     applyFetch,
-    applySync
+    applyOptimisticChanges
   }
 }

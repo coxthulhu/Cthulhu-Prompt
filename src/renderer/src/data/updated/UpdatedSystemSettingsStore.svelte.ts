@@ -25,11 +25,11 @@ export const applyFetchUpdatedSystemSettings = (
   systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, { data, revision })
 }
 
-export const syncUpdatedSystemSettings = (
+export const applyOptimisticUpdatedSystemSettings = (
   data: SystemSettings,
   revision: number
 ): void => {
-  systemSettingsStore.applySync(SYSTEM_SETTINGS_KEY, { data, revision })
+  systemSettingsStore.applyOptimisticChanges(SYSTEM_SETTINGS_KEY, { data, revision })
 }
 
 export const refetchUpdatedSystemSettings = (): Promise<void> =>
