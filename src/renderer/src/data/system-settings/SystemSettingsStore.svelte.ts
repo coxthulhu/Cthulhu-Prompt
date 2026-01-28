@@ -1,13 +1,13 @@
 import type {
   SystemSettings,
-  UpdateSystemSettingsRequest,
-  UpdateSystemSettingsResult
+  UpdateSystemSettingsRequest
 } from '@shared/ipc'
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
   createRevisionDataStore,
   type RevisionDataState,
+  type RevisionMutationResult,
   type RevisionSaveOutcome,
   type RevisionSnapshot
 } from '@renderer/data/revisioned/RevisionDataStore'
@@ -70,8 +70,8 @@ export const saveSystemSettings = (
 ): Promise<RevisionSaveOutcome> => {
   return createRevisionMutation({
     elements: [{ store: systemSettingsStore, state: systemSettingsState }],
-    run: async ([revision]) => {
-      return await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
+    run: ([revision]) => {
+      return ipcInvoke<RevisionMutationResult<SystemSettings>, UpdateSystemSettingsRequest>(
         'update-system-settings',
         {
           settings,

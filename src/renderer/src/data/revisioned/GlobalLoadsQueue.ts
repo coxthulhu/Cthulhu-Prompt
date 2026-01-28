@@ -4,21 +4,11 @@ import type {
   RevisionDataStoreWithLoad,
   RevisionLoadResult
 } from './RevisionDataStore'
+import { createSerialQueue } from './SerialQueue'
 
-type GlobalLoadTask<T> = () => Promise<T>
+export const enqueueGlobalLoad = createSerialQueue()
 
-let loadQueue: Promise<void> = Promise.resolve()
-
-export const enqueueGlobalLoad = async <T>(task: GlobalLoadTask<T>): Promise<T> => {
-  const run = loadQueue.then(task)
-  loadQueue = run.then(
-    () => undefined,
-    () => undefined
-  )
-  return await run
-}
-
-export const createRevisionLoad = async <TDraft, TData, TLoadSuccess extends object>({
+export const createRevisionLoad = <TDraft, TData, TLoadSuccess extends object>({
   store,
   state,
   run
@@ -26,8 +16,8 @@ export const createRevisionLoad = async <TDraft, TData, TLoadSuccess extends obj
   store: RevisionDataStoreWithLoad<TDraft, TData, TLoadSuccess>
   state: RevisionDataState<TDraft, TData>
   run: () => Promise<LoadResult<TLoadSuccess>>
-}): Promise<RevisionLoadResult<TDraft, TData>> => {
-  return await enqueueGlobalLoad(async () => {
+}): Promise<RevisionLoadResult<TDraft, TData>> =>
+  enqueueGlobalLoad(async () => {
     const requestId = store.beginLoad(state)
 
     try {
@@ -41,14 +31,14 @@ export const createRevisionLoad = async <TDraft, TData, TLoadSuccess extends obj
         return store.applyLoadError(state, result.error)
       }
 
-      const snapshot = store.createSnapshotFromLoad(result as TLoadSuccess)
+      const snapshot = store.createSnapshotFromLoad(result)
 
       if (snapshot.revision < state.baseSnapshot.revision) {
         store.applyLoadStale(state)
         return { type: 'stale' }
       }
 
-      const nextState = store.applyLoadSuccess(state, snapshot)
+      const nextState = store.applyLoadSuccess(snapshot)
       return { type: 'loaded', state: nextState }
     } catch (error) {
       if (state.loadRequestId !== requestId) {
@@ -59,4 +49,3 @@ export const createRevisionLoad = async <TDraft, TData, TLoadSuccess extends obj
       return store.applyLoadError(state, message)
     }
   })
-}

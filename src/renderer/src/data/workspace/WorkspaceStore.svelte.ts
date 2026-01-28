@@ -6,7 +6,6 @@ import type {
   LoadWorkspaceDataSuccess,
   PromptFolder,
   UpdateWorkspaceDataRequest,
-  UpdateWorkspaceDataResult,
   WorkspaceData
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
@@ -14,6 +13,7 @@ import { preparePromptFolderName } from '@shared/promptFolderName'
 import {
   createRevisionDataStore,
   type RevisionDataState,
+  type RevisionMutationResult,
   type RevisionSaveOutcome,
   type RevisionSnapshot
 } from '@renderer/data/revisioned/RevisionDataStore'
@@ -148,8 +148,8 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   const loadOutcome = await createRevisionLoad({
     store: workspaceDataStore,
     state,
-    run: async () => {
-      return await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
+    run: () => {
+      return ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
         'load-workspace-data',
         {
           workspacePath
@@ -164,20 +164,20 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   }
 }
 
-const saveWorkspaceData = async (): Promise<RevisionSaveOutcome> => {
+const saveWorkspaceData = (): Promise<RevisionSaveOutcome> => {
   const state = requireActiveWorkspaceState()
-  const savingSnapshot = createSnapshot(state.draftSnapshot, state.baseSnapshot.revision)
-  const foldersToSave = savingSnapshot.data.folders.map((folder) => ({
+  const workspacePath = state.draftSnapshot.workspacePath
+  const foldersToSave = state.draftSnapshot.folders.map((folder) => ({
     displayName: folder.displayName
   }))
 
   return createRevisionMutation({
     elements: [{ store: workspaceDataStore, state }],
-    run: async ([revision]) => {
-      return await ipcInvoke<UpdateWorkspaceDataResult, UpdateWorkspaceDataRequest>(
+    run: ([revision]) => {
+      return ipcInvoke<RevisionMutationResult<WorkspaceData>, UpdateWorkspaceDataRequest>(
         'update-workspace-data',
         {
-          workspacePath: savingSnapshot.data.workspacePath,
+          workspacePath,
           folders: foldersToSave,
           revision
         }

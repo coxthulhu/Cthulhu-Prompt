@@ -1,44 +1,36 @@
 import type { RevisionDataState, RevisionDataStoreBase } from './RevisionDataStore'
+import { createSerialQueue } from './SerialQueue'
 
-type GlobalMutationTask<T> = () => Promise<T>
-
-let mutationQueue: Promise<void> = Promise.resolve()
-
-export const enqueueGlobalMutation = async <T>(task: GlobalMutationTask<T>): Promise<T> => {
-  const run = mutationQueue.then(task)
-  mutationQueue = run.then(
-    () => undefined,
-    () => undefined
-  )
-  return await run
-}
+export const enqueueGlobalMutation = createSerialQueue()
 
 export type RevisionMutationElement<TDraft, TData> = {
   store: RevisionDataStoreBase<TDraft, TData>
   state: RevisionDataState<TDraft, TData>
 }
 
-type ConflictableResult = {
-  success: boolean
-}
+type ConflictableResult =
+  | { success: true }
+  | { success: false; conflict: true }
 
-type MutationSuccess<TResult> = Extract<TResult, { success: true }>
-type MutationConflict<TResult> = Extract<TResult, { success: false; conflict: true }>
-
-export const createRevisionMutation = async <TResult extends ConflictableResult, TOutcome>({
+export const createRevisionMutation = <
+  TResult extends ConflictableResult,
+  TOutcome,
+  TDraft,
+  TData
+>({
   elements,
   run,
   onSuccess,
   onConflict
 }: {
-  elements: RevisionMutationElement<any, any>[]
+  elements: ReadonlyArray<RevisionMutationElement<TDraft, TData>>
   run: (revisions: number[]) => Promise<TResult>
-  onSuccess: (result: MutationSuccess<TResult>) => TOutcome
-  onConflict: (result: MutationConflict<TResult>) => TOutcome
+  onSuccess: (result: TResult) => TOutcome
+  onConflict: (result: TResult) => TOutcome
 }): Promise<TOutcome> => {
   const revisions = elements.map((element) => element.state.baseSnapshot.revision)
 
-  return await enqueueGlobalMutation(async () => {
+  return enqueueGlobalMutation(async () => {
     for (const element of elements) {
       element.store.beginSave(element.state)
     }
@@ -46,9 +38,9 @@ export const createRevisionMutation = async <TResult extends ConflictableResult,
     try {
       const result = await run(revisions)
       if (result.success) {
-        return onSuccess(result as MutationSuccess<TResult>)
+        return onSuccess(result)
       }
-      return onConflict(result as MutationConflict<TResult>)
+      return onConflict(result)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       for (const element of elements) {

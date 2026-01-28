@@ -5,6 +5,10 @@ export type RevisionSnapshot<T> = {
 
 export type RevisionSaveOutcome = 'idle' | 'saved' | 'conflict' | 'unchanged' | 'error'
 
+export type RevisionMutationResult<TData> =
+  | { success: true; data: TData; revision: number }
+  | { success: false; conflict: true; data: TData; revision: number }
+
 export type RevisionDataState<TDraft, TData> = {
   baseSnapshot: RevisionSnapshot<TData>
   draftSnapshot: TDraft
@@ -45,10 +49,7 @@ export type RevisionDataStoreWithLoad<
 > = RevisionDataStoreBase<TDraft, TData> & {
   beginLoad: (state: RevisionDataState<TDraft, TData>) => number
   createSnapshotFromLoad: (result: TLoadSuccess) => RevisionSnapshot<TData>
-  applyLoadSuccess: (
-    state: RevisionDataState<TDraft, TData>,
-    snapshot: RevisionSnapshot<TData>
-  ) => RevisionDataState<TDraft, TData>
+  applyLoadSuccess: (snapshot: RevisionSnapshot<TData>) => RevisionDataState<TDraft, TData>
   applyLoadError: (
     state: RevisionDataState<TDraft, TData>,
     message: string
@@ -220,7 +221,7 @@ export function createRevisionDataStore<
       return beginLoad(state)
     },
     createSnapshotFromLoad,
-    applyLoadSuccess: (_state, snapshot) => {
+    applyLoadSuccess: (snapshot) => {
       return applyLoadSuccess(snapshot, applyLoadedSnapshot)
     },
     applyLoadError: (state, message) => {
