@@ -17,6 +17,27 @@ export type PromptResult = SharedPromptResult
 export type LoadPromptsResult = SharedLoadPromptsResult
 export type WorkspaceResult = SharedWorkspaceResult
 
+// In-memory revisions for upcoming revisioned prompt stores.
+const promptFolderRevisions = new Map<string, number>()
+const promptRevisions = new Map<string, number>()
+
+const getPromptFolderRevisionKey = (workspacePath: string, folderName: string): string => {
+  return path.join(workspacePath, 'Prompts', folderName)
+}
+
+const getPromptRevisionKey = (
+  workspacePath: string,
+  folderName: string,
+  promptId: string
+): string => {
+  return `${getPromptFolderRevisionKey(workspacePath, folderName)}::${promptId}`
+}
+
+const bumpRevision = (revisions: Map<string, number>, key: string): void => {
+  const nextRevision = (revisions.get(key) ?? 0) + 1
+  revisions.set(key, nextRevision)
+}
+
 export interface PromptsFileMetadata {
   schemaVersion: number
 }
@@ -197,6 +218,14 @@ export class PromptAPI {
         await this.writePromptsFile(filePath, promptsFile)
         folderConfig.promptCount = nextPromptCount
         this.writePromptFolderConfig(configPath, folderConfig)
+        bumpRevision(
+          promptRevisions,
+          getPromptRevisionKey(request.workspacePath, request.folderName, newPrompt.id)
+        )
+        bumpRevision(
+          promptFolderRevisions,
+          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
+        )
 
         return { success: true, prompt: newPrompt }
       })
@@ -230,6 +259,10 @@ export class PromptAPI {
 
         promptsFile.prompts[promptIndex] = updatedPrompt
         await this.writePromptsFile(filePath, promptsFile)
+        bumpRevision(
+          promptRevisions,
+          getPromptRevisionKey(request.workspacePath, request.folderName, request.id)
+        )
 
         return { success: true, prompt: updatedPrompt }
       })
@@ -256,6 +289,13 @@ export class PromptAPI {
 
         promptsFile.prompts.splice(promptIndex, 1)
         await this.writePromptsFile(filePath, promptsFile)
+        promptRevisions.delete(
+          getPromptRevisionKey(request.workspacePath, request.folderName, request.id)
+        )
+        bumpRevision(
+          promptFolderRevisions,
+          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
+        )
 
         return { success: true }
       })
@@ -295,6 +335,10 @@ export class PromptAPI {
 
         promptsFile.prompts.splice(insertIndex, 0, prompt)
         await this.writePromptsFile(filePath, promptsFile)
+        bumpRevision(
+          promptFolderRevisions,
+          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
+        )
 
         return { success: true }
       })
@@ -371,6 +415,10 @@ export class PromptAPI {
         const folderConfig = this.readPromptFolderConfig(configPath, request.folderName)
         folderConfig.folderDescription = request.folderDescription
         this.writePromptFolderConfig(configPath, folderConfig)
+        bumpRevision(
+          promptFolderRevisions,
+          getPromptFolderRevisionKey(request.workspacePath, request.folderName)
+        )
         return { success: true }
       })
     } catch (error) {
