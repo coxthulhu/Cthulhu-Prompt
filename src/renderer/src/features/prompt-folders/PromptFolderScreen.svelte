@@ -436,9 +436,8 @@
   row,
   rowId,
   virtualWindowWidthPx,
-  virtualWindowHeightPx,
   devicePixelRatio,
-  measuredHeightPx,
+  rowHeightPx,
   hydrationPriority,
   shouldDehydrate,
   overlayRowElement,
@@ -448,9 +447,8 @@
     promptId={row.promptId}
     {rowId}
     {virtualWindowWidthPx}
-    {virtualWindowHeightPx}
     {devicePixelRatio}
-    {measuredHeightPx}
+    {rowHeightPx}
     {hydrationPriority}
     {shouldDehydrate}
     {overlayRowElement}

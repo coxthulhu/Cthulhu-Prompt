@@ -12,6 +12,7 @@ export type VirtualWindowRowComponentProps<TRow> = {
   virtualWindowWidthPx: number
   virtualWindowHeightPx: number
   devicePixelRatio: number
+  rowHeightPx: number
   measuredHeightPx: number | null
   hydrationPriority: number
   shouldDehydrate: boolean

@@ -17,7 +17,6 @@
   } from '../prompt-folders/find/promptFolderFindTypes'
   import {
     ADDITIONAL_GAP_PX,
-    estimatePromptEditorHeight,
     getMonacoHeightFromRowPx,
     getRowHeightPx,
     getMinMonacoHeightPx,
@@ -31,9 +30,8 @@
     promptId,
     rowId,
     virtualWindowWidthPx,
-    virtualWindowHeightPx,
     devicePixelRatio,
-    measuredHeightPx,
+    rowHeightPx: virtualRowHeightPx,
     hydrationPriority,
     shouldDehydrate,
     overlayRowElement,
@@ -48,9 +46,8 @@
     promptId: string
     rowId: string
     virtualWindowWidthPx: number
-    virtualWindowHeightPx: number
     devicePixelRatio: number
-    measuredHeightPx: number | null
+    rowHeightPx: number
     hydrationPriority: number
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
@@ -67,17 +64,8 @@
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => getPromptData(promptId))
-  const estimatedRowHeightPx = $derived.by(() =>
-    estimatePromptEditorHeight(
-      promptData.draft.text,
-      virtualWindowWidthPx,
-      virtualWindowHeightPx,
-      promptFontSize,
-      promptEditorMinLines
-    )
-  )
   const placeholderMonacoHeightPx = $derived.by(() => {
-    const baseHeightPx = measuredHeightPx ?? estimatedRowHeightPx
+    const baseHeightPx = virtualRowHeightPx
     return Math.max(
       getMinMonacoHeightPx(promptFontSize, promptEditorMinLines),
       getMonacoHeightFromRowPx(baseHeightPx)
@@ -115,9 +103,6 @@
     SIDEBAR_WIDTH_PX + ROW_GAP_PX + BORDER_WIDTH_PX + MONACO_LEFT_PADDING_PX
   const OVERFLOW_RIGHT_PADDING_PX = BORDER_WIDTH_PX
   const OVERFLOW_BOTTOM_PADDING_PX = MONACO_VERTICAL_PADDING_PX
-
-  // Derived row height used for layout and stored measurements.
-  const rowHeightPx = $derived(getRowHeightPx(monacoHeightPx))
 
   // Side effect: keep the Monaco overflow host aligned with the prompt editor chrome.
   $effect(() => {
@@ -292,13 +277,13 @@
   }
 
   const handleMoveUp = () => handleMovePrompt(0, onMoveUp)
-  const handleMoveDown = () => handleMovePrompt(rowHeightPx, onMoveDown)
+  const handleMoveDown = () => handleMovePrompt(virtualRowHeightPx, onMoveDown)
 </script>
 
 <div
   bind:this={rowElement}
   class="flex items-stretch gap-2"
-  style={`height:${rowHeightPx}px; min-height:${rowHeightPx}px; max-height:${rowHeightPx}px;`}
+  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
   data-virtual-window-row
 >
@@ -347,7 +332,7 @@
                     monacoHeightPx = meta.heightPx
                   }
                   promptData.setText(text, {
-                    measuredHeightPx: rowHeightPx,
+                    measuredHeightPx: getRowHeightPx(meta.heightPx),
                     widthPx: virtualWindowWidthPx,
                     devicePixelRatio
                   })

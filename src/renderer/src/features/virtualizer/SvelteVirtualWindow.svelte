@@ -221,6 +221,7 @@
                 virtualWindowWidthPx: measurementWidth,
                 virtualWindowHeightPx: viewportHeight,
                 devicePixelRatio,
+                rowHeightPx: row.height,
                 measuredHeightPx: row.measuredHeightPx,
                 hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
                 shouldDehydrate: shouldDehydrateRow(row),
