@@ -9,9 +9,9 @@ import {
   createRevisionDataStore,
   type RevisionDataState,
   type RevisionSaveOutcome,
-  type RevisionSnapshot,
-  toRevisionSaveResult
+  type RevisionSnapshot
 } from '@renderer/data/revisioned/RevisionDataStore'
+import { createRevisionMutation } from '@renderer/data/revisioned/GlobalMutationsQueue'
 import { formatPromptFontSizeInput } from '@renderer/data/system-settings/systemSettingsFormat'
 
 export type SystemSettingsDraft = {
@@ -68,20 +68,28 @@ export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
 export const saveSystemSettings = (
   settings: SystemSettings
 ): Promise<RevisionSaveOutcome> => {
-  const baseRevision = systemSettingsState.baseSnapshot.revision
-  return systemSettingsStore.saveRevisionData(
-    systemSettingsState,
-    createSnapshot(settings, baseRevision),
-    async () => {
-      const result = await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
+  return createRevisionMutation({
+    elements: [{ store: systemSettingsStore, state: systemSettingsState }],
+    run: async ([revision]) => {
+      return await ipcInvoke<UpdateSystemSettingsResult, UpdateSystemSettingsRequest>(
         'update-system-settings',
         {
           settings,
-          revision: baseRevision
+          revision
         }
       )
-
-      return toRevisionSaveResult(result, createSnapshot)
+    },
+    onSuccess: (result) => {
+      return systemSettingsStore.applySaveSuccess(
+        systemSettingsState,
+        createSnapshot(result.data, result.revision)
+      )
+    },
+    onConflict: (result) => {
+      return systemSettingsStore.applySaveConflict(
+        systemSettingsState,
+        createSnapshot(result.data, result.revision)
+      )
     }
-  )
+  })
 }

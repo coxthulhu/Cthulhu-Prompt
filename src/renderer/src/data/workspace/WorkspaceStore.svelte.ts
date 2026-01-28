@@ -15,9 +15,9 @@ import {
   createRevisionDataStore,
   type RevisionDataState,
   type RevisionSaveOutcome,
-  type RevisionSnapshot,
-  toRevisionSaveResult
+  type RevisionSnapshot
 } from '@renderer/data/revisioned/RevisionDataStore'
+import { createRevisionMutation } from '@renderer/data/revisioned/GlobalMutationsQueue'
 
 export type WorkspaceDraft = WorkspaceData
 export type WorkspaceState = RevisionDataState<WorkspaceDraft, WorkspaceData>
@@ -161,23 +161,35 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
 
 const saveWorkspaceData = async (): Promise<RevisionSaveOutcome> => {
   const state = requireActiveWorkspaceState()
-  const baseRevision = state.baseSnapshot.revision
+  const savingSnapshot = createSnapshot(state.draftSnapshot, state.baseSnapshot.revision)
+  const foldersToSave = savingSnapshot.data.folders.map((folder) => ({
+    displayName: folder.displayName
+  }))
 
-  const savingSnapshot = createSnapshot(state.draftSnapshot, baseRevision)
-
-  return workspaceDataStore.saveRevisionData(state, savingSnapshot, async () => {
-    const result = await ipcInvoke<UpdateWorkspaceDataResult, UpdateWorkspaceDataRequest>(
-      'update-workspace-data',
-      {
-        workspacePath: state.draftSnapshot.workspacePath,
-        folders: state.draftSnapshot.folders.map((folder) => ({
-          displayName: folder.displayName
-        })),
-        revision: baseRevision
-      }
-    )
-
-    return toRevisionSaveResult(result, createSnapshot)
+  return createRevisionMutation({
+    elements: [{ store: workspaceDataStore, state }],
+    run: async ([revision]) => {
+      return await ipcInvoke<UpdateWorkspaceDataResult, UpdateWorkspaceDataRequest>(
+        'update-workspace-data',
+        {
+          workspacePath: savingSnapshot.data.workspacePath,
+          folders: foldersToSave,
+          revision
+        }
+      )
+    },
+    onSuccess: (result) => {
+      return workspaceDataStore.applySaveSuccess(
+        state,
+        createSnapshot(result.data, result.revision)
+      )
+    },
+    onConflict: (result) => {
+      return workspaceDataStore.applySaveConflict(
+        state,
+        createSnapshot(result.data, result.revision)
+      )
+    }
   })
 }
 

@@ -1,4 +1,4 @@
-import type { LoadResult, RevisionDataResult } from '@shared/ipc'
+import type { LoadResult } from '@shared/ipc'
 
 export type RevisionSnapshot<T> = {
   data: T
@@ -7,18 +7,9 @@ export type RevisionSnapshot<T> = {
 
 export type RevisionSaveOutcome = 'idle' | 'saved' | 'conflict' | 'unchanged' | 'error'
 
-export type RevisionSaveResult<TData> =
-  | { type: 'saved'; snapshot: RevisionSnapshot<TData> }
-  | { type: 'conflict'; snapshot: RevisionSnapshot<TData> }
-  | { type: 'unchanged' }
-  | { type: 'error'; message: string }
-
-export type RevisionSaveResponse<TData> = RevisionDataResult<TData>
-
 export type RevisionDataState<TDraft, TData> = {
   baseSnapshot: RevisionSnapshot<TData>
   draftSnapshot: TDraft
-  savingSnapshot: RevisionSnapshot<TData> | null
   dirty: boolean
   isSaving: boolean
   isLoading: boolean
@@ -40,11 +31,16 @@ export type RevisionDataStoreBase<TDraft, TData> = {
     base: RevisionSnapshot<TData>
   ) => RevisionDataState<TDraft, TData>
   markDraftChanged: (state: RevisionDataState<TDraft, TData>) => void
-  saveRevisionData: (
+  beginSave: (state: RevisionDataState<TDraft, TData>) => void
+  applySaveSuccess: (
     state: RevisionDataState<TDraft, TData>,
-    savingSnapshot: RevisionSnapshot<TData>,
-    save: () => Promise<RevisionSaveResult<TData>>
-  ) => Promise<RevisionSaveOutcome>
+    snapshot: RevisionSnapshot<TData>
+  ) => RevisionSaveOutcome
+  applySaveConflict: (
+    state: RevisionDataState<TDraft, TData>,
+    snapshot: RevisionSnapshot<TData>
+  ) => RevisionSaveOutcome
+  applySaveError: (state: RevisionDataState<TDraft, TData>, message: string) => RevisionSaveOutcome
 }
 
 export type RevisionDataStoreWithLoad<
@@ -58,27 +54,6 @@ export type RevisionDataStoreWithLoad<
   ) => Promise<RevisionLoadResult<TDraft, TData>>
 }
 
-export const toRevisionSaveResult = <TData>(
-  result: RevisionSaveResponse<TData>,
-  createSnapshot: (data: TData, revision: number) => RevisionSnapshot<TData>
-): RevisionSaveResult<TData> => {
-  if (result.success) {
-    return {
-      type: 'saved',
-      snapshot: createSnapshot(result.data, result.revision)
-    }
-  }
-
-  if (result.conflict) {
-    return {
-      type: 'conflict',
-      snapshot: createSnapshot(result.data, result.revision)
-    }
-  }
-
-  return { type: 'error', message: result.error }
-}
-
 const createRevisionDataState = <TDraft, TData>(
   base: RevisionSnapshot<TData>,
   draft: TDraft,
@@ -86,7 +61,6 @@ const createRevisionDataState = <TDraft, TData>(
 ): RevisionDataState<TDraft, TData> => ({
   baseSnapshot: base,
   draftSnapshot: draft,
-  savingSnapshot: null,
   dirty: isDraftDirty(draft, base),
   isSaving: false,
   isLoading: false,
@@ -149,14 +123,10 @@ const loadRevisionData = async <TDraft, TData, TLoadSuccess extends object>(
   }
 }
 
-const beginSave = <TDraft, TData>(
-  state: RevisionDataState<TDraft, TData>,
-  savingSnapshot: RevisionSnapshot<TData>
-): void => {
+const beginSave = <TDraft, TData>(state: RevisionDataState<TDraft, TData>): void => {
   state.isSaving = true
   state.saveError = null
   state.saveOutcome = 'idle'
-  state.savingSnapshot = savingSnapshot
   state.draftRevisionAtSave = state.draftRevision
 }
 
@@ -167,7 +137,6 @@ const finishSave = <TDraft, TData>(
 ): RevisionSaveOutcome => {
   state.saveError = saveError
   state.saveOutcome = outcome
-  state.savingSnapshot = null
   state.draftRevisionAtSave = null
   state.isSaving = false
   return outcome
@@ -206,34 +175,6 @@ const applySaveConflict = <TDraft, TData>(
 ): RevisionSaveOutcome => {
   applyServerSnapshot(state, snapshot, createDraft, isDraftDirty, true)
   return finishSave(state, 'conflict')
-}
-
-const saveRevisionData = async <TDraft, TData>(
-  state: RevisionDataState<TDraft, TData>,
-  savingSnapshot: RevisionSnapshot<TData>,
-  createDraft: (snapshot: RevisionSnapshot<TData>) => TDraft,
-  isDraftDirty: (draft: TDraft, base: RevisionSnapshot<TData>) => boolean,
-  save: () => Promise<RevisionSaveResult<TData>>
-): Promise<RevisionSaveOutcome> => {
-  beginSave(state, savingSnapshot)
-
-  try {
-    const result = await save()
-
-    switch (result.type) {
-      case 'saved':
-        return applySaveSuccess(state, result.snapshot, createDraft, isDraftDirty)
-      case 'conflict':
-        return applySaveConflict(state, result.snapshot, createDraft, isDraftDirty)
-      case 'error':
-        return finishSave(state, 'error', result.message)
-      case 'unchanged':
-        return finishSave(state, 'unchanged')
-    }
-  } catch (error) {
-    finishSave(state, 'error', error instanceof Error ? error.message : String(error))
-    throw error
-  }
 }
 
 type RevisionLoadConfig<TDraft, TData, TLoadSuccess extends object> = {
@@ -276,8 +217,17 @@ export function createRevisionDataStore<
     markDraftChanged: (state) => {
       markDraftChanged(state, isDraftDirty)
     },
-    saveRevisionData: (state, savingSnapshot, save) => {
-      return saveRevisionData(state, savingSnapshot, createDraft, isDraftDirty, save)
+    beginSave: (state) => {
+      beginSave(state)
+    },
+    applySaveSuccess: (state, snapshot) => {
+      return applySaveSuccess(state, snapshot, createDraft, isDraftDirty)
+    },
+    applySaveConflict: (state, snapshot) => {
+      return applySaveConflict(state, snapshot, createDraft, isDraftDirty)
+    },
+    applySaveError: (state, message) => {
+      return finishSave(state, 'error', message)
     }
   }
 
