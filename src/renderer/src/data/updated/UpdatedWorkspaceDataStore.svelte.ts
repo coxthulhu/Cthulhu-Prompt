@@ -4,7 +4,6 @@ import type { WorkspaceData } from '@shared/ipc'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 import { refetchUpdatedWorkspaceById } from './ipc/workspaceIpc'
-import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 const workspaceStore = createUpdatedBaseDataStore<WorkspaceData>()
 const workspaceIdByPath = new SvelteMap<string, string>()
@@ -88,7 +87,4 @@ export const syncUpdatedWorkspace = (
 }
 
 export const refetchUpdatedWorkspace = (workspaceId: string): Promise<void> =>
-  runUpdatedRefetch('workspace', async () => {
-    const result = await refetchUpdatedWorkspaceById(workspaceId)
-    applyFetchUpdatedWorkspace(workspaceId, result.data, result.revision)
-  })
+  refetchUpdatedWorkspaceById(workspaceId, applyFetchUpdatedWorkspace)

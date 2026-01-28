@@ -3,7 +3,6 @@ import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 import { refetchUpdatedSystemSettings as refetchUpdatedSystemSettingsIpc } from './ipc/systemSettingsIpc'
-import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 const SYSTEM_SETTINGS_KEY = 'system-settings'
 
@@ -34,7 +33,4 @@ export const syncUpdatedSystemSettings = (
 }
 
 export const refetchUpdatedSystemSettings = (): Promise<void> =>
-  runUpdatedRefetch('system settings', async () => {
-    const result = await refetchUpdatedSystemSettingsIpc()
-    applyFetchUpdatedSystemSettings(result.data, result.revision)
-  })
+  refetchUpdatedSystemSettingsIpc(applyFetchUpdatedSystemSettings)

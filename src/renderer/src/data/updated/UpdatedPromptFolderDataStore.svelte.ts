@@ -1,6 +1,5 @@
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 import { refetchUpdatedPromptFolderById } from './ipc/promptFolderIpc'
-import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 export type UpdatedPromptFolder = {
   promptFolderId: string
@@ -60,7 +59,4 @@ export const syncUpdatedPromptFolder = (
 }
 
 export const refetchUpdatedPromptFolder = (promptFolderId: string): Promise<void> =>
-  runUpdatedRefetch('prompt folder', async () => {
-    const result = await refetchUpdatedPromptFolderById(promptFolderId)
-    applyFetchUpdatedPromptFolder(promptFolderId, result.data, result.revision)
-  })
+  refetchUpdatedPromptFolderById(promptFolderId, applyFetchUpdatedPromptFolder)
