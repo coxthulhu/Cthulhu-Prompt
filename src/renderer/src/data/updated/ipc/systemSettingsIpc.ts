@@ -14,7 +14,7 @@ export const refetchUpdatedSystemSettings = (
 ): Promise<void> =>
   runUpdatedRefetch('system settings', async () => {
     const result = await enqueueUpdatedLoad(() =>
-      ipcInvoke<UpdatedSystemSettingsLoadResult>('load-system-settings')
+      ipcInvoke<UpdatedSystemSettingsLoadResult>('updated-load-system-settings')
     )
     applyFetch(result.data, result.revision)
   })

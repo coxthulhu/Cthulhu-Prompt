@@ -57,6 +57,12 @@ export interface WorkspaceData {
   folders: PromptFolder[]
 }
 
+export interface UpdatedWorkspaceData {
+  workspaceId: string
+  workspacePath: string
+  promptFolderIds: string[]
+}
+
 export interface LoadWorkspaceDataRequest {
   workspacePath: string
 }
@@ -64,6 +70,15 @@ export interface LoadWorkspaceDataRequest {
 export type LoadWorkspaceDataSuccess = { workspace: WorkspaceData; revision: number }
 
 export type LoadWorkspaceDataResult = LoadResult<LoadWorkspaceDataSuccess>
+
+export interface UpdatedLoadWorkspaceByIdRequest {
+  workspaceId: string
+}
+
+export type UpdatedLoadWorkspaceByIdResult = LoadResult<{
+  data: UpdatedWorkspaceData
+  revision: number
+}>
 
 export interface UpdateWorkspaceDataRequest {
   workspacePath: string

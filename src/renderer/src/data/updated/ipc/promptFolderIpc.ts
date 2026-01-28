@@ -15,7 +15,7 @@ export const refetchUpdatedPromptFolderById = (
 ): Promise<void> =>
   runUpdatedRefetch('prompt folder', async () => {
     const result = await enqueueUpdatedLoad(() =>
-      ipcInvoke<UpdatedPromptFolderLoadResult>('load-prompt-folder-by-id', {
+      ipcInvoke<UpdatedPromptFolderLoadResult>('updated-load-prompt-folder-by-id', {
         promptFolderId
       })
     )

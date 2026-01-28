@@ -15,7 +15,7 @@ export const refetchUpdatedPromptById = (
 ): Promise<void> =>
   runUpdatedRefetch('prompt', async () => {
     const result = await enqueueUpdatedLoad(() =>
-      ipcInvoke<UpdatedPromptLoadResult>('load-prompt-by-id', { promptId })
+      ipcInvoke<UpdatedPromptLoadResult>('updated-load-prompt-by-id', { promptId })
     )
     applyFetch(promptId, result.data, result.revision)
   })
