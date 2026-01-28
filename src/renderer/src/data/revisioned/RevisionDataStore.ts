@@ -1,5 +1,3 @@
-import type { LoadResult } from '@shared/ipc'
-
 export type RevisionSnapshot<T> = {
   data: T
   revision: number
@@ -48,10 +46,17 @@ export type RevisionDataStoreWithLoad<
   TData,
   TLoadSuccess extends object
 > = RevisionDataStoreBase<TDraft, TData> & {
-  loadRevisionData: (
+  beginLoad: (state: RevisionDataState<TDraft, TData>) => number
+  createSnapshotFromLoad: (result: TLoadSuccess) => RevisionSnapshot<TData>
+  applyLoadSuccess: (
     state: RevisionDataState<TDraft, TData>,
-    load: () => Promise<LoadResult<TLoadSuccess>>
-  ) => Promise<RevisionLoadResult<TDraft, TData>>
+    snapshot: RevisionSnapshot<TData>
+  ) => RevisionDataState<TDraft, TData>
+  applyLoadError: (
+    state: RevisionDataState<TDraft, TData>,
+    message: string
+  ) => RevisionLoadResult<TDraft, TData>
+  applyLoadStale: (state: RevisionDataState<TDraft, TData>) => void
 }
 
 const createRevisionDataState = <TDraft, TData>(
@@ -83,44 +88,36 @@ const markDraftChanged = <TDraft, TData>(
   state.saveError = null
 }
 
-const loadRevisionData = async <TDraft, TData, TLoadSuccess extends object>(
-  state: RevisionDataState<TDraft, TData>,
-  load: () => Promise<LoadResult<TLoadSuccess>>,
-  createSnapshotFromLoad: (result: TLoadSuccess) => RevisionSnapshot<TData>,
-  applySnapshot: (snapshot: RevisionSnapshot<TData>) => RevisionDataState<TDraft, TData>
-): Promise<RevisionLoadResult<TDraft, TData>> => {
+const beginLoad = <TDraft, TData>(state: RevisionDataState<TDraft, TData>): number => {
   const loadRequestId = state.loadRequestId + 1
   state.loadRequestId = loadRequestId
   state.isLoading = true
   state.loadError = null
+  return loadRequestId
+}
 
-  try {
-    const response = await load()
+const applyLoadSuccess = <TDraft, TData>(
+  snapshot: RevisionSnapshot<TData>,
+  applySnapshot: (snapshot: RevisionSnapshot<TData>) => RevisionDataState<TDraft, TData>
+): RevisionDataState<TDraft, TData> => {
+  const nextState = applySnapshot(snapshot)
+  nextState.isLoading = false
+  nextState.loadError = null
+  return nextState
+}
 
-    if (state.loadRequestId !== loadRequestId) {
-      return { type: 'stale' }
-    }
+const applyLoadError = <TDraft, TData>(
+  state: RevisionDataState<TDraft, TData>,
+  message: string
+): RevisionLoadResult<TDraft, TData> => {
+  state.isLoading = false
+  state.loadError = message
+  return { type: 'error', message }
+}
 
-    if (!response.success) {
-      state.isLoading = false
-      state.loadError = response.error
-      return { type: 'error', message: response.error }
-    }
-
-    const nextState = applySnapshot(createSnapshotFromLoad(response))
-    nextState.isLoading = false
-    nextState.loadError = null
-    return { type: 'loaded', state: nextState }
-  } catch (error) {
-    if (state.loadRequestId !== loadRequestId) {
-      return { type: 'stale' }
-    }
-
-    const message = error instanceof Error ? error.message : String(error)
-    state.isLoading = false
-    state.loadError = message
-    return { type: 'error', message }
-  }
+const applyLoadStale = <TDraft, TData>(state: RevisionDataState<TDraft, TData>): void => {
+  state.isLoading = false
+  state.loadError = null
 }
 
 const beginSave = <TDraft, TData>(state: RevisionDataState<TDraft, TData>): void => {
@@ -239,8 +236,18 @@ export function createRevisionDataStore<
 
   return {
     ...baseStore,
-    loadRevisionData: (state, load) => {
-      return loadRevisionData(state, load, createSnapshotFromLoad, applyLoadedSnapshot)
+    beginLoad: (state) => {
+      return beginLoad(state)
+    },
+    createSnapshotFromLoad,
+    applyLoadSuccess: (_state, snapshot) => {
+      return applyLoadSuccess(snapshot, applyLoadedSnapshot)
+    },
+    applyLoadError: (state, message) => {
+      return applyLoadError(state, message)
+    },
+    applyLoadStale: (state) => {
+      applyLoadStale(state)
     }
   }
 }

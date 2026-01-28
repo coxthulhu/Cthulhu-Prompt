@@ -18,6 +18,7 @@ import {
   type RevisionSnapshot
 } from '@renderer/data/revisioned/RevisionDataStore'
 import { createRevisionMutation } from '@renderer/data/revisioned/GlobalMutationsQueue'
+import { createRevisionLoad } from '@renderer/data/revisioned/GlobalLoadsQueue'
 
 export type WorkspaceDraft = WorkspaceData
 export type WorkspaceState = RevisionDataState<WorkspaceDraft, WorkspaceData>
@@ -144,13 +145,17 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   const state = cachedState ?? createLoadingState(workspacePath)
   activeWorkspaceState = state
 
-  const loadOutcome = await workspaceDataStore.loadRevisionData(state, async () => {
-    return await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
-      'load-workspace-data',
-      {
-        workspacePath
-      }
-    )
+  const loadOutcome = await createRevisionLoad({
+    store: workspaceDataStore,
+    state,
+    run: async () => {
+      return await ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
+        'load-workspace-data',
+        {
+          workspacePath
+        }
+      )
+    }
   })
 
   // Only swap the active state if this request still targets it.
