@@ -1,7 +1,6 @@
 import type { Prompt } from '@shared/ipc'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
-import { refetchUpdatedPromptById } from './ipc/promptIpc'
 
 const promptStore = createUpdatedBaseDataStore<Prompt>()
 
@@ -50,6 +49,3 @@ export const applyOptimisticUpdatedPrompt = (
 ): void => {
   promptStore.applyOptimisticChanges(promptId, { data, revision })
 }
-
-export const refetchUpdatedPrompt = (promptId: string): Promise<void> =>
-  refetchUpdatedPromptById(promptId, applyFetchUpdatedPrompt)

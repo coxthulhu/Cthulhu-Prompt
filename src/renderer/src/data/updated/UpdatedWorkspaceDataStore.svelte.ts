@@ -3,7 +3,6 @@ import { SvelteMap } from 'svelte/reactivity'
 import type { WorkspaceData } from '@shared/ipc'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
-import { refetchUpdatedWorkspaceById } from './ipc/workspaceIpc'
 
 const workspaceStore = createUpdatedBaseDataStore<WorkspaceData>()
 const workspaceIdByPath = new SvelteMap<string, string>()
@@ -85,6 +84,3 @@ export const applyOptimisticUpdatedWorkspace = (
   workspaceStore.applyOptimisticChanges(workspaceId, { data, revision })
   trackWorkspacePath(workspaceId, data)
 }
-
-export const refetchUpdatedWorkspace = (workspaceId: string): Promise<void> =>
-  refetchUpdatedWorkspaceById(workspaceId, applyFetchUpdatedWorkspace)
