@@ -1,12 +1,8 @@
 import type { Prompt } from '@shared/ipc'
-import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
-
-type LoadPromptResult = {
-  data: Prompt
-  revision: number
-}
+import { refetchUpdatedPromptById } from './ipc/promptIpc'
+import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 const promptStore = createUpdatedBaseDataStore<Prompt>()
 
@@ -40,7 +36,11 @@ export const completeUpdatedPromptDeletion = (promptId: string): void => {
   promptStore.completeDeletion(promptId)
 }
 
-export const fetchUpdatedPrompt = (promptId: string, data: Prompt, revision: number): void => {
+export const applyFetchUpdatedPrompt = (
+  promptId: string,
+  data: Prompt,
+  revision: number
+): void => {
   promptStore.applyFetch(promptId, { data, revision })
 }
 
@@ -48,12 +48,8 @@ export const syncUpdatedPrompt = (promptId: string, data: Prompt, revision: numb
   promptStore.applySync(promptId, { data, revision })
 }
 
-export const refetchUpdatedPrompt = async (promptId: string): Promise<void> => {
-  try {
-    // TODO: replace with the real prompt-by-id IPC channel.
-    const result = await ipcInvoke<LoadPromptResult>('load-prompt-by-id', { promptId })
-    fetchUpdatedPrompt(promptId, result.data, result.revision)
-  } catch (error) {
-    console.error('Failed to refetch prompt:', error)
-  }
-}
+export const refetchUpdatedPrompt = (promptId: string): Promise<void> =>
+  runUpdatedRefetch('prompt', async () => {
+    const result = await refetchUpdatedPromptById(promptId)
+    applyFetchUpdatedPrompt(promptId, result.data, result.revision)
+  })

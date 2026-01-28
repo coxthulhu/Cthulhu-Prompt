@@ -1,13 +1,9 @@
 import type { SystemSettings } from '@shared/ipc'
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
-import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
-
-type LoadSystemSettingsResult = {
-  data: SystemSettings
-  revision: number
-}
+import { refetchUpdatedSystemSettings as refetchUpdatedSystemSettingsIpc } from './ipc/systemSettingsIpc'
+import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 const SYSTEM_SETTINGS_KEY = 'system-settings'
 
@@ -23,7 +19,7 @@ systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, {
 export const getUpdatedSystemSettingsEntry = () =>
   systemSettingsStore.getEntry(SYSTEM_SETTINGS_KEY)
 
-export const fetchUpdatedSystemSettings = (
+export const applyFetchUpdatedSystemSettings = (
   data: SystemSettings,
   revision: number
 ): void => {
@@ -37,12 +33,8 @@ export const syncUpdatedSystemSettings = (
   systemSettingsStore.applySync(SYSTEM_SETTINGS_KEY, { data, revision })
 }
 
-export const refetchUpdatedSystemSettings = async (): Promise<void> => {
-  try {
-    // TODO: replace with the real system settings IPC channel.
-    const result = await ipcInvoke<LoadSystemSettingsResult>('load-system-settings')
-    fetchUpdatedSystemSettings(result.data, result.revision)
-  } catch (error) {
-    console.error('Failed to refetch system settings:', error)
-  }
-}
+export const refetchUpdatedSystemSettings = (): Promise<void> =>
+  runUpdatedRefetch('system settings', async () => {
+    const result = await refetchUpdatedSystemSettingsIpc()
+    applyFetchUpdatedSystemSettings(result.data, result.revision)
+  })

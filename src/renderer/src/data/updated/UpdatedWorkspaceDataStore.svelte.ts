@@ -1,14 +1,10 @@
 import { SvelteMap } from 'svelte/reactivity'
 
 import type { WorkspaceData } from '@shared/ipc'
-import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
-
-type LoadWorkspaceResult = {
-  data: WorkspaceData
-  revision: number
-}
+import { refetchUpdatedWorkspaceById } from './ipc/workspaceIpc'
+import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 const workspaceStore = createUpdatedBaseDataStore<WorkspaceData>()
 const workspaceIdByPath = new SvelteMap<string, string>()
@@ -73,7 +69,7 @@ export const completeUpdatedWorkspaceDeletion = (workspaceId: string): void => {
   }
 }
 
-export const fetchUpdatedWorkspace = (
+export const applyFetchUpdatedWorkspace = (
   workspaceId: string,
   data: WorkspaceData,
   revision: number
@@ -91,14 +87,8 @@ export const syncUpdatedWorkspace = (
   trackWorkspacePath(workspaceId, data)
 }
 
-export const refetchUpdatedWorkspace = async (workspaceId: string): Promise<void> => {
-  try {
-    // TODO: replace with the real workspace-by-id IPC channel.
-    const result = await ipcInvoke<LoadWorkspaceResult>('load-workspace-by-id', {
-      workspaceId
-    })
-    fetchUpdatedWorkspace(workspaceId, result.data, result.revision)
-  } catch (error) {
-    console.error('Failed to refetch workspace:', error)
-  }
-}
+export const refetchUpdatedWorkspace = (workspaceId: string): Promise<void> =>
+  runUpdatedRefetch('workspace', async () => {
+    const result = await refetchUpdatedWorkspaceById(workspaceId)
+    applyFetchUpdatedWorkspace(workspaceId, result.data, result.revision)
+  })

@@ -1,6 +1,6 @@
-import { ipcInvoke } from '@renderer/api/ipcInvoke'
-
 import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
+import { refetchUpdatedPromptFolderById } from './ipc/promptFolderIpc'
+import { runUpdatedRefetch } from './ipc/updatedIpcHelpers'
 
 export type UpdatedPromptFolder = {
   promptFolderId: string
@@ -8,11 +8,6 @@ export type UpdatedPromptFolder = {
   displayName: string
   promptCount: number
   folderDescription: string
-}
-
-type LoadPromptFolderResult = {
-  data: UpdatedPromptFolder
-  revision: number
 }
 
 const promptFolderStore = createUpdatedBaseDataStore<UpdatedPromptFolder>()
@@ -48,7 +43,7 @@ export const completeUpdatedPromptFolderDeletion = (promptFolderId: string): voi
   promptFolderStore.completeDeletion(promptFolderId)
 }
 
-export const fetchUpdatedPromptFolder = (
+export const applyFetchUpdatedPromptFolder = (
   promptFolderId: string,
   data: UpdatedPromptFolder,
   revision: number
@@ -64,14 +59,8 @@ export const syncUpdatedPromptFolder = (
   promptFolderStore.applySync(promptFolderId, { data, revision })
 }
 
-export const refetchUpdatedPromptFolder = async (promptFolderId: string): Promise<void> => {
-  try {
-    // TODO: replace with the real prompt-folder-by-id IPC channel (metadata only, no prompt bodies).
-    const result = await ipcInvoke<LoadPromptFolderResult>('load-prompt-folder-by-id', {
-      promptFolderId
-    })
-    fetchUpdatedPromptFolder(promptFolderId, result.data, result.revision)
-  } catch (error) {
-    console.error('Failed to refetch prompt folder:', error)
-  }
-}
+export const refetchUpdatedPromptFolder = (promptFolderId: string): Promise<void> =>
+  runUpdatedRefetch('prompt folder', async () => {
+    const result = await refetchUpdatedPromptFolderById(promptFolderId)
+    applyFetchUpdatedPromptFolder(promptFolderId, result.data, result.revision)
+  })
