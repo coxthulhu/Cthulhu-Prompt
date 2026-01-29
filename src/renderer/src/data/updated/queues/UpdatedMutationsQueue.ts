@@ -1,23 +1,23 @@
-import type { RevisionDataResult } from '@shared/ipc'
+import type { UpdatedMutationResult } from '@shared/ipc'
 
 import { enqueueUpdatedGlobalMessage } from './UpdatedGlobalQueue'
 
 export type UpdatedMutationOutcome<TData> =
-  | { type: 'success'; result: Extract<RevisionDataResult<TData>, { success: true }> }
-  | { type: 'conflict'; result: Extract<RevisionDataResult<TData>, { success: false; conflict: true }> }
+  | { type: 'success'; result: Extract<UpdatedMutationResult<TData>, { success: true }> }
+  | {
+      type: 'conflict'
+      result: Extract<UpdatedMutationResult<TData>, { success: false; conflict: true }>
+    }
   | {
       type: 'error'
       error: unknown
-      result?: Extract<RevisionDataResult<TData>, { success: false; conflict?: false }>
+      result?: Extract<UpdatedMutationResult<TData>, { success: false; conflict?: false }>
     }
 
 export type UpdatedMutationParams<TSnapshot, TData> = {
   snapshot: () => TSnapshot
-  run: (snapshot: TSnapshot) => Promise<RevisionDataResult<TData>>
-  commit: (
-    result: Extract<RevisionDataResult<TData>, { success: true }>,
-    snapshot: TSnapshot
-  ) => void
+  run: (snapshot: TSnapshot) => Promise<UpdatedMutationResult<TData>>
+  commit: (result: Extract<UpdatedMutationResult<TData>, { success: true }>, snapshot: TSnapshot) => void
   rollback: (outcome: UpdatedMutationOutcome<TData>) => void
 }
 

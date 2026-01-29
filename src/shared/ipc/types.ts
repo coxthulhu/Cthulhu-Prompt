@@ -28,6 +28,11 @@ export type RevisionDataResult<TData> =
   | { success: false; conflict: true; data: TData; revision: number }
   | { success: false; error: string; conflict?: false }
 
+export type UpdatedMutationResult<TData> =
+  | { success: true; data: TData }
+  | { success: false; conflict: true; data: TData }
+  | { success: false; error: string; conflict?: false }
+
 export type LoadResult<TSuccess> =
   | ({ success: true } & TSuccess)
   | { success: false; error: string }
@@ -140,6 +145,29 @@ export interface UpdatedLoadPromptByIdRequest {
 export type UpdatedLoadPromptByIdResult = LoadResult<{
   data: Prompt
   revision: number
+}>
+
+export interface UpdatedCreatePromptFolderRequest {
+  workspaceId: string
+  workspaceRevision: number
+  promptFolder: UpdatedPromptFolderData
+}
+
+export type UpdatedCreatePromptFolderResult = UpdatedMutationResult<{
+  workspaceRevision: number
+  promptFolderRevision: number
+}>
+
+export interface UpdatedCreatePromptRequest {
+  promptFolderId: string
+  promptFolderRevision: number
+  prompt: Prompt
+  previousPromptId: string | null
+}
+
+export type UpdatedCreatePromptResult = UpdatedMutationResult<{
+  promptRevision: number
+  promptFolderRevision: number
 }>
 
 export interface PromptResult extends WorkspaceResult {
