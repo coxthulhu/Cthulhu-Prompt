@@ -8,6 +8,12 @@ const promptFolderById = new Map<string, PromptLocation>()
 const promptById = new Map<string, PromptLocation>()
 
 // In-memory lookup for updated refetch IPC handlers.
+export const resetRegistry = (): void => {
+  workspacePathById.clear()
+  promptFolderById.clear()
+  promptById.clear()
+}
+
 export const registerWorkspace = (workspaceId: string, workspacePath: string): void => {
   workspacePathById.set(workspaceId, workspacePath)
 }

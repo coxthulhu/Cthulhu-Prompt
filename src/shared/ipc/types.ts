@@ -63,6 +63,14 @@ export interface UpdatedWorkspaceData {
   promptFolderIds: string[]
 }
 
+export interface UpdatedPromptFolderData {
+  promptFolderId: string
+  folderName: string
+  displayName: string
+  promptCount: number
+  folderDescription: string
+}
+
 export interface LoadWorkspaceDataRequest {
   workspacePath: string
 }
@@ -78,6 +86,16 @@ export interface UpdatedLoadWorkspaceByIdRequest {
 export type UpdatedLoadWorkspaceByIdResult = LoadResult<{
   data: UpdatedWorkspaceData
   revision: number
+}>
+
+export interface UpdatedLoadWorkspaceByPathRequest {
+  workspacePath: string
+}
+
+export type UpdatedLoadWorkspaceByPathResult = LoadResult<{
+  workspace: UpdatedWorkspaceData
+  workspaceRevision: number
+  promptFolders: Array<{ data: UpdatedPromptFolderData; revision: number }>
 }>
 
 export interface UpdateWorkspaceDataRequest {
@@ -96,6 +114,33 @@ export interface Prompt {
   promptText: string
   promptFolderCount: number
 }
+
+export interface UpdatedLoadPromptFolderByIdRequest {
+  promptFolderId: string
+}
+
+export type UpdatedLoadPromptFolderByIdResult = LoadResult<{
+  data: UpdatedPromptFolderData
+  revision: number
+}>
+
+export interface UpdatedLoadPromptFolderInitialRequest {
+  promptFolderId: string
+}
+
+export type UpdatedLoadPromptFolderInitialResult = LoadResult<{
+  promptFolder: { data: UpdatedPromptFolderData; revision: number }
+  prompts: Array<{ data: Prompt; revision: number }>
+}>
+
+export interface UpdatedLoadPromptByIdRequest {
+  promptId: string
+}
+
+export type UpdatedLoadPromptByIdResult = LoadResult<{
+  data: Prompt
+  revision: number
+}>
 
 export interface PromptResult extends WorkspaceResult {
   prompt?: Prompt

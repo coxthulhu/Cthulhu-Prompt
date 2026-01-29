@@ -2,16 +2,8 @@ import { ipcMain } from 'electron'
 import * as path from 'path'
 import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
-import type { Prompt } from '@shared/ipc'
+import type { Prompt, UpdatedLoadPromptByIdRequest, UpdatedLoadPromptByIdResult } from '@shared/ipc'
 import { getPromptLocation } from './registry'
-
-type UpdatedLoadPromptByIdRequest = {
-  promptId: string
-}
-
-type UpdatedLoadPromptByIdResult =
-  | { success: true; data: Prompt; revision: number }
-  | { success: false; error: string }
 
 export const setupUpdatedPromptHandlers = (): void => {
   ipcMain.handle(
