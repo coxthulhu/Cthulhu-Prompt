@@ -1,6 +1,8 @@
 import type { UpdatedPromptFolderData, UpdatedWorkspaceData } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
+import { applyFetchUpdatedPromptFolder } from '../UpdatedPromptFolderDataStore.svelte.ts'
+import { applyFetchUpdatedWorkspace } from '../UpdatedWorkspaceDataStore.svelte.ts'
 import { enqueueUpdatedLoad } from '../queues/UpdatedLoadsQueue'
 import { runUpdatedRefetch } from './updatedIpcHelpers'
 
@@ -15,22 +17,15 @@ type UpdatedWorkspaceLoadByPathResult = {
   promptFolders: Array<{ data: UpdatedPromptFolderData; revision: number }>
 }
 
-export const refetchUpdatedWorkspaceById = (
-  workspaceId: string,
-  applyFetch: (id: string, data: UpdatedWorkspaceData, revision: number) => void
-): Promise<void> =>
+export const refetchUpdatedWorkspaceById = (workspaceId: string): Promise<void> =>
   runUpdatedRefetch('workspace', async () => {
     const result = await enqueueUpdatedLoad(() =>
       ipcInvoke<UpdatedWorkspaceLoadResult>('updated-load-workspace-by-id', { workspaceId })
     )
-    applyFetch(workspaceId, result.data, result.revision)
+    applyFetchUpdatedWorkspace(workspaceId, result.data, result.revision)
   })
 
-export const loadUpdatedWorkspaceByPath = (
-  workspacePath: string,
-  applyWorkspaceFetch: (id: string, data: UpdatedWorkspaceData, revision: number) => void,
-  applyPromptFolderFetch: (id: string, data: UpdatedPromptFolderData, revision: number) => void
-): Promise<void> =>
+export const loadUpdatedWorkspaceByPath = (workspacePath: string): Promise<void> =>
   runUpdatedRefetch('workspace by path', async () => {
     const result = await enqueueUpdatedLoad(() =>
       ipcInvoke<UpdatedWorkspaceLoadByPathResult>('updated-load-workspace-by-path', {
@@ -38,10 +33,14 @@ export const loadUpdatedWorkspaceByPath = (
       })
     )
 
-    applyWorkspaceFetch(result.workspace.workspaceId, result.workspace, result.workspaceRevision)
+    applyFetchUpdatedWorkspace(
+      result.workspace.workspaceId,
+      result.workspace,
+      result.workspaceRevision
+    )
 
     for (const promptFolder of result.promptFolders) {
-      applyPromptFolderFetch(
+      applyFetchUpdatedPromptFolder(
         promptFolder.data.promptFolderId,
         promptFolder.data,
         promptFolder.revision
