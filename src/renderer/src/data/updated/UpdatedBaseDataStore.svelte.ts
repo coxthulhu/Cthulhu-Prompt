@@ -14,10 +14,10 @@ export type UpdatedBaseDataStore<T> = {
   entries: SvelteMap<string, UpdatedEntry<T>>
   getEntry: (id: string) => UpdatedEntry<T> | null
   insertDraft: (draft: T, idOverride?: string) => string
-  completeDraftInsert: (draftId: string, nextId: string, base: UpdatedSnapshot<T>) => void
+  commitDraftInsert: (draftId: string, nextId: string, base: UpdatedSnapshot<T>) => void
   deleteDraft: (id: string) => void
-  restoreDraftFromBase: (id: string) => void
-  completeDeletion: (id: string) => void
+  revertDraftFromBase: (id: string) => void
+  commitDeletion: (id: string) => void
   applyFetch: (id: string, base: UpdatedSnapshot<T>) => void
   applyOptimisticChanges: (id: string, base: UpdatedSnapshot<T>) => void
 }
@@ -42,7 +42,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     return id
   }
 
-  const completeDraftInsert = (
+  const commitDraftInsert = (
     draftId: string,
     nextId: string,
     base: UpdatedSnapshot<T>
@@ -65,7 +65,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     }
   }
 
-  const restoreDraftFromBase = (id: string): void => {
+  const revertDraftFromBase = (id: string): void => {
     const entry = entries.get(id)!
     if (!entry.baseSnapshot) {
       entries.delete(id)
@@ -75,7 +75,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     entry.draftSnapshot = cloneData(entry.baseSnapshot.data)
   }
 
-  const completeDeletion = (id: string): void => {
+  const commitDeletion = (id: string): void => {
     entries.delete(id)
   }
 
@@ -102,10 +102,10 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     entries,
     getEntry,
     insertDraft,
-    completeDraftInsert,
+    commitDraftInsert,
     deleteDraft,
-    restoreDraftFromBase,
-    completeDeletion,
+    revertDraftFromBase,
+    commitDeletion,
     applyFetch,
     applyOptimisticChanges
   }

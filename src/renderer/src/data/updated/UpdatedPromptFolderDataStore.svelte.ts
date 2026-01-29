@@ -14,25 +14,25 @@ export const insertUpdatedPromptFolderDraft = (draft: UpdatedPromptFolderData): 
   return promptFolderId
 }
 
-export const completeUpdatedPromptFolderDraftInsert = (
+export const commitUpdatedPromptFolderDraftInsert = (
   draftId: string,
   nextId: string,
   data: UpdatedPromptFolderData,
   revision: number
 ): void => {
-  promptFolderStore.completeDraftInsert(draftId, nextId, { data, revision })
+  promptFolderStore.commitDraftInsert(draftId, nextId, { data, revision })
 }
 
 export const deleteUpdatedPromptFolderDraft = (promptFolderId: string): void => {
   promptFolderStore.deleteDraft(promptFolderId)
 }
 
-export const restoreUpdatedPromptFolderDraftFromBase = (promptFolderId: string): void => {
-  promptFolderStore.restoreDraftFromBase(promptFolderId)
+export const revertUpdatedPromptFolderDraftFromBase = (promptFolderId: string): void => {
+  promptFolderStore.revertDraftFromBase(promptFolderId)
 }
 
-export const completeUpdatedPromptFolderDeletion = (promptFolderId: string): void => {
-  promptFolderStore.completeDeletion(promptFolderId)
+export const commitUpdatedPromptFolderDeletion = (promptFolderId: string): void => {
+  promptFolderStore.commitDeletion(promptFolderId)
 }
 
 export const applyFetchUpdatedPromptFolder = (

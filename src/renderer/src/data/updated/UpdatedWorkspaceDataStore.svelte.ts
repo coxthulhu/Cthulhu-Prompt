@@ -25,13 +25,13 @@ export const insertUpdatedWorkspaceDraft = (draft: UpdatedWorkspaceData): string
   return workspaceId
 }
 
-export const completeUpdatedWorkspaceDraftInsert = (
+export const commitUpdatedWorkspaceDraftInsert = (
   draftId: string,
   nextId: string,
   data: UpdatedWorkspaceData,
   revision: number
 ): void => {
-  workspaceStore.completeDraftInsert(draftId, nextId, { data, revision })
+  workspaceStore.commitDraftInsert(draftId, nextId, { data, revision })
   trackWorkspacePath(nextId, data)
 }
 
@@ -47,20 +47,20 @@ export const deleteUpdatedWorkspaceDraft = (workspaceId: string): void => {
   }
 }
 
-export const restoreUpdatedWorkspaceDraftFromBase = (workspaceId: string): void => {
+export const revertUpdatedWorkspaceDraftFromBase = (workspaceId: string): void => {
   const entry = workspaceStore.getEntry(workspaceId)!
-  workspaceStore.restoreDraftFromBase(workspaceId)
+  workspaceStore.revertDraftFromBase(workspaceId)
   if (entry.baseSnapshot) {
     trackWorkspacePath(workspaceId, entry.baseSnapshot.data)
   }
 }
 
-export const completeUpdatedWorkspaceDeletion = (workspaceId: string): void => {
+export const commitUpdatedWorkspaceDeletion = (workspaceId: string): void => {
   const entry = workspaceStore.getEntry(workspaceId)!
   const workspacePath =
     entry.baseSnapshot?.data.workspacePath ?? entry.draftSnapshot?.workspacePath ?? null
 
-  workspaceStore.completeDeletion(workspaceId)
+  workspaceStore.commitDeletion(workspaceId)
 
   if (workspacePath) {
     workspaceIdByPath.delete(workspacePath)
