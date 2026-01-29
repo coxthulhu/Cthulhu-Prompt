@@ -7,10 +7,12 @@ const promptFolderStore = createUpdatedBaseDataStore<UpdatedPromptFolderData>()
 export const getUpdatedPromptFolderEntry = (promptFolderId: string) =>
   promptFolderStore.getEntry(promptFolderId)
 
-export const insertUpdatedPromptFolderDraft = (draft: UpdatedPromptFolderData): string => {
+export const optimisticInsertUpdatedPromptFolderDraft = (
+  draft: UpdatedPromptFolderData
+): string => {
   const promptFolderId = crypto.randomUUID()
   const nextDraft: UpdatedPromptFolderData = { ...draft, promptFolderId }
-  promptFolderStore.insertDraft(nextDraft, promptFolderId)
+  promptFolderStore.optimisticInsert(nextDraft, promptFolderId)
   return promptFolderId
 }
 
@@ -23,8 +25,8 @@ export const commitUpdatedPromptFolderDraftInsert = (
   promptFolderStore.commitDraftInsert(draftId, nextId, { data, revision })
 }
 
-export const deleteUpdatedPromptFolderDraft = (promptFolderId: string): void => {
-  promptFolderStore.deleteDraft(promptFolderId)
+export const optimisticDeleteUpdatedPromptFolderDraft = (promptFolderId: string): void => {
+  promptFolderStore.optimisticDelete(promptFolderId)
 }
 
 export const revertUpdatedPromptFolderDraftFromBase = (promptFolderId: string): void => {

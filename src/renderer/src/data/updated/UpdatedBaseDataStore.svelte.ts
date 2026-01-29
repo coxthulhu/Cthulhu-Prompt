@@ -13,9 +13,9 @@ export type UpdatedEntry<T> = {
 export type UpdatedBaseDataStore<T> = {
   entries: SvelteMap<string, UpdatedEntry<T>>
   getEntry: (id: string) => UpdatedEntry<T> | null
-  insertDraft: (draft: T, idOverride?: string) => string
+  optimisticInsert: (draft: T, idOverride?: string) => string
   commitDraftInsert: (draftId: string, nextId: string, base: UpdatedSnapshot<T>) => void
-  deleteDraft: (id: string) => void
+  optimisticDelete: (id: string) => void
   revertDraftFromBase: (id: string) => void
   commitDeletion: (id: string) => void
   applyFetch: (id: string, base: UpdatedSnapshot<T>) => void
@@ -36,7 +36,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
 
   const getEntry = (id: string): UpdatedEntry<T> | null => entries.get(id) ?? null
 
-  const insertDraft = (draft: T, idOverride?: string): string => {
+  const optimisticInsert = (draft: T, idOverride?: string): string => {
     const id = idOverride ?? crypto.randomUUID()
     entries.set(id, createEntry(null, draft))
     return id
@@ -56,7 +56,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     }
   }
 
-  const deleteDraft = (id: string): void => {
+  const optimisticDelete = (id: string): void => {
     const entry = entries.get(id)!
     entry.draftSnapshot = null
 
@@ -101,9 +101,9 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
   return {
     entries,
     getEntry,
-    insertDraft,
+    optimisticInsert,
     commitDraftInsert,
-    deleteDraft,
+    optimisticDelete,
     revertDraftFromBase,
     commitDeletion,
     applyFetch,

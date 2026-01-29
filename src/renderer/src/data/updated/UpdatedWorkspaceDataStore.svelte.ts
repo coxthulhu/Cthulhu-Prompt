@@ -17,10 +17,10 @@ export const getUpdatedWorkspaceEntry = (workspaceId: string) =>
 export const getUpdatedWorkspaceIdForPath = (workspacePath: string): string | null =>
   workspaceIdByPath.get(workspacePath) ?? null
 
-export const insertUpdatedWorkspaceDraft = (draft: UpdatedWorkspaceData): string => {
+export const optimisticInsertUpdatedWorkspaceDraft = (draft: UpdatedWorkspaceData): string => {
   const workspaceId = crypto.randomUUID()
   const nextDraft: UpdatedWorkspaceData = { ...draft, workspaceId }
-  workspaceStore.insertDraft(nextDraft, workspaceId)
+  workspaceStore.optimisticInsert(nextDraft, workspaceId)
   trackWorkspacePath(workspaceId, nextDraft)
   return workspaceId
 }
@@ -35,12 +35,12 @@ export const commitUpdatedWorkspaceDraftInsert = (
   trackWorkspacePath(nextId, data)
 }
 
-export const deleteUpdatedWorkspaceDraft = (workspaceId: string): void => {
+export const optimisticDeleteUpdatedWorkspaceDraft = (workspaceId: string): void => {
   const entry = workspaceStore.getEntry(workspaceId)!
   const workspacePath =
     entry.baseSnapshot?.data.workspacePath ?? entry.draftSnapshot?.workspacePath ?? null
 
-  workspaceStore.deleteDraft(workspaceId)
+  workspaceStore.optimisticDelete(workspaceId)
 
   if (!workspaceStore.getEntry(workspaceId) && workspacePath) {
     workspaceIdByPath.delete(workspacePath)

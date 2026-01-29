@@ -6,10 +6,10 @@ const promptStore = createUpdatedBaseDataStore<Prompt>()
 
 export const getUpdatedPromptEntry = (promptId: string) => promptStore.getEntry(promptId)
 
-export const insertUpdatedPromptDraft = (draft: Prompt): string => {
+export const optimisticInsertUpdatedPromptDraft = (draft: Prompt): string => {
   const promptId = crypto.randomUUID()
   const nextDraft: Prompt = { ...draft, id: promptId }
-  promptStore.insertDraft(nextDraft, promptId)
+  promptStore.optimisticInsert(nextDraft, promptId)
   return promptId
 }
 
@@ -22,8 +22,8 @@ export const commitUpdatedPromptDraftInsert = (
   promptStore.commitDraftInsert(draftId, nextId, { data, revision })
 }
 
-export const deleteUpdatedPromptDraft = (promptId: string): void => {
-  promptStore.deleteDraft(promptId)
+export const optimisticDeleteUpdatedPromptDraft = (promptId: string): void => {
+  promptStore.optimisticDelete(promptId)
 }
 
 export const revertUpdatedPromptDraftFromBase = (promptId: string): void => {
