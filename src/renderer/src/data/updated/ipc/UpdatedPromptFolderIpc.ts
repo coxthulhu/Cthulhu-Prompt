@@ -14,12 +14,12 @@ import {
   commitPromptFolderDraftInsert,
   getPromptFolderEntry,
   optimisticInsertPromptFolderDraft,
-  revertPromptFolderDraftFromBase
+  revertPromptFolderDraftFromLastServerSnapshot
 } from '../UpdatedPromptFolderDataStore.svelte.ts'
 import {
   applyOptimisticUpdatedWorkspace,
   getWorkspaceEntry,
-  revertWorkspaceDraftFromBase
+  revertWorkspaceDraftFromLastServerSnapshot
 } from '../UpdatedWorkspaceDataStore.svelte.ts'
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import {
@@ -96,7 +96,7 @@ export const createPromptFolder = (
       optimisticMutation: () => {
         const workspaceEntry = getWorkspaceEntry(workspaceId)!
         const workspaceDraft =
-          workspaceEntry.draftSnapshot ?? workspaceEntry.baseSnapshot!.data
+          workspaceEntry.draftSnapshot ?? workspaceEntry.lastServerSnapshot!.data
         const promptFolderDraft: PromptFolderData = {
           promptFolderId: '',
           folderName: preparedName.folderName,
@@ -119,10 +119,10 @@ export const createPromptFolder = (
         // Clone draft state so later edits don't mutate the queued snapshot.
         return {
           workspaceId,
-          workspaceRevision: workspaceEntry.baseSnapshot!.revision,
+          workspaceRevision: workspaceEntry.lastServerSnapshot!.revision,
           promptFolderId,
           workspaceData: structuredClone(
-            workspaceEntry.draftSnapshot ?? workspaceEntry.baseSnapshot!.data
+            workspaceEntry.draftSnapshot ?? workspaceEntry.lastServerSnapshot!.data
           ),
           promptFolderData: structuredClone(promptFolderEntry.draftSnapshot!)
         }
@@ -150,13 +150,13 @@ export const createPromptFolder = (
         )
       },
       rollbackConflict: () => {
-        revertPromptFolderDraftFromBase(promptFolderId)
-        revertWorkspaceDraftFromBase(workspaceId)
+        revertPromptFolderDraftFromLastServerSnapshot(promptFolderId)
+        revertWorkspaceDraftFromLastServerSnapshot(workspaceId)
         void refetchWorkspaceById(workspaceId)
       },
       rollbackError: () => {
-        revertPromptFolderDraftFromBase(promptFolderId)
-        revertWorkspaceDraftFromBase(workspaceId)
+        revertPromptFolderDraftFromLastServerSnapshot(promptFolderId)
+        revertWorkspaceDraftFromLastServerSnapshot(workspaceId)
       }
     }
   )

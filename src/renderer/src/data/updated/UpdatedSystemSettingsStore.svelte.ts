@@ -8,7 +8,7 @@ const SYSTEM_SETTINGS_KEY = 'system-settings'
 const systemSettingsStore = createBaseDataStore<SystemSettings>()
 
 const runtimeConfig = getRuntimeConfig()
-// Precache runtime-provided settings so the renderer has a base snapshot at startup.
+// Precache runtime-provided settings so the renderer has a most recent server authoritative snapshot at startup.
 systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, {
   data: runtimeConfig.systemSettings,
   revision: runtimeConfig.systemSettingsRevision

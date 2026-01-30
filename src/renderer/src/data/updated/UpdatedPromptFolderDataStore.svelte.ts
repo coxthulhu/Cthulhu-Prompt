@@ -27,8 +27,10 @@ export const optimisticDeletePromptFolderDraft = (promptFolderId: string): void 
   promptFolderStore.optimisticDelete(promptFolderId)
 }
 
-export const revertPromptFolderDraftFromBase = (promptFolderId: string): void => {
-  promptFolderStore.revertDraftFromBase(promptFolderId)
+export const revertPromptFolderDraftFromLastServerSnapshot = (
+  promptFolderId: string
+): void => {
+  promptFolderStore.revertDraftFromLastServerSnapshot(promptFolderId)
 }
 
 export const commitPromptFolderDeletion = (promptFolderId: string): void => {

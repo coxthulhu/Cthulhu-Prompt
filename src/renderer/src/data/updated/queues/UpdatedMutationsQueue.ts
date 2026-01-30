@@ -45,11 +45,13 @@ export type SyncMutationParams<TSnapshot, TData> = MutationParams<TSnapshot, TDa
  * - run: executed only when this task reaches the front of the global queue.
  *   Perform the IPC call using the snapshot captured at enqueue time.
  * - commitSuccess: called only when run returns success; commit optimistic changes and
- *   promote the saving snapshot to base state.
- * - rollbackConflict: called when run returns a conflict; restore base
- *   state and revert optimistic draft changes using your store helpers.
- * - rollbackError: called when run returns an error result or throws; restore
- *   base state and revert optimistic draft changes using your store helpers.
+ *   promote the saving snapshot to the most recent server authoritative snapshot.
+ * - rollbackConflict: called when run returns a conflict; restore the most recent
+ *   server authoritative snapshot and revert optimistic draft changes using your
+ *   store helpers.
+ * - rollbackError: called when run returns an error result or throws; restore the
+ *   most recent server authoritative snapshot and revert optimistic draft changes
+ *   using your store helpers.
  *
  * Autosaves should skip optimisticMutation because the draft already includes
  * the field-level changes before enqueue time.

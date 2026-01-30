@@ -26,8 +26,10 @@ export const optimisticDeletePromptDraft = (promptId: string): void => {
   promptStore.optimisticDelete(promptId)
 }
 
-export const revertPromptDraftFromBase = (promptId: string): void => {
-  promptStore.revertDraftFromBase(promptId)
+export const revertPromptDraftFromLastServerSnapshot = (
+  promptId: string
+): void => {
+  promptStore.revertDraftFromLastServerSnapshot(promptId)
 }
 
 export const commitPromptDeletion = (promptId: string): void => {

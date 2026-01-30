@@ -27,8 +27,10 @@ export const optimisticDeleteWorkspaceDraft = (workspaceId: string): void => {
   workspaceStore.optimisticDelete(workspaceId)
 }
 
-export const revertWorkspaceDraftFromBase = (workspaceId: string): void => {
-  workspaceStore.revertDraftFromBase(workspaceId)
+export const revertWorkspaceDraftFromLastServerSnapshot = (
+  workspaceId: string
+): void => {
+  workspaceStore.revertDraftFromLastServerSnapshot(workspaceId)
 }
 
 export const commitWorkspaceDeletion = (workspaceId: string): void => {

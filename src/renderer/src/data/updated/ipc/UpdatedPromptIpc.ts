@@ -11,12 +11,12 @@ import {
   commitPromptDraftInsert,
   getPromptEntry,
   optimisticInsertPromptDraft,
-  revertPromptDraftFromBase
+  revertPromptDraftFromLastServerSnapshot
 } from '../UpdatedPromptDataStore.svelte.ts'
 import {
   applyOptimisticUpdatedPromptFolder,
   getPromptFolderEntry,
-  revertPromptFolderDraftFromBase
+  revertPromptFolderDraftFromLastServerSnapshot
 } from '../UpdatedPromptFolderDataStore.svelte.ts'
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import {
@@ -65,7 +65,8 @@ export const createPrompt = (
     optimisticMutation: () => {
       const promptFolderEntry = getPromptFolderEntry(promptFolderId)!
       const promptFolderDraft =
-        promptFolderEntry.draftSnapshot ?? promptFolderEntry.baseSnapshot!.data
+        promptFolderEntry.draftSnapshot ??
+        promptFolderEntry.lastServerSnapshot!.data
       const nextPromptCount = promptFolderDraft.promptCount + 1
       const now = new Date().toISOString()
 
@@ -105,9 +106,10 @@ export const createPrompt = (
       // Clone draft state so later edits don't mutate the queued snapshot.
       return {
         promptFolderId,
-        promptFolderRevision: promptFolderEntry.baseSnapshot!.revision,
+        promptFolderRevision: promptFolderEntry.lastServerSnapshot!.revision,
         promptFolderData: structuredClone(
-          promptFolderEntry.draftSnapshot ?? promptFolderEntry.baseSnapshot!.data
+          promptFolderEntry.draftSnapshot ??
+            promptFolderEntry.lastServerSnapshot!.data
         ),
         promptId,
         promptData: structuredClone(promptEntry.draftSnapshot!),
@@ -135,13 +137,13 @@ export const createPrompt = (
       )
     },
     rollbackConflict: () => {
-      revertPromptDraftFromBase(promptId)
-      revertPromptFolderDraftFromBase(promptFolderId)
+      revertPromptDraftFromLastServerSnapshot(promptId)
+      revertPromptFolderDraftFromLastServerSnapshot(promptFolderId)
       void refetchPromptFolderById(promptFolderId)
     },
     rollbackError: () => {
-      revertPromptDraftFromBase(promptId)
-      revertPromptFolderDraftFromBase(promptFolderId)
+      revertPromptDraftFromLastServerSnapshot(promptId)
+      revertPromptFolderDraftFromLastServerSnapshot(promptFolderId)
     }
   })
 }

@@ -6,7 +6,7 @@ export type Snapshot<T> = {
 }
 
 export type Entry<T> = {
-  baseSnapshot: Snapshot<T> | null
+  lastServerSnapshot: Snapshot<T> | null
   draftSnapshot: T | null
 }
 
@@ -14,22 +14,26 @@ export type BaseDataStore<T> = {
   entries: SvelteMap<string, Entry<T>>
   getEntry: (id: string) => Entry<T> | null
   optimisticInsert: (draft: T, idOverride?: string) => string
-  commitDraftInsert: (draftId: string, nextId: string, base: Snapshot<T>) => void
+  commitDraftInsert: (
+    draftId: string,
+    nextId: string,
+    lastServerSnapshot: Snapshot<T>
+  ) => void
   optimisticDelete: (id: string) => void
-  revertDraftFromBase: (id: string) => void
+  revertDraftFromLastServerSnapshot: (id: string) => void
   commitDeletion: (id: string) => void
-  applyFetch: (id: string, base: Snapshot<T>) => void
-  applyOptimisticChanges: (id: string, base: Snapshot<T>) => void
+  applyFetch: (id: string, lastServerSnapshot: Snapshot<T>) => void
+  applyOptimisticChanges: (id: string, lastServerSnapshot: Snapshot<T>) => void
 }
 
 const cloneData = <T>(data: T): T => structuredClone(data)
 
 const createEntry = <T>(
-  baseSnapshot: Snapshot<T> | null,
+  lastServerSnapshot: Snapshot<T> | null,
   draftSnapshot: T | null
 ): Entry<T> =>
   // Use $state so nested snapshot updates propagate to reactive consumers.
-  $state<Entry<T>>({ baseSnapshot, draftSnapshot })
+  $state<Entry<T>>({ lastServerSnapshot, draftSnapshot })
 
 export const createBaseDataStore = <T>(): BaseDataStore<T> => {
   const entries = new SvelteMap<string, Entry<T>>()
@@ -45,10 +49,10 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
   const commitDraftInsert = (
     draftId: string,
     nextId: string,
-    base: Snapshot<T>
+    lastServerSnapshot: Snapshot<T>
   ): void => {
     const entry = entries.get(draftId)!
-    entry.baseSnapshot = base
+    entry.lastServerSnapshot = lastServerSnapshot
 
     if (draftId !== nextId) {
       entries.delete(draftId)
@@ -60,41 +64,44 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     const entry = entries.get(id)!
     entry.draftSnapshot = null
 
-    if (!entry.baseSnapshot) {
+    if (!entry.lastServerSnapshot) {
       entries.delete(id)
     }
   }
 
-  const revertDraftFromBase = (id: string): void => {
+  const revertDraftFromLastServerSnapshot = (id: string): void => {
     const entry = entries.get(id)!
-    if (!entry.baseSnapshot) {
+    if (!entry.lastServerSnapshot) {
       entries.delete(id)
       return
     }
 
-    entry.draftSnapshot = cloneData(entry.baseSnapshot.data)
+    entry.draftSnapshot = cloneData(entry.lastServerSnapshot.data)
   }
 
   const commitDeletion = (id: string): void => {
     entries.delete(id)
   }
 
-  const applyFetch = (id: string, base: Snapshot<T>): void => {
+  const applyFetch = (id: string, lastServerSnapshot: Snapshot<T>): void => {
     const entry = entries.get(id) ?? createEntry<T>(null, null)
-    const previousRevision = entry.baseSnapshot?.revision ?? null
+    const previousRevision = entry.lastServerSnapshot?.revision ?? null
 
-    entry.baseSnapshot = base
+    entry.lastServerSnapshot = lastServerSnapshot
 
-    if (previousRevision !== base.revision) {
-      entry.draftSnapshot = cloneData(base.data)
+    if (previousRevision !== lastServerSnapshot.revision) {
+      entry.draftSnapshot = cloneData(lastServerSnapshot.data)
     }
 
     entries.set(id, entry)
   }
 
-  const applyOptimisticChanges = (id: string, base: Snapshot<T>): void => {
+  const applyOptimisticChanges = (
+    id: string,
+    lastServerSnapshot: Snapshot<T>
+  ): void => {
     const entry = entries.get(id) ?? createEntry<T>(null, null)
-    entry.baseSnapshot = base
+    entry.lastServerSnapshot = lastServerSnapshot
     entries.set(id, entry)
   }
 
@@ -104,7 +111,7 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     optimisticInsert,
     commitDraftInsert,
     optimisticDelete,
-    revertDraftFromBase,
+    revertDraftFromLastServerSnapshot,
     commitDeletion,
     applyFetch,
     applyOptimisticChanges
