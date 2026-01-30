@@ -15,7 +15,7 @@ import {
 } from '@shared/runtimeConfig'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 
-function resolveDevWorkspacePath(): string | null {
+function resolveDefaultDevWorkspacePath(): string | null {
   try {
     const currentDir = process.cwd()
     const devWorkspacePath = resolve(currentDir, '..', 'CthulhuPromptTest')
@@ -27,7 +27,7 @@ function resolveDevWorkspacePath(): string | null {
   }
 }
 
-function resolveExecutionFolderName(): string | null {
+function getWorkingDirectoryName(): string | null {
   try {
     return basename(process.cwd())
   } catch (error) {
@@ -36,7 +36,7 @@ function resolveExecutionFolderName(): string | null {
   }
 }
 
-function encodeRuntimeConfig(config: RuntimeConfig): string {
+function encodeRuntimeConfigArg(config: RuntimeConfig): string {
   const payload = JSON.stringify(config)
   return `${RUNTIME_ARG_PREFIX}${Buffer.from(payload, 'utf8').toString('base64')}`
 }
@@ -94,8 +94,8 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
     : playwrightEnvironment
       ? 'PLAYWRIGHT'
       : ''
-  const devWorkspacePath = devEnvironment ? resolveDevWorkspacePath() : null
-  const executionFolderName = resolveExecutionFolderName()
+  const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
+  const executionFolderName = getWorkingDirectoryName()
   const systemSettingsResult = await SystemSettingsManager.loadSystemSettings()
   const systemSettings = systemSettingsResult.settings ?? DEFAULT_SYSTEM_SETTINGS
   const systemSettingsRevision = systemSettingsResult.revision ?? 0
@@ -124,7 +124,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      additionalArguments: [encodeRuntimeConfig(runtimeConfig)]
+      additionalArguments: [encodeRuntimeConfigArg(runtimeConfig)]
     }
   })
 
