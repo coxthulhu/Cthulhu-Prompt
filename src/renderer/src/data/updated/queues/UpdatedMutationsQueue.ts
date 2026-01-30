@@ -17,8 +17,17 @@ export type UpdatedMutationOutcome<TData> =
 export type UpdatedMutationParams<TSnapshot, TData> = {
   snapshot: () => TSnapshot
   run: (snapshot: TSnapshot) => Promise<UpdatedMutationResult<TData>>
-  commit: (result: Extract<UpdatedMutationResult<TData>, { success: true }>, snapshot: TSnapshot) => void
-  rollback: (outcome: UpdatedMutationOutcome<TData>) => void
+  commitSuccess: (
+    result: Extract<UpdatedMutationResult<TData>, { success: true }>,
+    snapshot: TSnapshot
+  ) => void
+  rollbackConflict: (
+    result: Extract<UpdatedMutationResult<TData>, { success: false; conflict: true }>
+  ) => void
+  rollbackError: (
+    error: unknown,
+    result?: Extract<UpdatedMutationResult<TData>, { success: false; conflict?: false }>
+  ) => void
 }
 
 export type UpdatedSyncMutationParams<TSnapshot, TData> = UpdatedMutationParams<
@@ -38,10 +47,12 @@ export type UpdatedSyncMutationParams<TSnapshot, TData> = UpdatedMutationParams<
  *   Capture a "saving snapshot" from the current draft; this snapshot is reused later.
  * - run: executed only when this task reaches the front of the global queue.
  *   Perform the IPC call using the snapshot captured at enqueue time.
- * - commit: called only when run returns success; commit optimistic changes and
+ * - commitSuccess: called only when run returns success; commit optimistic changes and
  *   promote the saving snapshot to base state.
- * - rollback: called when run returns conflict or error, or throws; restore base
+ * - rollbackConflict: called when run returns a conflict; restore base
  *   state and revert optimistic draft changes using your store helpers.
+ * - rollbackError: called when run returns an error result or throws; restore
+ *   base state and revert optimistic draft changes using your store helpers.
  *
  * Autosaves should skip optimisticMutation because the draft already includes
  * the field-level changes before enqueue time.
@@ -55,13 +66,13 @@ const enqueueUpdatedMutation = <TSnapshot, TData>(
       const result = await params.run(snapshot)
 
       if (result.success) {
-        params.commit(result, snapshot)
+        params.commitSuccess(result, snapshot)
         return { type: 'success', result }
       }
 
       if (result.conflict) {
         const outcome: UpdatedMutationOutcome<TData> = { type: 'conflict', result }
-        params.rollback(outcome)
+        params.rollbackConflict(result)
         return outcome
       }
 
@@ -70,16 +81,16 @@ const enqueueUpdatedMutation = <TSnapshot, TData>(
         error: result.error,
         result
       }
-      params.rollback(outcome)
+      params.rollbackError(result.error, result)
       return outcome
     } catch (error) {
       const outcome: UpdatedMutationOutcome<TData> = { type: 'error', error }
-      params.rollback(outcome)
+      params.rollbackError(error)
       return outcome
     }
   })
 
-export const enqueueUpdatedSyncMutation = <TSnapshot, TData>(
+export const enqueueMutationApplyOptimistic = <TSnapshot, TData>(
   params: UpdatedSyncMutationParams<TSnapshot, TData>
 ): Promise<UpdatedMutationOutcome<TData>> => {
   params.optimisticMutation()
@@ -87,7 +98,7 @@ export const enqueueUpdatedSyncMutation = <TSnapshot, TData>(
   return enqueueUpdatedMutation(params, snapshot)
 }
 
-export const enqueueUpdatedAutosaveMutation = <TSnapshot, TData>(
+export const enqueueMutationAssumeOptimisticAlreadyApplied = <TSnapshot, TData>(
   params: UpdatedMutationParams<TSnapshot, TData>
 ): Promise<UpdatedMutationOutcome<TData>> => {
   const snapshot = params.snapshot()

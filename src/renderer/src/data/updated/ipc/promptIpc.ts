@@ -20,7 +20,7 @@ import {
 } from '../UpdatedPromptFolderDataStore.svelte.ts'
 import { enqueueUpdatedLoad } from '../queues/UpdatedLoadsQueue'
 import {
-  enqueueUpdatedSyncMutation,
+  enqueueMutationApplyOptimistic,
   type UpdatedMutationOutcome
 } from '../queues/UpdatedMutationsQueue'
 import { runUpdatedRefetch } from './updatedIpcHelpers'
@@ -61,7 +61,7 @@ export const createUpdatedPrompt = (
 ): Promise<UpdatedMutationOutcome<UpdatedCreatePromptResultData>> => {
   let promptId = ''
 
-  return enqueueUpdatedSyncMutation<UpdatedCreatePromptSnapshot, UpdatedCreatePromptResultData>({
+  return enqueueMutationApplyOptimistic<UpdatedCreatePromptSnapshot, UpdatedCreatePromptResultData>({
     optimisticMutation: () => {
       const promptFolderEntry = getUpdatedPromptFolderEntry(promptFolderId)!
       const promptFolderDraft =
@@ -107,7 +107,7 @@ export const createUpdatedPrompt = (
         prompt: snapshot.promptData,
         previousPromptId: snapshot.previousPromptId
       }),
-    commit: (result, snapshot) => {
+    commitSuccess: (result, snapshot) => {
       commitUpdatedPromptDraftInsert(
         snapshot.promptId,
         snapshot.promptId,
@@ -120,13 +120,14 @@ export const createUpdatedPrompt = (
         result.data.promptFolderRevision
       )
     },
-    rollback: (outcome) => {
+    rollbackConflict: () => {
       revertUpdatedPromptDraftFromBase(promptId)
       revertUpdatedPromptFolderDraftFromBase(promptFolderId)
-
-      if (outcome.type === 'conflict') {
-        void refetchUpdatedPromptFolderById(promptFolderId)
-      }
+      void refetchUpdatedPromptFolderById(promptFolderId)
+    },
+    rollbackError: () => {
+      revertUpdatedPromptDraftFromBase(promptId)
+      revertUpdatedPromptFolderDraftFromBase(promptFolderId)
     }
   })
 }

@@ -23,7 +23,7 @@ import {
 } from '../UpdatedWorkspaceDataStore.svelte.ts'
 import { enqueueUpdatedLoad } from '../queues/UpdatedLoadsQueue'
 import {
-  enqueueUpdatedSyncMutation,
+  enqueueMutationApplyOptimistic,
   type UpdatedMutationOutcome
 } from '../queues/UpdatedMutationsQueue'
 import { runUpdatedRefetch } from './updatedIpcHelpers'
@@ -88,7 +88,10 @@ export const createUpdatedPromptFolder = (
   const preparedName = preparePromptFolderName(displayName)
   let promptFolderId = ''
 
-  return enqueueUpdatedSyncMutation<UpdatedCreatePromptFolderSnapshot, UpdatedCreatePromptFolderResultData>(
+  return enqueueMutationApplyOptimistic<
+    UpdatedCreatePromptFolderSnapshot,
+    UpdatedCreatePromptFolderResultData
+  >(
     {
       optimisticMutation: () => {
         const workspaceEntry = getUpdatedWorkspaceEntry(workspaceId)!
@@ -132,7 +135,7 @@ export const createUpdatedPromptFolder = (
             promptFolder: snapshot.promptFolderData
           }
         ),
-      commit: (result, snapshot) => {
+      commitSuccess: (result, snapshot) => {
         commitUpdatedPromptFolderDraftInsert(
           snapshot.promptFolderId,
           snapshot.promptFolderId,
@@ -145,13 +148,14 @@ export const createUpdatedPromptFolder = (
           result.data.workspaceRevision
         )
       },
-      rollback: (outcome) => {
+      rollbackConflict: () => {
         revertUpdatedPromptFolderDraftFromBase(promptFolderId)
         revertUpdatedWorkspaceDraftFromBase(workspaceId)
-
-        if (outcome.type === 'conflict') {
-          void refetchUpdatedWorkspaceById(workspaceId)
-        }
+        void refetchUpdatedWorkspaceById(workspaceId)
+      },
+      rollbackError: () => {
+        revertUpdatedPromptFolderDraftFromBase(promptFolderId)
+        revertUpdatedWorkspaceDraftFromBase(workspaceId)
       }
     }
   )
