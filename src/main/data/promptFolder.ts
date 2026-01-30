@@ -35,10 +35,24 @@ const readPromptFolderData = (
     promptFolderId: parsed.promptFolderId,
     folderName,
     displayName: parsed.foldername,
+    promptCount: parsed.promptCount,
     promptIds: resolvedPromptIds,
     folderDescription: parsed.folderDescription
   }
 }
+
+export const buildPromptFolderData = (
+  folderName: string,
+  config: PromptFolderConfig,
+  promptIds: string[]
+): UpdatedPromptFolderData => ({
+  promptFolderId: config.promptFolderId,
+  folderName,
+  displayName: config.foldername,
+  promptCount: config.promptCount,
+  promptIds,
+  folderDescription: config.folderDescription
+})
 
 const readPromptFolderPrompts = (workspacePath: string, folderName: string): Prompt[] => {
   const fs = getFs()
@@ -158,7 +172,7 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
         const configContent = JSON.stringify(
           createPromptFolderConfig(
             request.promptFolder.displayName,
-            request.promptFolder.promptIds.length,
+            request.promptFolder.promptCount,
             request.promptFolder.promptFolderId,
             request.promptFolder.folderDescription
           ),

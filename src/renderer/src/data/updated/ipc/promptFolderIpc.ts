@@ -101,6 +101,7 @@ export const createUpdatedPromptFolder = (
           promptFolderId: '',
           folderName: preparedName.folderName,
           displayName: preparedName.displayName,
+          promptCount: 0,
           promptIds: [],
           folderDescription: ''
         }

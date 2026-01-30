@@ -12,6 +12,7 @@ import type {
   UpdatedWorkspaceData
 } from '@shared/ipc'
 import type { PromptFolderConfig } from '@shared/promptFolderConfig'
+import { buildPromptFolderData } from './promptFolder'
 import {
   getWorkspacePath,
   registerPrompt,
@@ -70,18 +71,6 @@ const readPromptFolders = (
 
 const readPromptFolderIds = (workspacePath: string): string[] =>
   readPromptFolders(workspacePath).map((folder) => folder.config.promptFolderId)
-
-const buildPromptFolderData = (
-  folderName: string,
-  config: PromptFolderConfig,
-  promptIds: string[]
-): UpdatedPromptFolderData => ({
-  promptFolderId: config.promptFolderId,
-  folderName,
-  displayName: config.foldername,
-  promptIds,
-  folderDescription: config.folderDescription
-})
 
 const readPromptFolderPrompts = (workspacePath: string, folderName: string): Prompt[] => {
   const fs = getFs()

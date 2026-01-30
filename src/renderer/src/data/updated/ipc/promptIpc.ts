@@ -66,7 +66,7 @@ export const createUpdatedPrompt = (
       const promptFolderEntry = getUpdatedPromptFolderEntry(promptFolderId)!
       const promptFolderDraft =
         promptFolderEntry.draftSnapshot ?? promptFolderEntry.baseSnapshot!.data
-      const nextPromptCount = promptFolderDraft.promptIds.length + 1
+      const nextPromptCount = promptFolderDraft.promptCount + 1
       const now = new Date().toISOString()
 
       const promptDraft: Prompt = {
@@ -94,6 +94,7 @@ export const createUpdatedPrompt = (
       nextPromptIds.splice(insertIndex, 0, promptId)
       promptFolderEntry.draftSnapshot = {
         ...promptFolderDraft,
+        promptCount: nextPromptCount,
         promptIds: nextPromptIds
       }
     },
