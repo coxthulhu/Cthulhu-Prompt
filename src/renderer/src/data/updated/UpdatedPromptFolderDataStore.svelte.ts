@@ -1,45 +1,43 @@
-import type { UpdatedPromptFolderData } from '@shared/ipc'
+import type { UpdatedPromptFolderData as PromptFolderData } from '@shared/ipc'
 
-import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
+import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
-const promptFolderStore = createUpdatedBaseDataStore<UpdatedPromptFolderData>()
+const promptFolderStore = createBaseDataStore<PromptFolderData>()
 
-export const getUpdatedPromptFolderEntry = (promptFolderId: string) =>
+export const getPromptFolderEntry = (promptFolderId: string) =>
   promptFolderStore.getEntry(promptFolderId)
 
-export const optimisticInsertUpdatedPromptFolderDraft = (
-  draft: UpdatedPromptFolderData
-): string => {
+export const optimisticInsertPromptFolderDraft = (draft: PromptFolderData): string => {
   const promptFolderId = crypto.randomUUID()
-  const nextDraft: UpdatedPromptFolderData = { ...draft, promptFolderId }
+  const nextDraft: PromptFolderData = { ...draft, promptFolderId }
   promptFolderStore.optimisticInsert(nextDraft, promptFolderId)
   return promptFolderId
 }
 
-export const commitUpdatedPromptFolderDraftInsert = (
+export const commitPromptFolderDraftInsert = (
   draftId: string,
   nextId: string,
-  data: UpdatedPromptFolderData,
+  data: PromptFolderData,
   revision: number
 ): void => {
   promptFolderStore.commitDraftInsert(draftId, nextId, { data, revision })
 }
 
-export const optimisticDeleteUpdatedPromptFolderDraft = (promptFolderId: string): void => {
+export const optimisticDeletePromptFolderDraft = (promptFolderId: string): void => {
   promptFolderStore.optimisticDelete(promptFolderId)
 }
 
-export const revertUpdatedPromptFolderDraftFromBase = (promptFolderId: string): void => {
+export const revertPromptFolderDraftFromBase = (promptFolderId: string): void => {
   promptFolderStore.revertDraftFromBase(promptFolderId)
 }
 
-export const commitUpdatedPromptFolderDeletion = (promptFolderId: string): void => {
+export const commitPromptFolderDeletion = (promptFolderId: string): void => {
   promptFolderStore.commitDeletion(promptFolderId)
 }
 
-export const applyFetchUpdatedPromptFolder = (
+export const applyFetchPromptFolder = (
   promptFolderId: string,
-  data: UpdatedPromptFolderData,
+  data: PromptFolderData,
   revision: number
 ): void => {
   promptFolderStore.applyFetch(promptFolderId, { data, revision })
@@ -47,7 +45,7 @@ export const applyFetchUpdatedPromptFolder = (
 
 export const applyOptimisticUpdatedPromptFolder = (
   promptFolderId: string,
-  data: UpdatedPromptFolderData,
+  data: PromptFolderData,
   revision: number
 ): void => {
   promptFolderStore.applyOptimisticChanges(promptFolderId, { data, revision })

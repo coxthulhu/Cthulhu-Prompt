@@ -1,5 +1,5 @@
-import { enqueueUpdatedGlobalMessage } from './UpdatedGlobalQueue'
+import { enqueueGlobalMessage } from './UpdatedGlobalQueue'
 
 // Thin wrapper so loads share the same global message queue.
-export const enqueueUpdatedLoad = <T>(task: () => Promise<T>): Promise<T> =>
-  enqueueUpdatedGlobalMessage(task)
+export const enqueueLoad = <T>(task: () => Promise<T>): Promise<T> =>
+  enqueueGlobalMessage(task)

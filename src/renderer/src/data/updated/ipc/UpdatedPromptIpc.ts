@@ -1,69 +1,69 @@
 import type {
   Prompt,
-  UpdatedCreatePromptRequest,
-  UpdatedCreatePromptResult,
-  UpdatedPromptFolderData
+  UpdatedCreatePromptRequest as CreatePromptRequest,
+  UpdatedCreatePromptResult as CreatePromptResult,
+  UpdatedPromptFolderData as PromptFolderData
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import {
-  applyFetchUpdatedPrompt,
-  commitUpdatedPromptDraftInsert,
-  getUpdatedPromptEntry,
-  optimisticInsertUpdatedPromptDraft,
-  revertUpdatedPromptDraftFromBase
+  applyFetchPrompt,
+  commitPromptDraftInsert,
+  getPromptEntry,
+  optimisticInsertPromptDraft,
+  revertPromptDraftFromBase
 } from '../UpdatedPromptDataStore.svelte.ts'
 import {
   applyOptimisticUpdatedPromptFolder,
-  getUpdatedPromptFolderEntry,
-  revertUpdatedPromptFolderDraftFromBase
+  getPromptFolderEntry,
+  revertPromptFolderDraftFromBase
 } from '../UpdatedPromptFolderDataStore.svelte.ts'
-import { enqueueUpdatedLoad } from '../queues/UpdatedLoadsQueue'
+import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import {
   enqueueMutationApplyOptimistic,
-  type UpdatedMutationOutcome
+  type MutationOutcome
 } from '../queues/UpdatedMutationsQueue'
-import { runUpdatedRefetch } from './updatedIpcHelpers'
-import { refetchUpdatedPromptFolderById } from './promptFolderIpc'
+import { runRefetch } from './UpdatedIpcHelpers'
+import { refetchPromptFolderById } from './UpdatedPromptFolderIpc'
 
-type UpdatedPromptLoadResult = {
+type PromptLoadResult = {
   data: Prompt
   revision: number
 }
 
-type UpdatedCreatePromptSnapshot = {
+type CreatePromptSnapshot = {
   promptFolderId: string
   promptFolderRevision: number
-  promptFolderData: UpdatedPromptFolderData
+  promptFolderData: PromptFolderData
   promptId: string
   promptData: Prompt
   previousPromptId: string | null
 }
 
-type UpdatedCreatePromptResultData = {
+type CreatePromptResultData = {
   promptRevision: number
   promptFolderRevision: number
 }
 
-export const refetchUpdatedPromptById = (promptId: string): Promise<void> =>
-  runUpdatedRefetch('prompt', async () => {
-    const result = await enqueueUpdatedLoad(() =>
-      ipcInvoke<UpdatedPromptLoadResult>('updated-load-prompt-by-id', { promptId })
+export const refetchPromptById = (promptId: string): Promise<void> =>
+  runRefetch('prompt', async () => {
+    const result = await enqueueLoad(() =>
+      ipcInvoke<PromptLoadResult>('updated-load-prompt-by-id', { promptId })
     )
-    applyFetchUpdatedPrompt(promptId, result.data, result.revision)
+    applyFetchPrompt(promptId, result.data, result.revision)
   })
 
-export const createUpdatedPrompt = (
+export const createPrompt = (
   promptFolderId: string,
   previousPromptId: string | null,
   title = '',
   promptText = ''
-): Promise<UpdatedMutationOutcome<UpdatedCreatePromptResultData>> => {
+): Promise<MutationOutcome<CreatePromptResultData>> => {
   let promptId = ''
 
-  return enqueueMutationApplyOptimistic<UpdatedCreatePromptSnapshot, UpdatedCreatePromptResultData>({
+  return enqueueMutationApplyOptimistic<CreatePromptSnapshot, CreatePromptResultData>({
     optimisticMutation: () => {
-      const promptFolderEntry = getUpdatedPromptFolderEntry(promptFolderId)!
+      const promptFolderEntry = getPromptFolderEntry(promptFolderId)!
       const promptFolderDraft =
         promptFolderEntry.draftSnapshot ?? promptFolderEntry.baseSnapshot!.data
       const nextPromptCount = promptFolderDraft.promptCount + 1
@@ -78,7 +78,7 @@ export const createUpdatedPrompt = (
         promptFolderCount: nextPromptCount
       }
 
-      promptId = optimisticInsertUpdatedPromptDraft(promptDraft)
+      promptId = optimisticInsertPromptDraft(promptDraft)
       const nextPromptIds = [...promptFolderDraft.promptIds]
       let insertIndex = nextPromptIds.length
 
@@ -99,8 +99,8 @@ export const createUpdatedPrompt = (
       }
     },
     snapshot: () => {
-      const promptFolderEntry = getUpdatedPromptFolderEntry(promptFolderId)!
-      const promptEntry = getUpdatedPromptEntry(promptId)!
+      const promptFolderEntry = getPromptFolderEntry(promptFolderId)!
+      const promptEntry = getPromptEntry(promptId)!
 
       // Clone draft state so later edits don't mutate the queued snapshot.
       return {
@@ -115,14 +115,14 @@ export const createUpdatedPrompt = (
       }
     },
     run: (snapshot) =>
-      ipcInvoke<UpdatedCreatePromptResult, UpdatedCreatePromptRequest>('updated-create-prompt', {
+      ipcInvoke<CreatePromptResult, CreatePromptRequest>('updated-create-prompt', {
         promptFolderId: snapshot.promptFolderId,
         promptFolderRevision: snapshot.promptFolderRevision,
         prompt: snapshot.promptData,
         previousPromptId: snapshot.previousPromptId
       }),
     commitSuccess: (result, snapshot) => {
-      commitUpdatedPromptDraftInsert(
+      commitPromptDraftInsert(
         snapshot.promptId,
         snapshot.promptId,
         snapshot.promptData,
@@ -135,13 +135,13 @@ export const createUpdatedPrompt = (
       )
     },
     rollbackConflict: () => {
-      revertUpdatedPromptDraftFromBase(promptId)
-      revertUpdatedPromptFolderDraftFromBase(promptFolderId)
-      void refetchUpdatedPromptFolderById(promptFolderId)
+      revertPromptDraftFromBase(promptId)
+      revertPromptFolderDraftFromBase(promptFolderId)
+      void refetchPromptFolderById(promptFolderId)
     },
     rollbackError: () => {
-      revertUpdatedPromptDraftFromBase(promptId)
-      revertUpdatedPromptFolderDraftFromBase(promptFolderId)
+      revertPromptDraftFromBase(promptId)
+      revertPromptFolderDraftFromBase(promptFolderId)
     }
   })
 }

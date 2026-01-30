@@ -1,11 +1,11 @@
 import type { SystemSettings } from '@shared/ipc'
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 
-import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
+import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
 const SYSTEM_SETTINGS_KEY = 'system-settings'
 
-const systemSettingsStore = createUpdatedBaseDataStore<SystemSettings>()
+const systemSettingsStore = createBaseDataStore<SystemSettings>()
 
 const runtimeConfig = getRuntimeConfig()
 // Precache runtime-provided settings so the renderer has a base snapshot at startup.
@@ -14,10 +14,10 @@ systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, {
   revision: runtimeConfig.systemSettingsRevision
 })
 
-export const getUpdatedSystemSettingsEntry = () =>
+export const getSystemSettingsEntry = () =>
   systemSettingsStore.getEntry(SYSTEM_SETTINGS_KEY)
 
-export const applyFetchUpdatedSystemSettings = (
+export const applyFetchSystemSettings = (
   data: SystemSettings,
   revision: number
 ): void => {

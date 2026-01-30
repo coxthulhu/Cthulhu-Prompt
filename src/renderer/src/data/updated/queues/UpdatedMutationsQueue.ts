@@ -1,44 +1,41 @@
-import type { UpdatedMutationResult } from '@shared/ipc'
+import type { UpdatedMutationResult as MutationResult } from '@shared/ipc'
 
-import { enqueueUpdatedGlobalMessage } from './UpdatedGlobalQueue'
+import { enqueueGlobalMessage } from './UpdatedGlobalQueue'
 
-export type UpdatedMutationOutcome<TData> =
-  | { type: 'success'; result: Extract<UpdatedMutationResult<TData>, { success: true }> }
+export type MutationOutcome<TData> =
+  | { type: 'success'; result: Extract<MutationResult<TData>, { success: true }> }
   | {
       type: 'conflict'
-      result: Extract<UpdatedMutationResult<TData>, { success: false; conflict: true }>
+      result: Extract<MutationResult<TData>, { success: false; conflict: true }>
     }
   | {
       type: 'error'
       error: unknown
-      result?: Extract<UpdatedMutationResult<TData>, { success: false; conflict?: false }>
+      result?: Extract<MutationResult<TData>, { success: false; conflict?: false }>
     }
 
-export type UpdatedMutationParams<TSnapshot, TData> = {
+export type MutationParams<TSnapshot, TData> = {
   snapshot: () => TSnapshot
-  run: (snapshot: TSnapshot) => Promise<UpdatedMutationResult<TData>>
+  run: (snapshot: TSnapshot) => Promise<MutationResult<TData>>
   commitSuccess: (
-    result: Extract<UpdatedMutationResult<TData>, { success: true }>,
+    result: Extract<MutationResult<TData>, { success: true }>,
     snapshot: TSnapshot
   ) => void
   rollbackConflict: (
-    result: Extract<UpdatedMutationResult<TData>, { success: false; conflict: true }>
+    result: Extract<MutationResult<TData>, { success: false; conflict: true }>
   ) => void
   rollbackError: (
     error: unknown,
-    result?: Extract<UpdatedMutationResult<TData>, { success: false; conflict?: false }>
+    result?: Extract<MutationResult<TData>, { success: false; conflict?: false }>
   ) => void
 }
 
-export type UpdatedSyncMutationParams<TSnapshot, TData> = UpdatedMutationParams<
-  TSnapshot,
-  TData
-> & {
+export type SyncMutationParams<TSnapshot, TData> = MutationParams<TSnapshot, TData> & {
   optimisticMutation: () => void
 }
 
 /**
- * Updated mutation queue helpers (shared global queue with loads).
+ * Mutation queue helpers (shared global queue with loads).
  *
  * Parameter usage and timing:
  * - optimisticMutation (sync-only): run immediately on enqueue to mutate draft state.
@@ -57,11 +54,11 @@ export type UpdatedSyncMutationParams<TSnapshot, TData> = UpdatedMutationParams<
  * Autosaves should skip optimisticMutation because the draft already includes
  * the field-level changes before enqueue time.
  */
-const enqueueUpdatedMutation = <TSnapshot, TData>(
-  params: UpdatedMutationParams<TSnapshot, TData>,
+const enqueueMutation = <TSnapshot, TData>(
+  params: MutationParams<TSnapshot, TData>,
   snapshot: TSnapshot
-): Promise<UpdatedMutationOutcome<TData>> =>
-  enqueueUpdatedGlobalMessage(async () => {
+): Promise<MutationOutcome<TData>> =>
+  enqueueGlobalMessage(async () => {
     try {
       const result = await params.run(snapshot)
 
@@ -71,12 +68,12 @@ const enqueueUpdatedMutation = <TSnapshot, TData>(
       }
 
       if (result.conflict) {
-        const outcome: UpdatedMutationOutcome<TData> = { type: 'conflict', result }
+        const outcome: MutationOutcome<TData> = { type: 'conflict', result }
         params.rollbackConflict(result)
         return outcome
       }
 
-      const outcome: UpdatedMutationOutcome<TData> = {
+      const outcome: MutationOutcome<TData> = {
         type: 'error',
         error: result.error,
         result
@@ -84,23 +81,23 @@ const enqueueUpdatedMutation = <TSnapshot, TData>(
       params.rollbackError(result.error, result)
       return outcome
     } catch (error) {
-      const outcome: UpdatedMutationOutcome<TData> = { type: 'error', error }
+      const outcome: MutationOutcome<TData> = { type: 'error', error }
       params.rollbackError(error)
       return outcome
     }
   })
 
 export const enqueueMutationApplyOptimistic = <TSnapshot, TData>(
-  params: UpdatedSyncMutationParams<TSnapshot, TData>
-): Promise<UpdatedMutationOutcome<TData>> => {
+  params: SyncMutationParams<TSnapshot, TData>
+): Promise<MutationOutcome<TData>> => {
   params.optimisticMutation()
   const snapshot = params.snapshot()
-  return enqueueUpdatedMutation(params, snapshot)
+  return enqueueMutation(params, snapshot)
 }
 
 export const enqueueMutationAssumeOptimisticAlreadyApplied = <TSnapshot, TData>(
-  params: UpdatedMutationParams<TSnapshot, TData>
-): Promise<UpdatedMutationOutcome<TData>> => {
+  params: MutationParams<TSnapshot, TData>
+): Promise<MutationOutcome<TData>> => {
   const snapshot = params.snapshot()
-  return enqueueUpdatedMutation(params, snapshot)
+  return enqueueMutation(params, snapshot)
 }

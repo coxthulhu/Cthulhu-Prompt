@@ -1,19 +1,19 @@
 import type { Prompt } from '@shared/ipc'
 
-import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
+import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
-const promptStore = createUpdatedBaseDataStore<Prompt>()
+const promptStore = createBaseDataStore<Prompt>()
 
-export const getUpdatedPromptEntry = (promptId: string) => promptStore.getEntry(promptId)
+export const getPromptEntry = (promptId: string) => promptStore.getEntry(promptId)
 
-export const optimisticInsertUpdatedPromptDraft = (draft: Prompt): string => {
+export const optimisticInsertPromptDraft = (draft: Prompt): string => {
   const promptId = crypto.randomUUID()
   const nextDraft: Prompt = { ...draft, id: promptId }
   promptStore.optimisticInsert(nextDraft, promptId)
   return promptId
 }
 
-export const commitUpdatedPromptDraftInsert = (
+export const commitPromptDraftInsert = (
   draftId: string,
   nextId: string,
   data: Prompt,
@@ -22,19 +22,19 @@ export const commitUpdatedPromptDraftInsert = (
   promptStore.commitDraftInsert(draftId, nextId, { data, revision })
 }
 
-export const optimisticDeleteUpdatedPromptDraft = (promptId: string): void => {
+export const optimisticDeletePromptDraft = (promptId: string): void => {
   promptStore.optimisticDelete(promptId)
 }
 
-export const revertUpdatedPromptDraftFromBase = (promptId: string): void => {
+export const revertPromptDraftFromBase = (promptId: string): void => {
   promptStore.revertDraftFromBase(promptId)
 }
 
-export const commitUpdatedPromptDeletion = (promptId: string): void => {
+export const commitPromptDeletion = (promptId: string): void => {
   promptStore.commitDeletion(promptId)
 }
 
-export const applyFetchUpdatedPrompt = (
+export const applyFetchPrompt = (
   promptId: string,
   data: Prompt,
   revision: number

@@ -13,5 +13,5 @@ const createSerialQueue = () => {
   }
 }
 
-// Global queue to serialize updated IPC traffic.
-export const enqueueUpdatedGlobalMessage = createSerialQueue()
+// Global queue to serialize IPC traffic for the updated data layer.
+export const enqueueGlobalMessage = createSerialQueue()

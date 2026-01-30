@@ -1,4 +1,4 @@
-export const runUpdatedRefetch = async <T>(
+export const runRefetch = async <T>(
   label: string,
   run: () => Promise<T>
 ): Promise<void> => {

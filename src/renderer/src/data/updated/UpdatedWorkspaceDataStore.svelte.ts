@@ -1,43 +1,43 @@
-import type { UpdatedWorkspaceData } from '@shared/ipc'
+import type { UpdatedWorkspaceData as WorkspaceData } from '@shared/ipc'
 
-import { createUpdatedBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
+import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
-const workspaceStore = createUpdatedBaseDataStore<UpdatedWorkspaceData>()
+const workspaceStore = createBaseDataStore<WorkspaceData>()
 
-export const getUpdatedWorkspaceEntry = (workspaceId: string) =>
+export const getWorkspaceEntry = (workspaceId: string) =>
   workspaceStore.getEntry(workspaceId)
 
-export const optimisticInsertUpdatedWorkspaceDraft = (draft: UpdatedWorkspaceData): string => {
+export const optimisticInsertWorkspaceDraft = (draft: WorkspaceData): string => {
   const workspaceId = crypto.randomUUID()
-  const nextDraft: UpdatedWorkspaceData = { ...draft, workspaceId }
+  const nextDraft: WorkspaceData = { ...draft, workspaceId }
   workspaceStore.optimisticInsert(nextDraft, workspaceId)
   return workspaceId
 }
 
-export const commitUpdatedWorkspaceDraftInsert = (
+export const commitWorkspaceDraftInsert = (
   draftId: string,
   nextId: string,
-  data: UpdatedWorkspaceData,
+  data: WorkspaceData,
   revision: number
 ): void => {
   workspaceStore.commitDraftInsert(draftId, nextId, { data, revision })
 }
 
-export const optimisticDeleteUpdatedWorkspaceDraft = (workspaceId: string): void => {
+export const optimisticDeleteWorkspaceDraft = (workspaceId: string): void => {
   workspaceStore.optimisticDelete(workspaceId)
 }
 
-export const revertUpdatedWorkspaceDraftFromBase = (workspaceId: string): void => {
+export const revertWorkspaceDraftFromBase = (workspaceId: string): void => {
   workspaceStore.revertDraftFromBase(workspaceId)
 }
 
-export const commitUpdatedWorkspaceDeletion = (workspaceId: string): void => {
+export const commitWorkspaceDeletion = (workspaceId: string): void => {
   workspaceStore.commitDeletion(workspaceId)
 }
 
-export const applyFetchUpdatedWorkspace = (
+export const applyFetchWorkspace = (
   workspaceId: string,
-  data: UpdatedWorkspaceData,
+  data: WorkspaceData,
   revision: number
 ): void => {
   workspaceStore.applyFetch(workspaceId, { data, revision })
@@ -45,7 +45,7 @@ export const applyFetchUpdatedWorkspace = (
 
 export const applyOptimisticUpdatedWorkspace = (
   workspaceId: string,
-  data: UpdatedWorkspaceData,
+  data: WorkspaceData,
   revision: number
 ): void => {
   workspaceStore.applyOptimisticChanges(workspaceId, { data, revision })

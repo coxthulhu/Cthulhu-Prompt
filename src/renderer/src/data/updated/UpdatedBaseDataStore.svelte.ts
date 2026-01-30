@@ -1,40 +1,40 @@
 import { SvelteMap } from 'svelte/reactivity'
 
-export type UpdatedSnapshot<T> = {
+export type Snapshot<T> = {
   data: T
   revision: number
 }
 
-export type UpdatedEntry<T> = {
-  baseSnapshot: UpdatedSnapshot<T> | null
+export type Entry<T> = {
+  baseSnapshot: Snapshot<T> | null
   draftSnapshot: T | null
 }
 
-export type UpdatedBaseDataStore<T> = {
-  entries: SvelteMap<string, UpdatedEntry<T>>
-  getEntry: (id: string) => UpdatedEntry<T> | null
+export type BaseDataStore<T> = {
+  entries: SvelteMap<string, Entry<T>>
+  getEntry: (id: string) => Entry<T> | null
   optimisticInsert: (draft: T, idOverride?: string) => string
-  commitDraftInsert: (draftId: string, nextId: string, base: UpdatedSnapshot<T>) => void
+  commitDraftInsert: (draftId: string, nextId: string, base: Snapshot<T>) => void
   optimisticDelete: (id: string) => void
   revertDraftFromBase: (id: string) => void
   commitDeletion: (id: string) => void
-  applyFetch: (id: string, base: UpdatedSnapshot<T>) => void
-  applyOptimisticChanges: (id: string, base: UpdatedSnapshot<T>) => void
+  applyFetch: (id: string, base: Snapshot<T>) => void
+  applyOptimisticChanges: (id: string, base: Snapshot<T>) => void
 }
 
 const cloneData = <T>(data: T): T => structuredClone(data)
 
 const createEntry = <T>(
-  baseSnapshot: UpdatedSnapshot<T> | null,
+  baseSnapshot: Snapshot<T> | null,
   draftSnapshot: T | null
-): UpdatedEntry<T> =>
+): Entry<T> =>
   // Use $state so nested snapshot updates propagate to reactive consumers.
-  $state<UpdatedEntry<T>>({ baseSnapshot, draftSnapshot })
+  $state<Entry<T>>({ baseSnapshot, draftSnapshot })
 
-export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
-  const entries = new SvelteMap<string, UpdatedEntry<T>>()
+export const createBaseDataStore = <T>(): BaseDataStore<T> => {
+  const entries = new SvelteMap<string, Entry<T>>()
 
-  const getEntry = (id: string): UpdatedEntry<T> | null => entries.get(id) ?? null
+  const getEntry = (id: string): Entry<T> | null => entries.get(id) ?? null
 
   const optimisticInsert = (draft: T, idOverride?: string): string => {
     const id = idOverride ?? crypto.randomUUID()
@@ -45,7 +45,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
   const commitDraftInsert = (
     draftId: string,
     nextId: string,
-    base: UpdatedSnapshot<T>
+    base: Snapshot<T>
   ): void => {
     const entry = entries.get(draftId)!
     entry.baseSnapshot = base
@@ -79,7 +79,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     entries.delete(id)
   }
 
-  const applyFetch = (id: string, base: UpdatedSnapshot<T>): void => {
+  const applyFetch = (id: string, base: Snapshot<T>): void => {
     const entry = entries.get(id) ?? createEntry<T>(null, null)
     const previousRevision = entry.baseSnapshot?.revision ?? null
 
@@ -92,7 +92,7 @@ export const createUpdatedBaseDataStore = <T>(): UpdatedBaseDataStore<T> => {
     entries.set(id, entry)
   }
 
-  const applyOptimisticChanges = (id: string, base: UpdatedSnapshot<T>): void => {
+  const applyOptimisticChanges = (id: string, base: Snapshot<T>): void => {
     const entry = entries.get(id) ?? createEntry<T>(null, null)
     entry.baseSnapshot = base
     entries.set(id, entry)
