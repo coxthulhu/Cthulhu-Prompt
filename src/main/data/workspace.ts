@@ -73,12 +73,13 @@ const readPromptFolderIds = (workspacePath: string): string[] =>
 
 const buildPromptFolderData = (
   folderName: string,
-  config: PromptFolderConfig
+  config: PromptFolderConfig,
+  promptIds: string[]
 ): UpdatedPromptFolderData => ({
   promptFolderId: config.promptFolderId,
   folderName,
   displayName: config.foldername,
-  promptCount: config.promptCount,
+  promptIds,
   folderDescription: config.folderDescription
 })
 
@@ -138,11 +139,12 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
         const promptFolderIds: string[] = []
 
         for (const folder of readPromptFolders(request.workspacePath)) {
-          const data = buildPromptFolderData(folder.folderName, folder.config)
+          const prompts = readPromptFolderPrompts(request.workspacePath, folder.folderName)
+          const promptIds = prompts.map((prompt) => prompt.id)
+          const data = buildPromptFolderData(folder.folderName, folder.config, promptIds)
           promptFolderIds.push(data.promptFolderId)
           registerPromptFolder(data.promptFolderId, request.workspacePath, folder.folderName)
 
-          const prompts = readPromptFolderPrompts(request.workspacePath, folder.folderName)
           for (const prompt of prompts) {
             registerPrompt(prompt.id, request.workspacePath, folder.folderName)
           }

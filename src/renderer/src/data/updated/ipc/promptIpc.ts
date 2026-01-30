@@ -66,7 +66,7 @@ export const createUpdatedPrompt = (
       const promptFolderEntry = getUpdatedPromptFolderEntry(promptFolderId)!
       const promptFolderDraft =
         promptFolderEntry.draftSnapshot ?? promptFolderEntry.baseSnapshot!.data
-      const nextPromptCount = promptFolderDraft.promptCount + 1
+      const nextPromptCount = promptFolderDraft.promptIds.length + 1
       const now = new Date().toISOString()
 
       const promptDraft: Prompt = {
@@ -79,9 +79,22 @@ export const createUpdatedPrompt = (
       }
 
       promptId = optimisticInsertUpdatedPromptDraft(promptDraft)
+      const nextPromptIds = [...promptFolderDraft.promptIds]
+      let insertIndex = nextPromptIds.length
+
+      if (previousPromptId === null) {
+        insertIndex = 0
+      } else if (previousPromptId) {
+        const previousIndex = nextPromptIds.indexOf(previousPromptId)
+        if (previousIndex !== -1) {
+          insertIndex = previousIndex + 1
+        }
+      }
+
+      nextPromptIds.splice(insertIndex, 0, promptId)
       promptFolderEntry.draftSnapshot = {
         ...promptFolderDraft,
-        promptCount: nextPromptCount
+        promptIds: nextPromptIds
       }
     },
     snapshot: () => {

@@ -23,16 +23,19 @@ const readPromptFolderConfig = (configPath: string): PromptFolderConfig => {
 
 const readPromptFolderData = (
   workspacePath: string,
-  folderName: string
+  folderName: string,
+  promptIds?: string[]
 ): UpdatedPromptFolderData => {
   const configPath = path.join(workspacePath, 'Prompts', folderName, 'PromptFolder.json')
   const parsed = readPromptFolderConfig(configPath)
+  const resolvedPromptIds =
+    promptIds ?? readPromptFolderPrompts(workspacePath, folderName).map((prompt) => prompt.id)
 
   return {
     promptFolderId: parsed.promptFolderId,
     folderName,
     displayName: parsed.foldername,
-    promptCount: parsed.promptCount,
+    promptIds: resolvedPromptIds,
     folderDescription: parsed.folderDescription
   }
 }
@@ -87,8 +90,12 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
       }
 
       try {
-        const data = readPromptFolderData(location.workspacePath, location.folderName)
         const prompts = readPromptFolderPrompts(location.workspacePath, location.folderName)
+        const data = readPromptFolderData(
+          location.workspacePath,
+          location.folderName,
+          prompts.map((prompt) => prompt.id)
+        )
 
         return {
           success: true,
@@ -151,7 +158,7 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
         const configContent = JSON.stringify(
           createPromptFolderConfig(
             request.promptFolder.displayName,
-            request.promptFolder.promptCount,
+            request.promptFolder.promptIds.length,
             request.promptFolder.promptFolderId,
             request.promptFolder.folderDescription
           ),
