@@ -27,12 +27,12 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint + typecheck** (run together) and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory (or the WSL converted equivalent).
+Use Windows `cmd.exe` for **lint + typecheck** (run together), Vitest, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory.
 Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
 
-- Required for Windows-side runs (lint + typecheck together, Playwright). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
+- Required for Windows-side runs (lint + typecheck together, Vitest, Playwright). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
 - Include a short justification string explaining why elevation is needed.
 - Reusable template (swap the trailing command as needed):
   ```ts
@@ -49,9 +49,9 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 
 - Lint + Typecheck (Windows interop): use the template above with `<command>` set to `npm run lint && npm run typecheck`; keep `timeout_ms` at 300000.
 - Format: `npm run format` — can run in WSL; applies Prettier styling.
-- Unit/integration tests: `npm run test:vitest` — can run in WSL.
+- Unit/integration tests: `npm run test:vitest` — run via Windows `cmd.exe`.
 
-### Running Playwright (WSL)
+### Running Playwright (Windows)
 
 Run via Windows `cmd.exe`; reuse the template and set `<command>` to the desired Playwright invocation. Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. Always keep the 300000 ms timeout. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
 Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
