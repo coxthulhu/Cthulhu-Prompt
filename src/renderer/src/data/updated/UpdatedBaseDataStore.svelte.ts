@@ -14,16 +14,8 @@ export type BaseDataStore<T> = {
   entries: SvelteMap<string, Entry<T>>
   getEntry: (id: string) => Entry<T> | null
   optimisticInsert: (draft: T, idOverride?: string) => string
-  commitDraftInsert: (
-    draftId: string,
-    nextId: string,
-    lastServerSnapshot: Snapshot<T>
-  ) => void
   optimisticDelete: (id: string) => void
-  revertDraftFromLastServerSnapshot: (id: string) => void
-  commitDeletion: (id: string) => void
   applyFetch: (id: string, lastServerSnapshot: Snapshot<T>) => void
-  applyOptimisticChanges: (id: string, lastServerSnapshot: Snapshot<T>) => void
 }
 
 const cloneData = <T>(data: T): T => structuredClone(data)
@@ -46,20 +38,6 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     return id
   }
 
-  const commitDraftInsert = (
-    draftId: string,
-    nextId: string,
-    lastServerSnapshot: Snapshot<T>
-  ): void => {
-    const entry = entries.get(draftId)!
-    entry.lastServerSnapshot = lastServerSnapshot
-
-    if (draftId !== nextId) {
-      entries.delete(draftId)
-      entries.set(nextId, entry)
-    }
-  }
-
   const optimisticDelete = (id: string): void => {
     const entry = entries.get(id)!
     entry.draftSnapshot = null
@@ -67,20 +45,6 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     if (!entry.lastServerSnapshot) {
       entries.delete(id)
     }
-  }
-
-  const revertDraftFromLastServerSnapshot = (id: string): void => {
-    const entry = entries.get(id)!
-    if (!entry.lastServerSnapshot) {
-      entries.delete(id)
-      return
-    }
-
-    entry.draftSnapshot = cloneData(entry.lastServerSnapshot.data)
-  }
-
-  const commitDeletion = (id: string): void => {
-    entries.delete(id)
   }
 
   const applyFetch = (id: string, lastServerSnapshot: Snapshot<T>): void => {
@@ -96,24 +60,11 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     entries.set(id, entry)
   }
 
-  const applyOptimisticChanges = (
-    id: string,
-    lastServerSnapshot: Snapshot<T>
-  ): void => {
-    const entry = entries.get(id) ?? createEntry<T>(null, null)
-    entry.lastServerSnapshot = lastServerSnapshot
-    entries.set(id, entry)
-  }
-
   return {
     entries,
     getEntry,
     optimisticInsert,
-    commitDraftInsert,
     optimisticDelete,
-    revertDraftFromLastServerSnapshot,
-    commitDeletion,
-    applyFetch,
-    applyOptimisticChanges
+    applyFetch
   }
 }

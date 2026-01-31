@@ -14,27 +14,8 @@ export const optimisticInsertWorkspaceDraft = (draft: WorkspaceData): string => 
   return workspaceId
 }
 
-export const commitWorkspaceDraftInsert = (
-  draftId: string,
-  nextId: string,
-  data: WorkspaceData,
-  revision: number
-): void => {
-  workspaceStore.commitDraftInsert(draftId, nextId, { data, revision })
-}
-
 export const optimisticDeleteWorkspaceDraft = (workspaceId: string): void => {
   workspaceStore.optimisticDelete(workspaceId)
-}
-
-export const revertWorkspaceDraftFromLastServerSnapshot = (
-  workspaceId: string
-): void => {
-  workspaceStore.revertDraftFromLastServerSnapshot(workspaceId)
-}
-
-export const commitWorkspaceDeletion = (workspaceId: string): void => {
-  workspaceStore.commitDeletion(workspaceId)
 }
 
 export const applyFetchWorkspace = (
@@ -43,12 +24,4 @@ export const applyFetchWorkspace = (
   revision: number
 ): void => {
   workspaceStore.applyFetch(workspaceId, { data, revision })
-}
-
-export const applyOptimisticUpdatedWorkspace = (
-  workspaceId: string,
-  data: WorkspaceData,
-  revision: number
-): void => {
-  workspaceStore.applyOptimisticChanges(workspaceId, { data, revision })
 }

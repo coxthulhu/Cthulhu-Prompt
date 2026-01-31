@@ -14,27 +14,8 @@ export const optimisticInsertPromptFolderDraft = (draft: PromptFolderData): stri
   return promptFolderId
 }
 
-export const commitPromptFolderDraftInsert = (
-  draftId: string,
-  nextId: string,
-  data: PromptFolderData,
-  revision: number
-): void => {
-  promptFolderStore.commitDraftInsert(draftId, nextId, { data, revision })
-}
-
 export const optimisticDeletePromptFolderDraft = (promptFolderId: string): void => {
   promptFolderStore.optimisticDelete(promptFolderId)
-}
-
-export const revertPromptFolderDraftFromLastServerSnapshot = (
-  promptFolderId: string
-): void => {
-  promptFolderStore.revertDraftFromLastServerSnapshot(promptFolderId)
-}
-
-export const commitPromptFolderDeletion = (promptFolderId: string): void => {
-  promptFolderStore.commitDeletion(promptFolderId)
 }
 
 export const applyFetchPromptFolder = (
@@ -43,12 +24,4 @@ export const applyFetchPromptFolder = (
   revision: number
 ): void => {
   promptFolderStore.applyFetch(promptFolderId, { data, revision })
-}
-
-export const applyOptimisticUpdatedPromptFolder = (
-  promptFolderId: string,
-  data: PromptFolderData,
-  revision: number
-): void => {
-  promptFolderStore.applyOptimisticChanges(promptFolderId, { data, revision })
 }

@@ -23,10 +23,3 @@ export const applyFetchSystemSettings = (
 ): void => {
   systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, { data, revision })
 }
-
-export const applyOptimisticUpdatedSystemSettings = (
-  data: SystemSettings,
-  revision: number
-): void => {
-  systemSettingsStore.applyOptimisticChanges(SYSTEM_SETTINGS_KEY, { data, revision })
-}
