@@ -9,7 +9,7 @@ const systemSettingsStore = createBaseDataStore<SystemSettings>()
 
 const runtimeConfig = getRuntimeConfig()
 // Precache runtime-provided settings so the renderer has a most recent server authoritative snapshot at startup.
-systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, {
+systemSettingsStore.mergeAuthoritativeSnapshot(SYSTEM_SETTINGS_KEY, {
   data: runtimeConfig.systemSettings,
   revision: runtimeConfig.systemSettingsRevision
 })
@@ -21,7 +21,7 @@ export const applyFetchSystemSettings = (
   data: SystemSettings,
   revision: number
 ): void => {
-  systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, { data, revision })
+  systemSettingsStore.mergeAuthoritativeSnapshot(SYSTEM_SETTINGS_KEY, { data, revision })
 }
 
 export const mergeAuthoritativeSystemSettingsSnapshot = (

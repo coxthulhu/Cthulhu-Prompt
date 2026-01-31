@@ -23,7 +23,7 @@ export const applyFetchWorkspace = (
   data: WorkspaceData,
   revision: number
 ): void => {
-  workspaceStore.applyFetch(workspaceId, { data, revision })
+  workspaceStore.mergeAuthoritativeSnapshot(workspaceId, { data, revision })
 }
 
 export const mergeAuthoritativeWorkspaceSnapshot = (

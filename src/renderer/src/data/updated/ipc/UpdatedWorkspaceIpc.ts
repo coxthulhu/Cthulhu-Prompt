@@ -4,8 +4,8 @@ import type {
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
-import { applyFetchPromptFolder } from '../UpdatedPromptFolderDataStore.svelte.ts'
-import { applyFetchWorkspace } from '../UpdatedWorkspaceDataStore.svelte.ts'
+import { mergeAuthoritativePromptFolderSnapshot } from '../UpdatedPromptFolderDataStore.svelte.ts'
+import { mergeAuthoritativeWorkspaceSnapshot } from '../UpdatedWorkspaceDataStore.svelte.ts'
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
 
@@ -25,7 +25,7 @@ export const refetchWorkspaceById = (workspaceId: string): Promise<void> =>
     const result = await enqueueLoad(() =>
       ipcInvoke<WorkspaceLoadResult>('updated-load-workspace-by-id', { workspaceId })
     )
-    applyFetchWorkspace(workspaceId, result.data, result.revision)
+    mergeAuthoritativeWorkspaceSnapshot(workspaceId, result.data, result.revision)
   })
 
 export const loadWorkspaceByPath = (workspacePath: string): Promise<void> =>
@@ -36,14 +36,14 @@ export const loadWorkspaceByPath = (workspacePath: string): Promise<void> =>
       })
     )
 
-    applyFetchWorkspace(
+    mergeAuthoritativeWorkspaceSnapshot(
       result.workspace.workspaceId,
       result.workspace,
       result.workspaceRevision
     )
 
     for (const promptFolder of result.promptFolders) {
-      applyFetchPromptFolder(
+      mergeAuthoritativePromptFolderSnapshot(
         promptFolder.data.promptFolderId,
         promptFolder.data,
         promptFolder.revision

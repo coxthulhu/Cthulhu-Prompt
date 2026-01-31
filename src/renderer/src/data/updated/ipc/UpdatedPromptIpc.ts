@@ -1,7 +1,7 @@
 import type { Prompt } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
-import { applyFetchPrompt } from '../UpdatedPromptDataStore.svelte.ts'
+import { mergeAuthoritativePromptSnapshot } from '../UpdatedPromptDataStore.svelte.ts'
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
 
@@ -15,5 +15,5 @@ export const refetchPromptById = (promptId: string): Promise<void> =>
     const result = await enqueueLoad(() =>
       ipcInvoke<PromptLoadResult>('updated-load-prompt-by-id', { promptId })
     )
-    applyFetchPrompt(promptId, result.data, result.revision)
+    mergeAuthoritativePromptSnapshot(promptId, result.data, result.revision)
   })

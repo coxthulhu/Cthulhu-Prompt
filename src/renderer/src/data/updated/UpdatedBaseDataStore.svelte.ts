@@ -122,8 +122,9 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     const previousSnapshot = entry.lastServerSnapshot
 
     if (!previousSnapshot) {
-      console.error('Missing last server snapshot for merge.')
+      // Initialize from the first authoritative snapshot.
       entry.lastServerSnapshot = snapshot
+      entry.draftSnapshot = cloneData(snapshot.data)
       entries.set(id, entry)
       return
     }

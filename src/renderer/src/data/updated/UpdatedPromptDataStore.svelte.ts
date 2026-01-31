@@ -22,7 +22,7 @@ export const applyFetchPrompt = (
   data: Prompt,
   revision: number
 ): void => {
-  promptStore.applyFetch(promptId, { data, revision })
+  promptStore.mergeAuthoritativeSnapshot(promptId, { data, revision })
 }
 
 export const mergeAuthoritativePromptSnapshot = (

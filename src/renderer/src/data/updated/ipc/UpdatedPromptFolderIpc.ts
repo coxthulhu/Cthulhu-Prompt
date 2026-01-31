@@ -4,8 +4,8 @@ import type {
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
-import { applyFetchPrompt } from '../UpdatedPromptDataStore.svelte.ts'
-import { applyFetchPromptFolder } from '../UpdatedPromptFolderDataStore.svelte.ts'
+import { mergeAuthoritativePromptSnapshot } from '../UpdatedPromptDataStore.svelte.ts'
+import { mergeAuthoritativePromptFolderSnapshot } from '../UpdatedPromptFolderDataStore.svelte.ts'
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
 
@@ -26,7 +26,11 @@ export const refetchPromptFolderById = (promptFolderId: string): Promise<void> =
         promptFolderId
       })
     )
-    applyFetchPromptFolder(promptFolderId, result.data, result.revision)
+    mergeAuthoritativePromptFolderSnapshot(
+      promptFolderId,
+      result.data,
+      result.revision
+    )
   })
 
 export const loadPromptFolderInitial = (promptFolderId: string): Promise<void> =>
@@ -37,13 +41,13 @@ export const loadPromptFolderInitial = (promptFolderId: string): Promise<void> =
       })
     )
 
-    applyFetchPromptFolder(
+    mergeAuthoritativePromptFolderSnapshot(
       promptFolderId,
       result.promptFolder.data,
       result.promptFolder.revision
     )
 
     for (const prompt of result.prompts) {
-      applyFetchPrompt(prompt.data.id, prompt.data, prompt.revision)
+      mergeAuthoritativePromptSnapshot(prompt.data.id, prompt.data, prompt.revision)
     }
   })

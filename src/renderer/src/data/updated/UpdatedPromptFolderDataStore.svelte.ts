@@ -23,7 +23,7 @@ export const applyFetchPromptFolder = (
   data: PromptFolderData,
   revision: number
 ): void => {
-  promptFolderStore.applyFetch(promptFolderId, { data, revision })
+  promptFolderStore.mergeAuthoritativeSnapshot(promptFolderId, { data, revision })
 }
 
 export const mergeAuthoritativePromptFolderSnapshot = (
