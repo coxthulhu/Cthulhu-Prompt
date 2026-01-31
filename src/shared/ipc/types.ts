@@ -148,29 +148,6 @@ export type UpdatedLoadPromptByIdResult = LoadResult<{
   revision: number
 }>
 
-export interface UpdatedCreatePromptFolderRequest {
-  workspaceId: string
-  workspaceRevision: number
-  promptFolder: UpdatedPromptFolderData
-}
-
-export type UpdatedCreatePromptFolderResult = UpdatedMutationResult<{
-  workspaceRevision: number
-  promptFolderRevision: number
-}>
-
-export interface UpdatedCreatePromptRequest {
-  promptFolderId: string
-  promptFolderRevision: number
-  prompt: Prompt
-  previousPromptId: string | null
-}
-
-export type UpdatedCreatePromptResult = UpdatedMutationResult<{
-  promptRevision: number
-  promptFolderRevision: number
-}>
-
 export interface PromptResult extends WorkspaceResult {
   prompt?: Prompt
 }

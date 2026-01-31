@@ -1,33 +1,13 @@
 import type {
   Prompt,
-  UpdatedCreatePromptFolderRequest as CreatePromptFolderRequest,
-  UpdatedCreatePromptFolderResult as CreatePromptFolderResult,
-  UpdatedPromptFolderData as PromptFolderData,
-  UpdatedWorkspaceData as WorkspaceData
+  UpdatedPromptFolderData as PromptFolderData
 } from '@shared/ipc'
-import { preparePromptFolderName } from '@shared/promptFolderName'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { applyFetchPrompt } from '../UpdatedPromptDataStore.svelte.ts'
-import {
-  applyFetchPromptFolder,
-  commitPromptFolderDraftInsert,
-  getPromptFolderEntry,
-  optimisticInsertPromptFolderDraft,
-  revertPromptFolderDraftFromLastServerSnapshot
-} from '../UpdatedPromptFolderDataStore.svelte.ts'
-import {
-  applyOptimisticUpdatedWorkspace,
-  getWorkspaceEntry,
-  revertWorkspaceDraftFromLastServerSnapshot
-} from '../UpdatedWorkspaceDataStore.svelte.ts'
+import { applyFetchPromptFolder } from '../UpdatedPromptFolderDataStore.svelte.ts'
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
-import {
-  enqueueMutationApplyOptimistic,
-  type MutationOutcome
-} from '../queues/UpdatedMutationsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
-import { refetchWorkspaceById } from './UpdatedWorkspaceIpc'
 
 type PromptFolderLoadResult = {
   data: PromptFolderData
@@ -37,19 +17,6 @@ type PromptFolderLoadResult = {
 type PromptFolderInitialLoadResult = {
   promptFolder: { data: PromptFolderData; revision: number }
   prompts: Array<{ data: Prompt; revision: number }>
-}
-
-type CreatePromptFolderSnapshot = {
-  workspaceId: string
-  workspaceRevision: number
-  promptFolderId: string
-  workspaceData: WorkspaceData
-  promptFolderData: PromptFolderData
-}
-
-type CreatePromptFolderResultData = {
-  workspaceRevision: number
-  promptFolderRevision: number
 }
 
 export const refetchPromptFolderById = (promptFolderId: string): Promise<void> =>
@@ -80,84 +47,3 @@ export const loadPromptFolderInitial = (promptFolderId: string): Promise<void> =
       applyFetchPrompt(prompt.data.id, prompt.data, prompt.revision)
     }
   })
-
-export const createPromptFolder = (
-  workspaceId: string,
-  displayName: string
-): Promise<MutationOutcome<CreatePromptFolderResultData>> => {
-  const preparedName = preparePromptFolderName(displayName)
-  let promptFolderId = ''
-
-  return enqueueMutationApplyOptimistic<
-    CreatePromptFolderSnapshot,
-    CreatePromptFolderResultData
-  >(
-    {
-      optimisticMutation: () => {
-        const workspaceEntry = getWorkspaceEntry(workspaceId)!
-        const workspaceDraft =
-          workspaceEntry.draftSnapshot ?? workspaceEntry.lastServerSnapshot!.data
-        const promptFolderDraft: PromptFolderData = {
-          promptFolderId: '',
-          folderName: preparedName.folderName,
-          displayName: preparedName.displayName,
-          promptCount: 0,
-          promptIds: [],
-          folderDescription: ''
-        }
-
-        promptFolderId = optimisticInsertPromptFolderDraft(promptFolderDraft)
-        workspaceEntry.draftSnapshot = {
-          ...workspaceDraft,
-          promptFolderIds: [...workspaceDraft.promptFolderIds, promptFolderId]
-        }
-      },
-      snapshot: () => {
-        const workspaceEntry = getWorkspaceEntry(workspaceId)!
-        const promptFolderEntry = getPromptFolderEntry(promptFolderId)!
-
-        // Clone draft state so later edits don't mutate the queued snapshot.
-        return {
-          workspaceId,
-          workspaceRevision: workspaceEntry.lastServerSnapshot!.revision,
-          promptFolderId,
-          workspaceData: structuredClone(
-            workspaceEntry.draftSnapshot ?? workspaceEntry.lastServerSnapshot!.data
-          ),
-          promptFolderData: structuredClone(promptFolderEntry.draftSnapshot!)
-        }
-      },
-      run: (snapshot) =>
-        ipcInvoke<CreatePromptFolderResult, CreatePromptFolderRequest>(
-          'updated-create-prompt-folder',
-          {
-            workspaceId: snapshot.workspaceId,
-            workspaceRevision: snapshot.workspaceRevision,
-            promptFolder: snapshot.promptFolderData
-          }
-        ),
-      commitSuccess: (result, snapshot) => {
-        commitPromptFolderDraftInsert(
-          snapshot.promptFolderId,
-          snapshot.promptFolderId,
-          snapshot.promptFolderData,
-          result.data.promptFolderRevision
-        )
-        applyOptimisticUpdatedWorkspace(
-          snapshot.workspaceId,
-          snapshot.workspaceData,
-          result.data.workspaceRevision
-        )
-      },
-      rollbackConflict: () => {
-        revertPromptFolderDraftFromLastServerSnapshot(promptFolderId)
-        revertWorkspaceDraftFromLastServerSnapshot(workspaceId)
-        void refetchWorkspaceById(workspaceId)
-      },
-      rollbackError: () => {
-        revertPromptFolderDraftFromLastServerSnapshot(promptFolderId)
-        revertWorkspaceDraftFromLastServerSnapshot(workspaceId)
-      }
-    }
-  )
-}
