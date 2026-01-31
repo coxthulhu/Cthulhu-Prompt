@@ -23,3 +23,15 @@ export const applyFetchSystemSettings = (
 ): void => {
   systemSettingsStore.applyFetch(SYSTEM_SETTINGS_KEY, { data, revision })
 }
+
+export const mergeAuthoritativeSystemSettingsSnapshot = (
+  data: SystemSettings,
+  revision: number,
+  conflict = false
+): void => {
+  systemSettingsStore.mergeAuthoritativeSnapshot(
+    SYSTEM_SETTINGS_KEY,
+    { data, revision },
+    conflict
+  )
+}

@@ -24,3 +24,12 @@ export const applyFetchPrompt = (
 ): void => {
   promptStore.applyFetch(promptId, { data, revision })
 }
+
+export const mergeAuthoritativePromptSnapshot = (
+  promptId: string,
+  data: Prompt,
+  revision: number,
+  conflict = false
+): void => {
+  promptStore.mergeAuthoritativeSnapshot(promptId, { data, revision }, conflict)
+}
