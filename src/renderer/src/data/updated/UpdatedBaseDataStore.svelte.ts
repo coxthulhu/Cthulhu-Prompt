@@ -85,9 +85,11 @@ const isDeepEqual = (left: unknown, right: unknown): boolean => {
 const createEntry = <T>(
   lastServerSnapshot: Snapshot<T> | null,
   draftSnapshot: T | null
-): Entry<T> =>
+): Entry<T> => {
   // Use $state so nested snapshot updates propagate to reactive consumers.
-  $state<Entry<T>>({ lastServerSnapshot, draftSnapshot })
+  const entry = $state<Entry<T>>({ lastServerSnapshot, draftSnapshot })
+  return entry
+}
 
 export const createBaseDataStore = <T>(): BaseDataStore<T> => {
   const entries = new SvelteMap<string, Entry<T>>()
