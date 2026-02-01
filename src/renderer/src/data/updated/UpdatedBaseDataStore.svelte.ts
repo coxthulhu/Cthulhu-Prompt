@@ -87,7 +87,16 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
 
   const optimisticInsert = (draft: T, idOverride?: string): string => {
     const id = idOverride ?? crypto.randomUUID()
-    entries.set(id, createEntry(null, draft))
+    entries.set(
+      id,
+      createEntry(
+        {
+          data: cloneData(draft),
+          revision: -1
+        },
+        draft
+      )
+    )
     return id
   }
 
@@ -95,7 +104,7 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     const entry = entries.get(id)!
     entry.draftSnapshot = null
 
-    if (!entry.lastServerSnapshot) {
+    if (!entry.lastServerSnapshot || entry.lastServerSnapshot.revision === -1) {
       entries.delete(id)
     }
   }
