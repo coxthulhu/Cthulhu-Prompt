@@ -12,6 +12,7 @@ import type {
 } from '@shared/ipc/updatedTypes'
 import type { PromptFolderConfigFile, PromptFromFile } from './diskTypes'
 import { getPromptFolderLocation } from './registry'
+import { buildResponseData } from './updatedResponse'
 
 const readPromptFolderConfig = (configPath: string): PromptFolderConfigFile => {
   const fs = getFs()
@@ -81,14 +82,10 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
 
       try {
         const data = readPromptFolderData(location.workspacePath, location.folderName)
-        const clientTempId = revisions.promptFolder.getClientTempId(request.id)
 
         return {
           success: true,
-          id: request.id,
-          data,
-          revision: revisions.promptFolder.get(request.id),
-          ...(clientTempId !== undefined ? { clientTempId } : {})
+          ...buildResponseData(request.id, data, revisions.promptFolder)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -116,27 +113,13 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
           location.folderName,
           prompts.map((prompt) => prompt.id)
         )
-        const promptFolderClientTempId = revisions.promptFolder.getClientTempId(request.id)
 
         return {
           success: true,
-          promptFolder: {
-            id: request.id,
-            data,
-            revision: revisions.promptFolder.get(request.id),
-            ...(promptFolderClientTempId !== undefined
-              ? { clientTempId: promptFolderClientTempId }
-              : {})
-          },
-          prompts: prompts.map((prompt) => {
-            const clientTempId = revisions.prompt.getClientTempId(prompt.id)
-            return {
-              id: prompt.id,
-              data: toUpdatedPromptData(prompt),
-              revision: revisions.prompt.get(prompt.id),
-              ...(clientTempId !== undefined ? { clientTempId } : {})
-            }
-          })
+          promptFolder: buildResponseData(request.id, data, revisions.promptFolder),
+          prompts: prompts.map((prompt) =>
+            buildResponseData(prompt.id, toUpdatedPromptData(prompt), revisions.prompt)
+          )
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

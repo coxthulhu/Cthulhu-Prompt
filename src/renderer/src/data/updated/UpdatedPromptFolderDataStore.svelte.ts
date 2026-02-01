@@ -18,7 +18,7 @@ export const optimisticDeletePromptFolderDraft = (promptFolderId: string): void 
   promptFolderStore.optimisticDelete(promptFolderId)
 }
 
-// After rekeying, mergeAuthoritativePromptFolderSnapshot(response.id, response.data, response.revision).
+// After rekeying, mergeAuthoritativePromptFolderSnapshot(response).
 export const rekeyPromptFolderEntry = (
   response: ResponseData<PromptFolderData>,
   rewriteReferences: (oldPromptFolderId: string, newPromptFolderId: string) => void
@@ -27,16 +27,13 @@ export const rekeyPromptFolderEntry = (
 }
 
 export const mergeAuthoritativePromptFolderSnapshot = (
-  promptFolderId: string,
-  data: PromptFolderData,
-  revision: number,
-  conflict = false,
-  clientTempId?: string
+  response: ResponseData<PromptFolderData>,
+  conflict = false
 ): void => {
   promptFolderStore.mergeAuthoritativeSnapshot(
-    promptFolderId,
-    { data, revision },
+    response.id,
+    { data: response.data, revision: response.revision },
     conflict,
-    clientTempId
+    response.clientTempId
   )
 }

@@ -15,7 +15,7 @@ export const optimisticDeleteWorkspaceDraft = (workspaceId: string): void => {
   workspaceStore.optimisticDelete(workspaceId)
 }
 
-// After rekeying, mergeAuthoritativeWorkspaceSnapshot(response.id, response.data, response.revision).
+// After rekeying, mergeAuthoritativeWorkspaceSnapshot(response).
 export const rekeyWorkspaceEntry = (
   response: ResponseData<WorkspaceData>,
   rewriteReferences: (oldWorkspaceId: string, newWorkspaceId: string) => void
@@ -24,16 +24,13 @@ export const rekeyWorkspaceEntry = (
 }
 
 export const mergeAuthoritativeWorkspaceSnapshot = (
-  workspaceId: string,
-  data: WorkspaceData,
-  revision: number,
-  conflict = false,
-  clientTempId?: string
+  response: ResponseData<WorkspaceData>,
+  conflict = false
 ): void => {
   workspaceStore.mergeAuthoritativeSnapshot(
-    workspaceId,
-    { data, revision },
+    response.id,
+    { data: response.data, revision: response.revision },
     conflict,
-    clientTempId
+    response.clientTempId
   )
 }

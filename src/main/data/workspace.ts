@@ -3,6 +3,7 @@ import * as path from 'path'
 import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
 import type {
+  ResponseData,
   UpdatedLoadWorkspaceByIdRequest,
   UpdatedLoadWorkspaceByIdResult,
   UpdatedLoadWorkspaceByPathRequest,
@@ -23,6 +24,7 @@ import {
   registerWorkspace,
   resetRegistry
 } from './registry'
+import { buildResponseData } from './updatedResponse'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 
@@ -101,14 +103,9 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
           workspacePath,
           promptFolderIds
         }
-        const clientTempId = revisions.workspace.getClientTempId(request.id)
-
         return {
           success: true,
-          id: request.id,
-          data: workspace,
-          revision: revisions.workspace.get(request.id),
-          ...(clientTempId !== undefined ? { clientTempId } : {})
+          ...buildResponseData(request.id, workspace, revisions.workspace)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -130,12 +127,7 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
         resetRegistry()
         registerWorkspace(workspaceId, request.workspacePath)
 
-        const promptFolderSnapshots: Array<{
-          id: string
-          data: UpdatedPromptFolderData
-          revision: number
-          clientTempId?: string
-        }> = []
+        const promptFolderSnapshots: Array<ResponseData<UpdatedPromptFolderData>> = []
         const promptFolderIds: string[] = []
 
         for (const folder of readPromptFolders(request.workspacePath)) {
@@ -153,36 +145,19 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
             registerPrompt(prompt.id, request.workspacePath, folder.folderName)
           }
 
-          const promptFolderClientTempId = revisions.promptFolder.getClientTempId(
-            folder.config.promptFolderId
+          promptFolderSnapshots.push(
+            buildResponseData(folder.config.promptFolderId, data, revisions.promptFolder)
           )
-
-          promptFolderSnapshots.push({
-            id: folder.config.promptFolderId,
-            data,
-            revision: revisions.promptFolder.get(folder.config.promptFolderId),
-            ...(promptFolderClientTempId !== undefined
-              ? { clientTempId: promptFolderClientTempId }
-              : {})
-          })
         }
 
         const workspace: UpdatedWorkspaceData = {
           workspacePath: request.workspacePath,
           promptFolderIds
         }
-        const workspaceClientTempId = revisions.workspace.getClientTempId(workspaceId)
 
         return {
           success: true,
-          workspace: {
-            id: workspaceId,
-            data: workspace,
-            revision: revisions.workspace.get(workspaceId),
-            ...(workspaceClientTempId !== undefined
-              ? { clientTempId: workspaceClientTempId }
-              : {})
-          },
+          workspace: buildResponseData(workspaceId, workspace, revisions.workspace),
           promptFolders: promptFolderSnapshots
         }
       } catch (error) {

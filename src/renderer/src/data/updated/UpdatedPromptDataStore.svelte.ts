@@ -14,7 +14,7 @@ export const optimisticDeletePromptDraft = (promptId: string): void => {
   promptStore.optimisticDelete(promptId)
 }
 
-// After rekeying, mergeAuthoritativePromptSnapshot(response.id, response.data, response.revision).
+// After rekeying, mergeAuthoritativePromptSnapshot(response).
 export const rekeyPromptEntry = (
   response: ResponseData<PromptData>,
   rewriteReferences: (oldPromptId: string, newPromptId: string) => void
@@ -23,16 +23,13 @@ export const rekeyPromptEntry = (
 }
 
 export const mergeAuthoritativePromptSnapshot = (
-  promptId: string,
-  data: PromptData,
-  revision: number,
-  conflict = false,
-  clientTempId?: string
+  response: ResponseData<PromptData>,
+  conflict = false
 ): void => {
   promptStore.mergeAuthoritativeSnapshot(
-    promptId,
-    { data, revision },
+    response.id,
+    { data: response.data, revision: response.revision },
     conflict,
-    clientTempId
+    response.clientTempId
   )
 }

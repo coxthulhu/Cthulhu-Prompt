@@ -9,6 +9,7 @@ import type {
 } from '@shared/ipc/updatedTypes'
 import type { PromptFromFile } from './diskTypes'
 import { getPromptLocation } from './registry'
+import { buildResponseData } from './updatedResponse'
 
 export const setupUpdatedPromptHandlers = (): void => {
   ipcMain.handle(
@@ -41,14 +42,10 @@ export const setupUpdatedPromptHandlers = (): void => {
         }
 
         const { id: _id, ...data } = prompt
-        const clientTempId = revisions.prompt.getClientTempId(request.id)
 
         return {
           success: true,
-          id: request.id,
-          data: data as UpdatedPromptData,
-          revision: revisions.prompt.get(request.id),
-          ...(clientTempId !== undefined ? { clientTempId } : {})
+          ...buildResponseData(request.id, data as UpdatedPromptData, revisions.prompt)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
