@@ -28,10 +28,27 @@ export type RevisionDataResult<TData> =
   | { success: false; conflict: true; data: TData; revision: number }
   | { success: false; error: string; conflict?: false }
 
-export type UpdatedMutationResult<TData> =
-  | { success: true; data: TData }
-  | { success: false; conflict: true; data: TData }
-  | { success: false; error: string; conflict?: false }
+// Mutation IPC wrappers for request/response payloads.
+export type UpdatedMutationRequest<TPayload> = {
+  requestId: string
+  payload: TPayload
+}
+
+export type DataInput<TData> = {
+  data: TData
+  expectedRevision: number | null
+}
+
+export type DataOutput<TData> = {
+  data: TData
+  clientTempId?: string
+  serverGeneratedId?: string
+}
+
+export type UpdatedMutationResult<TPayload> =
+  | { requestId: string; success: true; payload: TPayload }
+  | { requestId: string; success: false; conflict: true; payload: TPayload }
+  | { requestId: string; success: false; error: string; conflict?: false }
 
 export type LoadResult<TSuccess> =
   | ({ success: true } & TSuccess)
