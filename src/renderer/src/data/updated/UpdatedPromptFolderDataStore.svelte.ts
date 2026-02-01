@@ -1,4 +1,4 @@
-import type { UpdatedPromptFolderData as PromptFolderData } from '@shared/ipc'
+import type { UpdatedPromptFolderData as PromptFolderData } from '@shared/ipc/updatedTypes'
 
 import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 

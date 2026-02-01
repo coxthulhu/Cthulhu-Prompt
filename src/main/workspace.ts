@@ -17,7 +17,7 @@ import type {
   WorkspaceData as SharedWorkspaceData,
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
-import { createPromptFolderConfig } from '@shared/promptFolderConfig'
+import { createPromptFolderConfig, type WorkspaceInfoFile } from './data/diskTypes'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 
@@ -39,7 +39,7 @@ const readWorkspaceId = (workspacePath: string): string | null => {
     const fs = getFs()
     const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
     const content = fs.readFileSync(settingsPath, 'utf8')
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(content) as WorkspaceInfoFile
     return typeof parsed?.workspaceId === 'string' ? parsed.workspaceId : null
   } catch {
     return null

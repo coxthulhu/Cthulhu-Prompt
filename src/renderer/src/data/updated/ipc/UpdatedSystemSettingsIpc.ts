@@ -1,4 +1,4 @@
-import type { SystemSettings } from '@shared/ipc'
+import type { UpdatedSystemSettings } from '@shared/ipc/updatedTypes'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { mergeAuthoritativeSystemSettingsSnapshot } from '../UpdatedSystemSettingsStore.svelte.ts'
@@ -6,7 +6,7 @@ import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
 
 type SystemSettingsLoadResult = {
-  data: SystemSettings
+  data: UpdatedSystemSettings
   revision: number
 }
 

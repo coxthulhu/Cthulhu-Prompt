@@ -3,15 +3,18 @@ import * as path from 'path'
 import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
 import type {
-  Prompt,
   UpdatedLoadWorkspaceByIdRequest,
   UpdatedLoadWorkspaceByIdResult,
   UpdatedLoadWorkspaceByPathRequest,
   UpdatedLoadWorkspaceByPathResult,
   UpdatedPromptFolderData,
   UpdatedWorkspaceData
-} from '@shared/ipc'
-import type { PromptFolderConfig } from '@shared/promptFolderConfig'
+} from '@shared/ipc/updatedTypes'
+import type {
+  PromptFolderConfigFile,
+  PromptFromFile,
+  WorkspaceInfoFile
+} from './diskTypes'
 import { buildPromptFolderData } from './promptFolder'
 import {
   getWorkspacePath,
@@ -26,25 +29,23 @@ const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const readWorkspaceId = (workspacePath: string): string => {
   const fs = getFs()
   const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
-  const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
-    workspaceId?: string
-  }
+  const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as WorkspaceInfoFile
 
-  if (!parsed.workspaceId) {
+  if (!parsed?.workspaceId) {
     throw new Error('Invalid workspace info')
   }
 
   return parsed.workspaceId
 }
 
-const readPromptFolderConfig = (configPath: string): PromptFolderConfig => {
+const readPromptFolderConfig = (configPath: string): PromptFolderConfigFile => {
   const fs = getFs()
-  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as PromptFolderConfig
+  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as PromptFolderConfigFile
 }
 
 const readPromptFolders = (
   workspacePath: string
-): Array<{ folderName: string; config: PromptFolderConfig }> => {
+): Array<{ folderName: string; config: PromptFolderConfigFile }> => {
   const fs = getFs()
   const promptsPath = path.join(workspacePath, 'Prompts')
 
@@ -53,7 +54,7 @@ const readPromptFolders = (
   }
 
   const entries = fs.readdirSync(promptsPath, { withFileTypes: true })
-  const folders: Array<{ folderName: string; config: PromptFolderConfig }> = []
+  const folders: Array<{ folderName: string; config: PromptFolderConfigFile }> = []
 
   for (const entry of entries) {
     if (!entry.isDirectory()) {
@@ -72,11 +73,14 @@ const readPromptFolders = (
 const readPromptFolderIds = (workspacePath: string): string[] =>
   readPromptFolders(workspacePath).map((folder) => folder.config.promptFolderId)
 
-const readPromptFolderPrompts = (workspacePath: string, folderName: string): Prompt[] => {
+const readPromptFolderPrompts = (
+  workspacePath: string,
+  folderName: string
+): PromptFromFile[] => {
   const fs = getFs()
   const promptsPath = path.join(workspacePath, 'Prompts', folderName, 'Prompts.json')
   const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
-    prompts?: Prompt[]
+    prompts?: PromptFromFile[]
   }
   return parsed.prompts ?? []
 }

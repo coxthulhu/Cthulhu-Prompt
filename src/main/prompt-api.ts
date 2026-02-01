@@ -11,21 +11,16 @@ import type {
   PromptResult as SharedPromptResult,
   WorkspaceResult as SharedWorkspaceResult
 } from '@shared/ipc'
-import { createPromptFolderConfig, type PromptFolderConfig } from '@shared/promptFolderConfig'
+import {
+  createPromptFolderConfig,
+  type PromptFolderConfigFile,
+  type PromptsFile
+} from './data/diskTypes'
 
 export type Prompt = SharedPrompt
 export type PromptResult = SharedPromptResult
 export type LoadPromptsResult = SharedLoadPromptsResult
 export type WorkspaceResult = SharedWorkspaceResult
-
-export interface PromptsFileMetadata {
-  schemaVersion: number
-}
-
-export interface PromptsFile {
-  metadata: PromptsFileMetadata
-  prompts: Prompt[]
-}
 
 export interface CreatePromptRequest {
   workspacePath: string
@@ -137,7 +132,7 @@ export class PromptAPI {
   private static readPromptFolderConfig(
     filePath: string,
     fallbackName: string
-  ): PromptFolderConfig {
+  ): PromptFolderConfigFile {
     const fs = getFs()
     if (!fs.existsSync(filePath)) {
       const config = createPromptFolderConfig(fallbackName, 0, randomUUID())
@@ -146,10 +141,13 @@ export class PromptAPI {
     }
 
     const content = fs.readFileSync(filePath, 'utf8')
-    return JSON.parse(content) as PromptFolderConfig
+    return JSON.parse(content) as PromptFolderConfigFile
   }
 
-  private static writePromptFolderConfig(filePath: string, data: PromptFolderConfig): void {
+  private static writePromptFolderConfig(
+    filePath: string,
+    data: PromptFolderConfigFile
+  ): void {
     const fs = getFs()
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
   }

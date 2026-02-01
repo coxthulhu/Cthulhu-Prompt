@@ -2,13 +2,14 @@ import { app, ipcMain } from 'electron'
 import * as path from 'path'
 import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
-import type { SystemSettings } from '@shared/ipc'
+import type { UpdatedSystemSettings } from '@shared/ipc/updatedTypes'
 import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
+import type { SystemSettingsFile } from './diskTypes'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 
 type UpdatedLoadSystemSettingsResult =
-  | { success: true; data: SystemSettings; revision: number }
+  | { success: true; data: UpdatedSystemSettings; revision: number }
   | { success: false; error: string }
 
 export const setupUpdatedSystemSettingsHandlers = (): void => {
@@ -18,8 +19,8 @@ export const setupUpdatedSystemSettingsHandlers = (): void => {
       try {
         const fs = getFs()
         const settingsPath = path.join(app.getPath('userData'), SYSTEM_SETTINGS_FILENAME)
-        const settings = fs.existsSync(settingsPath)
-          ? (JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as SystemSettings)
+        const settings: UpdatedSystemSettings = fs.existsSync(settingsPath)
+          ? (JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as SystemSettingsFile)
           : DEFAULT_SYSTEM_SETTINGS
 
         return {

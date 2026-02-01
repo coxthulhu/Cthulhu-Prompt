@@ -3,20 +3,19 @@ import * as path from 'path'
 import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
 import type {
-  Prompt,
   UpdatedLoadPromptFolderByIdRequest,
   UpdatedLoadPromptFolderByIdResult,
   UpdatedLoadPromptFolderInitialRequest,
   UpdatedLoadPromptFolderInitialResult,
   UpdatedPromptData,
   UpdatedPromptFolderData
-} from '@shared/ipc'
-import type { PromptFolderConfig } from '@shared/promptFolderConfig'
+} from '@shared/ipc/updatedTypes'
+import type { PromptFolderConfigFile, PromptFromFile } from './diskTypes'
 import { getPromptFolderLocation } from './registry'
 
-const readPromptFolderConfig = (configPath: string): PromptFolderConfig => {
+const readPromptFolderConfig = (configPath: string): PromptFolderConfigFile => {
   const fs = getFs()
-  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as PromptFolderConfig
+  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as PromptFolderConfigFile
 }
 
 const readPromptFolderData = (
@@ -40,7 +39,7 @@ const readPromptFolderData = (
 
 export const buildPromptFolderData = (
   folderName: string,
-  config: PromptFolderConfig,
+  config: PromptFolderConfigFile,
   promptIds: string[]
 ): UpdatedPromptFolderData => ({
   folderName,
@@ -50,16 +49,19 @@ export const buildPromptFolderData = (
   folderDescription: config.folderDescription
 })
 
-const readPromptFolderPrompts = (workspacePath: string, folderName: string): Prompt[] => {
+const readPromptFolderPrompts = (
+  workspacePath: string,
+  folderName: string
+): PromptFromFile[] => {
   const fs = getFs()
   const promptsPath = path.join(workspacePath, 'Prompts', folderName, 'Prompts.json')
   const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
-    prompts?: Prompt[]
+    prompts?: PromptFromFile[]
   }
   return parsed.prompts ?? []
 }
 
-const toUpdatedPromptData = (prompt: Prompt): UpdatedPromptData => {
+const toUpdatedPromptData = (prompt: PromptFromFile): UpdatedPromptData => {
   const { id: _id, ...data } = prompt
   return data
 }

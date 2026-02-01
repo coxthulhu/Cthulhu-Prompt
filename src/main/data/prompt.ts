@@ -3,11 +3,11 @@ import * as path from 'path'
 import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
 import type {
-  Prompt,
-  UpdatedPromptData,
   UpdatedLoadPromptByIdRequest,
-  UpdatedLoadPromptByIdResult
-} from '@shared/ipc'
+  UpdatedLoadPromptByIdResult,
+  UpdatedPromptData
+} from '@shared/ipc/updatedTypes'
+import type { PromptFromFile } from './diskTypes'
 import { getPromptLocation } from './registry'
 
 export const setupUpdatedPromptHandlers = (): void => {
@@ -32,7 +32,7 @@ export const setupUpdatedPromptHandlers = (): void => {
           'Prompts.json'
         )
         const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
-          prompts?: Prompt[]
+          prompts?: PromptFromFile[]
         }
         const prompt = parsed.prompts?.find((item) => item.id === request.id)
 

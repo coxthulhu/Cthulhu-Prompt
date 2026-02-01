@@ -2,7 +2,7 @@ import type {
   ResponseData,
   UpdatedPromptFolderData as PromptFolderData,
   UpdatedWorkspaceData as WorkspaceData
-} from '@shared/ipc'
+} from '@shared/ipc/updatedTypes'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { mergeAuthoritativePromptFolderSnapshot } from '../UpdatedPromptFolderDataStore.svelte.ts'

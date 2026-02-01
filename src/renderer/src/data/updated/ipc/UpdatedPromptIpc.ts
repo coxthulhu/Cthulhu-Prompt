@@ -1,4 +1,7 @@
-import type { ResponseData, UpdatedPromptData as PromptData } from '@shared/ipc'
+import type {
+  ResponseData,
+  UpdatedPromptData as PromptData
+} from '@shared/ipc/updatedTypes'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 
 import { mergeAuthoritativePromptSnapshot } from '../UpdatedPromptDataStore.svelte.ts'

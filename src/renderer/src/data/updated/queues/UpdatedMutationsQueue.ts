@@ -1,4 +1,4 @@
-import type { UpdatedMutationResult as MutationResult } from '@shared/ipc'
+import type { UpdatedMutationResult as MutationResult } from '@shared/ipc/updatedTypes'
 
 import { enqueueGlobalMessage } from './UpdatedGlobalQueue'
 

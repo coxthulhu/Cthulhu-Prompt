@@ -5,7 +5,7 @@ import {
   VIRTUAL_FIND_MARKER,
   virtualFindPromptId
 } from '../helpers/VirtualFindTestConstants'
-import { createPromptFolderConfig } from '../../src/shared/promptFolderConfig'
+import { createPromptFolderConfig } from '../../src/main/data/diskTypes'
 
 /**
  * Configuration for creating a prompt folder

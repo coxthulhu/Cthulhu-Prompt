@@ -9,6 +9,7 @@ import type {
   UpdateSystemSettingsResult
 } from '@shared/ipc'
 import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/systemSettings'
+import type { SystemSettingsFile } from './data/diskTypes'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 
@@ -40,8 +41,9 @@ const readSystemSettingsPayload = (): {
 
   try {
     const content = fs.readFileSync(settingsPath, 'utf8')
-    const parsed = JSON.parse(content)
-    const payload = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
+    const parsed = JSON.parse(content) as SystemSettingsFile
+    const payload =
+      parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
 
     return {
       payload,
