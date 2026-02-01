@@ -91,3 +91,21 @@ export type UpdatedLoadPromptFolderInitialResult = UpdatedLoadResult<{
 export type UpdatedLoadPromptByIdRequest = ReadRequestData
 
 export type UpdatedLoadPromptByIdResult = UpdatedLoadResult<ResponseData<UpdatedPromptData>>
+
+export type UpdatedCreatePromptFolderData = {
+  workspaceId: string
+  displayName: string
+  clientTempId: string
+}
+
+export type UpdatedCreatePromptFolderRequest = MutationRequestWrapper<
+  MutationRequestData<UpdatedCreatePromptFolderData>
+>
+
+export type UpdatedCreatePromptFolderPayload = {
+  workspace: ResponseData<UpdatedWorkspaceData>
+  promptFolder?: ResponseData<UpdatedPromptFolderData>
+}
+
+export type UpdatedCreatePromptFolderResult =
+  UpdatedMutationResult<UpdatedCreatePromptFolderPayload>
