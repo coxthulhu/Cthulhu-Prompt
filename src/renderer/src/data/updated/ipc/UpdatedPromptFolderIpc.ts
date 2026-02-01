@@ -27,7 +27,9 @@ export const refetchPromptFolderById = (promptFolderId: string): Promise<void> =
     mergeAuthoritativePromptFolderSnapshot(
       result.id,
       result.data,
-      result.revision
+      result.revision,
+      false,
+      result.clientTempId
     )
   })
 
@@ -42,10 +44,18 @@ export const loadPromptFolderInitial = (promptFolderId: string): Promise<void> =
     mergeAuthoritativePromptFolderSnapshot(
       result.promptFolder.id,
       result.promptFolder.data,
-      result.promptFolder.revision
+      result.promptFolder.revision,
+      false,
+      result.promptFolder.clientTempId
     )
 
     for (const prompt of result.prompts) {
-      mergeAuthoritativePromptSnapshot(prompt.id, prompt.data, prompt.revision)
+      mergeAuthoritativePromptSnapshot(
+        prompt.id,
+        prompt.data,
+        prompt.revision,
+        false,
+        prompt.clientTempId
+      )
     }
   })

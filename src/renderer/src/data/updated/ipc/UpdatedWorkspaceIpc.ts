@@ -22,7 +22,13 @@ export const refetchWorkspaceById = (workspaceId: string): Promise<void> =>
     const result = await enqueueLoad(() =>
       ipcInvoke<WorkspaceLoadResult>('updated-load-workspace-by-id', { id: workspaceId })
     )
-    mergeAuthoritativeWorkspaceSnapshot(result.id, result.data, result.revision)
+    mergeAuthoritativeWorkspaceSnapshot(
+      result.id,
+      result.data,
+      result.revision,
+      false,
+      result.clientTempId
+    )
   })
 
 export const loadWorkspaceByPath = (workspacePath: string): Promise<void> =>
@@ -36,14 +42,18 @@ export const loadWorkspaceByPath = (workspacePath: string): Promise<void> =>
     mergeAuthoritativeWorkspaceSnapshot(
       result.workspace.id,
       result.workspace.data,
-      result.workspace.revision
+      result.workspace.revision,
+      false,
+      result.workspace.clientTempId
     )
 
     for (const promptFolder of result.promptFolders) {
       mergeAuthoritativePromptFolderSnapshot(
         promptFolder.id,
         promptFolder.data,
-        promptFolder.revision
+        promptFolder.revision,
+        false,
+        promptFolder.clientTempId
       )
     }
   })

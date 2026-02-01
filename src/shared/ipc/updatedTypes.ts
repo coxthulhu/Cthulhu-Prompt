@@ -11,6 +11,7 @@ export type MutationRequestWrapper<TPayload> = {
 }
 
 export type MutationRequestData<TData> = {
+  // TODO: Create mutations should include clientTempId so the server can store it with revisions.
   data: TData
   expectedRevision: number | null
 }

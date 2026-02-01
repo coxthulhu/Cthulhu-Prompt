@@ -30,11 +30,13 @@ export const mergeAuthoritativePromptFolderSnapshot = (
   promptFolderId: string,
   data: PromptFolderData,
   revision: number,
-  conflict = false
+  conflict = false,
+  clientTempId?: string
 ): void => {
   promptFolderStore.mergeAuthoritativeSnapshot(
     promptFolderId,
     { data, revision },
-    conflict
+    conflict,
+    clientTempId
   )
 }

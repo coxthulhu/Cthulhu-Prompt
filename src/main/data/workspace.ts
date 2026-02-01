@@ -101,12 +101,14 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
           workspacePath,
           promptFolderIds
         }
+        const clientTempId = revisions.workspace.getClientTempId(request.id)
 
         return {
           success: true,
           id: request.id,
           data: workspace,
-          revision: revisions.workspace.get(request.id)
+          revision: revisions.workspace.get(request.id),
+          ...(clientTempId !== undefined ? { clientTempId } : {})
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -132,6 +134,7 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
           id: string
           data: UpdatedPromptFolderData
           revision: number
+          clientTempId?: string
         }> = []
         const promptFolderIds: string[] = []
 
@@ -150,10 +153,17 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
             registerPrompt(prompt.id, request.workspacePath, folder.folderName)
           }
 
+          const promptFolderClientTempId = revisions.promptFolder.getClientTempId(
+            folder.config.promptFolderId
+          )
+
           promptFolderSnapshots.push({
             id: folder.config.promptFolderId,
             data,
-            revision: revisions.promptFolder.get(folder.config.promptFolderId)
+            revision: revisions.promptFolder.get(folder.config.promptFolderId),
+            ...(promptFolderClientTempId !== undefined
+              ? { clientTempId: promptFolderClientTempId }
+              : {})
           })
         }
 
@@ -161,13 +171,17 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
           workspacePath: request.workspacePath,
           promptFolderIds
         }
+        const workspaceClientTempId = revisions.workspace.getClientTempId(workspaceId)
 
         return {
           success: true,
           workspace: {
             id: workspaceId,
             data: workspace,
-            revision: revisions.workspace.get(workspaceId)
+            revision: revisions.workspace.get(workspaceId),
+            ...(workspaceClientTempId !== undefined
+              ? { clientTempId: workspaceClientTempId }
+              : {})
           },
           promptFolders: promptFolderSnapshots
         }

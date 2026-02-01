@@ -20,7 +20,12 @@ export type BaseDataStore<T> = {
     newId: string,
     rewriteReferences: (oldId: string, newId: string) => void
   ) => void
-  mergeAuthoritativeSnapshot: (id: string, snapshot: Snapshot<T>, conflict?: boolean) => void
+  mergeAuthoritativeSnapshot: (
+    id: string,
+    snapshot: Snapshot<T>,
+    conflict?: boolean,
+    clientTempId?: string
+  ) => void
 }
 
 const cloneData = <T>(data: T): T => structuredClone(data)
@@ -135,16 +140,30 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
   const mergeAuthoritativeSnapshot = (
     id: string,
     snapshot: Snapshot<T>,
-    conflict = false
+    conflict = false,
+    clientTempId?: string
   ): void => {
-    const entry = entries.get(id) ?? createEntry<T>(null, null)
+    let entryKey = id
+    let entry = entries.get(id) ?? null
+
+    if (!entry && clientTempId) {
+      const fallbackEntry = entries.get(clientTempId) ?? null
+      if (fallbackEntry) {
+        entry = fallbackEntry
+        entryKey = clientTempId
+      }
+    }
+
+    if (!entry) {
+      entry = createEntry<T>(null, null)
+    }
     const previousSnapshot = entry.lastServerSnapshot
 
     if (!previousSnapshot) {
       // Initialize from the first authoritative snapshot.
       entry.lastServerSnapshot = snapshot
       entry.draftSnapshot = cloneData(snapshot.data)
-      entries.set(id, entry)
+      entries.set(entryKey, entry)
       return
     }
 
@@ -154,7 +173,7 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
 
     if (!entry.draftSnapshot) {
       entry.lastServerSnapshot = snapshot
-      entries.set(id, entry)
+      entries.set(entryKey, entry)
       return
     }
 
@@ -170,7 +189,7 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     }
 
     entry.lastServerSnapshot = snapshot
-    entries.set(id, entry)
+    entries.set(entryKey, entry)
   }
 
   return {

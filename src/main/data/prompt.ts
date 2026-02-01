@@ -41,12 +41,14 @@ export const setupUpdatedPromptHandlers = (): void => {
         }
 
         const { id: _id, ...data } = prompt
+        const clientTempId = revisions.prompt.getClientTempId(request.id)
 
         return {
           success: true,
           id: request.id,
           data: data as UpdatedPromptData,
-          revision: revisions.prompt.get(request.id)
+          revision: revisions.prompt.get(request.id),
+          ...(clientTempId !== undefined ? { clientTempId } : {})
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

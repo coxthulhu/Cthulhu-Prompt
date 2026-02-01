@@ -27,7 +27,13 @@ export const mergeAuthoritativeWorkspaceSnapshot = (
   workspaceId: string,
   data: WorkspaceData,
   revision: number,
-  conflict = false
+  conflict = false,
+  clientTempId?: string
 ): void => {
-  workspaceStore.mergeAuthoritativeSnapshot(workspaceId, { data, revision }, conflict)
+  workspaceStore.mergeAuthoritativeSnapshot(
+    workspaceId,
+    { data, revision },
+    conflict,
+    clientTempId
+  )
 }

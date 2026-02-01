@@ -26,7 +26,13 @@ export const mergeAuthoritativePromptSnapshot = (
   promptId: string,
   data: PromptData,
   revision: number,
-  conflict = false
+  conflict = false,
+  clientTempId?: string
 ): void => {
-  promptStore.mergeAuthoritativeSnapshot(promptId, { data, revision }, conflict)
+  promptStore.mergeAuthoritativeSnapshot(
+    promptId,
+    { data, revision },
+    conflict,
+    clientTempId
+  )
 }

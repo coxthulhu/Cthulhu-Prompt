@@ -15,5 +15,11 @@ export const refetchPromptById = (promptId: string): Promise<void> =>
     const result = await enqueueLoad(() =>
       ipcInvoke<PromptLoadResult>('updated-load-prompt-by-id', { id: promptId })
     )
-    mergeAuthoritativePromptSnapshot(result.id, result.data, result.revision)
+    mergeAuthoritativePromptSnapshot(
+      result.id,
+      result.data,
+      result.revision,
+      false,
+      result.clientTempId
+    )
   })
