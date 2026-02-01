@@ -17,14 +17,6 @@ export const optimisticDeletePromptFolderDraft = (promptFolderId: string): void 
   promptFolderStore.optimisticDelete(promptFolderId)
 }
 
-export const applyFetchPromptFolder = (
-  promptFolderId: string,
-  data: PromptFolderData,
-  revision: number
-): void => {
-  promptFolderStore.mergeAuthoritativeSnapshot(promptFolderId, { data, revision })
-}
-
 export const mergeAuthoritativePromptFolderSnapshot = (
   promptFolderId: string,
   data: PromptFolderData,

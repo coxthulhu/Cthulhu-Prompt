@@ -15,7 +15,6 @@ export type BaseDataStore<T> = {
   getEntry: (id: string) => Entry<T> | null
   optimisticInsert: (draft: T, idOverride?: string) => string
   optimisticDelete: (id: string) => void
-  applyFetch: (id: string, lastServerSnapshot: Snapshot<T>) => void
   mergeAuthoritativeSnapshot: (id: string, snapshot: Snapshot<T>, conflict?: boolean) => void
 }
 
@@ -109,19 +108,6 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     }
   }
 
-  const applyFetch = (id: string, lastServerSnapshot: Snapshot<T>): void => {
-    const entry = entries.get(id) ?? createEntry<T>(null, null)
-    const previousRevision = entry.lastServerSnapshot?.revision ?? null
-
-    entry.lastServerSnapshot = lastServerSnapshot
-
-    if (previousRevision !== lastServerSnapshot.revision) {
-      entry.draftSnapshot = cloneData(lastServerSnapshot.data)
-    }
-
-    entries.set(id, entry)
-  }
-
   const mergeAuthoritativeSnapshot = (
     id: string,
     snapshot: Snapshot<T>,
@@ -168,7 +154,6 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     getEntry,
     optimisticInsert,
     optimisticDelete,
-    applyFetch,
     mergeAuthoritativeSnapshot
   }
 }

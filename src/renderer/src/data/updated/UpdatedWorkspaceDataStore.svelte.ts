@@ -17,14 +17,6 @@ export const optimisticDeleteWorkspaceDraft = (workspaceId: string): void => {
   workspaceStore.optimisticDelete(workspaceId)
 }
 
-export const applyFetchWorkspace = (
-  workspaceId: string,
-  data: WorkspaceData,
-  revision: number
-): void => {
-  workspaceStore.mergeAuthoritativeSnapshot(workspaceId, { data, revision })
-}
-
 export const mergeAuthoritativeWorkspaceSnapshot = (
   workspaceId: string,
   data: WorkspaceData,

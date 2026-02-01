@@ -17,13 +17,6 @@ systemSettingsStore.mergeAuthoritativeSnapshot(SYSTEM_SETTINGS_KEY, {
 export const getSystemSettingsEntry = () =>
   systemSettingsStore.getEntry(SYSTEM_SETTINGS_KEY)
 
-export const applyFetchSystemSettings = (
-  data: UpdatedSystemSettings,
-  revision: number
-): void => {
-  systemSettingsStore.mergeAuthoritativeSnapshot(SYSTEM_SETTINGS_KEY, { data, revision })
-}
-
 export const mergeAuthoritativeSystemSettingsSnapshot = (
   data: UpdatedSystemSettings,
   revision: number,

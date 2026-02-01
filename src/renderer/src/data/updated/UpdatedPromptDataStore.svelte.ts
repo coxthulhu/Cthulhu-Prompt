@@ -16,14 +16,6 @@ export const optimisticDeletePromptDraft = (promptId: string): void => {
   promptStore.optimisticDelete(promptId)
 }
 
-export const applyFetchPrompt = (
-  promptId: string,
-  data: PromptData,
-  revision: number
-): void => {
-  promptStore.mergeAuthoritativeSnapshot(promptId, { data, revision })
-}
-
 export const mergeAuthoritativePromptSnapshot = (
   promptId: string,
   data: PromptData,
