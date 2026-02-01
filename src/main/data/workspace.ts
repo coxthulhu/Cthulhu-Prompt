@@ -85,7 +85,7 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
   ipcMain.handle(
     'updated-load-workspace-by-id',
     async (_, request: UpdatedLoadWorkspaceByIdRequest): Promise<UpdatedLoadWorkspaceByIdResult> => {
-      const workspacePath = getWorkspacePath(request.workspaceId)
+      const workspacePath = getWorkspacePath(request.id)
 
       if (!workspacePath) {
         return { success: false, error: 'Workspace not registered' }
@@ -94,15 +94,15 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
       try {
         const promptFolderIds = readPromptFolderIds(workspacePath)
         const workspace: UpdatedWorkspaceData = {
-          workspaceId: request.workspaceId,
           workspacePath,
           promptFolderIds
         }
 
         return {
           success: true,
+          id: request.id,
           data: workspace,
-          revision: revisions.workspace.get(request.workspaceId)
+          revision: revisions.workspace.get(request.id)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -124,36 +124,47 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
         resetRegistry()
         registerWorkspace(workspaceId, request.workspacePath)
 
-        const promptFolderSnapshots: Array<{ data: UpdatedPromptFolderData; revision: number }> = []
+        const promptFolderSnapshots: Array<{
+          id: string
+          data: UpdatedPromptFolderData
+          revision: number
+        }> = []
         const promptFolderIds: string[] = []
 
         for (const folder of readPromptFolders(request.workspacePath)) {
           const prompts = readPromptFolderPrompts(request.workspacePath, folder.folderName)
           const promptIds = prompts.map((prompt) => prompt.id)
           const data = buildPromptFolderData(folder.folderName, folder.config, promptIds)
-          promptFolderIds.push(data.promptFolderId)
-          registerPromptFolder(data.promptFolderId, request.workspacePath, folder.folderName)
+          promptFolderIds.push(folder.config.promptFolderId)
+          registerPromptFolder(
+            folder.config.promptFolderId,
+            request.workspacePath,
+            folder.folderName
+          )
 
           for (const prompt of prompts) {
             registerPrompt(prompt.id, request.workspacePath, folder.folderName)
           }
 
           promptFolderSnapshots.push({
+            id: folder.config.promptFolderId,
             data,
-            revision: revisions.promptFolder.get(data.promptFolderId)
+            revision: revisions.promptFolder.get(folder.config.promptFolderId)
           })
         }
 
         const workspace: UpdatedWorkspaceData = {
-          workspaceId,
           workspacePath: request.workspacePath,
           promptFolderIds
         }
 
         return {
           success: true,
-          workspace,
-          workspaceRevision: revisions.workspace.get(workspaceId),
+          workspace: {
+            id: workspaceId,
+            data: workspace,
+            revision: revisions.workspace.get(workspaceId)
+          },
           promptFolders: promptFolderSnapshots
         }
       } catch (error) {

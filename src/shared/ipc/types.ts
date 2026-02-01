@@ -34,15 +34,21 @@ export type UpdatedMutationRequest<TPayload> = {
   payload: TPayload
 }
 
-export type DataInput<TData> = {
+export type MutationRequestData<TData> = {
   data: TData
   expectedRevision: number | null
 }
 
-export type DataOutput<TData> = {
+export type ReadRequestData<TData = undefined> = {
+  id: string
+  data?: TData
+}
+
+export type ResponseData<TData> = {
   data: TData
+  revision: number
+  id: string
   clientTempId?: string
-  serverGeneratedId?: string
 }
 
 export type UpdatedMutationResult<TPayload> =
@@ -80,13 +86,11 @@ export interface WorkspaceData {
 }
 
 export interface UpdatedWorkspaceData {
-  workspaceId: string
   workspacePath: string
   promptFolderIds: string[]
 }
 
 export interface UpdatedPromptFolderData {
-  promptFolderId: string
   folderName: string
   displayName: string
   promptCount: number
@@ -102,23 +106,19 @@ export type LoadWorkspaceDataSuccess = { workspace: WorkspaceData; revision: num
 
 export type LoadWorkspaceDataResult = LoadResult<LoadWorkspaceDataSuccess>
 
-export interface UpdatedLoadWorkspaceByIdRequest {
-  workspaceId: string
-}
+export type UpdatedLoadWorkspaceByIdRequest = ReadRequestData
 
-export type UpdatedLoadWorkspaceByIdResult = LoadResult<{
-  data: UpdatedWorkspaceData
-  revision: number
-}>
+export type UpdatedLoadWorkspaceByIdResult = LoadResult<
+  ResponseData<UpdatedWorkspaceData>
+>
 
 export interface UpdatedLoadWorkspaceByPathRequest {
   workspacePath: string
 }
 
 export type UpdatedLoadWorkspaceByPathResult = LoadResult<{
-  workspace: UpdatedWorkspaceData
-  workspaceRevision: number
-  promptFolders: Array<{ data: UpdatedPromptFolderData; revision: number }>
+  workspace: ResponseData<UpdatedWorkspaceData>
+  promptFolders: Array<ResponseData<UpdatedPromptFolderData>>
 }>
 
 export interface UpdateWorkspaceDataRequest {
@@ -138,32 +138,30 @@ export interface Prompt {
   promptFolderCount: number
 }
 
-export interface UpdatedLoadPromptFolderByIdRequest {
-  promptFolderId: string
+export interface UpdatedPromptData {
+  title: string
+  creationDate: string
+  lastModifiedDate: string
+  promptText: string
+  promptFolderCount: number
 }
 
-export type UpdatedLoadPromptFolderByIdResult = LoadResult<{
-  data: UpdatedPromptFolderData
-  revision: number
-}>
+export type UpdatedLoadPromptFolderByIdRequest = ReadRequestData
 
-export interface UpdatedLoadPromptFolderInitialRequest {
-  promptFolderId: string
-}
+export type UpdatedLoadPromptFolderByIdResult = LoadResult<
+  ResponseData<UpdatedPromptFolderData>
+>
+
+export type UpdatedLoadPromptFolderInitialRequest = ReadRequestData
 
 export type UpdatedLoadPromptFolderInitialResult = LoadResult<{
-  promptFolder: { data: UpdatedPromptFolderData; revision: number }
-  prompts: Array<{ data: Prompt; revision: number }>
+  promptFolder: ResponseData<UpdatedPromptFolderData>
+  prompts: Array<ResponseData<UpdatedPromptData>>
 }>
 
-export interface UpdatedLoadPromptByIdRequest {
-  promptId: string
-}
+export type UpdatedLoadPromptByIdRequest = ReadRequestData
 
-export type UpdatedLoadPromptByIdResult = LoadResult<{
-  data: Prompt
-  revision: number
-}>
+export type UpdatedLoadPromptByIdResult = LoadResult<ResponseData<UpdatedPromptData>>
 
 export interface PromptResult extends WorkspaceResult {
   prompt?: Prompt

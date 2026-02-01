@@ -9,8 +9,7 @@ export const getPromptFolderEntry = (promptFolderId: string) =>
 
 export const optimisticInsertPromptFolderDraft = (draft: PromptFolderData): string => {
   const promptFolderId = crypto.randomUUID()
-  const nextDraft: PromptFolderData = { ...draft, promptFolderId }
-  promptFolderStore.optimisticInsert(nextDraft, promptFolderId)
+  promptFolderStore.optimisticInsert(draft, promptFolderId)
   return promptFolderId
 }
 

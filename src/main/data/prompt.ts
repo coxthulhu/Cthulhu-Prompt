@@ -4,6 +4,7 @@ import { getFs } from '../fs-provider'
 import { revisions } from '../revisions'
 import type {
   Prompt,
+  UpdatedPromptData,
   UpdatedLoadPromptByIdRequest,
   UpdatedLoadPromptByIdResult
 } from '@shared/ipc'
@@ -16,7 +17,7 @@ export const setupUpdatedPromptHandlers = (): void => {
       _,
       request: UpdatedLoadPromptByIdRequest
     ): Promise<UpdatedLoadPromptByIdResult> => {
-      const location = getPromptLocation(request.promptId)
+      const location = getPromptLocation(request.id)
 
       if (!location) {
         return { success: false, error: 'Prompt not registered' }
@@ -33,16 +34,19 @@ export const setupUpdatedPromptHandlers = (): void => {
         const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
           prompts?: Prompt[]
         }
-        const prompt = parsed.prompts?.find((item) => item.id === request.promptId)
+        const prompt = parsed.prompts?.find((item) => item.id === request.id)
 
         if (!prompt) {
           return { success: false, error: 'Prompt not found' }
         }
 
+        const { id: _id, ...data } = prompt
+
         return {
           success: true,
-          data: prompt,
-          revision: revisions.prompt.get(request.promptId)
+          id: request.id,
+          data: data as UpdatedPromptData,
+          revision: revisions.prompt.get(request.id)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

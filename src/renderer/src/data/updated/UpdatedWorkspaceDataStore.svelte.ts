@@ -9,8 +9,7 @@ export const getWorkspaceEntry = (workspaceId: string) =>
 
 export const optimisticInsertWorkspaceDraft = (draft: WorkspaceData): string => {
   const workspaceId = crypto.randomUUID()
-  const nextDraft: WorkspaceData = { ...draft, workspaceId }
-  workspaceStore.optimisticInsert(nextDraft, workspaceId)
+  workspaceStore.optimisticInsert(draft, workspaceId)
   return workspaceId
 }
 

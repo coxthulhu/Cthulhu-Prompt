@@ -1,5 +1,6 @@
 import type {
-  Prompt,
+  ResponseData,
+  UpdatedPromptData as PromptData,
   UpdatedPromptFolderData as PromptFolderData
 } from '@shared/ipc'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
@@ -9,25 +10,22 @@ import { mergeAuthoritativePromptFolderSnapshot } from '../UpdatedPromptFolderDa
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
 
-type PromptFolderLoadResult = {
-  data: PromptFolderData
-  revision: number
-}
+type PromptFolderLoadResult = ResponseData<PromptFolderData>
 
 type PromptFolderInitialLoadResult = {
-  promptFolder: { data: PromptFolderData; revision: number }
-  prompts: Array<{ data: Prompt; revision: number }>
+  promptFolder: ResponseData<PromptFolderData>
+  prompts: Array<ResponseData<PromptData>>
 }
 
 export const refetchPromptFolderById = (promptFolderId: string): Promise<void> =>
   runRefetch('prompt folder', async () => {
     const result = await enqueueLoad(() =>
       ipcInvoke<PromptFolderLoadResult>('updated-load-prompt-folder-by-id', {
-        promptFolderId
+        id: promptFolderId
       })
     )
     mergeAuthoritativePromptFolderSnapshot(
-      promptFolderId,
+      result.id,
       result.data,
       result.revision
     )
@@ -37,17 +35,17 @@ export const loadPromptFolderInitial = (promptFolderId: string): Promise<void> =
   runRefetch('prompt folder initial load', async () => {
     const result = await enqueueLoad(() =>
       ipcInvoke<PromptFolderInitialLoadResult>('updated-load-prompt-folder-initial', {
-        promptFolderId
+        id: promptFolderId
       })
     )
 
     mergeAuthoritativePromptFolderSnapshot(
-      promptFolderId,
+      result.promptFolder.id,
       result.promptFolder.data,
       result.promptFolder.revision
     )
 
     for (const prompt of result.prompts) {
-      mergeAuthoritativePromptSnapshot(prompt.data.id, prompt.data, prompt.revision)
+      mergeAuthoritativePromptSnapshot(prompt.id, prompt.data, prompt.revision)
     }
   })

@@ -1,4 +1,5 @@
 import type {
+  ResponseData,
   UpdatedPromptFolderData as PromptFolderData,
   UpdatedWorkspaceData as WorkspaceData
 } from '@shared/ipc'
@@ -9,23 +10,19 @@ import { mergeAuthoritativeWorkspaceSnapshot } from '../UpdatedWorkspaceDataStor
 import { enqueueLoad } from '../queues/UpdatedLoadsQueue'
 import { runRefetch } from './UpdatedIpcHelpers'
 
-type WorkspaceLoadResult = {
-  data: WorkspaceData
-  revision: number
-}
+type WorkspaceLoadResult = ResponseData<WorkspaceData>
 
 type WorkspaceLoadByPathResult = {
-  workspace: WorkspaceData
-  workspaceRevision: number
-  promptFolders: Array<{ data: PromptFolderData; revision: number }>
+  workspace: ResponseData<WorkspaceData>
+  promptFolders: Array<ResponseData<PromptFolderData>>
 }
 
 export const refetchWorkspaceById = (workspaceId: string): Promise<void> =>
   runRefetch('workspace', async () => {
     const result = await enqueueLoad(() =>
-      ipcInvoke<WorkspaceLoadResult>('updated-load-workspace-by-id', { workspaceId })
+      ipcInvoke<WorkspaceLoadResult>('updated-load-workspace-by-id', { id: workspaceId })
     )
-    mergeAuthoritativeWorkspaceSnapshot(workspaceId, result.data, result.revision)
+    mergeAuthoritativeWorkspaceSnapshot(result.id, result.data, result.revision)
   })
 
 export const loadWorkspaceByPath = (workspacePath: string): Promise<void> =>
@@ -37,14 +34,14 @@ export const loadWorkspaceByPath = (workspacePath: string): Promise<void> =>
     )
 
     mergeAuthoritativeWorkspaceSnapshot(
-      result.workspace.workspaceId,
-      result.workspace,
-      result.workspaceRevision
+      result.workspace.id,
+      result.workspace.data,
+      result.workspace.revision
     )
 
     for (const promptFolder of result.promptFolders) {
       mergeAuthoritativePromptFolderSnapshot(
-        promptFolder.data.promptFolderId,
+        promptFolder.id,
         promptFolder.data,
         promptFolder.revision
       )

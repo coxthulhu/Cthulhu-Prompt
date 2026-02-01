@@ -8,6 +8,7 @@ import type {
   UpdatedLoadPromptFolderByIdResult,
   UpdatedLoadPromptFolderInitialRequest,
   UpdatedLoadPromptFolderInitialResult,
+  UpdatedPromptData,
   UpdatedPromptFolderData
 } from '@shared/ipc'
 import type { PromptFolderConfig } from '@shared/promptFolderConfig'
@@ -29,7 +30,6 @@ const readPromptFolderData = (
     promptIds ?? readPromptFolderPrompts(workspacePath, folderName).map((prompt) => prompt.id)
 
   return {
-    promptFolderId: parsed.promptFolderId,
     folderName,
     displayName: parsed.foldername,
     promptCount: parsed.promptCount,
@@ -43,7 +43,6 @@ export const buildPromptFolderData = (
   config: PromptFolderConfig,
   promptIds: string[]
 ): UpdatedPromptFolderData => ({
-  promptFolderId: config.promptFolderId,
   folderName,
   displayName: config.foldername,
   promptCount: config.promptCount,
@@ -60,6 +59,11 @@ const readPromptFolderPrompts = (workspacePath: string, folderName: string): Pro
   return parsed.prompts ?? []
 }
 
+const toUpdatedPromptData = (prompt: Prompt): UpdatedPromptData => {
+  const { id: _id, ...data } = prompt
+  return data
+}
+
 export const setupUpdatedPromptFolderHandlers = (): void => {
   ipcMain.handle(
     'updated-load-prompt-folder-by-id',
@@ -67,7 +71,7 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
       _,
       request: UpdatedLoadPromptFolderByIdRequest
     ): Promise<UpdatedLoadPromptFolderByIdResult> => {
-      const location = getPromptFolderLocation(request.promptFolderId)
+      const location = getPromptFolderLocation(request.id)
 
       if (!location) {
         return { success: false, error: 'Prompt folder not registered' }
@@ -78,8 +82,9 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
 
         return {
           success: true,
+          id: request.id,
           data,
-          revision: revisions.promptFolder.get(request.promptFolderId)
+          revision: revisions.promptFolder.get(request.id)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -94,7 +99,7 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
       _,
       request: UpdatedLoadPromptFolderInitialRequest
     ): Promise<UpdatedLoadPromptFolderInitialResult> => {
-      const location = getPromptFolderLocation(request.promptFolderId)
+      const location = getPromptFolderLocation(request.id)
 
       if (!location) {
         return { success: false, error: 'Prompt folder not registered' }
@@ -111,11 +116,13 @@ export const setupUpdatedPromptFolderHandlers = (): void => {
         return {
           success: true,
           promptFolder: {
+            id: request.id,
             data,
-            revision: revisions.promptFolder.get(request.promptFolderId)
+            revision: revisions.promptFolder.get(request.id)
           },
           prompts: prompts.map((prompt) => ({
-            data: prompt,
+            id: prompt.id,
+            data: toUpdatedPromptData(prompt),
             revision: revisions.prompt.get(prompt.id)
           }))
         }

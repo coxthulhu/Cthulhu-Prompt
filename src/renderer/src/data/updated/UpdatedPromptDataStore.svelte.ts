@@ -1,15 +1,14 @@
-import type { Prompt } from '@shared/ipc'
+import type { UpdatedPromptData as PromptData } from '@shared/ipc'
 
 import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
-const promptStore = createBaseDataStore<Prompt>()
+const promptStore = createBaseDataStore<PromptData>()
 
 export const getPromptEntry = (promptId: string) => promptStore.getEntry(promptId)
 
-export const optimisticInsertPromptDraft = (draft: Prompt): string => {
+export const optimisticInsertPromptDraft = (draft: PromptData): string => {
   const promptId = crypto.randomUUID()
-  const nextDraft: Prompt = { ...draft, id: promptId }
-  promptStore.optimisticInsert(nextDraft, promptId)
+  promptStore.optimisticInsert(draft, promptId)
   return promptId
 }
 
@@ -19,7 +18,7 @@ export const optimisticDeletePromptDraft = (promptId: string): void => {
 
 export const applyFetchPrompt = (
   promptId: string,
-  data: Prompt,
+  data: PromptData,
   revision: number
 ): void => {
   promptStore.mergeAuthoritativeSnapshot(promptId, { data, revision })
@@ -27,7 +26,7 @@ export const applyFetchPrompt = (
 
 export const mergeAuthoritativePromptSnapshot = (
   promptId: string,
-  data: Prompt,
+  data: PromptData,
   revision: number,
   conflict = false
 ): void => {
