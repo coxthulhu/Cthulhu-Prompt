@@ -16,7 +16,7 @@ export type MutationOutcome<TData> =
 
 export type MutationParams<TSnapshot, TData> = {
   snapshot: () => TSnapshot
-  run: (snapshot: TSnapshot) => Promise<MutationResult<TData>>
+  run: (snapshot: TSnapshot, requestId: string) => Promise<MutationResult<TData>>
   commitSuccess: (
     result: Extract<MutationResult<TData>, { success: true }>,
     snapshot: TSnapshot
@@ -44,6 +44,7 @@ export type SyncMutationParams<TSnapshot, TData> = MutationParams<TSnapshot, TDa
  *   Capture a "saving snapshot" from the current draft; this snapshot is reused later.
  * - run: executed only when this task reaches the front of the global queue.
  *   Perform the IPC call using the snapshot captured at enqueue time.
+ *   Use the requestId argument to populate mutation request wrappers.
  * - commitSuccess: called only when run returns success; commit optimistic changes and
  *   promote the saving snapshot to the most recent server authoritative snapshot.
  * - rollbackConflict: called when run returns a conflict; restore the most recent
@@ -59,10 +60,12 @@ export type SyncMutationParams<TSnapshot, TData> = MutationParams<TSnapshot, TDa
 const enqueueMutation = <TSnapshot, TData>(
   params: MutationParams<TSnapshot, TData>,
   snapshot: TSnapshot
-): Promise<MutationOutcome<TData>> =>
-  enqueueGlobalMessage(async () => {
+): Promise<MutationOutcome<TData>> => {
+  // Create the request ID at enqueue time so retries reuse it.
+  const requestId = crypto.randomUUID()
+  return enqueueGlobalMessage(async () => {
     try {
-      const result = await params.run(snapshot)
+      const result = await params.run(snapshot, requestId)
 
       if (result.success) {
         params.commitSuccess(result, snapshot)
@@ -88,6 +91,7 @@ const enqueueMutation = <TSnapshot, TData>(
       return outcome
     }
   })
+}
 
 export const enqueueMutationApplyOptimistic = <TSnapshot, TData>(
   params: SyncMutationParams<TSnapshot, TData>

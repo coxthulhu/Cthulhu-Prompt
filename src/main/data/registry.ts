@@ -42,3 +42,24 @@ export const getPromptFolderLocation = (promptFolderId: string): PromptLocation 
 
 export const getPromptLocation = (promptId: string): PromptLocation | null =>
   promptById.get(promptId) ?? null
+
+const MAX_MUTATION_REQUEST_IDS = 100
+const mutationRequestIds = new Set<string>()
+const mutationRequestOrder: string[] = []
+
+// FIFO cache for mutation request IDs to detect duplicates.
+export const registerMutationRequestId = (requestId: string): boolean => {
+  if (mutationRequestIds.has(requestId)) {
+    return false
+  }
+
+  mutationRequestIds.add(requestId)
+  mutationRequestOrder.push(requestId)
+
+  if (mutationRequestOrder.length > MAX_MUTATION_REQUEST_IDS) {
+    const oldest = mutationRequestOrder.shift()!
+    mutationRequestIds.delete(oldest)
+  }
+
+  return true
+}
