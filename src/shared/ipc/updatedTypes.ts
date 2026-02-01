@@ -5,7 +5,7 @@ export interface UpdatedSystemSettings {
 }
 
 // Updated mutation/load helpers.
-export type UpdatedMutationRequest<TPayload> = {
+export type MutationRequestWrapper<TPayload> = {
   requestId: string
   payload: TPayload
 }

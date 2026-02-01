@@ -15,6 +15,11 @@ export type BaseDataStore<T> = {
   getEntry: (id: string) => Entry<T> | null
   optimisticInsert: (draft: T, idOverride?: string) => string
   optimisticDelete: (id: string) => void
+  rekeyEntry: (
+    oldId: string,
+    newId: string,
+    rewriteReferences: (oldId: string, newId: string) => void
+  ) => void
   mergeAuthoritativeSnapshot: (id: string, snapshot: Snapshot<T>, conflict?: boolean) => void
 }
 
@@ -108,6 +113,25 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     }
   }
 
+  const rekeyEntry = (
+    oldId: string,
+    newId: string,
+    rewriteReferences: (oldId: string, newId: string) => void
+  ): void => {
+    const entry = entries.get(oldId)!
+    const nextSnapshot = entry.lastServerSnapshot
+      ? {
+          data: cloneData(entry.lastServerSnapshot.data),
+          revision: entry.lastServerSnapshot.revision
+        }
+      : null
+    const nextDraft = entry.draftSnapshot ? cloneData(entry.draftSnapshot) : null
+
+    entries.set(newId, createEntry(nextSnapshot, nextDraft))
+    rewriteReferences(oldId, newId)
+    entries.delete(oldId)
+  }
+
   const mergeAuthoritativeSnapshot = (
     id: string,
     snapshot: Snapshot<T>,
@@ -154,6 +178,7 @@ export const createBaseDataStore = <T>(): BaseDataStore<T> => {
     getEntry,
     optimisticInsert,
     optimisticDelete,
+    rekeyEntry,
     mergeAuthoritativeSnapshot
   }
 }

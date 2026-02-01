@@ -1,4 +1,4 @@
-import type { UpdatedWorkspaceData as WorkspaceData } from '@shared/ipc/updatedTypes'
+import type { ResponseData, UpdatedWorkspaceData as WorkspaceData } from '@shared/ipc/updatedTypes'
 
 import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
@@ -8,13 +8,19 @@ export const getWorkspaceEntry = (workspaceId: string) =>
   workspaceStore.getEntry(workspaceId)
 
 export const optimisticInsertWorkspaceDraft = (draft: WorkspaceData): string => {
-  const workspaceId = crypto.randomUUID()
-  workspaceStore.optimisticInsert(draft, workspaceId)
-  return workspaceId
+  return workspaceStore.optimisticInsert(draft)
 }
 
 export const optimisticDeleteWorkspaceDraft = (workspaceId: string): void => {
   workspaceStore.optimisticDelete(workspaceId)
+}
+
+// After rekeying, mergeAuthoritativeWorkspaceSnapshot(response.id, response.data, response.revision).
+export const rekeyWorkspaceEntry = (
+  response: ResponseData<WorkspaceData>,
+  rewriteReferences: (oldWorkspaceId: string, newWorkspaceId: string) => void
+): void => {
+  workspaceStore.rekeyEntry(response.clientTempId!, response.id, rewriteReferences)
 }
 
 export const mergeAuthoritativeWorkspaceSnapshot = (
