@@ -109,3 +109,22 @@ export type UpdatedCreatePromptFolderPayload = {
 
 export type UpdatedCreatePromptFolderResult =
   UpdatedMutationResult<UpdatedCreatePromptFolderPayload>
+
+export type UpdatedCreatePromptData = {
+  promptFolderId: string
+  title: string
+  promptText: string
+  insertAfterPromptId: string | null
+  clientTempId: string
+}
+
+export type UpdatedCreatePromptRequest = MutationRequestWrapper<
+  MutationRequestData<UpdatedCreatePromptData>
+>
+
+export type UpdatedCreatePromptPayload = {
+  promptFolder: ResponseData<UpdatedPromptFolderData>
+  prompt?: ResponseData<UpdatedPromptData>
+}
+
+export type UpdatedCreatePromptResult = UpdatedMutationResult<UpdatedCreatePromptPayload>
