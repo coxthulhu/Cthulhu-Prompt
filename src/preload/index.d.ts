@@ -1,38 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type {
-  LoadPromptsResult as SharedLoadPromptsResult,
-  PromptResult as SharedPromptResult,
-  WorkspaceResult as SharedWorkspaceResult
-} from '@shared/ipc'
 import type { RuntimeConfig } from '@shared/runtimeConfig'
-
-type PromptResult = SharedPromptResult
-type LoadPromptsResult = SharedLoadPromptsResult
-type WorkspaceResult = SharedWorkspaceResult
-
-interface PromptAPI {
-  createPrompt: (
-    workspacePath: string,
-    folderName: string,
-    title: string,
-    promptText: string,
-    previousPromptId?: string | null
-  ) => Promise<PromptResult>
-  updatePrompt: (
-    workspacePath: string,
-    folderName: string,
-    id: string,
-    title: string,
-    promptText: string
-  ) => Promise<PromptResult>
-  deletePrompt: (workspacePath: string, folderName: string, id: string) => Promise<WorkspaceResult>
-  loadPrompts: (workspacePath: string, folderName: string) => Promise<LoadPromptsResult>
-  updatePromptFolderDescription: (
-    workspacePath: string,
-    folderName: string,
-    folderDescription: string
-  ) => Promise<WorkspaceResult>
-}
 
 interface WindowControls {
   minimize: () => Promise<void>
@@ -47,7 +14,6 @@ interface WindowControls {
 declare global {
   interface Window {
     electron: ElectronAPI
-    promptAPI: PromptAPI
     runtimeConfig: RuntimeConfig
     windowControls: WindowControls
   }

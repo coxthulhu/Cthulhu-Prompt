@@ -80,59 +80,12 @@ const windowControls = {
   }
 }
 
-// Prompt APIs for renderer
-const promptAPI = {
-  createPrompt: (
-    workspacePath: string,
-    folderName: string,
-    title: string,
-    promptText: string,
-    previousPromptId?: string | null
-  ) =>
-    electronAPI.ipcRenderer.invoke('create-prompt', {
-      workspacePath,
-      folderName,
-      title,
-      promptText,
-      previousPromptId
-    }),
-  updatePrompt: (
-    workspacePath: string,
-    folderName: string,
-    id: string,
-    title: string,
-    promptText: string
-  ) =>
-    electronAPI.ipcRenderer.invoke('update-prompt', {
-      workspacePath,
-      folderName,
-      id,
-      title,
-      promptText
-    }),
-  deletePrompt: (workspacePath: string, folderName: string, id: string) =>
-    electronAPI.ipcRenderer.invoke('delete-prompt', { workspacePath, folderName, id }),
-  loadPrompts: (workspacePath: string, folderName: string) =>
-    electronAPI.ipcRenderer.invoke('load-prompts', { workspacePath, folderName }),
-  updatePromptFolderDescription: (
-    workspacePath: string,
-    folderName: string,
-    folderDescription: string
-  ) =>
-    electronAPI.ipcRenderer.invoke('update-prompt-folder-description', {
-      workspacePath,
-      folderName,
-      folderDescription
-    })
-}
-
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('promptAPI', promptAPI)
     contextBridge.exposeInMainWorld('runtimeConfig', runtimeConfig)
     contextBridge.exposeInMainWorld('windowControls', windowControls)
   } catch (error) {
@@ -141,8 +94,6 @@ if (process.contextIsolated) {
 } else {
   // @ts-expect-error (define in dts)
   window.electron = electronAPI
-  // @ts-expect-error (define in dts)
-  window.promptAPI = promptAPI
   // @ts-expect-error (define in dts)
   window.runtimeConfig = runtimeConfig
   // @ts-expect-error (define in dts)
