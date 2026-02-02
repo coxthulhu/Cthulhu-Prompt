@@ -8,9 +8,7 @@ export type RevisionMutationElement<TDraft, TData> = {
   state: RevisionDataState<TDraft, TData>
 }
 
-type ConflictableResult =
-  | { success: true }
-  | { success: false; conflict: true }
+type ConflictableResult = { success: true } | { success: false; conflict: true }
 
 export const createRevisionMutation = <
   TResult extends ConflictableResult,

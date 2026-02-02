@@ -49,10 +49,7 @@ const buildPromptFolderResponse = (
 export const setupUpdatedPromptHandlers = (): void => {
   ipcMain.handle(
     'updated-load-prompt-by-id',
-    async (
-      _,
-      request: UpdatedLoadPromptByIdRequest
-    ): Promise<UpdatedLoadPromptByIdResult> => {
+    async (_, request: UpdatedLoadPromptByIdRequest): Promise<UpdatedLoadPromptByIdResult> => {
       const location = getPromptLocation(request.id)
 
       if (!location) {
@@ -86,10 +83,7 @@ export const setupUpdatedPromptHandlers = (): void => {
 
   ipcMain.handle(
     'updated-create-prompt',
-    async (
-      _,
-      request: UpdatedCreatePromptRequest
-    ): Promise<UpdatedCreatePromptResult> => {
+    async (_, request: UpdatedCreatePromptRequest): Promise<UpdatedCreatePromptResult> => {
       return await runUpdatedMutation(request, async (respond, mutationRequest) => {
         const { data, expectedRevision } = mutationRequest.payload
         const location = getPromptFolderLocation(data.promptFolderId)
@@ -113,11 +107,7 @@ export const setupUpdatedPromptHandlers = (): void => {
             }
 
             const fs = getFs()
-            const folderPath = path.join(
-              location.workspacePath,
-              'Prompts',
-              location.folderName
-            )
+            const folderPath = path.join(location.workspacePath, 'Prompts', location.folderName)
             const promptsPath = path.join(folderPath, 'Prompts.json')
             const configPath = path.join(folderPath, 'PromptFolder.json')
 
@@ -170,11 +160,7 @@ export const setupUpdatedPromptHandlers = (): void => {
                 location.workspacePath,
                 location.folderName
               ),
-              prompt: buildResponseData(
-                promptId,
-                toUpdatedPromptData(newPrompt),
-                revisions.prompt
-              )
+              prompt: buildResponseData(promptId, toUpdatedPromptData(newPrompt), revisions.prompt)
             })
           })
         } catch (error) {
@@ -184,5 +170,4 @@ export const setupUpdatedPromptHandlers = (): void => {
       })
     }
   )
-
 }

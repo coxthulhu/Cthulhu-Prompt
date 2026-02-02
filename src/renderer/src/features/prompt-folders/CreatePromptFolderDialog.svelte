@@ -43,9 +43,7 @@
       validation.isValid &&
       !isPromptFolderListLoading &&
       Boolean(sanitizedFolderName) &&
-      promptFolders.some(
-        (folder) => folder.folderName.toLowerCase() === sanitizedFolderName
-      )
+      promptFolders.some((folder) => folder.folderName.toLowerCase() === sanitizedFolderName)
   )
   const validationMessage = $derived(
     !validation.isValid
@@ -59,10 +57,7 @@
   )
   const isValid = $derived(
     Boolean(
-      !validationMessage &&
-        validation.isValid &&
-        isWorkspaceReady &&
-        !isPromptFolderListLoading
+      !validationMessage && validation.isValid && isWorkspaceReady && !isPromptFolderListLoading
     )
   )
 

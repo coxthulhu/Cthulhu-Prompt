@@ -29,7 +29,6 @@ import {
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 
-
 const readWorkspaceId = (workspacePath: string): string => {
   const fs = getFs()
   const settingsPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
@@ -42,11 +41,13 @@ const readWorkspaceId = (workspacePath: string): string => {
   return parsed.workspaceId
 }
 
-
 export const setupUpdatedWorkspaceHandlers = (): void => {
   ipcMain.handle(
     'updated-load-workspace-by-id',
-    async (_, request: UpdatedLoadWorkspaceByIdRequest): Promise<UpdatedLoadWorkspaceByIdResult> => {
+    async (
+      _,
+      request: UpdatedLoadWorkspaceByIdRequest
+    ): Promise<UpdatedLoadWorkspaceByIdResult> => {
       const workspacePath = getWorkspacePath(request.id)
 
       if (!workspacePath) {
@@ -122,5 +123,4 @@ export const setupUpdatedWorkspaceHandlers = (): void => {
       }
     }
   )
-
 }

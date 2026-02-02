@@ -31,8 +31,7 @@
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsState = getSystemSettingsState()
   const promptFontSize = $derived(
-    systemSettingsState.baseSnapshot.data.promptFontSize ??
-      DEFAULT_SYSTEM_SETTINGS.promptFontSize
+    systemSettingsState.baseSnapshot.data.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
   )
   const promptEditorMinLines = $derived(
     systemSettingsState.baseSnapshot.data.promptEditorMinLines ??

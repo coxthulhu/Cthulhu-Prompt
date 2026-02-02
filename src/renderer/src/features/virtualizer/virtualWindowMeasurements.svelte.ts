@@ -8,12 +8,8 @@ type VirtualWindowMeasurementsOptions = {
 }
 
 export const createVirtualWindowMeasurements = (options: VirtualWindowMeasurementsOptions) => {
-  const {
-    getViewportFrame,
-    getLeftScrollPaddingPx,
-    getRightScrollPaddingPx,
-    scrollbarWidthPx
-  } = options
+  const { getViewportFrame, getLeftScrollPaddingPx, getRightScrollPaddingPx, scrollbarWidthPx } =
+    options
 
   let containerWidth = $state(0)
   let viewportHeight = $state(0)

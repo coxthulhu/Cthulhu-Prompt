@@ -26,9 +26,7 @@ export type RevisionLoadResult<TDraft, TData> =
   | { type: 'stale' }
 
 export type RevisionDataStoreBase<TDraft, TData> = {
-  createState: (
-    base: RevisionSnapshot<TData>
-  ) => RevisionDataState<TDraft, TData>
+  createState: (base: RevisionSnapshot<TData>) => RevisionDataState<TDraft, TData>
   markDraftChanged: (state: RevisionDataState<TDraft, TData>) => void
   beginSave: (state: RevisionDataState<TDraft, TData>) => void
   applySaveSuccess: (
@@ -164,23 +162,13 @@ export function createRevisionDataStore<TDraft, TData>(params: {
   createDraft: (snapshot: RevisionSnapshot<TData>) => TDraft
   isDraftDirty: (draft: TDraft, base: RevisionSnapshot<TData>) => boolean
 }): RevisionDataStoreBase<TDraft, TData>
-export function createRevisionDataStore<
-  TDraft,
-  TData,
-  TLoadSuccess extends object
->(params: {
-  createDraft: (snapshot: RevisionSnapshot<TData>) => TDraft
-  isDraftDirty: (draft: TDraft, base: RevisionSnapshot<TData>) => boolean
-} & RevisionLoadConfig<TDraft, TData, TLoadSuccess>): RevisionDataStoreWithLoad<
-  TDraft,
-  TData,
-  TLoadSuccess
->
-export function createRevisionDataStore<
-  TDraft,
-  TData,
-  TLoadSuccess extends object
->(
+export function createRevisionDataStore<TDraft, TData, TLoadSuccess extends object>(
+  params: {
+    createDraft: (snapshot: RevisionSnapshot<TData>) => TDraft
+    isDraftDirty: (draft: TDraft, base: RevisionSnapshot<TData>) => boolean
+  } & RevisionLoadConfig<TDraft, TData, TLoadSuccess>
+): RevisionDataStoreWithLoad<TDraft, TData, TLoadSuccess>
+export function createRevisionDataStore<TDraft, TData, TLoadSuccess extends object>(
   params: {
     createDraft: (snapshot: RevisionSnapshot<TData>) => TDraft
     isDraftDirty: (draft: TDraft, base: RevisionSnapshot<TData>) => boolean

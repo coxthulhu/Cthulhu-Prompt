@@ -42,8 +42,7 @@ const readSystemSettingsPayload = (): {
   try {
     const content = fs.readFileSync(settingsPath, 'utf8')
     const parsed = JSON.parse(content) as SystemSettingsFile
-    const payload =
-      parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
+    const payload = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
 
     return {
       payload,
@@ -71,12 +70,9 @@ export class SystemSettingsManager {
       return await this.loadSystemSettings()
     })
 
-    ipcMain.handle(
-      'update-system-settings',
-      async (_, request: UpdateSystemSettingsRequest) => {
-        return await this.updateSystemSettings(request.settings, request.revision)
-      }
-    )
+    ipcMain.handle('update-system-settings', async (_, request: UpdateSystemSettingsRequest) => {
+      return await this.updateSystemSettings(request.settings, request.revision)
+    })
   }
 
   static async loadSystemSettings(): Promise<LoadSystemSettingsResult> {

@@ -4,8 +4,7 @@ import { createBaseDataStore } from './UpdatedBaseDataStore.svelte.ts'
 
 const workspaceStore = createBaseDataStore<WorkspaceData>()
 
-export const getWorkspaceEntry = (workspaceId: string) =>
-  workspaceStore.getEntry(workspaceId)
+export const getWorkspaceEntry = (workspaceId: string) => workspaceStore.getEntry(workspaceId)
 
 export const optimisticInsertWorkspaceDraft = (draft: WorkspaceData): string => {
   return workspaceStore.optimisticInsert(draft)

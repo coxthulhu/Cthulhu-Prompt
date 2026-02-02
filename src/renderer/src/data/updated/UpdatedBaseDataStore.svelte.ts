@@ -70,10 +70,7 @@ const isDeepEqual = (left: unknown, right: unknown): boolean => {
     }
 
     if (
-      !isDeepEqual(
-        (left as Record<string, unknown>)[key],
-        (right as Record<string, unknown>)[key]
-      )
+      !isDeepEqual((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key])
     ) {
       return false
     }

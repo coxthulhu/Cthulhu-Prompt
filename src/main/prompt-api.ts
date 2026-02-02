@@ -144,10 +144,7 @@ export class PromptAPI {
     return JSON.parse(content) as PromptFolderConfigFile
   }
 
-  private static writePromptFolderConfig(
-    filePath: string,
-    data: PromptFolderConfigFile
-  ): void {
+  private static writePromptFolderConfig(filePath: string, data: PromptFolderConfigFile): void {
     const fs = getFs()
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
   }

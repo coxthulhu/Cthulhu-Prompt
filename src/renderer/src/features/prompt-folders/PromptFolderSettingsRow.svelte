@@ -46,11 +46,7 @@
 
   const descriptionValue = $derived(folderData.descriptionDraft.text)
   const placeholderHeightPx = $derived(
-    estimatePromptFolderSettingsMonacoHeight(
-      descriptionValue,
-      promptFontSize,
-      promptEditorMinLines
-    )
+    estimatePromptFolderSettingsMonacoHeight(descriptionValue, promptFontSize, promptEditorMinLines)
   )
 
   // Side effect: align Monaco overflow widgets with the description editor inside the virtualized row.

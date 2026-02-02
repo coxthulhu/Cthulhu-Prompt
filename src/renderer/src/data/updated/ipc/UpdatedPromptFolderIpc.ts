@@ -97,8 +97,7 @@ export const createPromptFolder = async (
     return null
   }
 
-  const { displayName: normalizedDisplayName, folderName } =
-    preparePromptFolderName(displayName)
+  const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
   let optimisticPromptFolderId = ''
   let previousPromptFolderIds: string[] = []
 

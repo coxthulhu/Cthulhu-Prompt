@@ -90,8 +90,7 @@ const workspaceDataStore = createRevisionDataStore<
   createDraft,
   isDraftDirty,
   createSnapshotFromLoad: (result) => createSnapshot(result.workspace, result.revision),
-  applyLoadedSnapshot: (snapshot) =>
-    replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
+  applyLoadedSnapshot: (snapshot) => replaceWorkspaceState(snapshot.data.workspaceId, snapshot)
 })
 
 const createWorkspaceState = (snapshot: RevisionSnapshot<WorkspaceData>): WorkspaceState => {
@@ -140,7 +139,9 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
   }
 
   const cachedWorkspaceId = workspaceIdByPath.get(workspacePath) ?? null
-  const cachedState = cachedWorkspaceId ? workspaceStatesById.get(cachedWorkspaceId) ?? null : null
+  const cachedState = cachedWorkspaceId
+    ? (workspaceStatesById.get(cachedWorkspaceId) ?? null)
+    : null
 
   const state = cachedState ?? createLoadingState(workspacePath)
   activeWorkspaceState = state
@@ -149,12 +150,9 @@ export const setActiveWorkspacePath = async (workspacePath: string | null): Prom
     store: workspaceDataStore,
     state,
     run: () => {
-      return ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>(
-        'load-workspace-data',
-        {
-          workspacePath
-        }
-      )
+      return ipcInvoke<LoadWorkspaceDataResult, LoadWorkspaceDataRequest>('load-workspace-data', {
+        workspacePath
+      })
     }
   })
 
@@ -200,8 +198,7 @@ const saveWorkspaceData = (): Promise<RevisionSaveOutcome> => {
 
 export const createPromptFolder = async (displayName: string): Promise<PromptFolder | null> => {
   const state = requireActiveWorkspaceState()
-  const { displayName: normalizedDisplayName, folderName } =
-    preparePromptFolderName(displayName)
+  const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
 
   state.draftSnapshot.folders = [
     ...state.draftSnapshot.folders,

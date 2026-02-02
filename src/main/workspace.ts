@@ -224,8 +224,11 @@ export class WorkspaceManager {
         return { success: false, error: 'Invalid workspace path' }
       }
 
-      const { validation, displayName: normalizedDisplayName, folderName } =
-        preparePromptFolderName(displayName)
+      const {
+        validation,
+        displayName: normalizedDisplayName,
+        folderName
+      } = preparePromptFolderName(displayName)
 
       if (!validation.isValid) {
         return { success: false, error: validation.errorMessage }

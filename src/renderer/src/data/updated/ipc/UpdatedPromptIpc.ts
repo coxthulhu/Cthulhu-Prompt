@@ -104,22 +104,19 @@ export const createPrompt = async (
       clientTempId: optimisticPromptId
     }),
     run: (snapshot, requestId) =>
-      ipcInvoke<UpdatedCreatePromptResult, UpdatedCreatePromptRequest>(
-        'updated-create-prompt',
-        {
-          requestId,
-          payload: {
-            data: {
-              promptFolderId: snapshot.promptFolderId,
-              title: snapshot.title,
-              promptText: snapshot.promptText,
-              insertAfterPromptId: snapshot.insertAfterPromptId,
-              clientTempId: snapshot.clientTempId
-            },
-            expectedRevision: snapshot.expectedRevision
-          }
+      ipcInvoke<UpdatedCreatePromptResult, UpdatedCreatePromptRequest>('updated-create-prompt', {
+        requestId,
+        payload: {
+          data: {
+            promptFolderId: snapshot.promptFolderId,
+            title: snapshot.title,
+            promptText: snapshot.promptText,
+            insertAfterPromptId: snapshot.insertAfterPromptId,
+            clientTempId: snapshot.clientTempId
+          },
+          expectedRevision: snapshot.expectedRevision
         }
-      ),
+      }),
     commitSuccess: (result, snapshot) => {
       const promptResponse = result.payload.prompt!
 

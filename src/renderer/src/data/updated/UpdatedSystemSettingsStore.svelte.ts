@@ -14,17 +14,12 @@ systemSettingsStore.mergeAuthoritativeSnapshot(SYSTEM_SETTINGS_KEY, {
   revision: runtimeConfig.systemSettingsRevision
 })
 
-export const getSystemSettingsEntry = () =>
-  systemSettingsStore.getEntry(SYSTEM_SETTINGS_KEY)
+export const getSystemSettingsEntry = () => systemSettingsStore.getEntry(SYSTEM_SETTINGS_KEY)
 
 export const mergeAuthoritativeSystemSettingsSnapshot = (
   data: UpdatedSystemSettings,
   revision: number,
   conflict = false
 ): void => {
-  systemSettingsStore.mergeAuthoritativeSnapshot(
-    SYSTEM_SETTINGS_KEY,
-    { data, revision },
-    conflict
-  )
+  systemSettingsStore.mergeAuthoritativeSnapshot(SYSTEM_SETTINGS_KEY, { data, revision }, conflict)
 }

@@ -11,10 +11,7 @@ type TestData = {
 describe('createBaseDataStore', () => {
   it('preserves fallback merges when rekeying optimistic entries', () => {
     const store = createBaseDataStore<TestData>()
-    const clientTempId = store.optimisticInsert(
-      { title: 'Draft', body: 'Draft' },
-      'client-temp-id'
-    )
+    const clientTempId = store.optimisticInsert({ title: 'Draft', body: 'Draft' }, 'client-temp-id')
 
     const entry = store.getEntry(clientTempId)
     expect(entry).not.toBeNull()

@@ -66,9 +66,7 @@ export interface UpdatedLoadWorkspaceByPathRequest {
   workspacePath: string
 }
 
-export type UpdatedLoadWorkspaceByIdResult = UpdatedLoadResult<
-  ResponseData<UpdatedWorkspaceData>
->
+export type UpdatedLoadWorkspaceByIdResult = UpdatedLoadResult<ResponseData<UpdatedWorkspaceData>>
 
 export type UpdatedLoadWorkspaceByPathResult = UpdatedLoadResult<{
   workspace: ResponseData<UpdatedWorkspaceData>

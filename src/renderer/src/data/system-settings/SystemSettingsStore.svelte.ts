@@ -1,7 +1,4 @@
-import type {
-  SystemSettings,
-  UpdateSystemSettingsRequest
-} from '@shared/ipc'
+import type { SystemSettings, UpdateSystemSettingsRequest } from '@shared/ipc'
 import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import {
@@ -38,9 +35,7 @@ const createSnapshot = (
 
 const createDraft = (snapshot: RevisionSnapshot<SystemSettings>): SystemSettingsDraft => ({
   promptFontSizeInput: formatPromptFontSizeInput(snapshot.data.promptFontSize),
-  promptEditorMinLinesInput: formatPromptEditorMinLinesInput(
-    snapshot.data.promptEditorMinLines
-  )
+  promptEditorMinLinesInput: formatPromptEditorMinLinesInput(snapshot.data.promptEditorMinLines)
 })
 
 const isDraftDirty = (
@@ -48,8 +43,7 @@ const isDraftDirty = (
   snapshot: RevisionSnapshot<SystemSettings>
 ): boolean => {
   return (
-    draft.promptFontSizeInput !==
-    formatPromptFontSizeInput(snapshot.data.promptFontSize) ||
+    draft.promptFontSizeInput !== formatPromptFontSizeInput(snapshot.data.promptFontSize) ||
     draft.promptEditorMinLinesInput !==
       formatPromptEditorMinLinesInput(snapshot.data.promptEditorMinLines)
   )
@@ -80,9 +74,7 @@ export const setSystemSettingsDraftPromptEditorMinLinesInput = (value: string): 
   systemSettingsStore.markDraftChanged(systemSettingsState)
 }
 
-export const saveSystemSettings = (
-  settings: SystemSettings
-): Promise<RevisionSaveOutcome> => {
+export const saveSystemSettings = (settings: SystemSettings): Promise<RevisionSaveOutcome> => {
   return createRevisionMutation({
     elements: [{ store: systemSettingsStore, state: systemSettingsState }],
     run: ([revision]) => {

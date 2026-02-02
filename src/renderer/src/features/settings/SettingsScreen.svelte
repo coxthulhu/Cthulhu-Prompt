@@ -96,9 +96,7 @@
   const validateDraft = () => {
     return {
       fontSizeError: validateFontSize(systemSettingsState.draftSnapshot.promptFontSizeInput),
-      minLinesError: validateMinLines(
-        systemSettingsState.draftSnapshot.promptEditorMinLinesInput
-      )
+      minLinesError: validateMinLines(systemSettingsState.draftSnapshot.promptEditorMinLinesInput)
     }
   }
 
@@ -167,21 +165,14 @@
   }
 
   const validation = $derived(validateDraft())
-  const displayFontSizeError = $derived(
-    systemSettingsState.saveError ?? validation.fontSizeError
-  )
-  const displayMinLinesError = $derived(
-    systemSettingsState.saveError ?? validation.minLinesError
-  )
+  const displayFontSizeError = $derived(systemSettingsState.saveError ?? validation.fontSizeError)
+  const displayMinLinesError = $derived(systemSettingsState.saveError ?? validation.minLinesError)
   const isFontSizeResetDisabled = $derived(
-    isUpdating ||
-      systemSettingsState.draftSnapshot.promptFontSizeInput ===
-        defaultFontSizeInput
+    isUpdating || systemSettingsState.draftSnapshot.promptFontSizeInput === defaultFontSizeInput
   )
   const isMinLinesResetDisabled = $derived(
     isUpdating ||
-      systemSettingsState.draftSnapshot.promptEditorMinLinesInput ===
-        defaultMinLinesInput
+      systemSettingsState.draftSnapshot.promptEditorMinLinesInput === defaultMinLinesInput
   )
 
   // Side effect: register autosave flush hooks and save before leaving the settings screen.
@@ -198,18 +189,14 @@
   <div class="w-full max-w-2xl space-y-6">
     <div>
       <h1 class="text-2xl font-bold">System Settings</h1>
-      <p class="mt-2 text-muted-foreground">
-        Global settings saved on your local machine.
-      </p>
+      <p class="mt-2 text-muted-foreground">Global settings saved on your local machine.</p>
     </div>
 
     <div class="border rounded-lg bg-muted/30 p-4">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div class="space-y-1">
           <h2 class="text-lg font-semibold">Prompt editor font size</h2>
-          <p class="text-sm text-muted-foreground">
-            Sets the font size used in the prompt editor.
-          </p>
+          <p class="text-sm text-muted-foreground">Sets the font size used in the prompt editor.</p>
         </div>
 
         <div class="flex items-center gap-3">
