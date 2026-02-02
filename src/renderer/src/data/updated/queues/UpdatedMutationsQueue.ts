@@ -50,9 +50,8 @@ export type SyncMutationParams<TSnapshot, TData> = MutationParams<TSnapshot, TDa
  * - rollbackConflict: called when run returns a conflict; restore the most recent
  *   server authoritative snapshot and revert optimistic draft changes using your
  *   store helpers.
- * - rollbackError: called when run returns an error result or throws; restore the
- *   most recent server authoritative snapshot and revert optimistic draft changes
- *   using your store helpers.
+ * - rollbackError: called when run returns an error result or throws. Undo only
+ *   the optimistic changes so unrelated draft edits remain intact.
  *
  * Autosaves should skip optimisticMutation because the draft already includes
  * the field-level changes before enqueue time.

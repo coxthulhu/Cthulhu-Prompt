@@ -124,6 +124,8 @@ export const createPromptFolder = async (
       )
     },
     snapshot: () => ({
+      // Side effect: capture the workspace and temp ID that the optimistic insert touched.
+      // This keeps commit/rollback aligned if the user navigates to another workspace.
       workspaceId,
       expectedRevision: workspaceEntry.lastServerSnapshot!.revision,
       displayName: normalizedDisplayName,
@@ -148,6 +150,8 @@ export const createPromptFolder = async (
       const promptFolderResponse = result.payload.promptFolder!
 
       rekeyPromptFolderEntry(promptFolderResponse, (oldId, newId) => {
+        // Side effect: rekey the optimistic entry on the same workspace that queued the mutation.
+        // The snapshot's workspaceId anchors the rewrite even if the active workspace changes.
         const entry = getWorkspaceEntry(snapshot.workspaceId)
         if (!entry?.draftSnapshot) {
           return
@@ -171,6 +175,8 @@ export const createPromptFolder = async (
       mergeAuthoritativeWorkspaceSnapshot(result.payload.workspace, true)
     },
     rollbackError: () => {
+      // Side effect: only revert the optimistic insert for this mutation.
+      // We keep other draft edits intact instead of resetting to the last server snapshot.
       optimisticDeletePromptFolderDraft(optimisticPromptFolderId)
       workspaceEntry.draftSnapshot!.promptFolderIds = previousPromptFolderIds
     }
