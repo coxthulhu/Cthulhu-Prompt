@@ -98,7 +98,7 @@ Note: Under the hood, Loro combines a Fugue-based CRDT core with Eg-walker-inspi
 
 ## Basic Usage
 
-```typescript twoslash
+```typescript
 import { LoroDoc } from "loro-crdt";
 
 const doc = new LoroDoc();
