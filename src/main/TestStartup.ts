@@ -160,6 +160,16 @@ export function setupTestStartupListener(): void {
     ;(global as any).testFileExistsResult = exists
   })
 
+  // Listen for file read requests
+  ;(app as any).on(
+    'test-read-file',
+    (payload: { filePath: string; requestId: string }) => {
+      const fs = getFs()
+      const content = fs.readFileSync(payload.filePath, 'utf8')
+      ;(app as any).emit(`test-read-file-ready:${payload.requestId}`, { content })
+    }
+  )
+
   // Listen for startup completion
   ;(app as any).on('test-complete-startup', () => {
     // Apply filesystem setup if provided

@@ -48,7 +48,8 @@ describe('Prompt Folders Autosave (Svelte)', () => {
   })
 
   test('retains typed content when switching folders immediately after typing', async ({
-    testSetup
+    testSetup,
+    electronApp
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -70,10 +71,20 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
 
-    const persisted = await mainWindow.evaluate(async () => {
-      const result = await window.promptAPI.loadPrompts('/ws/sample', 'Development')
-      return result?.prompts?.map((p) => p.promptText).join('\n') ?? ''
-    })
+    const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
+      return await new Promise<string>((resolve) => {
+        const requestId = `read-${Date.now().toString(36)}-${Math.random()
+          .toString(16)
+          .slice(2)}`
+        app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
+          resolve(payload.content)
+        })
+        app.emit('test-read-file', { filePath, requestId })
+      })
+    }, '/ws/sample/Prompts/Development/Prompts.json')
+    const persisted = JSON.parse(persistedContent)
+      .prompts.map((prompt: { promptText: string }) => prompt.promptText)
+      .join('\n')
     expect(persisted).toContain(marker)
 
     await expect
