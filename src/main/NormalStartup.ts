@@ -6,6 +6,7 @@ import icon from '../../resources/icon.png?asset'
 import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
 import { SystemSettingsManager } from './system-settings'
+import { LoroSystemSettingsDoc } from './loro/LoroSystemSettingsDoc'
 import { setupUpdatedDataHandlers } from './data'
 import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
 import {
@@ -194,6 +195,7 @@ export function startupNormally(): void {
 
     // Setup system settings IPC handlers
     SystemSettingsManager.setupIpcHandlers()
+    LoroSystemSettingsDoc.initialize()
     setupUpdatedDataHandlers()
     setupWindowControlHandlers()
 
