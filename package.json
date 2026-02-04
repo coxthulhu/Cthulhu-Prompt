@@ -28,6 +28,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/svelte-db": "^0.1.68",
     "electron-updater": "^6.3.9",
     "loro-crdt": "^1.10.5",
     "lucide-svelte": "^0.555.0",
