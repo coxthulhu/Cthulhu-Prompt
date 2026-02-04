@@ -43,7 +43,7 @@ TanStack DB is the reactive client store for your API. It provides sub-milliseco
 
 - Setting up a new collection
 - Choosing between QueryCollection, LocalStorage, etc.
-- Configuring sync modes (eager, on-demand, progressive)
+- Configuring sync modes (eager, on-demand)
 - Understanding collection lifecycle
 - Loading data from APIs or sync engines
 

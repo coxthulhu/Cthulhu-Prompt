@@ -86,7 +86,6 @@ const productsCollection = createCollection(
     // Choose sync mode:
     syncMode: 'eager', // Default: Load all upfront (<10k rows)
     // syncMode: 'on-demand', // Load only what queries request (>50k rows)
-    // syncMode: 'progressive', // Load subset first, sync full in background
   }),
 )
 ```
@@ -95,7 +94,6 @@ const productsCollection = createCollection(
 | ------------- | ------------------------------------------ | --------------------------------------- |
 | `eager`       | Load entire collection upfront             | <10k rows, mostly static data           |
 | `on-demand`   | Load only what queries request             | >50k rows, search interfaces, catalogs  |
-| `progressive` | Load query subset, sync full in background | Collaborative apps, instant first paint |
 
 
 ### LocalStorageCollection
@@ -196,28 +194,32 @@ collection.delete(key) // Delete item(s)
 
 // Utilities (collection-specific)
 collection.utils.refetch() // QueryCollection: refetch from API
-collection.utils.acceptMutations() // LocalCollection: accept in manual tx
+collection.utils.acceptMutations(transaction) // LocalCollection: accept in manual tx
 ```
 
 ## Configuration Options
 
 ```ts
-interface CollectionOptions {
+// Base CollectionConfig (for custom sync implementations)
+interface CollectionConfig {
   id?: string // Unique identifier
   getKey: (item) => Key // Extract unique key from item
   schema?: StandardSchema // Validation schema (Zod, Valibot, etc.)
+  sync: SyncConfig // Required when using createCollection directly
 
   // Persistence handlers
-  onInsert?: MutationFn
-  onUpdate?: MutationFn
-  onDelete?: MutationFn
-
-  // QueryCollection specific
-  queryKey?: QueryKey
-  queryFn?: QueryFn
-  queryClient?: QueryClient
-  syncMode?: 'eager' | 'on-demand' | 'progressive'
+  onInsert?: InsertMutationFn
+  onUpdate?: UpdateMutationFn
+  onDelete?: DeleteMutationFn
 }
+
+// QueryCollection options (from @tanstack/query-db-collection)
+queryCollectionOptions({
+  queryKey: QueryKey,
+  queryFn: QueryFn,
+  queryClient?: QueryClient,
+  syncMode?: 'eager' | 'on-demand',
+})
 ```
 
 ## Collection-Specific Skills
@@ -234,5 +236,5 @@ For detailed patterns on each collection type, see the dedicated skill directori
 | Reference                          | When to Use                                 |
 | ---------------------------------- | ------------------------------------------- |
 | `references/local-collections.md`  | LocalStorage, LocalOnly, cross-tab sync     |
-| `references/sync-modes.md`         | Eager vs on-demand vs progressive tradeoffs |
+| `references/sync-modes.md`         | Eager vs on-demand tradeoffs                 |
 | `references/custom-collections.md` | Building your own collection type           |

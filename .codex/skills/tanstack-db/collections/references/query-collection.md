@@ -42,7 +42,7 @@ queryCollectionOptions({
   // Optional
   queryClient?: QueryClient,    // Your query client instance
   schema?: StandardSchema,      // Validation schema
-  syncMode?: 'eager' | 'on-demand' | 'progressive',
+  syncMode?: 'eager' | 'on-demand',
 
   // Mutation handlers
   onInsert?: MutationFn,
@@ -132,15 +132,15 @@ For real-time updates (WebSocket, SSE), write directly to collection:
 ```ts
 // Listen to real-time updates
 websocket.on('todo:created', (todo) => {
-  todoCollection.utils.directWrite('insert', todo)
+  todoCollection.utils.writeInsert(todo)
 })
 
 websocket.on('todo:updated', (todo) => {
-  todoCollection.utils.directWrite('update', todo)
+  todoCollection.utils.writeUpdate(todo)
 })
 
 websocket.on('todo:deleted', ({ id }) => {
-  todoCollection.utils.directWrite('delete', id)
+  todoCollection.utils.writeDelete(id)
 })
 ```
 

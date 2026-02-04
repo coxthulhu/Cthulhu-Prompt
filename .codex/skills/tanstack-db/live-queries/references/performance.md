@@ -132,8 +132,7 @@ const allFieldsQuery = useLiveQuery((q) => q.from({ user: usersCollection }))
 ### Collection Size
 
 - **< 10k rows**: Eager sync works well
-- **10k - 50k rows**: Consider progressive sync
-- **> 50k rows**: Use on-demand sync
+- **>= 10k rows**: Use on-demand sync
 
 ### Query Result Caching
 

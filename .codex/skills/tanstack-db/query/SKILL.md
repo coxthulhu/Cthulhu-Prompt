@@ -138,7 +138,6 @@ const todoCollection = createCollection(
 | ------------- | ------------------------------------------ | --------------------------------------- |
 | `eager`       | Load entire collection upfront (default)   | <10k rows, mostly static data           |
 | `on-demand`   | Load only what queries request             | >50k rows, search interfaces, catalogs  |
-| `progressive` | Load query subset, sync full in background | Collaborative apps, instant first paint |
 
 ### On-Demand Mode
 

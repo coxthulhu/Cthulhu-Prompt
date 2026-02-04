@@ -9,9 +9,9 @@ Control when and how mutations persist to your backend using timing strategies.
 Wait for inactivity before persisting. Only final state is saved.
 
 ```ts
-import { usePacedMutations, debounceStrategy } from '@tanstack/svelte-db'
+import { createPacedMutations, debounceStrategy } from '@tanstack/svelte-db'
 
-const mutate = usePacedMutations<{ field: string; value: string }>({
+const mutate = createPacedMutations<{ field: string; value: string }>({
   onMutate: ({ field, value }) => {
     formCollection.update(formId, (draft) => {
       draft[field] = value
@@ -31,9 +31,9 @@ const mutate = usePacedMutations<{ field: string; value: string }>({
 Ensure minimum spacing between executions. Mutations between executions merge.
 
 ```ts
-import { usePacedMutations, throttleStrategy } from '@tanstack/svelte-db'
+import { createPacedMutations, throttleStrategy } from '@tanstack/svelte-db'
 
-const mutate = usePacedMutations<number>({
+const mutate = createPacedMutations<number>({
   onMutate: (volume) => {
     settingsCollection.update('volume', (d) => {
       d.value = volume
@@ -57,9 +57,9 @@ const mutate = usePacedMutations<number>({
 Each mutation creates a separate transaction, processed sequentially.
 
 ```ts
-import { usePacedMutations, queueStrategy } from '@tanstack/svelte-db'
+import { createPacedMutations, queueStrategy } from '@tanstack/svelte-db'
 
-const mutate = usePacedMutations<File>({
+const mutate = createPacedMutations<File>({
   onMutate: (file) => {
     uploadCollection.insert({
       id: crypto.randomUUID(),
@@ -93,7 +93,7 @@ const mutate = usePacedMutations<File>({
 
 ## Shared Queues
 
-Each hook call creates its own queue. To share across components:
+Each createPacedMutations instance creates its own queue. To share across components:
 
 ```svelte
 <script>
@@ -129,9 +129,9 @@ Each hook call creates its own queue. To share across components:
 Queue strategy continues processing after failures:
 
 ```ts
-import { usePacedMutations, queueStrategy } from '@tanstack/svelte-db'
+import { createPacedMutations, queueStrategy } from '@tanstack/svelte-db'
 
-const mutate = usePacedMutations({
+const mutate = createPacedMutations({
   onMutate: (data) => {
     /* ... */
   },
@@ -154,19 +154,9 @@ try {
 
 ## API Reference
 
-### usePacedMutations
-
-```ts
-function usePacedMutations<T>(options: {
-  onMutate: (input: T) => void
-  mutationFn: MutationFn
-  strategy: Strategy
-}): (input: T) => Transaction
-```
-
 ### createPacedMutations
 
-Same API, but outside Svelte components:
+Use in Svelte components or shared modules:
 
 ```ts
 const mutate = createPacedMutations<T>({

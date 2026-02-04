@@ -8,7 +8,6 @@ Control how data loads into QueryCollections.
 | ------------- | ------------------------------------- | -------------------------- |
 | `eager`       | Load all upfront                      | Small datasets (<10k rows) |
 | `on-demand`   | Load only what queries request        | Large datasets (>50k rows) |
-| `progressive` | Load subset first, full in background | Collaborative apps         |
 
 ## Eager Mode (Default)
 
@@ -87,50 +86,9 @@ query.data
 - Search interfaces
 - Large datasets where most data isn't accessed
 
-## Progressive Mode
-
-Loads query subset immediately, syncs full dataset in background:
-
-```ts
-const issuesCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['issues'],
-    queryFn: async (ctx) => {
-      if (ctx.meta?.loadSubsetOptions) {
-        // First: load what query needs
-        return api.issues.search(
-          parseLoadSubsetOptions(ctx.meta.loadSubsetOptions),
-        )
-      }
-      // Then: load everything in background
-      return api.issues.getAll()
-    },
-    getKey: (item) => item.id,
-    syncMode: 'progressive',
-  }),
-)
-```
-
-**Pros:**
-
-- Instant first paint
-- Eventually has all data for fast local queries
-- Good for collaborative apps
-
-**Cons:**
-
-- More complex implementation
-- Uses more memory than on-demand
-
-**Best for:**
-
-- Issue trackers (like Linear)
-- Collaborative documents
-- Apps that benefit from local-first after initial sync
-
 ## Predicate Push-Down
 
-With `on-demand` and `progressive`, query predicates are passed to queryFn:
+With `on-demand`, query predicates are passed to queryFn:
 
 ```ts
 queryFn: async (ctx) => {
@@ -180,23 +138,22 @@ const q2 = q.where(({ p }) =>
 ## Choosing a Mode
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    How much data?                           │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              │               │               │
-         < 10k rows      10k-50k rows     > 50k rows
-              │               │               │
-              ▼               ▼               ▼
-           EAGER         PROGRESSIVE      ON-DEMAND
+┌──────────────────────────────────────────────┐
+│                   How much data?             │
+└──────────────────────────────────────────────┘
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+       < 10k rows           >= 10k rows
+          │                     │
+          ▼                     ▼
+        EAGER               ON-DEMAND
 ```
 
 **Additional considerations:**
 
-- Need instant filtering on all data? → eager or progressive
+- Need instant filtering on all data? → eager
 - Search/filter is primary use case? → on-demand
-- Collaborative with real-time updates? → progressive
 - Memory-constrained environment? → on-demand
 
 ## Combining Modes
@@ -220,10 +177,10 @@ const productsCollection = createCollection(
   })
 )
 
-// Collaborative data: progressive
+// Large or sparse data: on-demand
 const issuesCollection = createCollection(
   queryCollectionOptions({
-    syncMode: 'progressive',
+    syncMode: 'on-demand',
     ...
   })
 )

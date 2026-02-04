@@ -14,6 +14,13 @@ Build your own collection type for custom data sources.
 Implement the `Collection` interface from `@tanstack/db`:
 
 ```ts
+import type {
+  CollectionStatus,
+  InsertConfig,
+  OperationConfig,
+  Transaction,
+} from '@tanstack/db'
+
 interface Collection<TData, TKey> {
   // Identity
   id: string
@@ -25,30 +32,33 @@ interface Collection<TData, TKey> {
   size: number
 
   // Write operations
-  insert(item: TData | TData[], options?: MutationOptions): Transaction
+  insert(item: TData | TData[], config?: InsertConfig): Transaction
   update(
     key: TKey | TKey[],
     updater: (draft: TData) => void,
-    options?: MutationOptions,
+    config?: OperationConfig,
   ): Transaction
-  delete(key: TKey | TKey[], options?: MutationOptions): Transaction
+  delete(key: TKey | TKey[], config?: OperationConfig): Transaction
 
-  // State
-  state: CollectionState
+  // Status + state
+  status: CollectionStatus
+  isReady(): boolean
+  isLoadingSubset: boolean
+  state: Map<TKey, TData>
 
-  // Utilities
-  utils: CollectionUtils
+  // Utilities (collection-specific)
+  utils: Record<string, (...args: Array<unknown>) => unknown>
 }
 ```
 
 ## Basic Structure
 
 ```ts
-import { createCollection, type CollectionOptions } from '@tanstack/db'
+import { createCollection, type CollectionConfig } from '@tanstack/db'
 
 export function myCollectionOptions<TData, TKey>(
   options: MyCollectionConfig<TData, TKey>,
-): CollectionOptions<TData, TKey> {
+): CollectionConfig<TData, TKey> {
   return {
     id: options.id,
     getKey: options.getKey,
@@ -56,20 +66,26 @@ export function myCollectionOptions<TData, TKey>(
 
     // Sync configuration
     sync: {
-      // Called to start syncing data
-      start: async (collection) => {
+      sync: ({ begin, write, commit, markReady }) => {
+        let ready = false
+
         // Set up data sync
         const cleanup = subscribeToDataSource((data) => {
-          collection.utils.directWrite('insert', data)
+          begin()
+          write({
+            type: 'insert',
+            key: options.getKey(data),
+            value: data,
+          })
+          commit()
+
+          if (!ready) {
+            markReady()
+            ready = true
+          }
         })
 
-        // Return cleanup function
-        return cleanup
-      },
-
-      // Called to stop syncing
-      stop: async (cleanup) => {
-        cleanup?.()
+        return () => cleanup()
       },
     },
 
@@ -92,35 +108,59 @@ export function websocketCollectionOptions<TData, TKey>(config: {
   onInsert?: MutationFn
   onUpdate?: MutationFn
   onDelete?: MutationFn
-}): CollectionOptions<TData, TKey> {
+}): CollectionConfig<TData, TKey> {
   return {
     id: config.id,
     getKey: config.getKey,
     schema: config.schema,
 
     sync: {
-      start: async (collection) => {
+      sync: ({ begin, write, commit, markReady }) => {
         const ws = new WebSocket(config.url)
+        let ready = false
 
         ws.onmessage = (event) => {
           const message = JSON.parse(event.data)
 
+          begin()
+
           switch (message.type) {
             case 'initial':
               message.data.forEach((item: TData) => {
-                collection.utils.directWrite('insert', item)
+                write({
+                  type: 'insert',
+                  key: config.getKey(item),
+                  value: item,
+                })
               })
+              if (!ready) {
+                markReady()
+                ready = true
+              }
               break
             case 'insert':
-              collection.utils.directWrite('insert', message.data)
+              write({
+                type: 'insert',
+                key: config.getKey(message.data),
+                value: message.data,
+              })
               break
             case 'update':
-              collection.utils.directWrite('update', message.data)
+              write({
+                type: 'update',
+                key: config.getKey(message.data),
+                value: message.data,
+              })
               break
             case 'delete':
-              collection.utils.directWrite('delete', message.key)
+              write({
+                type: 'delete',
+                key: message.key,
+              })
               break
           }
+
+          commit()
         }
 
         return () => ws.close()
@@ -156,7 +196,7 @@ export function indexedDBCollectionOptions<TData, TKey>(config: {
   storeName: string
   getKey: (item: TData) => TKey
   schema?: StandardSchema
-}): CollectionOptions<TData, TKey> {
+}): CollectionConfig<TData, TKey> {
   let db: IDBPDatabase
 
   return {
@@ -165,24 +205,33 @@ export function indexedDBCollectionOptions<TData, TKey>(config: {
     schema: config.schema,
 
     sync: {
-      start: async (collection) => {
-        db = await openDB(config.dbName, 1, {
-          upgrade(db) {
-            db.createObjectStore(config.storeName, {
-              keyPath: 'id',
+      sync: ({ begin, write, commit, markReady }) => {
+        void (async () => {
+          db = await openDB(config.dbName, 1, {
+            upgrade(db) {
+              db.createObjectStore(config.storeName, {
+                keyPath: 'id',
+              })
+            },
+          })
+
+          // Load initial data
+          const items = await db.getAll(config.storeName)
+          begin()
+          items.forEach((item) => {
+            write({
+              type: 'insert',
+              key: config.getKey(item),
+              value: item,
             })
-          },
-        })
+          })
+          commit()
+          markReady()
+        })()
 
-        // Load initial data
-        const items = await db.getAll(config.storeName)
-        items.forEach((item) => {
-          collection.utils.directWrite('insert', item)
-        })
-      },
-
-      stop: async () => {
-        db?.close()
+        return () => {
+          db?.close()
+        }
       },
     },
 
@@ -213,21 +262,24 @@ export function indexedDBCollectionOptions<TData, TKey>(config: {
 }
 ```
 
-## Direct Write API
+## Applying External Changes
 
-Use `directWrite` to update collection from external sources:
+Use the `sync` callback's `begin`/`write`/`commit` helpers to apply external updates:
 
 ```ts
-// Insert item(s)
-collection.utils.directWrite('insert', item)
-collection.utils.directWrite('insert', [item1, item2])
+sync: ({ begin, write, commit }) => {
+  const applyInsert = (item) => {
+    begin()
+    write({ type: 'insert', key: getKey(item), value: item })
+    commit()
+  }
 
-// Update item(s)
-collection.utils.directWrite('update', updatedItem)
-
-// Delete by key
-collection.utils.directWrite('delete', key)
-collection.utils.directWrite('delete', [key1, key2])
+  const applyDelete = (key) => {
+    begin()
+    write({ type: 'delete', key })
+    commit()
+  }
+}
 ```
 
 ## Collection State
@@ -235,17 +287,18 @@ collection.utils.directWrite('delete', [key1, key2])
 Track collection status:
 
 ```ts
-interface CollectionState {
-  isLoading: boolean
-  isError: boolean
-  error?: Error
-  isSyncing: boolean
-}
+const status = myCollection.status
+const isReady = myCollection.isReady()
+const isLoadingSubset = myCollection.isLoadingSubset
 
-// Access in components
-const state = myCollection.state
-if (state.isLoading) return <Loading />
-if (state.isError) return <Error error={state.error} />
+// Svelte template example:
+// {#if status === 'loading'}
+//   <Loading />
+// {:else if status === 'error'}
+//   <div>Failed to load collection</div>
+// {:else if isReady}
+//   <div>Ready</div>
+// {/if}
 ```
 
 ## Testing Custom Collections

@@ -181,14 +181,14 @@ await reviewTx.commit()
 
 ```ts
 import {
-  usePacedMutations,
+  createPacedMutations,
   debounceStrategy,
   throttleStrategy,
   queueStrategy,
 } from '@tanstack/svelte-db'
 
 // Debounce: Wait for inactivity (auto-save forms)
-const mutate = usePacedMutations<{ field: string; value: string }>({
+const mutate = createPacedMutations<{ field: string; value: string }>({
   onMutate: ({ field, value }) => {
     formCollection.update(formId, (draft) => {
       draft[field] = value
@@ -201,7 +201,7 @@ const mutate = usePacedMutations<{ field: string; value: string }>({
 })
 
 // Throttle: Minimum spacing (sliders)
-const mutate = usePacedMutations<number>({
+const mutate = createPacedMutations<number>({
   onMutate: (volume) => {
     settingsCollection.update('volume', (d) => {
       d.value = volume
@@ -214,7 +214,7 @@ const mutate = usePacedMutations<number>({
 })
 
 // Queue: Sequential processing (file uploads)
-const mutate = usePacedMutations<File>({
+const mutate = createPacedMutations<File>({
   onMutate: (file) => {
     uploadCollection.insert({
       id: crypto.randomUUID(),
