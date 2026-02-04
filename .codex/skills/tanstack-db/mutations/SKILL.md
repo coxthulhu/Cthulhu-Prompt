@@ -13,7 +13,7 @@ TanStack DB mutations follow optimistic update → server persist → sync back 
 
 ### Collection-Level Mutations
 
-```tsx
+```ts
 // Insert
 todoCollection.insert({
   id: crypto.randomUUID(),
@@ -51,7 +51,7 @@ todoCollection.delete([id1, id2])
 
 Define handlers when creating collections to persist mutations:
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['todos'],
@@ -85,8 +85,8 @@ const todoCollection = createCollection(
 
 For intent-based mutations or multi-collection changes:
 
-```tsx
-import { createOptimisticAction } from '@tanstack/react-db'
+```ts
+import { createOptimisticAction } from '@tanstack/svelte-db'
 
 const likePost = createOptimisticAction<string>({
   onMutate: (postId) => {
@@ -110,7 +110,7 @@ likePost(postId)
 
 ### Multi-Collection Actions
 
-```tsx
+```ts
 const createProject = createOptimisticAction<{ name: string; ownerId: string }>(
   {
     onMutate: ({ name, ownerId }) => {
@@ -142,8 +142,8 @@ const createProject = createOptimisticAction<{ name: string; ownerId: string }>(
 
 For batch mutations with explicit commit control:
 
-```tsx
-import { createTransaction } from '@tanstack/react-db'
+```ts
+import { createTransaction } from '@tanstack/svelte-db'
 
 const reviewTx = createTransaction({
   autoCommit: false, // Wait for explicit commit
@@ -179,13 +179,13 @@ await reviewTx.commit()
 
 ### Paced Mutations (Debounce/Throttle/Queue)
 
-```tsx
+```ts
 import {
   usePacedMutations,
   debounceStrategy,
   throttleStrategy,
   queueStrategy,
-} from '@tanstack/react-db'
+} from '@tanstack/svelte-db'
 
 // Debounce: Wait for inactivity (auto-save forms)
 const mutate = usePacedMutations<{ field: string; value: string }>({
@@ -233,7 +233,7 @@ const mutate = usePacedMutations<File>({
 
 Wait for server confirmation before showing change:
 
-```tsx
+```ts
 // Insert without optimistic update
 const tx = todoCollection.insert(
   { id: '1', text: 'Server-validated', completed: false },
@@ -253,7 +253,7 @@ try {
 
 Annotate mutations for custom handler behavior:
 
-```tsx
+```ts
 todoCollection.update(todoId, { metadata: { intent: 'complete' } }, (draft) => {
   draft.completed = true
 })
@@ -271,7 +271,7 @@ onUpdate: async ({ transaction }) => {
 
 ### Waiting for Persistence
 
-```tsx
+```ts
 const tx = todoCollection.update(todoId, (draft) => {
   draft.completed = true
 })
@@ -292,7 +292,7 @@ try {
 
 When server generates the real ID:
 
-```tsx
+```ts
 // Option 1: Use client-generated UUIDs (recommended)
 todoCollection.insert({
   id: crypto.randomUUID(), // Stable ID, no flicker
@@ -307,7 +307,7 @@ await tx.isPersisted.promise
 
 ## Transaction Handler API
 
-```tsx
+```ts
 interface OperationHandler {
   ({ transaction, collection }): Promise<any>
 }

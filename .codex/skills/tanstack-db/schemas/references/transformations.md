@@ -6,7 +6,7 @@ Transform data as it enters your collection.
 
 Most common transformation - convert ISO strings to Date objects:
 
-```tsx
+```ts
 const eventSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -27,7 +27,7 @@ console.log(event.start_time.getFullYear()) // Date out
 
 ## String to Number
 
-```tsx
+```ts
 const formSchema = z.object({
   id: z.string(),
   quantity: z
@@ -50,7 +50,7 @@ console.log(typeof item.quantity) // "number"
 
 ## JSON String to Object
 
-```tsx
+```ts
 const configSchema = z.object({
   id: z.string(),
   settings: z
@@ -69,7 +69,7 @@ console.log(config.settings.theme) // "dark"
 
 ## Computed Fields
 
-```tsx
+```ts
 const userSchema = z
   .object({
     id: z.string(),
@@ -93,7 +93,7 @@ console.log(user.full_name) // "John Doe"
 
 ## Sanitization
 
-```tsx
+```ts
 const commentSchema = z.object({
   id: z.string(),
   text: z.string().transform((val) => val.trim()),
@@ -103,7 +103,7 @@ const commentSchema = z.object({
 
 ## Complex Transformations
 
-```tsx
+```ts
 const productSchema = z
   .object({
     id: z.string(),
@@ -121,7 +121,7 @@ const productSchema = z
 
 ### Literal Defaults
 
-```tsx
+```ts
 const todoSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -139,7 +139,7 @@ collection.insert({
 
 ### Function Defaults
 
-```tsx
+```ts
 const postSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -150,7 +150,7 @@ const postSchema = z.object({
 
 ## Combining Defaults with Transformations
 
-```tsx
+```ts
 const todoSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -166,7 +166,7 @@ const todoSchema = z.object({
 
 **Always use union types** when transforming between types. This ensures TInput accepts both the input format AND the output format:
 
-```tsx
+```ts
 // REQUIRED: Accept both string (new data) and Date (existing data)
 const schema = z.object({
   created_at: z
@@ -186,7 +186,7 @@ See [TInput vs TOutput](./tinput-toutput.md) for why this is essential.
 
 Schema validation runs synchronously on every mutation. Keep transformations simple for high-frequency updates:
 
-```tsx
+```ts
 // Avoid expensive operations in transforms
 const schema = z.object({
   data: z.string().transform((val) => expensiveOperation(val)), // Slow

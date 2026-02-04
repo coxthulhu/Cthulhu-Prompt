@@ -13,8 +13,8 @@ Combine data from multiple collections with type-safe joins.
 
 ## Basic Join
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ user: usersCollection })
     .join(
@@ -29,7 +29,7 @@ const { data } = useLiveQuery((q) =>
 
 ## Convenience Methods
 
-```tsx
+```ts
 // These are equivalent:
 .join({ post: postsCollection }, condition, 'left')
 .leftJoin({ post: postsCollection }, condition)
@@ -48,7 +48,7 @@ const { data } = useLiveQuery((q) =>
 
 Join types affect optionality:
 
-```tsx
+```ts
 // Left join: right side optional
 .leftJoin({ post }, condition)
 // { user: User; post?: Post }
@@ -70,8 +70,8 @@ Join types affect optionality:
 
 Chain joins to combine many collections:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ user: usersCollection })
     .leftJoin({ post: postsCollection }, ({ user, post }) =>
@@ -92,8 +92,8 @@ const { data } = useLiveQuery((q) =>
 
 Flatten joined data:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ user: usersCollection })
     .innerJoin({ post: postsCollection }, ({ user, post }) =>
@@ -114,8 +114,8 @@ const { data } = useLiveQuery((q) =>
 
 Join against a filtered subset:
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   const recentPosts = q
     .from({ post: postsCollection })
     .where(({ post }) => gt(post.createdAt, lastWeek))
@@ -132,9 +132,9 @@ const { data } = useLiveQuery((q) => {
 
 Use `isUndefined` to find unmatched rows:
 
-```tsx
+```ts
 // Users without any posts
-const { data } = useLiveQuery((q) =>
+const query = useLiveQuery((q) =>
   q
     .from({ user: usersCollection })
     .leftJoin({ post: postsCollection }, ({ user, post }) =>
@@ -152,7 +152,7 @@ const { data } = useLiveQuery((q) =>
 
 Joins only support equality conditions:
 
-```tsx
+```ts
 // ✅ Supported
 .join({ post }, ({ user, post }) => eq(user.id, post.userId))
 
@@ -167,7 +167,7 @@ Joins only support equality conditions:
 - Multiple joins on large collections may need derived collections for caching
 - Consider filtering before joining to reduce intermediate results
 
-```tsx
+```ts
 // Better: filter first, then join
 const activeUsers = q
   .from({ user: usersCollection })

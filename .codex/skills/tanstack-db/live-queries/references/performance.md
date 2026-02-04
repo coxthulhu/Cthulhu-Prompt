@@ -24,7 +24,7 @@ TanStack DB uses differential dataflow (via d2ts). Instead of re-running queries
 
 ### 1. Use Expressions Over Functional Variants
 
-```tsx
+```ts
 // ✅ Optimizable
 .where(({ user }) => eq(user.active, true))
 
@@ -36,9 +36,9 @@ TanStack DB uses differential dataflow (via d2ts). Instead of re-running queries
 
 Reduce data before expensive operations:
 
-```tsx
+```ts
 // ✅ Better: filter first
-const { data } = useLiveQuery((q) =>
+const queryFiltered = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .where(({ order }) => eq(order.status, 'completed'))
@@ -46,7 +46,7 @@ const { data } = useLiveQuery((q) =>
 )
 
 // ❌ Worse: join everything then filter
-const { data } = useLiveQuery((q) =>
+const queryJoined = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .join({ user: usersCollection }, ...)
@@ -58,7 +58,7 @@ const { data } = useLiveQuery((q) =>
 
 Cache intermediate results:
 
-```tsx
+```ts
 // Create once, reuse everywhere
 const activeUsers = createLiveQueryCollection((q) =>
   q
@@ -67,12 +67,12 @@ const activeUsers = createLiveQueryCollection((q) =>
 )
 
 // Fast: uses cached result
-const userPosts = useLiveQuery((q) =>
+const userPostsQuery = useLiveQuery((q) =>
   q.from({ user: activeUsers }).join(...)
 )
 
 // Fast: same cached result
-const userComments = useLiveQuery((q) =>
+const userCommentsQuery = useLiveQuery((q) =>
   q.from({ user: activeUsers }).join(...)
 )
 ```
@@ -81,9 +81,9 @@ const userComments = useLiveQuery((q) =>
 
 Don't load more than needed:
 
-```tsx
+```ts
 // ✅ Paginated
-const { data } = useLiveQuery((q) =>
+const pagedQuery = useLiveQuery((q) =>
   q
     .from({ item: itemsCollection })
     .orderBy(({ item }) => item.createdAt, 'desc')
@@ -91,14 +91,14 @@ const { data } = useLiveQuery((q) =>
 )
 
 // ❌ Loading everything
-const { data } = useLiveQuery((q) => q.from({ item: itemsCollection }))
+const allItemsQuery = useLiveQuery((q) => q.from({ item: itemsCollection }))
 ```
 
 ### 5. Use On-Demand Sync Mode
 
 For large datasets, let queries drive loading:
 
-```tsx
+```ts
 const collection = createCollection(
   queryCollectionOptions({
     syncMode: 'on-demand', // Only load what queries need
@@ -114,9 +114,9 @@ const collection = createCollection(
 
 Only select fields you need:
 
-```tsx
+```ts
 // ✅ Only needed fields
-const { data } = useLiveQuery((q) =>
+const selectedQuery = useLiveQuery((q) =>
   q.from({ user: usersCollection }).select(({ user }) => ({
     id: user.id,
     name: user.name,
@@ -124,7 +124,7 @@ const { data } = useLiveQuery((q) =>
 )
 
 // ❌ All fields (includes large blobs, etc.)
-const { data } = useLiveQuery((q) => q.from({ user: usersCollection }))
+const allFieldsQuery = useLiveQuery((q) => q.from({ user: usersCollection }))
 ```
 
 ## Memory Considerations
@@ -139,22 +139,20 @@ const { data } = useLiveQuery((q) => q.from({ user: usersCollection }))
 
 Live query results are cached and updated incrementally. Multiple components using the same query share the cache:
 
-```tsx
+```ts
 // These share the same underlying query cache
-function ComponentA() {
-  const { data } = useLiveQuery((q) => q.from({ user: usersCollection }))
-}
+// Component A
+const queryA = useLiveQuery((q) => q.from({ user: usersCollection }))
 
-function ComponentB() {
-  const { data } = useLiveQuery((q) => q.from({ user: usersCollection }))
-}
+// Component B
+const queryB = useLiveQuery((q) => q.from({ user: usersCollection }))
 ```
 
 ### Garbage Collection
 
 Unused queries are garbage collected after `gcTime` (default 5 seconds):
 
-```tsx
+```ts
 const collection = createCollection(
   liveQueryCollectionOptions({
     query: ...,
@@ -173,15 +171,15 @@ localStorage.debug = 'ts/db:*'
 
 ### Measure Query Time
 
-```tsx
+```ts
 const start = performance.now()
-const { data } = useLiveQuery(...)
+const query = useLiveQuery(...)
 console.log(`Query took ${performance.now() - start}ms`)
 ```
 
-### Profile with React DevTools
+### Profile with Svelte DevTools
 
-Use React DevTools Profiler to identify re-render causes.
+Use Svelte DevTools or the browser performance profiler to identify re-render causes.
 
 ## Common Pitfalls
 

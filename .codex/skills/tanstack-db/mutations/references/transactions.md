@@ -11,8 +11,8 @@ Full control over mutation batching and commit timing.
 
 ## Creating Transactions
 
-```tsx
-import { createTransaction } from '@tanstack/react-db'
+```ts
+import { createTransaction } from '@tanstack/svelte-db'
 
 const tx = createTransaction({
   autoCommit: false, // Wait for explicit commit
@@ -24,7 +24,7 @@ const tx = createTransaction({
 
 ## Configuration Options
 
-```tsx
+```ts
 createTransaction({
   id?: string,              // Optional unique ID
   autoCommit?: boolean,     // Default: true
@@ -45,7 +45,7 @@ createTransaction({
 
 Apply mutations within the transaction:
 
-```tsx
+```ts
 tx.mutate(() => {
   collection.insert(item)
   collection.update(key, (draft) => { ... })
@@ -57,7 +57,7 @@ tx.mutate(() => {
 
 Persist all mutations:
 
-```tsx
+```ts
 await tx.commit()
 ```
 
@@ -65,13 +65,13 @@ await tx.commit()
 
 Discard all optimistic changes:
 
-```tsx
+```ts
 tx.rollback()
 ```
 
 ## Basic Workflow
 
-```tsx
+```ts
 const tx = createTransaction({
   autoCommit: false,
   mutationFn: async ({ transaction }) => {
@@ -101,7 +101,7 @@ await tx.commit()
 
 ## Transaction States
 
-```tsx
+```ts
 tx.state // 'pending' | 'persisting' | 'completed' | 'failed'
 ```
 
@@ -114,7 +114,7 @@ tx.state // 'pending' | 'persisting' | 'completed' | 'failed'
 
 ## Waiting for Completion
 
-```tsx
+```ts
 // Promise-based
 try {
   await tx.isPersisted.promise
@@ -133,7 +133,7 @@ if (tx.state === 'completed') {
 
 When `autoCommit: true` (default), each `mutate()` commits immediately:
 
-```tsx
+```ts
 const tx = createTransaction({
   autoCommit: true, // Default
   mutationFn: async ({ transaction }) => {
@@ -151,7 +151,7 @@ tx.mutate(() => {
 
 Local collections need explicit mutation acceptance:
 
-```tsx
+```ts
 const localCollection = createCollection(
   localOnlyCollectionOptions({
     id: 'drafts',
@@ -179,7 +179,7 @@ await tx.commit()
 
 ## Combining Local and Server Collections
 
-```tsx
+```ts
 const tx = createTransaction({
   mutationFn: async ({ transaction }) => {
     // Server mutations
@@ -208,7 +208,7 @@ tx.mutate(() => {
 
 Failed transactions automatically rollback optimistic state:
 
-```tsx
+```ts
 const tx = createTransaction({
   autoCommit: false,
   mutationFn: async ({ transaction }) => {
@@ -237,7 +237,7 @@ try {
 
 Combine with createOptimisticAction:
 
-```tsx
+```ts
 const archiveProject = createOptimisticAction<string>({
   onMutate: (projectId) => {
     // These mutations are wrapped in an auto-committed transaction

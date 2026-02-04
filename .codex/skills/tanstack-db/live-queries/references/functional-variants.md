@@ -19,8 +19,8 @@ Functional variants (`fn.where`, `fn.select`, `fn.having`) let you write arbitra
 
 Transform data with JavaScript:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q.from({ user: usersCollection }).fn.select((row) => ({
     id: row.user.id,
     displayName: `${row.user.firstName} ${row.user.lastName}`.trim(),
@@ -41,8 +41,8 @@ function getAgeGroup(age: number): 'young' | 'adult' | 'senior' {
 
 Filter with JavaScript logic:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q.from({ user: usersCollection }).fn.where((row) => {
     const user = row.user
     return (
@@ -58,8 +58,8 @@ const { data } = useLiveQuery((q) =>
 
 Filter groups with JavaScript:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .groupBy(({ order }) => order.customerId)
@@ -78,8 +78,8 @@ const { data } = useLiveQuery((q) =>
 
 Build nested structures:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q.from({ user: usersCollection }).fn.select((row) => {
     const user = row.user
     const fullName = `${user.firstName} ${user.lastName}`.trim()
@@ -117,8 +117,8 @@ function calculateProfileStrength(user) {
 
 Use expressions where possible, functional where needed:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ user: usersCollection })
     // Expression-based (optimizable)
@@ -138,14 +138,14 @@ const { data } = useLiveQuery((q) =>
 
 Functional variants maintain TypeScript support:
 
-```tsx
+```ts
 interface ProcessedUser {
   id: string
   name: string
   ageGroup: 'young' | 'adult' | 'senior'
 }
 
-const { data } = useLiveQuery((q) =>
+const query = useLiveQuery((q) =>
   q.from({ user: usersCollection }).fn.select(
     (row): ProcessedUser => ({
       id: row.user.id,
@@ -155,7 +155,7 @@ const { data } = useLiveQuery((q) =>
   ),
 )
 
-// data is ProcessedUser[]
+// query.data is ProcessedUser[]
 ```
 
 ## Performance Considerations
@@ -171,11 +171,11 @@ Functional variants still benefit from incremental updates but can't be optimize
 
 Use any JavaScript library:
 
-```tsx
+```ts
 import { format, parseISO } from 'date-fns'
 import slugify from 'slugify'
 
-const { data } = useLiveQuery((q) =>
+const query = useLiveQuery((q) =>
   q.from({ post: postsCollection }).fn.select((row) => ({
     id: row.post.id,
     title: row.post.title,

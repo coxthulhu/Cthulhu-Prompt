@@ -11,7 +11,7 @@ Validate data using StandardSchema-compatible libraries.
 
 ## Basic Type Validation
 
-```tsx
+```ts
 const userSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -32,7 +32,7 @@ collection.insert({
 
 ## String Constraints
 
-```tsx
+```ts
 const productSchema = z.object({
   id: z.string(),
   name: z.string().min(3, 'Name must be at least 3 characters'),
@@ -44,7 +44,7 @@ const productSchema = z.object({
 
 ## Number Constraints
 
-```tsx
+```ts
 const orderSchema = z.object({
   id: z.string(),
   quantity: z
@@ -61,7 +61,7 @@ const orderSchema = z.object({
 
 ## Enum Validation
 
-```tsx
+```ts
 const taskSchema = z.object({
   id: z.string(),
   status: z.enum(['todo', 'in-progress', 'done']),
@@ -77,7 +77,7 @@ collection.insert({
 
 ## Optional and Nullable Fields
 
-```tsx
+```ts
 const personSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -93,7 +93,7 @@ collection.insert({ id: '2', name: 'Bob', middleName: null })
 
 ## Array Validation
 
-```tsx
+```ts
 const postSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -104,7 +104,7 @@ const postSchema = z.object({
 
 ## Custom Validation
 
-```tsx
+```ts
 const userSchema = z.object({
   id: z.string(),
   username: z
@@ -126,7 +126,7 @@ const userSchema = z.object({
 
 ## Cross-Field Validation
 
-```tsx
+```ts
 const dateRangeSchema = z
   .object({
     id: z.string(),
@@ -145,7 +145,7 @@ const dateRangeSchema = z
 
 ## Collection Setup
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['todos'],
@@ -158,7 +158,7 @@ const todoCollection = createCollection(
 
 ## Type Inference
 
-```tsx
+```ts
 const todoSchema = z.object({
   id: z.string(),
   text: z.string(),

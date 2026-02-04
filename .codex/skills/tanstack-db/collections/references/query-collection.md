@@ -5,15 +5,15 @@ Load data from REST APIs using TanStack Query.
 ## Installation
 
 ```bash
-npm install @tanstack/query-db-collection @tanstack/react-db @tanstack/react-query
+npm install @tanstack/query-db-collection @tanstack/svelte-db @tanstack/svelte-query
 ```
 
 ## Basic Setup
 
-```tsx
-import { createCollection } from '@tanstack/react-db'
+```ts
+import { createCollection } from '@tanstack/svelte-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/svelte-query'
 
 const queryClient = new QueryClient()
 
@@ -32,7 +32,7 @@ const todoCollection = createCollection(
 
 ## Configuration Options
 
-```tsx
+```ts
 queryCollectionOptions({
   // Required
   queryKey: QueryKey,           // TanStack Query cache key
@@ -55,7 +55,7 @@ queryCollectionOptions({
 
 With `syncMode: 'on-demand'`, query predicates are passed to your queryFn:
 
-```tsx
+```ts
 const productsCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['products'],
@@ -83,20 +83,22 @@ const productsCollection = createCollection(
 )
 
 // This query triggers API call with predicates
-const { data } = useLiveQuery((q) =>
+const query = useLiveQuery((q) =>
   q
     .from({ product: productsCollection })
     .where(({ product }) => eq(product.category, 'electronics'))
     .where(({ product }) => lt(product.price, 100))
     .limit(50),
 )
+
+query.data
 ```
 
 ## Delta Loading
 
 QueryCollection automatically handles delta loading:
 
-```tsx
+```ts
 // First query loads: category=electronics
 const q1 = q.where(({ p }) => eq(p.category, 'electronics'))
 
@@ -109,7 +111,7 @@ const q2 = q.where(({ p }) =>
 
 ## Refetching
 
-```tsx
+```ts
 // Manual refetch
 await todoCollection.utils.refetch()
 
@@ -127,7 +129,7 @@ const queryClient = new QueryClient({
 
 For real-time updates (WebSocket, SSE), write directly to collection:
 
-```tsx
+```ts
 // Listen to real-time updates
 websocket.on('todo:created', (todo) => {
   todoCollection.utils.directWrite('insert', todo)
@@ -142,34 +144,11 @@ websocket.on('todo:deleted', ({ id }) => {
 })
 ```
 
-## With TanStack Query Hooks
-
-Access underlying query state:
-
-```tsx
-import { useQuery } from '@tanstack/react-query'
-
-function TodoStats() {
-  const { isLoading, isError, dataUpdatedAt } = useQuery({
-    queryKey: ['todos'],
-    // Query is managed by collection, this just accesses state
-  })
-
-  return (
-    <div>
-      {isLoading && <span>Loading...</span>}
-      {isError && <span>Error loading todos</span>}
-      <span>Last updated: {new Date(dataUpdatedAt).toLocaleString()}</span>
-    </div>
-  )
-}
-```
-
 ## Mutation Handlers
 
 QueryCollection auto-refetches after handlers complete:
 
-```tsx
+```ts
 queryCollectionOptions({
   onInsert: async ({ transaction }) => {
     await fetch('/api/todos', {
@@ -199,7 +178,7 @@ queryCollectionOptions({
 
 Control cache behavior via TanStack Query options:
 
-```tsx
+```ts
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -212,7 +191,7 @@ const queryClient = new QueryClient({
 
 ## Error Handling
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     queryFn: async () => {
@@ -235,7 +214,7 @@ if (todoCollection.state.isError) {
 
 For filtered views, use different query keys:
 
-```tsx
+```ts
 const activeTodos = createCollection(
   queryCollectionOptions({
     queryKey: ['todos', 'active'],

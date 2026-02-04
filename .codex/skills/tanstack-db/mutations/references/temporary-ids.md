@@ -6,10 +6,10 @@ Handle the transition from client-generated temporary IDs to server-generated re
 
 When inserting items where the server generates the ID:
 
-1. **UI Flicker**: React may unmount/remount when key changes from temp → real
+1. **UI Flicker**: Svelte may recreate keyed list items when the key changes from temp → real
 2. **Operation Failures**: Delete/update may use temp ID before real ID syncs
 
-```tsx
+```ts
 const tempId = -Date.now() // Temporary
 
 todoCollection.insert({
@@ -26,7 +26,7 @@ todoCollection.delete(tempId) // May fail: item now has different key
 
 Eliminate the problem by using stable client-generated IDs:
 
-```tsx
+```ts
 const id = crypto.randomUUID()
 
 todoCollection.insert({
@@ -47,7 +47,7 @@ todoCollection.delete(id)
 
 Don't allow operations until real ID is available:
 
-```tsx
+```ts
 const tempId = `temp-${Date.now()}`
 
 const tx = todoCollection.insert({
@@ -64,27 +64,29 @@ await tx.isPersisted.promise
 
 ### Disable Actions Until Persisted
 
-```tsx
-function TodoItem({ todo, isPending }) {
-  return (
-    <div>
-      {todo.text}
-      <button
-        onClick={() => todoCollection.delete(todo.id)}
-        disabled={isPending}
-      >
-        Delete
-      </button>
-    </div>
-  )
-}
+```svelte
+<script>
+  export let todo
+  export let isPending
+</script>
+
+<div>
+  {todo.text}
+  <button
+    type="button"
+    on:click={() => todoCollection.delete(todo.id)}
+    disabled={isPending}
+  >
+    Delete
+  </button>
+</div>
 ```
 
 ## Solution 3: Non-Optimistic Insert
 
 Don't show item until server confirms:
 
-```tsx
+```ts
 const tx = todoCollection.insert(
   { id: tempId, text: 'New todo' },
   { optimistic: false }, // Don't show until persisted
@@ -96,9 +98,9 @@ await tx.isPersisted.promise
 
 ## Solution 4: View Key Mapping
 
-Maintain stable React keys separate from data IDs:
+Maintain stable Svelte keys separate from data IDs:
 
-```tsx
+```ts
 // Mapping from any ID (temp or real) to stable view key
 const idToViewKey = new Map<string | number, string>()
 
@@ -125,34 +127,32 @@ onInsert: async ({ transaction }) => {
   await todoCollection.utils.refetch()
 }
 
-// In component
-function TodoList() {
-  const { data: todos } = useLiveQuery(...)
+```
 
-  return (
-    <ul>
-      {todos?.map((todo) => (
-        <li key={getViewKey(todo.id)}> {/* Stable key */}
-          {todo.text}
-        </li>
-      ))}
-    </ul>
-  )
-}
+```svelte
+<script>
+  const query = useLiveQuery(...)
+</script>
+
+<ul>
+  {#each query.data as todo (getViewKey(todo.id))}
+    <li>{todo.text}</li>
+  {/each}
+</ul>
 ```
 
 ## Temporary ID Patterns
 
 ### Negative Numbers
 
-```tsx
+```ts
 // Easily distinguishable from server IDs
 const tempId = -(Math.floor(Math.random() * 1000000) + 1)
 ```
 
 ### Prefixed Strings
 
-```tsx
+```ts
 const tempId = `temp-${crypto.randomUUID()}`
 
 // Check if temporary
@@ -161,56 +161,42 @@ const isTemp = (id: string) => id.startsWith('temp-')
 
 ### UUID v4
 
-```tsx
+```ts
 const tempId = crypto.randomUUID()
 // Works as permanent ID if server accepts it
 ```
 
 ## Tracking Pending Inserts
 
-```tsx
-function usePendingInserts(collection) {
-  const [pending, setPending] = useState(new Set())
+```svelte
+<script lang="ts">
+  let pending = $state(new Set())
 
   const insert = async (item) => {
-    setPending((p) => new Set(p).add(item.id))
+    pending = new Set(pending).add(item.id)
 
-    const tx = collection.insert(item)
+    const tx = todoCollection.insert(item)
 
     try {
       await tx.isPersisted.promise
     } finally {
-      setPending((p) => {
-        const next = new Set(p)
-        next.delete(item.id)
-        return next
-      })
+      const next = new Set(pending)
+      next.delete(item.id)
+      pending = next
     }
   }
 
-  return { insert, isPending: (id) => pending.has(id) }
-}
+  const isPending = (id) => pending.has(id)
+  const query = useLiveQuery(...)
+</script>
 
-// Usage
-function TodoApp() {
-  const { insert, isPending } = usePendingInserts(todoCollection)
-  const { data: todos } = useLiveQuery(...)
+<button type="button" on:click={() => insert({ id: tempId, text: 'New' })}>
+  Add
+</button>
 
-  return (
-    <>
-      <button onClick={() => insert({ id: tempId, text: 'New' })}>
-        Add
-      </button>
-      {todos?.map((todo) => (
-        <TodoItem
-          key={todo.id}
-          todo={todo}
-          isPending={isPending(todo.id)}
-        />
-      ))}
-    </>
-  )
-}
+{#each query.data as todo (todo.id)}
+  <TodoItem todo={todo} isPending={isPending(todo.id)} />
+{/each}
 ```
 
 ## Summary

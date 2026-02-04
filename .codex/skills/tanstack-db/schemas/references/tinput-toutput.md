@@ -9,7 +9,7 @@ When a schema has transformations, it has two types:
 - **TInput**: Type users provide when calling `insert()` or `update()`
 - **TOutput**: Type stored in collection and returned from queries
 
-```tsx
+```ts
 const todoSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -34,7 +34,7 @@ When you call `collection.update(id, (draft) => {...})`:
 
 ### Bad Pattern
 
-```tsx
+```ts
 // TInput only accepts strings
 const schema = z.object({
   created_at: z.string().transform((val) => new Date(val)),
@@ -51,7 +51,7 @@ collection.update('1', (draft) => {
 
 ### Good Pattern
 
-```tsx
+```ts
 // TInput accepts both string and Date
 const schema = z.object({
   created_at: z
@@ -81,7 +81,7 @@ All data in your collection is TOutput:
 - Data in `PendingMutation.modified`
 - Data in mutation handlers
 
-```tsx
+```ts
 const collection = createCollection({
   schema: todoSchema,
   onInsert: async ({ transaction }) => {
@@ -103,7 +103,7 @@ const collection = createCollection({
 
 ### Insert
 
-```tsx
+```ts
 // User provides TInput
 collection.insert({
   id: '1',
@@ -117,7 +117,7 @@ collection.insert({
 
 ### Update
 
-```tsx
+```ts
 // Draft contains TOutput
 collection.update('1', (draft) => {
   // draft.created_at is already a Date (TOutput)
@@ -132,7 +132,7 @@ collection.update('1', (draft) => {
 
 ### Date Fields
 
-```tsx
+```ts
 const schema = z.object({
   created_at: z
     .union([z.string(), z.date()])
@@ -147,7 +147,7 @@ const schema = z.object({
 
 ### Number from String (Forms)
 
-```tsx
+```ts
 const schema = z.object({
   quantity: z
     .union([z.string(), z.number()])
@@ -157,7 +157,7 @@ const schema = z.object({
 
 ### JSON Fields
 
-```tsx
+```ts
 const schema = z.object({
   metadata: z
     .union([z.string(), z.record(z.unknown())])
@@ -173,7 +173,7 @@ If updates fail with validation errors, check:
 2. Does TInput accept TOutput values?
 3. Add union type to accept both formats
 
-```tsx
+```ts
 // Before (broken)
 z.string().transform((val) => new Date(val))
 

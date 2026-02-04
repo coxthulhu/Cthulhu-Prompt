@@ -13,8 +13,8 @@ Embed queries within queries for complex data transformations.
 
 Use a query as the source:
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   // Build subquery
   const activeUsers = q
     .from({ user: usersCollection })
@@ -32,8 +32,8 @@ const { data } = useLiveQuery((q) => {
 
 Join against a filtered/transformed subset:
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   const recentPosts = q
     .from({ post: postsCollection })
     .where(({ post }) => gt(post.createdAt, lastWeek))
@@ -51,8 +51,8 @@ const { data } = useLiveQuery((q) => {
 
 Build complex queries with multiple levels:
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   // First level: count posts per user
   const postCounts = q
     .from({ post: postsCollection })
@@ -86,8 +86,8 @@ const { data } = useLiveQuery((q) => {
 
 Same subquery used multiple times is executed once:
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   // This subquery is defined once
   const activeUsers = q
     .from({ user: usersCollection })
@@ -109,7 +109,7 @@ const { data } = useLiveQuery((q) => {
 
 For reusable intermediate results, use derived collections:
 
-```tsx
+```ts
 // Create reusable derived collection
 const activeUsers = createLiveQueryCollection((q) =>
   q
@@ -149,8 +149,8 @@ const activeUserComments = useLiveQuery((q) =>
 
 ### Filter Before Join
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   const premiumUsers = q
     .from({ user: usersCollection })
     .where(({ user }) => eq(user.tier, 'premium'))
@@ -163,8 +163,8 @@ const { data } = useLiveQuery((q) => {
 
 ### Aggregate Then Join
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   const orderTotals = q
     .from({ order: ordersCollection })
     .groupBy(({ order }) => order.userId)
@@ -183,8 +183,8 @@ const { data } = useLiveQuery((q) => {
 
 ### Top N Per Group
 
-```tsx
-const { data } = useLiveQuery((q) => {
+```ts
+const query = useLiveQuery((q) => {
   const rankedPosts = q
     .from({ post: postsCollection })
     .orderBy(({ post }) => post.likes, 'desc')

@@ -12,7 +12,7 @@ Define how mutations persist to your backend.
 
 ## Handler Signature
 
-```tsx
+```ts
 type MutationHandler = (params: {
   transaction: Transaction
   collection: Collection
@@ -35,7 +35,7 @@ interface PendingMutation {
 
 ## Basic Handlers
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['todos'],
@@ -71,7 +71,7 @@ const todoCollection = createCollection(
 
 Automatic refetch after handler completes:
 
-```tsx
+```ts
 onUpdate: async ({ transaction }) => {
   await Promise.all(
     transaction.mutations.map((m) =>
@@ -86,7 +86,7 @@ onUpdate: async ({ transaction }) => {
 
 Return txid to wait for sync:
 
-```tsx
+```ts
 onUpdate: async ({ transaction }) => {
   const txids = await Promise.all(
     transaction.mutations.map(async (m) => {
@@ -102,7 +102,7 @@ onUpdate: async ({ transaction }) => {
 
 No handler needed (or use for side effects):
 
-```tsx
+```ts
 // LocalStorage and LocalOnly don't require handlers
 // But you can add them for side effects:
 onUpdate: async ({ transaction }) => {
@@ -116,7 +116,7 @@ onUpdate: async ({ transaction }) => {
 
 Customize behavior based on mutation metadata:
 
-```tsx
+```ts
 // When mutating
 todoCollection.update(todoId, { metadata: { intent: 'complete' } }, (draft) => {
   draft.completed = true
@@ -140,7 +140,7 @@ onUpdate: async ({ transaction }) => {
 
 Handle multiple mutations efficiently:
 
-```tsx
+```ts
 onUpdate: async ({ transaction }) => {
   // Single batch request instead of N requests
   await api.todos.batchUpdate(
@@ -156,7 +156,7 @@ onUpdate: async ({ transaction }) => {
 
 Use the same handler for all operations:
 
-```tsx
+```ts
 const mutationFn: MutationFn = async ({ transaction }) => {
   const response = await api.mutations.batch(
     transaction.mutations.map((m) => ({
@@ -183,7 +183,7 @@ const todoCollection = createCollection({
 
 Handlers receive transformed data (TOutput):
 
-```tsx
+```ts
 const schema = z.object({
   id: z.string(),
   created_at: z
@@ -207,7 +207,7 @@ onInsert: async ({ transaction }) => {
 
 Throw errors to trigger rollback:
 
-```tsx
+```ts
 onUpdate: async ({ transaction }) => {
   const response = await api.todos.update(...)
 
@@ -222,7 +222,7 @@ onUpdate: async ({ transaction }) => {
 
 **Critical:** Handlers must not resolve until server changes have synced back.
 
-```tsx
+```ts
 // ✅ Correct: waits for refetch
 onUpdate: async ({ transaction }) => {
   await api.update(...)

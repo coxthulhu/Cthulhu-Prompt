@@ -21,8 +21,8 @@ Collections are typed data stores that decouple data loading from data binding. 
 
 ### QueryCollection (REST APIs)
 
-```tsx
-import { createCollection } from '@tanstack/react-db'
+```ts
+import { createCollection } from '@tanstack/svelte-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 
 const todoCollection = createCollection(
@@ -72,7 +72,7 @@ const todoCollection = createCollection(
 
 Control how data loads into collections:
 
-```tsx
+```ts
 const productsCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['products'],
@@ -100,11 +100,11 @@ const productsCollection = createCollection(
 
 ### LocalStorageCollection
 
-```tsx
+```ts
 import {
   createCollection,
   localStorageCollectionOptions,
-} from '@tanstack/react-db'
+} from '@tanstack/svelte-db'
 
 const settingsCollection = createCollection(
   localStorageCollectionOptions({
@@ -121,11 +121,11 @@ settingsCollection.insert({ id: 'theme', value: 'dark' })
 
 ### LocalOnlyCollection
 
-```tsx
+```ts
 import {
   createCollection,
   localOnlyCollectionOptions,
-} from '@tanstack/react-db'
+} from '@tanstack/svelte-db'
 
 const uiStateCollection = createCollection(
   localOnlyCollectionOptions({
@@ -140,7 +140,7 @@ uiStateCollection.insert({ id: 'sidebar', expanded: true })
 
 ### Collection with Schema
 
-```tsx
+```ts
 import { z } from 'zod'
 
 const todoSchema = z.object({
@@ -165,8 +165,8 @@ const todoCollection = createCollection(
 
 ### Using TanStack Query Client
 
-```tsx
-import { QueryClient } from '@tanstack/react-query'
+```ts
+import { QueryClient } from '@tanstack/svelte-query'
 
 const queryClient = new QueryClient()
 
@@ -182,7 +182,7 @@ const todoCollection = createCollection(
 
 ## Collection API
 
-```tsx
+```ts
 // Read operations
 collection.get(key) // Get item by key
 collection.has(key) // Check if key exists
@@ -201,7 +201,7 @@ collection.utils.acceptMutations() // LocalCollection: accept in manual tx
 
 ## Configuration Options
 
-```tsx
+```ts
 interface CollectionOptions {
   id?: string // Unique identifier
   getKey: (item) => Key // Extract unique key from item

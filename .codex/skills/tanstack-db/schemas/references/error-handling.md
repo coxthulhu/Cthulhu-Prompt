@@ -6,7 +6,7 @@ Handle validation errors gracefully.
 
 When validation fails, TanStack DB throws `SchemaValidationError`:
 
-```tsx
+```ts
 import { SchemaValidationError } from '@tanstack/db'
 
 try {
@@ -26,7 +26,7 @@ try {
 
 ## Error Structure
 
-```tsx
+```ts
 error.issues = [
   {
     path: ['email'],
@@ -41,7 +41,7 @@ error.issues = [
 
 ## Displaying Errors in UI
 
-```tsx
+```ts
 const handleSubmit = async (data: unknown) => {
   try {
     collection.insert(data)
@@ -56,23 +56,28 @@ const handleSubmit = async (data: unknown) => {
 }
 ```
 
-## React Form Example
+## Svelte Form Example
 
-```tsx
-import { SchemaValidationError } from '@tanstack/db'
+```svelte
+<script lang="ts">
+  import { SchemaValidationError } from '@tanstack/db'
 
-function TodoForm() {
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  let errors = $state<Record<string, string>>({})
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrors({})
+  const handleSubmit = (event: SubmitEvent) => {
+    const form = event.currentTarget as HTMLFormElement
+    errors = {}
 
     try {
+      const text = (form.elements.namedItem('text') as HTMLInputElement).value
+      const priorityValue = (
+        form.elements.namedItem('priority') as HTMLInputElement
+      ).value
+
       todoCollection.insert({
         id: crypto.randomUUID(),
-        text: e.currentTarget.text.value,
-        priority: parseInt(e.currentTarget.priority.value),
+        text,
+        priority: parseInt(priorityValue),
       })
     } catch (error) {
       if (error instanceof SchemaValidationError) {
@@ -81,30 +86,32 @@ function TodoForm() {
           const field = issue.path?.[0] || 'form'
           newErrors[field] = issue.message
         })
-        setErrors(newErrors)
+        errors = newErrors
       }
     }
   }
+</script>
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <input name="text" />
-      {errors.text && <span className="error">{errors.text}</span>}
+<form on:submit|preventDefault={handleSubmit}>
+  <input name="text" />
+  {#if errors.text}
+    <span class="error">{errors.text}</span>
+  {/if}
 
-      <input name="priority" type="number" />
-      {errors.priority && <span className="error">{errors.priority}</span>}
+  <input name="priority" type="number" />
+  {#if errors.priority}
+    <span class="error">{errors.priority}</span>
+  {/if}
 
-      <button type="submit">Add Todo</button>
-    </form>
-  )
-}
+  <button type="submit">Add Todo</button>
+</form>
 ```
 
 ## Custom Error Messages
 
 Provide helpful messages in your schema:
 
-```tsx
+```ts
 const userSchema = z.object({
   username: z
     .string()
@@ -123,7 +130,7 @@ const userSchema = z.object({
 
 For nested objects, path shows the full path:
 
-```tsx
+```ts
 const schema = z.object({
   id: z.string(),
   address: z.object({
@@ -146,7 +153,7 @@ const fieldName = issue.path?.join('.') // "address.city"
 
 ## Array Errors
 
-```tsx
+```ts
 const schema = z.object({
   id: z.string(),
   tags: z.array(z.string().min(1)),
@@ -165,7 +172,7 @@ error.issues = [
 
 Schemas report all validation failures, not just the first:
 
-```tsx
+```ts
 collection.insert({
   id: '1',
   email: 'bad',
@@ -183,7 +190,7 @@ collection.insert({
 
 Sometimes you want to check validity without inserting:
 
-```tsx
+```ts
 const todoSchema = z.object({
   id: z.string(),
   text: z.string().min(1),
@@ -204,7 +211,7 @@ if (validateTodo(formData)) {
 
 ### Type-Safe Form Data
 
-```tsx
+```ts
 type TodoInput = z.input<typeof todoSchema>
 
 function createTodo(data: TodoInput) {
@@ -214,7 +221,7 @@ function createTodo(data: TodoInput) {
 
 ## Error Recovery Pattern
 
-```tsx
+```ts
 async function saveTodo(data: unknown) {
   try {
     collection.insert(data)

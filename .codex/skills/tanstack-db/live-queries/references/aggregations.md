@@ -14,10 +14,10 @@ Group data and compute aggregate values with groupBy, having, and aggregate func
 
 ## Basic Aggregation
 
-```tsx
+```ts
 import { count, sum, avg } from '@tanstack/db'
 
-const { data } = useLiveQuery((q) =>
+const query = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .groupBy(({ order }) => order.customerId)
@@ -34,8 +34,8 @@ const { data } = useLiveQuery((q) =>
 
 Group by multiple fields:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ sale: salesCollection })
     .groupBy(({ sale }) => [sale.year, sale.month, sale.category])
@@ -53,8 +53,8 @@ const { data } = useLiveQuery((q) =>
 
 Filter groups after aggregation:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .groupBy(({ order }) => order.customerId)
@@ -71,8 +71,8 @@ const { data } = useLiveQuery((q) =>
 
 Use aggregates directly in having:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .groupBy(({ order }) => order.customerId)
@@ -88,8 +88,8 @@ const { data } = useLiveQuery((q) =>
 
 Aggregates without groupBy treat entire dataset as one group:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q.from({ user: usersCollection }).select(({ user }) => ({
     totalUsers: count(user.id),
     avgAge: avg(user.age),
@@ -105,8 +105,8 @@ const { data } = useLiveQuery((q) =>
 
 Sort by computed aggregates using `$selected`:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ order: ordersCollection })
     .groupBy(({ order }) => order.customerId)
@@ -123,7 +123,7 @@ const { data } = useLiveQuery((q) =>
 
 Results are keyed by group value:
 
-```tsx
+```ts
 const deptStats = createLiveQueryCollection((q) =>
   q
     .from({ user: usersCollection })
@@ -159,7 +159,7 @@ In grouped queries, select can only include:
 1. Fields used in groupBy
 2. Aggregate functions
 
-```tsx
+```ts
 // ✅ Valid
 .groupBy(({ user }) => user.departmentId)
 .select(({ user }) => ({
@@ -179,8 +179,8 @@ In grouped queries, select can only include:
 
 Aggregate across joined data:
 
-```tsx
-const { data } = useLiveQuery((q) =>
+```ts
+const query = useLiveQuery((q) =>
   q
     .from({ user: usersCollection })
     .leftJoin({ order: ordersCollection }, ({ user, order }) =>

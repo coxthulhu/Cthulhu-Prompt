@@ -22,9 +22,9 @@ Any [StandardSchema](https://standardschema.dev) compatible library:
 
 ### Basic Validation
 
-```tsx
+```ts
 import { z } from 'zod'
-import { createCollection } from '@tanstack/react-db'
+import { createCollection } from '@tanstack/svelte-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 
 const todoSchema = z.object({
@@ -54,7 +54,7 @@ collection.insert({
 
 ### Default Values
 
-```tsx
+```ts
 const todoSchema = z.object({
   id: z.string(),
   text: z.string().min(1),
@@ -79,7 +79,7 @@ collection.insert({
 
 Transform input types to different output types:
 
-```tsx
+```ts
 const eventSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -105,7 +105,7 @@ console.log(event.start_time.getFullYear()) // Date out!
 
 When transforming types, TInput MUST be a superset of TOutput for updates to work:
 
-```tsx
+```ts
 // ❌ BAD: TInput only accepts string, but draft contains Date
 const badSchema = z.object({
   created_at: z.string().transform((val) => new Date(val)),
@@ -129,7 +129,7 @@ const goodSchema = z.object({
 
 ### Validation Patterns
 
-```tsx
+```ts
 // String constraints
 z.string().min(3, 'Too short')
 z.string().max(100, 'Too long')
@@ -168,7 +168,7 @@ z.object({
 
 ### Error Handling
 
-```tsx
+```ts
 import { SchemaValidationError } from '@tanstack/db'
 
 try {
@@ -190,21 +190,28 @@ try {
 }
 ```
 
-### React Form Example
+### Svelte Form Example
 
-```tsx
-function TodoForm() {
-  const [errors, setErrors] = useState<Record<string, string>>({})
+```svelte
+<script lang="ts">
+  import { SchemaValidationError } from '@tanstack/db'
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrors({})
+  let errors = $state<Record<string, string>>({})
+
+  const handleSubmit = (event: SubmitEvent) => {
+    const form = event.currentTarget as HTMLFormElement
+    errors = {}
 
     try {
+      const text = (form.elements.namedItem('text') as HTMLInputElement).value
+      const priorityValue = (
+        form.elements.namedItem('priority') as HTMLInputElement
+      ).value
+
       todoCollection.insert({
         id: crypto.randomUUID(),
-        text: e.currentTarget.text.value,
-        priority: parseInt(e.currentTarget.priority.value),
+        text,
+        priority: parseInt(priorityValue),
       })
     } catch (error) {
       if (error instanceof SchemaValidationError) {
@@ -213,28 +220,30 @@ function TodoForm() {
           const field = issue.path?.[0] || 'form'
           newErrors[field] = issue.message
         })
-        setErrors(newErrors)
+        errors = newErrors
       }
     }
   }
+</script>
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <input name="text" />
-      {errors.text && <span className="error">{errors.text}</span>}
+<form on:submit|preventDefault={handleSubmit}>
+  <input name="text" />
+  {#if errors.text}
+    <span class="error">{errors.text}</span>
+  {/if}
 
-      <input name="priority" type="number" />
-      {errors.priority && <span className="error">{errors.priority}</span>}
+  <input name="priority" type="number" />
+  {#if errors.priority}
+    <span class="error">{errors.priority}</span>
+  {/if}
 
-      <button type="submit">Add</button>
-    </form>
-  )
-}
+  <button type="submit">Add</button>
+</form>
 ```
 
 ### Schema with Computed Fields
 
-```tsx
+```ts
 const productSchema = z
   .object({
     id: z.string(),
@@ -264,7 +273,7 @@ console.log(product.display_price) // '$90.00'
 
 Schema transforms happen BEFORE handlers run:
 
-```tsx
+```ts
 const schema = z.object({
   id: z.string(),
   created_at: z

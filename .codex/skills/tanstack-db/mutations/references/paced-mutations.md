@@ -8,8 +8,8 @@ Control when and how mutations persist to your backend using timing strategies.
 
 Wait for inactivity before persisting. Only final state is saved.
 
-```tsx
-import { usePacedMutations, debounceStrategy } from '@tanstack/react-db'
+```ts
+import { usePacedMutations, debounceStrategy } from '@tanstack/svelte-db'
 
 const mutate = usePacedMutations<{ field: string; value: string }>({
   onMutate: ({ field, value }) => {
@@ -30,8 +30,8 @@ const mutate = usePacedMutations<{ field: string; value: string }>({
 
 Ensure minimum spacing between executions. Mutations between executions merge.
 
-```tsx
-import { usePacedMutations, throttleStrategy } from '@tanstack/react-db'
+```ts
+import { usePacedMutations, throttleStrategy } from '@tanstack/svelte-db'
 
 const mutate = usePacedMutations<number>({
   onMutate: (volume) => {
@@ -56,8 +56,8 @@ const mutate = usePacedMutations<number>({
 
 Each mutation creates a separate transaction, processed sequentially.
 
-```tsx
-import { usePacedMutations, queueStrategy } from '@tanstack/react-db'
+```ts
+import { usePacedMutations, queueStrategy } from '@tanstack/svelte-db'
 
 const mutate = usePacedMutations<File>({
   onMutate: (file) => {
@@ -95,43 +95,42 @@ const mutate = usePacedMutations<File>({
 
 Each hook call creates its own queue. To share across components:
 
-```tsx
-// Create single shared instance
-export const mutateDraft = createPacedMutations<{ id: string; text: string }>({
-  onMutate: ({ id, text }) => {
-    draftCollection.update(id, (d) => {
-      d.text = text
-    })
-  },
-  mutationFn: async ({ transaction }) => {
-    await api.saveDraft(transaction.mutations)
-  },
-  strategy: debounceStrategy({ wait: 500 }),
-})
+```svelte
+<script>
+  import { createPacedMutations, debounceStrategy } from '@tanstack/svelte-db'
 
-// Use everywhere - same debounce timer
-function Editor1() {
-  return (
-    <textarea
-      onChange={(e) => mutateDraft({ id: '1', text: e.target.value })}
-    />
-  )
-}
+  // Create single shared instance
+  const mutateDraft = createPacedMutations<{ id: string; text: string }>({
+    onMutate: ({ id, text }) => {
+      draftCollection.update(id, (d) => {
+        d.text = text
+      })
+    },
+    mutationFn: async ({ transaction }) => {
+      await api.saveDraft(transaction.mutations)
+    },
+    strategy: debounceStrategy({ wait: 500 }),
+  })
+</script>
 
-function Editor2() {
-  return (
-    <textarea
-      onChange={(e) => mutateDraft({ id: '2', text: e.target.value })}
-    />
-  )
-}
+<textarea
+  on:input={(event) =>
+    mutateDraft({ id: '1', text: event.currentTarget.value })}
+/>
+
+<textarea
+  on:input={(event) =>
+    mutateDraft({ id: '2', text: event.currentTarget.value })}
+/>
 ```
 
 ## Error Handling
 
 Queue strategy continues processing after failures:
 
-```tsx
+```ts
+import { usePacedMutations, queueStrategy } from '@tanstack/svelte-db'
+
 const mutate = usePacedMutations({
   onMutate: (data) => {
     /* ... */
@@ -157,7 +156,7 @@ try {
 
 ### usePacedMutations
 
-```tsx
+```ts
 function usePacedMutations<T>(options: {
   onMutate: (input: T) => void
   mutationFn: MutationFn
@@ -167,9 +166,9 @@ function usePacedMutations<T>(options: {
 
 ### createPacedMutations
 
-Same API, but outside React:
+Same API, but outside Svelte components:
 
-```tsx
+```ts
 const mutate = createPacedMutations<T>({
   onMutate: (input) => {
     /* ... */
@@ -183,7 +182,7 @@ const mutate = createPacedMutations<T>({
 
 ### Strategy Options
 
-```tsx
+```ts
 debounceStrategy({ wait: number })
 
 throttleStrategy({

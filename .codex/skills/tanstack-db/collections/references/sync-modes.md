@@ -14,7 +14,7 @@ Control how data loads into QueryCollections.
 
 Loads entire dataset on first access:
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['todos'],
@@ -46,7 +46,7 @@ const todoCollection = createCollection(
 
 Loads only what queries request:
 
-```tsx
+```ts
 const productsCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['products'],
@@ -60,12 +60,14 @@ const productsCollection = createCollection(
 )
 
 // Only loads electronics products
-const { data } = useLiveQuery((q) =>
+const query = useLiveQuery((q) =>
   q
     .from({ product: productsCollection })
     .where(({ product }) => eq(product.category, 'electronics'))
     .limit(50),
 )
+
+query.data
 ```
 
 **Pros:**
@@ -89,7 +91,7 @@ const { data } = useLiveQuery((q) =>
 
 Loads query subset immediately, syncs full dataset in background:
 
-```tsx
+```ts
 const issuesCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['issues'],
@@ -130,7 +132,7 @@ const issuesCollection = createCollection(
 
 With `on-demand` and `progressive`, query predicates are passed to queryFn:
 
-```tsx
+```ts
 queryFn: async (ctx) => {
   const options = ctx.meta?.loadSubsetOptions
   // options contains:
@@ -148,7 +150,7 @@ queryFn: async (ctx) => {
 
 Helper to convert predicates to API params:
 
-```tsx
+```ts
 import { parseLoadSubsetOptions } from '@tanstack/query-db-collection'
 
 const params = parseLoadSubsetOptions(ctx.meta?.loadSubsetOptions)
@@ -164,7 +166,7 @@ const params = parseLoadSubsetOptions(ctx.meta?.loadSubsetOptions)
 
 TanStack DB automatically optimizes loading:
 
-```tsx
+```ts
 // First query loads category=electronics
 const q1 = q.where(({ p }) => eq(p.category, 'electronics'))
 
@@ -201,7 +203,7 @@ const q2 = q.where(({ p }) =>
 
 Different collections can use different modes:
 
-```tsx
+```ts
 // Small reference data: eager
 const categoriesCollection = createCollection(
   queryCollectionOptions({

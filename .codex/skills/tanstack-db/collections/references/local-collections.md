@@ -6,11 +6,11 @@ In-memory and localStorage-backed collections for client-only state.
 
 In-memory state, lost on refresh:
 
-```tsx
+```ts
 import {
   createCollection,
   localOnlyCollectionOptions,
-} from '@tanstack/react-db'
+} from '@tanstack/svelte-db'
 
 const uiStateCollection = createCollection(
   localOnlyCollectionOptions({
@@ -24,18 +24,19 @@ uiStateCollection.insert({ id: 'sidebar', expanded: true })
 uiStateCollection.insert({ id: 'modal', open: false })
 
 // Query like any collection
-const { data } = useLiveQuery((q) => q.from({ state: uiStateCollection }))
+const query = useLiveQuery((q) => q.from({ state: uiStateCollection }))
+query.data
 ```
 
 ## LocalStorageCollection
 
 Persists to localStorage, syncs across tabs:
 
-```tsx
+```ts
 import {
   createCollection,
   localStorageCollectionOptions,
-} from '@tanstack/react-db'
+} from '@tanstack/svelte-db'
 
 const settingsCollection = createCollection(
   localStorageCollectionOptions({
@@ -54,7 +55,7 @@ settingsCollection.insert({ id: 'language', value: 'en' })
 
 ## Configuration
 
-```tsx
+```ts
 localOnlyCollectionOptions({
   id: string,                   // Collection identifier
   getKey: (item) => Key,        // Extract unique key
@@ -73,7 +74,7 @@ localStorageCollectionOptions({
 
 Local collections don't need `onInsert`/`onUpdate`/`onDelete` since there's no server. Mutations apply directly.
 
-```tsx
+```ts
 // Just works, no handlers needed
 settingsCollection.update('theme', (draft) => {
   draft.value = 'light'
@@ -84,7 +85,7 @@ settingsCollection.update('theme', (draft) => {
 
 You can add handlers for side effects (analytics, logging):
 
-```tsx
+```ts
 const settingsCollection = createCollection(
   localStorageCollectionOptions({
     id: 'settings',
@@ -106,7 +107,7 @@ const settingsCollection = createCollection(
 
 Local collections require `acceptMutations` in manual transactions:
 
-```tsx
+```ts
 const tx = createTransaction({
   autoCommit: false,
   mutationFn: async ({ transaction }) => {
@@ -129,7 +130,7 @@ await tx.commit()
 
 Same transaction can modify both:
 
-```tsx
+```ts
 const tx = createTransaction({
   autoCommit: false,
   mutationFn: async ({ transaction }) => {
@@ -164,7 +165,7 @@ await tx.commit()
 
 LocalStorageCollection automatically syncs across tabs:
 
-```tsx
+```ts
 // Tab 1
 settingsCollection.update('theme', (d) => {
   d.value = 'dark'
@@ -193,7 +194,7 @@ localStorage has ~5MB limit per origin. For larger data:
 
 Both support schema validation:
 
-```tsx
+```ts
 const settingsSchema = z.object({
   id: z.string(),
   value: z.union([z.string(), z.number(), z.boolean()]),
@@ -212,7 +213,7 @@ const settingsCollection = createCollection(
 
 ## Clearing Data
 
-```tsx
+```ts
 // Delete all items
 const items = settingsCollection.toArray
 items.forEach((item) => settingsCollection.delete(item.id))

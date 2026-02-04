@@ -13,10 +13,10 @@ QueryCollection integrates TanStack Query with TanStack DB, enabling REST API da
 
 ### Basic Setup
 
-```tsx
-import { createCollection } from '@tanstack/react-db'
+```ts
+import { createCollection } from '@tanstack/svelte-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/svelte-query'
 
 const queryClient = new QueryClient()
 
@@ -35,7 +35,7 @@ const todoCollection = createCollection(
 
 ### With Persistence Handlers
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['todos'],
@@ -69,7 +69,7 @@ const todoCollection = createCollection(
 
 ### Skip Auto-Refetch
 
-```tsx
+```ts
 onInsert: async ({ transaction }) => {
   await api.todos.create(transaction.mutations[0].modified)
   return { refetch: false } // Don't refetch after this handler
@@ -78,7 +78,7 @@ onInsert: async ({ transaction }) => {
 
 ### With Schema Validation
 
-```tsx
+```ts
 import { z } from 'zod'
 
 const todoSchema = z.object({
@@ -101,7 +101,7 @@ const todoCollection = createCollection(
 
 ### Select from Wrapped Response
 
-```tsx
+```ts
 // API returns { data: Todo[], total: number, page: number }
 const todoCollection = createCollection(
   queryCollectionOptions({
@@ -116,7 +116,7 @@ const todoCollection = createCollection(
 
 ### Dynamic Query Key
 
-```tsx
+```ts
 const todoCollection = createCollection(
   queryCollectionOptions({
     // Function-based queryKey for dynamic values
@@ -142,7 +142,7 @@ const todoCollection = createCollection(
 
 ### On-Demand Mode
 
-```tsx
+```ts
 import { parseLoadSubsetOptions } from '@tanstack/query-db-collection'
 
 const productsCollection = createCollection(
@@ -162,16 +162,21 @@ const productsCollection = createCollection(
 )
 
 // Live queries drive which data loads
-const results = useLiveQuery((db) =>
-  db.products.where({ category: 'electronics' }).limit(20),
+const query = useLiveQuery((q) =>
+  q
+    .from({ product: productsCollection })
+    .where(({ product }) => eq(product.category, 'electronics'))
+    .limit(20),
 )
+
+query.data
 ```
 
 ### Predicate Push-down
 
 Extract and forward query predicates to your API:
 
-```tsx
+```ts
 import {
   parseWhereExpression,
   parseOrderByExpression,
@@ -199,7 +204,7 @@ queryFn: async (ctx) => {
 
 ## Utility Methods
 
-```tsx
+```ts
 // Manual refetch
 await todoCollection.utils.refetch()
 await todoCollection.utils.refetch({ throwOnError: true })
@@ -230,7 +235,7 @@ await todoCollection.utils.clearError()
 
 ## Configuration Options
 
-```tsx
+```ts
 queryCollectionOptions({
   // Required
   queryKey: QueryKey | ((opts: LoadSubsetOptions) => QueryKey),
@@ -262,7 +267,7 @@ queryCollectionOptions({
 
 ### Polling
 
-```tsx
+```ts
 const statsCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['stats'],
@@ -276,7 +281,7 @@ const statsCollection = createCollection(
 
 ### Conditional Fetching
 
-```tsx
+```ts
 const userTodosCollection = createCollection(
   queryCollectionOptions({
     queryKey: ['todos', userId],
@@ -290,7 +295,7 @@ const userTodosCollection = createCollection(
 
 ### Sharing QueryClient
 
-```tsx
+```ts
 // Use your app's existing QueryClient
 import { queryClient } from './queryClient'
 

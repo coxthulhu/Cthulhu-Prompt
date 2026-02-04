@@ -6,7 +6,7 @@ Handle mutation failures gracefully with automatic rollback and recovery pattern
 
 When a mutation handler throws, optimistic state rolls back automatically:
 
-```tsx
+```ts
 const todoCollection = createCollection({
   onUpdate: async ({ transaction }) => {
     const response = await api.update(...)
@@ -26,7 +26,7 @@ todoCollection.update(id, (d) => { d.completed = true })
 
 ### Using Transaction Promise
 
-```tsx
+```ts
 const tx = todoCollection.update(id, (draft) => {
   draft.completed = true
 })
@@ -41,7 +41,7 @@ try {
 
 ### With Custom Actions
 
-```tsx
+```ts
 const updateTodo = createOptimisticAction<{
   id: string
   changes: Partial<Todo>
@@ -72,7 +72,7 @@ TanStack DB does not auto-retry. Implement retry logic in handlers:
 
 ### Simple Retry
 
-```tsx
+```ts
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -103,7 +103,7 @@ const todoCollection = createCollection({
 
 ### With p-retry Library
 
-```tsx
+```ts
 import pRetry from 'p-retry'
 
 onUpdate: async ({ transaction }) => {
@@ -121,7 +121,7 @@ onUpdate: async ({ transaction }) => {
 
 ## Transaction State Monitoring
 
-```tsx
+```ts
 const tx = todoCollection.update(id, (d) => {
   d.done = true
 })
@@ -144,7 +144,7 @@ tx.isPersisted.promise
 
 Schema validation happens before handlers run:
 
-```tsx
+```ts
 import { SchemaValidationError } from '@tanstack/db'
 
 try {
@@ -164,7 +164,7 @@ See [schemas/references/error-handling.md](../../schemas/references/error-handli
 
 ## Network Error Handling
 
-```tsx
+```ts
 onUpdate: async ({ transaction }) => {
   try {
     const response = await fetch('/api/todos', {
@@ -194,7 +194,7 @@ onUpdate: async ({ transaction }) => {
 
 When batching, handle partial failures:
 
-```tsx
+```ts
 onUpdate: async ({ transaction }) => {
   const results = await Promise.allSettled(
     transaction.mutations.map((m) => api.update(m.original.id, m.changes)),
@@ -209,12 +209,14 @@ onUpdate: async ({ transaction }) => {
 
 ## User-Facing Error Messages
 
-```tsx
-function TodoItem({ todo }) {
-  const [error, setError] = useState<string | null>(null)
+```svelte
+<script lang="ts">
+  export let todo
+
+  let error = $state<string | null>(null)
 
   const toggleComplete = async () => {
-    setError(null)
+    error = null
     const tx = todoCollection.update(todo.id, (d) => {
       d.completed = !d.completed
     })
@@ -222,18 +224,18 @@ function TodoItem({ todo }) {
     try {
       await tx.isPersisted.promise
     } catch (e) {
-      setError(e.message)
+      error = e.message
     }
   }
+</script>
 
-  return (
-    <div>
-      <span>{todo.text}</span>
-      <button onClick={toggleComplete}>Toggle</button>
-      {error && <span className="error">{error}</span>}
-    </div>
-  )
-}
+<div>
+  <span>{todo.text}</span>
+  <button type="button" on:click={toggleComplete}>Toggle</button>
+  {#if error}
+    <span class="error">{error}</span>
+  {/if}
+</div>
 ```
 
 ## Rollback vs Recovery

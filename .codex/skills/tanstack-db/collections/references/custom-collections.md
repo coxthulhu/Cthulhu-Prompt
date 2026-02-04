@@ -13,7 +13,7 @@ Build your own collection type for custom data sources.
 
 Implement the `Collection` interface from `@tanstack/db`:
 
-```tsx
+```ts
 interface Collection<TData, TKey> {
   // Identity
   id: string
@@ -43,7 +43,7 @@ interface Collection<TData, TKey> {
 
 ## Basic Structure
 
-```tsx
+```ts
 import { createCollection, type CollectionOptions } from '@tanstack/db'
 
 export function myCollectionOptions<TData, TKey>(
@@ -83,7 +83,7 @@ export function myCollectionOptions<TData, TKey>(
 
 ## Example: WebSocket Collection
 
-```tsx
+```ts
 export function websocketCollectionOptions<TData, TKey>(config: {
   id: string
   url: string
@@ -147,7 +147,7 @@ export function websocketCollectionOptions<TData, TKey>(config: {
 
 ## Example: IndexedDB Collection
 
-```tsx
+```ts
 import { openDB, type IDBPDatabase } from 'idb'
 
 export function indexedDBCollectionOptions<TData, TKey>(config: {
@@ -217,7 +217,7 @@ export function indexedDBCollectionOptions<TData, TKey>(config: {
 
 Use `directWrite` to update collection from external sources:
 
-```tsx
+```ts
 // Insert item(s)
 collection.utils.directWrite('insert', item)
 collection.utils.directWrite('insert', [item1, item2])
@@ -234,7 +234,7 @@ collection.utils.directWrite('delete', [key1, key2])
 
 Track collection status:
 
-```tsx
+```ts
 interface CollectionState {
   isLoading: boolean
   isError: boolean
@@ -250,7 +250,7 @@ if (state.isError) return <Error error={state.error} />
 
 ## Testing Custom Collections
 
-```tsx
+```ts
 import { createCollection } from '@tanstack/db'
 
 describe('MyCustomCollection', () => {
