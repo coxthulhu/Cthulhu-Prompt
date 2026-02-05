@@ -1,9 +1,4 @@
-import {
-  createCollection,
-  createPacedMutations,
-  debounceStrategy,
-  localOnlyCollectionOptions
-} from '@tanstack/svelte-db'
+import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
 import type {
   TanstackLoadSystemSettingsSuccess,
   TanstackSystemSettings,
@@ -29,13 +24,6 @@ const toSystemSettingsRecord = (
   ...settings
 })
 
-const toSystemSettingsPayload = (
-  record: TanstackSystemSettingsRecord
-): TanstackSystemSettings => {
-  const { id: _id, ...settings } = record
-  return settings
-}
-
 export const setTanstackSystemSettings = (settings: TanstackSystemSettings): void => {
   if (tanstackSystemSettingsCollection.has(SYSTEM_SETTINGS_RECORD_ID)) {
     tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
@@ -57,20 +45,14 @@ export const refetchTanstackSystemSettings = async (): Promise<void> => {
   setTanstackSystemSettings(result.settings)
 }
 
-export const updateTanstackSystemSettings = createPacedMutations<TanstackSystemSettings>({
-  onMutate: (settings) => {
-    setTanstackSystemSettings(settings)
-  },
-  mutationFn: async ({ transaction }) => {
-    const record = tanstackSystemSettingsCollection.get(SYSTEM_SETTINGS_RECORD_ID)!
-    const settings = toSystemSettingsPayload(record)
-    const result = await ipcInvoke<
-      TanstackUpdateSystemSettingsSuccess,
-      TanstackUpdateSystemSettingsRequest
-    >('tanstack-update-system-settings', { settings })
-
-    tanstackSystemSettingsCollection.utils.acceptMutations(transaction)
-    setTanstackSystemSettings(result.settings)
-  },
-  strategy: debounceStrategy({ wait: 2000 })
-})
+export const updateTanstackSystemSettings = async (
+  settings: TanstackSystemSettings
+): Promise<TanstackSystemSettings> => {
+  setTanstackSystemSettings(settings)
+  const result = await ipcInvoke<
+    TanstackUpdateSystemSettingsSuccess,
+    TanstackUpdateSystemSettingsRequest
+  >('tanstack-update-system-settings', { settings })
+  setTanstackSystemSettings(result.settings)
+  return result.settings
+}
