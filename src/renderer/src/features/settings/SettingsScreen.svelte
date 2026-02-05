@@ -10,9 +10,12 @@
     setTanstackSystemSettingsDraftFontSizeInput,
     setTanstackSystemSettingsDraftPromptEditorMinLinesInput
   } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
-  import { formatPromptEditorMinLinesInput, formatPromptFontSizeInput } from '@renderer/data/tanstack/TanstackSystemSettingsFormat'
+  import {
+    formatPromptEditorMinLinesInput,
+    formatPromptFontSizeInput
+  } from '@renderer/data/tanstack/TanstackSystemSettingsFormat'
+  import { registerTanstackSystemSettingsAutosave } from '@renderer/data/tanstack/TanstackSystemSettingsAutosave'
   import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
-  import { registerSystemSettingsAutosave } from '@renderer/data/system-settings/systemSettingsAutosave'
 
   const systemSettingsState = getTanstackSystemSettingsDraftState()
   const autosaveDraft = getTanstackSystemSettingsAutosaveDraft()
@@ -22,22 +25,29 @@
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
 
+  const runWithErrorLogging = async (
+    message: string,
+    action: () => Promise<void>
+  ): Promise<void> => {
+    try {
+      await action()
+    } catch (error) {
+      console.error(message, error)
+    }
+  }
+
   const handleFontSizeInput = (value: string) => {
-    if (systemSettingsState.draftSnapshot.promptFontSizeInput === value) return
     setTanstackSystemSettingsDraftFontSizeInput(value)
   }
 
   const handleMinLinesInput = (value: string) => {
-    if (systemSettingsState.draftSnapshot.promptEditorMinLinesInput === value) return
     setTanstackSystemSettingsDraftPromptEditorMinLinesInput(value)
   }
 
   const flushAutosave = async (): Promise<void> => {
-    try {
+    await runWithErrorLogging('Failed to update system settings:', async () => {
       await flushTanstackSystemSettingsAutosave()
-    } catch (error) {
-      console.error('Failed to update system settings:', error)
-    }
+    })
   }
 
   // Save immediately when an input loses focus to avoid delayed autosaves.
@@ -45,22 +55,25 @@
     void flushAutosave()
   }
 
-  const handleFontSizeReset = async () => {
-    try {
-      setTanstackSystemSettingsDraftFontSizeInput(defaultFontSizeInput)
+  const resetSettingToDefault = async (
+    defaultValue: string,
+    setDraftValue: (value: string) => void
+  ): Promise<void> => {
+    await runWithErrorLogging('Failed to reset system settings:', async () => {
+      setDraftValue(defaultValue)
       await saveTanstackSystemSettingsDraftNow()
-    } catch (error) {
-      console.error('Failed to reset system settings:', error)
-    }
+    })
+  }
+
+  const handleFontSizeReset = async () => {
+    await resetSettingToDefault(defaultFontSizeInput, setTanstackSystemSettingsDraftFontSizeInput)
   }
 
   const handleMinLinesReset = async () => {
-    try {
-      setTanstackSystemSettingsDraftPromptEditorMinLinesInput(defaultMinLinesInput)
-      await saveTanstackSystemSettingsDraftNow()
-    } catch (error) {
-      console.error('Failed to reset system settings:', error)
-    }
+    await resetSettingToDefault(
+      defaultMinLinesInput,
+      setTanstackSystemSettingsDraftPromptEditorMinLinesInput
+    )
   }
 
   const validation = $derived(getTanstackSystemSettingsValidation())
@@ -76,7 +89,7 @@
 
   // Side effect: register autosave flush hooks and save before leaving the settings screen.
   $effect(() => {
-    const unregister = registerSystemSettingsAutosave(flushAutosave)
+    const unregister = registerTanstackSystemSettingsAutosave(flushAutosave)
     return () => {
       unregister()
       void flushAutosave()

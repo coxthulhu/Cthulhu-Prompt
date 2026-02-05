@@ -1,11 +1,9 @@
 import { getContext, setContext } from 'svelte'
-import type { TanstackSystemSettingsRecord } from '@shared/tanstack/TanstackSystemSettings'
+import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
 
 const SYSTEM_SETTINGS_CONTEXT = Symbol('system-settings')
 
-export type SystemSettingsContext = {
-  data: TanstackSystemSettingsRecord
-}
+export type SystemSettingsContext = TanstackSystemSettings
 
 export const setSystemSettingsContext = (value: SystemSettingsContext): void => {
   setContext(SYSTEM_SETTINGS_CONTEXT, value)

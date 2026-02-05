@@ -19,7 +19,7 @@
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
   import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/TanstackSystemSettings'
   import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
-  import { setSystemSettingsContext } from './systemSettingsContext'
+  import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
   import type { TanstackSystemSettingsRecord } from '@shared/tanstack/TanstackSystemSettings'
   import {
@@ -34,8 +34,16 @@
   const systemSettingsQuery = useLiveQuery((q) =>
     q.from({ settings: tanstackSystemSettingsCollection }).findOne()
   ) as { data: TanstackSystemSettingsRecord }
-  const promptFontSize = $derived(systemSettingsQuery.data.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettingsQuery.data.promptEditorMinLines)
+  const systemSettings: SystemSettingsContext = {
+    get promptFontSize() {
+      return systemSettingsQuery.data.promptFontSize
+    },
+    get promptEditorMinLines() {
+      return systemSettingsQuery.data.promptEditorMinLines
+    }
+  }
+  const promptFontSize = $derived(systemSettings.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const windowControls = window.windowControls
 
   const checkWorkspaceFolderExists = async (folderPath: string): Promise<boolean> => {
@@ -48,7 +56,7 @@
     return await ipcInvoke<WorkspaceResult, CreateWorkspaceRequest>('create-workspace', request)
   }
 
-  setSystemSettingsContext(systemSettingsQuery)
+  setSystemSettingsContext(systemSettings)
 
   let activeScreen = $state<ScreenId>('home')
   const workspacePath = $derived(getActiveWorkspacePath())

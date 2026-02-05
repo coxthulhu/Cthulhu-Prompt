@@ -41,8 +41,8 @@
 
   let { folder } = $props<{ folder: PromptFolder }>()
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.data.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.data.promptEditorMinLines)
+  const promptFontSize = $derived(systemSettings.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const folderName = $derived(folder.folderName)
   const initialFolderData = getPromptFolderData(untrack(() => folder.folderName))
   let folderData = $state(initialFolderData)

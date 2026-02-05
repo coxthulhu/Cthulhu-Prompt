@@ -1,49 +1,29 @@
-export const formatPromptFontSizeInput = (value: number): string => {
+const formatNumericInput = (value: number): string => {
   return String(value)
 }
 
-const parsePromptFontSizeInput = (value: string): number => {
-  return Number(value)
-}
-
-export const formatPromptEditorMinLinesInput = (value: number): string => {
-  return String(value)
-}
-
-const parsePromptEditorMinLinesInput = (value: string): number => {
-  return Number(value)
-}
-
-export type PromptFontSizeNormalization = {
-  parsed: number
-  rounded: number
-  normalizedInput: string
-}
-
-export const normalizePromptFontSizeInput = (value: string): PromptFontSizeNormalization => {
-  const parsed = parsePromptFontSizeInput(value)
-  const rounded = Math.round(parsed)
+const normalizeNumericInput = (value: string): { parsed: number; rounded: number } => {
+  const parsed = Number(value)
   return {
     parsed,
-    rounded,
-    normalizedInput: formatPromptFontSizeInput(rounded)
+    rounded: Math.round(parsed)
   }
 }
 
-export type PromptEditorMinLinesNormalization = {
-  parsed: number
-  rounded: number
-  normalizedInput: string
+export const formatPromptFontSizeInput = (value: number): string => {
+  return formatNumericInput(value)
+}
+
+export const formatPromptEditorMinLinesInput = (value: number): string => {
+  return formatNumericInput(value)
+}
+
+export const normalizePromptFontSizeInput = (value: string): { parsed: number; rounded: number } => {
+  return normalizeNumericInput(value)
 }
 
 export const normalizePromptEditorMinLinesInput = (
   value: string
-): PromptEditorMinLinesNormalization => {
-  const parsed = parsePromptEditorMinLinesInput(value)
-  const rounded = Math.round(parsed)
-  return {
-    parsed,
-    rounded,
-    normalizedInput: formatPromptEditorMinLinesInput(rounded)
-  }
+): { parsed: number; rounded: number } => {
+  return normalizeNumericInput(value)
 }

@@ -2,7 +2,7 @@ import {
   flushPromptWorkspaceAutosaves,
   resetPromptDataStoreForWorkspace
 } from '@renderer/data/PromptDataStore.svelte.ts'
-import { flushSystemSettingsAutosaves } from '@renderer/data/system-settings/systemSettingsAutosave'
+import { flushTanstackSystemSettingsAutosaves } from '@renderer/data/tanstack/TanstackSystemSettingsAutosave'
 import {
   flushPromptFolderRequests,
   flushPromptFolderAutosaves,
@@ -22,7 +22,7 @@ export const switchWorkspaceStores = async (nextWorkspacePath: string | null): P
       flushPromptFolderRequests(),
       flushPromptFolderAutosaves(),
       flushPromptWorkspaceAutosaves(),
-      flushSystemSettingsAutosaves()
+      flushTanstackSystemSettingsAutosaves()
     ])
 
     currentWorkspacePath = nextWorkspacePath
