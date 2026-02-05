@@ -1,9 +1,3 @@
-// Updated system settings (duplicated from legacy types).
-export interface UpdatedSystemSettings {
-  promptFontSize: number
-  promptEditorMinLines: number
-}
-
 // Updated mutation/load helpers.
 export type MutationRequestWrapper<TPayload> = {
   requestId: string

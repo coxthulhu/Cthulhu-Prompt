@@ -6,11 +6,6 @@ type RevisionStore = {
   delete: (id: string) => void
 }
 
-type SingletonRevisionStore = {
-  get: () => number
-  bump: () => number
-}
-
 type RevisionEntry = {
   revision: number
   clientTempId?: string
@@ -38,22 +33,9 @@ const createRevisionStore = (): RevisionStore => {
   }
 }
 
-const createSingletonRevisionStore = (): SingletonRevisionStore => {
-  let revision = 0
-
-  return {
-    get: () => revision,
-    bump: () => {
-      revision += 1
-      return revision
-    }
-  }
-}
-
-// Unified in-memory revisions keyed by GUID (system settings is a singleton).
+// Unified in-memory revisions keyed by GUID.
 export const revisions = {
   workspace: createRevisionStore(),
   promptFolder: createRevisionStore(),
-  prompt: createRevisionStore(),
-  systemSettings: createSingletonRevisionStore()
+  prompt: createRevisionStore()
 }

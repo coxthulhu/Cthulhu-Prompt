@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { estimatePromptEditorHeight } from '@renderer/features/prompt-editor/promptEditorSizing'
-import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
+import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   MONACO_PLACEHOLDER_SELECTOR,

@@ -5,10 +5,9 @@ import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
 import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
-import { SystemSettingsManager } from './system-settings'
 import { setupUpdatedDataHandlers } from './data'
 import { setupTanstackSystemSettingsHandlers } from './tanstack/TanstackSystemSettingsHandlers'
-import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
+import { TanstackSystemSettingsManager } from './tanstack/TanstackSystemSettingsManager'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -97,16 +96,13 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
       : ''
   const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
-  const systemSettingsResult = await SystemSettingsManager.loadSystemSettings()
-  const systemSettings = systemSettingsResult.settings ?? DEFAULT_SYSTEM_SETTINGS
-  const systemSettingsRevision = systemSettingsResult.revision ?? 0
+  const systemSettings = await TanstackSystemSettingsManager.loadSystemSettings()
 
   return {
     devWorkspacePath,
     executionFolderName,
     environment,
-    systemSettings,
-    systemSettingsRevision
+    systemSettings
   }
 }
 
@@ -193,8 +189,7 @@ export function startupNormally(): void {
     // Setup prompt API handlers
     PromptAPI.setupIpcHandlers()
 
-    // Setup system settings IPC handlers
-    SystemSettingsManager.setupIpcHandlers()
+    // Setup data IPC handlers.
     setupUpdatedDataHandlers()
     setupTanstackSystemSettingsHandlers()
     setupWindowControlHandlers()

@@ -9,22 +9,6 @@ export interface CreateWorkspaceRequest {
   includeExamplePrompts: boolean
 }
 
-// Legacy system settings types.
-export interface SystemSettings {
-  promptFontSize: number
-  promptEditorMinLines: number
-}
-
-export interface LoadSystemSettingsResult extends WorkspaceResult {
-  settings?: SystemSettings
-  revision?: number
-}
-
-export interface UpdateSystemSettingsRequest {
-  settings: SystemSettings
-  revision: number
-}
-
 export type RevisionDataResult<TData> =
   | { success: true; data: TData; revision: number }
   | { success: false; conflict: true; data: TData; revision: number }
@@ -33,8 +17,6 @@ export type RevisionDataResult<TData> =
 export type LoadResult<TSuccess> =
   | ({ success: true } & TSuccess)
   | { success: false; error: string }
-
-export type UpdateSystemSettingsResult = RevisionDataResult<SystemSettings>
 
 // Legacy prompt folder types.
 export interface PromptFolder {

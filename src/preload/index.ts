@@ -6,14 +6,13 @@ import {
   normalizeRuntimeSystemSettings,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
-import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
+import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
 
 const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
   devWorkspacePath: null,
   executionFolderName: null,
   environment: '',
-  systemSettings: DEFAULT_SYSTEM_SETTINGS,
-  systemSettingsRevision: 0
+  systemSettings: DEFAULT_SYSTEM_SETTINGS
 })
 
 function loadRuntimeConfig(): RuntimeConfig {
@@ -36,15 +35,12 @@ function loadRuntimeConfig(): RuntimeConfig {
       typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
     const systemSettings = normalizeRuntimeSystemSettings(parsed.systemSettings)
-    const systemSettingsRevision =
-      typeof parsed.systemSettingsRevision === 'number' ? parsed.systemSettingsRevision : 0
 
     return Object.freeze({
       devWorkspacePath,
       executionFolderName,
       environment,
-      systemSettings,
-      systemSettingsRevision
+      systemSettings
     })
   } catch (error) {
     console.error('Failed to parse runtime config payload:', error)
