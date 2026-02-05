@@ -7,6 +7,7 @@ import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
 import { SystemSettingsManager } from './system-settings'
 import { setupUpdatedDataHandlers } from './data'
+import { setupTanstackSystemSettingsHandlers } from './tanstack/TanstackSystemSettingsHandlers'
 import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
 import {
   RUNTIME_ARG_PREFIX,
@@ -195,6 +196,7 @@ export function startupNormally(): void {
     // Setup system settings IPC handlers
     SystemSettingsManager.setupIpcHandlers()
     setupUpdatedDataHandlers()
+    setupTanstackSystemSettingsHandlers()
     setupWindowControlHandlers()
 
     const runtimeConfig = await buildRuntimeConfig()
