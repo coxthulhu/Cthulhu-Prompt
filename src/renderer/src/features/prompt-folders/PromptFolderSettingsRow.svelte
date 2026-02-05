@@ -39,8 +39,8 @@
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptFontSize = $derived(systemSettings.data.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.data.promptEditorMinLines)
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
 

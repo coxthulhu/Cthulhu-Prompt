@@ -60,8 +60,8 @@
     onMoveDown: () => Promise<boolean>
   } = $props()
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptFontSize = $derived(systemSettings.data.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.data.promptEditorMinLines)
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => getPromptData(promptId))
   const placeholderMonacoHeightPx = $derived.by(() => {

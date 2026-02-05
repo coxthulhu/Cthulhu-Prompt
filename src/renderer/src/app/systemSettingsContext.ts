@@ -1,10 +1,10 @@
 import { getContext, setContext } from 'svelte'
+import type { TanstackSystemSettingsRecord } from '@shared/tanstack/TanstackSystemSettings'
 
 const SYSTEM_SETTINGS_CONTEXT = Symbol('system-settings')
 
 export type SystemSettingsContext = {
-  promptFontSize: number
-  promptEditorMinLines: number
+  data: TanstackSystemSettingsRecord
 }
 
 export const setSystemSettingsContext = (value: SystemSettingsContext): void => {

@@ -42,8 +42,8 @@
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptFontSize = $derived(systemSettings.data.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettings.data.promptEditorMinLines)
   const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize, promptEditorMinLines))
 
   let container: HTMLDivElement | null = null

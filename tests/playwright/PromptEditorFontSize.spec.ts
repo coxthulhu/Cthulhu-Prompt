@@ -24,7 +24,7 @@ async function setPromptFontSize(
   await mainWindow.waitForFunction((expected) => {
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
-    return ipc.invoke('load-system-settings').then((result) => {
+    return ipc.invoke('tanstack-load-system-settings').then((result) => {
       return result?.settings?.promptFontSize === expected
     })
   }, value)

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { useLiveQuery } from '@tanstack/svelte-db'
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
@@ -8,7 +9,6 @@
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
-  import { DEFAULT_SYSTEM_SETTINGS } from '@shared/systemSettings'
   import { ipcInvoke } from '@renderer/api/ipcInvoke'
   import type { CreateWorkspaceRequest, WorkspaceResult } from '@shared/ipc'
   import type {
@@ -17,9 +17,11 @@
   } from '@renderer/features/workspace/types'
   import type { PromptFolder } from '@shared/ipc'
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
+  import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/TanstackSystemSettings'
+  import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
   import { setSystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
-  import { getSystemSettingsState } from '@renderer/data/system-settings/SystemSettingsStore.svelte.ts'
+  import type { TanstackSystemSettingsRecord } from '@shared/tanstack/TanstackSystemSettings'
   import {
     getActiveWorkspaceLoadingState,
     getActiveWorkspacePath
@@ -29,18 +31,11 @@
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
-  const systemSettingsState = getSystemSettingsState()
-  const promptFontSize = $derived(
-    systemSettingsState.baseSnapshot.data.promptFontSize ?? DEFAULT_SYSTEM_SETTINGS.promptFontSize
-  )
-  const promptEditorMinLines = $derived(
-    systemSettingsState.baseSnapshot.data.promptEditorMinLines ??
-      DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
-  )
-  const systemSettings = $state({
-    promptFontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize,
-    promptEditorMinLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
-  })
+  const systemSettingsQuery = useLiveQuery((q) =>
+    q.from({ settings: tanstackSystemSettingsCollection }).findOne()
+  ) as { data: TanstackSystemSettingsRecord }
+  const promptFontSize = $derived(systemSettingsQuery.data.promptFontSize)
+  const promptEditorMinLines = $derived(systemSettingsQuery.data.promptEditorMinLines)
   const windowControls = window.windowControls
 
   const checkWorkspaceFolderExists = async (folderPath: string): Promise<boolean> => {
@@ -53,7 +48,7 @@
     return await ipcInvoke<WorkspaceResult, CreateWorkspaceRequest>('create-workspace', request)
   }
 
-  setSystemSettingsContext(systemSettings)
+  setSystemSettingsContext(systemSettingsQuery)
 
   let activeScreen = $state<ScreenId>('home')
   const workspacePath = $derived(getActiveWorkspacePath())
@@ -76,10 +71,12 @@
     console.error(`Workspace ${context} error${suffix}`)
   }
 
-  // Side effect: keep the settings context aligned with the latest persisted values.
+  // Side effect: keep the module-level TanStack settings draft synced with query-backed settings.
   $effect(() => {
-    systemSettings.promptFontSize = promptFontSize
-    systemSettings.promptEditorMinLines = promptEditorMinLines
+    syncTanstackSystemSettingsDraft({
+      promptFontSize,
+      promptEditorMinLines
+    })
   })
 
   const clearPromptFolderSelection = () => {
