@@ -50,10 +50,7 @@ export const normalizeTanstackSystemSettings = (
   }
 }
 
-export type TanstackSystemSettingsRecord = TanstackSystemSettings & {
-  id: string
-  revision: number
-}
+export type TanstackSystemSettingsRecord = TanstackSystemSettings
 
 export type TanstackLoadSystemSettingsSuccess = {
   settings: TanstackSystemSettings

@@ -1,4 +1,7 @@
 import { createTransaction } from '@tanstack/svelte-db'
+import type { Collection } from '@tanstack/svelte-db'
+import type { TanstackRevisionEnvelope } from '@shared/tanstack/TanstackRevision'
+import type { TanstackRevisionCollectionUtils } from './TanstackRevisionCollection'
 
 type TanstackQueuedTask<T> = () => Promise<T>
 let tanstackMutationQueue: Promise<void> = Promise.resolve()
@@ -12,39 +15,38 @@ const enqueueTanstackGlobalMutation = <T>(task: TanstackQueuedTask<T>): Promise<
   return queuedTask
 }
 
-type TanstackRevisionMutationResult<TPayload> =
-  | { success: true; payload: TPayload }
-  | { success: false; conflict: true; payload: TPayload }
+type TanstackRevisionMutationResult<TKey extends string | number, TRecord> =
+  | { success: true; payload: TanstackRevisionEnvelope<TKey, TRecord> }
+  | { success: false; conflict: true; payload: TanstackRevisionEnvelope<TKey, TRecord> }
   | { success: false; error: string; conflict?: false }
 
-type TanstackRevisionMutationOptions<TPayload> = {
-  getExpectedRevision: () => number
+type TanstackRevisionMutationOptions<TRecord extends object, TKey extends string | number> = {
+  collection: Collection<TRecord, TKey, TanstackRevisionCollectionUtils<TRecord, TKey>>
+  key: TKey
   mutateOptimistically: () => void
-  runMutation: (expectedRevision: number) => Promise<TanstackRevisionMutationResult<TPayload>>
-  applyAuthoritative: (payload: TPayload) => void
+  runMutation: (
+    expectedRevision: number
+  ) => Promise<TanstackRevisionMutationResult<TKey, TRecord>>
   conflictMessage: string
 }
 
-export const runTanstackRevisionMutation = async <TRecord extends object, TPayload>({
-  getExpectedRevision,
+export const runTanstackRevisionMutation = async <TRecord extends object, TKey extends string | number>({
+  collection,
+  key,
   mutateOptimistically,
   runMutation,
-  applyAuthoritative,
   conflictMessage
-}: TanstackRevisionMutationOptions<TPayload>): Promise<TPayload> => {
-  let successfulPayload!: TPayload
-
+}: TanstackRevisionMutationOptions<TRecord, TKey>): Promise<void> => {
   const transaction = createTransaction<TRecord>({
     autoCommit: false,
     mutationFn: async () => {
-      const result = await runMutation(getExpectedRevision())
+      const result = await runMutation(collection.utils.getAuthoritativeRevision(key))
 
       if ('payload' in result) {
-        applyAuthoritative(result.payload)
+        collection.utils.upsertAuthoritative(result.payload)
       }
 
       if (result.success) {
-        successfulPayload = result.payload
         return
       }
 
@@ -63,6 +65,4 @@ export const runTanstackRevisionMutation = async <TRecord extends object, TPaylo
       await transaction.commit()
     }
   })
-
-  return successfulPayload
 }

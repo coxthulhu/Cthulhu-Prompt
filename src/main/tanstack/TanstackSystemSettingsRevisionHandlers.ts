@@ -11,11 +11,12 @@ import { tanstackRevisions } from './TanstackRevisions'
 const SYSTEM_SETTINGS_ROW_ID = 'system-settings'
 
 const buildRevisionPayload = (
-  settings: TanstackSystemSettingsRevisionData['settings'],
+  settings: TanstackSystemSettingsRevisionData['data'],
   revision: number
 ): TanstackSystemSettingsRevisionData => ({
-  settings,
-  revision
+  id: SYSTEM_SETTINGS_ROW_ID,
+  revision,
+  data: settings
 })
 
 export const setupTanstackSystemSettingsRevisionHandlers = (): void => {

@@ -1,4 +1,5 @@
 import type { TanstackSystemSettings } from './TanstackSystemSettings'
+import type { TanstackRevisionEnvelope } from './TanstackRevision'
 
 export type TanstackMutationRequest<TPayload> = {
   requestId: string
@@ -14,10 +15,10 @@ export type TanstackUpdateSystemSettingsRevisionRequest = TanstackMutationReques
   TanstackSystemSettingsRevisionPayload
 >
 
-export type TanstackSystemSettingsRevisionData = {
-  settings: TanstackSystemSettings
-  revision: number
-}
+export type TanstackSystemSettingsRevisionData = TanstackRevisionEnvelope<
+  string,
+  TanstackSystemSettings
+>
 
 export type TanstackUpdateSystemSettingsRevisionResult =
   | { requestId: string; success: true; payload: TanstackSystemSettingsRevisionData }

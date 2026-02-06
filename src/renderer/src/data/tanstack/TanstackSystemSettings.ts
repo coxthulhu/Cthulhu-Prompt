@@ -2,7 +2,7 @@ import { createCollection } from '@tanstack/svelte-db'
 import type {
   TanstackSystemSettings,
   TanstackSystemSettingsSnapshot,
-  TanstackSystemSettingsRecord,
+  TanstackSystemSettingsRecord
 } from '@shared/tanstack/TanstackSystemSettings'
 import type {
   TanstackUpdateSystemSettingsRevisionRequest,
@@ -17,7 +17,7 @@ const SYSTEM_SETTINGS_RECORD_ID = 'system-settings'
 export const tanstackSystemSettingsCollection = createCollection(
   tanstackRevisionCollectionOptions<TanstackSystemSettingsRecord, string>({
     id: 'tanstack-system-settings',
-    getKey: (record) => record.id
+    getKey: () => SYSTEM_SETTINGS_RECORD_ID
   })
 )
 
@@ -27,7 +27,7 @@ export const applyTanstackSystemSettingsSnapshot = (
   tanstackSystemSettingsCollection.utils.upsertAuthoritative({
     id: SYSTEM_SETTINGS_RECORD_ID,
     revision: snapshot.revision,
-    ...snapshot.settings
+    data: snapshot.settings
   })
 }
 
@@ -37,11 +37,10 @@ export const getTanstackSystemSettingsRecord = (): TanstackSystemSettingsRecord 
 
 export const updateTanstackSystemSettings = async (
   settings: TanstackSystemSettings
-): Promise<TanstackSystemSettingsSnapshot> => {
-  return runTanstackRevisionMutation<TanstackSystemSettingsRecord, TanstackSystemSettingsSnapshot>({
-    getExpectedRevision: () => {
-      return tanstackSystemSettingsCollection.utils.getAuthoritativeRevision(SYSTEM_SETTINGS_RECORD_ID)
-    },
+): Promise<void> => {
+  await runTanstackRevisionMutation<TanstackSystemSettingsRecord, string>({
+    collection: tanstackSystemSettingsCollection,
+    key: SYSTEM_SETTINGS_RECORD_ID,
     mutateOptimistically: () => {
       tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
         draft.promptFontSize = settings.promptFontSize
@@ -60,7 +59,6 @@ export const updateTanstackSystemSettings = async (
         }
       )
     },
-    applyAuthoritative: applyTanstackSystemSettingsSnapshot,
     conflictMessage: 'System settings update conflict'
   })
 }

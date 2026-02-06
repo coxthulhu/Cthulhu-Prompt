@@ -5,34 +5,35 @@ import type {
   SyncConfig,
   UtilsRecord
 } from '@tanstack/svelte-db'
+import type { TanstackRevisionEnvelope } from '@shared/tanstack/TanstackRevision'
 
 export interface TanstackRevisionCollectionUtils<
-  TRecord extends { revision: number },
+  TRecord extends object,
   TKey extends string | number
 > extends UtilsRecord {
-  upsertAuthoritative: (record: TRecord) => void
+  upsertAuthoritative: (snapshot: TanstackRevisionEnvelope<TKey, TRecord>) => void
   deleteAuthoritative: (key: TKey) => void
   getAuthoritativeRevision: (key: TKey) => number
 }
 
 type TanstackRevisionCollectionConfig<
-  TRecord extends { revision: number },
+  TRecord extends object,
   TKey extends string | number
 > = {
   id: string
   getKey: (record: TRecord) => TKey
-  initialData?: Array<TRecord>
+  initialData?: Array<TanstackRevisionEnvelope<TKey, TRecord>>
 }
 
 type TanstackRevisionCollectionOptionsResult<
-  TRecord extends { revision: number },
+  TRecord extends object,
   TKey extends string | number
 > = CollectionConfig<TRecord, TKey, never, TanstackRevisionCollectionUtils<TRecord, TKey>> & {
   utils: TanstackRevisionCollectionUtils<TRecord, TKey>
 }
 
 export const tanstackRevisionCollectionOptions = <
-  TRecord extends { revision: number },
+  TRecord extends object,
   TKey extends string | number
 >(
   config: TanstackRevisionCollectionConfig<TRecord, TKey>
@@ -61,7 +62,7 @@ export const tanstackRevisionCollectionOptions = <
   }
 
   const getAuthoritativeRevision = (key: TKey): number => {
-    if (!collection?.has(key)) {
+    if (!collection?.has(key) && !authoritativeRevisions.has(key)) {
       return 0
     }
 
@@ -82,11 +83,11 @@ export const tanstackRevisionCollectionOptions = <
 
       if (initialData.length > 0) {
         params.begin()
-        for (const record of initialData) {
-          authoritativeRevisions.set(getKey(record), record.revision)
+        for (const snapshot of initialData) {
+          authoritativeRevisions.set(snapshot.id, snapshot.revision)
           params.write({
             type: 'insert',
-            value: record
+            value: snapshot.data
           })
         }
         params.commit()
@@ -109,21 +110,21 @@ export const tanstackRevisionCollectionOptions = <
     getKey,
     sync,
     utils: {
-      upsertAuthoritative: (record) => {
-        const key = getKey(record)
+      upsertAuthoritative: (snapshot) => {
+        const key = snapshot.id
         const hasCollectionRecord = collection?.has(key) ?? false
         const hasKnownRecord = hasCollectionRecord || authoritativeRevisions.has(key)
-        const currentRevision = hasCollectionRecord ? (authoritativeRevisions.get(key) ?? 0) : 0
+        const currentRevision = authoritativeRevisions.get(key) ?? 0
 
-        if (hasKnownRecord && record.revision <= currentRevision) {
+        if (hasKnownRecord && snapshot.revision <= currentRevision) {
           return
         }
 
-        authoritativeRevisions.set(key, record.revision)
+        authoritativeRevisions.set(key, snapshot.revision)
         const type = hasCollectionRecord ? 'update' : 'insert'
         writeAuthoritative({
           type,
-          value: record
+          value: snapshot.data
         })
       },
       deleteAuthoritative: (key) => {
