@@ -11,11 +11,9 @@ import type {
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import { enqueueTanstackGlobalMutation } from './TanstackGlobalMutationQueue'
-import { TanstackAuthoritativeRevisionTracker } from './TanstackAuthoritativeRevisionTracker'
 import { tanstackRevisionCollectionOptions } from './TanstackRevisionCollection'
 
 const SYSTEM_SETTINGS_RECORD_ID = 'system-settings'
-const systemSettingsRevisionTracker = new TanstackAuthoritativeRevisionTracker<string>()
 
 export const tanstackSystemSettingsCollection = createCollection(
   tanstackRevisionCollectionOptions<TanstackSystemSettingsRecord, string>({
@@ -35,25 +33,6 @@ const toSystemSettingsRecord = (
 const applyAuthoritativeSettings = (snapshot: TanstackSystemSettingsSnapshot): void => {
   const record = toSystemSettingsRecord(snapshot)
   tanstackSystemSettingsCollection.utils.upsertAuthoritative(record)
-  systemSettingsRevisionTracker.setRevision(record.id, record.revision)
-}
-
-const applyOptimisticSettings = (settings: TanstackSystemSettings): void => {
-  const currentRevision = systemSettingsRevisionTracker.getRevision(SYSTEM_SETTINGS_RECORD_ID)
-
-  if (!tanstackSystemSettingsCollection.has(SYSTEM_SETTINGS_RECORD_ID)) {
-    tanstackSystemSettingsCollection.insert({
-      id: SYSTEM_SETTINGS_RECORD_ID,
-      revision: currentRevision,
-      ...settings
-    })
-    return
-  }
-
-  tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
-    draft.promptFontSize = settings.promptFontSize
-    draft.promptEditorMinLines = settings.promptEditorMinLines
-  })
 }
 
 export const setTanstackSystemSettings = (snapshot: TanstackSystemSettingsSnapshot): void => {
@@ -68,7 +47,9 @@ export const refetchTanstackSystemSettings = async (): Promise<void> => {
   const result = await ipcInvoke<TanstackLoadSystemSettingsSuccess>('tanstack-load-system-settings')
   applyAuthoritativeSettings({
     settings: result.settings,
-    revision: systemSettingsRevisionTracker.getRevision(SYSTEM_SETTINGS_RECORD_ID)
+    revision: tanstackSystemSettingsCollection.utils.getAuthoritativeRevision(
+      SYSTEM_SETTINGS_RECORD_ID
+    )
   })
 }
 
@@ -80,7 +61,9 @@ export const updateTanstackSystemSettings = async (
   const transaction = createTransaction<TanstackSystemSettingsRecord>({
     autoCommit: false,
     mutationFn: async () => {
-      const expectedRevision = systemSettingsRevisionTracker.getRevision(SYSTEM_SETTINGS_RECORD_ID)
+      const expectedRevision = tanstackSystemSettingsCollection.utils.getAuthoritativeRevision(
+        SYSTEM_SETTINGS_RECORD_ID
+      )
 
       const result = await ipcInvoke<
         TanstackUpdateSystemSettingsRevisionResult,
@@ -107,7 +90,10 @@ export const updateTanstackSystemSettings = async (
   })
 
   transaction.mutate(() => {
-    applyOptimisticSettings(settings)
+    tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
+      draft.promptFontSize = settings.promptFontSize
+      draft.promptEditorMinLines = settings.promptEditorMinLines
+    })
   })
 
   await enqueueTanstackGlobalMutation(() => transaction.commit())

@@ -7,15 +7,16 @@ import type {
 } from '@tanstack/svelte-db'
 
 export interface TanstackRevisionCollectionUtils<
-  TRecord extends object,
+  TRecord extends { revision: number },
   TKey extends string | number
 > extends UtilsRecord {
   upsertAuthoritative: (record: TRecord) => void
   deleteAuthoritative: (key: TKey) => void
+  getAuthoritativeRevision: (key: TKey) => number
 }
 
 type TanstackRevisionCollectionConfig<
-  TRecord extends object,
+  TRecord extends { revision: number },
   TKey extends string | number
 > = {
   id: string
@@ -24,19 +25,20 @@ type TanstackRevisionCollectionConfig<
 }
 
 type TanstackRevisionCollectionOptionsResult<
-  TRecord extends object,
+  TRecord extends { revision: number },
   TKey extends string | number
 > = CollectionConfig<TRecord, TKey, never, TanstackRevisionCollectionUtils<TRecord, TKey>> & {
   utils: TanstackRevisionCollectionUtils<TRecord, TKey>
 }
 
 export const tanstackRevisionCollectionOptions = <
-  TRecord extends object,
+  TRecord extends { revision: number },
   TKey extends string | number
 >(
   config: TanstackRevisionCollectionConfig<TRecord, TKey>
 ): TanstackRevisionCollectionOptionsResult<TRecord, TKey> => {
   const { id, getKey, initialData = [] } = config
+  const authoritativeRevisions = new Map<TKey, number>()
 
   let syncBegin:
     | ((options?: { immediate?: boolean }) => void)
@@ -58,6 +60,10 @@ export const tanstackRevisionCollectionOptions = <
     syncCommit()
   }
 
+  const getAuthoritativeRevision = (key: TKey): number => {
+    return authoritativeRevisions.get(key) ?? 0
+  }
+
   const sync: SyncConfig<TRecord, TKey> = {
     sync: (params) => {
       syncBegin = params.begin
@@ -73,6 +79,7 @@ export const tanstackRevisionCollectionOptions = <
       if (initialData.length > 0) {
         params.begin()
         for (const record of initialData) {
+          authoritativeRevisions.set(getKey(record), record.revision)
           params.write({
             type: 'insert',
             value: record
@@ -100,6 +107,7 @@ export const tanstackRevisionCollectionOptions = <
     utils: {
       upsertAuthoritative: (record) => {
         const key = getKey(record)
+        authoritativeRevisions.set(key, record.revision)
         const type = collection?.has(key) ? 'update' : 'insert'
         writeAuthoritative({
           type,
@@ -107,11 +115,13 @@ export const tanstackRevisionCollectionOptions = <
         })
       },
       deleteAuthoritative: (key) => {
+        authoritativeRevisions.delete(key)
         writeAuthoritative({
           type: 'delete',
           key
         })
-      }
+      },
+      getAuthoritativeRevision
     },
     startSync: true,
     gcTime: 0
