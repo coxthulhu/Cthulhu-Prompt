@@ -61,7 +61,19 @@ export const tanstackRevisionCollectionOptions = <
   }
 
   const getAuthoritativeRevision = (key: TKey): number => {
+    if (!collection?.has(key)) {
+      return 0
+    }
+
     return authoritativeRevisions.get(key) ?? 0
+  }
+
+  const getAppliedAuthoritativeRevision = (key: TKey): number => {
+    if (!collection?.has(key)) {
+      return -1
+    }
+
+    return authoritativeRevisions.get(key) ?? -1
   }
 
   const sync: SyncConfig<TRecord, TKey> = {
@@ -107,6 +119,10 @@ export const tanstackRevisionCollectionOptions = <
     utils: {
       upsertAuthoritative: (record) => {
         const key = getKey(record)
+        if (record.revision <= getAppliedAuthoritativeRevision(key)) {
+          return
+        }
+
         authoritativeRevisions.set(key, record.revision)
         const type = collection?.has(key) ? 'update' : 'insert'
         writeAuthoritative({
