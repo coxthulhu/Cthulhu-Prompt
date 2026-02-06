@@ -11,7 +11,7 @@ export type RuntimeConfig = {
   executionFolderName: string | null
   environment: RuntimeEnvironment
   systemSettings: TanstackSystemSettings
-  systemSettingsRevision?: number
+  systemSettingsRevision: number
 }
 
 export const RUNTIME_ARG_PREFIX = '--cthulhu-runtime='

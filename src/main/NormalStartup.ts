@@ -9,12 +9,15 @@ import { setupUpdatedDataHandlers } from './data'
 import { setupTanstackSystemSettingsHandlers } from './tanstack/TanstackSystemSettingsHandlers'
 import { setupTanstackSystemSettingsRevisionHandlers } from './tanstack/TanstackSystemSettingsRevisionHandlers'
 import { TanstackSystemSettingsManager } from './tanstack/TanstackSystemSettingsManager'
+import { tanstackRevisions } from './tanstack/TanstackRevisions'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
+
+const SYSTEM_SETTINGS_ROW_ID = 'system-settings'
 
 function resolveDefaultDevWorkspacePath(): string | null {
   try {
@@ -98,12 +101,14 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
   const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
   const systemSettings = await TanstackSystemSettingsManager.loadSystemSettings()
+  const systemSettingsRevision = tanstackRevisions.systemSettings.get(SYSTEM_SETTINGS_ROW_ID)
 
   return {
     devWorkspacePath,
     executionFolderName,
     environment,
-    systemSettings
+    systemSettings,
+    systemSettingsRevision
   }
 }
 

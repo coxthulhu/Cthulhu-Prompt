@@ -4,12 +4,12 @@ type TanstackQueuedTask<T> = () => Promise<T>
 let tanstackMutationQueue: Promise<void> = Promise.resolve()
 
 const enqueueTanstackGlobalMutation = <T>(task: TanstackQueuedTask<T>): Promise<T> => {
-  const run = tanstackMutationQueue.then(task)
-  tanstackMutationQueue = run.then(
+  const queuedTask = tanstackMutationQueue.then(task)
+  tanstackMutationQueue = queuedTask.then(
     () => undefined,
     () => undefined
   )
-  return run
+  return queuedTask
 }
 
 type TanstackRevisionMutationResult<TPayload> =
@@ -32,21 +32,23 @@ export const runTanstackRevisionMutation = async <TRecord extends object, TPaylo
   applyAuthoritative,
   conflictMessage
 }: TanstackRevisionMutationOptions<TPayload>): Promise<TPayload> => {
-  let committedPayload: TPayload | null = null
+  let successfulPayload!: TPayload
 
   const transaction = createTransaction<TRecord>({
     autoCommit: false,
     mutationFn: async () => {
       const result = await runMutation(getExpectedRevision())
 
-      if (result.success) {
-        committedPayload = result.payload
+      if ('payload' in result) {
         applyAuthoritative(result.payload)
+      }
+
+      if (result.success) {
+        successfulPayload = result.payload
         return
       }
 
       if (result.conflict) {
-        applyAuthoritative(result.payload)
         throw new Error(conflictMessage)
       }
 
@@ -62,9 +64,5 @@ export const runTanstackRevisionMutation = async <TRecord extends object, TPaylo
     }
   })
 
-  if (!committedPayload) {
-    throw new Error('TanStack revision mutation did not commit')
-  }
-
-  return committedPayload
+  return successfulPayload
 }

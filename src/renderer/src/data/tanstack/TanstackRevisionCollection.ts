@@ -111,13 +111,16 @@ export const tanstackRevisionCollectionOptions = <
     utils: {
       upsertAuthoritative: (record) => {
         const key = getKey(record)
-        const hasAppliedRecord = (collection?.has(key) ?? false) || authoritativeRevisions.has(key)
-        if (hasAppliedRecord && record.revision <= getAuthoritativeRevision(key)) {
+        const hasCollectionRecord = collection?.has(key) ?? false
+        const hasKnownRecord = hasCollectionRecord || authoritativeRevisions.has(key)
+        const currentRevision = hasCollectionRecord ? (authoritativeRevisions.get(key) ?? 0) : 0
+
+        if (hasKnownRecord && record.revision <= currentRevision) {
           return
         }
 
         authoritativeRevisions.set(key, record.revision)
-        const type = collection?.has(key) ? 'update' : 'insert'
+        const type = hasCollectionRecord ? 'update' : 'insert'
         writeAuthoritative({
           type,
           value: record

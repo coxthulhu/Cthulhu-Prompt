@@ -17,25 +17,18 @@ const SYSTEM_SETTINGS_RECORD_ID = 'system-settings'
 export const tanstackSystemSettingsCollection = createCollection(
   tanstackRevisionCollectionOptions<TanstackSystemSettingsRecord, string>({
     id: 'tanstack-system-settings',
-    getKey: (item) => item.id
+    getKey: (record) => record.id
   })
 )
 
-const toSystemSettingsRecord = (
+export const applyTanstackSystemSettingsSnapshot = (
   snapshot: TanstackSystemSettingsSnapshot
-): TanstackSystemSettingsRecord => ({
-  id: SYSTEM_SETTINGS_RECORD_ID,
-  revision: snapshot.revision,
-  ...snapshot.settings
-})
-
-const applyAuthoritativeSettings = (snapshot: TanstackSystemSettingsSnapshot): void => {
-  const record = toSystemSettingsRecord(snapshot)
-  tanstackSystemSettingsCollection.utils.upsertAuthoritative(record)
-}
-
-export const setTanstackSystemSettings = (snapshot: TanstackSystemSettingsSnapshot): void => {
-  applyAuthoritativeSettings(snapshot)
+): void => {
+  tanstackSystemSettingsCollection.utils.upsertAuthoritative({
+    id: SYSTEM_SETTINGS_RECORD_ID,
+    revision: snapshot.revision,
+    ...snapshot.settings
+  })
 }
 
 export const getTanstackSystemSettingsRecord = (): TanstackSystemSettingsRecord | null => {
@@ -67,7 +60,7 @@ export const updateTanstackSystemSettings = async (
         }
       )
     },
-    applyAuthoritative: applyAuthoritativeSettings,
+    applyAuthoritative: applyTanstackSystemSettingsSnapshot,
     conflictMessage: 'System settings update conflict'
   })
 }
