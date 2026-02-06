@@ -96,7 +96,19 @@ export const updateTanstackSystemSettings = async (
     })
   })
 
-  await enqueueTanstackGlobalMutation(() => transaction.commit())
+  await enqueueTanstackGlobalMutation(async () => {
+    if (transaction.state !== 'pending') {
+      return
+    }
+
+    await transaction.commit()
+  })
+
+  if (transaction.state === 'failed') {
+    throw transaction.error?.error ?? new Error('System settings mutation was canceled')
+  }
+
+  await transaction.isPersisted.promise
 
   return committedSnapshot!
 }
