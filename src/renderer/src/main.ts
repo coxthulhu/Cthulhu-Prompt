@@ -9,7 +9,10 @@ initializeSvelteVirtualWindowHydrationControls()
 
 const runtimeConfig = getRuntimeConfig()
 // Seed Tanstack system settings from the startup snapshot.
-setTanstackSystemSettings(runtimeConfig.systemSettings)
+setTanstackSystemSettings({
+  settings: runtimeConfig.systemSettings,
+  revision: runtimeConfig.systemSettingsRevision ?? 0
+})
 
 const app = mount(App, {
   target: document.getElementById('root')!

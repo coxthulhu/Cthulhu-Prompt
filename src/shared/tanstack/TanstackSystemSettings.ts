@@ -3,6 +3,11 @@ export interface TanstackSystemSettings {
   promptEditorMinLines: number
 }
 
+export type TanstackSystemSettingsSnapshot = {
+  settings: TanstackSystemSettings
+  revision: number
+}
+
 export const MIN_PROMPT_FONT_SIZE = 10
 export const MAX_PROMPT_FONT_SIZE = 32
 export const MIN_PROMPT_EDITOR_MIN_LINES = 2
@@ -47,6 +52,7 @@ export const normalizeTanstackSystemSettings = (
 
 export type TanstackSystemSettingsRecord = TanstackSystemSettings & {
   id: string
+  revision: number
 }
 
 export type TanstackLoadSystemSettingsSuccess = {

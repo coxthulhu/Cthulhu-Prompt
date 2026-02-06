@@ -11,6 +11,7 @@ export type RuntimeConfig = {
   executionFolderName: string | null
   environment: RuntimeEnvironment
   systemSettings: TanstackSystemSettings
+  systemSettingsRevision?: number
 }
 
 export const RUNTIME_ARG_PREFIX = '--cthulhu-runtime='
@@ -37,4 +38,12 @@ export const normalizeRuntimeSystemSettings = (value: unknown): TanstackSystemSe
   }
 
   return DEFAULT_SYSTEM_SETTINGS
+}
+
+export const normalizeRuntimeSystemSettingsRevision = (value: unknown): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0
+  }
+
+  return Math.max(0, Math.floor(value))
 }

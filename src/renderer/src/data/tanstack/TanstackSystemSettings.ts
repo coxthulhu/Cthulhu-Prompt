@@ -1,39 +1,63 @@
-import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
+import { createCollection, createTransaction } from '@tanstack/svelte-db'
 import type {
   TanstackLoadSystemSettingsSuccess,
   TanstackSystemSettings,
+  TanstackSystemSettingsSnapshot,
   TanstackSystemSettingsRecord,
-  TanstackUpdateSystemSettingsRequest,
-  TanstackUpdateSystemSettingsSuccess
 } from '@shared/tanstack/TanstackSystemSettings'
+import type {
+  TanstackUpdateSystemSettingsRevisionRequest,
+  TanstackUpdateSystemSettingsRevisionResult
+} from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { ipcInvoke } from '@renderer/api/ipcInvoke'
+import { enqueueTanstackGlobalMutation } from './TanstackGlobalMutationQueue'
+import { TanstackAuthoritativeRevisionTracker } from './TanstackAuthoritativeRevisionTracker'
+import { tanstackRevisionCollectionOptions } from './TanstackRevisionCollection'
 
 const SYSTEM_SETTINGS_RECORD_ID = 'system-settings'
+const systemSettingsRevisionTracker = new TanstackAuthoritativeRevisionTracker<string>()
 
 export const tanstackSystemSettingsCollection = createCollection(
-  localOnlyCollectionOptions<TanstackSystemSettingsRecord>({
+  tanstackRevisionCollectionOptions<TanstackSystemSettingsRecord, string>({
     id: 'tanstack-system-settings',
     getKey: (item) => item.id
   })
 )
 
 const toSystemSettingsRecord = (
-  settings: TanstackSystemSettings
+  snapshot: TanstackSystemSettingsSnapshot
 ): TanstackSystemSettingsRecord => ({
   id: SYSTEM_SETTINGS_RECORD_ID,
-  ...settings
+  revision: snapshot.revision,
+  ...snapshot.settings
 })
 
-export const setTanstackSystemSettings = (settings: TanstackSystemSettings): void => {
-  if (tanstackSystemSettingsCollection.has(SYSTEM_SETTINGS_RECORD_ID)) {
-    tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
-      draft.promptFontSize = settings.promptFontSize
-      draft.promptEditorMinLines = settings.promptEditorMinLines
+const applyAuthoritativeSettings = (snapshot: TanstackSystemSettingsSnapshot): void => {
+  const record = toSystemSettingsRecord(snapshot)
+  tanstackSystemSettingsCollection.utils.upsertAuthoritative(record)
+  systemSettingsRevisionTracker.setRevision(record.id, record.revision)
+}
+
+const applyOptimisticSettings = (settings: TanstackSystemSettings): void => {
+  const currentRevision = systemSettingsRevisionTracker.getRevision(SYSTEM_SETTINGS_RECORD_ID)
+
+  if (!tanstackSystemSettingsCollection.has(SYSTEM_SETTINGS_RECORD_ID)) {
+    tanstackSystemSettingsCollection.insert({
+      id: SYSTEM_SETTINGS_RECORD_ID,
+      revision: currentRevision,
+      ...settings
     })
     return
   }
 
-  tanstackSystemSettingsCollection.insert(toSystemSettingsRecord(settings))
+  tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
+    draft.promptFontSize = settings.promptFontSize
+    draft.promptEditorMinLines = settings.promptEditorMinLines
+  })
+}
+
+export const setTanstackSystemSettings = (snapshot: TanstackSystemSettingsSnapshot): void => {
+  applyAuthoritativeSettings(snapshot)
 }
 
 export const getTanstackSystemSettingsRecord = (): TanstackSystemSettingsRecord | null => {
@@ -42,17 +66,51 @@ export const getTanstackSystemSettingsRecord = (): TanstackSystemSettingsRecord 
 
 export const refetchTanstackSystemSettings = async (): Promise<void> => {
   const result = await ipcInvoke<TanstackLoadSystemSettingsSuccess>('tanstack-load-system-settings')
-  setTanstackSystemSettings(result.settings)
+  applyAuthoritativeSettings({
+    settings: result.settings,
+    revision: systemSettingsRevisionTracker.getRevision(SYSTEM_SETTINGS_RECORD_ID)
+  })
 }
 
 export const updateTanstackSystemSettings = async (
   settings: TanstackSystemSettings
-): Promise<TanstackSystemSettings> => {
-  setTanstackSystemSettings(settings)
-  const result = await ipcInvoke<
-    TanstackUpdateSystemSettingsSuccess,
-    TanstackUpdateSystemSettingsRequest
-  >('tanstack-update-system-settings', { settings })
-  setTanstackSystemSettings(result.settings)
-  return result.settings
+): Promise<TanstackSystemSettingsSnapshot> => {
+  let committedSnapshot: TanstackSystemSettingsSnapshot | null = null
+
+  const transaction = createTransaction<TanstackSystemSettingsRecord>({
+    autoCommit: false,
+    mutationFn: async () => {
+      const expectedRevision = systemSettingsRevisionTracker.getRevision(SYSTEM_SETTINGS_RECORD_ID)
+
+      const result = await ipcInvoke<
+        TanstackUpdateSystemSettingsRevisionResult,
+        TanstackUpdateSystemSettingsRevisionRequest
+      >('tanstack-update-system-settings-revision', {
+        requestId: crypto.randomUUID(),
+        payload: {
+          settings,
+          expectedRevision
+        }
+      })
+
+      if (result.success) {
+        committedSnapshot = result.payload
+        applyAuthoritativeSettings(result.payload)
+        return
+      }
+
+      if (result.conflict) {
+        applyAuthoritativeSettings(result.payload)
+        throw new Error('System settings update conflict')
+      }
+    }
+  })
+
+  transaction.mutate(() => {
+    applyOptimisticSettings(settings)
+  })
+
+  await enqueueTanstackGlobalMutation(() => transaction.commit())
+
+  return committedSnapshot!
 }
