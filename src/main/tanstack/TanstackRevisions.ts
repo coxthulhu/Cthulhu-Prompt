@@ -18,5 +18,8 @@ const createTanstackRevisionStore = (): TanstackRevisionStore => {
 }
 
 export const tanstackRevisions = {
-  systemSettings: createTanstackRevisionStore()
+  systemSettings: createTanstackRevisionStore(),
+  workspace: createTanstackRevisionStore(),
+  promptFolder: createTanstackRevisionStore(),
+  prompt: createTanstackRevisionStore()
 }
