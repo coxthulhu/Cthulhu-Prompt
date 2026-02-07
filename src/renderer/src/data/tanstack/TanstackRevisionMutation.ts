@@ -21,8 +21,8 @@ const enqueueTanstackGlobalMutation = <T>(task: TanstackQueuedTask<T>): Promise<
 
 type TanstackAnyRevisionCollection = Collection<
   any,
-  any,
-  TanstackRevisionCollectionUtils<any, any>
+  string,
+  TanstackRevisionCollectionUtils<any>
 >
 
 type TanstackRevisionCollectionsMap = Record<string, TanstackAnyRevisionCollection>
@@ -31,13 +31,9 @@ type TanstackCollectionRecord<TCollection> = TCollection extends Collection<infe
   ? TRecord
   : never
 
-type TanstackCollectionKey<TCollection> = TCollection extends Collection<any, infer TKey, any>
-  ? TKey
-  : never
-
 type TanstackRevisionMutationPayload = Record<
   string,
-  TanstackRevisionEnvelope<any, any>
+  TanstackRevisionEnvelope<any>
 >
 
 type TanstackMutationRequest = {
@@ -52,21 +48,15 @@ type TanstackRevisionMutationResult<TPayload extends TanstackRevisionMutationPay
 
 const tanstackPayloadEntityCollectionSymbol = Symbol('tanstackPayloadEntityCollection')
 
-type TanstackPayloadEntityWithCollectionMeta<
-  TKey extends string | number,
-  TRecord extends object
-> = TanstackRevisionPayloadEntity<TKey, TRecord> & {
+type TanstackPayloadEntityWithCollectionMeta<TRecord extends object> = TanstackRevisionPayloadEntity<TRecord> & {
   [tanstackPayloadEntityCollectionSymbol]: TanstackAnyRevisionCollection
 }
 
 type TanstackRevisionPayloadEntityBuilders<TCollections extends TanstackRevisionCollectionsMap> = {
   [TCollectionKey in keyof TCollections]: (entity: {
-    id: TanstackCollectionKey<TCollections[TCollectionKey]>
+    id: string
     data: TanstackCollectionRecord<TCollections[TCollectionKey]>
-  }) => TanstackRevisionPayloadEntity<
-    TanstackCollectionKey<TCollections[TCollectionKey]>,
-    TanstackCollectionRecord<TCollections[TCollectionKey]>
-  >
+  }) => TanstackRevisionPayloadEntity<TanstackCollectionRecord<TCollections[TCollectionKey]>>
 }
 
 type TanstackRevisionMutationOptions<
@@ -99,7 +89,6 @@ const createPayloadEntityBuilders = <TCollections extends TanstackRevisionCollec
 
     builders[collectionKey] = ((entity) => {
       const payloadEntity: TanstackPayloadEntityWithCollectionMeta<
-        TanstackCollectionKey<TCollections[typeof collectionKey]>,
         TanstackCollectionRecord<TCollections[typeof collectionKey]>
       > = {
         id: entity.id,
@@ -131,7 +120,7 @@ const sanitizeMutationPayload = (
       continue
     }
 
-    const payloadEntity = value as TanstackPayloadEntityWithCollectionMeta<any, any>
+    const payloadEntity = value as TanstackPayloadEntityWithCollectionMeta<any>
     payloadCollections.set(payloadKey, payloadEntity[tanstackPayloadEntityCollectionSymbol])
     sanitized[payloadKey] = {
       id: payloadEntity.id,

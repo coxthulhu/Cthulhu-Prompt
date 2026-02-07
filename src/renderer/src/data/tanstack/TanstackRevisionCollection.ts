@@ -8,49 +8,42 @@ import type {
 import type { TanstackRevisionEnvelope } from '@shared/tanstack/TanstackRevision'
 
 export interface TanstackRevisionCollectionUtils<
-  TRecord extends object,
-  TKey extends string | number
+  TRecord extends object
 > extends UtilsRecord {
-  upsertAuthoritative: (snapshot: TanstackRevisionEnvelope<TKey, TRecord>) => void
-  deleteAuthoritative: (key: TKey) => void
-  getAuthoritativeRevision: (key: TKey) => number
+  upsertAuthoritative: (snapshot: TanstackRevisionEnvelope<TRecord>) => void
+  deleteAuthoritative: (key: string) => void
+  getAuthoritativeRevision: (key: string) => number
 }
 
-type TanstackRevisionCollectionConfig<
-  TRecord extends object,
-  TKey extends string | number
-> = {
+type TanstackRevisionCollectionConfig<TRecord extends object> = {
   id: string
-  getKey: (record: TRecord) => TKey
-  initialData?: Array<TanstackRevisionEnvelope<TKey, TRecord>>
+  getKey: (record: TRecord) => string
+  initialData?: Array<TanstackRevisionEnvelope<TRecord>>
 }
 
-type TanstackRevisionCollectionOptionsResult<
-  TRecord extends object,
-  TKey extends string | number
-> = CollectionConfig<TRecord, TKey, never, TanstackRevisionCollectionUtils<TRecord, TKey>> & {
-  utils: TanstackRevisionCollectionUtils<TRecord, TKey>
+type TanstackRevisionCollectionOptionsResult<TRecord extends object> = CollectionConfig<
+  TRecord,
+  string,
+  never,
+  TanstackRevisionCollectionUtils<TRecord>
+> & {
+  utils: TanstackRevisionCollectionUtils<TRecord>
 }
 
-export const tanstackRevisionCollectionOptions = <
-  TRecord extends object,
-  TKey extends string | number
->(
-  config: TanstackRevisionCollectionConfig<TRecord, TKey>
-): TanstackRevisionCollectionOptionsResult<TRecord, TKey> => {
+export const tanstackRevisionCollectionOptions = <TRecord extends object>(
+  config: TanstackRevisionCollectionConfig<TRecord>
+): TanstackRevisionCollectionOptionsResult<TRecord> => {
   const { id, getKey, initialData = [] } = config
-  const authoritativeRevisions = new Map<TKey, number>()
+  const authoritativeRevisions = new Map<string, number>()
 
   let syncBegin:
     | ((options?: { immediate?: boolean }) => void)
     | null = null
-  let syncWrite: ((message: ChangeMessageOrDeleteKeyMessage<TRecord, TKey>) => void) | null = null
+  let syncWrite: ((message: ChangeMessageOrDeleteKeyMessage<TRecord, string>) => void) | null = null
   let syncCommit: (() => void) | null = null
-  let collection:
-    | Collection<TRecord, TKey, TanstackRevisionCollectionUtils<TRecord, TKey>>
-    | null = null
+  let collection: Collection<TRecord, string, TanstackRevisionCollectionUtils<TRecord>> | null = null
 
-  const writeAuthoritative = (message: ChangeMessageOrDeleteKeyMessage<TRecord, TKey>): void => {
+  const writeAuthoritative = (message: ChangeMessageOrDeleteKeyMessage<TRecord, string>): void => {
     if (!syncBegin || !syncWrite || !syncCommit) {
       return
     }
@@ -61,7 +54,7 @@ export const tanstackRevisionCollectionOptions = <
     syncCommit()
   }
 
-  const getAuthoritativeRevision = (key: TKey): number => {
+  const getAuthoritativeRevision = (key: string): number => {
     if (!collection?.has(key) && !authoritativeRevisions.has(key)) {
       return 0
     }
@@ -69,17 +62,16 @@ export const tanstackRevisionCollectionOptions = <
     return authoritativeRevisions.get(key) ?? 0
   }
 
-  const sync: SyncConfig<TRecord, TKey> = {
+  const sync: SyncConfig<TRecord, string> = {
     sync: (params) => {
       syncBegin = params.begin
       syncWrite = params.write
       syncCommit = params.commit
-      collection =
-        params.collection as Collection<
-          TRecord,
-          TKey,
-          TanstackRevisionCollectionUtils<TRecord, TKey>
-        >
+      collection = params.collection as Collection<
+        TRecord,
+        string,
+        TanstackRevisionCollectionUtils<TRecord>
+      >
 
       if (initialData.length > 0) {
         params.begin()

@@ -7,17 +7,14 @@ export type TanstackMutationRequest<TPayload> = {
 }
 
 export type TanstackSystemSettingsRevisionPayload = {
-  systemSettings: TanstackRevisionPayloadEntity<string, TanstackSystemSettings>
+  systemSettings: TanstackRevisionPayloadEntity<TanstackSystemSettings>
 }
 
 export type TanstackUpdateSystemSettingsRevisionRequest = TanstackMutationRequest<
   TanstackSystemSettingsRevisionPayload
 >
 
-export type TanstackSystemSettingsRevisionData = TanstackRevisionEnvelope<
-  string,
-  TanstackSystemSettings
->
+export type TanstackSystemSettingsRevisionData = TanstackRevisionEnvelope<TanstackSystemSettings>
 
 export type TanstackSystemSettingsRevisionResponsePayload = {
   systemSettings: TanstackSystemSettingsRevisionData

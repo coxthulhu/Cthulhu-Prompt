@@ -1,11 +1,11 @@
-export type TanstackRevisionEnvelope<TKey extends string | number, TData> = {
-  id: TKey
+export type TanstackRevisionEnvelope<TData> = {
+  id: string
   revision: number
   data: TData
 }
 
-export type TanstackRevisionPayloadEntity<TKey extends string | number, TData> = {
-  id: TKey
+export type TanstackRevisionPayloadEntity<TData> = {
+  id: string
   expectedRevision: number
   data: TData
 }
