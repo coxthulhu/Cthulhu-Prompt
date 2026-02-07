@@ -21,7 +21,7 @@
   import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
-  import type { TanstackSystemSettingsRecord } from '@shared/tanstack/TanstackSystemSettings'
+  import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
   import {
     getActiveWorkspaceLoadingState,
     getActiveWorkspacePath
@@ -33,7 +33,7 @@
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsQuery = useLiveQuery((q) =>
     q.from({ settings: tanstackSystemSettingsCollection }).findOne()
-  ) as { data: TanstackSystemSettingsRecord }
+  ) as { data: TanstackSystemSettings }
   const systemSettings: SystemSettingsContext = {
     get promptFontSize() {
       return systemSettingsQuery.data.promptFontSize

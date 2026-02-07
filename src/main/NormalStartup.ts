@@ -15,9 +15,8 @@ import {
   type RuntimeConfig,
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
+import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
-
-const SYSTEM_SETTINGS_ROW_ID = 'system-settings'
 
 function resolveDefaultDevWorkspacePath(): string | null {
   try {
@@ -101,7 +100,7 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
   const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
   const systemSettings = await TanstackSystemSettingsManager.loadSystemSettings()
-  const systemSettingsRevision = tanstackRevisions.systemSettings.get(SYSTEM_SETTINGS_ROW_ID)
+  const systemSettingsRevision = tanstackRevisions.systemSettings.get(TANSTACK_SYSTEM_SETTINGS_ID)
 
   return {
     devWorkspacePath,

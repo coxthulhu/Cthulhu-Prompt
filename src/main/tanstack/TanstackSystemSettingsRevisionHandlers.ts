@@ -4,19 +4,17 @@ import type {
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
+import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import { TanstackSystemSettingsManager } from './TanstackSystemSettingsManager'
 import { tanstackRevisions } from './TanstackRevisions'
 
-// Single-row id used to track system settings revisions.
-const SYSTEM_SETTINGS_ROW_ID = 'system-settings'
-
 const buildRevisionPayload = (
-  settings: TanstackSystemSettingsRevisionData['data'],
+  data: TanstackSystemSettingsRevisionData['data'],
   revision: number
 ): TanstackSystemSettingsRevisionData => ({
-  id: SYSTEM_SETTINGS_ROW_ID,
+  id: TANSTACK_SYSTEM_SETTINGS_ID,
   revision,
-  data: settings
+  data
 })
 
 export const setupTanstackSystemSettingsRevisionHandlers = (): void => {
@@ -29,7 +27,7 @@ export const setupTanstackSystemSettingsRevisionHandlers = (): void => {
       const { requestId, payload } = request
 
       try {
-        const currentRevision = tanstackRevisions.systemSettings.get(SYSTEM_SETTINGS_ROW_ID)
+        const currentRevision = tanstackRevisions.systemSettings.get(TANSTACK_SYSTEM_SETTINGS_ID)
         const systemSettingsEntity = payload.systemSettings
 
         if (systemSettingsEntity.expectedRevision !== currentRevision) {
@@ -47,7 +45,7 @@ export const setupTanstackSystemSettingsRevisionHandlers = (): void => {
         const settings = await TanstackSystemSettingsManager.updateSystemSettings(
           systemSettingsEntity.data
         )
-        const revision = tanstackRevisions.systemSettings.bump(SYSTEM_SETTINGS_ROW_ID)
+        const revision = tanstackRevisions.systemSettings.bump(TANSTACK_SYSTEM_SETTINGS_ID)
 
         return {
           requestId,

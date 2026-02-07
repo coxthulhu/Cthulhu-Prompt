@@ -1,12 +1,13 @@
 import { createCollection } from '@tanstack/svelte-db'
-import type { TanstackSystemSettingsRecord } from '@shared/tanstack/TanstackSystemSettings'
+import {
+  TANSTACK_SYSTEM_SETTINGS_ID,
+  type TanstackSystemSettings
+} from '@shared/tanstack/TanstackSystemSettings'
 import { tanstackRevisionCollectionOptions } from './TanstackRevisionCollection'
 
-export const TANSTACK_SYSTEM_SETTINGS_RECORD_ID = 'system-settings'
-
 export const tanstackSystemSettingsCollection = createCollection(
-  tanstackRevisionCollectionOptions<TanstackSystemSettingsRecord>({
+  tanstackRevisionCollectionOptions<TanstackSystemSettings>({
     id: 'tanstack-system-settings',
-    getKey: () => TANSTACK_SYSTEM_SETTINGS_RECORD_ID
+    getKey: () => TANSTACK_SYSTEM_SETTINGS_ID
   })
 )

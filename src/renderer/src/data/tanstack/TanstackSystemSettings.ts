@@ -1,34 +1,29 @@
 import type {
   TanstackSystemSettings,
-  TanstackSystemSettingsSnapshot,
-  TanstackSystemSettingsRecord
+  TanstackSystemSettingsSnapshot
 } from '@shared/tanstack/TanstackSystemSettings'
+import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import type {
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { runTanstackRevisionMutation } from './TanstackRevisionCollections'
-import {
-  TANSTACK_SYSTEM_SETTINGS_RECORD_ID,
-  tanstackSystemSettingsCollection
-} from './TanstackSystemSettingsCollection'
+import { tanstackSystemSettingsCollection } from './TanstackSystemSettingsCollection'
 
 export { tanstackSystemSettingsCollection } from './TanstackSystemSettingsCollection'
-
-const SYSTEM_SETTINGS_RECORD_ID = TANSTACK_SYSTEM_SETTINGS_RECORD_ID
 
 export const applyTanstackSystemSettingsSnapshot = (
   snapshot: TanstackSystemSettingsSnapshot
 ): void => {
   tanstackSystemSettingsCollection.utils.upsertAuthoritative({
-    id: SYSTEM_SETTINGS_RECORD_ID,
+    id: TANSTACK_SYSTEM_SETTINGS_ID,
     revision: snapshot.revision,
     data: snapshot.settings
   })
 }
 
-export const getTanstackSystemSettingsRecord = (): TanstackSystemSettingsRecord | null => {
-  return tanstackSystemSettingsCollection.get(SYSTEM_SETTINGS_RECORD_ID) ?? null
+export const getTanstackSystemSettings = (): TanstackSystemSettings | null => {
+  return tanstackSystemSettingsCollection.get(TANSTACK_SYSTEM_SETTINGS_ID) ?? null
 }
 
 export const updateTanstackSystemSettings = async (
@@ -36,19 +31,19 @@ export const updateTanstackSystemSettings = async (
 ): Promise<void> => {
   await runTanstackRevisionMutation({
     mutateOptimistically: () => {
-      tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
+      tanstackSystemSettingsCollection.update(TANSTACK_SYSTEM_SETTINGS_ID, (draft) => {
         draft.promptFontSize = settings.promptFontSize
         draft.promptEditorMinLines = settings.promptEditorMinLines
       })
     },
-    runMutation: async ({ entity, invoke }) => {
+    runMutation: async ({ entities, invoke }) => {
       return invoke<TanstackUpdateSystemSettingsRevisionResult, TanstackUpdateSystemSettingsRevisionRequest>(
         'tanstack-update-system-settings-revision',
         {
           requestId: crypto.randomUUID(),
           payload: {
-            systemSettings: entity.systemSettings({
-              id: SYSTEM_SETTINGS_RECORD_ID,
+            systemSettings: entities.systemSettings({
+              id: TANSTACK_SYSTEM_SETTINGS_ID,
               data: settings
             })
           }

@@ -1,10 +1,6 @@
-import { runTanstackRevisionMutation as createTanstackRevisionMutationRunner } from './TanstackRevisionMutation'
+import { createTanstackRevisionMutationRunner } from './TanstackRevisionMutation'
 import { tanstackSystemSettingsCollection } from './TanstackSystemSettingsCollection'
 
-export const tanstackRevisionCollections = {
+export const runTanstackRevisionMutation = createTanstackRevisionMutationRunner({
   systemSettings: tanstackSystemSettingsCollection
-}
-
-export const runTanstackRevisionMutation = createTanstackRevisionMutationRunner(
-  tanstackRevisionCollections
-)
+})

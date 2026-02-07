@@ -8,6 +8,8 @@ export type TanstackSystemSettingsSnapshot = {
   revision: number
 }
 
+export const TANSTACK_SYSTEM_SETTINGS_ID = 'system-settings'
+
 export const MIN_PROMPT_FONT_SIZE = 10
 export const MAX_PROMPT_FONT_SIZE = 32
 export const MIN_PROMPT_EDITOR_MIN_LINES = 2
@@ -49,8 +51,6 @@ export const normalizeTanstackSystemSettings = (
     )
   }
 }
-
-export type TanstackSystemSettingsRecord = TanstackSystemSettings
 
 export type TanstackLoadSystemSettingsSuccess = {
   settings: TanstackSystemSettings

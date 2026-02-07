@@ -27,32 +27,38 @@ type TanstackAnyRevisionCollection = Collection<
 
 type TanstackRevisionCollectionsMap = Record<string, TanstackAnyRevisionCollection>
 
-type TanstackCollectionRecord<TCollection> = TCollection extends Collection<infer TRecord, any, any>
+type TanstackCollectionRecord<TCollection> = TCollection extends Collection<
+  infer TRecord,
+  string,
+  infer _TUtils
+>
   ? TRecord
   : never
 
-type TanstackRevisionMutationPayload = Record<
-  string,
-  TanstackRevisionEnvelope<any>
->
+type TanstackRevisionPayload<TCollections extends TanstackRevisionCollectionsMap> = Partial<{
+  [TCollectionKey in keyof TCollections]: TanstackRevisionEnvelope<
+    TanstackCollectionRecord<TCollections[TCollectionKey]>
+  >
+}>
 
-type TanstackMutationRequest = {
+type TanstackMutationRequest<TCollections extends TanstackRevisionCollectionsMap> = {
   requestId: string
-  payload: Record<string, unknown>
+  payload: Partial<{
+    [TCollectionKey in keyof TCollections]: TanstackRevisionPayloadEntity<
+      TanstackCollectionRecord<TCollections[TCollectionKey]>
+    >
+  }>
 }
 
-type TanstackRevisionMutationResult<TPayload extends TanstackRevisionMutationPayload> =
+type TanstackRevisionMutationResult<
+  TCollections extends TanstackRevisionCollectionsMap,
+  TPayload extends TanstackRevisionPayload<TCollections>
+> =
   | { success: true; payload: TPayload }
   | { success: false; conflict: true; payload: TPayload }
   | { success: false; error: string; conflict?: false }
 
-const tanstackPayloadEntityCollectionSymbol = Symbol('tanstackPayloadEntityCollection')
-
-type TanstackPayloadEntityWithCollectionMeta<TRecord extends object> = TanstackRevisionPayloadEntity<TRecord> & {
-  [tanstackPayloadEntityCollectionSymbol]: TanstackAnyRevisionCollection
-}
-
-type TanstackRevisionPayloadEntityBuilders<TCollections extends TanstackRevisionCollectionsMap> = {
+type TanstackRevisionEntityBuilders<TCollections extends TanstackRevisionCollectionsMap> = {
   [TCollectionKey in keyof TCollections]: (entity: {
     id: string
     data: TanstackCollectionRecord<TCollections[TCollectionKey]>
@@ -61,139 +67,93 @@ type TanstackRevisionPayloadEntityBuilders<TCollections extends TanstackRevision
 
 type TanstackRevisionMutationOptions<
   TCollections extends TanstackRevisionCollectionsMap,
-  TPayload extends TanstackRevisionMutationPayload
+  TPayload extends TanstackRevisionPayload<TCollections>
 > = {
   mutateOptimistically: () => void
   runMutation: (
     helpers: {
-      entity: TanstackRevisionPayloadEntityBuilders<TCollections>
+      entities: TanstackRevisionEntityBuilders<TCollections>
       invoke: <
-        TResult extends TanstackRevisionMutationResult<TPayload>,
-        TRequest extends TanstackMutationRequest
+        TResult extends TanstackRevisionMutationResult<TCollections, TPayload>,
+        TRequest extends TanstackMutationRequest<TCollections>
       >(
         channel: string,
         request: TRequest
       ) => Promise<TResult>
     }
-  ) => Promise<TanstackRevisionMutationResult<TPayload>>
+  ) => Promise<TanstackRevisionMutationResult<TCollections, TPayload>>
   conflictMessage: string
 }
 
-const createPayloadEntityBuilders = <TCollections extends TanstackRevisionCollectionsMap>(
+const createRevisionEntityBuilders = <TCollections extends TanstackRevisionCollectionsMap>(
   collections: TCollections
-): TanstackRevisionPayloadEntityBuilders<TCollections> => {
-  const builders = {} as TanstackRevisionPayloadEntityBuilders<TCollections>
+): TanstackRevisionEntityBuilders<TCollections> => {
+  const builders = {} as TanstackRevisionEntityBuilders<TCollections>
 
   for (const collectionKey of Object.keys(collections) as Array<keyof TCollections>) {
     const collection = collections[collectionKey]
 
     builders[collectionKey] = ((entity) => {
-      const payloadEntity: TanstackPayloadEntityWithCollectionMeta<
-        TanstackCollectionRecord<TCollections[typeof collectionKey]>
-      > = {
+      return {
         id: entity.id,
         expectedRevision: collection.utils.getAuthoritativeRevision(entity.id),
-        data: entity.data,
-        [tanstackPayloadEntityCollectionSymbol]: collection
+        data: entity.data
       }
-
-      return payloadEntity
-    }) as TanstackRevisionPayloadEntityBuilders<TCollections>[typeof collectionKey]
+    }) as TanstackRevisionEntityBuilders<TCollections>[typeof collectionKey]
   }
 
   return builders
 }
 
-const sanitizeMutationPayload = (
-  payload: Record<string, unknown>,
-  payloadCollections: Map<string, TanstackAnyRevisionCollection>
-): Record<string, unknown> => {
-  const sanitized: Record<string, unknown> = {}
+const applyAuthoritativePayload = <TCollections extends TanstackRevisionCollectionsMap>(
+  collections: TCollections,
+  payload: TanstackRevisionPayload<TCollections>
+): void => {
+  for (const collectionKey of Object.keys(payload) as Array<keyof TCollections>) {
+    const snapshot = payload[collectionKey]
 
-  for (const [payloadKey, value] of Object.entries(payload)) {
-    if (
-      !value ||
-      typeof value !== 'object' ||
-      !(tanstackPayloadEntityCollectionSymbol in value)
-    ) {
-      sanitized[payloadKey] = value
+    if (!snapshot) {
       continue
     }
 
-    const payloadEntity = value as TanstackPayloadEntityWithCollectionMeta<any>
-    payloadCollections.set(payloadKey, payloadEntity[tanstackPayloadEntityCollectionSymbol])
-    sanitized[payloadKey] = {
-      id: payloadEntity.id,
-      expectedRevision: payloadEntity.expectedRevision,
-      data: payloadEntity.data
-    }
-  }
-
-  return sanitized
-}
-
-const mergeAuthoritativePayload = (
-  payload: TanstackRevisionMutationPayload,
-  payloadCollections: Map<string, TanstackAnyRevisionCollection>
-): void => {
-  for (const payloadKey of payloadCollections.keys()) {
-    if (!(payloadKey in payload)) {
-      throw new Error(`Missing mutation payload entity: ${payloadKey}`)
-    }
-  }
-
-  for (const [payloadKey, snapshot] of Object.entries(payload)) {
-    const collection = payloadCollections.get(payloadKey)
-
-    if (!collection) {
-      throw new Error(`Unknown mutation payload entity: ${payloadKey}`)
-    }
-
-    collection.utils.upsertAuthoritative(snapshot)
+    collections[collectionKey].utils.upsertAuthoritative(snapshot)
   }
 }
 
-const runTanstackRevisionMutationWithCollections = async <
+const runRevisionMutation = async <
   TCollections extends TanstackRevisionCollectionsMap,
-  TPayload extends TanstackRevisionMutationPayload
+  TPayload extends TanstackRevisionPayload<TCollections>
 >(
   collections: TCollections,
   {
-  mutateOptimistically,
-  runMutation,
-  conflictMessage
-}: TanstackRevisionMutationOptions<TCollections, TPayload>
+    mutateOptimistically,
+    runMutation,
+    conflictMessage
+  }: TanstackRevisionMutationOptions<TCollections, TPayload>
 ): Promise<void> => {
-  const payloadCollections = new Map<string, TanstackAnyRevisionCollection>()
-  const entity = createPayloadEntityBuilders(collections)
+  const entities = createRevisionEntityBuilders(collections)
 
   const transaction = createTransaction({
     autoCommit: false,
     mutationFn: async () => {
-      const result = await runMutation({
-        entity,
-        invoke: async (channel, request) => {
-          const payload = sanitizeMutationPayload(request.payload, payloadCollections)
-          return ipcInvoke(channel, {
-            ...request,
-            payload
-          })
-        }
+      const mutationResult = await runMutation({
+        entities,
+        invoke: (channel, request) => ipcInvoke(channel, request)
       })
 
-      if ('payload' in result) {
-        mergeAuthoritativePayload(result.payload, payloadCollections)
+      if ('payload' in mutationResult) {
+        applyAuthoritativePayload(collections, mutationResult.payload)
       }
 
-      if (result.success) {
+      if (mutationResult.success) {
         return
       }
 
-      if (result.conflict) {
+      if (mutationResult.conflict) {
         throw new Error(conflictMessage)
       }
 
-      throw new Error(result.error)
+      throw new Error(mutationResult.error)
     }
   })
 
@@ -206,12 +166,14 @@ const runTanstackRevisionMutationWithCollections = async <
   })
 }
 
-export const runTanstackRevisionMutation = <TCollections extends TanstackRevisionCollectionsMap>(
+export const createTanstackRevisionMutationRunner = <
+  TCollections extends TanstackRevisionCollectionsMap
+>(
   collections: TCollections
 ) => {
-  return async <TPayload extends TanstackRevisionMutationPayload>(
+  return async <TPayload extends TanstackRevisionPayload<TCollections>>(
     options: TanstackRevisionMutationOptions<TCollections, TPayload>
   ): Promise<void> => {
-    await runTanstackRevisionMutationWithCollections(collections, options)
+    await runRevisionMutation(collections, options)
   }
 }

@@ -55,10 +55,6 @@ export const tanstackRevisionCollectionOptions = <TRecord extends object>(
   }
 
   const getAuthoritativeRevision = (key: string): number => {
-    if (!collection?.has(key) && !authoritativeRevisions.has(key)) {
-      return 0
-    }
-
     return authoritativeRevisions.get(key) ?? 0
   }
 
