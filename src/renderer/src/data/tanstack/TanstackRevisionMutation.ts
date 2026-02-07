@@ -73,7 +73,6 @@ type TanstackRevisionMutationOptions<
   TCollections extends TanstackRevisionCollectionsMap,
   TPayload extends TanstackRevisionMutationPayload
 > = {
-  collections: TCollections
   mutateOptimistically: () => void
   runMutation: (
     helpers: {
@@ -165,15 +164,17 @@ const mergeAuthoritativePayload = (
   }
 }
 
-export const runTanstackRevisionMutation = async <
+const runTanstackRevisionMutationWithCollections = async <
   TCollections extends TanstackRevisionCollectionsMap,
   TPayload extends TanstackRevisionMutationPayload
->({
-  collections,
+>(
+  collections: TCollections,
+  {
   mutateOptimistically,
   runMutation,
   conflictMessage
-}: TanstackRevisionMutationOptions<TCollections, TPayload>): Promise<void> => {
+}: TanstackRevisionMutationOptions<TCollections, TPayload>
+): Promise<void> => {
   const payloadCollections = new Map<string, TanstackAnyRevisionCollection>()
   const entity = createPayloadEntityBuilders(collections)
 
@@ -214,4 +215,14 @@ export const runTanstackRevisionMutation = async <
       await transaction.commit()
     }
   })
+}
+
+export const runTanstackRevisionMutation = <TCollections extends TanstackRevisionCollectionsMap>(
+  collections: TCollections
+) => {
+  return async <TPayload extends TanstackRevisionMutationPayload>(
+    options: TanstackRevisionMutationOptions<TCollections, TPayload>
+  ): Promise<void> => {
+    await runTanstackRevisionMutationWithCollections(collections, options)
+  }
 }

@@ -1,4 +1,3 @@
-import { createCollection } from '@tanstack/svelte-db'
 import type {
   TanstackSystemSettings,
   TanstackSystemSettingsSnapshot,
@@ -8,17 +7,15 @@ import type {
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
-import { runTanstackRevisionMutation } from './TanstackRevisionMutation'
-import { tanstackRevisionCollectionOptions } from './TanstackRevisionCollection'
+import { runTanstackRevisionMutation } from './TanstackRevisionCollections'
+import {
+  TANSTACK_SYSTEM_SETTINGS_RECORD_ID,
+  tanstackSystemSettingsCollection
+} from './TanstackSystemSettingsCollection'
 
-const SYSTEM_SETTINGS_RECORD_ID = 'system-settings'
+export { tanstackSystemSettingsCollection } from './TanstackSystemSettingsCollection'
 
-export const tanstackSystemSettingsCollection = createCollection(
-  tanstackRevisionCollectionOptions<TanstackSystemSettingsRecord, string>({
-    id: 'tanstack-system-settings',
-    getKey: () => SYSTEM_SETTINGS_RECORD_ID
-  })
-)
+const SYSTEM_SETTINGS_RECORD_ID = TANSTACK_SYSTEM_SETTINGS_RECORD_ID
 
 export const applyTanstackSystemSettingsSnapshot = (
   snapshot: TanstackSystemSettingsSnapshot
@@ -38,9 +35,6 @@ export const updateTanstackSystemSettings = async (
   settings: TanstackSystemSettings
 ): Promise<void> => {
   await runTanstackRevisionMutation({
-    collections: {
-      systemSettings: tanstackSystemSettingsCollection
-    },
     mutateOptimistically: () => {
       tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
         draft.promptFontSize = settings.promptFontSize
