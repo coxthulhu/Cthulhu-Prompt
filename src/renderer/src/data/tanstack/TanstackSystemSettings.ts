@@ -40,7 +40,6 @@ export const updateTanstackSystemSettings = async (
       return invoke<TanstackUpdateSystemSettingsRevisionResult, TanstackUpdateSystemSettingsRevisionRequest>(
         'tanstack-update-system-settings-revision',
         {
-          requestId: crypto.randomUUID(),
           payload: {
             systemSettings: entities.systemSettings({
               id: TANSTACK_SYSTEM_SETTINGS_ID,

@@ -2,8 +2,22 @@ import type { TanstackSystemSettings } from './TanstackSystemSettings'
 import type { TanstackRevisionEnvelope, TanstackRevisionPayloadEntity } from './TanstackRevision'
 
 export type TanstackMutationRequest<TPayload> = {
-  requestId: string
   payload: TPayload
+}
+
+export type TanstackMutationWireRequest<
+  TRequest extends TanstackMutationRequest<unknown>
+> = TRequest & {
+  requestId: string
+}
+
+export type TanstackMutationResult<TPayload> =
+  | { success: true; payload: TPayload }
+  | { success: false; conflict: true; payload: TPayload }
+  | { success: false; error: string; conflict?: false }
+
+export type TanstackMutationResultWithRequestId<TPayload> = TanstackMutationResult<TPayload> & {
+  requestId: string
 }
 
 export type TanstackSystemSettingsRevisionPayload = {
@@ -21,11 +35,4 @@ export type TanstackSystemSettingsRevisionResponsePayload = {
 }
 
 export type TanstackUpdateSystemSettingsRevisionResult =
-  | { requestId: string; success: true; payload: TanstackSystemSettingsRevisionResponsePayload }
-  | {
-      requestId: string
-      success: false
-      conflict: true
-      payload: TanstackSystemSettingsRevisionResponsePayload
-    }
-  | { requestId: string; success: false; error: string; conflict?: false }
+  TanstackMutationResultWithRequestId<TanstackSystemSettingsRevisionResponsePayload>

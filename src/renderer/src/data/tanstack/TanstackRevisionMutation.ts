@@ -4,7 +4,7 @@ import type {
   TanstackRevisionEnvelope,
   TanstackRevisionPayloadEntity
 } from '@shared/tanstack/TanstackRevision'
-import { ipcInvoke } from '@renderer/api/ipcInvoke'
+import { tanstackIpcInvokeWithPayload } from './TanstackIpcInvoke'
 import type { TanstackRevisionCollectionUtils } from './TanstackRevisionCollection'
 
 type TanstackQueuedTask<T> = () => Promise<T>
@@ -42,7 +42,6 @@ type TanstackRevisionPayload<TCollections extends TanstackRevisionCollectionsMap
 }>
 
 type TanstackMutationRequest<TCollections extends TanstackRevisionCollectionsMap> = {
-  requestId: string
   payload: Partial<{
     [TCollectionKey in keyof TCollections]: TanstackRevisionPayloadEntity<
       TanstackCollectionRecord<TCollections[TCollectionKey]>
@@ -138,7 +137,7 @@ const runRevisionMutation = async <
     mutationFn: async () => {
       const mutationResult = await runMutation({
         entities,
-        invoke: (channel, request) => ipcInvoke(channel, request)
+        invoke: (channel, request) => tanstackIpcInvokeWithPayload(channel, request.payload)
       })
 
       if ('payload' in mutationResult) {
