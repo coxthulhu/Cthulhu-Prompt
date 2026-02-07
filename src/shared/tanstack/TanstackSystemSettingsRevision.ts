@@ -1,5 +1,5 @@
 import type { TanstackSystemSettings } from './TanstackSystemSettings'
-import type { TanstackRevisionEnvelope } from './TanstackRevision'
+import type { TanstackRevisionEnvelope, TanstackRevisionPayloadEntity } from './TanstackRevision'
 
 export type TanstackMutationRequest<TPayload> = {
   requestId: string
@@ -7,8 +7,7 @@ export type TanstackMutationRequest<TPayload> = {
 }
 
 export type TanstackSystemSettingsRevisionPayload = {
-  settings: TanstackSystemSettings
-  expectedRevision: number
+  systemSettings: TanstackRevisionPayloadEntity<string, TanstackSystemSettings>
 }
 
 export type TanstackUpdateSystemSettingsRevisionRequest = TanstackMutationRequest<
@@ -20,7 +19,16 @@ export type TanstackSystemSettingsRevisionData = TanstackRevisionEnvelope<
   TanstackSystemSettings
 >
 
+export type TanstackSystemSettingsRevisionResponsePayload = {
+  systemSettings: TanstackSystemSettingsRevisionData
+}
+
 export type TanstackUpdateSystemSettingsRevisionResult =
-  | { requestId: string; success: true; payload: TanstackSystemSettingsRevisionData }
-  | { requestId: string; success: false; conflict: true; payload: TanstackSystemSettingsRevisionData }
+  | { requestId: string; success: true; payload: TanstackSystemSettingsRevisionResponsePayload }
+  | {
+      requestId: string
+      success: false
+      conflict: true
+      payload: TanstackSystemSettingsRevisionResponsePayload
+    }
   | { requestId: string; success: false; error: string; conflict?: false }

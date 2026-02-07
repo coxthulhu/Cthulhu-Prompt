@@ -8,7 +8,6 @@ import type {
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
-import { ipcInvoke } from '@renderer/api/ipcInvoke'
 import { runTanstackRevisionMutation } from './TanstackRevisionMutation'
 import { tanstackRevisionCollectionOptions } from './TanstackRevisionCollection'
 
@@ -38,23 +37,26 @@ export const getTanstackSystemSettingsRecord = (): TanstackSystemSettingsRecord 
 export const updateTanstackSystemSettings = async (
   settings: TanstackSystemSettings
 ): Promise<void> => {
-  await runTanstackRevisionMutation<TanstackSystemSettingsRecord, string>({
-    collection: tanstackSystemSettingsCollection,
-    key: SYSTEM_SETTINGS_RECORD_ID,
+  await runTanstackRevisionMutation({
+    collections: {
+      systemSettings: tanstackSystemSettingsCollection
+    },
     mutateOptimistically: () => {
       tanstackSystemSettingsCollection.update(SYSTEM_SETTINGS_RECORD_ID, (draft) => {
         draft.promptFontSize = settings.promptFontSize
         draft.promptEditorMinLines = settings.promptEditorMinLines
       })
     },
-    runMutation: async (expectedRevision) => {
-      return ipcInvoke<TanstackUpdateSystemSettingsRevisionResult, TanstackUpdateSystemSettingsRevisionRequest>(
+    runMutation: async ({ entity, invoke }) => {
+      return invoke<TanstackUpdateSystemSettingsRevisionResult, TanstackUpdateSystemSettingsRevisionRequest>(
         'tanstack-update-system-settings-revision',
         {
           requestId: crypto.randomUUID(),
           payload: {
-            settings,
-            expectedRevision
+            systemSettings: entity.systemSettings({
+              id: SYSTEM_SETTINGS_RECORD_ID,
+              data: settings
+            })
           }
         }
       )

@@ -30,24 +30,31 @@ export const setupTanstackSystemSettingsRevisionHandlers = (): void => {
 
       try {
         const currentRevision = tanstackRevisions.systemSettings.get(SYSTEM_SETTINGS_ROW_ID)
+        const systemSettingsEntity = payload.systemSettings
 
-        if (payload.expectedRevision !== currentRevision) {
+        if (systemSettingsEntity.expectedRevision !== currentRevision) {
           const settings = await TanstackSystemSettingsManager.loadSystemSettings()
           return {
             requestId,
             success: false,
             conflict: true,
-            payload: buildRevisionPayload(settings, currentRevision)
+            payload: {
+              systemSettings: buildRevisionPayload(settings, currentRevision)
+            }
           }
         }
 
-        const settings = await TanstackSystemSettingsManager.updateSystemSettings(payload.settings)
+        const settings = await TanstackSystemSettingsManager.updateSystemSettings(
+          systemSettingsEntity.data
+        )
         const revision = tanstackRevisions.systemSettings.bump(SYSTEM_SETTINGS_ROW_ID)
 
         return {
           requestId,
           success: true,
-          payload: buildRevisionPayload(settings, revision)
+          payload: {
+            systemSettings: buildRevisionPayload(settings, revision)
+          }
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
