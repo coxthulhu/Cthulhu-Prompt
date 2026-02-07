@@ -3,6 +3,7 @@ import { startupNormally } from './NormalStartup'
 import { getFs, setFs } from './fs-provider'
 import { setDialogProvider, createTestDialogProvider } from './dialog-provider'
 import { isPlaywrightEnvironment } from './appEnvironment'
+import { setTanstackFs } from './tanstack/TanstackFsProvider'
 
 // Test setup storage
 interface TestFixtures {
@@ -140,6 +141,7 @@ export function setupTestStartupListener(): void {
       vol.reset()
       vol.fromJSON(filesystem)
       setFs(vol)
+      setTanstackFs(vol)
       emitFilesystemSetupResult(requestId, { success: true })
     } catch (error) {
       console.error('Failed to set up mocked filesystem:', error)
