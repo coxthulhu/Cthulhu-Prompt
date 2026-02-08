@@ -64,7 +64,7 @@ export const createTanstackPromptFolder = async (
         }
       )
     },
-    handleMutationResponse: (payload) => {
+    handleSuccessOrConflictResponse: (payload) => {
       tanstackWorkspaceCollection.utils.upsertAuthoritative(payload.workspace)
 
       if (!payload.promptFolder) {

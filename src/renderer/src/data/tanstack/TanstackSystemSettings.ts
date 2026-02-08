@@ -50,7 +50,7 @@ export const updateTanstackSystemSettings = async (
         }
       )
     },
-    handleMutationResponse: (payload: TanstackSystemSettingsRevisionResponsePayload) =>
+    handleSuccessOrConflictResponse: (payload: TanstackSystemSettingsRevisionResponsePayload) =>
       tanstackSystemSettingsCollection.utils.upsertAuthoritative(payload.systemSettings),
     conflictMessage: 'System settings update conflict'
   })

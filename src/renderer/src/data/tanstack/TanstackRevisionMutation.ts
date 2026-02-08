@@ -69,7 +69,7 @@ type TanstackRevisionMutationOptions<
       ) => Promise<TResult>
     }
   ) => Promise<TanstackRevisionMutationResult<TPayload>>
-  handleMutationResponse: (payload: TPayload) => void
+  handleSuccessOrConflictResponse: (payload: TPayload) => void
   conflictMessage: string
 }
 
@@ -101,7 +101,7 @@ const runRevisionMutation = async <
   {
     mutateOptimistically,
     runMutation,
-    handleMutationResponse,
+    handleSuccessOrConflictResponse,
     conflictMessage
   }: TanstackRevisionMutationOptions<TCollections, TPayload>
 ): Promise<void> => {
@@ -116,7 +116,7 @@ const runRevisionMutation = async <
       })
 
       if ('payload' in mutationResult) {
-        handleMutationResponse(mutationResult.payload)
+        handleSuccessOrConflictResponse(mutationResult.payload)
       }
 
       if (mutationResult.success) {
