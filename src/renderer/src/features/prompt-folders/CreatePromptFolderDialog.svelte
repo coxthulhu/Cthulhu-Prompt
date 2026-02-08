@@ -74,6 +74,9 @@
     try {
       submissionError = null
       isCreatingPromptFolder = true
+      // TODO(tanstack-create-prompt-folder): swap this submit path to `createTanstackPromptFolder`
+      // once the prompt folders UI migrates to the TanStack workspace/prompt-folder collections.
+      // await createTanstackPromptFolder(selectedWorkspace.id, normalizedDisplayName)
       const created = await createPromptFolder(normalizedDisplayName)
 
       if (created) {
