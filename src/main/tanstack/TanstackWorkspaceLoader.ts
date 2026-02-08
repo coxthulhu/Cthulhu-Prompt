@@ -6,7 +6,10 @@ import type {
 import { isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspacePath'
 import { getTanstackFs } from './TanstackFsProvider'
 import { tanstackRevisions } from './TanstackRevisions'
-import { registerTanstackWorkspace } from './TanstackWorkspaceRegistry'
+import {
+  registerTanstackWorkspace,
+  setSelectedTanstackWorkspaceId
+} from './TanstackWorkspaceRegistry'
 import { readTanstackPromptFolders, readTanstackWorkspaceId } from './TanstackWorkspaceReads'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
@@ -56,14 +59,20 @@ export const loadTanstackWorkspaceByPath = async (
 ): Promise<TanstackLoadWorkspaceByPathResult> => {
   try {
     if (!isTanstackWorkspacePathValid(workspacePath)) {
+      setSelectedTanstackWorkspaceId(null)
       return { success: false, error: 'Invalid workspace path' }
     }
 
+    const payload = buildTanstackWorkspaceLoadSuccess(workspacePath)
+    // Side effect: store the selected TanStack workspace ID only after the load succeeds.
+    setSelectedTanstackWorkspaceId(payload.workspace.id)
+
     return {
       success: true,
-      ...buildTanstackWorkspaceLoadSuccess(workspacePath)
+      ...payload
     }
   } catch (error) {
+    setSelectedTanstackWorkspaceId(null)
     const message = error instanceof Error ? error.message : String(error)
     return { success: false, error: message || 'Failed to load workspace by path' }
   }

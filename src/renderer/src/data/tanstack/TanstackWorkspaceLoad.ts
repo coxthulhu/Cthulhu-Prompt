@@ -7,14 +7,14 @@ import { runTanstackLoad } from './TanstackLoad'
 import { tanstackPromptFolderCollection } from './TanstackPromptFolderCollection'
 import { tanstackWorkspaceCollection } from './TanstackWorkspaceCollection'
 
-export const loadTanstackWorkspaceByPath = async (workspacePath: string): Promise<void> => {
+export const loadTanstackWorkspaceByPath = async (workspacePath: string): Promise<string> => {
   const result = await runTanstackLoad(() =>
-    tanstackIpcInvokeWithPayload<TanstackLoadWorkspaceByPathResult, TanstackLoadWorkspaceByPathRequest>(
-      'tanstack-load-workspace-by-path',
-      {
-        workspacePath
-      }
-    )
+    tanstackIpcInvokeWithPayload<
+      TanstackLoadWorkspaceByPathResult,
+      TanstackLoadWorkspaceByPathRequest
+    >('tanstack-load-workspace-by-path', {
+      workspacePath
+    })
   )
 
   const previousWorkspace = tanstackWorkspaceCollection.get(result.workspace.id)
@@ -25,7 +25,7 @@ export const loadTanstackWorkspaceByPath = async (workspacePath: string): Promis
   }
 
   if (!previousWorkspace) {
-    return
+    return result.workspace.id
   }
 
   const nextPromptFolderIds = new Set(result.workspace.data.promptFolderIds)
@@ -35,4 +35,6 @@ export const loadTanstackWorkspaceByPath = async (workspacePath: string): Promis
       tanstackPromptFolderCollection.utils.deleteAuthoritative(promptFolderId)
     }
   }
+
+  return result.workspace.id
 }

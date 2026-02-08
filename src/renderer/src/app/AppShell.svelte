@@ -20,6 +20,15 @@
   import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/TanstackSystemSettings'
   import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
+  import {
+    getTanstackSelectedWorkspaceId,
+    setTanstackSelectedWorkspaceId
+  } from '@renderer/data/tanstack/TanstackWorkspaceSelection.svelte.ts'
+  import { loadTanstackWorkspaceByPath } from '@renderer/data/tanstack/TanstackWorkspaceLoad'
+  import {
+    setTanstackWorkspaceSelectionContext,
+    type TanstackWorkspaceSelectionContext
+  } from './TanstackWorkspaceSelectionContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
   import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
   import {
@@ -42,6 +51,11 @@
       return systemSettingsQuery.data.promptEditorMinLines
     }
   }
+  const tanstackWorkspaceSelection: TanstackWorkspaceSelectionContext = {
+    get selectedWorkspaceId() {
+      return getTanstackSelectedWorkspaceId()
+    }
+  }
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const windowControls = window.windowControls
@@ -57,6 +71,7 @@
   }
 
   setSystemSettingsContext(systemSettings)
+  setTanstackWorkspaceSelectionContext(tanstackWorkspaceSelection)
 
   let activeScreen = $state<ScreenId>('home')
   const workspacePath = $derived(getActiveWorkspacePath())
@@ -91,6 +106,10 @@
     selectedPromptFolder = null
   }
 
+  const clearTanstackWorkspaceSelection = () => {
+    setTanstackSelectedWorkspaceId(null)
+  }
+
   const resetWorkspaceState = async () => {
     await switchWorkspaceStores(null)
     clearPromptFolderSelection()
@@ -98,6 +117,16 @@
 
   const handleWorkspaceSuccess = async (path: string) => {
     await switchWorkspaceStores(path)
+  }
+
+  const loadTanstackWorkspaceSelection = async (path: string): Promise<void> => {
+    try {
+      const workspaceId = await loadTanstackWorkspaceByPath(path)
+      setTanstackSelectedWorkspaceId(workspaceId)
+    } catch {
+      clearTanstackWorkspaceSelection()
+      // Side effect: this observer must not block the legacy workspace selection flow.
+    }
   }
 
   const selectWorkspace = async (path: string): Promise<WorkspaceSelectionResult> => {
@@ -110,15 +139,18 @@
       const settingsExists = await checkWorkspaceFolderExists(settingsPath)
 
       if (!promptsExists || !settingsExists) {
+        clearTanstackWorkspaceSelection()
         await resetWorkspaceState()
         return { success: false, reason: 'workspace-missing' }
       }
 
       await handleWorkspaceSuccess(path)
+      await loadTanstackWorkspaceSelection(path)
       return { success: true }
     } catch (error) {
       const message = extractErrorMessage(error)
       logWorkspaceError('select', message)
+      clearTanstackWorkspaceSelection()
       await resetWorkspaceState()
       return {
         success: false,
