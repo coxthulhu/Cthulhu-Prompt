@@ -68,6 +68,12 @@
   const createWorkspaceAtPath = async (
     request: CreateWorkspaceRequest
   ): Promise<WorkspaceResult> => {
+    // TODO(tanstack-create-workspace): switch to TanStack create IPC when create/select can migrate together.
+    // const result = await createTanstackWorkspace(
+    //   request.workspacePath,
+    //   request.includeExamplePrompts
+    // )
+    // return result.success ? { success: true } : { success: false, error: result.error }
     return await ipcInvoke<WorkspaceResult, CreateWorkspaceRequest>('create-workspace', request)
   }
 
@@ -171,6 +177,8 @@
       const result = await createWorkspaceAtPath({ workspacePath: path, includeExamplePrompts })
 
       if (result?.success) {
+        // TODO(tanstack-create-workspace): after TanStack create wiring, call `selectWorkspace(path)` here
+        // so create+select follows the exact same path as a manual workspace selection.
         await handleWorkspaceSuccess(path)
         return { success: true }
       }
