@@ -11,6 +11,7 @@ import { setupTanstackSystemSettingsRevisionHandlers } from './tanstack/Tanstack
 import { TanstackSystemSettingsManager } from './tanstack/TanstackSystemSettingsManager'
 import { tanstackRevisions } from './tanstack/TanstackRevisions'
 import { setupTanstackWorkspaceHandlers } from './tanstack/TanstackWorkspaceHandlers'
+import { setupTanstackPromptFolderHandlers } from './tanstack/TanstackPromptFolderHandlers'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -200,6 +201,7 @@ export function startupNormally(): void {
     setupTanstackSystemSettingsHandlers()
     setupTanstackSystemSettingsRevisionHandlers()
     setupTanstackWorkspaceHandlers()
+    setupTanstackPromptFolderHandlers()
     setupWindowControlHandlers()
 
     const runtimeConfig = await buildRuntimeConfig()

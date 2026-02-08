@@ -7,6 +7,7 @@ import { isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspaceP
 import { getTanstackFs } from './TanstackFsProvider'
 import { tanstackRevisions } from './TanstackRevisions'
 import {
+  registerTanstackPromptFolders,
   registerTanstackWorkspace,
   setSelectedTanstackWorkspaceId
 } from './TanstackWorkspaceRegistry'
@@ -35,6 +36,14 @@ const buildTanstackWorkspaceLoadSuccess = (
 
   // Side effect: keep path/id translation in memory for later TanStack loads.
   registerTanstackWorkspace(workspaceId, workspacePath)
+  registerTanstackPromptFolders(
+    workspaceId,
+    workspacePath,
+    promptFolders.map((promptFolder) => ({
+      id: promptFolder.id,
+      folderName: promptFolder.folderName
+    }))
+  )
 
   return {
     workspace: {

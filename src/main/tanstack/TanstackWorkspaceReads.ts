@@ -1,4 +1,5 @@
 import * as path from 'path'
+import type { TanstackPrompt } from '@shared/tanstack/TanstackPrompt'
 import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
 import type {
   TanstackPromptFolderConfigFile,
@@ -45,6 +46,30 @@ const readTanstackPromptIds = (workspacePath: string, folderName: string): strin
   return parsed.prompts.map((prompt) => prompt.id)
 }
 
+export const readTanstackPromptFolder = (
+  workspacePath: string,
+  folderName: string
+): TanstackPromptFolder => {
+  const config = readTanstackPromptFolderConfig(workspacePath, folderName)
+  const promptIds = readTanstackPromptIds(workspacePath, folderName)
+
+  return {
+    id: config.promptFolderId,
+    folderName,
+    displayName: config.foldername,
+    promptCount: config.promptCount,
+    promptIds,
+    folderDescription: config.folderDescription
+  }
+}
+
+export const readTanstackPrompts = (workspacePath: string, folderName: string): TanstackPrompt[] => {
+  const fs = getTanstackFs()
+  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
+  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as { prompts?: TanstackPrompt[] }
+  return parsed.prompts ?? []
+}
+
 export const readTanstackPromptFolders = (workspacePath: string): TanstackPromptFolder[] => {
   const fs = getTanstackFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
@@ -57,17 +82,7 @@ export const readTanstackPromptFolders = (workspacePath: string): TanstackPrompt
     }
 
     const folderName = entry.name
-    const config = readTanstackPromptFolderConfig(workspacePath, folderName)
-    const promptIds = readTanstackPromptIds(workspacePath, folderName)
-
-    promptFolders.push({
-      id: config.promptFolderId,
-      folderName,
-      displayName: config.foldername,
-      promptCount: config.promptCount,
-      promptIds,
-      folderDescription: config.folderDescription
-    })
+    promptFolders.push(readTanstackPromptFolder(workspacePath, folderName))
   }
 
   return promptFolders
