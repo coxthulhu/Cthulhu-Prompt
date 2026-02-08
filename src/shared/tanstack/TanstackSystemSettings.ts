@@ -59,15 +59,3 @@ export type TanstackLoadSystemSettingsSuccess = {
 export type TanstackLoadSystemSettingsResult =
   | ({ success: true } & TanstackLoadSystemSettingsSuccess)
   | { success: false; error: string }
-
-export type TanstackUpdateSystemSettingsRequest = {
-  settings: TanstackSystemSettings
-}
-
-export type TanstackUpdateSystemSettingsSuccess = {
-  settings: TanstackSystemSettings
-}
-
-export type TanstackUpdateSystemSettingsResult =
-  | ({ success: true } & TanstackUpdateSystemSettingsSuccess)
-  | { success: false; error: string }
