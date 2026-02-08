@@ -1,9 +1,6 @@
 import { createTransaction } from '@tanstack/svelte-db'
 import type { Collection } from '@tanstack/svelte-db'
-import type {
-  TanstackRevisionEnvelope,
-  TanstackRevisionPayloadEntity
-} from '@shared/tanstack/TanstackRevision'
+import type { TanstackRevisionPayloadEntity } from '@shared/tanstack/TanstackRevision'
 import { tanstackIpcInvokeWithPayload } from './TanstackIpcInvoke'
 import type { TanstackRevisionCollectionUtils } from './TanstackRevisionCollection'
 
@@ -35,12 +32,6 @@ type TanstackCollectionRecord<TCollection> = TCollection extends Collection<
   ? TRecord
   : never
 
-type TanstackRevisionPayload<TCollections extends TanstackRevisionCollectionsMap> = Partial<{
-  [TCollectionKey in keyof TCollections]: TanstackRevisionEnvelope<
-    TanstackCollectionRecord<TCollections[TCollectionKey]>
-  >
-}>
-
 type TanstackMutationRequest<TCollections extends TanstackRevisionCollectionsMap> = {
   payload: Partial<{
     [TCollectionKey in keyof TCollections]: TanstackRevisionPayloadEntity<
@@ -49,10 +40,7 @@ type TanstackMutationRequest<TCollections extends TanstackRevisionCollectionsMap
   }>
 }
 
-type TanstackRevisionMutationResult<
-  TCollections extends TanstackRevisionCollectionsMap,
-  TPayload extends TanstackRevisionPayload<TCollections>
-> =
+type TanstackRevisionMutationResult<TPayload> =
   | { success: true; payload: TPayload }
   | { success: false; conflict: true; payload: TPayload }
   | { success: false; error: string; conflict?: false }
@@ -66,21 +54,22 @@ type TanstackRevisionEntityBuilders<TCollections extends TanstackRevisionCollect
 
 type TanstackRevisionMutationOptions<
   TCollections extends TanstackRevisionCollectionsMap,
-  TPayload extends TanstackRevisionPayload<TCollections>
+  TPayload
 > = {
   mutateOptimistically: () => void
   runMutation: (
     helpers: {
       entities: TanstackRevisionEntityBuilders<TCollections>
       invoke: <
-        TResult extends TanstackRevisionMutationResult<TCollections, TPayload>,
+        TResult extends TanstackRevisionMutationResult<TPayload>,
         TRequest extends TanstackMutationRequest<TCollections>
       >(
         channel: string,
         request: TRequest
       ) => Promise<TResult>
     }
-  ) => Promise<TanstackRevisionMutationResult<TCollections, TPayload>>
+  ) => Promise<TanstackRevisionMutationResult<TPayload>>
+  handleMutationResponse: (payload: TPayload) => void
   conflictMessage: string
 }
 
@@ -104,29 +93,15 @@ const createRevisionEntityBuilders = <TCollections extends TanstackRevisionColle
   return builders
 }
 
-const applyAuthoritativePayload = <TCollections extends TanstackRevisionCollectionsMap>(
-  collections: TCollections,
-  payload: TanstackRevisionPayload<TCollections>
-): void => {
-  for (const collectionKey of Object.keys(payload) as Array<keyof TCollections>) {
-    const snapshot = payload[collectionKey]
-
-    if (!snapshot) {
-      continue
-    }
-
-    collections[collectionKey].utils.upsertAuthoritative(snapshot)
-  }
-}
-
 const runRevisionMutation = async <
   TCollections extends TanstackRevisionCollectionsMap,
-  TPayload extends TanstackRevisionPayload<TCollections>
+  TPayload
 >(
   collections: TCollections,
   {
     mutateOptimistically,
     runMutation,
+    handleMutationResponse,
     conflictMessage
   }: TanstackRevisionMutationOptions<TCollections, TPayload>
 ): Promise<void> => {
@@ -141,7 +116,7 @@ const runRevisionMutation = async <
       })
 
       if ('payload' in mutationResult) {
-        applyAuthoritativePayload(collections, mutationResult.payload)
+        handleMutationResponse(mutationResult.payload)
       }
 
       if (mutationResult.success) {
@@ -170,7 +145,7 @@ export const createTanstackRevisionMutationRunner = <
 >(
   collections: TCollections
 ) => {
-  return async <TPayload extends TanstackRevisionPayload<TCollections>>(
+  return async <TPayload>(
     options: TanstackRevisionMutationOptions<TCollections, TPayload>
   ): Promise<void> => {
     await runRevisionMutation(collections, options)

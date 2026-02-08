@@ -4,6 +4,7 @@ import type {
 } from '@shared/tanstack/TanstackSystemSettings'
 import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import type {
+  TanstackSystemSettingsRevisionResponsePayload,
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
@@ -49,6 +50,8 @@ export const updateTanstackSystemSettings = async (
         }
       )
     },
+    handleMutationResponse: (payload: TanstackSystemSettingsRevisionResponsePayload) =>
+      tanstackSystemSettingsCollection.utils.upsertAuthoritative(payload.systemSettings),
     conflictMessage: 'System settings update conflict'
   })
 }
