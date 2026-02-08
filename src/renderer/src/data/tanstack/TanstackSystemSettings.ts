@@ -39,7 +39,7 @@ export const updateTanstackSystemSettings = async (
     },
     runMutation: async ({ entities, invoke }) => {
       return invoke<TanstackUpdateSystemSettingsRevisionResult, TanstackUpdateSystemSettingsRevisionRequest>(
-        'tanstack-update-system-settings-revision',
+        'tanstack-update-system-settings',
         {
           payload: {
             systemSettings: entities.systemSettings({

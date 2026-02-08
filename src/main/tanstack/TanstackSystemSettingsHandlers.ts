@@ -37,7 +37,7 @@ export const setupTanstackSystemSettingsHandlers = (): void => {
   )
 
   ipcMain.handle(
-    'tanstack-update-system-settings-revision',
+    'tanstack-update-system-settings',
     async (
       _,
       request: TanstackMutationWireRequest<TanstackUpdateSystemSettingsRevisionRequest>
