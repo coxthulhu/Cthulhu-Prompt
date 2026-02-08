@@ -25,6 +25,7 @@
     setTanstackSelectedWorkspaceId
   } from '@renderer/data/tanstack/TanstackWorkspaceSelection.svelte.ts'
   import { loadTanstackWorkspaceByPath } from '@renderer/data/tanstack/TanstackWorkspaceLoad'
+  import { closeTanstackWorkspace } from '@renderer/data/tanstack/TanstackWorkspaceClose'
   import {
     setTanstackWorkspaceSelectionContext,
     type TanstackWorkspaceSelectionContext
@@ -89,7 +90,7 @@
   const extractErrorMessage = (error: unknown): string | undefined =>
     error instanceof Error ? error.message : typeof error === 'string' ? error : undefined
 
-  const logWorkspaceError = (context: 'select' | 'create', message?: string) => {
+  const logWorkspaceError = (context: 'select' | 'create' | 'close', message?: string) => {
     const suffix = message ? `: ${message}` : ''
     console.error(`Workspace ${context} error${suffix}`)
   }
@@ -189,6 +190,17 @@
         reason: 'unknown-error',
         message
       }
+    }
+  }
+
+  const closeWorkspace = async (): Promise<void> => {
+    await resetWorkspaceState()
+
+    try {
+      await closeTanstackWorkspace()
+    } catch (error) {
+      const message = extractErrorMessage(error)
+      logWorkspaceError('close', message)
     }
   }
 
@@ -299,7 +311,7 @@
             {isWorkspaceLoading}
             onWorkspaceSelect={selectWorkspace}
             onWorkspaceCreate={createWorkspace}
-            onWorkspaceClear={() => void resetWorkspaceState()}
+            onWorkspaceClear={() => void closeWorkspace()}
           />
         {:else if activeScreen === 'settings'}
           <SettingsScreen />
