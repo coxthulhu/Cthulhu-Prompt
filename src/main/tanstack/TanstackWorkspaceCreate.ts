@@ -94,6 +94,8 @@ export const createTanstackWorkspace = async (
   includeExamplePrompts: boolean
 ): Promise<TanstackCreateWorkspaceResult> => {
   try {
+    // Special-case command path: this is an imperative workspace bootstrap,
+    // not a normal TanStack revision mutation workflow.
     const validationResult = validateNewWorkspacePath(workspacePath)
     if (validationResult) {
       return validationResult

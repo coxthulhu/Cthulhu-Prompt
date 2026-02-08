@@ -31,6 +31,8 @@ export const setupTanstackWorkspaceHandlers = (): void => {
         return { requestId: request.requestId, success: false, error: 'Invalid request payload' }
       }
 
+      // Special-case payload: this create request uses command-style workspace fields,
+      // not the normal TanStack revision mutation entity shape.
       return runTanstackIpcRequest(request, async (payload) => {
         return await createTanstackWorkspace(payload.workspacePath, payload.includeExamplePrompts)
       })
