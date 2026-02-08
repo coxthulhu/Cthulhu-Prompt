@@ -1,7 +1,11 @@
 <script lang="ts">
   import { untrack } from 'svelte'
+  import { getTanstackWorkspaceSelectionContext } from '@renderer/app/TanstackWorkspaceSelectionContext'
   import type { PromptFolder } from '@shared/ipc'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/TanstackPromptFolderCollection'
+  import { loadTanstackPromptFolderInitial } from '@renderer/data/tanstack/TanstackPromptFolderLoad'
+  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/TanstackWorkspaceCollection'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import {
@@ -40,6 +44,7 @@
   import PromptFolderOutliner from './PromptFolderOutliner.svelte'
 
   let { folder } = $props<{ folder: PromptFolder }>()
+  const tanstackWorkspaceSelection = getTanstackWorkspaceSelectionContext()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
@@ -78,7 +83,33 @@
     scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
   }
 
-  // Side effect: reload prompts and select the folder settings row after folder changes.
+  const loadTanstackPromptFolderSideBySide = async (nextFolderName: string): Promise<void> => {
+    const workspaceId = tanstackWorkspaceSelection.selectedWorkspaceId
+    if (!workspaceId) {
+      return
+    }
+
+    const workspace = tanstackWorkspaceCollection.get(workspaceId)
+    if (!workspace) {
+      return
+    }
+
+    const promptFolderId = workspace.promptFolderIds.find((id) => {
+      return tanstackPromptFolderCollection.get(id)?.folderName === nextFolderName
+    })
+
+    if (!promptFolderId) {
+      return
+    }
+
+    try {
+      await loadTanstackPromptFolderInitial(workspaceId, promptFolderId)
+    } catch {
+      // Side effect: this observer must not block the legacy prompt folder load flow.
+    }
+  }
+
+  // Side effect: reload the folder via legacy + TanStack paths and reset outliner state.
   $effect(() => {
     const nextFolderName = folderName
 
@@ -86,6 +117,7 @@
     previousFolderName = nextFolderName
     folderData = getPromptFolderData(nextFolderName)
     void loadPromptFolder(nextFolderName)
+    void loadTanstackPromptFolderSideBySide(nextFolderName)
     scrollResetVersion += 1
     activeOutlinerRow = { kind: 'folder-settings' }
     outlinerManualSelectionActive = true
