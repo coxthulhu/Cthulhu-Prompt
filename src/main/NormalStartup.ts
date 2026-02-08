@@ -7,7 +7,6 @@ import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
 import { setupUpdatedDataHandlers } from './data'
 import { setupTanstackSystemSettingsHandlers } from './tanstack/TanstackSystemSettingsHandlers'
-import { setupTanstackSystemSettingsRevisionHandlers } from './tanstack/TanstackSystemSettingsRevisionHandlers'
 import { TanstackSystemSettingsManager } from './tanstack/TanstackSystemSettingsManager'
 import { tanstackRevisions } from './tanstack/TanstackRevisions'
 import { setupTanstackWorkspaceHandlers } from './tanstack/TanstackWorkspaceHandlers'
@@ -199,7 +198,6 @@ export function startupNormally(): void {
     // Setup data IPC handlers.
     setupUpdatedDataHandlers()
     setupTanstackSystemSettingsHandlers()
-    setupTanstackSystemSettingsRevisionHandlers()
     setupTanstackWorkspaceHandlers()
     setupTanstackPromptFolderHandlers()
     setupWindowControlHandlers()
