@@ -2,7 +2,7 @@ import './app.css'
 import App from './App.svelte'
 import { mount } from 'svelte'
 import { getRuntimeConfig } from './app/runtimeConfig'
-import { applyTanstackSystemSettingsSnapshot } from './data/tanstack/TanstackSystemSettings'
+import { applyTanstackSystemSettingsSnapshot } from './data/tanstack/Queries/TanstackSystemSettingsQuery'
 import { initializeSvelteVirtualWindowHydrationControls } from './features/virtualizer/SvelteVirtualWindowHydrationControls'
 
 initializeSvelteVirtualWindowHydrationControls()

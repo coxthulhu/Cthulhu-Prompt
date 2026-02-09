@@ -2,10 +2,10 @@ import type {
   TanstackLoadWorkspaceByPathRequest,
   TanstackLoadWorkspaceByPathResult
 } from '@shared/tanstack/TanstackWorkspaceLoad'
-import { tanstackIpcInvokeWithPayload } from './TanstackIpcInvoke'
-import { runTanstackLoad } from './TanstackLoad'
-import { tanstackPromptFolderCollection } from './TanstackPromptFolderCollection'
-import { tanstackWorkspaceCollection } from './TanstackWorkspaceCollection'
+import { tanstackIpcInvokeWithPayload } from '../IpcFramework/TanstackIpcInvoke'
+import { runTanstackLoad } from '../IpcFramework/TanstackLoad'
+import { tanstackPromptFolderCollection } from '../Collections/TanstackPromptFolderCollection'
+import { tanstackWorkspaceCollection } from '../Collections/TanstackWorkspaceCollection'
 
 export const loadTanstackWorkspaceByPath = async (workspacePath: string): Promise<string> => {
   const result = await runTanstackLoad(() =>

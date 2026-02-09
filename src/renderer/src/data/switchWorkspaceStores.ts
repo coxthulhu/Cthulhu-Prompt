@@ -2,7 +2,7 @@ import {
   flushPromptWorkspaceAutosaves,
   resetPromptDataStoreForWorkspace
 } from '@renderer/data/PromptDataStore.svelte.ts'
-import { flushTanstackSystemSettingsAutosaves } from '@renderer/data/tanstack/TanstackSystemSettingsAutosave'
+import { flushTanstackSystemSettingsAutosaves } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsAutosave'
 import {
   flushPromptFolderRequests,
   flushPromptFolderAutosaves,

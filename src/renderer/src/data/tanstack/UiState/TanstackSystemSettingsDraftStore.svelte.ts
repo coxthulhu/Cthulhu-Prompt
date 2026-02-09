@@ -12,7 +12,7 @@ import {
   createAutosaveController,
   type AutosaveDraft
 } from '@renderer/data/draftAutosave'
-import { updateTanstackSystemSettings } from './TanstackSystemSettings'
+import { updateTanstackSystemSettings } from '../Mutations/TanstackSystemSettingsMutations'
 import {
   formatPromptEditorMinLinesInput,
   formatPromptFontSizeInput,

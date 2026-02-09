@@ -17,15 +17,15 @@
   } from '@renderer/features/workspace/types'
   import type { PromptFolder } from '@shared/ipc'
   import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
-  import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/TanstackSystemSettings'
-  import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
+  import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/Queries/TanstackSystemSettingsQuery'
+  import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
     getTanstackSelectedWorkspaceId,
     setTanstackSelectedWorkspaceId
-  } from '@renderer/data/tanstack/TanstackWorkspaceSelection.svelte.ts'
-  import { loadTanstackWorkspaceByPath } from '@renderer/data/tanstack/TanstackWorkspaceLoad'
-  import { closeTanstackWorkspace } from '@renderer/data/tanstack/TanstackWorkspaceClose'
+  } from '@renderer/data/tanstack/UiState/TanstackWorkspaceSelection.svelte.ts'
+  import { loadTanstackWorkspaceByPath } from '@renderer/data/tanstack/Queries/TanstackWorkspaceQuery'
+  import { closeTanstackWorkspace } from '@renderer/data/tanstack/Mutations/TanstackWorkspaceMutations'
   import {
     setTanstackWorkspaceSelectionContext,
     type TanstackWorkspaceSelectionContext

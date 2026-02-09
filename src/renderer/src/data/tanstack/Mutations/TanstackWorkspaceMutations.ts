@@ -1,13 +1,17 @@
+import type {
+  TanstackCreateWorkspacePayload,
+  TanstackCreateWorkspaceResponse
+} from '@shared/tanstack/TanstackWorkspaceCreate'
 import type { TanstackCloseWorkspaceResult } from '@shared/tanstack/TanstackWorkspaceClose'
-import { runTanstackLoad } from './TanstackLoad'
-import { tanstackIpcInvoke } from './TanstackIpcInvoke'
-import { tanstackPromptCollection } from './TanstackPromptCollection'
-import { tanstackPromptFolderCollection } from './TanstackPromptFolderCollection'
-import { tanstackWorkspaceCollection } from './TanstackWorkspaceCollection'
+import { runTanstackLoad } from '../IpcFramework/TanstackLoad'
+import { tanstackIpcInvoke, tanstackIpcInvokeWithPayload } from '../IpcFramework/TanstackIpcInvoke'
+import { tanstackPromptCollection } from '../Collections/TanstackPromptCollection'
+import { tanstackPromptFolderCollection } from '../Collections/TanstackPromptFolderCollection'
+import { tanstackWorkspaceCollection } from '../Collections/TanstackWorkspaceCollection'
 import {
   getTanstackSelectedWorkspaceId,
   setTanstackSelectedWorkspaceId
-} from './TanstackWorkspaceSelection.svelte.ts'
+} from '../UiState/TanstackWorkspaceSelection.svelte.ts'
 
 const clearSelectedTanstackWorkspaceCollections = (workspaceId: string | null): void => {
   if (!workspaceId) {
@@ -32,6 +36,21 @@ const clearSelectedTanstackWorkspaceCollections = (workspaceId: string | null): 
   }
 
   tanstackWorkspaceCollection.utils.deleteAuthoritative(workspaceId)
+}
+
+export const createTanstackWorkspace = async (
+  workspacePath: string,
+  includeExamplePrompts: boolean
+): Promise<TanstackCreateWorkspaceResponse> => {
+  // Special-case payload: tanstack-create-workspace expects command arguments,
+  // not a normal TanStack revision mutation payload object.
+  return await tanstackIpcInvokeWithPayload<
+    TanstackCreateWorkspaceResponse,
+    TanstackCreateWorkspacePayload
+  >('tanstack-create-workspace', {
+    workspacePath,
+    includeExamplePrompts
+  })
 }
 
 export const closeTanstackWorkspace = async (): Promise<void> => {

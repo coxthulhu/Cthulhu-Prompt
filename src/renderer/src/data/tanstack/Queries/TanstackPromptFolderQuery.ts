@@ -2,10 +2,10 @@ import type {
   TanstackLoadPromptFolderInitialPayload,
   TanstackLoadPromptFolderInitialResult
 } from '@shared/tanstack/TanstackPromptFolderLoad'
-import { tanstackIpcInvokeWithPayload } from './TanstackIpcInvoke'
-import { runTanstackLoad } from './TanstackLoad'
-import { tanstackPromptCollection } from './TanstackPromptCollection'
-import { tanstackPromptFolderCollection } from './TanstackPromptFolderCollection'
+import { tanstackIpcInvokeWithPayload } from '../IpcFramework/TanstackIpcInvoke'
+import { runTanstackLoad } from '../IpcFramework/TanstackLoad'
+import { tanstackPromptCollection } from '../Collections/TanstackPromptCollection'
+import { tanstackPromptFolderCollection } from '../Collections/TanstackPromptFolderCollection'
 
 export const loadTanstackPromptFolderInitial = async (
   workspaceId: string,

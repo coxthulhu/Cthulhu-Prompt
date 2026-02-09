@@ -2,7 +2,7 @@ import { createTransaction } from '@tanstack/svelte-db'
 import type { Collection } from '@tanstack/svelte-db'
 import type { TanstackRevisionPayloadEntity } from '@shared/tanstack/TanstackRevision'
 import { tanstackIpcInvokeWithPayload } from './TanstackIpcInvoke'
-import type { TanstackRevisionCollectionUtils } from './TanstackRevisionCollection'
+import type { TanstackRevisionCollectionUtils } from '../Collections/TanstackRevisionCollection'
 
 type TanstackQueuedTask<T> = () => Promise<T>
 let tanstackMutationQueue: Promise<void> = Promise.resolve()

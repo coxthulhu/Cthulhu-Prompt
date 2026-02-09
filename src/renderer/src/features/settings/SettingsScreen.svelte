@@ -9,12 +9,12 @@
     saveTanstackSystemSettingsDraftNow,
     setTanstackSystemSettingsDraftFontSizeInput,
     setTanstackSystemSettingsDraftPromptEditorMinLinesInput
-  } from '@renderer/data/tanstack/TanstackSystemSettingsDraftStore.svelte.ts'
+  } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
   import {
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
-  } from '@renderer/data/tanstack/TanstackSystemSettingsFormat'
-  import { registerTanstackSystemSettingsAutosave } from '@renderer/data/tanstack/TanstackSystemSettingsAutosave'
+  } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsFormat'
+  import { registerTanstackSystemSettingsAutosave } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsAutosave'
   import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
 
   const systemSettingsState = getTanstackSystemSettingsDraftState()

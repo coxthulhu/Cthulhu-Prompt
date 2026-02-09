@@ -1,31 +1,12 @@
-import type {
-  TanstackSystemSettings,
-  TanstackSystemSettingsSnapshot
-} from '@shared/tanstack/TanstackSystemSettings'
 import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
+import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
 import type {
   TanstackSystemSettingsRevisionResponsePayload,
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
-import { runTanstackRevisionMutation } from './TanstackRevisionCollections'
-import { tanstackSystemSettingsCollection } from './TanstackSystemSettingsCollection'
-
-export { tanstackSystemSettingsCollection } from './TanstackSystemSettingsCollection'
-
-export const applyTanstackSystemSettingsSnapshot = (
-  snapshot: TanstackSystemSettingsSnapshot
-): void => {
-  tanstackSystemSettingsCollection.utils.upsertAuthoritative({
-    id: TANSTACK_SYSTEM_SETTINGS_ID,
-    revision: snapshot.revision,
-    data: snapshot.settings
-  })
-}
-
-export const getTanstackSystemSettings = (): TanstackSystemSettings | null => {
-  return tanstackSystemSettingsCollection.get(TANSTACK_SYSTEM_SETTINGS_ID) ?? null
-}
+import { tanstackSystemSettingsCollection } from '../Collections/TanstackSystemSettingsCollection'
+import { runTanstackRevisionMutation } from '../IpcFramework/TanstackRevisionCollections'
 
 export const updateTanstackSystemSettings = async (
   settings: TanstackSystemSettings

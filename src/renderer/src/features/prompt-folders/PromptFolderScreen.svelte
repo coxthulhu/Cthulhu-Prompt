@@ -3,9 +3,9 @@
   import { getTanstackWorkspaceSelectionContext } from '@renderer/app/TanstackWorkspaceSelectionContext'
   import type { PromptFolder } from '@shared/ipc'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/TanstackPromptFolderCollection'
-  import { loadTanstackPromptFolderInitial } from '@renderer/data/tanstack/TanstackPromptFolderLoad'
-  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/TanstackWorkspaceCollection'
+  import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
+  import { loadTanstackPromptFolderInitial } from '@renderer/data/tanstack/Queries/TanstackPromptFolderQuery'
+  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import {
