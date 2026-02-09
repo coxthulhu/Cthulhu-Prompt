@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.5
+
+### New Features
+
+- Added a reusable Svelte dropdown menu system and integrated folder actions in prompt folders.
+- Added a prompt editor minimum-lines setting.
+
+### Changes
+
+- Migrated to TanStack DB based mutation and query flows (create, update, delete) across the app.
+- Refined sidebar and outliner behavior/polish (sizing, hover/focus interactions, and labels/copy).
+
+### Fixed
+
+- Fixed virtualized window measurement padding reactivity and resize hydration timing issues.
+- Fixed outliner selection syncing when switching folders.
+
 ## 0.0.4
 
 ### New Features
