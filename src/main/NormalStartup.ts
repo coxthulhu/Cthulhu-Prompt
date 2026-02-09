@@ -6,11 +6,14 @@ import icon from '../../resources/icon.png?asset'
 import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
 import { setupUpdatedDataHandlers } from './data'
-import { setupTanstackSystemSettingsHandlers } from './tanstack/Handlers/TanstackSystemSettingsHandlers'
 import { TanstackSystemSettingsDataAccess } from './tanstack/DataAccess/TanstackSystemSettingsDataAccess'
 import { tanstackRevisions } from './tanstack/Registries/TanstackRevisions'
-import { setupTanstackWorkspaceHandlers } from './tanstack/Handlers/TanstackWorkspaceHandlers'
-import { setupTanstackPromptFolderHandlers } from './tanstack/Handlers/TanstackPromptFolderHandlers'
+import { setupTanstackWorkspaceMutationHandlers } from './tanstack/Mutations/TanstackWorkspaceMutations'
+import { setupTanstackPromptFolderMutationHandlers } from './tanstack/Mutations/TanstackPromptFolderMutations'
+import { setupTanstackSystemSettingsMutationHandlers } from './tanstack/Mutations/TanstackSystemSettingsMutations'
+import { setupTanstackWorkspaceQueryHandlers } from './tanstack/Queries/TanstackWorkspaceQuery'
+import { setupTanstackPromptFolderQueryHandlers } from './tanstack/Queries/TanstackPromptFolderQuery'
+import { setupTanstackSystemSettingsQueryHandlers } from './tanstack/Queries/TanstackSystemSettingsQuery'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -197,9 +200,12 @@ export function startupNormally(): void {
 
     // Setup data IPC handlers.
     setupUpdatedDataHandlers()
-    setupTanstackSystemSettingsHandlers()
-    setupTanstackWorkspaceHandlers()
-    setupTanstackPromptFolderHandlers()
+    setupTanstackSystemSettingsQueryHandlers()
+    setupTanstackSystemSettingsMutationHandlers()
+    setupTanstackWorkspaceQueryHandlers()
+    setupTanstackWorkspaceMutationHandlers()
+    setupTanstackPromptFolderQueryHandlers()
+    setupTanstackPromptFolderMutationHandlers()
     setupWindowControlHandlers()
 
     const runtimeConfig = await buildRuntimeConfig()

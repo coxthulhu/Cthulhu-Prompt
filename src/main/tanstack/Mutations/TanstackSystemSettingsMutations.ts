@@ -5,10 +5,7 @@ import type {
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
-import {
-  TANSTACK_SYSTEM_SETTINGS_ID,
-  type TanstackLoadSystemSettingsResult
-} from '@shared/tanstack/TanstackSystemSettings'
+import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import { TanstackSystemSettingsDataAccess } from '../DataAccess/TanstackSystemSettingsDataAccess'
 import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { tanstackRevisions } from '../Registries/TanstackRevisions'
@@ -22,20 +19,7 @@ const buildRevisionPayload = (
   data
 })
 
-export const setupTanstackSystemSettingsHandlers = (): void => {
-  ipcMain.handle(
-    'tanstack-load-system-settings-test',
-    async (): Promise<TanstackLoadSystemSettingsResult> => {
-      try {
-        const settings = await TanstackSystemSettingsDataAccess.loadSystemSettings()
-        return { success: true, settings }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        return { success: false, error: message || 'Failed to load system settings' }
-      }
-    }
-  )
-
+export const setupTanstackSystemSettingsMutationHandlers = (): void => {
   ipcMain.handle(
     'tanstack-update-system-settings',
     async (

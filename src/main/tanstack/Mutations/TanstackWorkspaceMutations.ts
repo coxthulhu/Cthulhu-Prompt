@@ -1,22 +1,17 @@
 import { ipcMain } from 'electron'
 import type {
-  TanstackLoadWorkspaceByPathResult,
-  TanstackLoadWorkspaceByPathWireRequest
-} from '@shared/tanstack/TanstackWorkspaceLoad'
-import type {
   TanstackCloseWorkspaceResult,
   TanstackCloseWorkspaceWireRequest
 } from '@shared/tanstack/TanstackWorkspaceClose'
-import { loadTanstackWorkspaceByPath } from '../Registries/TanstackWorkspaceLoader'
-import { setSelectedTanstackWorkspaceId } from '../Registries/TanstackWorkspaceRegistry'
 import type {
   TanstackCreateWorkspaceResponse,
   TanstackCreateWorkspaceWireRequest
 } from '@shared/tanstack/TanstackWorkspaceCreate'
 import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { createTanstackWorkspace } from '../DataAccess/TanstackWorkspaceDataAccess'
+import { setSelectedTanstackWorkspaceId } from '../Registries/TanstackWorkspaceRegistry'
 
-export const setupTanstackWorkspaceHandlers = (): void => {
+export const setupTanstackWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
     'tanstack-create-workspace',
     async (
@@ -36,17 +31,6 @@ export const setupTanstackWorkspaceHandlers = (): void => {
       return runTanstackIpcRequest(request, async (payload) => {
         return await createTanstackWorkspace(payload.workspacePath, payload.includeExamplePrompts)
       })
-    }
-  )
-
-  ipcMain.handle(
-    'tanstack-load-workspace-by-path',
-    async (_, request: TanstackLoadWorkspaceByPathWireRequest): Promise<TanstackLoadWorkspaceByPathResult> => {
-      if (!request?.payload?.workspacePath) {
-        return { success: false, error: 'Invalid request payload' }
-      }
-
-      return await loadTanstackWorkspaceByPath(request.payload.workspacePath)
     }
   )
 
