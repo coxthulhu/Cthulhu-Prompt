@@ -9,33 +9,32 @@
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
-  import { ipcInvoke } from '@renderer/api/ipcInvoke'
-  import type { CreateWorkspaceRequest, WorkspaceResult } from '@shared/ipc'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
   import type { PromptFolder } from '@shared/ipc'
-  import { switchWorkspaceStores } from '@renderer/data/switchWorkspaceStores'
   import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/Queries/TanstackSystemSettingsQuery'
+  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
   import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
+  import { switchTanstackWorkspaceStoreBridge } from '@renderer/data/tanstack/UiState/TanstackWorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
     getTanstackSelectedWorkspaceId,
     setTanstackSelectedWorkspaceId
   } from '@renderer/data/tanstack/UiState/TanstackWorkspaceSelection.svelte.ts'
   import { loadTanstackWorkspaceByPath } from '@renderer/data/tanstack/Queries/TanstackWorkspaceQuery'
-  import { closeTanstackWorkspace } from '@renderer/data/tanstack/Mutations/TanstackWorkspaceMutations'
+  import {
+    closeTanstackWorkspace,
+    createTanstackWorkspace
+  } from '@renderer/data/tanstack/Mutations/TanstackWorkspaceMutations'
   import {
     setTanstackWorkspaceSelectionContext,
     type TanstackWorkspaceSelectionContext
   } from './TanstackWorkspaceSelectionContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
   import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
-  import {
-    getActiveWorkspaceLoadingState,
-    getActiveWorkspacePath
-  } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
+  import type { TanstackWorkspace } from '@shared/tanstack/TanstackWorkspace'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
@@ -61,30 +60,25 @@
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const windowControls = window.windowControls
 
-  const checkWorkspaceFolderExists = async (folderPath: string): Promise<boolean> => {
-    return await ipcInvoke<boolean, string>('check-folder-exists', folderPath)
-  }
-
-  const createWorkspaceAtPath = async (
-    request: CreateWorkspaceRequest
-  ): Promise<WorkspaceResult> => {
-    // TODO(tanstack-create-workspace): switch to TanStack create IPC when create/select can migrate together.
-    // const result = await createTanstackWorkspace(
-    //   request.workspacePath,
-    //   request.includeExamplePrompts
-    // )
-    // return result.success ? { success: true } : { success: false, error: result.error }
-    return await ipcInvoke<WorkspaceResult, CreateWorkspaceRequest>('create-workspace', request)
-  }
+  const tanstackWorkspaceQuery = useLiveQuery((q) =>
+    q.from({ workspace: tanstackWorkspaceCollection })
+  ) as { data: TanstackWorkspace[]; isLoading: boolean }
 
   setSystemSettingsContext(systemSettings)
   setTanstackWorkspaceSelectionContext(tanstackWorkspaceSelection)
 
   let activeScreen = $state<ScreenId>('home')
-  const workspacePath = $derived(getActiveWorkspacePath())
+  const selectedWorkspace = $derived.by(() => {
+    const selectedWorkspaceId = getTanstackSelectedWorkspaceId()
+    return (
+      tanstackWorkspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
+    )
+  })
+  const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
   let selectedPromptFolder = $state<PromptFolder | null>(null)
-  const isWorkspaceReady = $derived(Boolean(workspacePath))
-  const isWorkspaceLoading = $derived(getActiveWorkspaceLoadingState())
+  const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
+  let workspaceActionCount = $state(0)
+  const isWorkspaceLoading = $derived(workspaceActionCount > 0 || tanstackWorkspaceQuery.isLoading)
   let hasAttemptedAutoSelect = false
   const windowTitle = $derived(
     isDevMode && executionFolderName
@@ -99,6 +93,14 @@
   const logWorkspaceError = (context: 'select' | 'create' | 'close', message?: string) => {
     const suffix = message ? `: ${message}` : ''
     console.error(`Workspace ${context} error${suffix}`)
+  }
+
+  const beginWorkspaceAction = () => {
+    workspaceActionCount += 1
+  }
+
+  const endWorkspaceAction = () => {
+    workspaceActionCount -= 1
   }
 
   // Side effect: keep the module-level TanStack settings draft synced with query-backed settings.
@@ -118,52 +120,51 @@
   }
 
   const resetWorkspaceState = async () => {
-    await switchWorkspaceStores(null)
-    clearPromptFolderSelection()
-  }
-
-  const handleWorkspaceSuccess = async (path: string) => {
-    await switchWorkspaceStores(path)
-  }
-
-  const loadTanstackWorkspaceSelection = async (path: string): Promise<void> => {
     try {
-      const workspaceId = await loadTanstackWorkspaceByPath(path)
-      setTanstackSelectedWorkspaceId(workspaceId)
+      await closeTanstackWorkspace()
     } catch {
+      // Side effect: always continue local workspace reset even when close IPC fails.
+    } finally {
+      await switchTanstackWorkspaceStoreBridge(null)
+      clearPromptFolderSelection()
       clearTanstackWorkspaceSelection()
-      // Side effect: this observer must not block the legacy workspace selection flow.
     }
+  }
+
+  const loadWorkspaceSelection = async (path: string): Promise<void> => {
+    const workspaceId = await loadTanstackWorkspaceByPath(path)
+    setTanstackSelectedWorkspaceId(workspaceId)
+    await switchTanstackWorkspaceStoreBridge(path)
+  }
+
+  const isWorkspaceMissingError = (message?: string): boolean => {
+    return message === 'Invalid workspace path'
   }
 
   const selectWorkspace = async (path: string): Promise<WorkspaceSelectionResult> => {
     clearPromptFolderSelection()
+    beginWorkspaceAction()
 
     try {
-      const promptsPath = `${path}/Prompts`
-      const settingsPath = `${path}/WorkspaceInfo.json`
-      const promptsExists = await checkWorkspaceFolderExists(promptsPath)
-      const settingsExists = await checkWorkspaceFolderExists(settingsPath)
-
-      if (!promptsExists || !settingsExists) {
-        clearTanstackWorkspaceSelection()
-        await resetWorkspaceState()
-        return { success: false, reason: 'workspace-missing' }
-      }
-
-      await handleWorkspaceSuccess(path)
-      await loadTanstackWorkspaceSelection(path)
+      await loadWorkspaceSelection(path)
       return { success: true }
     } catch (error) {
       const message = extractErrorMessage(error)
-      logWorkspaceError('select', message)
-      clearTanstackWorkspaceSelection()
+      const workspaceMissing = isWorkspaceMissingError(message)
+      if (!workspaceMissing) {
+        logWorkspaceError('select', message)
+      }
       await resetWorkspaceState()
+      if (workspaceMissing) {
+        return { success: false, reason: 'workspace-missing' }
+      }
       return {
         success: false,
         reason: 'unknown-error',
         message
       }
+    } finally {
+      endWorkspaceAction()
     }
   }
 
@@ -172,14 +173,13 @@
     includeExamplePrompts: boolean
   ): Promise<WorkspaceCreationResult> => {
     clearPromptFolderSelection()
+    beginWorkspaceAction()
 
     try {
-      const result = await createWorkspaceAtPath({ workspacePath: path, includeExamplePrompts })
+      const result = await createTanstackWorkspace(path, includeExamplePrompts)
 
-      if (result?.success) {
-        // TODO(tanstack-create-workspace): after TanStack create wiring, call `selectWorkspace(path)` here
-        // so create+select follows the exact same path as a manual workspace selection.
-        await handleWorkspaceSuccess(path)
+      if (result.success) {
+        await loadWorkspaceSelection(path)
         return { success: true }
       }
 
@@ -187,7 +187,7 @@
       return {
         success: false,
         reason: 'creation-failed',
-        message: result?.error
+        message: result.error
       }
     } catch (error) {
       const message = extractErrorMessage(error)
@@ -198,17 +198,23 @@
         reason: 'unknown-error',
         message
       }
+    } finally {
+      endWorkspaceAction()
     }
   }
 
   const closeWorkspace = async (): Promise<void> => {
-    await resetWorkspaceState()
+    beginWorkspaceAction()
 
     try {
       await closeTanstackWorkspace()
     } catch (error) {
       const message = extractErrorMessage(error)
       logWorkspaceError('close', message)
+    } finally {
+      await switchTanstackWorkspaceStoreBridge(null)
+      clearPromptFolderSelection()
+      endWorkspaceAction()
     }
   }
 

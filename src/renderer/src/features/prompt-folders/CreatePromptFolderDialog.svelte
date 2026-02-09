@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getTanstackWorkspaceSelectionContext } from '@renderer/app/TanstackWorkspaceSelectionContext'
   import { Plus } from 'lucide-svelte'
   import { Button } from '@renderer/common/ui/button'
   import {
@@ -10,7 +11,9 @@
     DialogTitle,
     DialogTrigger
   } from '@renderer/common/ui/dialog'
-  import { createPromptFolder } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
+  import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
+  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
+  import { createTanstackPromptFolder } from '@renderer/data/tanstack/Mutations/TanstackPromptFolderMutations'
   import type { PromptFolder } from '@shared/ipc'
   import { preparePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
@@ -28,6 +31,7 @@
   }>()
 
   let isDialogOpen = $state(false)
+  const tanstackWorkspaceSelection = getTanstackWorkspaceSelectionContext()
   let displayName = $state('')
   let submissionError = $state<string | null>(null)
   let hasInteractedWithInput = $state(false)
@@ -68,16 +72,38 @@
     hasInteractedWithInput = false
   }
 
+  const getCreatedPromptFolder = (workspaceId: string, folderName: string): PromptFolder | null => {
+    const workspace = tanstackWorkspaceCollection.get(workspaceId)
+
+    if (!workspace) {
+      return null
+    }
+
+    for (const promptFolderId of workspace.promptFolderIds) {
+      const promptFolder = tanstackPromptFolderCollection.get(promptFolderId)
+
+      if (promptFolder?.folderName === folderName) {
+        return {
+          folderName: promptFolder.folderName,
+          displayName: promptFolder.displayName
+        }
+      }
+    }
+
+    return null
+  }
+
   const handleCreateFolder = async () => {
     if (!isValid) return
+
+    const selectedWorkspaceId = tanstackWorkspaceSelection.selectedWorkspaceId
+    if (!selectedWorkspaceId) return
 
     try {
       submissionError = null
       isCreatingPromptFolder = true
-      // TODO(tanstack-create-prompt-folder): swap this submit path to `createTanstackPromptFolder`
-      // once the prompt folders UI migrates to the TanStack workspace/prompt-folder collections.
-      // await createTanstackPromptFolder(selectedWorkspace.id, normalizedDisplayName)
-      const created = await createPromptFolder(normalizedDisplayName)
+      await createTanstackPromptFolder(selectedWorkspaceId, normalizedDisplayName)
+      const created = getCreatedPromptFolder(selectedWorkspaceId, preparedName.folderName)
 
       if (created) {
         onCreated?.(created)
