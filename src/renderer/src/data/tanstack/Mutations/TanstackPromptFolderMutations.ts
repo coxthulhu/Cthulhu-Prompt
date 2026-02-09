@@ -3,26 +3,10 @@ import type {
   TanstackCreatePromptFolderRequest,
   TanstackCreatePromptFolderResult
 } from '@shared/tanstack/TanstackPromptFolderCreate'
-import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runTanstackRevisionMutation } from '../IpcFramework/TanstackRevisionCollections'
 import { tanstackPromptFolderCollection } from '../Collections/TanstackPromptFolderCollection'
 import { tanstackWorkspaceCollection } from '../Collections/TanstackWorkspaceCollection'
-
-const createOptimisticPromptFolder = (
-  promptFolderId: string,
-  displayName: string,
-  folderName: string
-): TanstackPromptFolder => {
-  return {
-    id: promptFolderId,
-    folderName,
-    displayName,
-    promptCount: 0,
-    promptIds: [],
-    folderDescription: ''
-  }
-}
 
 export const createTanstackPromptFolder = async (
   workspaceId: string,
@@ -42,9 +26,14 @@ export const createTanstackPromptFolder = async (
 
   await runTanstackRevisionMutation<TanstackCreatePromptFolderResponsePayload>({
     mutateOptimistically: () => {
-      tanstackPromptFolderCollection.insert(
-        createOptimisticPromptFolder(optimisticPromptFolderId, normalizedDisplayName, folderName)
-      )
+      tanstackPromptFolderCollection.insert({
+        id: optimisticPromptFolderId,
+        folderName,
+        displayName: normalizedDisplayName,
+        promptCount: 0,
+        promptIds: [],
+        folderDescription: ''
+      })
       tanstackWorkspaceCollection.update(workspaceId, (draft) => {
         draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]
       })
