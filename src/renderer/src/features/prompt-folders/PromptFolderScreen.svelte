@@ -104,6 +104,12 @@
 
     try {
       await loadTanstackPromptFolderInitial(workspaceId, promptFolderId)
+      // TODO(tanstack-prompt-folder-description-draft): when prompt folder settings migrate to
+      // TanStack draft state, sync this folder into `syncTanstackPromptFolderDescriptionDraft`.
+      // const tanstackPromptFolder = tanstackPromptFolderCollection.get(promptFolderId)
+      // if (tanstackPromptFolder) {
+      //   syncTanstackPromptFolderDescriptionDraft(tanstackPromptFolder)
+      // }
     } catch {
       // Side effect: this observer must not block the legacy prompt folder load flow.
     }
@@ -281,10 +287,18 @@
   }
 
   const handleMovePromptUp = (promptId: string) => {
+    // TODO(tanstack-update-prompt-folder): replace this with immediate TanStack prompt-folder
+    // reorder mutation by updating the folder's `promptIds` via `updateTanstackPromptFolder`.
+    // const nextPromptIds = reorderPromptIds(tanstackPromptFolder.promptIds, promptId, previousPromptId)
+    // await updateTanstackPromptFolder({ ...tanstackPromptFolder, promptIds: nextPromptIds })
     return movePromptUpInFolder(folder.folderName, promptId)
   }
 
   const handleMovePromptDown = (promptId: string) => {
+    // TODO(tanstack-update-prompt-folder): replace this with immediate TanStack prompt-folder
+    // reorder mutation by updating the folder's `promptIds` via `updateTanstackPromptFolder`.
+    // const nextPromptIds = reorderPromptIds(tanstackPromptFolder.promptIds, promptId, previousPromptId)
+    // await updateTanstackPromptFolder({ ...tanstackPromptFolder, promptIds: nextPromptIds })
     return movePromptDownInFolder(folder.folderName, promptId)
   }
 

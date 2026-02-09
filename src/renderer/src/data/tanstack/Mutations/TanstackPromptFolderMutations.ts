@@ -3,6 +3,12 @@ import type {
   TanstackCreatePromptFolderRequest,
   TanstackCreatePromptFolderResult
 } from '@shared/tanstack/TanstackPromptFolderCreate'
+import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
+import type {
+  TanstackPromptFolderRevisionResponsePayload,
+  TanstackUpdatePromptFolderRevisionRequest,
+  TanstackUpdatePromptFolderRevisionResult
+} from '@shared/tanstack/TanstackPromptFolderRevision'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runTanstackRevisionMutation } from '../IpcFramework/TanstackRevisionCollections'
 import { tanstackPromptFolderCollection } from '../Collections/TanstackPromptFolderCollection'
@@ -63,5 +69,77 @@ export const createTanstackPromptFolder = async (
       tanstackPromptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
     },
     conflictMessage: 'Prompt folder create conflict'
+  })
+}
+
+export const updateTanstackPromptFolder = async (
+  promptFolder: TanstackPromptFolder
+): Promise<void> => {
+  if (!tanstackPromptFolderCollection.get(promptFolder.id)) {
+    throw new Error('Prompt folder not loaded')
+  }
+
+  await runTanstackRevisionMutation<TanstackPromptFolderRevisionResponsePayload>({
+    mutateOptimistically: () => {
+      tanstackPromptFolderCollection.update(promptFolder.id, (draft) => {
+        draft.folderName = promptFolder.folderName
+        draft.displayName = promptFolder.displayName
+        draft.promptCount = promptFolder.promptCount
+        draft.promptIds = [...promptFolder.promptIds]
+        draft.folderDescription = promptFolder.folderDescription
+      })
+    },
+    runMutation: async ({ entities, invoke }) => {
+      return invoke<
+        TanstackUpdatePromptFolderRevisionResult,
+        TanstackUpdatePromptFolderRevisionRequest
+      >('tanstack-update-prompt-folder', {
+        payload: {
+          promptFolder: entities.promptFolder({
+            id: promptFolder.id,
+            data: promptFolder
+          })
+        }
+      })
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      tanstackPromptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+    },
+    conflictMessage: 'Prompt folder update conflict'
+  })
+}
+
+const requireTanstackPromptFolder = (promptFolderId: string): TanstackPromptFolder => {
+  const promptFolder = tanstackPromptFolderCollection.get(promptFolderId)
+
+  if (!promptFolder) {
+    throw new Error('Prompt folder not loaded')
+  }
+
+  return promptFolder
+}
+
+export const updateTanstackPromptFolderDescription = async (
+  promptFolderId: string,
+  folderDescription: string
+): Promise<void> => {
+  const promptFolder = requireTanstackPromptFolder(promptFolderId)
+
+  await updateTanstackPromptFolder({
+    ...promptFolder,
+    promptIds: [...promptFolder.promptIds],
+    folderDescription
+  })
+}
+
+export const reorderTanstackPromptFolderPrompts = async (
+  promptFolderId: string,
+  promptIds: string[]
+): Promise<void> => {
+  const promptFolder = requireTanstackPromptFolder(promptFolderId)
+
+  await updateTanstackPromptFolder({
+    ...promptFolder,
+    promptIds: [...promptIds]
   })
 }

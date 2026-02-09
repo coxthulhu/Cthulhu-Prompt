@@ -79,6 +79,10 @@
           {scrollToWithinWindowBand}
           {onHydrationChange}
           onChange={(text, meta) => {
+            // TODO(tanstack-prompt-folder-description-draft): route description edits through
+            // `setTanstackPromptFolderDraftDescription(promptFolderId, text)` once this row
+            // reads from TanStack prompt folder draft state.
+            // setTanstackPromptFolderDraftDescription(promptFolderId, text)
             folderData.setDescriptionText(text, {
               measuredHeightPx: getPromptFolderSettingsHeightPx(meta.heightPx),
               widthPx: virtualWindowWidthPx,

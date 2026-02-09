@@ -6,14 +6,30 @@ import type {
   TanstackCreatePromptFolderResult,
   TanstackCreatePromptFolderWireRequest
 } from '@shared/tanstack/TanstackPromptFolderCreate'
-import type { TanstackMutationResult } from '@shared/tanstack/TanstackSystemSettingsRevision'
+import type {
+  TanstackPromptFolderRevisionResponsePayload,
+  TanstackUpdatePromptFolderRevisionRequest,
+  TanstackUpdatePromptFolderRevisionResult
+} from '@shared/tanstack/TanstackPromptFolderRevision'
+import type {
+  TanstackPromptFolderConfigFile,
+  TanstackPromptsFile
+} from '@shared/tanstack/TanstackWorkspaceDiskTypes'
+import type {
+  TanstackMutationResult,
+  TanstackMutationWireRequest
+} from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
 import { readTanstackPromptFolder } from '../DataAccess/TanstackWorkspaceReads'
-import { parseTanstackCreatePromptFolderRequest } from '../IpcFramework/TanstackIpcValidation'
+import {
+  parseTanstackCreatePromptFolderRequest,
+  parseTanstackUpdatePromptFolderRevisionRequest
+} from '../IpcFramework/TanstackIpcValidation'
 import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { tanstackRevisions } from '../Registries/TanstackRevisions'
 import {
+  getTanstackPromptFolderLocation,
   getTanstackPromptFolderIds,
   getTanstackWorkspacePath,
   registerTanstackPromptFolder,
@@ -69,6 +85,100 @@ const buildPromptFolderSnapshot = (
     revision,
     data: promptFolder
   }
+}
+
+const isTanstackPromptFolderPathValid = (workspacePath: string, folderName: string): boolean => {
+  const fs = getTanstackFs()
+  const folderPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName)
+  return (
+    fs.existsSync(path.join(folderPath, PROMPT_FOLDER_CONFIG_FILENAME)) &&
+    fs.existsSync(path.join(folderPath, PROMPTS_FILENAME))
+  )
+}
+
+const readTanstackPromptFolderConfig = (
+  workspacePath: string,
+  folderName: string
+): TanstackPromptFolderConfigFile => {
+  const fs = getTanstackFs()
+  const configPath = path.join(
+    workspacePath,
+    PROMPTS_FOLDER_NAME,
+    folderName,
+    PROMPT_FOLDER_CONFIG_FILENAME
+  )
+  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as TanstackPromptFolderConfigFile
+}
+
+const readTanstackPromptFile = (workspacePath: string, folderName: string): TanstackPromptsFile => {
+  const fs = getTanstackFs()
+  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
+  return JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as TanstackPromptsFile
+}
+
+const writeTanstackPromptFolderConfig = (
+  workspacePath: string,
+  folderName: string,
+  config: TanstackPromptFolderConfigFile
+): void => {
+  const fs = getTanstackFs()
+  const configPath = path.join(
+    workspacePath,
+    PROMPTS_FOLDER_NAME,
+    folderName,
+    PROMPT_FOLDER_CONFIG_FILENAME
+  )
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8')
+}
+
+const writeTanstackPromptFile = (
+  workspacePath: string,
+  folderName: string,
+  promptsFile: TanstackPromptsFile
+): void => {
+  const fs = getTanstackFs()
+  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
+  fs.writeFileSync(
+    promptsPath,
+    JSON.stringify(
+      {
+        metadata: promptsFile.metadata ?? { schemaVersion: 1 },
+        prompts: promptsFile.prompts
+      },
+      null,
+      2
+    ),
+    'utf8'
+  )
+}
+
+const reorderTanstackPrompts = (
+  prompts: TanstackPromptsFile['prompts'],
+  nextPromptIds: string[]
+): TanstackPromptsFile['prompts'] | null => {
+  if (prompts.length !== nextPromptIds.length) {
+    return null
+  }
+
+  const promptById = new Map(prompts.map((prompt) => [prompt.id, prompt] as const))
+  const orderedPrompts: TanstackPromptsFile['prompts'] = []
+
+  for (const promptId of nextPromptIds) {
+    const prompt = promptById.get(promptId)
+
+    if (!prompt) {
+      return null
+    }
+
+    orderedPrompts.push(prompt)
+    promptById.delete(promptId)
+  }
+
+  if (promptById.size > 0) {
+    return null
+  }
+
+  return orderedPrompts
 }
 
 export const setupTanstackPromptFolderMutationHandlers = (): void => {
@@ -173,6 +283,84 @@ export const setupTanstackPromptFolderMutationHandlers = (): void => {
             success: true,
             payload: {
               workspace: buildWorkspaceSnapshot(workspace.id, workspacePath, workspaceRevision),
+              promptFolder: buildPromptFolderSnapshot(promptFolder, promptFolderRevision)
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message }
+        }
+      })
+    }
+  )
+
+  ipcMain.handle(
+    'tanstack-update-prompt-folder',
+    async (_, request: unknown): Promise<TanstackUpdatePromptFolderRevisionResult> => {
+      return await runTanstackMutationIpcRequest<
+        TanstackMutationWireRequest<TanstackUpdatePromptFolderRevisionRequest>,
+        TanstackMutationResult<TanstackPromptFolderRevisionResponsePayload>
+      >(request, parseTanstackUpdatePromptFolderRevisionRequest, async (validatedRequest) => {
+        try {
+          const promptFolderEntity = validatedRequest.payload.promptFolder
+          const location = getTanstackPromptFolderLocation(promptFolderEntity.id)
+
+          if (!location) {
+            return { success: false, error: 'Prompt folder not registered' }
+          }
+
+          if (!isTanstackPromptFolderPathValid(location.workspacePath, location.folderName)) {
+            return { success: false, error: 'Invalid prompt folder path' }
+          }
+
+          const currentPromptFolderRevision = tanstackRevisions.promptFolder.get(promptFolderEntity.id)
+
+          if (promptFolderEntity.expectedRevision !== currentPromptFolderRevision) {
+            const promptFolder = readTanstackPromptFolder(location.workspacePath, location.folderName)
+            return {
+              success: false,
+              conflict: true,
+              payload: {
+                promptFolder: buildPromptFolderSnapshot(promptFolder, currentPromptFolderRevision)
+              }
+            }
+          }
+
+          const promptFolderConfig = readTanstackPromptFolderConfig(
+            location.workspacePath,
+            location.folderName
+          )
+          const promptsFile = readTanstackPromptFile(location.workspacePath, location.folderName)
+          const reorderedPrompts = reorderTanstackPrompts(
+            promptsFile.prompts,
+            promptFolderEntity.data.promptIds
+          )
+
+          if (!reorderedPrompts) {
+            return { success: false, error: 'Invalid prompt order' }
+          }
+
+          promptFolderConfig.folderDescription = promptFolderEntity.data.folderDescription
+          writeTanstackPromptFolderConfig(location.workspacePath, location.folderName, promptFolderConfig)
+          writeTanstackPromptFile(location.workspacePath, location.folderName, {
+            ...promptsFile,
+            prompts: reorderedPrompts
+          })
+
+          const promptFolder = readTanstackPromptFolder(location.workspacePath, location.folderName)
+          registerTanstackPrompts(
+            location.workspaceId,
+            location.workspacePath,
+            promptFolder.id,
+            promptFolder.folderName,
+            promptFolder.promptIds
+          )
+
+          const promptFolderRevision = tanstackRevisions.promptFolder.bump(promptFolder.id)
+
+          return {
+            success: true,
+            payload: {
               promptFolder: buildPromptFolderSnapshot(promptFolder, promptFolderRevision)
             }
           }

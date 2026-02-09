@@ -22,6 +22,9 @@ export const switchWorkspaceStores = async (nextWorkspacePath: string | null): P
       flushPromptFolderRequests(),
       flushPromptFolderAutosaves(),
       flushPromptWorkspaceAutosaves(),
+      // TODO(tanstack-update-prompt-folder): include `flushTanstackPromptFolderAutosaves()` once
+      // prompt folder settings/editors migrate to TanStack prompt folder draft autosaves.
+      // flushTanstackPromptFolderAutosaves(),
       flushTanstackSystemSettingsAutosaves()
     ])
 
