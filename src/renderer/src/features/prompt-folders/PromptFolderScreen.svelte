@@ -274,6 +274,9 @@
   }
 
   const handleDeletePrompt = (promptId: string) => {
+    // TODO(tanstack-delete-prompt): switch this to `deleteTanstackPrompt(promptFolderId, promptId)`
+    // once prompt editors migrate to TanStack prompt drafts/collections.
+    // void deleteTanstackPrompt(promptFolderId, promptId)
     void deletePromptInFolder(folder.folderName, promptId)
   }
 

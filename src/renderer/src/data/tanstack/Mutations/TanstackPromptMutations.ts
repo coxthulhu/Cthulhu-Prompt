@@ -5,6 +5,11 @@ import type {
   TanstackCreatePromptResult
 } from '@shared/tanstack/TanstackPromptCreate'
 import type {
+  TanstackDeletePromptRequest,
+  TanstackDeletePromptResponsePayload,
+  TanstackDeletePromptResult
+} from '@shared/tanstack/TanstackPromptDelete'
+import type {
   TanstackPromptRevisionResponsePayload,
   TanstackUpdatePromptRevisionRequest,
   TanstackUpdatePromptRevisionResult
@@ -114,5 +119,54 @@ export const updateTanstackPrompt = async (prompt: TanstackPrompt): Promise<void
       tanstackPromptCollection.utils.upsertAuthoritative(payload.prompt)
     },
     conflictMessage: 'Prompt update conflict'
+  })
+}
+
+export const deleteTanstackPrompt = async (
+  promptFolderId: string,
+  promptId: string
+): Promise<void> => {
+  const promptFolder = tanstackPromptFolderCollection.get(promptFolderId)
+  if (!promptFolder) {
+    throw new Error('Prompt folder not loaded')
+  }
+
+  const prompt = tanstackPromptCollection.get(promptId)
+  if (!prompt) {
+    throw new Error('Prompt not loaded')
+  }
+
+  await runTanstackRevisionMutation<TanstackDeletePromptResponsePayload>({
+    mutateOptimistically: () => {
+      tanstackPromptCollection.delete(promptId)
+      tanstackPromptFolderCollection.update(promptFolderId, (draft) => {
+        draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
+      })
+    },
+    runMutation: async ({ entities, invoke }) => {
+      return invoke<TanstackDeletePromptResult, TanstackDeletePromptRequest>(
+        'tanstack-delete-prompt',
+        {
+          payload: {
+            promptFolder: entities.promptFolder({
+              id: promptFolderId,
+              data: promptFolder
+            }),
+            prompt: entities.prompt({
+              id: promptId,
+              data: prompt
+            })
+          }
+        }
+      )
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      tanstackPromptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+    },
+    conflictMessage: 'Prompt delete conflict',
+    onSuccess: () => {
+      // Side effect: clear the prompt revision cache after the delete commit succeeds.
+      tanstackPromptCollection.utils.deleteAuthoritative(promptId)
+    }
   })
 }

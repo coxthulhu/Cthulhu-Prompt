@@ -71,6 +71,7 @@ type TanstackRevisionMutationOptions<
   ) => Promise<TanstackRevisionMutationResult<TPayload>>
   handleSuccessOrConflictResponse: (payload: TPayload) => void
   conflictMessage: string
+  onSuccess?: () => void
 }
 
 const createRevisionEntityBuilders = <TCollections extends TanstackRevisionCollectionsMap>(
@@ -102,7 +103,8 @@ const runRevisionMutation = async <
     mutateOptimistically,
     runMutation,
     handleSuccessOrConflictResponse,
-    conflictMessage
+    conflictMessage,
+    onSuccess
   }: TanstackRevisionMutationOptions<TCollections, TPayload>
 ): Promise<void> => {
   const entities = createRevisionEntityBuilders(collections)
@@ -136,6 +138,11 @@ const runRevisionMutation = async <
   await enqueueTanstackGlobalMutation(async () => {
     if (transaction.state === 'pending') {
       await transaction.commit()
+    }
+
+    if (transaction.state === 'completed') {
+      // Side effect: success hook runs only after transaction commit succeeds.
+      onSuccess?.()
     }
   })
 }

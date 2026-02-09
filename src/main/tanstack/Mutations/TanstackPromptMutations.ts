@@ -7,6 +7,11 @@ import type {
   TanstackCreatePromptWireRequest
 } from '@shared/tanstack/TanstackPromptCreate'
 import type {
+  TanstackDeletePromptResponsePayload,
+  TanstackDeletePromptResult,
+  TanstackDeletePromptWireRequest
+} from '@shared/tanstack/TanstackPromptDelete'
+import type {
   TanstackPromptRevisionResponsePayload,
   TanstackUpdatePromptRevisionRequest,
   TanstackUpdatePromptRevisionResult
@@ -23,6 +28,7 @@ import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
 import { readTanstackPromptFolder } from '../DataAccess/TanstackWorkspaceReads'
 import {
   parseTanstackCreatePromptRequest,
+  parseTanstackDeletePromptRequest,
   parseTanstackUpdatePromptRevisionRequest
 } from '../IpcFramework/TanstackIpcValidation'
 import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcRequest'
@@ -217,6 +223,92 @@ export const setupTanstackPromptMutationHandlers = (): void => {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message }
+        }
+      })
+    }
+  )
+
+  ipcMain.handle(
+    'tanstack-delete-prompt',
+    async (_, request: unknown): Promise<TanstackDeletePromptResult> => {
+      return await runTanstackMutationIpcRequest<
+        TanstackDeletePromptWireRequest,
+        TanstackMutationResult<TanstackDeletePromptResponsePayload>
+      >(request, parseTanstackDeletePromptRequest, async (validatedRequest) => {
+        try {
+          const promptFolderEntity = validatedRequest.payload.promptFolder
+          const promptEntity = validatedRequest.payload.prompt
+          const location = getTanstackPromptFolderLocation(promptFolderEntity.id)
+
+          if (!location) {
+            return { success: false, error: 'Prompt folder not registered' }
+          }
+
+          if (!isTanstackPromptFolderPathValid(location.workspacePath, location.folderName)) {
+            return { success: false, error: 'Invalid prompt folder path' }
+          }
+
+          const promptFolder = readTanstackPromptFolder(location.workspacePath, location.folderName)
+          const currentPromptFolderRevision = tanstackRevisions.promptFolder.get(promptFolderEntity.id)
+
+          if (promptFolderEntity.expectedRevision !== currentPromptFolderRevision) {
+            return {
+              success: false,
+              conflict: true,
+              payload: {
+                promptFolder: buildPromptFolderSnapshot(promptFolder, currentPromptFolderRevision)
+              }
+            }
+          }
+
+          const currentPromptRevision = tanstackRevisions.prompt.get(promptEntity.id)
+
+          if (promptEntity.expectedRevision !== currentPromptRevision) {
+            return {
+              success: false,
+              conflict: true,
+              payload: {
+                promptFolder: buildPromptFolderSnapshot(promptFolder, currentPromptFolderRevision)
+              }
+            }
+          }
+
+          const promptsFile = readTanstackPromptFile(location.workspacePath, location.folderName)
+          const promptIndex = promptsFile.prompts.findIndex((prompt) => prompt.id === promptEntity.id)
+
+          if (promptIndex === -1) {
+            return {
+              success: false,
+              conflict: true,
+              payload: {
+                promptFolder: buildPromptFolderSnapshot(promptFolder, currentPromptFolderRevision)
+              }
+            }
+          }
+
+          promptsFile.prompts.splice(promptIndex, 1)
+          writeTanstackPromptFile(location.workspacePath, location.folderName, promptsFile)
+
+          registerTanstackPrompts(
+            location.workspaceId,
+            location.workspacePath,
+            promptFolder.id,
+            promptFolder.folderName,
+            promptsFile.prompts.map((prompt) => prompt.id)
+          )
+
+          const promptFolderRevision = tanstackRevisions.promptFolder.bump(promptFolder.id)
+          const nextPromptFolder = readTanstackPromptFolder(location.workspacePath, location.folderName)
+
+          return {
+            success: true,
+            payload: {
+              promptFolder: buildPromptFolderSnapshot(nextPromptFolder, promptFolderRevision)
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message || 'Failed to delete prompt' }
         }
       })
     }
