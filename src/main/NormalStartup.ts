@@ -10,6 +10,7 @@ import { TanstackSystemSettingsDataAccess } from './tanstack/DataAccess/Tanstack
 import { tanstackRevisions } from './tanstack/Registries/TanstackRevisions'
 import { setupTanstackWorkspaceMutationHandlers } from './tanstack/Mutations/TanstackWorkspaceMutations'
 import { setupTanstackPromptFolderMutationHandlers } from './tanstack/Mutations/TanstackPromptFolderMutations'
+import { setupTanstackPromptMutationHandlers } from './tanstack/Mutations/TanstackPromptMutations'
 import { setupTanstackSystemSettingsMutationHandlers } from './tanstack/Mutations/TanstackSystemSettingsMutations'
 import { setupTanstackWorkspaceQueryHandlers } from './tanstack/Queries/TanstackWorkspaceQuery'
 import { setupTanstackPromptFolderQueryHandlers } from './tanstack/Queries/TanstackPromptFolderQuery'
@@ -206,6 +207,7 @@ export function startupNormally(): void {
     setupTanstackWorkspaceMutationHandlers()
     setupTanstackPromptFolderQueryHandlers()
     setupTanstackPromptFolderMutationHandlers()
+    setupTanstackPromptMutationHandlers()
     setupWindowControlHandlers()
 
     const runtimeConfig = await buildRuntimeConfig()

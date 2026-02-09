@@ -1,7 +1,13 @@
 import type {
+  TanstackCreatePromptPayload,
+  TanstackCreatePromptWireRequest
+} from '@shared/tanstack/TanstackPromptCreate'
+import type {
   TanstackCreatePromptFolderPayload,
   TanstackCreatePromptFolderWireRequest
 } from '@shared/tanstack/TanstackPromptFolderCreate'
+import type { TanstackPrompt } from '@shared/tanstack/TanstackPrompt'
+import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
 import type { TanstackRevisionPayloadEntity } from '@shared/tanstack/TanstackRevision'
 import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
 import type {
@@ -166,6 +172,18 @@ const parseTanstackWorkspace = parseObject<TanstackWorkspace>({
 const parseTanstackWorkspaceRevisionPayloadEntity =
   parseRevisionPayloadEntity<TanstackWorkspace>(parseTanstackWorkspace)
 
+const parseTanstackPromptFolder = parseObject<TanstackPromptFolder>({
+  id: parseString,
+  folderName: parseString,
+  displayName: parseString,
+  promptCount: parseNumber,
+  promptIds: parseArray(parseString),
+  folderDescription: parseString
+})
+
+const parseTanstackPromptFolderRevisionPayloadEntity =
+  parseRevisionPayloadEntity<TanstackPromptFolder>(parseTanstackPromptFolder)
+
 const parseTanstackSystemSettings = parseObject<TanstackSystemSettings>({
   promptFontSize: parseNumber,
   promptEditorMinLines: parseNumber
@@ -173,6 +191,18 @@ const parseTanstackSystemSettings = parseObject<TanstackSystemSettings>({
 
 const parseTanstackSystemSettingsRevisionPayloadEntity =
   parseRevisionPayloadEntity<TanstackSystemSettings>(parseTanstackSystemSettings)
+
+const parseTanstackPrompt = parseObject<TanstackPrompt>({
+  id: parseString,
+  title: parseString,
+  creationDate: parseString,
+  lastModifiedDate: parseString,
+  promptText: parseString,
+  promptFolderCount: parseNumber
+})
+
+const parseTanstackPromptRevisionPayloadEntity =
+  parseRevisionPayloadEntity<TanstackPrompt>(parseTanstackPrompt)
 
 const parseTanstackCreateWorkspacePayload = parseObject<TanstackCreateWorkspacePayload>({
   workspacePath: parseString,
@@ -195,6 +225,46 @@ const parseTanstackCreatePromptFolderWireRequest: TanstackParser<TanstackCreateP
   parseWireRequestWithPayload<TanstackCreatePromptFolderPayload>(
     parseTanstackCreatePromptFolderPayload
   )
+
+const parseTanstackCreatePromptPayload: TanstackParser<TanstackCreatePromptPayload> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const valueKeys = Object.keys(record)
+
+  if (
+    valueKeys.length !== 3 ||
+    !('promptFolder' in record) ||
+    !('prompt' in record) ||
+    !('previousPromptId' in record)
+  ) {
+    return null
+  }
+
+  const promptFolder = parseTanstackPromptFolderRevisionPayloadEntity(record.promptFolder)
+  const prompt = parseTanstackPromptRevisionPayloadEntity(record.prompt)
+
+  if (promptFolder === null || prompt === null) {
+    return null
+  }
+
+  const previousPromptId = record.previousPromptId
+
+  if (previousPromptId !== null && typeof previousPromptId !== 'string') {
+    return null
+  }
+
+  return {
+    promptFolder,
+    prompt,
+    previousPromptId
+  }
+}
+
+const parseTanstackCreatePromptWireRequest: TanstackParser<TanstackCreatePromptWireRequest> =
+  parseWireRequestWithPayload<TanstackCreatePromptPayload>(parseTanstackCreatePromptPayload)
 
 const parseTanstackSystemSettingsRevisionPayload =
   parseObject<TanstackSystemSettingsRevisionPayload>({
@@ -239,6 +309,10 @@ export const parseTanstackCloseWorkspaceRequest = createRequestParser(
 
 export const parseTanstackCreatePromptFolderRequest = createRequestParser(
   parseTanstackCreatePromptFolderWireRequest
+)
+
+export const parseTanstackCreatePromptRequest = createRequestParser(
+  parseTanstackCreatePromptWireRequest
 )
 
 export const parseTanstackUpdateSystemSettingsRevisionRequest = createRequestParser(
