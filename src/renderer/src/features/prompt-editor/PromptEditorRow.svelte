@@ -7,7 +7,7 @@
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
+  import { getTanstackPromptFolderScreenPromptData } from '@renderer/data/tanstack/UiState/TanstackPromptFolderScreenData.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
   import { findMatchRange } from '../prompt-folders/find/promptFolderFindText'
@@ -63,7 +63,7 @@
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   // Derived prompt state and sizing so the row updates with virtual window changes.
-  const promptData = $derived.by(() => getPromptData(promptId))
+  const promptData = $derived.by(() => getTanstackPromptFolderScreenPromptData(promptId))
   const placeholderMonacoHeightPx = $derived.by(() => {
     const baseHeightPx = virtualRowHeightPx
     return Math.max(

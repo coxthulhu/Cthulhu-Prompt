@@ -13,7 +13,6 @@
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
-  import type { PromptFolder } from '@shared/ipc'
   import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/Queries/TanstackSystemSettingsQuery'
   import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
   import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
@@ -75,7 +74,7 @@
     )
   })
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
-  let selectedPromptFolder = $state<PromptFolder | null>(null)
+  let selectedPromptFolderId = $state<string | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0 || tanstackWorkspaceQuery.isLoading)
@@ -112,7 +111,7 @@
   })
 
   const clearPromptFolderSelection = () => {
-    selectedPromptFolder = null
+    selectedPromptFolderId = null
   }
 
   const clearTanstackWorkspaceSelection = () => {
@@ -270,19 +269,16 @@
       return
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
-    if (screen === 'prompt-folders' && !selectedPromptFolder) return
+    if (screen === 'prompt-folders' && !selectedPromptFolderId) return
     activeScreen = screen
   }
 
-  const navigateToPromptFolder = (folder: PromptFolder): void => {
+  const navigateToPromptFolder = (promptFolderId: string): void => {
     if (!isWorkspaceReady) return
-    if (
-      activeScreen === 'prompt-folders' &&
-      selectedPromptFolder?.folderName === folder.folderName
-    ) {
+    if (activeScreen === 'prompt-folders' && selectedPromptFolderId === promptFolderId) {
       return
     }
-    selectedPromptFolder = folder
+    selectedPromptFolderId = promptFolderId
     navigateToScreen('prompt-folders')
   }
 </script>
@@ -305,10 +301,10 @@
         {isWorkspaceReady}
         {isDevMode}
         {workspacePath}
-        {selectedPromptFolder}
+        {selectedPromptFolderId}
         onNavigate={navigateToScreen}
-        onPromptFolderSelect={(folder) => {
-          navigateToPromptFolder(folder)
+        onPromptFolderSelect={(promptFolderId) => {
+          navigateToPromptFolder(promptFolderId)
         }}
       />
     {/snippet}
@@ -330,8 +326,8 @@
         {:else if activeScreen === 'settings'}
           <SettingsScreen />
         {:else if activeScreen === 'prompt-folders'}
-          {#if selectedPromptFolder && workspacePath}
-            <PromptFolderScreen folder={selectedPromptFolder} />
+          {#if selectedPromptFolderId && workspacePath}
+            <PromptFolderScreen promptFolderId={selectedPromptFolderId} />
           {/if}
         {:else if activeScreen === 'test-screen'}
           <TestScreen />

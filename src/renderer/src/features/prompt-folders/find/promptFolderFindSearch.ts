@@ -1,4 +1,4 @@
-import { getPromptData } from '@renderer/data/PromptDataStore.svelte.ts'
+import { getTanstackPromptFolderScreenPromptData } from '@renderer/data/tanstack/UiState/TanstackPromptFolderScreenData.svelte.ts'
 import { findMatchRange } from './promptFolderFindText'
 import type { PromptFolderFindMatch } from './promptFolderFindTypes'
 
@@ -51,7 +51,7 @@ export const buildPromptFolderFindCounts = ({
   if (trimmedQuery.length === 0) return []
 
   return promptIds.map((promptId) => {
-    const promptData = getPromptData(promptId)
+    const promptData = getTanstackPromptFolderScreenPromptData(promptId)
     const title = promptData.draft.title
     const text = promptData.draft.text
     const titleCount = countMatchesInText(title, trimmedQuery)
@@ -109,7 +109,7 @@ export const getMatchTextForCurrentMatch = (
   if (!match) return null
   if (trimmedQuery.length === 0) return null
 
-  const promptData = getPromptData(match.promptId)
+  const promptData = getTanstackPromptFolderScreenPromptData(match.promptId)
   const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
   const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
 

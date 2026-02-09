@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { PromptFolderData } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
@@ -14,6 +14,7 @@
 
   type Props = {
     isLoading: boolean
+    promptFolderId: string
     rowId: string
     virtualWindowWidthPx: number
     devicePixelRatio: number
@@ -22,11 +23,13 @@
     overlayRowElement?: HTMLDivElement | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onHydrationChange?: (isHydrated: boolean) => void
-    folderData: PromptFolderData
+    descriptionText: string
+    onDescriptionChange: (text: string, measurement: TextMeasurement) => void
   }
 
   let {
     isLoading,
+    promptFolderId,
     rowId,
     virtualWindowWidthPx,
     devicePixelRatio,
@@ -35,7 +38,8 @@
     overlayRowElement,
     scrollToWithinWindowBand,
     onHydrationChange,
-    folderData
+    descriptionText,
+    onDescriptionChange
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
@@ -44,7 +48,7 @@
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
 
-  const descriptionValue = $derived(folderData.descriptionDraft.text)
+  const descriptionValue = $derived(descriptionText)
   const placeholderHeightPx = $derived(
     estimatePromptFolderSettingsMonacoHeight(descriptionValue, promptFontSize, promptEditorMinLines)
   )
@@ -68,28 +72,26 @@
     <p class="mt-2 text-sm font-semibold text-muted-foreground">Folder Description</p>
     <div class="mt-2">
       {#if overflowHost && !isLoading}
-        <HydratableMonacoEditor
-          initialValue={descriptionValue}
-          containerWidthPx={virtualWindowWidthPx}
-          {placeholderHeightPx}
-          overflowWidgetsDomNode={overflowHost}
-          {hydrationPriority}
-          {shouldDehydrate}
-          {rowId}
-          {scrollToWithinWindowBand}
-          {onHydrationChange}
-          onChange={(text, meta) => {
-            // TODO(tanstack-prompt-folder-description-draft): route description edits through
-            // `setTanstackPromptFolderDraftDescription(promptFolderId, text)` once this row
-            // reads from TanStack prompt folder draft state.
-            // setTanstackPromptFolderDraftDescription(promptFolderId, text)
-            folderData.setDescriptionText(text, {
-              measuredHeightPx: getPromptFolderSettingsHeightPx(meta.heightPx),
-              widthPx: virtualWindowWidthPx,
-              devicePixelRatio
-            })
-          }}
-        />
+        {#key promptFolderId}
+          <HydratableMonacoEditor
+            initialValue={descriptionValue}
+            containerWidthPx={virtualWindowWidthPx}
+            {placeholderHeightPx}
+            overflowWidgetsDomNode={overflowHost}
+            {hydrationPriority}
+            {shouldDehydrate}
+            {rowId}
+            {scrollToWithinWindowBand}
+            {onHydrationChange}
+            onChange={(text, meta) => {
+              onDescriptionChange(text, {
+                measuredHeightPx: getPromptFolderSettingsHeightPx(meta.heightPx),
+                widthPx: virtualWindowWidthPx,
+                devicePixelRatio
+              })
+            }}
+          />
+        {/key}
       {:else}
         <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />
       {/if}

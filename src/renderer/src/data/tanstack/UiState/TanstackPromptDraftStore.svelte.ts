@@ -170,3 +170,12 @@ export const removeTanstackPromptDraft = (promptId: string): void => {
   draftEntriesByPromptId.delete(promptId)
   lastSyncedPromptsById.delete(promptId)
 }
+
+export const clearTanstackPromptDraftStore = (): void => {
+  for (const entry of draftEntriesByPromptId.values()) {
+    clearAutosaveTimeout(entry.autosaveDraft)
+  }
+
+  draftEntriesByPromptId.clear()
+  lastSyncedPromptsById.clear()
+}

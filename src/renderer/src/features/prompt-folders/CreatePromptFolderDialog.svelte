@@ -14,7 +14,7 @@
   import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
   import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
   import { createTanstackPromptFolder } from '@renderer/data/tanstack/Mutations/TanstackPromptFolderMutations'
-  import type { PromptFolder } from '@shared/ipc'
+  import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
   import { preparePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
 
@@ -25,9 +25,9 @@
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
-    promptFolders: PromptFolder[]
+    promptFolders: TanstackPromptFolder[]
     isPromptFolderListLoading: boolean
-    onCreated?: (folder: PromptFolder) => void
+    onCreated?: (promptFolderId: string) => void
   }>()
 
   let isDialogOpen = $state(false)
@@ -72,7 +72,7 @@
     hasInteractedWithInput = false
   }
 
-  const getCreatedPromptFolder = (workspaceId: string, folderName: string): PromptFolder | null => {
+  const getCreatedPromptFolderId = (workspaceId: string, folderName: string): string | null => {
     const workspace = tanstackWorkspaceCollection.get(workspaceId)
 
     if (!workspace) {
@@ -83,10 +83,7 @@
       const promptFolder = tanstackPromptFolderCollection.get(promptFolderId)
 
       if (promptFolder?.folderName === folderName) {
-        return {
-          folderName: promptFolder.folderName,
-          displayName: promptFolder.displayName
-        }
+        return promptFolder.id
       }
     }
 
@@ -103,10 +100,13 @@
       submissionError = null
       isCreatingPromptFolder = true
       await createTanstackPromptFolder(selectedWorkspaceId, normalizedDisplayName)
-      const created = getCreatedPromptFolder(selectedWorkspaceId, preparedName.folderName)
+      const createdPromptFolderId = getCreatedPromptFolderId(
+        selectedWorkspaceId,
+        preparedName.folderName
+      )
 
-      if (created) {
-        onCreated?.(created)
+      if (createdPromptFolderId) {
+        onCreated?.(createdPromptFolderId)
       }
 
       closeDialog()

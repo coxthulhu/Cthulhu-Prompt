@@ -12,7 +12,6 @@
   } from '@renderer/common/ui/dropdown-menu'
   import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
   import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
-  import type { PromptFolder } from '@shared/ipc'
   import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
   import type { TanstackWorkspace } from '@shared/tanstack/TanstackWorkspace'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
@@ -24,7 +23,7 @@
     isWorkspaceReady = false,
     isDevMode = false,
     workspacePath = null,
-    selectedPromptFolder = null,
+    selectedPromptFolderId = null,
     onNavigate,
     onPromptFolderSelect
   } = $props<{
@@ -32,9 +31,9 @@
     isWorkspaceReady?: boolean
     isDevMode?: boolean
     workspacePath?: string | null
-    selectedPromptFolder?: PromptFolder | null
+    selectedPromptFolderId?: string | null
     onNavigate: (screen: ScreenId) => void
-    onPromptFolderSelect: (folder: PromptFolder) => void
+    onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
   let openFolderMenuName = $state<string | null>(null)
@@ -73,7 +72,7 @@
     )
   })
 
-  const promptFolders = $derived.by((): PromptFolder[] => {
+  const promptFolders = $derived.by((): TanstackPromptFolder[] => {
     if (!selectedWorkspace) {
       return []
     }
@@ -85,10 +84,6 @@
     return selectedWorkspace.promptFolderIds
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
       .filter((promptFolder): promptFolder is TanstackPromptFolder => promptFolder !== undefined)
-      .map((promptFolder) => ({
-        folderName: promptFolder.folderName,
-        displayName: promptFolder.displayName
-      }))
   })
 
   const areFoldersLoading = $derived(
@@ -215,10 +210,9 @@
                   testId={`regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`}
                   icon={FolderClosed}
                   label={folder.displayName}
-                  active={selectedPromptFolder?.folderName === folder.folderName &&
-                    activeScreen === 'prompt-folders'}
+                  active={selectedPromptFolderId === folder.id && activeScreen === 'prompt-folders'}
                   class="group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground group-data-[menu-open=true]/menu-item:bg-sidebar-accent group-data-[menu-open=true]/menu-item:text-sidebar-accent-foreground"
-                  onclick={() => onPromptFolderSelect(folder)}
+                  onclick={() => onPromptFolderSelect(folder.id)}
                 />
                 <DropdownMenu
                   open={openFolderMenuName === folder.folderName}
@@ -251,7 +245,9 @@
                 {isWorkspaceReady}
                 {promptFolders}
                 isPromptFolderListLoading={areFoldersLoading}
-                onCreated={onPromptFolderSelect}
+                onCreated={(promptFolderId) => {
+                  onPromptFolderSelect(promptFolderId)
+                }}
               />
             </li>
           {/if}

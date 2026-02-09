@@ -1,17 +1,30 @@
 <script lang="ts">
-  import { untrack } from 'svelte'
+  import { useLiveQuery } from '@tanstack/svelte-db'
+  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
+  import type { TanstackPrompt } from '@shared/tanstack/TanstackPrompt'
+  import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
   import { getTanstackWorkspaceSelectionContext } from '@renderer/app/TanstackWorkspaceSelectionContext'
-  import type { PromptFolder } from '@shared/ipc'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import { tanstackPromptCollection } from '@renderer/data/tanstack/Collections/TanstackPromptCollection'
   import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
   import { loadTanstackPromptFolderInitial } from '@renderer/data/tanstack/Queries/TanstackPromptFolderQuery'
-  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
+  import {
+    createTanstackPrompt,
+    deleteTanstackPrompt
+  } from '@renderer/data/tanstack/Mutations/TanstackPromptMutations'
+  import { reorderTanstackPromptFolderPrompts } from '@renderer/data/tanstack/Mutations/TanstackPromptFolderMutations'
+  import {
+    getTanstackPromptFolderScreenDescriptionText,
+    getTanstackPromptFolderScreenPromptData,
+    lookupTanstackPromptFolderScreenDescriptionMeasuredHeight,
+    lookupTanstackPromptFolderScreenPromptEditorMeasuredHeight,
+    removeTanstackPromptFolderScreenPrompt,
+    setTanstackPromptFolderScreenDescriptionText,
+    syncTanstackPromptFolderScreenDescriptionDraft,
+    syncTanstackPromptFolderScreenPromptDraft
+  } from '@renderer/data/tanstack/UiState/TanstackPromptFolderScreenData.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
-  import {
-    getPromptData,
-    lookupPromptEditorMeasuredHeight
-  } from '@renderer/data/PromptDataStore.svelte.ts'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
   import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
@@ -25,15 +38,6 @@
     type VirtualWindowViewportMetrics,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
-  import {
-    getPromptFolderData,
-    loadPromptFolder,
-    createPromptInFolder,
-    deletePromptInFolder,
-    movePromptDownInFolder,
-    movePromptUpInFolder,
-    lookupPromptFolderDescriptionMeasuredHeight
-  } from '@renderer/data/PromptFolderDataStore.svelte.ts'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { promptEditorRowId } from './promptFolderRowIds'
   import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
@@ -43,16 +47,33 @@
   } from './promptFolderSettingsSizing'
   import PromptFolderOutliner from './PromptFolderOutliner.svelte'
 
-  let { folder } = $props<{ folder: PromptFolder }>()
+  let { promptFolderId } = $props<{ promptFolderId: string }>()
+
   const tanstackWorkspaceSelection = getTanstackWorkspaceSelectionContext()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
-  const folderName = $derived(folder.folderName)
-  const initialFolderData = getPromptFolderData(untrack(() => folder.folderName))
-  let folderData = $state(initialFolderData)
 
-  let previousFolderName = $state<string | null>(null)
+  const tanstackPromptFolderQuery = useLiveQuery((q) =>
+    q.from({ promptFolder: tanstackPromptFolderCollection })
+  ) as { data: TanstackPromptFolder[]; isLoading: boolean }
+  const tanstackPromptQuery = useLiveQuery((q) =>
+    q.from({ prompt: tanstackPromptCollection })
+  ) as { data: TanstackPrompt[]; isLoading: boolean }
+
+  const promptFolder = $derived.by(() => {
+    return tanstackPromptFolderQuery.data.find((candidate) => candidate.id === promptFolderId) ?? null
+  })
+  const promptIds = $derived(promptFolder?.promptIds ?? [])
+  const descriptionText = $derived(getTanstackPromptFolderScreenDescriptionText(promptFolderId))
+  const folderDisplayName = $derived(promptFolder?.displayName ?? 'Prompt Folder')
+
+  let previousPromptFolderLoadKey = $state<string | null>(null)
+  let promptFolderLoadRequestId = $state(0)
+  let isLoading = $state(true)
+  let isCreatingPrompt = $state(false)
+  let errorMessage = $state<string | null>(null)
+
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
@@ -66,9 +87,12 @@
   let scrollResetVersion = $state(0)
   let lastScrollResetVersion = 0
   let scrollTopPx = $state(0)
+
   type PromptFocusRequest = { promptId: string; requestId: number }
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
+
+  const visiblePromptIds = $derived(errorMessage ? [] : isLoading ? [] : promptIds)
 
   const clearOutlinerManualSelection = () => {
     outlinerManualSelectionActive = false
@@ -83,51 +107,60 @@
     scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
   }
 
-  const loadTanstackPromptFolderSideBySide = async (nextFolderName: string): Promise<void> => {
-    const workspaceId = tanstackWorkspaceSelection.selectedWorkspaceId
-    if (!workspaceId) {
-      return
-    }
-
-    const workspace = tanstackWorkspaceCollection.get(workspaceId)
-    if (!workspace) {
-      return
-    }
-
-    const promptFolderId = workspace.promptFolderIds.find((id) => {
-      return tanstackPromptFolderCollection.get(id)?.folderName === nextFolderName
-    })
-
-    if (!promptFolderId) {
-      return
-    }
-
-    try {
-      await loadTanstackPromptFolderInitial(workspaceId, promptFolderId)
-      // TODO(tanstack-prompt-folder-description-draft): when prompt folder settings migrate to
-      // TanStack draft state, sync this folder into `syncTanstackPromptFolderDescriptionDraft`.
-      // const tanstackPromptFolder = tanstackPromptFolderCollection.get(promptFolderId)
-      // if (tanstackPromptFolder) {
-      //   syncTanstackPromptFolderDescriptionDraft(tanstackPromptFolder)
-      // }
-    } catch {
-      // Side effect: this observer must not block the legacy prompt folder load flow.
-    }
-  }
-
-  // Side effect: reload the folder via legacy + TanStack paths and reset outliner state.
-  $effect(() => {
-    const nextFolderName = folderName
-
-    if (previousFolderName === nextFolderName) return
-    previousFolderName = nextFolderName
-    folderData = getPromptFolderData(nextFolderName)
-    void loadPromptFolder(nextFolderName)
-    void loadTanstackPromptFolderSideBySide(nextFolderName)
+  const resetPromptFolderUiState = () => {
     scrollResetVersion += 1
     activeOutlinerRow = { kind: 'folder-settings' }
     outlinerManualSelectionActive = true
     outlinerAutoScrollRequestId += 1
+  }
+
+  // Side effect: load prompt-folder records and reset local screen state when folder selection changes.
+  $effect(() => {
+    const workspaceId = tanstackWorkspaceSelection.selectedWorkspaceId
+    if (!workspaceId) return
+
+    const nextPromptFolderLoadKey = `${workspaceId}:${promptFolderId}`
+    if (previousPromptFolderLoadKey === nextPromptFolderLoadKey) return
+
+    previousPromptFolderLoadKey = nextPromptFolderLoadKey
+    promptFolderLoadRequestId += 1
+    const requestId = promptFolderLoadRequestId
+    isLoading = true
+    isCreatingPrompt = false
+    errorMessage = null
+    resetPromptFolderUiState()
+
+    void (async () => {
+      try {
+        await loadTanstackPromptFolderInitial(workspaceId, promptFolderId)
+        if (requestId !== promptFolderLoadRequestId) return
+        isLoading = false
+      } catch (error) {
+        if (requestId !== promptFolderLoadRequestId) return
+        errorMessage = error instanceof Error ? error.message : String(error)
+        isLoading = false
+      }
+    })()
+  })
+
+  // Side effect: keep the folder-description draft state synced with collection updates.
+  $effect(() => {
+    const currentPromptFolder = promptFolder
+    if (!currentPromptFolder) return
+    syncTanstackPromptFolderScreenDescriptionDraft(currentPromptFolder)
+  })
+
+  // Side effect: keep prompt drafts synced with collection updates for rows in the active folder.
+  $effect(() => {
+    const currentPromptIds = promptIds
+    if (currentPromptIds.length === 0) return
+
+    const promptById = new Map(tanstackPromptQuery.data.map((prompt) => [prompt.id, prompt]))
+    for (const promptId of currentPromptIds) {
+      const prompt = promptById.get(promptId)
+      if (!prompt) continue
+      syncTanstackPromptFolderScreenPromptDraft(prompt)
+    }
   })
 
   // Side effect: reset the virtual window scroll position after folder changes.
@@ -138,8 +171,58 @@
     scrollApi.scrollTo(0)
   })
 
+  const reorderPromptIds = (
+    currentPromptIds: string[],
+    promptId: string,
+    previousPromptId: string | null
+  ): string[] | null => {
+    const currentIndex = currentPromptIds.indexOf(promptId)
+    if (currentIndex === -1) {
+      return null
+    }
+
+    const nextPromptIds = [...currentPromptIds]
+    nextPromptIds.splice(currentIndex, 1)
+
+    if (previousPromptId == null) {
+      nextPromptIds.unshift(promptId)
+      return nextPromptIds
+    }
+
+    const previousIndex = nextPromptIds.indexOf(previousPromptId)
+    if (previousIndex === -1) {
+      return null
+    }
+
+    nextPromptIds.splice(previousIndex + 1, 0, promptId)
+    return nextPromptIds
+  }
+
+  const reorderPromptInFolder = async (
+    promptId: string,
+    previousPromptId: string | null
+  ): Promise<boolean> => {
+    const currentPromptFolder = promptFolder
+    if (!currentPromptFolder) {
+      return false
+    }
+
+    const nextPromptIds = reorderPromptIds(currentPromptFolder.promptIds, promptId, previousPromptId)
+    if (!nextPromptIds) {
+      return false
+    }
+
+    try {
+      await reorderTanstackPromptFolderPrompts(currentPromptFolder.id, nextPromptIds)
+      return true
+    } catch {
+      // Intentionally ignore reorder errors to keep the UI quiet.
+      return false
+    }
+  }
+
   type PromptFolderRow =
-    | { kind: 'folder-settings'; isLoading: boolean; folder: PromptFolder }
+    | { kind: 'folder-settings'; isLoading: boolean }
     | { kind: 'prompt-header'; promptCount: number; isLoading: boolean }
     | { kind: 'placeholder'; messageKind: 'loading' | 'empty' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
@@ -154,14 +237,10 @@
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
-        estimatePromptFolderSettingsHeight(
-          folderData.descriptionDraft.text,
-          promptFontSize,
-          promptEditorMinLines
-        ),
-      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
-        lookupPromptFolderDescriptionMeasuredHeight(
-          row.folder.folderName,
+        estimatePromptFolderSettingsHeight(descriptionText, promptFontSize, promptEditorMinLines),
+      lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
+        lookupTanstackPromptFolderScreenDescriptionMeasuredHeight(
+          promptFolderId,
           widthPx,
           devicePixelRatio
         ),
@@ -184,14 +263,18 @@
     'prompt-editor': {
       estimateHeight: (row, widthPx, heightPx) =>
         estimatePromptEditorHeight(
-          getPromptData(row.promptId).draft.text,
+          getTanstackPromptFolderScreenPromptData(row.promptId).draft.text,
           widthPx,
           heightPx,
           promptFontSize,
           promptEditorMinLines
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
-        lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio),
+        lookupTanstackPromptFolderScreenPromptEditorMeasuredHeight(
+          row.promptId,
+          widthPx,
+          devicePixelRatio
+        ),
       needsOverlayRow: true,
       snippet: promptEditorRow
     },
@@ -202,22 +285,19 @@
   })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
-    const promptIds = folderData.promptIds
-    const isLoading = folderData.isLoading
     const rows: VirtualWindowItem<PromptFolderRow>[] = [
       {
         id: 'folder-settings',
         row: {
           kind: 'folder-settings',
-          isLoading,
-          folder
+          isLoading
         }
       },
       {
         id: 'prompt-header',
         row: {
           kind: 'prompt-header',
-          promptCount: promptIds.length,
+          promptCount: visiblePromptIds.length,
           isLoading
         }
       }
@@ -228,7 +308,7 @@
         id: 'placeholder-loading',
         row: { kind: 'placeholder', messageKind: 'loading' }
       })
-    } else if (promptIds.length === 0) {
+    } else if (visiblePromptIds.length === 0) {
       rows.push({
         id: 'divider-initial',
         row: { kind: 'prompt-divider', previousPromptId: null }
@@ -243,7 +323,7 @@
         row: { kind: 'prompt-divider', previousPromptId: null }
       })
 
-      promptIds.forEach((promptId) => {
+      visiblePromptIds.forEach((promptId) => {
         rows.push({ id: promptEditorRowId(promptId), row: { kind: 'prompt-editor', promptId } })
         rows.push({
           id: `${promptId}-divider`,
@@ -273,44 +353,94 @@
   }
 
   const handleAddPrompt = async (previousPromptId: string | null) => {
-    const promptId = await createPromptInFolder(folder.folderName, previousPromptId)
-    if (!promptId) return
-    promptFocusRequestId += 1
-    promptFocusRequest = { promptId, requestId: promptFocusRequestId }
+    const currentPromptFolder = promptFolder
+    if (!currentPromptFolder || isCreatingPrompt) {
+      return
+    }
+
+    isCreatingPrompt = true
+    const promptId = window.crypto.randomUUID()
+    const now = new Date().toISOString()
+    const optimisticPrompt: TanstackPrompt = {
+      id: promptId,
+      title: '',
+      creationDate: now,
+      lastModifiedDate: now,
+      promptText: '',
+      promptFolderCount: currentPromptFolder.promptCount + 1
+    }
+    syncTanstackPromptFolderScreenPromptDraft(optimisticPrompt)
+
+    try {
+      await createTanstackPrompt(currentPromptFolder.id, optimisticPrompt, previousPromptId)
+      promptFocusRequestId += 1
+      promptFocusRequest = { promptId, requestId: promptFocusRequestId }
+    } catch {
+      // Intentionally ignore create errors to keep the UI quiet.
+      removeTanstackPromptFolderScreenPrompt(promptId)
+    } finally {
+      isCreatingPrompt = false
+    }
   }
 
   const handleDeletePrompt = (promptId: string) => {
-    // TODO(tanstack-delete-prompt): switch this to `deleteTanstackPrompt(promptFolderId, promptId)`
-    // once prompt editors migrate to TanStack prompt drafts/collections.
-    // void deleteTanstackPrompt(promptFolderId, promptId)
-    void deletePromptInFolder(folder.folderName, promptId)
+    const currentPromptFolderId = promptFolder?.id
+    if (!currentPromptFolderId) {
+      return
+    }
+
+    void (async () => {
+      try {
+        await deleteTanstackPrompt(currentPromptFolderId, promptId)
+      } catch {
+        // Intentionally ignore delete errors to keep the UI quiet.
+      } finally {
+        if (!tanstackPromptCollection.get(promptId)) {
+          removeTanstackPromptFolderScreenPrompt(promptId)
+        }
+      }
+    })()
   }
 
-  const handleMovePromptUp = (promptId: string) => {
-    // TODO(tanstack-update-prompt-folder): replace this with immediate TanStack prompt-folder
-    // reorder mutation by updating the folder's `promptIds` via `updateTanstackPromptFolder`.
-    // const nextPromptIds = reorderPromptIds(tanstackPromptFolder.promptIds, promptId, previousPromptId)
-    // await updateTanstackPromptFolder({ ...tanstackPromptFolder, promptIds: nextPromptIds })
-    return movePromptUpInFolder(folder.folderName, promptId)
+  const handleMovePromptUp = async (promptId: string): Promise<boolean> => {
+    const currentPromptIds = promptFolder?.promptIds ?? []
+    const currentIndex = currentPromptIds.indexOf(promptId)
+    if (currentIndex <= 0) {
+      return false
+    }
+
+    const previousPromptId = currentIndex <= 1 ? null : currentPromptIds[currentIndex - 2]
+    return await reorderPromptInFolder(promptId, previousPromptId)
   }
 
-  const handleMovePromptDown = (promptId: string) => {
-    // TODO(tanstack-update-prompt-folder): replace this with immediate TanStack prompt-folder
-    // reorder mutation by updating the folder's `promptIds` via `updateTanstackPromptFolder`.
-    // const nextPromptIds = reorderPromptIds(tanstackPromptFolder.promptIds, promptId, previousPromptId)
-    // await updateTanstackPromptFolder({ ...tanstackPromptFolder, promptIds: nextPromptIds })
-    return movePromptDownInFolder(folder.folderName, promptId)
+  const handleMovePromptDown = async (promptId: string): Promise<boolean> => {
+    const currentPromptIds = promptFolder?.promptIds ?? []
+    const currentIndex = currentPromptIds.indexOf(promptId)
+    if (currentIndex === -1 || currentIndex >= currentPromptIds.length - 1) {
+      return false
+    }
+
+    const previousPromptId = currentPromptIds[currentIndex + 1]
+    return await reorderPromptInFolder(promptId, previousPromptId)
+  }
+
+  const handleDescriptionChange = (text: string, measurement: TextMeasurement) => {
+    setTanstackPromptFolderScreenDescriptionText(promptFolderId, text, measurement)
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
     const baseHeight = estimatePromptFolderSettingsHeight(
-      folderData.descriptionDraft.text,
+      descriptionText,
       promptFontSize,
       promptEditorMinLines
     )
-    if (!viewportMetrics) return baseHeight
-    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
-      folderName,
+
+    if (!viewportMetrics) {
+      return baseHeight
+    }
+
+    const measuredHeight = lookupTanstackPromptFolderScreenDescriptionMeasuredHeight(
+      promptFolderId,
       viewportMetrics.widthPx,
       viewportMetrics.devicePixelRatio
     )
@@ -332,7 +462,7 @@
 </script>
 
 <PromptFolderFindIntegration
-  promptIds={folderData.promptIds}
+  promptIds={visiblePromptIds}
   scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
 >
   <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
@@ -349,7 +479,7 @@
             class="min-w-0 truncate underline text-foreground/85 transition-colors hover:text-foreground"
             onclick={() => handleHeaderSegmentClick('folder-settings')}
           >
-            {folder.displayName}
+            {folderDisplayName}
           </button>
           <span class="mx-2">/</span>
           <button
@@ -377,9 +507,9 @@
       >
         {#snippet sidebar()}
           <PromptFolderOutliner
-            promptIds={folderData.promptIds}
-            isLoading={folderData.isLoading}
-            errorMessage={folderData.errorMessage}
+            promptIds={visiblePromptIds}
+            {isLoading}
+            {errorMessage}
             activeRow={activeOutlinerRow}
             autoScrollRequestId={outlinerAutoScrollRequestId}
             onSelectPrompt={handleOutlinerClick}
@@ -388,13 +518,11 @@
         {/snippet}
 
         {#snippet content()}
-          {#if folderData.errorMessage}
+          {#if errorMessage}
             <div class="flex-1 min-h-0 overflow-y-auto">
               <div class="pt-6 pl-6">
-                <h2 class="text-lg font-semibold mb-4">
-                  Prompts ({folderData.isLoading ? 0 : folderData.promptIds.length})
-                </h2>
-                <p class="mt-6 text-red-500">Error loading prompts: {folderData.errorMessage}</p>
+                <h2 class="text-lg font-semibold mb-4">Prompts ({isLoading ? 0 : visiblePromptIds.length})</h2>
+                <p class="mt-6 text-red-500">Error loading prompts: {errorMessage}</p>
               </div>
             </div>
           {:else}
@@ -442,6 +570,7 @@
 {#snippet folderSettingsRow(props)}
   <PromptFolderSettingsRow
     isLoading={props.row.isLoading}
+    {promptFolderId}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
     devicePixelRatio={props.devicePixelRatio}
@@ -450,7 +579,8 @@
     overlayRowElement={props.overlayRowElement ?? null}
     scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
     onHydrationChange={props.onHydrationChange}
-    {folderData}
+    {descriptionText}
+    onDescriptionChange={handleDescriptionChange}
   />
 {/snippet}
 
@@ -473,7 +603,7 @@
 
 {#snippet dividerRow({ row })}
   <PromptDivider
-    disabled={folderData.isCreatingPrompt}
+    disabled={isCreatingPrompt}
     onAddPrompt={() => handleAddPrompt(row.previousPromptId)}
     testId={row.previousPromptId
       ? `prompt-divider-add-after-${row.previousPromptId}`
