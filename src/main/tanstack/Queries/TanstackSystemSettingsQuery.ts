@@ -4,7 +4,7 @@ import { TanstackSystemSettingsDataAccess } from '../DataAccess/TanstackSystemSe
 
 export const setupTanstackSystemSettingsQueryHandlers = (): void => {
   ipcMain.handle(
-    'tanstack-load-system-settings-test',
+    'tanstack-load-system-settings-playwright-test',
     async (): Promise<TanstackLoadSystemSettingsResult> => {
       try {
         const settings = await TanstackSystemSettingsDataAccess.loadSystemSettings()

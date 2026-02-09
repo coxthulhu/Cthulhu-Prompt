@@ -2,13 +2,16 @@ import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { TanstackWorkspace } from '@shared/tanstack/TanstackWorkspace'
 import type {
+  TanstackCreatePromptFolderResponsePayload,
   TanstackCreatePromptFolderResult,
   TanstackCreatePromptFolderWireRequest
 } from '@shared/tanstack/TanstackPromptFolderCreate'
+import type { TanstackMutationResult } from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
 import { readTanstackPromptFolder } from '../DataAccess/TanstackWorkspaceReads'
-import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
+import { parseTanstackCreatePromptFolderRequest } from '../IpcFramework/TanstackIpcValidation'
+import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { tanstackRevisions } from '../Registries/TanstackRevisions'
 import {
   getTanstackPromptFolderIds,
@@ -73,29 +76,15 @@ export const setupTanstackPromptFolderMutationHandlers = (): void => {
     'tanstack-create-prompt-folder',
     async (
       _,
-      request: TanstackCreatePromptFolderWireRequest | undefined
+      request: unknown
     ): Promise<TanstackCreatePromptFolderResult> => {
-      if (
-        !request?.requestId ||
-        !request.payload?.workspace ||
-        !request.payload.promptFolderId ||
-        !request.payload.displayName
-      ) {
-        return { requestId: request?.requestId ?? '', success: false, error: 'Invalid request payload' }
-      }
-
-      return runTanstackIpcRequest(request, async (payload) => {
+      return await runTanstackMutationIpcRequest<
+        TanstackCreatePromptFolderWireRequest,
+        TanstackMutationResult<TanstackCreatePromptFolderResponsePayload>
+      >(request, parseTanstackCreatePromptFolderRequest, async (validatedRequest) => {
         try {
+          const payload = validatedRequest.payload
           const workspace = payload.workspace
-
-          if (
-            !workspace.id ||
-            typeof workspace.expectedRevision !== 'number' ||
-            !payload.promptFolderId
-          ) {
-            return { success: false, error: 'Invalid request payload' }
-          }
-
           const workspacePath = getTanstackWorkspacePath(workspace.id)
 
           if (!workspacePath) {

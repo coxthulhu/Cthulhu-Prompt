@@ -1,13 +1,16 @@
 import { ipcMain } from 'electron'
 import type {
+  TanstackMutationResult,
   TanstackMutationWireRequest,
   TanstackSystemSettingsRevisionData,
+  TanstackSystemSettingsRevisionResponsePayload,
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import { TanstackSystemSettingsDataAccess } from '../DataAccess/TanstackSystemSettingsDataAccess'
-import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
+import { parseTanstackUpdateSystemSettingsRevisionRequest } from '../IpcFramework/TanstackIpcValidation'
+import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { tanstackRevisions } from '../Registries/TanstackRevisions'
 
 const buildRevisionPayload = (
@@ -24,10 +27,14 @@ export const setupTanstackSystemSettingsMutationHandlers = (): void => {
     'tanstack-update-system-settings',
     async (
       _,
-      request: TanstackMutationWireRequest<TanstackUpdateSystemSettingsRevisionRequest>
+      request: unknown
     ): Promise<TanstackUpdateSystemSettingsRevisionResult> => {
-      return runTanstackIpcRequest(request, async (payload) => {
+      return await runTanstackMutationIpcRequest<
+        TanstackMutationWireRequest<TanstackUpdateSystemSettingsRevisionRequest>,
+        TanstackMutationResult<TanstackSystemSettingsRevisionResponsePayload>
+      >(request, parseTanstackUpdateSystemSettingsRevisionRequest, async (validatedRequest) => {
         try {
+          const payload = validatedRequest.payload
           const currentRevision = tanstackRevisions.systemSettings.get(TANSTACK_SYSTEM_SETTINGS_ID)
           const systemSettingsEntity = payload.systemSettings
 

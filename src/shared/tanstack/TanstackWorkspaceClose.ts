@@ -3,5 +3,5 @@ export type TanstackCloseWorkspaceWireRequest = {
 }
 
 export type TanstackCloseWorkspaceResult =
-  | { success: true }
-  | { success: false; error: string }
+  | { requestId: string; success: true }
+  | { requestId: string; success: false; error: string }
