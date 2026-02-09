@@ -118,6 +118,8 @@ const getOrCreatePromptData = (folderName: string, prompt: Prompt): PromptData =
     save: async () => {
       const contentToSave: PromptContent = { title: draft.title, text: draft.text }
 
+      // TODO(tanstack-update-prompt): swap this autosave request to TanStack prompt drafts.
+      // await saveTanstackPromptDraftNow(prompt.id)
       const result = await ipcInvoke<PromptResult, UpdatePromptRequestPayload>('update-prompt', {
         workspacePath: currentWorkspacePath!,
         folderName,
@@ -204,6 +206,8 @@ export const resetPromptDataStoreForWorkspace = (nextWorkspacePath: string | nul
 
 export const ingestPromptFolderPrompts = (folderName: string, prompts: Prompt[]): string[] => {
   prompts.forEach((prompt) => {
+    // TODO(tanstack-update-prompt): sync each prompt into `syncTanstackPromptDraft(prompt)`
+    // when prompt editors migrate to TanStack prompt collections.
     const promptData = getOrCreatePromptData(folderName, prompt)
 
     if (prompt.lastModifiedDate <= promptData.persisted.lastModifiedDate) {

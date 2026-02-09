@@ -6,17 +6,29 @@ import type {
   TanstackCreatePromptResult,
   TanstackCreatePromptWireRequest
 } from '@shared/tanstack/TanstackPromptCreate'
-import type { TanstackMutationResult } from '@shared/tanstack/TanstackSystemSettingsRevision'
+import type {
+  TanstackPromptRevisionResponsePayload,
+  TanstackUpdatePromptRevisionRequest,
+  TanstackUpdatePromptRevisionResult
+} from '@shared/tanstack/TanstackPromptRevision'
+import type {
+  TanstackMutationResult,
+  TanstackMutationWireRequest
+} from '@shared/tanstack/TanstackSystemSettingsRevision'
 import type {
   TanstackPromptFolderConfigFile,
   TanstackPromptsFile
 } from '@shared/tanstack/TanstackWorkspaceDiskTypes'
 import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
 import { readTanstackPromptFolder } from '../DataAccess/TanstackWorkspaceReads'
-import { parseTanstackCreatePromptRequest } from '../IpcFramework/TanstackIpcValidation'
+import {
+  parseTanstackCreatePromptRequest,
+  parseTanstackUpdatePromptRevisionRequest
+} from '../IpcFramework/TanstackIpcValidation'
 import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { tanstackRevisions } from '../Registries/TanstackRevisions'
 import {
+  getTanstackPromptLocation,
   getTanstackPromptFolderLocation,
   registerTanstackPrompts
 } from '../Registries/TanstackWorkspaceRegistry'
@@ -205,6 +217,77 @@ export const setupTanstackPromptMutationHandlers = (): void => {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message }
+        }
+      })
+    }
+  )
+
+  ipcMain.handle(
+    'tanstack-update-prompt',
+    async (_, request: unknown): Promise<TanstackUpdatePromptRevisionResult> => {
+      return await runTanstackMutationIpcRequest<
+        TanstackMutationWireRequest<TanstackUpdatePromptRevisionRequest>,
+        TanstackMutationResult<TanstackPromptRevisionResponsePayload>
+      >(request, parseTanstackUpdatePromptRevisionRequest, async (validatedRequest) => {
+        try {
+          const promptEntity = validatedRequest.payload.prompt
+          const location = getTanstackPromptLocation(promptEntity.id)
+
+          if (!location) {
+            return { success: false, error: 'Prompt not registered' }
+          }
+
+          if (!isTanstackPromptFolderPathValid(location.workspacePath, location.folderName)) {
+            return { success: false, error: 'Invalid prompt folder path' }
+          }
+
+          const promptsFile = readTanstackPromptFile(location.workspacePath, location.folderName)
+          const promptIndex = promptsFile.prompts.findIndex((prompt) => prompt.id === promptEntity.id)
+
+          if (promptIndex === -1) {
+            return { success: false, error: 'Prompt not found' }
+          }
+
+          const currentPromptRevision = tanstackRevisions.prompt.get(promptEntity.id)
+
+          if (promptEntity.expectedRevision !== currentPromptRevision) {
+            return {
+              success: false,
+              conflict: true,
+              payload: {
+                prompt: buildPromptSnapshot(promptsFile.prompts[promptIndex], currentPromptRevision)
+              }
+            }
+          }
+
+          const prompt: TanstackPrompt = {
+            ...promptEntity.data,
+            id: promptEntity.id,
+            lastModifiedDate: new Date().toISOString()
+          }
+
+          promptsFile.prompts[promptIndex] = prompt
+          writeTanstackPromptFile(location.workspacePath, location.folderName, promptsFile)
+
+          registerTanstackPrompts(
+            location.workspaceId,
+            location.workspacePath,
+            location.promptFolderId,
+            location.folderName,
+            promptsFile.prompts.map((savedPrompt) => savedPrompt.id)
+          )
+
+          const promptRevision = tanstackRevisions.prompt.bump(prompt.id)
+
+          return {
+            success: true,
+            payload: {
+              prompt: buildPromptSnapshot(prompt, promptRevision)
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message || 'Failed to update prompt' }
         }
       })
     }

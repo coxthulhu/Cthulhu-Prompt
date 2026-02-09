@@ -3,6 +3,10 @@ import type {
   TanstackCreatePromptWireRequest
 } from '@shared/tanstack/TanstackPromptCreate'
 import type {
+  TanstackPromptRevisionPayload,
+  TanstackUpdatePromptRevisionRequest
+} from '@shared/tanstack/TanstackPromptRevision'
+import type {
   TanstackCreatePromptFolderPayload,
   TanstackCreatePromptFolderWireRequest
 } from '@shared/tanstack/TanstackPromptFolderCreate'
@@ -266,6 +270,14 @@ const parseTanstackCreatePromptPayload: TanstackParser<TanstackCreatePromptPaylo
 const parseTanstackCreatePromptWireRequest: TanstackParser<TanstackCreatePromptWireRequest> =
   parseWireRequestWithPayload<TanstackCreatePromptPayload>(parseTanstackCreatePromptPayload)
 
+const parseTanstackPromptRevisionPayload = parseObject<TanstackPromptRevisionPayload>({
+  prompt: parseTanstackPromptRevisionPayloadEntity
+})
+
+const parseTanstackUpdatePromptRevisionWireRequest: TanstackParser<
+  TanstackMutationWireRequest<TanstackUpdatePromptRevisionRequest>
+> = parseWireRequestWithPayload<TanstackPromptRevisionPayload>(parseTanstackPromptRevisionPayload)
+
 const parseTanstackSystemSettingsRevisionPayload =
   parseObject<TanstackSystemSettingsRevisionPayload>({
     systemSettings: parseTanstackSystemSettingsRevisionPayloadEntity
@@ -313,6 +325,10 @@ export const parseTanstackCreatePromptFolderRequest = createRequestParser(
 
 export const parseTanstackCreatePromptRequest = createRequestParser(
   parseTanstackCreatePromptWireRequest
+)
+
+export const parseTanstackUpdatePromptRevisionRequest = createRequestParser(
+  parseTanstackUpdatePromptRevisionWireRequest
 )
 
 export const parseTanstackUpdateSystemSettingsRevisionRequest = createRequestParser(

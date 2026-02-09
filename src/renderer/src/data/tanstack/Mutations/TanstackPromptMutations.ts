@@ -4,6 +4,11 @@ import type {
   TanstackCreatePromptResponsePayload,
   TanstackCreatePromptResult
 } from '@shared/tanstack/TanstackPromptCreate'
+import type {
+  TanstackPromptRevisionResponsePayload,
+  TanstackUpdatePromptRevisionRequest,
+  TanstackUpdatePromptRevisionResult
+} from '@shared/tanstack/TanstackPromptRevision'
 import { tanstackPromptCollection } from '../Collections/TanstackPromptCollection'
 import { tanstackPromptFolderCollection } from '../Collections/TanstackPromptFolderCollection'
 import { runTanstackRevisionMutation } from '../IpcFramework/TanstackRevisionCollections'
@@ -74,5 +79,40 @@ export const createTanstackPrompt = async (
       tanstackPromptCollection.utils.upsertAuthoritative(payload.prompt)
     },
     conflictMessage: 'Prompt create conflict'
+  })
+}
+
+export const updateTanstackPrompt = async (prompt: TanstackPrompt): Promise<void> => {
+  if (!tanstackPromptCollection.get(prompt.id)) {
+    throw new Error('Prompt not loaded')
+  }
+
+  await runTanstackRevisionMutation<TanstackPromptRevisionResponsePayload>({
+    mutateOptimistically: () => {
+      tanstackPromptCollection.update(prompt.id, (draft) => {
+        draft.title = prompt.title
+        draft.creationDate = prompt.creationDate
+        draft.lastModifiedDate = prompt.lastModifiedDate
+        draft.promptText = prompt.promptText
+        draft.promptFolderCount = prompt.promptFolderCount
+      })
+    },
+    runMutation: async ({ entities, invoke }) => {
+      return invoke<TanstackUpdatePromptRevisionResult, TanstackUpdatePromptRevisionRequest>(
+        'tanstack-update-prompt',
+        {
+          payload: {
+            prompt: entities.prompt({
+              id: prompt.id,
+              data: prompt
+            })
+          }
+        }
+      )
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      tanstackPromptCollection.utils.upsertAuthoritative(payload.prompt)
+    },
+    conflictMessage: 'Prompt update conflict'
   })
 }
