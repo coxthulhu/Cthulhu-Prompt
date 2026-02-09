@@ -4,7 +4,7 @@ import type {
   TanstackLoadWorkspaceByPathSuccess
 } from '@shared/tanstack/TanstackWorkspaceLoad'
 import { isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspacePath'
-import { getTanstackFs } from './TanstackFsProvider'
+import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
 import { tanstackRevisions } from './TanstackRevisions'
 import {
   registerTanstackPrompts,
@@ -12,7 +12,7 @@ import {
   registerTanstackWorkspace,
   setSelectedTanstackWorkspaceId
 } from './TanstackWorkspaceRegistry'
-import { readTanstackPromptFolders, readTanstackWorkspaceId } from './TanstackWorkspaceReads'
+import { readTanstackPromptFolders, readTanstackWorkspaceId } from '../DataAccess/TanstackWorkspaceReads'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'

@@ -3,7 +3,7 @@ import { startupNormally } from './NormalStartup'
 import { getFs, setFs } from './fs-provider'
 import { setDialogProvider, createTestDialogProvider } from './dialog-provider'
 import { isPlaywrightEnvironment } from './appEnvironment'
-import { setTanstackFs } from './tanstack/TanstackFsProvider'
+import { setTanstackFs } from './tanstack/DataAccess/TanstackFsProvider'
 
 // Test setup storage
 interface TestFixtures {

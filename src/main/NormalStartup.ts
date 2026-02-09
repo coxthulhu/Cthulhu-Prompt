@@ -6,11 +6,11 @@ import icon from '../../resources/icon.png?asset'
 import { WorkspaceManager } from './workspace'
 import { PromptAPI } from './prompt-api'
 import { setupUpdatedDataHandlers } from './data'
-import { setupTanstackSystemSettingsHandlers } from './tanstack/TanstackSystemSettingsHandlers'
-import { TanstackSystemSettingsManager } from './tanstack/TanstackSystemSettingsManager'
-import { tanstackRevisions } from './tanstack/TanstackRevisions'
-import { setupTanstackWorkspaceHandlers } from './tanstack/TanstackWorkspaceHandlers'
-import { setupTanstackPromptFolderHandlers } from './tanstack/TanstackPromptFolderHandlers'
+import { setupTanstackSystemSettingsHandlers } from './tanstack/Handlers/TanstackSystemSettingsHandlers'
+import { TanstackSystemSettingsDataAccess } from './tanstack/DataAccess/TanstackSystemSettingsDataAccess'
+import { tanstackRevisions } from './tanstack/Registries/TanstackRevisions'
+import { setupTanstackWorkspaceHandlers } from './tanstack/Handlers/TanstackWorkspaceHandlers'
+import { setupTanstackPromptFolderHandlers } from './tanstack/Handlers/TanstackPromptFolderHandlers'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -100,7 +100,7 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
       : ''
   const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
-  const systemSettings = await TanstackSystemSettingsManager.loadSystemSettings()
+  const systemSettings = await TanstackSystemSettingsDataAccess.loadSystemSettings()
   const systemSettingsRevision = tanstackRevisions.systemSettings.get(TANSTACK_SYSTEM_SETTINGS_ID)
 
   return {

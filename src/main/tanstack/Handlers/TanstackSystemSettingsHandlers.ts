@@ -9,9 +9,9 @@ import {
   TANSTACK_SYSTEM_SETTINGS_ID,
   type TanstackLoadSystemSettingsResult
 } from '@shared/tanstack/TanstackSystemSettings'
-import { TanstackSystemSettingsManager } from './TanstackSystemSettingsManager'
-import { runTanstackIpcRequest } from './TanstackIpcRequest'
-import { tanstackRevisions } from './TanstackRevisions'
+import { TanstackSystemSettingsDataAccess } from '../DataAccess/TanstackSystemSettingsDataAccess'
+import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
+import { tanstackRevisions } from '../Registries/TanstackRevisions'
 
 const buildRevisionPayload = (
   data: TanstackSystemSettingsRevisionData['data'],
@@ -27,7 +27,7 @@ export const setupTanstackSystemSettingsHandlers = (): void => {
     'tanstack-load-system-settings-test',
     async (): Promise<TanstackLoadSystemSettingsResult> => {
       try {
-        const settings = await TanstackSystemSettingsManager.loadSystemSettings()
+        const settings = await TanstackSystemSettingsDataAccess.loadSystemSettings()
         return { success: true, settings }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -48,7 +48,7 @@ export const setupTanstackSystemSettingsHandlers = (): void => {
           const systemSettingsEntity = payload.systemSettings
 
           if (systemSettingsEntity.expectedRevision !== currentRevision) {
-            const settings = await TanstackSystemSettingsManager.loadSystemSettings()
+            const settings = await TanstackSystemSettingsDataAccess.loadSystemSettings()
             return {
               success: false,
               conflict: true,
@@ -58,7 +58,7 @@ export const setupTanstackSystemSettingsHandlers = (): void => {
             }
           }
 
-          const settings = await TanstackSystemSettingsManager.updateSystemSettings(
+          const settings = await TanstackSystemSettingsDataAccess.updateSystemSettings(
             systemSettingsEntity.data
           )
           const revision = tanstackRevisions.systemSettings.bump(TANSTACK_SYSTEM_SETTINGS_ID)

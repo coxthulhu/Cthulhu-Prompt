@@ -7,14 +7,14 @@ import type {
   TanstackCloseWorkspaceResult,
   TanstackCloseWorkspaceWireRequest
 } from '@shared/tanstack/TanstackWorkspaceClose'
-import { loadTanstackWorkspaceByPath } from './TanstackWorkspaceLoader'
-import { setSelectedTanstackWorkspaceId } from './TanstackWorkspaceRegistry'
+import { loadTanstackWorkspaceByPath } from '../Registries/TanstackWorkspaceLoader'
+import { setSelectedTanstackWorkspaceId } from '../Registries/TanstackWorkspaceRegistry'
 import type {
   TanstackCreateWorkspaceResponse,
   TanstackCreateWorkspaceWireRequest
 } from '@shared/tanstack/TanstackWorkspaceCreate'
-import { runTanstackIpcRequest } from './TanstackIpcRequest'
-import { createTanstackWorkspace } from './TanstackWorkspaceCreate'
+import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
+import { createTanstackWorkspace } from '../DataAccess/TanstackWorkspaceDataAccess'
 
 export const setupTanstackWorkspaceHandlers = (): void => {
   ipcMain.handle(

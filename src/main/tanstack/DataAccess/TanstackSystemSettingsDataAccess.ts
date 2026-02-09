@@ -1,12 +1,12 @@
 import { app } from 'electron'
 import * as path from 'path'
-import { getFs } from '../fs-provider'
+import { getFs } from '../../fs-provider'
 import {
   DEFAULT_SYSTEM_SETTINGS,
   normalizeTanstackSystemSettings,
   type TanstackSystemSettings
 } from '@shared/tanstack/TanstackSystemSettings'
-import type { SystemSettingsFile } from '../data/diskTypes'
+import type { SystemSettingsFile } from '../../data/diskTypes'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 
@@ -61,7 +61,7 @@ const writeSystemSettingsPayload = (payload: Record<string, unknown>): void => {
   fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), 'utf8')
 }
 
-export class TanstackSystemSettingsManager {
+export class TanstackSystemSettingsDataAccess {
   static async loadSystemSettings(): Promise<TanstackSystemSettings> {
     ensureSystemSettingsDirectory()
     const { payload, settings, shouldWriteDefaults } = readSystemSettingsPayload()

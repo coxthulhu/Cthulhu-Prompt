@@ -10,17 +10,17 @@ import type {
   TanstackCreatePromptFolderWireRequest
 } from '@shared/tanstack/TanstackPromptFolderCreate'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { getTanstackFs } from './TanstackFsProvider'
-import { runTanstackIpcRequest } from './TanstackIpcRequest'
-import { tanstackRevisions } from './TanstackRevisions'
+import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
+import { runTanstackIpcRequest } from '../IpcFramework/TanstackIpcRequest'
+import { tanstackRevisions } from '../Registries/TanstackRevisions'
 import {
   getTanstackPromptFolderIds,
   getTanstackPromptFolderLocation,
   registerTanstackPromptFolder,
   registerTanstackPrompts,
   getTanstackWorkspacePath
-} from './TanstackWorkspaceRegistry'
-import { readTanstackPromptFolder, readTanstackPrompts } from './TanstackWorkspaceReads'
+} from '../Registries/TanstackWorkspaceRegistry'
+import { readTanstackPromptFolder, readTanstackPrompts } from '../DataAccess/TanstackWorkspaceReads'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
