@@ -1,4 +1,3 @@
-import { flushTanstackSystemSettingsAutosaves } from './TanstackSystemSettingsAutosave'
 import {
   clearTanstackPromptFolderDraftStore,
   flushTanstackPromptFolderDraftAutosaves
@@ -7,6 +6,7 @@ import {
   clearTanstackPromptDraftStore,
   flushTanstackPromptDraftAutosaves
 } from './TanstackPromptDraftStore.svelte.ts'
+import { flushTanstackSystemSettingsAutosave } from './TanstackSystemSettingsDraftStore.svelte.ts'
 import { clearTanstackPromptFolderScreenState } from './TanstackPromptFolderScreenData.svelte.ts'
 
 let currentWorkspacePath: string | null = null
@@ -24,7 +24,7 @@ export const switchTanstackWorkspaceStoreBridge = async (
     await Promise.allSettled([
       flushTanstackPromptFolderDraftAutosaves(),
       flushTanstackPromptDraftAutosaves(),
-      flushTanstackSystemSettingsAutosaves()
+      flushTanstackSystemSettingsAutosave()
     ])
 
     currentWorkspacePath = nextWorkspacePath

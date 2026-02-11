@@ -14,7 +14,6 @@
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
   } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsFormat'
-  import { registerTanstackSystemSettingsAutosave } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsAutosave'
   import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
 
   const systemSettingsState = getTanstackSystemSettingsDraftState()
@@ -87,11 +86,9 @@
       systemSettingsState.draftSnapshot.promptEditorMinLinesInput === defaultMinLinesInput
   )
 
-  // Side effect: register autosave flush hooks and save before leaving the settings screen.
+  // Side effect: flush unsaved system settings when leaving the settings screen.
   $effect(() => {
-    const unregister = registerTanstackSystemSettingsAutosave(flushAutosave)
     return () => {
-      unregister()
       void flushAutosave()
     }
   })
