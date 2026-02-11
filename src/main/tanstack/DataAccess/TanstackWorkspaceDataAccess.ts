@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import * as path from 'path'
 import { tanstackWorkspaceRootPathErrorMessage, isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspacePath'
-import { getTanstackFs } from './TanstackFsProvider'
+import { getFs } from '../../fs-provider'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
@@ -13,14 +13,14 @@ const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
 type TanstackCreateWorkspaceResult = { success: true } | { success: false; error: string }
 
 const writeWorkspaceInfoFile = (workspacePath: string): void => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const workspaceInfoPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
   const content = JSON.stringify({ workspaceId: randomUUID() }, null, 2)
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
 }
 
 const writeExamplePrompts = (workspacePath: string): void => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const exampleFolderPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, EXAMPLE_FOLDER_NAME)
   const configPath = path.join(exampleFolderPath, PROMPT_FOLDER_CONFIG_FILENAME)
   const promptsPath = path.join(exampleFolderPath, PROMPTS_FILENAME)
@@ -78,7 +78,7 @@ const validateNewWorkspacePath = (workspacePath: string): TanstackCreateWorkspac
     return { success: false, error: tanstackWorkspaceRootPathErrorMessage }
   }
 
-  const fs = getTanstackFs()
+  const fs = getFs()
   const workspaceInfoPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
 
@@ -101,7 +101,7 @@ export const createTanstackWorkspace = async (
       return validationResult
     }
 
-    const fs = getTanstackFs()
+    const fs = getFs()
     const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
 
     fs.mkdirSync(promptsPath, { recursive: true })

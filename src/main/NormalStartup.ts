@@ -12,7 +12,7 @@ import { setupTanstackPromptMutationHandlers } from './tanstack/Mutations/Tansta
 import { setupTanstackSystemSettingsMutationHandlers } from './tanstack/Mutations/TanstackSystemSettingsMutations'
 import { setupTanstackWorkspaceQueryHandlers } from './tanstack/Queries/TanstackWorkspaceQuery'
 import { setupTanstackPromptFolderQueryHandlers } from './tanstack/Queries/TanstackPromptFolderQuery'
-import { setupTanstackSystemSettingsQueryHandlers } from './tanstack/Queries/TanstackSystemSettingsQuery'
+import { setupIntegrationTestSystemSettingsQueryHandlers } from './IntegrationTests/TanstackSystemSettingsTestQuery'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -193,7 +193,9 @@ export function startupNormally(): void {
 
     // Setup workspace dialog IPC handlers used by the home screen.
     setupWorkspaceDialogHandlers()
-    setupTanstackSystemSettingsQueryHandlers()
+    if (isPlaywrightEnvironment()) {
+      setupIntegrationTestSystemSettingsQueryHandlers()
+    }
     setupTanstackSystemSettingsMutationHandlers()
     setupTanstackWorkspaceQueryHandlers()
     setupTanstackWorkspaceMutationHandlers()

@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron'
 import type { TanstackLoadSystemSettingsResult } from '@shared/tanstack/TanstackSystemSettings'
-import { TanstackSystemSettingsDataAccess } from '../DataAccess/TanstackSystemSettingsDataAccess'
+import { TanstackSystemSettingsDataAccess } from '../tanstack/DataAccess/TanstackSystemSettingsDataAccess'
 
-export const setupTanstackSystemSettingsQueryHandlers = (): void => {
+export const setupIntegrationTestSystemSettingsQueryHandlers = (): void => {
   ipcMain.handle(
     'tanstack-load-system-settings-playwright-test',
     async (): Promise<TanstackLoadSystemSettingsResult> => {

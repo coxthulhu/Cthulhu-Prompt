@@ -20,7 +20,7 @@ import type {
   TanstackMutationWireRequest
 } from '@shared/tanstack/TanstackSystemSettingsRevision'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
+import { getFs } from '../../fs-provider'
 import { readTanstackPromptFolder } from '../DataAccess/TanstackWorkspaceReads'
 import {
   parseTanstackCreatePromptFolderRequest,
@@ -42,7 +42,7 @@ const PROMPT_FOLDER_CONFIG_FILENAME = 'PromptFolder.json'
 const PROMPTS_FILENAME = 'Prompts.json'
 
 const isTanstackWorkspacePathValid = (workspacePath: string): boolean => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   return (
     fs.existsSync(path.join(workspacePath, WORKSPACE_INFO_FILENAME)) &&
     fs.existsSync(path.join(workspacePath, PROMPTS_FOLDER_NAME))
@@ -50,7 +50,7 @@ const isTanstackWorkspacePathValid = (workspacePath: string): boolean => {
 }
 
 const hasPromptFolderNameConflict = (workspacePath: string, folderName: string): boolean => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
   const normalizedTargetName = folderName.toLowerCase()
   const entries = fs.readdirSync(promptsPath, { withFileTypes: true })
@@ -88,7 +88,7 @@ const buildPromptFolderSnapshot = (
 }
 
 const isTanstackPromptFolderPathValid = (workspacePath: string, folderName: string): boolean => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const folderPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName)
   return (
     fs.existsSync(path.join(folderPath, PROMPT_FOLDER_CONFIG_FILENAME)) &&
@@ -100,7 +100,7 @@ const readTanstackPromptFolderConfig = (
   workspacePath: string,
   folderName: string
 ): TanstackPromptFolderConfigFile => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const configPath = path.join(
     workspacePath,
     PROMPTS_FOLDER_NAME,
@@ -111,7 +111,7 @@ const readTanstackPromptFolderConfig = (
 }
 
 const readTanstackPromptFile = (workspacePath: string, folderName: string): TanstackPromptsFile => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
   return JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as TanstackPromptsFile
 }
@@ -121,7 +121,7 @@ const writeTanstackPromptFolderConfig = (
   folderName: string,
   config: TanstackPromptFolderConfigFile
 ): void => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const configPath = path.join(
     workspacePath,
     PROMPTS_FOLDER_NAME,
@@ -136,7 +136,7 @@ const writeTanstackPromptFile = (
   folderName: string,
   promptsFile: TanstackPromptsFile
 ): void => {
-  const fs = getTanstackFs()
+  const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
   fs.writeFileSync(
     promptsPath,
@@ -227,7 +227,7 @@ export const setupTanstackPromptFolderMutationHandlers = (): void => {
             }
           }
 
-          const fs = getTanstackFs()
+          const fs = getFs()
           const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
           const folderPath = path.join(promptsPath, folderName)
 

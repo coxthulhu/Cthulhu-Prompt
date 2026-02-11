@@ -4,7 +4,7 @@ import type {
   TanstackLoadWorkspaceByPathSuccess
 } from '@shared/tanstack/TanstackWorkspaceLoad'
 import { isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspacePath'
-import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
+import { getFs } from '../../fs-provider'
 import { tanstackRevisions } from './TanstackRevisions'
 import {
   registerTanstackPrompts,
@@ -21,7 +21,7 @@ const isTanstackWorkspacePathValid = (workspacePath: string): boolean => {
     return false
   }
 
-  const fs = getTanstackFs()
+  const fs = getFs()
   return (
     fs.existsSync(path.join(workspacePath, WORKSPACE_INFO_FILENAME)) &&
     fs.existsSync(path.join(workspacePath, PROMPTS_FOLDER_NAME))

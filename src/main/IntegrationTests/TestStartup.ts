@@ -1,14 +1,11 @@
 import { app, ipcMain } from 'electron'
-import { startupNormally } from './NormalStartup'
-import { getFs, setFs } from './fs-provider'
-import { setDialogProvider, createTestDialogProvider } from './dialog-provider'
-import { isPlaywrightEnvironment } from './appEnvironment'
-import { setTanstackFs } from './tanstack/DataAccess/TanstackFsProvider'
+import { startupNormally } from '../NormalStartup'
+import { getFs, setFs } from '../fs-provider'
+import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
+import { isPlaywrightEnvironment } from '../appEnvironment'
 
-// Test setup storage
 interface TestFixtures {
-  filesystem?: Record<string, string | null>
-  fileDialogResults?: any[]
+  fileDialogResults?: string[]
 }
 
 const testFixtures: TestFixtures = {}
@@ -84,85 +81,89 @@ function initializeIpcGatingForE2E(): void {
 }
 
 type FilesystemSetupPayload =
-  | Record<string, string | null>
-  | {
-      filesystem?: Record<string, string | null>
-      requestId?: string | null
-    }
+  {
+    filesystem: Record<string, string | null>
+    requestId: string
+  }
 
 type FilesystemSetupResult = {
   success: boolean
   error?: string
 }
 
-function emitFilesystemSetupResult(
-  requestId: string | undefined,
-  result: FilesystemSetupResult
-): void {
-  if (requestId) {
-    ;(app as any).emit(`test-setup-filesystem-ready:${requestId}`, result)
-  } else {
-    ;(global as any).testFilesystemReady = result.success
+function emitFilesystemSetupResult(requestId: string, result: FilesystemSetupResult): void {
+  ;(app as any).emit(`test-setup-filesystem-ready:${requestId}`, result)
+}
+
+function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+
+  if (typeof record.requestId !== 'string') {
+    return null
+  }
+
+  if (!record.filesystem || typeof record.filesystem !== 'object') {
+    return null
+  }
+
+  return {
+    requestId: record.requestId,
+    filesystem: record.filesystem as Record<string, string | null>
   }
 }
 
 export function setupTestStartupListener(): void {
   initializeIpcGatingForE2E()
 
-  // Listen for filesystem setup
-  ;(app as any).on('test-setup-filesystem', async (payload: FilesystemSetupPayload) => {
-    let filesystem: Record<string, string | null> | undefined
-    let requestId: string | undefined
+  ;(app as any).on('test-setup-filesystem', async (payload: unknown) => {
+    const typedPayload = parseFilesystemSetupPayload(payload)
 
-    if (payload && typeof payload === 'object' && 'filesystem' in payload) {
-      const withId = payload as {
-        filesystem?: Record<string, string | null>
-        requestId?: string | null
+    if (!typedPayload) {
+      const requestId =
+        payload && typeof payload === 'object' && 'requestId' in (payload as Record<string, unknown>)
+          ? String((payload as Record<string, unknown>).requestId ?? '')
+          : ''
+
+      if (requestId) {
+        emitFilesystemSetupResult(requestId, {
+          success: false,
+          error: 'No filesystem payload provided'
+        })
       }
-      filesystem = withId.filesystem
-      requestId = typeof withId.requestId === 'string' ? withId.requestId : undefined
-    } else if (payload && typeof payload === 'object') {
-      filesystem = payload as Record<string, string | null>
-    }
 
-    if (!filesystem) {
-      emitFilesystemSetupResult(requestId, {
-        success: false,
-        error: 'No filesystem payload provided'
-      })
       return
     }
 
-    testFixtures.filesystem = filesystem
-
-    // Immediately set up the mocked filesystem
     try {
       const { vol } = await import('memfs')
       vol.reset()
-      vol.fromJSON(filesystem)
+      vol.fromJSON(typedPayload.filesystem)
       setFs(vol)
-      setTanstackFs(vol)
-      emitFilesystemSetupResult(requestId, { success: true })
+      emitFilesystemSetupResult(typedPayload.requestId, { success: true })
     } catch (error) {
       console.error('Failed to set up mocked filesystem:', error)
       const message = error instanceof Error ? error.message : String(error)
-      emitFilesystemSetupResult(requestId, { success: false, error: message })
+      emitFilesystemSetupResult(typedPayload.requestId, {
+        success: false,
+        error: message
+      })
     }
   })
 
-  // Listen for file dialog setup
-  ;(app as any).on('test-setup-file-dialog', (results: any[]) => {
+  ;(app as any).on('test-setup-file-dialog', (results: string[]) => {
     testFixtures.fileDialogResults = results
   })
 
-  // Listen for file existence check
   ;(app as any).on('test-check-file-exists', (filePath: string) => {
     const fs = getFs()
     const exists = fs.existsSync(filePath)
     ;(global as any).testFileExistsResult = exists
   })
 
-  // Listen for file read requests
   ;(app as any).on(
     'test-read-file',
     (payload: { filePath: string; requestId: string }) => {
@@ -172,21 +173,11 @@ export function setupTestStartupListener(): void {
     }
   )
 
-  // Listen for startup completion
   ;(app as any).on('test-complete-startup', () => {
-    // Apply filesystem setup if provided
-    if (testFixtures.filesystem) {
-      // Store filesystem data for NormalStartup to use
-      ;(global as any).testFilesystemData = testFixtures.filesystem
-    }
-
-    // Apply file dialog setup if provided
     if (testFixtures.fileDialogResults) {
-      // Set up dialog provider with test results
       setDialogProvider(createTestDialogProvider(testFixtures.fileDialogResults))
     }
 
-    // Mark startup as completed and start normally
     ;(app as any)._testStartupCompleted = true
     startupNormally()
   })

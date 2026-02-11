@@ -1,6 +1,6 @@
 import type { TanstackParsedRequest } from './TanstackIpcValidation'
 
-export const TANSTACK_INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
+const TANSTACK_INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
 
 type TanstackMutationInvalidRequestResult = {
   requestId: string

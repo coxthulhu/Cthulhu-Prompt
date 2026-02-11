@@ -11,11 +11,9 @@ export type TanstackPromptFolderConfigFile = {
   folderDescription: string
 }
 
-export type TanstackPromptFromFile = TanstackPrompt
-
 export type TanstackPromptsFile = {
   metadata?: {
     schemaVersion: number
   }
-  prompts: TanstackPromptFromFile[]
+  prompts: TanstackPrompt[]
 }
