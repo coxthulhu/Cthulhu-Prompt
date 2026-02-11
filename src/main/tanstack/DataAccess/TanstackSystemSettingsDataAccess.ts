@@ -6,11 +6,7 @@ import {
   normalizeTanstackSystemSettings,
   type TanstackSystemSettings
 } from '@shared/tanstack/TanstackSystemSettings'
-
-type SystemSettingsFile = {
-  promptFontSize: number
-  promptEditorMinLines: number
-}
+import type { TanstackSystemSettingsFile } from '@shared/tanstack/DiskTypes/TanstackSystemSettingsDiskTypes'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 
@@ -42,7 +38,7 @@ const readSystemSettingsPayload = (): {
 
   try {
     const content = fs.readFileSync(settingsPath, 'utf8')
-    const parsed = JSON.parse(content) as SystemSettingsFile
+    const parsed = JSON.parse(content) as TanstackSystemSettingsFile
     const payload = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
 
     return {

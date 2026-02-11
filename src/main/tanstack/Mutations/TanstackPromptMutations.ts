@@ -23,7 +23,7 @@ import type {
 import type {
   TanstackPromptFolderConfigFile,
   TanstackPromptsFile
-} from '@shared/tanstack/TanstackWorkspaceDiskTypes'
+} from '@shared/tanstack/DiskTypes/TanstackWorkspaceDiskTypes'
 import { getTanstackFs } from '../DataAccess/TanstackFsProvider'
 import { readTanstackPromptFolder } from '../DataAccess/TanstackWorkspaceReads'
 import {

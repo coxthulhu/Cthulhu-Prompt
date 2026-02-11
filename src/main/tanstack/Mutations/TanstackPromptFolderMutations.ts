@@ -14,7 +14,7 @@ import type {
 import type {
   TanstackPromptFolderConfigFile,
   TanstackPromptsFile
-} from '@shared/tanstack/TanstackWorkspaceDiskTypes'
+} from '@shared/tanstack/DiskTypes/TanstackWorkspaceDiskTypes'
 import type {
   TanstackMutationResult,
   TanstackMutationWireRequest
