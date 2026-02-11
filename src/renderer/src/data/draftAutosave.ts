@@ -17,12 +17,6 @@ export const clearAutosaveTimeout = (draft: AutosaveDraft): void => {
   draft.autosaveTimeoutId = null
 }
 
-export const resetAutosaveDraft = (draft: AutosaveDraft): void => {
-  clearAutosaveTimeout(draft)
-  draft.dirty = false
-  draft.saving = false
-}
-
 export const createAutosaveController = ({
   draft,
   autosaveMs,

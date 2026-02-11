@@ -72,7 +72,7 @@ export const createTanstackPromptFolder = async (
   })
 }
 
-export const updateTanstackPromptFolder = async (
+const updateTanstackPromptFolder = async (
   promptFolder: TanstackPromptFolder
 ): Promise<void> => {
   if (!tanstackPromptFolderCollection.get(promptFolder.id)) {

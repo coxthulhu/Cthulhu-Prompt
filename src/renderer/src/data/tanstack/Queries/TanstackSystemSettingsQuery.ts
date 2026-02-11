@@ -2,8 +2,6 @@ import type { TanstackSystemSettingsSnapshot } from '@shared/tanstack/TanstackSy
 import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import { tanstackSystemSettingsCollection } from '../Collections/TanstackSystemSettingsCollection'
 
-export { tanstackSystemSettingsCollection } from '../Collections/TanstackSystemSettingsCollection'
-
 export const applyTanstackSystemSettingsSnapshot = (
   snapshot: TanstackSystemSettingsSnapshot
 ): void => {

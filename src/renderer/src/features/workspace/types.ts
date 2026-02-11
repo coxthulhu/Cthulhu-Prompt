@@ -1,11 +1,7 @@
-export type WorkspaceSelectionFailureReason = 'workspace-missing' | 'unknown-error'
-
 export type WorkspaceSelectionResult =
   | { success: true }
-  | { success: false; reason: WorkspaceSelectionFailureReason; message?: string }
-
-export type WorkspaceCreationFailureReason = 'creation-failed' | 'unknown-error'
+  | { success: false; reason: 'workspace-missing' | 'unknown-error'; message?: string }
 
 export type WorkspaceCreationResult =
   | { success: true }
-  | { success: false; reason: WorkspaceCreationFailureReason; message?: string }
+  | { success: false; reason: 'creation-failed' | 'unknown-error'; message?: string }

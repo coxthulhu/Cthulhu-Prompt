@@ -20,17 +20,17 @@ import {
   normalizePromptFontSizeInput
 } from './TanstackSystemSettingsFormat'
 
-export type TanstackSystemSettingsDraftSnapshot = {
+type TanstackSystemSettingsDraftSnapshot = {
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
 }
 
-export type TanstackSystemSettingsValidation = {
+type TanstackSystemSettingsValidation = {
   fontSizeError: string | null
   minLinesError: string | null
 }
 
-export type TanstackSystemSettingsDraftState = {
+type TanstackSystemSettingsDraftState = {
   draftSnapshot: TanstackSystemSettingsDraftSnapshot
   saveError: string | null
 }

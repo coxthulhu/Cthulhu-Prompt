@@ -13,7 +13,7 @@
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
-  import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/Queries/TanstackSystemSettingsQuery'
+  import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/Collections/TanstackSystemSettingsCollection'
   import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
   import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
   import { switchTanstackWorkspaceStoreBridge } from '@renderer/data/tanstack/UiState/TanstackWorkspaceStoreBridge'
@@ -114,10 +114,6 @@
     selectedPromptFolderId = null
   }
 
-  const clearTanstackWorkspaceSelection = () => {
-    setTanstackSelectedWorkspaceId(null)
-  }
-
   const resetWorkspaceState = async () => {
     try {
       await closeTanstackWorkspace()
@@ -126,7 +122,6 @@
     } finally {
       await switchTanstackWorkspaceStoreBridge(null)
       clearPromptFolderSelection()
-      clearTanstackWorkspaceSelection()
     }
   }
 
@@ -217,7 +212,7 @@
     }
   }
 
-  // Auto-select dev workspace in dev/playwright to mirror legacy behavior.
+  // Side effect: auto-select the configured dev workspace once in dev/playwright environments.
   $effect(() => {
     if (hasAttemptedAutoSelect || !isDevMode) {
       return

@@ -8,7 +8,7 @@ import {
 } from '@renderer/data/draftAutosave'
 import { updateTanstackPrompt } from '../Mutations/TanstackPromptMutations'
 
-export type TanstackPromptDraftState = {
+type TanstackPromptDraftState = {
   draftSnapshot: TanstackPrompt
   saveError: string | null
 }

@@ -21,7 +21,7 @@ type TanstackPromptFolderScreenPromptDraft = {
   text: string
 }
 
-export type TanstackPromptFolderScreenPromptData = {
+type TanstackPromptFolderScreenPromptData = {
   draft: TanstackPromptFolderScreenPromptDraft
   promptFolderCount: number
   setTitle: (title: string) => void

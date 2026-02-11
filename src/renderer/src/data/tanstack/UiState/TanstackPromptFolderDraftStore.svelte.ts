@@ -8,11 +8,11 @@ import {
 } from '@renderer/data/draftAutosave'
 import { updateTanstackPromptFolderDescription } from '../Mutations/TanstackPromptFolderMutations'
 
-export type TanstackPromptFolderDraftSnapshot = {
+type TanstackPromptFolderDraftSnapshot = {
   folderDescription: string
 }
 
-export type TanstackPromptFolderDraftState = {
+type TanstackPromptFolderDraftState = {
   draftSnapshot: TanstackPromptFolderDraftSnapshot
   saveError: string | null
 }

@@ -24,8 +24,6 @@ export const getRuntimeConfig = (): RuntimeConfig => {
   }
 }
 
-export const isDevEnvironment = () => getRuntimeConfig().environment === 'DEV'
-export const isPlaywrightEnvironment = () => getRuntimeConfig().environment === 'PLAYWRIGHT'
 export const isDevOrPlaywrightEnvironment = () => {
   const env = getRuntimeConfig().environment
   return env === 'DEV' || env === 'PLAYWRIGHT'

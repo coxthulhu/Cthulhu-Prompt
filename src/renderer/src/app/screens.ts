@@ -2,7 +2,7 @@ import { Bug, Home, Settings } from 'lucide-svelte'
 
 export type ScreenId = 'home' | 'settings' | 'test-screen' | 'prompt-folders'
 
-export type ScreenConfig = {
+type ScreenConfig = {
   label: string
   testId: string
   requiresWorkspace: boolean
