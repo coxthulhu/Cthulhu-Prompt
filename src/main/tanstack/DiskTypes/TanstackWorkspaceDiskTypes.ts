@@ -1,4 +1,4 @@
-import type { TanstackPrompt } from '../TanstackPrompt'
+import type { TanstackPrompt } from '@shared/tanstack/TanstackPrompt'
 
 export type TanstackWorkspaceInfoFile = {
   workspaceId: string

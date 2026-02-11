@@ -6,7 +6,7 @@ import {
   normalizeTanstackSystemSettings,
   type TanstackSystemSettings
 } from '@shared/tanstack/TanstackSystemSettings'
-import type { TanstackSystemSettingsFile } from '@shared/tanstack/DiskTypes/TanstackSystemSettingsDiskTypes'
+import type { TanstackSystemSettingsFile } from '../DiskTypes/TanstackSystemSettingsDiskTypes'
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 

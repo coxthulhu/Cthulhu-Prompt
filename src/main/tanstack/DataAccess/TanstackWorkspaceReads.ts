@@ -5,7 +5,7 @@ import type {
   TanstackPromptFolderConfigFile,
   TanstackPromptsFile,
   TanstackWorkspaceInfoFile
-} from '@shared/tanstack/DiskTypes/TanstackWorkspaceDiskTypes'
+} from '../DiskTypes/TanstackWorkspaceDiskTypes'
 import { getTanstackFs } from './TanstackFsProvider'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
