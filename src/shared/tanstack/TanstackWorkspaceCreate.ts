@@ -10,12 +10,8 @@ export type TanstackCreateWorkspacePayload = {
   includeExamplePrompts: boolean
 }
 
-// This reuses the TanStack mutation request envelope shape ({ payload, requestId })
-// for IPC correlation only.
-export type TanstackCreateWorkspaceRequest = TanstackMutationRequest<TanstackCreateWorkspacePayload>
-
 export type TanstackCreateWorkspaceWireRequest =
-  TanstackMutationWireRequest<TanstackCreateWorkspaceRequest>
+  TanstackMutationWireRequest<TanstackMutationRequest<TanstackCreateWorkspacePayload>>
 
 export type TanstackCreateWorkspaceResponse =
   | { requestId: string; success: true }

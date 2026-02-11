@@ -2,7 +2,6 @@ import { ipcMain } from 'electron'
 import type {
   TanstackMutationResult,
   TanstackMutationWireRequest,
-  TanstackSystemSettingsRevisionData,
   TanstackSystemSettingsRevisionResponsePayload,
   TanstackUpdateSystemSettingsRevisionRequest,
   TanstackUpdateSystemSettingsRevisionResult
@@ -14,9 +13,9 @@ import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcReques
 import { tanstackRevisions } from '../Registries/TanstackRevisions'
 
 const buildRevisionPayload = (
-  data: TanstackSystemSettingsRevisionData['data'],
+  data: TanstackSystemSettingsRevisionResponsePayload['systemSettings']['data'],
   revision: number
-): TanstackSystemSettingsRevisionData => ({
+): TanstackSystemSettingsRevisionResponsePayload['systemSettings'] => ({
   id: TANSTACK_SYSTEM_SETTINGS_ID,
   revision,
   data

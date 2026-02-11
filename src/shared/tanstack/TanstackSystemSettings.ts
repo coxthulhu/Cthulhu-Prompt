@@ -19,7 +19,7 @@ export const DEFAULT_SYSTEM_SETTINGS: TanstackSystemSettings = Object.freeze({
   promptEditorMinLines: 3
 })
 
-export const clampPromptFontSize = (value: number): number => {
+const clampPromptFontSize = (value: number): number => {
   return Math.min(MAX_PROMPT_FONT_SIZE, Math.max(MIN_PROMPT_FONT_SIZE, value))
 }
 
@@ -28,7 +28,7 @@ const resolvePromptFontSize = (value: unknown, fallback: number): number => {
   return clampPromptFontSize(Math.round(value))
 }
 
-export const clampPromptEditorMinLines = (value: number): number => {
+const clampPromptEditorMinLines = (value: number): number => {
   return Math.min(MAX_PROMPT_EDITOR_MIN_LINES, Math.max(MIN_PROMPT_EDITOR_MIN_LINES, value))
 }
 
@@ -52,10 +52,6 @@ export const normalizeTanstackSystemSettings = (
   }
 }
 
-export type TanstackLoadSystemSettingsSuccess = {
-  settings: TanstackSystemSettings
-}
-
 export type TanstackLoadSystemSettingsResult =
-  | ({ success: true } & TanstackLoadSystemSettingsSuccess)
+  | { success: true; settings: TanstackSystemSettings }
   | { success: false; error: string }

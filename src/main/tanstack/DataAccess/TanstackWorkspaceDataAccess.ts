@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import * as path from 'path'
-import { tanstackWorkspaceRootPathErrorMessage, isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspacePath'
+import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 import { getFs } from '../../fs-provider'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
@@ -74,8 +74,8 @@ const writeExamplePrompts = (workspacePath: string): void => {
 }
 
 const validateNewWorkspacePath = (workspacePath: string): TanstackCreateWorkspaceResult | null => {
-  if (isTanstackWorkspaceRootPath(workspacePath)) {
-    return { success: false, error: tanstackWorkspaceRootPathErrorMessage }
+  if (isWorkspaceRootPath(workspacePath)) {
+    return { success: false, error: workspaceRootPathErrorMessage }
   }
 
   const fs = getFs()

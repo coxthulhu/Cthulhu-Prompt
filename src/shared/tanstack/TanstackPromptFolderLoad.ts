@@ -12,11 +12,10 @@ export type TanstackLoadPromptFolderInitialWireRequest = {
   payload: TanstackLoadPromptFolderInitialPayload
 }
 
-export type TanstackLoadPromptFolderInitialSuccess = {
-  promptFolder: TanstackRevisionEnvelope<TanstackPromptFolder>
-  prompts: Array<TanstackRevisionEnvelope<TanstackPrompt>>
-}
-
 export type TanstackLoadPromptFolderInitialResult =
-  | ({ success: true } & TanstackLoadPromptFolderInitialSuccess)
+  | {
+      success: true
+      promptFolder: TanstackRevisionEnvelope<TanstackPromptFolder>
+      prompts: Array<TanstackRevisionEnvelope<TanstackPrompt>>
+    }
   | { success: false; error: string }

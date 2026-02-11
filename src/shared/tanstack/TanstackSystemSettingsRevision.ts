@@ -28,10 +28,8 @@ export type TanstackUpdateSystemSettingsRevisionRequest = TanstackMutationReques
   TanstackSystemSettingsRevisionPayload
 >
 
-export type TanstackSystemSettingsRevisionData = TanstackRevisionEnvelope<TanstackSystemSettings>
-
 export type TanstackSystemSettingsRevisionResponsePayload = {
-  systemSettings: TanstackSystemSettingsRevisionData
+  systemSettings: TanstackRevisionEnvelope<TanstackSystemSettings>
 }
 
 export type TanstackUpdateSystemSettingsRevisionResult =

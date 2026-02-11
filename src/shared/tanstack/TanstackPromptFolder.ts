@@ -1,4 +1,3 @@
-// Field names intentionally match UpdatedPromptFolderData during migration.
 export interface TanstackPromptFolder {
   id: string
   folderName: string

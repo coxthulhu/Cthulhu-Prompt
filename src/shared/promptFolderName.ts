@@ -28,18 +28,16 @@ const RESERVED_NAMES = new Set([
 
 const MAX_FOLDER_NAME_LENGTH = 100
 
-export type FolderNameValidation = { isValid: boolean; errorMessage?: string }
+type FolderNameValidation = { isValid: boolean; errorMessage?: string }
 
 export const sanitizePromptFolderName = (name: string): string => name.replace(/\s+/g, '')
 
-export type NormalizedPromptFolderName = {
+type NormalizedPromptFolderName = {
   displayName: string
   folderName: string
 }
 
-export const normalizePromptFolderDisplayName = (
-  displayName: string
-): NormalizedPromptFolderName => {
+const normalizePromptFolderDisplayName = (displayName: string): NormalizedPromptFolderName => {
   const trimmedDisplayName = displayName.trim()
   return {
     displayName: trimmedDisplayName,
@@ -86,7 +84,7 @@ export const validatePromptFolderName = (name: string): FolderNameValidation => 
   return { isValid: true }
 }
 
-export type PreparedPromptFolderName = NormalizedPromptFolderName & {
+type PreparedPromptFolderName = NormalizedPromptFolderName & {
   validation: FolderNameValidation
 }
 

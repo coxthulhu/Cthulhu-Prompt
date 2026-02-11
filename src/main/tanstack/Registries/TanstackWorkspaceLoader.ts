@@ -1,9 +1,6 @@
 import * as path from 'path'
-import type {
-  TanstackLoadWorkspaceByPathResult,
-  TanstackLoadWorkspaceByPathSuccess
-} from '@shared/tanstack/TanstackWorkspaceLoad'
-import { isTanstackWorkspaceRootPath } from '@shared/tanstack/TanstackWorkspacePath'
+import type { TanstackLoadWorkspaceByPathResult } from '@shared/tanstack/TanstackWorkspaceLoad'
+import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../../fs-provider'
 import { tanstackRevisions } from './TanstackRevisions'
 import {
@@ -15,9 +12,13 @@ import { readTanstackPromptFolders, readTanstackWorkspaceId } from '../DataAcces
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
+type TanstackWorkspaceLoadPayload = Omit<
+  Extract<TanstackLoadWorkspaceByPathResult, { success: true }>,
+  'success'
+>
 
 const isTanstackWorkspacePathValid = (workspacePath: string): boolean => {
-  if (isTanstackWorkspaceRootPath(workspacePath)) {
+  if (isWorkspaceRootPath(workspacePath)) {
     return false
   }
 
@@ -30,7 +31,7 @@ const isTanstackWorkspacePathValid = (workspacePath: string): boolean => {
 
 const buildTanstackWorkspaceLoadSuccess = (
   workspacePath: string
-): TanstackLoadWorkspaceByPathSuccess => {
+): TanstackWorkspaceLoadPayload => {
   const workspaceId = readTanstackWorkspaceId(workspacePath)
   const promptFolders = readTanstackPromptFolders(workspacePath)
 

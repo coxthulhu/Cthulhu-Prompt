@@ -11,10 +11,8 @@ export type TanstackPromptRevisionPayload = {
 
 export type TanstackUpdatePromptRevisionRequest = TanstackMutationRequest<TanstackPromptRevisionPayload>
 
-export type TanstackPromptRevisionData = TanstackRevisionEnvelope<TanstackPrompt>
-
 export type TanstackPromptRevisionResponsePayload = {
-  prompt: TanstackPromptRevisionData
+  prompt: TanstackRevisionEnvelope<TanstackPrompt>
 }
 
 export type TanstackUpdatePromptRevisionResult =

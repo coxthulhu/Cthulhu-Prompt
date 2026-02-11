@@ -11,11 +11,10 @@ export type TanstackLoadWorkspaceByPathWireRequest = {
   payload: TanstackLoadWorkspaceByPathRequest
 }
 
-export type TanstackLoadWorkspaceByPathSuccess = {
-  workspace: TanstackRevisionEnvelope<TanstackWorkspace>
-  promptFolders: Array<TanstackRevisionEnvelope<TanstackPromptFolder>>
-}
-
 export type TanstackLoadWorkspaceByPathResult =
-  | ({ success: true } & TanstackLoadWorkspaceByPathSuccess)
+  | {
+      success: true
+      workspace: TanstackRevisionEnvelope<TanstackWorkspace>
+      promptFolders: Array<TanstackRevisionEnvelope<TanstackPromptFolder>>
+    }
   | { success: false; error: string }
