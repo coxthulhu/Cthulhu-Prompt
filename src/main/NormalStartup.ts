@@ -3,9 +3,7 @@ import { basename, join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
-import { WorkspaceManager } from './workspace'
-import { PromptAPI } from './prompt-api'
-import { setupUpdatedDataHandlers } from './data'
+import { checkFolderExists, setupWorkspaceDialogHandlers } from './workspaceDialog'
 import { TanstackSystemSettingsDataAccess } from './tanstack/DataAccess/TanstackSystemSettingsDataAccess'
 import { tanstackRevisions } from './tanstack/Registries/TanstackRevisions'
 import { setupTanstackWorkspaceMutationHandlers } from './tanstack/Mutations/TanstackWorkspaceMutations'
@@ -28,7 +26,7 @@ function resolveDefaultDevWorkspacePath(): string | null {
     const currentDir = process.cwd()
     const devWorkspacePath = resolve(currentDir, '..', 'CthulhuPromptTest')
 
-    return WorkspaceManager.checkFolderExists(devWorkspacePath) ? devWorkspacePath : null
+    return checkFolderExists(devWorkspacePath) ? devWorkspacePath : null
   } catch (error) {
     console.error('Error resolving dev workspace path:', error)
     return null
@@ -193,14 +191,8 @@ export function startupNormally(): void {
       optimizer.watchWindowShortcuts(window)
     })
 
-    // Setup workspace IPC handlers
-    WorkspaceManager.setupIpcHandlers()
-
-    // Setup prompt API handlers
-    PromptAPI.setupIpcHandlers()
-
-    // Setup data IPC handlers.
-    setupUpdatedDataHandlers()
+    // Setup workspace dialog IPC handlers used by the home screen.
+    setupWorkspaceDialogHandlers()
     setupTanstackSystemSettingsQueryHandlers()
     setupTanstackSystemSettingsMutationHandlers()
     setupTanstackWorkspaceQueryHandlers()

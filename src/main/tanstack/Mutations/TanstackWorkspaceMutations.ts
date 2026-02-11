@@ -13,7 +13,6 @@ import {
 } from '../IpcFramework/TanstackIpcValidation'
 import { runTanstackMutationIpcRequest } from '../IpcFramework/TanstackIpcRequest'
 import { createTanstackWorkspace } from '../DataAccess/TanstackWorkspaceDataAccess'
-import { setSelectedTanstackWorkspaceId } from '../Registries/TanstackWorkspaceRegistry'
 
 type TanstackCreateWorkspaceMutationResult =
   | { success: true }
@@ -53,7 +52,6 @@ export const setupTanstackWorkspaceMutationHandlers = (): void => {
         TanstackCloseWorkspaceWireRequest,
         TanstackCloseWorkspaceMutationResult
       >(request, parseTanstackCloseWorkspaceRequest, async () => {
-        setSelectedTanstackWorkspaceId(null)
         return { success: true }
       })
     }

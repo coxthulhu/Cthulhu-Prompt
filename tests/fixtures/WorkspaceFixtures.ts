@@ -5,7 +5,22 @@ import {
   VIRTUAL_FIND_MARKER,
   virtualFindPromptId
 } from '../helpers/VirtualFindTestConstants'
-import { createPromptFolderConfig } from '../../src/main/data/diskTypes'
+
+type PromptFolderConfigFile = {
+  foldername: string
+  promptFolderId: string
+  promptCount: number
+  folderDescription: string
+}
+
+const createPromptFolderConfig = (
+  foldername: string,
+  promptCount: number,
+  promptFolderId: string,
+  folderDescription: string = ''
+): PromptFolderConfigFile => {
+  return { foldername, promptFolderId, promptCount, folderDescription }
+}
 
 /**
  * Configuration for creating a prompt folder

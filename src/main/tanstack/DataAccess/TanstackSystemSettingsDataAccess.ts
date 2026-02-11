@@ -6,7 +6,11 @@ import {
   normalizeTanstackSystemSettings,
   type TanstackSystemSettings
 } from '@shared/tanstack/TanstackSystemSettings'
-import type { SystemSettingsFile } from '../../data/diskTypes'
+
+type SystemSettingsFile = {
+  promptFontSize: number
+  promptEditorMinLines: number
+}
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 

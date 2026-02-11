@@ -9,8 +9,7 @@ import { tanstackRevisions } from './TanstackRevisions'
 import {
   registerTanstackPrompts,
   registerTanstackPromptFolders,
-  registerTanstackWorkspace,
-  setSelectedTanstackWorkspaceId
+  registerTanstackWorkspace
 } from './TanstackWorkspaceRegistry'
 import { readTanstackPromptFolders, readTanstackWorkspaceId } from '../DataAccess/TanstackWorkspaceReads'
 
@@ -78,20 +77,16 @@ export const loadTanstackWorkspaceByPath = async (
 ): Promise<TanstackLoadWorkspaceByPathResult> => {
   try {
     if (!isTanstackWorkspacePathValid(workspacePath)) {
-      setSelectedTanstackWorkspaceId(null)
       return { success: false, error: 'Invalid workspace path' }
     }
 
     const payload = buildTanstackWorkspaceLoadSuccess(workspacePath)
-    // Side effect: store the selected TanStack workspace ID only after the load succeeds.
-    setSelectedTanstackWorkspaceId(payload.workspace.id)
 
     return {
       success: true,
       ...payload
     }
   } catch (error) {
-    setSelectedTanstackWorkspaceId(null)
     const message = error instanceof Error ? error.message : String(error)
     return { success: false, error: message || 'Failed to load workspace by path' }
   }
