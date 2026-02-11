@@ -116,10 +116,6 @@ export const getTanstackPromptDraftState = (promptId: string): TanstackPromptDra
   return draftEntriesByPromptId.get(promptId)?.state ?? null
 }
 
-export const getTanstackPromptAutosaveDraft = (promptId: string): AutosaveDraft | null => {
-  return draftEntriesByPromptId.get(promptId)?.autosaveDraft ?? null
-}
-
 export const setTanstackPromptDraftTitle = (promptId: string, title: string): void => {
   const entry = draftEntriesByPromptId.get(promptId)
   if (!entry) return
@@ -136,19 +132,6 @@ export const setTanstackPromptDraftText = (promptId: string, promptText: string)
   entry.state.draftSnapshot.promptText = promptText
   entry.state.saveError = null
   entry.markDirtyAndScheduleAutosave()
-}
-
-export const saveTanstackPromptDraftNow = async (promptId: string): Promise<void> => {
-  const entry = draftEntriesByPromptId.get(promptId)
-  if (!entry) return
-  await entry.saveNow()
-}
-
-export const flushTanstackPromptAutosave = async (promptId: string): Promise<void> => {
-  const entry = draftEntriesByPromptId.get(promptId)
-  if (!entry) return
-  clearAutosaveTimeout(entry.autosaveDraft)
-  await entry.saveNow()
 }
 
 export const flushTanstackPromptDraftAutosaves = async (): Promise<void> => {

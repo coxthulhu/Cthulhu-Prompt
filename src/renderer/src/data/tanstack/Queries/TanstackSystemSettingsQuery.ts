@@ -1,7 +1,4 @@
-import type {
-  TanstackSystemSettings,
-  TanstackSystemSettingsSnapshot
-} from '@shared/tanstack/TanstackSystemSettings'
+import type { TanstackSystemSettingsSnapshot } from '@shared/tanstack/TanstackSystemSettings'
 import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
 import { tanstackSystemSettingsCollection } from '../Collections/TanstackSystemSettingsCollection'
 
@@ -15,8 +12,4 @@ export const applyTanstackSystemSettingsSnapshot = (
     revision: snapshot.revision,
     data: snapshot.settings
   })
-}
-
-export const getTanstackSystemSettings = (): TanstackSystemSettings | null => {
-  return tanstackSystemSettingsCollection.get(TANSTACK_SYSTEM_SETTINGS_ID) ?? null
 }

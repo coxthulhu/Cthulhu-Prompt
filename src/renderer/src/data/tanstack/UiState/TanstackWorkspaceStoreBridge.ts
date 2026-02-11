@@ -1,4 +1,3 @@
-import { setActiveWorkspacePath } from '@renderer/data/workspace/WorkspaceStore.svelte.ts'
 import { flushTanstackSystemSettingsAutosaves } from './TanstackSystemSettingsAutosave'
 import {
   clearTanstackPromptFolderDraftStore,
@@ -29,7 +28,7 @@ export const switchTanstackWorkspaceStoreBridge = async (
     ])
 
     currentWorkspacePath = nextWorkspacePath
-    await setActiveWorkspacePath(nextWorkspacePath)
+    // Side effect: reset workspace-scoped draft/screen state after the workspace path changes.
     clearTanstackPromptFolderDraftStore()
     clearTanstackPromptDraftStore()
     clearTanstackPromptFolderScreenState()

@@ -97,10 +97,6 @@ export const getTanstackPromptFolderDraftState = (
   return draftEntriesByPromptFolderId.get(promptFolderId)?.state ?? null
 }
 
-export const getTanstackPromptFolderAutosaveDraft = (promptFolderId: string): AutosaveDraft | null => {
-  return draftEntriesByPromptFolderId.get(promptFolderId)?.autosaveDraft ?? null
-}
-
 export const setTanstackPromptFolderDraftDescription = (
   promptFolderId: string,
   folderDescription: string
@@ -116,36 +112,12 @@ export const setTanstackPromptFolderDraftDescription = (
   entry.markDirtyAndScheduleAutosave()
 }
 
-export const saveTanstackPromptFolderDraftNow = async (promptFolderId: string): Promise<void> => {
-  const entry = draftEntriesByPromptFolderId.get(promptFolderId)
-  if (!entry) return
-  await entry.saveNow()
-}
-
-export const flushTanstackPromptFolderAutosave = async (promptFolderId: string): Promise<void> => {
-  const entry = draftEntriesByPromptFolderId.get(promptFolderId)
-  if (!entry) return
-  clearAutosaveTimeout(entry.autosaveDraft)
-  await entry.saveNow()
-}
-
 export const flushTanstackPromptFolderDraftAutosaves = async (): Promise<void> => {
   const tasks = Array.from(draftEntriesByPromptFolderId.values(), (entry) => {
     clearAutosaveTimeout(entry.autosaveDraft)
     return entry.saveNow()
   })
   await Promise.allSettled(tasks)
-}
-
-export const removeTanstackPromptFolderDraft = (promptFolderId: string): void => {
-  const entry = draftEntriesByPromptFolderId.get(promptFolderId)
-
-  if (entry) {
-    clearAutosaveTimeout(entry.autosaveDraft)
-  }
-
-  draftEntriesByPromptFolderId.delete(promptFolderId)
-  lastSyncedDescriptionsByPromptFolderId.delete(promptFolderId)
 }
 
 export const clearTanstackPromptFolderDraftStore = (): void => {
