@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import type {
   LoadPromptFolderInitialResult,
   LoadPromptFolderInitialWireRequest
-} from '@shared/PromptFolderLoad'
+} from '@shared/PromptFolder'
 import {
   readPromptFolder,
   readPrompts

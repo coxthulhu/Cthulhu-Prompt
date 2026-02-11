@@ -1,14 +1,12 @@
 import type {
-  CreatePromptFolderResponsePayload,
   CreatePromptFolderRequest,
-  CreatePromptFolderResult
-} from '@shared/PromptFolderCreate'
-import type { PromptFolder } from '@shared/PromptFolder'
-import type {
+  CreatePromptFolderResponsePayload,
+  CreatePromptFolderResult,
+  PromptFolder,
   PromptFolderRevisionResponsePayload,
   UpdatePromptFolderRevisionRequest,
   UpdatePromptFolderRevisionResult
-} from '@shared/PromptFolderRevision'
+} from '@shared/PromptFolder'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'

@@ -1,7 +1,7 @@
 import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
-} from '@shared/PromptFolderLoad'
+} from '@shared/PromptFolder'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'

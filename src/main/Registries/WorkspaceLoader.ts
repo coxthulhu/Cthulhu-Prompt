@@ -1,5 +1,5 @@
 import * as path from 'path'
-import type { LoadWorkspaceByPathResult } from '@shared/WorkspaceLoad'
+import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import { revisions } from './Revisions'

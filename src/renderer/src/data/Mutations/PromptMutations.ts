@@ -1,19 +1,15 @@
-import type { Prompt } from '@shared/Prompt'
 import type {
   CreatePromptRequest,
   CreatePromptResponsePayload,
-  CreatePromptResult
-} from '@shared/PromptCreate'
-import type {
+  CreatePromptResult,
   DeletePromptRequest,
   DeletePromptResponsePayload,
-  DeletePromptResult
-} from '@shared/PromptDelete'
-import type {
+  DeletePromptResult,
+  Prompt,
   PromptRevisionResponsePayload,
   UpdatePromptRevisionRequest,
   UpdatePromptRevisionResult
-} from '@shared/PromptRevision'
+} from '@shared/Prompt'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'

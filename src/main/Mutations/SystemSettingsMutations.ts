@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron'
-import type {
-  MutationResult,
-  MutationWireRequest,
-  SystemSettingsRevisionResponsePayload,
-  UpdateSystemSettingsRevisionRequest,
-  UpdateSystemSettingsRevisionResult
-} from '@shared/SystemSettingsRevision'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import {
+  SYSTEM_SETTINGS_ID,
+  type MutationResult,
+  type MutationWireRequest,
+  type SystemSettingsRevisionResponsePayload,
+  type UpdateSystemSettingsRevisionRequest,
+  type UpdateSystemSettingsRevisionResult
+} from '@shared/SystemSettings'
 import { SystemSettingsDataAccess } from '../DataAccess/SystemSettingsDataAccess'
 import { parseUpdateSystemSettingsRevisionRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'

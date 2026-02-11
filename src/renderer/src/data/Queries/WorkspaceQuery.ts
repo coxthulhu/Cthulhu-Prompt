@@ -1,7 +1,7 @@
 import type {
   LoadWorkspaceByPathRequest,
   LoadWorkspaceByPathResult
-} from '@shared/WorkspaceLoad'
+} from '@shared/Workspace'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'

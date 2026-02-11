@@ -4,21 +4,19 @@ import type { Workspace } from '@shared/Workspace'
 import type {
   CreatePromptFolderResponsePayload,
   CreatePromptFolderResult,
-  CreatePromptFolderWireRequest
-} from '@shared/PromptFolderCreate'
-import type {
+  CreatePromptFolderWireRequest,
   PromptFolderRevisionResponsePayload,
   UpdatePromptFolderRevisionRequest,
   UpdatePromptFolderRevisionResult
-} from '@shared/PromptFolderRevision'
+} from '@shared/PromptFolder'
+import type {
+  MutationResult,
+  MutationWireRequest
+} from '@shared/SystemSettings'
 import type {
   PromptFolderConfigFile,
   PromptsFile
 } from '../DiskTypes/WorkspaceDiskTypes'
-import type {
-  MutationResult,
-  MutationWireRequest
-} from '@shared/SystemSettingsRevision'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { getFs } from '../fs-provider'
 import { readPromptFolder } from '../DataAccess/WorkspaceReads'

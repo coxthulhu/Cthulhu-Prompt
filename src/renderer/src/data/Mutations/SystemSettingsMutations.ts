@@ -1,10 +1,10 @@
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
-import type { SystemSettings } from '@shared/SystemSettings'
-import type {
-  SystemSettingsRevisionResponsePayload,
-  UpdateSystemSettingsRevisionRequest,
-  UpdateSystemSettingsRevisionResult
-} from '@shared/SystemSettingsRevision'
+import {
+  SYSTEM_SETTINGS_ID,
+  type SystemSettings,
+  type SystemSettingsRevisionResponsePayload,
+  type UpdateSystemSettingsRevisionRequest,
+  type UpdateSystemSettingsRevisionResult
+} from '@shared/SystemSettings'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 

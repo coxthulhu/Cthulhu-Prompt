@@ -1,12 +1,10 @@
 import { ipcMain } from 'electron'
 import type {
   CloseWorkspaceResult,
-  CloseWorkspaceWireRequest
-} from '@shared/WorkspaceClose'
-import type {
+  CloseWorkspaceWireRequest,
   CreateWorkspaceResponse,
   CreateWorkspaceWireRequest
-} from '@shared/WorkspaceCreate'
+} from '@shared/Workspace'
 import {
   parseCloseWorkspaceRequest,
   parseCreateWorkspaceRequest

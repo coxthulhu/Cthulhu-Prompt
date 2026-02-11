@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import type {
   LoadWorkspaceByPathResult,
   LoadWorkspaceByPathWireRequest
-} from '@shared/WorkspaceLoad'
+} from '@shared/Workspace'
 import { parseLoadWorkspaceByPathRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { loadWorkspaceByPath } from '../Registries/WorkspaceLoader'

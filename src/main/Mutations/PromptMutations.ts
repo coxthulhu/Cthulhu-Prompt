@@ -1,25 +1,21 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
-import type { Prompt } from '@shared/Prompt'
 import type {
   CreatePromptResponsePayload,
   CreatePromptResult,
-  CreatePromptWireRequest
-} from '@shared/PromptCreate'
-import type {
+  CreatePromptWireRequest,
   DeletePromptResponsePayload,
   DeletePromptResult,
-  DeletePromptWireRequest
-} from '@shared/PromptDelete'
-import type {
+  DeletePromptWireRequest,
+  Prompt,
   PromptRevisionResponsePayload,
   UpdatePromptRevisionRequest,
   UpdatePromptRevisionResult
-} from '@shared/PromptRevision'
+} from '@shared/Prompt'
 import type {
   MutationResult,
   MutationWireRequest
-} from '@shared/SystemSettingsRevision'
+} from '@shared/SystemSettings'
 import type {
   PromptFolderConfigFile,
   PromptsFile

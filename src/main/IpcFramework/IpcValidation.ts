@@ -1,40 +1,34 @@
 import type {
   CreatePromptPayload,
-  CreatePromptWireRequest
-} from '@shared/PromptCreate'
-import type {
+  CreatePromptWireRequest,
   DeletePromptPayload,
-  DeletePromptWireRequest
-} from '@shared/PromptDelete'
-import type {
+  DeletePromptWireRequest,
+  Prompt,
   PromptRevisionPayload,
   UpdatePromptRevisionRequest
-} from '@shared/PromptRevision'
-import type {
-  PromptFolderRevisionPayload,
-  UpdatePromptFolderRevisionRequest
-} from '@shared/PromptFolderRevision'
+} from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
-  CreatePromptFolderWireRequest
-} from '@shared/PromptFolderCreate'
-import type { Prompt } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
+  CreatePromptFolderWireRequest,
+  LoadPromptFolderInitialWireRequest,
+  PromptFolder,
+  PromptFolderRevisionPayload,
+  UpdatePromptFolderRevisionRequest
+} from '@shared/PromptFolder'
 import type { RevisionPayloadEntity } from '@shared/Revision'
-import type { SystemSettings } from '@shared/SystemSettings'
 import type {
+  MutationWireRequest,
+  SystemSettings,
   SystemSettingsRevisionPayload,
-  UpdateSystemSettingsRevisionRequest,
-  MutationWireRequest
-} from '@shared/SystemSettingsRevision'
-import type { LoadPromptFolderInitialWireRequest } from '@shared/PromptFolderLoad'
-import type { Workspace } from '@shared/Workspace'
-import type { CloseWorkspaceWireRequest } from '@shared/WorkspaceClose'
+  UpdateSystemSettingsRevisionRequest
+} from '@shared/SystemSettings'
 import type {
+  CloseWorkspaceWireRequest,
   CreateWorkspacePayload,
-  CreateWorkspaceWireRequest
-} from '@shared/WorkspaceCreate'
-import type { LoadWorkspaceByPathWireRequest } from '@shared/WorkspaceLoad'
+  CreateWorkspaceWireRequest,
+  LoadWorkspaceByPathWireRequest,
+  Workspace
+} from '@shared/Workspace'
 
 type Parser<T> = (value: unknown) => T | null
 

@@ -1,8 +1,8 @@
 import type {
+  CloseWorkspaceResult,
   CreateWorkspacePayload,
   CreateWorkspaceResponse
-} from '@shared/WorkspaceCreate'
-import type { CloseWorkspaceResult } from '@shared/WorkspaceClose'
+} from '@shared/Workspace'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvoke, ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { promptCollection } from '../Collections/PromptCollection'

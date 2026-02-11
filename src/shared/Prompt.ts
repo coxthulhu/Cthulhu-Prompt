@@ -1,3 +1,11 @@
+import type { PromptFolder } from './PromptFolder'
+import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type {
+  MutationRequest,
+  MutationResultWithRequestId,
+  MutationWireRequest
+} from './SystemSettings'
+
 export interface Prompt {
   id: string
   title: string
@@ -6,3 +14,52 @@ export interface Prompt {
   promptText: string
   promptFolderCount: number
 }
+
+export type PromptRevisionPayload = {
+  prompt: RevisionPayloadEntity<Prompt>
+}
+
+export type UpdatePromptRevisionRequest = MutationRequest<PromptRevisionPayload>
+
+export type PromptRevisionResponsePayload = {
+  prompt: RevisionEnvelope<Prompt>
+}
+
+export type UpdatePromptRevisionResult =
+  MutationResultWithRequestId<PromptRevisionResponsePayload>
+
+export type CreatePromptPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+  prompt: RevisionPayloadEntity<Prompt>
+  previousPromptId: string | null
+}
+
+export type CreatePromptRequest = MutationRequest<CreatePromptPayload>
+
+export type CreatePromptWireRequest = MutationWireRequest<CreatePromptRequest>
+
+export type CreatePromptResponsePayload = {
+  promptFolder: RevisionEnvelope<PromptFolder>
+  prompt?: RevisionEnvelope<Prompt>
+}
+
+export type CreatePromptResult = MutationResultWithRequestId<
+  CreatePromptResponsePayload
+>
+
+export type DeletePromptPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+  prompt: RevisionPayloadEntity<Prompt>
+}
+
+export type DeletePromptRequest = MutationRequest<DeletePromptPayload>
+
+export type DeletePromptWireRequest = MutationWireRequest<DeletePromptRequest>
+
+export type DeletePromptResponsePayload = {
+  promptFolder: RevisionEnvelope<PromptFolder>
+}
+
+export type DeletePromptResult = MutationResultWithRequestId<
+  DeletePromptResponsePayload
+>
