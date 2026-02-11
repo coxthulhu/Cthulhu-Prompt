@@ -3,7 +3,7 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
-  import { getTanstackPromptFolderScreenPromptData } from '@renderer/data/tanstack/UiState/TanstackPromptFolderScreenData.svelte.ts'
+  import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     buildPromptFolderFindCounts,
     buildSearchInputs,
@@ -134,7 +134,7 @@
 
   const recordSelectionFromMatch = (match: PromptFolderFindMatch) => {
     if (trimmedQuery.length === 0) return
-    const promptData = getTanstackPromptFolderScreenPromptData(match.promptId)
+    const promptData = getPromptFolderScreenPromptData(match.promptId)
     const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
     const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
     const matchRange = findMatchRange(targetText, trimmedQuery, matchIndex)
@@ -172,7 +172,7 @@
   }
 
   const findFirstMatchInPrompt = (promptId: string) => {
-    const promptData = getTanstackPromptFolderScreenPromptData(promptId)
+    const promptData = getPromptFolderScreenPromptData(promptId)
     const titleIndex = findMatchIndexAtOrAfter(promptData.draft.title, trimmedQuery, 0)
     if (titleIndex != null) {
       return { kind: 'title' as const, matchIndex: titleIndex }
@@ -189,7 +189,7 @@
     const startIndex = promptIds.indexOf(anchor.promptId)
     if (startIndex < 0) return null
 
-    const promptData = getTanstackPromptFolderScreenPromptData(anchor.promptId)
+    const promptData = getPromptFolderScreenPromptData(anchor.promptId)
     if (anchor.kind === 'title') {
       const titleIndex = findMatchIndexAtOrAfter(
         promptData.draft.title,
@@ -230,7 +230,7 @@
   }
 
   const findLastMatchInPrompt = (promptId: string) => {
-    const promptData = getTanstackPromptFolderScreenPromptData(promptId)
+    const promptData = getPromptFolderScreenPromptData(promptId)
     const bodyIndex = findMatchIndexBefore(
       promptData.draft.text,
       trimmedQuery,
@@ -255,7 +255,7 @@
     const startIndex = promptIds.indexOf(anchor.promptId)
     if (startIndex < 0) return null
 
-    const promptData = getTanstackPromptFolderScreenPromptData(anchor.promptId)
+    const promptData = getPromptFolderScreenPromptData(anchor.promptId)
     if (anchor.kind === 'body') {
       const bodyIndex = findMatchIndexBefore(
         promptData.draft.text,

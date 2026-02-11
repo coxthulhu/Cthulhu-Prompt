@@ -1,8 +1,8 @@
 import {
   DEFAULT_SYSTEM_SETTINGS,
-  normalizeTanstackSystemSettings,
-  type TanstackSystemSettings
-} from './tanstack/TanstackSystemSettings'
+  normalizeSystemSettings,
+  type SystemSettings
+} from './SystemSettings'
 
 export type RuntimeEnvironment = '' | 'DEV' | 'PLAYWRIGHT'
 
@@ -10,7 +10,7 @@ export type RuntimeConfig = {
   devWorkspacePath: string | null
   executionFolderName: string | null
   environment: RuntimeEnvironment
-  systemSettings: TanstackSystemSettings
+  systemSettings: SystemSettings
   systemSettingsRevision: number
 }
 
@@ -32,9 +32,9 @@ export const normalizeRuntimeEnvironment = (
   return ''
 }
 
-export const normalizeRuntimeSystemSettings = (value: unknown): TanstackSystemSettings => {
+export const normalizeRuntimeSystemSettings = (value: unknown): SystemSettings => {
   if (value && typeof value === 'object') {
-    return normalizeTanstackSystemSettings(value as Record<string, unknown>)
+    return normalizeSystemSettings(value as Record<string, unknown>)
   }
 
   return DEFAULT_SYSTEM_SETTINGS

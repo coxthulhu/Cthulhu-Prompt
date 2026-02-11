@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { screens, type ScreenId } from '@renderer/app/screens'
-  import { getTanstackWorkspaceSelectionContext } from '@renderer/app/TanstackWorkspaceSelectionContext'
+  import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { Home, FolderClosed, Loader, MoreHorizontal } from 'lucide-svelte'
   import {
@@ -10,10 +10,10 @@
     DropdownMenuItem,
     DropdownMenuTrigger
   } from '@renderer/common/ui/dropdown-menu'
-  import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
-  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
-  import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
-  import type { TanstackWorkspace } from '@shared/tanstack/TanstackWorkspace'
+  import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+  import type { PromptFolder } from '@shared/PromptFolder'
+  import type { Workspace } from '@shared/Workspace'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import SidebarButton from './SidebarButton.svelte'
   import SidebarGroup from './SidebarGroup.svelte'
@@ -37,13 +37,13 @@
   }>()
 
   let openFolderMenuName = $state<string | null>(null)
-  const tanstackWorkspaceSelection = getTanstackWorkspaceSelectionContext()
-  const tanstackWorkspaceQuery = useLiveQuery((q) =>
-    q.from({ workspace: tanstackWorkspaceCollection })
-  ) as { data: TanstackWorkspace[]; isLoading: boolean }
-  const tanstackPromptFolderQuery = useLiveQuery((q) =>
-    q.from({ promptFolder: tanstackPromptFolderCollection })
-  ) as { data: TanstackPromptFolder[]; isLoading: boolean }
+  const workspaceSelection = getWorkspaceSelectionContext()
+  const workspaceQuery = useLiveQuery((q) =>
+    q.from({ workspace: workspaceCollection })
+  ) as { data: Workspace[]; isLoading: boolean }
+  const promptFolderQuery = useLiveQuery((q) =>
+    q.from({ promptFolder: promptFolderCollection })
+  ) as { data: PromptFolder[]; isLoading: boolean }
 
   type NavItem = {
     id: ScreenId
@@ -66,29 +66,29 @@
   )
 
   const selectedWorkspace = $derived.by(() => {
-    const selectedWorkspaceId = tanstackWorkspaceSelection.selectedWorkspaceId
+    const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
     return (
-      tanstackWorkspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
+      workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
     )
   })
 
-  const promptFolders = $derived.by((): TanstackPromptFolder[] => {
+  const promptFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) {
       return []
     }
 
     const promptFolderById = new Map(
-      tanstackPromptFolderQuery.data.map((promptFolder) => [promptFolder.id, promptFolder])
+      promptFolderQuery.data.map((promptFolder) => [promptFolder.id, promptFolder])
     )
 
     return selectedWorkspace.promptFolderIds
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
-      .filter((promptFolder): promptFolder is TanstackPromptFolder => promptFolder !== undefined)
+      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
 
   const areFoldersLoading = $derived(
-    Boolean(tanstackWorkspaceSelection.selectedWorkspaceId) &&
-      (tanstackWorkspaceQuery.isLoading || tanstackPromptFolderQuery.isLoading)
+    Boolean(workspaceSelection.selectedWorkspaceId) &&
+      (workspaceQuery.isLoading || promptFolderQuery.isLoading)
   )
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     !isWorkspaceReady

@@ -13,35 +13,35 @@
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
-  import { tanstackSystemSettingsCollection } from '@renderer/data/tanstack/Collections/TanstackSystemSettingsCollection'
-  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
-  import { syncTanstackSystemSettingsDraft } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
-  import { switchTanstackWorkspaceStoreBridge } from '@renderer/data/tanstack/UiState/TanstackWorkspaceStoreBridge'
+  import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
+  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+  import { syncSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
+  import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
-    getTanstackSelectedWorkspaceId,
-    setTanstackSelectedWorkspaceId
-  } from '@renderer/data/tanstack/UiState/TanstackWorkspaceSelection.svelte.ts'
-  import { loadTanstackWorkspaceByPath } from '@renderer/data/tanstack/Queries/TanstackWorkspaceQuery'
+    getSelectedWorkspaceId,
+    setSelectedWorkspaceId
+  } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
+  import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
-    closeTanstackWorkspace,
-    createTanstackWorkspace
-  } from '@renderer/data/tanstack/Mutations/TanstackWorkspaceMutations'
+    closeWorkspace as closeWorkspaceMutation,
+    createWorkspace as createWorkspaceMutation
+  } from '@renderer/data/Mutations/WorkspaceMutations'
   import {
-    setTanstackWorkspaceSelectionContext,
-    type TanstackWorkspaceSelectionContext
-  } from './TanstackWorkspaceSelectionContext'
+    setWorkspaceSelectionContext,
+    type WorkspaceSelectionContext
+  } from './WorkspaceSelectionContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
-  import type { TanstackSystemSettings } from '@shared/tanstack/TanstackSystemSettings'
-  import type { TanstackWorkspace } from '@shared/tanstack/TanstackWorkspace'
+  import type { SystemSettings } from '@shared/SystemSettings'
+  import type { Workspace } from '@shared/Workspace'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsQuery = useLiveQuery((q) =>
-    q.from({ settings: tanstackSystemSettingsCollection }).findOne()
-  ) as { data: TanstackSystemSettings }
+    q.from({ settings: systemSettingsCollection }).findOne()
+  ) as { data: SystemSettings }
   const systemSettings: SystemSettingsContext = {
     get promptFontSize() {
       return systemSettingsQuery.data.promptFontSize
@@ -50,34 +50,34 @@
       return systemSettingsQuery.data.promptEditorMinLines
     }
   }
-  const tanstackWorkspaceSelection: TanstackWorkspaceSelectionContext = {
+  const workspaceSelection: WorkspaceSelectionContext = {
     get selectedWorkspaceId() {
-      return getTanstackSelectedWorkspaceId()
+      return getSelectedWorkspaceId()
     }
   }
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const windowControls = window.windowControls
 
-  const tanstackWorkspaceQuery = useLiveQuery((q) =>
-    q.from({ workspace: tanstackWorkspaceCollection })
-  ) as { data: TanstackWorkspace[]; isLoading: boolean }
+  const workspaceQuery = useLiveQuery((q) =>
+    q.from({ workspace: workspaceCollection })
+  ) as { data: Workspace[]; isLoading: boolean }
 
   setSystemSettingsContext(systemSettings)
-  setTanstackWorkspaceSelectionContext(tanstackWorkspaceSelection)
+  setWorkspaceSelectionContext(workspaceSelection)
 
   let activeScreen = $state<ScreenId>('home')
   const selectedWorkspace = $derived.by(() => {
-    const selectedWorkspaceId = getTanstackSelectedWorkspaceId()
+    const selectedWorkspaceId = getSelectedWorkspaceId()
     return (
-      tanstackWorkspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
+      workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
     )
   })
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
   let selectedPromptFolderId = $state<string | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
-  const isWorkspaceLoading = $derived(workspaceActionCount > 0 || tanstackWorkspaceQuery.isLoading)
+  const isWorkspaceLoading = $derived(workspaceActionCount > 0 || workspaceQuery.isLoading)
   let hasAttemptedAutoSelect = false
   const windowTitle = $derived(
     isDevMode && executionFolderName
@@ -102,9 +102,9 @@
     workspaceActionCount -= 1
   }
 
-  // Side effect: keep the module-level TanStack settings draft synced with query-backed settings.
+  // Side effect: keep the module-level  settings draft synced with query-backed settings.
   $effect(() => {
-    syncTanstackSystemSettingsDraft({
+    syncSystemSettingsDraft({
       promptFontSize,
       promptEditorMinLines
     })
@@ -116,19 +116,19 @@
 
   const resetWorkspaceState = async () => {
     try {
-      await closeTanstackWorkspace()
+      await closeWorkspaceMutation()
     } catch {
       // Side effect: always continue local workspace reset even when close IPC fails.
     } finally {
-      await switchTanstackWorkspaceStoreBridge(null)
+      await switchWorkspaceStoreBridge(null)
       clearPromptFolderSelection()
     }
   }
 
   const loadWorkspaceSelection = async (path: string): Promise<void> => {
-    const workspaceId = await loadTanstackWorkspaceByPath(path)
-    setTanstackSelectedWorkspaceId(workspaceId)
-    await switchTanstackWorkspaceStoreBridge(path)
+    const workspaceId = await loadWorkspaceByPath(path)
+    setSelectedWorkspaceId(workspaceId)
+    await switchWorkspaceStoreBridge(path)
   }
 
   const isWorkspaceMissingError = (message?: string): boolean => {
@@ -170,7 +170,7 @@
     beginWorkspaceAction()
 
     try {
-      const result = await createTanstackWorkspace(path, includeExamplePrompts)
+      const result = await createWorkspaceMutation(path, includeExamplePrompts)
 
       if (result.success) {
         await loadWorkspaceSelection(path)
@@ -201,12 +201,12 @@
     beginWorkspaceAction()
 
     try {
-      await closeTanstackWorkspace()
+      await closeWorkspaceMutation()
     } catch (error) {
       const message = extractErrorMessage(error)
       logWorkspaceError('close', message)
     } finally {
-      await switchTanstackWorkspaceStoreBridge(null)
+      await switchWorkspaceStoreBridge(null)
       clearPromptFolderSelection()
       endWorkspaceAction()
     }

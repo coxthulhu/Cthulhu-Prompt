@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getTanstackPromptFolderScreenPromptData } from '@renderer/data/tanstack/UiState/TanstackPromptFolderScreenData.svelte.ts'
+  import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
@@ -69,7 +69,7 @@
   })
 
   const getPromptDisplayTitle = (promptId: string): string => {
-    const promptData = getTanstackPromptFolderScreenPromptData(promptId)
+    const promptData = getPromptFolderScreenPromptData(promptId)
     const trimmedTitle = promptData.draft.title.trim()
     return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptData.promptFolderCount}`
   }

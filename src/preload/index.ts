@@ -7,7 +7,7 @@ import {
   normalizeRuntimeSystemSettings,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
-import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
+import { DEFAULT_SYSTEM_SETTINGS } from '@shared/SystemSettings'
 
 const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
   devWorkspacePath: null,

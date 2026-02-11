@@ -4,21 +4,21 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
 import { checkFolderExists, setupWorkspaceDialogHandlers } from './workspaceDialog'
-import { TanstackSystemSettingsDataAccess } from './tanstack/DataAccess/TanstackSystemSettingsDataAccess'
-import { tanstackRevisions } from './tanstack/Registries/TanstackRevisions'
-import { setupTanstackWorkspaceMutationHandlers } from './tanstack/Mutations/TanstackWorkspaceMutations'
-import { setupTanstackPromptFolderMutationHandlers } from './tanstack/Mutations/TanstackPromptFolderMutations'
-import { setupTanstackPromptMutationHandlers } from './tanstack/Mutations/TanstackPromptMutations'
-import { setupTanstackSystemSettingsMutationHandlers } from './tanstack/Mutations/TanstackSystemSettingsMutations'
-import { setupTanstackWorkspaceQueryHandlers } from './tanstack/Queries/TanstackWorkspaceQuery'
-import { setupTanstackPromptFolderQueryHandlers } from './tanstack/Queries/TanstackPromptFolderQuery'
-import { setupIntegrationTestSystemSettingsQueryHandlers } from './IntegrationTests/TanstackSystemSettingsTestQuery'
+import { SystemSettingsDataAccess } from './DataAccess/SystemSettingsDataAccess'
+import { revisions } from './Registries/Revisions'
+import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
+import { setupPromptFolderMutationHandlers } from './Mutations/PromptFolderMutations'
+import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
+import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsMutations'
+import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
+import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
+import { setupIntegrationTestSystemSettingsQueryHandlers } from './IntegrationTests/SystemSettingsTestQuery'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
-import { TANSTACK_SYSTEM_SETTINGS_ID } from '@shared/tanstack/TanstackSystemSettings'
+import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 
 function resolveDefaultDevWorkspacePath(): string | null {
@@ -102,8 +102,8 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
       : ''
   const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
-  const systemSettings = await TanstackSystemSettingsDataAccess.loadSystemSettings()
-  const systemSettingsRevision = tanstackRevisions.systemSettings.get(TANSTACK_SYSTEM_SETTINGS_ID)
+  const systemSettings = await SystemSettingsDataAccess.loadSystemSettings()
+  const systemSettingsRevision = revisions.systemSettings.get(SYSTEM_SETTINGS_ID)
 
   return {
     devWorkspacePath,
@@ -196,12 +196,12 @@ export function startupNormally(): void {
     if (isPlaywrightEnvironment()) {
       setupIntegrationTestSystemSettingsQueryHandlers()
     }
-    setupTanstackSystemSettingsMutationHandlers()
-    setupTanstackWorkspaceQueryHandlers()
-    setupTanstackWorkspaceMutationHandlers()
-    setupTanstackPromptFolderQueryHandlers()
-    setupTanstackPromptFolderMutationHandlers()
-    setupTanstackPromptMutationHandlers()
+    setupSystemSettingsMutationHandlers()
+    setupWorkspaceQueryHandlers()
+    setupWorkspaceMutationHandlers()
+    setupPromptFolderQueryHandlers()
+    setupPromptFolderMutationHandlers()
+    setupPromptMutationHandlers()
     setupWindowControlHandlers()
 
     const runtimeConfig = await buildRuntimeConfig()

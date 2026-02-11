@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getTanstackWorkspaceSelectionContext } from '@renderer/app/TanstackWorkspaceSelectionContext'
+  import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { Plus } from 'lucide-svelte'
   import { Button } from '@renderer/common/ui/button'
   import {
@@ -11,10 +11,10 @@
     DialogTitle,
     DialogTrigger
   } from '@renderer/common/ui/dialog'
-  import { tanstackPromptFolderCollection } from '@renderer/data/tanstack/Collections/TanstackPromptFolderCollection'
-  import { tanstackWorkspaceCollection } from '@renderer/data/tanstack/Collections/TanstackWorkspaceCollection'
-  import { createTanstackPromptFolder } from '@renderer/data/tanstack/Mutations/TanstackPromptFolderMutations'
-  import type { TanstackPromptFolder } from '@shared/tanstack/TanstackPromptFolder'
+  import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+  import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
+  import type { PromptFolder } from '@shared/PromptFolder'
   import { preparePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
 
@@ -25,13 +25,13 @@
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
-    promptFolders: TanstackPromptFolder[]
+    promptFolders: PromptFolder[]
     isPromptFolderListLoading: boolean
     onCreated?: (promptFolderId: string) => void
   }>()
 
   let isDialogOpen = $state(false)
-  const tanstackWorkspaceSelection = getTanstackWorkspaceSelectionContext()
+  const workspaceSelection = getWorkspaceSelectionContext()
   let displayName = $state('')
   let submissionError = $state<string | null>(null)
   let hasInteractedWithInput = $state(false)
@@ -73,14 +73,14 @@
   }
 
   const getCreatedPromptFolderId = (workspaceId: string, folderName: string): string | null => {
-    const workspace = tanstackWorkspaceCollection.get(workspaceId)
+    const workspace = workspaceCollection.get(workspaceId)
 
     if (!workspace) {
       return null
     }
 
     for (const promptFolderId of workspace.promptFolderIds) {
-      const promptFolder = tanstackPromptFolderCollection.get(promptFolderId)
+      const promptFolder = promptFolderCollection.get(promptFolderId)
 
       if (promptFolder?.folderName === folderName) {
         return promptFolder.id
@@ -93,13 +93,13 @@
   const handleCreateFolder = async () => {
     if (!isValid) return
 
-    const selectedWorkspaceId = tanstackWorkspaceSelection.selectedWorkspaceId
+    const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
     if (!selectedWorkspaceId) return
 
     try {
       submissionError = null
       isCreatingPromptFolder = true
-      await createTanstackPromptFolder(selectedWorkspaceId, normalizedDisplayName)
+      await createPromptFolder(selectedWorkspaceId, normalizedDisplayName)
       const createdPromptFolderId = getCreatedPromptFolderId(
         selectedWorkspaceId,
         preparedName.folderName

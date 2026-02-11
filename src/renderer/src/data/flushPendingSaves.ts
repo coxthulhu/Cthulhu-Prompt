@@ -1,11 +1,11 @@
-import { flushTanstackPromptFolderDraftAutosaves } from '@renderer/data/tanstack/UiState/TanstackPromptFolderDraftStore.svelte.ts'
-import { flushTanstackPromptDraftAutosaves } from '@renderer/data/tanstack/UiState/TanstackPromptDraftStore.svelte.ts'
-import { flushTanstackSystemSettingsAutosave } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
+import { flushPromptFolderDraftAutosaves } from '@renderer/data/UiState/PromptFolderDraftStore.svelte.ts'
+import { flushPromptDraftAutosaves } from '@renderer/data/UiState/PromptDraftStore.svelte.ts'
+import { flushSystemSettingsAutosave } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
 
 export const flushPendingSaves = async (): Promise<void> => {
   await Promise.allSettled([
-    flushTanstackPromptFolderDraftAutosaves(),
-    flushTanstackPromptDraftAutosaves(),
-    flushTanstackSystemSettingsAutosave()
+    flushPromptFolderDraftAutosaves(),
+    flushPromptDraftAutosaves(),
+    flushSystemSettingsAutosave()
   ])
 }

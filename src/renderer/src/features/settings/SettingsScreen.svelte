@@ -2,22 +2,22 @@
   import { Button } from '@renderer/common/ui/button'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import {
-    flushTanstackSystemSettingsAutosave,
-    getTanstackSystemSettingsAutosaveDraft,
-    getTanstackSystemSettingsDraftState,
-    getTanstackSystemSettingsValidation,
-    saveTanstackSystemSettingsDraftNow,
-    setTanstackSystemSettingsDraftFontSizeInput,
-    setTanstackSystemSettingsDraftPromptEditorMinLinesInput
-  } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsDraftStore.svelte.ts'
+    flushSystemSettingsAutosave,
+    getSystemSettingsAutosaveDraft,
+    getSystemSettingsDraftState,
+    getSystemSettingsValidation,
+    saveSystemSettingsDraftNow,
+    setSystemSettingsDraftFontSizeInput,
+    setSystemSettingsDraftPromptEditorMinLinesInput
+  } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
   import {
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
-  } from '@renderer/data/tanstack/UiState/TanstackSystemSettingsFormat'
-  import { DEFAULT_SYSTEM_SETTINGS } from '@shared/tanstack/TanstackSystemSettings'
+  } from '@renderer/data/UiState/SystemSettingsFormat'
+  import { DEFAULT_SYSTEM_SETTINGS } from '@shared/SystemSettings'
 
-  const systemSettingsState = getTanstackSystemSettingsDraftState()
-  const autosaveDraft = getTanstackSystemSettingsAutosaveDraft()
+  const systemSettingsState = getSystemSettingsDraftState()
+  const autosaveDraft = getSystemSettingsAutosaveDraft()
   const isUpdating = $derived(autosaveDraft.saving)
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
   const defaultFontSizeInput = formatPromptFontSizeInput(defaultFontSize)
@@ -36,16 +36,16 @@
   }
 
   const handleFontSizeInput = (value: string) => {
-    setTanstackSystemSettingsDraftFontSizeInput(value)
+    setSystemSettingsDraftFontSizeInput(value)
   }
 
   const handleMinLinesInput = (value: string) => {
-    setTanstackSystemSettingsDraftPromptEditorMinLinesInput(value)
+    setSystemSettingsDraftPromptEditorMinLinesInput(value)
   }
 
   const flushAutosave = async (): Promise<void> => {
     await runWithErrorLogging('Failed to update system settings:', async () => {
-      await flushTanstackSystemSettingsAutosave()
+      await flushSystemSettingsAutosave()
     })
   }
 
@@ -60,22 +60,22 @@
   ): Promise<void> => {
     await runWithErrorLogging('Failed to reset system settings:', async () => {
       setDraftValue(defaultValue)
-      await saveTanstackSystemSettingsDraftNow()
+      await saveSystemSettingsDraftNow()
     })
   }
 
   const handleFontSizeReset = async () => {
-    await resetSettingToDefault(defaultFontSizeInput, setTanstackSystemSettingsDraftFontSizeInput)
+    await resetSettingToDefault(defaultFontSizeInput, setSystemSettingsDraftFontSizeInput)
   }
 
   const handleMinLinesReset = async () => {
     await resetSettingToDefault(
       defaultMinLinesInput,
-      setTanstackSystemSettingsDraftPromptEditorMinLinesInput
+      setSystemSettingsDraftPromptEditorMinLinesInput
     )
   }
 
-  const validation = $derived(getTanstackSystemSettingsValidation())
+  const validation = $derived(getSystemSettingsValidation())
   const displayFontSizeError = $derived(systemSettingsState.saveError ?? validation.fontSizeError)
   const displayMinLinesError = $derived(systemSettingsState.saveError ?? validation.minLinesError)
   const isFontSizeResetDisabled = $derived(
