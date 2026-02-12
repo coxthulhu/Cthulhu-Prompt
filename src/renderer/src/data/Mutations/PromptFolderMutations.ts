@@ -1,10 +1,10 @@
 import type {
-  CreatePromptFolderRequest,
+  CreatePromptFolderPayload,
   CreatePromptFolderResponsePayload,
   CreatePromptFolderResult,
   PromptFolder,
+  PromptFolderRevisionPayload,
   PromptFolderRevisionResponsePayload,
-  UpdatePromptFolderRevisionRequest,
   UpdatePromptFolderRevisionResult
 } from '@shared/PromptFolder'
 import { preparePromptFolderName } from '@shared/promptFolderName'
@@ -43,7 +43,7 @@ export const createPromptFolder = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<CreatePromptFolderResult, CreatePromptFolderRequest>(
+      return invoke<CreatePromptFolderResult, { payload: CreatePromptFolderPayload }>(
         'create-prompt-folder',
         {
           payload: {
@@ -90,7 +90,7 @@ const updatePromptFolder = async (
     persistMutations: async ({ entities, invoke }) => {
       return invoke<
         UpdatePromptFolderRevisionResult,
-        UpdatePromptFolderRevisionRequest
+        { payload: PromptFolderRevisionPayload }
       >('update-prompt-folder', {
         payload: {
           promptFolder: entities.promptFolder({

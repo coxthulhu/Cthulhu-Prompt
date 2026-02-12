@@ -59,10 +59,6 @@ export type LoadSystemSettingsResult =
   | { success: true; settings: SystemSettings }
   | { success: false; error: string }
 
-export type MutationRequest<TPayload> = {
-  payload: TPayload
-}
-
 export type MutationResult<TPayload> =
   | { success: true; payload: TPayload }
   | { success: false; conflict: true; payload: TPayload }
@@ -74,10 +70,6 @@ export type MutationResultWithRequestId<TPayload> = MutationResult<TPayload> &
 export type SystemSettingsRevisionPayload = {
   systemSettings: RevisionPayloadEntity<SystemSettings>
 }
-
-export type UpdateSystemSettingsRevisionRequest = MutationRequest<
-  SystemSettingsRevisionPayload
->
 
 export type SystemSettingsRevisionResponsePayload = {
   systemSettings: RevisionEnvelope<SystemSettings>

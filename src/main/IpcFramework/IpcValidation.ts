@@ -3,14 +3,12 @@ import type {
   DeletePromptPayload,
   Prompt,
   PromptRevisionPayload,
-  UpdatePromptRevisionRequest
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
-  PromptFolderRevisionPayload,
-  UpdatePromptFolderRevisionRequest
+  PromptFolderRevisionPayload
 } from '@shared/PromptFolder'
 import type {
   IpcRequestContext,
@@ -19,8 +17,7 @@ import type {
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type {
   SystemSettings,
-  SystemSettingsRevisionPayload,
-  UpdateSystemSettingsRevisionRequest
+  SystemSettingsRevisionPayload
 } from '@shared/SystemSettings'
 import type {
   CloseWorkspacePayload,
@@ -291,7 +288,7 @@ const parsePromptRevisionPayload = parseObject<PromptRevisionPayload>({
 })
 
 const parseUpdatePromptRevisionWireRequest: Parser<
-  IpcRequestWithPayload<UpdatePromptRevisionRequest['payload']>
+  IpcRequestWithPayload<PromptRevisionPayload>
 > = parseWireRequestWithPayload<PromptRevisionPayload>(parsePromptRevisionPayload)
 
 const parsePromptFolderRevisionPayload =
@@ -300,7 +297,7 @@ const parsePromptFolderRevisionPayload =
   })
 
 const parseUpdatePromptFolderRevisionWireRequest: Parser<
-  IpcRequestWithPayload<UpdatePromptFolderRevisionRequest['payload']>
+  IpcRequestWithPayload<PromptFolderRevisionPayload>
 > = parseWireRequestWithPayload<PromptFolderRevisionPayload>(
   parsePromptFolderRevisionPayload
 )
@@ -319,7 +316,7 @@ const parseSystemSettingsRevisionPayload =
   })
 
 const parseUpdateSystemSettingsRevisionWireRequest: Parser<
-  IpcRequestWithPayload<UpdateSystemSettingsRevisionRequest['payload']>
+  IpcRequestWithPayload<SystemSettingsRevisionPayload>
 > = parseWireRequestWithPayload<SystemSettingsRevisionPayload>(
   parseSystemSettingsRevisionPayload
 )

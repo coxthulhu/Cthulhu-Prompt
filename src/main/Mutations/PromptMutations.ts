@@ -8,8 +8,8 @@ import type {
   DeletePromptResponsePayload,
   DeletePromptResult,
   Prompt,
+  PromptRevisionPayload,
   PromptRevisionResponsePayload,
-  UpdatePromptRevisionRequest,
   UpdatePromptRevisionResult
 } from '@shared/Prompt'
 import type {
@@ -314,7 +314,7 @@ export const setupPromptMutationHandlers = (): void => {
     'update-prompt',
     async (_, request: unknown): Promise<UpdatePromptRevisionResult> => {
       return await runMutationIpcRequest<
-        IpcRequestWithPayload<UpdatePromptRevisionRequest['payload']>,
+        IpcRequestWithPayload<PromptRevisionPayload>,
         MutationResult<PromptRevisionResponsePayload>
       >(request, parseUpdatePromptRevisionRequest, async (validatedRequest) => {
         try {

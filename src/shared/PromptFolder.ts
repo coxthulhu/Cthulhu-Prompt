@@ -1,9 +1,6 @@
 import type { Prompt } from './Prompt'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
-import type {
-  MutationRequest,
-  MutationResultWithRequestId
-} from './SystemSettings'
+import type { MutationResultWithRequestId } from './SystemSettings'
 import type { Workspace } from './Workspace'
 
 export interface PromptFolder {
@@ -19,9 +16,6 @@ export type PromptFolderRevisionPayload = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
 }
 
-export type UpdatePromptFolderRevisionRequest =
-  MutationRequest<PromptFolderRevisionPayload>
-
 export type PromptFolderRevisionResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
 }
@@ -34,10 +28,6 @@ export type CreatePromptFolderPayload = {
   promptFolderId: string
   displayName: string
 }
-
-export type CreatePromptFolderRequest = MutationRequest<
-  CreatePromptFolderPayload
->
 
 export type CreatePromptFolderResponsePayload = {
   workspace: RevisionEnvelope<Workspace>

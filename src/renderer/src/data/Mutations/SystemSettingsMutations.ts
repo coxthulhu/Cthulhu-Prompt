@@ -1,8 +1,8 @@
 import {
   SYSTEM_SETTINGS_ID,
   type SystemSettings,
+  type SystemSettingsRevisionPayload,
   type SystemSettingsRevisionResponsePayload,
-  type UpdateSystemSettingsRevisionRequest,
   type UpdateSystemSettingsRevisionResult
 } from '@shared/SystemSettings'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
@@ -19,17 +19,17 @@ export const updateSystemSettings = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<UpdateSystemSettingsRevisionResult, UpdateSystemSettingsRevisionRequest>(
-        'update-system-settings',
-        {
-          payload: {
-            systemSettings: entities.systemSettings({
-              id: SYSTEM_SETTINGS_ID,
-              data: settings
-            })
-          }
+      return invoke<
+        UpdateSystemSettingsRevisionResult,
+        { payload: SystemSettingsRevisionPayload }
+      >('update-system-settings', {
+        payload: {
+          systemSettings: entities.systemSettings({
+            id: SYSTEM_SETTINGS_ID,
+            data: settings
+          })
         }
-      )
+      })
     },
     handleSuccessOrConflictResponse: (payload: SystemSettingsRevisionResponsePayload) =>
       systemSettingsCollection.utils.upsertAuthoritative(payload.systemSettings),

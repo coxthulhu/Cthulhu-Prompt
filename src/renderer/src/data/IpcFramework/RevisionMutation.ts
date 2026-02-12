@@ -62,7 +62,7 @@ type RevisionMutationOptions<
       entities: RevisionEntityBuilders<TCollections>
       invoke: <
         TResult extends RevisionMutationResult<TPayload>,
-        TRequest extends MutationRequest<TCollections>
+        TRequest extends MutationRequest<TCollections> = MutationRequest<TCollections>
       >(
         channel: string,
         request: TRequest

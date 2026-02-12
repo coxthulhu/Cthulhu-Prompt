@@ -1,13 +1,11 @@
 import type {
-  CreatePromptRequest,
+  CreatePromptPayload,
   CreatePromptResponsePayload,
   CreatePromptResult,
-  DeletePromptRequest,
   DeletePromptResponsePayload,
   DeletePromptResult,
   Prompt,
   PromptRevisionResponsePayload,
-  UpdatePromptRevisionRequest,
   UpdatePromptRevisionResult
 } from '@shared/Prompt'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -53,22 +51,19 @@ export const createPrompt = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<CreatePromptResult, CreatePromptRequest>(
-        'create-prompt',
-        {
-          payload: {
-            promptFolder: entities.promptFolder({
-              id: promptFolderId,
-              data: promptFolder
-            }),
-            prompt: entities.prompt({
-              id: prompt.id,
-              data: prompt
-            }),
-            previousPromptId
-          }
+      return invoke<CreatePromptResult, { payload: CreatePromptPayload }>('create-prompt', {
+        payload: {
+          promptFolder: entities.promptFolder({
+            id: promptFolderId,
+            data: promptFolder
+          }),
+          prompt: entities.prompt({
+            id: prompt.id,
+            data: prompt
+          }),
+          previousPromptId
         }
-      )
+      })
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
@@ -99,17 +94,14 @@ export const updatePrompt = async (prompt: Prompt): Promise<void> => {
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<UpdatePromptRevisionResult, UpdatePromptRevisionRequest>(
-        'update-prompt',
-        {
-          payload: {
-            prompt: entities.prompt({
-              id: prompt.id,
-              data: prompt
-            })
-          }
+      return invoke<UpdatePromptRevisionResult>('update-prompt', {
+        payload: {
+          prompt: entities.prompt({
+            id: prompt.id,
+            data: prompt
+          })
         }
-      )
+      })
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptCollection.utils.upsertAuthoritative(payload.prompt)
@@ -140,21 +132,18 @@ export const deletePrompt = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<DeletePromptResult, DeletePromptRequest>(
-        'delete-prompt',
-        {
-          payload: {
-            promptFolder: entities.promptFolder({
-              id: promptFolderId,
-              data: promptFolder
-            }),
-            prompt: entities.prompt({
-              id: promptId,
-              data: prompt
-            })
-          }
+      return invoke<DeletePromptResult>('delete-prompt', {
+        payload: {
+          promptFolder: entities.promptFolder({
+            id: promptFolderId,
+            data: promptFolder
+          }),
+          prompt: entities.prompt({
+            id: promptId,
+            data: prompt
+          })
         }
-      )
+      })
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
