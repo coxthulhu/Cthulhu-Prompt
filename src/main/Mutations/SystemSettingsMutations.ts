@@ -1,12 +1,9 @@
 import { ipcMain } from 'electron'
 import {
   SYSTEM_SETTINGS_ID,
-  type MutationResult,
-  type SystemSettingsRevisionPayload,
   type SystemSettingsRevisionResponsePayload,
   type UpdateSystemSettingsRevisionResult
 } from '@shared/SystemSettings'
-import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import { SystemSettingsDataAccess } from '../DataAccess/SystemSettingsDataAccess'
 import { parseUpdateSystemSettingsRevisionRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
@@ -28,10 +25,7 @@ export const setupSystemSettingsMutationHandlers = (): void => {
       _,
       request: unknown
     ): Promise<UpdateSystemSettingsRevisionResult> => {
-      return await runMutationIpcRequest<
-        IpcRequestWithPayload<SystemSettingsRevisionPayload>,
-        MutationResult<SystemSettingsRevisionResponsePayload>
-      >(request, parseUpdateSystemSettingsRevisionRequest, async (validatedRequest) => {
+      return await runMutationIpcRequest(request, parseUpdateSystemSettingsRevisionRequest, async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
           const currentRevision = revisions.systemSettings.get(SYSTEM_SETTINGS_ID)

@@ -2,17 +2,9 @@ import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { Workspace } from '@shared/Workspace'
 import type {
-  CreatePromptFolderPayload,
-  CreatePromptFolderResponsePayload,
   CreatePromptFolderResult,
-  PromptFolderRevisionResponsePayload,
-  PromptFolderRevisionPayload,
   UpdatePromptFolderRevisionResult
 } from '@shared/PromptFolder'
-import type {
-  MutationResult
-} from '@shared/SystemSettings'
-import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import type {
   PromptFolderConfigFile,
   PromptsFile
@@ -186,10 +178,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
       _,
       request: unknown
     ): Promise<CreatePromptFolderResult> => {
-      return await runMutationIpcRequest<
-        IpcRequestWithPayload<CreatePromptFolderPayload>,
-        MutationResult<CreatePromptFolderResponsePayload>
-      >(request, parseCreatePromptFolderRequest, async (validatedRequest) => {
+      return await runMutationIpcRequest(request, parseCreatePromptFolderRequest, async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
           const workspace = payload.workspace
@@ -295,10 +284,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
   ipcMain.handle(
     'update-prompt-folder',
     async (_, request: unknown): Promise<UpdatePromptFolderRevisionResult> => {
-      return await runMutationIpcRequest<
-        IpcRequestWithPayload<PromptFolderRevisionPayload>,
-        MutationResult<PromptFolderRevisionResponsePayload>
-      >(request, parseUpdatePromptFolderRevisionRequest, async (validatedRequest) => {
+      return await runMutationIpcRequest(request, parseUpdatePromptFolderRevisionRequest, async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder
           const location = getPromptFolderLocation(promptFolderEntity.id)

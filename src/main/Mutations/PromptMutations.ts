@@ -1,21 +1,11 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
 import type {
-  CreatePromptPayload,
-  CreatePromptResponsePayload,
   CreatePromptResult,
-  DeletePromptPayload,
-  DeletePromptResponsePayload,
   DeletePromptResult,
   Prompt,
-  PromptRevisionPayload,
-  PromptRevisionResponsePayload,
   UpdatePromptRevisionResult
 } from '@shared/Prompt'
-import type {
-  MutationResult
-} from '@shared/SystemSettings'
-import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import type {
   PromptFolderConfigFile,
   PromptsFile
@@ -127,10 +117,7 @@ export const setupPromptMutationHandlers = (): void => {
   ipcMain.handle(
     'create-prompt',
     async (_, request: unknown): Promise<CreatePromptResult> => {
-      return await runMutationIpcRequest<
-        IpcRequestWithPayload<CreatePromptPayload>,
-        MutationResult<CreatePromptResponsePayload>
-      >(request, parseCreatePromptRequest, async (validatedRequest) => {
+      return await runMutationIpcRequest(request, parseCreatePromptRequest, async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
           const promptFolderEntity = payload.promptFolder
@@ -227,10 +214,7 @@ export const setupPromptMutationHandlers = (): void => {
   ipcMain.handle(
     'delete-prompt',
     async (_, request: unknown): Promise<DeletePromptResult> => {
-      return await runMutationIpcRequest<
-        IpcRequestWithPayload<DeletePromptPayload>,
-        MutationResult<DeletePromptResponsePayload>
-      >(request, parseDeletePromptRequest, async (validatedRequest) => {
+      return await runMutationIpcRequest(request, parseDeletePromptRequest, async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder
           const promptEntity = validatedRequest.payload.prompt
@@ -313,10 +297,7 @@ export const setupPromptMutationHandlers = (): void => {
   ipcMain.handle(
     'update-prompt',
     async (_, request: unknown): Promise<UpdatePromptRevisionResult> => {
-      return await runMutationIpcRequest<
-        IpcRequestWithPayload<PromptRevisionPayload>,
-        MutationResult<PromptRevisionResponsePayload>
-      >(request, parseUpdatePromptRevisionRequest, async (validatedRequest) => {
+      return await runMutationIpcRequest(request, parseUpdatePromptRevisionRequest, async (validatedRequest) => {
         try {
           const promptEntity = validatedRequest.payload.prompt
           const location = getPromptLocation(promptEntity.id)
