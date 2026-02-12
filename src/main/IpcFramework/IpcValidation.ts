@@ -34,19 +34,29 @@ type Parser<T> = (value: unknown) => T | null
 
 export type ParsedRequest<TRequest> =
   | { success: true; value: TRequest }
-  | { success: false; requestId: string }
+  | {
+      success: false
+      requestId: string
+      clientId: string
+    }
 
 type WireRequestWithPayload<TPayload> = {
   requestId: string
+  clientId: string
   payload: TPayload
 }
 
 type WireRequestWithoutPayload = {
   requestId: string
+  clientId: string
 }
 
 const parseString: Parser<string> = (value) => {
   return typeof value === 'string' ? value : null
+}
+
+const parseClientId: Parser<string> = (value) => {
+  return typeof value === 'string' && value.length > 0 ? value : null
 }
 
 const parseBoolean: Parser<boolean> = (value) => {
@@ -133,13 +143,15 @@ const parseWireRequestWithPayload = <TPayload>(
 ): Parser<WireRequestWithPayload<TPayload>> => {
   return parseObject({
     requestId: parseString,
+    clientId: parseClientId,
     payload: payloadParser
   })
 }
 
 const parseWireRequestWithoutPayload = (): Parser<WireRequestWithoutPayload> => {
   return parseObject({
-    requestId: parseString
+    requestId: parseString,
+    clientId: parseClientId
   })
 }
 
@@ -152,12 +164,26 @@ const extractRequestId = (request: unknown): string => {
   return typeof requestId === 'string' ? requestId : ''
 }
 
+const extractClientId = (request: unknown): string => {
+  if (typeof request !== 'object' || request === null || Array.isArray(request)) {
+    return ''
+  }
+
+  const clientId = (request as Record<string, unknown>).clientId
+  return typeof clientId === 'string' ? clientId : ''
+}
+
 const toParsedRequest = <TRequest>(
   value: TRequest | null,
-  requestId: string
+  requestId: string,
+  clientId: string
 ): ParsedRequest<TRequest> => {
   if (value === null) {
-    return { success: false, requestId }
+    return {
+      success: false,
+      requestId,
+      clientId
+    }
   }
 
   return { success: true, value }
@@ -165,7 +191,11 @@ const toParsedRequest = <TRequest>(
 
 const createRequestParser = <TRequest>(requestParser: Parser<TRequest>) => {
   return (request: unknown): ParsedRequest<TRequest> => {
-    return toParsedRequest(requestParser(request), extractRequestId(request))
+    return toParsedRequest(
+      requestParser(request),
+      extractRequestId(request),
+      extractClientId(request)
+    )
   }
 }
 

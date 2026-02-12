@@ -59,6 +59,7 @@ export type LoadPromptFolderInitialPayload = {
 
 export type LoadPromptFolderInitialWireRequest = {
   requestId: string
+  clientId: string
   payload: LoadPromptFolderInitialPayload
 }
 

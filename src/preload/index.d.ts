@@ -15,6 +15,7 @@ declare global {
   interface Window {
     electron: ElectronAPI
     runtimeConfig: RuntimeConfig
+    ipcClientId: string
     windowControls: WindowControls
   }
 }

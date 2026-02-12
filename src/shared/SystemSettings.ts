@@ -66,6 +66,7 @@ export type MutationWireRequest<
   TRequest extends MutationRequest<unknown>
 > = TRequest & {
   requestId: string
+  clientId: string
 }
 
 export type MutationResult<TPayload> =
@@ -75,6 +76,7 @@ export type MutationResult<TPayload> =
 
 export type MutationResultWithRequestId<TPayload> = MutationResult<TPayload> & {
   requestId: string
+  clientId: string
 }
 
 export type SystemSettingsRevisionPayload = {

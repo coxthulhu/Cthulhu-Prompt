@@ -55,6 +55,7 @@ function loadRuntimeConfig(): RuntimeConfig {
 }
 
 const runtimeConfig = loadRuntimeConfig()
+const ipcClientId = crypto.randomUUID()
 
 const windowControls = {
   minimize: () => electronAPI.ipcRenderer.invoke('window-minimize'),
@@ -89,6 +90,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('runtimeConfig', runtimeConfig)
+    contextBridge.exposeInMainWorld('ipcClientId', ipcClientId)
     contextBridge.exposeInMainWorld('windowControls', windowControls)
   } catch (error) {
     console.error(error)
@@ -98,6 +100,8 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-expect-error (define in dts)
   window.runtimeConfig = runtimeConfig
+  // @ts-expect-error (define in dts)
+  window.ipcClientId = ipcClientId
   // @ts-expect-error (define in dts)
   window.windowControls = windowControls
 }

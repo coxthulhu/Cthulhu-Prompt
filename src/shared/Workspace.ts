@@ -22,16 +22,17 @@ export type CreateWorkspaceWireRequest =
   MutationWireRequest<MutationRequest<CreateWorkspacePayload>>
 
 export type CreateWorkspaceResponse =
-  | { requestId: string; success: true }
-  | { requestId: string; success: false; error: string }
+  | { requestId: string; clientId: string; success: true }
+  | { requestId: string; clientId: string; success: false; error: string }
 
 export type CloseWorkspaceWireRequest = {
   requestId: string
+  clientId: string
 }
 
 export type CloseWorkspaceResult =
-  | { requestId: string; success: true }
-  | { requestId: string; success: false; error: string }
+  | { requestId: string; clientId: string; success: true }
+  | { requestId: string; clientId: string; success: false; error: string }
 
 export type LoadWorkspaceByPathRequest = {
   workspacePath: string
@@ -39,6 +40,7 @@ export type LoadWorkspaceByPathRequest = {
 
 export type LoadWorkspaceByPathWireRequest = {
   requestId: string
+  clientId: string
   payload: LoadWorkspaceByPathRequest
 }
 

@@ -1,51 +1,65 @@
 import type { ParsedRequest } from './IpcValidation'
 
 const INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
+const INVALID_CLIENT_ID_ERROR = 'Invalid client ID'
+
+type RequestValidationError =
+  | typeof INVALID_REQUEST_PAYLOAD_ERROR
+  | typeof INVALID_CLIENT_ID_ERROR
 
 type MutationInvalidRequestResult = {
   requestId: string
+  clientId: string
   success: false
-  error: typeof INVALID_REQUEST_PAYLOAD_ERROR
+  error: RequestValidationError
 }
 
 type QueryInvalidRequestResult = {
+  clientId: string
   success: false
-  error: typeof INVALID_REQUEST_PAYLOAD_ERROR
+  error: RequestValidationError
 }
 
-type MutationResponseWithRequestId<TResult extends object> = TResult extends object
-  ? TResult & { requestId: string }
+type MutationResponseWithRequestContext<TResult extends object> = TResult extends object
+  ? TResult & { requestId: string; clientId: string }
   : never
 
 export const runMutationIpcRequest = async <
-  TRequest extends { requestId: string },
+  TRequest extends { requestId: string; clientId: string },
   TResult extends object
 >(
   request: unknown,
   parseRequest: (request: unknown) => ParsedRequest<TRequest>,
   run: (request: TRequest) => Promise<TResult>
 ): Promise<
-  MutationResponseWithRequestId<TResult> | MutationInvalidRequestResult
+  MutationResponseWithRequestContext<TResult> | MutationInvalidRequestResult
 > => {
   const parsedRequest = parseRequest(request)
 
   if (!parsedRequest.success) {
     return {
       requestId: parsedRequest.requestId,
+      clientId: parsedRequest.clientId,
       success: false,
-      error: INVALID_REQUEST_PAYLOAD_ERROR
+      error: parsedRequest.clientId.length === 0
+        ? INVALID_CLIENT_ID_ERROR
+        : INVALID_REQUEST_PAYLOAD_ERROR
     }
   }
 
-  // Side effect: attach request IDs from validated inputs to every mutation response.
+  // Side effect: attach request/client IDs from validated inputs to every mutation response.
   const result = await run(parsedRequest.value)
   return {
     ...result,
-    requestId: parsedRequest.value.requestId
-  } as MutationResponseWithRequestId<TResult>
+    requestId: parsedRequest.value.requestId,
+    clientId: parsedRequest.value.clientId
+  } as MutationResponseWithRequestContext<TResult>
 }
 
-export const runQueryIpcRequest = async <TRequest, TResult extends object>(
+export const runQueryIpcRequest = async <
+  TRequest extends { clientId: string },
+  TResult extends object
+>(
   request: unknown,
   parseRequest: (request: unknown) => ParsedRequest<TRequest>,
   run: (request: TRequest) => Promise<TResult>
@@ -54,10 +68,17 @@ export const runQueryIpcRequest = async <TRequest, TResult extends object>(
 
   if (!parsedRequest.success) {
     return {
+      clientId: parsedRequest.clientId,
       success: false,
-      error: INVALID_REQUEST_PAYLOAD_ERROR
+      error: parsedRequest.clientId.length === 0
+        ? INVALID_CLIENT_ID_ERROR
+        : INVALID_REQUEST_PAYLOAD_ERROR
     }
   }
 
-  return await run(parsedRequest.value)
+  const result = await run(parsedRequest.value)
+  return {
+    ...result,
+    clientId: parsedRequest.value.clientId
+  } as TResult
 }
