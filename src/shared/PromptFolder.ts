@@ -1,5 +1,6 @@
 import type { Prompt } from './Prompt'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
 
 export interface PromptFolder {
@@ -35,10 +36,7 @@ export type LoadPromptFolderInitialPayload = {
   promptFolderId: string
 }
 
-export type LoadPromptFolderInitialResult =
-  | {
-      success: true
-      promptFolder: RevisionEnvelope<PromptFolder>
-      prompts: Array<RevisionEnvelope<Prompt>>
-    }
-  | { success: false; error: string }
+export type LoadPromptFolderInitialResult = IpcResult<{
+  promptFolder: RevisionEnvelope<PromptFolder>
+  prompts: Array<RevisionEnvelope<Prompt>>
+}>

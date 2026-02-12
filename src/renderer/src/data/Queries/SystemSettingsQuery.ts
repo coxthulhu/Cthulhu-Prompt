@@ -1,13 +1,13 @@
-import type { SystemSettingsSnapshot } from '@shared/SystemSettings'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import type { RevisionEnvelope } from '@shared/Revision'
+import type { SystemSettings } from '@shared/SystemSettings'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 
 export const applySystemSettingsSnapshot = (
-  snapshot: SystemSettingsSnapshot
+  snapshot: RevisionEnvelope<SystemSettings>
 ): void => {
   systemSettingsCollection.utils.upsertAuthoritative({
-    id: SYSTEM_SETTINGS_ID,
+    id: snapshot.id,
     revision: snapshot.revision,
-    data: snapshot.settings
+    data: snapshot.data
   })
 }

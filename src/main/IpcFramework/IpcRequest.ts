@@ -4,6 +4,7 @@ import type {
   IpcQueryResponseContext,
   IpcRequestWithPayload
 } from '@shared/IpcRequest'
+import type { IpcFailure } from '@shared/IpcResult'
 
 const INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
 const INVALID_CLIENT_ID_ERROR = 'Invalid client ID'
@@ -12,15 +13,15 @@ type RequestValidationError =
   | typeof INVALID_REQUEST_PAYLOAD_ERROR
   | typeof INVALID_CLIENT_ID_ERROR
 
-type MutationInvalidRequestResult = IpcMutationResponseContext & {
-  success: false
-  error: RequestValidationError
-}
+type MutationInvalidRequestResult = IpcMutationResponseContext &
+  IpcFailure & {
+    error: RequestValidationError
+  }
 
-type QueryInvalidRequestResult = IpcQueryResponseContext & {
-  success: false
-  error: RequestValidationError
-}
+type QueryInvalidRequestResult = IpcQueryResponseContext &
+  IpcFailure & {
+    error: RequestValidationError
+  }
 
 type MutationResponseWithRequestContext<TResult extends object> = TResult extends object
   ? TResult & IpcMutationResponseContext

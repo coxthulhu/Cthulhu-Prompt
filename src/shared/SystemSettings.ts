@@ -1,13 +1,9 @@
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { IpcResult } from './IpcResult'
 
 export interface SystemSettings {
   promptFontSize: number
   promptEditorMinLines: number
-}
-
-export type SystemSettingsSnapshot = {
-  settings: SystemSettings
-  revision: number
 }
 
 export const SYSTEM_SETTINGS_ID = 'system-settings'
@@ -54,14 +50,7 @@ export const normalizeSystemSettings = (
   }
 }
 
-export type LoadSystemSettingsResult =
-  | { success: true; settings: SystemSettings }
-  | { success: false; error: string }
-
-export type MutationResult<TPayload> =
-  | { success: true; payload: TPayload }
-  | { success: false; conflict: true; payload: TPayload }
-  | { success: false; error: string; conflict?: false }
+export type LoadSystemSettingsResult = IpcResult<{ settings: SystemSettings }>
 
 export type SystemSettingsRevisionPayload = {
   systemSettings: RevisionPayloadEntity<SystemSettings>

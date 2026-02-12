@@ -1,6 +1,7 @@
 import { createTransaction } from '@tanstack/svelte-db'
 import type { Collection } from '@tanstack/svelte-db'
 import type { RevisionPayloadEntity } from '@shared/Revision'
+import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 
@@ -40,11 +41,6 @@ type MutationRequest<TCollections extends RevisionCollectionsMap> = {
   }>
 }
 
-type RevisionMutationResult<TPayload> =
-  | { success: true; payload: TPayload }
-  | { success: false; conflict: true; payload: TPayload }
-  | { success: false; error: string; conflict?: false }
-
 type RevisionEntityBuilders<TCollections extends RevisionCollectionsMap> = {
   [TCollectionKey in keyof TCollections]: (entity: {
     id: string
@@ -63,9 +59,9 @@ type RevisionMutationOptions<
       invoke: <TRequest extends MutationRequest<TCollections> = MutationRequest<TCollections>>(
         channel: string,
         request: TRequest
-      ) => Promise<RevisionMutationResult<TPayload>>
+      ) => Promise<IpcMutationPayloadResult<TPayload>>
     }
-  ) => Promise<RevisionMutationResult<TPayload>>
+  ) => Promise<IpcMutationPayloadResult<TPayload>>
   handleSuccessOrConflictResponse: (payload: TPayload) => void
   conflictMessage: string
   onSuccess?: () => void
