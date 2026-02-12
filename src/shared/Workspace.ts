@@ -1,7 +1,6 @@
 import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope } from './Revision'
 import type {
-  IpcMutationActionResponse,
   IpcResult
 } from './IpcResult'
 
@@ -17,10 +16,6 @@ export type CreateWorkspacePayload = {
   workspacePath: string
   includeExamplePrompts: boolean
 }
-
-export type CreateWorkspaceResponse = IpcMutationActionResponse
-
-export type CloseWorkspaceResult = IpcMutationActionResponse
 
 export type CloseWorkspacePayload = Record<string, never>
 

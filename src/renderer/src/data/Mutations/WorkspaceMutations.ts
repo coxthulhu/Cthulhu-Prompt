@@ -1,9 +1,8 @@
 import type {
   CloseWorkspacePayload,
-  CloseWorkspaceResult,
-  CreateWorkspacePayload,
-  CreateWorkspaceResponse
+  CreateWorkspacePayload
 } from '@shared/Workspace'
+import type { IpcMutationActionResponse } from '@shared/IpcResult'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -42,11 +41,11 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
 export const createWorkspace = async (
   workspacePath: string,
   includeExamplePrompts: boolean
-): Promise<CreateWorkspaceResponse> => {
+): Promise<IpcMutationActionResponse> => {
   // Special-case payload: create-workspace expects command arguments,
   // not a normal  revision mutation payload object.
   return await ipcInvokeWithPayload<
-    CreateWorkspaceResponse,
+    IpcMutationActionResponse,
     CreateWorkspacePayload
   >('create-workspace', {
     workspacePath,
@@ -59,7 +58,7 @@ export const closeWorkspace = async (): Promise<void> => {
 
   try {
     await runLoad(() =>
-      ipcInvokeWithPayload<CloseWorkspaceResult, CloseWorkspacePayload>(
+      ipcInvokeWithPayload<IpcMutationActionResponse, CloseWorkspacePayload>(
         'close-workspace',
         {}
       )
