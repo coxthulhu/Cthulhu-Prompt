@@ -1,16 +1,13 @@
 import type {
   CreatePromptPayload,
-  CreatePromptWireRequest,
   DeletePromptPayload,
-  DeletePromptWireRequest,
   Prompt,
   PromptRevisionPayload,
   UpdatePromptRevisionRequest
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
-  CreatePromptFolderWireRequest,
-  LoadPromptFolderInitialWireRequest,
+  LoadPromptFolderInitialPayload,
   PromptFolder,
   PromptFolderRevisionPayload,
   UpdatePromptFolderRevisionRequest
@@ -26,10 +23,9 @@ import type {
   UpdateSystemSettingsRevisionRequest
 } from '@shared/SystemSettings'
 import type {
-  CloseWorkspaceWireRequest,
+  CloseWorkspacePayload,
   CreateWorkspacePayload,
-  CreateWorkspaceWireRequest,
-  LoadWorkspaceByPathWireRequest,
+  LoadWorkspaceByPathRequest,
   Workspace
 } from '@shared/Workspace'
 
@@ -136,13 +132,6 @@ const parseWireRequestWithPayload = <TPayload>(
   })
 }
 
-const parseWireRequestWithoutPayload = (): Parser<IpcRequestContext> => {
-  return parseObject({
-    requestId: parseString,
-    clientId: parseClientId
-  })
-}
-
 const extractRequestId = (request: unknown): string => {
   if (typeof request !== 'object' || request === null || Array.isArray(request)) {
     return ''
@@ -233,11 +222,16 @@ const parseCreateWorkspacePayload = parseObject<CreateWorkspacePayload>({
   includeExamplePrompts: parseBoolean
 })
 
-const parseCreateWorkspaceWireRequest: Parser<CreateWorkspaceWireRequest> =
+const parseCreateWorkspaceWireRequest: Parser<
+  IpcRequestWithPayload<CreateWorkspacePayload>
+> =
   parseWireRequestWithPayload<CreateWorkspacePayload>(parseCreateWorkspacePayload)
 
-const parseCloseWorkspaceWireRequest: Parser<CloseWorkspaceWireRequest> =
-  parseWireRequestWithoutPayload()
+const parseCloseWorkspacePayload = parseObject<CloseWorkspacePayload>({})
+
+const parseCloseWorkspaceWireRequest: Parser<
+  IpcRequestWithPayload<CloseWorkspacePayload>
+> = parseWireRequestWithPayload<CloseWorkspacePayload>(parseCloseWorkspacePayload)
 
 const parseCreatePromptFolderPayload = parseObject<CreatePromptFolderPayload>({
   workspace: parseWorkspaceRevisionPayloadEntity,
@@ -245,7 +239,9 @@ const parseCreatePromptFolderPayload = parseObject<CreatePromptFolderPayload>({
   displayName: parseString
 })
 
-const parseCreatePromptFolderWireRequest: Parser<CreatePromptFolderWireRequest> =
+const parseCreatePromptFolderWireRequest: Parser<
+  IpcRequestWithPayload<CreatePromptFolderPayload>
+> =
   parseWireRequestWithPayload<CreatePromptFolderPayload>(
     parseCreatePromptFolderPayload
   )
@@ -287,7 +283,7 @@ const parseCreatePromptPayload: Parser<CreatePromptPayload> = (value) => {
   }
 }
 
-const parseCreatePromptWireRequest: Parser<CreatePromptWireRequest> =
+const parseCreatePromptWireRequest: Parser<IpcRequestWithPayload<CreatePromptPayload>> =
   parseWireRequestWithPayload<CreatePromptPayload>(parseCreatePromptPayload)
 
 const parsePromptRevisionPayload = parseObject<PromptRevisionPayload>({
@@ -314,7 +310,7 @@ const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
   prompt: parsePromptRevisionPayloadEntity
 })
 
-const parseDeletePromptWireRequest: Parser<DeletePromptWireRequest> =
+const parseDeletePromptWireRequest: Parser<IpcRequestWithPayload<DeletePromptPayload>> =
   parseWireRequestWithPayload<DeletePromptPayload>(parseDeletePromptPayload)
 
 const parseSystemSettingsRevisionPayload =
@@ -329,24 +325,26 @@ const parseUpdateSystemSettingsRevisionWireRequest: Parser<
 )
 
 const parseLoadWorkspaceByPathPayload =
-  parseObject<LoadWorkspaceByPathWireRequest['payload']>({
+  parseObject<LoadWorkspaceByPathRequest>({
     workspacePath: parseString
   })
 
-const parseLoadWorkspaceByPathWireRequest: Parser<LoadWorkspaceByPathWireRequest> =
-  parseWireRequestWithPayload<LoadWorkspaceByPathWireRequest['payload']>(
+const parseLoadWorkspaceByPathWireRequest: Parser<
+  IpcRequestWithPayload<LoadWorkspaceByPathRequest>
+> =
+  parseWireRequestWithPayload<LoadWorkspaceByPathRequest>(
     parseLoadWorkspaceByPathPayload
   )
 
 const parseLoadPromptFolderInitialPayload =
-  parseObject<LoadPromptFolderInitialWireRequest['payload']>({
+  parseObject<LoadPromptFolderInitialPayload>({
     workspaceId: parseString,
     promptFolderId: parseString
   })
 
 const parseLoadPromptFolderInitialWireRequest: Parser<
-  LoadPromptFolderInitialWireRequest
-> = parseWireRequestWithPayload<LoadPromptFolderInitialWireRequest['payload']>(
+  IpcRequestWithPayload<LoadPromptFolderInitialPayload>
+> = parseWireRequestWithPayload<LoadPromptFolderInitialPayload>(
   parseLoadPromptFolderInitialPayload
 )
 

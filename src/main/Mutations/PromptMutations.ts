@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
 import type {
+  CreatePromptPayload,
   CreatePromptResponsePayload,
   CreatePromptResult,
-  CreatePromptWireRequest,
+  DeletePromptPayload,
   DeletePromptResponsePayload,
   DeletePromptResult,
-  DeletePromptWireRequest,
   Prompt,
   PromptRevisionResponsePayload,
   UpdatePromptRevisionRequest,
@@ -128,7 +128,7 @@ export const setupPromptMutationHandlers = (): void => {
     'create-prompt',
     async (_, request: unknown): Promise<CreatePromptResult> => {
       return await runMutationIpcRequest<
-        CreatePromptWireRequest,
+        IpcRequestWithPayload<CreatePromptPayload>,
         MutationResult<CreatePromptResponsePayload>
       >(request, parseCreatePromptRequest, async (validatedRequest) => {
         try {
@@ -228,7 +228,7 @@ export const setupPromptMutationHandlers = (): void => {
     'delete-prompt',
     async (_, request: unknown): Promise<DeletePromptResult> => {
       return await runMutationIpcRequest<
-        DeletePromptWireRequest,
+        IpcRequestWithPayload<DeletePromptPayload>,
         MutationResult<DeletePromptResponsePayload>
       >(request, parseDeletePromptRequest, async (validatedRequest) => {
         try {

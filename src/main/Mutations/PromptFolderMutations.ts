@@ -2,9 +2,9 @@ import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { Workspace } from '@shared/Workspace'
 import type {
+  CreatePromptFolderPayload,
   CreatePromptFolderResponsePayload,
   CreatePromptFolderResult,
-  CreatePromptFolderWireRequest,
   PromptFolderRevisionResponsePayload,
   UpdatePromptFolderRevisionRequest,
   UpdatePromptFolderRevisionResult
@@ -187,7 +187,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
       request: unknown
     ): Promise<CreatePromptFolderResult> => {
       return await runMutationIpcRequest<
-        CreatePromptFolderWireRequest,
+        IpcRequestWithPayload<CreatePromptFolderPayload>,
         MutationResult<CreatePromptFolderResponsePayload>
       >(request, parseCreatePromptFolderRequest, async (validatedRequest) => {
         try {

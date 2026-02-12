@@ -2,7 +2,7 @@ import type { ParsedRequest } from './IpcValidation'
 import type {
   IpcMutationResponseContext,
   IpcQueryResponseContext,
-  IpcRequestContext
+  IpcRequestWithPayload
 } from '@shared/IpcRequest'
 
 const INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
@@ -27,7 +27,7 @@ type MutationResponseWithRequestContext<TResult extends object> = TResult extend
   : never
 
 export const runMutationIpcRequest = async <
-  TRequest extends IpcRequestContext,
+  TRequest extends IpcRequestWithPayload<unknown>,
   TResult extends object
 >(
   request: unknown,
@@ -59,7 +59,7 @@ export const runMutationIpcRequest = async <
 }
 
 export const runQueryIpcRequest = async <
-  TRequest extends IpcRequestContext,
+  TRequest extends IpcRequestWithPayload<unknown>,
   TResult extends object
 >(
   request: unknown,

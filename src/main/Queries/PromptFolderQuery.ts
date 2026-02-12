@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron'
 import type {
   LoadPromptFolderInitialResult,
-  LoadPromptFolderInitialWireRequest
 } from '@shared/PromptFolder'
 import {
   readPromptFolder,
@@ -22,10 +21,7 @@ export const setupPromptFolderQueryHandlers = (): void => {
       _,
       request: unknown
     ): Promise<LoadPromptFolderInitialResult> => {
-      return await runQueryIpcRequest<
-        LoadPromptFolderInitialWireRequest,
-        LoadPromptFolderInitialResult
-      >(request, parseLoadPromptFolderInitialRequest, async (validatedRequest) => {
+      return await runQueryIpcRequest(request, parseLoadPromptFolderInitialRequest, async (validatedRequest) => {
         const payload = validatedRequest.payload
         const location = getPromptFolderLocation(payload.promptFolderId)
 

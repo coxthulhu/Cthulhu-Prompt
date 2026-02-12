@@ -1,10 +1,13 @@
 import { ipcMain } from 'electron'
 import type {
+  CloseWorkspacePayload,
   CloseWorkspaceResult,
-  CloseWorkspaceWireRequest,
   CreateWorkspaceResponse,
-  CreateWorkspaceWireRequest
+  CreateWorkspacePayload
 } from '@shared/Workspace'
+import type {
+  IpcRequestWithPayload
+} from '@shared/IpcRequest'
 import {
   parseCloseWorkspaceRequest,
   parseCreateWorkspaceRequest
@@ -30,7 +33,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
       // Special-case payload: this create request uses command-style workspace fields,
       // not the normal  revision mutation entity shape.
       return await runMutationIpcRequest<
-        CreateWorkspaceWireRequest,
+        IpcRequestWithPayload<CreateWorkspacePayload>,
         CreateWorkspaceMutationResult
       >(
         request,
@@ -47,7 +50,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
     'close-workspace',
     async (_, request: unknown): Promise<CloseWorkspaceResult> => {
       return await runMutationIpcRequest<
-        CloseWorkspaceWireRequest,
+        IpcRequestWithPayload<CloseWorkspacePayload>,
         CloseWorkspaceMutationResult
       >(request, parseCloseWorkspaceRequest, async () => {
         return { success: true }

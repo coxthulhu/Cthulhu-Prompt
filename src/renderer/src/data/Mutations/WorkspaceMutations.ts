@@ -1,10 +1,11 @@
 import type {
+  CloseWorkspacePayload,
   CloseWorkspaceResult,
   CreateWorkspacePayload,
   CreateWorkspaceResponse
 } from '@shared/Workspace'
 import { runLoad } from '../IpcFramework/Load'
-import { ipcInvoke, ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
+import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
@@ -58,7 +59,10 @@ export const closeWorkspace = async (): Promise<void> => {
 
   try {
     await runLoad(() =>
-      ipcInvoke<CloseWorkspaceResult>('close-workspace')
+      ipcInvokeWithPayload<CloseWorkspaceResult, CloseWorkspacePayload>(
+        'close-workspace',
+        {}
+      )
     )
   } finally {
     // Side effect: clear renderer  workspace state when the workspace closes.
