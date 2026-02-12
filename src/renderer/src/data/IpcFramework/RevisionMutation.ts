@@ -60,13 +60,10 @@ type RevisionMutationOptions<
   persistMutations: (
     helpers: {
       entities: RevisionEntityBuilders<TCollections>
-      invoke: <
-        TResult extends RevisionMutationResult<TPayload>,
-        TRequest extends MutationRequest<TCollections> = MutationRequest<TCollections>
-      >(
+      invoke: <TRequest extends MutationRequest<TCollections> = MutationRequest<TCollections>>(
         channel: string,
         request: TRequest
-      ) => Promise<TResult>
+      ) => Promise<RevisionMutationResult<TPayload>>
     }
   ) => Promise<RevisionMutationResult<TPayload>>
   handleSuccessOrConflictResponse: (payload: TPayload) => void

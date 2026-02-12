@@ -1,5 +1,4 @@
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
-import type { IpcMutationResponseContext } from './IpcRequest'
 
 export interface SystemSettings {
   promptFontSize: number
@@ -64,9 +63,6 @@ export type MutationResult<TPayload> =
   | { success: false; conflict: true; payload: TPayload }
   | { success: false; error: string; conflict?: false }
 
-export type MutationResultWithRequestId<TPayload> = MutationResult<TPayload> &
-  IpcMutationResponseContext
-
 export type SystemSettingsRevisionPayload = {
   systemSettings: RevisionPayloadEntity<SystemSettings>
 }
@@ -74,6 +70,3 @@ export type SystemSettingsRevisionPayload = {
 export type SystemSettingsRevisionResponsePayload = {
   systemSettings: RevisionEnvelope<SystemSettings>
 }
-
-export type UpdateSystemSettingsRevisionResult =
-  MutationResultWithRequestId<SystemSettingsRevisionResponsePayload>

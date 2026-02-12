@@ -1,11 +1,6 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
-import type {
-  CreatePromptResult,
-  DeletePromptResult,
-  Prompt,
-  UpdatePromptRevisionResult
-} from '@shared/Prompt'
+import type { Prompt } from '@shared/Prompt'
 import type {
   PromptFolderConfigFile,
   PromptsFile
@@ -116,7 +111,7 @@ const buildPromptFolderSnapshot = (
 export const setupPromptMutationHandlers = (): void => {
   ipcMain.handle(
     'create-prompt',
-    async (_, request: unknown): Promise<CreatePromptResult> => {
+    async (_, request: unknown) => {
       return await runMutationIpcRequest(request, parseCreatePromptRequest, async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
@@ -213,7 +208,7 @@ export const setupPromptMutationHandlers = (): void => {
 
   ipcMain.handle(
     'delete-prompt',
-    async (_, request: unknown): Promise<DeletePromptResult> => {
+    async (_, request: unknown) => {
       return await runMutationIpcRequest(request, parseDeletePromptRequest, async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder
@@ -296,7 +291,7 @@ export const setupPromptMutationHandlers = (): void => {
 
   ipcMain.handle(
     'update-prompt',
-    async (_, request: unknown): Promise<UpdatePromptRevisionResult> => {
+    async (_, request: unknown) => {
       return await runMutationIpcRequest(request, parseUpdatePromptRevisionRequest, async (validatedRequest) => {
         try {
           const promptEntity = validatedRequest.payload.prompt

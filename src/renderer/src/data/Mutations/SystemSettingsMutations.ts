@@ -3,7 +3,6 @@ import {
   type SystemSettings,
   type SystemSettingsRevisionPayload,
   type SystemSettingsRevisionResponsePayload,
-  type UpdateSystemSettingsRevisionResult
 } from '@shared/SystemSettings'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
@@ -19,10 +18,7 @@ export const updateSystemSettings = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<
-        UpdateSystemSettingsRevisionResult,
-        { payload: SystemSettingsRevisionPayload }
-      >('update-system-settings', {
+      return invoke<{ payload: SystemSettingsRevisionPayload }>('update-system-settings', {
         payload: {
           systemSettings: entities.systemSettings({
             id: SYSTEM_SETTINGS_ID,

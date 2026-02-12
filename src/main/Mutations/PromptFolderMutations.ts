@@ -2,10 +2,6 @@ import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { Workspace } from '@shared/Workspace'
 import type {
-  CreatePromptFolderResult,
-  UpdatePromptFolderRevisionResult
-} from '@shared/PromptFolder'
-import type {
   PromptFolderConfigFile,
   PromptsFile
 } from '../DiskTypes/WorkspaceDiskTypes'
@@ -177,7 +173,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
     async (
       _,
       request: unknown
-    ): Promise<CreatePromptFolderResult> => {
+    ) => {
       return await runMutationIpcRequest(request, parseCreatePromptFolderRequest, async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
@@ -283,7 +279,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
 
   ipcMain.handle(
     'update-prompt-folder',
-    async (_, request: unknown): Promise<UpdatePromptFolderRevisionResult> => {
+    async (_, request: unknown) => {
       return await runMutationIpcRequest(request, parseUpdatePromptFolderRevisionRequest, async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder

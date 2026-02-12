@@ -1,12 +1,9 @@
 import type {
   CreatePromptPayload,
   CreatePromptResponsePayload,
-  CreatePromptResult,
   DeletePromptResponsePayload,
-  DeletePromptResult,
   Prompt,
   PromptRevisionResponsePayload,
-  UpdatePromptRevisionResult
 } from '@shared/Prompt'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -51,7 +48,7 @@ export const createPrompt = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<CreatePromptResult, { payload: CreatePromptPayload }>('create-prompt', {
+      return invoke<{ payload: CreatePromptPayload }>('create-prompt', {
         payload: {
           promptFolder: entities.promptFolder({
             id: promptFolderId,
@@ -94,7 +91,7 @@ export const updatePrompt = async (prompt: Prompt): Promise<void> => {
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<UpdatePromptRevisionResult>('update-prompt', {
+      return invoke('update-prompt', {
         payload: {
           prompt: entities.prompt({
             id: prompt.id,
@@ -132,7 +129,7 @@ export const deletePrompt = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<DeletePromptResult>('delete-prompt', {
+      return invoke('delete-prompt', {
         payload: {
           promptFolder: entities.promptFolder({
             id: promptFolderId,

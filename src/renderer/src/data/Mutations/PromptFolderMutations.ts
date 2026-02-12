@@ -1,11 +1,9 @@
 import type {
   CreatePromptFolderPayload,
   CreatePromptFolderResponsePayload,
-  CreatePromptFolderResult,
   PromptFolder,
   PromptFolderRevisionPayload,
   PromptFolderRevisionResponsePayload,
-  UpdatePromptFolderRevisionResult
 } from '@shared/PromptFolder'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
@@ -43,19 +41,16 @@ export const createPromptFolder = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<CreatePromptFolderResult, { payload: CreatePromptFolderPayload }>(
-        'create-prompt-folder',
-        {
-          payload: {
-            workspace: entities.workspace({
-              id: workspaceId,
-              data: workspace
-            }),
-            promptFolderId: optimisticPromptFolderId,
-            displayName: normalizedDisplayName
-          }
+      return invoke<{ payload: CreatePromptFolderPayload }>('create-prompt-folder', {
+        payload: {
+          workspace: entities.workspace({
+            id: workspaceId,
+            data: workspace
+          }),
+          promptFolderId: optimisticPromptFolderId,
+          displayName: normalizedDisplayName
         }
-      )
+      })
     },
     handleSuccessOrConflictResponse: (payload) => {
       workspaceCollection.utils.upsertAuthoritative(payload.workspace)
@@ -88,10 +83,7 @@ const updatePromptFolder = async (
       })
     },
     persistMutations: async ({ entities, invoke }) => {
-      return invoke<
-        UpdatePromptFolderRevisionResult,
-        { payload: PromptFolderRevisionPayload }
-      >('update-prompt-folder', {
+      return invoke<{ payload: PromptFolderRevisionPayload }>('update-prompt-folder', {
         payload: {
           promptFolder: entities.promptFolder({
             id: promptFolder.id,
