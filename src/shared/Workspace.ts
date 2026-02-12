@@ -1,9 +1,10 @@
 import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope } from './Revision'
 import type {
-  MutationRequest,
-  MutationWireRequest
-} from './SystemSettings'
+  IpcMutationResponseContext,
+  IpcRequestContext,
+  IpcRequestWithPayload
+} from './IpcRequest'
 
 export interface Workspace {
   id: string
@@ -18,31 +19,24 @@ export type CreateWorkspacePayload = {
   includeExamplePrompts: boolean
 }
 
-export type CreateWorkspaceWireRequest =
-  MutationWireRequest<MutationRequest<CreateWorkspacePayload>>
+export type CreateWorkspaceWireRequest = IpcRequestWithPayload<CreateWorkspacePayload>
 
 export type CreateWorkspaceResponse =
-  | { requestId: string; clientId: string; success: true }
-  | { requestId: string; clientId: string; success: false; error: string }
+  | (IpcMutationResponseContext & { success: true })
+  | (IpcMutationResponseContext & { success: false; error: string })
 
-export type CloseWorkspaceWireRequest = {
-  requestId: string
-  clientId: string
-}
+export type CloseWorkspaceWireRequest = IpcRequestContext
 
 export type CloseWorkspaceResult =
-  | { requestId: string; clientId: string; success: true }
-  | { requestId: string; clientId: string; success: false; error: string }
+  | (IpcMutationResponseContext & { success: true })
+  | (IpcMutationResponseContext & { success: false; error: string })
 
 export type LoadWorkspaceByPathRequest = {
   workspacePath: string
 }
 
-export type LoadWorkspaceByPathWireRequest = {
-  requestId: string
-  clientId: string
-  payload: LoadWorkspaceByPathRequest
-}
+export type LoadWorkspaceByPathWireRequest =
+  IpcRequestWithPayload<LoadWorkspaceByPathRequest>
 
 export type LoadWorkspaceByPathResult =
   | {

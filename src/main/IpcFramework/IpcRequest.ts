@@ -1,4 +1,9 @@
 import type { ParsedRequest } from './IpcValidation'
+import type {
+  IpcMutationResponseContext,
+  IpcQueryResponseContext,
+  IpcRequestContext
+} from '@shared/IpcRequest'
 
 const INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
 const INVALID_CLIENT_ID_ERROR = 'Invalid client ID'
@@ -7,25 +12,22 @@ type RequestValidationError =
   | typeof INVALID_REQUEST_PAYLOAD_ERROR
   | typeof INVALID_CLIENT_ID_ERROR
 
-type MutationInvalidRequestResult = {
-  requestId: string
-  clientId: string
+type MutationInvalidRequestResult = IpcMutationResponseContext & {
   success: false
   error: RequestValidationError
 }
 
-type QueryInvalidRequestResult = {
-  clientId: string
+type QueryInvalidRequestResult = IpcQueryResponseContext & {
   success: false
   error: RequestValidationError
 }
 
 type MutationResponseWithRequestContext<TResult extends object> = TResult extends object
-  ? TResult & { requestId: string; clientId: string }
+  ? TResult & IpcMutationResponseContext
   : never
 
 export const runMutationIpcRequest = async <
-  TRequest extends { requestId: string; clientId: string },
+  TRequest extends IpcRequestContext,
   TResult extends object
 >(
   request: unknown,
@@ -57,7 +59,7 @@ export const runMutationIpcRequest = async <
 }
 
 export const runQueryIpcRequest = async <
-  TRequest extends { clientId: string },
+  TRequest extends IpcRequestContext,
   TResult extends object
 >(
   request: unknown,

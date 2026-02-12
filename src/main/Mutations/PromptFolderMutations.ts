@@ -10,9 +10,9 @@ import type {
   UpdatePromptFolderRevisionResult
 } from '@shared/PromptFolder'
 import type {
-  MutationResult,
-  MutationWireRequest
+  MutationResult
 } from '@shared/SystemSettings'
+import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import type {
   PromptFolderConfigFile,
   PromptsFile
@@ -296,7 +296,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
     'update-prompt-folder',
     async (_, request: unknown): Promise<UpdatePromptFolderRevisionResult> => {
       return await runMutationIpcRequest<
-        MutationWireRequest<UpdatePromptFolderRevisionRequest>,
+        IpcRequestWithPayload<UpdatePromptFolderRevisionRequest['payload']>,
         MutationResult<PromptFolderRevisionResponsePayload>
       >(request, parseUpdatePromptFolderRevisionRequest, async (validatedRequest) => {
         try {

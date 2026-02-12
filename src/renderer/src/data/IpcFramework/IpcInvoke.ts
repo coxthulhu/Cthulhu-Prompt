@@ -1,22 +1,15 @@
 import { ipcInvoke as invokeIpc } from '@renderer/api/ipcInvoke'
-
-type IpcRequestWithPayload<TPayload> = {
-  requestId: string
-  clientId: string
-  payload: TPayload
-}
-
-type IpcRequestWithoutPayload = {
-  requestId: string
-  clientId: string
-}
+import type {
+  IpcRequestContext,
+  IpcRequestWithPayload
+} from '@shared/IpcRequest'
 
 const createRequestId = (): string => crypto.randomUUID()
 const getClientId = (): string => window.ipcClientId
 
 export const ipcInvoke = <TResponse>(channel: string): Promise<TResponse> => {
   // Side effect: include request/client IDs for every typed IPC request.
-  return invokeIpc<TResponse, IpcRequestWithoutPayload>(channel, {
+  return invokeIpc<TResponse, IpcRequestContext>(channel, {
     requestId: createRequestId(),
     clientId: getClientId()
   })

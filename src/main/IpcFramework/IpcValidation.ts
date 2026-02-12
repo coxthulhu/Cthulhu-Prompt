@@ -15,9 +15,12 @@ import type {
   PromptFolderRevisionPayload,
   UpdatePromptFolderRevisionRequest
 } from '@shared/PromptFolder'
+import type {
+  IpcRequestContext,
+  IpcRequestWithPayload
+} from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type {
-  MutationWireRequest,
   SystemSettings,
   SystemSettingsRevisionPayload,
   UpdateSystemSettingsRevisionRequest
@@ -34,22 +37,7 @@ type Parser<T> = (value: unknown) => T | null
 
 export type ParsedRequest<TRequest> =
   | { success: true; value: TRequest }
-  | {
-      success: false
-      requestId: string
-      clientId: string
-    }
-
-type WireRequestWithPayload<TPayload> = {
-  requestId: string
-  clientId: string
-  payload: TPayload
-}
-
-type WireRequestWithoutPayload = {
-  requestId: string
-  clientId: string
-}
+  | ({ success: false } & IpcRequestContext)
 
 const parseString: Parser<string> = (value) => {
   return typeof value === 'string' ? value : null
@@ -140,7 +128,7 @@ const parseRevisionPayloadEntity = <TData>(
 
 const parseWireRequestWithPayload = <TPayload>(
   payloadParser: Parser<TPayload>
-): Parser<WireRequestWithPayload<TPayload>> => {
+): Parser<IpcRequestWithPayload<TPayload>> => {
   return parseObject({
     requestId: parseString,
     clientId: parseClientId,
@@ -148,7 +136,7 @@ const parseWireRequestWithPayload = <TPayload>(
   })
 }
 
-const parseWireRequestWithoutPayload = (): Parser<WireRequestWithoutPayload> => {
+const parseWireRequestWithoutPayload = (): Parser<IpcRequestContext> => {
   return parseObject({
     requestId: parseString,
     clientId: parseClientId
@@ -307,7 +295,7 @@ const parsePromptRevisionPayload = parseObject<PromptRevisionPayload>({
 })
 
 const parseUpdatePromptRevisionWireRequest: Parser<
-  MutationWireRequest<UpdatePromptRevisionRequest>
+  IpcRequestWithPayload<UpdatePromptRevisionRequest['payload']>
 > = parseWireRequestWithPayload<PromptRevisionPayload>(parsePromptRevisionPayload)
 
 const parsePromptFolderRevisionPayload =
@@ -316,7 +304,7 @@ const parsePromptFolderRevisionPayload =
   })
 
 const parseUpdatePromptFolderRevisionWireRequest: Parser<
-  MutationWireRequest<UpdatePromptFolderRevisionRequest>
+  IpcRequestWithPayload<UpdatePromptFolderRevisionRequest['payload']>
 > = parseWireRequestWithPayload<PromptFolderRevisionPayload>(
   parsePromptFolderRevisionPayload
 )
@@ -335,7 +323,7 @@ const parseSystemSettingsRevisionPayload =
   })
 
 const parseUpdateSystemSettingsRevisionWireRequest: Parser<
-  MutationWireRequest<UpdateSystemSettingsRevisionRequest>
+  IpcRequestWithPayload<UpdateSystemSettingsRevisionRequest['payload']>
 > = parseWireRequestWithPayload<SystemSettingsRevisionPayload>(
   parseSystemSettingsRevisionPayload
 )

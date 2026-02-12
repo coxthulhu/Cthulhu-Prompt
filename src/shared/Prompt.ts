@@ -1,9 +1,9 @@
 import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { IpcRequestWithPayload } from './IpcRequest'
 import type {
   MutationRequest,
-  MutationResultWithRequestId,
-  MutationWireRequest
+  MutationResultWithRequestId
 } from './SystemSettings'
 
 export interface Prompt {
@@ -36,7 +36,7 @@ export type CreatePromptPayload = {
 
 export type CreatePromptRequest = MutationRequest<CreatePromptPayload>
 
-export type CreatePromptWireRequest = MutationWireRequest<CreatePromptRequest>
+export type CreatePromptWireRequest = IpcRequestWithPayload<CreatePromptPayload>
 
 export type CreatePromptResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
@@ -54,7 +54,7 @@ export type DeletePromptPayload = {
 
 export type DeletePromptRequest = MutationRequest<DeletePromptPayload>
 
-export type DeletePromptWireRequest = MutationWireRequest<DeletePromptRequest>
+export type DeletePromptWireRequest = IpcRequestWithPayload<DeletePromptPayload>
 
 export type DeletePromptResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
