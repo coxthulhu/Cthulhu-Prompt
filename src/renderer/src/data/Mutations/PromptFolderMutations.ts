@@ -42,7 +42,7 @@ export const createPromptFolder = async (
         draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]
       })
     },
-    runMutation: async ({ entities, invoke }) => {
+    persistMutations: async ({ entities, invoke }) => {
       return invoke<CreatePromptFolderResult, CreatePromptFolderRequest>(
         'create-prompt-folder',
         {
@@ -87,7 +87,7 @@ const updatePromptFolder = async (
         draft.folderDescription = promptFolder.folderDescription
       })
     },
-    runMutation: async ({ entities, invoke }) => {
+    persistMutations: async ({ entities, invoke }) => {
       return invoke<
         UpdatePromptFolderRevisionResult,
         UpdatePromptFolderRevisionRequest

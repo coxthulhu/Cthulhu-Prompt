@@ -57,7 +57,7 @@ type RevisionMutationOptions<
   TPayload
 > = {
   mutateOptimistically: () => void
-  runMutation: (
+  persistMutations: (
     helpers: {
       entities: RevisionEntityBuilders<TCollections>
       invoke: <
@@ -101,7 +101,7 @@ const runRevisionMutation = async <
   collections: TCollections,
   {
     mutateOptimistically,
-    runMutation,
+    persistMutations,
     handleSuccessOrConflictResponse,
     conflictMessage,
     onSuccess
@@ -112,7 +112,7 @@ const runRevisionMutation = async <
   const transaction = createTransaction({
     autoCommit: false,
     mutationFn: async () => {
-      const mutationResult = await runMutation({
+      const mutationResult = await persistMutations({
         entities,
         invoke: (channel, request) => ipcInvokeWithPayload(channel, request.payload)
       })

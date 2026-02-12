@@ -52,7 +52,7 @@ export const createPrompt = async (
         draft.promptCount += 1
       })
     },
-    runMutation: async ({ entities, invoke }) => {
+    persistMutations: async ({ entities, invoke }) => {
       return invoke<CreatePromptResult, CreatePromptRequest>(
         'create-prompt',
         {
@@ -98,7 +98,7 @@ export const updatePrompt = async (prompt: Prompt): Promise<void> => {
         draft.promptFolderCount = prompt.promptFolderCount
       })
     },
-    runMutation: async ({ entities, invoke }) => {
+    persistMutations: async ({ entities, invoke }) => {
       return invoke<UpdatePromptRevisionResult, UpdatePromptRevisionRequest>(
         'update-prompt',
         {
@@ -139,7 +139,7 @@ export const deletePrompt = async (
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
       })
     },
-    runMutation: async ({ entities, invoke }) => {
+    persistMutations: async ({ entities, invoke }) => {
       return invoke<DeletePromptResult, DeletePromptRequest>(
         'delete-prompt',
         {

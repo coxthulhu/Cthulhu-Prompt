@@ -18,7 +18,7 @@ export const updateSystemSettings = async (
         draft.promptEditorMinLines = settings.promptEditorMinLines
       })
     },
-    runMutation: async ({ entities, invoke }) => {
+    persistMutations: async ({ entities, invoke }) => {
       return invoke<UpdateSystemSettingsRevisionResult, UpdateSystemSettingsRevisionRequest>(
         'update-system-settings',
         {
