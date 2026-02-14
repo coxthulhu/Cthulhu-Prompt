@@ -34,7 +34,6 @@ type ElementOpenUpdateState = {
   latestInFlightOpenUpdateEnqueueTask: Promise<void> | null
 }
 
-const transactionsById = new Map<string, TransactionEntry>()
 const elementStatesByGlobalKey = new Map<string, ElementOpenUpdateState>()
 
 // Keep element keys aligned with TanStack's global mutation key format.
@@ -173,7 +172,6 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
           })
         }
       } finally {
-        clearRevisionMutationTransaction(transaction.id)
         cleanupElementStateIfIdle(globalElementKey)
       }
     }
@@ -188,38 +186,15 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
   )
 }
 
-// Register a transaction so it can be looked up by id.
+// Register a transaction entry.
 export const registerRevisionMutationTransaction = (
   transaction: Transaction<any>,
   isQueuedImmediately: boolean
 ): TransactionEntry => {
-  const transactionEntry: TransactionEntry = {
+  return {
     transaction,
     isQueuedImmediately
   }
-
-  transactionsById.set(transaction.id, transactionEntry)
-
-  return transactionEntry
-}
-
-// Remove a tracked transaction entry.
-export const clearRevisionMutationTransaction = (transactionId: string): void => {
-  transactionsById.delete(transactionId)
-}
-
-// Read a snapshot of currently indexed transactions for one (collectionId, elementId) pair.
-export const getTransactionsForElement = (
-  collectionId: string,
-  elementId: string | number
-): TransactionEntry[] => {
-  const globalElementKey = buildGlobalElementKey(collectionId, elementId)
-
-  return [...transactionsById.values()].filter((transactionEntry) => {
-    return transactionEntry.transaction.mutations.some(
-      (mutation) => mutation.globalKey === globalElementKey
-    )
-  })
 }
 
 // Mutate a per-element open update transaction and restart its debounce window.
@@ -250,7 +225,6 @@ export const mutateOpenUpdateTransaction = ({
     mutateTransaction(openUpdateTransaction.transactionEntry.transaction)
   } catch (error) {
     if (newOpenUpdateTransaction) {
-      clearRevisionMutationTransaction(newOpenUpdateTransaction.transactionEntry.transaction.id)
       elementState.openUpdateTransaction = null
       cleanupElementStateIfIdle(globalElementKey)
     }

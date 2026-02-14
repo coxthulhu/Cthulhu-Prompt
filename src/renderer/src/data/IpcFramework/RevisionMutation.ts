@@ -6,7 +6,6 @@ import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 import {
-  clearRevisionMutationTransaction,
   mutateOpenUpdateTransaction,
   registerRevisionMutationTransaction,
   sendOpenUpdateTransactionIfPresent
@@ -159,25 +158,21 @@ const mutateRevisionTransaction = (
   transaction.mutate(mutateOptimistically)
 }
 
-// Side effect: always remove transaction registry entries once enqueue work settles.
-const enqueueAndClearRegisteredRevisionMutationTransaction = async (
+// Side effect: enqueue one registered transaction and run success hook when it commits.
+const enqueueRegisteredRevisionMutationTransaction = async (
   transactionEntry: TransactionEntry,
   onSuccess: (() => void) | undefined
 ): Promise<void> => {
-  try {
-    await enqueueGlobalMutation(async () => {
-      if (transactionEntry.transaction.state === 'pending') {
-        await transactionEntry.transaction.commit()
-      }
+  await enqueueGlobalMutation(async () => {
+    if (transactionEntry.transaction.state === 'pending') {
+      await transactionEntry.transaction.commit()
+    }
 
-      if (transactionEntry.transaction.state === 'completed') {
-        // Side effect: success hook runs only after transaction commit succeeds.
-        onSuccess?.()
-      }
-    })
-  } finally {
-    clearRevisionMutationTransaction(transactionEntry.transaction.id)
-  }
+    if (transactionEntry.transaction.state === 'completed') {
+      // Side effect: success hook runs only after transaction commit succeeds.
+      onSuccess?.()
+    }
+  })
 }
 
 // Public runner for standard revision mutations (immediate queueing by default).
@@ -196,12 +191,7 @@ export const createRevisionMutationRunner = <
       queueImmediately
     )
 
-    try {
-      mutateRevisionTransaction(transactionEntry.transaction, options.mutateOptimistically)
-    } catch (error) {
-      clearRevisionMutationTransaction(transactionEntry.transaction.id)
-      throw error
-    }
+    mutateRevisionTransaction(transactionEntry.transaction, options.mutateOptimistically)
 
     if (!queueImmediately) {
       return
@@ -226,7 +216,7 @@ export const createRevisionMutationRunner = <
       )
     }
 
-    await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
+    await enqueueRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
   }
 }
 
@@ -263,7 +253,7 @@ export const createOpenRevisionUpdateMutationRunner = <
           transactionEntry,
           validateBeforeEnqueue,
           enqueueTransaction: async () => {
-            await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
+            await enqueueRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
           }
         }
       },

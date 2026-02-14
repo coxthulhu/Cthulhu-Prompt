@@ -7,7 +7,6 @@ import {
   createRevisionMutationRunner
 } from '@renderer/data/IpcFramework/RevisionMutation'
 import {
-  getTransactionsForElement,
   sendOpenUpdateTransactionIfPresent,
   submitOpenUpdateTransactionAndWait,
   submitAllOpenUpdateTransactionsAndWait
@@ -55,12 +54,10 @@ const createTestCollection = (
 const createSingleItemRegistryContext = (label: string) => {
   const collectionId = nextCollectionId(label)
   const collection = createTestCollection(collectionId, [createSingleItemRevisionEnvelope()])
-  const getIndexedTransactions = () => getTransactionsForElement(collectionId, TEST_ITEM_ID)
 
   return {
     collectionId,
-    collection,
-    getIndexedTransactions
+    collection
   }
 }
 
@@ -70,10 +67,10 @@ describe('revision mutation transaction registry', () => {
     vi.useRealTimers()
   })
 
-  it('indexes by element with dedupe and marks queued transactions', async () => {
-    const { collection, getIndexedTransactions } = createSingleItemRegistryContext('dedupe')
+  it('runs immediate mutations and persists once', async () => {
+    const { collection } = createSingleItemRegistryContext('immediate')
     const runMutation = createRevisionMutationRunner({ test: collection })
-    let isQueuedImmediately: boolean | null = null
+    let persistCalled = 0
 
     await runMutation<MutationPayload>({
       mutateOptimistically: () => {
@@ -85,21 +82,18 @@ describe('revision mutation transaction registry', () => {
         })
       },
       persistMutations: async () => {
-        expect(getIndexedTransactions().length).toBe(1)
-        const [entry] = getIndexedTransactions()
-        isQueuedImmediately = entry?.isQueuedImmediately ?? null
+        persistCalled += 1
         return { success: true, payload: { ok: true } }
       },
       handleSuccessOrConflictResponse: () => {},
       conflictMessage: 'Conflict'
     })
 
-    expect(isQueuedImmediately).toBe(true)
-    expect(getIndexedTransactions().length).toBe(0)
+    expect(persistCalled).toBe(1)
   })
 
   it('clears entries when persistence fails', async () => {
-    const { collection, getIndexedTransactions } = createSingleItemRegistryContext('failure')
+    const { collection } = createSingleItemRegistryContext('failure')
     const runMutation = createRevisionMutationRunner({ test: collection })
 
     await expect(
@@ -118,13 +112,10 @@ describe('revision mutation transaction registry', () => {
         conflictMessage: 'Conflict detected'
       })
     ).rejects.toThrow('Conflict detected')
-
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
   it('clears entries when mutateOptimistically throws', async () => {
-    const { collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('optimistic-error')
+    const { collection } = createSingleItemRegistryContext('optimistic-error')
     const runMutation = createRevisionMutationRunner({ test: collection })
     let persistCalled = false
 
@@ -146,14 +137,12 @@ describe('revision mutation transaction registry', () => {
     ).rejects.toThrow('Optimistic mutation failed')
 
     expect(persistCalled).toBe(false)
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
-  it('does not keep index entries after insert-delete cancellation', async () => {
+  it('does not persist after insert-delete cancellation', async () => {
     const collectionId = nextCollectionId('cancel')
     const collection = createTestCollection(collectionId, [])
     const runMutation = createRevisionMutationRunner({ test: collection })
-    const getIndexedTransactions = () => getTransactionsForElement(collectionId, 'item-new')
     let persistCalled = false
 
     await runMutation<MutationPayload>({
@@ -173,19 +162,16 @@ describe('revision mutation transaction registry', () => {
     })
 
     expect(persistCalled).toBe(false)
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
   it('debounces open update transactions and enqueues only once', async () => {
     vi.useFakeTimers()
 
-    const { collectionId, collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('open-debounce')
+    const { collectionId, collection } = createSingleItemRegistryContext('open-debounce')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
     let persistCalled = 0
-    let isQueuedImmediately: boolean | null = null
 
     const queueOpenUpdateWithValue = (value: number) => {
       mutateOpenUpdate<MutationPayload>({
@@ -199,8 +185,6 @@ describe('revision mutation transaction registry', () => {
         },
         persistMutations: async () => {
           persistCalled += 1
-          const [entry] = getIndexedTransactions()
-          isQueuedImmediately = entry?.isQueuedImmediately ?? null
           return { success: true, payload: { ok: true } }
         },
         handleSuccessOrConflictResponse: () => {},
@@ -211,8 +195,6 @@ describe('revision mutation transaction registry', () => {
     queueOpenUpdateWithValue(1)
     queueOpenUpdateWithValue(2)
 
-    expect(getIndexedTransactions().length).toBe(1)
-
     vi.advanceTimersByTime(199)
     await Promise.resolve()
     expect(persistCalled).toBe(0)
@@ -221,15 +203,12 @@ describe('revision mutation transaction registry', () => {
     await submitAllOpenUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
-    expect(isQueuedImmediately).toBe(false)
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
   it('sends open update transactions immediately when requested', async () => {
     vi.useFakeTimers()
 
-    const { collectionId, collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('open-send-now')
+    const { collectionId, collection } = createSingleItemRegistryContext('open-send-now')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
@@ -256,7 +235,6 @@ describe('revision mutation transaction registry', () => {
     await submitAllOpenUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
-    expect(getIndexedTransactions().length).toBe(0)
 
     vi.advanceTimersByTime(10_000)
     await submitAllOpenUpdateTransactionsAndWait()
@@ -309,8 +287,9 @@ describe('revision mutation transaction registry', () => {
   it('keeps invalid debounced open update transactions pending until validation passes', async () => {
     vi.useFakeTimers()
 
-    const { collectionId, collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('open-validation-debounce')
+    const { collectionId, collection } = createSingleItemRegistryContext(
+      'open-validation-debounce'
+    )
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
@@ -339,7 +318,6 @@ describe('revision mutation transaction registry', () => {
     await submitAllOpenUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(0)
-    expect(getIndexedTransactions().length).toBe(1)
 
     isValid = true
 
@@ -365,12 +343,12 @@ describe('revision mutation transaction registry', () => {
     await submitAllOpenUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
   it('flushes matching open update transactions before queueImmediately enqueue', async () => {
-    const { collectionId, collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('queue-immediate-flush-open')
+    const { collectionId, collection } = createSingleItemRegistryContext(
+      'queue-immediate-flush-open'
+    )
     const runMutation = createRevisionMutationRunner({ test: collection })
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
@@ -409,12 +387,12 @@ describe('revision mutation transaction registry', () => {
     })
 
     expect(persistOrder).toEqual(['open', 'immediate'])
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
   it('rolls back invalid open update transactions during immediate flush without rolling back the immediate transaction', async () => {
-    const { collectionId, collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('queue-immediate-invalid-open')
+    const { collectionId, collection } = createSingleItemRegistryContext(
+      'queue-immediate-invalid-open'
+    )
     const runMutation = createRevisionMutationRunner({ test: collection })
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
@@ -454,12 +432,10 @@ describe('revision mutation transaction registry', () => {
     })
 
     expect(persistOrder).toEqual(['immediate'])
-    expect(getIndexedTransactions().length).toBe(0)
   })
 
   it('always resolves when submitting all open update transactions', async () => {
-    const { collectionId, collection, getIndexedTransactions } =
-      createSingleItemRegistryContext('open-submit-all')
+    const { collectionId, collection } = createSingleItemRegistryContext('open-submit-all')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
@@ -483,6 +459,5 @@ describe('revision mutation transaction registry', () => {
     })
 
     await expect(submitAllOpenUpdateTransactionsAndWait()).resolves.toBeUndefined()
-    expect(getIndexedTransactions().length).toBe(0)
   })
 })

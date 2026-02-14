@@ -12,7 +12,6 @@ export {
   sendOpenUpdateTransactionIfPresent,
   submitOpenUpdateTransactionAndWait,
   submitAllOpenUpdateTransactionsAndWait,
-  getTransactionsForElement,
   type TransactionEntry
 } from './RevisionMutationTransactionRegistry'
 
