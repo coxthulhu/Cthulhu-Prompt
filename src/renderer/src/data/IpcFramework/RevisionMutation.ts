@@ -4,6 +4,11 @@ import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
+import {
+  clearRevisionMutationTransaction,
+  registerRevisionMutationTransaction,
+  syncRevisionMutationTransactionIndex
+} from './RevisionMutationTransactionRegistry'
 
 type QueuedTask<T> = () => Promise<T>
 let mutationQueue: Promise<void> = Promise.resolve()
@@ -126,18 +131,30 @@ const runRevisionMutation = async <
     }
   })
 
-  transaction.mutate(mutateOptimistically)
+  registerRevisionMutationTransaction(transaction, true)
 
-  await enqueueGlobalMutation(async () => {
-    if (transaction.state === 'pending') {
-      await transaction.commit()
-    }
+  try {
+    transaction.mutate(mutateOptimistically)
+    syncRevisionMutationTransactionIndex(transaction.id)
+  } catch (error) {
+    clearRevisionMutationTransaction(transaction.id)
+    throw error
+  }
 
-    if (transaction.state === 'completed') {
-      // Side effect: success hook runs only after transaction commit succeeds.
-      onSuccess?.()
-    }
-  })
+  try {
+    await enqueueGlobalMutation(async () => {
+      if (transaction.state === 'pending') {
+        await transaction.commit()
+      }
+
+      if (transaction.state === 'completed') {
+        // Side effect: success hook runs only after transaction commit succeeds.
+        onSuccess?.()
+      }
+    })
+  } finally {
+    clearRevisionMutationTransaction(transaction.id)
+  }
 }
 
 export const createRevisionMutationRunner = <
