@@ -1,9 +1,5 @@
 import {
   DEFAULT_SYSTEM_SETTINGS,
-  MAX_PROMPT_EDITOR_MIN_LINES,
-  MAX_PROMPT_FONT_SIZE,
-  MIN_PROMPT_EDITOR_MIN_LINES,
-  MIN_PROMPT_FONT_SIZE,
   type SystemSettings
 } from '@shared/SystemSettings'
 import {
@@ -14,36 +10,22 @@ import {
 } from '@renderer/data/draftAutosave'
 import { updateSystemSettings } from '../Mutations/SystemSettingsMutations'
 import {
-  formatPromptEditorMinLinesInput,
-  formatPromptFontSizeInput,
+  getSystemSettingsValidation as getSystemSettingsValidationForSnapshot,
+  haveSameSystemSettings,
   normalizePromptEditorMinLinesInput,
-  normalizePromptFontSizeInput
+  normalizePromptFontSizeInput,
+  toSystemSettingsDraftSnapshot,
+  type SystemSettingsDraftSnapshot,
+  type SystemSettingsValidation
 } from './SystemSettingsFormat'
-
-type SystemSettingsDraftSnapshot = {
-  promptFontSizeInput: string
-  promptEditorMinLinesInput: string
-}
-
-type SystemSettingsValidation = {
-  fontSizeError: string | null
-  minLinesError: string | null
-}
 
 type SystemSettingsDraftState = {
   draftSnapshot: SystemSettingsDraftSnapshot
   saveError: string | null
 }
 
-const toDraftSnapshot = (
-  settings: SystemSettings
-): SystemSettingsDraftSnapshot => ({
-  promptFontSizeInput: formatPromptFontSizeInput(settings.promptFontSize),
-  promptEditorMinLinesInput: formatPromptEditorMinLinesInput(settings.promptEditorMinLines)
-})
-
 const draftState = $state<SystemSettingsDraftState>({
-  draftSnapshot: toDraftSnapshot(DEFAULT_SYSTEM_SETTINGS),
+  draftSnapshot: toSystemSettingsDraftSnapshot(DEFAULT_SYSTEM_SETTINGS),
   saveError: null
 })
 
@@ -56,67 +38,18 @@ const autosaveDraft = $state<AutosaveDraft>({
 let lastSyncedSettings: SystemSettings = DEFAULT_SYSTEM_SETTINGS
 let hasSyncedSettings = false
 
-const validateFontSize = (value: string): string | null => {
-  if (!value.trim()) {
-    return 'Enter a font size.'
-  }
-
-  const { parsed } = normalizePromptFontSizeInput(value)
-
-  if (!Number.isFinite(parsed)) {
-    return 'Font size must be a number.'
-  }
-
-  if (parsed < MIN_PROMPT_FONT_SIZE || parsed > MAX_PROMPT_FONT_SIZE) {
-    return `Use a value between ${MIN_PROMPT_FONT_SIZE} and ${MAX_PROMPT_FONT_SIZE}.`
-  }
-
-  return null
-}
-
-const validateMinLines = (value: string): string | null => {
-  if (!value.trim()) {
-    return 'Enter a minimum line count.'
-  }
-
-  const { parsed } = normalizePromptEditorMinLinesInput(value)
-
-  if (!Number.isFinite(parsed)) {
-    return 'Minimum line count must be a number.'
-  }
-
-  if (parsed < MIN_PROMPT_EDITOR_MIN_LINES || parsed > MAX_PROMPT_EDITOR_MIN_LINES) {
-    return `Use a value between ${MIN_PROMPT_EDITOR_MIN_LINES} and ${MAX_PROMPT_EDITOR_MIN_LINES}.`
-  }
-
-  return null
-}
-
 export const getSystemSettingsValidation = (): SystemSettingsValidation => {
-  return {
-    fontSizeError: validateFontSize(draftState.draftSnapshot.promptFontSizeInput),
-    minLinesError: validateMinLines(draftState.draftSnapshot.promptEditorMinLinesInput)
-  }
+  return getSystemSettingsValidationForSnapshot(draftState.draftSnapshot)
 }
 
 const syncDraftSnapshot = (settings: SystemSettings): void => {
-  draftState.draftSnapshot.promptFontSizeInput = formatPromptFontSizeInput(settings.promptFontSize)
-  draftState.draftSnapshot.promptEditorMinLinesInput = formatPromptEditorMinLinesInput(
-    settings.promptEditorMinLines
-  )
+  draftState.draftSnapshot = toSystemSettingsDraftSnapshot(settings)
   draftState.saveError = null
   autosaveDraft.dirty = false
 }
 
-const haveSameSettings = (left: SystemSettings, right: SystemSettings): boolean => {
-  return (
-    left.promptFontSize === right.promptFontSize &&
-    left.promptEditorMinLines === right.promptEditorMinLines
-  )
-}
-
 export const syncSystemSettingsDraft = (settings: SystemSettings): void => {
-  if (hasSyncedSettings && haveSameSettings(lastSyncedSettings, settings)) {
+  if (hasSyncedSettings && haveSameSystemSettings(lastSyncedSettings, settings)) {
     return
   }
 
