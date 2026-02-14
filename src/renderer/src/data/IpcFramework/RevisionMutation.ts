@@ -9,8 +9,7 @@ import {
   clearRevisionMutationTransaction,
   mutateOpenUpdateTransaction,
   registerRevisionMutationTransaction,
-  sendOpenUpdateTransactionIfPresent,
-  syncRevisionMutationTransactionIndex
+  sendOpenUpdateTransactionIfPresent
 } from './RevisionMutationTransactionRegistry'
 import type { TransactionEntry } from './RevisionMutationTransactionRegistry'
 
@@ -152,13 +151,12 @@ const createRegisteredRevisionMutationTransaction = <
   return registerRevisionMutationTransaction(transaction, isQueuedImmediately)
 }
 
-// Apply optimistic mutation logic and refresh element indexes for the transaction.
+// Apply optimistic mutation logic for a transaction.
 const mutateRevisionTransaction = (
   transaction: Transaction<any>,
   mutateOptimistically: () => void
 ): void => {
   transaction.mutate(mutateOptimistically)
-  syncRevisionMutationTransactionIndex(transaction.id)
 }
 
 // Side effect: always remove transaction registry entries once enqueue work settles.

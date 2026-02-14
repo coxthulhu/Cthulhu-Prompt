@@ -28,12 +28,14 @@ type MutateOpenUpdateTransactionOptions = {
   mutateTransaction: (transaction: Transaction<any>) => void
 }
 
-const transactionEntries = new Map<string, TransactionEntry>()
-const transactionKeys = new Map<string, Set<string>>()
-const transactionsByElement = new Map<string, Set<TransactionEntry>>()
-const openUpdateTransactionsByElement = new Map<string, OpenUpdateTransaction>()
-const inFlightOpenUpdateEnqueueTasksByElement = new Map<string, Promise<void>>()
-let latestTrackedOpenUpdateEnqueueTask: Promise<void> = Promise.resolve()
+type ElementOpenUpdateState = {
+  openUpdateTransaction: OpenUpdateTransaction | null
+  // We only track the latest task because mutation commits are globally serialized.
+  latestInFlightOpenUpdateEnqueueTask: Promise<void> | null
+}
+
+const transactionsById = new Map<string, TransactionEntry>()
+const elementStatesByGlobalKey = new Map<string, ElementOpenUpdateState>()
 
 // Keep element keys aligned with TanStack's global mutation key format.
 const buildGlobalElementKey = (
@@ -43,17 +45,33 @@ const buildGlobalElementKey = (
   return `KEY::${collectionId}/${elementId}`
 }
 
-const getOrCreateElementTransactions = (
+const getOrCreateElementState = (
   globalElementKey: string
-): Set<TransactionEntry> => {
-  let elementTransactions = transactionsByElement.get(globalElementKey)
+): ElementOpenUpdateState => {
+  let elementState = elementStatesByGlobalKey.get(globalElementKey)
 
-  if (!elementTransactions) {
-    elementTransactions = new Set<TransactionEntry>()
-    transactionsByElement.set(globalElementKey, elementTransactions)
+  if (!elementState) {
+    elementState = {
+      openUpdateTransaction: null,
+      latestInFlightOpenUpdateEnqueueTask: null
+    }
+    elementStatesByGlobalKey.set(globalElementKey, elementState)
   }
 
-  return elementTransactions
+  return elementState
+}
+
+const cleanupElementStateIfIdle = (globalElementKey: string): void => {
+  const elementState = elementStatesByGlobalKey.get(globalElementKey)
+  if (!elementState) {
+    return
+  }
+
+  if (elementState.openUpdateTransaction || elementState.latestInFlightOpenUpdateEnqueueTask) {
+    return
+  }
+
+  elementStatesByGlobalKey.delete(globalElementKey)
 }
 
 // Side effect: cancel any active debounce timer for an open update transaction.
@@ -74,15 +92,21 @@ const trackOpenUpdateEnqueueTask = (
     () => undefined,
     () => undefined
   )
+  const elementState = getOrCreateElementState(globalElementKey)
+  elementState.latestInFlightOpenUpdateEnqueueTask = trackedTask
 
-  latestTrackedOpenUpdateEnqueueTask = trackedTask
-  inFlightOpenUpdateEnqueueTasksByElement.set(globalElementKey, trackedTask)
   void trackedTask.finally(() => {
-    if (inFlightOpenUpdateEnqueueTasksByElement.get(globalElementKey) !== trackedTask) {
+    const latestElementState = elementStatesByGlobalKey.get(globalElementKey)
+    if (!latestElementState) {
       return
     }
 
-    inFlightOpenUpdateEnqueueTasksByElement.delete(globalElementKey)
+    if (latestElementState.latestInFlightOpenUpdateEnqueueTask !== trackedTask) {
+      return
+    }
+
+    latestElementState.latestInFlightOpenUpdateEnqueueTask = null
+    cleanupElementStateIfIdle(globalElementKey)
   })
 
   return trackedTask
@@ -115,7 +139,8 @@ const dispatchOpenUpdateTransaction = (
 
   return {
     wasSent: false,
-    waitTask: inFlightOpenUpdateEnqueueTasksByElement.get(globalElementKey) ?? null
+    waitTask:
+      elementStatesByGlobalKey.get(globalElementKey)?.latestInFlightOpenUpdateEnqueueTask ?? null
   }
 }
 
@@ -124,7 +149,8 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
   globalElementKey: string,
   reason: OpenUpdateSendReason
 ): Promise<void> | null => {
-  const openUpdateTransaction = openUpdateTransactionsByElement.get(globalElementKey)
+  const elementState = elementStatesByGlobalKey.get(globalElementKey)
+  const openUpdateTransaction = elementState?.openUpdateTransaction
   if (!openUpdateTransaction) {
     return null
   }
@@ -135,12 +161,11 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
   let isValid = true
   if (openUpdateTransaction.validateBeforeEnqueue) {
     isValid = openUpdateTransaction.validateBeforeEnqueue(transaction)
-    syncRevisionMutationTransactionIndex(transaction.id)
   }
 
   if (!isValid) {
     if (reason === 'before-immediate-transaction') {
-      openUpdateTransactionsByElement.delete(globalElementKey)
+      elementState.openUpdateTransaction = null
       try {
         if (transaction.state === 'pending') {
           transaction.rollback({
@@ -149,57 +174,21 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
         }
       } finally {
         clearRevisionMutationTransaction(transaction.id)
+        cleanupElementStateIfIdle(globalElementKey)
       }
     }
 
     return null
   }
 
-  openUpdateTransactionsByElement.delete(globalElementKey)
+  elementState.openUpdateTransaction = null
   return trackOpenUpdateEnqueueTask(
     globalElementKey,
     openUpdateTransaction.enqueueTransaction()
   )
 }
 
-// Recompute per-element transaction indexes from the transaction's current mutation set.
-export const syncRevisionMutationTransactionIndex = (
-  transactionId: string
-): void => {
-  const transactionEntry = transactionEntries.get(transactionId)!
-  const previousKeys = transactionKeys.get(transactionId) ?? new Set<string>()
-  const nextKeys = new Set(
-    transactionEntry.transaction.mutations.map((mutation) => mutation.globalKey)
-  )
-
-  for (const previousKey of previousKeys) {
-    if (nextKeys.has(previousKey)) {
-      continue
-    }
-
-    const elementTransactions = transactionsByElement.get(previousKey)
-    if (!elementTransactions) {
-      continue
-    }
-
-    elementTransactions.delete(transactionEntry)
-    if (elementTransactions.size === 0) {
-      transactionsByElement.delete(previousKey)
-    }
-  }
-
-  for (const nextKey of nextKeys) {
-    if (previousKeys.has(nextKey)) {
-      continue
-    }
-
-    getOrCreateElementTransactions(nextKey).add(transactionEntry)
-  }
-
-  transactionKeys.set(transactionId, nextKeys)
-}
-
-// Register a transaction so it can be looked up by id and by mutated element key.
+// Register a transaction so it can be looked up by id.
 export const registerRevisionMutationTransaction = (
   transaction: Transaction<any>,
   isQueuedImmediately: boolean
@@ -209,42 +198,28 @@ export const registerRevisionMutationTransaction = (
     isQueuedImmediately
   }
 
-  transactionEntries.set(transaction.id, transactionEntry)
-  transactionKeys.set(transaction.id, new Set())
+  transactionsById.set(transaction.id, transactionEntry)
 
   return transactionEntry
 }
 
-// Remove a transaction from all indexes and per-element lookup sets.
+// Remove a tracked transaction entry.
 export const clearRevisionMutationTransaction = (transactionId: string): void => {
-  const transactionEntry = transactionEntries.get(transactionId)
-  if (!transactionEntry) {
-    return
-  }
-
-  const indexedKeys = transactionKeys.get(transactionId) ?? new Set<string>()
-  for (const indexedKey of indexedKeys) {
-    const elementTransactions = transactionsByElement.get(indexedKey)
-    if (!elementTransactions) {
-      continue
-    }
-
-    elementTransactions.delete(transactionEntry)
-    if (elementTransactions.size === 0) {
-      transactionsByElement.delete(indexedKey)
-    }
-  }
-
-  transactionKeys.delete(transactionId)
-  transactionEntries.delete(transactionId)
+  transactionsById.delete(transactionId)
 }
 
-// Read all currently indexed transactions for one (collectionId, elementId) pair.
+// Read a snapshot of currently indexed transactions for one (collectionId, elementId) pair.
 export const getTransactionsForElement = (
   collectionId: string,
   elementId: string | number
-): Set<TransactionEntry> => {
-  return getOrCreateElementTransactions(buildGlobalElementKey(collectionId, elementId))
+): TransactionEntry[] => {
+  const globalElementKey = buildGlobalElementKey(collectionId, elementId)
+
+  return [...transactionsById.values()].filter((transactionEntry) => {
+    return transactionEntry.transaction.mutations.some(
+      (mutation) => mutation.globalKey === globalElementKey
+    )
+  })
 }
 
 // Mutate a per-element open update transaction and restart its debounce window.
@@ -256,7 +231,8 @@ export const mutateOpenUpdateTransaction = ({
   mutateTransaction
 }: MutateOpenUpdateTransactionOptions): void => {
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
-  let openUpdateTransaction = openUpdateTransactionsByElement.get(globalElementKey)
+  const elementState = getOrCreateElementState(globalElementKey)
+  let openUpdateTransaction = elementState.openUpdateTransaction
   let newOpenUpdateTransaction: OpenUpdateTransactionFactoryResult | null = null
 
   if (!openUpdateTransaction) {
@@ -267,16 +243,16 @@ export const mutateOpenUpdateTransaction = ({
       enqueueTransaction: newOpenUpdateTransaction.enqueueTransaction,
       validateBeforeEnqueue: newOpenUpdateTransaction.validateBeforeEnqueue
     }
-    openUpdateTransactionsByElement.set(globalElementKey, openUpdateTransaction)
+    elementState.openUpdateTransaction = openUpdateTransaction
   }
 
   try {
     mutateTransaction(openUpdateTransaction.transactionEntry.transaction)
-    syncRevisionMutationTransactionIndex(openUpdateTransaction.transactionEntry.transaction.id)
   } catch (error) {
     if (newOpenUpdateTransaction) {
       clearRevisionMutationTransaction(newOpenUpdateTransaction.transactionEntry.transaction.id)
-      openUpdateTransactionsByElement.delete(globalElementKey)
+      elementState.openUpdateTransaction = null
+      cleanupElementStateIfIdle(globalElementKey)
     }
 
     throw error
@@ -320,25 +296,24 @@ export const submitOpenUpdateTransactionAndWait = async (
   }
 }
 
-// Submit all open update transactions and wait for every enqueue task to settle.
+// Submit all currently open update transactions and wait for current enqueue work.
 export const submitAllOpenUpdateTransactionsAndWait = async (): Promise<void> => {
-  while (true) {
-    const openTransactionKeys = [...openUpdateTransactionsByElement.keys()]
-    let didSendAny = false
+  const waitTasks = new Set<Promise<void>>()
 
-    for (const openTransactionKey of openTransactionKeys) {
-      const dispatchResult = dispatchOpenUpdateTransaction(
-        openTransactionKey,
-        'manual',
-        false
-      )
-      didSendAny = didSendAny || dispatchResult.wasSent
+  for (const [globalElementKey, elementState] of elementStatesByGlobalKey.entries()) {
+    if (elementState.latestInFlightOpenUpdateEnqueueTask) {
+      waitTasks.add(elementState.latestInFlightOpenUpdateEnqueueTask)
     }
 
-    await latestTrackedOpenUpdateEnqueueTask
+    if (!elementState.openUpdateTransaction) {
+      continue
+    }
 
-    if (!didSendAny) {
-      return
+    const enqueueTask = sendOpenUpdateTransactionByGlobalElementKey(globalElementKey, 'manual')
+    if (enqueueTask) {
+      waitTasks.add(enqueueTask)
     }
   }
+
+  await Promise.all([...waitTasks])
 }
