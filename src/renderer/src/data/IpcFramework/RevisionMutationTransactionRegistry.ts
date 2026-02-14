@@ -29,7 +29,7 @@ type ElementOpenUpdateState = {
 const elementStatesByGlobalKey = new Map<string, ElementOpenUpdateState>()
 
 // Keep element keys aligned with TanStack's global mutation key format.
-const buildGlobalElementKey = (
+export const buildGlobalElementKey = (
   collectionId: string,
   elementId: string | number
 ): string => {
@@ -168,10 +168,9 @@ export const mutateOpenUpdateTransaction = ({
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
   const elementState = getOrCreateElementState(globalElementKey)
   let openUpdateTransaction = elementState.openUpdateTransaction
-  let createdOpenUpdateTransaction: OpenUpdateTransactionBase | null = null
 
   if (!openUpdateTransaction) {
-    createdOpenUpdateTransaction = createTransaction()
+    const createdOpenUpdateTransaction = createTransaction()
     openUpdateTransaction = {
       debounceTimeoutId: null,
       transaction: createdOpenUpdateTransaction.transaction,
@@ -181,16 +180,7 @@ export const mutateOpenUpdateTransaction = ({
     elementState.openUpdateTransaction = openUpdateTransaction
   }
 
-  try {
-    mutateTransaction(openUpdateTransaction.transaction)
-  } catch (error) {
-    if (createdOpenUpdateTransaction) {
-      elementState.openUpdateTransaction = null
-      cleanupElementStateIfIdle(globalElementKey)
-    }
-
-    throw error
-  }
+  mutateTransaction(openUpdateTransaction.transaction)
 
   clearOpenUpdateDebounceTimeout(openUpdateTransaction)
   openUpdateTransaction.debounceTimeoutId = globalThis.setTimeout(() => {

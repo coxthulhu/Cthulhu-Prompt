@@ -6,6 +6,7 @@ import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 import {
+  buildGlobalElementKey,
   mutateOpenUpdateTransaction,
   sendOpenUpdateTransactionIfPresent
 } from './RevisionMutationTransactionRegistry'
@@ -195,7 +196,7 @@ export const createRevisionMutationRunner = <
     for (const mutation of transaction.mutations) {
       const collectionId = mutation.collection.id
       const elementId = mutation.key as string | number
-      const elementKey = `${collectionId}/${elementId}`
+      const elementKey = buildGlobalElementKey(collectionId, elementId)
 
       if (sentElementKeys.has(elementKey)) {
         continue
