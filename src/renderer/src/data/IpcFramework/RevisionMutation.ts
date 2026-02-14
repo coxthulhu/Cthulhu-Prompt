@@ -1,18 +1,23 @@
 import { createTransaction } from '@tanstack/svelte-db'
 import type { Collection } from '@tanstack/svelte-db'
+import type { Transaction } from '@tanstack/svelte-db'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 import {
   clearRevisionMutationTransaction,
+  mutateOpenUpdateTransaction,
   registerRevisionMutationTransaction,
+  sendOpenUpdateTransactionIfPresent,
   syncRevisionMutationTransactionIndex
 } from './RevisionMutationTransactionRegistry'
+import type { TransactionEntry } from './RevisionMutationTransactionRegistry'
 
 type QueuedTask<T> = () => Promise<T>
 let mutationQueue: Promise<void> = Promise.resolve()
 
+// Side effect: serialize all mutation commits through a single queue.
 const enqueueGlobalMutation = <T>(task: QueuedTask<T>): Promise<T> => {
   const queuedTask = mutationQueue.then(task)
   mutationQueue = queuedTask.then(
@@ -70,17 +75,45 @@ type RevisionMutationOptions<
   handleSuccessOrConflictResponse: (payload: TPayload) => void
   conflictMessage: string
   onSuccess?: () => void
+  queueImmediately?: boolean
 }
 
-const createRevisionEntityBuilders = <TCollections extends RevisionCollectionsMap>(
-  collections: TCollections
-): RevisionEntityBuilders<TCollections> => {
-  const builders = {} as RevisionEntityBuilders<TCollections>
+type OpenRevisionUpdateMutationOptions<
+  TCollections extends RevisionCollectionsMap,
+  TPayload
+> = RevisionMutationOptions<TCollections, TPayload> & {
+  collectionId: string
+  elementId: string | number
+  debounceMs: number
+}
+
+type CreateRevisionMutationTransactionOptions<
+  TCollections extends RevisionCollectionsMap,
+  TPayload
+> = Pick<
+  RevisionMutationOptions<TCollections, TPayload>,
+  'persistMutations' | 'handleSuccessOrConflictResponse' | 'conflictMessage'
+>
+
+// Create and register a manual-commit transaction using the shared revision mutation contract.
+const createRegisteredRevisionMutationTransaction = <
+  TCollections extends RevisionCollectionsMap,
+  TPayload
+>(
+  collections: TCollections,
+  {
+    persistMutations,
+    handleSuccessOrConflictResponse,
+    conflictMessage
+  }: CreateRevisionMutationTransactionOptions<TCollections, TPayload>,
+  queuedImmediately: boolean
+): TransactionEntry => {
+  const entities = {} as RevisionEntityBuilders<TCollections>
 
   for (const collectionKey of Object.keys(collections) as Array<keyof TCollections>) {
     const collection = collections[collectionKey]
 
-    builders[collectionKey] = ((entity) => {
+    entities[collectionKey] = ((entity) => {
       return {
         id: entity.id,
         expectedRevision: collection.utils.getAuthoritativeRevision(entity.id),
@@ -88,24 +121,6 @@ const createRevisionEntityBuilders = <TCollections extends RevisionCollectionsMa
       }
     }) as RevisionEntityBuilders<TCollections>[typeof collectionKey]
   }
-
-  return builders
-}
-
-const runRevisionMutation = async <
-  TCollections extends RevisionCollectionsMap,
-  TPayload
->(
-  collections: TCollections,
-  {
-    mutateOptimistically,
-    persistMutations,
-    handleSuccessOrConflictResponse,
-    conflictMessage,
-    onSuccess
-  }: RevisionMutationOptions<TCollections, TPayload>
-): Promise<void> => {
-  const entities = createRevisionEntityBuilders(collections)
 
   const transaction = createTransaction({
     autoCommit: false,
@@ -131,40 +146,138 @@ const runRevisionMutation = async <
     }
   })
 
-  registerRevisionMutationTransaction(transaction, true)
+  return registerRevisionMutationTransaction(transaction, queuedImmediately)
+}
 
-  try {
-    transaction.mutate(mutateOptimistically)
-    syncRevisionMutationTransactionIndex(transaction.id)
-  } catch (error) {
-    clearRevisionMutationTransaction(transaction.id)
-    throw error
-  }
+// Apply optimistic mutation logic and refresh element indexes for the transaction.
+const mutateRevisionTransaction = (
+  transaction: Transaction<any>,
+  mutateOptimistically: () => void
+): void => {
+  transaction.mutate(mutateOptimistically)
+  syncRevisionMutationTransactionIndex(transaction.id)
+}
 
+// Side effect: always remove transaction registry entries once enqueue work settles.
+const enqueueAndClearRegisteredRevisionMutationTransaction = async (
+  transactionEntry: TransactionEntry,
+  onSuccess: (() => void) | undefined
+): Promise<void> => {
   try {
     await enqueueGlobalMutation(async () => {
-      if (transaction.state === 'pending') {
-        await transaction.commit()
+      if (transactionEntry.transaction.state === 'pending') {
+        await transactionEntry.transaction.commit()
       }
 
-      if (transaction.state === 'completed') {
+      if (transactionEntry.transaction.state === 'completed') {
         // Side effect: success hook runs only after transaction commit succeeds.
         onSuccess?.()
       }
     })
   } finally {
-    clearRevisionMutationTransaction(transaction.id)
+    clearRevisionMutationTransaction(transactionEntry.transaction.id)
   }
 }
 
+// Public runner for standard revision mutations (immediate queueing by default).
 export const createRevisionMutationRunner = <
   TCollections extends RevisionCollectionsMap
 >(
   collections: TCollections
 ) => {
   return async <TPayload>(
-    options: RevisionMutationOptions<TCollections, TPayload>
+    {
+      mutateOptimistically,
+      persistMutations,
+      handleSuccessOrConflictResponse,
+      conflictMessage,
+      onSuccess,
+      queueImmediately = true
+    }: RevisionMutationOptions<TCollections, TPayload>
   ): Promise<void> => {
-    await runRevisionMutation(collections, options)
+    const transactionEntry = createRegisteredRevisionMutationTransaction(
+      collections,
+      {
+        persistMutations,
+        handleSuccessOrConflictResponse,
+        conflictMessage
+      },
+      queueImmediately
+    )
+
+    try {
+      mutateRevisionTransaction(transactionEntry.transaction, mutateOptimistically)
+    } catch (error) {
+      clearRevisionMutationTransaction(transactionEntry.transaction.id)
+      throw error
+    }
+
+    if (!queueImmediately) {
+      return
+    }
+
+    // Flush any open debounced updates for elements touched by this immediate transaction.
+    const sentElementKeys = new Set<string>()
+    for (const mutation of transactionEntry.transaction.mutations) {
+      const collectionId = mutation.collection.id
+      const elementId = mutation.key as string | number
+      const elementKey = `${collectionId}/${elementId}`
+
+      if (sentElementKeys.has(elementKey)) {
+        continue
+      }
+
+      sentElementKeys.add(elementKey)
+      sendOpenUpdateTransactionIfPresent(collectionId, elementId)
+    }
+
+    await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
+  }
+}
+
+// Public runner for debounced per-element open update transactions.
+export const createOpenRevisionUpdateMutationRunner = <
+  TCollections extends RevisionCollectionsMap
+>(
+  collections: TCollections
+) => {
+  return <TPayload>(
+    {
+      collectionId,
+      elementId,
+      debounceMs,
+      mutateOptimistically,
+      persistMutations,
+      handleSuccessOrConflictResponse,
+      conflictMessage,
+      onSuccess
+    }: OpenRevisionUpdateMutationOptions<TCollections, TPayload>
+  ): void => {
+    mutateOpenUpdateTransaction({
+      collectionId,
+      elementId,
+      debounceMs,
+      createTransaction: () => {
+        const transactionEntry = createRegisteredRevisionMutationTransaction(
+          collections,
+          {
+            persistMutations,
+            handleSuccessOrConflictResponse,
+            conflictMessage
+          },
+          false
+        )
+
+        return {
+          transactionEntry,
+          enqueueTransaction: async () => {
+            await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
+          }
+        }
+      },
+      mutateTransaction: (transaction) => {
+        mutateRevisionTransaction(transaction, mutateOptimistically)
+      }
+    })
   }
 }

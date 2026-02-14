@@ -1,9 +1,16 @@
 import { createCollection } from '@tanstack/svelte-db'
 import type { RevisionEnvelope } from '@shared/Revision'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { revisionCollectionOptions } from '@renderer/data/Collections/RevisionCollection'
-import { createRevisionMutationRunner } from '@renderer/data/IpcFramework/RevisionMutation'
-import { getTransactionsForElement } from '@renderer/data/IpcFramework/RevisionMutationTransactionRegistry'
+import {
+  createOpenRevisionUpdateMutationRunner,
+  createRevisionMutationRunner
+} from '@renderer/data/IpcFramework/RevisionMutation'
+import {
+  getTransactionsForElement,
+  sendOpenUpdateTransactionIfPresent,
+  submitAllOpenUpdateTransactionsAndWait
+} from '@renderer/data/IpcFramework/RevisionMutationTransactionRegistry'
 
 type TestRecord = {
   id: string
@@ -35,6 +42,11 @@ const createTestCollection = (
 }
 
 describe('revision mutation transaction registry', () => {
+  afterEach(async () => {
+    await submitAllOpenUpdateTransactionsAndWait()
+    vi.useRealTimers()
+  })
+
   it('indexes by element with dedupe and marks queued transactions', async () => {
     const collectionId = nextCollectionId('dedupe')
     const collection = createTestCollection(collectionId, [
@@ -161,6 +173,194 @@ describe('revision mutation transaction registry', () => {
     })
 
     expect(persistCalled).toBe(false)
+    expect(indexedTransactions.size).toBe(0)
+  })
+
+  it('debounces open update transactions and enqueues only once', async () => {
+    vi.useFakeTimers()
+
+    const collectionId = nextCollectionId('open-debounce')
+    const collection = createTestCollection(collectionId, [
+      {
+        id: 'item-1',
+        revision: 1,
+        data: { id: 'item-1', value: 0 }
+      }
+    ])
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
+    let persistCalled = 0
+    let queuedImmediately: boolean | null = null
+
+    const mutateFirstValue = (value: number) => {
+      mutateOpenUpdate<MutationPayload>({
+        collectionId,
+        elementId: 'item-1',
+        debounceMs: 200,
+        mutateOptimistically: () => {
+          collection.update('item-1', (draft) => {
+            draft.value = value
+          })
+        },
+        persistMutations: async () => {
+          persistCalled += 1
+          const [entry] = [...indexedTransactions]
+          queuedImmediately = entry?.queuedImmediately ?? null
+          return { success: true, payload: { ok: true } }
+        },
+        handleSuccessOrConflictResponse: () => {},
+        conflictMessage: 'Conflict'
+      })
+    }
+
+    mutateFirstValue(1)
+    mutateFirstValue(2)
+
+    expect(indexedTransactions.size).toBe(1)
+
+    vi.advanceTimersByTime(199)
+    await Promise.resolve()
+    expect(persistCalled).toBe(0)
+
+    vi.advanceTimersByTime(1)
+    await submitAllOpenUpdateTransactionsAndWait()
+
+    expect(persistCalled).toBe(1)
+    expect(queuedImmediately).toBe(false)
+    expect(indexedTransactions.size).toBe(0)
+  })
+
+  it('sends open update transactions immediately when requested', async () => {
+    vi.useFakeTimers()
+
+    const collectionId = nextCollectionId('open-send-now')
+    const collection = createTestCollection(collectionId, [
+      {
+        id: 'item-1',
+        revision: 1,
+        data: { id: 'item-1', value: 0 }
+      }
+    ])
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
+    let persistCalled = 0
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: 'item-1',
+      debounceMs: 10_000,
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 7
+        })
+      },
+      persistMutations: async () => {
+        persistCalled += 1
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    sendOpenUpdateTransactionIfPresent(collectionId, 'item-1')
+    await submitAllOpenUpdateTransactionsAndWait()
+
+    expect(persistCalled).toBe(1)
+    expect(indexedTransactions.size).toBe(0)
+
+    vi.advanceTimersByTime(10_000)
+    await submitAllOpenUpdateTransactionsAndWait()
+    expect(persistCalled).toBe(1)
+  })
+
+  it('flushes matching open update transactions before queueImmediately enqueue', async () => {
+    const collectionId = nextCollectionId('queue-immediate-flush-open')
+    const collection = createTestCollection(collectionId, [
+      {
+        id: 'item-1',
+        revision: 1,
+        data: { id: 'item-1', value: 0 }
+      }
+    ])
+    const runMutation = createRevisionMutationRunner({ test: collection })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    const persistOrder: string[] = []
+    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: 'item-1',
+      debounceMs: 10_000,
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 1
+        })
+      },
+      persistMutations: async () => {
+        persistOrder.push('open')
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    await runMutation<MutationPayload>({
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 2
+        })
+      },
+      persistMutations: async () => {
+        persistOrder.push('immediate')
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    expect(persistOrder).toEqual(['open', 'immediate'])
+    expect(indexedTransactions.size).toBe(0)
+  })
+
+  it('always resolves when submitting all open update transactions', async () => {
+    const collectionId = nextCollectionId('open-submit-all')
+    const collection = createTestCollection(collectionId, [
+      {
+        id: 'item-1',
+        revision: 1,
+        data: { id: 'item-1', value: 0 }
+      }
+    ])
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: 'item-1',
+      debounceMs: 10_000,
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 5
+        })
+      },
+      persistMutations: async () => ({
+        success: false,
+        conflict: true,
+        payload: { ok: true }
+      }),
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    await expect(submitAllOpenUpdateTransactionsAndWait()).resolves.toBeUndefined()
     expect(indexedTransactions.size).toBe(0)
   })
 })
