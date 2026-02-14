@@ -1,51 +1,95 @@
 import {
   DEFAULT_SYSTEM_SETTINGS,
+  SYSTEM_SETTINGS_ID,
   type SystemSettings
 } from '@shared/SystemSettings'
+import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
-  AUTOSAVE_MS,
-  clearAutosaveTimeout,
-  createAutosaveController,
-  type AutosaveDraft
-} from '@renderer/data/draftAutosave'
-import { updateSystemSettings } from '../Mutations/SystemSettingsMutations'
+  SYSTEM_SETTINGS_DRAFT_ID,
+  type SystemSettingsDraftRecord,
+  systemSettingsDraftCollection
+} from '../Collections/SystemSettingsDraftCollection'
+import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
+import {
+  sendOpenUpdateTransactionIfPresent,
+  submitAllOpenUpdateTransactionsAndWait
+} from '../IpcFramework/RevisionCollections'
+import { mutateOpenSystemSettingsAutosaveUpdate } from '../Mutations/SystemSettingsMutations'
 import {
   getSystemSettingsValidation as getSystemSettingsValidationForSnapshot,
   haveSameSystemSettings,
   normalizePromptEditorMinLinesInput,
   normalizePromptFontSizeInput,
   toSystemSettingsDraftSnapshot,
-  type SystemSettingsDraftSnapshot,
   type SystemSettingsValidation
 } from './SystemSettingsFormat'
 
-type SystemSettingsDraftState = {
-  draftSnapshot: SystemSettingsDraftSnapshot
-  saveError: string | null
+export type SystemSettingsAutosaveState = {
+  saving: boolean
 }
 
-const draftState = $state<SystemSettingsDraftState>({
-  draftSnapshot: toSystemSettingsDraftSnapshot(DEFAULT_SYSTEM_SETTINGS),
-  saveError: null
-})
-
-const autosaveDraft = $state<AutosaveDraft>({
-  dirty: false,
-  saving: false,
-  autosaveTimeoutId: null
+const autosaveState = $state<SystemSettingsAutosaveState>({
+  saving: false
 })
 
 let lastSyncedSettings: SystemSettings = DEFAULT_SYSTEM_SETTINGS
 let hasSyncedSettings = false
 
-export const getSystemSettingsValidation = (): SystemSettingsValidation => {
-  return getSystemSettingsValidationForSnapshot(draftState.draftSnapshot)
+const getSystemSettingsDraftRecord = (): SystemSettingsDraftRecord => {
+  return systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
 }
 
-const syncDraftSnapshot = (settings: SystemSettings): void => {
-  draftState.draftSnapshot = toSystemSettingsDraftSnapshot(settings)
-  draftState.saveError = null
-  autosaveDraft.dirty = false
+const getValidatedSystemSettingsFromDraftRecord = (
+  draftRecord: SystemSettingsDraftRecord
+): SystemSettings | null => {
+  const validation = getSystemSettingsValidationForSnapshot(draftRecord.draftSnapshot)
+  if (validation.fontSizeError || validation.minLinesError) {
+    return null
+  }
+
+  return {
+    promptFontSize: normalizePromptFontSizeInput(draftRecord.draftSnapshot.promptFontSizeInput).rounded,
+    promptEditorMinLines: normalizePromptEditorMinLinesInput(
+      draftRecord.draftSnapshot.promptEditorMinLinesInput
+    ).rounded
+  }
+}
+
+const doesDraftValidate = (): boolean => {
+  const validation = getSystemSettingsValidation()
+  return !validation.fontSizeError && !validation.minLinesError
+}
+
+const scheduleSystemSettingsAutosaveMutation = (
+  applyDraftUpdate: (draftRecord: SystemSettingsDraftRecord) => void
+): void => {
+  mutateOpenSystemSettingsAutosaveUpdate({
+    debounceMs: AUTOSAVE_MS,
+    mutateOptimistically: () => {
+      systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
+        applyDraftUpdate(draftRecord)
+        draftRecord.saveError = null
+      })
+
+      const updatedDraftRecord = getSystemSettingsDraftRecord()
+      const validatedSettings = getValidatedSystemSettingsFromDraftRecord(updatedDraftRecord)
+      if (!validatedSettings) {
+        return
+      }
+
+      systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
+        draft.promptFontSize = validatedSettings.promptFontSize
+        draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
+      })
+    },
+    validateBeforeEnqueue: () => {
+      return doesDraftValidate()
+    }
+  })
+}
+
+export const getSystemSettingsValidation = (): SystemSettingsValidation => {
+  return getSystemSettingsValidationForSnapshot(getSystemSettingsDraftRecord().draftSnapshot)
 }
 
 export const syncSystemSettingsDraft = (settings: SystemSettings): void => {
@@ -55,66 +99,52 @@ export const syncSystemSettingsDraft = (settings: SystemSettings): void => {
 
   hasSyncedSettings = true
   lastSyncedSettings = { ...settings }
-  clearAutosaveTimeout(autosaveDraft)
-  syncDraftSnapshot(settings)
+
+  systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
+    draftRecord.draftSnapshot = toSystemSettingsDraftSnapshot(settings)
+    draftRecord.saveError = null
+  })
 }
 
-const autosave = createAutosaveController({
-  draft: autosaveDraft,
-  autosaveMs: AUTOSAVE_MS,
-  save: async () => {
-    const validation = getSystemSettingsValidation()
-
-    if (validation.fontSizeError || validation.minLinesError) {
-      return
-    }
-
-    const fontSize = normalizePromptFontSizeInput(draftState.draftSnapshot.promptFontSizeInput)
-    const minLines = normalizePromptEditorMinLinesInput(
-      draftState.draftSnapshot.promptEditorMinLinesInput
-    )
-
-    draftState.saveError = null
-    await updateSystemSettings({
-      promptFontSize: fontSize.rounded,
-      promptEditorMinLines: minLines.rounded
-    })
-    autosaveDraft.dirty = false
-  }
-})
-
-export const getSystemSettingsDraftState = (): SystemSettingsDraftState => {
-  return draftState
-}
-
-export const getSystemSettingsAutosaveDraft = (): AutosaveDraft => {
-  return autosaveDraft
+export const getSystemSettingsAutosaveDraft = (): SystemSettingsAutosaveState => {
+  return autosaveState
 }
 
 export const setSystemSettingsDraftFontSizeInput = (value: string): void => {
-  if (draftState.draftSnapshot.promptFontSizeInput === value) return
-  draftState.draftSnapshot.promptFontSizeInput = value
-  draftState.saveError = null
-  autosave.markDirtyAndScheduleAutosave()
+  const currentDraft = getSystemSettingsDraftRecord()
+
+  if (currentDraft.draftSnapshot.promptFontSizeInput === value) {
+    return
+  }
+
+  scheduleSystemSettingsAutosaveMutation((draftRecord) => {
+    draftRecord.draftSnapshot.promptFontSizeInput = value
+  })
 }
 
 export const setSystemSettingsDraftPromptEditorMinLinesInput = (value: string): void => {
-  if (draftState.draftSnapshot.promptEditorMinLinesInput === value) return
-  draftState.draftSnapshot.promptEditorMinLinesInput = value
-  draftState.saveError = null
-  autosave.markDirtyAndScheduleAutosave()
+  const currentDraft = getSystemSettingsDraftRecord()
+
+  if (currentDraft.draftSnapshot.promptEditorMinLinesInput === value) {
+    return
+  }
+
+  scheduleSystemSettingsAutosaveMutation((draftRecord) => {
+    draftRecord.draftSnapshot.promptEditorMinLinesInput = value
+  })
 }
 
 export const saveSystemSettingsDraftNow = async (): Promise<void> => {
+  autosaveState.saving = true
+
   try {
-    await autosave.saveNow()
-  } catch (error) {
-    draftState.saveError = error instanceof Error ? error.message : 'Failed to update system settings.'
-    throw error
+    sendOpenUpdateTransactionIfPresent(systemSettingsCollection.id, SYSTEM_SETTINGS_ID, 'manual')
+    await submitAllOpenUpdateTransactionsAndWait()
+  } finally {
+    autosaveState.saving = false
   }
 }
 
 export const flushSystemSettingsAutosave = async (): Promise<void> => {
-  clearAutosaveTimeout(autosaveDraft)
   await saveSystemSettingsDraftNow()
 }

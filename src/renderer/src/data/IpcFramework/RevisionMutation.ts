@@ -70,6 +70,7 @@ type RevisionMutationOptions<
         channel: string,
         request: TRequest
       ) => Promise<IpcMutationPayloadResult<TPayload>>
+      transaction?: Transaction<any>
     }
   ) => Promise<IpcMutationPayloadResult<TPayload>>
   handleSuccessOrConflictResponse: (payload: TPayload) => void
@@ -85,6 +86,7 @@ type OpenRevisionUpdateMutationOptions<
   collectionId: string
   elementId: string | number
   debounceMs: number
+  validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
 }
 
 type CreateRevisionMutationTransactionOptions<
@@ -124,10 +126,11 @@ const createRegisteredRevisionMutationTransaction = <
 
   const transaction = createTransaction({
     autoCommit: false,
-    mutationFn: async () => {
+    mutationFn: async ({ transaction }) => {
       const mutationResult = await persistMutations({
         entities,
-        invoke: (channel, request) => ipcInvokeWithPayload(channel, request.payload)
+        invoke: (channel, request) => ipcInvokeWithPayload(channel, request.payload),
+        transaction
       })
 
       if ('payload' in mutationResult) {
@@ -228,7 +231,11 @@ export const createRevisionMutationRunner = <
       }
 
       sentElementKeys.add(elementKey)
-      sendOpenUpdateTransactionIfPresent(collectionId, elementId)
+      sendOpenUpdateTransactionIfPresent(
+        collectionId,
+        elementId,
+        'before-immediate-transaction'
+      )
     }
 
     await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
@@ -246,6 +253,7 @@ export const createOpenRevisionUpdateMutationRunner = <
       collectionId,
       elementId,
       debounceMs,
+      validateBeforeEnqueue,
       mutateOptimistically,
       persistMutations,
       handleSuccessOrConflictResponse,
@@ -270,6 +278,7 @@ export const createOpenRevisionUpdateMutationRunner = <
 
         return {
           transactionEntry,
+          validateBeforeEnqueue: validateBeforeEnqueue ?? null,
           enqueueTransaction: async () => {
             await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
           }

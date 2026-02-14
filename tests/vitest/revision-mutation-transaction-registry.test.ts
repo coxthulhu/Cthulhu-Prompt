@@ -277,6 +277,75 @@ describe('revision mutation transaction registry', () => {
     expect(persistCalled).toBe(1)
   })
 
+  it('keeps invalid debounced open update transactions pending until validation passes', async () => {
+    vi.useFakeTimers()
+
+    const collectionId = nextCollectionId('open-validation-debounce')
+    const collection = createTestCollection(collectionId, [
+      {
+        id: 'item-1',
+        revision: 1,
+        data: { id: 'item-1', value: 0 }
+      }
+    ])
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
+    let persistCalled = 0
+    let isValid = false
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: 'item-1',
+      debounceMs: 200,
+      validateBeforeEnqueue: () => isValid,
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 1
+        })
+      },
+      persistMutations: async () => {
+        persistCalled += 1
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    vi.advanceTimersByTime(200)
+    await submitAllOpenUpdateTransactionsAndWait()
+
+    expect(persistCalled).toBe(0)
+    expect(indexedTransactions.size).toBe(1)
+
+    isValid = true
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: 'item-1',
+      debounceMs: 200,
+      validateBeforeEnqueue: () => isValid,
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 2
+        })
+      },
+      persistMutations: async () => {
+        persistCalled += 1
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    vi.advanceTimersByTime(200)
+    await submitAllOpenUpdateTransactionsAndWait()
+
+    expect(persistCalled).toBe(1)
+    expect(indexedTransactions.size).toBe(0)
+  })
+
   it('flushes matching open update transactions before queueImmediately enqueue', async () => {
     const collectionId = nextCollectionId('queue-immediate-flush-open')
     const collection = createTestCollection(collectionId, [
@@ -325,6 +394,58 @@ describe('revision mutation transaction registry', () => {
     })
 
     expect(persistOrder).toEqual(['open', 'immediate'])
+    expect(indexedTransactions.size).toBe(0)
+  })
+
+  it('rolls back invalid open update transactions during immediate flush without rolling back the immediate transaction', async () => {
+    const collectionId = nextCollectionId('queue-immediate-invalid-open')
+    const collection = createTestCollection(collectionId, [
+      {
+        id: 'item-1',
+        revision: 1,
+        data: { id: 'item-1', value: 0 }
+      }
+    ])
+    const runMutation = createRevisionMutationRunner({ test: collection })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    const persistOrder: string[] = []
+    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: 'item-1',
+      debounceMs: 10_000,
+      validateBeforeEnqueue: () => false,
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 1
+        })
+      },
+      persistMutations: async () => {
+        persistOrder.push('open')
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    await runMutation<MutationPayload>({
+      mutateOptimistically: () => {
+        collection.update('item-1', (draft) => {
+          draft.value = 2
+        })
+      },
+      persistMutations: async () => {
+        persistOrder.push('immediate')
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    expect(persistOrder).toEqual(['immediate'])
     expect(indexedTransactions.size).toBe(0)
   })
 

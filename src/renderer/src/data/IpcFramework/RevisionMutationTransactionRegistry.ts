@@ -5,15 +5,19 @@ export type TransactionEntry = {
   queuedImmediately: boolean
 }
 
+export type OpenUpdateSendReason = 'debounce' | 'manual' | 'before-immediate-transaction'
+
 type OpenUpdateTransaction = {
   transactionEntry: TransactionEntry
   debounceTimeoutId: ReturnType<typeof globalThis.setTimeout> | null
   enqueueTransaction: () => Promise<void>
+  validateBeforeEnqueue: ((transaction: Transaction<any>) => boolean) | null
 }
 
 type OpenUpdateTransactionFactoryResult = {
   transactionEntry: TransactionEntry
   enqueueTransaction: () => Promise<void>
+  validateBeforeEnqueue: ((transaction: Transaction<any>) => boolean) | null
 }
 
 type MutateOpenUpdateTransactionOptions = {
@@ -63,14 +67,37 @@ const clearOpenUpdateDebounceTimeout = (openUpdateTransaction: OpenUpdateTransac
 
 // Send a single open update transaction by key, canceling debounce first.
 const sendOpenUpdateTransactionByGlobalElementKey = (
-  globalElementKey: string
-): void => {
+  globalElementKey: string,
+  reason: OpenUpdateSendReason
+): boolean => {
   const openUpdateTransaction = openUpdateTransactionsByElement.get(globalElementKey)
   if (!openUpdateTransaction) {
-    return
+    return false
   }
 
   clearOpenUpdateDebounceTimeout(openUpdateTransaction)
+
+  const isValid = openUpdateTransaction.validateBeforeEnqueue
+    ? openUpdateTransaction.validateBeforeEnqueue(openUpdateTransaction.transactionEntry.transaction)
+    : true
+
+  if (!isValid) {
+    if (reason === 'before-immediate-transaction') {
+      openUpdateTransactionsByElement.delete(globalElementKey)
+      try {
+        if (openUpdateTransaction.transactionEntry.transaction.state === 'pending') {
+          openUpdateTransaction.transactionEntry.transaction.rollback({
+            isSecondaryRollback: true
+          })
+        }
+      } finally {
+        clearRevisionMutationTransaction(openUpdateTransaction.transactionEntry.transaction.id)
+      }
+    }
+
+    return false
+  }
+
   openUpdateTransactionsByElement.delete(globalElementKey)
 
   // Track enqueue tasks so submit-all can wait for both timer-triggered and forced sends.
@@ -83,6 +110,8 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
   void trackedTask.finally(() => {
     pendingOpenUpdateEnqueueTasks.delete(trackedTask)
   })
+
+  return true
 }
 
 // Recompute per-element transaction indexes from the transaction's current mutation set.
@@ -187,7 +216,8 @@ export const mutateOpenUpdateTransaction = ({
     openUpdateTransaction = {
       transactionEntry: createdTransaction.transactionEntry,
       debounceTimeoutId: null,
-      enqueueTransaction: createdTransaction.enqueueTransaction
+      enqueueTransaction: createdTransaction.enqueueTransaction,
+      validateBeforeEnqueue: createdTransaction.validateBeforeEnqueue
     }
     openUpdateTransactionsByElement.set(globalElementKey, openUpdateTransaction)
   }
@@ -206,32 +236,39 @@ export const mutateOpenUpdateTransaction = ({
 
   clearOpenUpdateDebounceTimeout(openUpdateTransaction)
   openUpdateTransaction.debounceTimeoutId = globalThis.setTimeout(() => {
-    sendOpenUpdateTransactionIfPresent(collectionId, elementId)
+    sendOpenUpdateTransactionIfPresent(collectionId, elementId, 'debounce')
   }, debounceMs)
 }
 
 // Fire-and-forget send of a per-element open update transaction, if one exists.
 export const sendOpenUpdateTransactionIfPresent = (
   collectionId: string,
-  elementId: string | number
-): void => {
-  sendOpenUpdateTransactionByGlobalElementKey(buildGlobalElementKey(collectionId, elementId))
+  elementId: string | number,
+  reason: OpenUpdateSendReason = 'manual'
+): boolean => {
+  return sendOpenUpdateTransactionByGlobalElementKey(
+    buildGlobalElementKey(collectionId, elementId),
+    reason
+  )
 }
 
 // Submit all open update transactions and wait for every enqueue task to settle.
 export const submitAllOpenUpdateTransactionsAndWait = async (): Promise<void> => {
-  while (openUpdateTransactionsByElement.size > 0) {
+  while (true) {
     const openTransactionKeys = [...openUpdateTransactionsByElement.keys()]
+    let sentAny = false
+
     for (const openTransactionKey of openTransactionKeys) {
-      sendOpenUpdateTransactionByGlobalElementKey(openTransactionKey)
+      const didSend = sendOpenUpdateTransactionByGlobalElementKey(openTransactionKey, 'manual')
+      sentAny = sentAny || didSend
     }
 
     while (pendingOpenUpdateEnqueueTasks.size > 0) {
       await Promise.allSettled([...pendingOpenUpdateEnqueueTasks])
     }
-  }
 
-  while (pendingOpenUpdateEnqueueTasks.size > 0) {
-    await Promise.allSettled([...pendingOpenUpdateEnqueueTasks])
+    if (!sentAny) {
+      return
+    }
   }
 }
