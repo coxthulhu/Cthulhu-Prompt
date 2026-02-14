@@ -2,27 +2,23 @@ import {
   SYSTEM_SETTINGS_ID,
   type SystemSettings,
   type SystemSettingsRevisionPayload,
-  type SystemSettingsRevisionResponsePayload,
+  type SystemSettingsRevisionResponsePayload
 } from '@shared/SystemSettings'
 import type { Transaction } from '@tanstack/svelte-db'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
+import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutateOpenRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
 
-const readLatestSystemSettingsFromTransaction = (transaction: Transaction<any> | undefined): SystemSettings => {
-  if (!transaction) {
-    throw new Error('Missing transaction for system settings update.')
-  }
-
-  for (let index = transaction.mutations.length - 1; index >= 0; index -= 1) {
-    const mutation = transaction.mutations[index]!
-
-    if (mutation.collection.id === systemSettingsCollection.id && mutation.key === SYSTEM_SETTINGS_ID) {
-      return mutation.modified as SystemSettings
-    }
-  }
-
-  throw new Error('System settings transaction did not include the latest record.')
+const readLatestSystemSettingsFromTransaction = (
+  transaction: Transaction<any>
+): SystemSettings => {
+  return getLatestMutationModifiedRecord(
+    transaction,
+    systemSettingsCollection.id,
+    SYSTEM_SETTINGS_ID,
+    () => systemSettingsCollection.get(SYSTEM_SETTINGS_ID)!
+  )
 }
 
 const persistSystemSettingsFromTransaction = async ({
@@ -41,7 +37,7 @@ const persistSystemSettingsFromTransaction = async ({
     channel: string,
     request: { payload: SystemSettingsRevisionPayload }
   ) => Promise<IpcMutationPayloadResult<SystemSettingsRevisionResponsePayload>>
-  transaction?: Transaction<any>
+  transaction: Transaction<any>
 }) => {
   const latestSettings = readLatestSystemSettingsFromTransaction(transaction)
 

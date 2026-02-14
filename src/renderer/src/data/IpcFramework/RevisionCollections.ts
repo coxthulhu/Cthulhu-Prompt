@@ -6,6 +6,7 @@ import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+
 export {
   mutateOpenUpdateTransaction,
   sendOpenUpdateTransactionIfPresent,
@@ -14,17 +15,14 @@ export {
   type TransactionEntry
 } from './RevisionMutationTransactionRegistry'
 
-export const runRevisionMutation = createRevisionMutationRunner({
+const revisionCollections = {
   systemSettings: systemSettingsCollection,
   workspace: workspaceCollection,
   promptFolder: promptFolderCollection,
   prompt: promptCollection
-})
+}
+
+export const runRevisionMutation = createRevisionMutationRunner(revisionCollections)
 
 export const mutateOpenRevisionUpdateTransaction =
-  createOpenRevisionUpdateMutationRunner({
-    systemSettings: systemSettingsCollection,
-    workspace: workspaceCollection,
-    promptFolder: promptFolderCollection,
-    prompt: promptCollection
-  })
+  createOpenRevisionUpdateMutationRunner(revisionCollections)

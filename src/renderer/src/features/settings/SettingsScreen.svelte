@@ -48,23 +48,12 @@
     }
   }
 
-  const handleFontSizeInput = (value: string) => {
-    setSystemSettingsDraftFontSizeInput(value)
-  }
-
-  const handleMinLinesInput = (value: string) => {
-    setSystemSettingsDraftPromptEditorMinLinesInput(value)
-  }
-
-  const flushAutosave = async (): Promise<void> => {
-    await runWithErrorLogging('Failed to update system settings:', async () => {
-      await flushSystemSettingsAutosave()
-    })
-  }
-
   // Save immediately when an input loses focus to avoid delayed autosaves.
   const handleInputBlur = () => {
-    void flushAutosave()
+    void runWithErrorLogging(
+      'Failed to update system settings:',
+      flushSystemSettingsAutosave
+    )
   }
 
   const resetSettingToDefault = async (
@@ -102,7 +91,10 @@
   // Side effect: flush unsaved system settings when leaving the settings screen.
   $effect(() => {
     return () => {
-      void flushAutosave()
+      void runWithErrorLogging(
+        'Failed to update system settings:',
+        flushSystemSettingsAutosave
+      )
     }
   })
 </script>
@@ -127,7 +119,7 @@
             class="w-24"
             value={systemSettingsState.draftSnapshot.promptFontSizeInput}
             oninput={(event) =>
-              handleFontSizeInput((event.currentTarget as HTMLInputElement).value)}
+              setSystemSettingsDraftFontSizeInput((event.currentTarget as HTMLInputElement).value)}
             onblur={handleInputBlur}
           />
           <Button size="sm" onclick={handleFontSizeReset} disabled={isFontSizeResetDisabled}>
@@ -158,7 +150,9 @@
             class="w-24"
             value={systemSettingsState.draftSnapshot.promptEditorMinLinesInput}
             oninput={(event) =>
-              handleMinLinesInput((event.currentTarget as HTMLInputElement).value)}
+              setSystemSettingsDraftPromptEditorMinLinesInput(
+                (event.currentTarget as HTMLInputElement).value
+              )}
             onblur={handleInputBlur}
           />
           <Button size="sm" onclick={handleMinLinesReset} disabled={isMinLinesResetDisabled}>

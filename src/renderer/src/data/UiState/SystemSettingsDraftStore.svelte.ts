@@ -15,6 +15,7 @@ import {
   sendOpenUpdateTransactionIfPresent,
   submitAllOpenUpdateTransactionsAndWait
 } from '../IpcFramework/RevisionCollections'
+import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutateOpenSystemSettingsAutosaveUpdate } from '../Mutations/SystemSettingsMutations'
 import {
   getSystemSettingsValidation as getSystemSettingsValidationForSnapshot,
@@ -43,18 +44,12 @@ const getSystemSettingsDraftRecord = (): SystemSettingsDraftRecord => {
 const getSystemSettingsDraftRecordFromTransaction = (
   transaction: Transaction<any>
 ): SystemSettingsDraftRecord => {
-  for (let index = transaction.mutations.length - 1; index >= 0; index -= 1) {
-    const mutation = transaction.mutations[index]!
-
-    if (
-      mutation.collection.id === systemSettingsDraftCollection.id &&
-      mutation.key === SYSTEM_SETTINGS_DRAFT_ID
-    ) {
-      return mutation.modified as SystemSettingsDraftRecord
-    }
-  }
-
-  return getSystemSettingsDraftRecord()
+  return getLatestMutationModifiedRecord(
+    transaction,
+    systemSettingsDraftCollection.id,
+    SYSTEM_SETTINGS_DRAFT_ID,
+    getSystemSettingsDraftRecord
+  )
 }
 
 const getValidatedSystemSettingsFromDraftRecord = (

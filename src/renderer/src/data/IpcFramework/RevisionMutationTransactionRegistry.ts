@@ -32,7 +32,7 @@ const transactionEntries = new Map<string, TransactionEntry>()
 const transactionKeys = new Map<string, Set<string>>()
 const transactionsByElement = new Map<string, Set<TransactionEntry>>()
 const openUpdateTransactionsByElement = new Map<string, OpenUpdateTransaction>()
-const pendingOpenUpdateEnqueueTasks = new Set<Promise<void>>()
+let latestOpenUpdateEnqueueTask: Promise<void> = Promise.resolve()
 
 // Keep element keys aligned with TanStack's global mutation key format.
 const buildGlobalElementKey = (
@@ -63,6 +63,13 @@ const clearOpenUpdateDebounceTimeout = (openUpdateTransaction: OpenUpdateTransac
 
   globalThis.clearTimeout(openUpdateTransaction.debounceTimeoutId)
   openUpdateTransaction.debounceTimeoutId = null
+}
+
+const trackOpenUpdateEnqueueTask = (enqueueTask: Promise<void>): void => {
+  latestOpenUpdateEnqueueTask = enqueueTask.then(
+    () => undefined,
+    () => undefined
+  )
 }
 
 // Send a single open update transaction by key, canceling debounce first.
@@ -102,17 +109,7 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
   }
 
   openUpdateTransactionsByElement.delete(globalElementKey)
-
-  // Track enqueue tasks so submit-all can wait for both timer-triggered and forced sends.
-  const trackedTask = openUpdateTransaction.enqueueTransaction().then(
-    () => undefined,
-    () => undefined
-  )
-
-  pendingOpenUpdateEnqueueTasks.add(trackedTask)
-  void trackedTask.finally(() => {
-    pendingOpenUpdateEnqueueTasks.delete(trackedTask)
-  })
+  trackOpenUpdateEnqueueTask(openUpdateTransaction.enqueueTransaction())
 
   return true
 }
@@ -266,9 +263,7 @@ export const submitAllOpenUpdateTransactionsAndWait = async (): Promise<void> =>
       sentAny = sentAny || didSend
     }
 
-    while (pendingOpenUpdateEnqueueTasks.size > 0) {
-      await Promise.allSettled([...pendingOpenUpdateEnqueueTasks])
-    }
+    await latestOpenUpdateEnqueueTask
 
     if (!sentAny) {
       return

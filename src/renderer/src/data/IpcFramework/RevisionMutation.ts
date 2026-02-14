@@ -70,7 +70,7 @@ type RevisionMutationOptions<
         channel: string,
         request: TRequest
       ) => Promise<IpcMutationPayloadResult<TPayload>>
-      transaction?: Transaction<any>
+      transaction: Transaction<any>
     }
   ) => Promise<IpcMutationPayloadResult<TPayload>>
   handleSuccessOrConflictResponse: (payload: TPayload) => void
@@ -152,6 +152,21 @@ const createRegisteredRevisionMutationTransaction = <
   return registerRevisionMutationTransaction(transaction, queuedImmediately)
 }
 
+const createRegisteredRevisionMutationTransactionFromMutationOptions = <
+  TCollections extends RevisionCollectionsMap,
+  TPayload
+>(
+  collections: TCollections,
+  options: CreateRevisionMutationTransactionOptions<TCollections, TPayload>,
+  queuedImmediately: boolean
+): TransactionEntry => {
+  return createRegisteredRevisionMutationTransaction(
+    collections,
+    options,
+    queuedImmediately
+  )
+}
+
 // Apply optimistic mutation logic and refresh element indexes for the transaction.
 const mutateRevisionTransaction = (
   transaction: Transaction<any>,
@@ -189,27 +204,18 @@ export const createRevisionMutationRunner = <
   collections: TCollections
 ) => {
   return async <TPayload>(
-    {
-      mutateOptimistically,
-      persistMutations,
-      handleSuccessOrConflictResponse,
-      conflictMessage,
-      onSuccess,
-      queueImmediately = true
-    }: RevisionMutationOptions<TCollections, TPayload>
+    options: RevisionMutationOptions<TCollections, TPayload>
   ): Promise<void> => {
-    const transactionEntry = createRegisteredRevisionMutationTransaction(
+    const { onSuccess, queueImmediately = true } = options
+    const transactionEntry =
+      createRegisteredRevisionMutationTransactionFromMutationOptions(
       collections,
-      {
-        persistMutations,
-        handleSuccessOrConflictResponse,
-        conflictMessage
-      },
+      options,
       queueImmediately
     )
 
     try {
-      mutateRevisionTransaction(transactionEntry.transaction, mutateOptimistically)
+      mutateRevisionTransaction(transactionEntry.transaction, options.mutateOptimistically)
     } catch (error) {
       clearRevisionMutationTransaction(transactionEntry.transaction.id)
       throw error
@@ -249,32 +255,28 @@ export const createOpenRevisionUpdateMutationRunner = <
   collections: TCollections
 ) => {
   return <TPayload>(
-    {
+    options: OpenRevisionUpdateMutationOptions<TCollections, TPayload>
+  ): void => {
+    const {
       collectionId,
       elementId,
       debounceMs,
       validateBeforeEnqueue,
       mutateOptimistically,
-      persistMutations,
-      handleSuccessOrConflictResponse,
-      conflictMessage,
       onSuccess
-    }: OpenRevisionUpdateMutationOptions<TCollections, TPayload>
-  ): void => {
+    } = options
+
     mutateOpenUpdateTransaction({
       collectionId,
       elementId,
       debounceMs,
       createTransaction: () => {
-        const transactionEntry = createRegisteredRevisionMutationTransaction(
-          collections,
-          {
-            persistMutations,
-            handleSuccessOrConflictResponse,
-            conflictMessage
-          },
-          false
-        )
+        const transactionEntry =
+          createRegisteredRevisionMutationTransactionFromMutationOptions(
+            collections,
+            options,
+            false
+          )
 
         return {
           transactionEntry,

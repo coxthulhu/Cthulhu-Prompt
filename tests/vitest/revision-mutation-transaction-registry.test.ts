@@ -21,11 +21,21 @@ type MutationPayload = {
   ok: true
 }
 
+const TEST_ITEM_ID = 'item-1'
+
 let collectionCounter = 0
 
 const nextCollectionId = (label: string): string => {
   collectionCounter += 1
   return `revision-mutation-registry-${label}-${collectionCounter}`
+}
+
+const createSingleItemRevisionEnvelope = (): RevisionEnvelope<TestRecord> => {
+  return {
+    id: TEST_ITEM_ID,
+    revision: 1,
+    data: { id: TEST_ITEM_ID, value: 0 }
+  }
 }
 
 const createTestCollection = (
@@ -41,6 +51,18 @@ const createTestCollection = (
   )
 }
 
+const createSingleItemRegistryContext = (label: string) => {
+  const collectionId = nextCollectionId(label)
+  const collection = createTestCollection(collectionId, [createSingleItemRevisionEnvelope()])
+  const indexedTransactions = getTransactionsForElement(collectionId, TEST_ITEM_ID)
+
+  return {
+    collectionId,
+    collection,
+    indexedTransactions
+  }
+}
+
 describe('revision mutation transaction registry', () => {
   afterEach(async () => {
     await submitAllOpenUpdateTransactionsAndWait()
@@ -48,24 +70,16 @@ describe('revision mutation transaction registry', () => {
   })
 
   it('indexes by element with dedupe and marks queued transactions', async () => {
-    const collectionId = nextCollectionId('dedupe')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collection, indexedTransactions } = createSingleItemRegistryContext('dedupe')
     const runMutation = createRevisionMutationRunner({ test: collection })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
     let queuedImmediately: boolean | null = null
 
     await runMutation<MutationPayload>({
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -84,21 +98,13 @@ describe('revision mutation transaction registry', () => {
   })
 
   it('clears entries when persistence fails', async () => {
-    const collectionId = nextCollectionId('failure')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collection, indexedTransactions } = createSingleItemRegistryContext('failure')
     const runMutation = createRevisionMutationRunner({ test: collection })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
 
     await expect(
       runMutation<MutationPayload>({
         mutateOptimistically: () => {
-          collection.update('item-1', (draft) => {
+          collection.update(TEST_ITEM_ID, (draft) => {
             draft.value = 3
           })
         },
@@ -116,22 +122,15 @@ describe('revision mutation transaction registry', () => {
   })
 
   it('clears entries when mutateOptimistically throws', async () => {
-    const collectionId = nextCollectionId('optimistic-error')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collection, indexedTransactions } =
+      createSingleItemRegistryContext('optimistic-error')
     const runMutation = createRevisionMutationRunner({ test: collection })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
     let persistCalled = false
 
     await expect(
       runMutation<MutationPayload>({
         mutateOptimistically: () => {
-          collection.update('item-1', (draft) => {
+          collection.update(TEST_ITEM_ID, (draft) => {
             draft.value = 4
           })
           throw new Error('Optimistic mutation failed')
@@ -179,28 +178,21 @@ describe('revision mutation transaction registry', () => {
   it('debounces open update transactions and enqueues only once', async () => {
     vi.useFakeTimers()
 
-    const collectionId = nextCollectionId('open-debounce')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collectionId, collection, indexedTransactions } =
+      createSingleItemRegistryContext('open-debounce')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
     let persistCalled = 0
     let queuedImmediately: boolean | null = null
 
     const mutateFirstValue = (value: number) => {
       mutateOpenUpdate<MutationPayload>({
         collectionId,
-        elementId: 'item-1',
+        elementId: TEST_ITEM_ID,
         debounceMs: 200,
         mutateOptimistically: () => {
-          collection.update('item-1', (draft) => {
+          collection.update(TEST_ITEM_ID, (draft) => {
             draft.value = value
           })
         },
@@ -235,26 +227,19 @@ describe('revision mutation transaction registry', () => {
   it('sends open update transactions immediately when requested', async () => {
     vi.useFakeTimers()
 
-    const collectionId = nextCollectionId('open-send-now')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collectionId, collection, indexedTransactions } =
+      createSingleItemRegistryContext('open-send-now')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
     let persistCalled = 0
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,
-      elementId: 'item-1',
+      elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 7
         })
       },
@@ -266,7 +251,7 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    sendOpenUpdateTransactionIfPresent(collectionId, 'item-1')
+    sendOpenUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)
     await submitAllOpenUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
@@ -280,28 +265,21 @@ describe('revision mutation transaction registry', () => {
   it('keeps invalid debounced open update transactions pending until validation passes', async () => {
     vi.useFakeTimers()
 
-    const collectionId = nextCollectionId('open-validation-debounce')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collectionId, collection, indexedTransactions } =
+      createSingleItemRegistryContext('open-validation-debounce')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
     let persistCalled = 0
     let isValid = false
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,
-      elementId: 'item-1',
+      elementId: TEST_ITEM_ID,
       debounceMs: 200,
       validateBeforeEnqueue: () => isValid,
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
       },
@@ -323,11 +301,11 @@ describe('revision mutation transaction registry', () => {
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,
-      elementId: 'item-1',
+      elementId: TEST_ITEM_ID,
       debounceMs: 200,
       validateBeforeEnqueue: () => isValid,
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -347,27 +325,20 @@ describe('revision mutation transaction registry', () => {
   })
 
   it('flushes matching open update transactions before queueImmediately enqueue', async () => {
-    const collectionId = nextCollectionId('queue-immediate-flush-open')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collectionId, collection, indexedTransactions } =
+      createSingleItemRegistryContext('queue-immediate-flush-open')
     const runMutation = createRevisionMutationRunner({ test: collection })
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
     const persistOrder: string[] = []
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,
-      elementId: 'item-1',
+      elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
       },
@@ -381,7 +352,7 @@ describe('revision mutation transaction registry', () => {
 
     await runMutation<MutationPayload>({
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -398,28 +369,21 @@ describe('revision mutation transaction registry', () => {
   })
 
   it('rolls back invalid open update transactions during immediate flush without rolling back the immediate transaction', async () => {
-    const collectionId = nextCollectionId('queue-immediate-invalid-open')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collectionId, collection, indexedTransactions } =
+      createSingleItemRegistryContext('queue-immediate-invalid-open')
     const runMutation = createRevisionMutationRunner({ test: collection })
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
     const persistOrder: string[] = []
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,
-      elementId: 'item-1',
+      elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
       validateBeforeEnqueue: () => false,
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
       },
@@ -433,7 +397,7 @@ describe('revision mutation transaction registry', () => {
 
     await runMutation<MutationPayload>({
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -450,25 +414,18 @@ describe('revision mutation transaction registry', () => {
   })
 
   it('always resolves when submitting all open update transactions', async () => {
-    const collectionId = nextCollectionId('open-submit-all')
-    const collection = createTestCollection(collectionId, [
-      {
-        id: 'item-1',
-        revision: 1,
-        data: { id: 'item-1', value: 0 }
-      }
-    ])
+    const { collectionId, collection, indexedTransactions } =
+      createSingleItemRegistryContext('open-submit-all')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
       test: collection
     })
-    const indexedTransactions = getTransactionsForElement(collectionId, 'item-1')
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,
-      elementId: 'item-1',
+      elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
       mutateOptimistically: () => {
-        collection.update('item-1', (draft) => {
+        collection.update(TEST_ITEM_ID, (draft) => {
           draft.value = 5
         })
       },
