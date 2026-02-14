@@ -108,7 +108,7 @@ const createRegisteredRevisionMutationTransaction = <
     handleSuccessOrConflictResponse,
     conflictMessage
   }: CreateRevisionMutationTransactionOptions<TCollections, TPayload>,
-  queuedImmediately: boolean
+  isQueuedImmediately: boolean
 ): TransactionEntry => {
   const entities = {} as RevisionEntityBuilders<TCollections>
 
@@ -149,22 +149,7 @@ const createRegisteredRevisionMutationTransaction = <
     }
   })
 
-  return registerRevisionMutationTransaction(transaction, queuedImmediately)
-}
-
-const createRegisteredRevisionMutationTransactionFromMutationOptions = <
-  TCollections extends RevisionCollectionsMap,
-  TPayload
->(
-  collections: TCollections,
-  options: CreateRevisionMutationTransactionOptions<TCollections, TPayload>,
-  queuedImmediately: boolean
-): TransactionEntry => {
-  return createRegisteredRevisionMutationTransaction(
-    collections,
-    options,
-    queuedImmediately
-  )
+  return registerRevisionMutationTransaction(transaction, isQueuedImmediately)
 }
 
 // Apply optimistic mutation logic and refresh element indexes for the transaction.
@@ -207,8 +192,7 @@ export const createRevisionMutationRunner = <
     options: RevisionMutationOptions<TCollections, TPayload>
   ): Promise<void> => {
     const { onSuccess, queueImmediately = true } = options
-    const transactionEntry =
-      createRegisteredRevisionMutationTransactionFromMutationOptions(
+    const transactionEntry = createRegisteredRevisionMutationTransaction(
       collections,
       options,
       queueImmediately
@@ -271,16 +255,15 @@ export const createOpenRevisionUpdateMutationRunner = <
       elementId,
       debounceMs,
       createTransaction: () => {
-        const transactionEntry =
-          createRegisteredRevisionMutationTransactionFromMutationOptions(
-            collections,
-            options,
-            false
-          )
+        const transactionEntry = createRegisteredRevisionMutationTransaction(
+          collections,
+          options,
+          false
+        )
 
         return {
           transactionEntry,
-          validateBeforeEnqueue: validateBeforeEnqueue ?? null,
+          validateBeforeEnqueue,
           enqueueTransaction: async () => {
             await enqueueAndClearRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
           }

@@ -9,13 +9,15 @@
   } from '@renderer/data/Collections/SystemSettingsDraftCollection'
   import {
     flushSystemSettingsAutosave,
-    getSystemSettingsAutosaveDraft,
-    getSystemSettingsValidation,
-    saveSystemSettingsDraftNow,
+    getSystemSettingsAutosaveState,
+    saveSystemSettingsDraftNow
+  } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
+  import {
     setSystemSettingsDraftFontSizeInput,
     setSystemSettingsDraftPromptEditorMinLinesInput
   } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
   import {
+    getSystemSettingsValidation,
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
   } from '@renderer/data/UiState/SystemSettingsFormat'
@@ -30,8 +32,8 @@
       systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
     )
   })
-  const autosaveDraft = getSystemSettingsAutosaveDraft()
-  const isUpdating = $derived(autosaveDraft.saving)
+  const autosaveState = getSystemSettingsAutosaveState()
+  const isUpdating = $derived(autosaveState.saving)
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
   const defaultFontSizeInput = formatPromptFontSizeInput(defaultFontSize)
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
@@ -77,7 +79,7 @@
     )
   }
 
-  const validation = $derived(getSystemSettingsValidation())
+  const validation = $derived(getSystemSettingsValidation(systemSettingsState.draftSnapshot))
   const displayFontSizeError = $derived(systemSettingsState.saveError ?? validation.fontSizeError)
   const displayMinLinesError = $derived(systemSettingsState.saveError ?? validation.minLinesError)
   const isFontSizeResetDisabled = $derived(

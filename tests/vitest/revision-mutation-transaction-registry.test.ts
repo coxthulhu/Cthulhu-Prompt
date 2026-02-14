@@ -73,7 +73,7 @@ describe('revision mutation transaction registry', () => {
   it('indexes by element with dedupe and marks queued transactions', async () => {
     const { collection, indexedTransactions } = createSingleItemRegistryContext('dedupe')
     const runMutation = createRevisionMutationRunner({ test: collection })
-    let queuedImmediately: boolean | null = null
+    let isQueuedImmediately: boolean | null = null
 
     await runMutation<MutationPayload>({
       mutateOptimistically: () => {
@@ -87,14 +87,14 @@ describe('revision mutation transaction registry', () => {
       persistMutations: async () => {
         expect(indexedTransactions.size).toBe(1)
         const [entry] = [...indexedTransactions]
-        queuedImmediately = entry?.queuedImmediately ?? null
+        isQueuedImmediately = entry?.isQueuedImmediately ?? null
         return { success: true, payload: { ok: true } }
       },
       handleSuccessOrConflictResponse: () => {},
       conflictMessage: 'Conflict'
     })
 
-    expect(queuedImmediately).toBe(true)
+    expect(isQueuedImmediately).toBe(true)
     expect(indexedTransactions.size).toBe(0)
   })
 
@@ -185,9 +185,9 @@ describe('revision mutation transaction registry', () => {
       test: collection
     })
     let persistCalled = 0
-    let queuedImmediately: boolean | null = null
+    let isQueuedImmediately: boolean | null = null
 
-    const mutateFirstValue = (value: number) => {
+    const queueOpenUpdateWithValue = (value: number) => {
       mutateOpenUpdate<MutationPayload>({
         collectionId,
         elementId: TEST_ITEM_ID,
@@ -200,7 +200,7 @@ describe('revision mutation transaction registry', () => {
         persistMutations: async () => {
           persistCalled += 1
           const [entry] = [...indexedTransactions]
-          queuedImmediately = entry?.queuedImmediately ?? null
+          isQueuedImmediately = entry?.isQueuedImmediately ?? null
           return { success: true, payload: { ok: true } }
         },
         handleSuccessOrConflictResponse: () => {},
@@ -208,8 +208,8 @@ describe('revision mutation transaction registry', () => {
       })
     }
 
-    mutateFirstValue(1)
-    mutateFirstValue(2)
+    queueOpenUpdateWithValue(1)
+    queueOpenUpdateWithValue(2)
 
     expect(indexedTransactions.size).toBe(1)
 
@@ -221,7 +221,7 @@ describe('revision mutation transaction registry', () => {
     await submitAllOpenUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
-    expect(queuedImmediately).toBe(false)
+    expect(isQueuedImmediately).toBe(false)
     expect(indexedTransactions.size).toBe(0)
   })
 
