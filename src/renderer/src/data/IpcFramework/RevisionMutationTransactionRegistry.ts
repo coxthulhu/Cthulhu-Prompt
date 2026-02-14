@@ -75,23 +75,26 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
     return false
   }
 
+  const transaction = openUpdateTransaction.transactionEntry.transaction
   clearOpenUpdateDebounceTimeout(openUpdateTransaction)
 
-  const isValid = openUpdateTransaction.validateBeforeEnqueue
-    ? openUpdateTransaction.validateBeforeEnqueue(openUpdateTransaction.transactionEntry.transaction)
-    : true
+  let isValid = true
+  if (openUpdateTransaction.validateBeforeEnqueue) {
+    isValid = openUpdateTransaction.validateBeforeEnqueue(transaction)
+    syncRevisionMutationTransactionIndex(transaction.id)
+  }
 
   if (!isValid) {
     if (reason === 'before-immediate-transaction') {
       openUpdateTransactionsByElement.delete(globalElementKey)
       try {
-        if (openUpdateTransaction.transactionEntry.transaction.state === 'pending') {
-          openUpdateTransaction.transactionEntry.transaction.rollback({
+        if (transaction.state === 'pending') {
+          transaction.rollback({
             isSecondaryRollback: true
           })
         }
       } finally {
-        clearRevisionMutationTransaction(openUpdateTransaction.transactionEntry.transaction.id)
+        clearRevisionMutationTransaction(transaction.id)
       }
     }
 

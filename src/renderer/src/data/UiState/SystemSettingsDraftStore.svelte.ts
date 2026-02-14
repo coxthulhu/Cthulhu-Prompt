@@ -3,6 +3,7 @@ import {
   SYSTEM_SETTINGS_ID,
   type SystemSettings
 } from '@shared/SystemSettings'
+import type { Transaction } from '@tanstack/svelte-db'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
   SYSTEM_SETTINGS_DRAFT_ID,
@@ -39,6 +40,23 @@ const getSystemSettingsDraftRecord = (): SystemSettingsDraftRecord => {
   return systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
 }
 
+const getSystemSettingsDraftRecordFromTransaction = (
+  transaction: Transaction<any>
+): SystemSettingsDraftRecord => {
+  for (let index = transaction.mutations.length - 1; index >= 0; index -= 1) {
+    const mutation = transaction.mutations[index]!
+
+    if (
+      mutation.collection.id === systemSettingsDraftCollection.id &&
+      mutation.key === SYSTEM_SETTINGS_DRAFT_ID
+    ) {
+      return mutation.modified as SystemSettingsDraftRecord
+    }
+  }
+
+  return getSystemSettingsDraftRecord()
+}
+
 const getValidatedSystemSettingsFromDraftRecord = (
   draftRecord: SystemSettingsDraftRecord
 ): SystemSettings | null => {
@@ -55,11 +73,6 @@ const getValidatedSystemSettingsFromDraftRecord = (
   }
 }
 
-const doesDraftValidate = (): boolean => {
-  const validation = getSystemSettingsValidation()
-  return !validation.fontSizeError && !validation.minLinesError
-}
-
 const scheduleSystemSettingsAutosaveMutation = (
   applyDraftUpdate: (draftRecord: SystemSettingsDraftRecord) => void
 ): void => {
@@ -70,20 +83,22 @@ const scheduleSystemSettingsAutosaveMutation = (
         applyDraftUpdate(draftRecord)
         draftRecord.saveError = null
       })
-
-      const updatedDraftRecord = getSystemSettingsDraftRecord()
-      const validatedSettings = getValidatedSystemSettingsFromDraftRecord(updatedDraftRecord)
+    },
+    validateBeforeEnqueue: (transaction) => {
+      const draftRecord = getSystemSettingsDraftRecordFromTransaction(transaction)
+      const validatedSettings = getValidatedSystemSettingsFromDraftRecord(draftRecord)
       if (!validatedSettings) {
-        return
+        return false
       }
 
-      systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
-        draft.promptFontSize = validatedSettings.promptFontSize
-        draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
+      transaction.mutate(() => {
+        systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
+          draft.promptFontSize = validatedSettings.promptFontSize
+          draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
+        })
       })
-    },
-    validateBeforeEnqueue: () => {
-      return doesDraftValidate()
+
+      return true
     }
   })
 }
