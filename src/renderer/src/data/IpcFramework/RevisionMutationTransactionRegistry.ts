@@ -6,7 +6,7 @@ type OpenUpdateTransactionBase = {
   validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
 }
 
-export type OpenUpdateSendReason = 'debounce' | 'manual' | 'before-immediate-transaction'
+type OpenUpdateSendReason = 'debounce' | 'manual' | 'before-immediate-transaction'
 
 type OpenUpdateTransaction = OpenUpdateTransactionBase & {
   debounceTimeoutId: ReturnType<typeof globalThis.setTimeout> | null

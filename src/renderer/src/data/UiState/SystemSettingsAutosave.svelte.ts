@@ -17,7 +17,7 @@ import {
   normalizePromptFontSizeInput
 } from './SystemSettingsFormat'
 
-export type SystemSettingsAutosaveState = {
+type SystemSettingsAutosaveState = {
   saving: boolean
 }
 
