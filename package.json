@@ -30,7 +30,6 @@
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/svelte-db": "^0.1.68",
     "electron-updater": "^6.3.9",
-    "loro-crdt": "^1.10.5",
     "lucide-svelte": "^0.555.0",
     "monaco-editor": "^0.52.2",
     "tailwind-merge": "^3.4.0",
