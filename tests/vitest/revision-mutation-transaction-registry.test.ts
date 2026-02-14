@@ -9,6 +9,7 @@ import {
 import {
   getTransactionsForElement,
   sendOpenUpdateTransactionIfPresent,
+  submitOpenUpdateTransactionAndWait,
   submitAllOpenUpdateTransactionsAndWait
 } from '@renderer/data/IpcFramework/RevisionMutationTransactionRegistry'
 
@@ -260,6 +261,49 @@ describe('revision mutation transaction registry', () => {
     vi.advanceTimersByTime(10_000)
     await submitAllOpenUpdateTransactionsAndWait()
     expect(persistCalled).toBe(1)
+  })
+
+  it('waits for the targeted open update transaction when it is already in flight', async () => {
+    const { collectionId, collection } = createSingleItemRegistryContext(
+      'open-submit-targeted-in-flight'
+    )
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    let resolvePersist: (() => void) | null = null
+    const persistGate = new Promise<void>((resolve) => {
+      resolvePersist = resolve
+    })
+    let persistFinished = false
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: TEST_ITEM_ID,
+      debounceMs: 10_000,
+      mutateOptimistically: () => {
+        collection.update(TEST_ITEM_ID, (draft) => {
+          draft.value = 9
+        })
+      },
+      persistMutations: async () => {
+        await persistGate
+        persistFinished = true
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    sendOpenUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)
+    const waitTask = submitOpenUpdateTransactionAndWait(collectionId, TEST_ITEM_ID)
+
+    await Promise.resolve()
+    expect(persistFinished).toBe(false)
+
+    resolvePersist!()
+    await waitTask
+
+    expect(persistFinished).toBe(true)
   })
 
   it('keeps invalid debounced open update transactions pending until validation passes', async () => {

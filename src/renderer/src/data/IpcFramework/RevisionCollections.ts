@@ -10,6 +10,7 @@ import { workspaceCollection } from '../Collections/WorkspaceCollection'
 export {
   mutateOpenUpdateTransaction,
   sendOpenUpdateTransactionIfPresent,
+  submitOpenUpdateTransactionAndWait,
   submitAllOpenUpdateTransactionsAndWait,
   getTransactionsForElement,
   type TransactionEntry

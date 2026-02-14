@@ -12,8 +12,7 @@ import {
 } from '../Collections/SystemSettingsDraftCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import {
-  sendOpenUpdateTransactionIfPresent,
-  submitAllOpenUpdateTransactionsAndWait
+  submitOpenUpdateTransactionAndWait
 } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutateOpenSystemSettingsAutosaveUpdate } from '../Mutations/SystemSettingsMutations'
@@ -148,8 +147,10 @@ export const saveSystemSettingsDraftNow = async (): Promise<void> => {
   autosaveState.saving = true
 
   try {
-    sendOpenUpdateTransactionIfPresent(systemSettingsCollection.id, SYSTEM_SETTINGS_ID, 'manual')
-    await submitAllOpenUpdateTransactionsAndWait()
+    await submitOpenUpdateTransactionAndWait(
+      systemSettingsCollection.id,
+      SYSTEM_SETTINGS_ID
+    )
   } finally {
     autosaveState.saving = false
   }

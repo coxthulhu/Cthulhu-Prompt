@@ -32,6 +32,7 @@ const transactionEntries = new Map<string, TransactionEntry>()
 const transactionKeys = new Map<string, Set<string>>()
 const transactionsByElement = new Map<string, Set<TransactionEntry>>()
 const openUpdateTransactionsByElement = new Map<string, OpenUpdateTransaction>()
+const inFlightOpenUpdateEnqueueTasksByElement = new Map<string, Promise<void>>()
 let latestOpenUpdateEnqueueTask: Promise<void> = Promise.resolve()
 
 // Keep element keys aligned with TanStack's global mutation key format.
@@ -65,21 +66,36 @@ const clearOpenUpdateDebounceTimeout = (openUpdateTransaction: OpenUpdateTransac
   openUpdateTransaction.debounceTimeoutId = null
 }
 
-const trackOpenUpdateEnqueueTask = (enqueueTask: Promise<void>): void => {
-  latestOpenUpdateEnqueueTask = enqueueTask.then(
+const trackOpenUpdateEnqueueTask = (
+  globalElementKey: string,
+  enqueueTask: Promise<void>
+): Promise<void> => {
+  const trackedTask = enqueueTask.then(
     () => undefined,
     () => undefined
   )
+
+  latestOpenUpdateEnqueueTask = trackedTask
+  inFlightOpenUpdateEnqueueTasksByElement.set(globalElementKey, trackedTask)
+  void trackedTask.finally(() => {
+    if (inFlightOpenUpdateEnqueueTasksByElement.get(globalElementKey) !== trackedTask) {
+      return
+    }
+
+    inFlightOpenUpdateEnqueueTasksByElement.delete(globalElementKey)
+  })
+
+  return trackedTask
 }
 
 // Send a single open update transaction by key, canceling debounce first.
 const sendOpenUpdateTransactionByGlobalElementKey = (
   globalElementKey: string,
   reason: OpenUpdateSendReason
-): boolean => {
+): Promise<void> | null => {
   const openUpdateTransaction = openUpdateTransactionsByElement.get(globalElementKey)
   if (!openUpdateTransaction) {
-    return false
+    return null
   }
 
   const transaction = openUpdateTransaction.transactionEntry.transaction
@@ -105,13 +121,14 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
       }
     }
 
-    return false
+    return null
   }
 
   openUpdateTransactionsByElement.delete(globalElementKey)
-  trackOpenUpdateEnqueueTask(openUpdateTransaction.enqueueTransaction())
-
-  return true
+  return trackOpenUpdateEnqueueTask(
+    globalElementKey,
+    openUpdateTransaction.enqueueTransaction()
+  )
 }
 
 // Recompute per-element transaction indexes from the transaction's current mutation set.
@@ -246,10 +263,34 @@ export const sendOpenUpdateTransactionIfPresent = (
   elementId: string | number,
   reason: OpenUpdateSendReason = 'manual'
 ): boolean => {
-  return sendOpenUpdateTransactionByGlobalElementKey(
+  const enqueueTask = sendOpenUpdateTransactionByGlobalElementKey(
     buildGlobalElementKey(collectionId, elementId),
     reason
   )
+
+  return enqueueTask != null
+}
+
+// Submit one open update transaction (if present) and wait for its enqueue task to settle.
+export const submitOpenUpdateTransactionAndWait = async (
+  collectionId: string,
+  elementId: string | number
+): Promise<void> => {
+  const globalElementKey = buildGlobalElementKey(collectionId, elementId)
+  const enqueueTask = sendOpenUpdateTransactionByGlobalElementKey(
+    globalElementKey,
+    'manual'
+  )
+
+  if (enqueueTask) {
+    await enqueueTask
+    return
+  }
+
+  const inFlightTask = inFlightOpenUpdateEnqueueTasksByElement.get(globalElementKey)
+  if (inFlightTask) {
+    await inFlightTask
+  }
 }
 
 // Submit all open update transactions and wait for every enqueue task to settle.
@@ -259,8 +300,11 @@ export const submitAllOpenUpdateTransactionsAndWait = async (): Promise<void> =>
     let sentAny = false
 
     for (const openTransactionKey of openTransactionKeys) {
-      const didSend = sendOpenUpdateTransactionByGlobalElementKey(openTransactionKey, 'manual')
-      sentAny = sentAny || didSend
+      const enqueueTask = sendOpenUpdateTransactionByGlobalElementKey(
+        openTransactionKey,
+        'manual'
+      )
+      sentAny = sentAny || enqueueTask != null
     }
 
     await latestOpenUpdateEnqueueTask
