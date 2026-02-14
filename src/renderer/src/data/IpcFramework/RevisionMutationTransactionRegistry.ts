@@ -1,30 +1,22 @@
 import type { Transaction } from '@tanstack/svelte-db'
 
-export type TransactionEntry = {
+type OpenUpdateTransactionBase = {
   transaction: Transaction<any>
-  isQueuedImmediately: boolean
+  enqueueTransaction: () => Promise<void>
+  validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
 }
 
 export type OpenUpdateSendReason = 'debounce' | 'manual' | 'before-immediate-transaction'
 
-type OpenUpdateTransaction = {
-  transactionEntry: TransactionEntry
+type OpenUpdateTransaction = OpenUpdateTransactionBase & {
   debounceTimeoutId: ReturnType<typeof globalThis.setTimeout> | null
-  enqueueTransaction: () => Promise<void>
-  validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
-}
-
-type OpenUpdateTransactionFactoryResult = {
-  transactionEntry: TransactionEntry
-  enqueueTransaction: () => Promise<void>
-  validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
 }
 
 type MutateOpenUpdateTransactionOptions = {
   collectionId: string
   elementId: string | number
   debounceMs: number
-  createTransaction: () => OpenUpdateTransactionFactoryResult
+  createTransaction: () => OpenUpdateTransactionBase
   mutateTransaction: (transaction: Transaction<any>) => void
 }
 
@@ -116,53 +108,24 @@ type OpenUpdateDispatchResult = {
   waitTask: Promise<void> | null
 }
 
-const dispatchOpenUpdateTransaction = (
+const sendOpenUpdateTransactionByGlobalElementKey = (
   globalElementKey: string,
   reason: OpenUpdateSendReason,
   includeInFlightTask: boolean
 ): OpenUpdateDispatchResult => {
-  const enqueueTask = sendOpenUpdateTransactionByGlobalElementKey(globalElementKey, reason)
-  if (enqueueTask) {
-    return {
-      wasSent: true,
-      waitTask: enqueueTask
-    }
-  }
-
-  if (!includeInFlightTask) {
+  const elementState = elementStatesByGlobalKey.get(globalElementKey)
+  if (!elementState || !elementState.openUpdateTransaction) {
     return {
       wasSent: false,
-      waitTask: null
+      waitTask: includeInFlightTask ? (elementState?.latestInFlightOpenUpdateEnqueueTask ?? null) : null
     }
   }
 
-  return {
-    wasSent: false,
-    waitTask:
-      elementStatesByGlobalKey.get(globalElementKey)?.latestInFlightOpenUpdateEnqueueTask ?? null
-  }
-}
-
-// Send a single open update transaction by key, canceling debounce first.
-const sendOpenUpdateTransactionByGlobalElementKey = (
-  globalElementKey: string,
-  reason: OpenUpdateSendReason
-): Promise<void> | null => {
-  const elementState = elementStatesByGlobalKey.get(globalElementKey)
-  const openUpdateTransaction = elementState?.openUpdateTransaction
-  if (!openUpdateTransaction) {
-    return null
-  }
-
-  const transaction = openUpdateTransaction.transactionEntry.transaction
+  const openUpdateTransaction = elementState.openUpdateTransaction
+  const transaction = openUpdateTransaction.transaction
   clearOpenUpdateDebounceTimeout(openUpdateTransaction)
 
-  let isValid = true
-  if (openUpdateTransaction.validateBeforeEnqueue) {
-    isValid = openUpdateTransaction.validateBeforeEnqueue(transaction)
-  }
-
-  if (!isValid) {
+  if (openUpdateTransaction.validateBeforeEnqueue?.(transaction) === false) {
     if (reason === 'before-immediate-transaction') {
       elementState.openUpdateTransaction = null
       try {
@@ -176,24 +139,21 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
       }
     }
 
-    return null
+    return {
+      wasSent: false,
+      waitTask: includeInFlightTask ? (elementState.latestInFlightOpenUpdateEnqueueTask ?? null) : null
+    }
   }
 
   elementState.openUpdateTransaction = null
-  return trackOpenUpdateEnqueueTask(
+  const waitTask = trackOpenUpdateEnqueueTask(
     globalElementKey,
     openUpdateTransaction.enqueueTransaction()
   )
-}
 
-// Register a transaction entry.
-export const registerRevisionMutationTransaction = (
-  transaction: Transaction<any>,
-  isQueuedImmediately: boolean
-): TransactionEntry => {
   return {
-    transaction,
-    isQueuedImmediately
+    wasSent: true,
+    waitTask
   }
 }
 
@@ -208,23 +168,23 @@ export const mutateOpenUpdateTransaction = ({
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
   const elementState = getOrCreateElementState(globalElementKey)
   let openUpdateTransaction = elementState.openUpdateTransaction
-  let newOpenUpdateTransaction: OpenUpdateTransactionFactoryResult | null = null
+  let createdOpenUpdateTransaction: OpenUpdateTransactionBase | null = null
 
   if (!openUpdateTransaction) {
-    newOpenUpdateTransaction = createTransaction()
+    createdOpenUpdateTransaction = createTransaction()
     openUpdateTransaction = {
-      transactionEntry: newOpenUpdateTransaction.transactionEntry,
       debounceTimeoutId: null,
-      enqueueTransaction: newOpenUpdateTransaction.enqueueTransaction,
-      validateBeforeEnqueue: newOpenUpdateTransaction.validateBeforeEnqueue
+      transaction: createdOpenUpdateTransaction.transaction,
+      enqueueTransaction: createdOpenUpdateTransaction.enqueueTransaction,
+      validateBeforeEnqueue: createdOpenUpdateTransaction.validateBeforeEnqueue
     }
     elementState.openUpdateTransaction = openUpdateTransaction
   }
 
   try {
-    mutateTransaction(openUpdateTransaction.transactionEntry.transaction)
+    mutateTransaction(openUpdateTransaction.transaction)
   } catch (error) {
-    if (newOpenUpdateTransaction) {
+    if (createdOpenUpdateTransaction) {
       elementState.openUpdateTransaction = null
       cleanupElementStateIfIdle(globalElementKey)
     }
@@ -244,7 +204,7 @@ export const sendOpenUpdateTransactionIfPresent = (
   elementId: string | number,
   reason: OpenUpdateSendReason = 'manual'
 ): boolean => {
-  const dispatchResult = dispatchOpenUpdateTransaction(
+  const dispatchResult = sendOpenUpdateTransactionByGlobalElementKey(
     buildGlobalElementKey(collectionId, elementId),
     reason,
     false
@@ -259,7 +219,7 @@ export const submitOpenUpdateTransactionAndWait = async (
   elementId: string | number
 ): Promise<void> => {
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
-  const dispatchResult = dispatchOpenUpdateTransaction(
+  const dispatchResult = sendOpenUpdateTransactionByGlobalElementKey(
     globalElementKey,
     'manual',
     true
@@ -283,9 +243,13 @@ export const submitAllOpenUpdateTransactionsAndWait = async (): Promise<void> =>
       continue
     }
 
-    const enqueueTask = sendOpenUpdateTransactionByGlobalElementKey(globalElementKey, 'manual')
-    if (enqueueTask) {
-      waitTasks.add(enqueueTask)
+    const dispatchResult = sendOpenUpdateTransactionByGlobalElementKey(
+      globalElementKey,
+      'manual',
+      false
+    )
+    if (dispatchResult.waitTask) {
+      waitTasks.add(dispatchResult.waitTask)
     }
   }
 

@@ -1,16 +1,11 @@
 <script lang="ts">
-  import { useLiveQuery } from '@tanstack/svelte-db'
   import { Button } from '@renderer/common/ui/button'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import {
-    SYSTEM_SETTINGS_DRAFT_ID,
-    type SystemSettingsDraftRecord,
-    systemSettingsDraftCollection
-  } from '@renderer/data/Collections/SystemSettingsDraftCollection'
-  import {
-    flushSystemSettingsAutosave,
     getSystemSettingsAutosaveState,
-    saveSystemSettingsDraftNow
+    selectSystemSettingsDraftRecord,
+    saveSystemSettingsDraftNow,
+    useSystemSettingsDraftQuery
   } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
   import {
     setSystemSettingsDraftFontSizeInput,
@@ -23,15 +18,10 @@
   } from '@renderer/data/UiState/SystemSettingsFormat'
   import { DEFAULT_SYSTEM_SETTINGS } from '@shared/SystemSettings'
 
-  const systemSettingsDraftQuery = useLiveQuery((q) =>
-    q.from({ systemSettingsDraft: systemSettingsDraftCollection })
-  ) as { data: SystemSettingsDraftRecord[] }
-  const systemSettingsState = $derived.by(() => {
-    return (
-      systemSettingsDraftQuery.data.find((draft) => draft.id === SYSTEM_SETTINGS_DRAFT_ID) ??
-      systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
-    )
-  })
+  const systemSettingsDraftQuery = useSystemSettingsDraftQuery()
+  const systemSettingsState = $derived(
+    selectSystemSettingsDraftRecord(systemSettingsDraftQuery.data)
+  )
   const autosaveState = getSystemSettingsAutosaveState()
   const isUpdating = $derived(autosaveState.saving)
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
@@ -54,7 +44,7 @@
   const handleInputBlur = () => {
     void runWithErrorLogging(
       'Failed to update system settings:',
-      flushSystemSettingsAutosave
+      saveSystemSettingsDraftNow
     )
   }
 
@@ -95,7 +85,7 @@
     return () => {
       void runWithErrorLogging(
         'Failed to update system settings:',
-        flushSystemSettingsAutosave
+        saveSystemSettingsDraftNow
       )
     }
   })

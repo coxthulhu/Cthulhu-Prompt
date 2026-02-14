@@ -1,5 +1,6 @@
 import { SYSTEM_SETTINGS_ID, type SystemSettings } from '@shared/SystemSettings'
 import type { Transaction } from '@tanstack/svelte-db'
+import { useLiveQuery } from '@tanstack/svelte-db'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
   SYSTEM_SETTINGS_DRAFT_ID,
@@ -24,8 +25,27 @@ const autosaveState = $state<SystemSettingsAutosaveState>({
   saving: false
 })
 
+type SystemSettingsDraftQuery = {
+  data: SystemSettingsDraftRecord[]
+}
+
 export const getSystemSettingsDraftRecord = (): SystemSettingsDraftRecord => {
   return systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
+}
+
+export const useSystemSettingsDraftQuery = (): SystemSettingsDraftQuery => {
+  return useLiveQuery((query) => {
+    return query.from({ systemSettingsDraft: systemSettingsDraftCollection })
+  }) as SystemSettingsDraftQuery
+}
+
+export const selectSystemSettingsDraftRecord = (
+  records: SystemSettingsDraftRecord[]
+): SystemSettingsDraftRecord => {
+  return (
+    records.find((record) => record.id === SYSTEM_SETTINGS_DRAFT_ID) ??
+    getSystemSettingsDraftRecord()
+  )
 }
 
 const getSystemSettingsDraftRecordFromTransaction = (
@@ -97,8 +117,4 @@ export const saveSystemSettingsDraftNow = async (): Promise<void> => {
   } finally {
     autosaveState.saving = false
   }
-}
-
-export const flushSystemSettingsAutosave = async (): Promise<void> => {
-  await saveSystemSettingsDraftNow()
 }

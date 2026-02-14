@@ -11,8 +11,7 @@ export {
   mutateOpenUpdateTransaction,
   sendOpenUpdateTransactionIfPresent,
   submitOpenUpdateTransactionAndWait,
-  submitAllOpenUpdateTransactionsAndWait,
-  type TransactionEntry
+  submitAllOpenUpdateTransactionsAndWait
 } from './RevisionMutationTransactionRegistry'
 
 const revisionCollections = {

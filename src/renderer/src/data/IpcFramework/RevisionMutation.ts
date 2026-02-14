@@ -7,10 +7,8 @@ import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 import {
   mutateOpenUpdateTransaction,
-  registerRevisionMutationTransaction,
   sendOpenUpdateTransactionIfPresent
 } from './RevisionMutationTransactionRegistry'
-import type { TransactionEntry } from './RevisionMutationTransactionRegistry'
 
 type QueuedTask<T> = () => Promise<T>
 let mutationQueue: Promise<void> = Promise.resolve()
@@ -95,8 +93,8 @@ type CreateRevisionMutationTransactionOptions<
   'persistMutations' | 'handleSuccessOrConflictResponse' | 'conflictMessage'
 >
 
-// Create and register a manual-commit transaction using the shared revision mutation contract.
-const createRegisteredRevisionMutationTransaction = <
+// Create a manual-commit transaction using the shared revision mutation contract.
+const createRevisionMutationTransaction = <
   TCollections extends RevisionCollectionsMap,
   TPayload
 >(
@@ -105,9 +103,8 @@ const createRegisteredRevisionMutationTransaction = <
     persistMutations,
     handleSuccessOrConflictResponse,
     conflictMessage
-  }: CreateRevisionMutationTransactionOptions<TCollections, TPayload>,
-  isQueuedImmediately: boolean
-): TransactionEntry => {
+  }: CreateRevisionMutationTransactionOptions<TCollections, TPayload>
+): Transaction<any> => {
   const entities = {} as RevisionEntityBuilders<TCollections>
 
   for (const collectionKey of Object.keys(collections) as Array<keyof TCollections>) {
@@ -147,7 +144,7 @@ const createRegisteredRevisionMutationTransaction = <
     }
   })
 
-  return registerRevisionMutationTransaction(transaction, isQueuedImmediately)
+  return transaction
 }
 
 // Apply optimistic mutation logic for a transaction.
@@ -158,17 +155,17 @@ const mutateRevisionTransaction = (
   transaction.mutate(mutateOptimistically)
 }
 
-// Side effect: enqueue one registered transaction and run success hook when it commits.
-const enqueueRegisteredRevisionMutationTransaction = async (
-  transactionEntry: TransactionEntry,
+// Side effect: enqueue one transaction and run success hook when it commits.
+const enqueueRevisionMutationTransaction = async (
+  transaction: Transaction<any>,
   onSuccess: (() => void) | undefined
 ): Promise<void> => {
   await enqueueGlobalMutation(async () => {
-    if (transactionEntry.transaction.state === 'pending') {
-      await transactionEntry.transaction.commit()
+    if (transaction.state === 'pending') {
+      await transaction.commit()
     }
 
-    if (transactionEntry.transaction.state === 'completed') {
+    if (transaction.state === 'completed') {
       // Side effect: success hook runs only after transaction commit succeeds.
       onSuccess?.()
     }
@@ -185,13 +182,9 @@ export const createRevisionMutationRunner = <
     options: RevisionMutationOptions<TCollections, TPayload>
   ): Promise<void> => {
     const { onSuccess, queueImmediately = true } = options
-    const transactionEntry = createRegisteredRevisionMutationTransaction(
-      collections,
-      options,
-      queueImmediately
-    )
+    const transaction = createRevisionMutationTransaction(collections, options)
 
-    mutateRevisionTransaction(transactionEntry.transaction, options.mutateOptimistically)
+    mutateRevisionTransaction(transaction, options.mutateOptimistically)
 
     if (!queueImmediately) {
       return
@@ -199,7 +192,7 @@ export const createRevisionMutationRunner = <
 
     // Flush any open debounced updates for elements touched by this immediate transaction.
     const sentElementKeys = new Set<string>()
-    for (const mutation of transactionEntry.transaction.mutations) {
+    for (const mutation of transaction.mutations) {
       const collectionId = mutation.collection.id
       const elementId = mutation.key as string | number
       const elementKey = `${collectionId}/${elementId}`
@@ -216,7 +209,7 @@ export const createRevisionMutationRunner = <
       )
     }
 
-    await enqueueRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
+    await enqueueRevisionMutationTransaction(transaction, onSuccess)
   }
 }
 
@@ -243,17 +236,13 @@ export const createOpenRevisionUpdateMutationRunner = <
       elementId,
       debounceMs,
       createTransaction: () => {
-        const transactionEntry = createRegisteredRevisionMutationTransaction(
-          collections,
-          options,
-          false
-        )
+        const transaction = createRevisionMutationTransaction(collections, options)
 
         return {
-          transactionEntry,
+          transaction,
           validateBeforeEnqueue,
           enqueueTransaction: async () => {
-            await enqueueRegisteredRevisionMutationTransaction(transactionEntry, onSuccess)
+            await enqueueRevisionMutationTransaction(transaction, onSuccess)
           }
         }
       },

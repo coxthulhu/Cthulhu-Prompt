@@ -6,7 +6,7 @@ import {
   clearPromptDraftStore,
   flushPromptDraftAutosaves
 } from './PromptDraftStore.svelte.ts'
-import { flushSystemSettingsAutosave } from './SystemSettingsAutosave.svelte.ts'
+import { saveSystemSettingsDraftNow } from './SystemSettingsAutosave.svelte.ts'
 import { clearPromptFolderScreenState } from './PromptFolderScreenData.svelte.ts'
 
 let currentWorkspacePath: string | null = null
@@ -24,7 +24,7 @@ export const switchWorkspaceStoreBridge = async (
     await Promise.allSettled([
       flushPromptFolderDraftAutosaves(),
       flushPromptDraftAutosaves(),
-      flushSystemSettingsAutosave()
+      saveSystemSettingsDraftNow()
     ])
 
     currentWorkspacePath = nextWorkspacePath
