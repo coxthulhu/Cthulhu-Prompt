@@ -1,4 +1,3 @@
-import type { Prompt } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { createMeasuredHeightCache, type TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -8,8 +7,7 @@ import {
   removePromptDraft,
   setPromptDraftText,
   setPromptDraftTitle,
-  syncPromptDraft,
-  syncPromptDrafts
+  syncPromptDraft
 } from './PromptDraftStore.svelte.ts'
 import {
   getPromptFolderDraftState,
@@ -75,17 +73,6 @@ const getPromptFolderDescription = (promptFolderId: string): string => {
     promptFolderCollection.get(promptFolderId)?.folderDescription ??
     ''
   )
-}
-
-export const syncPromptFolderScreenPromptDraft = (prompt: Prompt): void => {
-  syncPromptDraft(prompt)
-}
-
-export const syncPromptFolderScreenPromptDrafts = (
-  prompts: Prompt[],
-  options?: { createMissing?: boolean }
-): void => {
-  syncPromptDrafts(prompts, options)
 }
 
 export const syncPromptFolderScreenDescriptionDraft = (

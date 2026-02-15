@@ -24,10 +24,12 @@
     lookupPromptFolderScreenDescriptionMeasuredHeight,
     removePromptFolderScreenPrompt,
     setPromptFolderScreenDescriptionText,
-    syncPromptFolderScreenDescriptionDraft,
-    syncPromptFolderScreenPromptDraft,
-    syncPromptFolderScreenPromptDrafts
+    syncPromptFolderScreenDescriptionDraft
   } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import {
+    syncPromptDraft,
+    syncPromptDrafts
+  } from '@renderer/data/UiState/PromptDraftStore.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
@@ -185,7 +187,7 @@
       return
     }
 
-    syncPromptFolderScreenPromptDrafts(promptsToSync, { createMissing: false })
+    syncPromptDrafts(promptsToSync, { createMissing: false })
   })
 
   // Side effect: reset the virtual window scroll position after folder changes.
@@ -398,7 +400,7 @@
       promptText: '',
       promptFolderCount: currentPromptFolder.promptCount + 1
     }
-    syncPromptFolderScreenPromptDraft(optimisticPrompt)
+    syncPromptDraft(optimisticPrompt)
 
     try {
       await createPrompt(currentPromptFolder.id, optimisticPrompt, previousPromptId)

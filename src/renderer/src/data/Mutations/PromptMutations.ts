@@ -99,7 +99,7 @@ type PacedPromptMutationOptions = Parameters<
 
 type PacedPromptAutosaveUpdateOptions = Pick<
   PacedPromptMutationOptions,
-  'debounceMs' | 'mutateOptimistically' | 'validateBeforeEnqueue' | 'draftOnlyChange'
+  'debounceMs' | 'mutateOptimistically' | 'draftOnlyChange'
 > & {
   promptId: string
 }
@@ -108,7 +108,6 @@ export const mutatePacedPromptAutosaveUpdate = ({
   promptId,
   debounceMs,
   mutateOptimistically,
-  validateBeforeEnqueue,
   draftOnlyChange
 }: PacedPromptAutosaveUpdateOptions): boolean => {
   return mutatePacedRevisionUpdateTransaction<PromptRevisionResponsePayload>({
@@ -116,7 +115,6 @@ export const mutatePacedPromptAutosaveUpdate = ({
     elementId: promptId,
     debounceMs,
     mutateOptimistically,
-    validateBeforeEnqueue,
     draftOnlyChange,
     persistMutations: async ({ entities, invoke, transaction }) => {
       const latestPrompt = readLatestPromptFromTransaction(transaction, promptId)

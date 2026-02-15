@@ -35,24 +35,29 @@ const haveSamePrompt = (left: Prompt, right: Prompt): boolean => {
   )
 }
 
-const validatePromptDraftTransaction = (): boolean => {
-  return true
+type PromptDraftOptimisticMutationOptions = {
+  draftOnlyChange?: boolean
+  mutatePromptDraft: (draft: PromptDraftRecord) => void
+  mutatePrompt?: (draft: Prompt) => void
 }
 
-type PromptDraftPacedUpdateOptions = Omit<
-  Parameters<typeof mutatePacedPromptAutosaveUpdate>[0],
-  'promptId' | 'debounceMs' | 'validateBeforeEnqueue'
->
-
-const mutatePromptDraftPacedUpdate = (
+const mutatePromptDraftOptimistically = (
   promptId: string,
-  options: PromptDraftPacedUpdateOptions
+  options: PromptDraftOptimisticMutationOptions
 ): boolean => {
+  const { draftOnlyChange, mutatePromptDraft, mutatePrompt } = options
+
   return mutatePacedPromptAutosaveUpdate({
     promptId,
     debounceMs: AUTOSAVE_MS,
-    validateBeforeEnqueue: validatePromptDraftTransaction,
-    ...options
+    draftOnlyChange,
+    mutateOptimistically: ({ collections }) => {
+      collections.promptDraft.update(promptId, mutatePromptDraft)
+
+      if (mutatePrompt) {
+        collections.prompt.update(promptId, mutatePrompt)
+      }
+    }
   })
 }
 
@@ -99,7 +104,8 @@ export const syncPromptDrafts = (
 
   const createMissing = options?.createMissing ?? true
   const draftInserts: PromptDraftRecord[] = []
-  const draftUpdates = new SvelteMap<string, Prompt>()
+  const draftUpdatesById: Record<string, Prompt> = {}
+  const draftUpdateIds: string[] = []
 
   for (const prompt of prompts) {
     const promptSnapshot = toPromptSnapshot(prompt)
@@ -125,18 +131,20 @@ export const syncPromptDrafts = (
     }
 
     lastSyncedPromptsById.set(prompt.id, promptSnapshot)
-    draftUpdates.set(prompt.id, promptSnapshot)
+    if (!draftUpdatesById[prompt.id]) {
+      draftUpdateIds.push(prompt.id)
+    }
+    draftUpdatesById[prompt.id] = promptSnapshot
   }
 
   if (draftInserts.length > 0) {
     promptDraftCollection.insert(draftInserts)
   }
 
-  if (draftUpdates.size > 0) {
-    const draftUpdateIds = Array.from(draftUpdates.keys())
+  if (draftUpdateIds.length > 0) {
     promptDraftCollection.update(draftUpdateIds, (draftRecords) => {
       for (const draftRecord of draftRecords) {
-        const nextSnapshot = draftUpdates.get(draftRecord.id)
+        const nextSnapshot = draftUpdatesById[draftRecord.id]
         if (!nextSnapshot) {
           continue
         }
@@ -157,15 +165,12 @@ export const setPromptDraftTitle = (promptId: string, title: string): void => {
     return
   }
 
-  mutatePromptDraftPacedUpdate(promptId, {
-    mutateOptimistically: ({ collections }) => {
-      collections.promptDraft.update(promptId, (draft) => {
-        draft.draftSnapshot.title = title
-      })
-
-      collections.prompt.update(promptId, (draft) => {
-        draft.title = title
-      })
+  mutatePromptDraftOptimistically(promptId, {
+    mutatePromptDraft: (draft) => {
+      draft.draftSnapshot.title = title
+    },
+    mutatePrompt: (draft) => {
+      draft.title = title
     }
   })
 }
@@ -183,16 +188,14 @@ export const setPromptDraftText = (
   const textChanged = draftRecord.draftSnapshot.promptText !== promptText
 
   if (!textChanged) {
-    const updatedOpenTransaction = mutatePromptDraftPacedUpdate(promptId, {
+    const didUpdateOpenTransaction = mutatePromptDraftOptimistically(promptId, {
       draftOnlyChange: true,
-      mutateOptimistically: ({ collections }) => {
-        collections.promptDraft.update(promptId, (draft) => {
-          applyPromptMeasurementUpdate(draft, measurement, false)
-        })
+      mutatePromptDraft: (draft) => {
+        applyPromptMeasurementUpdate(draft, measurement, false)
       }
     })
 
-    if (!updatedOpenTransaction) {
+    if (!didUpdateOpenTransaction) {
       promptDraftCollection.update(promptId, (draft) => {
         applyPromptMeasurementUpdate(draft, measurement, false)
       })
@@ -201,16 +204,13 @@ export const setPromptDraftText = (
     return
   }
 
-  mutatePromptDraftPacedUpdate(promptId, {
-    mutateOptimistically: ({ collections }) => {
-      collections.promptDraft.update(promptId, (draft) => {
-        draft.draftSnapshot.promptText = promptText
-        applyPromptMeasurementUpdate(draft, measurement, true)
-      })
-
-      collections.prompt.update(promptId, (draft) => {
-        draft.promptText = promptText
-      })
+  mutatePromptDraftOptimistically(promptId, {
+    mutatePromptDraft: (draft) => {
+      draft.draftSnapshot.promptText = promptText
+      applyPromptMeasurementUpdate(draft, measurement, true)
+    },
+    mutatePrompt: (draft) => {
+      draft.promptText = promptText
     }
   })
 }

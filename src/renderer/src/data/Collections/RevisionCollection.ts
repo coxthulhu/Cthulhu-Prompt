@@ -45,10 +45,6 @@ export const revisionCollectionOptions = <TRecord extends object>(
   let syncCommit: (() => void) | null = null
   let collection: Collection<TRecord, string, RevisionCollectionUtils<TRecord>> | null = null
 
-  const writeAuthoritative = (message: ChangeMessageOrDeleteKeyMessage<TRecord, string>): void => {
-    writeManyAuthoritative([message])
-  }
-
   const writeManyAuthoritative = (
     messages: Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>>
   ): void => {
@@ -102,6 +98,22 @@ export const revisionCollectionOptions = <TRecord extends object>(
     return messages
   }
 
+  const collectDeleteMessages = (
+    keys: Array<string>
+  ): Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>> => {
+    const messages: Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>> = []
+
+    for (const key of keys) {
+      authoritativeRevisions.delete(key)
+      messages.push({
+        type: 'delete',
+        key
+      })
+    }
+
+    return messages
+  }
+
   const sync: SyncConfig<TRecord, string> = {
     sync: (params) => {
       syncBegin = params.begin
@@ -143,35 +155,16 @@ export const revisionCollectionOptions = <TRecord extends object>(
     sync,
     utils: {
       upsertAuthoritative: (snapshot) => {
-        const messages = collectUpsertMessages([snapshot])
-        if (messages.length === 0) {
-          return
-        }
-        writeAuthoritative(messages[0]!)
+        writeManyAuthoritative(collectUpsertMessages([snapshot]))
       },
       upsertManyAuthoritative: (snapshots) => {
-        const messages = collectUpsertMessages(snapshots)
-        writeManyAuthoritative(messages)
+        writeManyAuthoritative(collectUpsertMessages(snapshots))
       },
       deleteAuthoritative: (key) => {
-        authoritativeRevisions.delete(key)
-        writeAuthoritative({
-          type: 'delete',
-          key
-        })
+        writeManyAuthoritative(collectDeleteMessages([key]))
       },
       deleteManyAuthoritative: (keys) => {
-        const messages: Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>> = []
-
-        for (const key of keys) {
-          authoritativeRevisions.delete(key)
-          messages.push({
-            type: 'delete',
-            key
-          })
-        }
-
-        writeManyAuthoritative(messages)
+        writeManyAuthoritative(collectDeleteMessages(keys))
       },
       getAuthoritativeRevision
     },
