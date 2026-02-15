@@ -73,11 +73,11 @@ describe('revision mutation transaction registry', () => {
     let persistCalled = 0
 
     await runMutation<MutationPayload>({
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
-        collection.update(TEST_ITEM_ID, (draft) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -98,8 +98,8 @@ describe('revision mutation transaction registry', () => {
 
     await expect(
       runMutation<MutationPayload>({
-        mutateOptimistically: () => {
-          collection.update(TEST_ITEM_ID, (draft) => {
+        mutateOptimistically: ({ collections }) => {
+          collections.test.update(TEST_ITEM_ID, (draft) => {
             draft.value = 3
           })
         },
@@ -121,8 +121,8 @@ describe('revision mutation transaction registry', () => {
 
     await expect(
       runMutation<MutationPayload>({
-        mutateOptimistically: () => {
-          collection.update(TEST_ITEM_ID, (draft) => {
+        mutateOptimistically: ({ collections }) => {
+          collections.test.update(TEST_ITEM_ID, (draft) => {
             draft.value = 4
           })
           throw new Error('Optimistic mutation failed')
@@ -146,12 +146,12 @@ describe('revision mutation transaction registry', () => {
     let persistCalled = false
 
     await runMutation<MutationPayload>({
-      mutateOptimistically: () => {
-        collection.insert({
+      mutateOptimistically: ({ collections }) => {
+        collections.test.insert({
           id: 'item-new',
           value: 1
         })
-        collection.delete('item-new')
+        collections.test.delete('item-new')
       },
       persistMutations: async () => {
         persistCalled = true
@@ -178,8 +178,8 @@ describe('revision mutation transaction registry', () => {
         collectionId,
         elementId: TEST_ITEM_ID,
         debounceMs: 200,
-        mutateOptimistically: () => {
-          collection.update(TEST_ITEM_ID, (draft) => {
+        mutateOptimistically: ({ collections }) => {
+          collections.test.update(TEST_ITEM_ID, (draft) => {
             draft.value = value
           })
         },
@@ -218,8 +218,8 @@ describe('revision mutation transaction registry', () => {
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 7
         })
       },
@@ -258,8 +258,8 @@ describe('revision mutation transaction registry', () => {
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 9
         })
       },
@@ -301,8 +301,8 @@ describe('revision mutation transaction registry', () => {
       elementId: TEST_ITEM_ID,
       debounceMs: 200,
       validateBeforeEnqueue: () => isValid,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
       },
@@ -326,8 +326,8 @@ describe('revision mutation transaction registry', () => {
       elementId: TEST_ITEM_ID,
       debounceMs: 200,
       validateBeforeEnqueue: () => isValid,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -359,8 +359,8 @@ describe('revision mutation transaction registry', () => {
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
       },
@@ -373,8 +373,8 @@ describe('revision mutation transaction registry', () => {
     })
 
     await runMutation<MutationPayload>({
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -404,8 +404,8 @@ describe('revision mutation transaction registry', () => {
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
       validateBeforeEnqueue: () => false,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 1
         })
       },
@@ -418,8 +418,8 @@ describe('revision mutation transaction registry', () => {
     })
 
     await runMutation<MutationPayload>({
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 2
         })
       },
@@ -434,6 +434,57 @@ describe('revision mutation transaction registry', () => {
     expect(persistOrder).toEqual(['immediate'])
   })
 
+  it('replays immediate optimistic mutations after invalid open rollback', async () => {
+    const { collectionId, collection } = createSingleItemRegistryContext(
+      'queue-immediate-replay-after-open-rollback'
+    )
+    const runMutation = createRevisionMutationRunner({ test: collection })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
+      test: collection
+    })
+    let openPersistCalled = 0
+    let immediatePersistedValue: number | null = null
+
+    mutateOpenUpdate<MutationPayload>({
+      collectionId,
+      elementId: TEST_ITEM_ID,
+      debounceMs: 10_000,
+      validateBeforeEnqueue: () => false,
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
+          draft.value = 10
+        })
+      },
+      persistMutations: async () => {
+        openPersistCalled += 1
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    await runMutation<MutationPayload>({
+      mutateOptimistically: ({ collections }) => {
+        const nextValue = collection.get(TEST_ITEM_ID)!.value + 1
+        collections.test.update(TEST_ITEM_ID, (draft) => {
+          draft.value = nextValue
+        })
+      },
+      persistMutations: async ({ transaction }) => {
+        const updatedRecord = transaction.mutations.find(
+          (mutation) => mutation.key === TEST_ITEM_ID
+        )?.modified as TestRecord | undefined
+        immediatePersistedValue = updatedRecord?.value ?? null
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    expect(openPersistCalled).toBe(0)
+    expect(immediatePersistedValue).toBe(1)
+  })
+
   it('always resolves when submitting all open update transactions', async () => {
     const { collectionId, collection } = createSingleItemRegistryContext('open-submit-all')
     const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
@@ -444,8 +495,8 @@ describe('revision mutation transaction registry', () => {
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
-      mutateOptimistically: () => {
-        collection.update(TEST_ITEM_ID, (draft) => {
+      mutateOptimistically: ({ collections }) => {
+        collections.test.update(TEST_ITEM_ID, (draft) => {
           draft.value = 5
         })
       },

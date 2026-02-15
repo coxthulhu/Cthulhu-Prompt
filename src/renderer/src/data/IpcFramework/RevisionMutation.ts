@@ -6,7 +6,12 @@ import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { ipcInvokeWithPayload } from './IpcInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 import {
-  buildGlobalElementKey,
+  applyOptimisticMutation,
+  collectTouchedElementsFromMutation,
+  type OptimisticMutateFn,
+  type OptimisticCollectionsMap
+} from './RevisionMutationOptimisticHelpers'
+import {
   mutateOpenUpdateTransaction,
   sendOpenUpdateTransactionIfPresent
 } from './RevisionMutationTransactionRegistry'
@@ -40,30 +45,33 @@ type CollectionRecord<TCollection> = TCollection extends Collection<
   ? TRecord
   : never
 
-type MutationRequest<TCollections extends RevisionCollectionsMap> = {
+type MutationRequest<TRevisionCollections extends RevisionCollectionsMap> = {
   payload: Partial<{
-    [TCollectionKey in keyof TCollections]: RevisionPayloadEntity<
-      CollectionRecord<TCollections[TCollectionKey]>
+    [TCollectionKey in keyof TRevisionCollections]: RevisionPayloadEntity<
+      CollectionRecord<TRevisionCollections[TCollectionKey]>
     >
   }>
 }
 
-type RevisionEntityBuilders<TCollections extends RevisionCollectionsMap> = {
-  [TCollectionKey in keyof TCollections]: (entity: {
+type RevisionEntityBuilders<TRevisionCollections extends RevisionCollectionsMap> = {
+  [TCollectionKey in keyof TRevisionCollections]: (entity: {
     id: string
-    data: CollectionRecord<TCollections[TCollectionKey]>
-  }) => RevisionPayloadEntity<CollectionRecord<TCollections[TCollectionKey]>>
+    data: CollectionRecord<TRevisionCollections[TCollectionKey]>
+  }) => RevisionPayloadEntity<CollectionRecord<TRevisionCollections[TCollectionKey]>>
 }
 
 type RevisionMutationOptions<
-  TCollections extends RevisionCollectionsMap,
+  TRevisionCollections extends RevisionCollectionsMap,
+  TOptimisticCollections extends OptimisticCollectionsMap,
   TPayload
 > = {
-  mutateOptimistically: () => void
+  mutateOptimistically: OptimisticMutateFn<TOptimisticCollections>
   persistMutations: (
     helpers: {
-      entities: RevisionEntityBuilders<TCollections>
-      invoke: <TRequest extends MutationRequest<TCollections> = MutationRequest<TCollections>>(
+      entities: RevisionEntityBuilders<TRevisionCollections>
+      invoke: <
+        TRequest extends MutationRequest<TRevisionCollections> = MutationRequest<TRevisionCollections>
+      >(
         channel: string,
         request: TRequest
       ) => Promise<IpcMutationPayloadResult<TPayload>>
@@ -77,9 +85,10 @@ type RevisionMutationOptions<
 }
 
 type OpenRevisionUpdateMutationOptions<
-  TCollections extends RevisionCollectionsMap,
+  TRevisionCollections extends RevisionCollectionsMap,
+  TOptimisticCollections extends OptimisticCollectionsMap,
   TPayload
-> = RevisionMutationOptions<TCollections, TPayload> & {
+> = RevisionMutationOptions<TRevisionCollections, TOptimisticCollections, TPayload> & {
   collectionId: string
   elementId: string | number
   debounceMs: number
@@ -87,29 +96,37 @@ type OpenRevisionUpdateMutationOptions<
 }
 
 type CreateRevisionMutationTransactionOptions<
-  TCollections extends RevisionCollectionsMap,
+  TRevisionCollections extends RevisionCollectionsMap,
+  TOptimisticCollections extends OptimisticCollectionsMap,
   TPayload
 > = Pick<
-  RevisionMutationOptions<TCollections, TPayload>,
+  RevisionMutationOptions<TRevisionCollections, TOptimisticCollections, TPayload>,
   'persistMutations' | 'handleSuccessOrConflictResponse' | 'conflictMessage'
 >
 
 // Create a manual-commit transaction using the shared revision mutation contract.
 const createRevisionMutationTransaction = <
-  TCollections extends RevisionCollectionsMap,
+  TRevisionCollections extends RevisionCollectionsMap,
+  TOptimisticCollections extends OptimisticCollectionsMap,
   TPayload
 >(
-  collections: TCollections,
+  revisionCollections: TRevisionCollections,
   {
     persistMutations,
     handleSuccessOrConflictResponse,
     conflictMessage
-  }: CreateRevisionMutationTransactionOptions<TCollections, TPayload>
+  }: CreateRevisionMutationTransactionOptions<
+    TRevisionCollections,
+    TOptimisticCollections,
+    TPayload
+  >
 ): Transaction<any> => {
-  const entities = {} as RevisionEntityBuilders<TCollections>
+  const entities = {} as RevisionEntityBuilders<TRevisionCollections>
 
-  for (const collectionKey of Object.keys(collections) as Array<keyof TCollections>) {
-    const collection = collections[collectionKey]
+  for (const collectionKey of Object.keys(revisionCollections) as Array<
+    keyof TRevisionCollections
+  >) {
+    const collection = revisionCollections[collectionKey]
 
     entities[collectionKey] = ((entity) => {
       return {
@@ -117,7 +134,7 @@ const createRevisionMutationTransaction = <
         expectedRevision: collection.utils.getAuthoritativeRevision(entity.id),
         data: entity.data
       }
-    }) as RevisionEntityBuilders<TCollections>[typeof collectionKey]
+    }) as RevisionEntityBuilders<TRevisionCollections>[typeof collectionKey]
   }
 
   const transaction = createTransaction({
@@ -175,39 +192,53 @@ const enqueueRevisionMutationTransaction = async (
 
 // Public runner for standard revision mutations (immediate queueing by default).
 export const createRevisionMutationRunner = <
-  TCollections extends RevisionCollectionsMap
+  TRevisionCollections extends RevisionCollectionsMap,
+  TOptimisticCollections extends OptimisticCollectionsMap = TRevisionCollections
 >(
-  collections: TCollections
+  revisionCollections: TRevisionCollections,
+  optimisticCollections?: TOptimisticCollections
 ) => {
+  const resolvedOptimisticCollections =
+    optimisticCollections ?? (revisionCollections as unknown as TOptimisticCollections)
+
   return async <TPayload>(
-    options: RevisionMutationOptions<TCollections, TPayload>
+    options: RevisionMutationOptions<
+      TRevisionCollections,
+      TOptimisticCollections,
+      TPayload
+    >
   ): Promise<void> => {
     const { onSuccess, queueImmediately = true } = options
-    const transaction = createRevisionMutationTransaction(collections, options)
+    const transaction = createRevisionMutationTransaction<
+      TRevisionCollections,
+      TOptimisticCollections,
+      TPayload
+    >(revisionCollections, options)
+    const touchedElements = collectTouchedElementsFromMutation(
+      resolvedOptimisticCollections,
+      options.mutateOptimistically
+    )
 
-    mutateRevisionTransaction(transaction, options.mutateOptimistically)
+    if (queueImmediately) {
+      // Flush matching open updates before applying immediate optimistic changes.
+      for (const touchedElement of touchedElements) {
+        sendOpenUpdateTransactionIfPresent(
+          touchedElement.collectionId,
+          touchedElement.elementId,
+          'before-immediate-transaction'
+        )
+      }
+    }
+
+    mutateRevisionTransaction(transaction, () => {
+      applyOptimisticMutation(
+        resolvedOptimisticCollections,
+        options.mutateOptimistically
+      )
+    })
 
     if (!queueImmediately) {
       return
-    }
-
-    // Flush any open debounced updates for elements touched by this immediate transaction.
-    const sentElementKeys = new Set<string>()
-    for (const mutation of transaction.mutations) {
-      const collectionId = mutation.collection.id
-      const elementId = mutation.key as string | number
-      const elementKey = buildGlobalElementKey(collectionId, elementId)
-
-      if (sentElementKeys.has(elementKey)) {
-        continue
-      }
-
-      sentElementKeys.add(elementKey)
-      sendOpenUpdateTransactionIfPresent(
-        collectionId,
-        elementId,
-        'before-immediate-transaction'
-      )
     }
 
     await enqueueRevisionMutationTransaction(transaction, onSuccess)
@@ -216,12 +247,21 @@ export const createRevisionMutationRunner = <
 
 // Public runner for debounced per-element open update transactions.
 export const createOpenRevisionUpdateMutationRunner = <
-  TCollections extends RevisionCollectionsMap
+  TRevisionCollections extends RevisionCollectionsMap,
+  TOptimisticCollections extends OptimisticCollectionsMap = TRevisionCollections
 >(
-  collections: TCollections
+  revisionCollections: TRevisionCollections,
+  optimisticCollections?: TOptimisticCollections
 ) => {
+  const resolvedOptimisticCollections =
+    optimisticCollections ?? (revisionCollections as unknown as TOptimisticCollections)
+
   return <TPayload>(
-    options: OpenRevisionUpdateMutationOptions<TCollections, TPayload>
+    options: OpenRevisionUpdateMutationOptions<
+      TRevisionCollections,
+      TOptimisticCollections,
+      TPayload
+    >
   ): void => {
     const {
       collectionId,
@@ -237,7 +277,11 @@ export const createOpenRevisionUpdateMutationRunner = <
       elementId,
       debounceMs,
       createTransaction: () => {
-        const transaction = createRevisionMutationTransaction(collections, options)
+        const transaction = createRevisionMutationTransaction<
+          TRevisionCollections,
+          TOptimisticCollections,
+          TPayload
+        >(revisionCollections, options)
 
         return {
           transaction,
@@ -248,7 +292,17 @@ export const createOpenRevisionUpdateMutationRunner = <
         }
       },
       mutateTransaction: (transaction) => {
-        mutateRevisionTransaction(transaction, mutateOptimistically)
+        // Keep open updates on the same collect-then-apply path as immediate mutations.
+        collectTouchedElementsFromMutation(
+          resolvedOptimisticCollections,
+          mutateOptimistically
+        )
+        mutateRevisionTransaction(transaction, () => {
+          applyOptimisticMutation(
+            resolvedOptimisticCollections,
+            mutateOptimistically
+          )
+        })
       }
     })
   }

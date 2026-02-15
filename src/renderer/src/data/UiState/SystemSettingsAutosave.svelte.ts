@@ -80,8 +80,8 @@ export const mutateSystemSettingsDraftWithAutosave = (
 ): void => {
   mutateOpenSystemSettingsAutosaveUpdate({
     debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: () => {
-      systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
+    mutateOptimistically: ({ collections }) => {
+      collections.systemSettingsDraft.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
         applyDraftUpdate(draftRecord)
         draftRecord.saveError = null
       })

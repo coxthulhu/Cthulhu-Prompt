@@ -5,6 +5,7 @@ import {
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
+import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 export {
@@ -21,7 +22,17 @@ const revisionCollections = {
   prompt: promptCollection
 }
 
-export const runRevisionMutation = createRevisionMutationRunner(revisionCollections)
+const optimisticCollections = {
+  ...revisionCollections,
+  systemSettingsDraft: systemSettingsDraftCollection
+}
+
+export type AppOptimisticCollections = typeof optimisticCollections
 
 export const mutateOpenRevisionUpdateTransaction =
-  createOpenRevisionUpdateMutationRunner(revisionCollections)
+  createOpenRevisionUpdateMutationRunner(revisionCollections, optimisticCollections)
+
+export const runRevisionMutation = createRevisionMutationRunner(
+  revisionCollections,
+  optimisticCollections
+)

@@ -27,8 +27,8 @@ export const createPromptFolder = async (
   const optimisticPromptFolderId = crypto.randomUUID()
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
-    mutateOptimistically: () => {
-      promptFolderCollection.insert({
+    mutateOptimistically: ({ collections }) => {
+      collections.promptFolder.insert({
         id: optimisticPromptFolderId,
         folderName,
         displayName: normalizedDisplayName,
@@ -36,7 +36,7 @@ export const createPromptFolder = async (
         promptIds: [],
         folderDescription: ''
       })
-      workspaceCollection.update(workspaceId, (draft) => {
+      collections.workspace.update(workspaceId, (draft) => {
         draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]
       })
     },
@@ -73,8 +73,8 @@ const updatePromptFolder = async (
   }
 
   await runRevisionMutation<PromptFolderRevisionResponsePayload>({
-    mutateOptimistically: () => {
-      promptFolderCollection.update(promptFolder.id, (draft) => {
+    mutateOptimistically: ({ collections }) => {
+      collections.promptFolder.update(promptFolder.id, (draft) => {
         draft.folderName = promptFolder.folderName
         draft.displayName = promptFolder.displayName
         draft.promptCount = promptFolder.promptCount

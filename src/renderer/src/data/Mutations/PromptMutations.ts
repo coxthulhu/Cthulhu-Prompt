@@ -21,15 +21,15 @@ export const createPrompt = async (
   }
 
   await runRevisionMutation<CreatePromptResponsePayload>({
-    mutateOptimistically: () => {
+    mutateOptimistically: ({ collections }) => {
       const optimisticPromptCount = promptFolder.promptCount + 1
 
-      promptCollection.insert({
+      collections.prompt.insert({
         ...prompt,
         promptFolderCount: optimisticPromptCount
       })
 
-      promptFolderCollection.update(promptFolderId, (draft) => {
+      collections.promptFolder.update(promptFolderId, (draft) => {
         let insertIndex = draft.promptIds.length
 
         if (previousPromptId === null) {
@@ -81,8 +81,8 @@ export const updatePrompt = async (prompt: Prompt): Promise<void> => {
   }
 
   await runRevisionMutation<PromptRevisionResponsePayload>({
-    mutateOptimistically: () => {
-      promptCollection.update(prompt.id, (draft) => {
+    mutateOptimistically: ({ collections }) => {
+      collections.prompt.update(prompt.id, (draft) => {
         draft.title = prompt.title
         draft.creationDate = prompt.creationDate
         draft.lastModifiedDate = prompt.lastModifiedDate
@@ -122,9 +122,9 @@ export const deletePrompt = async (
   }
 
   await runRevisionMutation<DeletePromptResponsePayload>({
-    mutateOptimistically: () => {
-      promptCollection.delete(promptId)
-      promptFolderCollection.update(promptFolderId, (draft) => {
+    mutateOptimistically: ({ collections }) => {
+      collections.prompt.delete(promptId)
+      collections.promptFolder.update(promptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
       })
     },
