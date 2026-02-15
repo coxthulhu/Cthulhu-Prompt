@@ -69,7 +69,7 @@ describe('revision mutation transaction registry', () => {
 
   it('runs immediate mutations and persists once', async () => {
     const { collection } = createSingleItemRegistryContext('immediate')
-    const runMutation = createRevisionMutationRunner({ test: collection })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
     let persistCalled = 0
 
     await runMutation<MutationPayload>({
@@ -94,7 +94,7 @@ describe('revision mutation transaction registry', () => {
 
   it('clears entries when persistence fails', async () => {
     const { collection } = createSingleItemRegistryContext('failure')
-    const runMutation = createRevisionMutationRunner({ test: collection })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
 
     await expect(
       runMutation<MutationPayload>({
@@ -116,7 +116,7 @@ describe('revision mutation transaction registry', () => {
 
   it('clears entries when mutateOptimistically throws', async () => {
     const { collection } = createSingleItemRegistryContext('optimistic-error')
-    const runMutation = createRevisionMutationRunner({ test: collection })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
     let persistCalled = false
 
     await expect(
@@ -142,7 +142,7 @@ describe('revision mutation transaction registry', () => {
   it('does not persist after insert-delete cancellation', async () => {
     const collectionId = nextCollectionId('cancel')
     const collection = createTestCollection(collectionId, [])
-    const runMutation = createRevisionMutationRunner({ test: collection })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
     let persistCalled = false
 
     await runMutation<MutationPayload>({
@@ -168,9 +168,10 @@ describe('revision mutation transaction registry', () => {
     vi.useFakeTimers()
 
     const { collectionId, collection } = createSingleItemRegistryContext('open-debounce')
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     let persistCalled = 0
 
     const queueOpenUpdateWithValue = (value: number) => {
@@ -209,9 +210,10 @@ describe('revision mutation transaction registry', () => {
     vi.useFakeTimers()
 
     const { collectionId, collection } = createSingleItemRegistryContext('open-send-now')
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     let persistCalled = 0
 
     mutateOpenUpdate<MutationPayload>({
@@ -245,9 +247,10 @@ describe('revision mutation transaction registry', () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
       'open-submit-targeted-in-flight'
     )
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     let resolvePersist: (() => void) | null = null
     const persistGate = new Promise<void>((resolve) => {
       resolvePersist = resolve
@@ -290,9 +293,10 @@ describe('revision mutation transaction registry', () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
       'open-validation-debounce'
     )
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     let persistCalled = 0
     let isValid = false
 
@@ -349,10 +353,11 @@ describe('revision mutation transaction registry', () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
       'queue-immediate-flush-open'
     )
-    const runMutation = createRevisionMutationRunner({ test: collection })
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     const persistOrder: string[] = []
 
     mutateOpenUpdate<MutationPayload>({
@@ -393,10 +398,11 @@ describe('revision mutation transaction registry', () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
       'queue-immediate-invalid-open'
     )
-    const runMutation = createRevisionMutationRunner({ test: collection })
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     const persistOrder: string[] = []
 
     mutateOpenUpdate<MutationPayload>({
@@ -438,10 +444,11 @@ describe('revision mutation transaction registry', () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
       'queue-immediate-replay-after-open-rollback'
     )
-    const runMutation = createRevisionMutationRunner({ test: collection })
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
     let openPersistCalled = 0
     let immediatePersistedValue: number | null = null
 
@@ -487,9 +494,10 @@ describe('revision mutation transaction registry', () => {
 
   it('always resolves when submitting all open update transactions', async () => {
     const { collectionId, collection } = createSingleItemRegistryContext('open-submit-all')
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner({
-      test: collection
-    })
+    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+      { test: collection },
+      { test: collection }
+    )
 
     mutateOpenUpdate<MutationPayload>({
       collectionId,

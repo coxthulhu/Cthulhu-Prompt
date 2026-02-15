@@ -27,8 +27,6 @@ const optimisticCollections = {
   systemSettingsDraft: systemSettingsDraftCollection
 }
 
-export type AppOptimisticCollections = typeof optimisticCollections
-
 export const mutateOpenRevisionUpdateTransaction =
   createOpenRevisionUpdateMutationRunner(revisionCollections, optimisticCollections)
 

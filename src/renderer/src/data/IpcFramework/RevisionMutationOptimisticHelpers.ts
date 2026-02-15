@@ -1,8 +1,25 @@
 import { buildGlobalElementKey } from './RevisionMutationTransactionRegistry'
 
+type ElementId = string | number
+type MutationOperation = 'insert' | 'update' | 'delete'
+type InsertMutationArgs = [data: unknown | unknown[], config?: unknown]
+type UpdateMutationArgs =
+  | [keys: ElementId | ElementId[], mutateDraft: (...args: any[]) => void]
+  | [
+      keys: ElementId | ElementId[],
+      config: unknown,
+      mutateDraft: (...args: any[]) => void
+    ]
+type DeleteMutationArgs = [keys: ElementId | ElementId[], config?: unknown]
+type MutationOperationArgs = {
+  insert: InsertMutationArgs
+  update: UpdateMutationArgs
+  delete: DeleteMutationArgs
+}
+
 export type TouchedElement = {
   collectionId: string
-  elementId: string | number
+  elementId: ElementId
 }
 
 export type MutationCapableCollection = {
@@ -10,16 +27,16 @@ export type MutationCapableCollection = {
   insert: (...args: any[]) => unknown
   update: (...args: any[]) => unknown
   delete: (...args: any[]) => unknown
-  getKeyFromItem?: (...args: any[]) => unknown
+  getKeyFromItem: (...args: any[]) => ElementId
 }
 
 export type OptimisticCollectionsMap = Record<string, MutationCapableCollection>
 
 export type OptimisticMutationCollectionHelper = {
   id: string
-  insert: (...args: any[]) => void
-  update: (...args: any[]) => void
-  delete: (...args: any[]) => void
+  insert: (...args: InsertMutationArgs) => void
+  update: (...args: UpdateMutationArgs) => void
+  delete: (...args: DeleteMutationArgs) => void
 }
 
 export type OptimisticMutationHelpers<
@@ -34,55 +51,19 @@ export type OptimisticMutateFn<
   TOptimisticCollections extends OptimisticCollectionsMap
 > = (helpers: OptimisticMutationHelpers<TOptimisticCollections>) => void
 
-const toElementIdList = (value: unknown): Array<string | number> => {
-  if (typeof value === 'string' || typeof value === 'number') {
-    return [value]
-  }
-
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  const elementIds: Array<string | number> = []
-  for (const entry of value) {
-    if (typeof entry === 'string' || typeof entry === 'number') {
-      elementIds.push(entry)
-    }
-  }
-
-  return elementIds
+const toElementIdList = (value: ElementId | ElementId[]): ElementId[] => {
+  return Array.isArray(value) ? value : [value]
 }
 
 const extractInsertElementIds = (
   collection: MutationCapableCollection,
-  insertedData: unknown
-): Array<string | number> => {
+  insertedData: InsertMutationArgs[0]
+): ElementId[] => {
   const insertedItems = Array.isArray(insertedData) ? insertedData : [insertedData]
-  const elementIds: Array<string | number> = []
+  const elementIds: ElementId[] = []
 
   for (const insertedItem of insertedItems) {
-    let elementId: unknown
-
-    if (typeof collection.getKeyFromItem === 'function') {
-      try {
-        elementId = collection.getKeyFromItem(insertedItem)
-      } catch {
-        elementId = undefined
-      }
-    }
-
-    if (
-      (typeof elementId !== 'string' && typeof elementId !== 'number') &&
-      insertedItem &&
-      typeof insertedItem === 'object' &&
-      'id' in insertedItem
-    ) {
-      elementId = (insertedItem as { id?: unknown }).id
-    }
-
-    if (typeof elementId === 'string' || typeof elementId === 'number') {
-      elementIds.push(elementId)
-    }
+    elementIds.push(collection.getKeyFromItem(insertedItem))
   }
 
   return elementIds
@@ -92,10 +73,10 @@ const createOptimisticMutationHelpers = <
   TOptimisticCollections extends OptimisticCollectionsMap
 >(
   optimisticCollections: TOptimisticCollections,
-  executeMutation: (
+  executeMutation: <TOperation extends MutationOperation>(
     collection: MutationCapableCollection,
-    operation: 'insert' | 'update' | 'delete',
-    args: Array<any>
+    operation: TOperation,
+    args: MutationOperationArgs[TOperation]
   ) => void
 ): OptimisticMutationHelpers<TOptimisticCollections> => {
   const helperCollections = {} as OptimisticMutationHelpers<TOptimisticCollections>['collections']
@@ -132,7 +113,7 @@ export const collectTouchedElementsFromMutation = <
   const touchedElementsByGlobalKey = new Map<string, TouchedElement>()
   const trackTouchedElements = (
     collectionId: string,
-    elementIds: Array<string | number>
+    elementIds: ElementId[]
   ): void => {
     for (const elementId of elementIds) {
       const globalElementKey = buildGlobalElementKey(collectionId, elementId)
@@ -151,7 +132,7 @@ export const collectTouchedElementsFromMutation = <
         return
       }
 
-      trackTouchedElements(collection.id, toElementIdList(args[0]))
+      trackTouchedElements(collection.id, toElementIdList(args[0] as ElementId | ElementId[]))
     }
   )
 
