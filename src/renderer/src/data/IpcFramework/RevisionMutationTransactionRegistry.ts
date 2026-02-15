@@ -1,32 +1,32 @@
 import type { Transaction } from '@tanstack/svelte-db'
 
-type OpenUpdateTransactionBase = {
+type PacedUpdateTransactionBase = {
   transaction: Transaction<any>
   enqueueTransaction: () => Promise<void>
   validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
 }
 
-type OpenUpdateSendReason = 'debounce' | 'manual' | 'before-immediate-transaction'
+type PacedUpdateSendReason = 'debounce' | 'manual' | 'before-immediate-transaction'
 
-type OpenUpdateTransaction = OpenUpdateTransactionBase & {
+type PacedUpdateTransaction = PacedUpdateTransactionBase & {
   debounceTimeoutId: ReturnType<typeof globalThis.setTimeout> | null
 }
 
-type MutateOpenUpdateTransactionOptions = {
+type MutatePacedUpdateTransactionOptions = {
   collectionId: string
   elementId: string | number
   debounceMs: number
-  createTransaction: () => OpenUpdateTransactionBase
+  createTransaction: () => PacedUpdateTransactionBase
   mutateTransaction: (transaction: Transaction<any>) => void
 }
 
-type ElementOpenUpdateState = {
-  openUpdateTransaction: OpenUpdateTransaction | null
+type ElementPacedUpdateState = {
+  pacedUpdateTransaction: PacedUpdateTransaction | null
   // We only track the latest task because mutation commits are globally serialized.
-  latestInFlightOpenUpdateEnqueueTask: Promise<void> | null
+  latestInFlightPacedUpdateEnqueueTask: Promise<void> | null
 }
 
-const elementStatesByGlobalKey = new Map<string, ElementOpenUpdateState>()
+const elementStatesByGlobalKey = new Map<string, ElementPacedUpdateState>()
 
 // Keep element keys aligned with TanStack's global mutation key format.
 export const buildGlobalElementKey = (
@@ -38,13 +38,13 @@ export const buildGlobalElementKey = (
 
 const getOrCreateElementState = (
   globalElementKey: string
-): ElementOpenUpdateState => {
+): ElementPacedUpdateState => {
   let elementState = elementStatesByGlobalKey.get(globalElementKey)
 
   if (!elementState) {
     elementState = {
-      openUpdateTransaction: null,
-      latestInFlightOpenUpdateEnqueueTask: null
+      pacedUpdateTransaction: null,
+      latestInFlightPacedUpdateEnqueueTask: null
     }
     elementStatesByGlobalKey.set(globalElementKey, elementState)
   }
@@ -58,24 +58,24 @@ const cleanupElementStateIfIdle = (globalElementKey: string): void => {
     return
   }
 
-  if (elementState.openUpdateTransaction || elementState.latestInFlightOpenUpdateEnqueueTask) {
+  if (elementState.pacedUpdateTransaction || elementState.latestInFlightPacedUpdateEnqueueTask) {
     return
   }
 
   elementStatesByGlobalKey.delete(globalElementKey)
 }
 
-// Side effect: cancel any active debounce timer for an open update transaction.
-const clearOpenUpdateDebounceTimeout = (openUpdateTransaction: OpenUpdateTransaction): void => {
-  if (openUpdateTransaction.debounceTimeoutId == null) {
+// Side effect: cancel any active debounce timer for a paced update transaction.
+const clearPacedUpdateDebounceTimeout = (pacedUpdateTransaction: PacedUpdateTransaction): void => {
+  if (pacedUpdateTransaction.debounceTimeoutId == null) {
     return
   }
 
-  globalThis.clearTimeout(openUpdateTransaction.debounceTimeoutId)
-  openUpdateTransaction.debounceTimeoutId = null
+  globalThis.clearTimeout(pacedUpdateTransaction.debounceTimeoutId)
+  pacedUpdateTransaction.debounceTimeoutId = null
 }
 
-const trackOpenUpdateEnqueueTask = (
+const trackPacedUpdateEnqueueTask = (
   globalElementKey: string,
   enqueuePromise: Promise<void>
 ): Promise<void> => {
@@ -84,7 +84,7 @@ const trackOpenUpdateEnqueueTask = (
     () => undefined
   )
   const elementState = getOrCreateElementState(globalElementKey)
-  elementState.latestInFlightOpenUpdateEnqueueTask = trackedTask
+  elementState.latestInFlightPacedUpdateEnqueueTask = trackedTask
 
   void trackedTask.finally(() => {
     const latestElementState = elementStatesByGlobalKey.get(globalElementKey)
@@ -92,42 +92,42 @@ const trackOpenUpdateEnqueueTask = (
       return
     }
 
-    if (latestElementState.latestInFlightOpenUpdateEnqueueTask !== trackedTask) {
+    if (latestElementState.latestInFlightPacedUpdateEnqueueTask !== trackedTask) {
       return
     }
 
-    latestElementState.latestInFlightOpenUpdateEnqueueTask = null
+    latestElementState.latestInFlightPacedUpdateEnqueueTask = null
     cleanupElementStateIfIdle(globalElementKey)
   })
 
   return trackedTask
 }
 
-type OpenUpdateDispatchResult = {
+type PacedUpdateDispatchResult = {
   wasSent: boolean
   waitTask: Promise<void> | null
 }
 
-const sendOpenUpdateTransactionByGlobalElementKey = (
+const sendPacedUpdateTransactionByGlobalElementKey = (
   globalElementKey: string,
-  reason: OpenUpdateSendReason,
+  reason: PacedUpdateSendReason,
   includeInFlightTask: boolean
-): OpenUpdateDispatchResult => {
+): PacedUpdateDispatchResult => {
   const elementState = elementStatesByGlobalKey.get(globalElementKey)
-  if (!elementState || !elementState.openUpdateTransaction) {
+  if (!elementState || !elementState.pacedUpdateTransaction) {
     return {
       wasSent: false,
-      waitTask: includeInFlightTask ? (elementState?.latestInFlightOpenUpdateEnqueueTask ?? null) : null
+      waitTask: includeInFlightTask ? (elementState?.latestInFlightPacedUpdateEnqueueTask ?? null) : null
     }
   }
 
-  const openUpdateTransaction = elementState.openUpdateTransaction
-  const transaction = openUpdateTransaction.transaction
-  clearOpenUpdateDebounceTimeout(openUpdateTransaction)
+  const pacedUpdateTransaction = elementState.pacedUpdateTransaction
+  const transaction = pacedUpdateTransaction.transaction
+  clearPacedUpdateDebounceTimeout(pacedUpdateTransaction)
 
-  if (openUpdateTransaction.validateBeforeEnqueue?.(transaction) === false) {
+  if (pacedUpdateTransaction.validateBeforeEnqueue?.(transaction) === false) {
     if (reason === 'before-immediate-transaction') {
-      elementState.openUpdateTransaction = null
+      elementState.pacedUpdateTransaction = null
       try {
         if (transaction.state === 'pending') {
           transaction.rollback({
@@ -141,14 +141,14 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
 
     return {
       wasSent: false,
-      waitTask: includeInFlightTask ? (elementState.latestInFlightOpenUpdateEnqueueTask ?? null) : null
+      waitTask: includeInFlightTask ? (elementState.latestInFlightPacedUpdateEnqueueTask ?? null) : null
     }
   }
 
-  elementState.openUpdateTransaction = null
-  const waitTask = trackOpenUpdateEnqueueTask(
+  elementState.pacedUpdateTransaction = null
+  const waitTask = trackPacedUpdateEnqueueTask(
     globalElementKey,
-    openUpdateTransaction.enqueueTransaction()
+    pacedUpdateTransaction.enqueueTransaction()
   )
 
   return {
@@ -157,44 +157,44 @@ const sendOpenUpdateTransactionByGlobalElementKey = (
   }
 }
 
-// Mutate a per-element open update transaction and restart its debounce window.
-export const mutateOpenUpdateTransaction = ({
+// Mutate a per-element paced update transaction and restart its debounce window.
+export const mutatePacedUpdateTransaction = ({
   collectionId,
   elementId,
   debounceMs,
   createTransaction,
   mutateTransaction
-}: MutateOpenUpdateTransactionOptions): void => {
+}: MutatePacedUpdateTransactionOptions): void => {
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
   const elementState = getOrCreateElementState(globalElementKey)
-  let openUpdateTransaction = elementState.openUpdateTransaction
+  let pacedUpdateTransaction = elementState.pacedUpdateTransaction
 
-  if (!openUpdateTransaction) {
-    const createdOpenUpdateTransaction = createTransaction()
-    openUpdateTransaction = {
+  if (!pacedUpdateTransaction) {
+    const createdPacedUpdateTransaction = createTransaction()
+    pacedUpdateTransaction = {
       debounceTimeoutId: null,
-      transaction: createdOpenUpdateTransaction.transaction,
-      enqueueTransaction: createdOpenUpdateTransaction.enqueueTransaction,
-      validateBeforeEnqueue: createdOpenUpdateTransaction.validateBeforeEnqueue
+      transaction: createdPacedUpdateTransaction.transaction,
+      enqueueTransaction: createdPacedUpdateTransaction.enqueueTransaction,
+      validateBeforeEnqueue: createdPacedUpdateTransaction.validateBeforeEnqueue
     }
-    elementState.openUpdateTransaction = openUpdateTransaction
+    elementState.pacedUpdateTransaction = pacedUpdateTransaction
   }
 
-  mutateTransaction(openUpdateTransaction.transaction)
+  mutateTransaction(pacedUpdateTransaction.transaction)
 
-  clearOpenUpdateDebounceTimeout(openUpdateTransaction)
-  openUpdateTransaction.debounceTimeoutId = globalThis.setTimeout(() => {
-    sendOpenUpdateTransactionIfPresent(collectionId, elementId, 'debounce')
+  clearPacedUpdateDebounceTimeout(pacedUpdateTransaction)
+  pacedUpdateTransaction.debounceTimeoutId = globalThis.setTimeout(() => {
+    sendPacedUpdateTransactionIfPresent(collectionId, elementId, 'debounce')
   }, debounceMs)
 }
 
-// Fire-and-forget send of a per-element open update transaction, if one exists.
-export const sendOpenUpdateTransactionIfPresent = (
+// Fire-and-forget send of a per-element paced update transaction, if one exists.
+export const sendPacedUpdateTransactionIfPresent = (
   collectionId: string,
   elementId: string | number,
-  reason: OpenUpdateSendReason = 'manual'
+  reason: PacedUpdateSendReason = 'manual'
 ): boolean => {
-  const dispatchResult = sendOpenUpdateTransactionByGlobalElementKey(
+  const dispatchResult = sendPacedUpdateTransactionByGlobalElementKey(
     buildGlobalElementKey(collectionId, elementId),
     reason,
     false
@@ -203,13 +203,13 @@ export const sendOpenUpdateTransactionIfPresent = (
   return dispatchResult.wasSent
 }
 
-// Submit one open update transaction (if present) and wait for its enqueue task to settle.
-export const submitOpenUpdateTransactionAndWait = async (
+// Submit one paced update transaction (if present) and wait for its enqueue task to settle.
+export const submitPacedUpdateTransactionAndWait = async (
   collectionId: string,
   elementId: string | number
 ): Promise<void> => {
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
-  const dispatchResult = sendOpenUpdateTransactionByGlobalElementKey(
+  const dispatchResult = sendPacedUpdateTransactionByGlobalElementKey(
     globalElementKey,
     'manual',
     true
@@ -220,20 +220,20 @@ export const submitOpenUpdateTransactionAndWait = async (
   }
 }
 
-// Submit all currently open update transactions and wait for current enqueue work.
-export const submitAllOpenUpdateTransactionsAndWait = async (): Promise<void> => {
+// Submit all current paced update transactions and wait for current enqueue work.
+export const submitAllPacedUpdateTransactionsAndWait = async (): Promise<void> => {
   const waitTasks = new Set<Promise<void>>()
 
   for (const [globalElementKey, elementState] of elementStatesByGlobalKey.entries()) {
-    if (elementState.latestInFlightOpenUpdateEnqueueTask) {
-      waitTasks.add(elementState.latestInFlightOpenUpdateEnqueueTask)
+    if (elementState.latestInFlightPacedUpdateEnqueueTask) {
+      waitTasks.add(elementState.latestInFlightPacedUpdateEnqueueTask)
     }
 
-    if (!elementState.openUpdateTransaction) {
+    if (!elementState.pacedUpdateTransaction) {
       continue
     }
 
-    const dispatchResult = sendOpenUpdateTransactionByGlobalElementKey(
+    const dispatchResult = sendPacedUpdateTransactionByGlobalElementKey(
       globalElementKey,
       'manual',
       false

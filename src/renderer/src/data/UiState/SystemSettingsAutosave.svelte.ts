@@ -8,9 +8,9 @@ import {
   systemSettingsDraftCollection
 } from '../Collections/SystemSettingsDraftCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { submitOpenUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
+import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
-import { mutateOpenSystemSettingsAutosaveUpdate } from '../Mutations/SystemSettingsMutations'
+import { mutatePacedSystemSettingsAutosaveUpdate } from '../Mutations/SystemSettingsMutations'
 import {
   getSystemSettingsValidation,
   normalizePromptEditorMinLinesInput,
@@ -78,7 +78,7 @@ const readValidatedSystemSettings = (
 export const mutateSystemSettingsDraftWithAutosave = (
   applyDraftUpdate: (draftRecord: SystemSettingsDraftRecord) => void
 ): void => {
-  mutateOpenSystemSettingsAutosaveUpdate({
+  mutatePacedSystemSettingsAutosaveUpdate({
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.systemSettingsDraft.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
@@ -113,7 +113,7 @@ export const saveSystemSettingsDraftNow = async (): Promise<void> => {
   autosaveState.saving = true
 
   try {
-    await submitOpenUpdateTransactionAndWait(systemSettingsCollection.id, SYSTEM_SETTINGS_ID)
+    await submitPacedUpdateTransactionAndWait(systemSettingsCollection.id, SYSTEM_SETTINGS_ID)
   } finally {
     autosaveState.saving = false
   }

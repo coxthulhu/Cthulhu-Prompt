@@ -1,5 +1,5 @@
 import {
-  createOpenRevisionUpdateMutationRunner,
+  createPacedRevisionUpdateMutationRunner,
   createRevisionMutationRunner
 } from './RevisionMutation'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -9,10 +9,10 @@ import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraf
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 export {
-  mutateOpenUpdateTransaction,
-  sendOpenUpdateTransactionIfPresent,
-  submitOpenUpdateTransactionAndWait,
-  submitAllOpenUpdateTransactionsAndWait
+  mutatePacedUpdateTransaction,
+  sendPacedUpdateTransactionIfPresent,
+  submitPacedUpdateTransactionAndWait,
+  submitAllPacedUpdateTransactionsAndWait
 } from './RevisionMutationTransactionRegistry'
 
 const revisionCollections = {
@@ -27,8 +27,8 @@ const optimisticCollections = {
   systemSettingsDraft: systemSettingsDraftCollection
 }
 
-export const mutateOpenRevisionUpdateTransaction =
-  createOpenRevisionUpdateMutationRunner(revisionCollections, optimisticCollections)
+export const mutatePacedRevisionUpdateTransaction =
+  createPacedRevisionUpdateMutationRunner(revisionCollections, optimisticCollections)
 
 export const runRevisionMutation = createRevisionMutationRunner(
   revisionCollections,

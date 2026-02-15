@@ -13,8 +13,8 @@ import {
   type TouchedElement
 } from './RevisionMutationOptimisticHelpers'
 import {
-  mutateOpenUpdateTransaction,
-  sendOpenUpdateTransactionIfPresent
+  mutatePacedUpdateTransaction,
+  sendPacedUpdateTransactionIfPresent
 } from './RevisionMutationTransactionRegistry'
 
 type QueuedTask<T> = () => Promise<T>
@@ -85,7 +85,7 @@ type RevisionMutationOptions<
   queueImmediately?: boolean
 }
 
-type OpenRevisionUpdateMutationOptions<
+type PacedRevisionUpdateMutationOptions<
   TRevisionCollections extends RevisionCollectionsMap,
   TOptimisticCollections extends OptimisticCollectionsMap,
   TPayload
@@ -231,9 +231,9 @@ export const createRevisionMutationRunner = <
       options.mutateOptimistically,
       queueImmediately
         ? (touchedElements) => {
-            // Flush matching open updates before applying immediate optimistic changes.
+            // Flush matching paced updates before applying immediate optimistic changes.
             for (const touchedElement of touchedElements) {
-              sendOpenUpdateTransactionIfPresent(
+              sendPacedUpdateTransactionIfPresent(
                 touchedElement.collectionId,
                 touchedElement.elementId,
                 'before-immediate-transaction'
@@ -251,8 +251,8 @@ export const createRevisionMutationRunner = <
   }
 }
 
-// Public runner for debounced per-element open update transactions.
-export const createOpenRevisionUpdateMutationRunner = <
+// Public runner for debounced per-element paced update transactions.
+export const createPacedRevisionUpdateMutationRunner = <
   TRevisionCollections extends RevisionCollectionsMap,
   TOptimisticCollections extends OptimisticCollectionsMap
 >(
@@ -260,7 +260,7 @@ export const createOpenRevisionUpdateMutationRunner = <
   optimisticCollections: TOptimisticCollections
 ) => {
   return <TPayload>(
-    options: OpenRevisionUpdateMutationOptions<
+    options: PacedRevisionUpdateMutationOptions<
       TRevisionCollections,
       TOptimisticCollections,
       TPayload
@@ -275,7 +275,7 @@ export const createOpenRevisionUpdateMutationRunner = <
       onSuccess
     } = options
 
-    mutateOpenUpdateTransaction({
+    mutatePacedUpdateTransaction({
       collectionId,
       elementId,
       debounceMs,

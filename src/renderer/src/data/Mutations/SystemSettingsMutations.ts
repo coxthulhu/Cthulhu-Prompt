@@ -6,7 +6,7 @@ import {
 import type { Transaction } from '@tanstack/svelte-db'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
-import { mutateOpenRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
+import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
 
 const readLatestSystemSettingsFromTransaction = (
   transaction: Transaction<any>
@@ -19,21 +19,21 @@ const readLatestSystemSettingsFromTransaction = (
   )
 }
 
-type OpenSystemSettingsMutationOptions = Parameters<
-  typeof mutateOpenRevisionUpdateTransaction<SystemSettingsRevisionResponsePayload>
+type PacedSystemSettingsMutationOptions = Parameters<
+  typeof mutatePacedRevisionUpdateTransaction<SystemSettingsRevisionResponsePayload>
 >[0]
 
-type OpenSystemSettingsUpdateOptions = Pick<
-  OpenSystemSettingsMutationOptions,
+type PacedSystemSettingsUpdateOptions = Pick<
+  PacedSystemSettingsMutationOptions,
   'debounceMs' | 'mutateOptimistically' | 'validateBeforeEnqueue'
 >
 
-export const mutateOpenSystemSettingsAutosaveUpdate = ({
+export const mutatePacedSystemSettingsAutosaveUpdate = ({
   debounceMs,
   mutateOptimistically,
   validateBeforeEnqueue
-}: OpenSystemSettingsUpdateOptions): void => {
-  mutateOpenRevisionUpdateTransaction<SystemSettingsRevisionResponsePayload>({
+}: PacedSystemSettingsUpdateOptions): void => {
+  mutatePacedRevisionUpdateTransaction<SystemSettingsRevisionResponsePayload>({
     collectionId: systemSettingsCollection.id,
     elementId: SYSTEM_SETTINGS_ID,
     debounceMs,

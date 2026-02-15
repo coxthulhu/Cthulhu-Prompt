@@ -3,13 +3,13 @@ import type { RevisionEnvelope } from '@shared/Revision'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { revisionCollectionOptions } from '@renderer/data/Collections/RevisionCollection'
 import {
-  createOpenRevisionUpdateMutationRunner,
+  createPacedRevisionUpdateMutationRunner,
   createRevisionMutationRunner
 } from '@renderer/data/IpcFramework/RevisionMutation'
 import {
-  sendOpenUpdateTransactionIfPresent,
-  submitOpenUpdateTransactionAndWait,
-  submitAllOpenUpdateTransactionsAndWait
+  sendPacedUpdateTransactionIfPresent,
+  submitPacedUpdateTransactionAndWait,
+  submitAllPacedUpdateTransactionsAndWait
 } from '@renderer/data/IpcFramework/RevisionMutationTransactionRegistry'
 
 type TestRecord = {
@@ -63,7 +63,7 @@ const createSingleItemRegistryContext = (label: string) => {
 
 describe('revision mutation transaction registry', () => {
   afterEach(async () => {
-    await submitAllOpenUpdateTransactionsAndWait()
+    await submitAllPacedUpdateTransactionsAndWait()
     vi.useRealTimers()
   })
 
@@ -164,18 +164,18 @@ describe('revision mutation transaction registry', () => {
     expect(persistCalled).toBe(false)
   })
 
-  it('debounces open update transactions and enqueues only once', async () => {
+  it('debounces paced update transactions and enqueues only once', async () => {
     vi.useFakeTimers()
 
-    const { collectionId, collection } = createSingleItemRegistryContext('open-debounce')
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const { collectionId, collection } = createSingleItemRegistryContext('paced-debounce')
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
     let persistCalled = 0
 
-    const queueOpenUpdateWithValue = (value: number) => {
-      mutateOpenUpdate<MutationPayload>({
+    const queuePacedUpdateWithValue = (value: number) => {
+      mutatePacedUpdate<MutationPayload>({
         collectionId,
         elementId: TEST_ITEM_ID,
         debounceMs: 200,
@@ -193,30 +193,30 @@ describe('revision mutation transaction registry', () => {
       })
     }
 
-    queueOpenUpdateWithValue(1)
-    queueOpenUpdateWithValue(2)
+    queuePacedUpdateWithValue(1)
+    queuePacedUpdateWithValue(2)
 
     vi.advanceTimersByTime(199)
     await Promise.resolve()
     expect(persistCalled).toBe(0)
 
     vi.advanceTimersByTime(1)
-    await submitAllOpenUpdateTransactionsAndWait()
+    await submitAllPacedUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
   })
 
-  it('sends open update transactions immediately when requested', async () => {
+  it('sends paced update transactions immediately when requested', async () => {
     vi.useFakeTimers()
 
-    const { collectionId, collection } = createSingleItemRegistryContext('open-send-now')
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const { collectionId, collection } = createSingleItemRegistryContext('paced-send-now')
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
     let persistCalled = 0
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
@@ -233,21 +233,21 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    sendOpenUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)
-    await submitAllOpenUpdateTransactionsAndWait()
+    sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)
+    await submitAllPacedUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
 
     vi.advanceTimersByTime(10_000)
-    await submitAllOpenUpdateTransactionsAndWait()
+    await submitAllPacedUpdateTransactionsAndWait()
     expect(persistCalled).toBe(1)
   })
 
-  it('waits for the targeted open update transaction when it is already in flight', async () => {
+  it('waits for the targeted paced update transaction when it is already in flight', async () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
-      'open-submit-targeted-in-flight'
+      'paced-submit-targeted-in-flight'
     )
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
@@ -257,7 +257,7 @@ describe('revision mutation transaction registry', () => {
     })
     let persistFinished = false
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
@@ -275,8 +275,8 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    sendOpenUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)
-    const waitTask = submitOpenUpdateTransactionAndWait(collectionId, TEST_ITEM_ID)
+    sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)
+    const waitTask = submitPacedUpdateTransactionAndWait(collectionId, TEST_ITEM_ID)
 
     await Promise.resolve()
     expect(persistFinished).toBe(false)
@@ -287,20 +287,20 @@ describe('revision mutation transaction registry', () => {
     expect(persistFinished).toBe(true)
   })
 
-  it('keeps invalid debounced open update transactions pending until validation passes', async () => {
+  it('keeps invalid debounced paced update transactions pending until validation passes', async () => {
     vi.useFakeTimers()
 
     const { collectionId, collection } = createSingleItemRegistryContext(
-      'open-validation-debounce'
+      'paced-validation-debounce'
     )
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
     let persistCalled = 0
     let isValid = false
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 200,
@@ -319,13 +319,13 @@ describe('revision mutation transaction registry', () => {
     })
 
     vi.advanceTimersByTime(200)
-    await submitAllOpenUpdateTransactionsAndWait()
+    await submitAllPacedUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(0)
 
     isValid = true
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 200,
@@ -344,23 +344,23 @@ describe('revision mutation transaction registry', () => {
     })
 
     vi.advanceTimersByTime(200)
-    await submitAllOpenUpdateTransactionsAndWait()
+    await submitAllPacedUpdateTransactionsAndWait()
 
     expect(persistCalled).toBe(1)
   })
 
-  it('flushes matching open update transactions before queueImmediately enqueue', async () => {
+  it('flushes matching paced update transactions before queueImmediately enqueue', async () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
-      'queue-immediate-flush-open'
+      'queue-immediate-flush-paced'
     )
     const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
     const persistOrder: string[] = []
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
@@ -370,7 +370,7 @@ describe('revision mutation transaction registry', () => {
         })
       },
       persistMutations: async () => {
-        persistOrder.push('open')
+        persistOrder.push('paced')
         return { success: true, payload: { ok: true } }
       },
       handleSuccessOrConflictResponse: () => {},
@@ -391,21 +391,21 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    expect(persistOrder).toEqual(['open', 'immediate'])
+    expect(persistOrder).toEqual(['paced', 'immediate'])
   })
 
-  it('rolls back invalid open update transactions during immediate flush without rolling back the immediate transaction', async () => {
+  it('rolls back invalid paced update transactions during immediate flush without rolling back the immediate transaction', async () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
-      'queue-immediate-invalid-open'
+      'queue-immediate-invalid-paced'
     )
     const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
     const persistOrder: string[] = []
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
@@ -416,7 +416,7 @@ describe('revision mutation transaction registry', () => {
         })
       },
       persistMutations: async () => {
-        persistOrder.push('open')
+        persistOrder.push('paced')
         return { success: true, payload: { ok: true } }
       },
       handleSuccessOrConflictResponse: () => {},
@@ -440,19 +440,19 @@ describe('revision mutation transaction registry', () => {
     expect(persistOrder).toEqual(['immediate'])
   })
 
-  it('replays immediate optimistic mutations after invalid open rollback', async () => {
+  it('replays immediate optimistic mutations after invalid paced rollback', async () => {
     const { collectionId, collection } = createSingleItemRegistryContext(
-      'queue-immediate-replay-after-open-rollback'
+      'queue-immediate-replay-after-paced-rollback'
     )
     const runMutation = createRevisionMutationRunner({ test: collection }, { test: collection })
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
-    let openPersistCalled = 0
+    let pacedPersistCalled = 0
     let immediatePersistedValue: number | null = null
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
@@ -463,7 +463,7 @@ describe('revision mutation transaction registry', () => {
         })
       },
       persistMutations: async () => {
-        openPersistCalled += 1
+        pacedPersistCalled += 1
         return { success: true, payload: { ok: true } }
       },
       handleSuccessOrConflictResponse: () => {},
@@ -488,18 +488,18 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    expect(openPersistCalled).toBe(0)
+    expect(pacedPersistCalled).toBe(0)
     expect(immediatePersistedValue).toBe(1)
   })
 
-  it('always resolves when submitting all open update transactions', async () => {
-    const { collectionId, collection } = createSingleItemRegistryContext('open-submit-all')
-    const mutateOpenUpdate = createOpenRevisionUpdateMutationRunner(
+  it('always resolves when submitting all paced update transactions', async () => {
+    const { collectionId, collection } = createSingleItemRegistryContext('paced-submit-all')
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
       { test: collection }
     )
 
-    mutateOpenUpdate<MutationPayload>({
+    mutatePacedUpdate<MutationPayload>({
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 10_000,
@@ -517,6 +517,6 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    await expect(submitAllOpenUpdateTransactionsAndWait()).resolves.toBeUndefined()
+    await expect(submitAllPacedUpdateTransactionsAndWait()).resolves.toBeUndefined()
   })
 })
