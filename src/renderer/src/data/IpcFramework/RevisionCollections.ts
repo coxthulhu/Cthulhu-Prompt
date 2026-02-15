@@ -3,6 +3,7 @@ import {
   createRevisionMutationRunner
 } from './RevisionMutation'
 import { promptCollection } from '../Collections/PromptCollection'
+import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
@@ -24,6 +25,7 @@ const revisionCollections = {
 
 const optimisticCollections = {
   ...revisionCollections,
+  promptDraft: promptDraftCollection,
   systemSettingsDraft: systemSettingsDraftCollection
 }
 

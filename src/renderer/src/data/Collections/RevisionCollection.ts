@@ -11,7 +11,9 @@ export interface RevisionCollectionUtils<
   TRecord extends object
 > extends UtilsRecord {
   upsertAuthoritative: (snapshot: RevisionEnvelope<TRecord>) => void
+  upsertManyAuthoritative: (snapshots: Array<RevisionEnvelope<TRecord>>) => void
   deleteAuthoritative: (key: string) => void
+  deleteManyAuthoritative: (keys: Array<string>) => void
   getAuthoritativeRevision: (key: string) => number
 }
 
@@ -44,18 +46,60 @@ export const revisionCollectionOptions = <TRecord extends object>(
   let collection: Collection<TRecord, string, RevisionCollectionUtils<TRecord>> | null = null
 
   const writeAuthoritative = (message: ChangeMessageOrDeleteKeyMessage<TRecord, string>): void => {
+    writeManyAuthoritative([message])
+  }
+
+  const writeManyAuthoritative = (
+    messages: Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>>
+  ): void => {
     if (!syncBegin || !syncWrite || !syncCommit) {
+      return
+    }
+    if (messages.length === 0) {
       return
     }
 
     // Side effect: bypass pending optimistic persistence and apply server truth immediately.
     syncBegin({ immediate: true })
-    syncWrite(message)
+    for (const message of messages) {
+      syncWrite(message)
+    }
     syncCommit()
   }
 
   const getAuthoritativeRevision = (key: string): number => {
     return authoritativeRevisions.get(key) ?? 0
+  }
+
+  const collectUpsertMessages = (
+    snapshots: Array<RevisionEnvelope<TRecord>>
+  ): Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>> => {
+    const messages: Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>> = []
+    const queuedInsertKeys = new Set<string>()
+
+    for (const snapshot of snapshots) {
+      const key = snapshot.id
+      const hasCollectionRecord = (collection?.has(key) ?? false) || queuedInsertKeys.has(key)
+      const hasKnownRecord = hasCollectionRecord || authoritativeRevisions.has(key)
+      const currentRevision = authoritativeRevisions.get(key) ?? 0
+
+      if (hasKnownRecord && snapshot.revision <= currentRevision) {
+        continue
+      }
+
+      authoritativeRevisions.set(key, snapshot.revision)
+      const type = hasCollectionRecord ? 'update' : 'insert'
+      if (type === 'insert') {
+        queuedInsertKeys.add(key)
+      }
+
+      messages.push({
+        type,
+        value: snapshot.data
+      })
+    }
+
+    return messages
   }
 
   const sync: SyncConfig<TRecord, string> = {
@@ -99,21 +143,15 @@ export const revisionCollectionOptions = <TRecord extends object>(
     sync,
     utils: {
       upsertAuthoritative: (snapshot) => {
-        const key = snapshot.id
-        const hasCollectionRecord = collection?.has(key) ?? false
-        const hasKnownRecord = hasCollectionRecord || authoritativeRevisions.has(key)
-        const currentRevision = authoritativeRevisions.get(key) ?? 0
-
-        if (hasKnownRecord && snapshot.revision <= currentRevision) {
+        const messages = collectUpsertMessages([snapshot])
+        if (messages.length === 0) {
           return
         }
-
-        authoritativeRevisions.set(key, snapshot.revision)
-        const type = hasCollectionRecord ? 'update' : 'insert'
-        writeAuthoritative({
-          type,
-          value: snapshot.data
-        })
+        writeAuthoritative(messages[0]!)
+      },
+      upsertManyAuthoritative: (snapshots) => {
+        const messages = collectUpsertMessages(snapshots)
+        writeManyAuthoritative(messages)
       },
       deleteAuthoritative: (key) => {
         authoritativeRevisions.delete(key)
@@ -121,6 +159,19 @@ export const revisionCollectionOptions = <TRecord extends object>(
           type: 'delete',
           key
         })
+      },
+      deleteManyAuthoritative: (keys) => {
+        const messages: Array<ChangeMessageOrDeleteKeyMessage<TRecord, string>> = []
+
+        for (const key of keys) {
+          authoritativeRevisions.delete(key)
+          messages.push({
+            type: 'delete',
+            key
+          })
+        }
+
+        writeManyAuthoritative(messages)
       },
       getAuthoritativeRevision
     },

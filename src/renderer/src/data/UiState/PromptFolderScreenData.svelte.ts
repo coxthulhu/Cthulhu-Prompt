@@ -8,7 +8,8 @@ import {
   removePromptDraft,
   setPromptDraftText,
   setPromptDraftTitle,
-  syncPromptDraft
+  syncPromptDraft,
+  syncPromptDrafts
 } from './PromptDraftStore.svelte.ts'
 import {
   getPromptFolderDraftState,
@@ -28,7 +29,6 @@ type PromptFolderScreenPromptData = {
   setText: (text: string, measurement: TextMeasurement) => void
 }
 
-const promptEditorMeasuredHeights = createMeasuredHeightCache()
 const promptFolderDescriptionMeasuredHeights = createMeasuredHeightCache()
 
 const ensurePromptDraftState = (promptId: string): void => {
@@ -81,6 +81,13 @@ export const syncPromptFolderScreenPromptDraft = (prompt: Prompt): void => {
   syncPromptDraft(prompt)
 }
 
+export const syncPromptFolderScreenPromptDrafts = (
+  prompts: Prompt[],
+  options?: { createMissing?: boolean }
+): void => {
+  syncPromptDrafts(prompts, options)
+}
+
 export const syncPromptFolderScreenDescriptionDraft = (
   promptFolder: PromptFolder
 ): void => {
@@ -102,14 +109,7 @@ export const getPromptFolderScreenPromptData = (
     },
     setText: (text: string, measurement: TextMeasurement) => {
       ensurePromptDraftState(promptId)
-      const textChanged = getPromptText(promptId) !== text
-      promptEditorMeasuredHeights.record(promptId, measurement, textChanged)
-
-      if (!textChanged) {
-        return
-      }
-
-      setPromptDraftText(promptId, text)
+      setPromptDraftText(promptId, text, measurement)
     }
   }
 }
@@ -134,14 +134,6 @@ export const setPromptFolderScreenDescriptionText = (
   setPromptFolderDraftDescription(promptFolderId, text)
 }
 
-export const lookupPromptFolderScreenPromptEditorMeasuredHeight = (
-  promptId: string,
-  widthPx: number,
-  devicePixelRatio: number
-): number | null => {
-  return promptEditorMeasuredHeights.lookup(promptId, widthPx, devicePixelRatio)
-}
-
 export const lookupPromptFolderScreenDescriptionMeasuredHeight = (
   promptFolderId: string,
   widthPx: number,
@@ -152,10 +144,8 @@ export const lookupPromptFolderScreenDescriptionMeasuredHeight = (
 
 export const removePromptFolderScreenPrompt = (promptId: string): void => {
   removePromptDraft(promptId)
-  promptEditorMeasuredHeights.clear(promptId)
 }
 
 export const clearPromptFolderScreenState = (): void => {
-  promptEditorMeasuredHeights.clearAll()
   promptFolderDescriptionMeasuredHeights.clearAll()
 }

@@ -26,16 +26,16 @@ export const loadPromptFolderInitial = async (
   )
 
   promptFolderCollection.utils.upsertAuthoritative(result.promptFolder)
-
-  for (const prompt of result.prompts) {
-    promptCollection.utils.upsertAuthoritative(prompt)
-  }
+  promptCollection.utils.upsertManyAuthoritative(result.prompts)
 
   const nextPromptIds = new Set(result.promptFolder.data.promptIds)
+  const removedPromptIds: string[] = []
 
   for (const previousPromptId of previousPromptIds) {
     if (!nextPromptIds.has(previousPromptId)) {
-      promptCollection.utils.deleteAuthoritative(previousPromptId)
+      removedPromptIds.push(previousPromptId)
     }
   }
+
+  promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
 }

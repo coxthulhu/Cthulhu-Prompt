@@ -15,7 +15,6 @@ export const createPromptDraftMeasuredHeightKey = (
 export type PromptDraftRecord = {
   id: string
   draftSnapshot: Prompt
-  saveError: string | null
   // Mirrors measuredHeightCache for prompt editor rows.
   promptEditorMeasuredHeightsByKey: Record<string, number>
 }

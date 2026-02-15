@@ -5,6 +5,11 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import {
+    createPromptDraftMeasuredHeightKey,
+    type PromptDraftRecord,
+    promptDraftCollection
+  } from '@renderer/data/Collections/PromptDraftCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
@@ -17,11 +22,11 @@
     getPromptFolderScreenDescriptionText,
     getPromptFolderScreenPromptData,
     lookupPromptFolderScreenDescriptionMeasuredHeight,
-    lookupPromptFolderScreenPromptEditorMeasuredHeight,
     removePromptFolderScreenPrompt,
     setPromptFolderScreenDescriptionText,
     syncPromptFolderScreenDescriptionDraft,
-    syncPromptFolderScreenPromptDraft
+    syncPromptFolderScreenPromptDraft,
+    syncPromptFolderScreenPromptDrafts
   } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
@@ -54,15 +59,28 @@
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
 
-  const promptFolderQuery = useLiveQuery((q) =>
-    q.from({ promptFolder: promptFolderCollection })
-  ) as { data: PromptFolder[]; isLoading: boolean }
-  const promptQuery = useLiveQuery((q) =>
-    q.from({ prompt: promptCollection })
-  ) as { data: Prompt[]; isLoading: boolean }
+  const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
+    data: PromptFolder[]
+    isLoading: boolean
+  }
+  const promptQuery = useLiveQuery(promptCollection) as {
+    data: Prompt[]
+    isLoading: boolean
+  }
+  const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
+    data: PromptDraftRecord[]
+    isLoading: boolean
+  }
 
   const promptFolder = $derived.by(() => {
     return promptFolderQuery.data.find((candidate) => candidate.id === promptFolderId) ?? null
+  })
+  const promptDraftById = $derived.by(() => {
+    const draftsById: Record<string, PromptDraftRecord> = {}
+    for (const draft of promptDraftQuery.data) {
+      draftsById[draft.id] = draft
+    }
+    return draftsById
   })
   const promptIds = $derived(promptFolder?.promptIds ?? [])
   const descriptionText = $derived(getPromptFolderScreenDescriptionText(promptFolderId))
@@ -156,11 +174,18 @@
     if (currentPromptIds.length === 0) return
 
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
+    const promptsToSync: Prompt[] = []
     for (const promptId of currentPromptIds) {
       const prompt = promptById.get(promptId)
       if (!prompt) continue
-      syncPromptFolderScreenPromptDraft(prompt)
+      promptsToSync.push(prompt)
     }
+
+    if (promptsToSync.length === 0) {
+      return
+    }
+
+    syncPromptFolderScreenPromptDrafts(promptsToSync, { createMissing: false })
   })
 
   // Side effect: reset the virtual window scroll position after folder changes.
@@ -263,18 +288,22 @@
     'prompt-editor': {
       estimateHeight: (row, widthPx, heightPx) =>
         estimatePromptEditorHeight(
-          getPromptFolderScreenPromptData(row.promptId).draft.text,
+          promptDraftById[row.promptId]?.draftSnapshot.promptText ??
+            getPromptFolderScreenPromptData(row.promptId).draft.text,
           widthPx,
           heightPx,
           promptFontSize,
           promptEditorMinLines
         ),
-      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
-        lookupPromptFolderScreenPromptEditorMeasuredHeight(
-          row.promptId,
-          widthPx,
-          devicePixelRatio
-        ),
+      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
+        const promptDraftRecord = promptDraftById[row.promptId]
+        if (!promptDraftRecord) {
+          return null
+        }
+
+        const key = createPromptDraftMeasuredHeightKey(widthPx, devicePixelRatio)
+        return promptDraftRecord.promptEditorMeasuredHeightsByKey[key] ?? null
+      },
       needsOverlayRow: true,
       snippet: promptEditorRow
     },
@@ -624,6 +653,7 @@
 }: PromptEditorRowProps)}
   <PromptEditorRow
     promptId={row.promptId}
+    promptDraftRecord={promptDraftById[row.promptId] ?? null}
     {rowId}
     {virtualWindowWidthPx}
     {devicePixelRatio}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { monaco } from '@renderer/common/Monaco'
+  import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -28,6 +29,7 @@
 
   let {
     promptId,
+    promptDraftRecord,
     rowId,
     virtualWindowWidthPx,
     devicePixelRatio,
@@ -44,6 +46,7 @@
     onMoveDown
   }: {
     promptId: string
+    promptDraftRecord?: PromptDraftRecord | null
     rowId: string
     virtualWindowWidthPx: number
     devicePixelRatio: number
@@ -63,7 +66,20 @@
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   // Derived prompt state and sizing so the row updates with virtual window changes.
-  const promptData = $derived.by(() => getPromptFolderScreenPromptData(promptId))
+  const promptData = $derived.by(() => {
+    const fallbackPromptData = getPromptFolderScreenPromptData(promptId)
+    if (!promptDraftRecord) {
+      return fallbackPromptData
+    }
+
+    return {
+      ...fallbackPromptData,
+      draft: {
+        title: promptDraftRecord.draftSnapshot.title,
+        text: promptDraftRecord.draftSnapshot.promptText
+      }
+    }
+  })
   const placeholderMonacoHeightPx = $derived.by(() => {
     const baseHeightPx = virtualRowHeightPx
     return Math.max(

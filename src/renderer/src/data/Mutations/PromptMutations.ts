@@ -4,10 +4,28 @@ import type {
   DeletePromptResponsePayload,
   Prompt,
   PromptRevisionResponsePayload,
+  PromptRevisionPayload
 } from '@shared/Prompt'
+import type { Transaction } from '@tanstack/svelte-db'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
+import {
+  mutatePacedRevisionUpdateTransaction,
+  runRevisionMutation
+} from '../IpcFramework/RevisionCollections'
+
+const readLatestPromptFromTransaction = (
+  transaction: Transaction<any>,
+  promptId: string
+): Prompt => {
+  return getLatestMutationModifiedRecord(
+    transaction,
+    promptCollection.id,
+    promptId,
+    () => promptCollection.get(promptId)!
+  )
+}
 
 export const createPrompt = async (
   promptFolderId: string,
@@ -75,30 +93,55 @@ export const createPrompt = async (
   })
 }
 
-export const updatePrompt = async (prompt: Prompt): Promise<void> => {
-  if (!promptCollection.get(prompt.id)) {
-    throw new Error('Prompt not loaded')
-  }
+type PacedPromptMutationOptions = Parameters<
+  typeof mutatePacedRevisionUpdateTransaction<PromptRevisionResponsePayload>
+>[0]
 
-  await runRevisionMutation<PromptRevisionResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.prompt.update(prompt.id, (draft) => {
-        draft.title = prompt.title
-        draft.creationDate = prompt.creationDate
-        draft.lastModifiedDate = prompt.lastModifiedDate
-        draft.promptText = prompt.promptText
-        draft.promptFolderCount = prompt.promptFolderCount
-      })
-    },
-    persistMutations: async ({ entities, invoke }) => {
-      return invoke('update-prompt', {
-        payload: {
-          prompt: entities.prompt({
-            id: prompt.id,
-            data: prompt
-          })
+type PacedPromptAutosaveUpdateOptions = Pick<
+  PacedPromptMutationOptions,
+  'debounceMs' | 'mutateOptimistically' | 'validateBeforeEnqueue' | 'draftOnlyChange'
+> & {
+  promptId: string
+}
+
+export const mutatePacedPromptAutosaveUpdate = ({
+  promptId,
+  debounceMs,
+  mutateOptimistically,
+  validateBeforeEnqueue,
+  draftOnlyChange
+}: PacedPromptAutosaveUpdateOptions): boolean => {
+  return mutatePacedRevisionUpdateTransaction<PromptRevisionResponsePayload>({
+    collectionId: promptCollection.id,
+    elementId: promptId,
+    debounceMs,
+    mutateOptimistically,
+    validateBeforeEnqueue,
+    draftOnlyChange,
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const latestPrompt = readLatestPromptFromTransaction(transaction, promptId)
+      try {
+        const mutationResult = await invoke<{ payload: PromptRevisionPayload }>('update-prompt', {
+          payload: {
+            prompt: entities.prompt({
+              id: promptId,
+              data: latestPrompt
+            })
+          }
+        })
+
+        if (!mutationResult.success) {
+          console.error(
+            'Failed to update prompt:',
+            mutationResult.conflict ? 'Prompt update conflict' : mutationResult.error
+          )
         }
-      })
+
+        return mutationResult
+      } catch (error) {
+        console.error('Failed to update prompt:', error)
+        throw error
+      }
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptCollection.utils.upsertAuthoritative(payload.prompt)

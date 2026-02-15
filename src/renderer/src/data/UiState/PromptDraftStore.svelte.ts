@@ -1,26 +1,18 @@
-import { SvelteMap } from 'svelte/reactivity'
 import type { Prompt } from '@shared/Prompt'
+import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
+import { SvelteMap } from 'svelte/reactivity'
+import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
-  AUTOSAVE_MS,
-  clearAutosaveTimeout,
-  createAutosaveController,
-  type AutosaveDraft
-} from '@renderer/data/draftAutosave'
-import { updatePrompt } from '../Mutations/PromptMutations'
+  createPromptDraftMeasuredHeightKey,
+  type PromptDraftRecord,
+  promptDraftCollection
+} from '../Collections/PromptDraftCollection'
+import { promptCollection } from '../Collections/PromptCollection'
+import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
+import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
 
-type PromptDraftState = {
-  draftSnapshot: Prompt
-  saveError: string | null
-}
+export type PromptDraftState = PromptDraftRecord
 
-type PromptDraftEntry = {
-  state: PromptDraftState
-  autosaveDraft: AutosaveDraft
-  saveNow: () => Promise<void>
-  markDirtyAndScheduleAutosave: () => void
-}
-
-const draftEntriesByPromptId = new SvelteMap<string, PromptDraftEntry>()
 const lastSyncedPromptsById = new SvelteMap<string, Prompt>()
 
 const toPromptSnapshot = (prompt: Prompt): Prompt => ({
@@ -31,15 +23,6 @@ const toPromptSnapshot = (prompt: Prompt): Prompt => ({
   promptText: prompt.promptText,
   promptFolderCount: prompt.promptFolderCount
 })
-
-const applyPromptSnapshot = (target: Prompt, prompt: Prompt): void => {
-  target.id = prompt.id
-  target.title = prompt.title
-  target.creationDate = prompt.creationDate
-  target.lastModifiedDate = prompt.lastModifiedDate
-  target.promptText = prompt.promptText
-  target.promptFolderCount = prompt.promptFolderCount
-}
 
 const haveSamePrompt = (left: Prompt, right: Prompt): boolean => {
   return (
@@ -52,113 +35,202 @@ const haveSamePrompt = (left: Prompt, right: Prompt): boolean => {
   )
 }
 
-const createDraftEntry = (prompt: Prompt): PromptDraftEntry => {
-  const state = $state<PromptDraftState>({
-    draftSnapshot: toPromptSnapshot(prompt),
-    saveError: null
-  })
-  const autosaveDraft = $state<AutosaveDraft>({
-    dirty: false,
-    saving: false,
-    autosaveTimeoutId: null
-  })
+const validatePromptDraftTransaction = (): boolean => {
+  return true
+}
 
-  const autosave = createAutosaveController({
-    draft: autosaveDraft,
-    autosaveMs: AUTOSAVE_MS,
-    save: async () => {
-      const promptToSave = toPromptSnapshot(state.draftSnapshot)
-      state.saveError = null
-      await updatePrompt(promptToSave)
-      autosaveDraft.dirty = false
-    }
-  })
+type PromptDraftPacedUpdateOptions = Omit<
+  Parameters<typeof mutatePacedPromptAutosaveUpdate>[0],
+  'promptId' | 'debounceMs' | 'validateBeforeEnqueue'
+>
 
-  const saveNow = async (): Promise<void> => {
-    try {
-      await autosave.saveNow()
-    } catch (error) {
-      state.saveError = error instanceof Error ? error.message : 'Failed to update prompt.'
-      throw error
+const mutatePromptDraftPacedUpdate = (
+  promptId: string,
+  options: PromptDraftPacedUpdateOptions
+): boolean => {
+  return mutatePacedPromptAutosaveUpdate({
+    promptId,
+    debounceMs: AUTOSAVE_MS,
+    validateBeforeEnqueue: validatePromptDraftTransaction,
+    ...options
+  })
+}
+
+const applyPromptMeasurementUpdate = (
+  draftRecord: PromptDraftRecord,
+  measurement: TextMeasurement,
+  textChanged: boolean
+): void => {
+  const key = createPromptDraftMeasuredHeightKey(
+    measurement.widthPx,
+    measurement.devicePixelRatio
+  )
+
+  if (textChanged) {
+    if (measurement.measuredHeightPx == null) {
+      draftRecord.promptEditorMeasuredHeightsByKey = {}
+      return
     }
+
+    draftRecord.promptEditorMeasuredHeightsByKey = {
+      [key]: measurement.measuredHeightPx
+    }
+    return
   }
 
-  return {
-    state,
-    autosaveDraft,
-    saveNow,
-    markDirtyAndScheduleAutosave: autosave.markDirtyAndScheduleAutosave
+  if (measurement.measuredHeightPx == null) {
+    return
   }
+
+  draftRecord.promptEditorMeasuredHeightsByKey[key] = measurement.measuredHeightPx
 }
 
 export const syncPromptDraft = (prompt: Prompt): void => {
-  const existingEntry = draftEntriesByPromptId.get(prompt.id)
+  syncPromptDrafts([prompt])
+}
 
-  if (!existingEntry) {
-    draftEntriesByPromptId.set(prompt.id, createDraftEntry(prompt))
-    lastSyncedPromptsById.set(prompt.id, toPromptSnapshot(prompt))
+export const syncPromptDrafts = (
+  prompts: Prompt[],
+  options?: { createMissing?: boolean }
+): void => {
+  if (prompts.length === 0) {
     return
   }
 
-  const lastSyncedPrompt = lastSyncedPromptsById.get(prompt.id)
-  if (lastSyncedPrompt && haveSamePrompt(lastSyncedPrompt, prompt)) {
-    return
+  const createMissing = options?.createMissing ?? true
+  const draftInserts: PromptDraftRecord[] = []
+  const draftUpdates = new SvelteMap<string, Prompt>()
+
+  for (const prompt of prompts) {
+    const promptSnapshot = toPromptSnapshot(prompt)
+    const existingRecord = promptDraftCollection.get(prompt.id)
+
+    if (!existingRecord) {
+      if (!createMissing) {
+        continue
+      }
+
+      draftInserts.push({
+        id: prompt.id,
+        draftSnapshot: promptSnapshot,
+        promptEditorMeasuredHeightsByKey: {}
+      })
+      lastSyncedPromptsById.set(prompt.id, promptSnapshot)
+      continue
+    }
+
+    const lastSyncedPrompt = lastSyncedPromptsById.get(prompt.id)
+    if (lastSyncedPrompt && haveSamePrompt(lastSyncedPrompt, promptSnapshot)) {
+      continue
+    }
+
+    lastSyncedPromptsById.set(prompt.id, promptSnapshot)
+    draftUpdates.set(prompt.id, promptSnapshot)
   }
 
-  lastSyncedPromptsById.set(prompt.id, toPromptSnapshot(prompt))
-  clearAutosaveTimeout(existingEntry.autosaveDraft)
-  applyPromptSnapshot(existingEntry.state.draftSnapshot, prompt)
-  existingEntry.state.saveError = null
-  existingEntry.autosaveDraft.dirty = false
+  if (draftInserts.length > 0) {
+    promptDraftCollection.insert(draftInserts)
+  }
+
+  if (draftUpdates.size > 0) {
+    const draftUpdateIds = Array.from(draftUpdates.keys())
+    promptDraftCollection.update(draftUpdateIds, (draftRecords) => {
+      for (const draftRecord of draftRecords) {
+        const nextSnapshot = draftUpdates.get(draftRecord.id)
+        if (!nextSnapshot) {
+          continue
+        }
+
+        draftRecord.draftSnapshot = nextSnapshot
+      }
+    })
+  }
 }
 
 export const getPromptDraftState = (promptId: string): PromptDraftState | null => {
-  return draftEntriesByPromptId.get(promptId)?.state ?? null
+  return promptDraftCollection.get(promptId) ?? null
 }
 
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
-  const entry = draftEntriesByPromptId.get(promptId)
-  if (!entry) return
-  if (entry.state.draftSnapshot.title === title) return
-  entry.state.draftSnapshot.title = title
-  entry.state.saveError = null
-  entry.markDirtyAndScheduleAutosave()
+  const draftRecord = promptDraftCollection.get(promptId)
+  if (!draftRecord || draftRecord.draftSnapshot.title === title) {
+    return
+  }
+
+  mutatePromptDraftPacedUpdate(promptId, {
+    mutateOptimistically: ({ collections }) => {
+      collections.promptDraft.update(promptId, (draft) => {
+        draft.draftSnapshot.title = title
+      })
+
+      collections.prompt.update(promptId, (draft) => {
+        draft.title = title
+      })
+    }
+  })
 }
 
-export const setPromptDraftText = (promptId: string, promptText: string): void => {
-  const entry = draftEntriesByPromptId.get(promptId)
-  if (!entry) return
-  if (entry.state.draftSnapshot.promptText === promptText) return
-  entry.state.draftSnapshot.promptText = promptText
-  entry.state.saveError = null
-  entry.markDirtyAndScheduleAutosave()
+export const setPromptDraftText = (
+  promptId: string,
+  promptText: string,
+  measurement: TextMeasurement
+): void => {
+  const draftRecord = promptDraftCollection.get(promptId)
+  if (!draftRecord) {
+    return
+  }
+
+  const textChanged = draftRecord.draftSnapshot.promptText !== promptText
+
+  if (!textChanged) {
+    const updatedOpenTransaction = mutatePromptDraftPacedUpdate(promptId, {
+      draftOnlyChange: true,
+      mutateOptimistically: ({ collections }) => {
+        collections.promptDraft.update(promptId, (draft) => {
+          applyPromptMeasurementUpdate(draft, measurement, false)
+        })
+      }
+    })
+
+    if (!updatedOpenTransaction) {
+      promptDraftCollection.update(promptId, (draft) => {
+        applyPromptMeasurementUpdate(draft, measurement, false)
+      })
+    }
+
+    return
+  }
+
+  mutatePromptDraftPacedUpdate(promptId, {
+    mutateOptimistically: ({ collections }) => {
+      collections.promptDraft.update(promptId, (draft) => {
+        draft.draftSnapshot.promptText = promptText
+        applyPromptMeasurementUpdate(draft, measurement, true)
+      })
+
+      collections.prompt.update(promptId, (draft) => {
+        draft.promptText = promptText
+      })
+    }
+  })
 }
 
 export const flushPromptDraftAutosaves = async (): Promise<void> => {
-  const tasks = Array.from(draftEntriesByPromptId.values(), (entry) => {
-    clearAutosaveTimeout(entry.autosaveDraft)
-    return entry.saveNow()
+  const tasks = promptDraftCollection.toArray.map(async (draftRecord) => {
+    await submitPacedUpdateTransactionAndWait(promptCollection.id, draftRecord.id)
   })
-
   await Promise.allSettled(tasks)
 }
 
 export const removePromptDraft = (promptId: string): void => {
-  const entry = draftEntriesByPromptId.get(promptId)
-
-  if (entry) {
-    clearAutosaveTimeout(entry.autosaveDraft)
-  }
-
-  draftEntriesByPromptId.delete(promptId)
+  promptDraftCollection.delete(promptId)
   lastSyncedPromptsById.delete(promptId)
 }
 
 export const clearPromptDraftStore = (): void => {
-  for (const entry of draftEntriesByPromptId.values()) {
-    clearAutosaveTimeout(entry.autosaveDraft)
+  const draftIds = Array.from(promptDraftCollection.keys())
+  if (draftIds.length > 0) {
+    promptDraftCollection.delete(draftIds)
   }
-
-  draftEntriesByPromptId.clear()
   lastSyncedPromptsById.clear()
 }
