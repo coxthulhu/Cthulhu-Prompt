@@ -6,6 +6,10 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import {
+  deletePromptDrafts,
+  upsertPromptDrafts
+} from '../UiState/PromptDraftStore.svelte.ts'
 
 export const loadPromptFolderInitial = async (
   workspaceId: string,
@@ -25,8 +29,9 @@ export const loadPromptFolderInitial = async (
     })
   )
 
-  promptFolderCollection.utils.upsertAuthoritative(result.promptFolder)
   promptCollection.utils.upsertManyAuthoritative(result.prompts)
+  upsertPromptDrafts(result.prompts.map((prompt) => prompt.data))
+  promptFolderCollection.utils.upsertAuthoritative(result.promptFolder)
 
   const nextPromptIds = new Set(result.promptFolder.data.promptIds)
   const removedPromptIds: string[] = []
@@ -38,4 +43,5 @@ export const loadPromptFolderInitial = async (
   }
 
   promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
+  deletePromptDrafts(removedPromptIds)
 }

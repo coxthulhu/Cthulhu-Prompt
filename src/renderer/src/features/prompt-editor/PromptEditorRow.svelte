@@ -46,7 +46,7 @@
     onMoveDown
   }: {
     promptId: string
-    promptDraftRecord?: PromptDraftRecord | null
+    promptDraftRecord: PromptDraftRecord
     rowId: string
     virtualWindowWidthPx: number
     devicePixelRatio: number
@@ -67,13 +67,9 @@
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
-    const fallbackPromptData = getPromptFolderScreenPromptData(promptId)
-    if (!promptDraftRecord) {
-      return fallbackPromptData
-    }
-
+    const basePromptData = getPromptFolderScreenPromptData(promptId)
     return {
-      ...fallbackPromptData,
+      ...basePromptData,
       draft: {
         title: promptDraftRecord.draftSnapshot.title,
         text: promptDraftRecord.draftSnapshot.promptText

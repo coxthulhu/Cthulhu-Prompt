@@ -7,6 +7,7 @@ import type {
   PromptRevisionPayload
 } from '@shared/Prompt'
 import type { Transaction } from '@tanstack/svelte-db'
+import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
@@ -27,6 +28,22 @@ const readLatestPromptFromTransaction = (
   )
 }
 
+const upsertPromptDraftSnapshot = (prompt: Prompt): void => {
+  const existingDraft = promptDraftCollection.get(prompt.id)
+  if (!existingDraft) {
+    promptDraftCollection.insert({
+      id: prompt.id,
+      draftSnapshot: { ...prompt },
+      promptEditorMeasuredHeightsByKey: {}
+    })
+    return
+  }
+
+  promptDraftCollection.update(prompt.id, (draftRecord) => {
+    draftRecord.draftSnapshot = { ...prompt }
+  })
+}
+
 export const createPrompt = async (
   promptFolderId: string,
   prompt: Prompt,
@@ -41,10 +58,16 @@ export const createPrompt = async (
   await runRevisionMutation<CreatePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       const optimisticPromptCount = promptFolder.promptCount + 1
-
-      collections.prompt.insert({
+      const optimisticPrompt = {
         ...prompt,
         promptFolderCount: optimisticPromptCount
+      }
+
+      collections.prompt.insert(optimisticPrompt)
+      collections.promptDraft.insert({
+        id: optimisticPrompt.id,
+        draftSnapshot: optimisticPrompt,
+        promptEditorMeasuredHeightsByKey: {}
       })
 
       collections.promptFolder.update(promptFolderId, (draft) => {
@@ -88,6 +111,7 @@ export const createPrompt = async (
       }
 
       promptCollection.utils.upsertAuthoritative(payload.prompt)
+      upsertPromptDraftSnapshot(payload.prompt.data)
     },
     conflictMessage: 'Prompt create conflict'
   })
@@ -143,6 +167,7 @@ export const mutatePacedPromptAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptCollection.utils.upsertAuthoritative(payload.prompt)
+      upsertPromptDraftSnapshot(payload.prompt.data)
     },
     conflictMessage: 'Prompt update conflict'
   })
@@ -165,6 +190,7 @@ export const deletePrompt = async (
   await runRevisionMutation<DeletePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.prompt.delete(promptId)
+      collections.promptDraft.delete(promptId)
       collections.promptFolder.update(promptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
       })

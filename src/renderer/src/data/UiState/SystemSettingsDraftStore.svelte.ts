@@ -1,4 +1,4 @@
-import { DEFAULT_SYSTEM_SETTINGS, type SystemSettings } from '@shared/SystemSettings'
+import type { SystemSettings } from '@shared/SystemSettings'
 import {
   SYSTEM_SETTINGS_DRAFT_ID,
   systemSettingsDraftCollection
@@ -8,24 +8,25 @@ import {
   mutateSystemSettingsDraftWithAutosave
 } from './SystemSettingsAutosave.svelte.ts'
 import {
-  haveSameSystemSettings,
   type SystemSettingsDraftSnapshot,
   toSystemSettingsDraftSnapshot
 } from './SystemSettingsFormat'
 
-let lastSyncedSettings: SystemSettings = DEFAULT_SYSTEM_SETTINGS
-let hasSyncedSettings = false
+export const upsertSystemSettingsDraft = (settings: SystemSettings): void => {
+  const nextSnapshot = toSystemSettingsDraftSnapshot(settings)
+  const existingRecord = systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)
 
-export const syncSystemSettingsDraft = (settings: SystemSettings): void => {
-  if (hasSyncedSettings && haveSameSystemSettings(lastSyncedSettings, settings)) {
+  if (!existingRecord) {
+    systemSettingsDraftCollection.insert({
+      id: SYSTEM_SETTINGS_DRAFT_ID,
+      draftSnapshot: nextSnapshot,
+      saveError: null
+    })
     return
   }
 
-  hasSyncedSettings = true
-  lastSyncedSettings = { ...settings }
-
   systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-    draftRecord.draftSnapshot = toSystemSettingsDraftSnapshot(settings)
+    draftRecord.draftSnapshot = nextSnapshot
     draftRecord.saveError = null
   })
 }

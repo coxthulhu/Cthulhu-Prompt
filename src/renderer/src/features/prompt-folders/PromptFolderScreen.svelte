@@ -20,16 +20,11 @@
   import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
   import {
     getPromptFolderScreenDescriptionText,
-    getPromptFolderScreenPromptData,
     lookupPromptFolderScreenDescriptionMeasuredHeight,
     removePromptFolderScreenPrompt,
     setPromptFolderScreenDescriptionText,
     syncPromptFolderScreenDescriptionDraft
   } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
-  import {
-    syncPromptDraft,
-    syncPromptDrafts
-  } from '@renderer/data/UiState/PromptDraftStore.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
@@ -63,10 +58,6 @@
 
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
     data: PromptFolder[]
-    isLoading: boolean
-  }
-  const promptQuery = useLiveQuery(promptCollection) as {
-    data: Prompt[]
     isLoading: boolean
   }
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
@@ -112,7 +103,20 @@
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
 
-  const visiblePromptIds = $derived(errorMessage ? [] : isLoading ? [] : promptIds)
+  const visiblePromptIds = $derived.by(() => {
+    if (errorMessage || isLoading) {
+      return []
+    }
+
+    const idsWithDrafts: string[] = []
+    for (const promptId of promptIds) {
+      if (promptDraftById[promptId]) {
+        idsWithDrafts.push(promptId)
+      }
+    }
+
+    return idsWithDrafts
+  })
 
   const clearOutlinerManualSelection = () => {
     outlinerManualSelectionActive = false
@@ -168,26 +172,6 @@
     const currentPromptFolder = promptFolder
     if (!currentPromptFolder) return
     syncPromptFolderScreenDescriptionDraft(currentPromptFolder)
-  })
-
-  // Side effect: keep prompt drafts synced with collection updates for rows in the active folder.
-  $effect(() => {
-    const currentPromptIds = promptIds
-    if (currentPromptIds.length === 0) return
-
-    const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
-    const promptsToSync: Prompt[] = []
-    for (const promptId of currentPromptIds) {
-      const prompt = promptById.get(promptId)
-      if (!prompt) continue
-      promptsToSync.push(prompt)
-    }
-
-    if (promptsToSync.length === 0) {
-      return
-    }
-
-    syncPromptDrafts(promptsToSync, { createMissing: false })
   })
 
   // Side effect: reset the virtual window scroll position after folder changes.
@@ -290,19 +274,14 @@
     'prompt-editor': {
       estimateHeight: (row, widthPx, heightPx) =>
         estimatePromptEditorHeight(
-          promptDraftById[row.promptId]?.draftSnapshot.promptText ??
-            getPromptFolderScreenPromptData(row.promptId).draft.text,
+          promptDraftById[row.promptId]!.draftSnapshot.promptText,
           widthPx,
           heightPx,
           promptFontSize,
           promptEditorMinLines
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
-        const promptDraftRecord = promptDraftById[row.promptId]
-        if (!promptDraftRecord) {
-          return null
-        }
-
+        const promptDraftRecord = promptDraftById[row.promptId]!
         const key = createPromptDraftMeasuredHeightKey(widthPx, devicePixelRatio)
         return promptDraftRecord.promptEditorMeasuredHeightsByKey[key] ?? null
       },
@@ -400,7 +379,6 @@
       promptText: '',
       promptFolderCount: currentPromptFolder.promptCount + 1
     }
-    syncPromptDraft(optimisticPrompt)
 
     try {
       await createPrompt(currentPromptFolder.id, optimisticPrompt, previousPromptId)
@@ -655,7 +633,7 @@
 }: PromptEditorRowProps)}
   <PromptEditorRow
     promptId={row.promptId}
-    promptDraftRecord={promptDraftById[row.promptId] ?? null}
+    promptDraftRecord={promptDraftById[row.promptId]!}
     {rowId}
     {virtualWindowWidthPx}
     {devicePixelRatio}

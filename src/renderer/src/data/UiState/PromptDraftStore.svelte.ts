@@ -1,6 +1,5 @@
 import type { Prompt } from '@shared/Prompt'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { SvelteMap } from 'svelte/reactivity'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
   createPromptDraftMeasuredHeightKey,
@@ -12,8 +11,6 @@ import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCol
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
 
 export type PromptDraftState = PromptDraftRecord
-
-const lastSyncedPromptsById = new SvelteMap<string, Prompt>()
 
 const toPromptSnapshot = (prompt: Prompt): Prompt => ({
   id: prompt.id,
@@ -90,19 +87,15 @@ const applyPromptMeasurementUpdate = (
   draftRecord.promptEditorMeasuredHeightsByKey[key] = measurement.measuredHeightPx
 }
 
-export const syncPromptDraft = (prompt: Prompt): void => {
-  syncPromptDrafts([prompt])
+export const upsertPromptDraft = (prompt: Prompt): void => {
+  upsertPromptDrafts([prompt])
 }
 
-export const syncPromptDrafts = (
-  prompts: Prompt[],
-  options?: { createMissing?: boolean }
-): void => {
+export const upsertPromptDrafts = (prompts: Prompt[]): void => {
   if (prompts.length === 0) {
     return
   }
 
-  const createMissing = options?.createMissing ?? true
   const draftInserts: PromptDraftRecord[] = []
   const draftUpdatesById: Record<string, Prompt> = {}
   const draftUpdateIds: string[] = []
@@ -112,25 +105,18 @@ export const syncPromptDrafts = (
     const existingRecord = promptDraftCollection.get(prompt.id)
 
     if (!existingRecord) {
-      if (!createMissing) {
-        continue
-      }
-
       draftInserts.push({
         id: prompt.id,
         draftSnapshot: promptSnapshot,
         promptEditorMeasuredHeightsByKey: {}
       })
-      lastSyncedPromptsById.set(prompt.id, promptSnapshot)
       continue
     }
 
-    const lastSyncedPrompt = lastSyncedPromptsById.get(prompt.id)
-    if (lastSyncedPrompt && haveSamePrompt(lastSyncedPrompt, promptSnapshot)) {
+    if (haveSamePrompt(existingRecord.draftSnapshot, promptSnapshot)) {
       continue
     }
 
-    lastSyncedPromptsById.set(prompt.id, promptSnapshot)
     if (!draftUpdatesById[prompt.id]) {
       draftUpdateIds.push(prompt.id)
     }
@@ -155,13 +141,13 @@ export const syncPromptDrafts = (
   }
 }
 
-export const getPromptDraftState = (promptId: string): PromptDraftState | null => {
-  return promptDraftCollection.get(promptId) ?? null
+export const getPromptDraftState = (promptId: string): PromptDraftState => {
+  return promptDraftCollection.get(promptId)!
 }
 
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
-  const draftRecord = promptDraftCollection.get(promptId)
-  if (!draftRecord || draftRecord.draftSnapshot.title === title) {
+  const draftRecord = getPromptDraftState(promptId)
+  if (draftRecord.draftSnapshot.title === title) {
     return
   }
 
@@ -180,11 +166,7 @@ export const setPromptDraftText = (
   promptText: string,
   measurement: TextMeasurement
 ): void => {
-  const draftRecord = promptDraftCollection.get(promptId)
-  if (!draftRecord) {
-    return
-  }
-
+  const draftRecord = getPromptDraftState(promptId)
   const textChanged = draftRecord.draftSnapshot.promptText !== promptText
 
   if (!textChanged) {
@@ -222,15 +204,19 @@ export const flushPromptDraftAutosaves = async (): Promise<void> => {
   await Promise.allSettled(tasks)
 }
 
+export const deletePromptDrafts = (promptIds: string[]): void => {
+  if (promptIds.length === 0) {
+    return
+  }
+
+  promptDraftCollection.delete(promptIds)
+}
+
 export const removePromptDraft = (promptId: string): void => {
-  promptDraftCollection.delete(promptId)
-  lastSyncedPromptsById.delete(promptId)
+  deletePromptDrafts([promptId])
 }
 
 export const clearPromptDraftStore = (): void => {
-  const draftIds = Array.from(promptDraftCollection.keys())
-  if (draftIds.length > 0) {
-    promptDraftCollection.delete(draftIds)
-  }
-  lastSyncedPromptsById.clear()
+  const draftIds = Array.from(promptDraftCollection.keys(), (draftId) => String(draftId))
+  deletePromptDrafts(draftIds)
 }

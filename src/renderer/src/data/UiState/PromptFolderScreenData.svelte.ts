@@ -6,8 +6,7 @@ import {
   getPromptDraftState,
   removePromptDraft,
   setPromptDraftText,
-  setPromptDraftTitle,
-  syncPromptDraft
+  setPromptDraftTitle
 } from './PromptDraftStore.svelte.ts'
 import {
   getPromptFolderDraftState,
@@ -29,15 +28,6 @@ type PromptFolderScreenPromptData = {
 
 const promptFolderDescriptionMeasuredHeights = createMeasuredHeightCache()
 
-const ensurePromptDraftState = (promptId: string): void => {
-  const prompt = promptCollection.get(promptId)
-  if (!prompt) {
-    return
-  }
-
-  syncPromptDraft(prompt)
-}
-
 const ensurePromptFolderDescriptionDraftState = (promptFolderId: string): void => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) {
@@ -45,22 +35,6 @@ const ensurePromptFolderDescriptionDraftState = (promptFolderId: string): void =
   }
 
   syncPromptFolderDescriptionDraft(promptFolder)
-}
-
-const getPromptTitle = (promptId: string): string => {
-  return (
-    getPromptDraftState(promptId)?.draftSnapshot.title ??
-    promptCollection.get(promptId)?.title ??
-    ''
-  )
-}
-
-const getPromptText = (promptId: string): string => {
-  return (
-    getPromptDraftState(promptId)?.draftSnapshot.promptText ??
-    promptCollection.get(promptId)?.promptText ??
-    ''
-  )
 }
 
 const getPromptFolderCount = (promptId: string): number => {
@@ -84,18 +58,17 @@ export const syncPromptFolderScreenDescriptionDraft = (
 export const getPromptFolderScreenPromptData = (
   promptId: string
 ): PromptFolderScreenPromptData => {
+  const promptDraftState = getPromptDraftState(promptId)
   return {
     draft: {
-      title: getPromptTitle(promptId),
-      text: getPromptText(promptId)
+      title: promptDraftState.draftSnapshot.title,
+      text: promptDraftState.draftSnapshot.promptText
     },
     promptFolderCount: getPromptFolderCount(promptId),
     setTitle: (title: string) => {
-      ensurePromptDraftState(promptId)
       setPromptDraftTitle(promptId, title)
     },
     setText: (text: string, measurement: TextMeasurement) => {
-      ensurePromptDraftState(promptId)
       setPromptDraftText(promptId, text, measurement)
     }
   }

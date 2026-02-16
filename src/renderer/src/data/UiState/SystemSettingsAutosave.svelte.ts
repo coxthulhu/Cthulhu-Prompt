@@ -14,7 +14,8 @@ import { mutatePacedSystemSettingsAutosaveUpdate } from '../Mutations/SystemSett
 import {
   getSystemSettingsValidation,
   normalizePromptEditorMinLinesInput,
-  normalizePromptFontSizeInput
+  normalizePromptFontSizeInput,
+  toSystemSettingsDraftSnapshot
 } from './SystemSettingsFormat'
 
 type SystemSettingsAutosaveState = {
@@ -97,6 +98,10 @@ export const mutateSystemSettingsDraftWithAutosave = (
         systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
           draft.promptFontSize = validatedSettings.promptFontSize
           draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
+        })
+        systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
+          draftRecord.draftSnapshot = toSystemSettingsDraftSnapshot(validatedSettings)
+          draftRecord.saveError = null
         })
       })
 

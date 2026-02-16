@@ -15,7 +15,6 @@
   } from '@renderer/features/workspace/types'
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-  import { syncSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
   import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
@@ -55,8 +54,6 @@
       return getSelectedWorkspaceId()
     }
   }
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const windowControls = window.windowControls
 
   const workspaceQuery = useLiveQuery((q) =>
@@ -101,14 +98,6 @@
   const endWorkspaceAction = () => {
     workspaceActionCount -= 1
   }
-
-  // Side effect: keep the module-level  settings draft synced with query-backed settings.
-  $effect(() => {
-    syncSystemSettingsDraft({
-      promptFontSize,
-      promptEditorMinLines
-    })
-  })
 
   const clearPromptFolderSelection = () => {
     selectedPromptFolderId = null

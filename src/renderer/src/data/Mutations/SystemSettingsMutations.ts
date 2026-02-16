@@ -7,6 +7,7 @@ import type { Transaction } from '@tanstack/svelte-db'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
+import { upsertSystemSettingsDraft } from '../UiState/SystemSettingsDraftStore.svelte.ts'
 
 const readLatestSystemSettingsFromTransaction = (
   transaction: Transaction<any>
@@ -53,6 +54,7 @@ export const mutatePacedSystemSettingsAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       systemSettingsCollection.utils.upsertAuthoritative(payload.systemSettings)
+      upsertSystemSettingsDraft(payload.systemSettings.data)
     },
     conflictMessage: 'System settings update conflict'
   })
