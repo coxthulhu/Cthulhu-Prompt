@@ -28,18 +28,11 @@ const readLatestPromptFolderFromTransaction = (
   )
 }
 
-const upsertPromptFolderDraftSnapshot = (promptFolder: PromptFolder): void => {
-  const existingDraft = promptFolderDraftCollection.get(promptFolder.id)
-  if (!existingDraft) {
-    promptFolderDraftCollection.insert({
-      id: promptFolder.id,
-      draftSnapshot: {
-        folderDescription: promptFolder.folderDescription
-      },
-      saveError: null,
-      descriptionMeasuredHeightsByKey: {}
-    })
-    return
+export const updatePromptFolderDraftSnapshotFromServer = (
+  promptFolder: PromptFolder
+): void => {
+  if (!promptFolderDraftCollection.get(promptFolder.id)) {
+    throw new Error('Prompt folder draft not loaded')
   }
 
   promptFolderDraftCollection.update(promptFolder.id, (draftRecord) => {
@@ -105,7 +98,7 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      upsertPromptFolderDraftSnapshot(payload.promptFolder.data)
+      updatePromptFolderDraftSnapshotFromServer(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder update conflict'
   })
@@ -169,7 +162,7 @@ export const createPromptFolder = async (
       }
 
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      upsertPromptFolderDraftSnapshot(payload.promptFolder.data)
+      updatePromptFolderDraftSnapshotFromServer(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder create conflict'
   })
@@ -204,7 +197,7 @@ const updatePromptFolder = async (
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      upsertPromptFolderDraftSnapshot(payload.promptFolder.data)
+      updatePromptFolderDraftSnapshotFromServer(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder update conflict'
   })

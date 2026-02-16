@@ -28,15 +28,9 @@ const readLatestPromptFromTransaction = (
   )
 }
 
-const upsertPromptDraftSnapshot = (prompt: Prompt): void => {
-  const existingDraft = promptDraftCollection.get(prompt.id)
-  if (!existingDraft) {
-    promptDraftCollection.insert({
-      id: prompt.id,
-      draftSnapshot: { ...prompt },
-      promptEditorMeasuredHeightsByKey: {}
-    })
-    return
+export const updatePromptDraftSnapshotFromServer = (prompt: Prompt): void => {
+  if (!promptDraftCollection.get(prompt.id)) {
+    throw new Error('Prompt draft not loaded')
   }
 
   promptDraftCollection.update(prompt.id, (draftRecord) => {
@@ -111,7 +105,7 @@ export const createPrompt = async (
       }
 
       promptCollection.utils.upsertAuthoritative(payload.prompt)
-      upsertPromptDraftSnapshot(payload.prompt.data)
+      updatePromptDraftSnapshotFromServer(payload.prompt.data)
     },
     conflictMessage: 'Prompt create conflict'
   })
@@ -167,7 +161,7 @@ export const mutatePacedPromptAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptCollection.utils.upsertAuthoritative(payload.prompt)
-      upsertPromptDraftSnapshot(payload.prompt.data)
+      updatePromptDraftSnapshotFromServer(payload.prompt.data)
     },
     conflictMessage: 'Prompt update conflict'
   })
