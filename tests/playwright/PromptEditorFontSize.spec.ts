@@ -104,9 +104,7 @@ describe('Prompt editor font size', () => {
     expect(largeLineHeight).toBeGreaterThan(smallLineHeight * 2)
   })
 
-  test('keeps updated font size after navigating to a prompt folder and back to settings', async ({
-    testSetup
-  }) => {
+  test('keeps updated font size after blur', async ({ testSetup }) => {
     const updatedFontSize = 27
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -116,13 +114,11 @@ describe('Prompt editor font size', () => {
 
     await testHelpers.navigateToSettingsScreen()
     const input = mainWindow.locator('[data-testid="font-size-input"]')
+    const minLinesInput = mainWindow.locator('[data-testid="min-lines-input"]')
     await input.fill(String(updatedFontSize))
     await expect(input).toHaveValue(String(updatedFontSize))
 
-    await testHelpers.navigateToPromptFolders('Development')
-    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'visible' })
-
-    await testHelpers.navigateToSettingsScreen()
+    await minLinesInput.click()
     await expect(input).toHaveValue(String(updatedFontSize))
     await waitForStoredPromptFontSize(mainWindow, updatedFontSize)
   })

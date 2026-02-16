@@ -1,0 +1,30 @@
+diff --git a/node_modules/@tanstack/db/dist/cjs/local-only.cjs b/node_modules/@tanstack/db/dist/cjs/local-only.cjs
+index ba733f4..0a64f34 100644
+--- a/node_modules/@tanstack/db/dist/cjs/local-only.cjs
++++ b/node_modules/@tanstack/db/dist/cjs/local-only.cjs
+@@ -109,7 +109,9 @@ function createLocalOnlySync(initialData) {
+   return {
+     sync,
+     confirmOperationsSync,
+-    collection
++    get collection() {
++      return collection;
++    }
+   };
+ }
+ exports.localOnlyCollectionOptions = localOnlyCollectionOptions;
+diff --git a/node_modules/@tanstack/db/dist/esm/local-only.js b/node_modules/@tanstack/db/dist/esm/local-only.js
+index 26f34a9..70dd694 100644
+--- a/node_modules/@tanstack/db/dist/esm/local-only.js
++++ b/node_modules/@tanstack/db/dist/esm/local-only.js
+@@ -107,7 +107,9 @@ function createLocalOnlySync(initialData) {
+   return {
+     sync,
+     confirmOperationsSync,
+-    collection
++    get collection() {
++      return collection;
++    }
+   };
+ }
+ export {
