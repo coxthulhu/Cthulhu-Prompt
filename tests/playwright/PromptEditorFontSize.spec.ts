@@ -8,6 +8,16 @@ import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
+async function waitForStoredPromptFontSize(mainWindow: any, value: number): Promise<void> {
+  await mainWindow.waitForFunction((expected) => {
+    const ipc = window.electron?.ipcRenderer
+    if (!ipc?.invoke) return false
+    return ipc.invoke('load-system-settings-playwright-test').then((result) => {
+      return result?.settings?.promptFontSize === expected
+    })
+  }, value)
+}
+
 async function setPromptFontSize(
   mainWindow: any,
   testHelpers: {
@@ -21,13 +31,7 @@ async function setPromptFontSize(
   await input.fill(String(value))
   await expect(input).toHaveValue(String(value))
   await testHelpers.navigateToHomeScreen()
-  await mainWindow.waitForFunction((expected) => {
-    const ipc = window.electron?.ipcRenderer
-    if (!ipc?.invoke) return false
-    return ipc.invoke('load-system-settings-playwright-test').then((result) => {
-      return result?.settings?.promptFontSize === expected
-    })
-  }, value)
+  await waitForStoredPromptFontSize(mainWindow, value)
 }
 
 async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Promise<number> {
@@ -98,5 +102,28 @@ describe('Prompt editor font size', () => {
     const largeLineHeight = await getMonacoLineHeight(mainWindow, rowSelector)
 
     expect(largeLineHeight).toBeGreaterThan(smallLineHeight * 2)
+  })
+
+  test('keeps updated font size after navigating to a prompt folder and back to settings', async ({
+    testSetup
+  }) => {
+    const updatedFontSize = 27
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToSettingsScreen()
+    const input = mainWindow.locator('[data-testid="font-size-input"]')
+    await input.fill(String(updatedFontSize))
+    await expect(input).toHaveValue(String(updatedFontSize))
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'visible' })
+
+    await testHelpers.navigateToSettingsScreen()
+    await expect(input).toHaveValue(String(updatedFontSize))
+    await waitForStoredPromptFontSize(mainWindow, updatedFontSize)
   })
 })
