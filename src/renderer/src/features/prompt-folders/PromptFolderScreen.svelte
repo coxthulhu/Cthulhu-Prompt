@@ -10,7 +10,11 @@
     type PromptDraftRecord,
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
-  import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+  import {
+    createPromptFolderDraftMeasuredHeightKey,
+    type PromptFolderDraftRecord,
+    promptFolderDraftCollection
+  } from '@renderer/data/Collections/PromptFolderDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
   import {
@@ -18,13 +22,7 @@
     deletePrompt
   } from '@renderer/data/Mutations/PromptMutations'
   import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
-  import {
-    getPromptFolderScreenDescriptionText,
-    lookupPromptFolderScreenDescriptionMeasuredHeight,
-    removePromptFolderScreenPrompt,
-    setPromptFolderScreenDescriptionText,
-    syncPromptFolderScreenDescriptionDraft
-  } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftStore.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
@@ -64,6 +62,10 @@
     data: PromptDraftRecord[]
     isLoading: boolean
   }
+  const promptFolderDraftQuery = useLiveQuery(promptFolderDraftCollection) as {
+    data: PromptFolderDraftRecord[]
+    isLoading: boolean
+  }
 
   const promptFolder = $derived.by(() => {
     return promptFolderQuery.data.find((candidate) => candidate.id === promptFolderId) ?? null
@@ -75,8 +77,20 @@
     }
     return draftsById
   })
+  const promptFolderDraftById = $derived.by(() => {
+    const draftsById: Record<string, PromptFolderDraftRecord> = {}
+    for (const draft of promptFolderDraftQuery.data) {
+      draftsById[draft.id] = draft
+    }
+    return draftsById
+  })
+  const promptFolderDraft = $derived(promptFolderDraftById[promptFolderId] ?? null)
   const promptIds = $derived(promptFolder?.promptIds ?? [])
-  const descriptionText = $derived(getPromptFolderScreenDescriptionText(promptFolderId))
+  const descriptionText = $derived(
+    promptFolderDraft?.draftSnapshot.folderDescription ??
+      promptFolder?.folderDescription ??
+      ''
+  )
   const folderDisplayName = $derived(promptFolder?.displayName ?? 'Prompt Folder')
 
   let previousPromptFolderLoadKey = $state<string | null>(null)
@@ -167,13 +181,6 @@
     })()
   })
 
-  // Side effect: keep the folder-description draft state synced with collection updates.
-  $effect(() => {
-    const currentPromptFolder = promptFolder
-    if (!currentPromptFolder) return
-    syncPromptFolderScreenDescriptionDraft(currentPromptFolder)
-  })
-
   // Side effect: reset the virtual window scroll position after folder changes.
   $effect(() => {
     if (!scrollApi) return
@@ -232,6 +239,19 @@
     }
   }
 
+  const lookupPromptFolderDescriptionMeasuredHeight = (
+    widthPx: number,
+    devicePixelRatio: number
+  ): number | null => {
+    const draftRecord = promptFolderDraft
+    if (!draftRecord) {
+      return null
+    }
+
+    const key = createPromptFolderDraftMeasuredHeightKey(widthPx, devicePixelRatio)
+    return draftRecord.descriptionMeasuredHeightsByKey[key] ?? null
+  }
+
   type PromptFolderRow =
     | { kind: 'folder-settings'; isLoading: boolean }
     | { kind: 'prompt-header'; promptCount: number; isLoading: boolean }
@@ -250,11 +270,7 @@
       estimateHeight: () =>
         estimatePromptFolderSettingsHeight(descriptionText, promptFontSize, promptEditorMinLines),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
-        lookupPromptFolderScreenDescriptionMeasuredHeight(
-          promptFolderId,
-          widthPx,
-          devicePixelRatio
-        ),
+        lookupPromptFolderDescriptionMeasuredHeight(widthPx, devicePixelRatio),
       needsOverlayRow: true,
       snippet: folderSettingsRow
     },
@@ -386,7 +402,6 @@
       promptFocusRequest = { promptId, requestId: promptFocusRequestId }
     } catch {
       // Intentionally ignore create errors to keep the UI quiet.
-      removePromptFolderScreenPrompt(promptId)
     } finally {
       isCreatingPrompt = false
     }
@@ -403,10 +418,6 @@
         await deletePrompt(currentPromptFolderId, promptId)
       } catch {
         // Intentionally ignore delete errors to keep the UI quiet.
-      } finally {
-        if (!promptCollection.get(promptId)) {
-          removePromptFolderScreenPrompt(promptId)
-        }
       }
     })()
   }
@@ -434,7 +445,7 @@
   }
 
   const handleDescriptionChange = (text: string, measurement: TextMeasurement) => {
-    setPromptFolderScreenDescriptionText(promptFolderId, text, measurement)
+    setPromptFolderDraftDescription(promptFolderId, text, measurement)
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
@@ -448,8 +459,7 @@
       return baseHeight
     }
 
-    const measuredHeight = lookupPromptFolderScreenDescriptionMeasuredHeight(
-      promptFolderId,
+    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
       viewportMetrics.widthPx,
       viewportMetrics.devicePixelRatio
     )

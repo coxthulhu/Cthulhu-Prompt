@@ -1,130 +1,214 @@
-import { SvelteMap } from 'svelte/reactivity'
 import type { PromptFolder } from '@shared/PromptFolder'
+import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
+import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
-  AUTOSAVE_MS,
-  clearAutosaveTimeout,
-  createAutosaveController,
-  type AutosaveDraft
-} from '@renderer/data/draftAutosave'
-import { updatePromptFolderDescription } from '../Mutations/PromptFolderMutations'
+  createPromptFolderDraftMeasuredHeightKey,
+  type PromptFolderDraftRecord,
+  type PromptFolderDraftSnapshot,
+  promptFolderDraftCollection
+} from '../Collections/PromptFolderDraftCollection'
+import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
+import { mutatePacedPromptFolderAutosaveUpdate } from '../Mutations/PromptFolderMutations'
 
-type PromptFolderDraftSnapshot = {
-  folderDescription: string
+export type PromptFolderDraftState = PromptFolderDraftRecord
+
+const toPromptFolderDraftSnapshot = (
+  promptFolder: PromptFolder
+): PromptFolderDraftSnapshot => ({
+  folderDescription: promptFolder.folderDescription
+})
+
+const haveSamePromptFolderDraftSnapshot = (
+  left: PromptFolderDraftSnapshot,
+  right: PromptFolderDraftSnapshot
+): boolean => {
+  return left.folderDescription === right.folderDescription
 }
 
-type PromptFolderDraftState = {
-  draftSnapshot: PromptFolderDraftSnapshot
-  saveError: string | null
+type PromptFolderDraftOptimisticMutationOptions = {
+  draftOnlyChange?: boolean
+  mutatePromptFolderDraft: (draft: PromptFolderDraftRecord) => void
+  mutatePromptFolder?: (draft: PromptFolder) => void
 }
 
-type PromptFolderDraftEntry = {
-  state: PromptFolderDraftState
-  autosaveDraft: AutosaveDraft
-  saveNow: () => Promise<void>
-  markDirtyAndScheduleAutosave: () => void
-}
+const mutatePromptFolderDraftOptimistically = (
+  promptFolderId: string,
+  options: PromptFolderDraftOptimisticMutationOptions
+): boolean => {
+  const { draftOnlyChange, mutatePromptFolderDraft, mutatePromptFolder } = options
 
-const draftEntriesByPromptFolderId = new SvelteMap<string, PromptFolderDraftEntry>()
-const lastSyncedDescriptionsByPromptFolderId = new SvelteMap<string, string>()
+  return mutatePacedPromptFolderAutosaveUpdate({
+    promptFolderId,
+    debounceMs: AUTOSAVE_MS,
+    draftOnlyChange,
+    mutateOptimistically: ({ collections }) => {
+      collections.promptFolderDraft.update(promptFolderId, (draftRecord) => {
+        mutatePromptFolderDraft(draftRecord)
+        draftRecord.saveError = null
+      })
 
-const createDraftEntry = (promptFolder: PromptFolder): PromptFolderDraftEntry => {
-  const state = $state<PromptFolderDraftState>({
-    draftSnapshot: {
-      folderDescription: promptFolder.folderDescription
-    },
-    saveError: null
-  })
-
-  const autosaveDraft = $state<AutosaveDraft>({
-    dirty: false,
-    saving: false,
-    autosaveTimeoutId: null
-  })
-
-  const autosave = createAutosaveController({
-    draft: autosaveDraft,
-    autosaveMs: AUTOSAVE_MS,
-    save: async () => {
-      const descriptionToSave = state.draftSnapshot.folderDescription
-      state.saveError = null
-      await updatePromptFolderDescription(promptFolder.id, descriptionToSave)
-      autosaveDraft.dirty = false
+      if (mutatePromptFolder) {
+        collections.promptFolder.update(promptFolderId, mutatePromptFolder)
+      }
     }
   })
-
-  const saveNow = async (): Promise<void> => {
-    try {
-      await autosave.saveNow()
-    } catch (error) {
-      state.saveError = error instanceof Error ? error.message : 'Failed to update prompt folder.'
-      throw error
-    }
-  }
-
-  return {
-    state,
-    autosaveDraft,
-    saveNow,
-    markDirtyAndScheduleAutosave: autosave.markDirtyAndScheduleAutosave
-  }
 }
 
-export const syncPromptFolderDescriptionDraft = (promptFolder: PromptFolder): void => {
-  const existingEntry = draftEntriesByPromptFolderId.get(promptFolder.id)
+const applyDescriptionMeasurementUpdate = (
+  draftRecord: PromptFolderDraftRecord,
+  measurement: TextMeasurement,
+  textChanged: boolean
+): void => {
+  const key = createPromptFolderDraftMeasuredHeightKey(
+    measurement.widthPx,
+    measurement.devicePixelRatio
+  )
 
-  if (!existingEntry) {
-    draftEntriesByPromptFolderId.set(promptFolder.id, createDraftEntry(promptFolder))
-    lastSyncedDescriptionsByPromptFolderId.set(promptFolder.id, promptFolder.folderDescription)
+  if (textChanged) {
+    if (measurement.measuredHeightPx == null) {
+      draftRecord.descriptionMeasuredHeightsByKey = {}
+      return
+    }
+
+    draftRecord.descriptionMeasuredHeightsByKey = {
+      [key]: measurement.measuredHeightPx
+    }
     return
   }
 
-  const lastSyncedDescription = lastSyncedDescriptionsByPromptFolderId.get(promptFolder.id)
-
-  if (lastSyncedDescription === promptFolder.folderDescription) {
+  if (measurement.measuredHeightPx == null) {
     return
   }
 
-  lastSyncedDescriptionsByPromptFolderId.set(promptFolder.id, promptFolder.folderDescription)
-  clearAutosaveTimeout(existingEntry.autosaveDraft)
-  existingEntry.state.draftSnapshot.folderDescription = promptFolder.folderDescription
-  existingEntry.state.saveError = null
-  existingEntry.autosaveDraft.dirty = false
+  draftRecord.descriptionMeasuredHeightsByKey[key] = measurement.measuredHeightPx
+}
+
+export const upsertPromptFolderDraft = (promptFolder: PromptFolder): void => {
+  upsertPromptFolderDrafts([promptFolder])
+}
+
+export const upsertPromptFolderDrafts = (
+  promptFolders: PromptFolder[]
+): void => {
+  if (promptFolders.length === 0) {
+    return
+  }
+
+  const draftInserts: PromptFolderDraftRecord[] = []
+  const draftUpdatesById: Record<string, PromptFolderDraftSnapshot> = {}
+  const draftUpdateIds: string[] = []
+
+  for (const promptFolder of promptFolders) {
+    const nextSnapshot = toPromptFolderDraftSnapshot(promptFolder)
+    const existingRecord = promptFolderDraftCollection.get(promptFolder.id)
+
+    if (!existingRecord) {
+      draftInserts.push({
+        id: promptFolder.id,
+        draftSnapshot: nextSnapshot,
+        saveError: null,
+        descriptionMeasuredHeightsByKey: {}
+      })
+      continue
+    }
+
+    if (haveSamePromptFolderDraftSnapshot(existingRecord.draftSnapshot, nextSnapshot)) {
+      continue
+    }
+
+    if (!draftUpdatesById[promptFolder.id]) {
+      draftUpdateIds.push(promptFolder.id)
+    }
+    draftUpdatesById[promptFolder.id] = nextSnapshot
+  }
+
+  if (draftInserts.length > 0) {
+    promptFolderDraftCollection.insert(draftInserts)
+  }
+
+  if (draftUpdateIds.length > 0) {
+    promptFolderDraftCollection.update(draftUpdateIds, (draftRecords) => {
+      for (const draftRecord of draftRecords) {
+        const nextSnapshot = draftUpdatesById[draftRecord.id]
+        if (!nextSnapshot) {
+          continue
+        }
+
+        draftRecord.draftSnapshot = nextSnapshot
+        draftRecord.saveError = null
+      }
+    })
+  }
 }
 
 export const getPromptFolderDraftState = (
   promptFolderId: string
-): PromptFolderDraftState | null => {
-  return draftEntriesByPromptFolderId.get(promptFolderId)?.state ?? null
+): PromptFolderDraftState => {
+  return promptFolderDraftCollection.get(promptFolderId)!
 }
 
 export const setPromptFolderDraftDescription = (
   promptFolderId: string,
-  folderDescription: string
+  folderDescription: string,
+  measurement: TextMeasurement
 ): void => {
-  const entry = draftEntriesByPromptFolderId.get(promptFolderId)
+  const draftRecord = getPromptFolderDraftState(promptFolderId)
+  const textChanged = draftRecord.draftSnapshot.folderDescription !== folderDescription
 
-  if (!entry || entry.state.draftSnapshot.folderDescription === folderDescription) {
+  if (!textChanged) {
+    const didUpdateOpenTransaction = mutatePromptFolderDraftOptimistically(promptFolderId, {
+      draftOnlyChange: true,
+      mutatePromptFolderDraft: (draft) => {
+        applyDescriptionMeasurementUpdate(draft, measurement, false)
+      }
+    })
+
+    if (!didUpdateOpenTransaction) {
+      promptFolderDraftCollection.update(promptFolderId, (draft) => {
+        applyDescriptionMeasurementUpdate(draft, measurement, false)
+      })
+    }
+
     return
   }
 
-  entry.state.draftSnapshot.folderDescription = folderDescription
-  entry.state.saveError = null
-  entry.markDirtyAndScheduleAutosave()
+  mutatePromptFolderDraftOptimistically(promptFolderId, {
+    mutatePromptFolderDraft: (draft) => {
+      draft.draftSnapshot.folderDescription = folderDescription
+      applyDescriptionMeasurementUpdate(draft, measurement, true)
+    },
+    mutatePromptFolder: (draft) => {
+      draft.folderDescription = folderDescription
+    }
+  })
+}
+
+export const deletePromptFolderDrafts = (
+  promptFolderIds: string[]
+): void => {
+  if (promptFolderIds.length === 0) {
+    return
+  }
+
+  promptFolderDraftCollection.delete(promptFolderIds)
+}
+
+export const removePromptFolderDraft = (promptFolderId: string): void => {
+  deletePromptFolderDrafts([promptFolderId])
 }
 
 export const flushPromptFolderDraftAutosaves = async (): Promise<void> => {
-  const tasks = Array.from(draftEntriesByPromptFolderId.values(), (entry) => {
-    clearAutosaveTimeout(entry.autosaveDraft)
-    return entry.saveNow()
+  const tasks = promptFolderDraftCollection.toArray.map(async (draftRecord) => {
+    await submitPacedUpdateTransactionAndWait(promptFolderCollection.id, draftRecord.id)
   })
   await Promise.allSettled(tasks)
 }
 
 export const clearPromptFolderDraftStore = (): void => {
-  for (const entry of draftEntriesByPromptFolderId.values()) {
-    clearAutosaveTimeout(entry.autosaveDraft)
-  }
-
-  draftEntriesByPromptFolderId.clear()
-  lastSyncedDescriptionsByPromptFolderId.clear()
+  const draftIds = Array.from(
+    promptFolderDraftCollection.keys(),
+    (draftId) => String(draftId)
+  )
+  deletePromptFolderDrafts(draftIds)
 }

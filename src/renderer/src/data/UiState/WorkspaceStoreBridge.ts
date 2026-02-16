@@ -7,7 +7,6 @@ import {
   flushPromptDraftAutosaves
 } from './PromptDraftStore.svelte.ts'
 import { saveSystemSettingsDraftNow } from './SystemSettingsAutosave.svelte.ts'
-import { clearPromptFolderScreenState } from './PromptFolderScreenData.svelte.ts'
 
 let currentWorkspacePath: string | null = null
 let switchQueue: Promise<void> = Promise.resolve()
@@ -31,7 +30,6 @@ export const switchWorkspaceStoreBridge = async (
     // Side effect: reset workspace-scoped draft/screen state after the workspace path changes.
     clearPromptFolderDraftStore()
     clearPromptDraftStore()
-    clearPromptFolderScreenState()
   })
 
   switchQueue = task

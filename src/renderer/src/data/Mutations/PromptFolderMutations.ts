@@ -3,12 +3,113 @@ import type {
   CreatePromptFolderResponsePayload,
   PromptFolder,
   PromptFolderRevisionPayload,
-  PromptFolderRevisionResponsePayload,
+  PromptFolderRevisionResponsePayload
 } from '@shared/PromptFolder'
+import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import {
+  mutatePacedRevisionUpdateTransaction,
+  runRevisionMutation
+} from '../IpcFramework/RevisionCollections'
+import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+
+const readLatestPromptFolderFromTransaction = (
+  transaction: Transaction<any>,
+  promptFolderId: string
+): PromptFolder => {
+  return getLatestMutationModifiedRecord(
+    transaction,
+    promptFolderCollection.id,
+    promptFolderId,
+    () => promptFolderCollection.get(promptFolderId)!
+  )
+}
+
+const upsertPromptFolderDraftSnapshot = (promptFolder: PromptFolder): void => {
+  const existingDraft = promptFolderDraftCollection.get(promptFolder.id)
+  if (!existingDraft) {
+    promptFolderDraftCollection.insert({
+      id: promptFolder.id,
+      draftSnapshot: {
+        folderDescription: promptFolder.folderDescription
+      },
+      saveError: null,
+      descriptionMeasuredHeightsByKey: {}
+    })
+    return
+  }
+
+  promptFolderDraftCollection.update(promptFolder.id, (draftRecord) => {
+    draftRecord.draftSnapshot.folderDescription = promptFolder.folderDescription
+    draftRecord.saveError = null
+  })
+}
+
+type PacedPromptFolderMutationOptions = Parameters<
+  typeof mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>
+>[0]
+
+type PacedPromptFolderAutosaveUpdateOptions = Pick<
+  PacedPromptFolderMutationOptions,
+  'debounceMs' | 'mutateOptimistically' | 'draftOnlyChange'
+> & {
+  promptFolderId: string
+}
+
+export const mutatePacedPromptFolderAutosaveUpdate = ({
+  promptFolderId,
+  debounceMs,
+  mutateOptimistically,
+  draftOnlyChange
+}: PacedPromptFolderAutosaveUpdateOptions): boolean => {
+  return mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
+    collectionId: promptFolderCollection.id,
+    elementId: promptFolderId,
+    debounceMs,
+    mutateOptimistically,
+    draftOnlyChange,
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const latestPromptFolder = readLatestPromptFolderFromTransaction(
+        transaction,
+        promptFolderId
+      )
+
+      try {
+        const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
+          'update-prompt-folder',
+          {
+            payload: {
+              promptFolder: entities.promptFolder({
+                id: promptFolderId,
+                data: latestPromptFolder
+              })
+            }
+          }
+        )
+
+        if (!mutationResult.success) {
+          console.error(
+            'Failed to update prompt folder:',
+            mutationResult.conflict ? 'Prompt folder update conflict' : mutationResult.error
+          )
+        }
+
+        return mutationResult
+      } catch (error) {
+        console.error('Failed to update prompt folder:', error)
+        throw error
+      }
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      upsertPromptFolderDraftSnapshot(payload.promptFolder.data)
+    },
+    conflictMessage: 'Prompt folder update conflict'
+  })
+}
 
 export const createPromptFolder = async (
   workspaceId: string,
@@ -36,6 +137,14 @@ export const createPromptFolder = async (
         promptIds: [],
         folderDescription: ''
       })
+      collections.promptFolderDraft.insert({
+        id: optimisticPromptFolderId,
+        draftSnapshot: {
+          folderDescription: ''
+        },
+        saveError: null,
+        descriptionMeasuredHeightsByKey: {}
+      })
       collections.workspace.update(workspaceId, (draft) => {
         draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]
       })
@@ -60,6 +169,7 @@ export const createPromptFolder = async (
       }
 
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      upsertPromptFolderDraftSnapshot(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder create conflict'
   })
@@ -94,6 +204,7 @@ const updatePromptFolder = async (
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      upsertPromptFolderDraftSnapshot(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder update conflict'
   })
