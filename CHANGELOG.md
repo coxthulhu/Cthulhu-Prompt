@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.6
+
+### Changes
+
+- Refactored the TanStack data and IPC layers into a unified typed revision/update flow and removed legacy duplicate paths.
+- Migrated prompt, prompt-folder, and system-settings drafts to paced autosave transactions with local-only draft collections and improved optimistic mutation handling.
+
+### Fixed
+
+- Enforced a strict draft-sync contract so server updates only apply to already-loaded drafts.
+- Patched local-only mutation acceptance for system settings to improve blur/save persistence consistency.
+- Added regression coverage for prompt editor font-size persistence.
+
 ## 0.0.5
 
 ### New Features
