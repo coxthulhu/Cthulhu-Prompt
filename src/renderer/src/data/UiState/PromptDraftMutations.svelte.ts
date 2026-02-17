@@ -33,7 +33,6 @@ const haveSamePrompt = (left: Prompt, right: Prompt): boolean => {
 }
 
 type PromptDraftOptimisticMutationOptions = {
-  draftOnlyChange?: boolean
   mutatePromptDraft: (draft: PromptDraftRecord) => void
   mutatePrompt?: (draft: Prompt) => void
 }
@@ -42,12 +41,12 @@ const mutatePromptDraftOptimistically = (
   promptId: string,
   options: PromptDraftOptimisticMutationOptions
 ): void => {
-  const { draftOnlyChange, mutatePromptDraft, mutatePrompt } = options
+  const { mutatePromptDraft, mutatePrompt } = options
 
   mutatePacedPromptAutosaveUpdate({
     promptId,
     debounceMs: AUTOSAVE_MS,
-    draftOnlyChange,
+    draftOnlyChange: mutatePrompt == null,
     mutateOptimistically: ({ collections }) => {
       collections.promptDraft.update(promptId, mutatePromptDraft)
 
@@ -170,7 +169,6 @@ export const setPromptDraftText = (
 
   if (!textChanged) {
     mutatePromptDraftOptimistically(promptId, {
-      draftOnlyChange: true,
       mutatePromptDraft: (draft) => {
         applyPromptMeasurementUpdate(draft, measurement, false)
       }

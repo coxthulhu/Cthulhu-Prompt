@@ -24,7 +24,6 @@ const haveSamePromptFolderDescription = (
 }
 
 type PromptFolderDraftOptimisticMutationOptions = {
-  draftOnlyChange?: boolean
   mutatePromptFolderDraft: (draft: PromptFolderDraftRecord) => void
   mutatePromptFolder?: (draft: PromptFolder) => void
 }
@@ -33,12 +32,12 @@ const mutatePromptFolderDraftOptimistically = (
   promptFolderId: string,
   options: PromptFolderDraftOptimisticMutationOptions
 ): void => {
-  const { draftOnlyChange, mutatePromptFolderDraft, mutatePromptFolder } = options
+  const { mutatePromptFolderDraft, mutatePromptFolder } = options
 
   mutatePacedPromptFolderAutosaveUpdate({
     promptFolderId,
     debounceMs: AUTOSAVE_MS,
-    draftOnlyChange,
+    draftOnlyChange: mutatePromptFolder == null,
     mutateOptimistically: ({ collections }) => {
       collections.promptFolderDraft.update(promptFolderId, (draftRecord) => {
         mutatePromptFolderDraft(draftRecord)
@@ -152,7 +151,6 @@ export const setPromptFolderDraftDescription = (
 
   if (!textChanged) {
     mutatePromptFolderDraftOptimistically(promptFolderId, {
-      draftOnlyChange: true,
       mutatePromptFolderDraft: (draft) => {
         applyDescriptionMeasurementUpdate(draft, measurement, false)
       }
