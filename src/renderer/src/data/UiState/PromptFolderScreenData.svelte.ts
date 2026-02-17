@@ -4,7 +4,7 @@ import {
   getPromptDraftState,
   setPromptDraftText,
   setPromptDraftTitle
-} from './PromptDraftStore.svelte.ts'
+} from './PromptDraftMutations.svelte.ts'
 
 type PromptFolderScreenPromptDraft = {
   title: string
@@ -28,8 +28,8 @@ export const getPromptFolderScreenPromptData = (
   const promptDraftState = getPromptDraftState(promptId)
   return {
     draft: {
-      title: promptDraftState.draftSnapshot.title,
-      text: promptDraftState.draftSnapshot.promptText
+      title: promptDraftState.title,
+      text: promptDraftState.promptText
     },
     promptFolderCount: getPromptFolderCount(promptId),
     setTitle: (title: string) => {

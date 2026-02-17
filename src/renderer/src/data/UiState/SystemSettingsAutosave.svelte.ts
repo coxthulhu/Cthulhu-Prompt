@@ -63,15 +63,15 @@ const getSystemSettingsDraftRecordFromTransaction = (
 const readValidatedSystemSettings = (
   draftRecord: SystemSettingsDraftRecord
 ): SystemSettings | null => {
-  const validation = getSystemSettingsValidation(draftRecord.draftSnapshot)
+  const validation = getSystemSettingsValidation(draftRecord)
   if (validation.fontSizeError || validation.minLinesError) {
     return null
   }
 
   return {
-    promptFontSize: normalizePromptFontSizeInput(draftRecord.draftSnapshot.promptFontSizeInput).rounded,
+    promptFontSize: normalizePromptFontSizeInput(draftRecord.promptFontSizeInput).rounded,
     promptEditorMinLines: normalizePromptEditorMinLinesInput(
-      draftRecord.draftSnapshot.promptEditorMinLinesInput
+      draftRecord.promptEditorMinLinesInput
     ).rounded
   }
 }
@@ -84,7 +84,6 @@ export const mutateSystemSettingsDraftWithAutosave = (
     mutateOptimistically: ({ collections }) => {
       collections.systemSettingsDraft.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
         applyDraftUpdate(draftRecord)
-        draftRecord.saveError = null
       })
     },
     validateBeforeEnqueue: (transaction) => {
@@ -100,8 +99,9 @@ export const mutateSystemSettingsDraftWithAutosave = (
           draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
         })
         systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-          draftRecord.draftSnapshot = toSystemSettingsDraftSnapshot(validatedSettings)
-          draftRecord.saveError = null
+          const nextDraftSnapshot = toSystemSettingsDraftSnapshot(validatedSettings)
+          draftRecord.promptFontSizeInput = nextDraftSnapshot.promptFontSizeInput
+          draftRecord.promptEditorMinLinesInput = nextDraftSnapshot.promptEditorMinLinesInput
         })
       })
 

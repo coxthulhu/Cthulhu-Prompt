@@ -8,7 +8,7 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import {
   deletePromptFolderDrafts,
   upsertPromptFolderDrafts
-} from '../UiState/PromptFolderDraftStore.svelte.ts'
+} from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 export const loadWorkspaceByPath = async (workspacePath: string): Promise<string> => {

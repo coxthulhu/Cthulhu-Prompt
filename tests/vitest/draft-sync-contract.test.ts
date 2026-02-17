@@ -8,9 +8,9 @@ import {
   SYSTEM_SETTINGS_DRAFT_ID,
   systemSettingsDraftCollection
 } from '@renderer/data/Collections/SystemSettingsDraftCollection'
-import { upsertPromptDraft } from '@renderer/data/UiState/PromptDraftStore.svelte.ts'
-import { upsertPromptFolderDraft } from '@renderer/data/UiState/PromptFolderDraftStore.svelte.ts'
-import { upsertSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
+import { upsertPromptDraft } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+import { upsertPromptFolderDraft } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
+import { upsertSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
 
 const clearPromptDraftCollection = (): void => {
   const draftIds = Array.from(promptDraftCollection.keys(), (draftId) => String(draftId))
@@ -89,11 +89,11 @@ describe('draft sync contract', () => {
     upsertPromptDraft(updatedPrompt)
 
     const draftRecord = promptDraftCollection.get(prompt.id)!
-    expect(draftRecord.draftSnapshot).toEqual(updatedPrompt)
+    expect(draftRecord).toMatchObject(updatedPrompt)
     expect(draftRecord.promptEditorMeasuredHeightsByKey).toEqual({ '640:1': 200 })
   })
 
-  it('upserts prompt-folder drafts, clears saveError, and preserves measured heights', () => {
+  it('upserts prompt-folder drafts and preserves measured heights', () => {
     const promptFolder = createPromptFolder()
     const updatedPromptFolder = createPromptFolder({
       folderDescription: 'Updated folder description'
@@ -102,27 +102,22 @@ describe('draft sync contract', () => {
     upsertPromptFolderDraft(promptFolder)
 
     promptFolderDraftCollection.update(promptFolder.id, (draftRecord) => {
-      draftRecord.saveError = 'Previous save failed'
       draftRecord.descriptionMeasuredHeightsByKey = { '640:1': 120 }
     })
 
     upsertPromptFolderDraft(updatedPromptFolder)
 
     const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
-    expect(draftRecord.draftSnapshot).toEqual({
-      folderDescription: 'Updated folder description'
-    })
-    expect(draftRecord.saveError).toBeNull()
+    expect(draftRecord.folderDescription).toBe('Updated folder description')
     expect(draftRecord.descriptionMeasuredHeightsByKey).toEqual({ '640:1': 120 })
   })
 
-  it('upserts the system-settings draft and clears saveError', () => {
+  it('upserts the system-settings draft', () => {
     upsertSystemSettingsDraft(createSystemSettings())
 
     systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-      draftRecord.saveError = 'Previous save failed'
-      draftRecord.draftSnapshot.promptFontSizeInput = '18'
-      draftRecord.draftSnapshot.promptEditorMinLinesInput = '5'
+      draftRecord.promptFontSizeInput = '18'
+      draftRecord.promptEditorMinLinesInput = '5'
     })
 
     upsertSystemSettingsDraft(
@@ -133,10 +128,7 @@ describe('draft sync contract', () => {
     )
 
     const draftRecord = systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
-    expect(draftRecord.draftSnapshot).toEqual({
-      promptFontSizeInput: '19',
-      promptEditorMinLinesInput: '6'
-    })
-    expect(draftRecord.saveError).toBeNull()
+    expect(draftRecord.promptFontSizeInput).toBe('19')
+    expect(draftRecord.promptEditorMinLinesInput).toBe('6')
   })
 })

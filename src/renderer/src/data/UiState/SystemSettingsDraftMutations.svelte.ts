@@ -1,6 +1,7 @@
 import type { SystemSettings } from '@shared/SystemSettings'
 import {
   SYSTEM_SETTINGS_DRAFT_ID,
+  type SystemSettingsDraftRecord,
   systemSettingsDraftCollection
 } from '../Collections/SystemSettingsDraftCollection'
 import {
@@ -8,7 +9,6 @@ import {
   mutateSystemSettingsDraftWithAutosave
 } from './SystemSettingsAutosave.svelte.ts'
 import {
-  type SystemSettingsDraftSnapshot,
   toSystemSettingsDraftSnapshot
 } from './SystemSettingsFormat'
 
@@ -19,30 +19,30 @@ export const upsertSystemSettingsDraft = (settings: SystemSettings): void => {
   if (!existingRecord) {
     systemSettingsDraftCollection.insert({
       id: SYSTEM_SETTINGS_DRAFT_ID,
-      draftSnapshot: nextSnapshot,
-      saveError: null
+      promptFontSizeInput: nextSnapshot.promptFontSizeInput,
+      promptEditorMinLinesInput: nextSnapshot.promptEditorMinLinesInput
     })
     return
   }
 
   systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-    draftRecord.draftSnapshot = nextSnapshot
-    draftRecord.saveError = null
+    draftRecord.promptFontSizeInput = nextSnapshot.promptFontSizeInput
+    draftRecord.promptEditorMinLinesInput = nextSnapshot.promptEditorMinLinesInput
   })
 }
 
 const updateSystemSettingsDraftInput = (
   value: string,
-  selectInput: (snapshot: SystemSettingsDraftSnapshot) => string,
-  applyInput: (snapshot: SystemSettingsDraftSnapshot, value: string) => void
+  selectInput: (draftRecord: SystemSettingsDraftRecord) => string,
+  applyInput: (draftRecord: SystemSettingsDraftRecord, value: string) => void
 ): void => {
   const draftRecord = getSystemSettingsDraftRecord()
-  if (selectInput(draftRecord.draftSnapshot) === value) {
+  if (selectInput(draftRecord) === value) {
     return
   }
 
   mutateSystemSettingsDraftWithAutosave((nextDraftRecord) => {
-    applyInput(nextDraftRecord.draftSnapshot, value)
+    applyInput(nextDraftRecord, value)
   })
 }
 

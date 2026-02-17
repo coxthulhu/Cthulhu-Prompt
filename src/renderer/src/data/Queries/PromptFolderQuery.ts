@@ -9,8 +9,8 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import {
   deletePromptDrafts,
   upsertPromptDrafts
-} from '../UiState/PromptDraftStore.svelte.ts'
-import { upsertPromptFolderDraft } from '../UiState/PromptFolderDraftStore.svelte.ts'
+} from '../UiState/PromptDraftMutations.svelte.ts'
+import { upsertPromptFolderDraft } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 
 export const loadPromptFolderInitial = async (
   workspaceId: string,

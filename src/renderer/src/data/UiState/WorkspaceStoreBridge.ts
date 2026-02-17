@@ -1,11 +1,11 @@
 import {
   clearPromptFolderDraftStore,
   flushPromptFolderDraftAutosaves
-} from './PromptFolderDraftStore.svelte.ts'
+} from './PromptFolderDraftMutations.svelte.ts'
 import {
   clearPromptDraftStore,
   flushPromptDraftAutosaves
-} from './PromptDraftStore.svelte.ts'
+} from './PromptDraftMutations.svelte.ts'
 import { saveSystemSettingsDraftNow } from './SystemSettingsAutosave.svelte.ts'
 
 let currentWorkspacePath: string | null = null

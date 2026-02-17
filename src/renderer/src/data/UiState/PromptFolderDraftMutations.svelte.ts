@@ -4,7 +4,6 @@ import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
   createPromptFolderDraftMeasuredHeightKey,
   type PromptFolderDraftRecord,
-  type PromptFolderDraftSnapshot,
   promptFolderDraftCollection
 } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -13,17 +12,15 @@ import { mutatePacedPromptFolderAutosaveUpdate } from '../Mutations/PromptFolder
 
 export type PromptFolderDraftState = PromptFolderDraftRecord
 
-const toPromptFolderDraftSnapshot = (
-  promptFolder: PromptFolder
-): PromptFolderDraftSnapshot => ({
-  folderDescription: promptFolder.folderDescription
-})
+const toPromptFolderDescription = (promptFolder: PromptFolder): string => {
+  return promptFolder.folderDescription
+}
 
-const haveSamePromptFolderDraftSnapshot = (
-  left: PromptFolderDraftSnapshot,
-  right: PromptFolderDraftSnapshot
+const haveSamePromptFolderDescription = (
+  left: string,
+  right: string
 ): boolean => {
-  return left.folderDescription === right.folderDescription
+  return left === right
 }
 
 type PromptFolderDraftOptimisticMutationOptions = {
@@ -45,7 +42,6 @@ const mutatePromptFolderDraftOptimistically = (
     mutateOptimistically: ({ collections }) => {
       collections.promptFolderDraft.update(promptFolderId, (draftRecord) => {
         mutatePromptFolderDraft(draftRecord)
-        draftRecord.saveError = null
       })
 
       if (mutatePromptFolder) {
@@ -96,31 +92,30 @@ export const upsertPromptFolderDrafts = (
   }
 
   const draftInserts: PromptFolderDraftRecord[] = []
-  const draftUpdatesById: Record<string, PromptFolderDraftSnapshot> = {}
+  const draftUpdatesById: Record<string, string> = {}
   const draftUpdateIds: string[] = []
 
   for (const promptFolder of promptFolders) {
-    const nextSnapshot = toPromptFolderDraftSnapshot(promptFolder)
+    const nextDescription = toPromptFolderDescription(promptFolder)
     const existingRecord = promptFolderDraftCollection.get(promptFolder.id)
 
     if (!existingRecord) {
       draftInserts.push({
         id: promptFolder.id,
-        draftSnapshot: nextSnapshot,
-        saveError: null,
+        folderDescription: nextDescription,
         descriptionMeasuredHeightsByKey: {}
       })
       continue
     }
 
-    if (haveSamePromptFolderDraftSnapshot(existingRecord.draftSnapshot, nextSnapshot)) {
+    if (haveSamePromptFolderDescription(existingRecord.folderDescription, nextDescription)) {
       continue
     }
 
     if (!draftUpdatesById[promptFolder.id]) {
       draftUpdateIds.push(promptFolder.id)
     }
-    draftUpdatesById[promptFolder.id] = nextSnapshot
+    draftUpdatesById[promptFolder.id] = nextDescription
   }
 
   if (draftInserts.length > 0) {
@@ -130,13 +125,12 @@ export const upsertPromptFolderDrafts = (
   if (draftUpdateIds.length > 0) {
     promptFolderDraftCollection.update(draftUpdateIds, (draftRecords) => {
       for (const draftRecord of draftRecords) {
-        const nextSnapshot = draftUpdatesById[draftRecord.id]
-        if (!nextSnapshot) {
+        const nextDescription = draftUpdatesById[draftRecord.id]
+        if (nextDescription == null) {
           continue
         }
 
-        draftRecord.draftSnapshot = nextSnapshot
-        draftRecord.saveError = null
+        draftRecord.folderDescription = nextDescription
       }
     })
   }
@@ -154,7 +148,7 @@ export const setPromptFolderDraftDescription = (
   measurement: TextMeasurement
 ): void => {
   const draftRecord = getPromptFolderDraftState(promptFolderId)
-  const textChanged = draftRecord.draftSnapshot.folderDescription !== folderDescription
+  const textChanged = draftRecord.folderDescription !== folderDescription
 
   if (!textChanged) {
     const didUpdateOpenTransaction = mutatePromptFolderDraftOptimistically(promptFolderId, {
@@ -175,7 +169,7 @@ export const setPromptFolderDraftDescription = (
 
   mutatePromptFolderDraftOptimistically(promptFolderId, {
     mutatePromptFolderDraft: (draft) => {
-      draft.draftSnapshot.folderDescription = folderDescription
+      draft.folderDescription = folderDescription
       applyDescriptionMeasurementUpdate(draft, measurement, true)
     },
     mutatePromptFolder: (draft) => {

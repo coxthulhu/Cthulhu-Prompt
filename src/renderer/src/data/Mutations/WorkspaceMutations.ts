@@ -8,8 +8,8 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { removePromptFolderDraft } from '../UiState/PromptFolderDraftStore.svelte.ts'
-import { removePromptDraft } from '../UiState/PromptDraftStore.svelte.ts'
+import { removePromptFolderDraft } from '../UiState/PromptFolderDraftMutations.svelte.ts'
+import { removePromptDraft } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   getSelectedWorkspaceId,
   setSelectedWorkspaceId

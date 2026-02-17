@@ -122,10 +122,7 @@ export const createPromptFolder = async (
       })
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
-        draftSnapshot: {
-          folderDescription: ''
-        },
-        saveError: null,
+        folderDescription: '',
         descriptionMeasuredHeightsByKey: {}
       })
       collections.workspace.update(workspaceId, (draft) => {
@@ -180,8 +177,7 @@ const updatePromptFolder = async (
         draft.folderDescription = promptFolder.folderDescription
       })
       collections.promptFolderDraft.update(promptFolder.id, (draftRecord) => {
-        draftRecord.draftSnapshot.folderDescription = promptFolder.folderDescription
-        draftRecord.saveError = null
+        draftRecord.folderDescription = promptFolder.folderDescription
       })
     },
     persistMutations: async ({ entities, invoke, transaction }) => {

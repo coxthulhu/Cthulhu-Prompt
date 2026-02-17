@@ -106,14 +106,13 @@ export const upsertPromptDrafts = (prompts: Prompt[]): void => {
 
     if (!existingRecord) {
       draftInserts.push({
-        id: prompt.id,
-        draftSnapshot: promptSnapshot,
+        ...promptSnapshot,
         promptEditorMeasuredHeightsByKey: {}
       })
       continue
     }
 
-    if (haveSamePrompt(existingRecord.draftSnapshot, promptSnapshot)) {
+    if (haveSamePrompt(existingRecord, promptSnapshot)) {
       continue
     }
 
@@ -135,7 +134,7 @@ export const upsertPromptDrafts = (prompts: Prompt[]): void => {
           continue
         }
 
-        draftRecord.draftSnapshot = nextSnapshot
+        Object.assign(draftRecord, nextSnapshot)
       }
     })
   }
@@ -147,13 +146,13 @@ export const getPromptDraftState = (promptId: string): PromptDraftState => {
 
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
   const draftRecord = getPromptDraftState(promptId)
-  if (draftRecord.draftSnapshot.title === title) {
+  if (draftRecord.title === title) {
     return
   }
 
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
-      draft.draftSnapshot.title = title
+      draft.title = title
     },
     mutatePrompt: (draft) => {
       draft.title = title
@@ -167,7 +166,7 @@ export const setPromptDraftText = (
   measurement: TextMeasurement
 ): void => {
   const draftRecord = getPromptDraftState(promptId)
-  const textChanged = draftRecord.draftSnapshot.promptText !== promptText
+  const textChanged = draftRecord.promptText !== promptText
 
   if (!textChanged) {
     const didUpdateOpenTransaction = mutatePromptDraftOptimistically(promptId, {
@@ -188,7 +187,7 @@ export const setPromptDraftText = (
 
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
-      draft.draftSnapshot.promptText = promptText
+      draft.promptText = promptText
       applyPromptMeasurementUpdate(draft, measurement, true)
     },
     mutatePrompt: (draft) => {

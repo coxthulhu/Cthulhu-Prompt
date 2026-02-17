@@ -71,8 +71,8 @@
     return {
       ...basePromptData,
       draft: {
-        title: promptDraftRecord.draftSnapshot.title,
-        text: promptDraftRecord.draftSnapshot.promptText
+        title: promptDraftRecord.title,
+        text: promptDraftRecord.promptText
       }
     }
   })

@@ -49,8 +49,7 @@ export const createPrompt = async (
 
       collections.prompt.insert(optimisticPrompt)
       collections.promptDraft.insert({
-        id: optimisticPrompt.id,
-        draftSnapshot: optimisticPrompt,
+        ...optimisticPrompt,
         promptEditorMeasuredHeightsByKey: {}
       })
 

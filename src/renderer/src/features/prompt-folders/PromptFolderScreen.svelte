@@ -22,7 +22,7 @@
     deletePrompt
   } from '@renderer/data/Mutations/PromptMutations'
   import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
-  import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftStore.svelte.ts'
+  import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
@@ -87,9 +87,7 @@
   const promptFolderDraft = $derived(promptFolderDraftById[promptFolderId] ?? null)
   const promptIds = $derived(promptFolder?.promptIds ?? [])
   const descriptionText = $derived(
-    promptFolderDraft?.draftSnapshot.folderDescription ??
-      promptFolder?.folderDescription ??
-      ''
+    promptFolderDraft?.folderDescription ?? promptFolder?.folderDescription ?? ''
   )
   const folderDisplayName = $derived(promptFolder?.displayName ?? 'Prompt Folder')
 
@@ -290,7 +288,7 @@
     'prompt-editor': {
       estimateHeight: (row, widthPx, heightPx) =>
         estimatePromptEditorHeight(
-          promptDraftById[row.promptId]!.draftSnapshot.promptText,
+          promptDraftById[row.promptId]!.promptText,
           widthPx,
           heightPx,
           promptFontSize,

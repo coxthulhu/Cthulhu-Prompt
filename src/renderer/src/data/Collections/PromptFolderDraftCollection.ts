@@ -11,14 +11,9 @@ export const createPromptFolderDraftMeasuredHeightKey = (
   return `${widthPx}:${roundDevicePixelRatio(devicePixelRatio)}`
 }
 
-export type PromptFolderDraftSnapshot = {
-  folderDescription: string
-}
-
 export type PromptFolderDraftRecord = {
   id: string
-  draftSnapshot: PromptFolderDraftSnapshot
-  saveError: string | null
+  folderDescription: string
   // Mirrors measuredHeightCache for prompt folder description.
   descriptionMeasuredHeightsByKey: Record<string, number>
 }

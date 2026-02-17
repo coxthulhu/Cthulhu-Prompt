@@ -10,7 +10,7 @@
   import {
     setSystemSettingsDraftFontSizeInput,
     setSystemSettingsDraftPromptEditorMinLinesInput
-  } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
+  } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
     formatPromptEditorMinLinesInput,
@@ -69,15 +69,14 @@
     )
   }
 
-  const validation = $derived(getSystemSettingsValidation(systemSettingsState.draftSnapshot))
-  const displayFontSizeError = $derived(systemSettingsState.saveError ?? validation.fontSizeError)
-  const displayMinLinesError = $derived(systemSettingsState.saveError ?? validation.minLinesError)
+  const validation = $derived(getSystemSettingsValidation(systemSettingsState))
+  const displayFontSizeError = $derived(validation.fontSizeError)
+  const displayMinLinesError = $derived(validation.minLinesError)
   const isFontSizeResetDisabled = $derived(
-    isUpdating || systemSettingsState.draftSnapshot.promptFontSizeInput === defaultFontSizeInput
+    isUpdating || systemSettingsState.promptFontSizeInput === defaultFontSizeInput
   )
   const isMinLinesResetDisabled = $derived(
-    isUpdating ||
-      systemSettingsState.draftSnapshot.promptEditorMinLinesInput === defaultMinLinesInput
+    isUpdating || systemSettingsState.promptEditorMinLinesInput === defaultMinLinesInput
   )
 
   // Side effect: flush unsaved system settings when leaving the settings screen.
@@ -109,7 +108,7 @@
           <NumericInput
             data-testid="font-size-input"
             class="w-24"
-            value={systemSettingsState.draftSnapshot.promptFontSizeInput}
+            value={systemSettingsState.promptFontSizeInput}
             oninput={(event) =>
               setSystemSettingsDraftFontSizeInput((event.currentTarget as HTMLInputElement).value)}
             onblur={handleInputBlur}
@@ -140,7 +139,7 @@
           <NumericInput
             data-testid="min-lines-input"
             class="w-24"
-            value={systemSettingsState.draftSnapshot.promptEditorMinLinesInput}
+            value={systemSettingsState.promptEditorMinLinesInput}
             oninput={(event) =>
               setSystemSettingsDraftPromptEditorMinLinesInput(
                 (event.currentTarget as HTMLInputElement).value

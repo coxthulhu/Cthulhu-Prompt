@@ -91,11 +91,11 @@ const validateMinLines = (value: string): string | null => {
 
 // Keep these messages stable because the settings screen renders them directly.
 export const getSystemSettingsValidation = (
-  draftSnapshot: SystemSettingsDraftSnapshot
+  draftValues: SystemSettingsDraftSnapshot
 ): SystemSettingsValidation => {
   return {
-    fontSizeError: validateFontSize(draftSnapshot.promptFontSizeInput),
-    minLinesError: validateMinLines(draftSnapshot.promptEditorMinLinesInput)
+    fontSizeError: validateFontSize(draftValues.promptFontSizeInput),
+    minLinesError: validateMinLines(draftValues.promptEditorMinLinesInput)
   }
 }
 
