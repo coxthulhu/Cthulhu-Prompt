@@ -57,35 +57,23 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
         promptFolderId
       )
 
-      try {
-        const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
-          'update-prompt-folder',
-          {
-            payload: {
-              promptFolder: entities.promptFolder({
-                id: promptFolderId,
-                data: latestPromptFolder
-              })
-            }
+      const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
+        'update-prompt-folder',
+        {
+          payload: {
+            promptFolder: entities.promptFolder({
+              id: promptFolderId,
+              data: latestPromptFolder
+            })
           }
-        )
-
-        if (!mutationResult.success) {
-          console.error(
-            'Failed to update prompt folder:',
-            mutationResult.conflict ? 'Prompt folder update conflict' : mutationResult.error
-          )
         }
+      )
 
-        if (mutationResult.success) {
-          promptFolderDraftCollection.utils.acceptMutations(transaction)
-        }
-
-        return mutationResult
-      } catch (error) {
-        console.error('Failed to update prompt folder:', error)
-        throw error
+      if (mutationResult.success) {
+        promptFolderDraftCollection.utils.acceptMutations(transaction)
       }
+
+      return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)

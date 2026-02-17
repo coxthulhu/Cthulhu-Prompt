@@ -110,10 +110,8 @@
       }
 
       closeDialog()
-    } catch (error) {
-      console.error('Error creating prompt folder:', error)
-      submissionError =
-        error instanceof Error ? error.message : 'Failed to create folder. Please try again.'
+    } catch {
+      submissionError = 'Failed to create folder. Please try again.'
     } finally {
       isCreatingPromptFolder = false
     }

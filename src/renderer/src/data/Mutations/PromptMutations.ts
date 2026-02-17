@@ -130,32 +130,20 @@ export const mutatePacedPromptAutosaveUpdate = ({
     draftOnlyChange,
     persistMutations: async ({ entities, invoke, transaction }) => {
       const latestPrompt = readLatestPromptFromTransaction(transaction, promptId)
-      try {
-        const mutationResult = await invoke<{ payload: PromptRevisionPayload }>('update-prompt', {
-          payload: {
-            prompt: entities.prompt({
-              id: promptId,
-              data: latestPrompt
-            })
-          }
-        })
-
-        if (!mutationResult.success) {
-          console.error(
-            'Failed to update prompt:',
-            mutationResult.conflict ? 'Prompt update conflict' : mutationResult.error
-          )
+      const mutationResult = await invoke<{ payload: PromptRevisionPayload }>('update-prompt', {
+        payload: {
+          prompt: entities.prompt({
+            id: promptId,
+            data: latestPrompt
+          })
         }
+      })
 
-        if (mutationResult.success) {
-          promptDraftCollection.utils.acceptMutations(transaction)
-        }
-
-        return mutationResult
-      } catch (error) {
-        console.error('Failed to update prompt:', error)
-        throw error
+      if (mutationResult.success) {
+        promptDraftCollection.utils.acceptMutations(transaction)
       }
+
+      return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptCollection.utils.upsertAuthoritative(payload.prompt)

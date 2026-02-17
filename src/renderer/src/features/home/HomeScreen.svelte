@@ -90,15 +90,11 @@
             selectedFolderPath = selectedPath
             includeExamplePrompts = true
             showSetupDialog = true
-          } else if (selectionResult.message) {
-            console.error('Error selecting workspace:', selectionResult.message)
-          } else {
-            console.error('Error selecting workspace')
           }
         }
       }
-    } catch (error) {
-      console.error('Error selecting folder:', error)
+    } catch {
+      // IPC errors are logged centrally in ipcInvoke.
     } finally {
       if (activeWorkspaceAction === 'select') {
         activeWorkspaceAction = null
@@ -129,8 +125,8 @@
         includeExamplePrompts = true
         showSetupDialog = true
       }
-    } catch (error) {
-      console.error('Error selecting folder for creation:', error)
+    } catch {
+      // IPC errors are logged centrally in ipcInvoke.
     } finally {
       if (activeWorkspaceAction === 'create') {
         activeWorkspaceAction = null
@@ -147,10 +143,6 @@
         if (creationResult.success) {
           showSetupDialog = false
           selectedFolderPath = null
-        } else if (creationResult.message) {
-          console.error('Failed to create workspace:', creationResult.message)
-        } else {
-          console.error('Failed to create workspace')
         }
       } finally {
         if (activeWorkspaceAction === 'create') {
@@ -173,10 +165,6 @@
           showExistingWorkspaceDialog = false
           includeExamplePrompts = true
           showSetupDialog = true
-        } else if (selectionResult.message) {
-          console.error('Error selecting workspace:', selectionResult.message)
-        } else {
-          console.error('Error selecting workspace')
         }
       } finally {
         if (activeWorkspaceAction === 'select') {

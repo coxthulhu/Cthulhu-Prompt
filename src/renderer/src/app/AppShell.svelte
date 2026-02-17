@@ -86,11 +86,6 @@
   const extractErrorMessage = (error: unknown): string | undefined =>
     error instanceof Error ? error.message : typeof error === 'string' ? error : undefined
 
-  const logWorkspaceError = (context: 'select' | 'create' | 'close', message?: string) => {
-    const suffix = message ? `: ${message}` : ''
-    console.error(`Workspace ${context} error${suffix}`)
-  }
-
   const beginWorkspaceAction = () => {
     workspaceActionCount += 1
   }
@@ -134,17 +129,13 @@
     } catch (error) {
       const message = extractErrorMessage(error)
       const workspaceMissing = isWorkspaceMissingError(message)
-      if (!workspaceMissing) {
-        logWorkspaceError('select', message)
-      }
       await resetWorkspaceState()
       if (workspaceMissing) {
         return { success: false, reason: 'workspace-missing' }
       }
       return {
         success: false,
-        reason: 'unknown-error',
-        message
+        reason: 'unknown-error'
       }
     } finally {
       endWorkspaceAction()
@@ -169,17 +160,13 @@
       await resetWorkspaceState()
       return {
         success: false,
-        reason: 'creation-failed',
-        message: result.error
+        reason: 'creation-failed'
       }
-    } catch (error) {
-      const message = extractErrorMessage(error)
-      logWorkspaceError('create', message)
+    } catch {
       await resetWorkspaceState()
       return {
         success: false,
-        reason: 'unknown-error',
-        message
+        reason: 'unknown-error'
       }
     } finally {
       endWorkspaceAction()
@@ -191,9 +178,8 @@
 
     try {
       await closeWorkspaceMutation()
-    } catch (error) {
-      const message = extractErrorMessage(error)
-      logWorkspaceError('close', message)
+    } catch {
+      // Side effect: always continue local workspace cleanup when close IPC fails.
     } finally {
       await switchWorkspaceStoreBridge(null)
       clearPromptFolderSelection()
@@ -216,14 +202,7 @@
 
     hasAttemptedAutoSelect = true
     ;(async () => {
-      const selectionResult = await selectWorkspace(devWorkspacePath)
-      if (
-        !selectionResult.success &&
-        selectionResult.reason !== 'workspace-missing' &&
-        selectionResult.message
-      ) {
-        logWorkspaceError('select', selectionResult.message)
-      }
+      await selectWorkspace(devWorkspacePath)
     })()
   })
 

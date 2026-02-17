@@ -29,30 +29,24 @@
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
 
-  const runWithErrorLogging = async (
-    message: string,
-    action: () => Promise<void>
-  ): Promise<void> => {
+  const runIgnoringError = async (action: () => Promise<void>): Promise<void> => {
     try {
       await action()
-    } catch (error) {
-      console.error(message, error)
+    } catch {
+      // IPC errors are logged centrally in ipcInvoke.
     }
   }
 
   // Save immediately when an input loses focus to avoid delayed autosaves.
   const handleInputBlur = () => {
-    void runWithErrorLogging(
-      'Failed to update system settings:',
-      saveSystemSettingsDraftNow
-    )
+    void runIgnoringError(saveSystemSettingsDraftNow)
   }
 
   const resetSettingToDefault = async (
     defaultValue: string,
     setDraftValue: (value: string) => void
   ): Promise<void> => {
-    await runWithErrorLogging('Failed to reset system settings:', async () => {
+    await runIgnoringError(async () => {
       setDraftValue(defaultValue)
       await saveSystemSettingsDraftNow()
     })
@@ -82,10 +76,7 @@
   // Side effect: flush unsaved system settings when leaving the settings screen.
   $effect(() => {
     return () => {
-      void runWithErrorLogging(
-        'Failed to update system settings:',
-        saveSystemSettingsDraftNow
-      )
+      void runIgnoringError(saveSystemSettingsDraftNow)
     }
   })
 </script>

@@ -23,6 +23,38 @@ type IpcInvokeErrorOptions = {
   cause?: unknown
 }
 
+const logIpcError = ({
+  channel,
+  payload,
+  response,
+  error
+}: {
+  channel: string
+  payload?: unknown
+  response?: unknown
+  error: unknown
+}): void => {
+  console.error('IPC invocation error', {
+    channel,
+    payload,
+    response,
+    error
+  })
+}
+
+const logIpcConflictWarning = ({
+  channel,
+  error
+}: {
+  channel: string
+  error?: string
+}): void => {
+  console.warn('IPC conflict response', {
+    channel,
+    error
+  })
+}
+
 // Carries IPC context so callers can log channel/payload/response when needed.
 export class IpcInvokeError extends Error {
   readonly channel: string
@@ -49,7 +81,13 @@ export async function ipcInvoke<TResponse, TPayload = unknown>(
   const ipcRenderer = window.electron?.ipcRenderer
 
   if (!ipcRenderer?.invoke) {
-    throw new IpcInvokeError('IPC renderer is not available', { channel, payload })
+    const invokeError = new IpcInvokeError('IPC renderer is not available', { channel, payload })
+    logIpcError({
+      channel,
+      payload,
+      error: invokeError
+    })
+    throw invokeError
   }
 
   try {
@@ -58,12 +96,26 @@ export async function ipcInvoke<TResponse, TPayload = unknown>(
         ? await ipcRenderer.invoke(channel)
         : await ipcRenderer.invoke(channel, payload)
 
+    if (isSuccessEnvelope(result) && !result.success && result.conflict) {
+      logIpcConflictWarning({
+        channel,
+        error: result.error
+      })
+    }
+
     if (isSuccessEnvelope(result) && !result.success && !result.conflict) {
-      throw new IpcInvokeError(result.error ?? 'Unknown IPC error', {
+      const invokeError = new IpcInvokeError(result.error ?? 'Unknown IPC error', {
         channel,
         payload,
         response: result
       })
+      logIpcError({
+        channel,
+        payload,
+        response: result,
+        error: invokeError
+      })
+      throw invokeError
     }
 
     return result as TResponse
@@ -74,10 +126,16 @@ export async function ipcInvoke<TResponse, TPayload = unknown>(
 
     const message = error instanceof Error ? error.message : 'Unexpected IPC invocation failure'
 
-    throw new IpcInvokeError(message, {
+    const invokeError = new IpcInvokeError(message, {
       channel,
       payload,
       cause: error
     })
+    logIpcError({
+      channel,
+      payload,
+      error: invokeError
+    })
+    throw invokeError
   }
 }
