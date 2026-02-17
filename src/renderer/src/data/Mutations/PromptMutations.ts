@@ -28,16 +28,6 @@ const readLatestPromptFromTransaction = (
   )
 }
 
-export const updatePromptDraftSnapshotFromServer = (prompt: Prompt): void => {
-  if (!promptDraftCollection.get(prompt.id)) {
-    throw new Error('Prompt draft not loaded')
-  }
-
-  promptDraftCollection.update(prompt.id, (draftRecord) => {
-    draftRecord.draftSnapshot = { ...prompt }
-  })
-}
-
 export const createPrompt = async (
   promptFolderId: string,
   prompt: Prompt,
@@ -82,8 +72,8 @@ export const createPrompt = async (
         draft.promptCount += 1
       })
     },
-    persistMutations: async ({ entities, invoke }) => {
-      return invoke<{ payload: CreatePromptPayload }>('create-prompt', {
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const mutationResult = await invoke<{ payload: CreatePromptPayload }>('create-prompt', {
         payload: {
           promptFolder: entities.promptFolder({
             id: promptFolderId,
@@ -96,6 +86,12 @@ export const createPrompt = async (
           previousPromptId
         }
       })
+
+      if (mutationResult.success) {
+        promptDraftCollection.utils.acceptMutations(transaction)
+      }
+
+      return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
@@ -105,7 +101,6 @@ export const createPrompt = async (
       }
 
       promptCollection.utils.upsertAuthoritative(payload.prompt)
-      updatePromptDraftSnapshotFromServer(payload.prompt.data)
     },
     conflictMessage: 'Prompt create conflict'
   })
@@ -153,6 +148,10 @@ export const mutatePacedPromptAutosaveUpdate = ({
           )
         }
 
+        if (mutationResult.success) {
+          promptDraftCollection.utils.acceptMutations(transaction)
+        }
+
         return mutationResult
       } catch (error) {
         console.error('Failed to update prompt:', error)
@@ -161,7 +160,6 @@ export const mutatePacedPromptAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptCollection.utils.upsertAuthoritative(payload.prompt)
-      updatePromptDraftSnapshotFromServer(payload.prompt.data)
     },
     conflictMessage: 'Prompt update conflict'
   })
@@ -189,8 +187,8 @@ export const deletePrompt = async (
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
       })
     },
-    persistMutations: async ({ entities, invoke }) => {
-      return invoke('delete-prompt', {
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const mutationResult = await invoke('delete-prompt', {
         payload: {
           promptFolder: entities.promptFolder({
             id: promptFolderId,
@@ -202,6 +200,12 @@ export const deletePrompt = async (
           })
         }
       })
+
+      if (mutationResult.success) {
+        promptDraftCollection.utils.acceptMutations(transaction)
+      }
+
+      return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)

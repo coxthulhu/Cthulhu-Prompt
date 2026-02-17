@@ -28,19 +28,6 @@ const readLatestPromptFolderFromTransaction = (
   )
 }
 
-export const updatePromptFolderDraftSnapshotFromServer = (
-  promptFolder: PromptFolder
-): void => {
-  if (!promptFolderDraftCollection.get(promptFolder.id)) {
-    throw new Error('Prompt folder draft not loaded')
-  }
-
-  promptFolderDraftCollection.update(promptFolder.id, (draftRecord) => {
-    draftRecord.draftSnapshot.folderDescription = promptFolder.folderDescription
-    draftRecord.saveError = null
-  })
-}
-
 type PacedPromptFolderMutationOptions = Parameters<
   typeof mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>
 >[0]
@@ -90,6 +77,10 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
           )
         }
 
+        if (mutationResult.success) {
+          promptFolderDraftCollection.utils.acceptMutations(transaction)
+        }
+
         return mutationResult
       } catch (error) {
         console.error('Failed to update prompt folder:', error)
@@ -98,7 +89,6 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      updatePromptFolderDraftSnapshotFromServer(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder update conflict'
   })
@@ -142,8 +132,8 @@ export const createPromptFolder = async (
         draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]
       })
     },
-    persistMutations: async ({ entities, invoke }) => {
-      return invoke<{ payload: CreatePromptFolderPayload }>('create-prompt-folder', {
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const mutationResult = await invoke<{ payload: CreatePromptFolderPayload }>('create-prompt-folder', {
         payload: {
           workspace: entities.workspace({
             id: workspaceId,
@@ -153,6 +143,12 @@ export const createPromptFolder = async (
           displayName: normalizedDisplayName
         }
       })
+
+      if (mutationResult.success) {
+        promptFolderDraftCollection.utils.acceptMutations(transaction)
+      }
+
+      return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
       workspaceCollection.utils.upsertAuthoritative(payload.workspace)
@@ -162,7 +158,6 @@ export const createPromptFolder = async (
       }
 
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      updatePromptFolderDraftSnapshotFromServer(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder create conflict'
   })
@@ -184,9 +179,13 @@ const updatePromptFolder = async (
         draft.promptIds = [...promptFolder.promptIds]
         draft.folderDescription = promptFolder.folderDescription
       })
+      collections.promptFolderDraft.update(promptFolder.id, (draftRecord) => {
+        draftRecord.draftSnapshot.folderDescription = promptFolder.folderDescription
+        draftRecord.saveError = null
+      })
     },
-    persistMutations: async ({ entities, invoke }) => {
-      return invoke<{ payload: PromptFolderRevisionPayload }>('update-prompt-folder', {
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>('update-prompt-folder', {
         payload: {
           promptFolder: entities.promptFolder({
             id: promptFolder.id,
@@ -194,10 +193,15 @@ const updatePromptFolder = async (
           })
         }
       })
+
+      if (mutationResult.success) {
+        promptFolderDraftCollection.utils.acceptMutations(transaction)
+      }
+
+      return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      updatePromptFolderDraftSnapshotFromServer(payload.promptFolder.data)
     },
     conflictMessage: 'Prompt folder update conflict'
   })

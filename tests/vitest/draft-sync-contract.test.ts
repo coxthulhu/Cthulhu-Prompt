@@ -1,16 +1,16 @@
 import type { Prompt } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { SystemSettings } from '@shared/SystemSettings'
-import { describe, expect, it, afterEach } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
 import {
   SYSTEM_SETTINGS_DRAFT_ID,
   systemSettingsDraftCollection
 } from '@renderer/data/Collections/SystemSettingsDraftCollection'
-import { updatePromptDraftSnapshotFromServer } from '@renderer/data/Mutations/PromptMutations'
-import { updatePromptFolderDraftSnapshotFromServer } from '@renderer/data/Mutations/PromptFolderMutations'
-import { updateSystemSettingsDraftSnapshotFromServer } from '@renderer/data/Mutations/SystemSettingsMutations'
+import { upsertPromptDraft } from '@renderer/data/UiState/PromptDraftStore.svelte.ts'
+import { upsertPromptFolderDraft } from '@renderer/data/UiState/PromptFolderDraftStore.svelte.ts'
+import { upsertSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftStore.svelte.ts'
 
 const clearPromptDraftCollection = (): void => {
   const draftIds = Array.from(promptDraftCollection.keys(), (draftId) => String(draftId))
@@ -41,101 +41,96 @@ afterEach(() => {
   clearSystemSettingsDraftCollection()
 })
 
-const createPrompt = (): Prompt => ({
+const createPrompt = (overrides: Partial<Prompt> = {}): Prompt => ({
   id: 'prompt-1',
-  title: 'Updated title',
+  title: 'Original title',
   creationDate: '2026-01-01T00:00:00.000Z',
   lastModifiedDate: '2026-01-02T00:00:00.000Z',
-  promptText: 'Updated text',
-  promptFolderCount: 3
+  promptText: 'Original text',
+  promptFolderCount: 3,
+  ...overrides
 })
 
-const createPromptFolder = (): PromptFolder => ({
+const createPromptFolder = (
+  overrides: Partial<PromptFolder> = {}
+): PromptFolder => ({
   id: 'folder-1',
   folderName: 'folder',
   displayName: 'Folder',
   promptCount: 2,
   promptIds: ['prompt-1', 'prompt-2'],
-  folderDescription: 'Updated folder description'
+  folderDescription: 'Original folder description',
+  ...overrides
 })
 
-const createSystemSettings = (): SystemSettings => ({
-  promptFontSize: 19,
-  promptEditorMinLines: 6
+const createSystemSettings = (
+  overrides: Partial<SystemSettings> = {}
+): SystemSettings => ({
+  promptFontSize: 16,
+  promptEditorMinLines: 3,
+  ...overrides
 })
 
 describe('draft sync contract', () => {
-  it('updates prompt drafts from server only when the draft already exists', () => {
+  it('upserts prompt drafts and preserves measured heights', () => {
     const prompt = createPrompt()
-
-    expect(() => updatePromptDraftSnapshotFromServer(prompt)).toThrow(
-      'Prompt draft not loaded'
-    )
-    expect(promptDraftCollection.get(prompt.id)).toBeUndefined()
-
-    promptDraftCollection.insert({
-      id: prompt.id,
-      draftSnapshot: {
-        ...prompt,
-        title: 'Old title'
-      },
-      promptEditorMeasuredHeightsByKey: {
-        '640:1': 200
-      }
+    const updatedPrompt = createPrompt({
+      title: 'Updated title',
+      promptText: 'Updated text',
+      lastModifiedDate: '2026-01-03T00:00:00.000Z'
     })
 
-    updatePromptDraftSnapshotFromServer(prompt)
+    upsertPromptDraft(prompt)
+
+    promptDraftCollection.update(prompt.id, (draftRecord) => {
+      draftRecord.promptEditorMeasuredHeightsByKey = { '640:1': 200 }
+    })
+
+    upsertPromptDraft(updatedPrompt)
 
     const draftRecord = promptDraftCollection.get(prompt.id)!
-    expect(draftRecord.draftSnapshot).toEqual(prompt)
+    expect(draftRecord.draftSnapshot).toEqual(updatedPrompt)
     expect(draftRecord.promptEditorMeasuredHeightsByKey).toEqual({ '640:1': 200 })
   })
 
-  it('updates prompt-folder drafts from server only when the draft already exists', () => {
+  it('upserts prompt-folder drafts, clears saveError, and preserves measured heights', () => {
     const promptFolder = createPromptFolder()
-
-    expect(() => updatePromptFolderDraftSnapshotFromServer(promptFolder)).toThrow(
-      'Prompt folder draft not loaded'
-    )
-    expect(promptFolderDraftCollection.get(promptFolder.id)).toBeUndefined()
-
-    promptFolderDraftCollection.insert({
-      id: promptFolder.id,
-      draftSnapshot: {
-        folderDescription: 'Old folder description'
-      },
-      saveError: 'Previous save failed',
-      descriptionMeasuredHeightsByKey: {
-        '640:1': 120
-      }
+    const updatedPromptFolder = createPromptFolder({
+      folderDescription: 'Updated folder description'
     })
 
-    updatePromptFolderDraftSnapshotFromServer(promptFolder)
+    upsertPromptFolderDraft(promptFolder)
+
+    promptFolderDraftCollection.update(promptFolder.id, (draftRecord) => {
+      draftRecord.saveError = 'Previous save failed'
+      draftRecord.descriptionMeasuredHeightsByKey = { '640:1': 120 }
+    })
+
+    upsertPromptFolderDraft(updatedPromptFolder)
 
     const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
-    expect(draftRecord.draftSnapshot.folderDescription).toBe(promptFolder.folderDescription)
+    expect(draftRecord.draftSnapshot).toEqual({
+      folderDescription: 'Updated folder description'
+    })
     expect(draftRecord.saveError).toBeNull()
     expect(draftRecord.descriptionMeasuredHeightsByKey).toEqual({ '640:1': 120 })
   })
 
-  it('updates the system-settings draft from server only when the draft already exists', () => {
-    const settings = createSystemSettings()
+  it('upserts the system-settings draft and clears saveError', () => {
+    upsertSystemSettingsDraft(createSystemSettings())
 
-    expect(() => updateSystemSettingsDraftSnapshotFromServer(settings)).toThrow(
-      'System settings draft not loaded'
-    )
-    expect(systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)).toBeUndefined()
-
-    systemSettingsDraftCollection.insert({
-      id: SYSTEM_SETTINGS_DRAFT_ID,
-      draftSnapshot: {
-        promptFontSizeInput: '16',
-        promptEditorMinLinesInput: '3'
-      },
-      saveError: 'Previous save failed'
+    systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
+      draftRecord.saveError = 'Previous save failed'
+      draftRecord.draftSnapshot.promptFontSizeInput = '18'
+      draftRecord.draftSnapshot.promptEditorMinLinesInput = '5'
     })
 
-    updateSystemSettingsDraftSnapshotFromServer(settings)
+    upsertSystemSettingsDraft(
+      createSystemSettings({
+        promptFontSize: 19,
+        promptEditorMinLines: 6
+      })
+    )
 
     const draftRecord = systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
     expect(draftRecord.draftSnapshot).toEqual({
