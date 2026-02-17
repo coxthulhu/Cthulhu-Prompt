@@ -41,10 +41,10 @@ type PromptDraftOptimisticMutationOptions = {
 const mutatePromptDraftOptimistically = (
   promptId: string,
   options: PromptDraftOptimisticMutationOptions
-): boolean => {
+): void => {
   const { draftOnlyChange, mutatePromptDraft, mutatePrompt } = options
 
-  return mutatePacedPromptAutosaveUpdate({
+  mutatePacedPromptAutosaveUpdate({
     promptId,
     debounceMs: AUTOSAVE_MS,
     draftOnlyChange,
@@ -169,18 +169,12 @@ export const setPromptDraftText = (
   const textChanged = draftRecord.promptText !== promptText
 
   if (!textChanged) {
-    const didUpdateOpenTransaction = mutatePromptDraftOptimistically(promptId, {
+    mutatePromptDraftOptimistically(promptId, {
       draftOnlyChange: true,
       mutatePromptDraft: (draft) => {
         applyPromptMeasurementUpdate(draft, measurement, false)
       }
     })
-
-    if (!didUpdateOpenTransaction) {
-      promptDraftCollection.update(promptId, (draft) => {
-        applyPromptMeasurementUpdate(draft, measurement, false)
-      })
-    }
 
     return
   }

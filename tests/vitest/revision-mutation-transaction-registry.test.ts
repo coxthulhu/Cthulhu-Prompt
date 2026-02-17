@@ -1,4 +1,4 @@
-import { createCollection } from '@tanstack/svelte-db'
+import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
 import type { RevisionEnvelope } from '@shared/Revision'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { revisionCollectionOptions } from '@renderer/data/Collections/RevisionCollection'
@@ -241,6 +241,49 @@ describe('revision mutation transaction registry', () => {
     vi.advanceTimersByTime(10_000)
     await submitAllPacedUpdateTransactionsAndWait()
     expect(persistCalled).toBe(1)
+  })
+
+  it('applies draft-only optimistic updates immediately without creating paced transactions', async () => {
+    vi.useFakeTimers()
+
+    const { collectionId, collection } = createSingleItemRegistryContext('paced-draft-only')
+    const draftCollection = createCollection(
+      localOnlyCollectionOptions<TestRecord>({
+        id: nextCollectionId('paced-draft-only-local'),
+        getKey: (record) => record.id
+      })
+    )
+    draftCollection.insert({ id: TEST_ITEM_ID, value: 0 })
+    const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
+      { test: collection },
+      { draft: draftCollection }
+    )
+    let persistCalled = 0
+
+    mutatePacedUpdate<MutationPayload>({
+      collectionId,
+      elementId: TEST_ITEM_ID,
+      debounceMs: 200,
+      draftOnlyChange: true,
+      mutateOptimistically: ({ collections }) => {
+        collections.draft.update(TEST_ITEM_ID, (draft) => {
+          draft.value = 11
+        })
+      },
+      persistMutations: async () => {
+        persistCalled += 1
+        return { success: true, payload: { ok: true } }
+      },
+      handleSuccessOrConflictResponse: () => {},
+      conflictMessage: 'Conflict'
+    })
+
+    expect(draftCollection.get(TEST_ITEM_ID)!.value).toBe(11)
+    expect(sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)).toBe(false)
+
+    vi.advanceTimersByTime(200)
+    await submitAllPacedUpdateTransactionsAndWait()
+    expect(persistCalled).toBe(0)
   })
 
   it('waits for the targeted paced update transaction when it is already in flight', async () => {

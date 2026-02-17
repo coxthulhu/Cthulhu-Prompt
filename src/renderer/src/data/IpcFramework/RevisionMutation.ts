@@ -266,7 +266,7 @@ export const createPacedRevisionUpdateMutationRunner = <
       TOptimisticCollections,
       TPayload
     >
-  ): boolean => {
+  ): void => {
     const {
       collectionId,
       elementId,
@@ -277,7 +277,7 @@ export const createPacedRevisionUpdateMutationRunner = <
       draftOnlyChange = false
     } = options
 
-    return mutatePacedUpdateTransaction({
+    const didMutateOpenPacedTransaction = mutatePacedUpdateTransaction({
       collectionId,
       elementId,
       debounceMs,
@@ -305,5 +305,10 @@ export const createPacedRevisionUpdateMutationRunner = <
         )
       }
     })
+
+    if (!didMutateOpenPacedTransaction && draftOnlyChange) {
+      // For draft-only changes, apply optimistic draft updates immediately when no paced transaction is open.
+      applyOptimisticMutation(optimisticCollections, mutateOptimistically)
+    }
   }
 }

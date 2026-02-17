@@ -121,8 +121,8 @@ export const mutatePacedPromptAutosaveUpdate = ({
   debounceMs,
   mutateOptimistically,
   draftOnlyChange
-}: PacedPromptAutosaveUpdateOptions): boolean => {
-  return mutatePacedRevisionUpdateTransaction<PromptRevisionResponsePayload>({
+}: PacedPromptAutosaveUpdateOptions): void => {
+  mutatePacedRevisionUpdateTransaction<PromptRevisionResponsePayload>({
     collectionId: promptCollection.id,
     elementId: promptId,
     debounceMs,

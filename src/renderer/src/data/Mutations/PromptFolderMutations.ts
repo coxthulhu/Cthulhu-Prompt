@@ -44,8 +44,8 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
   debounceMs,
   mutateOptimistically,
   draftOnlyChange
-}: PacedPromptFolderAutosaveUpdateOptions): boolean => {
-  return mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
+}: PacedPromptFolderAutosaveUpdateOptions): void => {
+  mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
     collectionId: promptFolderCollection.id,
     elementId: promptFolderId,
     debounceMs,

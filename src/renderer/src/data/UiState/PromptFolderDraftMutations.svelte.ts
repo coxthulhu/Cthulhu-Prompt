@@ -32,10 +32,10 @@ type PromptFolderDraftOptimisticMutationOptions = {
 const mutatePromptFolderDraftOptimistically = (
   promptFolderId: string,
   options: PromptFolderDraftOptimisticMutationOptions
-): boolean => {
+): void => {
   const { draftOnlyChange, mutatePromptFolderDraft, mutatePromptFolder } = options
 
-  return mutatePacedPromptFolderAutosaveUpdate({
+  mutatePacedPromptFolderAutosaveUpdate({
     promptFolderId,
     debounceMs: AUTOSAVE_MS,
     draftOnlyChange,
@@ -151,18 +151,12 @@ export const setPromptFolderDraftDescription = (
   const textChanged = draftRecord.folderDescription !== folderDescription
 
   if (!textChanged) {
-    const didUpdateOpenTransaction = mutatePromptFolderDraftOptimistically(promptFolderId, {
+    mutatePromptFolderDraftOptimistically(promptFolderId, {
       draftOnlyChange: true,
       mutatePromptFolderDraft: (draft) => {
         applyDescriptionMeasurementUpdate(draft, measurement, false)
       }
     })
-
-    if (!didUpdateOpenTransaction) {
-      promptFolderDraftCollection.update(promptFolderId, (draft) => {
-        applyDescriptionMeasurementUpdate(draft, measurement, false)
-      })
-    }
 
     return
   }
