@@ -14,6 +14,7 @@
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
+  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { preparePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'
@@ -96,25 +97,32 @@
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
     if (!selectedWorkspaceId) return
 
-    try {
-      submissionError = null
-      isCreatingPromptFolder = true
-      await createPromptFolder(selectedWorkspaceId, normalizedDisplayName)
-      const createdPromptFolderId = getCreatedPromptFolderId(
-        selectedWorkspaceId,
-        preparedName.folderName
-      )
+    submissionError = null
+    isCreatingPromptFolder = true
 
-      if (createdPromptFolderId) {
-        onCreated?.(createdPromptFolderId)
-      }
+    const wasCreated = await runIpcBestEffort(
+      async () => {
+        await createPromptFolder(selectedWorkspaceId, normalizedDisplayName)
+        const createdPromptFolderId = getCreatedPromptFolderId(
+          selectedWorkspaceId,
+          preparedName.folderName
+        )
 
-      closeDialog()
-    } catch {
+        if (createdPromptFolderId) {
+          onCreated?.(createdPromptFolderId)
+        }
+
+        closeDialog()
+        return true
+      },
+      () => false
+    )
+
+    if (!wasCreated) {
       submissionError = 'Failed to create folder. Please try again.'
-    } finally {
-      isCreatingPromptFolder = false
     }
+
+    isCreatingPromptFolder = false
   }
 
   const handleCancel = () => closeDialog()

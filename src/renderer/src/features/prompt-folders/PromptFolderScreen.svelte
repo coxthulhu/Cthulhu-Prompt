@@ -17,6 +17,7 @@
   } from '@renderer/data/Collections/PromptFolderDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
+  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
   import {
     createPrompt,
     deletePrompt
@@ -228,13 +229,13 @@
       return false
     }
 
-    try {
-      await reorderPromptFolderPrompts(currentPromptFolder.id, nextPromptIds)
-      return true
-    } catch {
-      // Intentionally ignore reorder errors to keep the UI quiet.
-      return false
-    }
+    return await runIpcBestEffort(
+      async () => {
+        await reorderPromptFolderPrompts(currentPromptFolder.id, nextPromptIds)
+        return true
+      },
+      () => false
+    )
   }
 
   const lookupPromptFolderDescriptionMeasuredHeight = (
@@ -394,15 +395,13 @@
       promptFolderCount: currentPromptFolder.promptCount + 1
     }
 
-    try {
+    await runIpcBestEffort(async () => {
       await createPrompt(currentPromptFolder.id, optimisticPrompt, previousPromptId)
       promptFocusRequestId += 1
       promptFocusRequest = { promptId, requestId: promptFocusRequestId }
-    } catch {
-      // Intentionally ignore create errors to keep the UI quiet.
-    } finally {
-      isCreatingPrompt = false
-    }
+    })
+
+    isCreatingPrompt = false
   }
 
   const handleDeletePrompt = (promptId: string) => {
@@ -411,13 +410,9 @@
       return
     }
 
-    void (async () => {
-      try {
-        await deletePrompt(currentPromptFolderId, promptId)
-      } catch {
-        // Intentionally ignore delete errors to keep the UI quiet.
-      }
-    })()
+    void runIpcBestEffort(async () => {
+      await deletePrompt(currentPromptFolderId, promptId)
+    })
   }
 
   const handleMovePromptUp = async (promptId: string): Promise<boolean> => {

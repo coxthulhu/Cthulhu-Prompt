@@ -7,6 +7,7 @@
     saveSystemSettingsDraftNow,
     useSystemSettingsDraftQuery
   } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
+  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
   import {
     setSystemSettingsDraftFontSizeInput,
     setSystemSettingsDraftPromptEditorMinLinesInput
@@ -29,24 +30,16 @@
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
 
-  const runIgnoringError = async (action: () => Promise<void>): Promise<void> => {
-    try {
-      await action()
-    } catch {
-      // IPC errors are logged centrally in ipcInvoke.
-    }
-  }
-
   // Save immediately when an input loses focus to avoid delayed autosaves.
   const handleInputBlur = () => {
-    void runIgnoringError(saveSystemSettingsDraftNow)
+    void runIpcBestEffort(saveSystemSettingsDraftNow)
   }
 
   const resetSettingToDefault = async (
     defaultValue: string,
     setDraftValue: (value: string) => void
   ): Promise<void> => {
-    await runIgnoringError(async () => {
+    await runIpcBestEffort(async () => {
       setDraftValue(defaultValue)
       await saveSystemSettingsDraftNow()
     })
@@ -76,7 +69,7 @@
   // Side effect: flush unsaved system settings when leaving the settings screen.
   $effect(() => {
     return () => {
-      void runIgnoringError(saveSystemSettingsDraftNow)
+      void runIpcBestEffort(saveSystemSettingsDraftNow)
     }
   })
 </script>

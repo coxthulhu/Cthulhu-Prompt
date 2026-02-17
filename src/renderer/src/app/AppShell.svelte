@@ -26,6 +26,7 @@
     closeWorkspace as closeWorkspaceMutation,
     createWorkspace as createWorkspaceMutation
   } from '@renderer/data/Mutations/WorkspaceMutations'
+  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
   import {
     setWorkspaceSelectionContext,
     type WorkspaceSelectionContext
@@ -99,14 +100,9 @@
   }
 
   const resetWorkspaceState = async () => {
-    try {
-      await closeWorkspaceMutation()
-    } catch {
-      // Side effect: always continue local workspace reset even when close IPC fails.
-    } finally {
-      await switchWorkspaceStoreBridge(null)
-      clearPromptFolderSelection()
-    }
+    await runIpcBestEffort(closeWorkspaceMutation)
+    await switchWorkspaceStoreBridge(null)
+    clearPromptFolderSelection()
   }
 
   const loadWorkspaceSelection = async (path: string): Promise<void> => {
@@ -150,24 +146,29 @@
     beginWorkspaceAction()
 
     try {
-      const result = await createWorkspaceMutation(path, includeExamplePrompts)
+      return await runIpcBestEffort<WorkspaceCreationResult>(
+        async () => {
+          const result = await createWorkspaceMutation(path, includeExamplePrompts)
 
-      if (result.success) {
-        await loadWorkspaceSelection(path)
-        return { success: true }
-      }
+          if (result.success) {
+            await loadWorkspaceSelection(path)
+            return { success: true }
+          }
 
-      await resetWorkspaceState()
-      return {
-        success: false,
-        reason: 'creation-failed'
-      }
-    } catch {
-      await resetWorkspaceState()
-      return {
-        success: false,
-        reason: 'unknown-error'
-      }
+          await resetWorkspaceState()
+          return {
+            success: false,
+            reason: 'creation-failed'
+          }
+        },
+        async () => {
+          await resetWorkspaceState()
+          return {
+            success: false,
+            reason: 'unknown-error'
+          }
+        }
+      )
     } finally {
       endWorkspaceAction()
     }
@@ -177,9 +178,7 @@
     beginWorkspaceAction()
 
     try {
-      await closeWorkspaceMutation()
-    } catch {
-      // Side effect: always continue local workspace cleanup when close IPC fails.
+      await runIpcBestEffort(closeWorkspaceMutation)
     } finally {
       await switchWorkspaceStoreBridge(null)
       clearPromptFolderSelection()

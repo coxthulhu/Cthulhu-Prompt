@@ -11,7 +11,7 @@
     DialogTitle,
     ErrorDialog
   } from '@renderer/common/ui/dialog'
-  import { ipcInvoke } from '@renderer/api/ipcInvoke'
+  import { ipcInvoke, runIpcBestEffort } from '@renderer/api/ipcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
     WorkspaceCreationResult,
@@ -74,7 +74,10 @@
   const handleSelectFolder = async () => {
     activeWorkspaceAction = 'select'
     try {
-      const result = await openWorkspaceFolderDialog()
+      const result = await runIpcBestEffort(
+        openWorkspaceFolderDialog,
+        () => ({ dialogCancelled: true, filePaths: [] })
+      )
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]
@@ -93,8 +96,6 @@
           }
         }
       }
-    } catch {
-      // IPC errors are logged centrally in ipcInvoke.
     } finally {
       if (activeWorkspaceAction === 'select') {
         activeWorkspaceAction = null
@@ -105,7 +106,10 @@
   const handleCreateFolder = async () => {
     activeWorkspaceAction = 'create'
     try {
-      const result = await openWorkspaceFolderDialog()
+      const result = await runIpcBestEffort(
+        openWorkspaceFolderDialog,
+        () => ({ dialogCancelled: true, filePaths: [] })
+      )
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]
@@ -125,8 +129,6 @@
         includeExamplePrompts = true
         showSetupDialog = true
       }
-    } catch {
-      // IPC errors are logged centrally in ipcInvoke.
     } finally {
       if (activeWorkspaceAction === 'create') {
         activeWorkspaceAction = null

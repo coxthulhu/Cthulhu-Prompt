@@ -74,6 +74,25 @@ export class IpcInvokeError extends Error {
   }
 }
 
+export async function runIpcBestEffort(action: () => Promise<void>): Promise<void>
+export async function runIpcBestEffort<T>(
+  action: () => Promise<T>,
+  onError: () => T | Promise<T>
+): Promise<T>
+export async function runIpcBestEffort<T>(
+  action: () => Promise<T>,
+  onError?: () => T | Promise<T>
+): Promise<T | void> {
+  try {
+    return await action()
+  } catch {
+    // Side effect: keep UI flows quiet while IPC failures are logged centrally.
+    if (onError) {
+      return await onError()
+    }
+  }
+}
+
 export async function ipcInvoke<TResponse, TPayload = unknown>(
   channel: string,
   payload?: TPayload
