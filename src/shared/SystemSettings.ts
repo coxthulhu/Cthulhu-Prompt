@@ -50,7 +50,9 @@ export const normalizeSystemSettings = (
   }
 }
 
-export type LoadSystemSettingsResult = IpcResult<{ settings: SystemSettings }>
+export type LoadSystemSettingsResult = IpcResult<{
+  systemSettings: RevisionEnvelope<SystemSettings>
+}>
 
 export type SystemSettingsRevisionPayload = {
   systemSettings: RevisionPayloadEntity<SystemSettings>

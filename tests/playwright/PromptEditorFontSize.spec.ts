@@ -12,8 +12,8 @@ async function waitForStoredPromptFontSize(mainWindow: any, value: number): Prom
   await mainWindow.waitForFunction((expected) => {
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
-    return ipc.invoke('load-system-settings-playwright-test').then((result) => {
-      return result?.settings?.promptFontSize === expected
+    return ipc.invoke('load-system-settings').then((result) => {
+      return result?.systemSettings?.data?.promptFontSize === expected
     })
   }, value)
 }

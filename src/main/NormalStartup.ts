@@ -4,21 +4,18 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
 import { checkFolderExists, setupWorkspaceDialogHandlers } from './workspaceDialog'
-import { SystemSettingsDataAccess } from './DataAccess/SystemSettingsDataAccess'
-import { revisions } from './Registries/Revisions'
 import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
 import { setupPromptFolderMutationHandlers } from './Mutations/PromptFolderMutations'
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
 import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsMutations'
 import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
 import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
-import { setupIntegrationTestSystemSettingsQueryHandlers } from './IntegrationTests/SystemSettingsTestQuery'
+import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 
 function resolveDefaultDevWorkspacePath(): string | null {
@@ -92,7 +89,7 @@ function setupWindowControlHandlers(): void {
   })
 }
 
-async function buildRuntimeConfig(): Promise<RuntimeConfig> {
+function buildRuntimeConfig(): RuntimeConfig {
   const devEnvironment = isDevEnvironment()
   const playwrightEnvironment = isPlaywrightEnvironment()
   const environment: RuntimeEnvironment = devEnvironment
@@ -102,15 +99,11 @@ async function buildRuntimeConfig(): Promise<RuntimeConfig> {
       : ''
   const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
-  const systemSettings = await SystemSettingsDataAccess.loadSystemSettings()
-  const systemSettingsRevision = revisions.systemSettings.get(SYSTEM_SETTINGS_ID)
 
   return {
     devWorkspacePath,
     executionFolderName,
-    environment,
-    systemSettings,
-    systemSettingsRevision
+    environment
   }
 }
 
@@ -193,9 +186,7 @@ export function startupNormally(): void {
 
     // Setup workspace dialog IPC handlers used by the home screen.
     setupWorkspaceDialogHandlers()
-    if (isPlaywrightEnvironment()) {
-      setupIntegrationTestSystemSettingsQueryHandlers()
-    }
+    setupSystemSettingsQueryHandlers()
     setupSystemSettingsMutationHandlers()
     setupWorkspaceQueryHandlers()
     setupWorkspaceMutationHandlers()
@@ -204,7 +195,7 @@ export function startupNormally(): void {
     setupPromptMutationHandlers()
     setupWindowControlHandlers()
 
-    const runtimeConfig = await buildRuntimeConfig()
+    const runtimeConfig = buildRuntimeConfig()
 
     createWindow(runtimeConfig)
 

@@ -3,18 +3,13 @@ import { electronAPI } from '@electron-toolkit/preload'
 import {
   RUNTIME_ARG_PREFIX,
   normalizeRuntimeEnvironment,
-  normalizeRuntimeSystemSettingsRevision,
-  normalizeRuntimeSystemSettings,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
-import { DEFAULT_SYSTEM_SETTINGS } from '@shared/SystemSettings'
 
 const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
   devWorkspacePath: null,
   executionFolderName: null,
-  environment: '',
-  systemSettings: DEFAULT_SYSTEM_SETTINGS,
-  systemSettingsRevision: 0
+  environment: ''
 })
 
 function loadRuntimeConfig(): RuntimeConfig {
@@ -36,17 +31,11 @@ function loadRuntimeConfig(): RuntimeConfig {
     const executionFolderName =
       typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
-    const systemSettings = normalizeRuntimeSystemSettings(parsed.systemSettings)
-    const systemSettingsRevision = normalizeRuntimeSystemSettingsRevision(
-      parsed.systemSettingsRevision
-    )
 
     return Object.freeze({
       devWorkspacePath,
       executionFolderName,
-      environment,
-      systemSettings,
-      systemSettingsRevision
+      environment
     })
   } catch (error) {
     console.error('Failed to parse runtime config payload:', error)

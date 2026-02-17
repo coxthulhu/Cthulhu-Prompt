@@ -1,16 +1,12 @@
 import {
   normalizeRuntimeEnvironment,
-  normalizeRuntimeSystemSettingsRevision,
-  normalizeRuntimeSystemSettings,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
 
 const fallbackRuntimeConfig: RuntimeConfig = {
   devWorkspacePath: null,
   executionFolderName: null,
-  environment: '',
-  systemSettings: normalizeRuntimeSystemSettings(undefined),
-  systemSettingsRevision: 0
+  environment: ''
 }
 
 export const getRuntimeConfig = (): RuntimeConfig => {
@@ -18,9 +14,7 @@ export const getRuntimeConfig = (): RuntimeConfig => {
   return {
     devWorkspacePath: config.devWorkspacePath,
     executionFolderName: config.executionFolderName ?? null,
-    environment: normalizeRuntimeEnvironment(config.environment),
-    systemSettings: normalizeRuntimeSystemSettings(config.systemSettings),
-    systemSettingsRevision: normalizeRuntimeSystemSettingsRevision(config.systemSettingsRevision)
+    environment: normalizeRuntimeEnvironment(config.environment)
   }
 }
 
