@@ -3,7 +3,7 @@ import type { Collection } from '@tanstack/svelte-db'
 import type { Transaction } from '@tanstack/svelte-db'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
-import { ipcInvokeWithPayload } from './IpcInvoke'
+import { ipcInvokeWithPayload } from './IpcRequestInvoke'
 import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
 import {
   applyOptimisticMutation,

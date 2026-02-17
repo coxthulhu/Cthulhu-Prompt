@@ -17,7 +17,7 @@
   } from '@renderer/data/Collections/PromptFolderDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
-  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     createPrompt,
     deletePrompt

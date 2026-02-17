@@ -14,7 +14,7 @@
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
-  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { preparePromptFolderName } from '@shared/promptFolderName'
   import SidebarButton from '../sidebar/SidebarButton.svelte'

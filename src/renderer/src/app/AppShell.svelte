@@ -26,7 +26,7 @@
     closeWorkspace as closeWorkspaceMutation,
     createWorkspace as createWorkspaceMutation
   } from '@renderer/data/Mutations/WorkspaceMutations'
-  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     setWorkspaceSelectionContext,
     type WorkspaceSelectionContext

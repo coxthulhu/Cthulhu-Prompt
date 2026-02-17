@@ -7,7 +7,7 @@
     saveSystemSettingsDraftNow,
     useSystemSettingsDraftQuery
   } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
-  import { runIpcBestEffort } from '@renderer/api/ipcInvoke'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     setSystemSettingsDraftFontSizeInput,
     setSystemSettingsDraftPromptEditorMinLinesInput

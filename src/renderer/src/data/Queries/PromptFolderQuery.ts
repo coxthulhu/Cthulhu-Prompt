@@ -2,7 +2,7 @@ import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
 } from '@shared/PromptFolder'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
+import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'

@@ -4,7 +4,7 @@ import type {
 } from '@shared/Workspace'
 import type { IpcMutationActionResponse } from '@shared/IpcResult'
 import { runLoad } from '../IpcFramework/Load'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcInvoke'
+import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'

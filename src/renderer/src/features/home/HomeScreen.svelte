@@ -11,7 +11,7 @@
     DialogTitle,
     ErrorDialog
   } from '@renderer/common/ui/dialog'
-  import { ipcInvoke, runIpcBestEffort } from '@renderer/api/ipcInvoke'
+  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
     WorkspaceCreationResult,
