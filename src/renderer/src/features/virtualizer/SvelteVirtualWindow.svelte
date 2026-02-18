@@ -39,6 +39,7 @@
   const DEFAULT_RIGHT_SCROLL_PADDING_PX = 8
   const WINDOW_BAND_PADDING_PX = 100
   const SCROLLBAR_WIDTH_PX = 10
+  const WHEEL_SCROLL_MULTIPLIER = 0.4
 
   let {
     items,
@@ -167,7 +168,7 @@
 
   const handleWheel = (event: WheelEvent) => {
     if (viewportHeight <= 0) return
-    applyUserScrollTop(scrollTopPx + event.deltaY)
+    applyUserScrollTop(scrollTopPx + event.deltaY * WHEEL_SCROLL_MULTIPLIER)
   }
 
   const handleNativeScroll = (event: Event) => {

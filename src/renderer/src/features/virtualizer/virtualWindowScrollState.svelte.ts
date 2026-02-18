@@ -72,7 +72,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   const clampedAnchoredScrollTopPx = $derived(clampScrollTop(anchoredScrollTopPx))
   const anchoredScrollBottomPx = $derived(clampedAnchoredScrollTopPx + getViewportHeight())
 
-  const OVERSCAN_PX = 1000
+  const OVERSCAN_PX = 400
 
   // Overscan the viewport so rows above/below are rendered ahead of scroll.
   const overscannedTopPx = $derived(Math.max(0, clampedAnchoredScrollTopPx - OVERSCAN_PX))
