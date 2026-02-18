@@ -340,9 +340,11 @@
                 }}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {
-                  if (meta.heightPx !== monacoHeightPx) {
+                  const didHeightChange = meta.heightPx !== monacoHeightPx
+                  if (didHeightChange) {
                     monacoHeightPx = meta.heightPx
                   }
+                  if (!didHeightChange && text === promptData.draft.text) return
                   promptData.setText(text, {
                     measuredHeightPx: getRowHeightPx(meta.heightPx),
                     widthPx: virtualWindowWidthPx,

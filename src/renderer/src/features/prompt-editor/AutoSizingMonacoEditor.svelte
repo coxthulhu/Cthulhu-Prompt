@@ -58,6 +58,9 @@
   let lastActiveMatchIndex: number | null = null
   let lastReportedFindQuery = ''
   let lastReportedFindCount = -1
+  let lastAppliedFontSizePx: number | null = null
+  let lastEmittedValue: string | null = null
+  let lastEmittedHeightPx = -1
 
   const getFindController = () => {
     if (!editor) return null
@@ -119,6 +122,9 @@
   }
 
   const emitChange = (value: string, didResize: boolean, heightPx: number) => {
+    if (value === lastEmittedValue && heightPx === lastEmittedHeightPx) return
+    lastEmittedValue = value
+    lastEmittedHeightPx = heightPx
     onChange?.(value, { didResize, heightPx })
   }
 
@@ -310,6 +316,7 @@
     })
 
     editor = nextEditor
+    lastAppliedFontSizePx = promptFontSize
     registerMonacoEditor({ container, editor: nextEditor })
     onEditorLifecycle?.(nextEditor, true)
     findController = FindController.get(nextEditor)
@@ -329,9 +336,14 @@
     })
     const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
-    layoutEditor()
+    const previousHeightPx = monacoHeightPx
+    const nextHeightPx = layoutEditor()
     lastContainerWidthPx = containerWidthPx
-    emitChange(nextEditor.getValue(), false, monacoHeightPx)
+    const didResize = nextHeightPx !== previousHeightPx
+    const currentValue = nextEditor.getValue()
+    if (didResize || currentValue !== initialValue) {
+      emitChange(currentValue, didResize, nextHeightPx)
+    }
     onFindMatchReveal?.(revealFindMatch)
 
     return () => {
@@ -354,11 +366,17 @@
   // Side effect: keep Monaco font size aligned with system settings.
   $effect(() => {
     if (!editor) return
-    editor.updateOptions({ fontSize: promptFontSize })
     const previousHeightPx = monacoHeightPx
+    const didFontSizeChange = lastAppliedFontSizePx !== promptFontSize
+    if (didFontSizeChange) {
+      editor.updateOptions({ fontSize: promptFontSize })
+      lastAppliedFontSizePx = promptFontSize
+    }
     const nextHeightPx = measureContentHeightPx()
+    if (!didFontSizeChange && nextHeightPx === previousHeightPx) return
     const updatedHeightPx = layoutEditor(nextHeightPx)
-    emitChange(editor.getValue(), updatedHeightPx !== previousHeightPx, updatedHeightPx)
+    if (updatedHeightPx === previousHeightPx) return
+    emitChange(editor.getValue(), true, updatedHeightPx)
   })
 
   // Side effect: when the virtualized container width changes, relayout Monaco and sync cached height.
