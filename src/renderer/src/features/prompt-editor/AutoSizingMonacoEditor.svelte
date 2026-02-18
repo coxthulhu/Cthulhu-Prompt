@@ -58,6 +58,9 @@
   let lastActiveMatchIndex: number | null = null
   let lastReportedFindQuery = ''
   let lastReportedFindCount = -1
+  let lastFontSizeEffectEditor: monaco.editor.IStandaloneCodeEditor | null = null
+  let lastAppliedPromptFontSize: number | null = null
+  let lastAppliedPromptEditorMinLines: number | null = null
 
   const getFindController = () => {
     if (!editor) return null
@@ -351,10 +354,22 @@
     }
   })
 
-  // Side effect: keep Monaco font size aligned with system settings.
+  // Side effect: apply font/min-lines relayout only when those settings change.
   $effect(() => {
     if (!editor) return
-    editor.updateOptions({ fontSize: promptFontSize })
+    const editorChanged = editor !== lastFontSizeEffectEditor
+    const fontSizeChanged = promptFontSize !== lastAppliedPromptFontSize
+    const minLinesChanged = promptEditorMinLines !== lastAppliedPromptEditorMinLines
+    if (!editorChanged && !fontSizeChanged && !minLinesChanged) return
+
+    lastFontSizeEffectEditor = editor
+    lastAppliedPromptFontSize = promptFontSize
+    lastAppliedPromptEditorMinLines = promptEditorMinLines
+
+    if (editorChanged || fontSizeChanged) {
+      editor.updateOptions({ fontSize: promptFontSize })
+    }
+
     const previousHeightPx = monacoHeightPx
     const nextHeightPx = measureContentHeightPx()
     const updatedHeightPx = layoutEditor(nextHeightPx)
