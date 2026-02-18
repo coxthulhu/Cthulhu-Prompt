@@ -16,7 +16,9 @@
     promptFolderDraftCollection
   } from '@renderer/data/Collections/PromptFolderDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-  import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
+  import {
+    loadPromptFolderInitial
+  } from '@renderer/data/Queries/PromptFolderQuery'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     createPrompt,
@@ -151,6 +153,26 @@
     outlinerAutoScrollRequestId += 1
   }
 
+  const hasCachedPromptFolderData = (nextPromptFolderId: string): boolean => {
+    const promptFolderDraft = promptFolderDraftCollection.get(nextPromptFolderId)
+    if (!promptFolderDraft?.hasLoadedInitialData) {
+      return false
+    }
+
+    const cachedPromptFolder = promptFolderCollection.get(nextPromptFolderId)
+    if (!cachedPromptFolder) {
+      return false
+    }
+
+    for (const promptId of cachedPromptFolder.promptIds) {
+      if (!promptDraftCollection.get(promptId)) {
+        return false
+      }
+    }
+
+    return true
+  }
+
   // Side effect: load prompt-folder records and reset local screen state when folder selection changes.
   $effect(() => {
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -162,7 +184,8 @@
     previousPromptFolderLoadKey = nextPromptFolderLoadKey
     promptFolderLoadRequestId += 1
     const requestId = promptFolderLoadRequestId
-    isLoading = true
+    const canUseCachedData = hasCachedPromptFolderData(promptFolderId)
+    isLoading = !canUseCachedData
     isCreatingPrompt = false
     errorMessage = null
     resetPromptFolderUiState()

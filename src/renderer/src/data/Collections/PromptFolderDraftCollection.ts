@@ -14,6 +14,8 @@ export const createPromptFolderDraftMeasuredHeightKey = (
 export type PromptFolderDraftRecord = {
   id: string
   folderDescription: string
+  // Tracks whether this folder has completed at least one initial screen load this session.
+  hasLoadedInitialData: boolean
   // Mirrors measuredHeightCache for prompt folder description.
   descriptionMeasuredHeightsByKey: Record<string, number>
 }

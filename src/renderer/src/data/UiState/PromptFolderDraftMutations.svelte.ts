@@ -102,6 +102,7 @@ export const upsertPromptFolderDrafts = (
       draftInserts.push({
         id: promptFolder.id,
         folderDescription: nextDescription,
+        hasLoadedInitialData: false,
         descriptionMeasuredHeightsByKey: {}
       })
       continue
@@ -133,6 +134,20 @@ export const upsertPromptFolderDrafts = (
       }
     })
   }
+}
+
+export const setPromptFolderDraftHasLoadedInitialData = (
+  promptFolderId: string,
+  hasLoadedInitialData: boolean
+): void => {
+  const draftRecord = promptFolderDraftCollection.get(promptFolderId)
+  if (!draftRecord || draftRecord.hasLoadedInitialData === hasLoadedInitialData) {
+    return
+  }
+
+  promptFolderDraftCollection.update(promptFolderId, (draft) => {
+    draft.hasLoadedInitialData = hasLoadedInitialData
+  })
 }
 
 export const getPromptFolderDraftState = (

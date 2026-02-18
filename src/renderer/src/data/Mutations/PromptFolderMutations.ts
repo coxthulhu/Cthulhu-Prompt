@@ -111,6 +111,7 @@ export const createPromptFolder = async (
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
         folderDescription: '',
+        hasLoadedInitialData: false,
         descriptionMeasuredHeightsByKey: {}
       })
       collections.workspace.update(workspaceId, (draft) => {
