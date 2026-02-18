@@ -184,4 +184,28 @@ monaco.editor.addKeybindingRules([
 
 // (Optionally) export monaco to reuse elsewhere
 export const PROMPT_EDITOR_THEME = PROMPT_EDITOR_THEME_ID
+
+export const warmupMonacoEditor = (): void => {
+  const warmupHost = document.createElement('div')
+  warmupHost.style.position = 'fixed'
+  warmupHost.style.left = '-10000px'
+  warmupHost.style.top = '0'
+  warmupHost.style.width = '1px'
+  warmupHost.style.height = '1px'
+  document.body.append(warmupHost)
+
+  const warmupModel = monaco.editor.createModel('', 'markdown')
+  const warmupEditor = monaco.editor.create(warmupHost, {
+    model: warmupModel,
+    language: 'markdown',
+    theme: PROMPT_EDITOR_THEME_ID,
+    minimap: { enabled: false },
+    dimension: { width: 1, height: 1 }
+  })
+
+  warmupEditor.dispose()
+  warmupModel.dispose()
+  warmupHost.remove()
+}
+
 export { monaco }
