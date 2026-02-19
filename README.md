@@ -29,6 +29,3 @@ Cthulhu Prompt is a lightweight prompt writing and management tool that helps yo
 ## Useful Commands
 
 - `npm run dev` - Start development mode
-- `npm run build:win` - Build Windows installer
-- `npm run build:mac` - Build macOS installer
-- `npm run build:linux` - Build Linux installer

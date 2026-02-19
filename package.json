@@ -11,18 +11,11 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",
-    "start": "electron-vite preview",
     "dev": "cross-env DEV_ENVIRONMENT=DEV CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=200 electron-vite dev --watch",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "patch-package && electron-builder install-app-deps",
-    "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux",
-    "test": "npm run test:vitest && npm run test:playwright",
     "test:vitest": "vitest run tests/vitest",
-    "test:playwright": "cross-env VITE_LOG_LEVEL=warn npm run build && cross-env DEV_ENVIRONMENT=PLAYWRIGHT npx playwright test",
-    "test:playwright:nobuild": "cross-env DEV_ENVIRONMENT=PLAYWRIGHT npx playwright test"
+    "test:playwright": "cross-env VITE_LOG_LEVEL=warn npm run build && cross-env DEV_ENVIRONMENT=PLAYWRIGHT npx playwright test"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
