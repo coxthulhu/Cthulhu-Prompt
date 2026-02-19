@@ -4,6 +4,7 @@
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { Prompt } from '@shared/Prompt'
   import type { PromptFolder } from '@shared/PromptFolder'
+  import { compactGuid } from '@shared/compactGuid'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import {
@@ -407,7 +408,7 @@
     }
 
     isCreatingPrompt = true
-    const promptId = window.crypto.randomUUID()
+    const promptId = compactGuid(window.crypto.randomUUID())
     const now = new Date().toISOString()
     const optimisticPrompt: Prompt = {
       id: promptId,

@@ -1,5 +1,6 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { compactGuid } from '@shared/compactGuid'
 import {
   RUNTIME_ARG_PREFIX,
   normalizeRuntimeEnvironment,
@@ -44,7 +45,7 @@ function loadRuntimeConfig(): RuntimeConfig {
 }
 
 const runtimeConfig = loadRuntimeConfig()
-const ipcClientId = crypto.randomUUID()
+const ipcClientId = compactGuid(crypto.randomUUID())
 
 const windowControls = {
   minimize: () => electronAPI.ipcRenderer.invoke('window-minimize'),

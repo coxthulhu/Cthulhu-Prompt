@@ -1,7 +1,8 @@
 import { ipcInvoke as invokeIpc } from './IpcInvoke'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
+import { compactGuid } from '@shared/compactGuid'
 
-const createRequestId = (): string => crypto.randomUUID()
+const createRequestId = (): string => compactGuid(crypto.randomUUID())
 const getClientId = (): string => window.ipcClientId
 
 export const ipcInvoke = <TResponse>(channel: string): Promise<TResponse> => {

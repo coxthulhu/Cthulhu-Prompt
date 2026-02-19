@@ -70,7 +70,7 @@ const createDeterministicId = (seed: string): string => {
     hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
   }
   const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000-0000-0000-0000-${suffix}`
+  return `00000000000000000000${suffix}`
 }
 
 const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {

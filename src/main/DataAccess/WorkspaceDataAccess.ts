@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import * as path from 'path'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
+import { compactGuid } from '@shared/compactGuid'
 import { getFs } from '../fs-provider'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
@@ -15,7 +16,7 @@ type CreateWorkspaceResult = { success: true } | { success: false; error: string
 const writeWorkspaceInfoFile = (workspacePath: string): void => {
   const fs = getFs()
   const workspaceInfoPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
-  const content = JSON.stringify({ workspaceId: randomUUID() }, null, 2)
+  const content = JSON.stringify({ workspaceId: compactGuid(randomUUID()) }, null, 2)
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
 }
 
@@ -27,7 +28,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
   const now = new Date().toISOString()
   const examplePrompts = [
     {
-      id: randomUUID(),
+      id: compactGuid(randomUUID()),
       title: 'Example: Add a Feature',
       creationDate: now,
       lastModifiedDate: now,
@@ -35,7 +36,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
       promptFolderCount: 1
     },
     {
-      id: randomUUID(),
+      id: compactGuid(randomUUID()),
       title: 'Example: Fix a Bug',
       creationDate: now,
       lastModifiedDate: now,
@@ -50,7 +51,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
     JSON.stringify(
       {
         foldername: EXAMPLE_FOLDER_DISPLAY_NAME,
-        promptFolderId: randomUUID(),
+        promptFolderId: compactGuid(randomUUID()),
         promptCount: examplePrompts.length,
         folderDescription: ''
       },

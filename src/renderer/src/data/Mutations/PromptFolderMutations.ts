@@ -5,6 +5,7 @@ import type {
   PromptFolderRevisionPayload,
   PromptFolderRevisionResponsePayload
 } from '@shared/PromptFolder'
+import { compactGuid } from '@shared/compactGuid'
 import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import {
@@ -88,7 +89,7 @@ export const createPromptFolder = async (
   }
 
   const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
-  const optimisticPromptFolderId = crypto.randomUUID()
+  const optimisticPromptFolderId = compactGuid(crypto.randomUUID())
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
