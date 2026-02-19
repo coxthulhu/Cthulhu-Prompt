@@ -4,6 +4,7 @@
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
   import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
+  import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
@@ -78,10 +79,12 @@
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0 || workspaceQuery.isLoading)
   const STARTUP_LOADING_OVERLAY_FADE_MS = 200
-  let hasAttemptedStartupRestore = false
-  let isStartupRestoreLoading = $state(true)
-  let isStartupLoadingOverlayVisible = $state(true)
-  let isStartupLoadingOverlayFading = $state(false)
+  type StartupRestoreState = 'pending' | 'restoring' | 'ready'
+  let startupRestoreState = $state<StartupRestoreState>('pending')
+  const startupLoadingOverlay = createLoadingOverlayState({
+    fadeMs: STARTUP_LOADING_OVERLAY_FADE_MS,
+    startsVisible: true
+  })
   const windowTitle = $derived(
     isDevMode && executionFolderName
       ? `${baseWindowTitle} — ${executionFolderName}`
@@ -212,31 +215,25 @@
 
   // Side effect: restore the previous workspace once after user persistence loads.
   $effect(() => {
-    if (hasAttemptedStartupRestore) {
+    if (startupRestoreState !== 'pending') {
       return
     }
 
-    hasAttemptedStartupRestore = true
+    startupRestoreState = 'restoring'
     void (async () => {
       try {
         await restoreWorkspaceFromPersistence()
       } catch (error) {
         console.error('Failed to restore workspace from user persistence.', error)
       } finally {
-        isStartupRestoreLoading = false
+        startupRestoreState = 'ready'
       }
     })()
   })
 
-  // Side effect: keep the startup overlay mounted long enough to play a fade-out transition.
+  // Side effect: sync startup restore progress to the shared loading overlay state.
   $effect(() => {
-    if (isStartupRestoreLoading || !isStartupLoadingOverlayVisible) return
-    isStartupLoadingOverlayFading = true
-    const timeoutId = window.setTimeout(() => {
-      isStartupLoadingOverlayVisible = false
-      isStartupLoadingOverlayFading = false
-    }, STARTUP_LOADING_OVERLAY_FADE_MS)
-    return () => window.clearTimeout(timeoutId)
+    startupLoadingOverlay.setLoading(startupRestoreState !== 'ready')
   })
 
   // Side effect: keep the browser window title in sync with dev mode state.
@@ -333,11 +330,11 @@
   </ResizableSidebar>
 </div>
 
-{#if isStartupLoadingOverlayVisible}
+{#if startupLoadingOverlay.getIsVisible()}
   <LoadingOverlay
     testId="startup-loading-overlay"
     fadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
-    isFading={isStartupLoadingOverlayFading}
+    isFading={startupLoadingOverlay.getIsFading()}
     message="Loading workspace..."
     fullscreen
   />

@@ -2,15 +2,13 @@ import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { compactGuid } from '@shared/compactGuid'
 import {
+  DEFAULT_RUNTIME_CONFIG,
   RUNTIME_ARG_PREFIX,
   normalizeRuntimeEnvironment,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
 
-const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
-  executionFolderName: null,
-  environment: ''
-})
+const defaultRuntimeConfig: RuntimeConfig = Object.freeze({ ...DEFAULT_RUNTIME_CONFIG })
 
 function loadRuntimeConfig(): RuntimeConfig {
   const runtimeFlag = process.argv.find((arg) => arg.startsWith(RUNTIME_ARG_PREFIX))

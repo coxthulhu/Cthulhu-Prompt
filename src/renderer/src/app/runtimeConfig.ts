@@ -1,12 +1,11 @@
-import { normalizeRuntimeEnvironment, type RuntimeConfig } from '@shared/runtimeConfig'
-
-const fallbackRuntimeConfig: RuntimeConfig = {
-  executionFolderName: null,
-  environment: ''
-}
+import {
+  DEFAULT_RUNTIME_CONFIG,
+  normalizeRuntimeEnvironment,
+  type RuntimeConfig
+} from '@shared/runtimeConfig'
 
 export const getRuntimeConfig = (): RuntimeConfig => {
-  const config = window.runtimeConfig ?? fallbackRuntimeConfig
+  const config = window.runtimeConfig ?? DEFAULT_RUNTIME_CONFIG
   return {
     executionFolderName: config.executionFolderName ?? null,
     environment: normalizeRuntimeEnvironment(config.environment)

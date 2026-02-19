@@ -5,6 +5,11 @@ export type RuntimeConfig = {
   environment: RuntimeEnvironment
 }
 
+export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
+  executionFolderName: null,
+  environment: ''
+}
+
 export const RUNTIME_ARG_PREFIX = '--cthulhu-runtime='
 
 export const normalizeRuntimeEnvironment = (

@@ -31,6 +31,7 @@
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import ResizableSidebar from '../sidebar/ResizableSidebar.svelte'
   import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
+  import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
   import {
     defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
@@ -94,8 +95,10 @@
   let promptFolderLoadRequestId = $state(0)
   let isLoading = $state(true)
   const LOADING_OVERLAY_FADE_MS = 125
-  let isLoadingOverlayVisible = $state(false)
-  let isLoadingOverlayFading = $state(false)
+  let shouldShowLoadingOverlay = $state(false)
+  const loadingOverlay = createLoadingOverlayState({
+    fadeMs: LOADING_OVERLAY_FADE_MS
+  })
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
 
@@ -185,8 +188,7 @@
     const requestId = promptFolderLoadRequestId
     const canUseCachedData = hasCachedPromptFolderData(promptFolderId)
     isLoading = !canUseCachedData
-    isLoadingOverlayVisible = !canUseCachedData
-    isLoadingOverlayFading = false
+    shouldShowLoadingOverlay = !canUseCachedData
     isCreatingPrompt = false
     errorMessage = null
     resetPromptFolderUiState()
@@ -212,15 +214,9 @@
     scrollApi.scrollTo(0)
   })
 
-  // Side effect: keep the loading overlay mounted long enough to play a fade-out when initial load finishes.
+  // Side effect: sync prompt-folder load progress to the shared loading overlay state.
   $effect(() => {
-    if (isLoading || !isLoadingOverlayVisible) return
-    isLoadingOverlayFading = true
-    const timeoutId = window.setTimeout(() => {
-      isLoadingOverlayVisible = false
-      isLoadingOverlayFading = false
-    }, LOADING_OVERLAY_FADE_MS)
-    return () => window.clearTimeout(timeoutId)
+    loadingOverlay.setLoading(shouldShowLoadingOverlay && isLoading)
   })
 
   const reorderPromptIds = (
@@ -599,11 +595,11 @@
         {/snippet}
       </ResizableSidebar>
     </div>
-    {#if isLoadingOverlayVisible}
+    {#if loadingOverlay.getIsVisible()}
       <LoadingOverlay
         testId="prompt-folder-loading-overlay"
         fadeMs={LOADING_OVERLAY_FADE_MS}
-        isFading={isLoadingOverlayFading}
+        isFading={loadingOverlay.getIsFading()}
         message="Loading prompt folder..."
       />
     {/if}
