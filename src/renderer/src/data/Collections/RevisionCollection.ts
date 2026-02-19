@@ -7,9 +7,7 @@ import type {
 } from '@tanstack/svelte-db'
 import type { RevisionEnvelope } from '@shared/Revision'
 
-export interface RevisionCollectionUtils<
-  TRecord extends object
-> extends UtilsRecord {
+export interface RevisionCollectionUtils<TRecord extends object> extends UtilsRecord {
   upsertAuthoritative: (snapshot: RevisionEnvelope<TRecord>) => void
   upsertManyAuthoritative: (snapshots: Array<RevisionEnvelope<TRecord>>) => void
   deleteAuthoritative: (key: string) => void
@@ -38,9 +36,7 @@ export const revisionCollectionOptions = <TRecord extends object>(
   const { id, getKey, initialData = [] } = config
   const authoritativeRevisions = new Map<string, number>()
 
-  let syncBegin:
-    | ((options?: { immediate?: boolean }) => void)
-    | null = null
+  let syncBegin: ((options?: { immediate?: boolean }) => void) | null = null
   let syncWrite: ((message: ChangeMessageOrDeleteKeyMessage<TRecord, string>) => void) | null = null
   let syncCommit: (() => void) | null = null
   let collection: Collection<TRecord, string, RevisionCollectionUtils<TRecord>> | null = null

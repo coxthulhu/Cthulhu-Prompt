@@ -35,9 +35,7 @@ const resolvePromptEditorMinLines = (value: unknown, fallback: number): number =
   return clampPromptEditorMinLines(Math.round(value))
 }
 
-export const normalizeSystemSettings = (
-  payload: Record<string, unknown>
-): SystemSettings => {
+export const normalizeSystemSettings = (payload: Record<string, unknown>): SystemSettings => {
   return {
     promptFontSize: resolvePromptFontSize(
       payload.promptFontSize,

@@ -57,7 +57,9 @@ export const registerPromptFolder = (
   const existingLocation = promptFolderLocationById.get(promptFolder.id)
 
   if (existingLocation && existingLocation.workspaceId !== workspaceId) {
-    const previousWorkspacePromptFolderIds = promptFolderIdsByWorkspaceId.get(existingLocation.workspaceId)
+    const previousWorkspacePromptFolderIds = promptFolderIdsByWorkspaceId.get(
+      existingLocation.workspaceId
+    )
     previousWorkspacePromptFolderIds?.delete(promptFolder.id)
 
     if (previousWorkspacePromptFolderIds && previousWorkspacePromptFolderIds.size === 0) {

@@ -50,10 +50,7 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
     debounceMs,
     mutateOptimistically,
     persistMutations: async ({ entities, invoke, transaction }) => {
-      const latestPromptFolder = readLatestPromptFolderFromTransaction(
-        transaction,
-        promptFolderId
-      )
+      const latestPromptFolder = readLatestPromptFolderFromTransaction(transaction, promptFolderId)
 
       const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
         'update-prompt-folder',
@@ -90,10 +87,7 @@ export const createPromptFolder = async (
     throw new Error('Workspace not loaded')
   }
 
-  const {
-    displayName: normalizedDisplayName,
-    folderName
-  } = preparePromptFolderName(displayName)
+  const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
   const optimisticPromptFolderId = crypto.randomUUID()
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
@@ -116,16 +110,19 @@ export const createPromptFolder = async (
       })
     },
     persistMutations: async ({ entities, invoke, transaction }) => {
-      const mutationResult = await invoke<{ payload: CreatePromptFolderPayload }>('create-prompt-folder', {
-        payload: {
-          workspace: entities.workspace({
-            id: workspaceId,
-            data: workspace
-          }),
-          promptFolderId: optimisticPromptFolderId,
-          displayName: normalizedDisplayName
+      const mutationResult = await invoke<{ payload: CreatePromptFolderPayload }>(
+        'create-prompt-folder',
+        {
+          payload: {
+            workspace: entities.workspace({
+              id: workspaceId,
+              data: workspace
+            }),
+            promptFolderId: optimisticPromptFolderId,
+            displayName: normalizedDisplayName
+          }
         }
-      })
+      )
 
       if (mutationResult.success) {
         promptFolderDraftCollection.utils.acceptMutations(transaction)
@@ -146,9 +143,7 @@ export const createPromptFolder = async (
   })
 }
 
-const updatePromptFolder = async (
-  promptFolder: PromptFolder
-): Promise<void> => {
+const updatePromptFolder = async (promptFolder: PromptFolder): Promise<void> => {
   if (!promptFolderCollection.get(promptFolder.id)) {
     throw new Error('Prompt folder not loaded')
   }
@@ -167,14 +162,17 @@ const updatePromptFolder = async (
       })
     },
     persistMutations: async ({ entities, invoke, transaction }) => {
-      const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>('update-prompt-folder', {
-        payload: {
-          promptFolder: entities.promptFolder({
-            id: promptFolder.id,
-            data: promptFolder
-          })
+      const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
+        'update-prompt-folder',
+        {
+          payload: {
+            promptFolder: entities.promptFolder({
+              id: promptFolder.id,
+              data: promptFolder
+            })
+          }
         }
-      })
+      )
 
       if (mutationResult.success) {
         promptFolderDraftCollection.utils.acceptMutations(transaction)

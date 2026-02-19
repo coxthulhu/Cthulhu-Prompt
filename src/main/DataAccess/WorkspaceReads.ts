@@ -46,10 +46,7 @@ const readPromptIds = (workspacePath: string, folderName: string): string[] => {
   return parsed.prompts.map((prompt) => prompt.id)
 }
 
-export const readPromptFolder = (
-  workspacePath: string,
-  folderName: string
-): PromptFolder => {
+export const readPromptFolder = (workspacePath: string, folderName: string): PromptFolder => {
   const config = readPromptFolderConfig(workspacePath, folderName)
   const promptIds = readPromptIds(workspacePath, folderName)
 

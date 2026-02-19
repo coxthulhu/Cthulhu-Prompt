@@ -42,13 +42,7 @@ const logIpcError = ({
   })
 }
 
-const logIpcConflictWarning = ({
-  channel,
-  error
-}: {
-  channel: string
-  error?: string
-}): void => {
+const logIpcConflictWarning = ({ channel, error }: { channel: string; error?: string }): void => {
   console.warn('IPC conflict response', {
     channel,
     error

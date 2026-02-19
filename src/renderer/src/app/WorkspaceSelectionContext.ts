@@ -6,9 +6,7 @@ export type WorkspaceSelectionContext = {
   selectedWorkspaceId: string | null
 }
 
-export const setWorkspaceSelectionContext = (
-  value: WorkspaceSelectionContext
-): void => {
+export const setWorkspaceSelectionContext = (value: WorkspaceSelectionContext): void => {
   setContext(WORKSPACE_SELECTION_CONTEXT, value)
 }
 

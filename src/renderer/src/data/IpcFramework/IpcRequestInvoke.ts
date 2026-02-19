@@ -1,8 +1,5 @@
 import { ipcInvoke as invokeIpc } from './IpcInvoke'
-import type {
-  IpcRequestContext,
-  IpcRequestWithPayload
-} from '@shared/IpcRequest'
+import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 
 const createRequestId = (): string => crypto.randomUUID()
 const getClientId = (): string => window.ipcClientId

@@ -18,13 +18,11 @@ const buildRevisionPayload = (
 })
 
 export const setupSystemSettingsMutationHandlers = (): void => {
-  ipcMain.handle(
-    'update-system-settings',
-    async (
-      _,
-      request: unknown
-    ) => {
-      return await runMutationIpcRequest(request, parseUpdateSystemSettingsRevisionRequest, async (validatedRequest) => {
+  ipcMain.handle('update-system-settings', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseUpdateSystemSettingsRevisionRequest,
+      async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
           const currentRevision = revisions.systemSettings.get(SYSTEM_SETTINGS_ID)
@@ -59,7 +57,7 @@ export const setupSystemSettingsMutationHandlers = (): void => {
             error: message || 'Failed to update system settings'
           }
         }
-      })
-    }
-  )
+      }
+    )
+  })
 }

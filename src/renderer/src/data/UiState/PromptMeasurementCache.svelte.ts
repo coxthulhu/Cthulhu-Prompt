@@ -1,7 +1,4 @@
-import {
-  createMeasuredHeightCache,
-  type TextMeasurement
-} from '@renderer/data/measuredHeightCache'
+import { createMeasuredHeightCache, type TextMeasurement } from '@renderer/data/measuredHeightCache'
 
 const promptEditorMeasuredHeightCache = createMeasuredHeightCache()
 const promptFolderDescriptionMeasuredHeightCache = createMeasuredHeightCache()
@@ -52,15 +49,11 @@ export const recordPromptFolderDescriptionMeasuredHeight = (
   promptFolderDescriptionMeasuredHeightCache.record(promptFolderId, measurement, textChanged)
 }
 
-export const clearPromptFolderDescriptionMeasuredHeight = (
-  promptFolderId: string
-): void => {
+export const clearPromptFolderDescriptionMeasuredHeight = (promptFolderId: string): void => {
   promptFolderDescriptionMeasuredHeightCache.clear(promptFolderId)
 }
 
-export const clearPromptFolderDescriptionMeasuredHeights = (
-  promptFolderIds: string[]
-): void => {
+export const clearPromptFolderDescriptionMeasuredHeights = (promptFolderIds: string[]): void => {
   for (const promptFolderId of promptFolderIds) {
     promptFolderDescriptionMeasuredHeightCache.clear(promptFolderId)
   }

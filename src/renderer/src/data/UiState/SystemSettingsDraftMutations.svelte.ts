@@ -8,9 +8,7 @@ import {
   getSystemSettingsDraftRecord,
   mutateSystemSettingsDraftWithAutosave
 } from './SystemSettingsAutosave.svelte.ts'
-import {
-  toSystemSettingsDraftSnapshot
-} from './SystemSettingsFormat'
+import { toSystemSettingsDraftSnapshot } from './SystemSettingsFormat'
 
 export const upsertSystemSettingsDraft = (settings: SystemSettings): void => {
   const nextSnapshot = toSystemSettingsDraftSnapshot(settings)

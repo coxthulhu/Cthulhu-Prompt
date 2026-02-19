@@ -5,11 +5,7 @@ type MutationOperation = 'insert' | 'update' | 'delete'
 type InsertMutationArgs = [data: unknown | unknown[], config?: unknown]
 type UpdateMutationArgs =
   | [keys: ElementId | ElementId[], mutateDraft: (...args: any[]) => void]
-  | [
-      keys: ElementId | ElementId[],
-      config: unknown,
-      mutateDraft: (...args: any[]) => void
-    ]
+  | [keys: ElementId | ElementId[], config: unknown, mutateDraft: (...args: any[]) => void]
 type DeleteMutationArgs = [keys: ElementId | ElementId[], config?: unknown]
 type MutationOperationArgs = {
   insert: InsertMutationArgs
@@ -39,17 +35,15 @@ export type OptimisticMutationCollectionHelper = {
   delete: (...args: DeleteMutationArgs) => void
 }
 
-export type OptimisticMutationHelpers<
-  TOptimisticCollections extends OptimisticCollectionsMap
-> = {
+export type OptimisticMutationHelpers<TOptimisticCollections extends OptimisticCollectionsMap> = {
   collections: {
     [TCollectionKey in keyof TOptimisticCollections]: OptimisticMutationCollectionHelper
   }
 }
 
-export type OptimisticMutateFn<
-  TOptimisticCollections extends OptimisticCollectionsMap
-> = (helpers: OptimisticMutationHelpers<TOptimisticCollections>) => void
+export type OptimisticMutateFn<TOptimisticCollections extends OptimisticCollectionsMap> = (
+  helpers: OptimisticMutationHelpers<TOptimisticCollections>
+) => void
 
 const toElementIdList = (value: ElementId | ElementId[]): ElementId[] => {
   return Array.isArray(value) ? value : [value]
@@ -69,9 +63,7 @@ const extractInsertElementIds = (
   return elementIds
 }
 
-const createOptimisticMutationHelpers = <
-  TOptimisticCollections extends OptimisticCollectionsMap
->(
+const createOptimisticMutationHelpers = <TOptimisticCollections extends OptimisticCollectionsMap>(
   optimisticCollections: TOptimisticCollections,
   executeMutation: <TOperation extends MutationOperation>(
     collection: MutationCapableCollection,
@@ -111,10 +103,7 @@ export const collectTouchedElementsFromMutation = <
   mutateOptimistically: OptimisticMutateFn<TOptimisticCollections>
 ): Array<TouchedElement> => {
   const touchedElementsByGlobalKey = new Map<string, TouchedElement>()
-  const trackTouchedElements = (
-    collectionId: string,
-    elementIds: ElementId[]
-  ): void => {
+  const trackTouchedElements = (collectionId: string, elementIds: ElementId[]): void => {
     for (const elementId of elementIds) {
       const globalElementKey = buildGlobalElementKey(collectionId, elementId)
       touchedElementsByGlobalKey.set(globalElementKey, {
@@ -140,9 +129,7 @@ export const collectTouchedElementsFromMutation = <
   return [...touchedElementsByGlobalKey.values()]
 }
 
-export const applyOptimisticMutation = <
-  TOptimisticCollections extends OptimisticCollectionsMap
->(
+export const applyOptimisticMutation = <TOptimisticCollections extends OptimisticCollectionsMap>(
   optimisticCollections: TOptimisticCollections,
   mutateOptimistically: OptimisticMutateFn<TOptimisticCollections>
 ): void => {

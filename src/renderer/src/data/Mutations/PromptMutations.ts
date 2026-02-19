@@ -147,10 +147,7 @@ export const mutatePacedPromptAutosaveUpdate = ({
   })
 }
 
-export const deletePrompt = async (
-  promptFolderId: string,
-  promptId: string
-): Promise<void> => {
+export const deletePrompt = async (promptFolderId: string, promptId: string): Promise<void> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) {
     throw new Error('Prompt folder not loaded')

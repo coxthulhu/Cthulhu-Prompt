@@ -1,8 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import {
-  SYSTEM_SETTINGS_ID,
-  type SystemSettings
-} from '@shared/SystemSettings'
+import { SYSTEM_SETTINGS_ID, type SystemSettings } from '@shared/SystemSettings'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 export const systemSettingsCollection = createCollection(

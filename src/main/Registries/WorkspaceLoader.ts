@@ -3,19 +3,12 @@ import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import { revisions } from './Revisions'
-import {
-  registerPrompts,
-  registerPromptFolders,
-  registerWorkspace
-} from './WorkspaceRegistry'
+import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
 import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
-type WorkspaceLoadPayload = Omit<
-  Extract<LoadWorkspaceByPathResult, { success: true }>,
-  'success'
->
+type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
 const isWorkspacePathValid = (workspacePath: string): boolean => {
   if (isWorkspaceRootPath(workspacePath)) {
@@ -29,9 +22,7 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
   )
 }
 
-const buildWorkspaceLoadSuccess = (
-  workspacePath: string
-): WorkspaceLoadPayload => {
+const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
   const workspaceId = readWorkspaceId(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
 

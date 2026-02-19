@@ -30,21 +30,12 @@ const enqueueGlobalMutation = <T>(task: QueuedTask<T>): Promise<T> => {
   return queuedTask
 }
 
-type AnyRevisionCollection = Collection<
-  any,
-  string,
-  RevisionCollectionUtils<any>
->
+type AnyRevisionCollection = Collection<any, string, RevisionCollectionUtils<any>>
 
 type RevisionCollectionsMap = Record<string, AnyRevisionCollection>
 
-type CollectionRecord<TCollection> = TCollection extends Collection<
-  infer TRecord,
-  string,
-  infer _TUtils
->
-  ? TRecord
-  : never
+type CollectionRecord<TCollection> =
+  TCollection extends Collection<infer TRecord, string, infer _TUtils> ? TRecord : never
 
 type MutationRequest<TRevisionCollections extends RevisionCollectionsMap> = {
   payload: Partial<{
@@ -67,18 +58,16 @@ type RevisionMutationOptions<
   TPayload
 > = {
   mutateOptimistically: OptimisticMutateFn<TOptimisticCollections>
-  persistMutations: (
-    helpers: {
-      entities: RevisionEntityBuilders<TRevisionCollections>
-      invoke: <
-        TRequest extends MutationRequest<TRevisionCollections> = MutationRequest<TRevisionCollections>
-      >(
-        channel: string,
-        request: TRequest
-      ) => Promise<IpcMutationPayloadResult<TPayload>>
-      transaction: Transaction<any>
-    }
-  ) => Promise<IpcMutationPayloadResult<TPayload>>
+  persistMutations: (helpers: {
+    entities: RevisionEntityBuilders<TRevisionCollections>
+    invoke: <
+      TRequest extends MutationRequest<TRevisionCollections> = MutationRequest<TRevisionCollections>
+    >(
+      channel: string,
+      request: TRequest
+    ) => Promise<IpcMutationPayloadResult<TPayload>>
+    transaction: Transaction<any>
+  }) => Promise<IpcMutationPayloadResult<TPayload>>
   handleSuccessOrConflictResponse: (payload: TPayload) => void
   conflictMessage: string
   onSuccess?: () => void
@@ -110,10 +99,11 @@ const createRevisionMutationTransaction = <
   TPayload
 >(
   revisionCollections: TRevisionCollections,
-  { persistMutations, handleSuccessOrConflictResponse, conflictMessage }: CreateRevisionMutationTransactionOptions<
-    TRevisionCollections,
-    TPayload
-  >
+  {
+    persistMutations,
+    handleSuccessOrConflictResponse,
+    conflictMessage
+  }: CreateRevisionMutationTransactionOptions<TRevisionCollections, TPayload>
 ): Transaction<any> => {
   const entities = {} as RevisionEntityBuilders<TRevisionCollections>
 
@@ -213,11 +203,7 @@ export const createRevisionMutationRunner = <
   optimisticCollections: TOptimisticCollections
 ) => {
   return async <TPayload>(
-    options: RevisionMutationOptions<
-      TRevisionCollections,
-      TOptimisticCollections,
-      TPayload
-    >
+    options: RevisionMutationOptions<TRevisionCollections, TOptimisticCollections, TPayload>
   ): Promise<void> => {
     const { onSuccess, queueImmediately = true } = options
     const transaction = createRevisionMutationTransaction<TRevisionCollections, TPayload>(

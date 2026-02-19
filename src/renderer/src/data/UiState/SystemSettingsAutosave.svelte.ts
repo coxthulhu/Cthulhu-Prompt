@@ -70,9 +70,8 @@ const readValidatedSystemSettings = (
 
   return {
     promptFontSize: normalizePromptFontSizeInput(draftRecord.promptFontSizeInput).rounded,
-    promptEditorMinLines: normalizePromptEditorMinLinesInput(
-      draftRecord.promptEditorMinLinesInput
-    ).rounded
+    promptEditorMinLines: normalizePromptEditorMinLinesInput(draftRecord.promptEditorMinLinesInput)
+      .rounded
   }
 }
 

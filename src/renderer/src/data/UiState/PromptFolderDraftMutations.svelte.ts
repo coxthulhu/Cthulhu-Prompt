@@ -1,7 +1,10 @@
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import { type PromptFolderDraftRecord, promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
+import {
+  type PromptFolderDraftRecord,
+  promptFolderDraftCollection
+} from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptFolderAutosaveUpdate } from '../Mutations/PromptFolderMutations'
@@ -17,10 +20,7 @@ const toPromptFolderDescription = (promptFolder: PromptFolder): string => {
   return promptFolder.folderDescription
 }
 
-const haveSamePromptFolderDescription = (
-  left: string,
-  right: string
-): boolean => {
+const haveSamePromptFolderDescription = (left: string, right: string): boolean => {
   return left === right
 }
 
@@ -54,9 +54,7 @@ export const upsertPromptFolderDraft = (promptFolder: PromptFolder): void => {
   upsertPromptFolderDrafts([promptFolder])
 }
 
-export const upsertPromptFolderDrafts = (
-  promptFolders: PromptFolder[]
-): void => {
+export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void => {
   if (promptFolders.length === 0) {
     return
   }
@@ -123,9 +121,7 @@ export const setPromptFolderDraftHasLoadedInitialData = (
   })
 }
 
-export const getPromptFolderDraftState = (
-  promptFolderId: string
-): PromptFolderDraftState => {
+export const getPromptFolderDraftState = (promptFolderId: string): PromptFolderDraftState => {
   return promptFolderDraftCollection.get(promptFolderId)!
 }
 
@@ -152,9 +148,7 @@ export const setPromptFolderDraftDescription = (
   })
 }
 
-export const deletePromptFolderDrafts = (
-  promptFolderIds: string[]
-): void => {
+export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {
   if (promptFolderIds.length === 0) {
     return
   }
@@ -175,9 +169,6 @@ export const flushPromptFolderDraftAutosaves = async (): Promise<void> => {
 }
 
 export const clearPromptFolderDraftStore = (): void => {
-  const draftIds = Array.from(
-    promptFolderDraftCollection.keys(),
-    (draftId) => String(draftId)
-  )
+  const draftIds = Array.from(promptFolderDraftCollection.keys(), (draftId) => String(draftId))
   deletePromptFolderDrafts(draftIds)
 }

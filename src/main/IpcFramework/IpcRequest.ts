@@ -9,9 +9,7 @@ import type { IpcFailure } from '@shared/IpcResult'
 const INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
 const INVALID_CLIENT_ID_ERROR = 'Invalid client ID'
 
-type RequestValidationError =
-  | typeof INVALID_REQUEST_PAYLOAD_ERROR
-  | typeof INVALID_CLIENT_ID_ERROR
+type RequestValidationError = typeof INVALID_REQUEST_PAYLOAD_ERROR | typeof INVALID_CLIENT_ID_ERROR
 
 type MutationInvalidRequestResult = IpcMutationResponseContext &
   IpcFailure & {
@@ -34,9 +32,7 @@ export const runMutationIpcRequest = async <
   request: unknown,
   parseRequest: (request: unknown) => ParsedRequest<TRequest>,
   run: (request: TRequest) => Promise<TResult>
-): Promise<
-  MutationResponseWithRequestContext<TResult> | MutationInvalidRequestResult
-> => {
+): Promise<MutationResponseWithRequestContext<TResult> | MutationInvalidRequestResult> => {
   const parsedRequest = parseRequest(request)
 
   if (!parsedRequest.success) {
@@ -44,9 +40,10 @@ export const runMutationIpcRequest = async <
       requestId: parsedRequest.requestId,
       clientId: parsedRequest.clientId,
       success: false,
-      error: parsedRequest.clientId.length === 0
-        ? INVALID_CLIENT_ID_ERROR
-        : INVALID_REQUEST_PAYLOAD_ERROR
+      error:
+        parsedRequest.clientId.length === 0
+          ? INVALID_CLIENT_ID_ERROR
+          : INVALID_REQUEST_PAYLOAD_ERROR
     }
   }
 
@@ -73,9 +70,10 @@ export const runQueryIpcRequest = async <
     return {
       clientId: parsedRequest.clientId,
       success: false,
-      error: parsedRequest.clientId.length === 0
-        ? INVALID_CLIENT_ID_ERROR
-        : INVALID_REQUEST_PAYLOAD_ERROR
+      error:
+        parsedRequest.clientId.length === 0
+          ? INVALID_CLIENT_ID_ERROR
+          : INVALID_REQUEST_PAYLOAD_ERROR
     }
   }
 

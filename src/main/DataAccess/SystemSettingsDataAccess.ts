@@ -77,9 +77,7 @@ export class SystemSettingsDataAccess {
     return settings
   }
 
-  static async updateSystemSettings(
-    settingsUpdate: SystemSettings
-  ): Promise<SystemSettings> {
+  static async updateSystemSettings(settingsUpdate: SystemSettings): Promise<SystemSettings> {
     ensureSystemSettingsDirectory()
     const { payload } = readSystemSettingsPayload()
 

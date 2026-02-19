@@ -31,8 +31,10 @@ const optimisticCollections = {
   systemSettingsDraft: systemSettingsDraftCollection
 }
 
-export const mutatePacedRevisionUpdateTransaction =
-  createPacedRevisionUpdateMutationRunner(revisionCollections, optimisticCollections)
+export const mutatePacedRevisionUpdateTransaction = createPacedRevisionUpdateMutationRunner(
+  revisionCollections,
+  optimisticCollections
+)
 
 export const runRevisionMutation = createRevisionMutationRunner(
   revisionCollections,

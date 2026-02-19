@@ -22,9 +22,7 @@ const getPromptFolderCount = (promptId: string): number => {
   return promptCollection.get(promptId)?.promptFolderCount ?? 0
 }
 
-export const getPromptFolderScreenPromptData = (
-  promptId: string
-): PromptFolderScreenPromptData => {
+export const getPromptFolderScreenPromptData = (promptId: string): PromptFolderScreenPromptData => {
   const promptDraftState = getPromptDraftState(promptId)
   return {
     draft: {

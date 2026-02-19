@@ -1,7 +1,5 @@
 import { ipcMain } from 'electron'
-import type {
-  LoadWorkspaceByPathResult,
-} from '@shared/Workspace'
+import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { parseLoadWorkspaceByPathRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { loadWorkspaceByPath } from '../Registries/WorkspaceLoader'
@@ -10,9 +8,13 @@ export const setupWorkspaceQueryHandlers = (): void => {
   ipcMain.handle(
     'load-workspace-by-path',
     async (_, request: unknown): Promise<LoadWorkspaceByPathResult> => {
-      return await runQueryIpcRequest(request, parseLoadWorkspaceByPathRequest, async (validatedRequest) => {
-        return await loadWorkspaceByPath(validatedRequest.payload.workspacePath)
-      })
+      return await runQueryIpcRequest(
+        request,
+        parseLoadWorkspaceByPathRequest,
+        async (validatedRequest) => {
+          return await loadWorkspaceByPath(validatedRequest.payload.workspacePath)
+        }
+      )
     }
   )
 }

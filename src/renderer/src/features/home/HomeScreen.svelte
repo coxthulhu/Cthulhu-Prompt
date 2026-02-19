@@ -74,10 +74,10 @@
   const handleSelectFolder = async () => {
     activeWorkspaceAction = 'select'
     try {
-      const result = await runIpcBestEffort(
-        openWorkspaceFolderDialog,
-        () => ({ dialogCancelled: true, filePaths: [] })
-      )
+      const result = await runIpcBestEffort(openWorkspaceFolderDialog, () => ({
+        dialogCancelled: true,
+        filePaths: []
+      }))
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]
@@ -106,10 +106,10 @@
   const handleCreateFolder = async () => {
     activeWorkspaceAction = 'create'
     try {
-      const result = await runIpcBestEffort(
-        openWorkspaceFolderDialog,
-        () => ({ dialogCancelled: true, filePaths: [] })
-      )
+      const result = await runIpcBestEffort(openWorkspaceFolderDialog, () => ({
+        dialogCancelled: true,
+        filePaths: []
+      }))
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]

@@ -1,7 +1,4 @@
-import type {
-  LoadWorkspaceByPathRequest,
-  LoadWorkspaceByPathResult
-} from '@shared/Workspace'
+import type { LoadWorkspaceByPathRequest, LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -13,12 +10,12 @@ import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 export const loadWorkspaceByPath = async (workspacePath: string): Promise<string> => {
   const result = await runLoad(() =>
-    ipcInvokeWithPayload<
-      LoadWorkspaceByPathResult,
-      LoadWorkspaceByPathRequest
-    >('load-workspace-by-path', {
-      workspacePath
-    })
+    ipcInvokeWithPayload<LoadWorkspaceByPathResult, LoadWorkspaceByPathRequest>(
+      'load-workspace-by-path',
+      {
+        workspacePath
+      }
+    )
   )
 
   const previousWorkspace = workspaceCollection.get(result.workspace.id)

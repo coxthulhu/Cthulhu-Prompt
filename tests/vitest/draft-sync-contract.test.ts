@@ -20,10 +20,7 @@ const clearPromptDraftCollection = (): void => {
 }
 
 const clearPromptFolderDraftCollection = (): void => {
-  const draftIds = Array.from(
-    promptFolderDraftCollection.keys(),
-    (draftId) => String(draftId)
-  )
+  const draftIds = Array.from(promptFolderDraftCollection.keys(), (draftId) => String(draftId))
   if (draftIds.length > 0) {
     promptFolderDraftCollection.delete(draftIds)
   }
@@ -51,9 +48,7 @@ const createPrompt = (overrides: Partial<Prompt> = {}): Prompt => ({
   ...overrides
 })
 
-const createPromptFolder = (
-  overrides: Partial<PromptFolder> = {}
-): PromptFolder => ({
+const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   id: 'folder-1',
   folderName: 'folder',
   displayName: 'Folder',
@@ -63,9 +58,7 @@ const createPromptFolder = (
   ...overrides
 })
 
-const createSystemSettings = (
-  overrides: Partial<SystemSettings> = {}
-): SystemSettings => ({
+const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSettings => ({
   promptFontSize: 16,
   promptEditorMinLines: 3,
   ...overrides

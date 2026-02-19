@@ -29,16 +29,11 @@ type ElementPacedUpdateState = {
 const elementStatesByGlobalKey = new Map<string, ElementPacedUpdateState>()
 
 // Keep element keys aligned with TanStack's global mutation key format.
-export const buildGlobalElementKey = (
-  collectionId: string,
-  elementId: string | number
-): string => {
+export const buildGlobalElementKey = (collectionId: string, elementId: string | number): string => {
   return `KEY::${collectionId}/${elementId}`
 }
 
-const getOrCreateElementState = (
-  globalElementKey: string
-): ElementPacedUpdateState => {
+const getOrCreateElementState = (globalElementKey: string): ElementPacedUpdateState => {
   let elementState = elementStatesByGlobalKey.get(globalElementKey)
 
   if (!elementState) {
@@ -117,7 +112,9 @@ const sendPacedUpdateTransactionByGlobalElementKey = (
   if (!elementState || !elementState.pacedUpdateTransaction) {
     return {
       wasSent: false,
-      waitTask: includeInFlightTask ? (elementState?.latestInFlightPacedUpdateEnqueueTask ?? null) : null
+      waitTask: includeInFlightTask
+        ? (elementState?.latestInFlightPacedUpdateEnqueueTask ?? null)
+        : null
     }
   }
 
@@ -141,7 +138,9 @@ const sendPacedUpdateTransactionByGlobalElementKey = (
 
     return {
       wasSent: false,
-      waitTask: includeInFlightTask ? (elementState.latestInFlightPacedUpdateEnqueueTask ?? null) : null
+      waitTask: includeInFlightTask
+        ? (elementState.latestInFlightPacedUpdateEnqueueTask ?? null)
+        : null
     }
   }
 

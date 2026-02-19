@@ -10,16 +10,17 @@ import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
     'create-workspace',
-    async (
-      _,
-      request: unknown
-    ): Promise<IpcMutationActionResponse> => {
+    async (_, request: unknown): Promise<IpcMutationActionResponse> => {
       // Special-case payload: this create request uses command-style workspace fields,
       // not the normal  revision mutation entity shape.
-      return await runMutationIpcRequest(request, parseCreateWorkspaceRequest, async (validatedRequest) => {
-        const payload = validatedRequest.payload
-        return await createWorkspace(payload.workspacePath, payload.includeExamplePrompts)
-      })
+      return await runMutationIpcRequest(
+        request,
+        parseCreateWorkspaceRequest,
+        async (validatedRequest) => {
+          const payload = validatedRequest.payload
+          return await createWorkspace(payload.workspacePath, payload.includeExamplePrompts)
+        }
+      )
     }
   )
 

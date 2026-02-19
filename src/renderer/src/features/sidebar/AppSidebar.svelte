@@ -38,9 +38,10 @@
 
   let openFolderMenuName = $state<string | null>(null)
   const workspaceSelection = getWorkspaceSelectionContext()
-  const workspaceQuery = useLiveQuery((q) =>
-    q.from({ workspace: workspaceCollection })
-  ) as { data: Workspace[]; isLoading: boolean }
+  const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
+    data: Workspace[]
+    isLoading: boolean
+  }
   const promptFolderQuery = useLiveQuery((q) =>
     q.from({ promptFolder: promptFolderCollection })
   ) as { data: PromptFolder[]; isLoading: boolean }
@@ -67,9 +68,7 @@
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
-    return (
-      workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
-    )
+    return workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
   })
 
   const promptFolders = $derived.by((): PromptFolder[] => {

@@ -1,8 +1,6 @@
 import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope } from './Revision'
-import type {
-  IpcResult
-} from './IpcResult'
+import type { IpcResult } from './IpcResult'
 
 export interface Workspace {
   id: string

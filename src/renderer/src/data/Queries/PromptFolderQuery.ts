@@ -6,10 +6,7 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import {
-  deletePromptDrafts,
-  upsertPromptDrafts
-} from '../UiState/PromptDraftMutations.svelte.ts'
+import { deletePromptDrafts, upsertPromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   setPromptFolderDraftHasLoadedInitialData,
   upsertPromptFolderDraft
@@ -19,18 +16,16 @@ export const loadPromptFolderInitial = async (
   workspaceId: string,
   promptFolderId: string
 ): Promise<void> => {
-  const previousPromptIds = new Set(
-    promptFolderCollection.get(promptFolderId)?.promptIds ?? []
-  )
+  const previousPromptIds = new Set(promptFolderCollection.get(promptFolderId)?.promptIds ?? [])
 
   const result = await runLoad(() =>
-    ipcInvokeWithPayload<
-      LoadPromptFolderInitialResult,
-      LoadPromptFolderInitialPayload
-    >('load-prompt-folder-initial', {
-      workspaceId,
-      promptFolderId
-    })
+    ipcInvokeWithPayload<LoadPromptFolderInitialResult, LoadPromptFolderInitialPayload>(
+      'load-prompt-folder-initial',
+      {
+        workspaceId,
+        promptFolderId
+      }
+    )
   )
 
   promptCollection.utils.upsertManyAuthoritative(result.prompts)

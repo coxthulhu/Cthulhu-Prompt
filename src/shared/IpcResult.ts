@@ -1,7 +1,4 @@
-import type {
-  IpcMutationResponseContext,
-  IpcQueryResponseContext
-} from './IpcRequest'
+import type { IpcMutationResponseContext, IpcQueryResponseContext } from './IpcRequest'
 
 export type IpcSuccess<TData extends object = object> = { success: true } & TData
 
@@ -10,9 +7,7 @@ export type IpcFailure = {
   error: string
 }
 
-export type IpcResult<TData extends object = object> =
-  | IpcSuccess<TData>
-  | IpcFailure
+export type IpcResult<TData extends object = object> = IpcSuccess<TData> | IpcFailure
 
 export type IpcMutationPayloadResult<TPayload> =
   | { success: true; payload: TPayload }
@@ -21,8 +16,8 @@ export type IpcMutationPayloadResult<TPayload> =
 
 export type IpcMutationActionResponse = IpcResult & IpcMutationResponseContext
 
-export type IpcMutationPayloadResponse<TPayload> =
-  IpcMutationPayloadResult<TPayload> & IpcMutationResponseContext
+export type IpcMutationPayloadResponse<TPayload> = IpcMutationPayloadResult<TPayload> &
+  IpcMutationResponseContext
 
-export type IpcQueryResponse<TData extends object = object> =
-  IpcResult<TData> & IpcQueryResponseContext
+export type IpcQueryResponse<TData extends object = object> = IpcResult<TData> &
+  IpcQueryResponseContext

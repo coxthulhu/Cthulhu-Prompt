@@ -1,7 +1,4 @@
-import {
-  normalizeRuntimeEnvironment,
-  type RuntimeConfig
-} from '@shared/runtimeConfig'
+import { normalizeRuntimeEnvironment, type RuntimeConfig } from '@shared/runtimeConfig'
 
 const fallbackRuntimeConfig: RuntimeConfig = {
   devWorkspacePath: null,

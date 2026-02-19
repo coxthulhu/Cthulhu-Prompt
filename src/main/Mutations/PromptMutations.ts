@@ -1,10 +1,7 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { Prompt } from '@shared/Prompt'
-import type {
-  PromptFolderConfigFile,
-  PromptsFile
-} from '../DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderConfigFile, PromptsFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readPromptFolder } from '../DataAccess/WorkspaceReads'
 import {
@@ -109,10 +106,11 @@ const buildPromptFolderSnapshot = (
 }
 
 export const setupPromptMutationHandlers = (): void => {
-  ipcMain.handle(
-    'create-prompt',
-    async (_, request: unknown) => {
-      return await runMutationIpcRequest(request, parseCreatePromptRequest, async (validatedRequest) => {
+  ipcMain.handle('create-prompt', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseCreatePromptRequest,
+      async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
           const promptFolderEntity = payload.promptFolder
@@ -202,14 +200,15 @@ export const setupPromptMutationHandlers = (): void => {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message }
         }
-      })
-    }
-  )
+      }
+    )
+  })
 
-  ipcMain.handle(
-    'delete-prompt',
-    async (_, request: unknown) => {
-      return await runMutationIpcRequest(request, parseDeletePromptRequest, async (validatedRequest) => {
+  ipcMain.handle('delete-prompt', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseDeletePromptRequest,
+      async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder
           const promptEntity = validatedRequest.payload.prompt
@@ -249,7 +248,9 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const promptsFile = readPromptFile(location.workspacePath, location.folderName)
-          const promptIndex = promptsFile.prompts.findIndex((prompt) => prompt.id === promptEntity.id)
+          const promptIndex = promptsFile.prompts.findIndex(
+            (prompt) => prompt.id === promptEntity.id
+          )
 
           if (promptIndex === -1) {
             return {
@@ -285,14 +286,15 @@ export const setupPromptMutationHandlers = (): void => {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message || 'Failed to delete prompt' }
         }
-      })
-    }
-  )
+      }
+    )
+  })
 
-  ipcMain.handle(
-    'update-prompt',
-    async (_, request: unknown) => {
-      return await runMutationIpcRequest(request, parseUpdatePromptRevisionRequest, async (validatedRequest) => {
+  ipcMain.handle('update-prompt', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseUpdatePromptRevisionRequest,
+      async (validatedRequest) => {
         try {
           const promptEntity = validatedRequest.payload.prompt
           const location = getPromptLocation(promptEntity.id)
@@ -306,7 +308,9 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const promptsFile = readPromptFile(location.workspacePath, location.folderName)
-          const promptIndex = promptsFile.prompts.findIndex((prompt) => prompt.id === promptEntity.id)
+          const promptIndex = promptsFile.prompts.findIndex(
+            (prompt) => prompt.id === promptEntity.id
+          )
 
           if (promptIndex === -1) {
             return { success: false, error: 'Prompt not found' }
@@ -353,7 +357,7 @@ export const setupPromptMutationHandlers = (): void => {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message || 'Failed to update prompt' }
         }
-      })
-    }
-  )
+      }
+    )
+  })
 }

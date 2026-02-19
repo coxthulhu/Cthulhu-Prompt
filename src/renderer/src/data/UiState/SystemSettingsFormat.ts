@@ -36,7 +36,9 @@ export const formatPromptEditorMinLinesInput = (value: number): string => {
   return formatNumericInput(value)
 }
 
-export const normalizePromptFontSizeInput = (value: string): { parsed: number; rounded: number } => {
+export const normalizePromptFontSizeInput = (
+  value: string
+): { parsed: number; rounded: number } => {
   return normalizeNumericInput(value)
 }
 

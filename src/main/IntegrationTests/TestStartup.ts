@@ -80,11 +80,10 @@ function initializeIpcGatingForE2E(): void {
   ipcMain.handle = wrappedHandle
 }
 
-type FilesystemSetupPayload =
-  {
-    filesystem: Record<string, string | null>
-    requestId: string
-  }
+type FilesystemSetupPayload = {
+  filesystem: Record<string, string | null>
+  requestId: string
+}
 
 type FilesystemSetupResult = {
   success: boolean
@@ -118,13 +117,14 @@ function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload |
 
 export function setupTestStartupListener(): void {
   initializeIpcGatingForE2E()
-
   ;(app as any).on('test-setup-filesystem', async (payload: unknown) => {
     const typedPayload = parseFilesystemSetupPayload(payload)
 
     if (!typedPayload) {
       const requestId =
-        payload && typeof payload === 'object' && 'requestId' in (payload as Record<string, unknown>)
+        payload &&
+        typeof payload === 'object' &&
+        'requestId' in (payload as Record<string, unknown>)
           ? String((payload as Record<string, unknown>).requestId ?? '')
           : ''
 
@@ -153,26 +153,19 @@ export function setupTestStartupListener(): void {
       })
     }
   })
-
   ;(app as any).on('test-setup-file-dialog', (results: string[]) => {
     testFixtures.fileDialogResults = results
   })
-
   ;(app as any).on('test-check-file-exists', (filePath: string) => {
     const fs = getFs()
     const exists = fs.existsSync(filePath)
     ;(global as any).testFileExistsResult = exists
   })
-
-  ;(app as any).on(
-    'test-read-file',
-    (payload: { filePath: string; requestId: string }) => {
-      const fs = getFs()
-      const content = fs.readFileSync(payload.filePath, 'utf8')
-      ;(app as any).emit(`test-read-file-ready:${payload.requestId}`, { content })
-    }
-  )
-
+  ;(app as any).on('test-read-file', (payload: { filePath: string; requestId: string }) => {
+    const fs = getFs()
+    const content = fs.readFileSync(payload.filePath, 'utf8')
+    ;(app as any).emit(`test-read-file-ready:${payload.requestId}`, { content })
+  })
   ;(app as any).on('test-complete-startup', () => {
     if (testFixtures.fileDialogResults) {
       setDialogProvider(createTestDialogProvider(testFixtures.fileDialogResults))

@@ -1,10 +1,7 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { Workspace } from '@shared/Workspace'
-import type {
-  PromptFolderConfigFile,
-  PromptsFile
-} from '../DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderConfigFile, PromptsFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { getFs } from '../fs-provider'
 import { readPromptFolder } from '../DataAccess/WorkspaceReads'
@@ -168,13 +165,11 @@ const reorderPrompts = (
 }
 
 export const setupPromptFolderMutationHandlers = (): void => {
-  ipcMain.handle(
-    'create-prompt-folder',
-    async (
-      _,
-      request: unknown
-    ) => {
-      return await runMutationIpcRequest(request, parseCreatePromptFolderRequest, async (validatedRequest) => {
+  ipcMain.handle('create-prompt-folder', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseCreatePromptFolderRequest,
+      async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
           const workspace = payload.workspace
@@ -195,7 +190,10 @@ export const setupPromptFolderMutationHandlers = (): void => {
           } = preparePromptFolderName(payload.displayName)
 
           if (!validation.isValid) {
-            return { success: false, error: validation.errorMessage ?? 'Invalid prompt folder name' }
+            return {
+              success: false,
+              error: validation.errorMessage ?? 'Invalid prompt folder name'
+            }
           }
 
           const currentWorkspaceRevision = revisions.workspace.get(workspace.id)
@@ -205,7 +203,11 @@ export const setupPromptFolderMutationHandlers = (): void => {
               success: false,
               conflict: true,
               payload: {
-                workspace: buildWorkspaceSnapshot(workspace.id, workspacePath, currentWorkspaceRevision)
+                workspace: buildWorkspaceSnapshot(
+                  workspace.id,
+                  workspacePath,
+                  currentWorkspaceRevision
+                )
               }
             }
           }
@@ -214,10 +216,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
           const folderPath = path.join(promptsPath, folderName)
 
-          if (
-            hasPromptFolderNameConflict(workspacePath, folderName) ||
-            fs.existsSync(folderPath)
-          ) {
+          if (hasPromptFolderNameConflict(workspacePath, folderName) || fs.existsSync(folderPath)) {
             return { success: false, error: 'A folder with this name already exists' }
           }
 
@@ -273,14 +272,15 @@ export const setupPromptFolderMutationHandlers = (): void => {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message }
         }
-      })
-    }
-  )
+      }
+    )
+  })
 
-  ipcMain.handle(
-    'update-prompt-folder',
-    async (_, request: unknown) => {
-      return await runMutationIpcRequest(request, parseUpdatePromptFolderRevisionRequest, async (validatedRequest) => {
+  ipcMain.handle('update-prompt-folder', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseUpdatePromptFolderRevisionRequest,
+      async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder
           const location = getPromptFolderLocation(promptFolderEntity.id)
@@ -348,7 +348,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message }
         }
-      })
-    }
-  )
+      }
+    )
+  })
 }

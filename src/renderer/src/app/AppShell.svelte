@@ -57,9 +57,10 @@
   }
   const windowControls = window.windowControls
 
-  const workspaceQuery = useLiveQuery((q) =>
-    q.from({ workspace: workspaceCollection })
-  ) as { data: Workspace[]; isLoading: boolean }
+  const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
+    data: Workspace[]
+    isLoading: boolean
+  }
 
   setSystemSettingsContext(systemSettings)
   setWorkspaceSelectionContext(workspaceSelection)
@@ -67,9 +68,7 @@
   let activeScreen = $state<ScreenId>('home')
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = getSelectedWorkspaceId()
-    return (
-      workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
-    )
+    return workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
   })
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
   let selectedPromptFolderId = $state<string | null>(null)

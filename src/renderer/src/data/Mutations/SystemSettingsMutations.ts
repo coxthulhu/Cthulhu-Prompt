@@ -9,9 +9,7 @@ import { systemSettingsCollection } from '../Collections/SystemSettingsCollectio
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
 
-const readLatestSystemSettingsFromTransaction = (
-  transaction: Transaction<any>
-): SystemSettings => {
+const readLatestSystemSettingsFromTransaction = (transaction: Transaction<any>): SystemSettings => {
   return getLatestMutationModifiedRecord(
     transaction,
     systemSettingsCollection.id,

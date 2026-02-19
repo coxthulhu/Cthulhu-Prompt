@@ -73,9 +73,7 @@ describe('Prompt Folders Autosave (Svelte)', () => {
 
     const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
       return await new Promise<string>((resolve) => {
-        const requestId = `read-${Date.now().toString(36)}-${Math.random()
-          .toString(16)
-          .slice(2)}`
+        const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
         app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
           resolve(payload.content)
         })

@@ -6,17 +6,18 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import { type PromptDraftRecord, promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
-  import { type PromptFolderDraftRecord, promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
+  import {
+    type PromptDraftRecord,
+    promptDraftCollection
+  } from '@renderer/data/Collections/PromptDraftCollection'
+  import {
+    type PromptFolderDraftRecord,
+    promptFolderDraftCollection
+  } from '@renderer/data/Collections/PromptFolderDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-  import {
-    loadPromptFolderInitial
-  } from '@renderer/data/Queries/PromptFolderQuery'
+  import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import {
-    createPrompt,
-    deletePrompt
-  } from '@renderer/data/Mutations/PromptMutations'
+  import { createPrompt, deletePrompt } from '@renderer/data/Mutations/PromptMutations'
   import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
   import {
     lookupPromptEditorMeasuredHeight,
@@ -257,7 +258,11 @@
       return false
     }
 
-    const nextPromptIds = reorderPromptIds(currentPromptFolder.promptIds, promptId, previousPromptId)
+    const nextPromptIds = reorderPromptIds(
+      currentPromptFolder.promptIds,
+      promptId,
+      previousPromptId
+    )
     if (!nextPromptIds) {
       return false
     }
@@ -275,11 +280,7 @@
     widthPx: number,
     devicePixelRatio: number
   ): number | null => {
-    return lookupPromptFolderDescriptionMeasuredHeight(
-      promptFolderId,
-      widthPx,
-      devicePixelRatio
-    )
+    return lookupPromptFolderDescriptionMeasuredHeight(promptFolderId, widthPx, devicePixelRatio)
   }
 
   type PromptFolderRow =
