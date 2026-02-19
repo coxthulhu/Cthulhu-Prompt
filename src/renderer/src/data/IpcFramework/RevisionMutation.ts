@@ -94,7 +94,6 @@ type PacedRevisionUpdateMutationOptions<
   elementId: string | number
   debounceMs: number
   validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
-  draftOnlyChange?: boolean
 }
 
 type CreateRevisionMutationTransactionOptions<
@@ -273,16 +272,13 @@ export const createPacedRevisionUpdateMutationRunner = <
       debounceMs,
       validateBeforeEnqueue,
       mutateOptimistically,
-      onSuccess,
-      draftOnlyChange = false
+      onSuccess
     } = options
 
-    const didMutateOpenPacedTransaction = mutatePacedUpdateTransaction({
+    mutatePacedUpdateTransaction({
       collectionId,
       elementId,
       debounceMs,
-      createIfMissing: !draftOnlyChange,
-      restartDebounceTimer: !draftOnlyChange,
       createTransaction: () => {
         const transaction = createRevisionMutationTransaction<TRevisionCollections, TPayload>(
           revisionCollections,
@@ -305,10 +301,5 @@ export const createPacedRevisionUpdateMutationRunner = <
         )
       }
     })
-
-    if (!didMutateOpenPacedTransaction && draftOnlyChange) {
-      // For draft-only changes, apply optimistic draft updates immediately when no paced transaction is open.
-      applyOptimisticMutation(optimisticCollections, mutateOptimistically)
-    }
   }
 }

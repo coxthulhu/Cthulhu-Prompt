@@ -48,10 +48,7 @@ export const createPrompt = async (
       }
 
       collections.prompt.insert(optimisticPrompt)
-      collections.promptDraft.insert({
-        ...optimisticPrompt,
-        promptEditorMeasuredHeightsByKey: {}
-      })
+      collections.promptDraft.insert(optimisticPrompt)
 
       collections.promptFolder.update(promptFolderId, (draft) => {
         let insertIndex = draft.promptIds.length
@@ -111,7 +108,7 @@ type PacedPromptMutationOptions = Parameters<
 
 type PacedPromptAutosaveUpdateOptions = Pick<
   PacedPromptMutationOptions,
-  'debounceMs' | 'mutateOptimistically' | 'draftOnlyChange'
+  'debounceMs' | 'mutateOptimistically'
 > & {
   promptId: string
 }
@@ -119,15 +116,13 @@ type PacedPromptAutosaveUpdateOptions = Pick<
 export const mutatePacedPromptAutosaveUpdate = ({
   promptId,
   debounceMs,
-  mutateOptimistically,
-  draftOnlyChange
+  mutateOptimistically
 }: PacedPromptAutosaveUpdateOptions): void => {
   mutatePacedRevisionUpdateTransaction<PromptRevisionResponsePayload>({
     collectionId: promptCollection.id,
     elementId: promptId,
     debounceMs,
     mutateOptimistically,
-    draftOnlyChange,
     persistMutations: async ({ entities, invoke, transaction }) => {
       const latestPrompt = readLatestPromptFromTransaction(transaction, promptId)
       const mutationResult = await invoke<{ payload: PromptRevisionPayload }>('update-prompt', {

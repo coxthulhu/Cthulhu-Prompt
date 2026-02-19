@@ -1,14 +1,15 @@
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import {
-  createPromptFolderDraftMeasuredHeightKey,
-  type PromptFolderDraftRecord,
-  promptFolderDraftCollection
-} from '../Collections/PromptFolderDraftCollection'
+import { type PromptFolderDraftRecord, promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptFolderAutosaveUpdate } from '../Mutations/PromptFolderMutations'
+import {
+  clearPromptFolderDescriptionMeasuredHeight,
+  clearPromptFolderDescriptionMeasuredHeights,
+  recordPromptFolderDescriptionMeasuredHeight
+} from './PromptMeasurementCache.svelte.ts'
 
 export type PromptFolderDraftState = PromptFolderDraftRecord
 
@@ -37,7 +38,6 @@ const mutatePromptFolderDraftOptimistically = (
   mutatePacedPromptFolderAutosaveUpdate({
     promptFolderId,
     debounceMs: AUTOSAVE_MS,
-    draftOnlyChange: mutatePromptFolder == null,
     mutateOptimistically: ({ collections }) => {
       collections.promptFolderDraft.update(promptFolderId, (draftRecord) => {
         mutatePromptFolderDraft(draftRecord)
@@ -48,35 +48,6 @@ const mutatePromptFolderDraftOptimistically = (
       }
     }
   })
-}
-
-const applyDescriptionMeasurementUpdate = (
-  draftRecord: PromptFolderDraftRecord,
-  measurement: TextMeasurement,
-  textChanged: boolean
-): void => {
-  const key = createPromptFolderDraftMeasuredHeightKey(
-    measurement.widthPx,
-    measurement.devicePixelRatio
-  )
-
-  if (textChanged) {
-    if (measurement.measuredHeightPx == null) {
-      draftRecord.descriptionMeasuredHeightsByKey = {}
-      return
-    }
-
-    draftRecord.descriptionMeasuredHeightsByKey = {
-      [key]: measurement.measuredHeightPx
-    }
-    return
-  }
-
-  if (measurement.measuredHeightPx == null) {
-    return
-  }
-
-  draftRecord.descriptionMeasuredHeightsByKey[key] = measurement.measuredHeightPx
 }
 
 export const upsertPromptFolderDraft = (promptFolder: PromptFolder): void => {
@@ -99,11 +70,11 @@ export const upsertPromptFolderDrafts = (
     const existingRecord = promptFolderDraftCollection.get(promptFolder.id)
 
     if (!existingRecord) {
+      clearPromptFolderDescriptionMeasuredHeight(promptFolder.id)
       draftInserts.push({
         id: promptFolder.id,
         folderDescription: nextDescription,
-        hasLoadedInitialData: false,
-        descriptionMeasuredHeightsByKey: {}
+        hasLoadedInitialData: false
       })
       continue
     }
@@ -111,6 +82,8 @@ export const upsertPromptFolderDrafts = (
     if (haveSamePromptFolderDescription(existingRecord.folderDescription, nextDescription)) {
       continue
     }
+
+    clearPromptFolderDescriptionMeasuredHeight(promptFolder.id)
 
     if (!draftUpdatesById[promptFolder.id]) {
       draftUpdateIds.push(promptFolder.id)
@@ -163,21 +136,15 @@ export const setPromptFolderDraftDescription = (
 ): void => {
   const draftRecord = getPromptFolderDraftState(promptFolderId)
   const textChanged = draftRecord.folderDescription !== folderDescription
+  recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, textChanged)
 
   if (!textChanged) {
-    mutatePromptFolderDraftOptimistically(promptFolderId, {
-      mutatePromptFolderDraft: (draft) => {
-        applyDescriptionMeasurementUpdate(draft, measurement, false)
-      }
-    })
-
     return
   }
 
   mutatePromptFolderDraftOptimistically(promptFolderId, {
     mutatePromptFolderDraft: (draft) => {
       draft.folderDescription = folderDescription
-      applyDescriptionMeasurementUpdate(draft, measurement, true)
     },
     mutatePromptFolder: (draft) => {
       draft.folderDescription = folderDescription
@@ -192,6 +159,7 @@ export const deletePromptFolderDrafts = (
     return
   }
 
+  clearPromptFolderDescriptionMeasuredHeights(promptFolderIds)
   promptFolderDraftCollection.delete(promptFolderIds)
 }
 

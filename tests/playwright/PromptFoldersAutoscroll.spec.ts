@@ -18,21 +18,40 @@ const MONACO_CURSOR_LINE_SELECTOR = '.monaco-editor .view-overlays .current-line
 const MONACO_CURSOR_SELECTOR = '.monaco-editor .cursor'
 const LONG_WRAPPED_FOLDER_NAME = 'Long Wrapped Singles'
 
-describe('Prompt Folders Autoscroll', () => {
-  test('scrolls title input to 100px from bottom when typing', async ({ testSetup }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'virtual' }
-    })
+type PromptTarget = {
+  promptTestId: string
+}
 
-    expect(workspaceSetupResult?.workspaceReady).toBe(true)
+type PromptTitleTarget = PromptTarget & {
+  scrollDelta: number
+}
 
-    await testHelpers.navigateToPromptFolders('Long')
+const scrollForNextCandidate = async (page: any, testHelpers: any): Promise<boolean> => {
+  const metrics = await page.evaluate((hostSelector) => {
+    const host = document.querySelector<HTMLElement>(hostSelector)
+    if (!host) return null
+    return {
+      scrollTop: host.scrollTop,
+      clientHeight: host.clientHeight,
+      scrollHeight: host.scrollHeight
+    }
+  }, HOST_SELECTOR)
 
-    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.waitForSelector(FIRST_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+  if (!metrics) return false
+  const remainingScrollPx = metrics.scrollHeight - (metrics.scrollTop + metrics.clientHeight)
+  if (remainingScrollPx <= 0) return false
 
-    // Align the first offscreen title input to the bottom of the viewport.
-    const target = await mainWindow.evaluate(
+  const scrollDelta = Math.max(1, Math.round(metrics.clientHeight * 0.75))
+  await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, scrollDelta)
+  return true
+}
+
+const findPromptTitleBelowViewport = async (
+  page: any,
+  testHelpers: any
+): Promise<PromptTitleTarget | null> => {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const target = await page.evaluate(
       ({ hostSelector, titleSelector }) => {
         const host = document.querySelector<HTMLElement>(hostSelector)
         if (!host) return null
@@ -49,11 +68,64 @@ describe('Prompt Folders Autoscroll', () => {
         if (!promptTestId) return null
 
         const scrollDelta = Math.round(candidate.rect.bottom - hostRect.bottom)
-
         return { promptTestId, scrollDelta }
       },
       { hostSelector: HOST_SELECTOR, titleSelector: TITLE_SELECTOR }
     )
+
+    if (target?.promptTestId && typeof target.scrollDelta === 'number') return target
+    if (!(await scrollForNextCandidate(page, testHelpers))) return null
+  }
+
+  return null
+}
+
+const findPromptEditorBelowViewport = async (
+  page: any,
+  testHelpers: any
+): Promise<PromptTarget | null> => {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const target = await page.evaluate(
+      ({ hostSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        if (!host) return null
+        const hostRect = host.getBoundingClientRect()
+        const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
+        const candidate = rows
+          .map((row) => ({ row, rect: row.getBoundingClientRect() }))
+          .filter(({ rect }) => rect.top >= hostRect.bottom)
+          .sort((a, b) => a.rect.top - b.rect.top)[0]
+        if (!candidate) return null
+
+        const promptTestId = candidate.row.getAttribute('data-testid')
+        if (!promptTestId) return null
+        return { promptTestId }
+      },
+      { hostSelector: HOST_SELECTOR }
+    )
+
+    if (target?.promptTestId) return target
+    if (!(await scrollForNextCandidate(page, testHelpers))) return null
+  }
+
+  return null
+}
+
+describe('Prompt Folders Autoscroll', () => {
+  test('scrolls title input to 100px from bottom when typing', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult?.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Long')
+
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(FIRST_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+
+    // Align the first offscreen title input to the bottom of the viewport.
+    const target = await findPromptTitleBelowViewport(mainWindow, testHelpers)
 
     if (!target?.promptTestId || typeof target.scrollDelta !== 'number') {
       throw new Error('Failed to find a prompt title below the viewport.')
@@ -128,25 +200,7 @@ describe('Prompt Folders Autoscroll', () => {
       timeout: 6000
     })
 
-    const target = await mainWindow.evaluate(
-      ({ hostSelector }) => {
-        const host = document.querySelector<HTMLElement>(hostSelector)
-        if (!host) return null
-        const hostRect = host.getBoundingClientRect()
-        const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
-        const candidate = rows
-          .map((row) => ({ row, rect: row.getBoundingClientRect() }))
-          .filter(({ rect }) => rect.top >= hostRect.bottom)
-          .sort((a, b) => a.rect.top - b.rect.top)[0]
-        if (!candidate) return null
-
-        const promptTestId = candidate.row.getAttribute('data-testid')
-        if (!promptTestId) return null
-
-        return { promptTestId }
-      },
-      { hostSelector: HOST_SELECTOR }
-    )
+    const target = await findPromptEditorBelowViewport(mainWindow, testHelpers)
 
     if (!target?.promptTestId) {
       throw new Error('Failed to find a prompt editor below the viewport.')
@@ -287,25 +341,7 @@ describe('Prompt Folders Autoscroll', () => {
       timeout: 6000
     })
 
-    const target = await mainWindow.evaluate(
-      ({ hostSelector }) => {
-        const host = document.querySelector<HTMLElement>(hostSelector)
-        if (!host) return null
-        const hostRect = host.getBoundingClientRect()
-        const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-virtual-window-row]'))
-        const candidate = rows
-          .map((row) => ({ row, rect: row.getBoundingClientRect() }))
-          .filter(({ rect }) => rect.top >= hostRect.bottom)
-          .sort((a, b) => a.rect.top - b.rect.top)[0]
-        if (!candidate) return null
-
-        const promptTestId = candidate.row.getAttribute('data-testid')
-        if (!promptTestId) return null
-
-        return { promptTestId }
-      },
-      { hostSelector: HOST_SELECTOR }
-    )
+    const target = await findPromptEditorBelowViewport(mainWindow, testHelpers)
 
     if (!target?.promptTestId) {
       throw new Error('Failed to find a prompt editor below the viewport.')

@@ -72,7 +72,7 @@ const createSystemSettings = (
 })
 
 describe('draft sync contract', () => {
-  it('upserts prompt drafts and preserves measured heights', () => {
+  it('upserts prompt drafts', () => {
     const prompt = createPrompt()
     const updatedPrompt = createPrompt({
       title: 'Updated title',
@@ -81,35 +81,24 @@ describe('draft sync contract', () => {
     })
 
     upsertPromptDraft(prompt)
-
-    promptDraftCollection.update(prompt.id, (draftRecord) => {
-      draftRecord.promptEditorMeasuredHeightsByKey = { '640:1': 200 }
-    })
-
     upsertPromptDraft(updatedPrompt)
 
     const draftRecord = promptDraftCollection.get(prompt.id)!
     expect(draftRecord).toMatchObject(updatedPrompt)
-    expect(draftRecord.promptEditorMeasuredHeightsByKey).toEqual({ '640:1': 200 })
   })
 
-  it('upserts prompt-folder drafts and preserves measured heights', () => {
+  it('upserts prompt-folder drafts', () => {
     const promptFolder = createPromptFolder()
     const updatedPromptFolder = createPromptFolder({
       folderDescription: 'Updated folder description'
     })
 
     upsertPromptFolderDraft(promptFolder)
-
-    promptFolderDraftCollection.update(promptFolder.id, (draftRecord) => {
-      draftRecord.descriptionMeasuredHeightsByKey = { '640:1': 120 }
-    })
-
     upsertPromptFolderDraft(updatedPromptFolder)
 
     const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
     expect(draftRecord.folderDescription).toBe('Updated folder description')
-    expect(draftRecord.descriptionMeasuredHeightsByKey).toEqual({ '640:1': 120 })
+    expect(draftRecord.hasLoadedInitialData).toBe(false)
   })
 
   it('upserts the system-settings draft', () => {

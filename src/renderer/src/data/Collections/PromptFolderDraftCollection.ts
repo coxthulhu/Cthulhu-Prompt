@@ -1,23 +1,10 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
 
-const roundDevicePixelRatio = (value: number): number => {
-  return Math.round(value * 100) / 100
-}
-
-export const createPromptFolderDraftMeasuredHeightKey = (
-  widthPx: number,
-  devicePixelRatio: number
-): string => {
-  return `${widthPx}:${roundDevicePixelRatio(devicePixelRatio)}`
-}
-
 export type PromptFolderDraftRecord = {
   id: string
   folderDescription: string
   // Tracks whether this folder has completed at least one initial screen load this session.
   hasLoadedInitialData: boolean
-  // Mirrors measuredHeightCache for prompt folder description.
-  descriptionMeasuredHeightsByKey: Record<string, number>
 }
 
 // Local-only UI draft state for prompt folder description editing.

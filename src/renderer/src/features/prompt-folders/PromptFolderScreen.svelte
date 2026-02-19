@@ -5,16 +5,8 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import {
-    createPromptDraftMeasuredHeightKey,
-    type PromptDraftRecord,
-    promptDraftCollection
-  } from '@renderer/data/Collections/PromptDraftCollection'
-  import {
-    createPromptFolderDraftMeasuredHeightKey,
-    type PromptFolderDraftRecord,
-    promptFolderDraftCollection
-  } from '@renderer/data/Collections/PromptFolderDraftCollection'
+  import { type PromptDraftRecord, promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
+  import { type PromptFolderDraftRecord, promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import {
     loadPromptFolderInitial
@@ -25,6 +17,10 @@
     deletePrompt
   } from '@renderer/data/Mutations/PromptMutations'
   import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
+  import {
+    lookupPromptEditorMeasuredHeight,
+    lookupPromptFolderDescriptionMeasuredHeight
+  } from '@renderer/data/UiState/PromptMeasurementCache.svelte.ts'
   import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
@@ -261,17 +257,15 @@
     )
   }
 
-  const lookupPromptFolderDescriptionMeasuredHeight = (
+  const lookupPromptFolderDescriptionMeasuredHeightForScreen = (
     widthPx: number,
     devicePixelRatio: number
   ): number | null => {
-    const draftRecord = promptFolderDraft
-    if (!draftRecord) {
-      return null
-    }
-
-    const key = createPromptFolderDraftMeasuredHeightKey(widthPx, devicePixelRatio)
-    return draftRecord.descriptionMeasuredHeightsByKey[key] ?? null
+    return lookupPromptFolderDescriptionMeasuredHeight(
+      promptFolderId,
+      widthPx,
+      devicePixelRatio
+    )
   }
 
   type PromptFolderRow =
@@ -292,7 +286,7 @@
       estimateHeight: () =>
         estimatePromptFolderSettingsHeight(descriptionText, promptFontSize, promptEditorMinLines),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
-        lookupPromptFolderDescriptionMeasuredHeight(widthPx, devicePixelRatio),
+        lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
       needsOverlayRow: true,
       snippet: folderSettingsRow
     },
@@ -319,9 +313,7 @@
           promptEditorMinLines
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
-        const promptDraftRecord = promptDraftById[row.promptId]!
-        const key = createPromptDraftMeasuredHeightKey(widthPx, devicePixelRatio)
-        return promptDraftRecord.promptEditorMeasuredHeightsByKey[key] ?? null
+        return lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio)
       },
       needsOverlayRow: true,
       snippet: promptEditorRow
@@ -475,7 +467,7 @@
       return baseHeight
     }
 
-    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
+    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeightForScreen(
       viewportMetrics.widthPx,
       viewportMetrics.devicePixelRatio
     )

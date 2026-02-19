@@ -21,6 +21,7 @@ const moveUpSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
 const moveDownSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
+const PROMPT_OUTLINER_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
   return await page.evaluate((selector: string) => {
@@ -29,6 +30,17 @@ const getPromptEditorIds = async (page: any): Promise<string[]> => {
       .filter((testId) => testId.startsWith('prompt-editor-'))
       .map((testId) => testId.replace('prompt-editor-', ''))
   }, PROMPT_EDITOR_PREFIX_SELECTOR)
+}
+
+const getOutlinerPromptTitles = async (page: any): Promise<string[]> => {
+  return await page.evaluate((selector: string) => {
+    const outliner = document.querySelector<HTMLElement>(selector)
+    if (!outliner) return []
+
+    return Array.from(outliner.querySelectorAll<HTMLButtonElement>('button'))
+      .map((button) => button.textContent?.trim() ?? '')
+      .filter((title) => title.length > 0 && title !== 'Folder Settings')
+  }, PROMPT_OUTLINER_SELECTOR)
 }
 
 const waitForPromptCount = async (page: any, count: number) => {
@@ -197,12 +209,19 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
-    const orderAfterFinalReturn = await getPromptEditorIds(mainWindow)
-    const finalOrder = orderAfterFinalReturn.filter((id) => fiveNewIds.includes(id))
-    expect(finalOrder).toEqual(fiveNewIds)
+    const expectedTitleOrder = fiveNewIds.map((promptId) => expectedById.get(promptId)!.title)
+    const outlinerTitles = await getOutlinerPromptTitles(mainWindow)
+    const finalTitleOrder = outlinerTitles.filter((title) => expectedTitleOrder.includes(title))
+    expect(finalTitleOrder).toEqual(expectedTitleOrder)
 
     for (const promptId of fiveNewIds) {
-      await expectPromptContent(mainWindow, promptId, expectedById.get(promptId)!)
+      const expected = expectedById.get(promptId)!
+      const outlinerButton = mainWindow.locator(
+        `${PROMPT_OUTLINER_SELECTOR} button:has-text("${expected.title}")`
+      )
+      await outlinerButton.scrollIntoViewIfNeeded()
+      await outlinerButton.click()
+      await expectPromptContent(mainWindow, promptId, expected)
     }
   })
 

@@ -18,8 +18,6 @@ type MutatePacedUpdateTransactionOptions = {
   debounceMs: number
   createTransaction: () => PacedUpdateTransactionBase
   mutateTransaction: (transaction: Transaction<any>) => void
-  createIfMissing?: boolean
-  restartDebounceTimer?: boolean
 }
 
 type ElementPacedUpdateState = {
@@ -165,20 +163,13 @@ export const mutatePacedUpdateTransaction = ({
   elementId,
   debounceMs,
   createTransaction,
-  mutateTransaction,
-  createIfMissing = true,
-  restartDebounceTimer = true
-}: MutatePacedUpdateTransactionOptions): boolean => {
+  mutateTransaction
+}: MutatePacedUpdateTransactionOptions): void => {
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
   const elementState = getOrCreateElementState(globalElementKey)
   let pacedUpdateTransaction = elementState.pacedUpdateTransaction
 
   if (!pacedUpdateTransaction) {
-    if (!createIfMissing) {
-      cleanupElementStateIfIdle(globalElementKey)
-      return false
-    }
-
     const createdPacedUpdateTransaction = createTransaction()
     pacedUpdateTransaction = {
       debounceTimeoutId: null,
@@ -191,16 +182,10 @@ export const mutatePacedUpdateTransaction = ({
 
   mutateTransaction(pacedUpdateTransaction.transaction)
 
-  if (!restartDebounceTimer) {
-    return true
-  }
-
   clearPacedUpdateDebounceTimeout(pacedUpdateTransaction)
   pacedUpdateTransaction.debounceTimeoutId = globalThis.setTimeout(() => {
     sendPacedUpdateTransactionIfPresent(collectionId, elementId, 'debounce')
   }, debounceMs)
-
-  return true
 }
 
 // Fire-and-forget send of a per-element paced update transaction, if one exists.

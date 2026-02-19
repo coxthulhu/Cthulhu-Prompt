@@ -1,17 +1,6 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
 import type { Prompt } from '@shared/Prompt'
 
-const roundDevicePixelRatio = (value: number): number => {
-  return Math.round(value * 100) / 100
-}
-
-export const createPromptDraftMeasuredHeightKey = (
-  widthPx: number,
-  devicePixelRatio: number
-): string => {
-  return `${widthPx}:${roundDevicePixelRatio(devicePixelRatio)}`
-}
-
 export type PromptDraftRecord = {
   id: Prompt['id']
   title: Prompt['title']
@@ -19,8 +8,6 @@ export type PromptDraftRecord = {
   lastModifiedDate: Prompt['lastModifiedDate']
   promptText: Prompt['promptText']
   promptFolderCount: Prompt['promptFolderCount']
-  // Mirrors measuredHeightCache for prompt editor rows.
-  promptEditorMeasuredHeightsByKey: Record<string, number>
 }
 
 // Local-only UI draft state for prompt title/text editing.

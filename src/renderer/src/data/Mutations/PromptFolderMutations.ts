@@ -34,7 +34,7 @@ type PacedPromptFolderMutationOptions = Parameters<
 
 type PacedPromptFolderAutosaveUpdateOptions = Pick<
   PacedPromptFolderMutationOptions,
-  'debounceMs' | 'mutateOptimistically' | 'draftOnlyChange'
+  'debounceMs' | 'mutateOptimistically'
 > & {
   promptFolderId: string
 }
@@ -42,15 +42,13 @@ type PacedPromptFolderAutosaveUpdateOptions = Pick<
 export const mutatePacedPromptFolderAutosaveUpdate = ({
   promptFolderId,
   debounceMs,
-  mutateOptimistically,
-  draftOnlyChange
+  mutateOptimistically
 }: PacedPromptFolderAutosaveUpdateOptions): void => {
   mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
     collectionId: promptFolderCollection.id,
     elementId: promptFolderId,
     debounceMs,
     mutateOptimistically,
-    draftOnlyChange,
     persistMutations: async ({ entities, invoke, transaction }) => {
       const latestPromptFolder = readLatestPromptFolderFromTransaction(
         transaction,
@@ -111,8 +109,7 @@ export const createPromptFolder = async (
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
         folderDescription: '',
-        hasLoadedInitialData: false,
-        descriptionMeasuredHeightsByKey: {}
+        hasLoadedInitialData: false
       })
       collections.workspace.update(workspaceId, (draft) => {
         draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]

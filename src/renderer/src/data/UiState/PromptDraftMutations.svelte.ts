@@ -1,14 +1,15 @@
 import type { Prompt } from '@shared/Prompt'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import {
-  createPromptDraftMeasuredHeightKey,
-  type PromptDraftRecord,
-  promptDraftCollection
-} from '../Collections/PromptDraftCollection'
+import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
+import {
+  clearPromptEditorMeasuredHeight,
+  clearPromptEditorMeasuredHeights,
+  recordPromptEditorMeasuredHeight
+} from './PromptMeasurementCache.svelte.ts'
 
 export type PromptDraftState = PromptDraftRecord
 
@@ -46,7 +47,6 @@ const mutatePromptDraftOptimistically = (
   mutatePacedPromptAutosaveUpdate({
     promptId,
     debounceMs: AUTOSAVE_MS,
-    draftOnlyChange: mutatePrompt == null,
     mutateOptimistically: ({ collections }) => {
       collections.promptDraft.update(promptId, mutatePromptDraft)
 
@@ -55,35 +55,6 @@ const mutatePromptDraftOptimistically = (
       }
     }
   })
-}
-
-const applyPromptMeasurementUpdate = (
-  draftRecord: PromptDraftRecord,
-  measurement: TextMeasurement,
-  textChanged: boolean
-): void => {
-  const key = createPromptDraftMeasuredHeightKey(
-    measurement.widthPx,
-    measurement.devicePixelRatio
-  )
-
-  if (textChanged) {
-    if (measurement.measuredHeightPx == null) {
-      draftRecord.promptEditorMeasuredHeightsByKey = {}
-      return
-    }
-
-    draftRecord.promptEditorMeasuredHeightsByKey = {
-      [key]: measurement.measuredHeightPx
-    }
-    return
-  }
-
-  if (measurement.measuredHeightPx == null) {
-    return
-  }
-
-  draftRecord.promptEditorMeasuredHeightsByKey[key] = measurement.measuredHeightPx
 }
 
 export const upsertPromptDraft = (prompt: Prompt): void => {
@@ -104,15 +75,17 @@ export const upsertPromptDrafts = (prompts: Prompt[]): void => {
     const existingRecord = promptDraftCollection.get(prompt.id)
 
     if (!existingRecord) {
-      draftInserts.push({
-        ...promptSnapshot,
-        promptEditorMeasuredHeightsByKey: {}
-      })
+      clearPromptEditorMeasuredHeight(prompt.id)
+      draftInserts.push(promptSnapshot)
       continue
     }
 
     if (haveSamePrompt(existingRecord, promptSnapshot)) {
       continue
+    }
+
+    if (existingRecord.promptText !== promptSnapshot.promptText) {
+      clearPromptEditorMeasuredHeight(prompt.id)
     }
 
     if (!draftUpdatesById[prompt.id]) {
@@ -166,21 +139,15 @@ export const setPromptDraftText = (
 ): void => {
   const draftRecord = getPromptDraftState(promptId)
   const textChanged = draftRecord.promptText !== promptText
+  recordPromptEditorMeasuredHeight(promptId, measurement, textChanged)
 
   if (!textChanged) {
-    mutatePromptDraftOptimistically(promptId, {
-      mutatePromptDraft: (draft) => {
-        applyPromptMeasurementUpdate(draft, measurement, false)
-      }
-    })
-
     return
   }
 
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
       draft.promptText = promptText
-      applyPromptMeasurementUpdate(draft, measurement, true)
     },
     mutatePrompt: (draft) => {
       draft.promptText = promptText
@@ -200,6 +167,7 @@ export const deletePromptDrafts = (promptIds: string[]): void => {
     return
   }
 
+  clearPromptEditorMeasuredHeights(promptIds)
   promptDraftCollection.delete(promptIds)
 }
 
