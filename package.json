@@ -12,7 +12,7 @@
     "svelte-check": "svelte-check --tsconfig ./tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run svelte-check",
     "start": "electron-vite preview",
-    "dev": "cross-env DEV_ENVIRONMENT=DEV CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=200 electron-vite dev",
+    "dev": "cross-env DEV_ENVIRONMENT=DEV CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=200 electron-vite dev --watch",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "patch-package && electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
