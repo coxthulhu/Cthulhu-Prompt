@@ -11,6 +11,8 @@ import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsM
 import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
 import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
 import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
+import { setupUserPersistenceQueryHandlers } from './Queries/UserPersistenceQuery'
+import { UserPersistenceDataAccess } from './DataAccess/UserPersistenceDataAccess'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
@@ -186,7 +188,10 @@ export function startupNormally(): void {
 
     // Setup workspace dialog IPC handlers used by the home screen.
     setupWorkspaceDialogHandlers()
+    // Side effect: guarantee per-user persistence files/folders exist before renderer queries run.
+    UserPersistenceDataAccess.initializePersistenceArtifacts()
     setupSystemSettingsQueryHandlers()
+    setupUserPersistenceQueryHandlers()
     setupSystemSettingsMutationHandlers()
     setupWorkspaceQueryHandlers()
     setupWorkspaceMutationHandlers()

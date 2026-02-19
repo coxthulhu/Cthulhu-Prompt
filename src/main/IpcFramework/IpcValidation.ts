@@ -13,6 +13,7 @@ import type {
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/SystemSettings'
+import type { LoadWorkspacePersistenceRequest } from '@shared/UserPersistence'
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
@@ -307,6 +308,16 @@ const parseLoadWorkspaceByPathWireRequest: Parser<
   IpcRequestWithPayload<LoadWorkspaceByPathRequest>
 > = parseWireRequestWithPayload<LoadWorkspaceByPathRequest>(parseLoadWorkspaceByPathPayload)
 
+const parseLoadWorkspacePersistencePayload = parseObject<LoadWorkspacePersistenceRequest>({
+  workspaceId: parseString
+})
+
+const parseLoadWorkspacePersistenceWireRequest: Parser<
+  IpcRequestWithPayload<LoadWorkspacePersistenceRequest>
+> = parseWireRequestWithPayload<LoadWorkspacePersistenceRequest>(
+  parseLoadWorkspacePersistencePayload
+)
+
 const parseLoadPromptFolderInitialPayload = parseObject<LoadPromptFolderInitialPayload>({
   workspaceId: parseString,
   promptFolderId: parseString
@@ -342,6 +353,10 @@ export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
 
 export const parseLoadWorkspaceByPathRequest = createRequestParser(
   parseLoadWorkspaceByPathWireRequest
+)
+
+export const parseLoadWorkspacePersistenceRequest = createRequestParser(
+  parseLoadWorkspacePersistenceWireRequest
 )
 
 export const parseLoadPromptFolderInitialRequest = createRequestParser(
