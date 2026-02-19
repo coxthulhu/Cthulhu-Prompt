@@ -1,9 +1,9 @@
 import { app, shell, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
-import { basename, join, resolve } from 'path'
+import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
-import { checkFolderExists, setupWorkspaceDialogHandlers } from './workspaceDialog'
+import { setupWorkspaceDialogHandlers } from './workspaceDialog'
 import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
 import { setupPromptFolderMutationHandlers } from './Mutations/PromptFolderMutations'
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
@@ -19,18 +19,6 @@ import {
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
-
-function resolveDefaultDevWorkspacePath(): string | null {
-  try {
-    const currentDir = process.cwd()
-    const devWorkspacePath = resolve(currentDir, '..', 'CthulhuPromptTest')
-
-    return checkFolderExists(devWorkspacePath) ? devWorkspacePath : null
-  } catch (error) {
-    console.error('Error resolving dev workspace path:', error)
-    return null
-  }
-}
 
 function getWorkingDirectoryName(): string | null {
   try {
@@ -99,11 +87,9 @@ function buildRuntimeConfig(): RuntimeConfig {
     : playwrightEnvironment
       ? 'PLAYWRIGHT'
       : ''
-  const devWorkspacePath = devEnvironment ? resolveDefaultDevWorkspacePath() : null
   const executionFolderName = getWorkingDirectoryName()
 
   return {
-    devWorkspacePath,
     executionFolderName,
     environment
   }

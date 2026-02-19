@@ -8,7 +8,6 @@ import {
 } from '@shared/runtimeConfig'
 
 const defaultRuntimeConfig: RuntimeConfig = Object.freeze({
-  devWorkspacePath: null,
   executionFolderName: null,
   environment: ''
 })
@@ -27,14 +26,11 @@ function loadRuntimeConfig(): RuntimeConfig {
       environment?: string
     }
 
-    const devWorkspacePath =
-      typeof parsed.devWorkspacePath === 'string' ? parsed.devWorkspacePath : null
     const executionFolderName =
       typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
 
     return Object.freeze({
-      devWorkspacePath,
       executionFolderName,
       environment
     })

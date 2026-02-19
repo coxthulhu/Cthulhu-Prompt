@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Loader } from 'lucide-svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { Prompt } from '@shared/Prompt'
@@ -31,6 +30,7 @@
   import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import ResizableSidebar from '../sidebar/ResizableSidebar.svelte'
+  import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
   import {
     defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
@@ -600,18 +600,12 @@
       </ResizableSidebar>
     </div>
     {#if isLoadingOverlayVisible}
-      <div
-        data-testid="prompt-folder-loading-overlay"
-        class={`absolute inset-0 z-10 flex items-center justify-center bg-background transition-opacity ${
-          isLoadingOverlayFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-        style={`transition-duration: ${LOADING_OVERLAY_FADE_MS}ms;`}
-      >
-        <div class="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader class="size-6 animate-spin" />
-          <p class="text-sm font-medium">Loading prompt folder...</p>
-        </div>
-      </div>
+      <LoadingOverlay
+        testId="prompt-folder-loading-overlay"
+        fadeMs={LOADING_OVERLAY_FADE_MS}
+        isFading={isLoadingOverlayFading}
+        message="Loading prompt folder..."
+      />
     {/if}
   </main>
 </PromptFolderFindIntegration>

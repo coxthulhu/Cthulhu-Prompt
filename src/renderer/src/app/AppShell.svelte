@@ -3,6 +3,7 @@
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
+  import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
@@ -21,6 +22,7 @@
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
   } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
+  import { loadUserPersistence } from '@renderer/data/Queries/UserPersistenceQuery'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
     closeWorkspace as closeWorkspaceMutation,
@@ -75,7 +77,11 @@
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0 || workspaceQuery.isLoading)
-  let hasAttemptedAutoSelect = false
+  const STARTUP_LOADING_OVERLAY_FADE_MS = 200
+  let hasAttemptedStartupRestore = false
+  let isStartupRestoreLoading = $state(true)
+  let isStartupLoadingOverlayVisible = $state(true)
+  let isStartupLoadingOverlayFading = $state(false)
   const windowTitle = $derived(
     isDevMode && executionFolderName
       ? `${baseWindowTitle} — ${executionFolderName}`
@@ -112,6 +118,25 @@
 
   const isWorkspaceMissingError = (message?: string): boolean => {
     return message === 'Invalid workspace path'
+  }
+
+  const restoreWorkspaceFromPersistence = async (): Promise<void> => {
+    const userPersistence = await loadUserPersistence()
+    const lastWorkspacePath = userPersistence.lastWorkspacePath
+
+    if (!lastWorkspacePath) {
+      return
+    }
+
+    const selectionResult = await selectWorkspace(lastWorkspacePath)
+    if (selectionResult.success) {
+      return
+    }
+
+    console.error('Failed to restore last workspace. Cleared persisted path.', {
+      workspacePath: lastWorkspacePath,
+      reason: selectionResult.reason
+    })
   }
 
   const selectWorkspace = async (path: string): Promise<WorkspaceSelectionResult> => {
@@ -185,23 +210,33 @@
     }
   }
 
-  // Side effect: auto-select the configured dev workspace once in dev/playwright environments.
+  // Side effect: restore the previous workspace once after user persistence loads.
   $effect(() => {
-    if (hasAttemptedAutoSelect || !isDevMode) {
+    if (hasAttemptedStartupRestore) {
       return
     }
 
-    const devWorkspacePath = runtimeConfig.devWorkspacePath
-
-    if (!devWorkspacePath) {
-      hasAttemptedAutoSelect = true
-      return
-    }
-
-    hasAttemptedAutoSelect = true
-    ;(async () => {
-      await selectWorkspace(devWorkspacePath)
+    hasAttemptedStartupRestore = true
+    void (async () => {
+      try {
+        await restoreWorkspaceFromPersistence()
+      } catch (error) {
+        console.error('Failed to restore workspace from user persistence.', error)
+      } finally {
+        isStartupRestoreLoading = false
+      }
     })()
+  })
+
+  // Side effect: keep the startup overlay mounted long enough to play a fade-out transition.
+  $effect(() => {
+    if (isStartupRestoreLoading || !isStartupLoadingOverlayVisible) return
+    isStartupLoadingOverlayFading = true
+    const timeoutId = window.setTimeout(() => {
+      isStartupLoadingOverlayVisible = false
+      isStartupLoadingOverlayFading = false
+    }, STARTUP_LOADING_OVERLAY_FADE_MS)
+    return () => window.clearTimeout(timeoutId)
   })
 
   // Side effect: keep the browser window title in sync with dev mode state.
@@ -297,3 +332,13 @@
     {/snippet}
   </ResizableSidebar>
 </div>
+
+{#if isStartupLoadingOverlayVisible}
+  <LoadingOverlay
+    testId="startup-loading-overlay"
+    fadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
+    isFading={isStartupLoadingOverlayFading}
+    message="Loading workspace..."
+    fullscreen
+  />
+{/if}

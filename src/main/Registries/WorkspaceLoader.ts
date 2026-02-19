@@ -27,6 +27,8 @@ const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload 
   const workspaceId = readWorkspaceId(workspacePath)
   // Side effect: opening a workspace guarantees a matching persistence file exists.
   UserPersistenceDataAccess.ensureWorkspacePersistenceFile(workspaceId)
+  // Side effect: opening a workspace marks it as the last-opened workspace for startup restore.
+  UserPersistenceDataAccess.updateLastWorkspacePath(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
 
   // Side effect: keep path/id translation in memory for later  loads.

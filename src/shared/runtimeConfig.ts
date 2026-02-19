@@ -1,7 +1,6 @@
 export type RuntimeEnvironment = '' | 'DEV' | 'PLAYWRIGHT'
 
 export type RuntimeConfig = {
-  devWorkspacePath: string | null
   executionFolderName: string | null
   environment: RuntimeEnvironment
 }

@@ -6,6 +6,7 @@ import {
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
+import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
@@ -28,6 +29,8 @@ export const setupWorkspaceMutationHandlers = (): void => {
     'close-workspace',
     async (_, request: unknown): Promise<IpcMutationActionResponse> => {
       return await runMutationIpcRequest(request, parseCloseWorkspaceRequest, async () => {
+        // Side effect: closing a workspace clears startup restore workspace selection.
+        UserPersistenceDataAccess.clearLastWorkspacePath()
         return { success: true }
       })
     }
