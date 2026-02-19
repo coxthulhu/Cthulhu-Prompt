@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Loader } from 'lucide-svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { Prompt } from '@shared/Prompt'
@@ -55,15 +56,12 @@
 
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
     data: PromptFolder[]
-    isLoading: boolean
   }
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
     data: PromptDraftRecord[]
-    isLoading: boolean
   }
   const promptFolderDraftQuery = useLiveQuery(promptFolderDraftCollection) as {
     data: PromptFolderDraftRecord[]
-    isLoading: boolean
   }
 
   const promptFolder = $derived.by(() => {
@@ -93,6 +91,9 @@
   let previousPromptFolderLoadKey = $state<string | null>(null)
   let promptFolderLoadRequestId = $state(0)
   let isLoading = $state(true)
+  const LOADING_OVERLAY_FADE_MS = 125
+  let isLoadingOverlayVisible = $state(false)
+  let isLoadingOverlayFading = $state(false)
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
 
@@ -115,7 +116,7 @@
   let promptFocusRequestId = $state(0)
 
   const visiblePromptIds = $derived.by(() => {
-    if (errorMessage || isLoading) {
+    if (errorMessage) {
       return []
     }
 
@@ -182,6 +183,8 @@
     const requestId = promptFolderLoadRequestId
     const canUseCachedData = hasCachedPromptFolderData(promptFolderId)
     isLoading = !canUseCachedData
+    isLoadingOverlayVisible = !canUseCachedData
+    isLoadingOverlayFading = false
     isCreatingPrompt = false
     errorMessage = null
     resetPromptFolderUiState()
@@ -205,6 +208,17 @@
     if (scrollResetVersion === lastScrollResetVersion) return
     lastScrollResetVersion = scrollResetVersion
     scrollApi.scrollTo(0)
+  })
+
+  // Side effect: keep the loading overlay mounted long enough to play a fade-out when initial load finishes.
+  $effect(() => {
+    if (isLoading || !isLoadingOverlayVisible) return
+    isLoadingOverlayFading = true
+    const timeoutId = window.setTimeout(() => {
+      isLoadingOverlayVisible = false
+      isLoadingOverlayFading = false
+    }, LOADING_OVERLAY_FADE_MS)
+    return () => window.clearTimeout(timeoutId)
   })
 
   const reorderPromptIds = (
@@ -269,9 +283,9 @@
   }
 
   type PromptFolderRow =
-    | { kind: 'folder-settings'; isLoading: boolean }
-    | { kind: 'prompt-header'; promptCount: number; isLoading: boolean }
-    | { kind: 'placeholder'; messageKind: 'loading' | 'empty' }
+    | { kind: 'folder-settings' }
+    | { kind: 'prompt-header'; promptCount: number }
+    | { kind: 'placeholder' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
     | { kind: 'bottom-spacer' }
@@ -329,33 +343,26 @@
       {
         id: 'folder-settings',
         row: {
-          kind: 'folder-settings',
-          isLoading
+          kind: 'folder-settings'
         }
       },
       {
         id: 'prompt-header',
         row: {
           kind: 'prompt-header',
-          promptCount: visiblePromptIds.length,
-          isLoading
+          promptCount: visiblePromptIds.length
         }
       }
     ]
 
-    if (isLoading) {
-      rows.push({
-        id: 'placeholder-loading',
-        row: { kind: 'placeholder', messageKind: 'loading' }
-      })
-    } else if (visiblePromptIds.length === 0) {
+    if (visiblePromptIds.length === 0) {
       rows.push({
         id: 'divider-initial',
         row: { kind: 'prompt-divider', previousPromptId: null }
       })
       rows.push({
         id: 'placeholder-empty',
-        row: { kind: 'placeholder', messageKind: 'empty' }
+        row: { kind: 'placeholder' }
       })
     } else {
       rows.push({
@@ -492,7 +499,7 @@
   promptIds={visiblePromptIds}
   scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
 >
-  <main class="flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
+  <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
     <div class="flex h-9 border-b border-border" style="background-color: #1F1F1F;">
       <div
         class="h-full shrink-0 border-r border-border"
@@ -535,7 +542,6 @@
         {#snippet sidebar()}
           <PromptFolderOutliner
             promptIds={visiblePromptIds}
-            {isLoading}
             {errorMessage}
             activeRow={activeOutlinerRow}
             autoScrollRequestId={outlinerAutoScrollRequestId}
@@ -548,7 +554,7 @@
           {#if errorMessage}
             <div class="flex-1 min-h-0 overflow-y-auto">
               <div class="pt-6 pl-6">
-                <h2 class="text-lg font-semibold mb-4">Prompts ({isLoading ? 0 : visiblePromptIds.length})</h2>
+                <h2 class="text-lg font-semibold mb-4">Prompts ({visiblePromptIds.length})</h2>
                 <p class="mt-6 text-red-500">Error loading prompts: {errorMessage}</p>
               </div>
             </div>
@@ -591,12 +597,25 @@
         {/snippet}
       </ResizableSidebar>
     </div>
+    {#if isLoadingOverlayVisible}
+      <div
+        data-testid="prompt-folder-loading-overlay"
+        class={`absolute inset-0 z-10 flex items-center justify-center bg-background transition-opacity ${
+          isLoadingOverlayFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+        style={`transition-duration: ${LOADING_OVERLAY_FADE_MS}ms;`}
+      >
+        <div class="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader class="size-6 animate-spin" />
+          <p class="text-sm font-medium">Loading prompt folder...</p>
+        </div>
+      </div>
+    {/if}
   </main>
 </PromptFolderFindIntegration>
 
 {#snippet folderSettingsRow(props)}
   <PromptFolderSettingsRow
-    isLoading={props.row.isLoading}
     {promptFolderId}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
@@ -613,18 +632,14 @@
 
 {#snippet promptHeaderRow({ row })}
   <div class="pt-6 pb-4" data-virtual-window-row>
-    <h2 class="text-lg font-semibold">Prompts ({row.isLoading ? 0 : row.promptCount})</h2>
+    <h2 class="text-lg font-semibold">Prompts ({row.promptCount})</h2>
   </div>
 {/snippet}
 
-{#snippet placeholderRow({ row })}
+{#snippet placeholderRow()}
   <div class="text-center py-12 text-muted-foreground">
-    {#if row.messageKind === 'loading'}
-      <p>Loading prompts...</p>
-    {:else}
-      <p>No prompts found in this folder.</p>
-      <p class="text-sm mt-2">Click the + button to create your first prompt.</p>
-    {/if}
+    <p>No prompts found in this folder.</p>
+    <p class="text-sm mt-2">Click the + button to create your first prompt.</p>
   </div>
 {/snippet}
 

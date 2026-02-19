@@ -9,7 +9,6 @@
 
   type Props = {
     promptIds: string[]
-    isLoading: boolean
     errorMessage: string | null
     activeRow: OutlinerActiveRow | null
     autoScrollRequestId: number
@@ -19,7 +18,6 @@
 
   let {
     promptIds,
-    isLoading,
     errorMessage,
     activeRow,
     autoScrollRequestId,
@@ -27,10 +25,7 @@
     onSelectFolderSettings
   }: Props = $props()
 
-  type OutlinerRow =
-    | { kind: 'loading' }
-    | { kind: 'folder-settings' }
-    | { kind: 'prompt'; promptId: string }
+  type OutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
   type OutlinerActiveRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
   const OUTLINER_ROW_HEIGHT_PX = 28
   const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
@@ -39,10 +34,6 @@
   let lastAutoScrollRequestId = $state(0)
 
   const outlinerRowRegistry = defineVirtualWindowRowRegistry<OutlinerRow>({
-    loading: {
-      estimateHeight: () => 32,
-      snippet: outlinerLoadingRow
-    },
     'folder-settings': {
       estimateHeight: () => 28,
       snippet: outlinerFolderSettingsRow
@@ -55,9 +46,6 @@
 
   const outlinerItems = $derived.by((): VirtualWindowItem<OutlinerRow>[] => {
     if (errorMessage) return []
-    if (isLoading) {
-      return [{ id: 'outliner-loading', row: { kind: 'loading' } }]
-    }
 
     const items: VirtualWindowItem<OutlinerRow>[] = [
       { id: OUTLINER_FOLDER_SETTINGS_ROW_ID, row: { kind: 'folder-settings' } }
@@ -103,12 +91,6 @@
     />
   </div>
 </div>
-
-{#snippet outlinerLoadingRow({ row })}
-  <div class="px-3 py-2 text-sm text-muted-foreground text-left" data-kind={row.kind}>
-    Loading prompts...
-  </div>
-{/snippet}
 
 {#snippet outlinerFolderSettingsRow()}
   {@const isActive = activeRow?.kind === 'folder-settings'}

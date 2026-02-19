@@ -13,7 +13,6 @@
   } from './promptFolderSettingsSizing'
 
   type Props = {
-    isLoading: boolean
     promptFolderId: string
     rowId: string
     virtualWindowWidthPx: number
@@ -28,7 +27,6 @@
   }
 
   let {
-    isLoading,
     promptFolderId,
     rowId,
     virtualWindowWidthPx,
@@ -71,7 +69,7 @@
     <h2 class="text-lg font-semibold">Folder Settings</h2>
     <p class="mt-2 text-sm font-semibold text-muted-foreground">Folder Description</p>
     <div class="mt-2">
-      {#if overflowHost && !isLoading}
+      {#if overflowHost}
         {#key promptFolderId}
           <HydratableMonacoEditor
             initialValue={descriptionValue}
