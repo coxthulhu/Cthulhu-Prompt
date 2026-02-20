@@ -136,22 +136,6 @@
 
     return idsWithDrafts
   })
-  const findItems = $derived.by((): PromptFolderFindItem[] => {
-    return visiblePromptIds.map((promptId) => ({
-      entityId: promptId,
-      rowId: promptEditorRowId(promptId),
-      sections: [
-        {
-          key: 'title',
-          text: promptDraftById[promptId]!.title
-        },
-        {
-          key: 'body',
-          text: promptDraftById[promptId]!.promptText
-        }
-      ]
-    }))
-  })
 
   const clearOutlinerManualSelection = () => {
     outlinerManualSelectionActive = false
@@ -305,6 +289,12 @@
     Extract<PromptFolderRow, { kind: 'prompt-editor' }>
   >
   type ActiveOutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
+  type PromptFolderFindItemBuilderRegistry = {
+    [K in PromptFolderRow['kind']]?: (
+      row: Extract<PromptFolderRow, { kind: K }>,
+      rowId: string
+    ) => PromptFolderFindItem | null
+  }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
@@ -313,6 +303,7 @@
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
       needsOverlayRow: true,
+      centerRowEligible: true,
       snippet: folderSettingsRow
     },
     'prompt-header': {
@@ -340,6 +331,8 @@
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
         return lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio)
       },
+      hydrationPriorityEligible: true,
+      centerRowEligible: true,
       needsOverlayRow: true,
       dehydrateOnWidthResize: true,
       snippet: promptEditorRow
@@ -393,6 +386,40 @@
 
     rows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
     return rows
+  })
+  const findItemBuildersByRowKind: PromptFolderFindItemBuilderRegistry = {
+    'prompt-editor': (row, rowId) => {
+      const promptDraft = promptDraftById[row.promptId]
+      if (!promptDraft) return null
+      return {
+        entityId: row.promptId,
+        rowId,
+        sections: [
+          {
+            key: 'title',
+            text: promptDraft.title
+          },
+          {
+            key: 'body',
+            text: promptDraft.promptText
+          }
+        ]
+      }
+    }
+  }
+  const findItems = $derived.by((): PromptFolderFindItem[] => {
+    const nextItems: PromptFolderFindItem[] = []
+    for (const item of virtualItems) {
+      const builder = findItemBuildersByRowKind[item.row.kind] as
+        | ((row: PromptFolderRow, rowId: string) => PromptFolderFindItem | null)
+        | undefined
+      if (!builder) continue
+      const findItem = builder(item.row, item.id)
+      if (findItem) {
+        nextItems.push(findItem)
+      }
+    }
+    return nextItems
   })
 
   const handleOutlinerClick = (promptId: string) => {
@@ -576,9 +603,6 @@
               {rowRegistry}
               testId="prompt-folder-virtual-window"
               spacerTestId="prompt-folder-virtual-window-spacer"
-              getHydrationPriorityEligibility={(row) => row.kind === 'prompt-editor'}
-              getCenterRowEligibility={(row) =>
-                row.kind === 'prompt-editor' || row.kind === 'folder-settings'}
               bind:scrollToWithinWindowBand
               bind:scrollToAndTrackRowCentered
               bind:scrollApi

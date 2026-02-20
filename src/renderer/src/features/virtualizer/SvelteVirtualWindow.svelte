@@ -74,6 +74,15 @@
   const measurementWidth = $derived(getMeasurementWidth())
   const viewportHeight = $derived(getViewportHeight())
   const devicePixelRatio = $derived(getDevicePixelRatio())
+  const resolvedHydrationPriorityEligibility = $derived.by(() => {
+    return (
+      getHydrationPriorityEligibility ??
+      ((row: TRow) => rowRegistry[row.kind].hydrationPriorityEligible ?? false)
+    )
+  })
+  const resolvedCenterRowEligibility = $derived.by(() => {
+    return getCenterRowEligibility ?? ((row: TRow) => rowRegistry[row.kind].centerRowEligible ?? false)
+  })
 
   const { getRowStates, getTotalHeightPx } = createVirtualWindowRowsState({
     getItems: () => items,
@@ -126,8 +135,8 @@
     getWidthResizeActive,
     getScrollAnchorMode,
     setScrollAnchorMode,
-    getHydrationPriorityEligibility: () => getHydrationPriorityEligibility,
-    getCenterRowEligibility: () => getCenterRowEligibility
+    getHydrationPriorityEligibility: () => resolvedHydrationPriorityEligibility,
+    getCenterRowEligibility: () => resolvedCenterRowEligibility
   })
 
   const totalHeightPx = $derived(getTotalHeightPx())

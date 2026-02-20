@@ -50,6 +50,8 @@ export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   lookupMeasuredHeight?: (row: TRow, widthPx: number, devicePixelRatio: number) => number | null
   snippet: VirtualWindowRowSnippet<TRow>
   needsOverlayRow?: boolean
+  hydrationPriorityEligible?: boolean
+  centerRowEligible?: boolean
   dehydrateOnWidthResize?: boolean
 }
 
