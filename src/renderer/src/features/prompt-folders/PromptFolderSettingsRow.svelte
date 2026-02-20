@@ -79,6 +79,7 @@
             {hydrationPriority}
             {shouldDehydrate}
             {rowId}
+            findSectionKey="folder-description"
             {scrollToWithinWindowBand}
             {onHydrationChange}
             onChange={(text, meta) => {

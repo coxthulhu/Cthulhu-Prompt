@@ -5,7 +5,6 @@
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import { PROMPT_FOLDER_FIND_BODY_SECTION_KEY } from '../prompt-folders/find/promptFolderFindSectionKeys'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
   import {
     cancelMonacoHydration,
@@ -30,7 +29,7 @@
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
-    findSectionKey?: string
+    findSectionKey: string
     findRequest?: PromptFolderFindRequest | null
     onFindMatches?: (query: string, count: number) => void
     onFindMatchReveal?: (
@@ -54,7 +53,7 @@
     onChange,
     onBlur,
     onEditorLifecycle,
-    findSectionKey = PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+    findSectionKey,
     findRequest,
     onFindMatches,
     onFindMatchReveal,
