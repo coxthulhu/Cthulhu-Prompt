@@ -29,6 +29,7 @@
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
+    findSectionKey?: string
     findRequest?: PromptFolderFindRequest | null
     onFindMatches?: (query: string, count: number) => void
     onFindMatchReveal?: (
@@ -52,6 +53,7 @@
     onChange,
     onBlur,
     onEditorLifecycle,
+    findSectionKey = 'body',
     findRequest,
     onFindMatches,
     onFindMatchReveal,
@@ -135,6 +137,7 @@
       {onChange}
       {onBlur}
       {onEditorLifecycle}
+      {findSectionKey}
       {findRequest}
       {onFindMatches}
       {onFindMatchReveal}

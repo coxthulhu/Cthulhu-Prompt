@@ -42,6 +42,7 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
+  import type { PromptFolderFindItem } from './find/promptFolderFindTypes'
   import { promptEditorRowId } from './promptFolderRowIds'
   import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
   import {
@@ -134,6 +135,22 @@
     }
 
     return idsWithDrafts
+  })
+  const findItems = $derived.by((): PromptFolderFindItem[] => {
+    return visiblePromptIds.map((promptId) => ({
+      entityId: promptId,
+      rowId: promptEditorRowId(promptId),
+      sections: [
+        {
+          key: 'title',
+          text: promptDraftById[promptId]!.title
+        },
+        {
+          key: 'body',
+          text: promptDraftById[promptId]!.promptText
+        }
+      ]
+    }))
   })
 
   const clearOutlinerManualSelection = () => {
@@ -324,6 +341,7 @@
         return lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio)
       },
       needsOverlayRow: true,
+      dehydrateOnWidthResize: true,
       snippet: promptEditorRow
     },
     'bottom-spacer': {
@@ -490,7 +508,7 @@
 </script>
 
 <PromptFolderFindIntegration
-  promptIds={visiblePromptIds}
+  items={findItems}
   scrollToWithinWindowBand={scrollToWithinWindowBandWithManualClear}
 >
   <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">

@@ -1,11 +1,14 @@
-import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
 import { findMatchRange } from './promptFolderFindText'
-import type { PromptFolderFindMatch } from './promptFolderFindTypes'
+import type { PromptFolderFindItem, PromptFolderFindMatch } from './promptFolderFindTypes'
+
+export type PromptFolderFindSectionCount = {
+  sectionKey: string
+  count: number
+}
 
 export type PromptFolderFindCounts = {
-  promptId: string
-  titleCount: number
-  bodyCount: number
+  entityId: string
+  sectionCounts: PromptFolderFindSectionCount[]
 }
 
 export type SearchInputs = {
@@ -15,24 +18,29 @@ export type SearchInputs = {
 }
 
 type BuildMatchCountsArgs = {
-  promptIds: string[]
+  items: PromptFolderFindItem[]
   trimmedQuery: string
-  hydratedPromptIds: Set<string>
-  bodyMatchCountsByPromptId: Map<string, { query: string; count: number }>
+  hydratedEntityIds: Set<string>
+  sectionMatchCountsByEntitySectionKey: Map<string, { query: string; count: number }>
   countMatchesInText: (text: string, query: string) => number
 }
 
+export const getPromptFolderFindSectionCountKey = (
+  entityId: string,
+  sectionKey: string
+): string => `${entityId}\u0000${sectionKey}`
+
 export const buildSearchInputs = ({
   normalizedQuery,
-  promptIds,
+  entityIds,
   searchRevision
 }: {
   normalizedQuery: string
-  promptIds: string[]
+  entityIds: string[]
   searchRevision: number
 }): SearchInputs => ({
   queryKey: normalizedQuery,
-  scopeKey: promptIds.join('|'),
+  scopeKey: entityIds.join('|'),
   searchRevision
 })
 
@@ -42,36 +50,29 @@ export const hasSearchInputsChanged = (next: SearchInputs, prev: SearchInputs) =
   next.searchRevision !== prev.searchRevision
 
 export const buildPromptFolderFindCounts = ({
-  promptIds,
+  items,
   trimmedQuery,
-  hydratedPromptIds,
-  bodyMatchCountsByPromptId,
+  hydratedEntityIds,
+  sectionMatchCountsByEntitySectionKey,
   countMatchesInText
 }: BuildMatchCountsArgs): PromptFolderFindCounts[] => {
   if (trimmedQuery.length === 0) return []
 
-  return promptIds.map((promptId) => {
-    const promptData = getPromptFolderScreenPromptData(promptId)
-    const title = promptData.draft.title
-    const text = promptData.draft.text
-    const titleCount = countMatchesInText(title, trimmedQuery)
-
-    let bodyCount = 0
-    if (hydratedPromptIds.has(promptId)) {
-      const tracked = bodyMatchCountsByPromptId.get(promptId)
-      if (tracked?.query === trimmedQuery) {
-        bodyCount = tracked.count
-      } else {
-        bodyCount = countMatchesInText(text, trimmedQuery)
+  return items.map((item) => {
+    const sectionCounts = item.sections.map((section) => {
+      const key = getPromptFolderFindSectionCountKey(item.entityId, section.key)
+      const tracked = sectionMatchCountsByEntitySectionKey.get(key)
+      const useTrackedCount = hydratedEntityIds.has(item.entityId) && tracked?.query === trimmedQuery
+      const count = useTrackedCount ? tracked.count : countMatchesInText(section.text, trimmedQuery)
+      return {
+        sectionKey: section.key,
+        count
       }
-    } else {
-      bodyCount = countMatchesInText(text, trimmedQuery)
-    }
+    })
 
     return {
-      promptId,
-      titleCount,
-      bodyCount
+      entityId: item.entityId,
+      sectionCounts
     }
   })
 }
@@ -82,38 +83,31 @@ export const getPromptFolderFindMatchForIndex = (
 ): PromptFolderFindMatch => {
   let remaining = matchIndex
   for (const group of groups) {
-    if (remaining <= group.titleCount) {
-      return {
-        promptId: group.promptId,
-        kind: 'title',
-        titleMatchIndex: remaining - 1
+    for (const section of group.sectionCounts) {
+      if (remaining <= section.count) {
+        return {
+          entityId: group.entityId,
+          sectionKey: section.sectionKey,
+          sectionMatchIndex: remaining - 1
+        }
       }
+      remaining -= section.count
     }
-    remaining -= group.titleCount
-    if (remaining <= group.bodyCount) {
-      return {
-        promptId: group.promptId,
-        kind: 'body',
-        bodyMatchIndex: remaining - 1
-      }
-    }
-    remaining -= group.bodyCount
   }
   throw new Error('Match index out of range')
 }
 
 export const getMatchTextForCurrentMatch = (
   match: PromptFolderFindMatch | null,
-  trimmedQuery: string
+  trimmedQuery: string,
+  getSectionText: (entityId: string, sectionKey: string) => string
 ) => {
   if (!match) return null
   if (trimmedQuery.length === 0) return null
 
-  const promptData = getPromptFolderScreenPromptData(match.promptId)
-  const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
-  const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
+  const targetText = getSectionText(match.entityId, match.sectionKey)
 
-  const matchRange = findMatchRange(targetText, trimmedQuery, matchIndex)
+  const matchRange = findMatchRange(targetText, trimmedQuery, match.sectionMatchIndex)
   if (!matchRange) return null
 
   return targetText.slice(matchRange.start, matchRange.end)

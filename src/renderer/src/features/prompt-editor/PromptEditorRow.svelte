@@ -93,13 +93,15 @@
   let lastFocusRequestId = $state(0)
   let lastEditorFocusRequestId = $state(0)
   let isHydrated = $state(false)
+  const TITLE_FIND_SECTION_KEY = 'title'
+  const BODY_FIND_SECTION_KEY = 'body'
   type FindRowHandlers = {
     requestImmediateHydration: (() => void) | null
-    revealBodyMatch: ((query: string, matchIndex: number) => number | null) | null
+    revealSectionMatch: ((query: string, matchIndex: number) => number | null) | null
   }
   let findRowHandlers = $state<FindRowHandlers>({
     requestImmediateHydration: null,
-    revealBodyMatch: null
+    revealSectionMatch: null
   })
   const findContext = getPromptFolderFindContext()
 
@@ -142,20 +144,19 @@
 
   const findRequest = $derived.by<PromptFolderFindRequest | null>(() => {
     if (!findContext) return null
-    const activeBodyMatchIndex =
-      findContext.currentMatch?.kind === 'body' && findContext.currentMatch.promptId === promptId
-        ? findContext.currentMatch.bodyMatchIndex
-        : null
+    const activeMatch =
+      findContext.currentMatch?.entityId === promptId ? findContext.currentMatch : null
 
     return {
       isOpen: findContext.isFindOpen,
       query: findContext.query,
-      activeBodyMatchIndex
+      activeSectionKey: activeMatch?.sectionKey ?? null,
+      activeSectionMatchIndex: activeMatch?.sectionMatchIndex ?? null
     }
   })
 
   const handleFindMatches = (query: string, count: number) => {
-    findContext?.reportBodyMatchCount(promptId, query, count)
+    findContext?.reportSectionMatchCount(promptId, BODY_FIND_SECTION_KEY, query, count)
   }
 
   const handleEditorLifecycle = (
@@ -172,8 +173,8 @@
 
   const reportTitleSelection = (startOffset: number, endOffset: number) => {
     findContext?.reportSelection({
-      promptId,
-      kind: 'title',
+      entityId: promptId,
+      sectionKey: TITLE_FIND_SECTION_KEY,
       startOffset,
       endOffset
     })
@@ -181,8 +182,8 @@
 
   const reportBodySelection = (startOffset: number, endOffset: number) => {
     findContext?.reportSelection({
-      promptId,
-      kind: 'body',
+      entityId: promptId,
+      sectionKey: BODY_FIND_SECTION_KEY,
       startOffset,
       endOffset
     })
@@ -210,13 +211,17 @@
   onMount(() => {
     if (!findContext) return
     const handle: PromptFolderFindRowHandle = {
-      promptId,
+      entityId: promptId,
       rowId,
       isHydrated: () => isHydrated,
       ensureHydrated,
-      revealBodyMatch: (query, matchIndex) =>
-        findRowHandlers.revealBodyMatch?.(query, matchIndex) ?? null,
-      getTitleCenterOffset
+      shouldEnsureHydratedForSection: (sectionKey) => sectionKey === BODY_FIND_SECTION_KEY,
+      revealSectionMatch: (sectionKey, query, matchIndex) => {
+        if (sectionKey !== BODY_FIND_SECTION_KEY) return null
+        return findRowHandlers.revealSectionMatch?.(query, matchIndex) ?? null
+      },
+      getSectionCenterOffset: (sectionKey) =>
+        sectionKey === TITLE_FIND_SECTION_KEY ? getTitleCenterOffset() : null
     }
     return findContext.registerRow(handle)
   })
@@ -228,9 +233,9 @@
     if (!findFocusRequest || findFocusRequest.requestId === lastFocusRequestId) return
     lastFocusRequestId = findFocusRequest.requestId
     const focusMatch = findFocusRequest.match
-    if (focusMatch.promptId !== promptId) return
+    if (focusMatch.entityId !== promptId) return
 
-    if (focusMatch.kind === 'title') {
+    if (focusMatch.sectionKey === TITLE_FIND_SECTION_KEY) {
       const input = titleInputRef
       if (!input) return
       input.focus({ preventScroll: true })
@@ -239,7 +244,7 @@
       const matchRange = findMatchRange(
         promptData.draft.title,
         focusQuery,
-        focusMatch.titleMatchIndex
+        focusMatch.sectionMatchIndex
       )
       if (!matchRange) return
       input.setSelectionRange(matchRange.start, matchRange.end)
@@ -329,10 +334,11 @@
                 {rowId}
                 {scrollToWithinWindowBand}
                 onEditorLifecycle={handleEditorLifecycle}
+                findSectionKey={BODY_FIND_SECTION_KEY}
                 {findRequest}
                 onFindMatches={handleFindMatches}
                 onFindMatchReveal={(handler) => {
-                  findRowHandlers.revealBodyMatch = handler
+                  findRowHandlers.revealSectionMatch = handler
                 }}
                 onSelectionChange={reportBodySelection}
                 onImmediateHydrationRequest={(request) => {

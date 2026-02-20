@@ -99,10 +99,10 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
 
   const shouldDehydrateRow = (row: VirtualRowState<TRow>): boolean =>
     getWidthResizeActive() &&
-    row.rowData.kind === 'prompt-editor' &&
+    (getRowRegistry()[row.rowData.kind].dehydrateOnWidthResize ?? false) &&
     !rowTouchesViewport(row, getClampedAnchoredScrollTopPx(), getAnchoredScrollBottomPx())
 
-  // Side effect: revert to top anchoring once rendered prompt editor rows hydrate during center anchoring.
+  // Side effect: revert to top anchoring once rendered eligible rows hydrate during center anchoring.
   $effect(() => {
     if (getScrollAnchorMode() !== 'center') return
     const isEligible = getHydrationPriorityEligibility?.()

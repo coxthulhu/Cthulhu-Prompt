@@ -18,6 +18,7 @@
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
+    findSectionKey?: string
     findRequest?: PromptFolderFindRequest | null
     onFindMatches?: (query: string, count: number) => void
     onFindMatchReveal?: (
@@ -35,6 +36,7 @@
     onChange,
     onBlur,
     onEditorLifecycle,
+    findSectionKey = 'body',
     findRequest,
     onFindMatches,
     onFindMatchReveal,
@@ -397,14 +399,15 @@
       return
     }
 
-    const shouldClearSelection =
-      findRequest.activeBodyMatchIndex == null && lastActiveMatchIndex != null
+    const activeSectionMatchIndex =
+      findRequest.activeSectionKey === findSectionKey ? findRequest.activeSectionMatchIndex : null
+    const shouldClearSelection = activeSectionMatchIndex == null && lastActiveMatchIndex != null
 
     if (!syncFindState(trimmedQuery, { shouldClearSelection })) return
 
-    if (findRequest.activeBodyMatchIndex != null && findRequest.activeBodyMatchIndex >= 0) {
-      findModel?.moveToMatch(findRequest.activeBodyMatchIndex)
-      lastActiveMatchIndex = findRequest.activeBodyMatchIndex
+    if (activeSectionMatchIndex != null && activeSectionMatchIndex >= 0) {
+      findModel?.moveToMatch(activeSectionMatchIndex)
+      lastActiveMatchIndex = activeSectionMatchIndex
     } else {
       lastActiveMatchIndex = null
     }

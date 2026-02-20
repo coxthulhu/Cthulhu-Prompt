@@ -3,10 +3,10 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
-  import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     buildPromptFolderFindCounts,
     buildSearchInputs,
+    getPromptFolderFindSectionCountKey,
     getMatchTextForCurrentMatch,
     getPromptFolderFindMatchForIndex,
     hasSearchInputsChanged,
@@ -25,24 +25,25 @@
   import type {
     PromptFolderFindAnchor,
     PromptFolderFindFocusRequest,
+    PromptFolderFindItem,
     PromptFolderFindMatch,
     PromptFolderFindRowHandle,
     PromptFolderFindState
   } from './promptFolderFindTypes'
 
   type PromptFolderFindIntegrationProps = {
-    promptIds: string[]
+    items: PromptFolderFindItem[]
     children?: Snippet
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
   }
 
-  let { promptIds, children, scrollToWithinWindowBand }: PromptFolderFindIntegrationProps = $props()
+  let { items, children, scrollToWithinWindowBand }: PromptFolderFindIntegrationProps = $props()
 
   let isFindOpen = $state(false)
   let matchText = $state('')
   let totalMatches = $state(0)
   let currentMatchIndex = $state(0)
-  let matchCountsByPrompt = $state<PromptFolderFindCounts[]>([])
+  let matchCountsByEntity = $state<PromptFolderFindCounts[]>([])
   let focusFindRequestId = $state(0)
   let focusRequest = $state<PromptFolderFindFocusRequest | null>(null)
   let searchRevision = $state(0)
@@ -51,10 +52,18 @@
   const trimmedQuery = $derived(matchText.trim())
   const normalizedQuery = $derived(trimmedQuery.toLowerCase())
 
-  const hydratedPromptIds = new SvelteSet<string>()
-  const bodyMatchCountsByPromptId = new SvelteMap<string, { query: string; count: number }>()
-  const rowHandlesByPromptId = new SvelteMap<string, PromptFolderFindRowHandle>()
+  const hydratedEntityIds = new SvelteSet<string>()
+  const sectionMatchCountsByEntitySectionKey = new SvelteMap<string, { query: string; count: number }>()
+  const rowHandlesByEntityId = new SvelteMap<string, PromptFolderFindRowHandle>()
   const searchModel = createPromptFolderFindSearchModel()
+  const itemByEntityId = $derived.by(() => {
+    const lookup = new SvelteMap<string, PromptFolderFindItem>()
+    for (const item of items) {
+      lookup.set(item.entityId, item)
+    }
+    return lookup
+  })
+  const entityIds = $derived.by(() => items.map((item) => item.entityId))
 
   // Show the widget and request a fresh scan for the current query.
   const openFindDialog = () => {
@@ -80,21 +89,24 @@
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (resetSelection: boolean) => {
     if (trimmedQuery.length === 0) {
-      matchCountsByPrompt = []
+      matchCountsByEntity = []
       totalMatches = 0
       currentMatchIndex = 0
       return
     }
 
     const nextCounts = buildPromptFolderFindCounts({
-      promptIds,
+      items,
       trimmedQuery,
-      hydratedPromptIds,
-      bodyMatchCountsByPromptId,
+      hydratedEntityIds,
+      sectionMatchCountsByEntitySectionKey,
       countMatchesInText: searchModel.countMatchesInText
     })
-    matchCountsByPrompt = nextCounts
-    totalMatches = nextCounts.reduce((sum, entry) => sum + entry.titleCount + entry.bodyCount, 0)
+    matchCountsByEntity = nextCounts
+    totalMatches = nextCounts.reduce(
+      (sum, entry) => sum + entry.sectionCounts.reduce((sectionSum, section) => sectionSum + section.count, 0),
+      0
+    )
 
     if (resetSelection) {
       currentMatchIndex = 0
@@ -113,14 +125,22 @@
   const currentMatch = $derived.by(() =>
     currentMatchIndex <= 0
       ? null
-      : getPromptFolderFindMatchForIndex(currentMatchIndex, matchCountsByPrompt)
+      : getPromptFolderFindMatchForIndex(currentMatchIndex, matchCountsByEntity)
   )
+
+  const getItem = (entityId: string): PromptFolderFindItem | null => itemByEntityId.get(entityId) ?? null
+  const getSectionText = (entityId: string, sectionKey: string): string => {
+    const item = getItem(entityId)
+    if (!item) return ''
+    return item.sections.find((section) => section.key === sectionKey)?.text ?? ''
+  }
 
   const revealMatch = async (match: PromptFolderFindMatch) => {
     if (!scrollToWithinWindowBand) return
     await revealPromptFolderMatch(match, {
       query: trimmedQuery,
-      rowHandlesByPromptId,
+      rowHandlesByEntityId,
+      getRowIdForEntity: (entityId) => getItem(entityId)?.rowId ?? null,
       scrollToWithinWindowBand,
       waitForRows: () => tick()
     })
@@ -134,14 +154,12 @@
 
   const recordSelectionFromMatch = (match: PromptFolderFindMatch) => {
     if (trimmedQuery.length === 0) return
-    const promptData = getPromptFolderScreenPromptData(match.promptId)
-    const targetText = match.kind === 'title' ? promptData.draft.title : promptData.draft.text
-    const matchIndex = match.kind === 'title' ? match.titleMatchIndex : match.bodyMatchIndex
-    const matchRange = findMatchRange(targetText, trimmedQuery, matchIndex)
+    const targetText = getSectionText(match.entityId, match.sectionKey)
+    const matchRange = findMatchRange(targetText, trimmedQuery, match.sectionMatchIndex)
     if (!matchRange) return
     recordSelectionAnchor({
-      promptId: match.promptId,
-      kind: match.kind,
+      entityId: match.entityId,
+      sectionKey: match.sectionKey,
       startOffset: matchRange.start,
       endOffset: matchRange.end
     })
@@ -149,151 +167,136 @@
 
   const setCurrentMatchIndex = (nextIndex: number) => {
     currentMatchIndex = nextIndex
-    const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByPrompt)
+    const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
     recordSelectionFromMatch(match)
     void revealMatch(match)
   }
 
-  const getGlobalMatchIndex = (promptId: string, kind: 'title' | 'body', matchIndex: number) => {
+  const getGlobalMatchIndex = (entityId: string, sectionKey: string, matchIndex: number) => {
     let runningIndex = 0
-    for (const group of matchCountsByPrompt) {
-      if (group.promptId === promptId) {
-        if (kind === 'title') {
+    for (const group of matchCountsByEntity) {
+      for (const section of group.sectionCounts) {
+        if (group.entityId === entityId && section.sectionKey === sectionKey) {
           return runningIndex + matchIndex + 1
         }
-        runningIndex += group.titleCount
-        if (kind === 'body') {
-          return runningIndex + matchIndex + 1
-        }
+        runningIndex += section.count
       }
-      runningIndex += group.titleCount + group.bodyCount
     }
     return null
   }
 
-  const findFirstMatchInPrompt = (promptId: string) => {
-    const promptData = getPromptFolderScreenPromptData(promptId)
-    const titleIndex = findMatchIndexAtOrAfter(promptData.draft.title, trimmedQuery, 0)
-    if (titleIndex != null) {
-      return { kind: 'title' as const, matchIndex: titleIndex }
-    }
-    const bodyIndex = findMatchIndexAtOrAfter(promptData.draft.text, trimmedQuery, 0)
-    if (bodyIndex != null) {
-      return { kind: 'body' as const, matchIndex: bodyIndex }
+  const findFirstMatchInItem = (item: PromptFolderFindItem) => {
+    for (const section of item.sections) {
+      const sectionMatchIndex = findMatchIndexAtOrAfter(section.text, trimmedQuery, 0)
+      if (sectionMatchIndex == null) continue
+      return { sectionKey: section.key, sectionMatchIndex }
     }
     return null
   }
 
   const getNextMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
     if (trimmedQuery.length === 0 || totalMatches === 0) return null
-    const startIndex = promptIds.indexOf(anchor.promptId)
+    const startIndex = items.findIndex((item) => item.entityId === anchor.entityId)
     if (startIndex < 0) return null
 
-    const promptData = getPromptFolderScreenPromptData(anchor.promptId)
-    if (anchor.kind === 'title') {
-      const titleIndex = findMatchIndexAtOrAfter(
-        promptData.draft.title,
+    const startItem = items[startIndex]
+    const startSectionIndex = startItem.sections.findIndex(
+      (section) => section.key === anchor.sectionKey
+    )
+    if (startSectionIndex >= 0) {
+      const startSection = startItem.sections[startSectionIndex]
+      const sectionMatchIndex = findMatchIndexAtOrAfter(
+        startSection.text,
         trimmedQuery,
         anchor.endOffset
       )
-      if (titleIndex != null) {
-        return getGlobalMatchIndex(anchor.promptId, 'title', titleIndex)
+      if (sectionMatchIndex != null) {
+        return getGlobalMatchIndex(startItem.entityId, startSection.key, sectionMatchIndex)
       }
-      const bodyIndex = findMatchIndexAtOrAfter(promptData.draft.text, trimmedQuery, 0)
-      if (bodyIndex != null) {
-        return getGlobalMatchIndex(anchor.promptId, 'body', bodyIndex)
-      }
-    } else {
-      const bodyIndex = findMatchIndexAtOrAfter(
-        promptData.draft.text,
-        trimmedQuery,
-        anchor.endOffset
-      )
-      if (bodyIndex != null) {
-        return getGlobalMatchIndex(anchor.promptId, 'body', bodyIndex)
+
+      for (let sectionIndex = startSectionIndex + 1; sectionIndex < startItem.sections.length; sectionIndex += 1) {
+        const nextSection = startItem.sections[sectionIndex]
+        const nextSectionMatchIndex = findMatchIndexAtOrAfter(nextSection.text, trimmedQuery, 0)
+        if (nextSectionMatchIndex == null) continue
+        return getGlobalMatchIndex(startItem.entityId, nextSection.key, nextSectionMatchIndex)
       }
     }
 
-    for (let i = startIndex + 1; i < promptIds.length; i += 1) {
-      const match = findFirstMatchInPrompt(promptIds[i])
+    for (let i = startIndex + 1; i < items.length; i += 1) {
+      const match = findFirstMatchInItem(items[i])
       if (!match) continue
-      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
     }
 
     for (let i = 0; i <= startIndex; i += 1) {
-      const match = findFirstMatchInPrompt(promptIds[i])
+      const match = findFirstMatchInItem(items[i])
       if (!match) continue
-      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
     }
 
     return null
   }
 
-  const findLastMatchInPrompt = (promptId: string) => {
-    const promptData = getPromptFolderScreenPromptData(promptId)
-    const bodyIndex = findMatchIndexBefore(
-      promptData.draft.text,
-      trimmedQuery,
-      Number.POSITIVE_INFINITY
-    )
-    if (bodyIndex != null) {
-      return { kind: 'body' as const, matchIndex: bodyIndex }
-    }
-    const titleIndex = findMatchIndexBefore(
-      promptData.draft.title,
-      trimmedQuery,
-      Number.POSITIVE_INFINITY
-    )
-    if (titleIndex != null) {
-      return { kind: 'title' as const, matchIndex: titleIndex }
+  const findLastMatchInItem = (item: PromptFolderFindItem) => {
+    for (let sectionIndex = item.sections.length - 1; sectionIndex >= 0; sectionIndex -= 1) {
+      const section = item.sections[sectionIndex]
+      const sectionMatchIndex = findMatchIndexBefore(
+        section.text,
+        trimmedQuery,
+        Number.POSITIVE_INFINITY
+      )
+      if (sectionMatchIndex == null) continue
+      return { sectionKey: section.key, sectionMatchIndex }
     }
     return null
   }
 
   const getPreviousMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
     if (trimmedQuery.length === 0 || totalMatches === 0) return null
-    const startIndex = promptIds.indexOf(anchor.promptId)
+    const startIndex = items.findIndex((item) => item.entityId === anchor.entityId)
     if (startIndex < 0) return null
 
-    const promptData = getPromptFolderScreenPromptData(anchor.promptId)
-    if (anchor.kind === 'body') {
-      const bodyIndex = findMatchIndexBefore(
-        promptData.draft.text,
+    const startItem = items[startIndex]
+    const startSectionIndex = startItem.sections.findIndex(
+      (section) => section.key === anchor.sectionKey
+    )
+    if (startSectionIndex >= 0) {
+      const startSection = startItem.sections[startSectionIndex]
+      const sectionMatchIndex = findMatchIndexBefore(
+        startSection.text,
         trimmedQuery,
         anchor.startOffset
       )
-      if (bodyIndex != null) {
-        return getGlobalMatchIndex(anchor.promptId, 'body', bodyIndex)
+      if (sectionMatchIndex != null) {
+        return getGlobalMatchIndex(startItem.entityId, startSection.key, sectionMatchIndex)
       }
-      const titleIndex = findMatchIndexBefore(
-        promptData.draft.title,
-        trimmedQuery,
-        Number.POSITIVE_INFINITY
-      )
-      if (titleIndex != null) {
-        return getGlobalMatchIndex(anchor.promptId, 'title', titleIndex)
-      }
-    } else {
-      const titleIndex = findMatchIndexBefore(
-        promptData.draft.title,
-        trimmedQuery,
-        anchor.startOffset
-      )
-      if (titleIndex != null) {
-        return getGlobalMatchIndex(anchor.promptId, 'title', titleIndex)
+
+      for (let sectionIndex = startSectionIndex - 1; sectionIndex >= 0; sectionIndex -= 1) {
+        const previousSection = startItem.sections[sectionIndex]
+        const previousSectionMatchIndex = findMatchIndexBefore(
+          previousSection.text,
+          trimmedQuery,
+          Number.POSITIVE_INFINITY
+        )
+        if (previousSectionMatchIndex == null) continue
+        return getGlobalMatchIndex(
+          startItem.entityId,
+          previousSection.key,
+          previousSectionMatchIndex
+        )
       }
     }
 
     for (let i = startIndex - 1; i >= 0; i -= 1) {
-      const match = findLastMatchInPrompt(promptIds[i])
+      const match = findLastMatchInItem(items[i])
       if (!match) continue
-      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
     }
 
-    for (let i = promptIds.length - 1; i >= startIndex; i -= 1) {
-      const match = findLastMatchInPrompt(promptIds[i])
+    for (let i = items.length - 1; i >= startIndex; i -= 1) {
+      const match = findLastMatchInItem(items[i])
       if (!match) continue
-      return getGlobalMatchIndex(promptIds[i], match.kind, match.matchIndex)
+      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
     }
 
     return null
@@ -325,10 +328,10 @@
   // Side effect: refresh the placeholder search state while the find widget is open.
   $effect(() => {
     if (!isFindOpen) return
-    // Scope key guards the full rescan against changes in prompt IDs or query.
+    // Scope key guards the full rescan against changes in findable entity IDs or query.
     const nextInputs = buildSearchInputs({
       normalizedQuery,
-      promptIds,
+      entityIds,
       searchRevision
     })
     if (!hasSearchInputsChanged(nextInputs, lastSearchInputs)) return
@@ -340,45 +343,65 @@
     lastSearchInputs = nextInputs
   })
 
-  // Track which prompts are hydrated so we can prefer editor-reported counts.
-  const reportHydration = (promptId: string, isHydrated: boolean) => {
+  const clearSectionMatchCounts = (entityId: string) => {
+    const keyPrefix = `${entityId}\u0000`
+    for (const key of sectionMatchCountsByEntitySectionKey.keys()) {
+      if (key.startsWith(keyPrefix)) {
+        sectionMatchCountsByEntitySectionKey.delete(key)
+      }
+    }
+  }
+
+  // Track which entities are hydrated so we can prefer editor-reported counts.
+  const reportHydration = (entityId: string, isHydrated: boolean) => {
     if (isHydrated) {
-      hydratedPromptIds.add(promptId)
+      hydratedEntityIds.add(entityId)
     } else {
-      hydratedPromptIds.delete(promptId)
-      bodyMatchCountsByPromptId.delete(promptId)
+      hydratedEntityIds.delete(entityId)
+      clearSectionMatchCounts(entityId)
     }
   }
 
   // Receive match counts from hydrated editors and update totals incrementally.
-  const reportBodyMatchCount = (promptId: string, query: string, count: number) => {
+  const reportSectionMatchCount = (
+    entityId: string,
+    sectionKey: string,
+    query: string,
+    count: number
+  ) => {
     if (query !== trimmedQuery) return
-    bodyMatchCountsByPromptId.set(promptId, { query, count })
+    const sectionCountKey = getPromptFolderFindSectionCountKey(entityId, sectionKey)
+    sectionMatchCountsByEntitySectionKey.set(sectionCountKey, { query, count })
 
     if (!isFindOpen) return
-    // Update just the affected prompt counts instead of rescanning everything.
-    const groupIndex = matchCountsByPrompt.findIndex((group) => group.promptId === promptId)
+    // Update just the affected entity section count instead of rescanning everything.
+    const groupIndex = matchCountsByEntity.findIndex((group) => group.entityId === entityId)
     if (groupIndex < 0) return
 
-    const group = matchCountsByPrompt[groupIndex]
-    if (group.bodyCount === count) return
+    const group = matchCountsByEntity[groupIndex]
+    const sectionIndex = group.sectionCounts.findIndex((section) => section.sectionKey === sectionKey)
+    if (sectionIndex < 0) return
+    const section = group.sectionCounts[sectionIndex]
+    if (section.count === count) return
 
-    const nextGroups = matchCountsByPrompt.slice()
-    nextGroups[groupIndex] = { ...group, bodyCount: count }
-    matchCountsByPrompt = nextGroups
+    const nextSectionCounts = group.sectionCounts.slice()
+    nextSectionCounts[sectionIndex] = { ...section, count }
+    const nextGroups = matchCountsByEntity.slice()
+    nextGroups[groupIndex] = { ...group, sectionCounts: nextSectionCounts }
+    matchCountsByEntity = nextGroups
 
-    totalMatches = totalMatches + (count - group.bodyCount)
+    totalMatches = totalMatches + (count - section.count)
     if (currentMatchIndex > totalMatches) {
       currentMatchIndex = totalMatches
     }
   }
 
   const registerRow = (handle: PromptFolderFindRowHandle) => {
-    rowHandlesByPromptId.set(handle.promptId, handle)
+    rowHandlesByEntityId.set(handle.entityId, handle)
     return () => {
-      const current = rowHandlesByPromptId.get(handle.promptId)
+      const current = rowHandlesByEntityId.get(handle.entityId)
       if (current === handle) {
-        rowHandlesByPromptId.delete(handle.promptId)
+        rowHandlesByEntityId.delete(handle.entityId)
       }
     }
   }
@@ -390,7 +413,7 @@
     focusRequest: null,
     reportSelection: recordSelectionAnchor,
     reportHydration,
-    reportBodyMatchCount,
+    reportSectionMatchCount,
     registerRow
   })
 
@@ -413,7 +436,8 @@
       setMatchText: (value) => {
         matchText = value
       },
-      getMatchTextForCurrentMatch: (match) => getMatchTextForCurrentMatch(match, trimmedQuery),
+      getMatchTextForCurrentMatch: (match) =>
+        getMatchTextForCurrentMatch(match, trimmedQuery, getSectionText),
       openFindDialog,
       closeFindDialog
     })
