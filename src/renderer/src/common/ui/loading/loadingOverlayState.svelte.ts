@@ -1,11 +1,13 @@
 type LoadingOverlayStateOptions = {
   fadeMs: number
   startsVisible?: boolean
+  getIsLoading?: () => boolean
 }
 
 export const createLoadingOverlayState = ({
   fadeMs,
-  startsVisible = false
+  startsVisible = false,
+  getIsLoading
 }: LoadingOverlayStateOptions) => {
   const initialPhase: 'hidden' | 'visible' | 'fading' = startsVisible ? 'visible' : 'hidden'
   let overlayPhase = $state<'hidden' | 'visible' | 'fading'>(initialPhase)
@@ -53,6 +55,13 @@ export const createLoadingOverlayState = ({
       clearHideTimeout()
     }
   })
+
+  if (getIsLoading) {
+    // Side effect: keep the overlay phase synchronized with the caller's loading state.
+    $effect(() => {
+      setLoading(getIsLoading())
+    })
+  }
 
   return {
     setLoading,

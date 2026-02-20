@@ -4,6 +4,8 @@ import { getFs } from '../fs-provider'
 import {
   DEFAULT_WORKSPACE_PERSISTENCE,
   DEFAULT_USER_PERSISTENCE,
+  parseUserPersistence,
+  parseWorkspacePersistence,
   type UserPersistence,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
@@ -50,41 +52,11 @@ const readJsonFile = (filePath: string): unknown | null => {
   }
 }
 
-const parseUserPersistence = (payload: unknown): UserPersistence | null => {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return null
+const ensureJsonFile = <TPayload extends object>(filePath: string, initialValue: TPayload): void => {
+  const fs = getFs()
+  if (!fs.existsSync(filePath)) {
+    writeJsonFile(filePath, initialValue)
   }
-
-  const lastWorkspacePath = (payload as { lastWorkspacePath?: unknown }).lastWorkspacePath
-  if (lastWorkspacePath === null || typeof lastWorkspacePath === 'string') {
-    return { lastWorkspacePath }
-  }
-
-  return null
-}
-
-const parseWorkspacePersistence = (payload: unknown): WorkspacePersistence | null => {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return null
-  }
-
-  const schemaVersion = (payload as { schemaVersion?: unknown }).schemaVersion
-  if (schemaVersion === 1) {
-    return { schemaVersion: 1 }
-  }
-
-  return null
-}
-
-const writeUserPersistence = (payload: UserPersistence): UserPersistence => {
-  return writeJsonFile(resolveUserPersistencePath(), payload)
-}
-
-const writeWorkspacePersistence = (
-  workspaceId: string,
-  payload: WorkspacePersistence
-): WorkspacePersistence => {
-  return writeJsonFile(resolveWorkspacePersistencePath(workspaceId), payload)
 }
 
 const ensureBasePersistenceArtifacts = (): void => {
@@ -92,10 +64,7 @@ const ensureBasePersistenceArtifacts = (): void => {
   fs.mkdirSync(resolveUserDataPath(), { recursive: true })
   fs.mkdirSync(resolveWorkspacePersistenceDirectoryPath(), { recursive: true })
 
-  const userPersistencePath = resolveUserPersistencePath()
-  if (!fs.existsSync(userPersistencePath)) {
-    writeJsonFile(userPersistencePath, { ...DEFAULT_USER_PERSISTENCE })
-  }
+  ensureJsonFile(resolveUserPersistencePath(), { ...DEFAULT_USER_PERSISTENCE })
 }
 
 export class UserPersistenceDataAccess {
@@ -105,12 +74,9 @@ export class UserPersistenceDataAccess {
 
   static ensureWorkspacePersistenceFile(workspaceId: string): void {
     ensureBasePersistenceArtifacts()
-
-    const fs = getFs()
-    const workspacePersistencePath = resolveWorkspacePersistencePath(workspaceId)
-    if (!fs.existsSync(workspacePersistencePath)) {
-      writeWorkspacePersistence(workspaceId, { ...DEFAULT_WORKSPACE_PERSISTENCE })
-    }
+    ensureJsonFile(resolveWorkspacePersistencePath(workspaceId), {
+      ...DEFAULT_WORKSPACE_PERSISTENCE
+    })
   }
 
   static readUserPersistence(): UserPersistence {
@@ -121,7 +87,7 @@ export class UserPersistenceDataAccess {
 
   static updateLastWorkspacePath(workspacePath: string | null): UserPersistence {
     ensureBasePersistenceArtifacts()
-    return writeUserPersistence({
+    return writeJsonFile(resolveUserPersistencePath(), {
       lastWorkspacePath: workspacePath
     })
   }

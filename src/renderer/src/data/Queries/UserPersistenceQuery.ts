@@ -1,3 +1,7 @@
+import {
+  LOAD_USER_PERSISTENCE_CHANNEL,
+  LOAD_WORKSPACE_PERSISTENCE_CHANNEL
+} from '@shared/UserPersistence'
 import type {
   LoadUserPersistenceResult,
   LoadWorkspacePersistenceRequest,
@@ -10,7 +14,7 @@ import { ipcInvoke, ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvok
 
 export const loadUserPersistence = async (): Promise<UserPersistence> => {
   const result = await runLoad(() =>
-    ipcInvoke<LoadUserPersistenceResult>('load-user-persistence')
+    ipcInvoke<LoadUserPersistenceResult>(LOAD_USER_PERSISTENCE_CHANNEL)
   )
   return result.userPersistence
 }
@@ -20,7 +24,7 @@ export const loadWorkspacePersistence = async (
 ): Promise<WorkspacePersistence> => {
   const result = await runLoad(() =>
     ipcInvokeWithPayload<LoadWorkspacePersistenceResult, LoadWorkspacePersistenceRequest>(
-      'load-workspace-persistence',
+      LOAD_WORKSPACE_PERSISTENCE_CHANNEL,
       { workspaceId }
     )
   )

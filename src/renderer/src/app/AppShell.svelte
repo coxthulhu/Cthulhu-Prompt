@@ -79,11 +79,12 @@
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0 || workspaceQuery.isLoading)
   const STARTUP_LOADING_OVERLAY_FADE_MS = 200
-  type StartupRestoreState = 'pending' | 'restoring' | 'ready'
-  let startupRestoreState = $state<StartupRestoreState>('pending')
-  const startupLoadingOverlay = createLoadingOverlayState({
+  type StartupRestorePhase = 'pending' | 'restoring' | 'ready'
+  let startupRestorePhase = $state<StartupRestorePhase>('pending')
+  const startupRestoreOverlay = createLoadingOverlayState({
     fadeMs: STARTUP_LOADING_OVERLAY_FADE_MS,
-    startsVisible: true
+    startsVisible: true,
+    getIsLoading: () => startupRestorePhase !== 'ready'
   })
   const windowTitle = $derived(
     isDevMode && executionFolderName
@@ -113,10 +114,10 @@
     clearPromptFolderSelection()
   }
 
-  const loadWorkspaceSelection = async (path: string): Promise<void> => {
-    const workspaceId = await loadWorkspaceByPath(path)
+  const loadWorkspaceSelection = async (workspacePath: string): Promise<void> => {
+    const workspaceId = await loadWorkspaceByPath(workspacePath)
     setSelectedWorkspaceId(workspaceId)
-    await switchWorkspaceStoreBridge(path)
+    await switchWorkspaceStoreBridge(workspacePath)
   }
 
   const isWorkspaceMissingError = (message?: string): boolean => {
@@ -142,12 +143,12 @@
     })
   }
 
-  const selectWorkspace = async (path: string): Promise<WorkspaceSelectionResult> => {
+  const selectWorkspace = async (workspacePath: string): Promise<WorkspaceSelectionResult> => {
     clearPromptFolderSelection()
     beginWorkspaceAction()
 
     try {
-      await loadWorkspaceSelection(path)
+      await loadWorkspaceSelection(workspacePath)
       return { success: true }
     } catch (error) {
       const message = extractErrorMessage(error)
@@ -166,7 +167,7 @@
   }
 
   const createWorkspace = async (
-    path: string,
+    workspacePath: string,
     includeExamplePrompts: boolean
   ): Promise<WorkspaceCreationResult> => {
     clearPromptFolderSelection()
@@ -175,10 +176,10 @@
     try {
       return await runIpcBestEffort<WorkspaceCreationResult>(
         async () => {
-          const result = await createWorkspaceMutation(path, includeExamplePrompts)
+          const result = await createWorkspaceMutation(workspacePath, includeExamplePrompts)
 
           if (result.success) {
-            await loadWorkspaceSelection(path)
+            await loadWorkspaceSelection(workspacePath)
             return { success: true }
           }
 
@@ -215,25 +216,20 @@
 
   // Side effect: restore the previous workspace once after user persistence loads.
   $effect(() => {
-    if (startupRestoreState !== 'pending') {
+    if (startupRestorePhase !== 'pending') {
       return
     }
 
-    startupRestoreState = 'restoring'
+    startupRestorePhase = 'restoring'
     void (async () => {
       try {
         await restoreWorkspaceFromPersistence()
       } catch (error) {
         console.error('Failed to restore workspace from user persistence.', error)
       } finally {
-        startupRestoreState = 'ready'
+        startupRestorePhase = 'ready'
       }
     })()
-  })
-
-  // Side effect: sync startup restore progress to the shared loading overlay state.
-  $effect(() => {
-    startupLoadingOverlay.setLoading(startupRestoreState !== 'ready')
   })
 
   // Side effect: keep the browser window title in sync with dev mode state.
@@ -330,11 +326,11 @@
   </ResizableSidebar>
 </div>
 
-{#if startupLoadingOverlay.getIsVisible()}
+{#if startupRestoreOverlay.getIsVisible()}
   <LoadingOverlay
     testId="startup-loading-overlay"
     fadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
-    isFading={startupLoadingOverlay.getIsFading()}
+    isFading={startupRestoreOverlay.getIsFading()}
     message="Loading workspace..."
     fullscreen
   />

@@ -97,7 +97,8 @@
   const LOADING_OVERLAY_FADE_MS = 125
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
-    fadeMs: LOADING_OVERLAY_FADE_MS
+    fadeMs: LOADING_OVERLAY_FADE_MS,
+    getIsLoading: () => shouldShowLoadingOverlay && isLoading
   })
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
@@ -212,11 +213,6 @@
     if (scrollResetVersion === lastScrollResetVersion) return
     lastScrollResetVersion = scrollResetVersion
     scrollApi.scrollTo(0)
-  })
-
-  // Side effect: sync prompt-folder load progress to the shared loading overlay state.
-  $effect(() => {
-    loadingOverlay.setLoading(shouldShowLoadingOverlay && isLoading)
   })
 
   const reorderPromptIds = (

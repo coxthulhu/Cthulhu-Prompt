@@ -1,4 +1,8 @@
 import { ipcMain } from 'electron'
+import {
+  LOAD_USER_PERSISTENCE_CHANNEL,
+  LOAD_WORKSPACE_PERSISTENCE_CHANNEL
+} from '@shared/UserPersistence'
 import type {
   LoadUserPersistenceResult,
   LoadWorkspacePersistenceResult
@@ -7,22 +11,28 @@ import { parseLoadWorkspacePersistenceRequest } from '../IpcFramework/IpcValidat
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
+const getErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error)
+}
+
 export const setupUserPersistenceQueryHandlers = (): void => {
-  ipcMain.handle('load-user-persistence', async (): Promise<LoadUserPersistenceResult> => {
-    try {
-      const userPersistence = UserPersistenceDataAccess.readUserPersistence()
-      return {
-        success: true,
-        userPersistence
+  ipcMain.handle(
+    LOAD_USER_PERSISTENCE_CHANNEL,
+    async (): Promise<LoadUserPersistenceResult> => {
+      try {
+        const userPersistence = UserPersistenceDataAccess.readUserPersistence()
+        return {
+          success: true,
+          userPersistence
+        }
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) }
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      return { success: false, error: message || 'Failed to load user persistence' }
     }
-  })
+  )
 
   ipcMain.handle(
-    'load-workspace-persistence',
+    LOAD_WORKSPACE_PERSISTENCE_CHANNEL,
     async (_, request: unknown): Promise<LoadWorkspacePersistenceResult> => {
       return await runQueryIpcRequest(
         request,
@@ -37,8 +47,7 @@ export const setupUserPersistenceQueryHandlers = (): void => {
               workspacePersistence
             }
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error)
-            return { success: false, error: message || 'Failed to load workspace persistence' }
+            return { success: false, error: getErrorMessage(error) }
           }
         }
       )
