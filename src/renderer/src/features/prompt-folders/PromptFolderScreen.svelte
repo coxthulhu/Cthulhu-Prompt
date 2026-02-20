@@ -98,7 +98,7 @@
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
     fadeMs: LOADING_OVERLAY_FADE_MS,
-    getIsLoading: () => shouldShowLoadingOverlay && isLoading
+    isLoading: () => shouldShowLoadingOverlay && isLoading
   })
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
@@ -591,11 +591,11 @@
         {/snippet}
       </ResizableSidebar>
     </div>
-    {#if loadingOverlay.getIsVisible()}
+    {#if loadingOverlay.isVisible()}
       <LoadingOverlay
         testId="prompt-folder-loading-overlay"
         fadeMs={LOADING_OVERLAY_FADE_MS}
-        isFading={loadingOverlay.getIsFading()}
+        isFading={loadingOverlay.isFading()}
         message="Loading prompt folder..."
       />
     {/if}

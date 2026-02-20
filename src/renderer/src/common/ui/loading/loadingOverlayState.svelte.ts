@@ -1,23 +1,25 @@
+import { untrack } from 'svelte'
+
 type LoadingOverlayStateOptions = {
   fadeMs: number
   startsVisible?: boolean
-  getIsLoading?: () => boolean
+  isLoading?: () => boolean
 }
+
+type OverlayPhase = 'hidden' | 'visible' | 'fading'
 
 export const createLoadingOverlayState = ({
   fadeMs,
   startsVisible = false,
-  getIsLoading
+  isLoading: getIsLoading
 }: LoadingOverlayStateOptions) => {
-  const initialPhase: 'hidden' | 'visible' | 'fading' = startsVisible ? 'visible' : 'hidden'
-  let overlayPhase = $state<'hidden' | 'visible' | 'fading'>(initialPhase)
-  let currentPhase: 'hidden' | 'visible' | 'fading' = initialPhase
+  const initialPhase: OverlayPhase = startsVisible ? 'visible' : 'hidden'
+  let overlayPhase = $state<OverlayPhase>(initialPhase)
   let hideTimeoutId: number | null = null
-  const isVisible = $derived(overlayPhase !== 'hidden')
-  const isFading = $derived(overlayPhase === 'fading')
+  const visible = $derived(overlayPhase !== 'hidden')
+  const fading = $derived(overlayPhase === 'fading')
 
-  const setPhase = (nextPhase: 'hidden' | 'visible' | 'fading'): void => {
-    currentPhase = nextPhase
+  const setPhase = (nextPhase: OverlayPhase): void => {
     overlayPhase = nextPhase
   }
 
@@ -31,14 +33,14 @@ export const createLoadingOverlayState = ({
   const setLoading = (isLoading: boolean): void => {
     if (isLoading) {
       clearHideTimeout()
-      if (currentPhase !== 'visible') {
+      if (overlayPhase !== 'visible') {
         setPhase('visible')
       }
       return
     }
 
     clearHideTimeout()
-    if (currentPhase !== 'visible') {
+    if (overlayPhase !== 'visible') {
       return
     }
 
@@ -59,13 +61,16 @@ export const createLoadingOverlayState = ({
   if (getIsLoading) {
     // Side effect: keep the overlay phase synchronized with the caller's loading state.
     $effect(() => {
-      setLoading(getIsLoading())
+      const nextIsLoading = getIsLoading()
+      untrack(() => {
+        setLoading(nextIsLoading)
+      })
     })
   }
 
   return {
     setLoading,
-    getIsVisible: (): boolean => isVisible,
-    getIsFading: (): boolean => isFading
+    isVisible: (): boolean => visible,
+    isFading: (): boolean => fading
   }
 }

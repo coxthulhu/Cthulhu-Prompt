@@ -64,7 +64,7 @@ const ensureBasePersistenceArtifacts = (): void => {
   fs.mkdirSync(resolveUserDataPath(), { recursive: true })
   fs.mkdirSync(resolveWorkspacePersistenceDirectoryPath(), { recursive: true })
 
-  ensureJsonFile(resolveUserPersistencePath(), { ...DEFAULT_USER_PERSISTENCE })
+  ensureJsonFile(resolveUserPersistencePath(), DEFAULT_USER_PERSISTENCE)
 }
 
 export class UserPersistenceDataAccess {
@@ -74,15 +74,13 @@ export class UserPersistenceDataAccess {
 
   static ensureWorkspacePersistenceFile(workspaceId: string): void {
     ensureBasePersistenceArtifacts()
-    ensureJsonFile(resolveWorkspacePersistencePath(workspaceId), {
-      ...DEFAULT_WORKSPACE_PERSISTENCE
-    })
+    ensureJsonFile(resolveWorkspacePersistencePath(workspaceId), DEFAULT_WORKSPACE_PERSISTENCE)
   }
 
   static readUserPersistence(): UserPersistence {
     ensureBasePersistenceArtifacts()
     const parsedPersistence = parseUserPersistence(readJsonFile(resolveUserPersistencePath()))
-    return parsedPersistence ?? { ...DEFAULT_USER_PERSISTENCE }
+    return parsedPersistence ?? DEFAULT_USER_PERSISTENCE
   }
 
   static updateLastWorkspacePath(workspacePath: string | null): UserPersistence {
@@ -101,6 +99,6 @@ export class UserPersistenceDataAccess {
     const parsedPersistence = parseWorkspacePersistence(
       readJsonFile(resolveWorkspacePersistencePath(workspaceId))
     )
-    return parsedPersistence ?? { ...DEFAULT_WORKSPACE_PERSISTENCE }
+    return parsedPersistence ?? DEFAULT_WORKSPACE_PERSISTENCE
   }
 }

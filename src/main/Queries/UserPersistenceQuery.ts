@@ -11,10 +11,6 @@ import { parseLoadWorkspacePersistenceRequest } from '../IpcFramework/IpcValidat
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
-const getErrorMessage = (error: unknown): string => {
-  return error instanceof Error ? error.message : String(error)
-}
-
 export const setupUserPersistenceQueryHandlers = (): void => {
   ipcMain.handle(
     LOAD_USER_PERSISTENCE_CHANNEL,
@@ -26,7 +22,7 @@ export const setupUserPersistenceQueryHandlers = (): void => {
           userPersistence
         }
       } catch (error) {
-        return { success: false, error: getErrorMessage(error) }
+        return { success: false, error: error instanceof Error ? error.message : String(error) }
       }
     }
   )
@@ -47,7 +43,7 @@ export const setupUserPersistenceQueryHandlers = (): void => {
               workspacePersistence
             }
           } catch (error) {
-            return { success: false, error: getErrorMessage(error) }
+            return { success: false, error: error instanceof Error ? error.message : String(error) }
           }
         }
       )

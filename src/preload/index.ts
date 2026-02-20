@@ -8,13 +8,11 @@ import {
   type RuntimeConfig
 } from '@shared/runtimeConfig'
 
-const defaultRuntimeConfig: RuntimeConfig = Object.freeze({ ...DEFAULT_RUNTIME_CONFIG })
-
 function loadRuntimeConfig(): RuntimeConfig {
   const runtimeFlag = process.argv.find((arg) => arg.startsWith(RUNTIME_ARG_PREFIX))
 
   if (!runtimeFlag) {
-    return defaultRuntimeConfig
+    return DEFAULT_RUNTIME_CONFIG
   }
 
   try {
@@ -34,7 +32,7 @@ function loadRuntimeConfig(): RuntimeConfig {
     })
   } catch (error) {
     console.error('Failed to parse runtime config payload:', error)
-    return defaultRuntimeConfig
+    return DEFAULT_RUNTIME_CONFIG
   }
 }
 

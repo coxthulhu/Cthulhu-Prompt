@@ -4,8 +4,8 @@ import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import { revisions } from './Revisions'
 import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
-import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
-import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
+import { readPromptFolders } from '../DataAccess/WorkspaceReads'
+import { markWorkspaceOpened } from '../Services/WorkspacePersistenceLifecycle'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
@@ -24,11 +24,8 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
 }
 
 const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
-  const workspaceId = readWorkspaceId(workspacePath)
-  // Side effect: opening a workspace guarantees a matching persistence file exists.
-  UserPersistenceDataAccess.ensureWorkspacePersistenceFile(workspaceId)
-  // Side effect: opening a workspace marks it as the last-opened workspace for startup restore.
-  UserPersistenceDataAccess.updateLastWorkspacePath(workspacePath)
+  // Side effect: opening a workspace updates all workspace persistence metadata.
+  const workspaceId = markWorkspaceOpened(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
 
   // Side effect: keep path/id translation in memory for later  loads.

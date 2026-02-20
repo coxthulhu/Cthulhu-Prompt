@@ -84,7 +84,7 @@
   const startupRestoreOverlay = createLoadingOverlayState({
     fadeMs: STARTUP_LOADING_OVERLAY_FADE_MS,
     startsVisible: true,
-    getIsLoading: () => startupRestorePhase !== 'ready'
+    isLoading: () => startupRestorePhase !== 'ready'
   })
   const windowTitle = $derived(
     isDevMode && executionFolderName
@@ -326,11 +326,11 @@
   </ResizableSidebar>
 </div>
 
-{#if startupRestoreOverlay.getIsVisible()}
+{#if startupRestoreOverlay.isVisible()}
   <LoadingOverlay
     testId="startup-loading-overlay"
     fadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
-    isFading={startupRestoreOverlay.getIsFading()}
+    isFading={startupRestoreOverlay.isFading()}
     message="Loading workspace..."
     fullscreen
   />
