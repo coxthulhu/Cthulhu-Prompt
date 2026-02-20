@@ -17,6 +17,10 @@
     PromptFolderFindRowHandle
   } from '../prompt-folders/find/promptFolderFindTypes'
   import {
+    PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+    PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
+  } from '../prompt-folders/find/promptFolderFindSectionKeys'
+  import {
     ADDITIONAL_GAP_PX,
     getMonacoHeightFromRowPx,
     getRowHeightPx,
@@ -93,8 +97,6 @@
   let lastFocusRequestId = $state(0)
   let lastEditorFocusRequestId = $state(0)
   let isHydrated = $state(false)
-  const TITLE_FIND_SECTION_KEY = 'title'
-  const BODY_FIND_SECTION_KEY = 'body'
   type FindRowHandlers = {
     requestImmediateHydration: (() => void) | null
     revealSectionMatch: ((query: string, matchIndex: number) => number | null) | null
@@ -156,7 +158,7 @@
   })
 
   const handleFindMatches = (query: string, count: number) => {
-    findContext?.reportSectionMatchCount(promptId, BODY_FIND_SECTION_KEY, query, count)
+    findContext?.reportSectionMatchCount(promptId, PROMPT_FOLDER_FIND_BODY_SECTION_KEY, query, count)
   }
 
   const handleEditorLifecycle = (
@@ -174,7 +176,7 @@
   const reportTitleSelection = (startOffset: number, endOffset: number) => {
     findContext?.reportSelection({
       entityId: promptId,
-      sectionKey: TITLE_FIND_SECTION_KEY,
+      sectionKey: PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
       startOffset,
       endOffset
     })
@@ -183,7 +185,7 @@
   const reportBodySelection = (startOffset: number, endOffset: number) => {
     findContext?.reportSelection({
       entityId: promptId,
-      sectionKey: BODY_FIND_SECTION_KEY,
+      sectionKey: PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
       startOffset,
       endOffset
     })
@@ -215,13 +217,14 @@
       rowId,
       isHydrated: () => isHydrated,
       ensureHydrated,
-      shouldEnsureHydratedForSection: (sectionKey) => sectionKey === BODY_FIND_SECTION_KEY,
+      shouldEnsureHydratedForSection: (sectionKey) =>
+        sectionKey === PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
       revealSectionMatch: (sectionKey, query, matchIndex) => {
-        if (sectionKey !== BODY_FIND_SECTION_KEY) return null
+        if (sectionKey !== PROMPT_FOLDER_FIND_BODY_SECTION_KEY) return null
         return findRowHandlers.revealSectionMatch?.(query, matchIndex) ?? null
       },
       getSectionCenterOffset: (sectionKey) =>
-        sectionKey === TITLE_FIND_SECTION_KEY ? getTitleCenterOffset() : null
+        sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY ? getTitleCenterOffset() : null
     }
     return findContext.registerRow(handle)
   })
@@ -235,7 +238,7 @@
     const focusMatch = findFocusRequest.match
     if (focusMatch.entityId !== promptId) return
 
-    if (focusMatch.sectionKey === TITLE_FIND_SECTION_KEY) {
+    if (focusMatch.sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY) {
       const input = titleInputRef
       if (!input) return
       input.focus({ preventScroll: true })
@@ -334,7 +337,7 @@
                 {rowId}
                 {scrollToWithinWindowBand}
                 onEditorLifecycle={handleEditorLifecycle}
-                findSectionKey={BODY_FIND_SECTION_KEY}
+                findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
                 {findRequest}
                 onFindMatches={handleFindMatches}
                 onFindMatchReveal={(handler) => {

@@ -42,6 +42,10 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
+  import {
+    PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+    PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
+  } from './find/promptFolderFindSectionKeys'
   import type { PromptFolderFindItem } from './find/promptFolderFindTypes'
   import { promptEditorRowId } from './promptFolderRowIds'
   import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
@@ -289,12 +293,6 @@
     Extract<PromptFolderRow, { kind: 'prompt-editor' }>
   >
   type ActiveOutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
-  type PromptFolderFindItemBuilderRegistry = {
-    [K in PromptFolderRow['kind']]?: (
-      row: Extract<PromptFolderRow, { kind: K }>,
-      rowId: string
-    ) => PromptFolderFindItem | null
-  }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
@@ -387,37 +385,34 @@
     rows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
     return rows
   })
-  const findItemBuildersByRowKind: PromptFolderFindItemBuilderRegistry = {
-    'prompt-editor': (row, rowId) => {
-      const promptDraft = promptDraftById[row.promptId]
-      if (!promptDraft) return null
-      return {
-        entityId: row.promptId,
-        rowId,
-        sections: [
-          {
-            key: 'title',
-            text: promptDraft.title
-          },
-          {
-            key: 'body',
-            text: promptDraft.promptText
-          }
-        ]
-      }
+  const buildFindItem = (
+    virtualItem: VirtualWindowItem<PromptFolderRow>
+  ): PromptFolderFindItem | null => {
+    const { row, id: rowId } = virtualItem
+    if (row.kind !== 'prompt-editor') return null
+    const promptDraft = promptDraftById[row.promptId]
+    if (!promptDraft) return null
+    return {
+      entityId: row.promptId,
+      rowId,
+      sections: [
+        {
+          key: PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
+          text: promptDraft.title
+        },
+        {
+          key: PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+          text: promptDraft.promptText
+        }
+      ]
     }
   }
   const findItems = $derived.by((): PromptFolderFindItem[] => {
     const nextItems: PromptFolderFindItem[] = []
-    for (const item of virtualItems) {
-      const builder = findItemBuildersByRowKind[item.row.kind] as
-        | ((row: PromptFolderRow, rowId: string) => PromptFolderFindItem | null)
-        | undefined
-      if (!builder) continue
-      const findItem = builder(item.row, item.id)
-      if (findItem) {
-        nextItems.push(findItem)
-      }
+    for (const virtualItem of virtualItems) {
+      const findItem = buildFindItem(virtualItem)
+      if (!findItem) continue
+      nextItems.push(findItem)
     }
     return nextItems
   })

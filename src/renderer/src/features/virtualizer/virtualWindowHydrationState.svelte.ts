@@ -15,8 +15,6 @@ type VirtualWindowHydrationStateOptions<TRow extends { kind: string }> = {
   getWidthResizeActive: () => boolean
   getScrollAnchorMode: () => 'top' | 'center'
   setScrollAnchorMode: (mode: 'top' | 'center') => void
-  getHydrationPriorityEligibility?: () => ((row: TRow) => boolean) | undefined
-  getCenterRowEligibility?: () => ((row: TRow) => boolean) | undefined
 }
 
 export const createVirtualWindowHydrationState = <TRow extends { kind: string }>(
@@ -32,24 +30,24 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     getAnchoredScrollBottomPx,
     getWidthResizeActive,
     getScrollAnchorMode,
-    setScrollAnchorMode,
-    getHydrationPriorityEligibility,
-    getCenterRowEligibility
+    setScrollAnchorMode
   } = options
 
   const hydrationStateByRowId = new SvelteMap<string, boolean>()
   const overlayRowElements = new SvelteMap<string, HTMLDivElement>()
+  const isHydrationPriorityEligible = (rowData: TRow): boolean =>
+    getRowRegistry()[rowData.kind].hydrationPriorityEligible ?? false
+  const isCenterRowEligible = (rowData: TRow): boolean =>
+    getRowRegistry()[rowData.kind].centerRowEligible ?? false
 
   // Derive hydration priorities so rows closest to the viewport center hydrate first.
   const hydrationPriorityByRowId = $derived.by(() => {
-    const isEligible = getHydrationPriorityEligibility?.()
     const visibleRows = getVisibleRows()
-    if (!isEligible) return new SvelteMap<string, number>()
     if (visibleRows.length === 0) return new SvelteMap<string, number>()
 
     const viewportCenterPx = getClampedAnchoredScrollTopPx() + getViewportHeight() / 2
     const candidates = visibleRows
-      .filter((row) => isEligible(row.rowData))
+      .filter((row) => isHydrationPriorityEligible(row.rowData))
       .map((row) => ({
         id: row.id,
         index: row.index,
@@ -74,7 +72,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     const viewportHeight = getViewportHeight()
     if (rowStates.length === 0 || viewportHeight <= 0) return null
     const viewportCenterPx = getClampedAnchoredScrollTopPx() + viewportHeight / 2
-    return findNearestEligibleRow(rowStates, viewportCenterPx, getCenterRowEligibility?.())
+    return findNearestEligibleRow(rowStates, viewportCenterPx, isCenterRowEligible)
   })
   const centerRowId = $derived(centerRow?.id ?? null)
   const centerRowData = $derived(centerRow?.rowData ?? null)
@@ -93,7 +91,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
 
   const isRowHydrated = (row: VirtualRowState<TRow> | null): boolean => {
     if (!row) return true
-    if (!getHydrationPriorityEligibility?.()?.(row.rowData)) return true
+    if (!isHydrationPriorityEligible(row.rowData)) return true
     return hydrationStateByRowId.get(row.id) ?? false
   }
 
@@ -105,10 +103,9 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
   // Side effect: revert to top anchoring once rendered eligible rows hydrate during center anchoring.
   $effect(() => {
     if (getScrollAnchorMode() !== 'center') return
-    const isEligible = getHydrationPriorityEligibility?.()
     const visibleRows = getViewportRows()
     const hasUnhydratedVisibleRows = visibleRows.some(
-      (row) => isEligible?.(row.rowData) && !isRowHydrated(row)
+      (row) => isHydrationPriorityEligible(row.rowData) && !isRowHydrated(row)
     )
     if (!hasUnhydratedVisibleRows) {
       setScrollAnchorMode('top')

@@ -7,6 +7,7 @@
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
   import { clampMonacoHeightPx, getMinMonacoHeightPx } from './promptEditorSizing'
+  import { PROMPT_FOLDER_FIND_BODY_SECTION_KEY } from '../prompt-folders/find/promptFolderFindSectionKeys'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
 
   type Props = {
@@ -36,7 +37,7 @@
     onChange,
     onBlur,
     onEditorLifecycle,
-    findSectionKey = 'body',
+    findSectionKey = PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
     findRequest,
     onFindMatches,
     onFindMatchReveal,

@@ -6,7 +6,6 @@
   import {
     buildPromptFolderFindCounts,
     buildSearchInputs,
-    getPromptFolderFindSectionCountKey,
     getMatchTextForCurrentMatch,
     getPromptFolderFindMatchForIndex,
     hasSearchInputsChanged,
@@ -53,7 +52,10 @@
   const normalizedQuery = $derived(trimmedQuery.toLowerCase())
 
   const hydratedEntityIds = new SvelteSet<string>()
-  const sectionMatchCountsByEntitySectionKey = new SvelteMap<string, { query: string; count: number }>()
+  const sectionMatchCountsByEntityId = new SvelteMap<
+    string,
+    SvelteMap<string, { query: string; count: number }>
+  >()
   const rowHandlesByEntityId = new SvelteMap<string, PromptFolderFindRowHandle>()
   const searchModel = createPromptFolderFindSearchModel()
   const itemByEntityId = $derived.by(() => {
@@ -61,6 +63,13 @@
     for (const item of items) {
       lookup.set(item.entityId, item)
     }
+    return lookup
+  })
+  const itemIndexByEntityId = $derived.by(() => {
+    const lookup = new SvelteMap<string, number>()
+    items.forEach((item, index) => {
+      lookup.set(item.entityId, index)
+    })
     return lookup
   })
   const entityIds = $derived.by(() => items.map((item) => item.entityId))
@@ -99,7 +108,7 @@
       items,
       trimmedQuery,
       hydratedEntityIds,
-      sectionMatchCountsByEntitySectionKey,
+      sectionMatchCountsByEntityId,
       countMatchesInText: searchModel.countMatchesInText
     })
     matchCountsByEntity = nextCounts
@@ -172,135 +181,140 @@
     void revealMatch(match)
   }
 
-  const getGlobalMatchIndex = (entityId: string, sectionKey: string, matchIndex: number) => {
-    let runningIndex = 0
+  type PromptFolderFindSectionRange = {
+    entityId: string
+    sectionKey: string
+    count: number
+    startMatchIndex: number
+  }
+
+  type PromptFolderFindSectionMatch = {
+    sectionKey: string
+    sectionMatchIndex: number
+  }
+
+  type TraversalDirection = 1 | -1
+
+  const sectionRangesByMatchOrder = $derived.by((): PromptFolderFindSectionRange[] => {
+    const ranges: PromptFolderFindSectionRange[] = []
+    let nextStartMatchIndex = 1
     for (const group of matchCountsByEntity) {
       for (const section of group.sectionCounts) {
-        if (group.entityId === entityId && section.sectionKey === sectionKey) {
-          return runningIndex + matchIndex + 1
-        }
-        runningIndex += section.count
+        if (section.count <= 0) continue
+        ranges.push({
+          entityId: group.entityId,
+          sectionKey: section.sectionKey,
+          count: section.count,
+          startMatchIndex: nextStartMatchIndex
+        })
+        nextStartMatchIndex += section.count
       }
     }
-    return null
-  }
+    return ranges
+  })
 
-  const findFirstMatchInItem = (item: PromptFolderFindItem) => {
-    for (const section of item.sections) {
-      const sectionMatchIndex = findMatchIndexAtOrAfter(section.text, trimmedQuery, 0)
-      if (sectionMatchIndex == null) continue
-      return { sectionKey: section.key, sectionMatchIndex }
-    }
-    return null
-  }
-
-  const getNextMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
-    if (trimmedQuery.length === 0 || totalMatches === 0) return null
-    const startIndex = items.findIndex((item) => item.entityId === anchor.entityId)
-    if (startIndex < 0) return null
-
-    const startItem = items[startIndex]
-    const startSectionIndex = startItem.sections.findIndex(
-      (section) => section.key === anchor.sectionKey
-    )
-    if (startSectionIndex >= 0) {
-      const startSection = startItem.sections[startSectionIndex]
-      const sectionMatchIndex = findMatchIndexAtOrAfter(
-        startSection.text,
-        trimmedQuery,
-        anchor.endOffset
-      )
-      if (sectionMatchIndex != null) {
-        return getGlobalMatchIndex(startItem.entityId, startSection.key, sectionMatchIndex)
+  const sectionRangeByEntitySection = $derived.by(() => {
+    const lookup = new SvelteMap<string, SvelteMap<string, PromptFolderFindSectionRange>>()
+    for (const range of sectionRangesByMatchOrder) {
+      let bySectionKey = lookup.get(range.entityId)
+      if (!bySectionKey) {
+        bySectionKey = new SvelteMap<string, PromptFolderFindSectionRange>()
+        lookup.set(range.entityId, bySectionKey)
       }
-
-      for (let sectionIndex = startSectionIndex + 1; sectionIndex < startItem.sections.length; sectionIndex += 1) {
-        const nextSection = startItem.sections[sectionIndex]
-        const nextSectionMatchIndex = findMatchIndexAtOrAfter(nextSection.text, trimmedQuery, 0)
-        if (nextSectionMatchIndex == null) continue
-        return getGlobalMatchIndex(startItem.entityId, nextSection.key, nextSectionMatchIndex)
-      }
+      bySectionKey.set(range.sectionKey, range)
     }
+    return lookup
+  })
 
-    for (let i = startIndex + 1; i < items.length; i += 1) {
-      const match = findFirstMatchInItem(items[i])
-      if (!match) continue
-      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
-    }
-
-    for (let i = 0; i <= startIndex; i += 1) {
-      const match = findFirstMatchInItem(items[i])
-      if (!match) continue
-      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
-    }
-
-    return null
+  const getGlobalMatchIndex = (entityId: string, sectionKey: string, matchIndex: number) => {
+    const sectionRange = sectionRangeByEntitySection.get(entityId)?.get(sectionKey)
+    if (!sectionRange) return null
+    if (matchIndex < 0 || matchIndex >= sectionRange.count) return null
+    return sectionRange.startMatchIndex + matchIndex
   }
 
-  const findLastMatchInItem = (item: PromptFolderFindItem) => {
-    for (let sectionIndex = item.sections.length - 1; sectionIndex >= 0; sectionIndex -= 1) {
+  const findSectionMatchIndex = (sectionText: string, offset: number, direction: TraversalDirection) =>
+    direction === 1
+      ? findMatchIndexAtOrAfter(sectionText, trimmedQuery, offset)
+      : findMatchIndexBefore(sectionText, trimmedQuery, offset)
+
+  const findMatchInItemFromSection = (
+    item: PromptFolderFindItem,
+    startSectionIndex: number,
+    direction: TraversalDirection,
+    initialOffset: number
+  ): PromptFolderFindSectionMatch | null => {
+    if (startSectionIndex < 0 || startSectionIndex >= item.sections.length) return null
+    for (
+      let sectionIndex = startSectionIndex;
+      sectionIndex >= 0 && sectionIndex < item.sections.length;
+      sectionIndex += direction
+    ) {
       const section = item.sections[sectionIndex]
-      const sectionMatchIndex = findMatchIndexBefore(
-        section.text,
-        trimmedQuery,
-        Number.POSITIVE_INFINITY
-      )
+      const sectionOffset =
+        sectionIndex === startSectionIndex
+          ? initialOffset
+          : direction === 1
+            ? 0
+            : Number.POSITIVE_INFINITY
+      const sectionMatchIndex = findSectionMatchIndex(section.text, sectionOffset, direction)
       if (sectionMatchIndex == null) continue
       return { sectionKey: section.key, sectionMatchIndex }
     }
     return null
   }
 
-  const getPreviousMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
+  const findBoundaryMatchInItem = (
+    item: PromptFolderFindItem,
+    direction: TraversalDirection
+  ): PromptFolderFindSectionMatch | null => {
+    if (item.sections.length === 0) return null
+    const startSectionIndex = direction === 1 ? 0 : item.sections.length - 1
+    const boundaryOffset = direction === 1 ? 0 : Number.POSITIVE_INFINITY
+    return findMatchInItemFromSection(item, startSectionIndex, direction, boundaryOffset)
+  }
+
+  const getMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor, direction: TraversalDirection) => {
     if (trimmedQuery.length === 0 || totalMatches === 0) return null
-    const startIndex = items.findIndex((item) => item.entityId === anchor.entityId)
-    if (startIndex < 0) return null
+    const startIndex = itemIndexByEntityId.get(anchor.entityId)
+    if (startIndex == null) return null
 
     const startItem = items[startIndex]
     const startSectionIndex = startItem.sections.findIndex(
       (section) => section.key === anchor.sectionKey
     )
     if (startSectionIndex >= 0) {
-      const startSection = startItem.sections[startSectionIndex]
-      const sectionMatchIndex = findMatchIndexBefore(
-        startSection.text,
-        trimmedQuery,
-        anchor.startOffset
+      const anchorOffset = direction === 1 ? anchor.endOffset : anchor.startOffset
+      const anchoredMatch = findMatchInItemFromSection(
+        startItem,
+        startSectionIndex,
+        direction,
+        anchorOffset
       )
-      if (sectionMatchIndex != null) {
-        return getGlobalMatchIndex(startItem.entityId, startSection.key, sectionMatchIndex)
-      }
-
-      for (let sectionIndex = startSectionIndex - 1; sectionIndex >= 0; sectionIndex -= 1) {
-        const previousSection = startItem.sections[sectionIndex]
-        const previousSectionMatchIndex = findMatchIndexBefore(
-          previousSection.text,
-          trimmedQuery,
-          Number.POSITIVE_INFINITY
-        )
-        if (previousSectionMatchIndex == null) continue
+      if (anchoredMatch) {
         return getGlobalMatchIndex(
           startItem.entityId,
-          previousSection.key,
-          previousSectionMatchIndex
+          anchoredMatch.sectionKey,
+          anchoredMatch.sectionMatchIndex
         )
       }
     }
 
-    for (let i = startIndex - 1; i >= 0; i -= 1) {
-      const match = findLastMatchInItem(items[i])
+    for (let step = 1; step <= items.length; step += 1) {
+      const nextIndex = (startIndex + step * direction + items.length) % items.length
+      const match = findBoundaryMatchInItem(items[nextIndex], direction)
       if (!match) continue
-      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
-    }
-
-    for (let i = items.length - 1; i >= startIndex; i -= 1) {
-      const match = findLastMatchInItem(items[i])
-      if (!match) continue
-      return getGlobalMatchIndex(items[i].entityId, match.sectionKey, match.sectionMatchIndex)
+      return getGlobalMatchIndex(items[nextIndex].entityId, match.sectionKey, match.sectionMatchIndex)
     }
 
     return null
   }
+
+  const getNextMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) =>
+    getMatchIndexFromAnchor(anchor, 1)
+
+  const getPreviousMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) =>
+    getMatchIndexFromAnchor(anchor, -1)
 
   // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
@@ -343,22 +357,13 @@
     lastSearchInputs = nextInputs
   })
 
-  const clearSectionMatchCounts = (entityId: string) => {
-    const keyPrefix = `${entityId}\u0000`
-    for (const key of sectionMatchCountsByEntitySectionKey.keys()) {
-      if (key.startsWith(keyPrefix)) {
-        sectionMatchCountsByEntitySectionKey.delete(key)
-      }
-    }
-  }
-
   // Track which entities are hydrated so we can prefer editor-reported counts.
   const reportHydration = (entityId: string, isHydrated: boolean) => {
     if (isHydrated) {
       hydratedEntityIds.add(entityId)
     } else {
       hydratedEntityIds.delete(entityId)
-      clearSectionMatchCounts(entityId)
+      sectionMatchCountsByEntityId.delete(entityId)
     }
   }
 
@@ -370,8 +375,12 @@
     count: number
   ) => {
     if (query !== trimmedQuery) return
-    const sectionCountKey = getPromptFolderFindSectionCountKey(entityId, sectionKey)
-    sectionMatchCountsByEntitySectionKey.set(sectionCountKey, { query, count })
+    let sectionCountsBySectionKey = sectionMatchCountsByEntityId.get(entityId)
+    if (!sectionCountsBySectionKey) {
+      sectionCountsBySectionKey = new SvelteMap<string, { query: string; count: number }>()
+      sectionMatchCountsByEntityId.set(entityId, sectionCountsBySectionKey)
+    }
+    sectionCountsBySectionKey.set(sectionKey, { query, count })
 
     if (!isFindOpen) return
     // Update just the affected entity section count instead of rescanning everything.

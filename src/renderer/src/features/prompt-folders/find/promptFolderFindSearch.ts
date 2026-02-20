@@ -21,14 +21,9 @@ type BuildMatchCountsArgs = {
   items: PromptFolderFindItem[]
   trimmedQuery: string
   hydratedEntityIds: Set<string>
-  sectionMatchCountsByEntitySectionKey: Map<string, { query: string; count: number }>
+  sectionMatchCountsByEntityId: Map<string, Map<string, { query: string; count: number }>>
   countMatchesInText: (text: string, query: string) => number
 }
-
-export const getPromptFolderFindSectionCountKey = (
-  entityId: string,
-  sectionKey: string
-): string => `${entityId}\u0000${sectionKey}`
 
 export const buildSearchInputs = ({
   normalizedQuery,
@@ -53,15 +48,14 @@ export const buildPromptFolderFindCounts = ({
   items,
   trimmedQuery,
   hydratedEntityIds,
-  sectionMatchCountsByEntitySectionKey,
+  sectionMatchCountsByEntityId,
   countMatchesInText
 }: BuildMatchCountsArgs): PromptFolderFindCounts[] => {
   if (trimmedQuery.length === 0) return []
 
   return items.map((item) => {
     const sectionCounts = item.sections.map((section) => {
-      const key = getPromptFolderFindSectionCountKey(item.entityId, section.key)
-      const tracked = sectionMatchCountsByEntitySectionKey.get(key)
+      const tracked = sectionMatchCountsByEntityId.get(item.entityId)?.get(section.key)
       const useTrackedCount = hydratedEntityIds.has(item.entityId) && tracked?.query === trimmedQuery
       const count = useTrackedCount ? tracked.count : countMatchesInText(section.text, trimmedQuery)
       return {

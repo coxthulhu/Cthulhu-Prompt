@@ -1,0 +1,2 @@
+export const PROMPT_FOLDER_FIND_TITLE_SECTION_KEY = 'title'
+export const PROMPT_FOLDER_FIND_BODY_SECTION_KEY = 'body'

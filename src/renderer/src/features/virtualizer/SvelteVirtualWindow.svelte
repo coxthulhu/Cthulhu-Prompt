@@ -19,8 +19,6 @@
   type VirtualWindowProps = {
     items: VirtualWindowItem<TRow>[]
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
-    getHydrationPriorityEligibility?: (row: TRow) => boolean
-    getCenterRowEligibility?: (row: TRow) => boolean
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
     scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
@@ -44,8 +42,6 @@
   let {
     items,
     rowRegistry,
-    getHydrationPriorityEligibility,
-    getCenterRowEligibility,
     scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
     scrollToAndTrackRowCentered = $bindable<ScrollToAndTrackRowCentered | null>(null),
     onCenterRowChange,
@@ -74,15 +70,6 @@
   const measurementWidth = $derived(getMeasurementWidth())
   const viewportHeight = $derived(getViewportHeight())
   const devicePixelRatio = $derived(getDevicePixelRatio())
-  const resolvedHydrationPriorityEligibility = $derived.by(() => {
-    return (
-      getHydrationPriorityEligibility ??
-      ((row: TRow) => rowRegistry[row.kind].hydrationPriorityEligible ?? false)
-    )
-  })
-  const resolvedCenterRowEligibility = $derived.by(() => {
-    return getCenterRowEligibility ?? ((row: TRow) => rowRegistry[row.kind].centerRowEligible ?? false)
-  })
 
   const { getRowStates, getTotalHeightPx } = createVirtualWindowRowsState({
     getItems: () => items,
@@ -134,9 +121,7 @@
     getAnchoredScrollBottomPx,
     getWidthResizeActive,
     getScrollAnchorMode,
-    setScrollAnchorMode,
-    getHydrationPriorityEligibility: () => resolvedHydrationPriorityEligibility,
-    getCenterRowEligibility: () => resolvedCenterRowEligibility
+    setScrollAnchorMode
   })
 
   const totalHeightPx = $derived(getTotalHeightPx())
