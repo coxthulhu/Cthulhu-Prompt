@@ -9,7 +9,10 @@ import {
   systemSettingsDraftCollection
 } from '@renderer/data/Collections/SystemSettingsDraftCollection'
 import { upsertPromptDraft } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
-import { upsertPromptFolderDraft } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
+import {
+  setPromptFolderDraftDescription,
+  upsertPromptFolderDraft
+} from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import { upsertSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
 
 const clearPromptDraftCollection = (): void => {
@@ -92,6 +95,17 @@ describe('draft sync contract', () => {
     const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
     expect(draftRecord.folderDescription).toBe('Updated folder description')
     expect(draftRecord.hasLoadedInitialData).toBe(false)
+  })
+
+  it('ignores prompt-folder description updates when the draft is missing', () => {
+    expect(() =>
+      setPromptFolderDraftDescription('missing-folder-id', 'Updated folder description', {
+        measuredHeightPx: 144,
+        widthPx: 700,
+        devicePixelRatio: 1
+      })
+    ).not.toThrow()
+    expect(promptFolderDraftCollection.get('missing-folder-id')).toBeUndefined()
   })
 
   it('upserts the system-settings draft', () => {

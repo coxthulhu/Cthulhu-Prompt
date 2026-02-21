@@ -121,8 +121,10 @@ export const setPromptFolderDraftHasLoadedInitialData = (
   })
 }
 
-export const getPromptFolderDraftState = (promptFolderId: string): PromptFolderDraftState => {
-  return promptFolderDraftCollection.get(promptFolderId)!
+export const getPromptFolderDraftState = (
+  promptFolderId: string
+): PromptFolderDraftState | null => {
+  return promptFolderDraftCollection.get(promptFolderId) ?? null
 }
 
 export const setPromptFolderDraftDescription = (
@@ -131,6 +133,11 @@ export const setPromptFolderDraftDescription = (
   measurement: TextMeasurement
 ): void => {
   const draftRecord = getPromptFolderDraftState(promptFolderId)
+  if (!draftRecord) {
+    // Monaco can emit an initial onChange before the folder draft is hydrated.
+    recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, false)
+    return
+  }
   const textChanged = draftRecord.folderDescription !== folderDescription
   recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, textChanged)
 
