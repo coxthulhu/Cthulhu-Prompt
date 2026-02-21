@@ -183,10 +183,14 @@
   <div
     bind:this={trackElement}
     class="virtual-window-scrollbar-track"
+    role="button"
+    tabindex="-1"
     onpointerdown={handleTrackPointerDown}
   >
     <div
       class="virtual-window-scrollbar-thumb"
+      role="button"
+      tabindex="-1"
       class:active={isDragging}
       style={`height:${thumbHeightPx}px; transform:translate3d(0, ${thumbTopPx}px, 0);`}
       onpointerdown={handleThumbPointerDown}

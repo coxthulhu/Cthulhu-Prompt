@@ -243,7 +243,7 @@ describe('revision mutation transaction registry', () => {
     expect(persistCalled).toBe(1)
   })
 
-  it('applies draft-only optimistic updates immediately without creating paced transactions', async () => {
+  it('queues paced transactions when optimistic updates only touch draft collections', async () => {
     vi.useFakeTimers()
 
     const { collectionId, collection } = createSingleItemRegistryContext('paced-draft-only')
@@ -264,7 +264,6 @@ describe('revision mutation transaction registry', () => {
       collectionId,
       elementId: TEST_ITEM_ID,
       debounceMs: 200,
-      draftOnlyChange: true,
       mutateOptimistically: ({ collections }) => {
         collections.draft.update(TEST_ITEM_ID, (draft) => {
           draft.value = 11
@@ -279,11 +278,9 @@ describe('revision mutation transaction registry', () => {
     })
 
     expect(draftCollection.get(TEST_ITEM_ID)!.value).toBe(11)
-    expect(sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)).toBe(false)
-
-    vi.advanceTimersByTime(200)
+    expect(sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)).toBe(true)
     await submitAllPacedUpdateTransactionsAndWait()
-    expect(persistCalled).toBe(0)
+    expect(persistCalled).toBe(1)
   })
 
   it('waits for the targeted paced update transaction when it is already in flight', async () => {
