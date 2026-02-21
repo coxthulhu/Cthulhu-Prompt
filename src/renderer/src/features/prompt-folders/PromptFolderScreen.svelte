@@ -43,12 +43,13 @@
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import {
+    PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
     PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
     PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
   } from './find/promptFolderFindSectionKeys'
   import type { PromptFolderFindItem } from './find/promptFolderFindTypes'
-  import { promptEditorRowId } from './promptFolderRowIds'
-  import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
+  import { promptEditorRowId, promptFolderSettingsFindEntityId } from './promptFolderRowIds'
+  import PromptFolderSettingsRowUpdated from './PromptFolderSettingsRowUpdated.svelte'
   import {
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
@@ -300,8 +301,10 @@
         estimatePromptFolderSettingsHeight(descriptionText, promptFontSize, promptEditorMinLines),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
+      hydrationPriorityEligible: true,
       needsOverlayRow: true,
       centerRowEligible: true,
+      dehydrateOnWidthResize: true,
       snippet: folderSettingsRow
     },
     'prompt-header': {
@@ -385,7 +388,7 @@
     rows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
     return rows
   })
-  const buildFindItem = (
+  const buildPromptFindItem = (
     virtualItem: VirtualWindowItem<PromptFolderRow>
   ): PromptFolderFindItem | null => {
     const { row, id: rowId } = virtualItem
@@ -409,8 +412,20 @@
   }
   const findItems = $derived.by((): PromptFolderFindItem[] => {
     const nextItems: PromptFolderFindItem[] = []
+    if (!errorMessage) {
+      nextItems.push({
+        entityId: promptFolderSettingsFindEntityId(promptFolderId),
+        rowId: 'folder-settings',
+        sections: [
+          {
+            key: PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
+            text: descriptionText
+          }
+        ]
+      })
+    }
     for (const virtualItem of virtualItems) {
-      const findItem = buildFindItem(virtualItem)
+      const findItem = buildPromptFindItem(virtualItem)
       if (!findItem) continue
       nextItems.push(findItem)
     }
@@ -640,11 +655,12 @@
 </PromptFolderFindIntegration>
 
 {#snippet folderSettingsRow(props)}
-  <PromptFolderSettingsRow
+  <PromptFolderSettingsRowUpdated
     {promptFolderId}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
     devicePixelRatio={props.devicePixelRatio}
+    rowHeightPx={props.rowHeightPx}
     hydrationPriority={props.hydrationPriority}
     shouldDehydrate={props.shouldDehydrate}
     overlayRowElement={props.overlayRowElement ?? null}
