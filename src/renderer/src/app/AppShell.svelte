@@ -28,6 +28,7 @@
     setSelectedWorkspaceId
   } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
   import { syncLastWorkspacePath } from '@renderer/data/Mutations/UserPersistenceMutations'
+  import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
     closeWorkspace as closeWorkspaceMutation,
@@ -63,6 +64,8 @@
     }
   }
   const windowControls = window.windowControls
+  const getUserPersistenceDraft = () => userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
+  const appSidebarDefaultWidthPx = getUserPersistenceDraft().appSidebarWidthPx
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
@@ -293,11 +296,14 @@
   {/if}
 
   <ResizableSidebar
-    defaultWidth={200}
+    defaultWidth={appSidebarDefaultWidthPx}
     minWidth={180}
     maxWidth={400}
     handleTestId="app-sidebar-resize-handle"
     containerClass="flex-1 min-h-0"
+    onDesiredWidthChange={(nextDesiredWidth) => {
+      setAppSidebarWidthWithAutosave(nextDesiredWidth)
+    }}
   >
     {#snippet sidebar()}
       <AppSidebar

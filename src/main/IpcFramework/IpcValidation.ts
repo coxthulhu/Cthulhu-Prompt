@@ -47,6 +47,10 @@ const parseNumber: Parser<number> = (value) => {
   return typeof value === 'number' ? value : null
 }
 
+const parseNullableString: Parser<string | null> = (value) => {
+  return value === null || typeof value === 'string' ? value : null
+}
+
 const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
   return (value) => {
     if (!Array.isArray(value)) {
@@ -200,25 +204,11 @@ const parseSystemSettings = parseObject<SystemSettings>({
 const parseSystemSettingsRevisionPayloadEntity =
   parseRevisionPayloadEntity<SystemSettings>(parseSystemSettings)
 
-const parseUserPersistence: Parser<UserPersistence> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const valueKeys = Object.keys(record)
-
-  if (valueKeys.length !== 1 || !('lastWorkspacePath' in record)) {
-    return null
-  }
-
-  const lastWorkspacePath = record.lastWorkspacePath
-  if (lastWorkspacePath !== null && typeof lastWorkspacePath !== 'string') {
-    return null
-  }
-
-  return { lastWorkspacePath }
-}
+const parseUserPersistence = parseObject<UserPersistence>({
+  lastWorkspacePath: parseNullableString,
+  appSidebarWidthPx: parseNumber,
+  promptOutlinerWidthPx: parseNumber
+})
 
 const parseUserPersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)

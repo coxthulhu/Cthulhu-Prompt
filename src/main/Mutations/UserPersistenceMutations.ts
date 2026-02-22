@@ -40,8 +40,8 @@ export const setupUserPersistenceMutationHandlers = (): void => {
             }
           }
 
-          const userPersistence = UserPersistenceDataAccess.updateLastWorkspacePath(
-            userPersistenceEntity.data.lastWorkspacePath
+          const userPersistence = UserPersistenceDataAccess.updateUserPersistence(
+            userPersistenceEntity.data
           )
           const revision = revisions.userPersistence.bump(USER_PERSISTENCE_ID)
 

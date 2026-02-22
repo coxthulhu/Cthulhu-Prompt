@@ -14,6 +14,10 @@
     type PromptFolderDraftRecord,
     promptFolderDraftCollection
   } from '@renderer/data/Collections/PromptFolderDraftCollection'
+  import {
+    USER_PERSISTENCE_DRAFT_ID,
+    userPersistenceDraftCollection
+  } from '@renderer/data/Collections/UserPersistenceDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -24,6 +28,7 @@
     lookupPromptFolderDescriptionMeasuredHeight
   } from '@renderer/data/UiState/PromptMeasurementCache.svelte.ts'
   import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
+  import { setPromptOutlinerWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
@@ -118,7 +123,9 @@
   // Manual selection keeps the outliner highlight on the clicked row until the user scrolls.
   let outlinerManualSelectionActive = $state(false)
   let outlinerAutoScrollRequestId = $state(0)
-  let sidebarWidthPx = $state(200)
+  const getUserPersistenceDraft = () => userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
+  const promptOutlinerDefaultWidthPx = getUserPersistenceDraft().promptOutlinerWidthPx
+  let sidebarWidthPx = $state(promptOutlinerDefaultWidthPx)
   let scrollResetVersion = $state(0)
   let lastScrollResetVersion = 0
   let scrollTopPx = $state(0)
@@ -577,7 +584,7 @@
     </div>
     <div class="flex-1 min-h-0 flex">
       <ResizableSidebar
-        defaultWidth={200}
+        defaultWidth={promptOutlinerDefaultWidthPx}
         minWidth={100}
         maxWidth={400}
         containerClass="h-full"
@@ -586,6 +593,9 @@
         sidebarBorderClass="border-border/50"
         onWidthChange={(nextWidth) => {
           sidebarWidthPx = nextWidth
+        }}
+        onDesiredWidthChange={(nextDesiredWidth) => {
+          setPromptOutlinerWidthWithAutosave(nextDesiredWidth)
         }}
       >
         {#snippet sidebar()}

@@ -10,12 +10,16 @@ export const upsertUserPersistenceDraft = (userPersistence: UserPersistence): vo
   if (!existingRecord) {
     userPersistenceDraftCollection.insert({
       id: USER_PERSISTENCE_DRAFT_ID,
-      lastWorkspacePath: userPersistence.lastWorkspacePath
+      lastWorkspacePath: userPersistence.lastWorkspacePath,
+      appSidebarWidthPx: userPersistence.appSidebarWidthPx,
+      promptOutlinerWidthPx: userPersistence.promptOutlinerWidthPx
     })
     return
   }
 
   userPersistenceDraftCollection.update(USER_PERSISTENCE_DRAFT_ID, (draftRecord) => {
     draftRecord.lastWorkspacePath = userPersistence.lastWorkspacePath
+    draftRecord.appSidebarWidthPx = userPersistence.appSidebarWidthPx
+    draftRecord.promptOutlinerWidthPx = userPersistence.promptOutlinerWidthPx
   })
 }

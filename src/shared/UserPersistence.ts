@@ -3,10 +3,14 @@ import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type UserPersistence = {
   lastWorkspacePath: string | null
+  appSidebarWidthPx: number
+  promptOutlinerWidthPx: number
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
-  lastWorkspacePath: null
+  lastWorkspacePath: null,
+  appSidebarWidthPx: 200,
+  promptOutlinerWidthPx: 200
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -53,11 +57,24 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
   }
 
   const lastWorkspacePath = value.lastWorkspacePath
-  if (lastWorkspacePath === null || typeof lastWorkspacePath === 'string') {
-    return { lastWorkspacePath }
+  if (lastWorkspacePath !== null && typeof lastWorkspacePath !== 'string') {
+    return null
   }
 
-  return null
+  const appSidebarWidthPx =
+    typeof value.appSidebarWidthPx === 'number'
+      ? Math.round(value.appSidebarWidthPx)
+      : DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
+  const promptOutlinerWidthPx =
+    typeof value.promptOutlinerWidthPx === 'number'
+      ? Math.round(value.promptOutlinerWidthPx)
+      : DEFAULT_USER_PERSISTENCE.promptOutlinerWidthPx
+
+  return {
+    lastWorkspacePath,
+    appSidebarWidthPx,
+    promptOutlinerWidthPx
+  }
 }
 
 export const parseWorkspacePersistence = (value: unknown): WorkspacePersistence | null => {

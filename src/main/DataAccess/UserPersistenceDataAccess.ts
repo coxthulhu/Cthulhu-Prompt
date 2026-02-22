@@ -83,9 +83,19 @@ export class UserPersistenceDataAccess {
     return parsedPersistence ?? DEFAULT_USER_PERSISTENCE
   }
 
-  static updateLastWorkspacePath(workspacePath: string | null): UserPersistence {
+  static updateUserPersistence(userPersistence: UserPersistence): UserPersistence {
     ensureBasePersistenceArtifacts()
     return writeJsonFile(resolveUserPersistencePath(), {
+      lastWorkspacePath: userPersistence.lastWorkspacePath,
+      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx),
+      promptOutlinerWidthPx: Math.round(userPersistence.promptOutlinerWidthPx)
+    })
+  }
+
+  static updateLastWorkspacePath(workspacePath: string | null): UserPersistence {
+    const currentPersistence = this.readUserPersistence()
+    return this.updateUserPersistence({
+      ...currentPersistence,
       lastWorkspacePath: workspacePath
     })
   }
