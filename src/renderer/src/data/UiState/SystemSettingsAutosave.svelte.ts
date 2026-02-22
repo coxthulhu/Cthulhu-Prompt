@@ -113,7 +113,7 @@ export const getSystemSettingsAutosaveState = (): SystemSettingsAutosaveState =>
   return autosaveState
 }
 
-export const saveSystemSettingsDraftNow = async (): Promise<void> => {
+export const flushSystemSettingsAutosaves = async (): Promise<void> => {
   autosaveState.saving = true
 
   try {

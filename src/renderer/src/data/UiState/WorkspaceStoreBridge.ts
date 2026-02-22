@@ -3,7 +3,7 @@ import {
   flushPromptFolderDraftAutosaves
 } from './PromptFolderDraftMutations.svelte.ts'
 import { clearPromptDraftStore, flushPromptDraftAutosaves } from './PromptDraftMutations.svelte.ts'
-import { saveSystemSettingsDraftNow } from './SystemSettingsAutosave.svelte.ts'
+import { flushSystemSettingsAutosaves } from './SystemSettingsAutosave.svelte.ts'
 
 let currentWorkspacePath: string | null = null
 let switchQueue: Promise<void> = Promise.resolve()
@@ -20,7 +20,7 @@ export const switchWorkspaceStoreBridge = async (
     await Promise.allSettled([
       flushPromptFolderDraftAutosaves(),
       flushPromptDraftAutosaves(),
-      saveSystemSettingsDraftNow()
+      flushSystemSettingsAutosaves()
     ])
 
     currentWorkspacePath = nextWorkspacePath

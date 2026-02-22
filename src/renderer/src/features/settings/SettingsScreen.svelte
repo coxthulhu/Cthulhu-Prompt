@@ -2,9 +2,9 @@
   import { Button } from '@renderer/common/ui/button'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import {
+    flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
     selectSystemSettingsDraftRecord,
-    saveSystemSettingsDraftNow,
     useSystemSettingsDraftQuery
   } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -32,7 +32,7 @@
 
   // Save immediately when an input loses focus to avoid delayed autosaves.
   const handleInputBlur = () => {
-    void runIpcBestEffort(saveSystemSettingsDraftNow)
+    void runIpcBestEffort(flushSystemSettingsAutosaves)
   }
 
   const resetSettingToDefault = async (
@@ -41,7 +41,7 @@
   ): Promise<void> => {
     await runIpcBestEffort(async () => {
       setDraftValue(defaultValue)
-      await saveSystemSettingsDraftNow()
+      await flushSystemSettingsAutosaves()
     })
   }
 
@@ -69,7 +69,7 @@
   // Side effect: flush unsaved system settings when leaving the settings screen.
   $effect(() => {
     return () => {
-      void runIpcBestEffort(saveSystemSettingsDraftNow)
+      void runIpcBestEffort(flushSystemSettingsAutosaves)
     }
   })
 </script>
