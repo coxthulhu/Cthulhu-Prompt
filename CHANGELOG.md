@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.7
+
+### New Features
+
+- Added startup persistence for user/workspace UI state (restoring last workspace, selected screen, and sidebar widths).
+- Added a prompt-folder loading overlay during hydration/loading.
+
+### Changes
+
+- Updated prompt folder description to have parity with all other prompt folder text editors (find integration, resizing, hydration).
+- Moved persistence hydration/sync to startup IPC + renderer flows and consolidated loading-overlay state handling.
+- Improved editor/runtime performance with Monaco startup warmup, mount/relayout tuning, reload draft-cache reuse, and virtual scroll tuning.
+- Simplified IPC and draft-mutation internals; updated Svelte/dev script/tooling configuration.
+
+### Fixed
+
+- Fixed regressions from recent Svelte upgrades.
+- Prevented prompt-folder draft updates from applying before hydration.
+- Stabilized Monaco relayout/mount behavior during settings changes.
+
 ## 0.0.6
 
 ### Changes
