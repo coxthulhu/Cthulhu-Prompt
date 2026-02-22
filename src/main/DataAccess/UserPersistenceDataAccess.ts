@@ -2,8 +2,8 @@ import { app } from 'electron'
 import * as path from 'path'
 import { getFs } from '../fs-provider'
 import {
-  DEFAULT_WORKSPACE_PERSISTENCE,
   DEFAULT_USER_PERSISTENCE,
+  createDefaultWorkspacePersistence,
   parseUserPersistence,
   parseWorkspacePersistence,
   type UserPersistence,
@@ -74,7 +74,10 @@ export class UserPersistenceDataAccess {
 
   static ensureWorkspacePersistenceFile(workspaceId: string): void {
     ensureBasePersistenceArtifacts()
-    ensureJsonFile(resolveWorkspacePersistencePath(workspaceId), DEFAULT_WORKSPACE_PERSISTENCE)
+    ensureJsonFile(
+      resolveWorkspacePersistencePath(workspaceId),
+      createDefaultWorkspacePersistence(workspaceId)
+    )
   }
 
   static readUserPersistence(): UserPersistence {
@@ -107,8 +110,23 @@ export class UserPersistenceDataAccess {
   static readWorkspacePersistence(workspaceId: string): WorkspacePersistence {
     this.ensureWorkspacePersistenceFile(workspaceId)
     const parsedPersistence = parseWorkspacePersistence(
-      readJsonFile(resolveWorkspacePersistencePath(workspaceId))
+      readJsonFile(resolveWorkspacePersistencePath(workspaceId)),
+      workspaceId
     )
-    return parsedPersistence ?? DEFAULT_WORKSPACE_PERSISTENCE
+    return parsedPersistence ?? createDefaultWorkspacePersistence(workspaceId)
+  }
+
+  static updateWorkspacePersistence(workspacePersistence: WorkspacePersistence): WorkspacePersistence {
+    this.ensureWorkspacePersistenceFile(workspacePersistence.workspaceId)
+    const selectedScreen = workspacePersistence.selectedScreen
+    const selectedPromptFolderId =
+      selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null
+
+    return writeJsonFile(resolveWorkspacePersistencePath(workspacePersistence.workspaceId), {
+      schemaVersion: 1,
+      workspaceId: workspacePersistence.workspaceId,
+      selectedScreen,
+      selectedPromptFolderId
+    })
   }
 }

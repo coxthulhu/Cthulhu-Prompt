@@ -20,6 +20,7 @@
     USER_PERSISTENCE_DRAFT_ID,
     userPersistenceDraftCollection
   } from '@renderer/data/Collections/UserPersistenceDraftCollection'
+  import { workspacePersistenceDraftCollection } from '@renderer/data/Collections/WorkspacePersistenceDraftCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
@@ -28,7 +29,9 @@
     setSelectedWorkspaceId
   } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
   import { syncLastWorkspacePath } from '@renderer/data/Mutations/UserPersistenceMutations'
+  import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspacePersistenceMutations'
   import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
+  import { loadWorkspacePersistence } from '@renderer/data/Queries/UserPersistenceQuery'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
     closeWorkspace as closeWorkspaceMutation,
@@ -40,6 +43,7 @@
     type WorkspaceSelectionContext
   } from './WorkspaceSelectionContext'
   import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
+  import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
 
@@ -115,6 +119,14 @@
     selectedPromptFolderId = null
   }
 
+  const toPersistedWorkspaceScreen = (screen: ScreenId): PersistedWorkspaceScreen | null => {
+    if (screen === 'home' || screen === 'settings' || screen === 'prompt-folders') {
+      return screen
+    }
+
+    return null
+  }
+
   const resetWorkspaceState = async () => {
     await runIpcBestEffort(closeWorkspaceMutation)
     await switchWorkspaceStoreBridge(null)
@@ -123,9 +135,70 @@
 
   const loadWorkspaceSelection = async (workspacePath: string): Promise<void> => {
     const workspaceId = await loadWorkspaceByPath(workspacePath)
+    await loadWorkspacePersistence(workspaceId)
     setSelectedWorkspaceId(workspaceId)
     await switchWorkspaceStoreBridge(workspacePath)
     await syncLastWorkspacePath(workspacePath)
+  }
+
+  const syncCurrentWorkspaceScreenSelection = async (screen: ScreenId): Promise<void> => {
+    const workspaceId = getSelectedWorkspaceId()
+    if (!workspaceId) {
+      return
+    }
+
+    const persistedScreen = toPersistedWorkspaceScreen(screen)
+    if (!persistedScreen) {
+      return
+    }
+
+    const persistedPromptFolderId =
+      persistedScreen === 'prompt-folders' ? selectedPromptFolderId : null
+    const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+
+    if (
+      draftRecord &&
+      draftRecord.selectedScreen === persistedScreen &&
+      draftRecord.selectedPromptFolderId === persistedPromptFolderId
+    ) {
+      return
+    }
+
+    await syncWorkspaceScreenSelection(workspaceId, persistedScreen, persistedPromptFolderId)
+  }
+
+  const restoreWorkspaceScreenFromPersistence = async (): Promise<void> => {
+    const workspaceId = getSelectedWorkspaceId()
+    if (!workspaceId) {
+      return
+    }
+
+    const workspacePersistence = workspacePersistenceDraftCollection.get(workspaceId)
+    if (!workspacePersistence) {
+      return
+    }
+
+    if (workspacePersistence.selectedScreen === 'prompt-folders') {
+      const workspaceRecord = workspaceCollection.get(workspaceId)
+      const persistedPromptFolderId = workspacePersistence.selectedPromptFolderId
+      const hasPromptFolder =
+        persistedPromptFolderId !== null &&
+        Boolean(workspaceRecord?.promptFolderIds.includes(persistedPromptFolderId))
+
+      if (hasPromptFolder && persistedPromptFolderId) {
+        selectedPromptFolderId = persistedPromptFolderId
+        activeScreen = 'prompt-folders'
+        return
+      }
+
+      clearPromptFolderSelection()
+      activeScreen = 'home'
+      await syncWorkspaceScreenSelection(workspaceId, 'home', null)
+      return
+    }
+
+    clearPromptFolderSelection()
+    activeScreen = workspacePersistence.selectedScreen
   }
 
   const isWorkspaceMissingError = (message?: string): boolean => {
@@ -142,6 +215,7 @@
 
     const selectionResult = await selectWorkspace(lastWorkspacePath)
     if (selectionResult.success) {
+      await restoreWorkspaceScreenFromPersistence()
       return
     }
 
@@ -278,6 +352,7 @@
     if (config.requiresWorkspace && !isWorkspaceReady) return
     if (screen === 'prompt-folders' && !selectedPromptFolderId) return
     activeScreen = screen
+    void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
 
   const navigateToPromptFolder = (promptFolderId: string): void => {

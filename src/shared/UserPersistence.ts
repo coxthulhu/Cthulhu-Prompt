@@ -15,17 +15,28 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
 
+export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
+
 export type WorkspacePersistence = {
   schemaVersion: 1
+  workspaceId: string
+  selectedScreen: PersistedWorkspaceScreen
+  selectedPromptFolderId: string | null
 }
 
-export const DEFAULT_WORKSPACE_PERSISTENCE: WorkspacePersistence = {
-  schemaVersion: 1
+export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
+  return {
+    schemaVersion: 1,
+    workspaceId,
+    selectedScreen: 'home',
+    selectedPromptFolderId: null
+  }
 }
 
 export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
 export const LOAD_WORKSPACE_PERSISTENCE_CHANNEL = 'load-workspace-persistence'
 export const UPDATE_USER_PERSISTENCE_CHANNEL = 'update-user-persistence'
+export const UPDATE_WORKSPACE_PERSISTENCE_CHANNEL = 'update-workspace-persistence'
 
 export type LoadWorkspacePersistenceRequest = {
   workspaceId: string
@@ -43,8 +54,16 @@ export type UserPersistenceRevisionResponsePayload = {
   userPersistence: RevisionEnvelope<UserPersistence>
 }
 
+export type WorkspacePersistenceRevisionPayload = {
+  workspacePersistence: RevisionPayloadEntity<WorkspacePersistence>
+}
+
+export type WorkspacePersistenceRevisionResponsePayload = {
+  workspacePersistence: RevisionEnvelope<WorkspacePersistence>
+}
+
 export type LoadWorkspacePersistenceResult = IpcResult<{
-  workspacePersistence: WorkspacePersistence
+  workspacePersistence: RevisionEnvelope<WorkspacePersistence>
 }>
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -77,13 +96,36 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
   }
 }
 
-export const parseWorkspacePersistence = (value: unknown): WorkspacePersistence | null => {
+const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen => {
+  if (value === 'home' || value === 'settings' || value === 'prompt-folders') {
+    return value
+  }
+
+  return 'home'
+}
+
+export const parseWorkspacePersistence = (
+  value: unknown,
+  workspaceId: string
+): WorkspacePersistence | null => {
   if (!isRecord(value)) {
     return null
   }
 
   if (value.schemaVersion === 1) {
-    return { schemaVersion: 1 }
+    const selectedScreen = parsePersistedWorkspaceScreen(value.selectedScreen)
+    const selectedPromptFolderId =
+      value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
+        ? value.selectedPromptFolderId
+        : null
+
+    return {
+      schemaVersion: 1,
+      workspaceId,
+      selectedScreen,
+      selectedPromptFolderId:
+        selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null
+    }
   }
 
   return null

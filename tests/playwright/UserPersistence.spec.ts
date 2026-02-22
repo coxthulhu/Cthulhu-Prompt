@@ -4,6 +4,15 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
+const createDeterministicId = (seed: string): string => {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000000000000000${suffix}`
+}
+
 const readUserPersistenceFile = async (electronApp: any): Promise<{
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
@@ -22,6 +31,32 @@ const readUserPersistenceFile = async (electronApp: any): Promise<{
       app.emit('test-read-file', { filePath, requestId })
     })
   }, userPersistencePath)
+
+  return JSON.parse(persistedContent)
+}
+
+const readWorkspacePersistenceFile = async (
+  electronApp: any,
+  workspaceId: string
+): Promise<{
+  schemaVersion: number
+  workspaceId: string
+  selectedScreen: 'home' | 'settings' | 'prompt-folders'
+  selectedPromptFolderId: string | null
+}> => {
+  const userDataPath = await electronApp.evaluate(({ app }) => {
+    return app.getPath('userData')
+  })
+  const workspacePersistencePath = join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)
+  const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
+    return await new Promise<string>((resolve) => {
+      const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
+      app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
+        resolve(payload.content)
+      })
+      app.emit('test-read-file', { filePath, requestId })
+    })
+  }, workspacePersistencePath)
 
   return JSON.parse(persistedContent)
 }
@@ -142,5 +177,115 @@ describe('User Persistence', () => {
         return `${persisted.appSidebarWidthPx}:${persisted.promptOutlinerWidthPx}`
       })
       .toBe('180:220')
+  })
+
+  test('reopens the persisted prompt-folder screen on startup', async ({ electronApp, testSetup }) => {
+    const persistedWorkspacePath = '/ws/persisted-screen'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const persistedPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
+    const userDataPath = await electronApp.evaluate(({ app }) => {
+      return app.getPath('userData')
+    })
+
+    await testSetup.setupFilesystem({
+      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
+      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
+        { lastWorkspacePath: persistedWorkspacePath },
+        null,
+        2
+      ),
+      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+        {
+          schemaVersion: 1,
+          workspaceId,
+          selectedScreen: 'prompt-folders',
+          selectedPromptFolderId: persistedPromptFolderId
+        },
+        null,
+        2
+      )
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')
+    ).toHaveAttribute('data-active', 'true')
+  })
+
+  test('resets invalid persisted prompt-folder startup screen to home and saves it', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-invalid-screen'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const userDataPath = await electronApp.evaluate(({ app }) => {
+      return app.getPath('userData')
+    })
+
+    await testSetup.setupFilesystem({
+      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
+      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
+        { lastWorkspacePath: persistedWorkspacePath },
+        null,
+        2
+      ),
+      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+        {
+          schemaVersion: 1,
+          workspaceId,
+          selectedScreen: 'prompt-folders',
+          selectedPromptFolderId: 'missing-folder-id'
+        },
+        null,
+        2
+      )
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
+      })
+      .toBe('home:null')
+  })
+
+  test('syncs workspace screen persistence and clears folder when leaving prompt folders', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const { testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
+      })
+      .toBe(`prompt-folders:${developmentPromptFolderId}`)
+
+    await testHelpers.navigateToSettingsScreen()
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
+      })
+      .toBe('settings:null')
   })
 })

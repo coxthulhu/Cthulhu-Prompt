@@ -16,7 +16,9 @@ import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/Syst
 import type {
   LoadWorkspacePersistenceRequest,
   UserPersistence,
-  UserPersistenceRevisionPayload
+  UserPersistenceRevisionPayload,
+  WorkspacePersistence,
+  WorkspacePersistenceRevisionPayload
 } from '@shared/UserPersistence'
 import type {
   CloseWorkspacePayload,
@@ -49,6 +51,14 @@ const parseNumber: Parser<number> = (value) => {
 
 const parseNullableString: Parser<string | null> = (value) => {
   return value === null || typeof value === 'string' ? value : null
+}
+
+const parseWorkspaceScreen: Parser<WorkspacePersistence['selectedScreen']> = (value) => {
+  if (value === 'home' || value === 'settings' || value === 'prompt-folders') {
+    return value
+  }
+
+  return null
 }
 
 const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
@@ -102,6 +112,11 @@ const parseObject = <TValue extends object>(shape: {
       const parsedField = parser(record[key])
 
       if (parsedField === null) {
+        if (record[key] === null && parser === parseNullableString) {
+          parsedObject[key] = null as TValue[typeof key]
+          continue
+        }
+
         return null
       }
 
@@ -212,6 +227,16 @@ const parseUserPersistence = parseObject<UserPersistence>({
 
 const parseUserPersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
+
+const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
+  schemaVersion: (value) => (value === 1 ? 1 : null),
+  workspaceId: parseString,
+  selectedScreen: parseWorkspaceScreen,
+  selectedPromptFolderId: parseNullableString
+})
+
+const parseWorkspacePersistenceRevisionPayloadEntity =
+  parseRevisionPayloadEntity<WorkspacePersistence>(parseWorkspacePersistence)
 
 const parsePrompt = parseObject<Prompt>({
   id: parseString,
@@ -327,6 +352,16 @@ const parseUpdateUserPersistenceRevisionWireRequest: Parser<
   parseUserPersistenceRevisionPayload
 )
 
+const parseWorkspacePersistenceRevisionPayload = parseObject<WorkspacePersistenceRevisionPayload>({
+  workspacePersistence: parseWorkspacePersistenceRevisionPayloadEntity
+})
+
+const parseUpdateWorkspacePersistenceRevisionWireRequest: Parser<
+  IpcRequestWithPayload<WorkspacePersistenceRevisionPayload>
+> = parseWireRequestWithPayload<WorkspacePersistenceRevisionPayload>(
+  parseWorkspacePersistenceRevisionPayload
+)
+
 const parseLoadWorkspaceByPathPayload = parseObject<LoadWorkspaceByPathRequest>({
   workspacePath: parseString
 })
@@ -380,6 +415,10 @@ export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
 
 export const parseUpdateUserPersistenceRevisionRequest = createRequestParser(
   parseUpdateUserPersistenceRevisionWireRequest
+)
+
+export const parseUpdateWorkspacePersistenceRevisionRequest = createRequestParser(
+  parseUpdateWorkspacePersistenceRevisionWireRequest
 )
 
 export const parseLoadWorkspaceByPathRequest = createRequestParser(

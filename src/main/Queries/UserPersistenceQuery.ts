@@ -46,7 +46,11 @@ export const setupUserPersistenceQueryHandlers = (): void => {
             )
             return {
               success: true,
-              workspacePersistence
+              workspacePersistence: {
+                id: validatedRequest.payload.workspaceId,
+                revision: revisions.workspacePersistence.get(validatedRequest.payload.workspaceId),
+                data: workspacePersistence
+              }
             }
           } catch (error) {
             return { success: false, error: error instanceof Error ? error.message : String(error) }
