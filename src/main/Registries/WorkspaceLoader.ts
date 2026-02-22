@@ -24,7 +24,7 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
 }
 
 const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
-  // Side effect: opening a workspace updates all workspace persistence metadata.
+  // Side effect: opening a workspace ensures workspace persistence metadata exists.
   const workspaceId = markWorkspaceOpened(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
 

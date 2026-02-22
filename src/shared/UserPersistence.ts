@@ -1,4 +1,5 @@
 import type { IpcResult } from './IpcResult'
+import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type UserPersistence = {
   lastWorkspacePath: string | null
@@ -7,6 +8,8 @@ export type UserPersistence = {
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   lastWorkspacePath: null
 }
+
+export const USER_PERSISTENCE_ID = 'user-persistence'
 
 export type WorkspacePersistence = {
   schemaVersion: 1
@@ -18,14 +21,23 @@ export const DEFAULT_WORKSPACE_PERSISTENCE: WorkspacePersistence = {
 
 export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
 export const LOAD_WORKSPACE_PERSISTENCE_CHANNEL = 'load-workspace-persistence'
+export const UPDATE_USER_PERSISTENCE_CHANNEL = 'update-user-persistence'
 
 export type LoadWorkspacePersistenceRequest = {
   workspaceId: string
 }
 
 export type LoadUserPersistenceResult = IpcResult<{
-  userPersistence: UserPersistence
+  userPersistence: RevisionEnvelope<UserPersistence>
 }>
+
+export type UserPersistenceRevisionPayload = {
+  userPersistence: RevisionPayloadEntity<UserPersistence>
+}
+
+export type UserPersistenceRevisionResponsePayload = {
+  userPersistence: RevisionEnvelope<UserPersistence>
+}
 
 export type LoadWorkspacePersistenceResult = IpcResult<{
   workspacePersistence: WorkspacePersistence

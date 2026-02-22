@@ -6,7 +6,6 @@ import {
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
-import { markWorkspaceClosed } from '../Services/WorkspacePersistenceLifecycle'
 
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
@@ -29,8 +28,6 @@ export const setupWorkspaceMutationHandlers = (): void => {
     'close-workspace',
     async (_, request: unknown): Promise<IpcMutationActionResponse> => {
       return await runMutationIpcRequest(request, parseCloseWorkspaceRequest, async () => {
-        // Side effect: closing a workspace clears workspace persistence metadata.
-        markWorkspaceClosed()
         return { success: true }
       })
     }

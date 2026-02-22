@@ -13,7 +13,11 @@ import type {
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/SystemSettings'
-import type { LoadWorkspacePersistenceRequest } from '@shared/UserPersistence'
+import type {
+  LoadWorkspacePersistenceRequest,
+  UserPersistence,
+  UserPersistenceRevisionPayload
+} from '@shared/UserPersistence'
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
@@ -196,6 +200,29 @@ const parseSystemSettings = parseObject<SystemSettings>({
 const parseSystemSettingsRevisionPayloadEntity =
   parseRevisionPayloadEntity<SystemSettings>(parseSystemSettings)
 
+const parseUserPersistence: Parser<UserPersistence> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const valueKeys = Object.keys(record)
+
+  if (valueKeys.length !== 1 || !('lastWorkspacePath' in record)) {
+    return null
+  }
+
+  const lastWorkspacePath = record.lastWorkspacePath
+  if (lastWorkspacePath !== null && typeof lastWorkspacePath !== 'string') {
+    return null
+  }
+
+  return { lastWorkspacePath }
+}
+
+const parseUserPersistenceRevisionPayloadEntity =
+  parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
+
 const parsePrompt = parseObject<Prompt>({
   id: parseString,
   title: parseString,
@@ -300,6 +327,16 @@ const parseUpdateSystemSettingsRevisionWireRequest: Parser<
   IpcRequestWithPayload<SystemSettingsRevisionPayload>
 > = parseWireRequestWithPayload<SystemSettingsRevisionPayload>(parseSystemSettingsRevisionPayload)
 
+const parseUserPersistenceRevisionPayload = parseObject<UserPersistenceRevisionPayload>({
+  userPersistence: parseUserPersistenceRevisionPayloadEntity
+})
+
+const parseUpdateUserPersistenceRevisionWireRequest: Parser<
+  IpcRequestWithPayload<UserPersistenceRevisionPayload>
+> = parseWireRequestWithPayload<UserPersistenceRevisionPayload>(
+  parseUserPersistenceRevisionPayload
+)
+
 const parseLoadWorkspaceByPathPayload = parseObject<LoadWorkspaceByPathRequest>({
   workspacePath: parseString
 })
@@ -349,6 +386,10 @@ export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWir
 
 export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
   parseUpdateSystemSettingsRevisionWireRequest
+)
+
+export const parseUpdateUserPersistenceRevisionRequest = createRequestParser(
+  parseUpdateUserPersistenceRevisionWireRequest
 )
 
 export const parseLoadWorkspaceByPathRequest = createRequestParser(

@@ -8,6 +8,7 @@ import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
 import { setupPromptFolderMutationHandlers } from './Mutations/PromptFolderMutations'
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
 import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsMutations'
+import { setupUserPersistenceMutationHandlers } from './Mutations/UserPersistenceMutations'
 import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
 import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
 import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
@@ -179,6 +180,7 @@ export function startupNormally(): void {
     setupSystemSettingsQueryHandlers()
     setupUserPersistenceQueryHandlers()
     setupSystemSettingsMutationHandlers()
+    setupUserPersistenceMutationHandlers()
     setupWorkspaceQueryHandlers()
     setupWorkspaceMutationHandlers()
     setupPromptFolderQueryHandlers()

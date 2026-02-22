@@ -1,7 +1,8 @@
 import { ipcMain } from 'electron'
 import {
   LOAD_USER_PERSISTENCE_CHANNEL,
-  LOAD_WORKSPACE_PERSISTENCE_CHANNEL
+  LOAD_WORKSPACE_PERSISTENCE_CHANNEL,
+  USER_PERSISTENCE_ID
 } from '@shared/UserPersistence'
 import type {
   LoadUserPersistenceResult,
@@ -10,6 +11,7 @@ import type {
 import { parseLoadWorkspacePersistenceRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
+import { revisions } from '../Registries/Revisions'
 
 export const setupUserPersistenceQueryHandlers = (): void => {
   ipcMain.handle(
@@ -19,7 +21,11 @@ export const setupUserPersistenceQueryHandlers = (): void => {
         const userPersistence = UserPersistenceDataAccess.readUserPersistence()
         return {
           success: true,
-          userPersistence
+          userPersistence: {
+            id: USER_PERSISTENCE_ID,
+            revision: revisions.userPersistence.get(USER_PERSISTENCE_ID),
+            data: userPersistence
+          }
         }
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error) }

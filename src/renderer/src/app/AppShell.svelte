@@ -16,6 +16,10 @@
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
+  import {
+    USER_PERSISTENCE_DRAFT_ID,
+    userPersistenceDraftCollection
+  } from '@renderer/data/Collections/UserPersistenceDraftCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
@@ -23,7 +27,7 @@
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
   } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
-  import { loadUserPersistence } from '@renderer/data/Queries/UserPersistenceQuery'
+  import { syncLastWorkspacePath } from '@renderer/data/Mutations/UserPersistenceMutations'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
     closeWorkspace as closeWorkspaceMutation,
@@ -118,6 +122,7 @@
     const workspaceId = await loadWorkspaceByPath(workspacePath)
     setSelectedWorkspaceId(workspaceId)
     await switchWorkspaceStoreBridge(workspacePath)
+    await syncLastWorkspacePath(workspacePath)
   }
 
   const isWorkspaceMissingError = (message?: string): boolean => {
@@ -125,8 +130,8 @@
   }
 
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
-    const userPersistence = await loadUserPersistence()
-    const lastWorkspacePath = userPersistence.lastWorkspacePath
+    const lastWorkspacePath =
+      userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!.lastWorkspacePath
 
     if (!lastWorkspacePath) {
       return
@@ -137,7 +142,16 @@
       return
     }
 
-    console.error('Failed to restore last workspace. Cleared persisted path.', {
+    if (selectionResult.reason === 'workspace-missing') {
+      await syncLastWorkspacePath(null)
+      console.error('Failed to restore last workspace. Cleared persisted path.', {
+        workspacePath: lastWorkspacePath,
+        reason: selectionResult.reason
+      })
+      return
+    }
+
+    console.error('Failed to restore last workspace.', {
       workspacePath: lastWorkspacePath,
       reason: selectionResult.reason
     })
@@ -207,6 +221,7 @@
 
     try {
       await runIpcBestEffort(closeWorkspaceMutation)
+      await runIpcBestEffort(() => syncLastWorkspacePath(null))
     } finally {
       await switchWorkspaceStoreBridge(null)
       clearPromptFolderSelection()
@@ -214,7 +229,7 @@
     }
   }
 
-  // Side effect: restore the previous workspace once after user persistence loads.
+  // Side effect: restore the previous workspace once from the bootstrap-loaded user persistence.
   $effect(() => {
     if (startupRestorePhase !== 'pending') {
       return

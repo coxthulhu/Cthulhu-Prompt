@@ -2,6 +2,7 @@ import './app.css'
 import App from './App.svelte'
 import { mount } from 'svelte'
 import { loadSystemSettings } from './data/Queries/SystemSettingsQuery'
+import { loadUserPersistence } from './data/Queries/UserPersistenceQuery'
 import { initializeSvelteVirtualWindowHydrationControls } from './features/virtualizer/SvelteVirtualWindowHydrationControls'
 import { warmupMonacoEditor } from './common/Monaco'
 
@@ -10,6 +11,8 @@ initializeSvelteVirtualWindowHydrationControls()
 const bootstrap = async (): Promise<void> => {
   // Side effect: block first render until authoritative system settings are loaded.
   await loadSystemSettings()
+  // Side effect: block first render until authoritative user persistence is loaded.
+  await loadUserPersistence()
 
   try {
     // Side effect: pre-load Monaco editor modules before the first visible editor mounts.
@@ -24,7 +27,7 @@ const bootstrap = async (): Promise<void> => {
 }
 
 void bootstrap().catch((error) => {
-  console.error('Failed to load startup system settings.', error)
+  console.error('Failed to load startup renderer state.', error)
 })
 
 export default bootstrap
