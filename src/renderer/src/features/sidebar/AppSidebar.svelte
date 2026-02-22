@@ -133,7 +133,9 @@
     <div class="flex items-center gap-2 px-2 py-1">
       <img class="size-8 shrink-0" src={appIcon} alt="Cthulhu Prompt icon" />
       <div class="flex min-w-0 flex-col">
-        <span class="font-semibold text-sm truncate">{workspaceDisplay.title}</span>
+        <span data-testid="sidebar-workspace-name" class="font-semibold text-sm truncate">
+          {workspaceDisplay.title}
+        </span>
         <span class="text-xs text-muted-foreground flex min-w-0" title={workspacePath ?? undefined}>
           {#if workspacePath}
             <span class="min-w-0 truncate">{workspaceDisplay.prefix}</span>
