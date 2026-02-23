@@ -54,7 +54,7 @@
   } from './find/promptFolderFindSectionKeys'
   import type { PromptFolderFindItem } from './find/promptFolderFindTypes'
   import { promptEditorRowId, promptFolderSettingsFindEntityId } from './promptFolderRowIds'
-  import PromptFolderSettingsRowUpdated from './PromptFolderSettingsRowUpdated.svelte'
+  import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
   import {
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
@@ -665,7 +665,7 @@
 </PromptFolderFindIntegration>
 
 {#snippet folderSettingsRow(props)}
-  <PromptFolderSettingsRowUpdated
+  <PromptFolderSettingsRow
     {promptFolderId}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
