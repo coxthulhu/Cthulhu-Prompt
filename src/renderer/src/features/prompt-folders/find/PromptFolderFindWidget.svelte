@@ -165,8 +165,9 @@
     --prompt-find-focus-border: #007fd4;
     --prompt-find-toolbar-hover: #5a5d5e50;
     --prompt-find-error-foreground: #f48771;
-    position: fixed;
-    top: 0;
+    position: absolute;
+    /* Keep the widget below the prompt-folder header row. */
+    top: var(--prompt-folder-find-widget-top, 36px);
     right: 18px;
     width: 400px;
     z-index: 40;

@@ -459,16 +459,28 @@
   })
 </script>
 
-{@render children?.()}
+<div class="prompt-folder-find-integration">
+  {@render children?.()}
 
-{#if isFindOpen}
-  <PromptFolderFindWidget
-    bind:matchText
-    focusRequestId={focusFindRequestId}
-    {totalMatches}
-    {currentMatchIndex}
-    onClose={closeFindDialog}
-    onPrevious={handlePrevious}
-    onNext={handleNext}
-  />
-{/if}
+  {#if isFindOpen}
+    <PromptFolderFindWidget
+      bind:matchText
+      focusRequestId={focusFindRequestId}
+      {totalMatches}
+      {currentMatchIndex}
+      onClose={closeFindDialog}
+      onPrevious={handlePrevious}
+      onNext={handleNext}
+    />
+  {/if}
+</div>
+
+<style>
+  .prompt-folder-find-integration {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    --prompt-folder-find-widget-top: 36px;
+  }
+</style>
