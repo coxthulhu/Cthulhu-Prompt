@@ -113,7 +113,9 @@ describe('Prompt Folder Hydration', () => {
     try {
       await testHelpers.dragSidebarHandleBy(dragDistance)
 
-      await mainWindow.waitForTimeout(300)
+      await expect
+        .poll(async () => await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR))
+        .toBeLessThan(initialWidth)
 
       const resizedWidth = await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)
       expect(resizedWidth).toBeLessThan(initialWidth)
@@ -165,21 +167,21 @@ describe('Prompt Folder Hydration', () => {
 
     const dragDistance = 180
     await testHelpers.dragSidebarHandleBy(dragDistance)
-    await mainWindow.waitForTimeout(300)
+    await expect.poll(async () => await getEditorContentWidth()).toBeLessThan(initialWidth)
 
     const narrowedWidth = await getEditorContentWidth()
     expect(narrowedWidth).toBeLessThan(initialWidth)
     expect(initialWidth - narrowedWidth).toBeGreaterThan(20)
 
     await testHelpers.dragSidebarHandleBy(-dragDistance)
-    await mainWindow.waitForTimeout(300)
+    await expect.poll(async () => await getEditorContentWidth()).toBeGreaterThan(narrowedWidth)
 
     const expandedWidth = await getEditorContentWidth()
     expect(expandedWidth).toBeGreaterThan(narrowedWidth)
     expect(expandedWidth - narrowedWidth).toBeGreaterThan(20)
 
     await testHelpers.dragSidebarHandleBy(dragDistance)
-    await mainWindow.waitForTimeout(300)
+    await expect.poll(async () => await getEditorContentWidth()).toBeLessThan(expandedWidth)
 
     const resizedWidth = await getEditorContentWidth()
     expect(resizedWidth).toBeLessThan(expandedWidth)
@@ -218,8 +220,6 @@ describe('Prompt Folder Hydration', () => {
       }
 
       await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, viewportHeight * 3)
-
-      await mainWindow.waitForTimeout(500)
 
       const anchorHandle = await mainWindow.waitForFunction(
         ({ hostSelector, rowSelector, placeholderSelector }) => {
@@ -311,8 +311,24 @@ describe('Prompt Folder Hydration', () => {
       await mainWindow.evaluate(() => {
         window.svelteVirtualWindowTestControls?.resumeMonacoHydration()
       })
-
-      await mainWindow.waitForTimeout(3000)
+      await mainWindow.waitForFunction(
+        ({ hostSelector, rowSelector, placeholderSelector }) => {
+          const host = document.querySelector<HTMLElement>(hostSelector)
+          if (!host) return false
+          const hostTop = Math.round(host.getBoundingClientRect().top)
+          const rows = Array.from(host.querySelectorAll<HTMLElement>(rowSelector))
+          return rows.some((row) => {
+            if (row.querySelector(placeholderSelector)) return false
+            const rect = row.getBoundingClientRect()
+            return rect.bottom <= hostTop
+          })
+        },
+        {
+          hostSelector: HOST_SELECTOR,
+          rowSelector: PROMPT_ROW_SELECTOR,
+          placeholderSelector: MONACO_PLACEHOLDER_SELECTOR
+        }
+      )
 
       const anchoringVerificationHandle = await mainWindow.evaluateHandle(
         ({ hostSelector, rows, placeholderSelector }) => {
@@ -377,8 +393,6 @@ describe('Prompt Folder Hydration', () => {
       expect(Math.abs(scrollShift - totalMeasuredDelta)).toBeLessThanOrEqual(2)
 
       await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, anchoringVerification.scrollTopAfter)
-
-      await mainWindow.waitForTimeout(200)
 
       const hydratedAnchorHandle = await mainWindow.waitForFunction(
         ({ hostSelector, rowSelector, placeholderSelector }) => {

@@ -211,22 +211,10 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
         },
 
         completeStartup: async () => {
-          await electronApp.evaluate(async ({ app }) => {
+          const completed = await electronApp.evaluate(async ({ app }) => {
             app.emit('test-complete-startup')
+            return Boolean((app as any)._testStartupCompleted)
           })
-
-          // Wait for startup completion flag
-          let completed = false
-          let attempts = 0
-          while (!completed && attempts < 50) {
-            completed = await electronApp.evaluate(async ({ app }) => {
-              return (app as any)._testStartupCompleted || false
-            })
-            if (!completed) {
-              await new Promise((resolve) => setTimeout(resolve, 100))
-              attempts++
-            }
-          }
 
           if (!completed) {
             throw new Error('Startup completion timed out')
@@ -257,7 +245,11 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           const mainWindow = await electronApp.firstWindow()
           trackPageForRendererErrors(mainWindow)
           await mainWindow.waitForLoadState('domcontentloaded')
-          await mainWindow.waitForTimeout(3000) // Give extra time for React to render
+          await mainWindow.waitForSelector('[data-sidebar="sidebar"]', { state: 'visible' })
+          await mainWindow.waitForSelector('[data-testid="startup-loading-overlay"]', {
+            state: 'detached'
+          })
+          await mainWindow.waitForSelector('[data-testid="nav-button-home"]', { state: 'visible' })
 
           // Create bound test helpers
           const testHelpers = {
@@ -273,8 +265,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
             clickNavButton: (buttonText: string, timeout?: number) =>
               buttonHelpers.clickNavButton(mainWindow, buttonText, timeout),
             validatePageStructure: () => uiValidationHelpers.validatePageStructure(mainWindow),
-            setupWorkspaceViaUI: (timeout?: number) =>
-              workspaceHelpers.setupWorkspaceViaUI(mainWindow, timeout),
+            setupWorkspaceViaUI: () => workspaceHelpers.setupWorkspaceViaUI(mainWindow),
             clearWorkspaceViaUI: () => workspaceHelpers.clearWorkspaceViaUI(mainWindow),
             isWorkspaceReady: () => workspaceHelpers.isWorkspaceReady(mainWindow),
             isWorkspaceGetStarted: () => workspaceHelpers.isWorkspaceGetStarted(mainWindow),
@@ -283,8 +274,8 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               baseExpect(await workspaceHelpers.getDisplayedWorkspacePath(mainWindow)).toBe(path)
               baseExpect(await workspaceHelpers.isWorkspaceReady(mainWindow)).toBe(true)
             },
-            clickCollapsibleTrigger: (triggerText: string, timeout?: number) =>
-              promptFolderHelpers.clickCollapsibleTrigger(mainWindow, triggerText, timeout),
+            clickCollapsibleTrigger: (triggerText: string) =>
+              promptFolderHelpers.clickCollapsibleTrigger(mainWindow, triggerText),
             clickPromptFolderItem: (folderName: string, timeout?: number) =>
               promptFolderHelpers.clickPromptFolderItem(mainWindow, folderName, timeout),
             clickPromptFoldersUpdatedItem: (folderName: string, timeout?: number) =>

@@ -21,7 +21,6 @@ interface FocusOptions {
   timeout?: number
   clickPosition?: { x: number; y: number }
   ensureInputFocus?: boolean
-  afterFocusDelayMs?: number
 }
 
 export async function focusMonacoEditor(
@@ -38,10 +37,11 @@ export async function focusMonacoEditor(
     await page.locator(`${monacoSelector} textarea.inputarea`).click({ force: true })
   }
 
-  const delay = options.afterFocusDelayMs ?? 100
-  if (delay > 0) {
-    await page.waitForTimeout(delay)
-  }
+  await page.waitForFunction((selector) => {
+    const container = document.querySelector(selector)
+    const active = document.activeElement
+    return !!container && !!active && container.contains(active)
+  }, monacoSelector)
 
   return monacoSelector
 }

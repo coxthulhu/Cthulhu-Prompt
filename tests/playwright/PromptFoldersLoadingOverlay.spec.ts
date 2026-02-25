@@ -49,7 +49,6 @@ describe('Prompt folder loading overlay', () => {
       await testHelpers.navigateToPromptFolders('Development')
       await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
       await mainWindow.waitForSelector(PROMPT_EDITOR_PREFIX_SELECTOR, { state: 'attached' })
-      await mainWindow.waitForTimeout(250)
       await expect(mainWindow.locator(OVERLAY_SELECTOR)).toHaveCount(0)
     } finally {
       await testHelpers.resumeIpcChannel(LOADING_CHANNEL)

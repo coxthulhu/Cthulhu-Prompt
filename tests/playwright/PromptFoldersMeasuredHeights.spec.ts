@@ -30,9 +30,7 @@ describe('Prompt folders measured heights', () => {
 
     const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, scrollHeight)
-    await mainWindow.waitForTimeout(1500)
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
-    await mainWindow.waitForTimeout(1000)
 
     let scrollHeightAfterScroll = initialScrollHeight
     await expect

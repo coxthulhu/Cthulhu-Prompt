@@ -66,24 +66,33 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     expect(contentAfterTyping).toContain(marker)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForTimeout(2000)
+    await expect
+      .poll(async () => (await testHelpers.verifyPromptVisible('Simple Greeting')).found)
+      .toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
 
-    const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
-      return await new Promise<string>((resolve) => {
-        const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
-        app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
-          resolve(payload.content)
-        })
-        app.emit('test-read-file', { filePath, requestId })
-      })
-    }, '/ws/sample/Prompts/Development/Prompts.json')
-    const persisted = JSON.parse(persistedContent)
-      .prompts.map((prompt: { promptText: string }) => prompt.promptText)
-      .join('\n')
-    expect(persisted).toContain(marker)
+    await expect
+      .poll(
+        async () => {
+          const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
+            return await new Promise<string>((resolve) => {
+              const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
+              app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
+                resolve(payload.content)
+              })
+              app.emit('test-read-file', { filePath, requestId })
+            })
+          }, '/ws/sample/Prompts/Development/Prompts.json')
+
+          return JSON.parse(persistedContent)
+            .prompts.map((prompt: { promptText: string }) => prompt.promptText)
+            .join('\n')
+        },
+        { timeout: 5000 }
+      )
+      .toContain(marker)
 
     await expect
       .poll(async () => getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR), {
@@ -109,7 +118,9 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     await mainWindow.waitForTimeout(3000)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForTimeout(2000)
+    await expect
+      .poll(async () => (await testHelpers.verifyPromptVisible('Simple Greeting')).found)
+      .toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)

@@ -161,11 +161,9 @@ describe('Prompt folder prompt management', () => {
     const firstPromptContent = { title: 'Inserted A', text: 'Inserted A text' }
     await setPromptTitle(mainWindow, firstNewPromptId!, firstPromptContent.title)
     await replacePromptText(mainWindow, firstNewPromptId!, firstPromptContent.text)
-    await mainWindow.waitForTimeout(2500)
 
     // Steps 2-3: navigate away and back, confirm location + content.
     await testHelpers.navigateToHomeScreen()
-    await mainWindow.waitForTimeout(500)
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
@@ -201,11 +199,9 @@ describe('Prompt folder prompt management', () => {
       await setPromptTitle(mainWindow, promptId, title)
       await replacePromptText(mainWindow, promptId, text)
     }
-    await mainWindow.waitForTimeout(2500)
 
     // Step 6: navigate away and back, verify order + contents.
     await testHelpers.navigateToHomeScreen()
-    await mainWindow.waitForTimeout(500)
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
@@ -310,7 +306,6 @@ describe('Prompt folder prompt management', () => {
 
     // Navigate away and back to ensure deletions persist.
     await testHelpers.navigateToHomeScreen()
-    await mainWindow.waitForTimeout(500)
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 

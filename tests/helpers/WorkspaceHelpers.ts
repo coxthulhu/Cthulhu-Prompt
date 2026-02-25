@@ -9,12 +9,10 @@ import { isButtonVisible } from './ButtonHelpers'
 /**
  * Sets up a workspace through UI interactions using mocked file dialog
  * @param window - The Playwright window instance
- * @param timeout - Optional timeout for operations (default 3000ms)
  * @returns Promise that resolves with information about what happened
  */
 export async function setupWorkspaceViaUI(
-  window: any,
-  timeout = 3000
+  window: any
 ): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
@@ -22,22 +20,22 @@ export async function setupWorkspaceViaUI(
   // Click the "Select Workspace Folder" button
   await window.click('[data-testid="select-workspace-folder-button"]')
 
-  // Wait for potential workspace setup
-  await window.waitForTimeout(2000)
+  const setupDialog = window.locator('[role="dialog"]')
+  const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
 
-  // Check if workspace setup dialog appeared and handle it
-  const setupDialogVisible = await window.evaluate(() => {
-    return document.querySelector('[role="dialog"]') !== null
-  })
+  // Wait until either setup dialog appears or workspace becomes ready.
+  await Promise.race([
+    setupDialog.waitFor({ state: 'visible', timeout: 5000 }),
+    workspaceReadyTitle.waitFor({ state: 'visible', timeout: 5000 })
+  ])
+
+  const setupDialogVisible = await setupDialog.isVisible()
 
   if (setupDialogVisible) {
     // Click "Setup Workspace" button in the dialog
     await window.click('[data-testid="setup-workspace-button"]')
-    await window.waitForTimeout(1000)
+    await workspaceReadyTitle.waitFor({ state: 'visible', timeout: 5000 })
   }
-
-  // Wait for workspace to be fully ready
-  await window.waitForTimeout(timeout - 3000 > 0 ? timeout - 3000 : 500)
 
   // Check if workspace is now ready
   const workspaceReady = await isWorkspaceReady(window)
@@ -56,7 +54,10 @@ export async function setupWorkspaceViaUI(
 export async function clearWorkspaceViaUI(window: any): Promise<void> {
   // Click "Close Workspace" button
   await window.click('[data-testid="close-workspace-button"]')
-  await window.waitForTimeout(1000)
+  await window.waitForSelector('[data-testid="select-workspace-folder-button"]', {
+    state: 'visible',
+    timeout: 5000
+  })
 }
 
 /**

@@ -183,7 +183,10 @@ export async function clickPromptFolderItem(
   const testId = `regular-prompt-folder-${safeName}`
 
   await window.click(`[data-testid="${testId}"]`, { timeout })
-  await window.waitForTimeout(1000)
+  await window.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
+    state: 'attached',
+    timeout
+  })
 }
 
 export async function clickPromptFoldersUpdatedItem(
@@ -195,7 +198,10 @@ export async function clickPromptFoldersUpdatedItem(
   const testId = `prompt-folders-updated-folder-${safeName}`
 
   await window.click(`[data-testid="${testId}"]`, { timeout })
-  await window.waitForTimeout(1000)
+  await window.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
+    state: 'attached',
+    timeout
+  })
 }
 
 /**

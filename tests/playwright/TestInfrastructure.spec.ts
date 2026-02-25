@@ -88,26 +88,26 @@ describe('Test Infrastructure', () => {
         app.emit('test-check-file-exists', filePath)
       }, '/test/existing-file.txt')
 
-      // Wait a moment for the event to be processed
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const existsResult = await electronApp.evaluate(() => {
-        return (global as any).testFileExistsResult
-      })
-      expect(existsResult).toBe(true)
+      await expect
+        .poll(async () => {
+          return await electronApp.evaluate(() => {
+            return (global as any).testFileExistsResult
+          })
+        })
+        .toBe(true)
 
       // Test file that should not exist
       await electronApp.evaluate(async ({ app }, filePath) => {
         app.emit('test-check-file-exists', filePath)
       }, '/test/nonexistent-file.txt')
 
-      // Wait a moment for the event to be processed
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const notExistsResult = await electronApp.evaluate(() => {
-        return (global as any).testFileExistsResult
-      })
-      expect(notExistsResult).toBe(false)
+      await expect
+        .poll(async () => {
+          return await electronApp.evaluate(() => {
+            return (global as any).testFileExistsResult
+          })
+        })
+        .toBe(false)
 
       // Verify no windows were created during this test
       const windows = electronApp.windows()

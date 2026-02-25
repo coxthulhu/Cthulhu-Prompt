@@ -86,7 +86,10 @@ describe('Home Screen', () => {
       await expect(includeExamplesCheckbox).toHaveAttribute('data-state', 'checked')
 
       await mainWindow.click('[data-testid="setup-workspace-button"]')
-      await mainWindow.waitForTimeout(1000)
+      await mainWindow.waitForSelector('[data-testid="workspace-ready-title"]', {
+        state: 'visible',
+        timeout: 5000
+      })
 
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
 

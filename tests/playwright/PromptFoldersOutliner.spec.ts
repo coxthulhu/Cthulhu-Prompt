@@ -99,8 +99,6 @@ describe('Prompt folder outliner', () => {
     })
     await folderSettingsButton.click()
 
-    await mainWindow.waitForTimeout(2000)
-
     await expect(folderSettingsButton).toHaveAttribute('aria-current', 'true')
   })
 })

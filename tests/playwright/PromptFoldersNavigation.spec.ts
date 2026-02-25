@@ -79,7 +79,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToRegularFolder('Examples')
-    await mainWindow.waitForTimeout(1000)
 
     let screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -94,7 +93,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(promptResult.titleText).toContain('Simple Greeting')
 
     await testHelpers.navigateToRegularFolder('Development')
-    await mainWindow.waitForTimeout(1000)
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
@@ -112,14 +110,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
   })
 
   test('opens Prompt Folders view and renders prompt list', async ({ testSetup }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+    const { testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForTimeout(1000)
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -156,8 +153,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(createButton).toBeEnabled()
 
     await createButton.click()
-
-    await mainWindow.waitForTimeout(1000)
+    await expect(
+      mainWindow.locator('[data-testid="regular-prompt-folder-TestFolder"]')
+    ).toBeVisible()
 
     await testHelpers.navigateToRegularFolder('Test Folder')
 

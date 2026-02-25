@@ -83,9 +83,12 @@ export async function clickNavButton(
   const testId = navButtonMap[buttonText]
   if (testId) {
     await window.click(`[data-testid="${testId}"]`, { timeout })
+    await window.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
+      state: 'attached',
+      timeout
+    })
   } else {
     // Fallback for unmapped buttons (should be avoided)
     await window.click(`button:has-text("${buttonText}")`, { timeout })
   }
-  await window.waitForTimeout(500) // Wait for navigation to complete
 }
