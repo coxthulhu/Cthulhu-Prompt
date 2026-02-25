@@ -55,12 +55,11 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 
 Run via Windows `cmd.exe`; reuse the template and set `<command>` to the desired Playwright invocation. Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. Always keep the 300000 ms timeout. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
 Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
+Use `cmd.exe` caret-quoted escaping for every `--grep` value for consistency: `--grep=^"pattern^"`.
 
 - All tests: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright"`
 - Single file: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- tests/playwright/TestInfrastructure.test.ts"`
-- Single test (recommended): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- tests/playwright/TestInfrastructure.test.ts --grep=no.*window"`
-- Single test (keyword): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- tests/playwright/TestInfrastructure.test.ts -g hung"` (avoid spaces; prefer `--grep`)
-- Filter across all files: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- --grep=hydrate"`
+- Single test (full name with spaces): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- tests/playwright/PromptFoldersPromptManagement.spec.ts --grep=^"preserves prompt order after navigating away^""`
 
 ## Coding Style & Naming Conventions
 
