@@ -37,13 +37,21 @@ export const findNearestEligibleRow = <TRow extends { kind: string }>(
 ): VirtualRowState<TRow> | null => {
   if (rows.length === 0) return null
 
+  const distanceToRowBounds = (row: VirtualRowState<TRow>): number => {
+    const rowTop = row.offset
+    const rowBottom = row.offset + row.height
+    if (centerPx < rowTop) return rowTop - centerPx
+    if (centerPx > rowBottom) return centerPx - rowBottom
+    return 0
+  }
+
   let candidate: VirtualRowState<TRow> | null = null
   let bestDistance = Number.POSITIVE_INFINITY
 
   rows.forEach((row) => {
     if (isEligible && !isEligible(row.rowData)) return
-    const rowCenterPx = row.offset + row.height / 2
-    const distance = Math.abs(rowCenterPx - centerPx)
+    // Prefer the row that actually spans the center line; otherwise use nearest edge distance.
+    const distance = distanceToRowBounds(row)
     if (distance < bestDistance) {
       bestDistance = distance
       candidate = row
