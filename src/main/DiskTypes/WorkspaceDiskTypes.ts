@@ -12,8 +12,5 @@ export type PromptFolderConfigFile = {
 }
 
 export type PromptsFile = {
-  metadata?: {
-    schemaVersion: number
-  }
   prompts: Prompt[]
 }

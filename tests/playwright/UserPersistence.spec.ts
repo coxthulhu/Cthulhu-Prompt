@@ -39,7 +39,6 @@ const readWorkspacePersistenceFile = async (
   electronApp: any,
   workspaceId: string
 ): Promise<{
-  schemaVersion: number
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'prompt-folders'
   selectedPromptFolderId: string | null
@@ -196,7 +195,6 @@ describe('User Persistence', () => {
       ),
       [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
         {
-          schemaVersion: 1,
           workspaceId,
           selectedScreen: 'prompt-folders',
           selectedPromptFolderId: persistedPromptFolderId
@@ -235,7 +233,6 @@ describe('User Persistence', () => {
       ),
       [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
         {
-          schemaVersion: 1,
           workspaceId,
           selectedScreen: 'prompt-folders',
           selectedPromptFolderId: 'missing-folder-id'

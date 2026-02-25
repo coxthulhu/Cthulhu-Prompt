@@ -64,7 +64,6 @@ const writeExamplePrompts = (workspacePath: string): void => {
     promptsPath,
     JSON.stringify(
       {
-        metadata: { schemaVersion: 1 },
         prompts: examplePrompts
       },
       null,

@@ -18,7 +18,6 @@ export const USER_PERSISTENCE_ID = 'user-persistence'
 export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
 
 export type WorkspacePersistence = {
-  schemaVersion: 1
   workspaceId: string
   selectedScreen: PersistedWorkspaceScreen
   selectedPromptFolderId: string | null
@@ -26,7 +25,6 @@ export type WorkspacePersistence = {
 
 export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
   return {
-    schemaVersion: 1,
     workspaceId,
     selectedScreen: 'home',
     selectedPromptFolderId: null
@@ -112,21 +110,15 @@ export const parseWorkspacePersistence = (
     return null
   }
 
-  if (value.schemaVersion === 1) {
-    const selectedScreen = parsePersistedWorkspaceScreen(value.selectedScreen)
-    const selectedPromptFolderId =
-      value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
-        ? value.selectedPromptFolderId
-        : null
+  const selectedScreen = parsePersistedWorkspaceScreen(value.selectedScreen)
+  const selectedPromptFolderId =
+    value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
+      ? value.selectedPromptFolderId
+      : null
 
-    return {
-      schemaVersion: 1,
-      workspaceId,
-      selectedScreen,
-      selectedPromptFolderId:
-        selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null
-    }
+  return {
+    workspaceId,
+    selectedScreen,
+    selectedPromptFolderId: selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null
   }
-
-  return null
 }

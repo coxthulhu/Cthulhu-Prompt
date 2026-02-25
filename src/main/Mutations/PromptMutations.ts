@@ -76,7 +76,6 @@ const writePromptFile = (
     promptsPath,
     JSON.stringify(
       {
-        metadata: promptsFile.metadata ?? { schemaVersion: 1 },
         prompts: promptsFile.prompts
       },
       null,

@@ -123,7 +123,6 @@ export class UserPersistenceDataAccess {
       selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null
 
     return writeJsonFile(resolveWorkspacePersistencePath(workspacePersistence.workspaceId), {
-      schemaVersion: 1,
       workspaceId: workspacePersistence.workspaceId,
       selectedScreen,
       selectedPromptFolderId

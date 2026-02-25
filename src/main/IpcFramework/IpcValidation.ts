@@ -229,7 +229,6 @@ const parseUserPersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
 
 const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
-  schemaVersion: (value) => (value === 1 ? 1 : null),
   workspaceId: parseString,
   selectedScreen: parseWorkspaceScreen,
   selectedPromptFolderId: parseNullableString

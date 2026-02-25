@@ -125,7 +125,6 @@ const writePromptFile = (
     promptsPath,
     JSON.stringify(
       {
-        metadata: promptsFile.metadata ?? { schemaVersion: 1 },
         prompts: promptsFile.prompts
       },
       null,
@@ -241,7 +240,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           const promptsFilePath = path.join(folderPath, PROMPTS_FILENAME)
           fs.writeFileSync(
             promptsFilePath,
-            JSON.stringify({ metadata: { schemaVersion: 1 }, prompts: [] }, null, 2),
+            JSON.stringify({ prompts: [] }, null, 2),
             'utf8'
           )
 
