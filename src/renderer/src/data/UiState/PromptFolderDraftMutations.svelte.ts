@@ -11,6 +11,8 @@ import { mutatePacedPromptFolderAutosaveUpdate } from '../Mutations/PromptFolder
 import {
   clearPromptFolderDescriptionMeasuredHeight,
   clearPromptFolderDescriptionMeasuredHeights,
+  clearPromptFolderScrollTop,
+  clearPromptFolderScrollTops,
   recordPromptFolderDescriptionMeasuredHeight
 } from './PromptMeasurementCache.svelte.ts'
 
@@ -69,6 +71,7 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
 
     if (!existingRecord) {
       clearPromptFolderDescriptionMeasuredHeight(promptFolder.id)
+      clearPromptFolderScrollTop(promptFolder.id)
       draftInserts.push({
         id: promptFolder.id,
         folderDescription: nextDescription,
@@ -161,6 +164,7 @@ export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {
   }
 
   clearPromptFolderDescriptionMeasuredHeights(promptFolderIds)
+  clearPromptFolderScrollTops(promptFolderIds)
   promptFolderDraftCollection.delete(promptFolderIds)
 }
 

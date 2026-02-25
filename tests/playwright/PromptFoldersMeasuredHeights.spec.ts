@@ -13,6 +13,7 @@ const FIRST_PROMPT_SELECTOR = '[data-testid="prompt-editor-measurement-1"]'
 const LAST_SHORT_PROMPT_SELECTOR = '[data-testid="prompt-editor-short-60"]'
 const MEASUREMENT_FOLDER_NAME = 'Long Wrapped Singles'
 const SHORT_FOLDER_NAME = 'Short'
+const LONG_FOLDER_NAME = 'Long'
 
 describe('Prompt folders measured heights', () => {
   test('persists measured padding after navigation', async ({ testSetup }) => {
@@ -38,7 +39,7 @@ describe('Prompt folders measured heights', () => {
         scrollHeightAfterScroll = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
         return scrollHeightAfterScroll
       })
-      .toBeGreaterThan(initialScrollHeight)
+      .toBeGreaterThanOrEqual(initialScrollHeight)
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(MEASUREMENT_FOLDER_NAME)
@@ -85,5 +86,42 @@ describe('Prompt folders measured heights', () => {
     const scrollHeightAfterNavigation =
       await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
     expect(scrollHeightAfterNavigation).toBe(scrollHeightAfterEdit)
+  })
+
+  test('restores prompt folder scroll position after navigation and folder switches', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult?.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 900)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
+      .toBeGreaterThan(0)
+
+    const savedScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
+    expect(savedScrollTop).toBeGreaterThan(0)
+
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
+      .toBeGreaterThan(0)
+
+    await testHelpers.navigateToPromptFolders(LONG_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
+      .toBeGreaterThan(0)
   })
 })

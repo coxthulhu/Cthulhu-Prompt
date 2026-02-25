@@ -6,6 +6,7 @@ import {
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import {
+  PROMPT_FOLDER_HOST_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
@@ -165,6 +166,8 @@ describe('Prompt folder prompt management', () => {
     // Steps 2-3: navigate away and back, confirm location + content.
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
     const orderAfterReturn = await getPromptEditorIds(mainWindow)
@@ -203,6 +206,8 @@ describe('Prompt folder prompt management', () => {
     // Step 6: navigate away and back, verify order + contents.
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
     const expectedTitleOrder = fiveNewIds.map((promptId) => expectedById.get(promptId)!.title)
@@ -307,6 +312,8 @@ describe('Prompt folder prompt management', () => {
     // Navigate away and back to ensure deletions persist.
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
     const idsAfterReturn = await getPromptEditorIds(mainWindow)

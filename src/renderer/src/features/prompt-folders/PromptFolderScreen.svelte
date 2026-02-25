@@ -25,7 +25,9 @@
   import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
   import {
     lookupPromptEditorMeasuredHeight,
-    lookupPromptFolderDescriptionMeasuredHeight
+    lookupPromptFolderDescriptionMeasuredHeight,
+    lookupPromptFolderScrollTop,
+    recordPromptFolderScrollTop
   } from '@renderer/data/UiState/PromptMeasurementCache.svelte.ts'
   import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import { setPromptOutlinerWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
@@ -126,8 +128,9 @@
   const getUserPersistenceDraft = () => userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
   const promptOutlinerDefaultWidthPx = getUserPersistenceDraft().promptOutlinerWidthPx
   let sidebarWidthPx = $state(promptOutlinerDefaultWidthPx)
-  let scrollResetVersion = $state(0)
-  let lastScrollResetVersion = 0
+  let scrollRestoreVersion = $state(0)
+  let lastScrollRestoreVersion = 0
+  let hasRestoredScrollTopForCurrentFolder = $state(false)
   let scrollTopPx = $state(0)
 
   type PromptFocusRequest = { promptId: string; requestId: number }
@@ -163,7 +166,6 @@
   }
 
   const resetPromptFolderUiState = () => {
-    scrollResetVersion += 1
     activeOutlinerRow = { kind: 'folder-settings' }
     outlinerManualSelectionActive = true
     outlinerAutoScrollRequestId += 1
@@ -205,13 +207,20 @@
     shouldShowLoadingOverlay = !canUseCachedData
     isCreatingPrompt = false
     errorMessage = null
+    hasRestoredScrollTopForCurrentFolder = false
     resetPromptFolderUiState()
+    if (canUseCachedData) {
+      scrollRestoreVersion += 1
+    }
 
     void (async () => {
       try {
         await loadPromptFolderInitial(workspaceId, promptFolderId)
         if (requestId !== promptFolderLoadRequestId) return
         isLoading = false
+        if (!canUseCachedData) {
+          scrollRestoreVersion += 1
+        }
       } catch (error) {
         if (requestId !== promptFolderLoadRequestId) return
         errorMessage = error instanceof Error ? error.message : String(error)
@@ -220,12 +229,14 @@
     })()
   })
 
-  // Side effect: reset the virtual window scroll position after folder changes.
+  // Side effect: restore the virtual window scroll position after folder changes.
   $effect(() => {
     if (!scrollApi) return
-    if (scrollResetVersion === lastScrollResetVersion) return
-    lastScrollResetVersion = scrollResetVersion
-    scrollApi.scrollTo(0)
+    if (scrollRestoreVersion === lastScrollRestoreVersion) return
+    if (!errorMessage && promptIds.length > 0 && visiblePromptIds.length === 0) return
+    lastScrollRestoreVersion = scrollRestoreVersion
+    scrollApi.scrollTo(lookupPromptFolderScrollTop(promptFolderId) ?? 0)
+    hasRestoredScrollTopForCurrentFolder = true
   })
 
   const reorderPromptIds = (
@@ -629,6 +640,8 @@
               bind:viewportMetrics
               onScrollTopChange={(nextScrollTop) => {
                 scrollTopPx = nextScrollTop
+                if (!hasRestoredScrollTopForCurrentFolder) return
+                recordPromptFolderScrollTop(promptFolderId, nextScrollTop)
               }}
               onCenterRowChange={(row) => {
                 if (row?.kind === 'prompt-editor') {

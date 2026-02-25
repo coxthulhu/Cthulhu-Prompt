@@ -1,7 +1,9 @@
 import { createMeasuredHeightCache, type TextMeasurement } from '@renderer/data/measuredHeightCache'
+import { SvelteMap } from 'svelte/reactivity'
 
 const promptEditorMeasuredHeightCache = createMeasuredHeightCache()
 const promptFolderDescriptionMeasuredHeightCache = createMeasuredHeightCache()
+const promptFolderScrollTopById = new SvelteMap<string, number>()
 
 export const lookupPromptEditorMeasuredHeight = (
   promptId: string,
@@ -56,5 +58,23 @@ export const clearPromptFolderDescriptionMeasuredHeight = (promptFolderId: strin
 export const clearPromptFolderDescriptionMeasuredHeights = (promptFolderIds: string[]): void => {
   for (const promptFolderId of promptFolderIds) {
     promptFolderDescriptionMeasuredHeightCache.clear(promptFolderId)
+  }
+}
+
+export const lookupPromptFolderScrollTop = (promptFolderId: string): number | null => {
+  return promptFolderScrollTopById.get(promptFolderId) ?? null
+}
+
+export const recordPromptFolderScrollTop = (promptFolderId: string, scrollTopPx: number): void => {
+  promptFolderScrollTopById.set(promptFolderId, scrollTopPx)
+}
+
+export const clearPromptFolderScrollTop = (promptFolderId: string): void => {
+  promptFolderScrollTopById.delete(promptFolderId)
+}
+
+export const clearPromptFolderScrollTops = (promptFolderIds: string[]): void => {
+  for (const promptFolderId of promptFolderIds) {
+    promptFolderScrollTopById.delete(promptFolderId)
   }
 }
