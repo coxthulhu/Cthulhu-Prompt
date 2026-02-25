@@ -26,7 +26,7 @@ import {
   lookupPromptFolderDescriptionMeasuredHeight,
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
-} from '@renderer/data/UiState/PromptMeasurementCache.svelte.ts'
+} from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
 import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import { setPromptOutlinerWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'

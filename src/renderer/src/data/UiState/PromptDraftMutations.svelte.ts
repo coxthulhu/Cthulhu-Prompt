@@ -9,7 +9,7 @@ import {
   clearPromptEditorMeasuredHeight,
   clearPromptEditorMeasuredHeights,
   recordPromptEditorMeasuredHeight
-} from './PromptMeasurementCache.svelte.ts'
+} from './PromptDraftUiCache.svelte.ts'
 
 export type PromptDraftState = PromptDraftRecord
 

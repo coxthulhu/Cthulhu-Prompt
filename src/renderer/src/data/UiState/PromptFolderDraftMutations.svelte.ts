@@ -14,7 +14,7 @@ import {
   clearPromptFolderScrollTop,
   clearPromptFolderScrollTops,
   recordPromptFolderDescriptionMeasuredHeight
-} from './PromptMeasurementCache.svelte.ts'
+} from './PromptFolderDraftUiCache.svelte.ts'
 
 export type PromptFolderDraftState = PromptFolderDraftRecord
 

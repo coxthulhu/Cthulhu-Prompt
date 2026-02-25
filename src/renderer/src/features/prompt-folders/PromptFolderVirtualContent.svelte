@@ -1,9 +1,7 @@
 <script lang="ts">
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-  import {
-    lookupPromptEditorMeasuredHeight,
-    lookupPromptFolderDescriptionMeasuredHeight
-  } from '@renderer/data/UiState/PromptMeasurementCache.svelte.ts'
+  import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
+  import { lookupPromptFolderDescriptionMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
