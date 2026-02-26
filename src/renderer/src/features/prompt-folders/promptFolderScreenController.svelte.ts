@@ -67,15 +67,12 @@ export const createPromptFolderScreenController = ({
 
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
     data: PromptFolder[]
-    isLoading: boolean
   }
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
     data: PromptDraftRecord[]
-    isLoading: boolean
   }
   const promptFolderDraftQuery = useLiveQuery(promptFolderDraftCollection) as {
     data: PromptFolderDraftRecord[]
-    isLoading: boolean
   }
 
   const promptFolder = $derived.by(() => {
@@ -158,9 +155,6 @@ export const createPromptFolderScreenController = ({
   const isVirtualContentReady = $derived.by(() => {
     if (errorMessage) return true
     if (isLoading) return false
-    if (promptFolderQuery.isLoading || promptDraftQuery.isLoading || promptFolderDraftQuery.isLoading) {
-      return false
-    }
     if (!promptFolder) return false
     if (!promptFolderDraft?.hasLoadedInitialData) return false
     return visiblePromptIds.length === promptIds.length

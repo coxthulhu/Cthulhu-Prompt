@@ -3,7 +3,7 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { Home, FolderClosed, Loader, MoreHorizontal } from 'lucide-svelte'
+  import { Home, FolderClosed, MoreHorizontal } from 'lucide-svelte'
   import {
     DropdownMenu,
     DropdownMenuContent,
@@ -40,11 +40,10 @@
   const workspaceSelection = getWorkspaceSelectionContext()
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
-    isLoading: boolean
   }
   const promptFolderQuery = useLiveQuery((q) =>
     q.from({ promptFolder: promptFolderCollection })
-  ) as { data: PromptFolder[]; isLoading: boolean }
+  ) as { data: PromptFolder[] }
 
   type NavItem = {
     id: ScreenId
@@ -85,18 +84,12 @@
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
 
-  const areFoldersLoading = $derived(
-    Boolean(workspaceSelection.selectedWorkspaceId) &&
-      (workspaceQuery.isLoading || promptFolderQuery.isLoading)
-  )
-  const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
+  const folderListState = $derived<'no-workspace' | 'empty' | 'ready'>(
     !isWorkspaceReady
       ? 'no-workspace'
-      : areFoldersLoading
-        ? 'loading'
-        : promptFolders.length === 0
-          ? 'empty'
-          : 'ready'
+      : promptFolders.length === 0
+        ? 'empty'
+        : 'ready'
   )
 
   // Support middle truncation by deriving the workspace title + path segments.
@@ -183,11 +176,6 @@
         <ul data-slot="sidebar-menu" data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
           {#if folderListState === 'no-workspace'}
             <li class="px-2 text-xs text-muted-foreground">Select a Workspace to Get Started</li>
-          {:else if folderListState === 'loading'}
-            <li class="px-2 text-xs text-muted-foreground flex items-center gap-2">
-              <Loader class="size-4 animate-spin" />
-              Loading folders...
-            </li>
           {:else if folderListState === 'ready'}
             {#each promptFolders as folder (folder.folderName)}
               <li
@@ -245,7 +233,7 @@
               <CreatePromptFolderDialog
                 {isWorkspaceReady}
                 {promptFolders}
-                isPromptFolderListLoading={areFoldersLoading}
+                isPromptFolderListLoading={false}
                 onCreated={(promptFolderId) => {
                   onPromptFolderSelect(promptFolderId)
                 }}

@@ -73,7 +73,6 @@
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
-    isLoading: boolean
   }
 
   setSystemSettingsContext(systemSettings)
@@ -88,7 +87,7 @@
   let selectedPromptFolderId = $state<string | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
-  const isWorkspaceLoading = $derived(workspaceActionCount > 0 || workspaceQuery.isLoading)
+  const isWorkspaceLoading = $derived(workspaceActionCount > 0)
   const STARTUP_LOADING_OVERLAY_FADE_MS = 200
   type StartupRestorePhase = 'pending' | 'restoring' | 'ready'
   let startupRestorePhase = $state<StartupRestorePhase>('pending')
