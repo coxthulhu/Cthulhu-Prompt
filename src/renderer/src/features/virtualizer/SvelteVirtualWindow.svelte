@@ -19,6 +19,7 @@
   type VirtualWindowProps = {
     items: VirtualWindowItem<TRow>[]
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
+    initialScrollTopPx?: number | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
     scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
@@ -42,6 +43,7 @@
   let {
     items,
     rowRegistry,
+    initialScrollTopPx = null,
     scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
     scrollToAndTrackRowCentered = $bindable<ScrollToAndTrackRowCentered | null>(null),
     onCenterRowChange,
@@ -99,7 +101,8 @@
     getViewportHeight,
     getOnUserScroll: () => onUserScroll,
     getOnScrollTopChange: () => onScrollTopChange,
-    windowBandPaddingPx: WINDOW_BAND_PADDING_PX
+    windowBandPaddingPx: WINDOW_BAND_PADDING_PX,
+    getInitialScrollTopPx: () => initialScrollTopPx
   })
 
   const {

@@ -119,6 +119,7 @@ describe('Prompt folders measured heights', () => {
 
     const savedScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(savedScrollTop).toBeGreaterThan(0)
+    const savedOutlinerScrollTop = await testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR)
     await expect
       .poll(async () => getActiveOutlinerTitle(mainWindow))
       .not.toBeNull()
@@ -130,6 +131,10 @@ describe('Prompt folders measured heights', () => {
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    const restoredScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
+    const restoredOutlinerScrollTop = await testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR)
+    expect(restoredScrollTop).toBe(savedScrollTop)
+    expect(restoredOutlinerScrollTop).toBe(savedOutlinerScrollTop)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
@@ -142,6 +147,11 @@ describe('Prompt folders measured heights', () => {
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    const restoredAfterSwitchScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
+    const restoredAfterSwitchOutlinerScrollTop =
+      await testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR)
+    expect(restoredAfterSwitchScrollTop).toBe(savedScrollTop)
+    expect(restoredAfterSwitchOutlinerScrollTop).toBe(savedOutlinerScrollTop)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)

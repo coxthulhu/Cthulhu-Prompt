@@ -14,7 +14,6 @@
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps,
-    type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
@@ -46,6 +45,7 @@
     visiblePromptIds: string[]
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
+    initialScrollTopPx: number
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (previousPromptId: string | null) => void
     onDeletePrompt: (promptId: string) => void
@@ -54,7 +54,6 @@
     onDescriptionChange: (text: string, measurement: TextMeasurement) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
-    onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
     onCenterRowChange: (row: ActiveOutlinerRow | null) => void
@@ -70,6 +69,7 @@
     visiblePromptIds,
     isCreatingPrompt,
     promptFocusRequest,
+    initialScrollTopPx,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
     onDeletePrompt,
@@ -78,7 +78,6 @@
     onDescriptionChange,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
-    onScrollApiChange,
     onViewportMetricsChange,
     onScrollTopChange,
     onCenterRowChange,
@@ -87,7 +86,6 @@
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
-  let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
 
   // Side effect: expose the virtual window band-scroll API to the controller.
@@ -102,7 +100,6 @@
 
   // Side effect: expose imperative virtual scroll APIs to the controller.
   $effect(() => {
-    onScrollApiChange(scrollApi)
     onViewportMetricsChange(viewportMetrics)
   })
 
@@ -223,11 +220,11 @@
 <SvelteVirtualWindow
   items={virtualItems}
   {rowRegistry}
+  {initialScrollTopPx}
   testId="prompt-folder-virtual-window"
   spacerTestId="prompt-folder-virtual-window-spacer"
   bind:scrollToWithinWindowBand
   bind:scrollToAndTrackRowCentered
-  bind:scrollApi
   bind:viewportMetrics
   {onScrollTopChange}
   onCenterRowChange={(row) => {

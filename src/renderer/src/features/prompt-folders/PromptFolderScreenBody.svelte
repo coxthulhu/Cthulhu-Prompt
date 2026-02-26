@@ -28,14 +28,18 @@
     }}
   >
     {#snippet sidebar()}
-      <PromptFolderOutliner
-        promptIds={controller.visiblePromptIds}
-        errorMessage={controller.errorMessage}
-        activeRow={controller.activeOutlinerRow}
-        autoScrollRequestId={controller.outlinerAutoScrollRequestId}
-        onSelectPrompt={controller.handleOutlinerClick}
-        onSelectFolderSettings={controller.handleOutlinerFolderSettingsClick}
-      />
+      {#if controller.isVirtualContentReady}
+        <PromptFolderOutliner
+          promptIds={controller.visiblePromptIds}
+          errorMessage={controller.errorMessage}
+          activeRow={controller.activeOutlinerRow}
+          initialScrollTopPx={controller.initialOutlinerScrollTopPx}
+          autoScrollRequestId={controller.outlinerAutoScrollRequestId}
+          onSelectPrompt={controller.handleOutlinerClick}
+          onSelectFolderSettings={controller.handleOutlinerFolderSettingsClick}
+          onScrollTopChange={controller.handleOutlinerScrollTopChange}
+        />
+      {/if}
     {/snippet}
 
     {#snippet content()}
@@ -46,7 +50,7 @@
             <p class="mt-6 text-red-500">Error loading prompts: {controller.errorMessage}</p>
           </div>
         </div>
-      {:else}
+      {:else if controller.isVirtualContentReady}
         <PromptFolderVirtualContent
           promptFolderId={controller.promptFolderId}
           descriptionText={controller.descriptionText}
@@ -56,6 +60,7 @@
           visiblePromptIds={controller.visiblePromptIds}
           isCreatingPrompt={controller.isCreatingPrompt}
           promptFocusRequest={controller.promptFocusRequest}
+          initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
           scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
           onAddPrompt={controller.handleAddPrompt}
           onDeletePrompt={controller.handleDeletePrompt}
@@ -64,7 +69,6 @@
           onDescriptionChange={controller.handleDescriptionChange}
           onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
           onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
-          onScrollApiChange={controller.setScrollApi}
           onViewportMetricsChange={controller.setViewportMetrics}
           onScrollTopChange={controller.handleVirtualScrollTopChange}
           onCenterRowChange={controller.handleVirtualCenterRowChange}

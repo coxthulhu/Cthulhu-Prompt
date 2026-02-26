@@ -13,6 +13,7 @@ type VirtualWindowScrollStateOptions<TRow extends { kind: string }> = {
   getOnUserScroll: () => ((scrollTopPx: number) => void) | undefined
   getOnScrollTopChange: () => ((scrollTopPx: number) => void) | undefined
   windowBandPaddingPx: number
+  getInitialScrollTopPx: () => number | null
 }
 
 export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
@@ -24,10 +25,12 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getViewportHeight,
     getOnUserScroll,
     getOnScrollTopChange,
-    windowBandPaddingPx
+    windowBandPaddingPx,
+    getInitialScrollTopPx
   } = options
 
-  let scrollTopPx = $state(0)
+  const initialScrollTopPx = getInitialScrollTopPx()
+  let scrollTopPx = $state(Math.max(0, initialScrollTopPx ?? 0))
   let scrollAnchorMode = $state<'top' | 'center'>('top')
   let previousRowStates = $state<VirtualRowState<TRow>[]>([])
   let scrollbarRevealVersion = $state(0)
@@ -182,12 +185,15 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
   $effect(() => {
+    const rowStates = getRowStates()
+    const viewportHeight = getViewportHeight()
+    if (rowStates.length === 0 || viewportHeight <= 0) return
+
     if (clampedAnchoredScrollTopPx !== scrollTopPx) {
       applyProgrammaticScrollTop(clampedAnchoredScrollTopPx)
     }
 
-    previousRowStates = getRowStates()
-    void getViewportHeight()
+    previousRowStates = rowStates
   })
 
   // Side effect: keep the tracked row aligned as measurements change.

@@ -11,18 +11,22 @@
     promptIds: string[]
     errorMessage: string | null
     activeRow: OutlinerActiveRow | null
+    initialScrollTopPx: number
     autoScrollRequestId: number
     onSelectPrompt: (promptId: string) => void
     onSelectFolderSettings: () => void
+    onScrollTopChange: (scrollTopPx: number) => void
   }
 
   let {
     promptIds,
     errorMessage,
     activeRow,
+    initialScrollTopPx,
     autoScrollRequestId,
     onSelectPrompt,
-    onSelectFolderSettings
+    onSelectFolderSettings,
+    onScrollTopChange
   }: Props = $props()
 
   type OutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
@@ -84,9 +88,11 @@
     <SvelteVirtualWindow
       items={outlinerItems}
       rowRegistry={outlinerRowRegistry}
+      {initialScrollTopPx}
       leftScrollPaddingPx={12}
       testId="prompt-outliner-virtual-window"
       spacerTestId="prompt-outliner-virtual-window-spacer"
+      {onScrollTopChange}
       bind:scrollToWithinWindowBand
     />
   </div>
