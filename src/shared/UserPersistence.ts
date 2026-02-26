@@ -26,7 +26,7 @@ export type WorkspacePersistence = {
   workspaceId: string
   selectedScreen: PersistedWorkspaceScreen
   selectedPromptFolderId: string | null
-  promptFolderOutlinerEntryIds: WorkspacePromptFolderOutlinerEntry[]
+  promptFolderOutlinerEntries: WorkspacePromptFolderOutlinerEntry[]
 }
 
 export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
@@ -34,7 +34,32 @@ export const createDefaultWorkspacePersistence = (workspaceId: string): Workspac
     workspaceId,
     selectedScreen: 'home',
     selectedPromptFolderId: null,
-    promptFolderOutlinerEntryIds: []
+    promptFolderOutlinerEntries: []
+  }
+}
+
+export const cloneWorkspacePromptFolderOutlinerEntries = (
+  entries: WorkspacePromptFolderOutlinerEntry[]
+): WorkspacePromptFolderOutlinerEntry[] => {
+  return entries.map((entry) => ({
+    promptFolderId: entry.promptFolderId,
+    outlinerEntryId: entry.outlinerEntryId
+  }))
+}
+
+export const toSerializableWorkspacePersistence = (
+  workspacePersistence: WorkspacePersistence
+): WorkspacePersistence => {
+  const selectedScreen = workspacePersistence.selectedScreen
+
+  return {
+    workspaceId: workspacePersistence.workspaceId,
+    selectedScreen,
+    selectedPromptFolderId:
+      selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null,
+    promptFolderOutlinerEntries: cloneWorkspacePromptFolderOutlinerEntries(
+      workspacePersistence.promptFolderOutlinerEntries
+    )
   }
 }
 
@@ -160,14 +185,14 @@ export const parseWorkspacePersistence = (
     value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
       ? value.selectedPromptFolderId
       : null
-  const promptFolderOutlinerEntryIds = parseWorkspacePromptFolderOutlinerEntries(
-    value.promptFolderOutlinerEntryIds
+  const promptFolderOutlinerEntries = parseWorkspacePromptFolderOutlinerEntries(
+    value.promptFolderOutlinerEntries
   )
 
   return {
     workspaceId,
     selectedScreen,
     selectedPromptFolderId: selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null,
-    promptFolderOutlinerEntryIds
+    promptFolderOutlinerEntries
   }
 }

@@ -6,6 +6,7 @@ import {
   createDefaultWorkspacePersistence,
   parseUserPersistence,
   parseWorkspacePersistence,
+  toSerializableWorkspacePersistence,
   type UserPersistence,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
@@ -118,21 +119,10 @@ export class UserPersistenceDataAccess {
 
   static updateWorkspacePersistence(workspacePersistence: WorkspacePersistence): WorkspacePersistence {
     this.ensureWorkspacePersistenceFile(workspacePersistence.workspaceId)
-    const selectedScreen = workspacePersistence.selectedScreen
-    const selectedPromptFolderId =
-      selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null
-    const promptFolderOutlinerEntryIds = workspacePersistence.promptFolderOutlinerEntryIds.map(
-      (entry) => ({
-        promptFolderId: entry.promptFolderId,
-        outlinerEntryId: entry.outlinerEntryId
-      })
+    const serializableWorkspacePersistence = toSerializableWorkspacePersistence(workspacePersistence)
+    return writeJsonFile(
+      resolveWorkspacePersistencePath(workspacePersistence.workspaceId),
+      serializableWorkspacePersistence
     )
-
-    return writeJsonFile(resolveWorkspacePersistencePath(workspacePersistence.workspaceId), {
-      workspaceId: workspacePersistence.workspaceId,
-      selectedScreen,
-      selectedPromptFolderId,
-      promptFolderOutlinerEntryIds
-    })
   }
 }

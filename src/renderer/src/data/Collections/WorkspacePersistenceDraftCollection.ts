@@ -8,7 +8,7 @@ export type WorkspacePersistenceDraftRecord = {
   id: string
   selectedScreen: PersistedWorkspaceScreen
   selectedPromptFolderId: string | null
-  promptFolderOutlinerEntryIds: WorkspacePromptFolderOutlinerEntry[]
+  promptFolderOutlinerEntries: WorkspacePromptFolderOutlinerEntry[]
 }
 
 // Local-only draft state for workspace screen selection before sync writes.

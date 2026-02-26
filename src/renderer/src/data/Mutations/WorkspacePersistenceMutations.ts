@@ -1,5 +1,6 @@
 import {
   UPDATE_WORKSPACE_PERSISTENCE_CHANNEL,
+  toSerializableWorkspacePersistence,
   type PersistedWorkspaceScreen,
   type WorkspacePersistence,
   type WorkspacePersistenceRevisionResponsePayload
@@ -24,20 +25,6 @@ const readLatestWorkspacePersistenceFromTransaction = (
     workspaceId,
     () => workspacePersistenceCollection.get(workspaceId)!
   )
-}
-
-const toSerializableWorkspacePersistence = (
-  workspacePersistence: WorkspacePersistence
-): WorkspacePersistence => {
-  return {
-    workspaceId: workspacePersistence.workspaceId,
-    selectedScreen: workspacePersistence.selectedScreen,
-    selectedPromptFolderId: workspacePersistence.selectedPromptFolderId,
-    promptFolderOutlinerEntryIds: workspacePersistence.promptFolderOutlinerEntryIds.map((entry) => ({
-      promptFolderId: entry.promptFolderId,
-      outlinerEntryId: entry.outlinerEntryId
-    }))
-  }
 }
 
 const handleWorkspacePersistenceSuccessOrConflictResponse = (

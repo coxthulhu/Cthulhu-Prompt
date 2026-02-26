@@ -49,7 +49,13 @@ import {
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
 } from './find/promptFolderFindSectionKeys'
 import type { PromptFolderFindItem } from './find/promptFolderFindTypes'
-import { promptEditorRowId, promptFolderSettingsFindEntityId } from './promptFolderRowIds'
+import {
+  PROMPT_FOLDER_SETTINGS_ROW_ID,
+  persistedOutlinerEntryIdToOutlinerRowId,
+  persistedOutlinerEntryIdToPromptFolderRowId,
+  promptEditorRowId,
+  promptFolderSettingsFindEntityId
+} from './promptFolderRowIds'
 import { estimatePromptFolderSettingsHeight } from './promptFolderSettingsSizing'
 import { SvelteDate } from 'svelte/reactivity'
 
@@ -106,12 +112,12 @@ export const createPromptFolderScreenController = ({
   let previousPromptFolderLoadKey = $state<string | null>(null)
   let promptFolderLoadRequestId = $state(0)
   let isLoading = $state(true)
-  let waitingForInitialPersistedScroll = $state(false)
+  let pendingInitialCenterRowApplyCount = $state(0)
   const LOADING_OVERLAY_FADE_MS = 125
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
     fadeMs: LOADING_OVERLAY_FADE_MS,
-    isLoading: () => shouldShowLoadingOverlay && (isLoading || waitingForInitialPersistedScroll)
+    isLoading: () => shouldShowLoadingOverlay && (isLoading || pendingInitialCenterRowApplyCount > 0)
   })
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
@@ -129,8 +135,6 @@ export const createPromptFolderScreenController = ({
   let initialOutlinerScrollTopPx = $state(getRestoredOutlinerScrollTop())
   let initialPromptFolderCenterRowId = $state<string | null>(null)
   let initialOutlinerCenterRowId = $state<string | null>(null)
-  let initialPromptFolderCenterRowPending = $state(false)
-  let initialOutlinerCenterRowPending = $state(false)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(
     getRestoredActiveOutlinerRow() ?? { kind: 'folder-settings' }
   )
@@ -174,7 +178,7 @@ export const createPromptFolderScreenController = ({
     if (!errorMessage) {
       nextItems.push({
         entityId: promptFolderSettingsFindEntityId(promptFolderId),
-        rowId: 'folder-settings',
+        rowId: PROMPT_FOLDER_SETTINGS_ROW_ID,
         sections: [
           {
             key: PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
@@ -211,7 +215,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const toPersistedOutlinerEntryId = (row: ActiveOutlinerRow): string => {
-    return row.kind === 'folder-settings' ? 'folder-settings' : row.promptId
+    return row.kind === 'folder-settings' ? PROMPT_FOLDER_SETTINGS_ROW_ID : row.promptId
   }
 
   const setActiveOutlinerRow = (
@@ -238,27 +242,17 @@ export const createPromptFolderScreenController = ({
   }
 
   const clearInitialPersistedScrollWait = () => {
-    waitingForInitialPersistedScroll = false
-    initialPromptFolderCenterRowPending = false
-    initialOutlinerCenterRowPending = false
-  }
-
-  const settleInitialPersistedScrollWaitIfReady = () => {
-    if (!waitingForInitialPersistedScroll) return
-    if (initialPromptFolderCenterRowPending || initialOutlinerCenterRowPending) return
-    waitingForInitialPersistedScroll = false
+    pendingInitialCenterRowApplyCount = 0
   }
 
   const handleInitialPromptFolderCenterRowApplied = () => {
-    if (!initialPromptFolderCenterRowPending) return
-    initialPromptFolderCenterRowPending = false
-    settleInitialPersistedScrollWaitIfReady()
+    if (pendingInitialCenterRowApplyCount === 0) return
+    pendingInitialCenterRowApplyCount -= 1
   }
 
   const handleInitialOutlinerCenterRowApplied = () => {
-    if (!initialOutlinerCenterRowPending) return
-    initialOutlinerCenterRowPending = false
-    settleInitialPersistedScrollWaitIfReady()
+    if (pendingInitialCenterRowApplyCount === 0) return
+    pendingInitialCenterRowApplyCount -= 1
   }
 
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
@@ -308,23 +302,15 @@ export const createPromptFolderScreenController = ({
     const shouldApplyPersistedOutlinerEntry = Boolean(persistedOutlinerEntryId)
     isLoading = !canUseCachedData
     shouldShowLoadingOverlay = !canUseCachedData
-    waitingForInitialPersistedScroll = shouldApplyPersistedOutlinerEntry
+    pendingInitialCenterRowApplyCount = shouldApplyPersistedOutlinerEntry ? 2 : 0
     isCreatingPrompt = false
     errorMessage = null
-    initialPromptFolderCenterRowId =
-      persistedOutlinerEntryId === 'folder-settings'
-        ? 'folder-settings'
-        : persistedOutlinerEntryId
-          ? promptEditorRowId(persistedOutlinerEntryId)
-          : null
-    initialOutlinerCenterRowId =
-      persistedOutlinerEntryId === 'folder-settings'
-        ? 'outliner-folder-settings'
-        : persistedOutlinerEntryId
-          ? `outliner-${persistedOutlinerEntryId}`
-          : null
-    initialPromptFolderCenterRowPending = shouldApplyPersistedOutlinerEntry
-    initialOutlinerCenterRowPending = shouldApplyPersistedOutlinerEntry
+    initialPromptFolderCenterRowId = persistedOutlinerEntryId
+      ? persistedOutlinerEntryIdToPromptFolderRowId(persistedOutlinerEntryId)
+      : null
+    initialOutlinerCenterRowId = persistedOutlinerEntryId
+      ? persistedOutlinerEntryIdToOutlinerRowId(persistedOutlinerEntryId)
+      : null
     const restoredScrollTop = getRestoredPromptFolderScrollTop()
     const restoredOutlinerScrollTop = getRestoredOutlinerScrollTop()
     const restoredActiveOutlinerRow = getRestoredActiveOutlinerRow() ?? { kind: 'folder-settings' }
@@ -412,7 +398,7 @@ export const createPromptFolderScreenController = ({
     outlinerManualSelectionActive = true
     setActiveOutlinerRow({ kind: 'folder-settings' })
     outlinerAutoScrollRequestId += 1
-    scrollToAndTrackRowCentered('folder-settings')
+    scrollToAndTrackRowCentered(PROMPT_FOLDER_SETTINGS_ROW_ID)
   }
 
   const handleAddPrompt = async (previousPromptId: string | null) => {
@@ -499,7 +485,7 @@ export const createPromptFolderScreenController = ({
   })
 
   const activeHeaderRowId = $derived(
-    scrollTopPx < folderSettingsHeightPx ? 'folder-settings' : 'prompt-header'
+    scrollTopPx < folderSettingsHeightPx ? PROMPT_FOLDER_SETTINGS_ROW_ID : 'prompt-header'
   )
   const activeHeaderSection = $derived(
     activeHeaderRowId === 'prompt-header' ? 'Prompts' : 'Folder Settings'

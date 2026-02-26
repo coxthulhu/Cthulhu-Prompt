@@ -237,7 +237,7 @@ const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
   workspaceId: parseString,
   selectedScreen: parseWorkspaceScreen,
   selectedPromptFolderId: parseNullableString,
-  promptFolderOutlinerEntryIds: parseArray(parseWorkspacePromptFolderOutlinerEntry)
+  promptFolderOutlinerEntries: parseArray(parseWorkspacePromptFolderOutlinerEntry)
 })
 
 const parseWorkspacePersistenceRevisionPayloadEntity =

@@ -6,6 +6,10 @@
     type ScrollToWithinWindowBand,
     type VirtualWindowItem
   } from '../virtualizer/virtualWindowTypes'
+  import {
+    OUTLINER_FOLDER_SETTINGS_ROW_ID,
+    outlinerPromptRowId
+  } from './promptFolderRowIds'
 
   type Props = {
     promptIds: string[]
@@ -37,7 +41,6 @@
   type OutlinerActiveRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
   const OUTLINER_ROW_HEIGHT_PX = 28
   const OUTLINER_ROW_CENTER_OFFSET_PX = OUTLINER_ROW_HEIGHT_PX / 2
-  const OUTLINER_FOLDER_SETTINGS_ROW_ID = 'outliner-folder-settings'
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastAutoScrollRequestId = $state(0)
 
@@ -59,7 +62,7 @@
       { id: OUTLINER_FOLDER_SETTINGS_ROW_ID, row: { kind: 'folder-settings' } }
     ]
     promptIds.forEach((promptId) => {
-      items.push({ id: `outliner-${promptId}`, row: { kind: 'prompt', promptId } })
+      items.push({ id: outlinerPromptRowId(promptId), row: { kind: 'prompt', promptId } })
     })
     return items
   })
@@ -73,7 +76,7 @@
   const getActiveOutlinerRowId = (row: OutlinerActiveRow | null): string | null => {
     if (!row) return null
     if (row.kind === 'folder-settings') return OUTLINER_FOLDER_SETTINGS_ROW_ID
-    return `outliner-${row.promptId}`
+    return outlinerPromptRowId(row.promptId)
   }
 
   // Side effect: keep the active outliner row within the outliner scroll band when requested.

@@ -25,6 +25,18 @@ const upsertPromptFolderOutlinerEntry = (
   return nextEntries
 }
 
+const applyPromptFolderOutlinerEntry = (
+  record: { promptFolderOutlinerEntries: WorkspacePromptFolderOutlinerEntry[] },
+  promptFolderId: string,
+  outlinerEntryId: string
+): void => {
+  record.promptFolderOutlinerEntries = upsertPromptFolderOutlinerEntry(
+    record.promptFolderOutlinerEntries,
+    promptFolderId,
+    outlinerEntryId
+  )
+}
+
 export const lookupWorkspacePersistedPromptFolderOutlinerEntryId = (
   workspaceId: string,
   promptFolderId: string
@@ -34,7 +46,7 @@ export const lookupWorkspacePersistedPromptFolderOutlinerEntryId = (
     return null
   }
 
-  const persistedEntry = draftRecord.promptFolderOutlinerEntryIds.find(
+  const persistedEntry = draftRecord.promptFolderOutlinerEntries.find(
     (entry) => entry.promptFolderId === promptFolderId
   )
   return persistedEntry?.outlinerEntryId ?? null
@@ -51,11 +63,11 @@ export const setPromptFolderOutlinerEntryIdWithAutosave = (
   }
 
   const nextEntries = upsertPromptFolderOutlinerEntry(
-    draftRecord.promptFolderOutlinerEntryIds,
+    draftRecord.promptFolderOutlinerEntries,
     promptFolderId,
     outlinerEntryId
   )
-  if (nextEntries === draftRecord.promptFolderOutlinerEntryIds) {
+  if (nextEntries === draftRecord.promptFolderOutlinerEntries) {
     return
   }
 
@@ -64,18 +76,10 @@ export const setPromptFolderOutlinerEntryIdWithAutosave = (
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        draft.promptFolderOutlinerEntryIds = upsertPromptFolderOutlinerEntry(
-          draft.promptFolderOutlinerEntryIds,
-          promptFolderId,
-          outlinerEntryId
-        )
+        applyPromptFolderOutlinerEntry(draft, promptFolderId, outlinerEntryId)
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
-        draft.promptFolderOutlinerEntryIds = upsertPromptFolderOutlinerEntry(
-          draft.promptFolderOutlinerEntryIds,
-          promptFolderId,
-          outlinerEntryId
-        )
+        applyPromptFolderOutlinerEntry(draft, promptFolderId, outlinerEntryId)
       })
     }
   })

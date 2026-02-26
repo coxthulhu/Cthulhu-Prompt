@@ -17,7 +17,7 @@
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
-  import { promptEditorRowId } from './promptFolderRowIds'
+  import { PROMPT_FOLDER_SETTINGS_ROW_ID, promptEditorRowId } from './promptFolderRowIds'
   import {
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
@@ -166,7 +166,7 @@
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
     const rows: VirtualWindowItem<PromptFolderRow>[] = [
       {
-        id: 'folder-settings',
+        id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
           kind: 'folder-settings'
         }

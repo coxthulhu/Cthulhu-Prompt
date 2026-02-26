@@ -42,7 +42,7 @@
     setWorkspaceSelectionContext,
     type WorkspaceSelectionContext
   } from './WorkspaceSelectionContext'
-  import { flushPendingSaves } from '@renderer/data/flushPendingSaves'
+  import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
@@ -332,7 +332,7 @@
   $effect(() => {
     const unsubscribe = windowControls.onCloseRequested(() => {
       void (async () => {
-        await flushPendingSaves()
+        await flushAllAutosaves()
         await windowControls.confirmClose()
       })()
     })

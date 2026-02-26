@@ -43,7 +43,7 @@ const readWorkspacePersistenceFile = async (
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'prompt-folders'
   selectedPromptFolderId: string | null
-  promptFolderOutlinerEntryIds?: Array<{
+  promptFolderOutlinerEntries: Array<{
     promptFolderId: string
     outlinerEntryId: string
   }>
@@ -211,7 +211,8 @@ describe('User Persistence', () => {
         {
           workspaceId,
           selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: persistedPromptFolderId
+          selectedPromptFolderId: persistedPromptFolderId,
+          promptFolderOutlinerEntries: []
         },
         null,
         2
@@ -249,7 +250,8 @@ describe('User Persistence', () => {
         {
           workspaceId,
           selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: 'missing-folder-id'
+          selectedPromptFolderId: 'missing-folder-id',
+          promptFolderOutlinerEntries: []
         },
         null,
         2
@@ -322,7 +324,7 @@ describe('User Persistence', () => {
       .poll(
         async () => {
           const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
-          const entries = persisted.promptFolderOutlinerEntryIds ?? []
+          const entries = persisted.promptFolderOutlinerEntries
           const outlinerEntry = entries.find((entry) => entry.promptFolderId === developmentPromptFolderId)
           return outlinerEntry?.outlinerEntryId ?? null
         },
@@ -358,7 +360,7 @@ describe('User Persistence', () => {
       .poll(
         async () => {
           const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
-          const entries = persisted.promptFolderOutlinerEntryIds ?? []
+          const entries = persisted.promptFolderOutlinerEntries
           const examplesEntry = entries.find((entry) => entry.promptFolderId === examplesPromptFolderId)
           const developmentEntry = entries.find(
             (entry) => entry.promptFolderId === developmentPromptFolderId
@@ -390,7 +392,7 @@ describe('User Persistence', () => {
           workspaceId,
           selectedScreen: 'prompt-folders',
           selectedPromptFolderId: developmentPromptFolderId,
-          promptFolderOutlinerEntryIds: [
+          promptFolderOutlinerEntries: [
             {
               promptFolderId: developmentPromptFolderId,
               outlinerEntryId: 'dev-2'
@@ -438,7 +440,7 @@ describe('User Persistence', () => {
           workspaceId,
           selectedScreen: 'prompt-folders',
           selectedPromptFolderId: longPromptFolderId,
-          promptFolderOutlinerEntryIds: [
+          promptFolderOutlinerEntries: [
             {
               promptFolderId: longPromptFolderId,
               outlinerEntryId: persistedPromptId
@@ -488,7 +490,7 @@ describe('User Persistence', () => {
           workspaceId,
           selectedScreen: 'prompt-folders',
           selectedPromptFolderId: developmentPromptFolderId,
-          promptFolderOutlinerEntryIds: [
+          promptFolderOutlinerEntries: [
             {
               promptFolderId: developmentPromptFolderId,
               outlinerEntryId: 'missing-prompt-id'
