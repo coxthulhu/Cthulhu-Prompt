@@ -262,7 +262,9 @@ export const createPromptFolderScreenController = ({
     // Side effect: non-zero restores should follow centered rows instead of pinning Folder Settings.
     if (restoredScrollTop > 0) {
       clearOutlinerManualSelection()
-      activeOutlinerRow = null
+      if (latestCenteredOutlinerRow) {
+        activeOutlinerRow = latestCenteredOutlinerRow
+      }
       outlinerAutoScrollRequestId += 1
     }
     scrollApi.scrollTo(restoredScrollTop)

@@ -16,6 +16,7 @@ const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
 const MEASUREMENT_FOLDER_NAME = 'Long Wrapped Singles'
 const SHORT_FOLDER_NAME = 'Short'
 const LONG_FOLDER_NAME = 'Long'
+const TINY_SCROLL_TARGET_PX = 10
 
 const getActiveOutlinerTitle = async (mainWindow: Page): Promise<string | null> => {
   return await mainWindow.evaluate((hostSelector) => {
@@ -144,6 +145,43 @@ describe('Prompt folders measured heights', () => {
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
+    await expect
+      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .toBe(savedOutlinerTitle)
+  })
+
+  test('restores outliner selection after tiny scroll navigation restore', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult?.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, TINY_SCROLL_TARGET_PX)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
+      .toBeGreaterThan(0)
+
+    await expect
+      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .not.toBeNull()
+    const savedOutlinerTitle = await getActiveOutlinerTitle(mainWindow)
+    if (!savedOutlinerTitle) {
+      throw new Error('Expected an active outliner selection before tiny-scroll navigation')
+    }
+
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
+      .toBeGreaterThan(0)
+    await expect
+      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .not.toBeNull()
     await expect
       .poll(async () => getActiveOutlinerTitle(mainWindow))
       .toBe(savedOutlinerTitle)
