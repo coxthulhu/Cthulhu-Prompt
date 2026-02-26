@@ -383,6 +383,7 @@
       <AppSidebar
         {activeScreen}
         {isWorkspaceReady}
+        {isWorkspaceLoading}
         {isDevMode}
         {workspacePath}
         {selectedPromptFolderId}

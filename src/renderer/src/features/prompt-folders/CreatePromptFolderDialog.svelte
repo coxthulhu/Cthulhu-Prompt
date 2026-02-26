@@ -22,7 +22,7 @@
   let {
     isWorkspaceReady,
     promptFolders = [],
-    isPromptFolderListLoading = false,
+    isPromptFolderListLoading,
     onCreated
   } = $props<{
     isWorkspaceReady: boolean

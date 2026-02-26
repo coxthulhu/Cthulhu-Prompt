@@ -3,7 +3,7 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { Home, FolderClosed, MoreHorizontal } from 'lucide-svelte'
+  import { Home, FolderClosed, Loader, MoreHorizontal } from 'lucide-svelte'
   import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,6 +21,7 @@
   let {
     activeScreen,
     isWorkspaceReady = false,
+    isWorkspaceLoading = false,
     isDevMode = false,
     workspacePath = null,
     selectedPromptFolderId = null,
@@ -29,6 +30,7 @@
   } = $props<{
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
+    isWorkspaceLoading?: boolean
     isDevMode?: boolean
     workspacePath?: string | null
     selectedPromptFolderId?: string | null
@@ -84,8 +86,10 @@
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
 
-  const folderListState = $derived<'no-workspace' | 'empty' | 'ready'>(
-    !isWorkspaceReady
+  const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
+    isWorkspaceLoading
+      ? 'loading'
+      : !isWorkspaceReady
       ? 'no-workspace'
       : promptFolders.length === 0
         ? 'empty'
@@ -176,6 +180,11 @@
         <ul data-slot="sidebar-menu" data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
           {#if folderListState === 'no-workspace'}
             <li class="px-2 text-xs text-muted-foreground">Select a Workspace to Get Started</li>
+          {:else if folderListState === 'loading'}
+            <li class="px-2 text-xs text-muted-foreground flex items-center gap-2">
+              <Loader class="size-4 animate-spin" />
+              Loading folders...
+            </li>
           {:else if folderListState === 'ready'}
             {#each promptFolders as folder (folder.folderName)}
               <li
@@ -233,7 +242,7 @@
               <CreatePromptFolderDialog
                 {isWorkspaceReady}
                 {promptFolders}
-                isPromptFolderListLoading={false}
+                isPromptFolderListLoading={isWorkspaceLoading}
                 onCreated={(promptFolderId) => {
                   onPromptFolderSelect(promptFolderId)
                 }}
