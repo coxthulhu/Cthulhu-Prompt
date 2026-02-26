@@ -2,6 +2,7 @@
 import * as monaco from 'monaco-editor'
 import darkModernRaw from './monacoThemes/dark_modern.json?raw'
 import darkPlusRaw from './monacoThemes/dark_plus.json?raw'
+import darkVsRaw from './monacoThemes/dark_vs.json?raw'
 
 // Import Monaco's workers as *module workers* (bundled by Vite)
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
@@ -18,6 +19,7 @@ type VSCodeTokenColor = {
 }
 
 type VSCodeTheme = {
+  include?: string
   colors?: Record<string, string>
   tokenColors?: VSCodeTokenColor[]
 }
@@ -82,6 +84,47 @@ const parseThemeJson = (raw: string): VSCodeTheme => {
   return JSON.parse(withoutTrailingCommas) as VSCodeTheme
 }
 
+const normalizeThemePath = (themePath: string): string =>
+  themePath.startsWith('./') ? themePath : `./${themePath}`
+
+const THEME_SOURCE_BY_PATH: Record<string, string> = {
+  './dark_modern.json': darkModernRaw,
+  './dark_plus.json': darkPlusRaw,
+  './dark_vs.json': darkVsRaw
+}
+
+const resolvedThemeCache = new Map<string, VSCodeTheme>()
+
+const resolveTheme = (themePath: string, stack: string[] = []): VSCodeTheme => {
+  const normalizedPath = normalizeThemePath(themePath)
+  const cached = resolvedThemeCache.get(normalizedPath)
+  if (cached) return cached
+
+  if (stack.includes(normalizedPath)) {
+    throw new Error(`Circular Monaco theme include: ${[...stack, normalizedPath].join(' -> ')}`)
+  }
+
+  const rawTheme = THEME_SOURCE_BY_PATH[normalizedPath]
+  if (!rawTheme) {
+    throw new Error(`Missing Monaco theme include: ${normalizedPath}`)
+  }
+
+  const parsedTheme = parseThemeJson(rawTheme)
+  const parentTheme = parsedTheme.include
+    ? resolveTheme(parsedTheme.include, [...stack, normalizedPath])
+    : undefined
+  const resolvedTheme: VSCodeTheme = {
+    colors: {
+      ...(parentTheme?.colors ?? {}),
+      ...(parsedTheme.colors ?? {})
+    },
+    tokenColors: [...(parentTheme?.tokenColors ?? []), ...(parsedTheme.tokenColors ?? [])]
+  }
+
+  resolvedThemeCache.set(normalizedPath, resolvedTheme)
+  return resolvedTheme
+}
+
 const normalizeTokenColor = (value?: string): string | undefined =>
   value ? value.replace(/^#/, '') : undefined
 
@@ -141,17 +184,13 @@ self.MonacoEnvironment = {
   }
 } as any
 
-const darkModernTheme = parseThemeJson(darkModernRaw)
-const darkPlusTheme = parseThemeJson(darkPlusRaw)
+const darkModernTheme = resolveTheme('./dark_modern.json')
 
 monaco.editor.defineTheme(PROMPT_EDITOR_THEME_ID, {
   base: 'vs-dark',
   inherit: true,
-  rules: toMonacoRules(darkPlusTheme.tokenColors ?? []),
-  colors: {
-    ...(darkPlusTheme.colors ?? {}),
-    ...(darkModernTheme.colors ?? {})
-  }
+  rules: toMonacoRules(darkModernTheme.tokenColors ?? []),
+  colors: darkModernTheme.colors ?? {}
 })
 
 // Side effect: apply the Dark Modern theme to all Monaco editors globally.
