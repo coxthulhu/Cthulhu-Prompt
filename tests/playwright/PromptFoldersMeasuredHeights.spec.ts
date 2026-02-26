@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { PROMPT_FOLDER_HOST_SELECTOR } from '../helpers/PromptFolderSelectors'
 import {
@@ -11,9 +12,19 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
 const FIRST_PROMPT_SELECTOR = '[data-testid="prompt-editor-measurement-1"]'
 const LAST_SHORT_PROMPT_SELECTOR = '[data-testid="prompt-editor-short-60"]'
+const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
 const MEASUREMENT_FOLDER_NAME = 'Long Wrapped Singles'
 const SHORT_FOLDER_NAME = 'Short'
 const LONG_FOLDER_NAME = 'Long'
+
+const getActiveOutlinerTitle = async (mainWindow: Page): Promise<string | null> => {
+  return await mainWindow.evaluate((hostSelector) => {
+    const host = document.querySelector<HTMLElement>(hostSelector)
+    if (!host) return null
+    const activeButton = host.querySelector<HTMLButtonElement>('button[aria-current="true"]')
+    return activeButton?.textContent?.trim() ?? null
+  }, OUTLINER_HOST_SELECTOR)
+}
 
 describe('Prompt folders measured heights', () => {
   test('persists measured padding after navigation', async ({ testSetup }) => {
@@ -107,6 +118,13 @@ describe('Prompt folders measured heights', () => {
 
     const savedScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(savedScrollTop).toBeGreaterThan(0)
+    await expect
+      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .not.toBeNull()
+    const savedOutlinerTitle = await getActiveOutlinerTitle(mainWindow)
+    if (!savedOutlinerTitle) {
+      throw new Error('Expected an active outliner selection before navigation')
+    }
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
@@ -114,6 +132,9 @@ describe('Prompt folders measured heights', () => {
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
+    await expect
+      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .toBe(savedOutlinerTitle)
 
     await testHelpers.navigateToPromptFolders(LONG_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
@@ -123,5 +144,8 @@ describe('Prompt folders measured heights', () => {
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
+    await expect
+      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .toBe(savedOutlinerTitle)
   })
 })

@@ -92,11 +92,13 @@ describe('Prompt folder outliner', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(OUTLINER_HOST_SELECTOR, { state: 'attached' })
 
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, SHORT_SCROLL_TARGET_PX)
-
     const folderSettingsButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
       hasText: 'Folder Settings'
     })
+    await expect(folderSettingsButton).toHaveAttribute('aria-current', 'true')
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, SHORT_SCROLL_TARGET_PX)
+
     await folderSettingsButton.click()
 
     await expect(folderSettingsButton).toHaveAttribute('aria-current', 'true')

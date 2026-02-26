@@ -237,18 +237,13 @@ export const createPromptFolderScreenController = ({
     errorMessage = null
     hasRestoredScrollTopForCurrentFolder = false
     resetPromptFolderUiState()
-    if (canUseCachedData) {
-      scrollRestoreVersion += 1
-    }
 
     void (async () => {
       try {
         await loadPromptFolderInitial(workspaceId, promptFolderId)
         if (requestId !== promptFolderLoadRequestId) return
         isLoading = false
-        if (!canUseCachedData) {
-          scrollRestoreVersion += 1
-        }
+        scrollRestoreVersion += 1
       } catch (error) {
         if (requestId !== promptFolderLoadRequestId) return
         errorMessage = error instanceof Error ? error.message : String(error)
@@ -261,9 +256,16 @@ export const createPromptFolderScreenController = ({
   $effect(() => {
     if (!scrollApi) return
     if (scrollRestoreVersion === lastScrollRestoreVersion) return
-    if (!errorMessage && promptIds.length > 0 && visiblePromptIds.length === 0) return
+    if (!errorMessage && promptIds.length > 0 && visiblePromptIds.length < promptIds.length) return
     lastScrollRestoreVersion = scrollRestoreVersion
-    scrollApi.scrollTo(lookupPromptFolderScrollTop(promptFolderId) ?? 0)
+    const restoredScrollTop = lookupPromptFolderScrollTop(promptFolderId) ?? 0
+    // Side effect: non-zero restores should follow centered rows instead of pinning Folder Settings.
+    if (restoredScrollTop > 0) {
+      clearOutlinerManualSelection()
+      activeOutlinerRow = null
+      outlinerAutoScrollRequestId += 1
+    }
+    scrollApi.scrollTo(restoredScrollTop)
     hasRestoredScrollTopForCurrentFolder = true
   })
 
