@@ -12,10 +12,12 @@
     errorMessage: string | null
     activeRow: OutlinerActiveRow | null
     initialScrollTopPx: number
+    initialCenterRowId: string | null
     autoScrollRequestId: number
     onSelectPrompt: (promptId: string) => void
     onSelectFolderSettings: () => void
     onScrollTopChange: (scrollTopPx: number) => void
+    onInitialCenterRowApplied: () => void
   }
 
   let {
@@ -23,10 +25,12 @@
     errorMessage,
     activeRow,
     initialScrollTopPx,
+    initialCenterRowId,
     autoScrollRequestId,
     onSelectPrompt,
     onSelectFolderSettings,
-    onScrollTopChange
+    onScrollTopChange,
+    onInitialCenterRowApplied
   }: Props = $props()
 
   type OutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
@@ -89,10 +93,12 @@
       items={outlinerItems}
       rowRegistry={outlinerRowRegistry}
       {initialScrollTopPx}
+      initialScrollToRowCenteredId={initialCenterRowId}
       leftScrollPaddingPx={12}
       testId="prompt-outliner-virtual-window"
       spacerTestId="prompt-outliner-virtual-window-spacer"
       {onScrollTopChange}
+      onInitialScrollToRowCenteredApplied={onInitialCenterRowApplied}
       bind:scrollToWithinWindowBand
     />
   </div>

@@ -20,6 +20,8 @@
     items: VirtualWindowItem<TRow>[]
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
     initialScrollTopPx?: number | null
+    initialScrollToRowCenteredId?: string | null
+    onInitialScrollToRowCenteredApplied?: () => void
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
     scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
@@ -44,6 +46,8 @@
     items,
     rowRegistry,
     initialScrollTopPx = null,
+    initialScrollToRowCenteredId = null,
+    onInitialScrollToRowCenteredApplied,
     scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
     scrollToAndTrackRowCentered = $bindable<ScrollToAndTrackRowCentered | null>(null),
     onCenterRowChange,
@@ -102,7 +106,9 @@
     getOnUserScroll: () => onUserScroll,
     getOnScrollTopChange: () => onScrollTopChange,
     windowBandPaddingPx: WINDOW_BAND_PADDING_PX,
-    getInitialScrollTopPx: () => initialScrollTopPx
+    getInitialScrollTopPx: () => initialScrollTopPx,
+    getInitialScrollToRowCenteredId: () => initialScrollToRowCenteredId,
+    onInitialScrollToRowCenteredApplied: () => onInitialScrollToRowCenteredApplied?.()
   })
 
   const {

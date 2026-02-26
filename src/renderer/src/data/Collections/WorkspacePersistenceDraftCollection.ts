@@ -1,10 +1,14 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
-import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
+import type {
+  PersistedWorkspaceScreen,
+  WorkspacePromptFolderOutlinerEntry
+} from '@shared/UserPersistence'
 
 export type WorkspacePersistenceDraftRecord = {
   id: string
   selectedScreen: PersistedWorkspaceScreen
   selectedPromptFolderId: string | null
+  promptFolderOutlinerEntryIds: WorkspacePromptFolderOutlinerEntry[]
 }
 
 // Local-only draft state for workspace screen selection before sync writes.

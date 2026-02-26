@@ -33,6 +33,10 @@ import {
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
 import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import { setPromptOutlinerWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
+import {
+  lookupWorkspacePersistedPromptFolderOutlinerEntryId,
+  setPromptFolderOutlinerEntryIdWithAutosave
+} from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
 import type {
   ScrollToAndTrackRowCentered,
@@ -102,11 +106,12 @@ export const createPromptFolderScreenController = ({
   let previousPromptFolderLoadKey = $state<string | null>(null)
   let promptFolderLoadRequestId = $state(0)
   let isLoading = $state(true)
+  let waitingForInitialPersistedScroll = $state(false)
   const LOADING_OVERLAY_FADE_MS = 125
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
     fadeMs: LOADING_OVERLAY_FADE_MS,
-    isLoading: () => shouldShowLoadingOverlay && isLoading
+    isLoading: () => shouldShowLoadingOverlay && (isLoading || waitingForInitialPersistedScroll)
   })
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
@@ -122,6 +127,10 @@ export const createPromptFolderScreenController = ({
 
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
   let initialOutlinerScrollTopPx = $state(getRestoredOutlinerScrollTop())
+  let initialPromptFolderCenterRowId = $state<string | null>(null)
+  let initialOutlinerCenterRowId = $state<string | null>(null)
+  let initialPromptFolderCenterRowPending = $state(false)
+  let initialOutlinerCenterRowPending = $state(false)
   let activeOutlinerRow = $state<ActiveOutlinerRow | null>(
     getRestoredActiveOutlinerRow() ?? { kind: 'folder-settings' }
   )
@@ -201,9 +210,55 @@ export const createPromptFolderScreenController = ({
     outlinerManualSelectionActive = false
   }
 
-  const setActiveOutlinerRow = (nextRow: ActiveOutlinerRow | null) => {
+  const toPersistedOutlinerEntryId = (row: ActiveOutlinerRow): string => {
+    return row.kind === 'folder-settings' ? 'folder-settings' : row.promptId
+  }
+
+  const setActiveOutlinerRow = (
+    nextRow: ActiveOutlinerRow | null,
+    options: { persistWorkspace?: boolean } = {}
+  ) => {
     activeOutlinerRow = nextRow
     recordPromptFolderOutlinerActiveRow(promptFolderId, nextRow)
+
+    if (options.persistWorkspace === false || !nextRow) {
+      return
+    }
+
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (!workspaceId) {
+      return
+    }
+
+    setPromptFolderOutlinerEntryIdWithAutosave(
+      workspaceId,
+      promptFolderId,
+      toPersistedOutlinerEntryId(nextRow)
+    )
+  }
+
+  const clearInitialPersistedScrollWait = () => {
+    waitingForInitialPersistedScroll = false
+    initialPromptFolderCenterRowPending = false
+    initialOutlinerCenterRowPending = false
+  }
+
+  const settleInitialPersistedScrollWaitIfReady = () => {
+    if (!waitingForInitialPersistedScroll) return
+    if (initialPromptFolderCenterRowPending || initialOutlinerCenterRowPending) return
+    waitingForInitialPersistedScroll = false
+  }
+
+  const handleInitialPromptFolderCenterRowApplied = () => {
+    if (!initialPromptFolderCenterRowPending) return
+    initialPromptFolderCenterRowPending = false
+    settleInitialPersistedScrollWaitIfReady()
+  }
+
+  const handleInitialOutlinerCenterRowApplied = () => {
+    if (!initialOutlinerCenterRowPending) return
+    initialOutlinerCenterRowPending = false
+    settleInitialPersistedScrollWaitIfReady()
   }
 
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
@@ -247,10 +302,29 @@ export const createPromptFolderScreenController = ({
     promptFolderLoadRequestId += 1
     const requestId = promptFolderLoadRequestId
     const canUseCachedData = hasCachedPromptFolderData(promptFolderId)
+    const persistedOutlinerEntryId = !canUseCachedData
+      ? lookupWorkspacePersistedPromptFolderOutlinerEntryId(workspaceId, promptFolderId)
+      : null
+    const shouldApplyPersistedOutlinerEntry = Boolean(persistedOutlinerEntryId)
     isLoading = !canUseCachedData
     shouldShowLoadingOverlay = !canUseCachedData
+    waitingForInitialPersistedScroll = shouldApplyPersistedOutlinerEntry
     isCreatingPrompt = false
     errorMessage = null
+    initialPromptFolderCenterRowId =
+      persistedOutlinerEntryId === 'folder-settings'
+        ? 'folder-settings'
+        : persistedOutlinerEntryId
+          ? promptEditorRowId(persistedOutlinerEntryId)
+          : null
+    initialOutlinerCenterRowId =
+      persistedOutlinerEntryId === 'folder-settings'
+        ? 'outliner-folder-settings'
+        : persistedOutlinerEntryId
+          ? `outliner-${persistedOutlinerEntryId}`
+          : null
+    initialPromptFolderCenterRowPending = shouldApplyPersistedOutlinerEntry
+    initialOutlinerCenterRowPending = shouldApplyPersistedOutlinerEntry
     const restoredScrollTop = getRestoredPromptFolderScrollTop()
     const restoredOutlinerScrollTop = getRestoredOutlinerScrollTop()
     const restoredActiveOutlinerRow = getRestoredActiveOutlinerRow() ?? { kind: 'folder-settings' }
@@ -258,8 +332,8 @@ export const createPromptFolderScreenController = ({
     initialOutlinerScrollTopPx = restoredOutlinerScrollTop
     scrollTopPx = restoredScrollTop
     latestCenteredOutlinerRow = restoredActiveOutlinerRow
-    outlinerManualSelectionActive = restoredScrollTop <= 0
-    setActiveOutlinerRow(restoredActiveOutlinerRow)
+    outlinerManualSelectionActive = shouldApplyPersistedOutlinerEntry ? false : restoredScrollTop <= 0
+    setActiveOutlinerRow(restoredActiveOutlinerRow, { persistWorkspace: false })
 
     void (async () => {
       try {
@@ -270,6 +344,7 @@ export const createPromptFolderScreenController = ({
         if (requestId !== promptFolderLoadRequestId) return
         errorMessage = error instanceof Error ? error.message : String(error)
         isLoading = false
+        clearInitialPersistedScrollWait()
       }
     })()
   })
@@ -524,8 +599,14 @@ export const createPromptFolderScreenController = ({
     get initialPromptFolderScrollTopPx(): number {
       return initialPromptFolderScrollTopPx
     },
+    get initialPromptFolderCenterRowId(): string | null {
+      return initialPromptFolderCenterRowId
+    },
     get initialOutlinerScrollTopPx(): number {
       return initialOutlinerScrollTopPx
+    },
+    get initialOutlinerCenterRowId(): string | null {
+      return initialOutlinerCenterRowId
     },
     get activeOutlinerRow(): ActiveOutlinerRow | null {
       return activeOutlinerRow
@@ -564,6 +645,8 @@ export const createPromptFolderScreenController = ({
     setViewportMetrics,
     handleVirtualScrollTopChange,
     handleOutlinerScrollTopChange,
+    handleInitialPromptFolderCenterRowApplied,
+    handleInitialOutlinerCenterRowApplied,
     handleVirtualCenterRowChange,
     handleVirtualUserScroll
   }

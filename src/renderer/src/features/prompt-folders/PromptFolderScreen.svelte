@@ -68,10 +68,12 @@
               errorMessage={controller.errorMessage}
               activeRow={controller.activeOutlinerRow}
               initialScrollTopPx={controller.initialOutlinerScrollTopPx}
+              initialCenterRowId={controller.initialOutlinerCenterRowId}
               autoScrollRequestId={controller.outlinerAutoScrollRequestId}
               onSelectPrompt={controller.handleOutlinerClick}
               onSelectFolderSettings={controller.handleOutlinerFolderSettingsClick}
               onScrollTopChange={controller.handleOutlinerScrollTopChange}
+              onInitialCenterRowApplied={controller.handleInitialOutlinerCenterRowApplied}
             />
           {/if}
         {/snippet}
@@ -95,6 +97,7 @@
               isCreatingPrompt={controller.isCreatingPrompt}
               promptFocusRequest={controller.promptFocusRequest}
               initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
+              initialCenterRowId={controller.initialPromptFolderCenterRowId}
               scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
               onAddPrompt={controller.handleAddPrompt}
               onDeletePrompt={controller.handleDeletePrompt}
@@ -107,6 +110,7 @@
               onScrollTopChange={controller.handleVirtualScrollTopChange}
               onCenterRowChange={controller.handleVirtualCenterRowChange}
               onUserScroll={controller.handleVirtualUserScroll}
+              onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
             />
           {/if}
         {/snippet}

@@ -8,7 +8,10 @@ import type { Transaction } from '@tanstack/svelte-db'
 import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import {
+  mutatePacedRevisionUpdateTransaction,
+  runRevisionMutation
+} from '../IpcFramework/RevisionCollections'
 import { upsertWorkspacePersistenceDraft } from '../UiState/WorkspacePersistenceDraftMutations.svelte.ts'
 
 const readLatestWorkspacePersistenceFromTransaction = (
@@ -30,6 +33,59 @@ const handleWorkspacePersistenceSuccessOrConflictResponse = (
   upsertWorkspacePersistenceDraft(payload.workspacePersistence.data)
 }
 
+type PacedWorkspacePersistenceMutationOptions = Parameters<
+  typeof mutatePacedRevisionUpdateTransaction<WorkspacePersistenceRevisionResponsePayload>
+>[0]
+
+type PacedWorkspacePersistenceAutosaveUpdateOptions = Pick<
+  PacedWorkspacePersistenceMutationOptions,
+  'debounceMs' | 'mutateOptimistically'
+> & {
+  workspaceId: string
+}
+
+const createPersistWorkspacePersistenceMutations = (
+  workspaceId: string
+): PacedWorkspacePersistenceMutationOptions['persistMutations'] => {
+  return async ({ entities, invoke, transaction }) => {
+    const latestWorkspacePersistence = readLatestWorkspacePersistenceFromTransaction(
+      transaction,
+      workspaceId
+    )
+
+    const mutationResult = await invoke(UPDATE_WORKSPACE_PERSISTENCE_CHANNEL, {
+      payload: {
+        workspacePersistence: entities.workspacePersistence({
+          id: workspaceId,
+          data: latestWorkspacePersistence
+        })
+      }
+    })
+
+    if (mutationResult.success) {
+      workspacePersistenceDraftCollection.utils.acceptMutations(transaction)
+    }
+
+    return mutationResult
+  }
+}
+
+export const mutatePacedWorkspacePersistenceAutosaveUpdate = ({
+  workspaceId,
+  debounceMs,
+  mutateOptimistically
+}: PacedWorkspacePersistenceAutosaveUpdateOptions): void => {
+  mutatePacedRevisionUpdateTransaction<WorkspacePersistenceRevisionResponsePayload>({
+    collectionId: workspacePersistenceCollection.id,
+    elementId: workspaceId,
+    debounceMs,
+    mutateOptimistically,
+    persistMutations: createPersistWorkspacePersistenceMutations(workspaceId),
+    handleSuccessOrConflictResponse: handleWorkspacePersistenceSuccessOrConflictResponse,
+    conflictMessage: 'Workspace persistence update conflict'
+  })
+}
+
 export const syncWorkspaceScreenSelection = async (
   workspaceId: string,
   selectedScreen: PersistedWorkspaceScreen,
@@ -49,27 +105,7 @@ export const syncWorkspaceScreenSelection = async (
         draft.selectedPromptFolderId = normalizedPromptFolderId
       })
     },
-    persistMutations: async ({ entities, invoke, transaction }) => {
-      const latestWorkspacePersistence = readLatestWorkspacePersistenceFromTransaction(
-        transaction,
-        workspaceId
-      )
-
-      const mutationResult = await invoke(UPDATE_WORKSPACE_PERSISTENCE_CHANNEL, {
-        payload: {
-          workspacePersistence: entities.workspacePersistence({
-            id: workspaceId,
-            data: latestWorkspacePersistence
-          })
-        }
-      })
-
-      if (mutationResult.success) {
-        workspacePersistenceDraftCollection.utils.acceptMutations(transaction)
-      }
-
-      return mutationResult
-    },
+    persistMutations: createPersistWorkspacePersistenceMutations(workspaceId),
     handleSuccessOrConflictResponse: handleWorkspacePersistenceSuccessOrConflictResponse,
     conflictMessage: 'Workspace persistence update conflict'
   })

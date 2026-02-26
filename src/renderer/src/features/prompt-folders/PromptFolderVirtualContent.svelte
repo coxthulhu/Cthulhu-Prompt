@@ -46,6 +46,7 @@
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
     initialScrollTopPx: number
+    initialCenterRowId: string | null
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (previousPromptId: string | null) => void
     onDeletePrompt: (promptId: string) => void
@@ -58,6 +59,7 @@
     onScrollTopChange: (nextScrollTop: number) => void
     onCenterRowChange: (row: ActiveOutlinerRow | null) => void
     onUserScroll: () => void
+    onInitialCenterRowApplied: () => void
   }
 
   let {
@@ -70,6 +72,7 @@
     isCreatingPrompt,
     promptFocusRequest,
     initialScrollTopPx,
+    initialCenterRowId,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
     onDeletePrompt,
@@ -81,7 +84,8 @@
     onViewportMetricsChange,
     onScrollTopChange,
     onCenterRowChange,
-    onUserScroll
+    onUserScroll,
+    onInitialCenterRowApplied
   }: PromptFolderVirtualContentProps = $props()
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
@@ -221,8 +225,10 @@
   items={virtualItems}
   {rowRegistry}
   {initialScrollTopPx}
+  initialScrollToRowCenteredId={initialCenterRowId}
   testId="prompt-folder-virtual-window"
   spacerTestId="prompt-folder-virtual-window-spacer"
+  onInitialScrollToRowCenteredApplied={onInitialCenterRowApplied}
   bind:scrollToWithinWindowBand
   bind:scrollToAndTrackRowCentered
   bind:viewportMetrics

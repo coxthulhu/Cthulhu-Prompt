@@ -17,17 +17,24 @@ export const USER_PERSISTENCE_ID = 'user-persistence'
 
 export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
 
+export type WorkspacePromptFolderOutlinerEntry = {
+  promptFolderId: string
+  outlinerEntryId: string
+}
+
 export type WorkspacePersistence = {
   workspaceId: string
   selectedScreen: PersistedWorkspaceScreen
   selectedPromptFolderId: string | null
+  promptFolderOutlinerEntryIds: WorkspacePromptFolderOutlinerEntry[]
 }
 
 export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
   return {
     workspaceId,
     selectedScreen: 'home',
-    selectedPromptFolderId: null
+    selectedPromptFolderId: null,
+    promptFolderOutlinerEntryIds: []
   }
 }
 
@@ -102,6 +109,44 @@ const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen
   return 'home'
 }
 
+const parseWorkspacePromptFolderOutlinerEntry = (
+  value: unknown
+): WorkspacePromptFolderOutlinerEntry | null => {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  if (typeof value.promptFolderId !== 'string' || typeof value.outlinerEntryId !== 'string') {
+    return null
+  }
+
+  return {
+    promptFolderId: value.promptFolderId,
+    outlinerEntryId: value.outlinerEntryId
+  }
+}
+
+const parseWorkspacePromptFolderOutlinerEntries = (
+  value: unknown
+): WorkspacePromptFolderOutlinerEntry[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  const parsedEntries: WorkspacePromptFolderOutlinerEntry[] = []
+
+  for (const entry of value) {
+    const parsedEntry = parseWorkspacePromptFolderOutlinerEntry(entry)
+    if (!parsedEntry) {
+      continue
+    }
+
+    parsedEntries.push(parsedEntry)
+  }
+
+  return parsedEntries
+}
+
 export const parseWorkspacePersistence = (
   value: unknown,
   workspaceId: string
@@ -115,10 +160,14 @@ export const parseWorkspacePersistence = (
     value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
       ? value.selectedPromptFolderId
       : null
+  const promptFolderOutlinerEntryIds = parseWorkspacePromptFolderOutlinerEntries(
+    value.promptFolderOutlinerEntryIds
+  )
 
   return {
     workspaceId,
     selectedScreen,
-    selectedPromptFolderId: selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null
+    selectedPromptFolderId: selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null,
+    promptFolderOutlinerEntryIds
   }
 }

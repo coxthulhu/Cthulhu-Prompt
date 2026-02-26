@@ -228,10 +228,16 @@ const parseUserPersistence = parseObject<UserPersistence>({
 const parseUserPersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
 
+const parseWorkspacePromptFolderOutlinerEntry = parseObject({
+  promptFolderId: parseString,
+  outlinerEntryId: parseString
+})
+
 const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
   workspaceId: parseString,
   selectedScreen: parseWorkspaceScreen,
-  selectedPromptFolderId: parseNullableString
+  selectedPromptFolderId: parseNullableString,
+  promptFolderOutlinerEntryIds: parseArray(parseWorkspacePromptFolderOutlinerEntry)
 })
 
 const parseWorkspacePersistenceRevisionPayloadEntity =

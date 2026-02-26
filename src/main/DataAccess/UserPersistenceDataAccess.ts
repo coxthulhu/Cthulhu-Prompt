@@ -121,11 +121,18 @@ export class UserPersistenceDataAccess {
     const selectedScreen = workspacePersistence.selectedScreen
     const selectedPromptFolderId =
       selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null
+    const promptFolderOutlinerEntryIds = workspacePersistence.promptFolderOutlinerEntryIds.map(
+      (entry) => ({
+        promptFolderId: entry.promptFolderId,
+        outlinerEntryId: entry.outlinerEntryId
+      })
+    )
 
     return writeJsonFile(resolveWorkspacePersistencePath(workspacePersistence.workspaceId), {
       workspaceId: workspacePersistence.workspaceId,
       selectedScreen,
-      selectedPromptFolderId
+      selectedPromptFolderId,
+      promptFolderOutlinerEntryIds
     })
   }
 }

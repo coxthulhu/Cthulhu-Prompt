@@ -14,6 +14,8 @@ type VirtualWindowScrollStateOptions<TRow extends { kind: string }> = {
   getOnScrollTopChange: () => ((scrollTopPx: number) => void) | undefined
   windowBandPaddingPx: number
   getInitialScrollTopPx: () => number | null
+  getInitialScrollToRowCenteredId: () => string | null
+  onInitialScrollToRowCenteredApplied?: () => void
 }
 
 export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
@@ -26,7 +28,9 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getOnUserScroll,
     getOnScrollTopChange,
     windowBandPaddingPx,
-    getInitialScrollTopPx
+    getInitialScrollTopPx,
+    getInitialScrollToRowCenteredId,
+    onInitialScrollToRowCenteredApplied
   } = options
 
   const initialScrollTopPx = getInitialScrollTopPx()
@@ -36,6 +40,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   let scrollbarRevealVersion = $state(0)
   let lastScrollTop = 0
   let trackedRowId = $state<string | null>(null)
+  let initialScrollToRowCenteredApplied = $state(false)
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
   const scrollShadowActive = $derived(scrollTopPx > 0)
@@ -159,6 +164,12 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     return row.offset + row.height / 2 - viewportHeight / 2
   }
 
+  const finishInitialScrollToRowCentered = () => {
+    if (initialScrollToRowCenteredApplied) return
+    initialScrollToRowCenteredApplied = true
+    onInitialScrollToRowCenteredApplied?.()
+  }
+
   const scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered = (rowId: string) => {
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
@@ -175,6 +186,37 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
     scrollAnchorMode = 'center'
   }
+
+  // Side effect: apply a one-time initial centered row restore during virtual window initialization.
+  $effect(() => {
+    if (initialScrollToRowCenteredApplied) return
+
+    const initialRowId = getInitialScrollToRowCenteredId()
+    if (!initialRowId) {
+      finishInitialScrollToRowCentered()
+      return
+    }
+
+    const viewportHeight = getViewportHeight()
+    if (viewportHeight <= 0) return
+
+    const rowStates = getRowStates()
+    if (rowStates.length === 0) return
+
+    const row = rowStates.find((candidate) => candidate.id === initialRowId)
+    if (!row) {
+      finishInitialScrollToRowCentered()
+      return
+    }
+
+    trackedRowId = initialRowId
+    const nextScrollTop = clampScrollTop(getTrackedRowScrollTop(row, viewportHeight))
+    if (nextScrollTop !== scrollTopPx) {
+      applyProgrammaticScrollTop(nextScrollTop)
+    }
+    scrollAnchorMode = 'center'
+    finishInitialScrollToRowCentered()
+  })
 
   // Side effect: stop tracking once we leave center anchoring (e.g., after hydration completes).
   $effect(() => {
