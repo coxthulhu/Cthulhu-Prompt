@@ -26,6 +26,20 @@ const readLatestWorkspacePersistenceFromTransaction = (
   )
 }
 
+const toSerializableWorkspacePersistence = (
+  workspacePersistence: WorkspacePersistence
+): WorkspacePersistence => {
+  return {
+    workspaceId: workspacePersistence.workspaceId,
+    selectedScreen: workspacePersistence.selectedScreen,
+    selectedPromptFolderId: workspacePersistence.selectedPromptFolderId,
+    promptFolderOutlinerEntryIds: workspacePersistence.promptFolderOutlinerEntryIds.map((entry) => ({
+      promptFolderId: entry.promptFolderId,
+      outlinerEntryId: entry.outlinerEntryId
+    }))
+  }
+}
+
 const handleWorkspacePersistenceSuccessOrConflictResponse = (
   payload: WorkspacePersistenceRevisionResponsePayload
 ): void => {
@@ -52,12 +66,14 @@ const createPersistWorkspacePersistenceMutations = (
       transaction,
       workspaceId
     )
+    const serializableWorkspacePersistence =
+      toSerializableWorkspacePersistence(latestWorkspacePersistence)
 
     const mutationResult = await invoke(UPDATE_WORKSPACE_PERSISTENCE_CHANNEL, {
       payload: {
         workspacePersistence: entities.workspacePersistence({
           id: workspaceId,
-          data: latestWorkspacePersistence
+          data: serializableWorkspacePersistence
         })
       }
     })

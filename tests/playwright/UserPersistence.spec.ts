@@ -3,6 +3,7 @@ import { setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
+const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -42,6 +43,10 @@ const readWorkspacePersistenceFile = async (
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'prompt-folders'
   selectedPromptFolderId: string | null
+  promptFolderOutlinerEntryIds?: Array<{
+    promptFolderId: string
+    outlinerEntryId: string
+  }>
 }> => {
   const userDataPath = await electronApp.evaluate(({ app }) => {
     return app.getPath('userData')
@@ -58,6 +63,15 @@ const readWorkspacePersistenceFile = async (
   }, workspacePersistencePath)
 
   return JSON.parse(persistedContent)
+}
+
+const getActiveOutlinerTitle = async (mainWindow: any): Promise<string | null> => {
+  return await mainWindow.evaluate((hostSelector) => {
+    const host = document.querySelector<HTMLElement>(hostSelector)
+    if (!host) return null
+    const activeButton = host.querySelector<HTMLButtonElement>('button[aria-current="true"]')
+    return activeButton?.textContent?.trim() ?? null
+  }, OUTLINER_HOST_SELECTOR)
 }
 
 const getSidebarWidthByHandle = async (mainWindow: any, handleTestId: string): Promise<number> => {
@@ -284,5 +298,218 @@ describe('User Persistence', () => {
         return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
       })
       .toBe('settings:null')
+  })
+
+  test('autosaves active outliner entry id in workspace persistence', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const bugAnalysisButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
+      hasText: 'Bug Analysis'
+    })
+    await bugAnalysisButton.click()
+    await expect(bugAnalysisButton).toHaveAttribute('aria-current', 'true')
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+          const entries = persisted.promptFolderOutlinerEntryIds ?? []
+          const outlinerEntry = entries.find((entry) => entry.promptFolderId === developmentPromptFolderId)
+          return outlinerEntry?.outlinerEntryId ?? null
+        },
+        { timeout: 15000 }
+      )
+      .toBe('dev-2')
+  })
+
+  test('autosaves outliner entries for multiple folders', async ({ electronApp, testSetup }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const examplesPromptFolderId = createDeterministicId(`${workspacePath}:Examples`)
+    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const bugAnalysisButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
+      hasText: 'Bug Analysis'
+    })
+    await bugAnalysisButton.click()
+    await expect(bugAnalysisButton).toHaveAttribute('aria-current', 'true')
+
+    await testHelpers.navigateToPromptFolders('Examples')
+    const simpleGreetingButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
+      hasText: 'Simple Greeting'
+    })
+    await simpleGreetingButton.click()
+    await expect(simpleGreetingButton).toHaveAttribute('aria-current', 'true')
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+          const entries = persisted.promptFolderOutlinerEntryIds ?? []
+          const examplesEntry = entries.find((entry) => entry.promptFolderId === examplesPromptFolderId)
+          const developmentEntry = entries.find(
+            (entry) => entry.promptFolderId === developmentPromptFolderId
+          )
+          return `${examplesEntry?.outlinerEntryId ?? 'none'}:${developmentEntry?.outlinerEntryId ?? 'none'}:${entries.length}`
+        },
+        { timeout: 15000 }
+      )
+      .toBe('simple-1:dev-2:2')
+  })
+
+  test('restores persisted outliner entry on startup', async ({ electronApp, testSetup }) => {
+    const persistedWorkspacePath = '/ws/persisted-outliner-entry'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
+    const userDataPath = await electronApp.evaluate(({ app }) => {
+      return app.getPath('userData')
+    })
+
+    await testSetup.setupFilesystem({
+      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
+      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
+        { lastWorkspacePath: persistedWorkspacePath },
+        null,
+        2
+      ),
+      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+        {
+          workspaceId,
+          selectedScreen: 'prompt-folders',
+          selectedPromptFolderId: developmentPromptFolderId,
+          promptFolderOutlinerEntryIds: [
+            {
+              promptFolderId: developmentPromptFolderId,
+              outlinerEntryId: 'dev-2'
+            }
+          ]
+        },
+        null,
+        2
+      )
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect.poll(async () => getActiveOutlinerTitle(mainWindow)).toBe('Bug Analysis')
+  })
+
+  test('restores and auto-scrolls outliner to persisted entry on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-outliner-entry-long'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const longPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Long`)
+    const persistedPromptId = 'virtualization-test-45'
+    const userDataPath = await electronApp.evaluate(({ app }) => {
+      return app.getPath('userData')
+    })
+
+    await testSetup.setupFilesystem({
+      ...setupWorkspaceScenario(persistedWorkspacePath, 'virtual'),
+      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
+        { lastWorkspacePath: persistedWorkspacePath },
+        null,
+        2
+      ),
+      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+        {
+          workspaceId,
+          selectedScreen: 'prompt-folders',
+          selectedPromptFolderId: longPromptFolderId,
+          promptFolderOutlinerEntryIds: [
+            {
+              promptFolderId: longPromptFolderId,
+              outlinerEntryId: persistedPromptId
+            }
+          ]
+        },
+        null,
+        2
+      )
+    })
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="regular-prompt-folder-Long"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect.poll(async () => getActiveOutlinerTitle(mainWindow)).toBe('Large Prompt 45')
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR))
+      .toBeGreaterThan(0)
+  })
+
+  test('stays scrolled to top when persisted outliner entry is missing', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-outliner-entry-missing'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
+    const userDataPath = await electronApp.evaluate(({ app }) => {
+      return app.getPath('userData')
+    })
+
+    await testSetup.setupFilesystem({
+      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
+      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
+        { lastWorkspacePath: persistedWorkspacePath },
+        null,
+        2
+      ),
+      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+        {
+          workspaceId,
+          selectedScreen: 'prompt-folders',
+          selectedPromptFolderId: developmentPromptFolderId,
+          promptFolderOutlinerEntryIds: [
+            {
+              promptFolderId: developmentPromptFolderId,
+              outlinerEntryId: 'missing-prompt-id'
+            }
+          ]
+        },
+        null,
+        2
+      )
+    })
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop('[data-testid="prompt-folder-virtual-window"]'))
+      .toBe(0)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR))
+      .toBe(0)
   })
 })
