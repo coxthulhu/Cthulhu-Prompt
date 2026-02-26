@@ -32,7 +32,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint + typecheck** (run together), Vitest, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that the path used when running commands should be the same as your working directory.
+Use Windows `cmd.exe` for **lint + typecheck** (run together), Vitest, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that `<WINDOWS_PROJECT_PATH>` and `<WSL_PROJECT_PATH>` point to the same repository location.
 Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
@@ -42,8 +42,8 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 - Reusable template (swap the trailing command as needed):
   ```ts
   await shell({
-    command: ['cmd.exe', '/C', 'cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && <command>'],
-    workdir: '/mnt/c/Source/PromptApps/CthulhuPromptPublic',
+    command: ['cmd.exe', '/C', 'cd /d <WINDOWS_PROJECT_PATH> && <command>'],
+    workdir: '<WSL_PROJECT_PATH>',
     with_escalated_permissions: true,
     justification: 'Windows cmd.exe run needs sandbox access to project artifacts',
     timeout_ms: 300000
@@ -62,9 +62,9 @@ Run via Windows `cmd.exe`; reuse the template and set `<command>` to the desired
 Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
 Use `cmd.exe` caret-quoted escaping for every `--grep` value for consistency: `--grep=^"pattern^"`.
 
-- All tests: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright"`
-- Single file: `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- tests/playwright/TestInfrastructure.test.ts"`
-- Single test (full name with spaces): `cmd.exe /C "cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run test:playwright -- tests/playwright/PromptFoldersPromptManagement.spec.ts --grep=^"preserves prompt order after navigating away^""`
+- All tests: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright"`
+- Single file: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/TestInfrastructure.test.ts"`
+- Single test (full name with spaces): `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/PromptFoldersPromptManagement.spec.ts --grep=^"preserves prompt order after navigating away^""`
 
 ## Coding Style & Naming Conventions
 
