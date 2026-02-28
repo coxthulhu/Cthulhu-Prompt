@@ -18,15 +18,23 @@
     "test:playwright": "cross-env VITE_LOG_LEVEL=warn npm run build && cross-env DEV_ENVIRONMENT=PLAYWRIGHT npx playwright test"
   },
   "dependencies": {
+    "@codingame/monaco-vscode-api": "^26.2.1",
+    "@codingame/monaco-vscode-languages-service-override": "^26.2.1",
+    "@codingame/monaco-vscode-markdown-basics-default-extension": "^26.2.1",
+    "@codingame/monaco-vscode-markdown-language-features-default-extension": "^26.2.1",
+    "@codingame/monaco-vscode-textmate-service-override": "^26.2.1",
+    "@codingame/monaco-vscode-theme-defaults-default-extension": "^26.2.1",
+    "@codingame/monaco-vscode-theme-service-override": "^26.2.1",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/svelte-db": "^0.1.69",
     "electron-updater": "^6.3.9",
     "lucide-svelte": "^0.555.0",
-    "monaco-editor": "^0.52.2",
+    "monaco-editor": "npm:@codingame/monaco-vscode-editor-api@^26.2.1",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "vscode": "npm:@codingame/monaco-vscode-extension-api@^26.2.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
