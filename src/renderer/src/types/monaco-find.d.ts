@@ -1,4 +1,4 @@
-declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findController' {
+declare module '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findController' {
   import type { editor } from 'monaco-editor'
 
   export class FindController {
@@ -22,7 +22,7 @@ declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
   }
 }
 
-declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findModel' {
+declare module '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel' {
   import type { editor } from 'monaco-editor'
 
   export class FindModelBoundToEditorModel {

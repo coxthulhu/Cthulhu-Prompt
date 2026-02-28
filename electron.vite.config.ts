@@ -33,6 +33,10 @@ export default defineConfig({
   renderer: {
     // Purpose: renderer build is the noisiest; suppress when needed.
     logLevel,
+    // Monaco VSCode TextMate worker uses code-splitting; Vite worker output must be ES modules.
+    worker: {
+      format: 'es'
+    },
     server: {
       host: '127.0.0.1',
       port: 12000,

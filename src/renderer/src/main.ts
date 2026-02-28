@@ -4,7 +4,7 @@ import { mount } from 'svelte'
 import { loadSystemSettings } from './data/Queries/SystemSettingsQuery'
 import { loadUserPersistence } from './data/Queries/UserPersistenceQuery'
 import { initializeSvelteVirtualWindowHydrationControls } from './features/virtualizer/SvelteVirtualWindowHydrationControls'
-import { warmupMonacoEditor } from './common/Monaco'
+import { initializeMonacoVscodeApi, warmupMonacoEditor } from './common/Monaco'
 
 initializeSvelteVirtualWindowHydrationControls()
 
@@ -15,10 +15,12 @@ const bootstrap = async (): Promise<void> => {
   await loadUserPersistence()
 
   try {
+    // Side effect: initialize VSCode-backed Monaco services before first editor/model creation.
+    await initializeMonacoVscodeApi()
     // Side effect: pre-load Monaco editor modules before the first visible editor mounts.
     warmupMonacoEditor()
   } catch (error) {
-    console.warn('Monaco warmup failed. Continuing startup without warmup.', error)
+    console.warn('Monaco setup failed. Continuing startup without Monaco warmup.', error)
   }
 
   mount(App, {

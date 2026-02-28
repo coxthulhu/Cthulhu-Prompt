@@ -2,8 +2,8 @@
   import { onMount } from 'svelte'
   import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import { FindController } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
-  import { FindModelBoundToEditorModel } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findModel'
+  import { FindController } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findController'
+  import { FindModelBoundToEditorModel } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
   import { clampMonacoHeightPx, getMinMonacoHeightPx } from './promptEditorSizing'
@@ -290,66 +290,100 @@
   onMount(() => {
     if (!container) return
 
-    const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
-    if (measuredWidthPx <= 0) return
+    let isDisposed = false
+    let changeDisposable: monaco.IDisposable | null = null
+    let blurDisposable: monaco.IDisposable | null = null
+    let focusDisposable: monaco.IDisposable | null = null
+    let cursorDisposable: monaco.IDisposable | null = null
+    let selectionDisposable: monaco.IDisposable | null = null
+    let scrollDisposable: monaco.IDisposable | null = null
+    let mountedModelReference: Awaited<ReturnType<typeof monaco.editor.createModelReference>> | null = null
 
-    const nextEditor = monaco.editor.create(container, {
-      value: initialValue,
-      language: 'markdown',
-      automaticLayout: false,
-      theme: PROMPT_EDITOR_THEME,
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      wordWrap: 'on',
-      wordWrapColumn: 80,
-      fontSize: promptFontSize,
-      lineNumbers: 'on',
-      lineNumbersMinChars: 3,
-      scrollbar: { alwaysConsumeMouseWheel: false },
-      revealHorizontalRightPadding: 0,
-      cursorSmoothCaretAnimation: 'off',
-      smoothScrolling: false,
-      renderLineHighlightOnlyWhenFocus: true,
-      overflowWidgetsDomNode,
-      dimension: { width: measuredWidthPx, height: minMonacoHeightPx }
-    })
+    const mountEditor = async () => {
+      if (!container || isDisposed) return
+      const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
+      if (measuredWidthPx <= 0 || isDisposed) return
 
-    editor = nextEditor
-    registerMonacoEditor({ container, editor: nextEditor })
-    onEditorLifecycle?.(nextEditor, true)
-    findController = FindController.get(nextEditor)
+      const modelUri = monaco.Uri.file(`/cthulhu-prompt/${encodeURIComponent(rowId)}.md`)
+      const nextModelReference = await monaco.editor.createModelReference(modelUri, initialValue)
+      const textFileModel = nextModelReference.object
+      if (!textFileModel.isResolved()) {
+        await textFileModel.resolve()
+      }
+      if (isDisposed || !container) {
+        nextModelReference.dispose()
+        return
+      }
+      if (!textFileModel.isResolved()) {
+        nextModelReference.dispose()
+        return
+      }
 
-    const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
-    const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
-    const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
-    const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
-    const selectionDisposable = nextEditor.onDidChangeCursorSelection((event) => {
-      if (!onSelectionChange) return
-      if (event.source === 'api') return
-      const model = nextEditor.getModel()
-      if (!model) return
-      const startOffset = model.getOffsetAt(event.selection.getStartPosition())
-      const endOffset = model.getOffsetAt(event.selection.getEndPosition())
-      onSelectionChange(startOffset, endOffset)
-    })
-    const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
+      mountedModelReference = nextModelReference
+      const nextEditor = monaco.editor.create(container, {
+        model: textFileModel.textEditorModel,
+        automaticLayout: false,
+        theme: PROMPT_EDITOR_THEME,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        wordWrap: 'on',
+        wordWrapColumn: 80,
+        fontSize: promptFontSize,
+        lineNumbers: 'on',
+        lineNumbersMinChars: 3,
+        scrollbar: { alwaysConsumeMouseWheel: false },
+        revealHorizontalRightPadding: 0,
+        cursorSmoothCaretAnimation: 'off',
+        smoothScrolling: false,
+        renderLineHighlightOnlyWhenFocus: true,
+        overflowWidgetsDomNode,
+        dimension: { width: measuredWidthPx, height: minMonacoHeightPx }
+      })
 
-    layoutEditor()
-    lastContainerWidthPx = containerWidthPx
-    emitChange(nextEditor.getValue(), false, monacoHeightPx)
-    onFindMatchReveal?.(revealFindMatch)
+      editor = nextEditor
+      registerMonacoEditor({ container, editor: nextEditor })
+      onEditorLifecycle?.(nextEditor, true)
+      findController = FindController.get(nextEditor)
+
+      changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
+      blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
+      focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
+      cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
+      selectionDisposable = nextEditor.onDidChangeCursorSelection((event) => {
+        if (!onSelectionChange) return
+        if (event.source === 'api') return
+        const model = nextEditor.getModel()
+        if (!model) return
+        const startOffset = model.getOffsetAt(event.selection.getStartPosition())
+        const endOffset = model.getOffsetAt(event.selection.getEndPosition())
+        onSelectionChange(startOffset, endOffset)
+      })
+      scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
+
+      layoutEditor()
+      lastContainerWidthPx = containerWidthPx
+      emitChange(nextEditor.getValue(), false, monacoHeightPx)
+      onFindMatchReveal?.(revealFindMatch)
+    }
+
+    void mountEditor()
 
     return () => {
-      changeDisposable.dispose()
-      blurDisposable.dispose()
-      focusDisposable.dispose()
-      cursorDisposable.dispose()
-      selectionDisposable.dispose()
-      scrollDisposable.dispose()
-      unregisterMonacoEditor(nextEditor)
-      onEditorLifecycle?.(nextEditor, false)
+      isDisposed = true
+      changeDisposable?.dispose()
+      blurDisposable?.dispose()
+      focusDisposable?.dispose()
+      cursorDisposable?.dispose()
+      selectionDisposable?.dispose()
+      scrollDisposable?.dispose()
+      if (editor) {
+        unregisterMonacoEditor(editor)
+        onEditorLifecycle?.(editor, false)
+        editor.dispose()
+      }
       onFindMatchReveal?.(null)
-      nextEditor.dispose()
+      mountedModelReference?.dispose()
+      mountedModelReference = null
       editor = null
       findController = null
       clearFindState()
