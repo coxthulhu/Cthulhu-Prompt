@@ -17,6 +17,7 @@ import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
 const PROMPT_EDITOR_THEME_ID = 'Default Dark Modern'
 let monacoVscodeInitialization: Promise<void> | null = null
+let monacoEditorOverridesRegistered = false
 // Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
 const DISABLED_FIND_COMMANDS = [
   'actions.find',
@@ -65,44 +66,57 @@ self.MonacoEnvironment = {
   }
 } as any
 
+const registerMonacoEditorOverrides = (): void => {
+  if (monacoEditorOverridesRegistered) return
+  monacoEditorOverridesRegistered = true
+
+  // Disable Monaco's built-in find/replace widget so we can use our external dialog.
+  DISABLED_FIND_COMMANDS.forEach((id) => {
+    monaco.editor.addCommand({ id, run: () => {} })
+  })
+  monaco.editor.addKeybindingRules([
+    { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, command: null },
+    { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, command: null },
+    { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, command: null },
+    { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyC, command: null },
+    { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyW, command: null },
+    { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyR, command: null },
+    { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyL, command: null },
+    { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyP, command: null },
+    { keybinding: monaco.KeyCode.F3, command: null },
+    { keybinding: monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
+    { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.F3, command: null },
+    { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
+    {
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Digit1,
+      command: null
+    },
+    { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null },
+    { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null }
+  ])
+}
+
 export const initializeMonacoVscodeApi = (): Promise<void> => {
   if (monacoVscodeInitialization == null) {
     monacoVscodeInitialization = initialize({
       ...getThemeServiceOverride(),
       ...getTextMateServiceOverride(),
       ...getLanguagesServiceOverride()
-    }).then(() => {
-      monaco.editor.setTheme(PROMPT_EDITOR_THEME_ID)
     })
+      .catch((error) => {
+        const message =
+          error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+        if (message.includes('Services are already initialized')) return
+        throw error
+      })
+      .then(() => {
+        monaco.editor.setTheme(PROMPT_EDITOR_THEME_ID)
+        registerMonacoEditorOverrides()
+      })
   }
 
   return monacoVscodeInitialization
 }
-
-// Disable Monaco's built-in find/replace widget so we can use our external dialog.
-DISABLED_FIND_COMMANDS.forEach((id) => {
-  monaco.editor.addCommand({ id, run: () => {} })
-})
-monaco.editor.addKeybindingRules([
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, command: null },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, command: null },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, command: null },
-  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyC, command: null },
-  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyW, command: null },
-  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyR, command: null },
-  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyL, command: null },
-  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.KeyP, command: null },
-  { keybinding: monaco.KeyCode.F3, command: null },
-  { keybinding: monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.F3, command: null },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.F3, command: null },
-  {
-    keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Digit1,
-    command: null
-  },
-  { keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null },
-  { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null }
-])
 
 // (Optionally) export monaco to reuse elsewhere
 export const PROMPT_EDITOR_THEME = PROMPT_EDITOR_THEME_ID

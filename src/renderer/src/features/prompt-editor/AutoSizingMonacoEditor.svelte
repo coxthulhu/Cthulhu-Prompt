@@ -298,6 +298,7 @@
     let selectionDisposable: monaco.IDisposable | null = null
     let scrollDisposable: monaco.IDisposable | null = null
     let mountedModelReference: Awaited<ReturnType<typeof monaco.editor.createModelReference>> | null = null
+    let mountedFallbackModel: monaco.editor.ITextModel | null = null
 
     const mountEditor = async () => {
       if (!container || isDisposed) return
@@ -305,23 +306,42 @@
       if (measuredWidthPx <= 0 || isDisposed) return
 
       const modelUri = monaco.Uri.file(`/cthulhu-prompt/${encodeURIComponent(rowId)}.md`)
-      const nextModelReference = await monaco.editor.createModelReference(modelUri, initialValue)
-      const textFileModel = nextModelReference.object
-      if (!textFileModel.isResolved()) {
-        await textFileModel.resolve()
-      }
-      if (isDisposed || !container) {
-        nextModelReference.dispose()
-        return
-      }
-      if (!textFileModel.isResolved()) {
-        nextModelReference.dispose()
-        return
+      let editorModel: monaco.editor.ITextModel | null = null
+      try {
+        const nextModelReference = await monaco.editor.createModelReference(modelUri, initialValue)
+        const textFileModel = nextModelReference.object
+        if (!textFileModel.isResolved()) {
+          await textFileModel.resolve()
+        }
+        if (isDisposed || !container) {
+          nextModelReference.dispose()
+          return
+        }
+        if (!textFileModel.isResolved()) {
+          nextModelReference.dispose()
+          return
+        }
+
+        mountedModelReference = nextModelReference
+        editorModel = textFileModel.textEditorModel
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (!message.includes('Model not found')) {
+          throw error
+        }
+        const existingModel = monaco.editor.getModel(modelUri)
+        const nextFallbackModel =
+          existingModel ?? monaco.editor.createModel(initialValue, 'markdown', modelUri)
+        if (existingModel) {
+          existingModel.setValue(initialValue)
+        }
+        mountedFallbackModel = nextFallbackModel
+        editorModel = nextFallbackModel
       }
 
-      mountedModelReference = nextModelReference
+      if (!editorModel || isDisposed || !container) return
       const nextEditor = monaco.editor.create(container, {
-        model: textFileModel.textEditorModel,
+        model: editorModel,
         automaticLayout: false,
         theme: PROMPT_EDITOR_THEME,
         minimap: { enabled: false },
@@ -366,7 +386,10 @@
       onFindMatchReveal?.(revealFindMatch)
     }
 
-    void mountEditor()
+    void mountEditor().catch((error) => {
+      if (isDisposed) return
+      console.error('Failed to mount Monaco editor.', error)
+    })
 
     return () => {
       isDisposed = true
@@ -384,6 +407,8 @@
       onFindMatchReveal?.(null)
       mountedModelReference?.dispose()
       mountedModelReference = null
+      mountedFallbackModel?.dispose()
+      mountedFallbackModel = null
       editor = null
       findController = null
       clearFindState()

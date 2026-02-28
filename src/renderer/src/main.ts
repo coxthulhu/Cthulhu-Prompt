@@ -14,13 +14,14 @@ const bootstrap = async (): Promise<void> => {
   // Side effect: block first render until authoritative user persistence is loaded.
   await loadUserPersistence()
 
+  // Side effect: initialize VSCode-backed Monaco services before first editor/model creation.
+  await initializeMonacoVscodeApi()
+
   try {
-    // Side effect: initialize VSCode-backed Monaco services before first editor/model creation.
-    await initializeMonacoVscodeApi()
     // Side effect: pre-load Monaco editor modules before the first visible editor mounts.
     warmupMonacoEditor()
   } catch (error) {
-    console.warn('Monaco setup failed. Continuing startup without Monaco warmup.', error)
+    console.warn('Monaco warmup failed. Continuing startup without warmup.', error)
   }
 
   mount(App, {

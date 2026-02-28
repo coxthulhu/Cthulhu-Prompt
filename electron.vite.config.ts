@@ -33,6 +33,17 @@ export default defineConfig({
   renderer: {
     // Purpose: renderer build is the noisiest; suppress when needed.
     logLevel,
+    optimizeDeps: {
+      // Keep monaco-vscode packages unoptimized so extension resource URLs resolve in dev.
+      exclude: [
+        '@codingame/monaco-vscode-api',
+        '@codingame/monaco-vscode-languages-service-override',
+        '@codingame/monaco-vscode-markdown-basics-default-extension',
+        '@codingame/monaco-vscode-textmate-service-override',
+        '@codingame/monaco-vscode-theme-defaults-default-extension',
+        '@codingame/monaco-vscode-theme-service-override'
+      ]
+    },
     // Monaco VSCode TextMate worker uses code-splitting; Vite worker output must be ES modules.
     worker: {
       format: 'es'
