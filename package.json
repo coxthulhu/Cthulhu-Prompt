@@ -19,9 +19,11 @@
   },
   "dependencies": {
     "@codingame/monaco-vscode-api": "^26.2.1",
+    "@codingame/monaco-vscode-configuration-service-override": "^26.2.1",
     "@codingame/monaco-vscode-languages-service-override": "^26.2.1",
     "@codingame/monaco-vscode-markdown-basics-default-extension": "^26.2.1",
     "@codingame/monaco-vscode-markdown-language-features-default-extension": "^26.2.1",
+    "@codingame/monaco-vscode-model-service-override": "^26.2.1",
     "@codingame/monaco-vscode-textmate-service-override": "^26.2.1",
     "@codingame/monaco-vscode-theme-defaults-default-extension": "^26.2.1",
     "@codingame/monaco-vscode-theme-service-override": "^26.2.1",
@@ -37,6 +39,7 @@
     "vscode": "npm:@codingame/monaco-vscode-extension-api@^26.2.1"
   },
   "devDependencies": {
+    "@codingame/esbuild-import-meta-url-plugin": "^1.0.3",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
@@ -45,6 +48,7 @@
     "@playwright/test": "^1.41.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@types/node": "^22.16.5",
+    "@types/vscode": "^1.109.0",
     "bits-ui": "^2.14.4",
     "cross-env": "^10.1.0",
     "electron": "^37.2.3",
