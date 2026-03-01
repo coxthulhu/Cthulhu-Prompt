@@ -1,4 +1,4 @@
-declare module '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findController' {
+declare module 'monaco-editor/esm/vs/editor/contrib/find/browser/findController' {
   import type { editor } from 'monaco-editor'
 
   export class FindController {
