@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
+import { appendImportMetaUrlOptimizeDepsPlugin } from './build/vite/appendImportMetaUrlOptimizeDepsPlugin'
 
 // Allow silencing build logs during Playwright runs.
 // Reads `VITE_LOG_LEVEL` env var and applies to all bundles.
@@ -33,17 +34,6 @@ export default defineConfig({
   renderer: {
     // Purpose: renderer build is the noisiest; suppress when needed.
     logLevel,
-    optimizeDeps: {
-      // Keep monaco-vscode packages unoptimized so extension resource URLs resolve in dev.
-      exclude: [
-        '@codingame/monaco-vscode-api',
-        '@codingame/monaco-vscode-languages-service-override',
-        '@codingame/monaco-vscode-markdown-basics-default-extension',
-        '@codingame/monaco-vscode-textmate-service-override',
-        '@codingame/monaco-vscode-theme-defaults-default-extension',
-        '@codingame/monaco-vscode-theme-service-override'
-      ]
-    },
     // Monaco VSCode TextMate worker uses code-splitting; Vite worker output must be ES modules.
     worker: {
       format: 'es'
@@ -60,6 +50,7 @@ export default defineConfig({
       }
     },
     plugins: [
+      appendImportMetaUrlOptimizeDepsPlugin,
       tailwindcss(),
       svelte({
         // Disable Svelte HMR so Vite triggers a full window reload on file changes.
