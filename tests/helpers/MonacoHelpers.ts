@@ -2,18 +2,17 @@ import type { Page } from '@playwright/test'
 
 const DEFAULT_WAIT_TIMEOUT = 5000
 const DEFAULT_CLICK_POSITION = { x: 40, y: 20 }
+const MONACO_ROOT_SELECTOR = '.monaco-editor'
+const MONACO_VIEW_LINES_SELECTOR = '.view-lines'
+const MONACO_READY_SELECTOR = `${MONACO_ROOT_SELECTOR}:has(${MONACO_VIEW_LINES_SELECTOR})`
 
 export async function waitForMonacoEditor(
   page: Page,
   editorSelector: string,
   timeout: number = DEFAULT_WAIT_TIMEOUT
 ): Promise<string> {
-  const monacoSelector = `${editorSelector} .monaco-editor`
+  const monacoSelector = `${editorSelector} ${MONACO_READY_SELECTOR}`
   await page.waitForSelector(monacoSelector, { state: 'visible', timeout })
-  await page.waitForSelector(`${monacoSelector} textarea.inputarea`, {
-    state: 'attached',
-    timeout
-  })
   return monacoSelector
 }
 
@@ -31,17 +30,57 @@ export async function focusMonacoEditor(
   const monacoSelector = await waitForMonacoEditor(page, editorSelector, options.timeout)
   const position = options.clickPosition ?? DEFAULT_CLICK_POSITION
 
-  await page.locator(monacoSelector).click({ position })
+  await page.locator(`${monacoSelector} ${MONACO_VIEW_LINES_SELECTOR}`).click({ position })
 
   if (options.ensureInputFocus !== false) {
-    await page.locator(`${monacoSelector} textarea.inputarea`).click({ force: true })
+    await page.evaluate((selector) => {
+      const row = document.querySelector(selector)
+      if (!row) return
+
+      const monacoRoot = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+        (candidate) => candidate.querySelector('.view-lines')
+      )
+      if (!monacoRoot) return
+
+      const registry = (
+        window as unknown as {
+          __cthulhuMonacoEditors?: Array<{
+            container: HTMLElement | null
+            editor: { focus: () => void }
+          }>
+        }
+      ).__cthulhuMonacoEditors
+
+      const entry = registry?.find((item) => {
+        if (!item?.container) return false
+        return (
+          item.container === monacoRoot ||
+          item.container.contains(monacoRoot) ||
+          monacoRoot.contains(item.container)
+        )
+      })
+      entry?.editor.focus()
+
+      const fallbackNode =
+        monacoRoot.querySelector<HTMLElement>('textarea.inputarea') ??
+        monacoRoot.querySelector<HTMLElement>('.native-edit-context') ??
+        monacoRoot.querySelector<HTMLElement>('textarea.ime-text-area')
+      fallbackNode?.focus({ preventScroll: true })
+    }, editorSelector)
   }
 
   await page.waitForFunction((selector) => {
-    const container = document.querySelector(selector)
+    const row = document.querySelector(selector)
+    if (!row) {
+      return false
+    }
+
+    const container = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
     const active = document.activeElement
     return !!container && !!active && container.contains(active)
-  }, monacoSelector)
+  }, editorSelector)
 
   return monacoSelector
 }
@@ -66,22 +105,34 @@ export async function typeInMonacoEditor(
 }
 
 export async function isMonacoEditorFocused(page: Page, editorSelector: string): Promise<boolean> {
-  const monacoSelector = `${editorSelector} .monaco-editor`
   return await page.evaluate((selector) => {
-    const container = document.querySelector(selector) as HTMLElement | null
+    const row = document.querySelector(selector)
+    if (!row) {
+      return false
+    }
+
+    const container = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
     if (!container) {
       return false
     }
 
     const active = document.activeElement
     return !!active && container.contains(active)
-  }, monacoSelector)
+  }, editorSelector)
 }
 
 export async function getMonacoEditorText(page: Page, editorSelector: string): Promise<string> {
-  const monacoSelector = `${editorSelector} .monaco-editor`
   return await page.evaluate((selector) => {
-    const container = document.querySelector(selector)
+    const row = document.querySelector(selector)
+    if (!row) {
+      return ''
+    }
+
+    const container = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
     const lines = container?.querySelector('.view-lines') as HTMLElement | null
     if (!lines) {
       return ''
@@ -92,7 +143,7 @@ export async function getMonacoEditorText(page: Page, editorSelector: string): P
       .replace(/\u00A0/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-  }, monacoSelector)
+  }, editorSelector)
 }
 
 export type MonacoCursorPosition = {
@@ -104,9 +155,15 @@ export async function getMonacoCursorPosition(
   page: Page,
   editorSelector: string
 ): Promise<MonacoCursorPosition | null> {
-  const monacoSelector = `${editorSelector} .monaco-editor`
   return await page.evaluate((selector) => {
-    const monacoNode = document.querySelector(selector)
+    const row = document.querySelector(selector)
+    if (!row) {
+      return null
+    }
+
+    const monacoNode = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
     if (!monacoNode) {
       return null
     }
@@ -138,13 +195,17 @@ export async function getMonacoCursorPosition(
       lineNumber: position.lineNumber,
       column: position.column
     }
-  }, monacoSelector)
+  }, editorSelector)
 }
 
 export async function moveMonacoCursorToEnd(page: Page, editorSelector: string): Promise<void> {
-  const monacoSelector = `${editorSelector} .monaco-editor`
   await page.evaluate((selector) => {
-    const monacoNode = document.querySelector(selector)
+    const row = document.querySelector(selector)
+    if (!row) return
+
+    const monacoNode = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
     if (!monacoNode) return
 
     const registry = (
@@ -175,5 +236,5 @@ export async function moveMonacoCursorToEnd(page: Page, editorSelector: string):
     const lineNumber = model.getLineCount()
     const column = model.getLineMaxColumn(lineNumber)
     entry.editor.setPosition({ lineNumber, column })
-  }, monacoSelector)
+  }, editorSelector)
 }

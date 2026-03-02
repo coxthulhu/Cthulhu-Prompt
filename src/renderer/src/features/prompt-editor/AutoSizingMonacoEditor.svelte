@@ -131,10 +131,14 @@
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     options: FocusOptions = { preventScroll: true }
   ) => {
-    targetEditor
-      .getDomNode()
-      ?.querySelector<HTMLTextAreaElement>('.inputarea.monaco-mouse-cursor-text')
-      ?.focus(options)
+    const domNode = targetEditor.getDomNode()
+    if (!domNode) return
+
+    const focusTarget =
+      domNode.querySelector<HTMLElement>('.inputarea.monaco-mouse-cursor-text') ??
+      domNode.querySelector<HTMLElement>('.native-edit-context') ??
+      domNode.querySelector<HTMLElement>('.ime-text-area')
+    focusTarget?.focus(options)
   }
 
   const getCursorMetrics = (position: monaco.IPosition) => {
