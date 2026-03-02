@@ -19,7 +19,7 @@ let initializationPromise: Promise<void> | null = null
 const configureWorkers = (): void => {
   self.MonacoEnvironment = {
     getWorker(_moduleId: string, label: string) {
-      if (label === 'textMateWorker') {
+      if (label === 'TextMateWorker') {
         return new Worker(
           new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
           { type: 'module' }
