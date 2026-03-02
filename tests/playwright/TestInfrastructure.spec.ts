@@ -31,10 +31,7 @@ describe('Test Infrastructure', () => {
       expect(testSetupResult.message).toBe('Test setup communication works')
     })
 
-    test('should allow granular setup control for special cases', async ({
-      testSetup,
-      electronApp
-    }) => {
+    test('should allow granular setup control for special cases', async ({ testSetup }) => {
       // Demonstrate the individual setup functions for special test cases
       await testSetup.setupFilesystem({
         '/special/case.txt': 'special content'
@@ -44,11 +41,7 @@ describe('Test Infrastructure', () => {
 
       // Custom logic could go here before completing startup
 
-      await testSetup.completeStartup()
-
-      // Now can access mainWindow through electronApp if needed
-      const mainWindow = await electronApp.firstWindow()
-      await mainWindow.waitForLoadState('domcontentloaded')
+      const { mainWindow } = await testSetup.setupAndStart()
 
       expect(mainWindow.isClosed()).toBe(false)
     })
