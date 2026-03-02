@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.8
+
+### New Features
+
+- Added persistence for prompt-folder navigation context, including scroll position and outliner restore when returning to a folder.
+- Improved Monaco syntax highlighting with upstream VSCode compatibility and theme support. 
+
+### Changes
+
+- Refactored prompt-folder screen internals (controller/virtual content/settings row) and modularized renderer session UI caches.
+- Reworked workspace persistence/autosave flow and simplified persistence data model/versioning.
+- Updated sidebar loading-state handling and anchored the prompt find widget inside the folder screen layout.
+
+### Fixed
+
+- Fixed prompt-folder restore edge cases for tiny scroll offsets, outliner selection sync, and center-row targeting.
+- Fixed workspace persistence serialization issues and improved autosave reliability test coverage.
+- Fixed Monaco integration/runtime issues (optimizeDeps setup, TextMate worker/CSP wiring, and VSCode API runtime setup).
+- Improved Playwright stability by removing sleep-based waits and fixing startup/edit-context helper readiness.
+
 ## 0.0.7
 
 ### New Features
