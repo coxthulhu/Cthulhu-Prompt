@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
-import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
@@ -23,15 +23,16 @@ const readUserPersistenceFile = async (electronApp: any): Promise<{
     return app.getPath('userData')
   })
   const userPersistencePath = join(userDataPath, 'UserPersistence.json')
-  const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
+  const requestId = createTestRequestId('read')
+  const persistedContent = await electronApp.evaluate(async ({ app }, payload) => {
+    const { filePath, requestId } = payload
     return await new Promise<string>((resolve) => {
-      const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
       app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
         resolve(payload.content)
       })
       app.emit('test-read-file', { filePath, requestId })
     })
-  }, userPersistencePath)
+  }, { filePath: userPersistencePath, requestId })
 
   return JSON.parse(persistedContent)
 }
@@ -52,15 +53,16 @@ const readWorkspacePersistenceFile = async (
     return app.getPath('userData')
   })
   const workspacePersistencePath = join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)
-  const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
+  const requestId = createTestRequestId('read')
+  const persistedContent = await electronApp.evaluate(async ({ app }, payload) => {
+    const { filePath, requestId } = payload
     return await new Promise<string>((resolve) => {
-      const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
       app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
         resolve(payload.content)
       })
       app.emit('test-read-file', { filePath, requestId })
     })
-  }, workspacePersistencePath)
+  }, { filePath: workspacePersistencePath, requestId })
 
   return JSON.parse(persistedContent)
 }

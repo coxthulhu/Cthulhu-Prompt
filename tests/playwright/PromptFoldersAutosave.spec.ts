@@ -1,4 +1,4 @@
-import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import {
   waitForMonacoEditor,
   focusMonacoEditor,
@@ -76,15 +76,16 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     await expect
       .poll(
         async () => {
-          const persistedContent = await electronApp.evaluate(async ({ app }, filePath) => {
+          const requestId = createTestRequestId('read')
+          const persistedContent = await electronApp.evaluate(async ({ app }, payload) => {
+            const { filePath, requestId } = payload
             return await new Promise<string>((resolve) => {
-              const requestId = `read-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
               app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
                 resolve(payload.content)
               })
               app.emit('test-read-file', { filePath, requestId })
             })
-          }, '/ws/sample/Prompts/Development/Prompts.json')
+          }, { filePath: '/ws/sample/Prompts/Development/Prompts.json', requestId })
 
           return JSON.parse(persistedContent)
             .prompts.map((prompt: { promptText: string }) => prompt.promptText)

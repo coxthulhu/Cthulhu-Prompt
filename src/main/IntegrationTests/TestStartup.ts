@@ -3,6 +3,7 @@ import { startupNormally } from '../NormalStartup'
 import { getFs, setFs } from '../fs-provider'
 import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
 import { isPlaywrightEnvironment } from '../appEnvironment'
+import { SqliteDataAccess } from '../DataAccess/SqliteDataAccess'
 
 interface TestFixtures {
   fileDialogResults?: string[]
@@ -90,8 +91,23 @@ type FilesystemSetupResult = {
   error?: string
 }
 
+type SqlQueryPayload = {
+  requestId: string
+  sql: string
+}
+
+type SqlQueryResult = {
+  success: boolean
+  rows?: Array<Record<string, unknown>>
+  error?: string
+}
+
 function emitFilesystemSetupResult(requestId: string, result: FilesystemSetupResult): void {
   ;(app as any).emit(`test-setup-filesystem-ready:${requestId}`, result)
+}
+
+function emitSqlQueryResult(requestId: string, result: SqlQueryResult): void {
+  ;(app as any).emit(`test-run-sql-query-ready:${requestId}`, result)
 }
 
 function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload | null {
@@ -112,6 +128,27 @@ function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload |
   return {
     requestId: record.requestId,
     filesystem: record.filesystem as Record<string, string | null>
+  }
+}
+
+function parseSqlQueryPayload(payload: unknown): SqlQueryPayload | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+
+  if (typeof record.requestId !== 'string') {
+    return null
+  }
+
+  if (typeof record.sql !== 'string') {
+    return null
+  }
+
+  return {
+    requestId: record.requestId,
+    sql: record.sql
   }
 }
 
@@ -165,6 +202,24 @@ export function setupTestStartupListener(): void {
     const fs = getFs()
     const content = fs.readFileSync(payload.filePath, 'utf8')
     ;(app as any).emit(`test-read-file-ready:${payload.requestId}`, { content })
+  })
+  ;(app as any).on('test-run-sql-query', (payload: unknown) => {
+    const typedPayload = parseSqlQueryPayload(payload)
+    if (!typedPayload) {
+      return
+    }
+
+    try {
+      if (!SqliteDataAccess.isUsingInMemoryDatabase()) {
+        throw new Error('test-run-sql-query is only available for in-memory Playwright database')
+      }
+
+      const sqlResult = SqliteDataAccess.runSqlForTests(typedPayload.sql)
+      emitSqlQueryResult(typedPayload.requestId, { success: true, ...sqlResult })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      emitSqlQueryResult(typedPayload.requestId, { success: false, error: message })
+    }
   })
   ;(app as any).on('test-complete-startup', () => {
     if (testFixtures.fileDialogResults) {

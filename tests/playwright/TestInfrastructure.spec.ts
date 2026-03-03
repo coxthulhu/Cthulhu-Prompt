@@ -1,7 +1,25 @@
 import { test as playwrightTest, expect as playwrightExpect } from '@playwright/test'
-import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
+
+const runSqlQuery = async (
+  electronApp: any,
+  sql: string
+): Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }> => {
+  const requestId = createTestRequestId('sql')
+  return await electronApp.evaluate(async ({ app }, payload) => {
+    const { query, requestId } = payload
+    return await new Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }>(
+      (resolve) => {
+        app.once(`test-run-sql-query-ready:${requestId}`, (payload) => {
+          resolve(payload)
+        })
+        app.emit('test-run-sql-query', { requestId, sql: query })
+      }
+    )
+  }, { query: sql, requestId })
+}
 
 describe('Test Infrastructure', () => {
   describe('Controlled Startup Framework', () => {
@@ -44,6 +62,22 @@ describe('Test Infrastructure', () => {
       const { mainWindow } = await testSetup.setupAndStart()
 
       expect(mainWindow.isClosed()).toBe(false)
+    })
+
+    test('should expose SchemaVersion table through test SQL event', async ({
+      testSetup,
+      electronApp
+    }) => {
+      await testSetup.setupAndStart()
+
+      const queryResult = await runSqlQuery(
+        electronApp,
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'SchemaVersion'"
+      )
+
+      expect(queryResult.success).toBe(true)
+      expect(queryResult.rows).toHaveLength(1)
+      expect(queryResult.rows?.[0]).toMatchObject({ name: 'SchemaVersion' })
     })
   })
 

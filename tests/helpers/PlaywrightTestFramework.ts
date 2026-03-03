@@ -47,6 +47,10 @@ const defaultOptions: Required<PlaywrightTestOptions> = {
 
 const RENDERER_ERROR_ANNOTATION = 'renderer-errors-json'
 
+export const createTestRequestId = (prefix: string): string => {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
+}
+
 export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
   const config = { ...defaultOptions, ...options }
 
@@ -170,7 +174,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
 
       const setupUtils = {
         setupFilesystem: async (filesystem: Record<string, string | null>) => {
-          const requestId = `fs-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
+          const requestId = createTestRequestId('fs')
 
           const result = await electronApp.evaluate(
             async ({ app }, { filesystem, requestId }) => {
