@@ -215,13 +215,29 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
         },
 
         completeStartup: async () => {
-          const completed = await electronApp.evaluate(async ({ app }) => {
-            app.emit('test-complete-startup')
-            return Boolean((app as any)._testStartupCompleted)
-          })
+          const requestId = createTestRequestId('startup')
 
-          if (!completed) {
-            throw new Error('Startup completion timed out')
+          const result = await electronApp.evaluate(
+            async ({ app }, { requestId }) => {
+              return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+                const channel = `test-complete-startup-ready:${requestId}`
+                const timeout = setTimeout(() => {
+                  resolve({ success: false, error: 'Startup completion timed out' })
+                }, 10000)
+
+                app.once(channel, (payload: { success: boolean; error?: string } | undefined) => {
+                  clearTimeout(timeout)
+                  resolve(payload ?? { success: true })
+                })
+
+                app.emit('test-complete-startup', { requestId })
+              })
+            },
+            { requestId }
+          )
+
+          if (!result?.success) {
+            throw new Error(`Startup completion failed: ${result?.error ?? 'unknown error'}`)
           }
         },
 

@@ -96,6 +96,15 @@ type SqlQueryPayload = {
   sql: string
 }
 
+type StartupCompletionPayload = {
+  requestId: string
+}
+
+type StartupCompletionResult = {
+  success: boolean
+  error?: string
+}
+
 type SqlQueryResult = {
   success: boolean
   rows?: Array<Record<string, unknown>>
@@ -108,6 +117,10 @@ function emitFilesystemSetupResult(requestId: string, result: FilesystemSetupRes
 
 function emitSqlQueryResult(requestId: string, result: SqlQueryResult): void {
   ;(app as any).emit(`test-run-sql-query-ready:${requestId}`, result)
+}
+
+function emitStartupCompletionResult(requestId: string, result: StartupCompletionResult): void {
+  ;(app as any).emit(`test-complete-startup-ready:${requestId}`, result)
 }
 
 function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload | null {
@@ -150,6 +163,19 @@ function parseSqlQueryPayload(payload: unknown): SqlQueryPayload | null {
     requestId: record.requestId,
     sql: record.sql
   }
+}
+
+function parseStartupCompletionPayload(payload: unknown): StartupCompletionPayload | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+  if (typeof record.requestId !== 'string') {
+    return null
+  }
+
+  return { requestId: record.requestId }
 }
 
 export function setupTestStartupListener(): void {
@@ -225,12 +251,32 @@ export function setupTestStartupListener(): void {
       emitSqlQueryResult(typedPayload.requestId, { success: false, error: message })
     }
   })
-  ;(app as any).on('test-complete-startup', () => {
-    if (testFixtures.fileDialogResults) {
-      setDialogProvider(createTestDialogProvider(testFixtures.fileDialogResults))
+  ;(app as any).on('test-complete-startup', (payload: unknown) => {
+    const typedPayload = parseStartupCompletionPayload(payload)
+    if (!typedPayload) {
+      return
     }
 
-    ;(app as any)._testStartupCompleted = true
-    startupNormally()
+    try {
+      if (testFixtures.fileDialogResults) {
+        setDialogProvider(createTestDialogProvider(testFixtures.fileDialogResults))
+      }
+
+      const appRef = app as any
+      appRef._testStartupCompleted = true
+
+      if (!appRef._testStartupStarted) {
+        appRef._testStartupStarted = true
+        // Side effect: defer startup to avoid tearing down the current evaluate context.
+        setImmediate(() => {
+          startupNormally()
+        })
+      }
+
+      emitStartupCompletionResult(typedPayload.requestId, { success: true })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      emitStartupCompletionResult(typedPayload.requestId, { success: false, error: message })
+    }
   })
 }
