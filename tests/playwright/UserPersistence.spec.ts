@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import { setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
@@ -14,30 +13,157 @@ const createDeterministicId = (seed: string): string => {
   return `00000000000000000000${suffix}`
 }
 
-const readUserPersistenceFile = async (electronApp: any): Promise<{
+const toSqlText = (value: string): string => {
+  return `'${value.replace(/'/g, "''")}'`
+}
+
+const runSqlQuery = async (
+  electronApp: any,
+  sql: string
+): Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }> => {
+  const requestId = createTestRequestId('sql')
+  return await electronApp.evaluate(async ({ app }, payload) => {
+    const { query, requestId } = payload
+    return await new Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }>(
+      (resolve) => {
+        app.once(`test-run-sql-query-ready:${requestId}`, (nextPayload) => {
+          resolve(nextPayload)
+        })
+        app.emit('test-run-sql-query', { requestId, sql: query })
+      }
+    )
+  }, { query: sql, requestId })
+}
+
+const runSqlStatement = async (electronApp: any, sql: string): Promise<void> => {
+  const result = await runSqlQuery(electronApp, sql)
+
+  if (!result.success) {
+    throw new Error(result.error ?? 'SQL query failed')
+  }
+}
+
+const seedUserPersistence = async (
+  electronApp: any,
+  data: {
+    lastWorkspacePath: string | null
+    appSidebarWidthPx?: number
+    promptOutlinerWidthPx?: number
+  }
+): Promise<void> => {
+  const lastWorkspacePathSql =
+    data.lastWorkspacePath === null ? 'NULL' : toSqlText(data.lastWorkspacePath)
+
+  await runSqlStatement(
+    electronApp,
+    `
+    INSERT INTO app_persistence (
+      id,
+      last_workspace_path,
+      app_sidebar_width_px,
+      prompt_outliner_width_px
+    )
+    VALUES (
+      1,
+      ${lastWorkspacePathSql},
+      ${data.appSidebarWidthPx ?? 200},
+      ${data.promptOutlinerWidthPx ?? 200}
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      last_workspace_path = excluded.last_workspace_path,
+      app_sidebar_width_px = excluded.app_sidebar_width_px,
+      prompt_outliner_width_px = excluded.prompt_outliner_width_px
+    `
+  )
+}
+
+const seedWorkspacePersistence = async (
+  electronApp: any,
+  data: {
+    workspaceId: string
+    selectedScreen: 'home' | 'settings' | 'prompt-folders'
+    selectedPromptFolderId: string | null
+    promptFolderOutlinerEntries: Array<{
+      promptFolderId: string
+      outlinerEntryId: string
+    }>
+  }
+): Promise<void> => {
+  const selectedPromptFolderIdSql =
+    data.selectedPromptFolderId === null ? 'NULL' : toSqlText(data.selectedPromptFolderId)
+
+  await runSqlStatement(
+    electronApp,
+    `
+    INSERT INTO workspace_ui_state (
+      workspace_id,
+      selected_screen,
+      selected_prompt_folder_id
+    )
+    VALUES (
+      ${toSqlText(data.workspaceId)},
+      ${toSqlText(data.selectedScreen)},
+      ${selectedPromptFolderIdSql}
+    )
+    ON CONFLICT(workspace_id) DO UPDATE SET
+      selected_screen = excluded.selected_screen,
+      selected_prompt_folder_id = excluded.selected_prompt_folder_id
+    `
+  )
+
+  await runSqlStatement(
+    electronApp,
+    `DELETE FROM prompt_folder_ui_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
+  )
+
+  for (const entry of data.promptFolderOutlinerEntries) {
+    await runSqlStatement(
+      electronApp,
+      `
+      INSERT INTO prompt_folder_ui_state (
+        workspace_id,
+        prompt_folder_id,
+        outliner_entry_id
+      )
+      VALUES (
+        ${toSqlText(data.workspaceId)},
+        ${toSqlText(entry.promptFolderId)},
+        ${toSqlText(entry.outlinerEntryId)}
+      )
+      `
+    )
+  }
+}
+
+const readUserPersistence = async (electronApp: any): Promise<{
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
   promptOutlinerWidthPx: number
 }> => {
-  const userDataPath = await electronApp.evaluate(({ app }) => {
-    return app.getPath('userData')
-  })
-  const userPersistencePath = join(userDataPath, 'UserPersistence.json')
-  const requestId = createTestRequestId('read')
-  const persistedContent = await electronApp.evaluate(async ({ app }, payload) => {
-    const { filePath, requestId } = payload
-    return await new Promise<string>((resolve) => {
-      app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
-        resolve(payload.content)
-      })
-      app.emit('test-read-file', { filePath, requestId })
-    })
-  }, { filePath: userPersistencePath, requestId })
+  const queryResult = await runSqlQuery(
+    electronApp,
+    `
+    SELECT
+      last_workspace_path AS lastWorkspacePath,
+      app_sidebar_width_px AS appSidebarWidthPx,
+      prompt_outliner_width_px AS promptOutlinerWidthPx
+    FROM app_persistence
+    WHERE id = 1
+    `
+  )
 
-  return JSON.parse(persistedContent)
+  if (!queryResult.success || !queryResult.rows?.[0]) {
+    throw new Error(queryResult.error ?? 'Failed to read app persistence')
+  }
+
+  return queryResult.rows[0] as {
+    lastWorkspacePath: string | null
+    appSidebarWidthPx: number
+    promptOutlinerWidthPx: number
+  }
 }
 
-const readWorkspacePersistenceFile = async (
+const readWorkspacePersistence = async (
   electronApp: any,
   workspaceId: string
 ): Promise<{
@@ -49,22 +175,52 @@ const readWorkspacePersistenceFile = async (
     outlinerEntryId: string
   }>
 }> => {
-  const userDataPath = await electronApp.evaluate(({ app }) => {
-    return app.getPath('userData')
-  })
-  const workspacePersistencePath = join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)
-  const requestId = createTestRequestId('read')
-  const persistedContent = await electronApp.evaluate(async ({ app }, payload) => {
-    const { filePath, requestId } = payload
-    return await new Promise<string>((resolve) => {
-      app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
-        resolve(payload.content)
-      })
-      app.emit('test-read-file', { filePath, requestId })
-    })
-  }, { filePath: workspacePersistencePath, requestId })
+  const workspaceStateResult = await runSqlQuery(
+    electronApp,
+    `
+    SELECT
+      selected_screen AS selectedScreen,
+      selected_prompt_folder_id AS selectedPromptFolderId
+    FROM workspace_ui_state
+    WHERE workspace_id = ${toSqlText(workspaceId)}
+    `
+  )
 
-  return JSON.parse(persistedContent)
+  if (!workspaceStateResult.success) {
+    throw new Error(workspaceStateResult.error ?? 'Failed to read workspace state')
+  }
+
+  const promptFolderStateResult = await runSqlQuery(
+    electronApp,
+    `
+    SELECT
+      prompt_folder_id AS promptFolderId,
+      outliner_entry_id AS outlinerEntryId
+    FROM prompt_folder_ui_state
+    WHERE workspace_id = ${toSqlText(workspaceId)}
+    `
+  )
+
+  if (!promptFolderStateResult.success) {
+    throw new Error(promptFolderStateResult.error ?? 'Failed to read prompt folder state')
+  }
+
+  const workspaceRow = workspaceStateResult.rows?.[0] as
+    | {
+        selectedScreen: 'home' | 'settings' | 'prompt-folders'
+        selectedPromptFolderId: string | null
+      }
+    | undefined
+
+  return {
+    workspaceId,
+    selectedScreen: workspaceRow?.selectedScreen ?? 'home',
+    selectedPromptFolderId: workspaceRow?.selectedPromptFolderId ?? null,
+    promptFolderOutlinerEntries: (promptFolderStateResult.rows ?? []) as Array<{
+      promptFolderId: string
+      outlinerEntryId: string
+    }>
+  }
 }
 
 const getActiveOutlinerTitle = async (mainWindow: any): Promise<string | null> => {
@@ -113,17 +269,10 @@ const dragSidebarHandleBy = async (
 describe('User Persistence', () => {
   test('reopens the persisted workspace on startup', async ({ electronApp, testSetup }) => {
     const persistedWorkspacePath = '/ws/persisted-workspace'
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
-    })
 
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'minimal'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        { lastWorkspacePath: persistedWorkspacePath },
-        null,
-        2
-      )
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'minimal'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
     })
 
     // Startup should restore the workspace directly from user persistence.
@@ -141,21 +290,12 @@ describe('User Persistence', () => {
     testSetup
   }) => {
     const persistedWorkspacePath = '/ws/persisted-widths'
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
-    })
 
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        {
-          lastWorkspacePath: persistedWorkspacePath,
-          appSidebarWidthPx: 260,
-          promptOutlinerWidthPx: 180
-        },
-        null,
-        2
-      )
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath,
+      appSidebarWidthPx: 260,
+      promptOutlinerWidthPx: 180
     })
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -188,7 +328,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readUserPersistenceFile(electronApp)
+        const persisted = await readUserPersistence(electronApp)
         return `${persisted.appSidebarWidthPx}:${persisted.promptOutlinerWidthPx}`
       })
       .toBe('180:220')
@@ -198,27 +338,15 @@ describe('User Persistence', () => {
     const persistedWorkspacePath = '/ws/persisted-screen'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const persistedPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
     })
-
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        { lastWorkspacePath: persistedWorkspacePath },
-        null,
-        2
-      ),
-      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
-        {
-          workspaceId,
-          selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: persistedPromptFolderId,
-          promptFolderOutlinerEntries: []
-        },
-        null,
-        2
-      )
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedPromptFolderId: persistedPromptFolderId,
+      promptFolderOutlinerEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -237,27 +365,15 @@ describe('User Persistence', () => {
   }) => {
     const persistedWorkspacePath = '/ws/persisted-invalid-screen'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
     })
-
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        { lastWorkspacePath: persistedWorkspacePath },
-        null,
-        2
-      ),
-      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
-        {
-          workspaceId,
-          selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: 'missing-folder-id',
-          promptFolderOutlinerEntries: []
-        },
-        null,
-        2
-      )
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedPromptFolderId: 'missing-folder-id',
+      promptFolderOutlinerEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -268,7 +384,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
         return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
       })
       .toBe('home:null')
@@ -289,7 +405,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
         return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
       })
       .toBe(`prompt-folders:${developmentPromptFolderId}`)
@@ -298,7 +414,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
         return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
       })
       .toBe('settings:null')
@@ -325,7 +441,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
           const entries = persisted.promptFolderOutlinerEntries
           const outlinerEntry = entries.find((entry) => entry.promptFolderId === developmentPromptFolderId)
           return outlinerEntry?.outlinerEntryId ?? null
@@ -361,7 +477,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistenceFile(electronApp, workspaceId)
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
           const entries = persisted.promptFolderOutlinerEntries
           const examplesEntry = entries.find((entry) => entry.promptFolderId === examplesPromptFolderId)
           const developmentEntry = entries.find(
@@ -378,32 +494,20 @@ describe('User Persistence', () => {
     const persistedWorkspacePath = '/ws/persisted-outliner-entry'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
     })
-
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        { lastWorkspacePath: persistedWorkspacePath },
-        null,
-        2
-      ),
-      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedPromptFolderId: developmentPromptFolderId,
+      promptFolderOutlinerEntries: [
         {
-          workspaceId,
-          selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: developmentPromptFolderId,
-          promptFolderOutlinerEntries: [
-            {
-              promptFolderId: developmentPromptFolderId,
-              outlinerEntryId: 'dev-2'
-            }
-          ]
-        },
-        null,
-        2
-      )
+          promptFolderId: developmentPromptFolderId,
+          outlinerEntryId: 'dev-2'
+        }
+      ]
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -426,32 +530,20 @@ describe('User Persistence', () => {
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const longPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Long`)
     const persistedPromptId = 'virtualization-test-45'
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'virtual'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
     })
-
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'virtual'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        { lastWorkspacePath: persistedWorkspacePath },
-        null,
-        2
-      ),
-      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedPromptFolderId: longPromptFolderId,
+      promptFolderOutlinerEntries: [
         {
-          workspaceId,
-          selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: longPromptFolderId,
-          promptFolderOutlinerEntries: [
-            {
-              promptFolderId: longPromptFolderId,
-              outlinerEntryId: persistedPromptId
-            }
-          ]
-        },
-        null,
-        2
-      )
+          promptFolderId: longPromptFolderId,
+          outlinerEntryId: persistedPromptId
+        }
+      ]
     })
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -476,32 +568,20 @@ describe('User Persistence', () => {
     const persistedWorkspacePath = '/ws/persisted-outliner-entry-missing'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
-    const userDataPath = await electronApp.evaluate(({ app }) => {
-      return app.getPath('userData')
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
     })
-
-    await testSetup.setupFilesystem({
-      ...setupWorkspaceScenario(persistedWorkspacePath, 'sample'),
-      [join(userDataPath, 'UserPersistence.json')]: JSON.stringify(
-        { lastWorkspacePath: persistedWorkspacePath },
-        null,
-        2
-      ),
-      [join(userDataPath, 'WorkspacePersistence', `${workspaceId}.json`)]: JSON.stringify(
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedPromptFolderId: developmentPromptFolderId,
+      promptFolderOutlinerEntries: [
         {
-          workspaceId,
-          selectedScreen: 'prompt-folders',
-          selectedPromptFolderId: developmentPromptFolderId,
-          promptFolderOutlinerEntries: [
-            {
-              promptFolderId: developmentPromptFolderId,
-              outlinerEntryId: 'missing-prompt-id'
-            }
-          ]
-        },
-        null,
-        2
-      )
+          promptFolderId: developmentPromptFolderId,
+          outlinerEntryId: 'missing-prompt-id'
+        }
+      ]
     })
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({

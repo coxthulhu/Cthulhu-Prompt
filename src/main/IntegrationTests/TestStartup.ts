@@ -203,13 +203,17 @@ export function setupTestStartupListener(): void {
     const content = fs.readFileSync(payload.filePath, 'utf8')
     ;(app as any).emit(`test-read-file-ready:${payload.requestId}`, { content })
   })
-  ;(app as any).on('test-run-sql-query', (payload: unknown) => {
+  ;(app as any).on('test-run-sql-query', async (payload: unknown) => {
     const typedPayload = parseSqlQueryPayload(payload)
     if (!typedPayload) {
       return
     }
 
     try {
+      await app.whenReady()
+      // Side effect: allow SQL seeding before normal startup finishes in Playwright tests.
+      SqliteDataAccess.initializeDatabase()
+
       if (!SqliteDataAccess.isUsingInMemoryDatabase()) {
         throw new Error('test-run-sql-query is only available for in-memory Playwright database')
       }

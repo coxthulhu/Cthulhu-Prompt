@@ -1,128 +1,234 @@
-import { app } from 'electron'
-import * as path from 'path'
-import { getFs } from '../fs-provider'
 import {
   DEFAULT_USER_PERSISTENCE,
   createDefaultWorkspacePersistence,
-  parseUserPersistence,
   parseWorkspacePersistence,
   toSerializableWorkspacePersistence,
+  parseUserPersistence,
   type UserPersistence,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
+import { SqliteDataAccess } from './SqliteDataAccess'
 
-const USER_PERSISTENCE_FILENAME = 'UserPersistence.json'
-const WORKSPACE_PERSISTENCE_DIRECTORY_NAME = 'WorkspacePersistence'
+const APP_PERSISTENCE_ID = 1
 
-const resolveUserDataPath = (): string => {
-  return app.getPath('userData')
-}
-
-const resolveUserPersistencePath = (): string => {
-  return path.join(resolveUserDataPath(), USER_PERSISTENCE_FILENAME)
-}
-
-const resolveWorkspacePersistenceDirectoryPath = (): string => {
-  return path.join(resolveUserDataPath(), WORKSPACE_PERSISTENCE_DIRECTORY_NAME)
-}
-
-const resolveWorkspacePersistencePath = (workspaceId: string): string => {
-  return path.join(resolveWorkspacePersistenceDirectoryPath(), `${workspaceId}.json`)
-}
-
-const writeJsonFile = <TPayload extends object>(
-  filePath: string,
-  payload: TPayload
-): TPayload => {
-  const fs = getFs()
-  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf8')
-  return payload
-}
-
-const readJsonFile = (filePath: string): unknown | null => {
-  const fs = getFs()
-
-  if (!fs.existsSync(filePath)) {
-    return null
-  }
-
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-  } catch {
-    return null
-  }
-}
-
-const ensureJsonFile = <TPayload extends object>(filePath: string, initialValue: TPayload): void => {
-  const fs = getFs()
-  if (!fs.existsSync(filePath)) {
-    writeJsonFile(filePath, initialValue)
-  }
-}
-
-const ensureBasePersistenceArtifacts = (): void => {
-  const fs = getFs()
-  fs.mkdirSync(resolveUserDataPath(), { recursive: true })
-  fs.mkdirSync(resolveWorkspacePersistenceDirectoryPath(), { recursive: true })
-
-  ensureJsonFile(resolveUserPersistencePath(), DEFAULT_USER_PERSISTENCE)
+type UserPersistenceRow = {
+  lastWorkspacePath: string | null
+  appSidebarWidthPx: number
+  promptOutlinerWidthPx: number
 }
 
 export class UserPersistenceDataAccess {
-  static initializePersistenceArtifacts(): void {
-    ensureBasePersistenceArtifacts()
-  }
-
-  static ensureWorkspacePersistenceFile(workspaceId: string): void {
-    ensureBasePersistenceArtifacts()
-    ensureJsonFile(
-      resolveWorkspacePersistencePath(workspaceId),
-      createDefaultWorkspacePersistence(workspaceId)
-    )
-  }
-
   static readUserPersistence(): UserPersistence {
-    ensureBasePersistenceArtifacts()
-    const parsedPersistence = parseUserPersistence(readJsonFile(resolveUserPersistencePath()))
+    const db = SqliteDataAccess.getDatabase()
+    const persistenceRow = db
+      .prepare(
+        `
+        SELECT
+          last_workspace_path AS lastWorkspacePath,
+          app_sidebar_width_px AS appSidebarWidthPx,
+          prompt_outliner_width_px AS promptOutlinerWidthPx
+        FROM app_persistence
+        WHERE id = ?
+        `
+      )
+      .get(APP_PERSISTENCE_ID) as UserPersistenceRow | undefined
+    const parsedPersistence = parseUserPersistence(persistenceRow)
+
     return parsedPersistence ?? DEFAULT_USER_PERSISTENCE
   }
 
   static updateUserPersistence(userPersistence: UserPersistence): UserPersistence {
-    ensureBasePersistenceArtifacts()
-    return writeJsonFile(resolveUserPersistencePath(), {
+    const db = SqliteDataAccess.getDatabase()
+    const nextUserPersistence = {
       lastWorkspacePath: userPersistence.lastWorkspacePath,
       appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx),
       promptOutlinerWidthPx: Math.round(userPersistence.promptOutlinerWidthPx)
-    })
-  }
+    }
 
-  static updateLastWorkspacePath(workspacePath: string | null): UserPersistence {
-    const currentPersistence = this.readUserPersistence()
-    return this.updateUserPersistence({
-      ...currentPersistence,
-      lastWorkspacePath: workspacePath
-    })
-  }
+    db.prepare(
+      `
+      INSERT INTO app_persistence (
+        id,
+        last_workspace_path,
+        app_sidebar_width_px,
+        prompt_outliner_width_px
+      )
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        last_workspace_path = excluded.last_workspace_path,
+        app_sidebar_width_px = excluded.app_sidebar_width_px,
+        prompt_outliner_width_px = excluded.prompt_outliner_width_px
+      `
+    ).run(
+      APP_PERSISTENCE_ID,
+      nextUserPersistence.lastWorkspacePath,
+      nextUserPersistence.appSidebarWidthPx,
+      nextUserPersistence.promptOutlinerWidthPx
+    )
 
-  static clearLastWorkspacePath(): UserPersistence {
-    return this.updateLastWorkspacePath(null)
+    return nextUserPersistence
   }
 
   static readWorkspacePersistence(workspaceId: string): WorkspacePersistence {
-    this.ensureWorkspacePersistenceFile(workspaceId)
+    const db = SqliteDataAccess.getDatabase()
+    const workspaceUiState = db
+      .prepare(
+        `
+        SELECT
+          selected_screen AS selectedScreen,
+          selected_prompt_folder_id AS selectedPromptFolderId
+        FROM workspace_ui_state
+        WHERE workspace_id = ?
+        `
+      )
+      .get(workspaceId) as { selectedScreen: string; selectedPromptFolderId: string | null } | undefined
+
+    if (!workspaceUiState) {
+      return createDefaultWorkspacePersistence(workspaceId)
+    }
+
+    const promptFolderUiStateRows = db
+      .prepare(
+        `
+        SELECT
+          prompt_folder_id AS promptFolderId,
+          outliner_entry_id AS outlinerEntryId
+        FROM prompt_folder_ui_state
+        WHERE workspace_id = ?
+        `
+      )
+      .all(workspaceId)
+
     const parsedPersistence = parseWorkspacePersistence(
-      readJsonFile(resolveWorkspacePersistencePath(workspaceId)),
+      {
+        selectedScreen: workspaceUiState.selectedScreen,
+        selectedPromptFolderId: workspaceUiState.selectedPromptFolderId,
+        promptFolderOutlinerEntries: promptFolderUiStateRows
+      },
       workspaceId
     )
+
     return parsedPersistence ?? createDefaultWorkspacePersistence(workspaceId)
   }
 
   static updateWorkspacePersistence(workspacePersistence: WorkspacePersistence): WorkspacePersistence {
-    this.ensureWorkspacePersistenceFile(workspacePersistence.workspaceId)
+    const db = SqliteDataAccess.getDatabase()
     const serializableWorkspacePersistence = toSerializableWorkspacePersistence(workspacePersistence)
-    return writeJsonFile(
-      resolveWorkspacePersistencePath(workspacePersistence.workspaceId),
-      serializableWorkspacePersistence
-    )
+
+    const updateWorkspace = db.transaction(() => {
+      db.prepare(
+        `
+        INSERT INTO workspace_ui_state (
+          workspace_id,
+          selected_screen,
+          selected_prompt_folder_id
+        )
+        VALUES (?, ?, ?)
+        ON CONFLICT(workspace_id) DO UPDATE SET
+          selected_screen = excluded.selected_screen,
+          selected_prompt_folder_id = excluded.selected_prompt_folder_id
+        `
+      ).run(
+        serializableWorkspacePersistence.workspaceId,
+        serializableWorkspacePersistence.selectedScreen,
+        serializableWorkspacePersistence.selectedPromptFolderId
+      )
+
+      db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(
+        serializableWorkspacePersistence.workspaceId
+      )
+
+      const insertPromptFolderUiState = db.prepare(
+        `
+        INSERT INTO prompt_folder_ui_state (
+          workspace_id,
+          prompt_folder_id,
+          outliner_entry_id
+        )
+        VALUES (?, ?, ?)
+        `
+      )
+
+      for (const entry of serializableWorkspacePersistence.promptFolderOutlinerEntries) {
+        insertPromptFolderUiState.run(
+          serializableWorkspacePersistence.workspaceId,
+          entry.promptFolderId,
+          entry.outlinerEntryId
+        )
+      }
+    })
+
+    updateWorkspace()
+
+    return serializableWorkspacePersistence
+  }
+
+  static cleanupWorkspacePromptFolderUiState(
+    workspaceId: string,
+    workspacePromptFolderIds: string[]
+  ): void {
+    const db = SqliteDataAccess.getDatabase()
+    const validPromptFolderIds = new Set(workspacePromptFolderIds)
+
+    const cleanupWorkspaceState = db.transaction(() => {
+      const existingPromptFolderUiState = db
+        .prepare(
+          `
+          SELECT
+            prompt_folder_id AS promptFolderId,
+            outliner_entry_id AS outlinerEntryId
+          FROM prompt_folder_ui_state
+          WHERE workspace_id = ?
+          `
+        )
+        .all(workspaceId) as Array<{ promptFolderId: string; outlinerEntryId: string }>
+
+      db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(workspaceId)
+
+      const insertPromptFolderUiState = db.prepare(
+        `
+        INSERT INTO prompt_folder_ui_state (
+          workspace_id,
+          prompt_folder_id,
+          outliner_entry_id
+        )
+        VALUES (?, ?, ?)
+        `
+      )
+
+      for (const entry of existingPromptFolderUiState) {
+        if (!validPromptFolderIds.has(entry.promptFolderId)) {
+          continue
+        }
+
+        insertPromptFolderUiState.run(workspaceId, entry.promptFolderId, entry.outlinerEntryId)
+      }
+
+      const selectedWorkspaceFolder = db
+        .prepare(
+          `
+          SELECT selected_prompt_folder_id AS selectedPromptFolderId
+          FROM workspace_ui_state
+          WHERE workspace_id = ?
+          `
+        )
+        .get(workspaceId) as { selectedPromptFolderId: string | null } | undefined
+
+      if (
+        selectedWorkspaceFolder?.selectedPromptFolderId &&
+        !validPromptFolderIds.has(selectedWorkspaceFolder.selectedPromptFolderId)
+      ) {
+        db.prepare(
+          `
+          UPDATE workspace_ui_state
+          SET selected_screen = 'home',
+              selected_prompt_folder_id = NULL
+          WHERE workspace_id = ?
+          `
+        ).run(workspaceId)
+      }
+    })
+
+    cleanupWorkspaceState()
   }
 }

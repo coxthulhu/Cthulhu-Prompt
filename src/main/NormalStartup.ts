@@ -13,7 +13,6 @@ import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
 import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
 import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
 import { setupUserPersistenceQueryHandlers } from './Queries/UserPersistenceQuery'
-import { UserPersistenceDataAccess } from './DataAccess/UserPersistenceDataAccess'
 import { SqliteDataAccess } from './DataAccess/SqliteDataAccess'
 import {
   RUNTIME_ARG_PREFIX,
@@ -178,8 +177,6 @@ export function startupNormally(): void {
     setupWorkspaceDialogHandlers()
     // Side effect: create/open SQLite DB before renderer or IPC work begins.
     SqliteDataAccess.initializeDatabase()
-    // Side effect: guarantee per-user persistence files/folders exist before renderer queries run.
-    UserPersistenceDataAccess.initializePersistenceArtifacts()
     setupSystemSettingsQueryHandlers()
     setupUserPersistenceQueryHandlers()
     setupSystemSettingsMutationHandlers()

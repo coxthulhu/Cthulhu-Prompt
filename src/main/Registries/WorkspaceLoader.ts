@@ -4,8 +4,8 @@ import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import { revisions } from './Revisions'
 import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
-import { readPromptFolders } from '../DataAccess/WorkspaceReads'
-import { markWorkspaceOpened } from '../Services/WorkspacePersistenceLifecycle'
+import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
+import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
@@ -24,9 +24,13 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
 }
 
 const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
-  // Side effect: opening a workspace ensures workspace persistence metadata exists.
-  const workspaceId = markWorkspaceOpened(workspacePath)
+  const workspaceId = readWorkspaceId(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
+  // Side effect: drop stale per-folder UI state and clear invalid screen selections.
+  UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
+    workspaceId,
+    promptFolders.map((promptFolder) => promptFolder.id)
+  )
 
   // Side effect: keep path/id translation in memory for later  loads.
   registerWorkspace(workspaceId, workspacePath)
