@@ -14,8 +14,8 @@ const resolveDatabasePath = (): string => {
 }
 
 const initializeSchemaVersionTable = (db: Database.Database): void => {
-  db.exec('CREATE TABLE SchemaVersion (version INTEGER NOT NULL)')
-  db.exec('INSERT INTO SchemaVersion (version) VALUES (1)')
+  db.exec('CREATE TABLE schema_version (version INTEGER NOT NULL)')
+  db.exec('INSERT INTO schema_version (version) VALUES (1)')
 }
 
 export class SqliteDataAccess {

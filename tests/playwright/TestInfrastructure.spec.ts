@@ -64,7 +64,7 @@ describe('Test Infrastructure', () => {
       expect(mainWindow.isClosed()).toBe(false)
     })
 
-    test('should expose SchemaVersion table through test SQL event', async ({
+    test('should expose schema_version table through test SQL event', async ({
       testSetup,
       electronApp
     }) => {
@@ -72,12 +72,12 @@ describe('Test Infrastructure', () => {
 
       const queryResult = await runSqlQuery(
         electronApp,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'SchemaVersion'"
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'schema_version'"
       )
 
       expect(queryResult.success).toBe(true)
       expect(queryResult.rows).toHaveLength(1)
-      expect(queryResult.rows?.[0]).toMatchObject({ name: 'SchemaVersion' })
+      expect(queryResult.rows?.[0]).toMatchObject({ name: 'schema_version' })
     })
   })
 
