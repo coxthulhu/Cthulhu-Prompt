@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import { startupNormally } from '../NormalStartup'
 import { getFs, setFs } from '../fs-provider'
 import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
@@ -100,6 +100,10 @@ type StartupCompletionPayload = {
   requestId: string
 }
 
+type WindowStatePayload = {
+  requestId: string
+}
+
 type StartupCompletionResult = {
   success: boolean
   error?: string
@@ -108,6 +112,19 @@ type StartupCompletionResult = {
 type SqlQueryResult = {
   success: boolean
   rows?: Array<Record<string, unknown>>
+  error?: string
+}
+
+type WindowStateResult = {
+  success: boolean
+  state?: {
+    x: number
+    y: number
+    width: number
+    height: number
+    isMaximized: boolean
+    isFullScreen: boolean
+  }
   error?: string
 }
 
@@ -121,6 +138,10 @@ function emitSqlQueryResult(requestId: string, result: SqlQueryResult): void {
 
 function emitStartupCompletionResult(requestId: string, result: StartupCompletionResult): void {
   ;(app as any).emit(`test-complete-startup-ready:${requestId}`, result)
+}
+
+function emitWindowStateResult(requestId: string, result: WindowStateResult): void {
+  ;(app as any).emit(`test-read-main-window-state-ready:${requestId}`, result)
 }
 
 function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload | null {
@@ -166,6 +187,19 @@ function parseSqlQueryPayload(payload: unknown): SqlQueryPayload | null {
 }
 
 function parseStartupCompletionPayload(payload: unknown): StartupCompletionPayload | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+  if (typeof record.requestId !== 'string') {
+    return null
+  }
+
+  return { requestId: record.requestId }
+}
+
+function parseWindowStatePayload(payload: unknown): WindowStatePayload | null {
   if (!payload || typeof payload !== 'object') {
     return null
   }
@@ -228,6 +262,39 @@ export function setupTestStartupListener(): void {
     const fs = getFs()
     const content = fs.readFileSync(payload.filePath, 'utf8')
     ;(app as any).emit(`test-read-file-ready:${payload.requestId}`, { content })
+  })
+  ;(app as any).on('test-read-main-window-state', (payload: unknown) => {
+    const typedPayload = parseWindowStatePayload(payload)
+    if (!typedPayload) {
+      return
+    }
+
+    try {
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      if (!mainWindow) {
+        emitWindowStateResult(typedPayload.requestId, {
+          success: false,
+          error: 'Main window is not available'
+        })
+        return
+      }
+
+      const bounds = mainWindow.getBounds()
+      emitWindowStateResult(typedPayload.requestId, {
+        success: true,
+        state: {
+          x: Math.round(bounds.x),
+          y: Math.round(bounds.y),
+          width: Math.round(bounds.width),
+          height: Math.round(bounds.height),
+          isMaximized: mainWindow.isMaximized(),
+          isFullScreen: mainWindow.isFullScreen()
+        }
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      emitWindowStateResult(typedPayload.requestId, { success: false, error: message })
+    }
   })
   ;(app as any).on('test-run-sql-query', async (payload: unknown) => {
     const typedPayload = parseSqlQueryPayload(payload)

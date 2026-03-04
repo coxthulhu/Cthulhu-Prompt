@@ -77,6 +77,45 @@ const seedUserPersistence = async (
   )
 }
 
+const toSqlNullableInteger = (value: number | null): string => {
+  return value === null ? 'NULL' : `${Math.round(value)}`
+}
+
+const toSqlNullableBoolean = (value: boolean | null): string => {
+  if (value === null) {
+    return 'NULL'
+  }
+
+  return value ? '1' : '0'
+}
+
+const seedWindowPersistence = async (
+  electronApp: any,
+  data: {
+    x: number | null
+    y: number | null
+    width: number | null
+    height: number | null
+    isMaximized: boolean | null
+    isFullScreen: boolean | null
+  }
+): Promise<void> => {
+  await runSqlStatement(
+    electronApp,
+    `
+    UPDATE app_persistence
+    SET
+      window_x_px = ${toSqlNullableInteger(data.x)},
+      window_y_px = ${toSqlNullableInteger(data.y)},
+      window_width_px = ${toSqlNullableInteger(data.width)},
+      window_height_px = ${toSqlNullableInteger(data.height)},
+      window_is_maximized = ${toSqlNullableBoolean(data.isMaximized)},
+      window_is_fullscreen = ${toSqlNullableBoolean(data.isFullScreen)}
+    WHERE id = 1
+    `
+  )
+}
+
 const seedWorkspacePersistence = async (
   electronApp: any,
   data: {
@@ -223,6 +262,41 @@ const readWorkspacePersistence = async (
   }
 }
 
+const readMainWindowState = async (
+  electronApp: any
+): Promise<{
+  x: number
+  y: number
+  width: number
+  height: number
+  isMaximized: boolean
+  isFullScreen: boolean
+}> => {
+  const requestId = createTestRequestId('window-state')
+  const result = await electronApp.evaluate(async ({ app }, payload) => {
+    const { requestId } = payload
+    return await new Promise<{ success: boolean; state?: unknown; error?: string }>((resolve) => {
+      app.once(`test-read-main-window-state-ready:${requestId}`, (nextPayload) => {
+        resolve(nextPayload)
+      })
+      app.emit('test-read-main-window-state', { requestId })
+    })
+  }, { requestId })
+
+  if (!result.success || !result.state) {
+    throw new Error(result.error ?? 'Main window is not available')
+  }
+
+  return result.state as {
+    x: number
+    y: number
+    width: number
+    height: number
+    isMaximized: boolean
+    isFullScreen: boolean
+  }
+}
+
 const getActiveOutlinerTitle = async (mainWindow: any): Promise<string | null> => {
   return await mainWindow.evaluate((hostSelector) => {
     const host = document.querySelector<HTMLElement>(hostSelector)
@@ -314,6 +388,78 @@ describe('User Persistence', () => {
     await expect
       .poll(async () => getSidebarWidthByHandle(mainWindow, 'prompt-outliner-resize-handle'))
       .toBe(180)
+  })
+
+  test('restores persisted window bounds on startup', async ({ electronApp, testSetup }) => {
+    await seedWindowPersistence(electronApp, {
+      x: 0,
+      y: 0,
+      width: 800,
+      height: 600,
+      isMaximized: false,
+      isFullScreen: false
+    })
+
+    await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect
+      .poll(async () => {
+        const state = await readMainWindowState(electronApp)
+        return `${state.x}:${state.y}:${state.width}:${state.height}`
+      })
+      .toBe('0:0:800:600')
+  })
+
+  test('uses default window size when persisted bounds are invalid', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await seedWindowPersistence(electronApp, {
+      x: 50000,
+      y: 50000,
+      width: 930,
+      height: 690,
+      isMaximized: false,
+      isFullScreen: false
+    })
+
+    await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect
+      .poll(async () => {
+        const state = await readMainWindowState(electronApp)
+        return `${state.width}:${state.height}`
+      })
+      .toBe('900:670')
+  })
+
+  test('prefers fullscreen when fullscreen and maximized are both persisted', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await seedWindowPersistence(electronApp, {
+      x: 120,
+      y: 140,
+      width: 930,
+      height: 690,
+      isMaximized: true,
+      isFullScreen: true
+    })
+
+    await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect
+      .poll(async () => {
+        const state = await readMainWindowState(electronApp)
+        return state.isFullScreen
+      })
+      .toBe(true)
   })
 
   test('autosaves sidebar width changes to user persistence', async ({ electronApp, testSetup }) => {

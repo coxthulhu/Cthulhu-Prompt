@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
 import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadDevtools } from './devtools'
@@ -16,11 +16,20 @@ import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
 import { setupUserPersistenceQueryHandlers } from './Queries/UserPersistenceQuery'
 import { SqliteDataAccess } from './DataAccess/SqliteDataAccess'
 import {
+  UserPersistenceDataAccess,
+  type WindowPersistence
+} from './DataAccess/UserPersistenceDataAccess'
+import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
+
+const WINDOW_DEFAULT_WIDTH = 900
+const WINDOW_DEFAULT_HEIGHT = 670
+const WINDOW_MIN_WIDTH = 800
+const WINDOW_MIN_HEIGHT = 600
 
 function getWorkingDirectoryName(): string | null {
   try {
@@ -97,13 +106,112 @@ function buildRuntimeConfig(): RuntimeConfig {
   }
 }
 
+const hasPersistedWindowBounds = (
+  windowPersistence: WindowPersistence
+): windowPersistence is WindowPersistence & {
+  x: number
+  y: number
+  width: number
+  height: number
+} => {
+  return (
+    windowPersistence.x !== null &&
+    windowPersistence.y !== null &&
+    windowPersistence.width !== null &&
+    windowPersistence.height !== null
+  )
+}
+
+const arePersistedWindowBoundsValid = (windowPersistence: {
+  x: number
+  y: number
+  width: number
+  height: number
+}): boolean => {
+  if (
+    windowPersistence.width < WINDOW_MIN_WIDTH ||
+    windowPersistence.height < WINDOW_MIN_HEIGHT
+  ) {
+    return false
+  }
+
+  const windowRight = windowPersistence.x + windowPersistence.width
+  const windowBottom = windowPersistence.y + windowPersistence.height
+
+  return screen.getAllDisplays().some((display) => {
+    const displayRight = display.bounds.x + display.bounds.width
+    const displayBottom = display.bounds.y + display.bounds.height
+
+    return (
+      windowPersistence.x >= display.bounds.x &&
+      windowPersistence.y >= display.bounds.y &&
+      windowRight <= displayRight &&
+      windowBottom <= displayBottom
+    )
+  })
+}
+
+const resolveWindowStartupState = (): {
+  x: number | undefined
+  y: number | undefined
+  width: number
+  height: number
+  isMaximized: boolean
+  isFullScreen: boolean
+} => {
+  const persistedWindow = UserPersistenceDataAccess.readWindowPersistence()
+  const usePersistedBounds =
+    hasPersistedWindowBounds(persistedWindow) && arePersistedWindowBoundsValid(persistedWindow)
+
+  const isFullScreen = persistedWindow.isFullScreen === true
+  const isMaximized = !isFullScreen && persistedWindow.isMaximized === true
+
+  if (!usePersistedBounds) {
+    return {
+      x: undefined,
+      y: undefined,
+      width: WINDOW_DEFAULT_WIDTH,
+      height: WINDOW_DEFAULT_HEIGHT,
+      isMaximized,
+      isFullScreen
+    }
+  }
+
+  return {
+    x: persistedWindow.x,
+    y: persistedWindow.y,
+    width: persistedWindow.width,
+    height: persistedWindow.height,
+    isMaximized,
+    isFullScreen
+  }
+}
+
+const persistWindowState = (window: BrowserWindow): void => {
+  const normalBounds = window.getNormalBounds()
+
+  UserPersistenceDataAccess.updateWindowPersistence({
+    x: Math.round(normalBounds.x),
+    y: Math.round(normalBounds.y),
+    width: Math.round(normalBounds.width),
+    height: Math.round(normalBounds.height),
+    isMaximized: window.isMaximized(),
+    isFullScreen: window.isFullScreen()
+  })
+}
+
 function createWindow(runtimeConfig: RuntimeConfig): void {
+  const windowStartupState = resolveWindowStartupState()
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    minWidth: 800,
-    minHeight: 600,
+    width: windowStartupState.width,
+    height: windowStartupState.height,
+    ...(windowStartupState.x !== undefined && windowStartupState.y !== undefined
+      ? { x: windowStartupState.x, y: windowStartupState.y }
+      : {}),
+    minWidth: WINDOW_MIN_WIDTH,
+    minHeight: WINDOW_MIN_HEIGHT,
     show: false,
     autoHideMenuBar: true,
     title: 'Cthulhu Prompt',
@@ -116,12 +224,20 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     }
   })
 
+  if (windowStartupState.isFullScreen) {
+    mainWindow.setFullScreen(true)
+  } else if (windowStartupState.isMaximized) {
+    mainWindow.maximize()
+  }
+
   const closeGuard = { allowClose: false }
   windowCloseGuards.set(mainWindow, closeGuard)
 
   mainWindow.on('close', (event) => {
     if (closeGuard.allowClose) {
       closeGuard.allowClose = false
+      // Side effect: capture final window geometry and state after autosaves complete.
+      persistWindowState(mainWindow)
       return
     }
 

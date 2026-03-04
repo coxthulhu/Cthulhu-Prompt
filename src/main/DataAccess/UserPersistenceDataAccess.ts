@@ -17,6 +17,33 @@ type UserPersistenceRow = {
   promptOutlinerWidthPx: number
 }
 
+type WindowPersistenceRow = {
+  windowXPx: number | null
+  windowYPx: number | null
+  windowWidthPx: number | null
+  windowHeightPx: number | null
+  windowIsMaximized: number | null
+  windowIsFullScreen: number | null
+}
+
+export type WindowPersistence = {
+  x: number | null
+  y: number | null
+  width: number | null
+  height: number | null
+  isMaximized: boolean | null
+  isFullScreen: boolean | null
+}
+
+const DEFAULT_WINDOW_PERSISTENCE: WindowPersistence = {
+  x: null,
+  y: null,
+  width: null,
+  height: null,
+  isMaximized: null,
+  isFullScreen: null
+}
+
 export class UserPersistenceDataAccess {
   static readUserPersistence(): UserPersistence {
     const db = SqliteDataAccess.getDatabase()
@@ -67,6 +94,77 @@ export class UserPersistenceDataAccess {
     )
 
     return nextUserPersistence
+  }
+
+  static readWindowPersistence(): WindowPersistence {
+    const db = SqliteDataAccess.getDatabase()
+    const persistenceRow = db
+      .prepare(
+        `
+        SELECT
+          window_x_px AS windowXPx,
+          window_y_px AS windowYPx,
+          window_width_px AS windowWidthPx,
+          window_height_px AS windowHeightPx,
+          window_is_maximized AS windowIsMaximized,
+          window_is_fullscreen AS windowIsFullScreen
+        FROM app_persistence
+        WHERE id = ?
+        `
+      )
+      .get(APP_PERSISTENCE_ID) as WindowPersistenceRow | undefined
+
+    if (!persistenceRow) {
+      return DEFAULT_WINDOW_PERSISTENCE
+    }
+
+    return {
+      x: persistenceRow.windowXPx === null ? null : Math.round(persistenceRow.windowXPx),
+      y: persistenceRow.windowYPx === null ? null : Math.round(persistenceRow.windowYPx),
+      width: persistenceRow.windowWidthPx === null ? null : Math.round(persistenceRow.windowWidthPx),
+      height:
+        persistenceRow.windowHeightPx === null ? null : Math.round(persistenceRow.windowHeightPx),
+      isMaximized:
+        persistenceRow.windowIsMaximized === null ? null : Boolean(persistenceRow.windowIsMaximized),
+      isFullScreen:
+        persistenceRow.windowIsFullScreen === null ? null : Boolean(persistenceRow.windowIsFullScreen)
+    }
+  }
+
+  static updateWindowPersistence(windowPersistence: WindowPersistence): void {
+    const db = SqliteDataAccess.getDatabase()
+    const nextWindowPersistence = {
+      x: windowPersistence.x === null ? null : Math.round(windowPersistence.x),
+      y: windowPersistence.y === null ? null : Math.round(windowPersistence.y),
+      width: windowPersistence.width === null ? null : Math.round(windowPersistence.width),
+      height: windowPersistence.height === null ? null : Math.round(windowPersistence.height),
+      isMaximized:
+        windowPersistence.isMaximized === null ? null : windowPersistence.isMaximized ? 1 : 0,
+      isFullScreen:
+        windowPersistence.isFullScreen === null ? null : windowPersistence.isFullScreen ? 1 : 0
+    }
+
+    db.prepare(
+      `
+      UPDATE app_persistence
+      SET
+        window_x_px = ?,
+        window_y_px = ?,
+        window_width_px = ?,
+        window_height_px = ?,
+        window_is_maximized = ?,
+        window_is_fullscreen = ?
+      WHERE id = ?
+      `
+    ).run(
+      nextWindowPersistence.x,
+      nextWindowPersistence.y,
+      nextWindowPersistence.width,
+      nextWindowPersistence.height,
+      nextWindowPersistence.isMaximized,
+      nextWindowPersistence.isFullScreen,
+      APP_PERSISTENCE_ID
+    )
   }
 
   static readWorkspacePersistence(workspaceId: string): WorkspacePersistence {
