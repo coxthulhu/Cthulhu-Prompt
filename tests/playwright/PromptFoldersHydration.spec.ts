@@ -5,6 +5,7 @@ import {
   PROMPT_FOLDER_HOST_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
+import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -19,6 +20,130 @@ const MEASUREMENT_PROMPT_ID = 'measurement-1'
 const MEASUREMENT_PROMPT_SELECTOR = promptEditorSelector(MEASUREMENT_PROMPT_ID)
 const MEASUREMENT_PLACEHOLDER_SELECTOR = `${MEASUREMENT_PROMPT_SELECTOR} ${MONACO_PLACEHOLDER_SELECTOR}`
 const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
+const LONG_FOLDER_NAME = 'Long'
+
+type MonacoViewStateSnapshot = {
+  lineNumber: number
+  column: number
+  selectionStartLineNumber: number
+  selectionStartColumn: number
+  selectionEndLineNumber: number
+  selectionEndColumn: number
+  scrollTop: number
+}
+
+const readMonacoViewStateSnapshot = async (
+  mainWindow: any,
+  editorSelector: string
+): Promise<MonacoViewStateSnapshot | null> => {
+  return await mainWindow.evaluate((selector) => {
+    const row = document.querySelector(selector)
+    if (!row) return null
+
+    const monacoNode = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
+    if (!monacoNode) return null
+
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getPosition: () => { lineNumber: number; column: number } | null
+            getSelection: () => {
+              startLineNumber: number
+              startColumn: number
+              endLineNumber: number
+              endColumn: number
+            } | null
+            getScrollTop: () => number
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+    if (!registry?.length) return null
+
+    const entry = registry.find((item) => {
+      if (!item?.container) return false
+      return item.container === monacoNode || item.container.contains(monacoNode)
+    })
+    if (!entry) return null
+
+    const position = entry.editor.getPosition()
+    const selection = entry.editor.getSelection()
+    if (!position || !selection) return null
+
+    return {
+      lineNumber: position.lineNumber,
+      column: position.column,
+      selectionStartLineNumber: selection.startLineNumber,
+      selectionStartColumn: selection.startColumn,
+      selectionEndLineNumber: selection.endLineNumber,
+      selectionEndColumn: selection.endColumn,
+      scrollTop: Math.round(entry.editor.getScrollTop())
+    }
+  }, editorSelector)
+}
+
+const setMonacoViewStateForTest = async (mainWindow: any, editorSelector: string): Promise<void> => {
+  await mainWindow.evaluate((selector) => {
+    const row = document.querySelector(selector)
+    if (!row) return
+
+    const monacoNode = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+      (candidate) => candidate.querySelector('.view-lines')
+    )
+    if (!monacoNode) return
+
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getModel: () => {
+              getLineCount: () => number
+              getLineMaxColumn: (lineNumber: number) => number
+            } | null
+            setSelection: (selection: {
+              startLineNumber: number
+              startColumn: number
+              endLineNumber: number
+              endColumn: number
+            }) => void
+            setPosition: (position: { lineNumber: number; column: number }) => void
+            setScrollTop: (scrollTop: number) => void
+            revealLineInCenter: (lineNumber: number) => void
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+    if (!registry?.length) return
+
+    const entry = registry.find((item) => {
+      if (!item?.container) return false
+      return item.container === monacoNode || item.container.contains(monacoNode)
+    })
+    if (!entry) return
+
+    const model = entry.editor.getModel()
+    if (!model) return
+
+    const targetLineNumber = Math.min(15, model.getLineCount())
+    const lineMaxColumn = model.getLineMaxColumn(targetLineNumber)
+    const selectionStartColumn = Math.min(5, Math.max(1, lineMaxColumn - 1))
+    const selectionEndColumn = Math.min(lineMaxColumn, selectionStartColumn + 8)
+    entry.editor.setSelection({
+      startLineNumber: targetLineNumber,
+      startColumn: selectionStartColumn,
+      endLineNumber: targetLineNumber,
+      endColumn: selectionEndColumn
+    })
+    entry.editor.setPosition({ lineNumber: targetLineNumber, column: selectionEndColumn })
+    entry.editor.revealLineInCenter(targetLineNumber)
+    entry.editor.setScrollTop(240)
+  }, editorSelector)
+}
 
 describe('Prompt Folder Hydration', () => {
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {
@@ -28,13 +153,47 @@ describe('Prompt Folder Hydration', () => {
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders('Long')
+    await testHelpers.navigateToPromptFolders(LONG_FOLDER_NAME)
 
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(FIRST_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
 
     const scrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(scrollTop).toBe(0)
+  })
+
+  test('restores prompt editor Monaco view state after dehydration and rehydration', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'long-wrapped-lines' }
+    })
+
+    await testHelpers.navigateToPromptFolders(LONG_SINGLE_LINE_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await waitForMonacoEditor(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 180)
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await setMonacoViewStateForTest(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+
+    const beforeSnapshot = await readMonacoViewStateSnapshot(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+    if (!beforeSnapshot) {
+      throw new Error('Failed to capture Monaco view state before dehydration')
+    }
+
+    const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, scrollHeight)
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'detached' })
+
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await waitForMonacoEditor(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+
+    await expect
+      .poll(async () => await readMonacoViewStateSnapshot(mainWindow, MEASUREMENT_PROMPT_SELECTOR))
+      .toEqual(beforeSnapshot)
   })
 
   test('placeholder preserves hydrated height after dehydration and rehydration', async ({

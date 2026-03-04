@@ -37,6 +37,7 @@
   >
 
   type PromptFolderVirtualContentProps = {
+    workspaceId: string | null
     promptFolderId: string
     descriptionText: string
     promptFontSize: number
@@ -63,6 +64,7 @@
   }
 
   let {
+    workspaceId,
     promptFolderId,
     descriptionText,
     promptFontSize,
@@ -243,6 +245,7 @@
 
 {#snippet folderSettingsRow(props)}
   <PromptFolderSettingsRow
+    {workspaceId}
     {promptFolderId}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
@@ -293,6 +296,7 @@
   onHydrationChange
 }: PromptEditorRowProps)}
   <PromptEditorRow
+    {workspaceId}
     promptId={row.promptId}
     promptDraftRecord={promptDraftById[row.promptId]!}
     {rowId}

@@ -7,6 +7,7 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { removePromptFolderDraft } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { removePromptDraft } from '../UiState/PromptDraftMutations.svelte.ts'
+import { removePromptUiState } from '../UiState/PromptUiStateDraftMutations.svelte.ts'
 import {
   getSelectedWorkspaceId,
   setSelectedWorkspaceId
@@ -29,6 +30,7 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
       for (const promptId of promptFolder.promptIds) {
         promptCollection.utils.deleteAuthoritative(promptId)
         removePromptDraft(promptId)
+        removePromptUiState(promptId)
       }
     }
 

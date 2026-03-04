@@ -10,6 +10,10 @@ import type {
   PromptFolder,
   PromptFolderRevisionPayload
 } from '@shared/PromptFolder'
+import type {
+  PromptUiState,
+  PromptUiStateRevisionPayload
+} from '@shared/PromptUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/SystemSettings'
@@ -230,7 +234,8 @@ const parseUserPersistenceRevisionPayloadEntity =
 
 const parseWorkspacePromptFolderOutlinerEntry = parseObject({
   promptFolderId: parseString,
-  outlinerEntryId: parseString
+  outlinerEntryId: parseString,
+  folderDescriptionEditorViewStateJson: parseNullableString
 })
 
 const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
@@ -253,6 +258,15 @@ const parsePrompt = parseObject<Prompt>({
 })
 
 const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<Prompt>(parsePrompt)
+
+const parsePromptUiState = parseObject<PromptUiState>({
+  workspaceId: parseString,
+  promptId: parseString,
+  editorViewStateJson: parseString
+})
+
+const parsePromptUiStateRevisionPayloadEntity =
+  parseRevisionPayloadEntity<PromptUiState>(parsePromptUiState)
 
 const parseCreateWorkspacePayload = parseObject<CreateWorkspacePayload>({
   workspacePath: parseString,
@@ -367,6 +381,14 @@ const parseUpdateWorkspacePersistenceRevisionWireRequest: Parser<
   parseWorkspacePersistenceRevisionPayload
 )
 
+const parsePromptUiStateRevisionPayload = parseObject<PromptUiStateRevisionPayload>({
+  promptUiState: parsePromptUiStateRevisionPayloadEntity
+})
+
+const parseUpdatePromptUiStateRevisionWireRequest: Parser<
+  IpcRequestWithPayload<PromptUiStateRevisionPayload>
+> = parseWireRequestWithPayload<PromptUiStateRevisionPayload>(parsePromptUiStateRevisionPayload)
+
 const parseLoadWorkspaceByPathPayload = parseObject<LoadWorkspaceByPathRequest>({
   workspacePath: parseString
 })
@@ -424,6 +446,10 @@ export const parseUpdateUserPersistenceRevisionRequest = createRequestParser(
 
 export const parseUpdateWorkspacePersistenceRevisionRequest = createRequestParser(
   parseUpdateWorkspacePersistenceRevisionWireRequest
+)
+
+export const parseUpdatePromptUiStateRevisionRequest = createRequestParser(
+  parseUpdatePromptUiStateRevisionWireRequest
 )
 
 export const parseLoadWorkspaceByPathRequest = createRequestParser(

@@ -20,6 +20,7 @@ export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
 export type WorkspacePromptFolderOutlinerEntry = {
   promptFolderId: string
   outlinerEntryId: string
+  folderDescriptionEditorViewStateJson: string | null
 }
 
 export type WorkspacePersistence = {
@@ -43,7 +44,8 @@ export const cloneWorkspacePromptFolderOutlinerEntries = (
 ): WorkspacePromptFolderOutlinerEntry[] => {
   return entries.map((entry) => ({
     promptFolderId: entry.promptFolderId,
-    outlinerEntryId: entry.outlinerEntryId
+    outlinerEntryId: entry.outlinerEntryId,
+    folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson
   }))
 }
 
@@ -145,9 +147,19 @@ const parseWorkspacePromptFolderOutlinerEntry = (
     return null
   }
 
+  const folderDescriptionEditorViewStateJson = value.folderDescriptionEditorViewStateJson
+  if (
+    folderDescriptionEditorViewStateJson !== undefined &&
+    folderDescriptionEditorViewStateJson !== null &&
+    typeof folderDescriptionEditorViewStateJson !== 'string'
+  ) {
+    return null
+  }
+
   return {
     promptFolderId: value.promptFolderId,
-    outlinerEntryId: value.outlinerEntryId
+    outlinerEntryId: value.outlinerEntryId,
+    folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null
   }
 }
 

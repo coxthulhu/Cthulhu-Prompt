@@ -92,7 +92,8 @@ export class UserPersistenceDataAccess {
         `
         SELECT
           prompt_folder_id AS promptFolderId,
-          outliner_entry_id AS outlinerEntryId
+          outliner_entry_id AS outlinerEntryId,
+          folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
         `
@@ -143,9 +144,10 @@ export class UserPersistenceDataAccess {
         INSERT INTO prompt_folder_ui_state (
           workspace_id,
           prompt_folder_id,
-          outliner_entry_id
+          outliner_entry_id,
+          folder_description_editor_view_state_json
         )
-        VALUES (?, ?, ?)
+        VALUES (?, ?, ?, ?)
         `
       )
 
@@ -153,7 +155,8 @@ export class UserPersistenceDataAccess {
         insertPromptFolderUiState.run(
           serializableWorkspacePersistence.workspaceId,
           entry.promptFolderId,
-          entry.outlinerEntryId
+          entry.outlinerEntryId,
+          entry.folderDescriptionEditorViewStateJson
         )
       }
     })
@@ -176,12 +179,17 @@ export class UserPersistenceDataAccess {
           `
           SELECT
             prompt_folder_id AS promptFolderId,
-            outliner_entry_id AS outlinerEntryId
+            outliner_entry_id AS outlinerEntryId,
+            folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
           `
         )
-        .all(workspaceId) as Array<{ promptFolderId: string; outlinerEntryId: string }>
+        .all(workspaceId) as Array<{
+        promptFolderId: string
+        outlinerEntryId: string
+        folderDescriptionEditorViewStateJson: string | null
+      }>
 
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(workspaceId)
 
@@ -190,9 +198,10 @@ export class UserPersistenceDataAccess {
         INSERT INTO prompt_folder_ui_state (
           workspace_id,
           prompt_folder_id,
-          outliner_entry_id
+          outliner_entry_id,
+          folder_description_editor_view_state_json
         )
-        VALUES (?, ?, ?)
+        VALUES (?, ?, ?, ?)
         `
       )
 
@@ -201,7 +210,12 @@ export class UserPersistenceDataAccess {
           continue
         }
 
-        insertPromptFolderUiState.run(workspaceId, entry.promptFolderId, entry.outlinerEntryId)
+        insertPromptFolderUiState.run(
+          workspaceId,
+          entry.promptFolderId,
+          entry.outlinerEntryId,
+          entry.folderDescriptionEditorViewStateJson
+        )
       }
 
       const selectedWorkspaceFolder = db

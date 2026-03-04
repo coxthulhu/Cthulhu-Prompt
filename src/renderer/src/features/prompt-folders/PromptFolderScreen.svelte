@@ -88,6 +88,7 @@
             </div>
           {:else if controller.isVirtualContentReady}
             <PromptFolderVirtualContent
+              workspaceId={controller.workspaceId}
               promptFolderId={controller.promptFolderId}
               descriptionText={controller.descriptionText}
               promptFontSize={controller.promptFontSize}

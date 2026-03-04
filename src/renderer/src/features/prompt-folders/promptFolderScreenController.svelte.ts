@@ -74,6 +74,7 @@ export const createPromptFolderScreenController = ({
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const promptFolderId = $derived(getPromptFolderId())
+  const workspaceId = $derived(workspaceSelection.selectedWorkspaceId)
 
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
     data: PromptFolder[]
@@ -543,6 +544,9 @@ export const createPromptFolderScreenController = ({
   }
 
   return {
+    get workspaceId(): string | null {
+      return workspaceId
+    },
     get promptFolderId(): string {
       return promptFolderId
     },

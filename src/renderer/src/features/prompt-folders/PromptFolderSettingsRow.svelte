@@ -3,6 +3,10 @@
   import type { monaco } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
+  import {
+    lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson,
+    setPromptFolderDescriptionEditorViewStateWithAutosave
+  } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
@@ -22,6 +26,7 @@
   } from './promptFolderSettingsSizing'
 
   type Props = {
+    workspaceId: string | null
     promptFolderId: string
     rowId: string
     virtualWindowWidthPx: number
@@ -38,6 +43,7 @@
   }
 
   let {
+    workspaceId,
     promptFolderId,
     rowId,
     virtualWindowWidthPx,
@@ -56,6 +62,16 @@
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const initialDescriptionEditorViewStateJson = $derived.by(() => {
+    if (!workspaceId) {
+      return null
+    }
+
+    return lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson(
+      workspaceId,
+      promptFolderId
+    )
+  })
   const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId))
 
   const descriptionValue = $derived(descriptionText)
@@ -220,6 +236,8 @@
             {#key promptFolderId}
               <HydratableMonacoEditor
                 initialValue={descriptionValue}
+                initialViewStateJson={initialDescriptionEditorViewStateJson}
+                viewStateCaptureKey={`prompt-folder-description:${promptFolderId}`}
                 containerWidthPx={virtualWindowWidthPx}
                 placeholderHeightPx={placeholderMonacoHeightPx}
                 overflowWidgetsDomNode={overflowHost}
@@ -237,6 +255,14 @@
                 onSelectionChange={reportDescriptionSelection}
                 onImmediateHydrationRequest={(request) => {
                   findRowHandlers.requestImmediateHydration = request
+                }}
+                onViewStateCapture={(viewStateJson) => {
+                  if (!workspaceId) return
+                  setPromptFolderDescriptionEditorViewStateWithAutosave(
+                    workspaceId,
+                    promptFolderId,
+                    viewStateJson
+                  )
                 }}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {

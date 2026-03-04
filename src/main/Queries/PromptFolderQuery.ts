@@ -1,6 +1,10 @@
 import { ipcMain } from 'electron'
 import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
 import { readPromptFolder, readPrompts } from '../DataAccess/WorkspaceReads'
+import {
+  createPromptUiStateRevisionKey,
+  PromptUiStateDataAccess
+} from '../DataAccess/PromptUiStateDataAccess'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { revisions } from '../Registries/Revisions'
@@ -24,6 +28,10 @@ export const setupPromptFolderQueryHandlers = (): void => {
           try {
             const promptFolder = readPromptFolder(location.workspacePath, location.folderName)
             const prompts = readPrompts(location.workspacePath, location.folderName)
+            const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
+              location.workspaceId,
+              prompts.map((prompt) => prompt.id)
+            )
             registerPrompts(
               location.workspaceId,
               location.workspacePath,
@@ -43,6 +51,16 @@ export const setupPromptFolderQueryHandlers = (): void => {
                 id: prompt.id,
                 revision: revisions.prompt.get(prompt.id),
                 data: prompt
+              })),
+              promptUiStates: promptUiStates.map((promptUiState) => ({
+                id: promptUiState.promptId,
+                revision: revisions.promptUiState.get(
+                  createPromptUiStateRevisionKey(
+                    promptUiState.workspaceId,
+                    promptUiState.promptId
+                  )
+                ),
+                data: promptUiState
               }))
             }
           } catch (error) {

@@ -17,6 +17,8 @@
 
   type Props = {
     initialValue: string
+    initialViewStateJson?: string | null
+    viewStateCaptureKey?: string
     containerWidthPx: number
     placeholderHeightPx: number
     overflowWidgetsDomNode: HTMLElement
@@ -36,11 +38,14 @@
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
+    onViewStateCapture?: (viewStateJson: string | null) => void
     class?: string
   }
 
   let {
     initialValue,
+    initialViewStateJson,
+    viewStateCaptureKey,
     containerWidthPx,
     placeholderHeightPx,
     overflowWidgetsDomNode,
@@ -58,6 +63,7 @@
     onFindMatches,
     onFindMatchReveal,
     onSelectionChange,
+    onViewStateCapture,
     class: className
   }: Props = $props()
 
@@ -130,6 +136,8 @@
   {#if isHydrated}
     <AutoSizingMonacoEditor
       {initialValue}
+      {initialViewStateJson}
+      {viewStateCaptureKey}
       {containerWidthPx}
       {overflowWidgetsDomNode}
       {rowId}
@@ -142,6 +150,7 @@
       {onFindMatches}
       {onFindMatchReveal}
       {onSelectionChange}
+      {onViewStateCapture}
     />
   {:else}
     <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />

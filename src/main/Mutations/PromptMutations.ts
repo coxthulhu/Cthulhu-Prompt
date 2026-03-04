@@ -4,6 +4,7 @@ import type { Prompt } from '@shared/Prompt'
 import type { PromptFolderConfigFile, PromptsFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readPromptFolder } from '../DataAccess/WorkspaceReads'
+import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
@@ -271,6 +272,8 @@ export const setupPromptMutationHandlers = (): void => {
             promptFolder.folderName,
             promptsFile.prompts.map((prompt) => prompt.id)
           )
+          // Side effect: remove persisted Monaco view state for deleted prompts.
+          PromptUiStateDataAccess.deletePromptUiState(location.workspaceId, promptEntity.id)
 
           const promptFolderRevision = revisions.promptFolder.bump(promptFolder.id)
           const nextPromptFolder = readPromptFolder(location.workspacePath, location.folderName)

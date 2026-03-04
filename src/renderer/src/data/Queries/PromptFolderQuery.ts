@@ -6,11 +6,13 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
 import { deletePromptDrafts, upsertPromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   setPromptFolderDraftHasLoadedInitialData,
   upsertPromptFolderDraft
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
+import { upsertPromptUiStateDrafts } from '../UiState/PromptUiStateDraftMutations.svelte.ts'
 
 export const loadPromptFolderInitial = async (
   workspaceId: string,
@@ -32,6 +34,8 @@ export const loadPromptFolderInitial = async (
   upsertPromptDrafts(result.prompts.map((prompt) => prompt.data))
   promptFolderCollection.utils.upsertAuthoritative(result.promptFolder)
   upsertPromptFolderDraft(result.promptFolder.data)
+  promptUiStateCollection.utils.upsertManyAuthoritative(result.promptUiStates)
+  upsertPromptUiStateDrafts(result.promptUiStates.map((promptUiState) => promptUiState.data))
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
 
   const nextPromptIds = new Set(result.promptFolder.data.promptIds)

@@ -6,6 +6,7 @@ import { revisions } from './Revisions'
 import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
 import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
+import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
@@ -26,11 +27,14 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
 const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
   const workspaceId = readWorkspaceId(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
+  const workspacePromptIds = promptFolders.flatMap((promptFolder) => promptFolder.promptIds)
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
   UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
     workspaceId,
     promptFolders.map((promptFolder) => promptFolder.id)
   )
+  // Side effect: remove stale prompt editor view-state rows for prompts no longer in the workspace.
+  PromptUiStateDataAccess.cleanupWorkspacePromptUiState(workspaceId, workspacePromptIds)
 
   // Side effect: keep path/id translation in memory for later  loads.
   registerWorkspace(workspaceId, workspacePath)

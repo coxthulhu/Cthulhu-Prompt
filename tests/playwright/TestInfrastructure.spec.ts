@@ -85,7 +85,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 2 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 3 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -93,12 +93,17 @@ describe('Test Infrastructure', () => {
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
-          AND name IN ('app_persistence', 'workspace_ui_state', 'prompt_folder_ui_state')
+          AND name IN (
+            'app_persistence',
+            'workspace_ui_state',
+            'prompt_folder_ui_state',
+            'prompt_ui_state'
+          )
         `
       )
 
       expect(persistenceTablesResult.success).toBe(true)
-      expect(persistenceTablesResult.rows).toHaveLength(3)
+      expect(persistenceTablesResult.rows).toHaveLength(4)
     })
   })
 

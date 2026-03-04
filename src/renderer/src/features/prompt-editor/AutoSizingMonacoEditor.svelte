@@ -6,11 +6,17 @@
   import { FindModelBoundToEditorModel } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
+  import {
+    registerMonacoViewStateSaver,
+    unregisterMonacoViewStateSaver
+  } from './MonacoViewStateRegistry'
   import { clampMonacoHeightPx, getMinMonacoHeightPx } from './promptEditorSizing'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
 
   type Props = {
     initialValue: string
+    initialViewStateJson?: string | null
+    viewStateCaptureKey?: string
     containerWidthPx: number
     overflowWidgetsDomNode: HTMLElement
     rowId: string
@@ -25,10 +31,13 @@
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
+    onViewStateCapture?: (viewStateJson: string | null) => void
   }
 
   let {
     initialValue,
+    initialViewStateJson,
+    viewStateCaptureKey,
     containerWidthPx,
     overflowWidgetsDomNode,
     rowId,
@@ -40,7 +49,8 @@
     findRequest,
     onFindMatches,
     onFindMatchReveal,
-    onSelectionChange
+    onSelectionChange,
+    onViewStateCapture
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
@@ -125,6 +135,28 @@
 
   const emitChange = (value: string, didResize: boolean, heightPx: number) => {
     onChange?.(value, { didResize, heightPx })
+  }
+
+  const serializeEditorViewState = (
+    targetEditor: monaco.editor.IStandaloneCodeEditor
+  ): string | null => {
+    const viewState = targetEditor.saveViewState()
+    if (!viewState) return null
+
+    return JSON.stringify(viewState)
+  }
+
+  const tryRestoreEditorViewState = (
+    targetEditor: monaco.editor.IStandaloneCodeEditor,
+    viewStateJson: string | null | undefined
+  ) => {
+    if (!viewStateJson) return
+
+    try {
+      targetEditor.restoreViewState(JSON.parse(viewStateJson) as monaco.editor.ICodeEditorViewState)
+    } catch {
+      // Monaco tolerates stale or incompatible view state; ignore restoration failures.
+    }
   }
 
   const focusEditor = (
@@ -322,6 +354,13 @@
     registerMonacoEditor({ container, editor: nextEditor })
     onEditorLifecycle?.(nextEditor, true)
     findController = FindController.get(nextEditor)
+    const captureViewState = () => {
+      onViewStateCapture?.(serializeEditorViewState(nextEditor))
+    }
+
+    if (viewStateCaptureKey) {
+      registerMonacoViewStateSaver(viewStateCaptureKey, captureViewState)
+    }
 
     const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
@@ -339,17 +378,23 @@
     const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
     layoutEditor()
+    tryRestoreEditorViewState(nextEditor, initialViewStateJson)
+    layoutEditor()
     lastContainerWidthPx = containerWidthPx
     emitChange(nextEditor.getValue(), false, monacoHeightPx)
     onFindMatchReveal?.(revealFindMatch)
 
     return () => {
+      captureViewState()
       changeDisposable.dispose()
       blurDisposable.dispose()
       focusDisposable.dispose()
       cursorDisposable.dispose()
       selectionDisposable.dispose()
       scrollDisposable.dispose()
+      if (viewStateCaptureKey) {
+        unregisterMonacoViewStateSaver(viewStateCaptureKey)
+      }
       unregisterMonacoEditor(nextEditor)
       onEditorLifecycle?.(nextEditor, false)
       onFindMatchReveal?.(null)

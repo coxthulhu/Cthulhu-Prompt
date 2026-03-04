@@ -9,6 +9,10 @@
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import {
+    lookupPromptEditorViewStateJson,
+    setPromptEditorViewStateJson
+  } from '@renderer/data/UiState/PromptUiStateDraftMutations.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
   import { findMatchRange } from '../prompt-folders/find/promptFolderFindText'
@@ -33,6 +37,7 @@
 
   let {
     promptId,
+    workspaceId,
     promptDraftRecord,
     rowId,
     virtualWindowWidthPx,
@@ -50,6 +55,7 @@
     onMoveDown
   }: {
     promptId: string
+    workspaceId: string | null
     promptDraftRecord: PromptDraftRecord
     rowId: string
     virtualWindowWidthPx: number
@@ -69,6 +75,7 @@
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const initialEditorViewStateJson = $derived(lookupPromptEditorViewStateJson(promptId))
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
     const basePromptData = getPromptFolderScreenPromptData(promptId)
@@ -329,6 +336,8 @@
             {#key promptId}
               <HydratableMonacoEditor
                 initialValue={promptData.draft.text}
+                initialViewStateJson={initialEditorViewStateJson}
+                viewStateCaptureKey={`prompt:${promptId}`}
                 containerWidthPx={virtualWindowWidthPx}
                 placeholderHeightPx={placeholderMonacoHeightPx}
                 overflowWidgetsDomNode={overflowHost}
@@ -346,6 +355,10 @@
                 onSelectionChange={reportBodySelection}
                 onImmediateHydrationRequest={(request) => {
                   findRowHandlers.requestImmediateHydration = request
+                }}
+                onViewStateCapture={(viewStateJson) => {
+                  if (!workspaceId) return
+                  setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
                 }}
                 onHydrationChange={handleHydrationChange}
                 onChange={(text, meta) => {

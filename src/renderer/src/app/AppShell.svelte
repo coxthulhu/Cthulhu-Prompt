@@ -43,6 +43,7 @@
     type WorkspaceSelectionContext
   } from './WorkspaceSelectionContext'
   import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
+  import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
@@ -332,6 +333,7 @@
   $effect(() => {
     const unsubscribe = windowControls.onCloseRequested(() => {
       void (async () => {
+        captureRegisteredMonacoViewStates()
         await flushAllAutosaves()
         await windowControls.confirmClose()
       })()

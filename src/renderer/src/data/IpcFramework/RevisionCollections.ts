@@ -6,6 +6,8 @@ import { promptCollection } from '../Collections/PromptCollection'
 import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
+import { promptUiStateDraftCollection } from '../Collections/PromptUiStateDraftCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
@@ -27,13 +29,15 @@ const revisionCollections = {
   systemSettings: systemSettingsCollection,
   workspace: workspaceCollection,
   promptFolder: promptFolderCollection,
-  prompt: promptCollection
+  prompt: promptCollection,
+  promptUiState: promptUiStateCollection
 }
 
 const optimisticCollections = {
   ...revisionCollections,
   promptDraft: promptDraftCollection,
   promptFolderDraft: promptFolderDraftCollection,
+  promptUiStateDraft: promptUiStateDraftCollection,
   systemSettingsDraft: systemSettingsDraftCollection,
   userPersistenceDraft: userPersistenceDraftCollection,
   workspacePersistenceDraft: workspacePersistenceDraftCollection
