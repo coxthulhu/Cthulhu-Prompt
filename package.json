@@ -15,7 +15,7 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "patch-package && electron-builder install-app-deps",
     "test:vitest": "vitest run tests/vitest",
-    "test:playwright": "cross-env VITE_LOG_LEVEL=warn npm run build && cross-env DEV_ENVIRONMENT=PLAYWRIGHT npx playwright test"
+    "test:playwright": "powershell -NoProfile -ExecutionPolicy Bypass -File ./RunPlaywrightCompact.ps1"
   },
   "dependencies": {
     "@codingame/monaco-vscode-api": "^26.2.1",
