@@ -126,7 +126,10 @@
   class="bg-sidebar text-sidebar-foreground flex h-full w-full flex-col"
 >
   <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 px-2 pb-2 pt-0">
-    <div class="flex items-center gap-2 px-2 py-1">
+    <div
+      class="flex items-center gap-2 border-l-2 px-2 py-1"
+      style="border-left-color: rgba(168, 85, 247, 0.7);"
+    >
       <div class="flex min-w-0 flex-col">
         <span data-testid="sidebar-workspace-name" class="font-semibold text-sm truncate">
           {workspaceDisplay.title}
