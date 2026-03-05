@@ -1,4 +1,6 @@
 <script lang="ts">
+  import appIcon from '@renderer/assets/cutethulhu.png'
+
   let { title } = $props<{
     title: string
   }>()
@@ -60,7 +62,10 @@
   ondblclick={handleDoubleClick}
   onkeydown={handleKeyDown}
 >
-  <div class="titlebar__spacer"></div>
+  <!-- Keep the title centered by matching the left brand width to the control cluster. -->
+  <div class="titlebar__brand">
+    <img class="titlebar__brand-icon" src={appIcon} alt="Cthulhu Prompt icon" />
+  </div>
   <div class="titlebar__title" {title}>{title}</div>
   <div class="titlebar__controls">
     <button
@@ -110,8 +115,18 @@
     user-select: none;
   }
 
-  .titlebar__spacer {
+  .titlebar__brand {
     width: var(--titlebar-controls-width);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+  }
+
+  .titlebar__brand-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
   }
 
   .titlebar__title {

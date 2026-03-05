@@ -2,7 +2,6 @@
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import appIcon from '@renderer/assets/cutethulhu.png'
   import { Home, FolderClosed, Loader, MoreHorizontal } from 'lucide-svelte'
   import {
     DropdownMenu,
@@ -126,9 +125,8 @@
   data-slot="sidebar-inner"
   class="bg-sidebar text-sidebar-foreground flex h-full w-full flex-col"
 >
-  <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 p-2">
+  <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 px-2 pb-2 pt-0">
     <div class="flex items-center gap-2 px-2 py-1">
-      <img class="size-8 shrink-0" src={appIcon} alt="Cthulhu Prompt icon" />
       <div class="flex min-w-0 flex-col">
         <span data-testid="sidebar-workspace-name" class="font-semibold text-sm truncate">
           {workspaceDisplay.title}
