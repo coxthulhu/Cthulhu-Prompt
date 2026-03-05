@@ -65,6 +65,12 @@
         testId: config.testId
       }))
   )
+  const primaryNavItems = $derived.by(() =>
+    navItems.filter((item) => item.id === 'home' || item.id === 'settings')
+  )
+  const secondaryNavItems = $derived.by(() =>
+    navItems.filter((item) => item.id !== 'home' && item.id !== 'settings')
+  )
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
@@ -154,9 +160,9 @@
     data-sidebar="content"
     class="flex min-h-0 flex-1 flex-col overflow-auto group-data-[collapsible=icon]:overflow-hidden"
   >
-    <SidebarGroup label="Application">
-      <ul data-slot="sidebar-menu" data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
-        {#each navItems as item (item.id)}
+    <div class="px-2 pb-2">
+      <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-1">
+        {#each primaryNavItems as item (item.id)}
           {@const Icon = item.icon}
           <li
             data-slot="sidebar-menu-item"
@@ -167,6 +173,8 @@
               testId={item.testId}
               icon={Icon}
               label={item.label}
+              builderProps={{ 'aria-label': item.label, title: item.label }}
+              class="justify-center px-0"
               active={activeScreen === item.id}
               disabled={item.requiresWorkspace && !isWorkspaceReady}
               onclick={() => onNavigate(item.id)}
@@ -174,7 +182,33 @@
           </li>
         {/each}
       </ul>
-    </SidebarGroup>
+
+      {#if secondaryNavItems.length > 0}
+        <ul
+          data-slot="sidebar-menu"
+          data-sidebar="menu"
+          class="mt-2 flex w-full min-w-0 flex-col gap-1"
+        >
+          {#each secondaryNavItems as item (item.id)}
+            {@const Icon = item.icon}
+            <li
+              data-slot="sidebar-menu-item"
+              data-sidebar="menu-item"
+              class="group/menu-item relative"
+            >
+              <SidebarButton
+                testId={item.testId}
+                icon={Icon}
+                label={item.label}
+                active={activeScreen === item.id}
+                disabled={item.requiresWorkspace && !isWorkspaceReady}
+                onclick={() => onNavigate(item.id)}
+              />
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
 
     <SidebarGroup label="Prompt Folders">
       <div class="flex flex-col gap-1">
