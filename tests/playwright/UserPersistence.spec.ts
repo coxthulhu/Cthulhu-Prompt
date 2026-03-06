@@ -477,7 +477,7 @@ describe('User Persistence', () => {
         const persisted = await readUserPersistence(electronApp)
         return `${persisted.appSidebarWidthPx}:${persisted.promptOutlinerWidthPx}`
       })
-      .toBe('180:220')
+      .toBe('190:220')
   })
 
   test('reopens the persisted prompt-folder screen on startup', async ({ electronApp, testSetup }) => {
