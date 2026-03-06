@@ -10,7 +10,7 @@
   <div
     data-slot="sidebar-group"
     data-sidebar="group"
-    class="relative flex w-full min-w-0 flex-col p-2"
+    class="relative flex w-full min-w-0 flex-col px-2 pb-2 pt-1"
   >
     <div
       data-slot="sidebar-group-label"
