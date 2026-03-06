@@ -15,7 +15,7 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "patch-package && electron-builder install-app-deps",
     "test:vitest": "vitest run tests/vitest",
-    "test:playwright": "powershell -NoProfile -ExecutionPolicy Bypass -File ./RunPlaywrightCompact.ps1"
+    "test:playwright": "py -3 .\\RunPlaywrightCompact.py"
   },
   "dependencies": {
     "@codingame/monaco-vscode-api": "^26.2.1",

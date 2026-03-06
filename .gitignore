@@ -9,6 +9,8 @@ test-results
 .cthulhu/
 .claude/
 .idea/
+__pycache__/
+*.pyc
 
 ### WebStorm ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
