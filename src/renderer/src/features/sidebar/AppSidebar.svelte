@@ -2,20 +2,14 @@
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import { Home, FolderClosed, Loader, MoreHorizontal } from 'lucide-svelte'
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-  } from '@renderer/common/ui/dropdown-menu'
+  import { Home } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
+  import PromptTree from './PromptTree.svelte'
   import SidebarButton from './SidebarButton.svelte'
-  import SidebarGroup from './SidebarGroup.svelte'
 
   let {
     activeScreen,
@@ -37,7 +31,6 @@
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
-  let openFolderMenuName = $state<string | null>(null)
   const workspaceSelection = getWorkspaceSelectionContext()
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
@@ -214,87 +207,33 @@
   <div
     data-slot="sidebar-content"
     data-sidebar="content"
-    class="flex min-h-0 flex-1 flex-col overflow-auto group-data-[collapsible=icon]:overflow-hidden"
+    class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
-    <SidebarGroup label="Prompts">
-      {#snippet action()}
+    <div class="flex min-h-0 flex-1 flex-col">
+      <div class="text-sidebar-foreground flex h-8 shrink-0 items-center justify-between gap-2 px-2 text-sm font-normal">
+        <span class="min-w-0 truncate">Prompts</span>
         {#if isWorkspaceReady}
-          <CreatePromptFolderDialog
-            {isWorkspaceReady}
-            {promptFolders}
-            isPromptFolderListLoading={isWorkspaceLoading}
-            onCreated={(promptFolderId) => {
-              onPromptFolderSelect(promptFolderId)
-            }}
-          />
+          <div class="shrink-0">
+            <CreatePromptFolderDialog
+              {isWorkspaceReady}
+              {promptFolders}
+              isPromptFolderListLoading={isWorkspaceLoading}
+              onCreated={(promptFolderId) => {
+                onPromptFolderSelect(promptFolderId)
+              }}
+            />
+          </div>
         {/if}
-      {/snippet}
-
-      <div class="flex flex-col gap-1">
-        <ul data-slot="sidebar-menu" data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
-          {#if folderListState === 'no-workspace'}
-            <li class="px-2 text-xs text-muted-foreground">Select a Workspace to Get Started</li>
-          {:else if folderListState === 'loading'}
-            <li class="px-2 text-xs text-muted-foreground flex items-center gap-2">
-              <Loader class="size-4 animate-spin" />
-              Loading folders...
-            </li>
-          {:else if folderListState === 'ready'}
-            {#each promptFolders as folder (folder.folderName)}
-              <li
-                data-slot="sidebar-menu-item"
-                data-sidebar="menu-item"
-                data-menu-open={openFolderMenuName === folder.folderName}
-                class="group/menu-item relative"
-              >
-                {#snippet folderMenuTrigger({ props })}
-                  <button
-                    {...props}
-                    type="button"
-                    data-sidebar="menu-action"
-                    aria-label={`More actions for ${folder.displayName}`}
-                    class="absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground opacity-0 pointer-events-none transition-opacity duration-50 cursor-pointer group-hover/menu-item:opacity-100 group-hover/menu-item:pointer-events-auto group-has-[:focus-visible]/menu-item:opacity-100 group-has-[:focus-visible]/menu-item:pointer-events-auto group-data-[menu-open=true]/menu-item:opacity-100 group-data-[menu-open=true]/menu-item:pointer-events-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                  >
-                    <MoreHorizontal class="size-4" />
-                  </button>
-                {/snippet}
-                <SidebarButton
-                  testId={`regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`}
-                  icon={FolderClosed}
-                  label={folder.displayName}
-                  active={selectedPromptFolderId === folder.id && activeScreen === 'prompt-folders'}
-                  class="group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground group-data-[menu-open=true]/menu-item:bg-sidebar-accent group-data-[menu-open=true]/menu-item:text-sidebar-accent-foreground"
-                  onclick={() => onPromptFolderSelect(folder.id)}
-                />
-                <DropdownMenu
-                  open={openFolderMenuName === folder.folderName}
-                  onOpenChange={(nextOpen) => {
-                    openFolderMenuName = nextOpen
-                      ? folder.folderName
-                      : openFolderMenuName === folder.folderName
-                        ? null
-                        : openFolderMenuName
-                  }}
-                >
-                  <DropdownMenuTrigger child={folderMenuTrigger} />
-                  <DropdownMenuContent side="right" align="center" sideOffset={6}>
-                    <DropdownMenuItem variant="destructive" class="cursor-pointer">
-                      Delete Folder
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </li>
-            {/each}
-          {/if}
-
-          {#if folderListState === 'empty'}
-            <li class="px-2 text-xs text-muted-foreground">
-              Create a Prompt Folder to Get Started
-            </li>
-          {/if}
-        </ul>
       </div>
-    </SidebarGroup>
+
+      <PromptTree
+        {promptFolders}
+        {folderListState}
+        {selectedPromptFolderId}
+        isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
+        {onPromptFolderSelect}
+      />
+    </div>
   </div>
 
   <div data-slot="sidebar-footer" data-sidebar="footer" class="flex flex-col gap-2 p-2">
