@@ -130,12 +130,17 @@
 
 {#snippet sidebarTrigger({ props })}
   <SidebarButton
-    builderProps={props}
     icon={Plus}
-    label="New Prompt Folder"
+    label=""
     disabled={!isWorkspaceReady}
     ariaDisabled={!isWorkspaceReady}
     testId="new-prompt-folder-button"
+    class="h-7 w-7 min-w-7 justify-center bg-transparent px-0 py-0 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-sidebar-foreground"
+    builderProps={{
+      ...props,
+      'aria-label': 'New Prompt Folder',
+      title: 'New Prompt Folder'
+    }}
   />
 {/snippet}
 

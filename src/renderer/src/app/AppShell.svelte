@@ -373,7 +373,7 @@
 
   <ResizableSidebar
     defaultWidth={appSidebarDefaultWidthPx}
-    minWidth={180}
+    minWidth={190}
     maxWidth={400}
     handleTestId="app-sidebar-resize-handle"
     containerClass="flex-1 min-h-0"
@@ -399,7 +399,7 @@
     {#snippet content()}
       <div
         data-slot="sidebar-inset"
-        class="bg-background relative flex w-full flex-1 flex-col min-h-0"
+        class="bg-background border-[#222225] relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
       >
         {#if activeScreen === 'home'}
           <HomeScreen

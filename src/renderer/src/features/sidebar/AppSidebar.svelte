@@ -129,7 +129,8 @@
 <aside
   data-sidebar="sidebar"
   data-slot="sidebar-inner"
-  class="bg-sidebar text-sidebar-foreground flex h-full w-full flex-col"
+  class="text-foreground flex h-full w-full flex-col"
+  style="background-color: rgb(18, 18, 20);"
 >
   <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 px-2 pb-2 pt-0">
     <div
@@ -174,7 +175,7 @@
               icon={Icon}
               label={item.label}
               builderProps={{ 'aria-label': item.label, title: item.label }}
-              class="justify-center px-0"
+              class="justify-center border border-[#222225] px-0"
               active={activeScreen === item.id}
               disabled={item.requiresWorkspace && !isWorkspaceReady}
               onclick={() => onNavigate(item.id)}
@@ -210,7 +211,20 @@
       {/if}
     </div>
 
-    <SidebarGroup label="Prompt Folders">
+    <SidebarGroup label="Prompts">
+      {#snippet action()}
+        {#if isWorkspaceReady}
+          <CreatePromptFolderDialog
+            {isWorkspaceReady}
+            {promptFolders}
+            isPromptFolderListLoading={isWorkspaceLoading}
+            onCreated={(promptFolderId) => {
+              onPromptFolderSelect(promptFolderId)
+            }}
+          />
+        {/if}
+      {/snippet}
+
       <div class="flex flex-col gap-1">
         <ul data-slot="sidebar-menu" data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
           {#if folderListState === 'no-workspace'}
@@ -266,23 +280,6 @@
                 </DropdownMenu>
               </li>
             {/each}
-          {/if}
-
-          {#if isWorkspaceReady}
-            <li
-              data-slot="sidebar-menu-item"
-              data-sidebar="menu-item"
-              class="group/menu-item relative"
-            >
-              <CreatePromptFolderDialog
-                {isWorkspaceReady}
-                {promptFolders}
-                isPromptFolderListLoading={isWorkspaceLoading}
-                onCreated={(promptFolderId) => {
-                  onPromptFolderSelect(promptFolderId)
-                }}
-              />
-            </li>
           {/if}
 
           {#if folderListState === 'empty'}
