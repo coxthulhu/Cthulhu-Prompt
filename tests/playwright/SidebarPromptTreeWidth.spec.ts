@@ -120,6 +120,8 @@ test.describe('Sidebar Prompt Tree Width', () => {
     electronApp,
     testSetup
   }) => {
+    test.fail()
+
     await seedUserPersistence(electronApp, {
       appSidebarWidthPx: 260,
       promptOutlinerWidthPx: 240
