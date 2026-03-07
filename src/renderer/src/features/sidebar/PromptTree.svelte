@@ -88,8 +88,8 @@
   const treeRowLeadingIconClass = 'size-4 shrink-0 text-sidebar-foreground/75'
   const treeRowFolderIconClass =
     `${treeRowLeadingIconClass} translate-y-px fill-sidebar-foreground/15`
+  const treeRowFolderSettingsIconClass = treeRowFolderIconClass
   const treeRowOpenButtonClass = `${treeRowButtonClass} w-7 shrink-0 justify-center`
-  const childRowIndentPx = 14
 
   const folderSettingsTestId = (folder: PromptFolder): string =>
     `prompt-folder-settings-${folder.folderName.replace(/\s+/g, '')}`
@@ -236,7 +236,7 @@
 {/snippet}
 
 {#snippet folderSettingsRow(props)}
-  <div class={treeRowClass(false)} style={`padding-left: ${childRowIndentPx}px;`}>
+  <div class={treeRowClass(false)}>
     <div class={treeRowChevronCellClass} aria-hidden="true"></div>
     <button
       type="button"
@@ -245,7 +245,7 @@
     >
       <span class={treeRowToggleLabelWrapClass}>
         <Settings
-          class={treeRowLeadingIconClass}
+          class={treeRowFolderSettingsIconClass}
           data-testid={folderSettingsIconTestId(props.row.folder)}
           aria-hidden="true"
         />
