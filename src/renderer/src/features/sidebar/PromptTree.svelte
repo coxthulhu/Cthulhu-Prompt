@@ -172,9 +172,9 @@
     >
       <span class={treeRowChevronCellClass}>
         {#if isFolderExpanded(props.row.folder.id)}
-          <ChevronDown class="size-3.5 shrink-0" />
+          <ChevronDown class="size-4 shrink-0" />
         {:else}
-          <ChevronRight class="size-3.5 shrink-0" />
+          <ChevronRight class="size-4 shrink-0" />
         {/if}
       </span>
       <span class={treeRowToggleLabelWrapClass}>
@@ -198,7 +198,7 @@
       data-active={isActive}
       class={treeRowOpenButtonClass}
     >
-      <ArrowRight class="size-3.5 shrink-0" />
+      <ArrowRight class="size-4 shrink-0" />
     </button>
   </div>
 
