@@ -82,7 +82,7 @@
   const treeRowButtonClass =
     'flex h-full items-center border-0 bg-transparent p-0 text-inherit outline-hidden'
   const treeRowToggleButtonClass = `${treeRowButtonClass} min-w-0 flex-1`
-  const treeRowChevronCellClass = 'flex h-full w-8 shrink-0 items-center justify-end pr-1'
+  const treeRowChevronCellClass = 'flex h-full w-6 shrink-0 items-center justify-end pr-1'
   const treeRowLabelClass = 'min-w-0 truncate text-left'
   const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center gap-1.5 pl-[4px] pr-1'
   const treeRowLeadingIconClass = 'size-4 shrink-0 text-sidebar-foreground/75'
@@ -133,7 +133,7 @@
   })
 </script>
 
-<div class="-mx-2 flex min-h-0 flex-1 flex-col">
+<div class="flex min-h-0 flex-1 flex-col">
   {#if folderListState === 'no-workspace'}
     <div class="px-2 text-xs text-muted-foreground">Select a Workspace to Get Started</div>
   {:else if folderListState === 'loading'}
