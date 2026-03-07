@@ -203,7 +203,7 @@
     {/if}
   </div>
 
-  <div class="mx-2 mt-2 border-t border-[#222225]" aria-hidden="true"></div>
+  <div class="mx-2 my-2 border-t border-[#222225]" aria-hidden="true"></div>
 
   <div
     data-slot="sidebar-content"
@@ -211,7 +211,7 @@
     class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <div class="flex min-h-0 flex-1 flex-col">
-      <div class="text-sidebar-foreground flex h-8 shrink-0 items-center justify-between gap-2 px-2 text-sm font-normal">
+      <div class="text-sidebar-foreground mb-1 flex h-[22px] shrink-0 items-center justify-between gap-2 px-2 text-[14px] font-normal">
         <span class="min-w-0 flex items-center gap-1.5 truncate">
           <span class="relative size-4 shrink-0" aria-hidden="true">
             <FileDirectoryFill24 class="absolute inset-0 size-4 fill-sidebar-foreground/15" />
