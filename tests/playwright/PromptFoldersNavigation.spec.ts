@@ -4,6 +4,9 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const EXAMPLES_BUTTON = '[data-testid="regular-prompt-folder-Examples"]'
 const DEVELOPMENT_BUTTON = '[data-testid="regular-prompt-folder-Development"]'
+const EXAMPLES_TOGGLE = '[data-testid="prompt-folder-toggle-Examples"]'
+const EXAMPLES_SETTINGS = '[data-testid="prompt-folder-settings-Examples"]'
+const DEVELOPMENT_SETTINGS = '[data-testid="prompt-folder-settings-Development"]'
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -121,6 +124,33 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
+  })
+
+  test('keeps selection stable while folders expand and collapse', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+
+    await testHelpers.navigateToPromptFolders('Examples')
+    await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
+
+    await mainWindow.locator(EXAMPLES_TOGGLE).click()
+
+    await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(0)
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+
+    const screenInfo = await testHelpers.getPromptFolderScreenInfo()
+    expect(screenInfo.hasPromptEditors).toBe(true)
+    expect(screenInfo.promptCount).toBe(1)
+
+    await mainWindow.locator(EXAMPLES_TOGGLE).click()
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
   })
 
   test('creates and navigates to a new folder', async ({ testSetup }) => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, Loader } from 'lucide-svelte'
+  import { ChevronDown, ChevronRight, Loader } from 'lucide-svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -11,6 +11,9 @@
 
   type PromptTreeRow = {
     kind: 'prompt-folder'
+    folder: PromptFolder
+  } | {
+    kind: 'folder-settings'
     folder: PromptFolder
   }
 
@@ -44,18 +47,69 @@
     'prompt-folder': {
       estimateHeight: () => 24,
       snippet: promptFolderRow
+    },
+    'folder-settings': {
+      estimateHeight: () => 24,
+      snippet: folderSettingsRow
     }
   })
 
-  const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] =>
-    promptFolders.map((folder) => ({
-      id: folder.id,
-      row: {
-        kind: 'prompt-folder',
-        folder
+  let expandedFolderStates = $state<Record<string, boolean>>({})
+
+  const isFolderExpanded = (folderId: string): boolean => expandedFolderStates[folderId] ?? true
+
+  const toggleFolderExpanded = (folderId: string) => {
+    expandedFolderStates = {
+      ...expandedFolderStates,
+      [folderId]: !isFolderExpanded(folderId)
+    }
+  }
+
+  const treeRowClass = (isActive: boolean): string =>
+    `flex h-6 w-full overflow-hidden rounded-none text-left text-[14px] leading-none text-sidebar-foreground transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-within:ring-2 focus-within:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground ${
+      isActive
+        ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+        : ''
+    }`
+
+  const treeRowHitAreaClass =
+    'flex h-full items-center border-0 bg-transparent p-0 text-inherit outline-hidden'
+  const treeRowLeftCellClass = 'flex h-full w-8 shrink-0 items-center justify-end pr-1'
+  const treeRowLabelClass = 'block truncate'
+  const treeRowLabelHitAreaClass = `${treeRowHitAreaClass} min-w-0 flex-1 pl-1 pr-2`
+  const childRowIndentPx = 14
+
+  const folderSettingsTestId = (folder: PromptFolder): string =>
+    `prompt-folder-settings-${folder.folderName.replace(/\s+/g, '')}`
+
+  const folderToggleTestId = (folder: PromptFolder): string =>
+    `prompt-folder-toggle-${folder.folderName.replace(/\s+/g, '')}`
+
+  const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
+    const items: VirtualWindowItem<PromptTreeRow>[] = []
+
+    for (const folder of promptFolders) {
+      items.push({
+        id: folder.id,
+        row: {
+          kind: 'prompt-folder',
+          folder
+        }
+      })
+
+      if (isFolderExpanded(folder.id)) {
+        items.push({
+          id: `${folder.id}:settings`,
+          row: {
+            kind: 'folder-settings',
+            folder
+          }
+        })
       }
-    }))
-  )
+    }
+
+    return items
+  })
 </script>
 
 <div class="-mx-2 flex min-h-0 flex-1 flex-col">
@@ -83,21 +137,38 @@
 </div>
 
 {#snippet promptFolderRow(props)}
-  <button
-    type="button"
-    onclick={() => onPromptFolderSelect(props.row.folder.id)}
-    data-testid={`regular-prompt-folder-${props.row.folder.folderName.replace(/\s+/g, '')}`}
-    data-slot="sidebar-menu-button"
-    data-sidebar="menu-button"
-    data-size="default"
-    data-active={isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
-    class="h-6 w-full overflow-hidden rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none text-sidebar-foreground cursor-pointer outline-hidden ring-sidebar-ring transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground"
-  >
-    <div class="flex h-full w-full items-center gap-2 pl-3 pr-0">
-      <ChevronDown class="size-3.5 shrink-0" />
-      <span class="truncate">{props.row.folder.displayName}</span>
-    </div>
-  </button>
+  {@const isActive =
+    isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
+
+  <div class={treeRowClass(isActive)}>
+    <button
+      type="button"
+      aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
+      aria-expanded={isFolderExpanded(props.row.folder.id)}
+      onclick={() => toggleFolderExpanded(props.row.folder.id)}
+      data-testid={folderToggleTestId(props.row.folder)}
+      class={`${treeRowHitAreaClass} ${treeRowLeftCellClass}`}
+    >
+      {#if isFolderExpanded(props.row.folder.id)}
+        <ChevronDown class="size-3.5 shrink-0" />
+      {:else}
+        <ChevronRight class="size-3.5 shrink-0" />
+      {/if}
+    </button>
+
+    <button
+      type="button"
+      onclick={() => onPromptFolderSelect(props.row.folder.id)}
+      data-testid={`regular-prompt-folder-${props.row.folder.folderName.replace(/\s+/g, '')}`}
+      data-slot="sidebar-menu-button"
+      data-sidebar="menu-button"
+      data-size="default"
+      data-active={isActive}
+      class={treeRowLabelHitAreaClass}
+    >
+      <span class={treeRowLabelClass}>{props.row.folder.displayName}</span>
+    </button>
+  </div>
 
   <!--
   {#snippet folderMenuTrigger({ props: triggerProps })}
@@ -130,4 +201,17 @@
     </DropdownMenuContent>
   </DropdownMenu>
   -->
+{/snippet}
+
+{#snippet folderSettingsRow(props)}
+  <div class={treeRowClass(false)} style={`padding-left: ${childRowIndentPx}px;`}>
+    <div class={treeRowLeftCellClass} aria-hidden="true"></div>
+    <button
+      type="button"
+      data-testid={folderSettingsTestId(props.row.folder)}
+      class={treeRowLabelHitAreaClass}
+    >
+      <span class={treeRowLabelClass}>Folder Settings</span>
+    </button>
+  </div>
 {/snippet}
