@@ -1,4 +1,6 @@
-import { Bug, Home, Settings } from 'lucide-svelte'
+import type { ComponentType } from 'svelte'
+import { Bug, Home } from 'lucide-svelte'
+import SidebarSettingsIcon from '@renderer/features/sidebar/SidebarSettingsIcon.svelte'
 
 export type ScreenId = 'home' | 'settings' | 'test-screen' | 'prompt-folders'
 
@@ -8,7 +10,7 @@ type ScreenConfig = {
   requiresWorkspace: boolean
   devOnly?: boolean
   showInNav?: boolean
-  icon?: typeof Home
+  icon?: ComponentType
 }
 
 export const screens: Record<ScreenId, ScreenConfig> = {
@@ -24,7 +26,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     testId: 'nav-button-settings',
     requiresWorkspace: false,
     showInNav: true,
-    icon: Settings
+    icon: SidebarSettingsIcon
   },
   'test-screen': {
     label: 'Test Screen',

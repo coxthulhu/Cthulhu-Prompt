@@ -3,10 +3,9 @@
     ArrowRight,
     ChevronDown,
     ChevronRight,
-    Folder,
-    Loader,
-    Settings
+    Loader
   } from 'lucide-svelte'
+  import { FileDirectory24, FileDirectoryFill24, Gear24 } from 'svelte-octicons'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -52,11 +51,11 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
     'prompt-folder': {
-      estimateHeight: () => 24,
+      estimateHeight: () => 22,
       snippet: promptFolderRow
     },
     'folder-settings': {
-      estimateHeight: () => 24,
+      estimateHeight: () => 22,
       snippet: folderSettingsRow
     }
   })
@@ -73,7 +72,7 @@
   }
 
   const treeRowClass = (isActive: boolean): string =>
-    `flex h-6 w-full rounded-none text-left text-[14px] text-sidebar-foreground transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-within:ring-2 focus-within:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground ${
+    `flex h-[22px] w-full rounded-none text-left text-[14px] text-sidebar-foreground transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground ${
       isActive
         ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
         : ''
@@ -83,12 +82,13 @@
     'flex h-full items-center border-0 bg-transparent p-0 text-inherit outline-hidden'
   const treeRowToggleButtonClass = `${treeRowButtonClass} min-w-0 flex-1`
   const treeRowChevronCellClass = 'flex h-full w-6 shrink-0 items-center justify-end pr-1'
-  const treeRowLabelClass = 'min-w-0 truncate text-left'
+  const treeRowLabelClass = 'flex h-full min-w-0 items-center truncate text-left leading-none'
   const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center gap-1.5 pl-[4px] pr-1'
   const treeRowLeadingIconClass = 'size-4 shrink-0 text-sidebar-foreground/75'
-  const treeRowFolderIconClass =
-    `${treeRowLeadingIconClass} translate-y-px fill-sidebar-foreground/15`
-  const treeRowFolderSettingsIconClass = treeRowFolderIconClass
+  const treeRowFolderIconWrapClass = 'relative size-4 shrink-0'
+  const treeRowFolderFillIconClass = 'absolute inset-0 size-4 fill-sidebar-foreground/15'
+  const treeRowFolderOutlineIconClass = 'absolute inset-0 size-4 fill-sidebar-foreground/75'
+  const treeRowFolderSettingsIconClass = 'size-4 shrink-0 fill-current'
   const treeRowOpenButtonClass = `${treeRowButtonClass} w-[38px] shrink-0 justify-center`
 
   const folderSettingsTestId = (folder: PromptFolder): string =>
@@ -179,11 +179,10 @@
         {/if}
       </span>
       <span class={treeRowToggleLabelWrapClass}>
-        <Folder
-          class={treeRowFolderIconClass}
-          data-testid={folderIconTestId(props.row.folder)}
-          aria-hidden="true"
-        />
+        <span class={treeRowFolderIconWrapClass} data-testid={folderIconTestId(props.row.folder)}>
+          <FileDirectoryFill24 class={treeRowFolderFillIconClass} aria-hidden="true" />
+          <FileDirectory24 class={treeRowFolderOutlineIconClass} aria-hidden="true" />
+        </span>
         <span class={treeRowLabelClass}>{props.row.folder.displayName}</span>
       </span>
     </button>
@@ -245,7 +244,7 @@
       class={treeRowToggleButtonClass}
     >
       <span class={treeRowToggleLabelWrapClass}>
-        <Settings
+        <Gear24
           class={treeRowFolderSettingsIconClass}
           data-testid={folderSettingsIconTestId(props.row.folder)}
           aria-hidden="true"
