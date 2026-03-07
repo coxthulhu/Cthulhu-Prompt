@@ -19,6 +19,7 @@
   type VirtualWindowProps = {
     items: VirtualWindowItem<TRow>[]
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
+    overlayScrollbar?: boolean
     initialScrollTopPx?: number | null
     initialScrollToRowCenteredId?: string | null
     onInitialScrollToRowCenteredApplied?: () => void
@@ -45,6 +46,7 @@
   let {
     items,
     rowRegistry,
+    overlayScrollbar = false,
     initialScrollTopPx = null,
     initialScrollToRowCenteredId = null,
     onInitialScrollToRowCenteredApplied,
@@ -61,7 +63,7 @@
     spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
 
-  let viewportFrame: HTMLDivElement | null = null
+  let viewportFrame = $state<HTMLDivElement | null>(null)
 
   let isPointerOverWindow = $state(false)
 
@@ -70,7 +72,7 @@
       getViewportFrame: () => viewportFrame,
       getLeftScrollPaddingPx: () => leftScrollPaddingPx,
       getRightScrollPaddingPx: () => rightScrollPaddingPx,
-      scrollbarWidthPx: SCROLLBAR_WIDTH_PX
+      getScrollbarWidthPx: () => (overlayScrollbar ? 0 : SCROLLBAR_WIDTH_PX)
     })
 
   const measurementWidth = $derived(getMeasurementWidth())
@@ -195,7 +197,7 @@
     isPointerOverWindow = false
   }}
 >
-  <div bind:this={viewportFrame} class="flex h-full w-full">
+  {#snippet viewportContent()}
     <div
       class="h-full flex-1 min-w-0"
       style="overflow-anchor: none; overflow: hidden; position: relative;"
@@ -252,17 +254,39 @@
         {/each}
       </div>
     </div>
+  {/snippet}
 
+  {#if overlayScrollbar}
+    <div bind:this={viewportFrame} class="h-full w-full">
+      {@render viewportContent()}
+    </div>
+  {:else}
+    <div bind:this={viewportFrame} class="flex h-full w-full">
+      {@render viewportContent()}
+      <VirtualWindowScrollbar
+        {scrollTopPx}
+        viewportHeightPx={viewportHeight}
+        {totalHeightPx}
+        widthPx={SCROLLBAR_WIDTH_PX}
+        {isPointerOverWindow}
+        revealVersion={scrollbarRevealVersion}
+        onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
+      />
+    </div>
+  {/if}
+
+  {#if overlayScrollbar}
     <VirtualWindowScrollbar
       {scrollTopPx}
       viewportHeightPx={viewportHeight}
       {totalHeightPx}
       widthPx={SCROLLBAR_WIDTH_PX}
+      overlay
       {isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
       onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
     />
-  </div>
+  {/if}
 
   <div
     aria-hidden="true"

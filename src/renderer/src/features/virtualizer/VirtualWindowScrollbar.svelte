@@ -6,6 +6,7 @@
     viewportHeightPx: number
     totalHeightPx: number
     widthPx: number
+    overlay?: boolean
     isPointerOverWindow: boolean
     revealVersion: number
     onScrollTopChange: (nextScrollTop: number) => void
@@ -16,6 +17,7 @@
     viewportHeightPx,
     totalHeightPx,
     widthPx,
+    overlay = false,
     isPointerOverWindow,
     revealVersion,
     onScrollTopChange
@@ -177,6 +179,7 @@
 
 <div
   class={`virtual-window-scrollbar ${visibilityClass}`}
+  class:virtual-window-scrollbar--overlay={overlay}
   style={`width:${widthPx}px;`}
   aria-hidden="true"
 >
@@ -204,6 +207,13 @@
     height: 100%;
     flex: 0 0 auto;
     user-select: none;
+  }
+
+  .virtual-window-scrollbar--overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
   }
 
   .virtual-window-scrollbar.visible {

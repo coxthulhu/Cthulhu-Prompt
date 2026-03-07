@@ -4,11 +4,11 @@ type VirtualWindowMeasurementsOptions = {
   getViewportFrame: () => HTMLDivElement | null
   getLeftScrollPaddingPx: () => number
   getRightScrollPaddingPx: () => number
-  scrollbarWidthPx: number
+  getScrollbarWidthPx: () => number
 }
 
 export const createVirtualWindowMeasurements = (options: VirtualWindowMeasurementsOptions) => {
-  const { getViewportFrame, getLeftScrollPaddingPx, getRightScrollPaddingPx, scrollbarWidthPx } =
+  const { getViewportFrame, getLeftScrollPaddingPx, getRightScrollPaddingPx, getScrollbarWidthPx } =
     options
 
   let containerWidth = $state(0)
@@ -25,7 +25,7 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
   const measurementWidth = $derived(
     Math.max(
       0,
-      containerWidth - getLeftScrollPaddingPx() - getRightScrollPaddingPx() - scrollbarWidthPx
+      containerWidth - getLeftScrollPaddingPx() - getRightScrollPaddingPx() - getScrollbarWidthPx()
     )
   )
 

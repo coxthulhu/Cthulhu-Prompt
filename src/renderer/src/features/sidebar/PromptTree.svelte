@@ -89,7 +89,7 @@
   const treeRowFolderIconClass =
     `${treeRowLeadingIconClass} translate-y-px fill-sidebar-foreground/15`
   const treeRowFolderSettingsIconClass = treeRowFolderIconClass
-  const treeRowOpenButtonClass = `${treeRowButtonClass} w-7 shrink-0 justify-center`
+  const treeRowOpenButtonClass = `${treeRowButtonClass} w-[38px] shrink-0 justify-center`
 
   const folderSettingsTestId = (folder: PromptFolder): string =>
     `prompt-folder-settings-${folder.folderName.replace(/\s+/g, '')}`
@@ -148,6 +148,7 @@
       <SvelteVirtualWindow
         items={virtualItems}
         {rowRegistry}
+        overlayScrollbar
         leftScrollPaddingPx={0}
         rightScrollPaddingPx={0}
         testId="prompt-tree-virtual-window"
