@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronRight, Loader } from 'lucide-svelte'
+  import { ArrowRight, ChevronDown, ChevronRight, Loader } from 'lucide-svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -72,11 +72,13 @@
         : ''
     }`
 
-  const treeRowHitAreaClass =
+  const treeRowButtonClass =
     'flex h-full items-center border-0 bg-transparent p-0 text-inherit outline-hidden'
-  const treeRowLeftCellClass = 'flex h-full w-8 shrink-0 items-center justify-end pr-1'
-  const treeRowLabelClass = 'block truncate'
-  const treeRowLabelHitAreaClass = `${treeRowHitAreaClass} min-w-0 flex-1 pl-1 pr-2`
+  const treeRowToggleButtonClass = `${treeRowButtonClass} min-w-0 flex-1`
+  const treeRowChevronCellClass = 'flex h-full w-8 shrink-0 items-center justify-end pr-1'
+  const treeRowLabelClass = 'min-w-0 truncate text-left'
+  const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center pl-1 pr-1'
+  const treeRowOpenButtonClass = `${treeRowButtonClass} w-7 shrink-0 justify-center`
   const childRowIndentPx = 14
 
   const folderSettingsTestId = (folder: PromptFolder): string =>
@@ -84,6 +86,9 @@
 
   const folderToggleTestId = (folder: PromptFolder): string =>
     `prompt-folder-toggle-${folder.folderName.replace(/\s+/g, '')}`
+
+  const folderOpenTestId = (folder: PromptFolder): string =>
+    `regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
@@ -147,26 +152,32 @@
       aria-expanded={isFolderExpanded(props.row.folder.id)}
       onclick={() => toggleFolderExpanded(props.row.folder.id)}
       data-testid={folderToggleTestId(props.row.folder)}
-      class={`${treeRowHitAreaClass} ${treeRowLeftCellClass}`}
+      class={treeRowToggleButtonClass}
     >
-      {#if isFolderExpanded(props.row.folder.id)}
-        <ChevronDown class="size-3.5 shrink-0" />
-      {:else}
-        <ChevronRight class="size-3.5 shrink-0" />
-      {/if}
+      <span class={treeRowChevronCellClass}>
+        {#if isFolderExpanded(props.row.folder.id)}
+          <ChevronDown class="size-3.5 shrink-0" />
+        {:else}
+          <ChevronRight class="size-3.5 shrink-0" />
+        {/if}
+      </span>
+      <span class={treeRowToggleLabelWrapClass}>
+        <span class={treeRowLabelClass}>{props.row.folder.displayName}</span>
+      </span>
     </button>
 
     <button
       type="button"
+      aria-label={`Open ${props.row.folder.displayName}`}
       onclick={() => onPromptFolderSelect(props.row.folder.id)}
-      data-testid={`regular-prompt-folder-${props.row.folder.folderName.replace(/\s+/g, '')}`}
+      data-testid={folderOpenTestId(props.row.folder)}
       data-slot="sidebar-menu-button"
       data-sidebar="menu-button"
       data-size="default"
       data-active={isActive}
-      class={treeRowLabelHitAreaClass}
+      class={treeRowOpenButtonClass}
     >
-      <span class={treeRowLabelClass}>{props.row.folder.displayName}</span>
+      <ArrowRight class="size-3.5 shrink-0" />
     </button>
   </div>
 
@@ -205,13 +216,15 @@
 
 {#snippet folderSettingsRow(props)}
   <div class={treeRowClass(false)} style={`padding-left: ${childRowIndentPx}px;`}>
-    <div class={treeRowLeftCellClass} aria-hidden="true"></div>
+    <div class={treeRowChevronCellClass} aria-hidden="true"></div>
     <button
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
-      class={treeRowLabelHitAreaClass}
+      class={treeRowToggleButtonClass}
     >
-      <span class={treeRowLabelClass}>Folder Settings</span>
+      <span class={treeRowToggleLabelWrapClass}>
+        <span class={treeRowLabelClass}>Folder Settings</span>
+      </span>
     </button>
   </div>
 {/snippet}

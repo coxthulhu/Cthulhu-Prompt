@@ -24,7 +24,7 @@ export async function getActiveScreen(window: any): Promise<string> {
     )
 
     for (const button of Array.from(activeButtons)) {
-      const text = button.textContent?.toLowerCase() || ''
+      const text = `${button.textContent?.toLowerCase() || ''} ${button.getAttribute('aria-label')?.toLowerCase() || ''}`
       if (text.includes('home')) return 'home'
       if (text.includes('settings')) return 'settings'
       if (text.includes('test folder') || text.includes('project prompts')) return 'prompt-folder'
