@@ -66,7 +66,7 @@
   }
 
   const treeRowClass = (isActive: boolean): string =>
-    `flex h-6 w-full overflow-hidden rounded-none text-left text-[14px] leading-none text-sidebar-foreground transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-within:ring-2 focus-within:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground ${
+    `flex h-6 w-full rounded-none text-left text-[14px] text-sidebar-foreground transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-within:ring-2 focus-within:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground ${
       isActive
         ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
         : ''
