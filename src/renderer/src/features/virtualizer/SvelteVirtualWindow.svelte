@@ -66,13 +66,14 @@
   let viewportFrame = $state<HTMLDivElement | null>(null)
 
   let isPointerOverWindow = $state(false)
+  const reservedScrollbarWidthPx = $derived(overlayScrollbar ? 0 : SCROLLBAR_WIDTH_PX)
 
   const { getMeasurementWidth, getViewportHeight, getDevicePixelRatio, getWidthResizeActive } =
     createVirtualWindowMeasurements({
       getViewportFrame: () => viewportFrame,
       getLeftScrollPaddingPx: () => leftScrollPaddingPx,
       getRightScrollPaddingPx: () => rightScrollPaddingPx,
-      getScrollbarWidthPx: () => (overlayScrollbar ? 0 : SCROLLBAR_WIDTH_PX)
+      getScrollbarWidthPx: () => reservedScrollbarWidthPx
     })
 
   const measurementWidth = $derived(getMeasurementWidth())
@@ -197,7 +198,7 @@
     isPointerOverWindow = false
   }}
 >
-  {#snippet viewportContent()}
+  <div bind:this={viewportFrame} class="flex h-full w-full">
     <div
       class="h-full flex-1 min-w-0"
       style="overflow-anchor: none; overflow: hidden; position: relative;"
@@ -254,39 +255,18 @@
         {/each}
       </div>
     </div>
-  {/snippet}
 
-  {#if overlayScrollbar}
-    <div bind:this={viewportFrame} class="h-full w-full">
-      {@render viewportContent()}
-    </div>
-  {:else}
-    <div bind:this={viewportFrame} class="flex h-full w-full">
-      {@render viewportContent()}
-      <VirtualWindowScrollbar
-        {scrollTopPx}
-        viewportHeightPx={viewportHeight}
-        {totalHeightPx}
-        widthPx={SCROLLBAR_WIDTH_PX}
-        {isPointerOverWindow}
-        revealVersion={scrollbarRevealVersion}
-        onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
-      />
-    </div>
-  {/if}
-
-  {#if overlayScrollbar}
     <VirtualWindowScrollbar
       {scrollTopPx}
       viewportHeightPx={viewportHeight}
       {totalHeightPx}
       widthPx={SCROLLBAR_WIDTH_PX}
-      overlay
+      overlay={overlayScrollbar}
       {isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
       onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
     />
-  {/if}
+  </div>
 
   <div
     aria-hidden="true"
