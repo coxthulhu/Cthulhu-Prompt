@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { ArrowRight, ChevronDown, ChevronRight, Loader } from 'lucide-svelte'
+  import {
+    ArrowRight,
+    ChevronDown,
+    ChevronRight,
+    Folder,
+    Loader,
+    Settings
+  } from 'lucide-svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -77,7 +84,10 @@
   const treeRowToggleButtonClass = `${treeRowButtonClass} min-w-0 flex-1`
   const treeRowChevronCellClass = 'flex h-full w-8 shrink-0 items-center justify-end pr-1'
   const treeRowLabelClass = 'min-w-0 truncate text-left'
-  const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center pl-1 pr-1'
+  const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center gap-1.5 pl-[4px] pr-1'
+  const treeRowLeadingIconClass = 'size-4 shrink-0 text-sidebar-foreground/75'
+  const treeRowFolderIconClass =
+    `${treeRowLeadingIconClass} translate-y-px fill-sidebar-foreground/15`
   const treeRowOpenButtonClass = `${treeRowButtonClass} w-7 shrink-0 justify-center`
   const childRowIndentPx = 14
 
@@ -89,6 +99,12 @@
 
   const folderOpenTestId = (folder: PromptFolder): string =>
     `regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`
+
+  const folderIconTestId = (folder: PromptFolder): string =>
+    `prompt-folder-icon-${folder.folderName.replace(/\s+/g, '')}`
+
+  const folderSettingsIconTestId = (folder: PromptFolder): string =>
+    `prompt-folder-settings-icon-${folder.folderName.replace(/\s+/g, '')}`
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
@@ -162,6 +178,11 @@
         {/if}
       </span>
       <span class={treeRowToggleLabelWrapClass}>
+        <Folder
+          class={treeRowFolderIconClass}
+          data-testid={folderIconTestId(props.row.folder)}
+          aria-hidden="true"
+        />
         <span class={treeRowLabelClass}>{props.row.folder.displayName}</span>
       </span>
     </button>
@@ -223,6 +244,11 @@
       class={treeRowToggleButtonClass}
     >
       <span class={treeRowToggleLabelWrapClass}>
+        <Settings
+          class={treeRowLeadingIconClass}
+          data-testid={folderSettingsIconTestId(props.row.folder)}
+          aria-hidden="true"
+        />
         <span class={treeRowLabelClass}>Folder Settings</span>
       </span>
     </button>
