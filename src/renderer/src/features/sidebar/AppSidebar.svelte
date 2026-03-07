@@ -123,7 +123,7 @@
 <aside
   data-sidebar="sidebar"
   data-slot="sidebar-inner"
-  class="text-foreground flex h-full w-full flex-col"
+  class="flex h-full w-full flex-col text-sidebar-foreground/80"
   style="background-color: rgb(18, 18, 20);"
 >
   <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 px-2 pb-2 pt-0">
@@ -135,7 +135,7 @@
         <span data-testid="sidebar-workspace-name" class="font-semibold text-sm truncate">
           {workspaceDisplay.title}
         </span>
-        <span class="text-xs text-muted-foreground flex min-w-0" title={workspacePath ?? undefined}>
+        <span class="flex min-w-0 text-xs text-muted-foreground/80" title={workspacePath ?? undefined}>
           {#if workspacePath}
             <span class="min-w-0 truncate">{workspaceDisplay.prefix}</span>
             {#if workspaceDisplay.prefix}
@@ -211,7 +211,7 @@
     class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <div class="flex min-h-0 flex-1 flex-col">
-      <div class="text-sidebar-foreground mb-px flex h-[22px] shrink-0 items-center justify-between gap-2 px-2 text-[14px] font-normal">
+      <div class="mb-px flex h-[22px] shrink-0 items-center justify-between gap-2 px-2 text-[14px] font-normal text-sidebar-foreground/80">
         <span class="min-w-0 flex items-center gap-1.5 truncate">
           <span class="relative size-4 shrink-0" aria-hidden="true">
             <FileDirectoryFill24 class="absolute inset-0 size-4 fill-sidebar-foreground/15" />
