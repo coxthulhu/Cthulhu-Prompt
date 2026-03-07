@@ -2,7 +2,7 @@
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import { Home } from 'lucide-svelte'
+  import { Folder, Home } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import type { PromptFolder } from '@shared/PromptFolder'
@@ -211,7 +211,13 @@
   >
     <div class="flex min-h-0 flex-1 flex-col">
       <div class="text-sidebar-foreground flex h-8 shrink-0 items-center justify-between gap-2 px-2 text-sm font-normal">
-        <span class="min-w-0 truncate">Prompts</span>
+        <span class="min-w-0 flex items-center gap-1.5 truncate">
+          <Folder
+            class="size-4 shrink-0 text-sidebar-foreground/75 fill-sidebar-foreground/15"
+            aria-hidden="true"
+          />
+          <span class="truncate">Prompts</span>
+        </span>
         {#if isWorkspaceReady}
           <div class="shrink-0">
             <CreatePromptFolderDialog
