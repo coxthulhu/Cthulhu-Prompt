@@ -14,15 +14,22 @@ export type VirtualRowState<TRow extends { kind: string }> = {
   snippet: VirtualWindowRowSnippet<TRow>
 }
 
-const ROW_HEIGHT_GRID_PX = 4
-const normalizeRowHeight = (height: number): number => {
+const DEFAULT_ROW_HEIGHT_GRID_PX = 4
+const normalizeRowHeight = (height: number, rowHeightGridPx: number): number => {
   if (height <= 0) return 0
-  return Math.ceil(height / ROW_HEIGHT_GRID_PX) * ROW_HEIGHT_GRID_PX
+  const gridPx = rowHeightGridPx > 0 ? rowHeightGridPx : DEFAULT_ROW_HEIGHT_GRID_PX
+  return Math.ceil(height / gridPx) * gridPx
 }
 
-const resolveRowHeight = (estimated: number, measured: number | null): number => {
-  if (measured != null && Number.isFinite(measured)) return normalizeRowHeight(measured)
-  return normalizeRowHeight(estimated)
+const resolveRowHeight = (
+  estimated: number,
+  measured: number | null,
+  rowHeightGridPx: number
+): number => {
+  if (measured != null && Number.isFinite(measured)) {
+    return normalizeRowHeight(measured, rowHeightGridPx)
+  }
+  return normalizeRowHeight(estimated, rowHeightGridPx)
 }
 
 // Build row state with estimated and measured heights merged.
@@ -31,7 +38,8 @@ export const buildRows = <TRow extends { kind: string }>(
   registry: VirtualWindowRowTypeRegistry<TRow>,
   width: number,
   viewportHeightPx: number,
-  dpr: number
+  dpr: number,
+  rowHeightGridPx: number = DEFAULT_ROW_HEIGHT_GRID_PX
 ): VirtualRowState<TRow>[] => {
   const rows: VirtualRowState<TRow>[] = []
   let offset = 0
@@ -40,7 +48,7 @@ export const buildRows = <TRow extends { kind: string }>(
     const entry = registry[item.row.kind]
     const estimatedHeight = entry.estimateHeight(item.row, width, viewportHeightPx)
     const measuredHeightPx = entry.lookupMeasuredHeight?.(item.row, width, dpr) ?? null
-    const height = resolveRowHeight(estimatedHeight, measuredHeightPx)
+    const height = resolveRowHeight(estimatedHeight, measuredHeightPx, rowHeightGridPx)
 
     rows.push({
       id: item.id,

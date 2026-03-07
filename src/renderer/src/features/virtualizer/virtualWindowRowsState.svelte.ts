@@ -7,13 +7,20 @@ type VirtualWindowRowsStateOptions<TRow extends { kind: string }> = {
   getMeasurementWidth: () => number
   getViewportHeight: () => number
   getDevicePixelRatio: () => number
+  getRowHeightGridPx: () => number
 }
 
 export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
   options: VirtualWindowRowsStateOptions<TRow>
 ) => {
-  const { getItems, getRowRegistry, getMeasurementWidth, getViewportHeight, getDevicePixelRatio } =
-    options
+  const {
+    getItems,
+    getRowRegistry,
+    getMeasurementWidth,
+    getViewportHeight,
+    getDevicePixelRatio,
+    getRowHeightGridPx
+  } = options
 
   const rowStates = $derived.by(() => {
     const measurementWidth = getMeasurementWidth()
@@ -23,7 +30,8 @@ export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
       getRowRegistry(),
       measurementWidth,
       getViewportHeight(),
-      getDevicePixelRatio()
+      getDevicePixelRatio(),
+      getRowHeightGridPx()
     )
   })
 

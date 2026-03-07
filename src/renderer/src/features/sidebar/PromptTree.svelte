@@ -149,6 +149,7 @@
         items={virtualItems}
         {rowRegistry}
         overlayScrollbar
+        rowHeightGridPx={2}
         leftScrollPaddingPx={0}
         rightScrollPaddingPx={0}
         testId="prompt-tree-virtual-window"

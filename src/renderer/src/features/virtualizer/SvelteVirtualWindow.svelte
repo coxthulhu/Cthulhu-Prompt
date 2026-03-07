@@ -30,6 +30,7 @@
     onScrollTopChange?: (scrollTopPx: number) => void
     scrollApi?: VirtualWindowScrollApi | null
     viewportMetrics?: VirtualWindowViewportMetrics | null
+    rowHeightGridPx?: number
     leftScrollPaddingPx?: number
     rightScrollPaddingPx?: number
     testId?: string
@@ -39,6 +40,7 @@
   // Generic over row shape; callers provide the concrete discriminated union.
   const DEFAULT_LEFT_SCROLL_PADDING_PX = 24
   const DEFAULT_RIGHT_SCROLL_PADDING_PX = 8
+  const DEFAULT_ROW_HEIGHT_GRID_PX = 4
   const WINDOW_BAND_PADDING_PX = 100
   const SCROLLBAR_WIDTH_PX = 10
   const WHEEL_SCROLL_MULTIPLIER = 0.4
@@ -57,6 +59,7 @@
     onScrollTopChange,
     scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
+    rowHeightGridPx = DEFAULT_ROW_HEIGHT_GRID_PX,
     leftScrollPaddingPx = DEFAULT_LEFT_SCROLL_PADDING_PX,
     rightScrollPaddingPx = DEFAULT_RIGHT_SCROLL_PADDING_PX,
     testId = 'virtual-window',
@@ -85,7 +88,8 @@
     getRowRegistry: () => rowRegistry,
     getMeasurementWidth,
     getViewportHeight,
-    getDevicePixelRatio
+    getDevicePixelRatio,
+    getRowHeightGridPx: () => rowHeightGridPx
   })
 
   const {
