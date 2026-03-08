@@ -179,7 +179,7 @@
                 testId={item.testId}
                 icon={Icon}
                 label={item.label}
-                class="updatedSidebarTopNavButton"
+                class={`updatedSidebarTopNavButton ${item.id === 'test-screen' ? 'updatedSidebarTopNavButtonCentered' : ''}`}
                 active={activeScreen === item.id}
                 disabled={item.requiresWorkspace && !isWorkspaceReady}
                 onclick={() => onNavigate(item.id)}

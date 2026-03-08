@@ -373,7 +373,7 @@
 
   <ResizableSidebar
     defaultWidth={appSidebarDefaultWidthPx}
-    minWidth={225}
+    minWidth={240}
     maxWidth={400}
     handleTestId="app-sidebar-resize-handle"
     containerClass="flex-1 min-h-0"

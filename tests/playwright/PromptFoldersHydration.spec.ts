@@ -22,6 +22,7 @@ const MEASUREMENT_PLACEHOLDER_SELECTOR = `${MEASUREMENT_PROMPT_SELECTOR} ${MONAC
 const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 const LONG_FOLDER_NAME = 'Long'
 const BASELINE_EXPAND_DRAG_DISTANCE = -200
+const MIN_EXPECTED_WIDTH_DELTA_PX = 8
 
 type MonacoViewStateSnapshot = {
   lineNumber: number
@@ -290,7 +291,7 @@ describe('Prompt Folder Hydration', () => {
 
       const resizedWidth = await readPromptWidth()
       expect(resizedWidth).toBeLessThan(initialWidth)
-      expect(initialWidth - resizedWidth).toBeGreaterThan(20)
+      expect(initialWidth - resizedWidth).toBeGreaterThan(MIN_EXPECTED_WIDTH_DELTA_PX)
 
       await expect(mainWindow.locator(PLACEHOLDER_SELECTOR)).toHaveCount(0)
 
@@ -342,21 +343,21 @@ describe('Prompt Folder Hydration', () => {
 
     const narrowedWidth = await getEditorContentWidth()
     expect(narrowedWidth).toBeLessThan(initialWidth)
-    expect(initialWidth - narrowedWidth).toBeGreaterThan(20)
+    expect(initialWidth - narrowedWidth).toBeGreaterThan(MIN_EXPECTED_WIDTH_DELTA_PX)
 
     await testHelpers.dragSidebarHandleBy(-dragDistance)
     await expect.poll(async () => await getEditorContentWidth()).toBeGreaterThan(narrowedWidth)
 
     const expandedWidth = await getEditorContentWidth()
     expect(expandedWidth).toBeGreaterThan(narrowedWidth)
-    expect(expandedWidth - narrowedWidth).toBeGreaterThan(20)
+    expect(expandedWidth - narrowedWidth).toBeGreaterThan(MIN_EXPECTED_WIDTH_DELTA_PX)
 
     await testHelpers.dragSidebarHandleBy(dragDistance)
     await expect.poll(async () => await getEditorContentWidth()).toBeLessThan(expandedWidth)
 
     const resizedWidth = await getEditorContentWidth()
     expect(resizedWidth).toBeLessThan(expandedWidth)
-    expect(expandedWidth - resizedWidth).toBeGreaterThan(20)
+    expect(expandedWidth - resizedWidth).toBeGreaterThan(MIN_EXPECTED_WIDTH_DELTA_PX)
   })
 
   test('retains scroll anchor offset after hydration in long wrapped singles', async ({
