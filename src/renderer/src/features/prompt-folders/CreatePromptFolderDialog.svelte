@@ -23,11 +23,13 @@
     isWorkspaceReady,
     promptFolders = [],
     isPromptFolderListLoading,
+    triggerClass = '',
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
     promptFolders: PromptFolder[]
     isPromptFolderListLoading: boolean
+    triggerClass?: string
     onCreated?: (promptFolderId: string) => void
   }>()
 
@@ -135,7 +137,7 @@
     disabled={!isWorkspaceReady}
     ariaDisabled={!isWorkspaceReady}
     testId="new-prompt-folder-button"
-    class="h-7 w-7 min-w-7 justify-center border-0 bg-transparent px-0 py-0 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-sidebar-foreground"
+    class={`h-7 w-7 min-w-7 justify-center border-0 bg-transparent px-0 py-0 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-sidebar-foreground ${triggerClass}`}
     builderProps={{
       ...props,
       'aria-label': 'New Prompt Folder',

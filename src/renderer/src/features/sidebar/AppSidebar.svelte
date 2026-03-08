@@ -4,7 +4,6 @@
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { Home } from 'lucide-svelte'
-  import { FileDirectory24, FileDirectoryFill24 } from 'svelte-octicons'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import type { PromptFolder } from '@shared/PromptFolder'
@@ -198,19 +197,17 @@
     class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <div class="flex min-h-0 flex-1 flex-col">
-      <div class="mb-px flex h-[22px] shrink-0 items-center justify-between gap-2 px-2 text-[14px] font-normal text-sidebar-foreground/80">
-        <span class="min-w-0 flex items-center gap-1.5 truncate">
-          <span class="relative size-4 shrink-0" aria-hidden="true">
-            <FileDirectoryFill24 class="absolute inset-0 size-4 fill-sidebar-foreground/15" />
-            <FileDirectory24 class="absolute inset-0 size-4 fill-sidebar-foreground/75" />
-          </span>
-          <span class="truncate">Prompts</span>
-        </span>
+      <div class="updatedSidebarPromptsHeader">
+        <div class="updatedSidebarPromptsHeaderTextBlock">
+          <p class="updatedSidebarPromptsHeaderTitle">Prompts</p>
+          <p class="updatedSidebarPromptsHeaderCount">10 folders</p>
+        </div>
         {#if isWorkspaceReady}
-          <div class="shrink-0">
+          <div class="updatedSidebarPromptsHeaderAction">
             <CreatePromptFolderDialog
               {isWorkspaceReady}
               {promptFolders}
+              triggerClass="updatedSidebarPromptsHeaderAddButton"
               isPromptFolderListLoading={isWorkspaceLoading}
               onCreated={(promptFolderId) => {
                 onPromptFolderSelect(promptFolderId)
