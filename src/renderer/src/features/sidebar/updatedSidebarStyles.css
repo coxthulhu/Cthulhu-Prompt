@@ -46,3 +46,140 @@
 .updatedSidebarTopNavButtonCentered {
   justify-content: center;
 }
+
+.updatedSidebarPromptTreeRow {
+  display: flex;
+  height: 2.25rem;
+  width: 100%;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.75rem;
+  padding-inline: 0.5rem;
+  color: rgb(212 212 216);
+  transition: background-color 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.updatedSidebarPromptTreeRow:hover {
+  background-color: rgb(255 255 255 / 5%);
+  color: rgb(255 255 255);
+}
+
+.updatedSidebarPromptTreeRow[data-active='true'] {
+  background-color: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
+}
+
+.updatedSidebarPromptTreeToggleButton {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+
+.updatedSidebarPromptTreeChevronWrap {
+  display: flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: rgb(113 113 122);
+}
+
+.updatedSidebarPromptTreeChevronIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.updatedSidebarPromptTreeFolderIcon {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+  color: rgb(161 161 170);
+}
+
+.updatedSidebarPromptTreeFolderLabel {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.updatedSidebarPromptTreeCountBadge {
+  flex-shrink: 0;
+  border-radius: 0.375rem;
+  background-color: rgb(255 255 255 / 6%);
+  padding: 0 0.375rem;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgb(161 161 170);
+}
+
+.updatedSidebarPromptTreeOpenButton {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: rgb(113 113 122);
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+
+.updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeOpenButton {
+  opacity: 1;
+}
+
+.updatedSidebarPromptTreeSettingsRow {
+  width: 100%;
+  padding-left: 2rem;
+}
+
+.updatedSidebarPromptTreeSettingsButton {
+  display: flex;
+  height: 1.875rem;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  padding-inline: 0.5rem;
+  color: rgb(161 161 170);
+  text-align: left;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.updatedSidebarPromptTreeSettingsButton:hover {
+  background-color: rgb(255 255 255 / 5%);
+  color: rgb(228 228 231);
+}
+
+.updatedSidebarPromptTreeSettingsIcon {
+  height: 0.875rem;
+  width: 0.875rem;
+  flex-shrink: 0;
+}
+
+.updatedSidebarPromptTreeSettingsLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}

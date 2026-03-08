@@ -3,9 +3,10 @@
     ArrowRight,
     ChevronDown,
     ChevronRight,
-    Loader
+    Folder,
+    Loader,
+    Settings
   } from 'lucide-svelte'
-  import { FileDirectory24, FileDirectoryFill24, Gear24 } from 'svelte-octicons'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -51,11 +52,11 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
     'prompt-folder': {
-      estimateHeight: () => 22,
+      estimateHeight: () => 36,
       snippet: promptFolderRow
     },
     'folder-settings': {
-      estimateHeight: () => 22,
+      estimateHeight: () => 30,
       snippet: folderSettingsRow
     }
   })
@@ -71,24 +72,7 @@
     }
   }
 
-  const treeRowClass = (isActive: boolean): string =>
-    `flex h-[22px] w-full rounded-none text-left text-[14px] text-sidebar-foreground/80 transition-[color,background-color] duration-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground ${
-      isActive
-        ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-        : ''
-    }`
-
-  const treeRowButtonClass =
-    'flex h-full items-center border-0 bg-transparent p-0 text-inherit outline-hidden'
-  const treeRowToggleButtonClass = `${treeRowButtonClass} min-w-0 flex-1`
-  const treeRowChevronCellClass = 'flex h-full w-6 shrink-0 items-center justify-end pr-1'
-  const treeRowLabelClass = 'flex h-full min-w-0 items-center truncate text-left leading-none'
-  const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center gap-1.5 pl-[4px] pr-1'
-  const treeRowFolderIconWrapClass = 'relative size-4 shrink-0'
-  const treeRowFolderFillIconClass = 'absolute inset-0 size-4 fill-sidebar-foreground/15'
-  const treeRowFolderOutlineIconClass = 'absolute inset-0 size-4 fill-sidebar-foreground/75'
-  const treeRowFolderSettingsIconClass = 'size-4 shrink-0 fill-current'
-  const treeRowOpenButtonClass = `${treeRowButtonClass} w-[38px] shrink-0 justify-center`
+  const updatedSidebarPromptCount = 10
 
   const folderSettingsTestId = (folder: PromptFolder): string =>
     `prompt-folder-settings-${folder.folderName.replace(/\s+/g, '')}`
@@ -162,29 +146,25 @@
   {@const isActive =
     isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
 
-  <div class={treeRowClass(isActive)}>
+  <div class="updatedSidebarPromptTreeRow group" data-active={isActive ? 'true' : 'false'}>
     <button
       type="button"
       aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
       aria-expanded={isFolderExpanded(props.row.folder.id)}
       onclick={() => toggleFolderExpanded(props.row.folder.id)}
       data-testid={folderToggleTestId(props.row.folder)}
-      class={treeRowToggleButtonClass}
+      class="updatedSidebarPromptTreeToggleButton"
     >
-      <span class={treeRowChevronCellClass}>
+      <span class="updatedSidebarPromptTreeChevronWrap">
         {#if isFolderExpanded(props.row.folder.id)}
-          <ChevronDown class="size-4 shrink-0" />
+          <ChevronDown class="updatedSidebarPromptTreeChevronIcon" />
         {:else}
-          <ChevronRight class="size-4 shrink-0" />
+          <ChevronRight class="updatedSidebarPromptTreeChevronIcon" />
         {/if}
       </span>
-      <span class={treeRowToggleLabelWrapClass}>
-        <span class={treeRowFolderIconWrapClass} data-testid={folderIconTestId(props.row.folder)}>
-          <FileDirectoryFill24 class={treeRowFolderFillIconClass} aria-hidden="true" />
-          <FileDirectory24 class={treeRowFolderOutlineIconClass} aria-hidden="true" />
-        </span>
-        <span class={treeRowLabelClass}>{props.row.folder.displayName}</span>
-      </span>
+      <Folder class="updatedSidebarPromptTreeFolderIcon" data-testid={folderIconTestId(props.row.folder)} />
+      <span class="updatedSidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
+      <span class="updatedSidebarPromptTreeCountBadge">{updatedSidebarPromptCount}</span>
     </button>
 
     <button
@@ -196,9 +176,9 @@
       data-sidebar="menu-button"
       data-size="default"
       data-active={isActive}
-      class={treeRowOpenButtonClass}
+      class="updatedSidebarPromptTreeOpenButton"
     >
-      <ArrowRight class="size-4 shrink-0" />
+      <ArrowRight class="size-4" />
     </button>
   </div>
 
@@ -236,21 +216,18 @@
 {/snippet}
 
 {#snippet folderSettingsRow(props)}
-  <div class={treeRowClass(false)}>
-    <div class={treeRowChevronCellClass} aria-hidden="true"></div>
+  <div class="updatedSidebarPromptTreeSettingsRow">
     <button
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
-      class={treeRowToggleButtonClass}
+      class="updatedSidebarPromptTreeSettingsButton"
     >
-      <span class={treeRowToggleLabelWrapClass}>
-        <Gear24
-          class={treeRowFolderSettingsIconClass}
-          data-testid={folderSettingsIconTestId(props.row.folder)}
-          aria-hidden="true"
-        />
-        <span class={treeRowLabelClass}>Folder Settings</span>
-      </span>
+      <Settings
+        class="updatedSidebarPromptTreeSettingsIcon"
+        data-testid={folderSettingsIconTestId(props.row.folder)}
+        aria-hidden="true"
+      />
+      <span class="updatedSidebarPromptTreeSettingsLabel">Folder Settings</span>
     </button>
   </div>
 {/snippet}
