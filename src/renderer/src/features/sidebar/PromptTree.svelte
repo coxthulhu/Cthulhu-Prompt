@@ -72,8 +72,6 @@
     }
   }
 
-  const updatedSidebarPromptCount = 10
-
   const folderSettingsTestId = (folder: PromptFolder): string =>
     `prompt-folder-settings-${folder.folderName.replace(/\s+/g, '')}`
 
@@ -101,15 +99,16 @@
         }
       })
 
-      if (isFolderExpanded(folder.id)) {
-        items.push({
-          id: `${folder.id}:settings`,
-          row: {
-            kind: 'folder-settings',
-            folder
-          }
-        })
-      }
+      // Folder settings row is intentionally hidden for now.
+      // if (isFolderExpanded(folder.id)) {
+      //   items.push({
+      //     id: `${folder.id}:settings`,
+      //     row: {
+      //       kind: 'folder-settings',
+      //       folder
+      //     }
+      //   })
+      // }
     }
 
     return items
@@ -164,7 +163,7 @@
       </span>
       <Folder class="updatedSidebarPromptTreeFolderIcon" data-testid={folderIconTestId(props.row.folder)} />
       <span class="updatedSidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
-      <span class="updatedSidebarPromptTreeCountBadge">{updatedSidebarPromptCount}</span>
+      <span class="updatedSidebarPromptTreeCountBadge">{props.row.folder.promptIds.length}</span>
     </button>
 
     <button
