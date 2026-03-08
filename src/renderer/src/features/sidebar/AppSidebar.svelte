@@ -2,6 +2,7 @@
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
+  import appIcon from '@renderer/assets/cutethulhu.png'
   import { Home } from 'lucide-svelte'
   import { FileDirectory24, FileDirectoryFill24 } from 'svelte-octicons'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
@@ -95,27 +96,21 @@
         : 'ready'
   )
 
-  // Support middle truncation by deriving the workspace title + path segments.
+  // Keep workspace header text aligned with the mockup's simple end-truncation style.
   const workspaceDisplay = $derived.by(() => {
     if (!workspacePath) {
       return {
-        title: 'Cthulhu Prompt',
-        prefix: '',
-        suffix: '',
-        separator: '/'
+        title: 'No Workspace Selected',
+        path: 'No Workspace Selected'
       }
     }
 
     const segments = workspacePath.split(/[\\/]+/).filter(Boolean)
-    const separator = workspacePath.includes('\\') ? '\\' : '/'
-    const suffix = segments.length ? segments[segments.length - 1] : ''
-    const prefix = segments.length > 1 ? segments.slice(0, -1).join(separator) : ''
+    const title = segments.length ? segments[segments.length - 1] : workspacePath
 
     return {
-      title: suffix || 'Cthulhu Prompt',
-      prefix,
-      suffix,
-      separator
+      title,
+      path: workspacePath
     }
   })
 </script>
@@ -125,33 +120,25 @@
   data-slot="sidebar-inner"
   class="updatedSidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
 >
-  <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 px-2 pb-2 pt-0">
-    <div
-      class="flex items-center gap-2 border-l-2 px-2 py-1"
-      style="border-left-color: rgba(168, 85, 247, 0.7);"
-    >
-      <div class="flex min-w-0 flex-col">
-        <span data-testid="sidebar-workspace-name" class="font-semibold text-sm truncate">
-          {workspaceDisplay.title}
-        </span>
-        <span class="flex min-w-0 text-xs text-muted-foreground/80" title={workspacePath ?? undefined}>
-          {#if workspacePath}
-            <span class="min-w-0 truncate">{workspaceDisplay.prefix}</span>
-            {#if workspaceDisplay.prefix}
-              <span class="shrink-0">{workspaceDisplay.separator}</span>
-            {/if}
-            <span class="min-w-0 truncate max-w-[60%]">{workspaceDisplay.suffix}</span>
-          {:else}
-            No Workspace Selected
-          {/if}
-        </span>
-      </div>
+  <div
+    data-slot="sidebar-header"
+    data-sidebar="header"
+    class="flex items-start gap-2 border-b border-white/8 px-2 pb-4 pt-2"
+  >
+    <div class="flex h-10 w-10 shrink-0 items-center justify-center">
+      <img class="h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" />
+    </div>
+    <div class="min-w-0 flex-1">
+      <h1 data-testid="sidebar-workspace-name" class="truncate text-sm font-semibold tracking-tight text-zinc-100">
+        {workspaceDisplay.title}
+      </h1>
+      <p class="truncate pt-0.5 text-xs text-zinc-500" title={workspacePath ?? undefined}>
+        {workspaceDisplay.path}
+      </p>
     </div>
   </div>
 
-  <div class="mx-2 mb-2 border-t border-[#222225]" aria-hidden="true"></div>
-
-  <div class="px-2">
+  <div class="space-y-3 px-2 py-3">
     <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-2">
       {#each primaryNavItems as item (item.id)}
         {@const Icon = item.icon}
@@ -178,7 +165,7 @@
       <ul
         data-slot="sidebar-menu"
         data-sidebar="menu"
-        class="mt-2 flex w-full min-w-0 flex-col gap-2"
+        class="flex w-full min-w-0 flex-col gap-2"
       >
         {#each secondaryNavItems as item (item.id)}
           {@const Icon = item.icon}
