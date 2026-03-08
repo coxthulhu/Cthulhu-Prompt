@@ -123,8 +123,7 @@
 <aside
   data-sidebar="sidebar"
   data-slot="sidebar-inner"
-  class="flex h-full w-full flex-col text-sidebar-foreground/80"
-  style="background-color: rgb(18, 18, 20);"
+  class="updatedSidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
 >
   <div data-slot="sidebar-header" data-sidebar="header" class="flex flex-col gap-2 px-2 pb-2 pt-0">
     <div
@@ -153,7 +152,7 @@
   <div class="mx-2 mb-2 border-t border-[#222225]" aria-hidden="true"></div>
 
   <div class="px-2">
-    <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-1">
+    <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-2">
       {#each primaryNavItems as item (item.id)}
         {@const Icon = item.icon}
         <li
@@ -166,7 +165,7 @@
             icon={Icon}
             label={item.label}
             builderProps={{ 'aria-label': item.label, title: item.label }}
-            class="justify-center px-0"
+            class="updatedSidebarTopNavButton updatedSidebarTopNavButtonCentered"
             active={activeScreen === item.id}
             disabled={item.requiresWorkspace && !isWorkspaceReady}
             onclick={() => onNavigate(item.id)}
@@ -179,7 +178,7 @@
       <ul
         data-slot="sidebar-menu"
         data-sidebar="menu"
-        class="mt-2 flex w-full min-w-0 flex-col gap-1"
+        class="mt-2 flex w-full min-w-0 flex-col gap-2"
       >
         {#each secondaryNavItems as item (item.id)}
           {@const Icon = item.icon}
@@ -192,7 +191,7 @@
               testId={item.testId}
               icon={Icon}
               label={item.label}
-              class={item.id === 'test-screen' ? 'justify-center' : ''}
+              class="updatedSidebarTopNavButton"
               active={activeScreen === item.id}
               disabled={item.requiresWorkspace && !isWorkspaceReady}
               onclick={() => onNavigate(item.id)}

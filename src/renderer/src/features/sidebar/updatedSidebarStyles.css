@@ -1,0 +1,48 @@
+/* Shared visual refresh for the updated sidebar surface and top navigation buttons. */
+:root {
+  --updated-sidebar-gradient-top: #11131a;
+  --updated-sidebar-gradient-bottom: #0b0d12;
+  --updated-sidebar-mockup-border: rgb(255 255 255 / 10%);
+}
+
+.updatedSidebarSurface {
+  background: linear-gradient(
+    180deg,
+    var(--updated-sidebar-gradient-top) 0%,
+    var(--updated-sidebar-gradient-bottom) 100%
+  );
+}
+
+.updatedSidebarTitlebarSurface {
+  background-color: var(--updated-sidebar-gradient-top);
+}
+
+.updatedSidebarFrameBorder {
+  border-color: var(--updated-sidebar-mockup-border);
+}
+
+.updatedSidebarTopNavButton {
+  height: 2.25rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border-color: rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 3%);
+  padding-inline: 0.75rem;
+  color: rgb(212 212 216);
+}
+
+.updatedSidebarTopNavButton:hover {
+  background-color: rgb(255 255 255 / 6%);
+  color: rgb(255 255 255);
+}
+
+.updatedSidebarTopNavButton[data-active='true'] {
+  border-color: rgb(255 255 255 / 12%);
+  background-color: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255);
+}
+
+.updatedSidebarTopNavButtonCentered {
+  justify-content: center;
+}

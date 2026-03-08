@@ -55,8 +55,7 @@
 </script>
 
 <div
-  class="titlebar text-foreground"
-  style="background-color: rgb(18, 18, 20);"
+  class="titlebar updatedSidebarTitlebarSurface text-foreground"
   role="button"
   tabindex="0"
   aria-label="Toggle maximize"

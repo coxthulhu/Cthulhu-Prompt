@@ -84,7 +84,6 @@
   const treeRowChevronCellClass = 'flex h-full w-6 shrink-0 items-center justify-end pr-1'
   const treeRowLabelClass = 'flex h-full min-w-0 items-center truncate text-left leading-none'
   const treeRowToggleLabelWrapClass = 'flex min-w-0 flex-1 items-center gap-1.5 pl-[4px] pr-1'
-  const treeRowLeadingIconClass = 'size-4 shrink-0 text-sidebar-foreground/75'
   const treeRowFolderIconWrapClass = 'relative size-4 shrink-0'
   const treeRowFolderFillIconClass = 'absolute inset-0 size-4 fill-sidebar-foreground/15'
   const treeRowFolderOutlineIconClass = 'absolute inset-0 size-4 fill-sidebar-foreground/75'
