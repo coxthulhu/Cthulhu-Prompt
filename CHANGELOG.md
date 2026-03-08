@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.0.9
+
+### New Features
+
+- Added SQLite-backed local persistence for app/user state and prompt UI state.
+- Added a virtualized, collapsible sidebar prompt tree with folder/prompt counts.
+- Added persistence for window bounds/startup state and Monaco view state restoration.
+
+### Changes
+
+- Refreshed sidebar and prompt-tree styling.
+- Migrated the compact Playwright runner from PowerShell to Python and streamlined success output.
+
+### Fixed
+
+- Fixed Playwright startup/readiness synchronization and related persistence test stability.
+- Fixed prompt-tree row rendering/width issues and sidebar width hydration test regressions.
+- Fixed dev/test screen scrolling behavior.
+
 ## 0.0.8
 
 ### New Features
