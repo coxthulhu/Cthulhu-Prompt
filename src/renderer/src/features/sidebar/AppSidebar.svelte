@@ -95,6 +95,11 @@
         : 'ready'
   )
 
+  const promptFolderCountLabel = $derived.by(() => {
+    const folderCount = promptFolders.length
+    return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
+  })
+
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
   const workspaceDisplay = $derived.by(() => {
     if (!workspacePath) {
@@ -200,7 +205,7 @@
       <div class="mb-2 flex items-center justify-between px-2">
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Prompts</p>
-          <p class="mt-0.5 text-xs text-zinc-600">10 folders</p>
+          <p class="mt-0.5 text-xs text-zinc-600">{promptFolderCountLabel}</p>
         </div>
         {#if isWorkspaceReady}
           <div class="shrink-0">
