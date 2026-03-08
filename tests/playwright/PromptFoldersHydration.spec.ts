@@ -21,6 +21,7 @@ const MEASUREMENT_PROMPT_SELECTOR = promptEditorSelector(MEASUREMENT_PROMPT_ID)
 const MEASUREMENT_PLACEHOLDER_SELECTOR = `${MEASUREMENT_PROMPT_SELECTOR} ${MONACO_PLACEHOLDER_SELECTOR}`
 const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 const LONG_FOLDER_NAME = 'Long'
+const BASELINE_EXPAND_DRAG_DISTANCE = -200
 
 type MonacoViewStateSnapshot = {
   lineNumber: number
@@ -145,6 +146,18 @@ const setMonacoViewStateForTest = async (mainWindow: any, editorSelector: string
   }, editorSelector)
 }
 
+const prepareUncappedSidebarBaseline = async (
+  testHelpers: {
+    dragSidebarHandleBy: (distance: number) => Promise<void>
+  },
+  readWidth: () => Promise<number>
+): Promise<number> => {
+  const widthBeforeExpand = await readWidth()
+  await testHelpers.dragSidebarHandleBy(BASELINE_EXPAND_DRAG_DISTANCE)
+  await expect.poll(async () => await readWidth()).toBeGreaterThan(widthBeforeExpand)
+  return await readWidth()
+}
+
 describe('Prompt Folder Hydration', () => {
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -261,7 +274,8 @@ describe('Prompt Folder Hydration', () => {
       placeholderSelector: PLACEHOLDER_SELECTOR
     })
 
-    const initialWidth = await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)
+    const readPromptWidth = async () => await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)
+    const initialWidth = await prepareUncappedSidebarBaseline(testHelpers, readPromptWidth)
 
     await mainWindow.evaluate(() => {
       window.svelteVirtualWindowTestControls?.pauseMonacoHydration()
@@ -272,11 +286,9 @@ describe('Prompt Folder Hydration', () => {
     try {
       await testHelpers.dragSidebarHandleBy(dragDistance)
 
-      await expect
-        .poll(async () => await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR))
-        .toBeLessThan(initialWidth)
+      await expect.poll(async () => await readPromptWidth()).toBeLessThan(initialWidth)
 
-      const resizedWidth = await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)
+      const resizedWidth = await readPromptWidth()
       expect(resizedWidth).toBeLessThan(initialWidth)
       expect(initialWidth - resizedWidth).toBeGreaterThan(20)
 
@@ -322,7 +334,7 @@ describe('Prompt Folder Hydration', () => {
       return width
     }
 
-    const initialWidth = await getEditorContentWidth()
+    const initialWidth = await prepareUncappedSidebarBaseline(testHelpers, getEditorContentWidth)
 
     const dragDistance = 180
     await testHelpers.dragSidebarHandleBy(dragDistance)
