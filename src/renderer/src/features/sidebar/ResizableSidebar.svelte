@@ -16,6 +16,8 @@
     containerClass = 'h-screen',
     handleTestId = 'resizable-sidebar-handle',
     sidebarInsetYPx = 0,
+    sidebarInsetXPx = 0,
+    sidebarInsetClass = '',
     sidebarBorderClass = '',
     onWidthChange,
     onDesiredWidthChange
@@ -28,6 +30,8 @@
     containerClass?: string
     handleTestId?: string
     sidebarInsetYPx?: number
+    sidebarInsetXPx?: number
+    sidebarInsetClass?: string
     sidebarBorderClass?: string
     onWidthChange?: (widthPx: number) => void
     onDesiredWidthChange?: (widthPx: number) => void
@@ -107,7 +111,7 @@
 
 <div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
   <div class="relative flex-shrink-0" style={`width: ${width}px`}>
-    <div class="h-full" style={`padding: ${sidebarInsetYPx}px 0;`}>
+    <div class={`h-full ${sidebarInsetClass}`} style={`padding: ${sidebarInsetYPx}px ${sidebarInsetXPx}px;`}>
       <div class={`relative h-full ${sidebarBorderClass}`}>
         {@render sidebar()}
 
