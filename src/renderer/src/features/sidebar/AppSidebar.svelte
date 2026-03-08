@@ -123,18 +123,20 @@
   <div
     data-slot="sidebar-header"
     data-sidebar="header"
-    class="flex items-start gap-2 border-b border-white/8 px-2 pb-4 pt-2"
+    class="px-2 pt-2"
   >
-    <div class="flex h-10 w-10 shrink-0 items-center justify-center">
-      <img class="h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" />
-    </div>
-    <div class="min-w-0 flex-1">
-      <h1 data-testid="sidebar-workspace-name" class="truncate text-sm font-semibold tracking-tight text-zinc-100">
-        {workspaceDisplay.title}
-      </h1>
-      <p class="truncate pt-0.5 text-xs text-zinc-500" title={workspacePath ?? undefined}>
-        {workspaceDisplay.path}
-      </p>
+    <div class="flex items-start gap-2 border-b border-white/8 pb-4">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center">
+        <img class="h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" />
+      </div>
+      <div class="min-w-0 flex-1">
+        <h1 data-testid="sidebar-workspace-name" class="truncate text-sm font-semibold tracking-tight text-zinc-100">
+          {workspaceDisplay.title}
+        </h1>
+        <p class="truncate pt-0.5 text-xs text-zinc-500" title={workspacePath ?? undefined}>
+          {workspaceDisplay.path}
+        </p>
+      </div>
     </div>
   </div>
 
