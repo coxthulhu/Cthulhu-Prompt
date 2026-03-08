@@ -140,36 +140,10 @@
     </div>
   </div>
 
-  <div class="space-y-3 px-2 py-3">
-    <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-2">
-      {#each primaryNavItems as item (item.id)}
-        {@const Icon = item.icon}
-        <li
-          data-slot="sidebar-menu-item"
-          data-sidebar="menu-item"
-          class="group/menu-item relative"
-        >
-          <SidebarButton
-            testId={item.testId}
-            icon={Icon}
-            label={item.label}
-            builderProps={{ 'aria-label': item.label, title: item.label }}
-            class="updatedSidebarTopNavButton updatedSidebarTopNavButtonCentered"
-            active={activeScreen === item.id}
-            disabled={item.requiresWorkspace && !isWorkspaceReady}
-            onclick={() => onNavigate(item.id)}
-          />
-        </li>
-      {/each}
-    </ul>
-
-    {#if secondaryNavItems.length > 0}
-      <ul
-        data-slot="sidebar-menu"
-        data-sidebar="menu"
-        class="flex w-full min-w-0 flex-col gap-2"
-      >
-        {#each secondaryNavItems as item (item.id)}
+  <div class="px-2 py-3">
+    <div class="space-y-3 border-b border-white/8 pb-3">
+      <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-2">
+        {#each primaryNavItems as item (item.id)}
           {@const Icon = item.icon}
           <li
             data-slot="sidebar-menu-item"
@@ -180,7 +154,7 @@
               testId={item.testId}
               icon={Icon}
               label={item.label}
-              class="updatedSidebarTopNavButton"
+              class="updatedSidebarTopNavButton updatedSidebarTopNavButtonCentered"
               active={activeScreen === item.id}
               disabled={item.requiresWorkspace && !isWorkspaceReady}
               onclick={() => onNavigate(item.id)}
@@ -188,10 +162,35 @@
           </li>
         {/each}
       </ul>
-    {/if}
-  </div>
 
-  <div class="mx-2 my-2 border-t border-[#222225]" aria-hidden="true"></div>
+      {#if secondaryNavItems.length > 0}
+        <ul
+          data-slot="sidebar-menu"
+          data-sidebar="menu"
+          class="flex w-full min-w-0 flex-col gap-2"
+        >
+          {#each secondaryNavItems as item (item.id)}
+            {@const Icon = item.icon}
+            <li
+              data-slot="sidebar-menu-item"
+              data-sidebar="menu-item"
+              class="group/menu-item relative"
+            >
+              <SidebarButton
+                testId={item.testId}
+                icon={Icon}
+                label={item.label}
+                class="updatedSidebarTopNavButton"
+                active={activeScreen === item.id}
+                disabled={item.requiresWorkspace && !isWorkspaceReady}
+                onclick={() => onNavigate(item.id)}
+              />
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </div>
 
   <div
     data-slot="sidebar-content"
