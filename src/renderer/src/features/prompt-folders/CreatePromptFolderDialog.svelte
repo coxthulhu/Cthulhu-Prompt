@@ -32,6 +32,11 @@
     triggerClass?: string
     onCreated?: (promptFolderId: string) => void
   }>()
+  const defaultTriggerClass =
+    'h-7 w-7 min-w-7 justify-center border-0 bg-transparent px-0 py-0 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-sidebar-foreground'
+  const resolvedTriggerClass = $derived.by(() =>
+    triggerClass.trim().length > 0 ? triggerClass : defaultTriggerClass
+  )
 
   let isDialogOpen = $state(false)
   const workspaceSelection = getWorkspaceSelectionContext()
@@ -137,7 +142,7 @@
     disabled={!isWorkspaceReady}
     ariaDisabled={!isWorkspaceReady}
     testId="new-prompt-folder-button"
-    class={`h-7 w-7 min-w-7 justify-center border-0 bg-transparent px-0 py-0 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-sidebar-foreground ${triggerClass}`}
+    class={resolvedTriggerClass}
     builderProps={{
       ...props,
       'aria-label': 'New Prompt Folder',

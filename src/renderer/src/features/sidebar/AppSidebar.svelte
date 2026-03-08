@@ -197,17 +197,17 @@
     class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <div class="flex min-h-0 flex-1 flex-col">
-      <div class="updatedSidebarPromptsHeader">
-        <div class="updatedSidebarPromptsHeaderTextBlock">
-          <p class="updatedSidebarPromptsHeaderTitle">Prompts</p>
-          <p class="updatedSidebarPromptsHeaderCount">10 folders</p>
+      <div class="mb-2 flex items-center justify-between px-2">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Prompts</p>
+          <p class="mt-0.5 text-xs text-zinc-600">10 folders</p>
         </div>
         {#if isWorkspaceReady}
-          <div class="updatedSidebarPromptsHeaderAction">
+          <div class="shrink-0">
             <CreatePromptFolderDialog
               {isWorkspaceReady}
               {promptFolders}
-              triggerClass="updatedSidebarPromptsHeaderAddButton"
+              triggerClass="h-8 w-8 min-w-8 justify-center rounded-xl border-0 bg-transparent px-0 py-0 text-zinc-500 hover:bg-white/5 hover:text-white"
               isPromptFolderListLoading={isWorkspaceLoading}
               onCreated={(promptFolderId) => {
                 onPromptFolderSelect(promptFolderId)
