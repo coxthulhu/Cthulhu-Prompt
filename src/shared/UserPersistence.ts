@@ -9,7 +9,7 @@ export type UserPersistence = {
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   lastWorkspacePath: null,
-  appSidebarWidthPx: 200,
+  appSidebarWidthPx: 275,
   promptOutlinerWidthPx: 200
 }
 

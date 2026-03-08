@@ -66,7 +66,7 @@ const seedUserPersistence = async (
     VALUES (
       1,
       ${lastWorkspacePathSql},
-      ${data.appSidebarWidthPx ?? 200},
+      ${data.appSidebarWidthPx ?? 275},
       ${data.promptOutlinerWidthPx ?? 200}
     )
     ON CONFLICT(id) DO UPDATE SET
