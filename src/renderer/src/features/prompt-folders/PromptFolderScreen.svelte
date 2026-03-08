@@ -53,7 +53,7 @@
         containerClass="h-full"
         handleTestId="prompt-outliner-resize-handle"
         sidebarInsetYPx={16}
-        sidebarBorderClass="border-border/50"
+        sidebarBorderClass="border-r border-border/50"
         onWidthChange={(nextWidth) => {
           controller.setSidebarWidth(nextWidth)
         }}
