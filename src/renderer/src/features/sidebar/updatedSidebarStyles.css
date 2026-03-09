@@ -15,7 +15,7 @@
 
 .updatedSidebarTopLevelInset {
   padding-left: 5px;
-  padding-right: 5px;
+  padding-right: 0;
 }
 
 /* Keep the pre-existing inner 0.5rem side spacing while moving 5px inset to top-level sections. */
