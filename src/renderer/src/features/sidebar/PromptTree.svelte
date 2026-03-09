@@ -87,6 +87,15 @@
   const folderSettingsIconTestId = (folder: PromptFolder): string =>
     `prompt-folder-settings-icon-${folder.folderName.replace(/\s+/g, '')}`
 
+  const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
+    onPromptFolderSelect(promptFolderId)
+
+    const button = event.currentTarget
+    if (button instanceof HTMLButtonElement) {
+      button.blur()
+    }
+  }
+
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
@@ -171,7 +180,7 @@
       <button
         type="button"
         aria-label={`Open ${props.row.folder.displayName}`}
-        onclick={() => onPromptFolderSelect(props.row.folder.id)}
+        onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
         data-testid={folderOpenTestId(props.row.folder)}
         data-size="default"
         data-active={isActive}
