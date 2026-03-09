@@ -138,6 +138,23 @@
   color: rgb(161 161 170);
 }
 
+.updatedSidebarPromptTreeActionSlot {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-right: 0.375rem;
+  pointer-events: none;
+}
+
+.updatedSidebarPromptTreeActionSlot > * {
+  grid-area: 1 / 1;
+}
+
+.updatedSidebarPromptTreeCountInActionSlot {
+  pointer-events: none;
+  transition: opacity 120ms ease-out;
+}
+
 .updatedSidebarPromptTreeOpenButton {
   display: inline-flex;
   height: 1.5rem;
@@ -149,15 +166,21 @@
   border-radius: 0.375rem;
   background: transparent;
   color: rgb(212 212 216);
-  margin-right: 0.375rem;
   opacity: 0;
+  pointer-events: auto;
   cursor: pointer;
   transition: opacity 120ms ease-out, color 120ms ease-out;
 }
 
-.updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeOpenButton {
+.updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeOpenButton,
+.updatedSidebarPromptTreeRow:focus-within .updatedSidebarPromptTreeOpenButton {
   opacity: 1;
   color: rgb(244 244 245);
+}
+
+.updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeCountInActionSlot,
+.updatedSidebarPromptTreeRow:focus-within .updatedSidebarPromptTreeCountInActionSlot {
+  opacity: 0;
 }
 
 .updatedSidebarPromptTreeSettingsRow {

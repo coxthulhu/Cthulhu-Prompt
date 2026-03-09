@@ -161,20 +161,25 @@
       </span>
       <Folder class="updatedSidebarPromptTreeFolderIcon" data-testid={folderIconTestId(props.row.folder)} />
       <span class="updatedSidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
-      <span class="updatedSidebarPromptTreeCountBadge">{props.row.folder.promptIds.length}</span>
     </button>
 
-    <button
-      type="button"
-      aria-label={`Open ${props.row.folder.displayName}`}
-      onclick={() => onPromptFolderSelect(props.row.folder.id)}
-      data-testid={folderOpenTestId(props.row.folder)}
-      data-size="default"
-      data-active={isActive}
-      class="updatedSidebarPromptTreeOpenButton"
-    >
-      <ArrowRight class="size-4" />
-    </button>
+    <!-- Count and open arrow share one slot; hover/focus swaps visibility. -->
+    <div class="updatedSidebarPromptTreeActionSlot">
+      <span class="updatedSidebarPromptTreeCountBadge updatedSidebarPromptTreeCountInActionSlot">
+        {props.row.folder.promptIds.length}
+      </span>
+      <button
+        type="button"
+        aria-label={`Open ${props.row.folder.displayName}`}
+        onclick={() => onPromptFolderSelect(props.row.folder.id)}
+        data-testid={folderOpenTestId(props.row.folder)}
+        data-size="default"
+        data-active={isActive}
+        class="updatedSidebarPromptTreeOpenButton"
+      >
+        <ArrowRight class="size-4" />
+      </button>
+    </div>
   </div>
 
   <!--

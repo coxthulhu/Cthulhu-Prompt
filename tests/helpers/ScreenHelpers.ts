@@ -13,8 +13,8 @@ import { clickNavButton } from './ButtonHelpers'
  */
 export async function getActiveScreen(window: any): Promise<string> {
   return await window.evaluate(() => {
-    const promptFolderHeading = document.querySelector('[data-testid="prompt-folder-screen"] h1')
-    if (promptFolderHeading) {
+    const promptFolderScreen = document.querySelector('[data-testid="prompt-folder-screen"]')
+    if (promptFolderScreen) {
       return 'prompt-folder'
     }
 
