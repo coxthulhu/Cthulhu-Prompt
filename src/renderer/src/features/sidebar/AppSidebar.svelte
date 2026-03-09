@@ -185,8 +185,8 @@
     </div>
   </div>
 
-  <div class="updatedSidebarTopLevelInset flex min-h-0 flex-col">
-    <div class="mb-2 flex items-center justify-between px-2">
+  <div class="updatedSidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
+    <div class="mb-2 flex items-center justify-between">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Prompts</p>
         <p class="mt-0.5 text-xs text-zinc-600">{promptFolderCountLabel}</p>
