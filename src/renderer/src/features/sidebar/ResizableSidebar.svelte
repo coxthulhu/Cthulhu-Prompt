@@ -17,6 +17,7 @@
     handleTestId = 'resizable-sidebar-handle',
     sidebarInsetYPx = 0,
     sidebarInsetXPx = 0,
+    resizeHandleInsetXPx = 0,
     sidebarInsetClass = '',
     sidebarBorderClass = '',
     onWidthChange,
@@ -31,6 +32,7 @@
     handleTestId?: string
     sidebarInsetYPx?: number
     sidebarInsetXPx?: number
+    resizeHandleInsetXPx?: number
     sidebarInsetClass?: string
     sidebarBorderClass?: string
     onWidthChange?: (widthPx: number) => void
@@ -117,7 +119,8 @@
 
         <button
           type="button"
-          class="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-transparent z-10"
+          class="absolute top-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-transparent z-10"
+          style={`right: ${resizeHandleInsetXPx}px;`}
           data-testid={handleTestId}
           aria-label="Resize sidebar"
           onmousedown={handleMouseDown}

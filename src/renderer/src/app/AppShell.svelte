@@ -377,7 +377,7 @@
     maxWidth={400}
     handleTestId="app-sidebar-resize-handle"
     containerClass="flex-1 min-h-0"
-    sidebarInsetXPx={5}
+    resizeHandleInsetXPx={5}
     sidebarInsetClass="updatedSidebarSurface"
     onDesiredWidthChange={(nextDesiredWidth) => {
       setAppSidebarWidthWithAutosave(nextDesiredWidth)

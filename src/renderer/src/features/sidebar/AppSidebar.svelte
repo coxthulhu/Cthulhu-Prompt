@@ -127,7 +127,7 @@
   <div
     data-slot="sidebar-header"
     data-sidebar="header"
-    class="px-2 pt-2"
+    class="updatedSidebarTopLevelInsetWithInnerPadding pt-2"
   >
     <div class="flex items-start gap-2 border-b border-white/8 pb-4">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
@@ -144,7 +144,7 @@
     </div>
   </div>
 
-  <div class="px-2 py-3">
+  <div class="updatedSidebarTopLevelInsetWithInnerPadding py-3">
     <div class="space-y-3 border-b border-white/8 pb-3">
       <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-2">
         {#each primaryNavItems as item (item.id)}
@@ -199,7 +199,7 @@
   <div
     data-slot="sidebar-content"
     data-sidebar="content"
-    class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
+    class="updatedSidebarTopLevelInset flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <div class="flex min-h-0 flex-1 flex-col">
       <div class="mb-2 flex items-center justify-between px-2">
@@ -232,7 +232,11 @@
     </div>
   </div>
 
-  <div data-slot="sidebar-footer" data-sidebar="footer" class="flex flex-col gap-2 p-2">
+  <div
+    data-slot="sidebar-footer"
+    data-sidebar="footer"
+    class="updatedSidebarTopLevelInsetWithInnerPadding flex flex-col gap-2 py-2"
+  >
     <div class="p-2 text-xs text-muted-foreground">🦑 Made in R'lyeh</div>
   </div>
 </aside>
