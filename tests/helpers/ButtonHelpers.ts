@@ -47,7 +47,7 @@ export async function isButtonVisible(window: any, buttonText: string): Promise<
  */
 export async function isNavButtonActive(window: any, buttonText: string): Promise<boolean> {
   return await window.evaluate((text: string) => {
-    const buttons = document.querySelectorAll('[data-sidebar="menu-button"]')
+    const buttons = document.querySelectorAll('[data-testid^="nav-button-"]')
     for (const button of Array.from(buttons)) {
       if (button.textContent?.includes(text) && button.getAttribute('data-active') === 'true') {
         return true

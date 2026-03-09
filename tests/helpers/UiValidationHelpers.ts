@@ -16,7 +16,7 @@ export async function validatePageStructure(window: any): Promise<{
 }> {
   return await window.evaluate(() => {
     const hasMainElement = !!document.querySelector('main')
-    const hasSidebar = !!document.querySelector('[data-sidebar]')
+    const hasSidebar = !!document.querySelector('[data-testid="app-sidebar"]')
     const hasWelcomeText = !!document.querySelector('[data-testid="home-title"]')
 
     return {

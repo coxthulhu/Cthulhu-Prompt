@@ -400,7 +400,6 @@
 
     {#snippet content()}
       <div
-        data-slot="sidebar-inset"
         class="updatedSidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
       >
         {#if activeScreen === 'home'}

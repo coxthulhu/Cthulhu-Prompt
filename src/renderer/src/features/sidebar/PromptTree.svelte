@@ -170,8 +170,6 @@
       aria-label={`Open ${props.row.folder.displayName}`}
       onclick={() => onPromptFolderSelect(props.row.folder.id)}
       data-testid={folderOpenTestId(props.row.folder)}
-      data-slot="sidebar-menu-button"
-      data-sidebar="menu-button"
       data-size="default"
       data-active={isActive}
       class="updatedSidebarPromptTreeOpenButton"
@@ -185,7 +183,6 @@
     <button
       {...triggerProps}
       type="button"
-      data-sidebar="menu-action"
       aria-label={`More actions for ${props.row.folder.displayName}`}
       class="absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground opacity-0 pointer-events-none transition-opacity duration-50 cursor-pointer group-hover/menu-item:opacity-100 group-hover/menu-item:pointer-events-auto group-has-[:focus-visible]/menu-item:opacity-100 group-has-[:focus-visible]/menu-item:pointer-events-auto group-data-[menu-open=true]/menu-item:opacity-100 group-data-[menu-open=true]/menu-item:pointer-events-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
     >

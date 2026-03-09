@@ -63,8 +63,6 @@
 <button
   {...restBuilderProps}
   data-testid={testId}
-  data-slot="sidebar-menu-button"
-  data-sidebar="menu-button"
   data-size="default"
   data-active={active}
   class={[builderClass as string, baseButtonClass, className].filter(Boolean).join(' ')}

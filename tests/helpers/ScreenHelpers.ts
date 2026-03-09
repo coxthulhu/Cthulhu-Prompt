@@ -20,7 +20,7 @@ export async function getActiveScreen(window: any): Promise<string> {
 
     // Check data-active attribute on sidebar menu buttons
     const activeButtons = document.querySelectorAll(
-      '[data-sidebar="menu-button"][data-active="true"]'
+      '[data-active="true"][data-testid^="nav-button-"]'
     )
 
     for (const button of Array.from(activeButtons)) {

@@ -120,13 +120,10 @@
 </script>
 
 <aside
-  data-sidebar="sidebar"
-  data-slot="sidebar-inner"
+  data-testid="app-sidebar"
   class="updatedSidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
 >
   <div
-    data-slot="sidebar-header"
-    data-sidebar="header"
     class="updatedSidebarTopLevelInsetWithInnerPadding pt-2"
   >
     <div class="flex items-start gap-2 border-b border-white/8 pb-4">
@@ -146,12 +143,10 @@
 
   <div class="updatedSidebarTopLevelInsetWithInnerPadding py-3">
     <div class="space-y-3 border-b border-white/8 pb-3">
-      <ul data-slot="sidebar-menu" data-sidebar="menu" class="grid w-full min-w-0 grid-cols-2 gap-2">
+      <ul class="grid w-full min-w-0 grid-cols-2 gap-2">
         {#each primaryNavItems as item (item.id)}
           {@const Icon = item.icon}
           <li
-            data-slot="sidebar-menu-item"
-            data-sidebar="menu-item"
             class="group/menu-item relative"
           >
             <SidebarButton
@@ -168,16 +163,10 @@
       </ul>
 
       {#if secondaryNavItems.length > 0}
-        <ul
-          data-slot="sidebar-menu"
-          data-sidebar="menu"
-          class="flex w-full min-w-0 flex-col gap-2"
-        >
+        <ul class="flex w-full min-w-0 flex-col gap-2">
           {#each secondaryNavItems as item (item.id)}
             {@const Icon = item.icon}
             <li
-              data-slot="sidebar-menu-item"
-              data-sidebar="menu-item"
               class="group/menu-item relative"
             >
               <SidebarButton
@@ -197,8 +186,6 @@
   </div>
 
   <div
-    data-slot="sidebar-content"
-    data-sidebar="content"
     class="updatedSidebarTopLevelInset flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <div class="flex min-h-0 flex-1 flex-col">
@@ -233,8 +220,6 @@
   </div>
 
   <div
-    data-slot="sidebar-footer"
-    data-sidebar="footer"
     class="updatedSidebarTopLevelInsetWithInnerPadding flex flex-col gap-2 py-2"
   >
     <div class="p-2 text-xs text-muted-foreground">🦑 Made in R'lyeh</div>

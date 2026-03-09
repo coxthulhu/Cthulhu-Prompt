@@ -265,7 +265,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           const mainWindow = await electronApp.firstWindow()
           trackPageForRendererErrors(mainWindow)
           await mainWindow.waitForLoadState('domcontentloaded')
-          await mainWindow.waitForSelector('[data-sidebar="sidebar"]', { state: 'visible' })
+          await mainWindow.waitForSelector('[data-testid="app-sidebar"]', { state: 'visible' })
           await mainWindow.waitForSelector('[data-testid="startup-loading-overlay"]', {
             state: 'detached'
           })
