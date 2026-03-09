@@ -99,16 +99,15 @@
         }
       })
 
-      // Folder settings row is intentionally hidden for now.
-      // if (isFolderExpanded(folder.id)) {
-      //   items.push({
-      //     id: `${folder.id}:settings`,
-      //     row: {
-      //       kind: 'folder-settings',
-      //       folder
-      //     }
-      //   })
-      // }
+      if (isFolderExpanded(folder.id)) {
+        items.push({
+          id: `${folder.id}:settings`,
+          row: {
+            kind: 'folder-settings',
+            folder
+          }
+        })
+      }
     }
 
     return items
