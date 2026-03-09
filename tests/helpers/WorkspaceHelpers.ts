@@ -24,13 +24,11 @@ export async function setupWorkspaceViaUI(
   const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
-  // Wait for either setup path to become visible without racing on individual timeout errors.
-  await window.waitForFunction(() => {
-    return Boolean(
-      document.querySelector('[role="dialog"]') ||
-        document.querySelector('[data-testid="workspace-ready-title"]')
-    )
-  }, undefined, { timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  // Wait until either the setup dialog or ready state is visible.
+  await Promise.race([
+    setupDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS }),
+    workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  ])
 
   const setupDialogVisible = await setupDialog.isVisible()
 

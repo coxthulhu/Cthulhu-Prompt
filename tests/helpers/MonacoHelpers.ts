@@ -61,11 +61,8 @@ export async function focusMonacoEditor(
       })
       entry?.editor.focus()
 
-      const fallbackNode =
-        monacoRoot.querySelector<HTMLElement>('textarea.inputarea') ??
-        monacoRoot.querySelector<HTMLElement>('.native-edit-context') ??
-        monacoRoot.querySelector<HTMLElement>('textarea.ime-text-area')
-      fallbackNode?.focus({ preventScroll: true })
+      const inputArea = monacoRoot.querySelector<HTMLElement>('textarea.inputarea')
+      inputArea?.focus({ preventScroll: true })
     }, editorSelector)
   }
 
