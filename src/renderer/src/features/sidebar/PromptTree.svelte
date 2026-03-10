@@ -84,9 +84,6 @@
   const folderIconTestId = (folder: PromptFolder): string =>
     `prompt-folder-icon-${folder.folderName.replace(/\s+/g, '')}`
 
-  const folderSettingsIconTestId = (folder: PromptFolder): string =>
-    `prompt-folder-settings-icon-${folder.folderName.replace(/\s+/g, '')}`
-
   const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
     onPromptFolderSelect(promptFolderId)
 
@@ -232,7 +229,6 @@
     >
       <Settings
         class="updatedSidebarPromptTreeSettingsIcon"
-        data-testid={folderSettingsIconTestId(props.row.folder)}
         aria-hidden="true"
       />
       <span class="updatedSidebarPromptTreeSettingsLabel">Folder Settings</span>
