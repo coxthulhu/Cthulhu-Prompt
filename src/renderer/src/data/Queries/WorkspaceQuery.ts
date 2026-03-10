@@ -8,7 +8,10 @@ import {
   deletePromptFolderDrafts,
   upsertPromptFolderDrafts
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
-import { deletePromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
+import {
+  deletePromptDrafts,
+  upsertPromptSummaryDrafts
+} from '../UiState/PromptDraftMutations.svelte.ts'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 export const loadWorkspaceByPath = async (workspacePath: string): Promise<string> => {
@@ -48,6 +51,7 @@ export const loadWorkspaceByPath = async (workspacePath: string): Promise<string
       data: createPromptSummary(prompt.data)
     }))
   )
+  upsertPromptSummaryDrafts(result.prompts.map((prompt) => prompt.data))
 
   if (!previousWorkspace) {
     return result.workspace.id

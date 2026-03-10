@@ -1,4 +1,4 @@
-import type { Prompt, PromptFull } from '@shared/Prompt'
+import type { Prompt, PromptFull, PromptSummaryData } from '@shared/Prompt'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
@@ -20,6 +20,15 @@ const toPromptSnapshot = (prompt: PromptFull): PromptDraftRecord => ({
   lastModifiedDate: prompt.lastModifiedDate,
   promptText: prompt.promptText,
   promptFolderCount: prompt.promptFolderCount
+})
+
+const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRecord => ({
+  id: prompt.id,
+  title: prompt.title,
+  creationDate: '',
+  lastModifiedDate: '',
+  promptText: '',
+  promptFolderCount: 0
 })
 
 const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): boolean => {
@@ -59,6 +68,50 @@ const mutatePromptDraftOptimistically = (
 
 export const upsertPromptDraft = (prompt: PromptFull): void => {
   upsertPromptDrafts([prompt])
+}
+
+export const upsertPromptSummaryDrafts = (prompts: PromptSummaryData[]): void => {
+  if (prompts.length === 0) {
+    return
+  }
+
+  const draftInserts: PromptDraftRecord[] = []
+  const draftTitleUpdatesById: Record<string, string> = {}
+  const draftUpdateIds: string[] = []
+
+  for (const prompt of prompts) {
+    const existingRecord = promptDraftCollection.get(prompt.id)
+    if (!existingRecord) {
+      draftInserts.push(toPromptSummaryDraftSnapshot(prompt))
+      continue
+    }
+
+    if (existingRecord.title === prompt.title) {
+      continue
+    }
+
+    if (!draftTitleUpdatesById[prompt.id]) {
+      draftUpdateIds.push(prompt.id)
+    }
+    draftTitleUpdatesById[prompt.id] = prompt.title
+  }
+
+  if (draftInserts.length > 0) {
+    promptDraftCollection.insert(draftInserts)
+  }
+
+  if (draftUpdateIds.length > 0) {
+    promptDraftCollection.update(draftUpdateIds, (draftRecords) => {
+      for (const draftRecord of draftRecords) {
+        const nextTitle = draftTitleUpdatesById[draftRecord.id]
+        if (nextTitle == null) {
+          continue
+        }
+
+        draftRecord.title = nextTitle
+      }
+    })
+  }
 }
 
 export const upsertPromptDrafts = (prompts: PromptFull[]): void => {

@@ -1,4 +1,4 @@
-import type { PromptFull } from '@shared/Prompt'
+import type { PromptFull, PromptSummaryData } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { SystemSettings } from '@shared/SystemSettings'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -8,7 +8,10 @@ import {
   SYSTEM_SETTINGS_DRAFT_ID,
   systemSettingsDraftCollection
 } from '@renderer/data/Collections/SystemSettingsDraftCollection'
-import { upsertPromptDraft } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+import {
+  upsertPromptDraft,
+  upsertPromptSummaryDrafts
+} from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
 import {
   setPromptFolderDraftDescription,
   upsertPromptFolderDraft
@@ -52,6 +55,14 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   ...overrides
 })
 
+const createPromptSummary = (
+  overrides: Partial<PromptSummaryData> = {}
+): PromptSummaryData => ({
+  id: 'prompt-1',
+  title: 'Original title',
+  ...overrides
+})
+
 const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   id: 'folder-1',
   folderName: 'folder',
@@ -81,7 +92,39 @@ describe('draft sync contract', () => {
     upsertPromptDraft(updatedPrompt)
 
     const draftRecord = promptDraftCollection.get(prompt.id)!
-    expect(draftRecord).toMatchObject(updatedPrompt)
+    const { loadingState: _loadingState, ...expectedDraftRecord } = updatedPrompt
+    expect(draftRecord).toMatchObject(expectedDraftRecord)
+  })
+
+  it('upserts prompt summary drafts without clobbering full draft fields', () => {
+    const fullPrompt = createPrompt()
+    const summaryPrompt = createPromptSummary({ title: 'Updated summary title' })
+
+    upsertPromptDraft(fullPrompt)
+    upsertPromptSummaryDrafts([summaryPrompt])
+
+    const draftRecord = promptDraftCollection.get(fullPrompt.id)!
+    expect(draftRecord.title).toBe(summaryPrompt.title)
+    expect(draftRecord.creationDate).toBe(fullPrompt.creationDate)
+    expect(draftRecord.lastModifiedDate).toBe(fullPrompt.lastModifiedDate)
+    expect(draftRecord.promptText).toBe(fullPrompt.promptText)
+    expect(draftRecord.promptFolderCount).toBe(fullPrompt.promptFolderCount)
+  })
+
+  it('seeds prompt summary drafts when full prompt data is not loaded yet', () => {
+    const summaryPrompt = createPromptSummary({ id: 'prompt-summary-1', title: 'Summary title' })
+
+    upsertPromptSummaryDrafts([summaryPrompt])
+
+    const draftRecord = promptDraftCollection.get(summaryPrompt.id)!
+    expect(draftRecord).toEqual({
+      id: summaryPrompt.id,
+      title: summaryPrompt.title,
+      creationDate: '',
+      lastModifiedDate: '',
+      promptText: '',
+      promptFolderCount: 0
+    })
   })
 
   it('upserts prompt-folder drafts', () => {

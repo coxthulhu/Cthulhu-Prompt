@@ -134,10 +134,10 @@
   }
 
   const loadWorkspaceSelection = async (workspacePath: string): Promise<void> => {
+    await switchWorkspaceStoreBridge(workspacePath)
     const workspaceId = await loadWorkspaceByPath(workspacePath)
     await loadWorkspacePersistence(workspaceId)
     setSelectedWorkspaceId(workspaceId)
-    await switchWorkspaceStoreBridge(workspacePath)
     await syncLastWorkspacePath(workspacePath)
   }
 
