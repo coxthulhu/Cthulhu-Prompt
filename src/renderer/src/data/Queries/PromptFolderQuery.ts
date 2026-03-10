@@ -2,6 +2,7 @@ import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
 } from '@shared/PromptFolder'
+import { createPromptFull } from '@shared/Prompt'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -30,8 +31,13 @@ export const loadPromptFolderInitial = async (
     )
   )
 
-  promptCollection.utils.upsertManyAuthoritative(result.prompts)
-  upsertPromptDrafts(result.prompts.map((prompt) => prompt.data))
+  const fullPromptSnapshots = result.prompts.map((prompt) => ({
+    ...prompt,
+    data: createPromptFull(prompt.data)
+  }))
+
+  promptCollection.utils.upsertManyAuthoritative(fullPromptSnapshots)
+  upsertPromptDrafts(fullPromptSnapshots.map((prompt) => prompt.data))
   promptFolderCollection.utils.upsertAuthoritative(result.promptFolder)
   upsertPromptFolderDraft(result.promptFolder.data)
   promptUiStateCollection.utils.upsertManyAuthoritative(result.promptUiStates)

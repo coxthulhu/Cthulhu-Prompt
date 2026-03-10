@@ -1,4 +1,4 @@
-import type { Prompt } from '@shared/Prompt'
+import type { PromptPersisted } from '@shared/Prompt'
 
 export type WorkspaceInfoFile = {
   workspaceId: string
@@ -12,5 +12,5 @@ export type PromptFolderConfigFile = {
 }
 
 export type PromptsFile = {
-  prompts: Prompt[]
+  prompts: PromptPersisted[]
 }

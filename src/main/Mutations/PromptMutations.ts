@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
-import type { Prompt } from '@shared/Prompt'
+import type { PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderConfigFile, PromptsFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readPromptFolder } from '../DataAccess/WorkspaceReads'
@@ -86,7 +86,7 @@ const writePromptFile = (
   )
 }
 
-const buildPromptSnapshot = (prompt: Prompt, revision: number) => {
+const buildPromptSnapshot = (prompt: PromptPersisted, revision: number) => {
   return {
     id: prompt.id,
     revision,
@@ -162,7 +162,7 @@ export const setupPromptMutationHandlers = (): void => {
 
           const nextPromptCount = promptFolderConfig.promptCount + 1
           const now = new Date().toISOString()
-          const prompt: Prompt = {
+          const prompt: PromptPersisted = {
             id: promptEntity.data.id,
             title: promptEntity.data.title,
             creationDate: now,
@@ -330,7 +330,7 @@ export const setupPromptMutationHandlers = (): void => {
             }
           }
 
-          const prompt: Prompt = {
+          const prompt: PromptPersisted = {
             ...promptEntity.data,
             id: promptEntity.id,
             lastModifiedDate: new Date().toISOString()

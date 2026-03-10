@@ -19,6 +19,7 @@ type RevisionCollectionConfig<TRecord extends object> = {
   id: string
   getKey: (record: TRecord) => string
   initialData?: Array<RevisionEnvelope<TRecord>>
+  shouldAcceptEqualRevision?: (params: { currentRecord: TRecord; nextRecord: TRecord }) => boolean
 }
 
 type RevisionCollectionOptionsResult<TRecord extends object> = CollectionConfig<
@@ -33,7 +34,7 @@ type RevisionCollectionOptionsResult<TRecord extends object> = CollectionConfig<
 export const revisionCollectionOptions = <TRecord extends object>(
   config: RevisionCollectionConfig<TRecord>
 ): RevisionCollectionOptionsResult<TRecord> => {
-  const { id, getKey, initialData = [] } = config
+  const { id, getKey, initialData = [], shouldAcceptEqualRevision } = config
   const authoritativeRevisions = new Map<string, number>()
 
   let syncBegin: ((options?: { immediate?: boolean }) => void) | null = null
@@ -75,8 +76,23 @@ export const revisionCollectionOptions = <TRecord extends object>(
       const hasKnownRecord = hasCollectionRecord || authoritativeRevisions.has(key)
       const currentRevision = authoritativeRevisions.get(key) ?? 0
 
-      if (hasKnownRecord && snapshot.revision <= currentRevision) {
-        continue
+      if (hasKnownRecord) {
+        if (snapshot.revision < currentRevision) {
+          continue
+        }
+
+        if (snapshot.revision === currentRevision) {
+          const currentRecord = collection?.get(key)
+          if (
+            !currentRecord ||
+            !shouldAcceptEqualRevision?.({
+              currentRecord,
+              nextRecord: snapshot.data
+            })
+          ) {
+            continue
+          }
+        }
       }
 
       authoritativeRevisions.set(key, snapshot.revision)

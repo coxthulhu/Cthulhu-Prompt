@@ -81,4 +81,20 @@ describe('revision collection batching', () => {
     expect(collection.get('prompt-2')?.value).toBe(20)
     expect(collection.toArray).toHaveLength(1)
   })
+
+  it('accepts equal-revision updates when shouldAcceptEqualRevision returns true', () => {
+    const collection = createCollection(
+      revisionCollectionOptions<TestRecord>({
+        id: nextCollectionId('equal-revision'),
+        getKey: (record) => record.id,
+        shouldAcceptEqualRevision: () => true
+      })
+    )
+
+    collection.utils.upsertAuthoritative(createSnapshot('prompt-1', 2, 10))
+    collection.utils.upsertAuthoritative(createSnapshot('prompt-1', 2, 99))
+
+    expect(collection.get('prompt-1')?.value).toBe(99)
+    expect(collection.utils.getAuthoritativeRevision('prompt-1')).toBe(2)
+  })
 })

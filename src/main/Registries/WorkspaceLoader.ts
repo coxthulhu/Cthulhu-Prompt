@@ -4,7 +4,7 @@ import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import { revisions } from './Revisions'
 import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
-import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
+import { readPromptFolders, readPromptSummaries, readWorkspaceId } from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 
@@ -27,6 +27,9 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
 const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
   const workspaceId = readWorkspaceId(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
+  const prompts = promptFolders.flatMap((promptFolder) =>
+    readPromptSummaries(workspacePath, promptFolder.folderName)
+  )
   const workspacePromptIds = promptFolders.flatMap((promptFolder) => promptFolder.promptIds)
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
   UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
@@ -70,6 +73,11 @@ const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload 
       id: promptFolder.id,
       revision: revisions.promptFolder.get(promptFolder.id),
       data: promptFolder
+    })),
+    prompts: prompts.map((prompt) => ({
+      id: prompt.id,
+      revision: revisions.prompt.get(prompt.id),
+      data: prompt
     }))
   }
 }

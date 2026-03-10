@@ -1,4 +1,4 @@
-import type { Prompt } from '@shared/Prompt'
+import type { PromptFull } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { SystemSettings } from '@shared/SystemSettings'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -41,13 +41,14 @@ afterEach(() => {
   clearSystemSettingsDraftCollection()
 })
 
-const createPrompt = (overrides: Partial<Prompt> = {}): Prompt => ({
+const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   id: 'prompt-1',
   title: 'Original title',
   creationDate: '2026-01-01T00:00:00.000Z',
   lastModifiedDate: '2026-01-02T00:00:00.000Z',
   promptText: 'Original text',
   promptFolderCount: 3,
+  loadingState: 'full',
   ...overrides
 })
 

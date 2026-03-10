@@ -1,4 +1,4 @@
-import type { Prompt } from '@shared/Prompt'
+import type { Prompt, PromptFull } from '@shared/Prompt'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
@@ -13,7 +13,7 @@ import {
 
 export type PromptDraftState = PromptDraftRecord
 
-const toPromptSnapshot = (prompt: Prompt): Prompt => ({
+const toPromptSnapshot = (prompt: PromptFull): PromptDraftRecord => ({
   id: prompt.id,
   title: prompt.title,
   creationDate: prompt.creationDate,
@@ -22,7 +22,7 @@ const toPromptSnapshot = (prompt: Prompt): Prompt => ({
   promptFolderCount: prompt.promptFolderCount
 })
 
-const haveSamePrompt = (left: Prompt, right: Prompt): boolean => {
+const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): boolean => {
   return (
     left.id === right.id &&
     left.title === right.title &&
@@ -57,17 +57,17 @@ const mutatePromptDraftOptimistically = (
   })
 }
 
-export const upsertPromptDraft = (prompt: Prompt): void => {
+export const upsertPromptDraft = (prompt: PromptFull): void => {
   upsertPromptDrafts([prompt])
 }
 
-export const upsertPromptDrafts = (prompts: Prompt[]): void => {
+export const upsertPromptDrafts = (prompts: PromptFull[]): void => {
   if (prompts.length === 0) {
     return
   }
 
   const draftInserts: PromptDraftRecord[] = []
-  const draftUpdatesById: Record<string, Prompt> = {}
+  const draftUpdatesById: Record<string, PromptDraftRecord> = {}
   const draftUpdateIds: string[] = []
 
   for (const prompt of prompts) {
@@ -150,6 +150,9 @@ export const setPromptDraftText = (
       draft.promptText = promptText
     },
     mutatePrompt: (draft) => {
+      if (draft.loadingState === 'summary') {
+        return
+      }
       draft.promptText = promptText
     }
   })

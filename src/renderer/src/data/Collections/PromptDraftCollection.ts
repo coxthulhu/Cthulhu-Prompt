@@ -1,13 +1,13 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
-import type { Prompt } from '@shared/Prompt'
+import type { PromptFull } from '@shared/Prompt'
 
 export type PromptDraftRecord = {
-  id: Prompt['id']
-  title: Prompt['title']
-  creationDate: Prompt['creationDate']
-  lastModifiedDate: Prompt['lastModifiedDate']
-  promptText: Prompt['promptText']
-  promptFolderCount: Prompt['promptFolderCount']
+  id: PromptFull['id']
+  title: PromptFull['title']
+  creationDate: PromptFull['creationDate']
+  lastModifiedDate: PromptFull['lastModifiedDate']
+  promptText: PromptFull['promptText']
+  promptFolderCount: PromptFull['promptFolderCount']
 }
 
 // Local-only UI draft state for prompt title/text editing.

@@ -1,7 +1,7 @@
 import type {
   CreatePromptPayload,
   DeletePromptPayload,
-  Prompt,
+  PromptPersisted,
   PromptRevisionPayload
 } from '@shared/Prompt'
 import type {
@@ -248,7 +248,7 @@ const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
 const parseWorkspacePersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<WorkspacePersistence>(parseWorkspacePersistence)
 
-const parsePrompt = parseObject<Prompt>({
+const parsePrompt = parseObject<PromptPersisted>({
   id: parseString,
   title: parseString,
   creationDate: parseString,
@@ -257,7 +257,8 @@ const parsePrompt = parseObject<Prompt>({
   promptFolderCount: parseNumber
 })
 
-const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<Prompt>(parsePrompt)
+const parsePromptRevisionPayloadEntity =
+  parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
 
 const parsePromptUiState = parseObject<PromptUiState>({
   workspaceId: parseString,

@@ -1,4 +1,4 @@
-import type { Prompt } from './Prompt'
+import type { PromptPersisted } from './Prompt'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
@@ -39,6 +39,6 @@ export type LoadPromptFolderInitialPayload = {
 
 export type LoadPromptFolderInitialResult = IpcResult<{
   promptFolder: RevisionEnvelope<PromptFolder>
-  prompts: Array<RevisionEnvelope<Prompt>>
+  prompts: Array<RevisionEnvelope<PromptPersisted>>
   promptUiStates: Array<RevisionEnvelope<PromptUiState>>
 }>

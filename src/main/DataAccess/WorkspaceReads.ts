@@ -1,5 +1,5 @@
 import * as path from 'path'
-import type { Prompt } from '@shared/Prompt'
+import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import type {
   PromptFolderConfigFile,
@@ -60,11 +60,29 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
   }
 }
 
-export const readPrompts = (workspacePath: string, folderName: string): Prompt[] => {
+export const readPrompts = (workspacePath: string, folderName: string): PromptPersisted[] => {
   const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
-  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as { prompts?: Prompt[] }
+  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
+    prompts?: PromptPersisted[]
+  }
   return parsed.prompts ?? []
+}
+
+export const readPromptSummaries = (
+  workspacePath: string,
+  folderName: string
+): PromptSummaryData[] => {
+  const fs = getFs()
+  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
+  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
+    prompts?: PromptPersisted[]
+  }
+  const prompts = parsed.prompts ?? []
+  return prompts.map((prompt) => ({
+    id: prompt.id,
+    title: prompt.title
+  }))
 }
 
 export const readPromptFolders = (workspacePath: string): PromptFolder[] => {

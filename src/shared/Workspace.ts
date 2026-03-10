@@ -1,4 +1,5 @@
 import type { PromptFolder } from './PromptFolder'
+import type { PromptSummaryData } from './Prompt'
 import type { RevisionEnvelope } from './Revision'
 import type { IpcResult } from './IpcResult'
 
@@ -24,4 +25,5 @@ export type LoadWorkspaceByPathRequest = {
 export type LoadWorkspaceByPathResult = IpcResult<{
   workspace: RevisionEnvelope<Workspace>
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
+  prompts: Array<RevisionEnvelope<PromptSummaryData>>
 }>

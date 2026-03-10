@@ -1,6 +1,6 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import type { Prompt } from '@shared/Prompt'
+import { isPromptFull, type PromptFull } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
@@ -17,6 +17,7 @@ import {
   USER_PERSISTENCE_DRAFT_ID,
   userPersistenceDraftCollection
 } from '@renderer/data/Collections/UserPersistenceDraftCollection'
+import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -156,14 +157,19 @@ export const createPromptFolderScreenController = ({
       return []
     }
 
-    const idsWithDrafts: string[] = []
+    const loadedIds: string[] = []
     for (const promptId of promptIds) {
-      if (promptDraftById[promptId]) {
-        idsWithDrafts.push(promptId)
+      if (!promptDraftById[promptId]) {
+        continue
+      }
+
+      const prompt = promptCollection.get(promptId)
+      if (prompt && isPromptFull(prompt)) {
+        loadedIds.push(promptId)
       }
     }
 
-    return idsWithDrafts
+    return loadedIds
   })
 
   const isVirtualContentReady = $derived.by(() => {
@@ -280,6 +286,11 @@ export const createPromptFolderScreenController = ({
       if (!promptDraftCollection.get(promptId)) {
         return false
       }
+
+      const prompt = promptCollection.get(promptId)
+      if (!prompt || !isPromptFull(prompt)) {
+        return false
+      }
     }
 
     return true
@@ -326,7 +337,7 @@ export const createPromptFolderScreenController = ({
       try {
         await loadPromptFolderInitial(workspaceId, promptFolderId)
         if (requestId !== promptFolderLoadRequestId) return
-        isLoading = false
+        isLoading = !hasCachedPromptFolderData(promptFolderId)
       } catch (error) {
         if (requestId !== promptFolderLoadRequestId) return
         errorMessage = error instanceof Error ? error.message : String(error)
@@ -411,13 +422,14 @@ export const createPromptFolderScreenController = ({
     isCreatingPrompt = true
     const promptId = compactGuid(window.crypto.randomUUID())
     const now = new SvelteDate().toISOString()
-    const optimisticPrompt: Prompt = {
+    const optimisticPrompt: PromptFull = {
       id: promptId,
       title: '',
       creationDate: now,
       lastModifiedDate: now,
       promptText: '',
-      promptFolderCount: currentPromptFolder.promptCount + 1
+      promptFolderCount: currentPromptFolder.promptCount + 1,
+      loadingState: 'full'
     }
 
     await runIpcBestEffort(async () => {
