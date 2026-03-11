@@ -11,6 +11,7 @@
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     lookupPromptFolderOutlinerActiveRow,
+    lookupPromptTreeJumpRequest,
     recordPromptTreeJumpRequest,
     type PromptFolderOutlinerActiveRow,
     type PromptTreeJumpTarget
@@ -127,6 +128,11 @@
       return null
     }
 
+    const pendingInitialTreeJumpRequest = lookupPromptTreeJumpRequest(selectedPromptFolderId)
+    if (pendingInitialTreeJumpRequest?.mode === 'initial') {
+      return pendingInitialTreeJumpRequest.target
+    }
+
     return lookupPromptFolderOutlinerActiveRow(selectedPromptFolderId)
   })
 
@@ -195,9 +201,13 @@
 
   // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
   $effect(() => {
-    if (!scrollToWithinWindowBand) return
-
     const nextTrackedRowId = trackedTreeRowId
+    const currentFolderId = selectedPromptFolderId
+
+    if (!scrollToWithinWindowBand) {
+      return
+    }
+
     if (!nextTrackedRowId) {
       lastTrackedTreeRowId = null
       return
@@ -207,7 +217,6 @@
       return
     }
 
-    const currentFolderId = selectedPromptFolderId
     if (!currentFolderId) return
 
     if (!isFolderExpanded(currentFolderId)) {
