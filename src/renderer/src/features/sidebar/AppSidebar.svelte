@@ -124,7 +124,7 @@
   class="sidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
 >
   <div class="sidebarTopLevelInsetWithInnerPadding pt-2">
-    <div class="flex items-start gap-2 border-b border-white/8 pb-4">
+    <div class="flex items-start gap-2 border-b border-white/8 pb-2">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
         <img
           class="h-8 w-8 object-contain"
