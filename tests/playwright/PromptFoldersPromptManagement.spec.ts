@@ -209,7 +209,9 @@ describe('Prompt folder prompt management', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
     const promptTreePromptIds = await getPromptTreePromptRowIds(mainWindow)
-    const finalPromptTreeOrder = promptTreePromptIds.filter((promptId) => fiveNewIds.includes(promptId))
+    const finalPromptTreeOrder = promptTreePromptIds.filter((promptId) =>
+      fiveNewIds.includes(promptId)
+    )
     expect(finalPromptTreeOrder).toEqual(fiveNewIds)
 
     for (const promptId of fiveNewIds) {

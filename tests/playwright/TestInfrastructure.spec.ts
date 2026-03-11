@@ -8,17 +8,22 @@ const runSqlQuery = async (
   sql: string
 ): Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }> => {
   const requestId = createTestRequestId('sql')
-  return await electronApp.evaluate(async ({ app }, payload) => {
-    const { query, requestId } = payload
-    return await new Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }>(
-      (resolve) => {
+  return await electronApp.evaluate(
+    async ({ app }, payload) => {
+      const { query, requestId } = payload
+      return await new Promise<{
+        success: boolean
+        rows?: Array<Record<string, unknown>>
+        error?: string
+      }>((resolve) => {
         app.once(`test-run-sql-query-ready:${requestId}`, (payload) => {
           resolve(payload)
         })
         app.emit('test-run-sql-query', { requestId, sql: query })
-      }
-    )
-  }, { query: sql, requestId })
+      })
+    },
+    { query: sql, requestId }
+  )
 }
 
 describe('Test Infrastructure', () => {

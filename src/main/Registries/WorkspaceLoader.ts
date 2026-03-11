@@ -4,7 +4,11 @@ import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import { revisions } from './Revisions'
 import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
-import { readPromptFolders, readPromptSummaries, readWorkspaceId } from '../DataAccess/WorkspaceReads'
+import {
+  readPromptFolders,
+  readPromptSummaries,
+  readWorkspaceId
+} from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 

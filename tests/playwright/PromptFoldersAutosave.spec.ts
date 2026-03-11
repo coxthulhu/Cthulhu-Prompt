@@ -77,15 +77,18 @@ describe('Prompt Folders Autosave (Svelte)', () => {
       .poll(
         async () => {
           const requestId = createTestRequestId('read')
-          const persistedContent = await electronApp.evaluate(async ({ app }, payload) => {
-            const { filePath, requestId } = payload
-            return await new Promise<string>((resolve) => {
-              app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
-                resolve(payload.content)
+          const persistedContent = await electronApp.evaluate(
+            async ({ app }, payload) => {
+              const { filePath, requestId } = payload
+              return await new Promise<string>((resolve) => {
+                app.once(`test-read-file-ready:${requestId}`, (payload: { content: string }) => {
+                  resolve(payload.content)
+                })
+                app.emit('test-read-file', { filePath, requestId })
               })
-              app.emit('test-read-file', { filePath, requestId })
-            })
-          }, { filePath: '/ws/sample/Prompts/Development/Prompts.json', requestId })
+            },
+            { filePath: '/ws/sample/Prompts/Development/Prompts.json', requestId }
+          )
 
           return JSON.parse(persistedContent)
             .prompts.map((prompt: { promptText: string }) => prompt.promptText)

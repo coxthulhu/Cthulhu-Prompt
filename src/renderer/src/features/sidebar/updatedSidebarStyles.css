@@ -67,7 +67,10 @@
   border-radius: 0.75rem;
   padding-inline: 0;
   color: rgb(230 230 235);
-  transition: background-color 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 
 .updatedSidebarPromptTreeRow:hover {
@@ -169,7 +172,9 @@
   opacity: 0;
   pointer-events: auto;
   cursor: pointer;
-  transition: opacity 120ms ease-out, color 120ms ease-out;
+  transition:
+    opacity 120ms ease-out,
+    color 120ms ease-out;
 }
 
 .updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeOpenButton,
@@ -200,7 +205,9 @@
   padding-inline: 0.5rem;
   color: rgb(194 194 203);
   text-align: left;
-  transition: background-color 120ms ease-out, color 120ms ease-out;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
 }
 
 .updatedSidebarPromptTreeSettingsButton:hover {

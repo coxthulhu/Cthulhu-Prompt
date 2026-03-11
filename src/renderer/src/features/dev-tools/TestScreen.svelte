@@ -121,7 +121,10 @@
     </header>
 
     {#snippet sidebarPreview(mockup)}
-      <aside class={`sidebar-mockup ${mockup.styleClass}`} data-testid={`sidebar-mockup-${mockup.id}`}>
+      <aside
+        class={`sidebar-mockup ${mockup.styleClass}`}
+        data-testid={`sidebar-mockup-${mockup.id}`}
+      >
         <div class="sidebar-workspace">
           <p class="workspace-badge">{mockup.workspaceBadge}</p>
           <h3 class="workspace-name">{workspaceName}</h3>

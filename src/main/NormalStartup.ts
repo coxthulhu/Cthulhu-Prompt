@@ -128,10 +128,7 @@ const arePersistedWindowBoundsValid = (windowPersistence: {
   width: number
   height: number
 }): boolean => {
-  if (
-    windowPersistence.width < WINDOW_MIN_WIDTH ||
-    windowPersistence.height < WINDOW_MIN_HEIGHT
-  ) {
+  if (windowPersistence.width < WINDOW_MIN_WIDTH || windowPersistence.height < WINDOW_MIN_HEIGHT) {
     return false
   }
 

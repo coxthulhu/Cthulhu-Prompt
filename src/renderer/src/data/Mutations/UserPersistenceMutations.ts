@@ -17,7 +17,9 @@ import {
 } from '../IpcFramework/RevisionCollections'
 import { upsertUserPersistenceDraft } from '../UiState/UserPersistenceDraftMutations.svelte.ts'
 
-const readLatestUserPersistenceFromTransaction = (transaction: Transaction<any>): UserPersistence => {
+const readLatestUserPersistenceFromTransaction = (
+  transaction: Transaction<any>
+): UserPersistence => {
   return getLatestMutationModifiedRecord(
     transaction,
     userPersistenceCollection.id,

@@ -14,24 +14,21 @@ import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAcce
 import { revisions } from '../Registries/Revisions'
 
 export const setupUserPersistenceQueryHandlers = (): void => {
-  ipcMain.handle(
-    LOAD_USER_PERSISTENCE_CHANNEL,
-    async (): Promise<LoadUserPersistenceResult> => {
-      try {
-        const userPersistence = UserPersistenceDataAccess.readUserPersistence()
-        return {
-          success: true,
-          userPersistence: {
-            id: USER_PERSISTENCE_ID,
-            revision: revisions.userPersistence.get(USER_PERSISTENCE_ID),
-            data: userPersistence
-          }
+  ipcMain.handle(LOAD_USER_PERSISTENCE_CHANNEL, async (): Promise<LoadUserPersistenceResult> => {
+    try {
+      const userPersistence = UserPersistenceDataAccess.readUserPersistence()
+      return {
+        success: true,
+        userPersistence: {
+          id: USER_PERSISTENCE_ID,
+          revision: revisions.userPersistence.get(USER_PERSISTENCE_ID),
+          data: userPersistence
         }
-      } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
       }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
-  )
+  })
 
   ipcMain.handle(
     LOAD_WORKSPACE_PERSISTENCE_CHANNEL,

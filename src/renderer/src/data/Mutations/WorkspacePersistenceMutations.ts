@@ -53,8 +53,9 @@ const createPersistWorkspacePersistenceMutations = (
       transaction,
       workspaceId
     )
-    const serializableWorkspacePersistence =
-      toSerializableWorkspacePersistence(latestWorkspacePersistence)
+    const serializableWorkspacePersistence = toSerializableWorkspacePersistence(
+      latestWorkspacePersistence
+    )
 
     const mutationResult = await invoke(UPDATE_WORKSPACE_PERSISTENCE_CHANNEL, {
       payload: {

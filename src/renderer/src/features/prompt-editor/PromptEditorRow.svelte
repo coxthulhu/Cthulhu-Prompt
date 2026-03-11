@@ -165,7 +165,12 @@
   })
 
   const handleFindMatches = (query: string, count: number) => {
-    findContext?.reportSectionMatchCount(promptId, PROMPT_FOLDER_FIND_BODY_SECTION_KEY, query, count)
+    findContext?.reportSectionMatchCount(
+      promptId,
+      PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+      query,
+      count
+    )
   }
 
   const handleEditorLifecycle = (

@@ -11,9 +11,7 @@ import { isButtonVisible } from './ButtonHelpers'
  * @param window - The Playwright window instance
  * @returns Promise that resolves with information about what happened
  */
-export async function setupWorkspaceViaUI(
-  window: any
-): Promise<{
+export async function setupWorkspaceViaUI(window: any): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {

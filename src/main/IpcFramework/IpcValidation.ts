@@ -10,10 +10,7 @@ import type {
   PromptFolder,
   PromptFolderRevisionPayload
 } from '@shared/PromptFolder'
-import type {
-  PromptUiState,
-  PromptUiStateRevisionPayload
-} from '@shared/PromptUiState'
+import type { PromptUiState, PromptUiStateRevisionPayload } from '@shared/PromptUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/SystemSettings'
@@ -256,8 +253,7 @@ const parsePrompt = parseObject<PromptPersisted>({
   promptFolderCount: parseNumber
 })
 
-const parsePromptRevisionPayloadEntity =
-  parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
+const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
 
 const parsePromptUiState = parseObject<PromptUiState>({
   workspaceId: parseString,
@@ -367,9 +363,7 @@ const parseUserPersistenceRevisionPayload = parseObject<UserPersistenceRevisionP
 
 const parseUpdateUserPersistenceRevisionWireRequest: Parser<
   IpcRequestWithPayload<UserPersistenceRevisionPayload>
-> = parseWireRequestWithPayload<UserPersistenceRevisionPayload>(
-  parseUserPersistenceRevisionPayload
-)
+> = parseWireRequestWithPayload<UserPersistenceRevisionPayload>(parseUserPersistenceRevisionPayload)
 
 const parseWorkspacePersistenceRevisionPayload = parseObject<WorkspacePersistenceRevisionPayload>({
   workspacePersistence: parseWorkspacePersistenceRevisionPayloadEntity

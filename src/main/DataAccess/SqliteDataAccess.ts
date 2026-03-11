@@ -19,9 +19,9 @@ const resolveDatabasePath = (): string => {
 const ensureSchemaVersionTable = (db: Database.Database): void => {
   db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)')
 
-  const existingVersion = db
-    .prepare('SELECT version FROM schema_version LIMIT 1')
-    .get() as { version: number } | undefined
+  const existingVersion = db.prepare('SELECT version FROM schema_version LIMIT 1').get() as
+    | { version: number }
+    | undefined
 
   if (existingVersion) {
     return
@@ -67,10 +67,7 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       )
       ON CONFLICT(id) DO NOTHING
       `
-    ).run(
-      DEFAULT_USER_PERSISTENCE.lastWorkspacePath,
-      DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
-    )
+    ).run(DEFAULT_USER_PERSISTENCE.lastWorkspacePath, DEFAULT_USER_PERSISTENCE.appSidebarWidthPx)
 
     db.prepare('UPDATE schema_version SET version = ?').run(2)
   })
@@ -131,7 +128,9 @@ const migrateSchemaV4ToV5 = (db: Database.Database): void => {
     const tableInfo = db.prepare('PRAGMA table_info(prompt_folder_ui_state)').all() as Array<{
       name: string
     }>
-    const hasPromptTreeEntryColumn = tableInfo.some((column) => column.name === 'prompt_tree_entry_id')
+    const hasPromptTreeEntryColumn = tableInfo.some(
+      (column) => column.name === 'prompt_tree_entry_id'
+    )
     const hasOutlinerEntryColumn = tableInfo.some((column) => column.name === 'outliner_entry_id')
     const hasDescriptionViewStateColumn = tableInfo.some(
       (column) => column.name === 'folder_description_editor_view_state_json'
@@ -189,9 +188,11 @@ const migrateSchemaV4ToV5 = (db: Database.Database): void => {
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
-  let schemaVersion = (db.prepare('SELECT version FROM schema_version LIMIT 1').get() as {
-    version: number
-  }).version
+  let schemaVersion = (
+    db.prepare('SELECT version FROM schema_version LIMIT 1').get() as {
+      version: number
+    }
+  ).version
 
   if (schemaVersion > LATEST_SCHEMA_VERSION) {
     throw new Error(

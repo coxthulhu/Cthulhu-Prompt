@@ -55,9 +55,7 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   ...overrides
 })
 
-const createPromptSummary = (
-  overrides: Partial<PromptSummaryData> = {}
-): PromptSummaryData => ({
+const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): PromptSummaryData => ({
   id: 'prompt-1',
   title: 'Original title',
   promptFolderCount: 0,

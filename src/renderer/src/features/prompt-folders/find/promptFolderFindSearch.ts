@@ -56,7 +56,8 @@ export const buildPromptFolderFindCounts = ({
   return items.map((item) => {
     const sectionCounts = item.sections.map((section) => {
       const tracked = sectionMatchCountsByEntityId.get(item.entityId)?.get(section.key)
-      const useTrackedCount = hydratedEntityIds.has(item.entityId) && tracked?.query === trimmedQuery
+      const useTrackedCount =
+        hydratedEntityIds.has(item.entityId) && tracked?.query === trimmedQuery
       const count = useTrackedCount ? tracked.count : countMatchesInText(section.text, trimmedQuery)
       return {
         sectionKey: section.key,

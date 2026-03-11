@@ -24,7 +24,7 @@
 ### New Features
 
 - Added persistence for prompt-folder navigation context, including scroll position and outliner restore when returning to a folder.
-- Improved Monaco syntax highlighting with upstream VSCode compatibility and theme support. 
+- Improved Monaco syntax highlighting with upstream VSCode compatibility and theme support.
 
 ### Changes
 

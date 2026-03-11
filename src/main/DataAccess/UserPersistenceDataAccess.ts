@@ -115,13 +115,18 @@ export class UserPersistenceDataAccess {
     return {
       x: persistenceRow.windowXPx === null ? null : Math.round(persistenceRow.windowXPx),
       y: persistenceRow.windowYPx === null ? null : Math.round(persistenceRow.windowYPx),
-      width: persistenceRow.windowWidthPx === null ? null : Math.round(persistenceRow.windowWidthPx),
+      width:
+        persistenceRow.windowWidthPx === null ? null : Math.round(persistenceRow.windowWidthPx),
       height:
         persistenceRow.windowHeightPx === null ? null : Math.round(persistenceRow.windowHeightPx),
       isMaximized:
-        persistenceRow.windowIsMaximized === null ? null : Boolean(persistenceRow.windowIsMaximized),
+        persistenceRow.windowIsMaximized === null
+          ? null
+          : Boolean(persistenceRow.windowIsMaximized),
       isFullScreen:
-        persistenceRow.windowIsFullScreen === null ? null : Boolean(persistenceRow.windowIsFullScreen)
+        persistenceRow.windowIsFullScreen === null
+          ? null
+          : Boolean(persistenceRow.windowIsFullScreen)
     }
   }
 
@@ -173,7 +178,9 @@ export class UserPersistenceDataAccess {
         WHERE workspace_id = ?
         `
       )
-      .get(workspaceId) as { selectedScreen: string; selectedPromptFolderId: string | null } | undefined
+      .get(workspaceId) as
+      | { selectedScreen: string; selectedPromptFolderId: string | null }
+      | undefined
 
     if (!workspaceUiState) {
       return createDefaultWorkspacePersistence(workspaceId)
@@ -204,9 +211,12 @@ export class UserPersistenceDataAccess {
     return parsedPersistence ?? createDefaultWorkspacePersistence(workspaceId)
   }
 
-  static updateWorkspacePersistence(workspacePersistence: WorkspacePersistence): WorkspacePersistence {
+  static updateWorkspacePersistence(
+    workspacePersistence: WorkspacePersistence
+  ): WorkspacePersistence {
     const db = SqliteDataAccess.getDatabase()
-    const serializableWorkspacePersistence = toSerializableWorkspacePersistence(workspacePersistence)
+    const serializableWorkspacePersistence =
+      toSerializableWorkspacePersistence(workspacePersistence)
 
     const updateWorkspace = db.transaction(() => {
       db.prepare(

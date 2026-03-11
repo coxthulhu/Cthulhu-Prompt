@@ -88,7 +88,10 @@ const readMonacoViewStateSnapshot = async (
   }, editorSelector)
 }
 
-const setMonacoViewStateForTest = async (mainWindow: any, editorSelector: string): Promise<void> => {
+const setMonacoViewStateForTest = async (
+  mainWindow: any,
+  editorSelector: string
+): Promise<void> => {
   await mainWindow.evaluate((selector) => {
     const row = document.querySelector(selector)
     if (!row) return
@@ -185,14 +188,23 @@ describe('Prompt Folder Hydration', () => {
 
     await testHelpers.navigateToPromptFolders(LONG_SINGLE_LINE_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, {
+      state: 'attached',
+      timeout: 6000
+    })
     await waitForMonacoEditor(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
 
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 180)
-    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, {
+      state: 'attached',
+      timeout: 6000
+    })
     await setMonacoViewStateForTest(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
 
-    const beforeSnapshot = await readMonacoViewStateSnapshot(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+    const beforeSnapshot = await readMonacoViewStateSnapshot(
+      mainWindow,
+      MEASUREMENT_PROMPT_SELECTOR
+    )
     if (!beforeSnapshot) {
       throw new Error('Failed to capture Monaco view state before dehydration')
     }
@@ -202,7 +214,10 @@ describe('Prompt Folder Hydration', () => {
     await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'detached' })
 
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
-    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, { state: 'attached', timeout: 6000 })
+    await mainWindow.waitForSelector(MEASUREMENT_PROMPT_SELECTOR, {
+      state: 'attached',
+      timeout: 6000
+    })
     await waitForMonacoEditor(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
 
     await expect
@@ -275,7 +290,8 @@ describe('Prompt Folder Hydration', () => {
       placeholderSelector: PLACEHOLDER_SELECTOR
     })
 
-    const readPromptWidth = async () => await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)
+    const readPromptWidth = async () =>
+      await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)
     const initialWidth = await prepareUncappedSidebarBaseline(testHelpers, readPromptWidth)
 
     await mainWindow.evaluate(() => {

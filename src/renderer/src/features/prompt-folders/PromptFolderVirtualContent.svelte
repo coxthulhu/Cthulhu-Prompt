@@ -22,7 +22,10 @@
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
   } from './promptFolderSettingsSizing'
-  import type { ActivePromptTreeRow, PromptFocusRequest } from './promptFolderScreenController.svelte.ts'
+  import type {
+    ActivePromptTreeRow,
+    PromptFocusRequest
+  } from './promptFolderScreenController.svelte.ts'
 
   type PromptFolderRow =
     | { kind: 'folder-settings' }

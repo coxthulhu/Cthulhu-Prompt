@@ -22,7 +22,9 @@ describe('Prompt folder loading overlay', () => {
     await testHelpers.pauseIpcChannel(LOADING_CHANNEL)
     try {
       await testHelpers.navigateToPromptFolders('Development')
-      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', { state: 'attached' })
+      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', {
+        state: 'attached'
+      })
       await mainWindow.waitForSelector(OVERLAY_SELECTOR, { state: 'visible' })
 
       const overlay = mainWindow.locator(OVERLAY_SELECTOR)

@@ -5,7 +5,8 @@
 This repository contains Cthulhu Prompt, an Electron application that stores and helps the user to handle their AI prompts. These prompts are typically used for coding, and can be created, formatted, and organized. Ultimately, these prompts are copied out of the Cthulhu Prompt into an AI coding application like Claude Code, Codex CLI, or other online or on-device AI interfaces.
 
 ## Response Guidelines
-- I do not ask rhetorical questions. Answer my questions before proceeding. 
+
+- I do not ask rhetorical questions. Answer my questions before proceeding.
 - If I interrupt you, respond to me and stop. Do not continue without permission.
 - Never implement changes without permission.
 

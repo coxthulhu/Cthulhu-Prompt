@@ -238,11 +238,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           )
 
           const promptsFilePath = path.join(folderPath, PROMPTS_FILENAME)
-          fs.writeFileSync(
-            promptsFilePath,
-            JSON.stringify({ prompts: [] }, null, 2),
-            'utf8'
-          )
+          fs.writeFileSync(promptsFilePath, JSON.stringify({ prompts: [] }, null, 2), 'utf8')
 
           const promptFolder = readPromptFolder(workspacePath, folderName)
           registerPromptFolder(workspace.id, workspacePath, {

@@ -89,10 +89,10 @@
     isWorkspaceLoading
       ? 'loading'
       : !isWorkspaceReady
-      ? 'no-workspace'
-      : promptFolders.length === 0
-        ? 'empty'
-        : 'ready'
+        ? 'no-workspace'
+        : promptFolders.length === 0
+          ? 'empty'
+          : 'ready'
   )
 
   const promptFolderCountLabel = $derived.by(() => {
@@ -123,9 +123,7 @@
   data-testid="app-sidebar"
   class="updatedSidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
 >
-  <div
-    class="updatedSidebarTopLevelInsetWithInnerPadding pt-2"
-  >
+  <div class="updatedSidebarTopLevelInsetWithInnerPadding pt-2">
     <div class="flex items-start gap-2 border-b border-white/8 pb-4">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
         <img
@@ -137,7 +135,10 @@
         />
       </div>
       <div class="min-w-0 flex-1">
-        <h1 data-testid="sidebar-workspace-name" class="truncate text-sm font-semibold tracking-tight text-zinc-100">
+        <h1
+          data-testid="sidebar-workspace-name"
+          class="truncate text-sm font-semibold tracking-tight text-zinc-100"
+        >
           {workspaceDisplay.title}
         </h1>
         <p class="truncate pt-0.5 text-xs text-zinc-500" title={workspacePath ?? undefined}>
@@ -152,9 +153,7 @@
       <ul class="grid w-full min-w-0 grid-cols-2 gap-2">
         {#each primaryNavItems as item (item.id)}
           {@const Icon = item.icon}
-          <li
-            class="group/menu-item relative"
-          >
+          <li class="group/menu-item relative">
             <SidebarButton
               testId={item.testId}
               icon={Icon}
@@ -172,9 +171,7 @@
         <ul class="flex w-full min-w-0 flex-col gap-2">
           {#each secondaryNavItems as item (item.id)}
             {@const Icon = item.icon}
-            <li
-              class="group/menu-item relative"
-            >
+            <li class="group/menu-item relative">
               <SidebarButton
                 testId={item.testId}
                 icon={Icon}
@@ -224,5 +221,4 @@
       {onPromptFolderSelect}
     />
   </div>
-
 </aside>

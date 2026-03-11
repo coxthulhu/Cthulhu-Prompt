@@ -115,16 +115,12 @@ describe('Prompt folders measured heights', () => {
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
 
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 900)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
-      .toBeGreaterThan(0)
+    await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
 
     const savedScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(savedScrollTop).toBeGreaterThan(0)
     await mainWindow.waitForSelector(PROMPT_TREE_SELECTOR, { state: 'attached' })
-    await expect
-      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
-      .not.toBeNull()
+    await expect.poll(async () => getActivePromptTreeEntryTestId(mainWindow)).not.toBeNull()
     const savedPromptTreeEntryTestId = await getActivePromptTreeEntryTestId(mainWindow)
     if (!savedPromptTreeEntryTestId) {
       throw new Error('Expected an active prompt tree selection before navigation')
@@ -135,9 +131,7 @@ describe('Prompt folders measured heights', () => {
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     const restoredScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(restoredScrollTop).toBe(savedScrollTop)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
-      .toBeGreaterThan(0)
+    await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
     await expect
       .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .toBe(savedPromptTreeEntryTestId)
@@ -149,9 +143,7 @@ describe('Prompt folders measured heights', () => {
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     const restoredAfterSwitchScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(restoredAfterSwitchScrollTop).toBe(savedScrollTop)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
-      .toBeGreaterThan(0)
+    await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
     await expect
       .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .toBe(savedPromptTreeEntryTestId)
@@ -170,13 +162,9 @@ describe('Prompt folders measured heights', () => {
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
 
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, TINY_SCROLL_TARGET_PX)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
-      .toBeGreaterThan(0)
+    await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
 
-    await expect
-      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
-      .not.toBeNull()
+    await expect.poll(async () => getActivePromptTreeEntryTestId(mainWindow)).not.toBeNull()
     const savedPromptTreeEntryTestId = await getActivePromptTreeEntryTestId(mainWindow)
     if (!savedPromptTreeEntryTestId) {
       throw new Error('Expected an active prompt tree selection before tiny-scroll navigation')
@@ -185,12 +173,8 @@ describe('Prompt folders measured heights', () => {
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
-      .toBeGreaterThan(0)
-    await expect
-      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
-      .not.toBeNull()
+    await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
+    await expect.poll(async () => getActivePromptTreeEntryTestId(mainWindow)).not.toBeNull()
     await expect
       .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .toBe(savedPromptTreeEntryTestId)

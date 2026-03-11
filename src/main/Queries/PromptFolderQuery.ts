@@ -55,10 +55,7 @@ export const setupPromptFolderQueryHandlers = (): void => {
               promptUiStates: promptUiStates.map((promptUiState) => ({
                 id: promptUiState.promptId,
                 revision: revisions.promptUiState.get(
-                  createPromptUiStateRevisionKey(
-                    promptUiState.workspaceId,
-                    promptUiState.promptId
-                  )
+                  createPromptUiStateRevisionKey(promptUiState.workspaceId, promptUiState.promptId)
                 ),
                 data: promptUiState
               }))

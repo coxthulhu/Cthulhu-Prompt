@@ -38,7 +38,11 @@ const toPersistedPrompt = (prompt: Prompt): PromptPersisted => {
   }
 }
 
-const toFullPromptSnapshot = (snapshot: { id: string; revision: number; data: PromptPersisted }) => {
+const toFullPromptSnapshot = (snapshot: {
+  id: string
+  revision: number
+  data: PromptPersisted
+}) => {
   return {
     ...snapshot,
     data: createPromptFull(snapshot.data)

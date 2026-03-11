@@ -111,7 +111,10 @@
 
 <div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
   <div class="relative flex-shrink-0" style={`width: ${width}px`}>
-    <div class={`h-full ${sidebarInsetClass}`} style={`padding: ${sidebarInsetYPx}px ${sidebarInsetXPx}px;`}>
+    <div
+      class={`h-full ${sidebarInsetClass}`}
+      style={`padding: ${sidebarInsetYPx}px ${sidebarInsetXPx}px;`}
+    >
       <div class={`relative h-full ${sidebarBorderClass}`}>
         {@render sidebar()}
 
