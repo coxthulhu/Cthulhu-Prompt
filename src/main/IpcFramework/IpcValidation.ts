@@ -225,16 +225,15 @@ const parseSystemSettingsRevisionPayloadEntity =
 
 const parseUserPersistence = parseObject<UserPersistence>({
   lastWorkspacePath: parseNullableString,
-  appSidebarWidthPx: parseNumber,
-  promptOutlinerWidthPx: parseNumber
+  appSidebarWidthPx: parseNumber
 })
 
 const parseUserPersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
 
-const parseWorkspacePromptFolderOutlinerEntry = parseObject({
+const parseWorkspacePromptFolderPromptTreeEntry = parseObject({
   promptFolderId: parseString,
-  outlinerEntryId: parseString,
+  promptTreeEntryId: parseString,
   folderDescriptionEditorViewStateJson: parseNullableString
 })
 
@@ -242,7 +241,7 @@ const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
   workspaceId: parseString,
   selectedScreen: parseWorkspaceScreen,
   selectedPromptFolderId: parseNullableString,
-  promptFolderOutlinerEntries: parseArray(parseWorkspacePromptFolderOutlinerEntry)
+  promptFolderPromptTreeEntries: parseArray(parseWorkspacePromptFolderPromptTreeEntry)
 })
 
 const parseWorkspacePersistenceRevisionPayloadEntity =

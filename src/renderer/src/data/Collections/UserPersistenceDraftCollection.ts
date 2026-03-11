@@ -6,7 +6,6 @@ export type UserPersistenceDraftRecord = {
   id: typeof USER_PERSISTENCE_DRAFT_ID
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
-  promptOutlinerWidthPx: number
 }
 
 // Local-only draft state for user persistence fields before sync writes.

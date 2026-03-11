@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 4
+const LATEST_SCHEMA_VERSION = 5
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -36,8 +36,7 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       CREATE TABLE IF NOT EXISTS app_persistence (
         id INTEGER PRIMARY KEY,
         last_workspace_path TEXT,
-        app_sidebar_width_px INTEGER NOT NULL,
-        prompt_outliner_width_px INTEGER NOT NULL
+        app_sidebar_width_px INTEGER NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS workspace_ui_state (
@@ -49,7 +48,7 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       CREATE TABLE IF NOT EXISTS prompt_folder_ui_state (
         workspace_id TEXT NOT NULL,
         prompt_folder_id TEXT NOT NULL,
-        outliner_entry_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
         PRIMARY KEY (workspace_id, prompt_folder_id)
       );
     `)
@@ -59,12 +58,10 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       INSERT INTO app_persistence (
         id,
         last_workspace_path,
-        app_sidebar_width_px,
-        prompt_outliner_width_px
+        app_sidebar_width_px
       )
       VALUES (
         1,
-        ?,
         ?,
         ?
       )
@@ -72,8 +69,7 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       `
     ).run(
       DEFAULT_USER_PERSISTENCE.lastWorkspacePath,
-      DEFAULT_USER_PERSISTENCE.appSidebarWidthPx,
-      DEFAULT_USER_PERSISTENCE.promptOutlinerWidthPx
+      DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
     )
 
     db.prepare('UPDATE schema_version SET version = ?').run(2)
@@ -130,6 +126,66 @@ const migrateSchemaV3ToV4 = (db: Database.Database): void => {
   migrate()
 }
 
+const migrateSchemaV4ToV5 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    const tableInfo = db.prepare('PRAGMA table_info(prompt_folder_ui_state)').all() as Array<{
+      name: string
+    }>
+    const hasPromptTreeEntryColumn = tableInfo.some((column) => column.name === 'prompt_tree_entry_id')
+    const hasOutlinerEntryColumn = tableInfo.some((column) => column.name === 'outliner_entry_id')
+    const hasDescriptionViewStateColumn = tableInfo.some(
+      (column) => column.name === 'folder_description_editor_view_state_json'
+    )
+
+    // Ensure the source table has prompt_tree_entry_id before rebuilding.
+    if (!hasPromptTreeEntryColumn) {
+      db.exec(`
+        ALTER TABLE prompt_folder_ui_state
+        ADD COLUMN prompt_tree_entry_id TEXT;
+      `)
+    }
+
+    db.exec(`
+      CREATE TABLE prompt_folder_ui_state_new (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        folder_description_editor_view_state_json TEXT,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+    `)
+
+    const promptTreeEntryExpr = hasOutlinerEntryColumn
+      ? "COALESCE(prompt_tree_entry_id, outliner_entry_id, 'folder-settings')"
+      : "COALESCE(prompt_tree_entry_id, 'folder-settings')"
+    const descriptionViewStateExpr = hasDescriptionViewStateColumn
+      ? 'folder_description_editor_view_state_json'
+      : 'NULL'
+
+    db.exec(`
+      INSERT INTO prompt_folder_ui_state_new (
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        folder_description_editor_view_state_json
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        ${promptTreeEntryExpr},
+        ${descriptionViewStateExpr}
+      FROM prompt_folder_ui_state;
+    `)
+
+    db.exec('DROP TABLE prompt_folder_ui_state;')
+    db.exec('ALTER TABLE prompt_folder_ui_state_new RENAME TO prompt_folder_ui_state;')
+
+    db.prepare('UPDATE schema_version SET version = ?').run(5)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -159,6 +215,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 3) {
       migrateSchemaV3ToV4(db)
       schemaVersion = 4
+      continue
+    }
+
+    if (schemaVersion === 4) {
+      migrateSchemaV4ToV5(db)
+      schemaVersion = 5
       continue
     }
 

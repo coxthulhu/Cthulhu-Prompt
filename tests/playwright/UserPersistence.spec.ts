@@ -2,7 +2,7 @@ import { setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
-const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -48,7 +48,6 @@ const seedUserPersistence = async (
   data: {
     lastWorkspacePath: string | null
     appSidebarWidthPx?: number
-    promptOutlinerWidthPx?: number
   }
 ): Promise<void> => {
   const lastWorkspacePathSql =
@@ -60,19 +59,16 @@ const seedUserPersistence = async (
     INSERT INTO app_persistence (
       id,
       last_workspace_path,
-      app_sidebar_width_px,
-      prompt_outliner_width_px
+      app_sidebar_width_px
     )
     VALUES (
       1,
       ${lastWorkspacePathSql},
-      ${data.appSidebarWidthPx ?? 275},
-      ${data.promptOutlinerWidthPx ?? 200}
+      ${data.appSidebarWidthPx ?? 275}
     )
     ON CONFLICT(id) DO UPDATE SET
       last_workspace_path = excluded.last_workspace_path,
-      app_sidebar_width_px = excluded.app_sidebar_width_px,
-      prompt_outliner_width_px = excluded.prompt_outliner_width_px
+      app_sidebar_width_px = excluded.app_sidebar_width_px
     `
   )
 }
@@ -122,9 +118,9 @@ const seedWorkspacePersistence = async (
     workspaceId: string
     selectedScreen: 'home' | 'settings' | 'prompt-folders'
     selectedPromptFolderId: string | null
-    promptFolderOutlinerEntries: Array<{
+    promptFolderPromptTreeEntries: Array<{
       promptFolderId: string
-      outlinerEntryId: string
+      promptTreeEntryId: string
     }>
   }
 ): Promise<void> => {
@@ -155,19 +151,19 @@ const seedWorkspacePersistence = async (
     `DELETE FROM prompt_folder_ui_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
 
-  for (const entry of data.promptFolderOutlinerEntries) {
+  for (const entry of data.promptFolderPromptTreeEntries) {
     await runSqlStatement(
       electronApp,
       `
       INSERT INTO prompt_folder_ui_state (
         workspace_id,
         prompt_folder_id,
-        outliner_entry_id
+        prompt_tree_entry_id
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
         ${toSqlText(entry.promptFolderId)},
-        ${toSqlText(entry.outlinerEntryId)}
+        ${toSqlText(entry.promptTreeEntryId)}
       )
       `
     )
@@ -177,15 +173,13 @@ const seedWorkspacePersistence = async (
 const readUserPersistence = async (electronApp: any): Promise<{
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
-  promptOutlinerWidthPx: number
 }> => {
   const queryResult = await runSqlQuery(
     electronApp,
     `
     SELECT
       last_workspace_path AS lastWorkspacePath,
-      app_sidebar_width_px AS appSidebarWidthPx,
-      prompt_outliner_width_px AS promptOutlinerWidthPx
+      app_sidebar_width_px AS appSidebarWidthPx
     FROM app_persistence
     WHERE id = 1
     `
@@ -198,7 +192,6 @@ const readUserPersistence = async (electronApp: any): Promise<{
   return queryResult.rows[0] as {
     lastWorkspacePath: string | null
     appSidebarWidthPx: number
-    promptOutlinerWidthPx: number
   }
 }
 
@@ -209,9 +202,9 @@ const readWorkspacePersistence = async (
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'prompt-folders'
   selectedPromptFolderId: string | null
-  promptFolderOutlinerEntries: Array<{
+  promptFolderPromptTreeEntries: Array<{
     promptFolderId: string
-    outlinerEntryId: string
+    promptTreeEntryId: string
   }>
 }> => {
   const workspaceStateResult = await runSqlQuery(
@@ -234,7 +227,7 @@ const readWorkspacePersistence = async (
     `
     SELECT
       prompt_folder_id AS promptFolderId,
-      outliner_entry_id AS outlinerEntryId
+      prompt_tree_entry_id AS promptTreeEntryId
     FROM prompt_folder_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -255,9 +248,9 @@ const readWorkspacePersistence = async (
     workspaceId,
     selectedScreen: workspaceRow?.selectedScreen ?? 'home',
     selectedPromptFolderId: workspaceRow?.selectedPromptFolderId ?? null,
-    promptFolderOutlinerEntries: (promptFolderStateResult.rows ?? []) as Array<{
+    promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []) as Array<{
       promptFolderId: string
-      outlinerEntryId: string
+      promptTreeEntryId: string
     }>
   }
 }
@@ -297,13 +290,15 @@ const readMainWindowState = async (
   }
 }
 
-const getActiveOutlinerTitle = async (mainWindow: any): Promise<string | null> => {
+const getActivePromptTreeTitle = async (mainWindow: any): Promise<string | null> => {
   return await mainWindow.evaluate((hostSelector) => {
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
-    const activeButton = host.querySelector<HTMLButtonElement>('button[aria-current="true"]')
+    const activeButton = host.querySelector<HTMLButtonElement>(
+      'button[data-active="true"][data-testid^="prompt-folder-"]'
+    )
     return activeButton?.textContent?.trim() ?? null
-  }, OUTLINER_HOST_SELECTOR)
+  }, PROMPT_TREE_HOST_SELECTOR)
 }
 
 const getSidebarWidthByHandle = async (mainWindow: any, handleTestId: string): Promise<number> => {
@@ -368,8 +363,7 @@ describe('User Persistence', () => {
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
       lastWorkspacePath: persistedWorkspacePath,
-      appSidebarWidthPx: 260,
-      promptOutlinerWidthPx: 180
+      appSidebarWidthPx: 260
     })
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -385,9 +379,6 @@ describe('User Persistence', () => {
     await expect
       .poll(async () => getSidebarWidthByHandle(mainWindow, 'app-sidebar-resize-handle'))
       .toBe(260)
-    await expect
-      .poll(async () => getSidebarWidthByHandle(mainWindow, 'prompt-outliner-resize-handle'))
-      .toBe(180)
   })
 
   test('restores persisted window bounds on startup', async ({ electronApp, testSetup }) => {
@@ -470,14 +461,13 @@ describe('User Persistence', () => {
     await testHelpers.navigateToPromptFolders('Development')
 
     await dragSidebarHandleBy(mainWindow, 'app-sidebar-resize-handle', -40)
-    await dragSidebarHandleBy(mainWindow, 'prompt-outliner-resize-handle', 20)
 
     await expect
       .poll(async () => {
         const persisted = await readUserPersistence(electronApp)
-        return `${persisted.appSidebarWidthPx}:${persisted.promptOutlinerWidthPx}`
+        return `${persisted.appSidebarWidthPx}`
       })
-      .toBe('240:220')
+      .toBe('240')
   })
 
   test('reopens the persisted prompt-folder screen on startup', async ({ electronApp, testSetup }) => {
@@ -492,7 +482,7 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedPromptFolderId: persistedPromptFolderId,
-      promptFolderOutlinerEntries: []
+      promptFolderPromptTreeEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -519,7 +509,7 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedPromptFolderId: 'missing-folder-id',
-      promptFolderOutlinerEntries: []
+      promptFolderPromptTreeEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -566,7 +556,7 @@ describe('User Persistence', () => {
       .toBe('settings:null')
   })
 
-  test('autosaves active outliner entry id in workspace persistence', async ({
+  test('autosaves active prompt tree entry id in workspace persistence', async ({
     electronApp,
     testSetup
   }) => {
@@ -578,26 +568,26 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const bugAnalysisButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
-      hasText: 'Bug Analysis'
-    })
+    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')
     await bugAnalysisButton.click()
-    await expect(bugAnalysisButton).toHaveAttribute('aria-current', 'true')
+    await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
 
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const entries = persisted.promptFolderOutlinerEntries
-          const outlinerEntry = entries.find((entry) => entry.promptFolderId === developmentPromptFolderId)
-          return outlinerEntry?.outlinerEntryId ?? null
+          const entries = persisted.promptFolderPromptTreeEntries
+          const promptTreeEntry = entries.find(
+            (entry) => entry.promptFolderId === developmentPromptFolderId
+          )
+          return promptTreeEntry?.promptTreeEntryId ?? null
         },
         { timeout: 15000 }
       )
       .toBe('dev-2')
   })
 
-  test('autosaves outliner entries for multiple folders', async ({ electronApp, testSetup }) => {
+  test('autosaves prompt tree entries for multiple folders', async ({ electronApp, testSetup }) => {
     const workspacePath = '/ws/sample'
     const workspaceId = createDeterministicId(workspacePath)
     const examplesPromptFolderId = createDeterministicId(`${workspacePath}:Examples`)
@@ -607,37 +597,33 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const bugAnalysisButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
-      hasText: 'Bug Analysis'
-    })
+    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')
     await bugAnalysisButton.click()
-    await expect(bugAnalysisButton).toHaveAttribute('aria-current', 'true')
+    await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
 
     await testHelpers.navigateToPromptFolders('Examples')
-    const simpleGreetingButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
-      hasText: 'Simple Greeting'
-    })
+    const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-folder-prompt-simple-1"]')
     await simpleGreetingButton.click()
-    await expect(simpleGreetingButton).toHaveAttribute('aria-current', 'true')
+    await expect(simpleGreetingButton).toHaveAttribute('data-active', 'true')
 
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const entries = persisted.promptFolderOutlinerEntries
+          const entries = persisted.promptFolderPromptTreeEntries
           const examplesEntry = entries.find((entry) => entry.promptFolderId === examplesPromptFolderId)
           const developmentEntry = entries.find(
             (entry) => entry.promptFolderId === developmentPromptFolderId
           )
-          return `${examplesEntry?.outlinerEntryId ?? 'none'}:${developmentEntry?.outlinerEntryId ?? 'none'}:${entries.length}`
+          return `${examplesEntry?.promptTreeEntryId ?? 'none'}:${developmentEntry?.promptTreeEntryId ?? 'none'}:${entries.length}`
         },
         { timeout: 15000 }
       )
       .toBe('simple-1:dev-2:2')
   })
 
-  test('restores persisted outliner entry on startup', async ({ electronApp, testSetup }) => {
-    const persistedWorkspacePath = '/ws/persisted-outliner-entry'
+  test('restores persisted prompt tree entry on startup', async ({ electronApp, testSetup }) => {
+    const persistedWorkspacePath = '/ws/persisted-prompt-tree-entry'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
@@ -648,10 +634,10 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedPromptFolderId: developmentPromptFolderId,
-      promptFolderOutlinerEntries: [
+      promptFolderPromptTreeEntries: [
         {
           promptFolderId: developmentPromptFolderId,
-          outlinerEntryId: 'dev-2'
+          promptTreeEntryId: 'dev-2'
         }
       ]
     })
@@ -665,14 +651,14 @@ describe('User Persistence', () => {
       'data-active',
       'true'
     )
-    await expect.poll(async () => getActiveOutlinerTitle(mainWindow)).toBe('Bug Analysis')
+    await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')
   })
 
-  test('restores and auto-scrolls outliner to persisted entry on startup', async ({
+  test('restores and auto-scrolls prompt tree to persisted entry on startup', async ({
     electronApp,
     testSetup
   }) => {
-    const persistedWorkspacePath = '/ws/persisted-outliner-entry-long'
+    const persistedWorkspacePath = '/ws/persisted-prompt-tree-entry-long'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const longPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Long`)
     const persistedPromptId = 'virtualization-test-45'
@@ -684,10 +670,10 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedPromptFolderId: longPromptFolderId,
-      promptFolderOutlinerEntries: [
+      promptFolderPromptTreeEntries: [
         {
           promptFolderId: longPromptFolderId,
-          outlinerEntryId: persistedPromptId
+          promptTreeEntryId: persistedPromptId
         }
       ]
     })
@@ -697,17 +683,17 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await expect.poll(async () => getActiveOutlinerTitle(mainWindow)).toBe('Large Prompt 45')
+    await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Large Prompt 45')
     await expect
-      .poll(async () => testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR))
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_TREE_HOST_SELECTOR))
       .toBeGreaterThan(0)
   })
 
-  test('stays scrolled to top when persisted outliner entry is missing', async ({
+  test('stays scrolled to top when persisted prompt tree entry is missing', async ({
     electronApp,
     testSetup
   }) => {
-    const persistedWorkspacePath = '/ws/persisted-outliner-entry-missing'
+    const persistedWorkspacePath = '/ws/persisted-prompt-tree-entry-missing'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
@@ -718,10 +704,10 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedPromptFolderId: developmentPromptFolderId,
-      promptFolderOutlinerEntries: [
+      promptFolderPromptTreeEntries: [
         {
           promptFolderId: developmentPromptFolderId,
-          outlinerEntryId: 'missing-prompt-id'
+          promptTreeEntryId: 'missing-prompt-id'
         }
       ]
     })
@@ -735,7 +721,7 @@ describe('User Persistence', () => {
       .poll(async () => testHelpers.getElementScrollTop('[data-testid="prompt-folder-virtual-window"]'))
       .toBe(0)
     await expect
-      .poll(async () => testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR))
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_TREE_HOST_SELECTOR))
       .toBe(0)
   })
 })

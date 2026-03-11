@@ -4,7 +4,7 @@ import {
   createSessionValueCache
 } from './sessionUiCacheFactories.svelte.ts'
 
-export type PromptFolderOutlinerActiveRow =
+export type PromptFolderPromptTreeActiveRow =
   | { kind: 'folder-settings' }
   | { kind: 'prompt'; promptId: string }
 
@@ -20,15 +20,13 @@ export type PromptTreeJumpRequest = {
 
 const descriptionMeasuredHeight = createSessionMeasuredHeightCache()
 const scrollTop = createSessionValueCache<number>()
-const outlinerScrollTop = createSessionValueCache<number>()
-const outlinerActiveRow = createSessionValueCache<PromptFolderOutlinerActiveRow | null>()
+const promptTreeActiveRow = createSessionValueCache<PromptFolderPromptTreeActiveRow | null>()
 const promptTreeJumpRequest = createSessionValueCache<PromptTreeJumpRequest>()
 
 export const promptFolderDraftUiCache = {
   descriptionMeasuredHeight,
   scrollTop,
-  outlinerScrollTop,
-  outlinerActiveRow,
+  promptTreeActiveRow,
   promptTreeJumpRequest
 }
 
@@ -68,28 +66,17 @@ export const recordPromptFolderScrollTop = (promptFolderId: string, scrollTopPx:
   promptFolderDraftUiCache.scrollTop.record(promptFolderId, scrollTopPx)
 }
 
-export const lookupPromptFolderOutlinerScrollTop = (promptFolderId: string): number | null => {
-  return promptFolderDraftUiCache.outlinerScrollTop.lookup(promptFolderId)
-}
-
-export const recordPromptFolderOutlinerScrollTop = (
-  promptFolderId: string,
-  scrollTopPx: number
-): void => {
-  promptFolderDraftUiCache.outlinerScrollTop.record(promptFolderId, scrollTopPx)
-}
-
-export const lookupPromptFolderOutlinerActiveRow = (
+export const lookupPromptFolderPromptTreeActiveRow = (
   promptFolderId: string
-): PromptFolderOutlinerActiveRow | null => {
-  return promptFolderDraftUiCache.outlinerActiveRow.lookup(promptFolderId)
+): PromptFolderPromptTreeActiveRow | null => {
+  return promptFolderDraftUiCache.promptTreeActiveRow.lookup(promptFolderId)
 }
 
-export const recordPromptFolderOutlinerActiveRow = (
+export const recordPromptFolderPromptTreeActiveRow = (
   promptFolderId: string,
-  row: PromptFolderOutlinerActiveRow | null
+  row: PromptFolderPromptTreeActiveRow | null
 ): void => {
-  promptFolderDraftUiCache.outlinerActiveRow.record(promptFolderId, row)
+  promptFolderDraftUiCache.promptTreeActiveRow.record(promptFolderId, row)
 }
 
 export const lookupPromptTreeJumpRequest = (promptFolderId: string): PromptTreeJumpRequest | null => {
@@ -109,14 +96,12 @@ export const clearPromptTreeJumpRequest = (promptFolderId: string): void => {
 
 export const clearPromptFolderScrollTop = (promptFolderId: string): void => {
   promptFolderDraftUiCache.scrollTop.clear(promptFolderId)
-  promptFolderDraftUiCache.outlinerScrollTop.clear(promptFolderId)
-  promptFolderDraftUiCache.outlinerActiveRow.clear(promptFolderId)
+  promptFolderDraftUiCache.promptTreeActiveRow.clear(promptFolderId)
   promptFolderDraftUiCache.promptTreeJumpRequest.clear(promptFolderId)
 }
 
 export const clearPromptFolderScrollTops = (promptFolderIds: string[]): void => {
   promptFolderDraftUiCache.scrollTop.clearMany(promptFolderIds)
-  promptFolderDraftUiCache.outlinerScrollTop.clearMany(promptFolderIds)
-  promptFolderDraftUiCache.outlinerActiveRow.clearMany(promptFolderIds)
+  promptFolderDraftUiCache.promptTreeActiveRow.clearMany(promptFolderIds)
   promptFolderDraftUiCache.promptTreeJumpRequest.clearMany(promptFolderIds)
 }

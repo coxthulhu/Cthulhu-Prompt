@@ -7,17 +7,37 @@ import {
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
-const OUTLINER_ROW_HEIGHT_PX = 28
 const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
+const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-folder-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
 
-describe('Prompt folder outliner', () => {
-  test('keeps selected prompt centered after hydration for long wrapped singles', async ({
+const scrollPromptTreeRowIntoView = async (
+  mainWindow: any,
+  testHelpers: any,
+  rowSelector: string
+) => {
+  const hostHeight = await testHelpers.getPromptRowHeight(PROMPT_TREE_HOST_SELECTOR)
+  const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(PROMPT_TREE_HOST_SELECTOR)
+  const maxScrollTop = Math.max(0, scrollHeight - hostHeight)
+  const stepPx = Math.max(1, Math.round(hostHeight * 0.8))
+
+  for (let scrollTopPx = 0; scrollTopPx <= maxScrollTop; scrollTopPx += stepPx) {
+    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, scrollTopPx)
+    if ((await mainWindow.locator(rowSelector).count()) > 0) {
+      return
+    }
+  }
+
+  throw new Error(`Missing prompt tree row: ${rowSelector}`)
+}
+
+describe('Prompt folder prompt tree', () => {
+  test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -28,18 +48,12 @@ describe('Prompt folder outliner', () => {
 
     await testHelpers.navigateToPromptFolders(LONG_SINGLE_LINE_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.waitForSelector(OUTLINER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    // Scroll the outliner so the 30th row is rendered before clicking it.
-    await testHelpers.scrollVirtualWindowTo(
-      OUTLINER_HOST_SELECTOR,
-      (TARGET_INDEX - 1) * OUTLINER_ROW_HEIGHT_PX
-    )
-
-    const outlinerButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
-      hasText: TARGET_PROMPT_TITLE
-    })
-    await outlinerButton.click()
+    await scrollPromptTreeRowIntoView(mainWindow, testHelpers, TARGET_PROMPT_TREE_ROW_SELECTOR)
+    const promptTreeButton = mainWindow.locator(TARGET_PROMPT_TREE_ROW_SELECTOR)
+    await expect(promptTreeButton).toHaveText(TARGET_PROMPT_TITLE)
+    await promptTreeButton.click()
 
     await mainWindow.waitForSelector(
       `${PROMPT_FOLDER_HOST_SELECTOR} ${PROMPT_EDITOR_PREFIX_SELECTOR}`,
@@ -78,10 +92,12 @@ describe('Prompt folder outliner', () => {
     const expectedCenteredRowId = `prompt-editor-${TARGET_PROMPT_ID}`
     expect(centeredRowId).toBe(expectedCenteredRowId)
 
-    await expect(outlinerButton).toHaveAttribute('aria-current', 'true')
+    await expect(promptTreeButton).toHaveAttribute('data-active', 'true')
   })
 
-  test('keeps folder settings selected after outliner scroll to top', async ({ testSetup }) => {
+  test('scrolls back to folder settings when selecting settings in the prompt tree', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -90,17 +106,26 @@ describe('Prompt folder outliner', () => {
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.waitForSelector(OUTLINER_HOST_SELECTOR, { state: 'attached' })
-
-    const folderSettingsButton = mainWindow.locator(`${OUTLINER_HOST_SELECTOR} button`, {
-      hasText: 'Folder Settings'
-    })
-    await expect(folderSettingsButton).toHaveAttribute('aria-current', 'true')
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, SHORT_SCROLL_TARGET_PX)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBeGreaterThan(0)
 
-    await folderSettingsButton.click()
+    const folderSettingsSelector = '[data-testid="prompt-folder-settings-Short"]'
+    await mainWindow.evaluate((selector) => {
+      const button = document.querySelector<HTMLButtonElement>(selector)
+      if (!button) {
+        throw new Error(`Missing prompt tree row: ${selector}`)
+      }
+      button.click()
+    }, folderSettingsSelector)
+    const folderSettingsButton = mainWindow.locator(folderSettingsSelector)
 
-    await expect(folderSettingsButton).toHaveAttribute('aria-current', 'true')
+    await expect(folderSettingsButton).toHaveAttribute('data-active', 'true')
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBeLessThan(100)
   })
 })

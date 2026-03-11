@@ -22,7 +22,7 @@
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
   } from './promptFolderSettingsSizing'
-  import type { ActiveOutlinerRow, PromptFocusRequest } from './promptFolderScreenController.svelte.ts'
+  import type { ActivePromptTreeRow, PromptFocusRequest } from './promptFolderScreenController.svelte.ts'
 
   type PromptFolderRow =
     | { kind: 'folder-settings' }
@@ -58,7 +58,7 @@
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
-    onCenterRowChange: (row: ActiveOutlinerRow | null) => void
+    onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
     onInitialCenterRowApplied: () => void
   }

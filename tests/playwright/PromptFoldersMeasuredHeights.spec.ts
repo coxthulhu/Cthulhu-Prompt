@@ -10,21 +10,23 @@ import {
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
+const PROMPT_TREE_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const FIRST_PROMPT_SELECTOR = '[data-testid="prompt-editor-measurement-1"]'
 const LAST_SHORT_PROMPT_SELECTOR = '[data-testid="prompt-editor-short-60"]'
-const OUTLINER_HOST_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
 const MEASUREMENT_FOLDER_NAME = 'Long Wrapped Singles'
 const SHORT_FOLDER_NAME = 'Short'
 const LONG_FOLDER_NAME = 'Long'
 const TINY_SCROLL_TARGET_PX = 10
 
-const getActiveOutlinerTitle = async (mainWindow: Page): Promise<string | null> => {
+const getActivePromptTreeEntryTestId = async (mainWindow: Page): Promise<string | null> => {
   return await mainWindow.evaluate((hostSelector) => {
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
-    const activeButton = host.querySelector<HTMLButtonElement>('button[aria-current="true"]')
-    return activeButton?.textContent?.trim() ?? null
-  }, OUTLINER_HOST_SELECTOR)
+    const activeButton = host.querySelector<HTMLButtonElement>(
+      'button[data-active="true"][data-testid^="prompt-folder-"]'
+    )
+    return activeButton?.getAttribute('data-testid') ?? null
+  }, PROMPT_TREE_SELECTOR)
 }
 
 describe('Prompt folders measured heights', () => {
@@ -119,28 +121,26 @@ describe('Prompt folders measured heights', () => {
 
     const savedScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     expect(savedScrollTop).toBeGreaterThan(0)
-    const savedOutlinerScrollTop = await testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR)
+    await mainWindow.waitForSelector(PROMPT_TREE_SELECTOR, { state: 'attached' })
     await expect
-      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .not.toBeNull()
-    const savedOutlinerTitle = await getActiveOutlinerTitle(mainWindow)
-    if (!savedOutlinerTitle) {
-      throw new Error('Expected an active outliner selection before navigation')
+    const savedPromptTreeEntryTestId = await getActivePromptTreeEntryTestId(mainWindow)
+    if (!savedPromptTreeEntryTestId) {
+      throw new Error('Expected an active prompt tree selection before navigation')
     }
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     const restoredScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
-    const restoredOutlinerScrollTop = await testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR)
     expect(restoredScrollTop).toBe(savedScrollTop)
-    expect(restoredOutlinerScrollTop).toBe(savedOutlinerScrollTop)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
     await expect
-      .poll(async () => getActiveOutlinerTitle(mainWindow))
-      .toBe(savedOutlinerTitle)
+      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
+      .toBe(savedPromptTreeEntryTestId)
 
     await testHelpers.navigateToPromptFolders(LONG_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
@@ -148,19 +148,18 @@ describe('Prompt folders measured heights', () => {
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     const restoredAfterSwitchScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
-    const restoredAfterSwitchOutlinerScrollTop =
-      await testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR)
     expect(restoredAfterSwitchScrollTop).toBe(savedScrollTop)
-    expect(restoredAfterSwitchOutlinerScrollTop).toBe(savedOutlinerScrollTop)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
     await expect
-      .poll(async () => getActiveOutlinerTitle(mainWindow))
-      .toBe(savedOutlinerTitle)
+      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
+      .toBe(savedPromptTreeEntryTestId)
   })
 
-  test('restores outliner selection after tiny scroll navigation restore', async ({ testSetup }) => {
+  test('restores prompt tree selection after tiny scroll navigation restore', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -176,11 +175,11 @@ describe('Prompt folders measured heights', () => {
       .toBeGreaterThan(0)
 
     await expect
-      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .not.toBeNull()
-    const savedOutlinerTitle = await getActiveOutlinerTitle(mainWindow)
-    if (!savedOutlinerTitle) {
-      throw new Error('Expected an active outliner selection before tiny-scroll navigation')
+    const savedPromptTreeEntryTestId = await getActivePromptTreeEntryTestId(mainWindow)
+    if (!savedPromptTreeEntryTestId) {
+      throw new Error('Expected an active prompt tree selection before tiny-scroll navigation')
     }
 
     await testHelpers.navigateToHomeScreen()
@@ -190,10 +189,10 @@ describe('Prompt folders measured heights', () => {
       .poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
     await expect
-      .poll(async () => getActiveOutlinerTitle(mainWindow))
+      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .not.toBeNull()
     await expect
-      .poll(async () => getActiveOutlinerTitle(mainWindow))
-      .toBe(savedOutlinerTitle)
+      .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
+      .toBe(savedPromptTreeEntryTestId)
   })
 })

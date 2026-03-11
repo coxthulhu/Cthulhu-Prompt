@@ -14,10 +14,8 @@ import {
   promptFolderDraftCollection
 } from '@renderer/data/Collections/PromptFolderDraftCollection'
 import {
-  USER_PERSISTENCE_DRAFT_ID,
-  userPersistenceDraftCollection
-} from '@renderer/data/Collections/UserPersistenceDraftCollection'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+  promptCollection
+} from '@renderer/data/Collections/PromptCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -26,20 +24,17 @@ import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolde
 import {
   clearPromptTreeJumpRequest,
   lookupPromptFolderDescriptionMeasuredHeight,
-  lookupPromptFolderOutlinerActiveRow,
-  lookupPromptFolderOutlinerScrollTop,
+  lookupPromptFolderPromptTreeActiveRow,
   lookupPromptFolderScrollTop,
   lookupPromptTreeJumpRequest,
-  recordPromptFolderOutlinerActiveRow,
-  recordPromptFolderOutlinerScrollTop,
+  recordPromptFolderPromptTreeActiveRow,
   recordPromptFolderScrollTop,
   type PromptTreeJumpTarget
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
 import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
-import { setPromptOutlinerWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
 import {
-  lookupWorkspacePersistedPromptFolderOutlinerEntryId,
-  setPromptFolderOutlinerEntryIdWithAutosave
+  lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
+  setPromptFolderPromptTreeEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
 import type {
@@ -55,15 +50,14 @@ import {
 import type { PromptFolderFindItem } from './find/promptFolderFindTypes'
 import {
   PROMPT_FOLDER_SETTINGS_ROW_ID,
-  persistedOutlinerEntryIdToOutlinerRowId,
-  persistedOutlinerEntryIdToPromptFolderRowId,
+  persistedPromptTreeEntryIdToPromptFolderRowId,
   promptEditorRowId,
   promptFolderSettingsFindEntityId
 } from './promptFolderRowIds'
 import { estimatePromptFolderSettingsHeight } from './promptFolderSettingsSizing'
 import { SvelteDate } from 'svelte/reactivity'
 
-export type ActiveOutlinerRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
+export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
 
 type PromptFolderScreenControllerOptions = {
@@ -131,30 +125,22 @@ export const createPromptFolderScreenController = ({
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const getRestoredPromptFolderScrollTop = (): number => lookupPromptFolderScrollTop(promptFolderId) ?? 0
-  const getRestoredOutlinerScrollTop = (): number =>
-    lookupPromptFolderOutlinerScrollTop(promptFolderId) ?? 0
-  const getRestoredActiveOutlinerRow = (): ActiveOutlinerRow | null =>
-    lookupPromptFolderOutlinerActiveRow(promptFolderId)
+  const getRestoredActivePromptTreeRow = (): ActivePromptTreeRow | null =>
+    lookupPromptFolderPromptTreeActiveRow(promptFolderId)
 
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
-  let initialOutlinerScrollTopPx = $state(getRestoredOutlinerScrollTop())
   let initialPromptFolderCenterRowId = $state<string | null>(null)
-  let initialOutlinerCenterRowId = $state<string | null>(null)
-  let activeOutlinerRow = $state<ActiveOutlinerRow | null>(
-    getRestoredActiveOutlinerRow() ?? { kind: 'folder-settings' }
+  let activePromptTreeRow = $state<ActivePromptTreeRow | null>(
+    getRestoredActivePromptTreeRow() ?? { kind: 'folder-settings' }
   )
-  let latestCenteredOutlinerRow = $state<ActiveOutlinerRow | null>(getRestoredActiveOutlinerRow())
-  // Manual selection keeps the outliner highlight on the clicked row until the user scrolls.
-  let outlinerManualSelectionActive = $state(getRestoredPromptFolderScrollTop() <= 0)
-  let outlinerAutoScrollRequestId = $state(0)
-  const getUserPersistenceDraft = () => userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
-  const promptOutlinerDefaultWidthPx = getUserPersistenceDraft().promptOutlinerWidthPx
-  let sidebarWidthPx = $state(promptOutlinerDefaultWidthPx)
+  let latestCenteredPromptTreeRow = $state<ActivePromptTreeRow | null>(getRestoredActivePromptTreeRow())
+  // Manual selection keeps the prompt tree highlight on the clicked row until the user scrolls.
+  let promptTreeManualSelectionActive = $state(getRestoredPromptFolderScrollTop() <= 0)
   let scrollTopPx = $state(getRestoredPromptFolderScrollTop())
 
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
-  let pendingImmediateTreeJumpTarget = $state<ActiveOutlinerRow | null>(null)
+  let pendingImmediateTreeJumpTarget = $state<ActivePromptTreeRow | null>(null)
 
   const visiblePromptIds = $derived.by(() => {
     if (errorMessage) {
@@ -221,30 +207,30 @@ export const createPromptFolderScreenController = ({
     return nextItems
   })
 
-  const clearOutlinerManualSelection = () => {
-    outlinerManualSelectionActive = false
+  const clearPromptTreeManualSelection = () => {
+    promptTreeManualSelectionActive = false
   }
 
-  const toPersistedOutlinerEntryId = (row: ActiveOutlinerRow): string => {
+  const toPersistedPromptTreeEntryId = (row: ActivePromptTreeRow): string => {
     return row.kind === 'folder-settings' ? PROMPT_FOLDER_SETTINGS_ROW_ID : row.promptId
   }
 
-  const toActiveOutlinerRow = (target: PromptTreeJumpTarget): ActiveOutlinerRow => {
+  const toActivePromptTreeRow = (target: PromptTreeJumpTarget): ActivePromptTreeRow => {
     return target.kind === 'folder-settings'
       ? { kind: 'folder-settings' }
       : { kind: 'prompt', promptId: target.promptId }
   }
 
-  const toPromptFolderRowId = (row: ActiveOutlinerRow): string => {
+  const toPromptFolderRowId = (row: ActivePromptTreeRow): string => {
     return row.kind === 'folder-settings' ? PROMPT_FOLDER_SETTINGS_ROW_ID : promptEditorRowId(row.promptId)
   }
 
-  const setActiveOutlinerRow = (
-    nextRow: ActiveOutlinerRow | null,
+  const setActivePromptTreeRow = (
+    nextRow: ActivePromptTreeRow | null,
     options: { persistWorkspace?: boolean } = {}
   ) => {
-    activeOutlinerRow = nextRow
-    recordPromptFolderOutlinerActiveRow(promptFolderId, nextRow)
+    activePromptTreeRow = nextRow
+    recordPromptFolderPromptTreeActiveRow(promptFolderId, nextRow)
 
     if (options.persistWorkspace === false || !nextRow) {
       return
@@ -255,10 +241,10 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    setPromptFolderOutlinerEntryIdWithAutosave(
+    setPromptFolderPromptTreeEntryIdWithAutosave(
       workspaceId,
       promptFolderId,
-      toPersistedOutlinerEntryId(nextRow)
+      toPersistedPromptTreeEntryId(nextRow)
     )
   }
 
@@ -271,25 +257,19 @@ export const createPromptFolderScreenController = ({
     pendingInitialCenterRowApplyCount -= 1
   }
 
-  const handleInitialOutlinerCenterRowApplied = () => {
-    if (pendingInitialCenterRowApplyCount === 0) return
-    pendingInitialCenterRowApplyCount -= 1
-  }
-
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
     rowId,
     offsetPx,
     scrollType
   ) => {
-    clearOutlinerManualSelection()
+    clearPromptTreeManualSelection()
     scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
   }
 
-  const selectOutlinerRowAndCenter = (nextRow: ActiveOutlinerRow): boolean => {
+  const selectPromptTreeRowAndCenter = (nextRow: ActivePromptTreeRow): boolean => {
     if (!scrollToAndTrackRowCentered) return false
-    outlinerManualSelectionActive = true
-    setActiveOutlinerRow(nextRow)
-    outlinerAutoScrollRequestId += 1
+    promptTreeManualSelectionActive = true
+    setActivePromptTreeRow(nextRow)
     scrollToAndTrackRowCentered(toPromptFolderRowId(nextRow))
     return true
   }
@@ -338,47 +318,42 @@ export const createPromptFolderScreenController = ({
           ? PROMPT_FOLDER_SETTINGS_ROW_ID
           : treeJumpRequest.target.promptId
         : null
-    const persistedOutlinerEntryId = !initialTreeJumpEntryId && !canUseCachedData
-      ? lookupWorkspacePersistedPromptFolderOutlinerEntryId(workspaceId, promptFolderId)
+    const persistedPromptTreeEntryId = !initialTreeJumpEntryId && !canUseCachedData
+      ? lookupWorkspacePersistedPromptFolderPromptTreeEntryId(workspaceId, promptFolderId)
       : null
-    const initialOutlinerEntryId = initialTreeJumpEntryId ?? persistedOutlinerEntryId
-    const shouldApplyInitialOutlinerEntry = Boolean(initialOutlinerEntryId)
-    const shouldApplyPersistedOutlinerEntry = Boolean(persistedOutlinerEntryId)
-    const initialOutlinerRow: ActiveOutlinerRow | null = initialOutlinerEntryId
-      ? initialOutlinerEntryId === PROMPT_FOLDER_SETTINGS_ROW_ID
+    const initialPromptTreeEntryId = initialTreeJumpEntryId ?? persistedPromptTreeEntryId
+    const shouldApplyInitialPromptTreeEntry = Boolean(initialPromptTreeEntryId)
+    const shouldApplyPersistedPromptTreeEntry = Boolean(persistedPromptTreeEntryId)
+    const initialPromptTreeRow: ActivePromptTreeRow | null = initialPromptTreeEntryId
+      ? initialPromptTreeEntryId === PROMPT_FOLDER_SETTINGS_ROW_ID
         ? { kind: 'folder-settings' }
-        : { kind: 'prompt', promptId: initialOutlinerEntryId }
+        : { kind: 'prompt', promptId: initialPromptTreeEntryId }
       : null
     if (treeJumpRequest?.mode === 'initial') {
       clearPromptTreeJumpRequest(promptFolderId)
     }
     isLoading = !canUseCachedData
     shouldShowLoadingOverlay = !canUseCachedData
-    pendingInitialCenterRowApplyCount = shouldApplyInitialOutlinerEntry ? 2 : 0
+    pendingInitialCenterRowApplyCount = shouldApplyInitialPromptTreeEntry ? 1 : 0
     isCreatingPrompt = false
     errorMessage = null
-    initialPromptFolderCenterRowId = initialOutlinerEntryId
-      ? persistedOutlinerEntryIdToPromptFolderRowId(initialOutlinerEntryId)
-      : null
-    initialOutlinerCenterRowId = initialOutlinerEntryId
-      ? persistedOutlinerEntryIdToOutlinerRowId(initialOutlinerEntryId)
+    initialPromptFolderCenterRowId = initialPromptTreeEntryId
+      ? persistedPromptTreeEntryIdToPromptFolderRowId(initialPromptTreeEntryId)
       : null
     const restoredScrollTop = getRestoredPromptFolderScrollTop()
-    const restoredOutlinerScrollTop = getRestoredOutlinerScrollTop()
-    const restoredActiveOutlinerRow =
-      initialOutlinerRow ?? getRestoredActiveOutlinerRow() ?? { kind: 'folder-settings' }
+    const restoredActivePromptTreeRow =
+      initialPromptTreeRow ?? getRestoredActivePromptTreeRow() ?? { kind: 'folder-settings' }
     initialPromptFolderScrollTopPx = restoredScrollTop
-    initialOutlinerScrollTopPx = restoredOutlinerScrollTop
     scrollTopPx = restoredScrollTop
-    latestCenteredOutlinerRow = restoredActiveOutlinerRow
-    outlinerManualSelectionActive =
+    latestCenteredPromptTreeRow = restoredActivePromptTreeRow
+    promptTreeManualSelectionActive =
       treeJumpRequest?.mode === 'initial'
         ? true
-        : shouldApplyPersistedOutlinerEntry
+        : shouldApplyPersistedPromptTreeEntry
           ? false
           : restoredScrollTop <= 0
     pendingImmediateTreeJumpTarget = null
-    setActiveOutlinerRow(restoredActiveOutlinerRow, { persistWorkspace: false })
+    setActivePromptTreeRow(restoredActivePromptTreeRow, { persistWorkspace: false })
 
     void (async () => {
       try {
@@ -398,7 +373,7 @@ export const createPromptFolderScreenController = ({
   $effect(() => {
     const treeJumpRequest = lookupPromptTreeJumpRequest(promptFolderId)
     if (!treeJumpRequest || treeJumpRequest.mode !== 'immediate') return
-    pendingImmediateTreeJumpTarget = toActiveOutlinerRow(treeJumpRequest.target)
+    pendingImmediateTreeJumpTarget = toActivePromptTreeRow(treeJumpRequest.target)
     clearPromptTreeJumpRequest(promptFolderId)
   })
 
@@ -407,7 +382,7 @@ export const createPromptFolderScreenController = ({
     const target = pendingImmediateTreeJumpTarget
     if (!target || !scrollToAndTrackRowCentered) return
     if (target.kind === 'prompt' && !visiblePromptIds.includes(target.promptId)) return
-    if (!selectOutlinerRowAndCenter(target)) return
+    if (!selectPromptTreeRowAndCenter(target)) return
     pendingImmediateTreeJumpTarget = null
   })
 
@@ -459,14 +434,6 @@ export const createPromptFolderScreenController = ({
       },
       () => false
     )
-  }
-
-  const handleOutlinerClick = (nextPromptId: string) => {
-    selectOutlinerRowAndCenter({ kind: 'prompt', promptId: nextPromptId })
-  }
-
-  const handleOutlinerFolderSettingsClick = () => {
-    selectOutlinerRowAndCenter({ kind: 'folder-settings' })
   }
 
   const handleAddPrompt = async (previousPromptId: string | null) => {
@@ -562,16 +529,8 @@ export const createPromptFolderScreenController = ({
 
   const handleHeaderSegmentClick = (rowId: 'folder-settings' | 'prompt-header') => {
     if (!scrollToWithinWindowBand) return
-    clearOutlinerManualSelection()
+    clearPromptTreeManualSelection()
     scrollToWithinWindowBand(rowId, 0, 'minimal')
-  }
-
-  const setSidebarWidth = (nextWidth: number) => {
-    sidebarWidthPx = nextWidth
-  }
-
-  const setPromptOutlinerDesiredWidth = (nextDesiredWidth: number) => {
-    setPromptOutlinerWidthWithAutosave(nextDesiredWidth)
   }
 
   const setScrollToWithinWindowBand = (nextScrollToWithinWindowBand: ScrollToWithinWindowBand | null) => {
@@ -593,21 +552,16 @@ export const createPromptFolderScreenController = ({
     recordPromptFolderScrollTop(promptFolderId, nextScrollTop)
   }
 
-  const handleOutlinerScrollTopChange = (nextScrollTop: number) => {
-    recordPromptFolderOutlinerScrollTop(promptFolderId, nextScrollTop)
-  }
-
-  const handleVirtualCenterRowChange = (nextCenteredRow: ActiveOutlinerRow | null) => {
-    latestCenteredOutlinerRow = nextCenteredRow
-    if (outlinerManualSelectionActive) return
-    setActiveOutlinerRow(latestCenteredOutlinerRow)
+  const handleVirtualCenterRowChange = (nextCenteredRow: ActivePromptTreeRow | null) => {
+    latestCenteredPromptTreeRow = nextCenteredRow
+    if (promptTreeManualSelectionActive) return
+    setActivePromptTreeRow(latestCenteredPromptTreeRow)
   }
 
   const handleVirtualUserScroll = () => {
-    clearOutlinerManualSelection()
-    outlinerAutoScrollRequestId += 1
-    if (latestCenteredOutlinerRow) {
-      setActiveOutlinerRow(latestCenteredOutlinerRow)
+    clearPromptTreeManualSelection()
+    if (latestCenteredPromptTreeRow) {
+      setActivePromptTreeRow(latestCenteredPromptTreeRow)
     }
   }
 
@@ -623,12 +577,6 @@ export const createPromptFolderScreenController = ({
     },
     get promptEditorMinLines(): number {
       return promptEditorMinLines
-    },
-    get promptOutlinerDefaultWidthPx(): number {
-      return promptOutlinerDefaultWidthPx
-    },
-    get sidebarWidthPx(): number {
-      return sidebarWidthPx
     },
     get descriptionText(): string {
       return descriptionText
@@ -660,17 +608,8 @@ export const createPromptFolderScreenController = ({
     get initialPromptFolderCenterRowId(): string | null {
       return initialPromptFolderCenterRowId
     },
-    get initialOutlinerScrollTopPx(): number {
-      return initialOutlinerScrollTopPx
-    },
-    get initialOutlinerCenterRowId(): string | null {
-      return initialOutlinerCenterRowId
-    },
-    get activeOutlinerRow(): ActiveOutlinerRow | null {
-      return activeOutlinerRow
-    },
-    get outlinerAutoScrollRequestId(): number {
-      return outlinerAutoScrollRequestId
+    get activePromptTreeRow(): ActivePromptTreeRow | null {
+      return activePromptTreeRow
     },
     get findItems(): PromptFolderFindItem[] {
       return findItems
@@ -689,22 +628,16 @@ export const createPromptFolderScreenController = ({
     },
     scrollToWithinWindowBandWithManualClear,
     handleHeaderSegmentClick,
-    handleOutlinerClick,
-    handleOutlinerFolderSettingsClick,
     handleAddPrompt,
     handleDeletePrompt,
     handleMovePromptUp,
     handleMovePromptDown,
     handleDescriptionChange,
-    setSidebarWidth,
-    setPromptOutlinerDesiredWidth,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
     setViewportMetrics,
     handleVirtualScrollTopChange,
-    handleOutlinerScrollTopChange,
     handleInitialPromptFolderCenterRowApplied,
-    handleInitialOutlinerCenterRowApplied,
     handleVirtualCenterRowChange,
     handleVirtualUserScroll
   }

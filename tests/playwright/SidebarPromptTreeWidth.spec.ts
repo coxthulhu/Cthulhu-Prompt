@@ -46,7 +46,6 @@ const seedUserPersistence = async (
   electronApp: any,
   data: {
     appSidebarWidthPx: number
-    promptOutlinerWidthPx: number
   }
 ): Promise<void> => {
   await runSqlStatement(
@@ -55,19 +54,16 @@ const seedUserPersistence = async (
     INSERT INTO app_persistence (
       id,
       last_workspace_path,
-      app_sidebar_width_px,
-      prompt_outliner_width_px
+      app_sidebar_width_px
     )
     VALUES (
       1,
       NULL,
-      ${Math.round(data.appSidebarWidthPx)},
-      ${Math.round(data.promptOutlinerWidthPx)}
+      ${Math.round(data.appSidebarWidthPx)}
     )
     ON CONFLICT(id) DO UPDATE SET
       last_workspace_path = excluded.last_workspace_path,
-      app_sidebar_width_px = excluded.app_sidebar_width_px,
-      prompt_outliner_width_px = excluded.prompt_outliner_width_px
+      app_sidebar_width_px = excluded.app_sidebar_width_px
     `
   )
 }
@@ -120,11 +116,8 @@ test.describe('Sidebar Prompt Tree Width', () => {
     electronApp,
     testSetup
   }) => {
-    test.fail()
-
     await seedUserPersistence(electronApp, {
-      appSidebarWidthPx: 260,
-      promptOutlinerWidthPx: 240
+      appSidebarWidthPx: 260
     })
     await seedWindowPersistence(electronApp, {
       x: 0,
@@ -140,19 +133,11 @@ test.describe('Sidebar Prompt Tree Width', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-outliner-virtual-window"] button', {
-        hasText: 'Bug Analysis'
-      })
-    ).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')).toBeVisible()
     const developmentWidth = await getSidebarWidthByHandle(mainWindow, APP_SIDEBAR_HANDLE_TEST_ID)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-outliner-virtual-window"] button', {
-        hasText: 'Simple Greeting'
-      })
-    ).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-simple-1"]')).toBeVisible()
     const examplesWidth = await getSidebarWidthByHandle(mainWindow, APP_SIDEBAR_HANDLE_TEST_ID)
 
     expect(examplesWidth).toBe(developmentWidth)

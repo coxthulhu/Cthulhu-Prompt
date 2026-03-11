@@ -22,7 +22,7 @@ const moveUpSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
 const moveDownSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
-const PROMPT_OUTLINER_SELECTOR = '[data-testid="prompt-outliner-virtual-window"]'
+const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-folder-prompt-'
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
   return await page.evaluate((selector: string) => {
@@ -33,15 +33,13 @@ const getPromptEditorIds = async (page: any): Promise<string[]> => {
   }, PROMPT_EDITOR_PREFIX_SELECTOR)
 }
 
-const getOutlinerPromptTitles = async (page: any): Promise<string[]> => {
-  return await page.evaluate((selector: string) => {
-    const outliner = document.querySelector<HTMLElement>(selector)
-    if (!outliner) return []
-
-    return Array.from(outliner.querySelectorAll<HTMLButtonElement>('button'))
-      .map((button) => button.textContent?.trim() ?? '')
-      .filter((title) => title.length > 0 && title !== 'Folder Settings')
-  }, PROMPT_OUTLINER_SELECTOR)
+const getPromptTreePromptRowIds = async (page: any): Promise<string[]> => {
+  return await page.evaluate((prefix: string) => {
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-testid]'))
+      .map((element) => element.getAttribute('data-testid') ?? '')
+      .filter((testId) => testId.startsWith(prefix))
+      .map((testId) => testId.replace(prefix, ''))
+  }, PROMPT_TREE_PROMPT_ROW_PREFIX)
 }
 
 const waitForPromptCount = async (page: any, count: number) => {
@@ -210,18 +208,15 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
-    const expectedTitleOrder = fiveNewIds.map((promptId) => expectedById.get(promptId)!.title)
-    const outlinerTitles = await getOutlinerPromptTitles(mainWindow)
-    const finalTitleOrder = outlinerTitles.filter((title) => expectedTitleOrder.includes(title))
-    expect(finalTitleOrder).toEqual(expectedTitleOrder)
+    const promptTreePromptIds = await getPromptTreePromptRowIds(mainWindow)
+    const finalPromptTreeOrder = promptTreePromptIds.filter((promptId) => fiveNewIds.includes(promptId))
+    expect(finalPromptTreeOrder).toEqual(fiveNewIds)
 
     for (const promptId of fiveNewIds) {
       const expected = expectedById.get(promptId)!
-      const outlinerButton = mainWindow.locator(
-        `${PROMPT_OUTLINER_SELECTOR} button:has-text("${expected.title}")`
-      )
-      await outlinerButton.scrollIntoViewIfNeeded()
-      await outlinerButton.click()
+      const promptTreeRow = mainWindow.locator(`[data-testid="prompt-folder-prompt-${promptId}"]`)
+      await expect(promptTreeRow).toBeVisible()
+      await promptTreeRow.click()
       await expectPromptContent(mainWindow, promptId, expected)
     }
   })

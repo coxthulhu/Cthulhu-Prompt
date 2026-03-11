@@ -10,10 +10,10 @@
   } from 'lucide-svelte'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
-    lookupPromptFolderOutlinerActiveRow,
+    lookupPromptFolderPromptTreeActiveRow,
     lookupPromptTreeJumpRequest,
     recordPromptTreeJumpRequest,
-    type PromptFolderOutlinerActiveRow,
+    type PromptFolderPromptTreeActiveRow,
     type PromptTreeJumpTarget
   } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
@@ -123,7 +123,7 @@
     }
   }
 
-  const trackedOutlinerRow = $derived.by((): PromptFolderOutlinerActiveRow | null => {
+  const trackedPromptTreeRow = $derived.by((): PromptFolderPromptTreeActiveRow | null => {
     if (!isPromptFoldersScreenActive || !selectedPromptFolderId) {
       return null
     }
@@ -133,25 +133,25 @@
       return pendingInitialTreeJumpRequest.target
     }
 
-    return lookupPromptFolderOutlinerActiveRow(selectedPromptFolderId)
+    return lookupPromptFolderPromptTreeActiveRow(selectedPromptFolderId)
   })
 
   const trackedTreeRowId = $derived.by((): string | null => {
-    if (!selectedPromptFolderId || !trackedOutlinerRow) {
+    if (!selectedPromptFolderId || !trackedPromptTreeRow) {
       return null
     }
 
-    return trackedOutlinerRow.kind === 'folder-settings'
+    return trackedPromptTreeRow.kind === 'folder-settings'
       ? folderSettingsRowId(selectedPromptFolderId)
-      : folderPromptRowId(selectedPromptFolderId, trackedOutlinerRow.promptId)
+      : folderPromptRowId(selectedPromptFolderId, trackedPromptTreeRow.promptId)
   })
 
   const isTreeEntryActive = (folderId: string, target: PromptTreeJumpTarget): boolean => {
-    if (!isPromptFoldersScreenActive || selectedPromptFolderId !== folderId || !trackedOutlinerRow) {
+    if (!isPromptFoldersScreenActive || selectedPromptFolderId !== folderId || !trackedPromptTreeRow) {
       return false
     }
 
-    if (target.kind !== trackedOutlinerRow.kind) {
+    if (target.kind !== trackedPromptTreeRow.kind) {
       return false
     }
 
@@ -159,11 +159,11 @@
       return true
     }
 
-    if (trackedOutlinerRow.kind !== 'prompt') {
+    if (trackedPromptTreeRow.kind !== 'prompt') {
       return false
     }
 
-    return trackedOutlinerRow.promptId === target.promptId
+    return trackedPromptTreeRow.promptId === target.promptId
   }
 
   const queuePromptTreeJumpRequest = (

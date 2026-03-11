@@ -1,17 +1,17 @@
-import type { WorkspacePromptFolderOutlinerEntry } from '@shared/UserPersistence'
+import type { WorkspacePromptFolderPromptTreeEntry } from '@shared/UserPersistence'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedWorkspacePersistenceAutosaveUpdate } from '../Mutations/WorkspacePersistenceMutations'
 
-const DEFAULT_OUTLINER_ENTRY_ID = 'folder-settings'
+const DEFAULT_PROMPT_TREE_ENTRY_ID = 'folder-settings'
 
-const upsertPromptFolderOutlinerEntry = (
-  entries: WorkspacePromptFolderOutlinerEntry[],
+const upsertPromptFolderPromptTreeEntry = (
+  entries: WorkspacePromptFolderPromptTreeEntry[],
   promptFolderId: string,
-  outlinerEntryId: string
-): WorkspacePromptFolderOutlinerEntry[] => {
+  promptTreeEntryId: string
+): WorkspacePromptFolderPromptTreeEntry[] => {
   const existingIndex = entries.findIndex((entry) => entry.promptFolderId === promptFolderId)
 
   if (existingIndex === -1) {
@@ -19,13 +19,13 @@ const upsertPromptFolderOutlinerEntry = (
       ...entries,
       {
         promptFolderId,
-        outlinerEntryId,
+        promptTreeEntryId,
         folderDescriptionEditorViewStateJson: null
       }
     ]
   }
 
-  if (entries[existingIndex]?.outlinerEntryId === outlinerEntryId) {
+  if (entries[existingIndex]?.promptTreeEntryId === promptTreeEntryId) {
     return entries
   }
 
@@ -33,28 +33,28 @@ const upsertPromptFolderOutlinerEntry = (
   nextEntries[existingIndex] = {
     ...nextEntries[existingIndex],
     promptFolderId,
-    outlinerEntryId
+    promptTreeEntryId
   }
   return nextEntries
 }
 
-const applyPromptFolderOutlinerEntry = (
-  record: { promptFolderOutlinerEntries: WorkspacePromptFolderOutlinerEntry[] },
+const applyPromptFolderPromptTreeEntry = (
+  record: { promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[] },
   promptFolderId: string,
-  outlinerEntryId: string
+  promptTreeEntryId: string
 ): void => {
-  record.promptFolderOutlinerEntries = upsertPromptFolderOutlinerEntry(
-    record.promptFolderOutlinerEntries,
+  record.promptFolderPromptTreeEntries = upsertPromptFolderPromptTreeEntry(
+    record.promptFolderPromptTreeEntries,
     promptFolderId,
-    outlinerEntryId
+    promptTreeEntryId
   )
 }
 
 const upsertPromptFolderDescriptionEditorViewState = (
-  entries: WorkspacePromptFolderOutlinerEntry[],
+  entries: WorkspacePromptFolderPromptTreeEntry[],
   promptFolderId: string,
   viewStateJson: string
-): WorkspacePromptFolderOutlinerEntry[] => {
+): WorkspacePromptFolderPromptTreeEntry[] => {
   const existingIndex = entries.findIndex((entry) => entry.promptFolderId === promptFolderId)
 
   if (existingIndex === -1) {
@@ -62,7 +62,7 @@ const upsertPromptFolderDescriptionEditorViewState = (
       ...entries,
       {
         promptFolderId,
-        outlinerEntryId: DEFAULT_OUTLINER_ENTRY_ID,
+        promptTreeEntryId: DEFAULT_PROMPT_TREE_ENTRY_ID,
         folderDescriptionEditorViewStateJson: viewStateJson
       }
     ]
@@ -82,18 +82,18 @@ const upsertPromptFolderDescriptionEditorViewState = (
 }
 
 const applyPromptFolderDescriptionEditorViewState = (
-  record: { promptFolderOutlinerEntries: WorkspacePromptFolderOutlinerEntry[] },
+  record: { promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[] },
   promptFolderId: string,
   viewStateJson: string
 ): void => {
-  record.promptFolderOutlinerEntries = upsertPromptFolderDescriptionEditorViewState(
-    record.promptFolderOutlinerEntries,
+  record.promptFolderPromptTreeEntries = upsertPromptFolderDescriptionEditorViewState(
+    record.promptFolderPromptTreeEntries,
     promptFolderId,
     viewStateJson
   )
 }
 
-export const lookupWorkspacePersistedPromptFolderOutlinerEntryId = (
+export const lookupWorkspacePersistedPromptFolderPromptTreeEntryId = (
   workspaceId: string,
   promptFolderId: string
 ): string | null => {
@@ -102,10 +102,10 @@ export const lookupWorkspacePersistedPromptFolderOutlinerEntryId = (
     return null
   }
 
-  const persistedEntry = draftRecord.promptFolderOutlinerEntries.find(
+  const persistedEntry = draftRecord.promptFolderPromptTreeEntries.find(
     (entry) => entry.promptFolderId === promptFolderId
   )
-  return persistedEntry?.outlinerEntryId ?? null
+  return persistedEntry?.promptTreeEntryId ?? null
 }
 
 export const lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson = (
@@ -117,28 +117,28 @@ export const lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson 
     return null
   }
 
-  const persistedEntry = draftRecord.promptFolderOutlinerEntries.find(
+  const persistedEntry = draftRecord.promptFolderPromptTreeEntries.find(
     (entry) => entry.promptFolderId === promptFolderId
   )
   return persistedEntry?.folderDescriptionEditorViewStateJson ?? null
 }
 
-export const setPromptFolderOutlinerEntryIdWithAutosave = (
+export const setPromptFolderPromptTreeEntryIdWithAutosave = (
   workspaceId: string,
   promptFolderId: string,
-  outlinerEntryId: string
+  promptTreeEntryId: string
 ): void => {
   const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
   if (!draftRecord) {
     return
   }
 
-  const nextEntries = upsertPromptFolderOutlinerEntry(
-    draftRecord.promptFolderOutlinerEntries,
+  const nextEntries = upsertPromptFolderPromptTreeEntry(
+    draftRecord.promptFolderPromptTreeEntries,
     promptFolderId,
-    outlinerEntryId
+    promptTreeEntryId
   )
-  if (nextEntries === draftRecord.promptFolderOutlinerEntries) {
+  if (nextEntries === draftRecord.promptFolderPromptTreeEntries) {
     return
   }
 
@@ -147,10 +147,10 @@ export const setPromptFolderOutlinerEntryIdWithAutosave = (
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        applyPromptFolderOutlinerEntry(draft, promptFolderId, outlinerEntryId)
+        applyPromptFolderPromptTreeEntry(draft, promptFolderId, promptTreeEntryId)
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
-        applyPromptFolderOutlinerEntry(draft, promptFolderId, outlinerEntryId)
+        applyPromptFolderPromptTreeEntry(draft, promptFolderId, promptTreeEntryId)
       })
     }
   })
@@ -171,11 +171,11 @@ export const setPromptFolderDescriptionEditorViewStateWithAutosave = (
   }
 
   const nextEntries = upsertPromptFolderDescriptionEditorViewState(
-    draftRecord.promptFolderOutlinerEntries,
+    draftRecord.promptFolderPromptTreeEntries,
     promptFolderId,
     viewStateJson
   )
-  if (nextEntries === draftRecord.promptFolderOutlinerEntries) {
+  if (nextEntries === draftRecord.promptFolderPromptTreeEntries) {
     return
   }
 

@@ -4,22 +4,20 @@ import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 export type UserPersistence = {
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
-  promptOutlinerWidthPx: number
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   lastWorkspacePath: null,
-  appSidebarWidthPx: 275,
-  promptOutlinerWidthPx: 200
+  appSidebarWidthPx: 275
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
 
 export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
 
-export type WorkspacePromptFolderOutlinerEntry = {
+export type WorkspacePromptFolderPromptTreeEntry = {
   promptFolderId: string
-  outlinerEntryId: string
+  promptTreeEntryId: string
   folderDescriptionEditorViewStateJson: string | null
 }
 
@@ -27,7 +25,7 @@ export type WorkspacePersistence = {
   workspaceId: string
   selectedScreen: PersistedWorkspaceScreen
   selectedPromptFolderId: string | null
-  promptFolderOutlinerEntries: WorkspacePromptFolderOutlinerEntry[]
+  promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
 }
 
 export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
@@ -35,16 +33,16 @@ export const createDefaultWorkspacePersistence = (workspaceId: string): Workspac
     workspaceId,
     selectedScreen: 'home',
     selectedPromptFolderId: null,
-    promptFolderOutlinerEntries: []
+    promptFolderPromptTreeEntries: []
   }
 }
 
-export const cloneWorkspacePromptFolderOutlinerEntries = (
-  entries: WorkspacePromptFolderOutlinerEntry[]
-): WorkspacePromptFolderOutlinerEntry[] => {
+export const cloneWorkspacePromptFolderPromptTreeEntries = (
+  entries: WorkspacePromptFolderPromptTreeEntry[]
+): WorkspacePromptFolderPromptTreeEntry[] => {
   return entries.map((entry) => ({
     promptFolderId: entry.promptFolderId,
-    outlinerEntryId: entry.outlinerEntryId,
+    promptTreeEntryId: entry.promptTreeEntryId,
     folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson
   }))
 }
@@ -59,8 +57,8 @@ export const toSerializableWorkspacePersistence = (
     selectedScreen,
     selectedPromptFolderId:
       selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null,
-    promptFolderOutlinerEntries: cloneWorkspacePromptFolderOutlinerEntries(
-      workspacePersistence.promptFolderOutlinerEntries
+    promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
+      workspacePersistence.promptFolderPromptTreeEntries
     )
   }
 }
@@ -116,15 +114,10 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
     typeof value.appSidebarWidthPx === 'number'
       ? Math.round(value.appSidebarWidthPx)
       : DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
-  const promptOutlinerWidthPx =
-    typeof value.promptOutlinerWidthPx === 'number'
-      ? Math.round(value.promptOutlinerWidthPx)
-      : DEFAULT_USER_PERSISTENCE.promptOutlinerWidthPx
 
   return {
     lastWorkspacePath,
-    appSidebarWidthPx,
-    promptOutlinerWidthPx
+    appSidebarWidthPx
   }
 }
 
@@ -136,14 +129,14 @@ const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen
   return 'home'
 }
 
-const parseWorkspacePromptFolderOutlinerEntry = (
+const parseWorkspacePromptFolderPromptTreeEntry = (
   value: unknown
-): WorkspacePromptFolderOutlinerEntry | null => {
+): WorkspacePromptFolderPromptTreeEntry | null => {
   if (!isRecord(value)) {
     return null
   }
 
-  if (typeof value.promptFolderId !== 'string' || typeof value.outlinerEntryId !== 'string') {
+  if (typeof value.promptFolderId !== 'string' || typeof value.promptTreeEntryId !== 'string') {
     return null
   }
 
@@ -158,22 +151,22 @@ const parseWorkspacePromptFolderOutlinerEntry = (
 
   return {
     promptFolderId: value.promptFolderId,
-    outlinerEntryId: value.outlinerEntryId,
+    promptTreeEntryId: value.promptTreeEntryId,
     folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null
   }
 }
 
-const parseWorkspacePromptFolderOutlinerEntries = (
+const parseWorkspacePromptFolderPromptTreeEntries = (
   value: unknown
-): WorkspacePromptFolderOutlinerEntry[] => {
+): WorkspacePromptFolderPromptTreeEntry[] => {
   if (!Array.isArray(value)) {
     return []
   }
 
-  const parsedEntries: WorkspacePromptFolderOutlinerEntry[] = []
+  const parsedEntries: WorkspacePromptFolderPromptTreeEntry[] = []
 
   for (const entry of value) {
-    const parsedEntry = parseWorkspacePromptFolderOutlinerEntry(entry)
+    const parsedEntry = parseWorkspacePromptFolderPromptTreeEntry(entry)
     if (!parsedEntry) {
       continue
     }
@@ -197,14 +190,14 @@ export const parseWorkspacePersistence = (
     value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
       ? value.selectedPromptFolderId
       : null
-  const promptFolderOutlinerEntries = parseWorkspacePromptFolderOutlinerEntries(
-    value.promptFolderOutlinerEntries
+  const promptFolderPromptTreeEntries = parseWorkspacePromptFolderPromptTreeEntries(
+    value.promptFolderPromptTreeEntries
   )
 
   return {
     workspaceId,
     selectedScreen,
     selectedPromptFolderId: selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null,
-    promptFolderOutlinerEntries
+    promptFolderPromptTreeEntries
   }
 }

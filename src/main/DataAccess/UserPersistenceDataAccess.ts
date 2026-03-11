@@ -14,7 +14,6 @@ const APP_PERSISTENCE_ID = 1
 type UserPersistenceRow = {
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
-  promptOutlinerWidthPx: number
 }
 
 type WindowPersistenceRow = {
@@ -52,8 +51,7 @@ export class UserPersistenceDataAccess {
         `
         SELECT
           last_workspace_path AS lastWorkspacePath,
-          app_sidebar_width_px AS appSidebarWidthPx,
-          prompt_outliner_width_px AS promptOutlinerWidthPx
+          app_sidebar_width_px AS appSidebarWidthPx
         FROM app_persistence
         WHERE id = ?
         `
@@ -68,8 +66,7 @@ export class UserPersistenceDataAccess {
     const db = SqliteDataAccess.getDatabase()
     const nextUserPersistence = {
       lastWorkspacePath: userPersistence.lastWorkspacePath,
-      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx),
-      promptOutlinerWidthPx: Math.round(userPersistence.promptOutlinerWidthPx)
+      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx)
     }
 
     db.prepare(
@@ -77,20 +74,17 @@ export class UserPersistenceDataAccess {
       INSERT INTO app_persistence (
         id,
         last_workspace_path,
-        app_sidebar_width_px,
-        prompt_outliner_width_px
+        app_sidebar_width_px
       )
-      VALUES (?, ?, ?, ?)
+      VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         last_workspace_path = excluded.last_workspace_path,
-        app_sidebar_width_px = excluded.app_sidebar_width_px,
-        prompt_outliner_width_px = excluded.prompt_outliner_width_px
+        app_sidebar_width_px = excluded.app_sidebar_width_px
       `
     ).run(
       APP_PERSISTENCE_ID,
       nextUserPersistence.lastWorkspacePath,
-      nextUserPersistence.appSidebarWidthPx,
-      nextUserPersistence.promptOutlinerWidthPx
+      nextUserPersistence.appSidebarWidthPx
     )
 
     return nextUserPersistence
@@ -190,7 +184,7 @@ export class UserPersistenceDataAccess {
         `
         SELECT
           prompt_folder_id AS promptFolderId,
-          outliner_entry_id AS outlinerEntryId,
+          prompt_tree_entry_id AS promptTreeEntryId,
           folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
@@ -202,7 +196,7 @@ export class UserPersistenceDataAccess {
       {
         selectedScreen: workspaceUiState.selectedScreen,
         selectedPromptFolderId: workspaceUiState.selectedPromptFolderId,
-        promptFolderOutlinerEntries: promptFolderUiStateRows
+        promptFolderPromptTreeEntries: promptFolderUiStateRows
       },
       workspaceId
     )
@@ -242,18 +236,18 @@ export class UserPersistenceDataAccess {
         INSERT INTO prompt_folder_ui_state (
           workspace_id,
           prompt_folder_id,
-          outliner_entry_id,
+          prompt_tree_entry_id,
           folder_description_editor_view_state_json
         )
         VALUES (?, ?, ?, ?)
         `
       )
 
-      for (const entry of serializableWorkspacePersistence.promptFolderOutlinerEntries) {
+      for (const entry of serializableWorkspacePersistence.promptFolderPromptTreeEntries) {
         insertPromptFolderUiState.run(
           serializableWorkspacePersistence.workspaceId,
           entry.promptFolderId,
-          entry.outlinerEntryId,
+          entry.promptTreeEntryId,
           entry.folderDescriptionEditorViewStateJson
         )
       }
@@ -277,7 +271,7 @@ export class UserPersistenceDataAccess {
           `
           SELECT
             prompt_folder_id AS promptFolderId,
-            outliner_entry_id AS outlinerEntryId,
+            prompt_tree_entry_id AS promptTreeEntryId,
             folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
@@ -285,7 +279,7 @@ export class UserPersistenceDataAccess {
         )
         .all(workspaceId) as Array<{
         promptFolderId: string
-        outlinerEntryId: string
+        promptTreeEntryId: string
         folderDescriptionEditorViewStateJson: string | null
       }>
 
@@ -296,7 +290,7 @@ export class UserPersistenceDataAccess {
         INSERT INTO prompt_folder_ui_state (
           workspace_id,
           prompt_folder_id,
-          outliner_entry_id,
+          prompt_tree_entry_id,
           folder_description_editor_view_state_json
         )
         VALUES (?, ?, ?, ?)
@@ -311,7 +305,7 @@ export class UserPersistenceDataAccess {
         insertPromptFolderUiState.run(
           workspaceId,
           entry.promptFolderId,
-          entry.outlinerEntryId,
+          entry.promptTreeEntryId,
           entry.folderDescriptionEditorViewStateJson
         )
       }

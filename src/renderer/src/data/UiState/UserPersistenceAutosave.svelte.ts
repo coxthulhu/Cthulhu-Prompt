@@ -29,33 +29,8 @@ const mutateAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void => {
   })
 }
 
-const mutatePromptOutlinerWidthWithAutosave = (promptOutlinerWidthPx: number): void => {
-  const roundedWidthPx = Math.round(promptOutlinerWidthPx)
-  const draftRecord = userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)
-
-  if (!draftRecord || draftRecord.promptOutlinerWidthPx === roundedWidthPx) {
-    return
-  }
-
-  mutatePacedUserPersistenceAutosaveUpdate({
-    debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
-      collections.userPersistence.update(USER_PERSISTENCE_ID, (draft) => {
-        draft.promptOutlinerWidthPx = roundedWidthPx
-      })
-      collections.userPersistenceDraft.update(USER_PERSISTENCE_DRAFT_ID, (draft) => {
-        draft.promptOutlinerWidthPx = roundedWidthPx
-      })
-    }
-  })
-}
-
 export const setAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void => {
   mutateAppSidebarWidthWithAutosave(appSidebarWidthPx)
-}
-
-export const setPromptOutlinerWidthWithAutosave = (promptOutlinerWidthPx: number): void => {
-  mutatePromptOutlinerWidthWithAutosave(promptOutlinerWidthPx)
 }
 
 export const flushUserPersistenceAutosaves = async (): Promise<void> => {
