@@ -197,6 +197,11 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(async () => getTitleSelectionInfo(), { timeout: 2000 })
       .toEqual({ selectedText: titleQuery, hasFocus: true })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
   })
 
   test('scrolls to a virtualized match and highlights it immediately', async ({ testSetup }) => {

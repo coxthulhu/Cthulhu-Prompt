@@ -34,9 +34,15 @@
     items: PromptFolderFindItem[]
     children?: Snippet
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
+    onRevealMatch?: (match: PromptFolderFindMatch) => void
   }
 
-  let { items, children, scrollToWithinWindowBand }: PromptFolderFindIntegrationProps = $props()
+  let {
+    items,
+    children,
+    scrollToWithinWindowBand,
+    onRevealMatch
+  }: PromptFolderFindIntegrationProps = $props()
 
   let isFindOpen = $state(false)
   let matchText = $state('')
@@ -113,7 +119,8 @@
     })
     matchCountsByEntity = nextCounts
     totalMatches = nextCounts.reduce(
-      (sum, entry) => sum + entry.sectionCounts.reduce((sectionSum, section) => sectionSum + section.count, 0),
+      (sum, entry) =>
+        sum + entry.sectionCounts.reduce((sectionSum, section) => sectionSum + section.count, 0),
       0
     )
 
@@ -137,7 +144,8 @@
       : getPromptFolderFindMatchForIndex(currentMatchIndex, matchCountsByEntity)
   )
 
-  const getItem = (entityId: string): PromptFolderFindItem | null => itemByEntityId.get(entityId) ?? null
+  const getItem = (entityId: string): PromptFolderFindItem | null =>
+    itemByEntityId.get(entityId) ?? null
   const getSectionText = (entityId: string, sectionKey: string): string => {
     const item = getItem(entityId)
     if (!item) return ''
@@ -177,6 +185,7 @@
   const setCurrentMatchIndex = (nextIndex: number) => {
     currentMatchIndex = nextIndex
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
+    onRevealMatch?.(match)
     recordSelectionFromMatch(match)
     void revealMatch(match)
   }
@@ -233,7 +242,11 @@
     return sectionRange.startMatchIndex + matchIndex
   }
 
-  const findSectionMatchIndex = (sectionText: string, offset: number, direction: TraversalDirection) =>
+  const findSectionMatchIndex = (
+    sectionText: string,
+    offset: number,
+    direction: TraversalDirection
+  ) =>
     direction === 1
       ? findMatchIndexAtOrAfter(sectionText, trimmedQuery, offset)
       : findMatchIndexBefore(sectionText, trimmedQuery, offset)
@@ -274,7 +287,10 @@
     return findMatchInItemFromSection(item, startSectionIndex, direction, boundaryOffset)
   }
 
-  const getMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor, direction: TraversalDirection) => {
+  const getMatchIndexFromAnchor = (
+    anchor: PromptFolderFindAnchor,
+    direction: TraversalDirection
+  ) => {
     if (trimmedQuery.length === 0 || totalMatches === 0) return null
     const startIndex = itemIndexByEntityId.get(anchor.entityId)
     if (startIndex == null) return null
@@ -304,7 +320,11 @@
       const nextIndex = (startIndex + step * direction + items.length) % items.length
       const match = findBoundaryMatchInItem(items[nextIndex], direction)
       if (!match) continue
-      return getGlobalMatchIndex(items[nextIndex].entityId, match.sectionKey, match.sectionMatchIndex)
+      return getGlobalMatchIndex(
+        items[nextIndex].entityId,
+        match.sectionKey,
+        match.sectionMatchIndex
+      )
     }
 
     return null
@@ -388,7 +408,9 @@
     if (groupIndex < 0) return
 
     const group = matchCountsByEntity[groupIndex]
-    const sectionIndex = group.sectionCounts.findIndex((section) => section.sectionKey === sectionKey)
+    const sectionIndex = group.sectionCounts.findIndex(
+      (section) => section.sectionKey === sectionKey
+    )
     if (sectionIndex < 0) return
     const section = group.sectionCounts[sectionIndex]
     if (section.count === count) return

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
@@ -9,17 +10,27 @@
   const controller = createPromptFolderScreenController({
     getPromptFolderId: () => promptFolderId
   })
+
+  // Side effect: persist the last selected row for this folder when the screen unmounts.
+  onDestroy(() => {
+    controller.persistActivePromptTreeRow()
+  })
 </script>
 
 <PromptFolderFindIntegration
   items={controller.findItems}
   scrollToWithinWindowBand={controller.scrollToWithinWindowBandWithManualClear}
+  onRevealMatch={controller.handleFindMatchReveal}
 >
   <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    <div class="flex h-9 border-b border-border items-center pl-6" style="background-color: #1F1F1F;">
+    <div
+      class="flex h-9 border-b border-border items-center pl-6"
+      style="background-color: #1F1F1F;"
+    >
       <div class="flex min-w-0 items-center text-lg font-semibold">
         <button
           type="button"
+          data-testid="prompt-folder-header-folder"
           class="min-w-0 truncate underline text-foreground/85 transition-colors hover:text-foreground"
           onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
         >
@@ -28,6 +39,7 @@
         <span class="mx-2">/</span>
         <button
           type="button"
+          data-testid="prompt-folder-header-section"
           class="underline whitespace-nowrap text-foreground/85 transition-colors hover:text-foreground"
           onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
         >
@@ -40,7 +52,9 @@
       {#if controller.errorMessage}
         <div class="flex-1 min-h-0 overflow-y-auto">
           <div class="pt-6 pl-6">
-            <h2 class="text-lg font-semibold mb-4">Prompts ({controller.visiblePromptIds.length})</h2>
+            <h2 class="text-lg font-semibold mb-4">
+              Prompts ({controller.visiblePromptIds.length})
+            </h2>
             <p class="mt-6 text-red-500">Error loading prompts: {controller.errorMessage}</p>
           </div>
         </div>

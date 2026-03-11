@@ -22,17 +22,22 @@ const runSqlQuery = async (
   sql: string
 ): Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }> => {
   const requestId = createTestRequestId('sql')
-  return await electronApp.evaluate(async ({ app }, payload) => {
-    const { query, requestId } = payload
-    return await new Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }>(
-      (resolve) => {
+  return await electronApp.evaluate(
+    async ({ app }, payload) => {
+      const { query, requestId } = payload
+      return await new Promise<{
+        success: boolean
+        rows?: Array<Record<string, unknown>>
+        error?: string
+      }>((resolve) => {
         app.once(`test-run-sql-query-ready:${requestId}`, (nextPayload) => {
           resolve(nextPayload)
         })
         app.emit('test-run-sql-query', { requestId, sql: query })
-      }
-    )
-  }, { query: sql, requestId })
+      })
+    },
+    { query: sql, requestId }
+  )
 }
 
 const runSqlStatement = async (electronApp: any, sql: string): Promise<void> => {
@@ -170,7 +175,9 @@ const seedWorkspacePersistence = async (
   }
 }
 
-const readUserPersistence = async (electronApp: any): Promise<{
+const readUserPersistence = async (
+  electronApp: any
+): Promise<{
   lastWorkspacePath: string | null
   appSidebarWidthPx: number
 }> => {
@@ -266,15 +273,18 @@ const readMainWindowState = async (
   isFullScreen: boolean
 }> => {
   const requestId = createTestRequestId('window-state')
-  const result = await electronApp.evaluate(async ({ app }, payload) => {
-    const { requestId } = payload
-    return await new Promise<{ success: boolean; state?: unknown; error?: string }>((resolve) => {
-      app.once(`test-read-main-window-state-ready:${requestId}`, (nextPayload) => {
-        resolve(nextPayload)
+  const result = await electronApp.evaluate(
+    async ({ app }, payload) => {
+      const { requestId } = payload
+      return await new Promise<{ success: boolean; state?: unknown; error?: string }>((resolve) => {
+        app.once(`test-read-main-window-state-ready:${requestId}`, (nextPayload) => {
+          resolve(nextPayload)
+        })
+        app.emit('test-read-main-window-state', { requestId })
       })
-      app.emit('test-read-main-window-state', { requestId })
-    })
-  }, { requestId })
+    },
+    { requestId }
+  )
 
   if (!result.success || !result.state) {
     throw new Error(result.error ?? 'Main window is not available')
@@ -453,7 +463,10 @@ describe('User Persistence', () => {
       .toBe(true)
   })
 
-  test('autosaves sidebar width changes to user persistence', async ({ electronApp, testSetup }) => {
+  test('autosaves sidebar width changes to user persistence', async ({
+    electronApp,
+    testSetup
+  }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -470,7 +483,10 @@ describe('User Persistence', () => {
       .toBe('240')
   })
 
-  test('reopens the persisted prompt-folder screen on startup', async ({ electronApp, testSetup }) => {
+  test('reopens the persisted prompt-folder screen on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
     const persistedWorkspacePath = '/ws/persisted-screen'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const persistedPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
@@ -571,6 +587,7 @@ describe('User Persistence', () => {
     const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')
     await bugAnalysisButton.click()
     await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
+    await testHelpers.navigateToHomeScreen()
 
     await expect
       .poll(
@@ -605,13 +622,16 @@ describe('User Persistence', () => {
     const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-folder-prompt-simple-1"]')
     await simpleGreetingButton.click()
     await expect(simpleGreetingButton).toHaveAttribute('data-active', 'true')
+    await testHelpers.navigateToHomeScreen()
 
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
           const entries = persisted.promptFolderPromptTreeEntries
-          const examplesEntry = entries.find((entry) => entry.promptFolderId === examplesPromptFolderId)
+          const examplesEntry = entries.find(
+            (entry) => entry.promptFolderId === examplesPromptFolderId
+          )
           const developmentEntry = entries.find(
             (entry) => entry.promptFolderId === developmentPromptFolderId
           )
@@ -647,10 +667,9 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
+    await expect(
+      mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')
+    ).toHaveAttribute('data-active', 'true')
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')
   })
 
@@ -718,7 +737,9 @@ describe('User Persistence', () => {
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     await expect
-      .poll(async () => testHelpers.getElementScrollTop('[data-testid="prompt-folder-virtual-window"]'))
+      .poll(async () =>
+        testHelpers.getElementScrollTop('[data-testid="prompt-folder-virtual-window"]')
+      )
       .toBe(0)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_TREE_HOST_SELECTOR))

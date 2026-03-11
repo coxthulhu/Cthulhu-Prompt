@@ -253,4 +253,24 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       mainWindow.locator('[data-testid^="prompt-folder-prompt-short-"][aria-current="true"]')
     ).toBeVisible()
   })
+
+  test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Short')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
+      'Prompts'
+    )
+
+    await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-prompt-short-1"]')
+    ).toHaveAttribute('data-active', 'true')
+  })
 })

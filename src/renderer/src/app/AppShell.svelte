@@ -42,8 +42,14 @@
     setWorkspaceSelectionContext,
     type WorkspaceSelectionContext
   } from './WorkspaceSelectionContext'
+  import {
+    createPromptNavigationContextValue,
+    promptNavigationRowToPersistedEntryId,
+    setPromptNavigationContext
+  } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
+  import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
@@ -68,8 +74,10 @@
       return getSelectedWorkspaceId()
     }
   }
+  const promptNavigation = createPromptNavigationContextValue()
   const windowControls = window.windowControls
-  const getUserPersistenceDraft = () => userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
+  const getUserPersistenceDraft = () =>
+    userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
   const appSidebarDefaultWidthPx = getUserPersistenceDraft().appSidebarWidthPx
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
@@ -78,6 +86,7 @@
 
   setSystemSettingsContext(systemSettings)
   setWorkspaceSelectionContext(workspaceSelection)
+  setPromptNavigationContext(promptNavigation)
 
   let activeScreen = $state<ScreenId>('home')
   const selectedWorkspace = $derived.by(() => {
@@ -203,6 +212,21 @@
 
   const isWorkspaceMissingError = (message?: string): boolean => {
     return message === 'Invalid workspace path'
+  }
+
+  const persistPromptNavigationSelection = () => {
+    const workspaceId = getSelectedWorkspaceId()
+    const selectedFolderId = promptNavigation.selectedFolderId
+    const selectedRow = promptNavigation.selectedRow
+    if (!workspaceId || !selectedFolderId || !selectedRow) {
+      return
+    }
+
+    setPromptFolderPromptTreeEntryIdWithAutosave(
+      workspaceId,
+      selectedFolderId,
+      promptNavigationRowToPersistedEntryId(selectedRow)
+    )
   }
 
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
@@ -333,6 +357,7 @@
   $effect(() => {
     const unsubscribe = windowControls.onCloseRequested(() => {
       void (async () => {
+        persistPromptNavigationSelection()
         captureRegisteredMonacoViewStates()
         await flushAllAutosaves()
         await windowControls.confirmClose()
