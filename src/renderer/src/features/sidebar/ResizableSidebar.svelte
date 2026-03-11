@@ -1,11 +1,5 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte'
-  import {
-    registerSidebar,
-    updateSidebar,
-    unregisterSidebar,
-    getSidebarWidth
-  } from './sidebarSizingState.svelte.ts'
 
   let {
     defaultWidth,
@@ -38,14 +32,8 @@
   }>()
 
   // Snapshot the initial width so prop updates don't override drag changes.
-  const getInitialWidth = () => defaultWidth
-  let desiredWidth = $state(getInitialWidth())
-  const sidebarId = registerSidebar({
-    desiredWidth: getInitialWidth(),
-    minWidth: untrack(() => minWidth),
-    maxWidth: untrack(() => maxWidth)
-  })
-  const width = $derived.by(() => getSidebarWidth(sidebarId) ?? desiredWidth)
+  let desiredWidth = $state(untrack(() => defaultWidth))
+  const width = $derived.by(() => Math.min(Math.max(desiredWidth, minWidth), maxWidth))
   let isDragging = $state(false)
   let startMouseX = 0
   let startWidth = 0
@@ -87,11 +75,6 @@
     }
   })
 
-  // Side effect: sync this sidebar's sizing preferences with the global coordinator.
-  $effect(() => {
-    updateSidebar(sidebarId, { desiredWidth, minWidth, maxWidth })
-  })
-
   // Side effect: keep external layouts in sync with the current sidebar width.
   $effect(() => {
     onWidthChange?.(width)
@@ -102,10 +85,9 @@
     onDesiredWidthChange?.(desiredWidth)
   })
 
-  // Ensure drag state is cleared and the sidebar unregisters if the component unmounts mid-drag.
+  // Ensure drag state is cleared if the component unmounts mid-drag.
   onDestroy(() => {
     stopDragging()
-    unregisterSidebar(sidebarId)
   })
 </script>
 
