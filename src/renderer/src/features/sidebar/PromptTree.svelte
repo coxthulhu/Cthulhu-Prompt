@@ -3,10 +3,12 @@
     ArrowRight,
     ChevronDown,
     ChevronRight,
+    FileText,
     Folder,
     Loader,
     Settings
   } from 'lucide-svelte'
+  import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -22,6 +24,10 @@
   } | {
     kind: 'folder-settings'
     folder: PromptFolder
+  } | {
+    kind: 'folder-prompt'
+    folder: PromptFolder
+    promptId: string
   }
 
   let {
@@ -58,6 +64,10 @@
     'folder-settings': {
       estimateHeight: () => 30,
       snippet: folderSettingsRow
+    },
+    'folder-prompt': {
+      estimateHeight: () => 30,
+      snippet: folderPromptRow
     }
   })
 
@@ -83,6 +93,11 @@
 
   const folderIconTestId = (folder: PromptFolder): string =>
     `prompt-folder-icon-${folder.folderName.replace(/\s+/g, '')}`
+
+  const folderSettingsIconTestId = (folder: PromptFolder): string =>
+    `prompt-folder-settings-icon-${folder.folderName.replace(/\s+/g, '')}`
+
+  const folderPromptTestId = (promptId: string): string => `prompt-folder-prompt-${promptId}`
 
   const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
     onPromptFolderSelect(promptFolderId)
@@ -113,6 +128,17 @@
             folder
           }
         })
+
+        for (const promptId of folder.promptIds) {
+          items.push({
+            id: `${folder.id}:prompt:${promptId}`,
+            row: {
+              kind: 'folder-prompt',
+              folder,
+              promptId
+            }
+          })
+        }
       }
     }
 
@@ -229,9 +255,23 @@
     >
       <Settings
         class="updatedSidebarPromptTreeSettingsIcon"
+        data-testid={folderSettingsIconTestId(props.row.folder)}
         aria-hidden="true"
       />
       <span class="updatedSidebarPromptTreeSettingsLabel">Folder Settings</span>
+    </button>
+  </div>
+{/snippet}
+
+{#snippet folderPromptRow(props)}
+  <div class="updatedSidebarPromptTreeSettingsRow">
+    <button
+      type="button"
+      data-testid={folderPromptTestId(props.row.promptId)}
+      class="updatedSidebarPromptTreeSettingsButton"
+    >
+      <FileText class="updatedSidebarPromptTreeSettingsIcon" aria-hidden="true" />
+      <span class="updatedSidebarPromptTreeSettingsLabel">{getPromptDisplayTitle(props.row.promptId)}</span>
     </button>
   </div>
 {/snippet}

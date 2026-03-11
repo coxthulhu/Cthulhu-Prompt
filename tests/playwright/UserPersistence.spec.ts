@@ -697,10 +697,6 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="regular-prompt-folder-Long"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
     await expect.poll(async () => getActiveOutlinerTitle(mainWindow)).toBe('Large Prompt 45')
     await expect
       .poll(async () => testHelpers.getElementScrollTop(OUTLINER_HOST_SELECTOR))

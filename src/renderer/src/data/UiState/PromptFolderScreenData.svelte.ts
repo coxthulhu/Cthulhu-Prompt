@@ -1,5 +1,4 @@
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { isPromptFull } from '@shared/Prompt'
 import { promptCollection } from '../Collections/PromptCollection'
 import {
   getPromptDraftState,
@@ -21,7 +20,13 @@ type PromptFolderScreenPromptData = {
 
 const getPromptFolderCount = (promptId: string): number => {
   const prompt = promptCollection.get(promptId)
-  return prompt && isPromptFull(prompt) ? prompt.promptFolderCount : 0
+  return prompt?.promptFolderCount ?? 0
+}
+
+export const getPromptDisplayTitle = (promptId: string): string => {
+  const promptDraftState = getPromptDraftState(promptId)
+  const trimmedTitle = promptDraftState.title.trim()
+  return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${getPromptFolderCount(promptId)}`
 }
 
 export const getPromptFolderScreenPromptData = (promptId: string): PromptFolderScreenPromptData => {

@@ -60,6 +60,7 @@ const createPromptSummary = (
 ): PromptSummaryData => ({
   id: 'prompt-1',
   title: 'Original title',
+  promptFolderCount: 0,
   ...overrides
 })
 

@@ -181,9 +181,27 @@ export async function clickPromptFolderItem(
 ): Promise<void> {
   const safeName = folderName.replace(/\s+/g, '')
   const testId = `regular-prompt-folder-${safeName}`
+  const folderSelector = `[data-testid="${testId}"]`
+  const promptTreeSelector = '[data-testid="prompt-tree-virtual-window"]'
 
-  await window.click(`[data-testid="${testId}"]`, { timeout })
-  await window.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
+  // Sidebar tree rows are virtualized, so scroll until the target folder row is mounted.
+  await scrollVirtualWindowTo(window, promptTreeSelector, 0)
+  const treeHeight = await getPromptRowHeight(window, promptTreeSelector)
+  const treeScrollHeight = await getVirtualWindowScrollHeight(window, promptTreeSelector)
+  const maxTreeScrollTop = Math.max(0, treeScrollHeight - treeHeight)
+  const treeStepPx = Math.max(1, Math.round(treeHeight * 0.8))
+
+  for (let scrollTopPx = 0; scrollTopPx <= maxTreeScrollTop; scrollTopPx += treeStepPx) {
+    const rowCount = await window.locator(folderSelector).count()
+    if (rowCount > 0) {
+      break
+    }
+    const nextScrollTopPx = Math.min(maxTreeScrollTop, scrollTopPx + treeStepPx)
+    await scrollVirtualWindowTo(window, promptTreeSelector, nextScrollTopPx)
+  }
+
+  await window.click(folderSelector, { timeout })
+  await window.waitForSelector(`${folderSelector}[data-active="true"]`, {
     state: 'attached',
     timeout
   })

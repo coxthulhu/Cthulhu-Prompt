@@ -7,6 +7,7 @@ const DEVELOPMENT_BUTTON = '[data-testid="regular-prompt-folder-Development"]'
 const EXAMPLES_TOGGLE = '[data-testid="prompt-folder-toggle-Examples"]'
 const EXAMPLES_SETTINGS = '[data-testid="prompt-folder-settings-Examples"]'
 const DEVELOPMENT_SETTINGS = '[data-testid="prompt-folder-settings-Development"]'
+const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -147,6 +148,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
     await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(0)
+    await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()

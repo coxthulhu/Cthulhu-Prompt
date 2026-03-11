@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
@@ -66,12 +66,6 @@
     })
     return items
   })
-
-  const getPromptDisplayTitle = (promptId: string): string => {
-    const promptData = getPromptFolderScreenPromptData(promptId)
-    const trimmedTitle = promptData.draft.title.trim()
-    return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptData.promptFolderCount}`
-  }
 
   const getActiveOutlinerRowId = (row: OutlinerActiveRow | null): string | null => {
     if (!row) return null

@@ -81,7 +81,8 @@ export const readPromptSummaries = (
   const prompts = parsed.prompts ?? []
   return prompts.map((prompt) => ({
     id: prompt.id,
-    title: prompt.title
+    title: prompt.title,
+    promptFolderCount: prompt.promptFolderCount
   }))
 }
 

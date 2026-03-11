@@ -4,6 +4,7 @@ import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 export type PromptSummary = {
   id: string
   title: string
+  promptFolderCount: number
   loadingState: 'summary'
 }
 
@@ -23,11 +24,12 @@ export type Prompt = PromptSummary | PromptFull
 export type PromptPersisted = Omit<PromptFull, 'loadingState'>
 
 // Prompt data loaded during workspace bootstrap for tree/title hydration.
-export type PromptSummaryData = Pick<PromptPersisted, 'id' | 'title'>
+export type PromptSummaryData = Pick<PromptPersisted, 'id' | 'title' | 'promptFolderCount'>
 
 export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary => ({
   id: prompt.id,
   title: prompt.title,
+  promptFolderCount: prompt.promptFolderCount,
   loadingState: 'summary'
 })
 
