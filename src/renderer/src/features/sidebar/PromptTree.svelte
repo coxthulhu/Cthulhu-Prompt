@@ -283,32 +283,32 @@
 {#snippet promptFolderRow(props)}
   {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
 
-  <div class="updatedSidebarPromptTreeRow group" data-active={isActive ? 'true' : 'false'}>
+  <div class="sidebarPromptTreeRow group" data-active={isActive ? 'true' : 'false'}>
     <button
       type="button"
       aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
       aria-expanded={isFolderExpanded(props.row.folder.id)}
       onclick={() => toggleFolderExpanded(props.row.folder.id)}
       data-testid={folderToggleTestId(props.row.folder)}
-      class="updatedSidebarPromptTreeToggleButton"
+      class="sidebarPromptTreeToggleButton"
     >
-      <span class="updatedSidebarPromptTreeChevronWrap">
+      <span class="sidebarPromptTreeChevronWrap">
         {#if isFolderExpanded(props.row.folder.id)}
-          <ChevronDown class="updatedSidebarPromptTreeChevronIcon" />
+          <ChevronDown class="sidebarPromptTreeChevronIcon" />
         {:else}
-          <ChevronRight class="updatedSidebarPromptTreeChevronIcon" />
+          <ChevronRight class="sidebarPromptTreeChevronIcon" />
         {/if}
       </span>
       <Folder
-        class="updatedSidebarPromptTreeFolderIcon"
+        class="sidebarPromptTreeFolderIcon"
         data-testid={folderIconTestId(props.row.folder)}
       />
-      <span class="updatedSidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
+      <span class="sidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
     </button>
 
     <!-- Count and open arrow share one slot; hover/focus swaps visibility. -->
-    <div class="updatedSidebarPromptTreeActionSlot">
-      <span class="updatedSidebarPromptTreeCountBadge updatedSidebarPromptTreeCountInActionSlot">
+    <div class="sidebarPromptTreeActionSlot">
+      <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
         {props.row.folder.promptIds.length}
       </span>
       <button
@@ -318,7 +318,7 @@
         data-testid={folderOpenTestId(props.row.folder)}
         data-size="default"
         data-active={isActive}
-        class="updatedSidebarPromptTreeOpenButton"
+        class="sidebarPromptTreeOpenButton"
       >
         <ArrowRight class="size-4" />
       </button>
@@ -360,7 +360,7 @@
 {#snippet folderSettingsRow(props)}
   {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
 
-  <div class="updatedSidebarPromptTreeSettingsRow">
+  <div class="sidebarPromptTreeSettingsRow">
     <button
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
@@ -368,14 +368,14 @@
       aria-current={isActive ? 'true' : undefined}
       onclick={(event) =>
         handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
-      class="updatedSidebarPromptTreeSettingsButton"
+      class="sidebarPromptTreeSettingsButton"
     >
       <Settings
-        class="updatedSidebarPromptTreeSettingsIcon"
+        class="sidebarPromptTreeSettingsIcon"
         data-testid={folderSettingsIconTestId(props.row.folder)}
         aria-hidden="true"
       />
-      <span class="updatedSidebarPromptTreeSettingsLabel">Folder Settings</span>
+      <span class="sidebarPromptTreeSettingsLabel">Folder Settings</span>
     </button>
   </div>
 {/snippet}
@@ -386,7 +386,7 @@
     promptNavigationPromptRow(props.row.promptId)
   )}
 
-  <div class="updatedSidebarPromptTreeSettingsRow">
+  <div class="sidebarPromptTreeSettingsRow">
     <button
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
@@ -398,10 +398,10 @@
           promptNavigationPromptRow(props.row.promptId),
           event
         )}
-      class="updatedSidebarPromptTreeSettingsButton"
+      class="sidebarPromptTreeSettingsButton"
     >
-      <FileText class="updatedSidebarPromptTreeSettingsIcon" aria-hidden="true" />
-      <span class="updatedSidebarPromptTreeSettingsLabel"
+      <FileText class="sidebarPromptTreeSettingsIcon" aria-hidden="true" />
+      <span class="sidebarPromptTreeSettingsLabel"
         >{getPromptDisplayTitle(props.row.promptId)}</span
       >
     </button>

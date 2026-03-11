@@ -121,9 +121,9 @@
 
 <aside
   data-testid="app-sidebar"
-  class="updatedSidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
+  class="sidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
 >
-  <div class="updatedSidebarTopLevelInsetWithInnerPadding pt-2">
+  <div class="sidebarTopLevelInsetWithInnerPadding pt-2">
     <div class="flex items-start gap-2 border-b border-white/8 pb-4">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
         <img
@@ -148,7 +148,7 @@
     </div>
   </div>
 
-  <div class="updatedSidebarTopLevelInsetWithInnerPadding py-3">
+  <div class="sidebarTopLevelInsetWithInnerPadding py-3">
     <div class="space-y-3 border-b border-white/8 pb-3">
       <ul class="grid w-full min-w-0 grid-cols-2 gap-2">
         {#each primaryNavItems as item (item.id)}
@@ -158,7 +158,7 @@
               testId={item.testId}
               icon={Icon}
               label={item.label}
-              class="updatedSidebarTopNavButton updatedSidebarTopNavButtonCentered"
+              class="sidebarTopNavButton sidebarTopNavButtonCentered"
               active={activeScreen === item.id}
               disabled={item.requiresWorkspace && !isWorkspaceReady}
               onclick={() => onNavigate(item.id)}
@@ -176,7 +176,7 @@
                 testId={item.testId}
                 icon={Icon}
                 label={item.label}
-                class={`updatedSidebarTopNavButton ${item.id === 'test-screen' ? 'updatedSidebarTopNavButtonCentered' : ''}`}
+                class={`sidebarTopNavButton ${item.id === 'test-screen' ? 'sidebarTopNavButtonCentered' : ''}`}
                 active={activeScreen === item.id}
                 disabled={item.requiresWorkspace && !isWorkspaceReady}
                 onclick={() => onNavigate(item.id)}
@@ -188,7 +188,7 @@
     </div>
   </div>
 
-  <div class="updatedSidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
+  <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
     <div class="mb-2 flex items-center justify-between">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Prompts</p>
@@ -211,7 +211,7 @@
   </div>
 
   <div
-    class="updatedSidebarTopLevelInset flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
+    class="sidebarTopLevelInset flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
   >
     <PromptTree
       {promptFolders}

@@ -1,38 +1,38 @@
-/* Shared visual refresh for the updated sidebar surface and top navigation buttons. */
+/* Shared visual refresh for the sidebar surface and top navigation buttons. */
 :root {
-  --updated-sidebar-gradient-top: #11131a;
-  --updated-sidebar-gradient-bottom: #0b0d12;
-  --updated-sidebar-mockup-border: rgb(255 255 255 / 10%);
+  --sidebar-gradient-top: #11131a;
+  --sidebar-gradient-bottom: #0b0d12;
+  --sidebar-mockup-border: rgb(255 255 255 / 10%);
 }
 
-.updatedSidebarSurface {
+.sidebarSurface {
   background: linear-gradient(
     180deg,
-    var(--updated-sidebar-gradient-top) 0%,
-    var(--updated-sidebar-gradient-bottom) 100%
+    var(--sidebar-gradient-top) 0%,
+    var(--sidebar-gradient-bottom) 100%
   );
 }
 
-.updatedSidebarTopLevelInset {
+.sidebarTopLevelInset {
   padding-left: 5px;
   padding-right: 3px;
 }
 
 /* Keep the pre-existing inner 0.5rem side spacing while moving 5px inset to top-level sections. */
-.updatedSidebarTopLevelInsetWithInnerPadding {
+.sidebarTopLevelInsetWithInnerPadding {
   padding-left: 13px;
   padding-right: 13px;
 }
 
-.updatedSidebarTitlebarSurface {
-  background-color: var(--updated-sidebar-gradient-top);
+.sidebarTitlebarSurface {
+  background-color: var(--sidebar-gradient-top);
 }
 
-.updatedSidebarFrameBorder {
-  border-color: var(--updated-sidebar-mockup-border);
+.sidebarFrameBorder {
+  border-color: var(--sidebar-mockup-border);
 }
 
-.updatedSidebarTopNavButton {
+.sidebarTopNavButton {
   height: 2.25rem;
   justify-content: flex-start;
   gap: 0.5rem;
@@ -43,22 +43,22 @@
   color: rgb(212 212 216);
 }
 
-.updatedSidebarTopNavButton:hover {
+.sidebarTopNavButton:hover {
   background-color: rgb(255 255 255 / 6%);
   color: rgb(255 255 255);
 }
 
-.updatedSidebarTopNavButton[data-active='true'] {
+.sidebarTopNavButton[data-active='true'] {
   border-color: rgb(255 255 255 / 12%);
   background-color: rgb(255 255 255 / 10%);
   color: rgb(255 255 255);
 }
 
-.updatedSidebarTopNavButtonCentered {
+.sidebarTopNavButtonCentered {
   justify-content: center;
 }
 
-.updatedSidebarPromptTreeRow {
+.sidebarPromptTreeRow {
   display: flex;
   height: 2.25rem;
   width: 100%;
@@ -73,18 +73,18 @@
     box-shadow 120ms ease-out;
 }
 
-.updatedSidebarPromptTreeRow:hover {
+.sidebarPromptTreeRow:hover {
   background-color: rgb(255 255 255 / 5%);
   color: rgb(255 255 255);
 }
 
-.updatedSidebarPromptTreeRow[data-active='true'] {
+.sidebarPromptTreeRow[data-active='true'] {
   background-color: rgb(255 255 255 / 10%);
   color: rgb(255 255 255);
   box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
 }
 
-.updatedSidebarPromptTreeToggleButton {
+.sidebarPromptTreeToggleButton {
   display: flex;
   height: 100%;
   min-width: 0;
@@ -98,7 +98,7 @@
   text-align: left;
 }
 
-.updatedSidebarPromptTreeChevronWrap {
+.sidebarPromptTreeChevronWrap {
   display: flex;
   height: 1.25rem;
   width: 1.25rem;
@@ -109,19 +109,19 @@
   color: rgb(156 156 168);
 }
 
-.updatedSidebarPromptTreeChevronIcon {
+.sidebarPromptTreeChevronIcon {
   height: 1rem;
   width: 1rem;
 }
 
-.updatedSidebarPromptTreeFolderIcon {
+.sidebarPromptTreeFolderIcon {
   height: 1rem;
   width: 1rem;
   flex-shrink: 0;
   color: rgb(198 198 208);
 }
 
-.updatedSidebarPromptTreeFolderLabel {
+.sidebarPromptTreeFolderLabel {
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -131,7 +131,7 @@
   font-weight: 500;
 }
 
-.updatedSidebarPromptTreeCountBadge {
+.sidebarPromptTreeCountBadge {
   flex-shrink: 0;
   border-radius: 0.375rem;
   background-color: rgb(255 255 255 / 7%);
@@ -141,7 +141,7 @@
   color: rgb(196 196 205);
 }
 
-.updatedSidebarPromptTreeActionSlot {
+.sidebarPromptTreeActionSlot {
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -149,16 +149,16 @@
   pointer-events: none;
 }
 
-.updatedSidebarPromptTreeActionSlot > * {
+.sidebarPromptTreeActionSlot > * {
   grid-area: 1 / 1;
 }
 
-.updatedSidebarPromptTreeCountInActionSlot {
+.sidebarPromptTreeCountInActionSlot {
   pointer-events: none;
   transition: opacity 120ms ease-out;
 }
 
-.updatedSidebarPromptTreeOpenButton {
+.sidebarPromptTreeOpenButton {
   display: inline-flex;
   height: 1.5rem;
   width: 1.5rem;
@@ -177,23 +177,23 @@
     color 120ms ease-out;
 }
 
-.updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeOpenButton,
-.updatedSidebarPromptTreeRow:focus-within .updatedSidebarPromptTreeOpenButton {
+.sidebarPromptTreeRow:hover .sidebarPromptTreeOpenButton,
+.sidebarPromptTreeRow:focus-within .sidebarPromptTreeOpenButton {
   opacity: 1;
   color: rgb(244 244 245);
 }
 
-.updatedSidebarPromptTreeRow:hover .updatedSidebarPromptTreeCountInActionSlot,
-.updatedSidebarPromptTreeRow:focus-within .updatedSidebarPromptTreeCountInActionSlot {
+.sidebarPromptTreeRow:hover .sidebarPromptTreeCountInActionSlot,
+.sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountInActionSlot {
   opacity: 0;
 }
 
-.updatedSidebarPromptTreeSettingsRow {
+.sidebarPromptTreeSettingsRow {
   width: 100%;
   padding-left: 2rem;
 }
 
-.updatedSidebarPromptTreeSettingsButton {
+.sidebarPromptTreeSettingsButton {
   display: flex;
   height: 1.875rem;
   width: 100%;
@@ -210,24 +210,24 @@
     color 120ms ease-out;
 }
 
-.updatedSidebarPromptTreeSettingsButton:hover {
+.sidebarPromptTreeSettingsButton:hover {
   background-color: rgb(255 255 255 / 5%);
   color: rgb(241 241 244);
 }
 
-.updatedSidebarPromptTreeSettingsButton[data-active='true'] {
+.sidebarPromptTreeSettingsButton[data-active='true'] {
   background-color: rgb(255 255 255 / 10%);
   color: rgb(255 255 255);
   box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
 }
 
-.updatedSidebarPromptTreeSettingsIcon {
+.sidebarPromptTreeSettingsIcon {
   height: 0.875rem;
   width: 0.875rem;
   flex-shrink: 0;
 }
 
-.updatedSidebarPromptTreeSettingsLabel {
+.sidebarPromptTreeSettingsLabel {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

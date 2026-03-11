@@ -402,7 +402,7 @@
     maxWidth={400}
     handleTestId="app-sidebar-resize-handle"
     containerClass="flex-1 min-h-0"
-    sidebarInsetClass="updatedSidebarSurface"
+    sidebarInsetClass="sidebarSurface"
     onDesiredWidthChange={(nextDesiredWidth) => {
       setAppSidebarWidthWithAutosave(nextDesiredWidth)
     }}
@@ -424,7 +424,7 @@
 
     {#snippet content()}
       <div
-        class="updatedSidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
+        class="sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
       >
         {#if activeScreen === 'home'}
           <HomeScreen

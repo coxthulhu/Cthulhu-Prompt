@@ -53,7 +53,7 @@
 </script>
 
 <div
-  class="titlebar updatedSidebarTitlebarSurface text-foreground"
+  class="titlebar sidebarTitlebarSurface text-foreground"
   role="button"
   tabindex="0"
   aria-label="Toggle maximize"
