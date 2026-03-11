@@ -201,7 +201,7 @@ export async function clickPromptFolderItem(
   }
 
   await window.click(folderSelector, { timeout })
-  await window.waitForSelector(`${folderSelector}[data-active="true"]`, {
+  await window.waitForSelector('[data-testid="prompt-folder-screen"]', {
     state: 'attached',
     timeout
   })

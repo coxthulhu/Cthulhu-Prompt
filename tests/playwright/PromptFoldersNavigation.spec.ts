@@ -8,6 +8,12 @@ const EXAMPLES_TOGGLE = '[data-testid="prompt-folder-toggle-Examples"]'
 const EXAMPLES_SETTINGS = '[data-testid="prompt-folder-settings-Examples"]'
 const DEVELOPMENT_SETTINGS = '[data-testid="prompt-folder-settings-Development"]'
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
+const SHORT_SETTINGS = '[data-testid="prompt-folder-settings-Short"]'
+const SHORT_TOGGLE = '[data-testid="prompt-folder-toggle-Short"]'
+const SHORT_PROMPT_50 = '[data-testid="prompt-folder-prompt-short-50"]'
+const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
+const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -199,5 +205,52 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       mainWindow.locator('[data-testid="regular-prompt-folder-TestFolder"]')
     ).toHaveAttribute('data-active', 'true')
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
+  })
+
+  test('jumps to a prompt when clicking a prompt tree prompt row', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 1700)
+    await mainWindow.waitForSelector(SHORT_PROMPT_50, { state: 'attached' })
+    await mainWindow.evaluate((selector) => {
+      const button = document.querySelector<HTMLButtonElement>(selector)
+      if (!button) {
+        throw new Error(`Missing prompt tree row: ${selector}`)
+      }
+      button.click()
+    }, SHORT_PROMPT_50)
+
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+    await mainWindow.waitForSelector(SHORT_EDITOR_50, { state: 'attached' })
+    await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-active', 'true')
+  })
+
+  test('tracks centered prompt scroll in tree, including folder settings and auto-expand', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Short')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+
+    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
+
+    await mainWindow.locator(SHORT_TOGGLE).click()
+    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveCount(0)
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
+    await expect(mainWindow.locator(SHORT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-prompt-short-"][aria-current="true"]')
+    ).toBeVisible()
   })
 })

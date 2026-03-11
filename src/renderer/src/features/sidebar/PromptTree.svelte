@@ -9,10 +9,17 @@
     Settings
   } from 'lucide-svelte'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import {
+    lookupPromptFolderOutlinerActiveRow,
+    recordPromptTreeJumpRequest,
+    type PromptFolderOutlinerActiveRow,
+    type PromptTreeJumpTarget
+  } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
+    type ScrollToWithinWindowBand,
     type VirtualWindowItem
   } from '../virtualizer/virtualWindowTypes'
 
@@ -71,7 +78,11 @@
     }
   })
 
+  const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
   let expandedFolderStates = $state<Record<string, boolean>>({})
+  let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
+  let promptTreeJumpRequestId = $state(0)
+  let lastTrackedTreeRowId = $state<string | null>(null)
 
   const isFolderExpanded = (folderId: string): boolean => expandedFolderStates[folderId] ?? true
 
@@ -99,6 +110,9 @@
 
   const folderPromptTestId = (promptId: string): string => `prompt-folder-prompt-${promptId}`
 
+  const folderSettingsRowId = (folderId: string): string => `${folderId}:settings`
+  const folderPromptRowId = (folderId: string, promptId: string): string => `${folderId}:prompt:${promptId}`
+
   const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
     onPromptFolderSelect(promptFolderId)
 
@@ -107,6 +121,106 @@
       button.blur()
     }
   }
+
+  const trackedOutlinerRow = $derived.by((): PromptFolderOutlinerActiveRow | null => {
+    if (!isPromptFoldersScreenActive || !selectedPromptFolderId) {
+      return null
+    }
+
+    return lookupPromptFolderOutlinerActiveRow(selectedPromptFolderId)
+  })
+
+  const trackedTreeRowId = $derived.by((): string | null => {
+    if (!selectedPromptFolderId || !trackedOutlinerRow) {
+      return null
+    }
+
+    return trackedOutlinerRow.kind === 'folder-settings'
+      ? folderSettingsRowId(selectedPromptFolderId)
+      : folderPromptRowId(selectedPromptFolderId, trackedOutlinerRow.promptId)
+  })
+
+  const isTreeEntryActive = (folderId: string, target: PromptTreeJumpTarget): boolean => {
+    if (!isPromptFoldersScreenActive || selectedPromptFolderId !== folderId || !trackedOutlinerRow) {
+      return false
+    }
+
+    if (target.kind !== trackedOutlinerRow.kind) {
+      return false
+    }
+
+    if (target.kind === 'folder-settings') {
+      return true
+    }
+
+    if (trackedOutlinerRow.kind !== 'prompt') {
+      return false
+    }
+
+    return trackedOutlinerRow.promptId === target.promptId
+  }
+
+  const queuePromptTreeJumpRequest = (
+    promptFolderId: string,
+    target: PromptTreeJumpTarget,
+    mode: 'initial' | 'immediate'
+  ) => {
+    promptTreeJumpRequestId += 1
+    recordPromptTreeJumpRequest(promptFolderId, {
+      requestId: promptTreeJumpRequestId,
+      mode,
+      target
+    })
+  }
+
+  const handlePromptTreeEntrySelect = (
+    promptFolderId: string,
+    target: PromptTreeJumpTarget,
+    event: MouseEvent
+  ) => {
+    const isSameFolderActive =
+      isPromptFoldersScreenActive && selectedPromptFolderId === promptFolderId
+
+    queuePromptTreeJumpRequest(promptFolderId, target, isSameFolderActive ? 'immediate' : 'initial')
+
+    if (!isSameFolderActive) {
+      onPromptFolderSelect(promptFolderId)
+    }
+
+    const button = event.currentTarget
+    if (button instanceof HTMLButtonElement) {
+      button.blur()
+    }
+  }
+
+  // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
+  $effect(() => {
+    if (!scrollToWithinWindowBand) return
+
+    const nextTrackedRowId = trackedTreeRowId
+    if (!nextTrackedRowId) {
+      lastTrackedTreeRowId = null
+      return
+    }
+
+    if (nextTrackedRowId === lastTrackedTreeRowId) {
+      return
+    }
+
+    const currentFolderId = selectedPromptFolderId
+    if (!currentFolderId) return
+
+    if (!isFolderExpanded(currentFolderId)) {
+      expandedFolderStates = {
+        ...expandedFolderStates,
+        [currentFolderId]: true
+      }
+      return
+    }
+
+    lastTrackedTreeRowId = nextTrackedRowId
+    scrollToWithinWindowBand(nextTrackedRowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
+  })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
@@ -122,7 +236,7 @@
 
       if (isFolderExpanded(folder.id)) {
         items.push({
-          id: `${folder.id}:settings`,
+          id: folderSettingsRowId(folder.id),
           row: {
             kind: 'folder-settings',
             folder
@@ -131,7 +245,7 @@
 
         for (const promptId of folder.promptIds) {
           items.push({
-            id: `${folder.id}:prompt:${promptId}`,
+            id: folderPromptRowId(folder.id, promptId),
             row: {
               kind: 'folder-prompt',
               folder,
@@ -166,6 +280,7 @@
         rightScrollPaddingPx={0}
         testId="prompt-tree-virtual-window"
         spacerTestId="prompt-tree-virtual-window-spacer"
+        bind:scrollToWithinWindowBand
       />
     </div>
   {/if}
@@ -247,10 +362,15 @@
 {/snippet}
 
 {#snippet folderSettingsRow(props)}
+  {@const isActive = isTreeEntryActive(props.row.folder.id, { kind: 'folder-settings' })}
+
   <div class="updatedSidebarPromptTreeSettingsRow">
     <button
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
+      data-active={isActive ? 'true' : 'false'}
+      aria-current={isActive ? 'true' : undefined}
+      onclick={(event) => handlePromptTreeEntrySelect(props.row.folder.id, { kind: 'folder-settings' }, event)}
       class="updatedSidebarPromptTreeSettingsButton"
     >
       <Settings
@@ -264,10 +384,23 @@
 {/snippet}
 
 {#snippet folderPromptRow(props)}
+  {@const isActive = isTreeEntryActive(props.row.folder.id, {
+    kind: 'prompt',
+    promptId: props.row.promptId
+  })}
+
   <div class="updatedSidebarPromptTreeSettingsRow">
     <button
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
+      data-active={isActive ? 'true' : 'false'}
+      aria-current={isActive ? 'true' : undefined}
+      onclick={(event) =>
+        handlePromptTreeEntrySelect(
+          props.row.folder.id,
+          { kind: 'prompt', promptId: props.row.promptId },
+          event
+        )}
       class="updatedSidebarPromptTreeSettingsButton"
     >
       <FileText class="updatedSidebarPromptTreeSettingsIcon" aria-hidden="true" />

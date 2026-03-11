@@ -8,16 +8,28 @@ export type PromptFolderOutlinerActiveRow =
   | { kind: 'folder-settings' }
   | { kind: 'prompt'; promptId: string }
 
+export type PromptTreeJumpTarget =
+  | { kind: 'folder-settings' }
+  | { kind: 'prompt'; promptId: string }
+
+export type PromptTreeJumpRequest = {
+  requestId: number
+  mode: 'initial' | 'immediate'
+  target: PromptTreeJumpTarget
+}
+
 const descriptionMeasuredHeight = createSessionMeasuredHeightCache()
 const scrollTop = createSessionValueCache<number>()
 const outlinerScrollTop = createSessionValueCache<number>()
 const outlinerActiveRow = createSessionValueCache<PromptFolderOutlinerActiveRow | null>()
+const promptTreeJumpRequest = createSessionValueCache<PromptTreeJumpRequest>()
 
 export const promptFolderDraftUiCache = {
   descriptionMeasuredHeight,
   scrollTop,
   outlinerScrollTop,
-  outlinerActiveRow
+  outlinerActiveRow,
+  promptTreeJumpRequest
 }
 
 export const lookupPromptFolderDescriptionMeasuredHeight = (
@@ -80,14 +92,31 @@ export const recordPromptFolderOutlinerActiveRow = (
   promptFolderDraftUiCache.outlinerActiveRow.record(promptFolderId, row)
 }
 
+export const lookupPromptTreeJumpRequest = (promptFolderId: string): PromptTreeJumpRequest | null => {
+  return promptFolderDraftUiCache.promptTreeJumpRequest.lookup(promptFolderId)
+}
+
+export const recordPromptTreeJumpRequest = (
+  promptFolderId: string,
+  request: PromptTreeJumpRequest
+): void => {
+  promptFolderDraftUiCache.promptTreeJumpRequest.record(promptFolderId, request)
+}
+
+export const clearPromptTreeJumpRequest = (promptFolderId: string): void => {
+  promptFolderDraftUiCache.promptTreeJumpRequest.clear(promptFolderId)
+}
+
 export const clearPromptFolderScrollTop = (promptFolderId: string): void => {
   promptFolderDraftUiCache.scrollTop.clear(promptFolderId)
   promptFolderDraftUiCache.outlinerScrollTop.clear(promptFolderId)
   promptFolderDraftUiCache.outlinerActiveRow.clear(promptFolderId)
+  promptFolderDraftUiCache.promptTreeJumpRequest.clear(promptFolderId)
 }
 
 export const clearPromptFolderScrollTops = (promptFolderIds: string[]): void => {
   promptFolderDraftUiCache.scrollTop.clearMany(promptFolderIds)
   promptFolderDraftUiCache.outlinerScrollTop.clearMany(promptFolderIds)
   promptFolderDraftUiCache.outlinerActiveRow.clearMany(promptFolderIds)
+  promptFolderDraftUiCache.promptTreeJumpRequest.clearMany(promptFolderIds)
 }
