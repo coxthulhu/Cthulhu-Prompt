@@ -133,7 +133,7 @@
           src={appIcon}
           alt="Cthulhu Prompt icon"
           draggable="false"
-          on:dragstart={(event) => event.preventDefault()}
+          ondragstart={(event) => event.preventDefault()}
         />
       </div>
       <div class="min-w-0 flex-1">
