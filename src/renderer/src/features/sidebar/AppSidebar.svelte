@@ -225,9 +225,4 @@
     />
   </div>
 
-  <div
-    class="updatedSidebarTopLevelInsetWithInnerPadding flex flex-col gap-2 py-2"
-  >
-    <div class="p-2 text-xs text-muted-foreground">🦑 Made in R'lyeh</div>
-  </div>
 </aside>
