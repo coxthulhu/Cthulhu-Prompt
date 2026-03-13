@@ -18,6 +18,7 @@ export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
 export type WorkspacePromptFolderPromptTreeEntry = {
   promptFolderId: string
   promptTreeEntryId: string
+  promptTreeIsExpanded: boolean
   folderDescriptionEditorViewStateJson: string | null
 }
 
@@ -43,6 +44,7 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
   return entries.map((entry) => ({
     promptFolderId: entry.promptFolderId,
     promptTreeEntryId: entry.promptTreeEntryId,
+    promptTreeIsExpanded: entry.promptTreeIsExpanded,
     folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson
   }))
 }
@@ -149,9 +151,20 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     return null
   }
 
+  const promptTreeIsExpanded =
+    value.promptTreeIsExpanded === undefined
+      ? true
+      : typeof value.promptTreeIsExpanded === 'boolean'
+        ? value.promptTreeIsExpanded
+        : null
+  if (promptTreeIsExpanded === null) {
+    return null
+  }
+
   return {
     promptFolderId: value.promptFolderId,
     promptTreeEntryId: value.promptTreeEntryId,
+    promptTreeIsExpanded,
     folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null
   }
 }

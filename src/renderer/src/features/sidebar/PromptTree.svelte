@@ -13,6 +13,11 @@
     getPromptNavigationContext,
     type PromptNavigationRow
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
+  import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
+  import {
+    lookupWorkspacePersistedPromptFolderExpandedState,
+    setPromptFolderExpandedStateWithAutosave
+  } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -84,14 +89,41 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastTrackedTreeRowId = $state<string | null>(null)
   const promptNavigation = getPromptNavigationContext()
+  const workspaceSelection = getWorkspaceSelectionContext()
+  let lastWorkspaceId = $state<string | null>(workspaceSelection.selectedWorkspaceId)
 
-  const isFolderExpanded = (folderId: string): boolean => expandedFolderStates[folderId] ?? true
+  const lookupPersistedFolderExpandedState = (folderId: string): boolean => {
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (!workspaceId) {
+      return true
+    }
 
-  const toggleFolderExpanded = (folderId: string) => {
+    return lookupWorkspacePersistedPromptFolderExpandedState(workspaceId, folderId) ?? true
+  }
+
+  const isFolderExpanded = (folderId: string): boolean =>
+    expandedFolderStates[folderId] ?? lookupPersistedFolderExpandedState(folderId)
+
+  const setFolderExpanded = (folderId: string, isExpanded: boolean) => {
+    if (isFolderExpanded(folderId) === isExpanded) {
+      return
+    }
+
     expandedFolderStates = {
       ...expandedFolderStates,
-      [folderId]: !isFolderExpanded(folderId)
+      [folderId]: isExpanded
     }
+
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (!workspaceId) {
+      return
+    }
+
+    setPromptFolderExpandedStateWithAutosave(workspaceId, folderId, isExpanded)
+  }
+
+  const toggleFolderExpanded = (folderId: string) => {
+    setFolderExpanded(folderId, !isFolderExpanded(folderId))
   }
 
   const folderSettingsTestId = (folder: PromptFolder): string =>
@@ -184,6 +216,17 @@
     }
   }
 
+  // Side effect: clear local folder expand overrides when switching workspaces.
+  $effect(() => {
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (workspaceId === lastWorkspaceId) {
+      return
+    }
+
+    lastWorkspaceId = workspaceId
+    expandedFolderStates = {}
+  })
+
   // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
   $effect(() => {
     const nextTrackedRowId = trackedTreeRowId
@@ -205,10 +248,7 @@
     if (!currentFolderId) return
 
     if (!isFolderExpanded(currentFolderId)) {
-      expandedFolderStates = {
-        ...expandedFolderStates,
-        [currentFolderId]: true
-      }
+      setFolderExpanded(currentFolderId, true)
       return
     }
 

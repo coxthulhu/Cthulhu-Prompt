@@ -126,6 +126,7 @@ const seedWorkspacePersistence = async (
     promptFolderPromptTreeEntries: Array<{
       promptFolderId: string
       promptTreeEntryId: string
+      promptTreeIsExpanded?: boolean
     }>
   }
 ): Promise<void> => {
@@ -163,12 +164,14 @@ const seedWorkspacePersistence = async (
       INSERT INTO prompt_folder_ui_state (
         workspace_id,
         prompt_folder_id,
-        prompt_tree_entry_id
+        prompt_tree_entry_id,
+        prompt_tree_is_expanded
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
         ${toSqlText(entry.promptFolderId)},
-        ${toSqlText(entry.promptTreeEntryId)}
+        ${toSqlText(entry.promptTreeEntryId)},
+        ${entry.promptTreeIsExpanded === false ? 0 : 1}
       )
       `
     )
@@ -212,6 +215,7 @@ const readWorkspacePersistence = async (
   promptFolderPromptTreeEntries: Array<{
     promptFolderId: string
     promptTreeEntryId: string
+    promptTreeIsExpanded: boolean
   }>
 }> => {
   const workspaceStateResult = await runSqlQuery(
@@ -234,7 +238,8 @@ const readWorkspacePersistence = async (
     `
     SELECT
       prompt_folder_id AS promptFolderId,
-      prompt_tree_entry_id AS promptTreeEntryId
+      prompt_tree_entry_id AS promptTreeEntryId,
+      prompt_tree_is_expanded AS promptTreeIsExpanded
     FROM prompt_folder_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -255,10 +260,11 @@ const readWorkspacePersistence = async (
     workspaceId,
     selectedScreen: workspaceRow?.selectedScreen ?? 'home',
     selectedPromptFolderId: workspaceRow?.selectedPromptFolderId ?? null,
-    promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []) as Array<{
-      promptFolderId: string
-      promptTreeEntryId: string
-    }>
+    promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []).map((entry) => ({
+      promptFolderId: String(entry.promptFolderId),
+      promptTreeEntryId: String(entry.promptTreeEntryId),
+      promptTreeIsExpanded: entry.promptTreeIsExpanded !== 0
+    }))
   }
 }
 
@@ -642,6 +648,66 @@ describe('User Persistence', () => {
       .toBe('simple-1:dev-2:2')
   })
 
+  test('autosaves prompt tree folder expanded state', async ({ electronApp, testSetup }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const examplesPromptFolderId = createDeterministicId(`${workspacePath}:Examples`)
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    const examplesToggle = mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')
+    await expect(examplesToggle).toHaveAttribute('aria-expanded', 'true')
+    await examplesToggle.click()
+    await expect(examplesToggle).toHaveAttribute('aria-expanded', 'false')
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const entry = persisted.promptFolderPromptTreeEntries.find(
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === examplesPromptFolderId
+          )
+          return entry?.promptTreeIsExpanded ?? null
+        },
+        { timeout: 15000 }
+      )
+      .toBe(false)
+  })
+
+  test('persists prompt tree auto-expand state after scroll-follow expansion', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspacePath = '/ws/virtual'
+    const workspaceId = createDeterministicId(workspacePath)
+    const shortPromptFolderId = createDeterministicId(`${workspacePath}:Short`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Short')
+    const shortToggle = mainWindow.locator('[data-testid="prompt-folder-toggle-Short"]')
+    await shortToggle.click()
+    await expect(shortToggle).toHaveAttribute('aria-expanded', 'false')
+
+    await testHelpers.scrollVirtualWindowTo('[data-testid="prompt-folder-virtual-window"]', 1200)
+    await expect(shortToggle).toHaveAttribute('aria-expanded', 'true')
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const entry = persisted.promptFolderPromptTreeEntries.find(
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === shortPromptFolderId
+          )
+          return entry?.promptTreeIsExpanded ?? null
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true)
+  })
+
   test('restores persisted prompt tree entry on startup', async ({ electronApp, testSetup }) => {
     const persistedWorkspacePath = '/ws/persisted-prompt-tree-entry'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
@@ -671,6 +737,43 @@ describe('User Persistence', () => {
       mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')
     ).toHaveAttribute('data-active', 'true')
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')
+  })
+
+  test('restores persisted prompt tree expanded state on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-prompt-tree-expanded-state'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const examplesPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Examples`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspacePath: persistedWorkspacePath
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'home',
+      selectedPromptFolderId: null,
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: examplesPromptFolderId,
+          promptTreeEntryId: 'folder-settings',
+          promptTreeIsExpanded: false
+        }
+      ]
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-settings-Examples"]')).toHaveCount(
+      0
+    )
   })
 
   test('restores and auto-scrolls prompt tree to persisted entry on startup', async ({

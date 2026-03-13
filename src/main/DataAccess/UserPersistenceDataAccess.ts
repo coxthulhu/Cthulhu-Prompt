@@ -192,18 +192,31 @@ export class UserPersistenceDataAccess {
         SELECT
           prompt_folder_id AS promptFolderId,
           prompt_tree_entry_id AS promptTreeEntryId,
+          prompt_tree_is_expanded AS promptTreeIsExpanded,
           folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
         `
       )
-      .all(workspaceId)
+      .all(workspaceId) as Array<{
+      promptFolderId: string
+      promptTreeEntryId: string
+      promptTreeIsExpanded: number
+      folderDescriptionEditorViewStateJson: string | null
+    }>
+
+    const serializablePromptFolderUiStateRows = promptFolderUiStateRows.map((row) => ({
+      promptFolderId: row.promptFolderId,
+      promptTreeEntryId: row.promptTreeEntryId,
+      promptTreeIsExpanded: row.promptTreeIsExpanded !== 0,
+      folderDescriptionEditorViewStateJson: row.folderDescriptionEditorViewStateJson
+    }))
 
     const parsedPersistence = parseWorkspacePersistence(
       {
         selectedScreen: workspaceUiState.selectedScreen,
         selectedPromptFolderId: workspaceUiState.selectedPromptFolderId,
-        promptFolderPromptTreeEntries: promptFolderUiStateRows
+        promptFolderPromptTreeEntries: serializablePromptFolderUiStateRows
       },
       workspaceId
     )
@@ -247,9 +260,10 @@ export class UserPersistenceDataAccess {
           workspace_id,
           prompt_folder_id,
           prompt_tree_entry_id,
+          prompt_tree_is_expanded,
           folder_description_editor_view_state_json
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         `
       )
 
@@ -258,6 +272,7 @@ export class UserPersistenceDataAccess {
           serializableWorkspacePersistence.workspaceId,
           entry.promptFolderId,
           entry.promptTreeEntryId,
+          entry.promptTreeIsExpanded ? 1 : 0,
           entry.folderDescriptionEditorViewStateJson
         )
       }
@@ -282,6 +297,7 @@ export class UserPersistenceDataAccess {
           SELECT
             prompt_folder_id AS promptFolderId,
             prompt_tree_entry_id AS promptTreeEntryId,
+            prompt_tree_is_expanded AS promptTreeIsExpanded,
             folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
@@ -290,6 +306,7 @@ export class UserPersistenceDataAccess {
         .all(workspaceId) as Array<{
         promptFolderId: string
         promptTreeEntryId: string
+        promptTreeIsExpanded: number
         folderDescriptionEditorViewStateJson: string | null
       }>
 
@@ -301,9 +318,10 @@ export class UserPersistenceDataAccess {
           workspace_id,
           prompt_folder_id,
           prompt_tree_entry_id,
+          prompt_tree_is_expanded,
           folder_description_editor_view_state_json
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         `
       )
 
@@ -316,6 +334,7 @@ export class UserPersistenceDataAccess {
           workspaceId,
           entry.promptFolderId,
           entry.promptTreeEntryId,
+          entry.promptTreeIsExpanded,
           entry.folderDescriptionEditorViewStateJson
         )
       }

@@ -231,6 +231,7 @@ const parseUserPersistenceRevisionPayloadEntity =
 const parseWorkspacePromptFolderPromptTreeEntry = parseObject({
   promptFolderId: parseString,
   promptTreeEntryId: parseString,
+  promptTreeIsExpanded: parseBoolean,
   folderDescriptionEditorViewStateJson: parseNullableString
 })
 
