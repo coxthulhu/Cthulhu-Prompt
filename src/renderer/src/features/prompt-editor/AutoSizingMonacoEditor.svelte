@@ -455,7 +455,11 @@
     if (!syncFindState(trimmedQuery, { shouldClearSelection })) return
 
     if (activeSectionMatchIndex != null && activeSectionMatchIndex >= 0) {
-      findModel?.moveToMatch(activeSectionMatchIndex)
+      const didActiveMatchChange = lastActiveMatchIndex !== activeSectionMatchIndex
+      const shouldRefreshUnfocusedMatch = !didActiveMatchChange && !editor.hasTextFocus()
+      if (didActiveMatchChange || shouldRefreshUnfocusedMatch) {
+        findModel?.moveToMatch(activeSectionMatchIndex)
+      }
       lastActiveMatchIndex = activeSectionMatchIndex
     } else {
       lastActiveMatchIndex = null

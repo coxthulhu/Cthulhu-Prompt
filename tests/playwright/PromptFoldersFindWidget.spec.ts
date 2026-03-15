@@ -4,6 +4,7 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
+import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,
@@ -332,6 +333,87 @@ describe('Prompt folder find dialog', () => {
           return document.querySelector(selector) != null
         }, `${targetSelector} .monaco-editor .currentFindMatch`)
       })
+      .toBe(true)
+  })
+
+  test('does not reselect the active find match after typing at a new cursor location', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const editorSelector = promptEditorSelector('dev-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    const query = 'best practices'
+
+    const getMonacoSelectionInfo = async () => {
+      return await mainWindow.evaluate((selector) => {
+        const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+        if (!monacoNode) return null
+
+        const registry = (
+          window as unknown as {
+            __cthulhuMonacoEditors?: Array<{
+              container: HTMLElement | null
+              editor: {
+                getSelection: () => any
+                getModel: () => {
+                  getValueInRange: (range: any) => string
+                  getOffsetAt: (position: any) => number
+                } | null
+              }
+            }>
+          }
+        ).__cthulhuMonacoEditors
+
+        if (!registry?.length) return null
+        const entry = registry.find((item) => {
+          if (!item?.container) return false
+          return item.container === monacoNode || item.container.contains(monacoNode)
+        })
+        if (!entry) return null
+
+        const model = entry.editor.getModel()
+        const selection = entry.editor.getSelection()
+        if (!model || !selection) return null
+
+        return {
+          selectedText: model.getValueInRange(selection),
+          startOffset: model.getOffsetAt(selection.getStartPosition()),
+          endOffset: model.getOffsetAt(selection.getEndPosition())
+        }
+      }, editorSelector)
+    }
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await findInput.fill(query)
+    await findInput.press('Enter')
+
+    await expect
+      .poll(async () => getMonacoSelectionInfo(), { timeout: 2000 })
+      .toMatchObject({
+        selectedText: query
+      })
+
+    await focusMonacoEditor(mainWindow, editorSelector, {
+      clickPosition: { x: 12, y: 12 }
+    })
+    await mainWindow.keyboard.type('z')
+
+    await expect
+      .poll(
+        async () => {
+          const info = await getMonacoSelectionInfo()
+          if (!info) return false
+          return info.selectedText === '' && info.startOffset === info.endOffset
+        },
+        { timeout: 2000 }
+      )
       .toBe(true)
   })
 })
