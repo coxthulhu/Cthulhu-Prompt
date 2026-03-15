@@ -22,6 +22,7 @@ const SETTINGS_ROW_SELECTOR =
 const LOOP_REGRESSION_QUERY = 'cthulhu-loop-regression-marker-9x4k'
 const LOOP_MATCH_PROMPT_IDS = Array.from({ length: 19 }, (_, index) => `loop-test-${2 + index * 60}`)
 const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
+const TYPING_ANCHOR_QUERY = 'hello'
 
 const getMonacoSelectedText = async (
   mainWindow: any,
@@ -78,9 +79,7 @@ const getMonacoWordAtCursor = async (
           __cthulhuMonacoEditors?: Array<{
             container: HTMLElement | null
             editor: {
-              getModel: () => {
-                getWordAtPosition: (position: any) => { word: string } | null
-              } | null
+              getConfiguredWordAtPosition: (position: any) => { word: string } | null
               getPosition: () => any
             }
           }>
@@ -95,11 +94,10 @@ const getMonacoWordAtCursor = async (
       })
       if (!entry) return null
 
-      const model = entry.editor.getModel()
       const position = entry.editor.getPosition()
-      if (!model || !position) return null
+      if (!position) return null
 
-      return model.getWordAtPosition(position)?.word ?? null
+      return entry.editor.getConfiguredWordAtPosition(position)?.word ?? null
     },
     editorSelector
   )
@@ -118,6 +116,54 @@ const getCurrentFindMatchRowTestId = async (mainWindow: any): Promise<string | n
     const row = currentFindMatch.closest<HTMLElement>('[data-testid][data-virtual-window-row]')
     return row?.getAttribute('data-testid') ?? null
   })
+}
+
+const getMonacoSelectionState = async (
+  mainWindow: any,
+  editorSelector: string
+): Promise<
+  | {
+      selectedText: string
+      startLineNumber: number
+      startColumn: number
+    }
+  | null
+> => {
+  return await mainWindow.evaluate((selector) => {
+    const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+    if (!monacoNode) return null
+
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getModel: () => {
+              getValueInRange: (range: any) => string
+            } | null
+            getSelection: () => any
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+
+    if (!registry?.length) return null
+    const entry = registry.find((item) => {
+      if (!item?.container) return false
+      return item.container === monacoNode || item.container.contains(monacoNode)
+    })
+    if (!entry) return null
+
+    const model = entry.editor.getModel()
+    const selection = entry.editor.getSelection()
+    if (!model || !selection) return null
+
+    return {
+      selectedText: model.getValueInRange(selection),
+      startLineNumber: selection.startLineNumber,
+      startColumn: selection.startColumn
+    }
+  }, editorSelector)
 }
 
 const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, string | null> => {
@@ -200,6 +246,43 @@ const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, s
   filesystem[promptFolderPath] = JSON.stringify(promptFolderData, null, 2)
 
   return filesystem
+}
+
+const buildTypingAnchorWorkspace = (workspacePath: string): Record<string, string | null> => {
+  return createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Anchor',
+      displayName: 'Anchor',
+      promptFolderId: 'typing-anchor-folder',
+      prompts: [
+        {
+          id: 'typing-anchor-1',
+          title: 'Typing Anchor Prompt',
+          promptText: `hello first marker
+zzzz marker line
+hello second marker
+hello third marker`
+        }
+      ]
+    }
+  ])
+}
+
+const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, string | null> => {
+  return createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Boundaries',
+      displayName: 'Boundaries',
+      promptFolderId: 'configured-word-folder',
+      prompts: [
+        {
+          id: 'configured-word-1',
+          title: 'Configured Word Prompt',
+          promptText: `1.23 marker`
+        }
+      ]
+    }
+  ])
 }
 
 describe('Prompt folder find dialog', () => {
@@ -303,6 +386,120 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveValue(selectedText!)
   })
 
+  test('starts on the currently selected Monaco match when opening find', async ({ testSetup }) => {
+    const workspacePath = '/ws/find-selection-start-match'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Anchor')
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.down('Shift')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.up('Shift')
+
+    const selectedText = await getMonacoSelectedText(mainWindow, editorSelector)
+    expect(selectedText).toBe(TYPING_ANCHOR_QUERY)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
+  })
+
+  test('starts on the selected match when reopening find with the same persisted query', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-selection-start-match-reopen'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Anchor')
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await findInput.fill(TYPING_ANCHOR_QUERY)
+    await findInput.press('Enter')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 3, startColumn: 1 })
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.down('Shift')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.up('Shift')
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
+  })
+
+  test('starts on the clicked Monaco word match when opening find from a collapsed cursor', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-clicked-word-start-match'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Anchor')
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector, {
+      clickPosition: { x: 28, y: 12 }
+    })
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
+  })
+
   test('seeds find input from Monaco word at cursor on Ctrl+F', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -318,6 +515,37 @@ describe('Prompt folder find dialog', () => {
 
     const cursorWord = await getMonacoWordAtCursor(mainWindow, editorSelector)
     expect(cursorWord && cursorWord.length > 0).toBe(true)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue(cursorWord!)
+  })
+
+  test('seeds find input from Monaco configured word at numeric boundaries', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-configured-word-boundary'
+    await testSetup.setupFilesystem(buildConfiguredWordWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Boundaries')
+    const editorSelector = promptEditorSelector('configured-word-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+
+    const cursorWord = await getMonacoWordAtCursor(mainWindow, editorSelector)
+    expect(cursorWord).toBe('23')
 
     const findInput = mainWindow.locator(FIND_INPUT)
     await mainWindow.keyboard.press('Control+F')
@@ -351,6 +579,91 @@ describe('Prompt folder find dialog', () => {
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
     await expect(findInput).toHaveValue('Analysis')
+  })
+
+  test('jumps to the first match after the original cursor location while typing', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-typing-anchor'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Anchor')
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowDown')
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+
+    await findInput.type('h')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: 'h', startLineNumber: 3, startColumn: 1 })
+
+    await findInput.type('e')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: 'he', startLineNumber: 3, startColumn: 1 })
+
+    await findInput.type('llo')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 3, startColumn: 1 })
+  })
+
+  test('keeps the original typing anchor when the query is changed or cleared', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-typing-anchor-reset'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Anchor')
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowDown')
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+
+    await findInput.fill(TYPING_ANCHOR_QUERY)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 3, startColumn: 1 })
+
+    await findInput.press('Enter')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 4, startColumn: 1 })
+
+    await findInput.fill('')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('No results')
+
+    await findInput.fill(TYPING_ANCHOR_QUERY)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 3, startColumn: 1 })
   })
 
   test('focuses the current match after closing the find widget', async ({ testSetup }) => {
@@ -467,6 +780,81 @@ describe('Prompt folder find dialog', () => {
     )
   })
 
+  test('restores focus to the last navigated match when closing with no results', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const editorSelector = promptEditorSelector('dev-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    const bodyQuery = 'best practices'
+
+    const getMonacoSelectionInfo = async () => {
+      return await mainWindow.evaluate((selector) => {
+        const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+        if (!monacoNode) return null
+
+        const active = document.activeElement
+        const hasDomFocus = !!active && monacoNode.contains(active)
+
+        const registry = (
+          window as unknown as {
+            __cthulhuMonacoEditors?: Array<{
+              container: HTMLElement | null
+              editor: {
+                getSelection: () => any
+                getModel: () => {
+                  getValueInRange: (range: any) => string
+                } | null
+              }
+            }>
+          }
+        ).__cthulhuMonacoEditors
+
+        if (!registry?.length) return null
+
+        const entry = registry.find((item) => {
+          if (!item?.container) return false
+          return item.container === monacoNode || item.container.contains(monacoNode)
+        })
+        if (!entry) return null
+
+        const model = entry.editor.getModel()
+        const selection = entry.editor.getSelection()
+        if (!model || !selection) return null
+
+        return {
+          text: model.getValueInRange(selection),
+          hasDomFocus
+        }
+      }, editorSelector)
+    }
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await findInput.fill(bodyQuery)
+    await findInput.press('Enter')
+
+    await expect
+      .poll(async () => getMonacoSelectionInfo(), { timeout: 2000 })
+      .toEqual({ text: bodyQuery, hasDomFocus: false })
+
+    await findInput.fill('nonmatching-query-0001')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('No results')
+
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+
+    await expect
+      .poll(async () => getMonacoSelectionInfo(), { timeout: 2000 })
+      .toEqual({ text: bodyQuery, hasDomFocus: true })
+  })
+
   test('scrolls to a virtualized match and highlights it immediately', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
@@ -489,8 +877,6 @@ describe('Prompt folder find dialog', () => {
     await expect(mainWindow.locator('[data-testid="prompt-find-widget"]')).not.toContainText(
       'No results'
     )
-
-    await findInput.press('Enter')
 
     const firstSelector = promptEditorSelector(VIRTUAL_FIND_FIRST_PROMPT_ID)
     await expect
@@ -635,10 +1021,17 @@ describe('Prompt folder find dialog', () => {
     ]
     const totalMatches = expectedRowIdsByStep.length
     expect(totalMatches).toBe(20)
+    await expect
+      .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
+      .toBe(`1 of ${totalMatches}`)
+    await expect
+      .poll(() => getCurrentFindMatchRowTestId(mainWindow), { timeout: 5000 })
+      .toBe(expectedRowIdsByStep[0])
+
     const totalPresses = totalMatches * 3
     for (let step = 1; step <= totalPresses; step += 1) {
       await findInput.press('Enter')
-      const expectedMatchNumber = ((step - 1) % totalMatches) + 1
+      const expectedMatchNumber = (step % totalMatches) + 1
       const expectedLabel = `${expectedMatchNumber} of ${totalMatches}`
       const expectedRowId = expectedRowIdsByStep[expectedMatchNumber - 1]
 
@@ -678,7 +1071,7 @@ describe('Prompt folder find dialog', () => {
     await findInput.fill(RAPID_LOOP_QUERY)
     await expect
       .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
-      .toBe('0 of 12')
+      .toBe('1 of 12')
 
     await mainWindow.evaluate((selector) => {
       const label = document.querySelector<HTMLElement>(selector)
@@ -759,7 +1152,7 @@ describe('Prompt folder find dialog', () => {
       captureWindow.__promptFindLabelObserver?.disconnect()
     })
 
-    expect(labelEvents[0]).toEqual({ current: 0, total: 12 })
+    expect(labelEvents[0]).toEqual({ current: 1, total: 12 })
     for (let index = 1; index < labelEvents.length; index += 1) {
       const previous = labelEvents[index - 1]
       const next = labelEvents[index]

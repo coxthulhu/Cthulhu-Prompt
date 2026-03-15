@@ -50,6 +50,8 @@
   let matchCountsByEntity = $state<PromptFolderFindCounts[]>([])
   let focusFindRequestId = $state(0)
   let focusRequest = $state<PromptFolderFindFocusRequest | null>(null)
+  let lastNavigatedMatch = $state<PromptFolderFindMatch | null>(null)
+  let lastNavigatedQuery = $state('')
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
@@ -91,11 +93,13 @@
   // Close the widget and return focus to the current match.
   const closeFindDialog = () => {
     isFindOpen = false
-    if (currentMatch) {
+    const matchToFocus = currentMatch ?? lastNavigatedMatch
+    if (matchToFocus) {
+      const focusQuery = currentMatch ? trimmedQuery : lastNavigatedQuery
       focusRequest = {
         requestId: (focusRequest?.requestId ?? 0) + 1,
-        match: currentMatch,
-        query: trimmedQuery
+        match: matchToFocus,
+        query: focusQuery
       }
     }
   }
@@ -123,7 +127,25 @@
       0
     )
     if (resetSelection) {
-      currentMatchIndex = 0
+      if (totalMatches <= 0) {
+        currentMatchIndex = 0
+        return
+      }
+      const effectiveSelectionAnchor = lastSelectionAnchor
+        ? getEffectiveSelectionAnchor(lastSelectionAnchor)
+        : null
+      const selectedAnchorIndex = effectiveSelectionAnchor
+        ? getSelectedMatchIndexFromAnchor(effectiveSelectionAnchor)
+        : null
+      if (selectedAnchorIndex != null) {
+        setCurrentMatchIndex(selectedAnchorIndex)
+        return
+      }
+      const navigationAnchor = effectiveSelectionAnchor ?? lastSelectionAnchor
+      const anchorIndex = navigationAnchor
+        ? getNextMatchIndexFromAnchor(navigationAnchor)
+        : null
+      setCurrentMatchIndex(anchorIndex ?? 1)
       return
     }
 
@@ -167,67 +189,54 @@
     lastSelectionAnchor = { ...anchor, startOffset, endOffset }
   }
 
-  const recordSelectionFromMatch = (match: PromptFolderFindMatch) => {
-    if (trimmedQuery.length === 0) return
-    const targetText = getSectionText(match.entityId, match.sectionKey)
-    const matchRange = findMatchRange(targetText, trimmedQuery, match.sectionMatchIndex)
-    if (!matchRange) return
-    recordSelectionAnchor({
-      entityId: match.entityId,
-      sectionKey: match.sectionKey,
-      startOffset: matchRange.start,
-      endOffset: matchRange.end
-    })
-  }
-
-  const getWordAtOffset = (text: string, offset: number): string | null => {
-    if (text.length === 0) return null
-    const clampedOffset = Math.min(Math.max(offset, 0), text.length)
-    const isWordChar = (char: string) => /[0-9A-Za-z_]/.test(char)
-
-    let anchorIndex: number | null = null
-    if (clampedOffset < text.length && isWordChar(text[clampedOffset])) {
-      anchorIndex = clampedOffset
-    } else if (clampedOffset > 0 && isWordChar(text[clampedOffset - 1])) {
-      anchorIndex = clampedOffset - 1
-    }
-    if (anchorIndex == null) return null
-
-    let start = anchorIndex
-    while (start > 0 && isWordChar(text[start - 1])) {
-      start -= 1
-    }
-    let end = anchorIndex + 1
-    while (end < text.length && isWordChar(text[end])) {
-      end += 1
-    }
-    return text.slice(start, end)
-  }
-
-  const getSelectionMatchText = (): string | null => {
-    const anchor = lastSelectionAnchor
-    if (!anchor) return null
-
+  const getEffectiveSelectionAnchor = (anchor: PromptFolderFindAnchor): PromptFolderFindAnchor | null => {
     const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
     if (sectionText.length === 0) return null
 
     const startOffset = Math.min(Math.max(anchor.startOffset, 0), sectionText.length)
     const endOffset = Math.min(Math.max(anchor.endOffset, 0), sectionText.length)
     if (endOffset > startOffset) {
-      const selectedText = sectionText.slice(startOffset, endOffset)
-      // Monaco StartFindAction only seeds from same-line selections.
-      if (selectedText.includes('\n') || selectedText.includes('\r')) return null
-      return selectedText
+      return {
+        entityId: anchor.entityId,
+        sectionKey: anchor.sectionKey,
+        startOffset,
+        endOffset
+      }
     }
 
-    return getWordAtOffset(sectionText, startOffset)
+    const wordAtOffset = searchModel.getWordAtOffset(sectionText, startOffset)
+    if (!wordAtOffset) return null
+    return {
+      entityId: anchor.entityId,
+      sectionKey: anchor.sectionKey,
+      startOffset: wordAtOffset.start,
+      endOffset: wordAtOffset.end
+    }
+  }
+
+  const getSelectionMatchText = (): string | null => {
+    const anchor = lastSelectionAnchor
+    if (!anchor) return null
+
+    const effectiveSelectionAnchor = getEffectiveSelectionAnchor(anchor)
+    if (!effectiveSelectionAnchor) return null
+
+    const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
+    const selectedText = sectionText.slice(
+      effectiveSelectionAnchor.startOffset,
+      effectiveSelectionAnchor.endOffset
+    )
+    // Monaco StartFindAction only seeds from same-line selections.
+    if (selectedText.includes('\n') || selectedText.includes('\r')) return null
+    return selectedText
   }
 
   const setCurrentMatchIndex = (nextIndex: number) => {
     currentMatchIndex = nextIndex
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
+    lastNavigatedMatch = match
+    lastNavigatedQuery = trimmedQuery
     onRevealMatch?.(match)
-    recordSelectionFromMatch(match)
     void revealMatch(match)
   }
 
@@ -328,6 +337,28 @@
     return findMatchInItemFromSection(item, startSectionIndex, direction, boundaryOffset)
   }
 
+  const getSelectedMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
+    if (trimmedQuery.length === 0 || totalMatches <= 0) return null
+    const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
+    const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
+    if (endOffset <= startOffset) return null
+
+    const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
+    if (sectionText.length === 0) return null
+
+    const selectedText = sectionText.slice(startOffset, endOffset)
+    if (selectedText.toLowerCase() !== trimmedQuery.toLowerCase()) return null
+
+    const sectionMatchIndex = findMatchIndexAtOrAfter(sectionText, trimmedQuery, startOffset)
+    if (sectionMatchIndex == null) return null
+
+    const matchRange = findMatchRange(sectionText, trimmedQuery, sectionMatchIndex)
+    if (!matchRange) return null
+    if (matchRange.start !== startOffset || matchRange.end !== endOffset) return null
+
+    return getGlobalMatchIndex(anchor.entityId, anchor.sectionKey, sectionMatchIndex)
+  }
+
   const getMatchIndexFromAnchor = (
     anchor: PromptFolderFindAnchor,
     direction: TraversalDirection
@@ -380,7 +411,8 @@
   // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
     if (totalMatches === 0) return
-    const anchorIndex = lastSelectionAnchor
+    const anchorIndex =
+      currentMatchIndex <= 0 && lastSelectionAnchor
       ? getPreviousMatchIndexFromAnchor(lastSelectionAnchor)
       : null
     const nextIndex =
@@ -391,7 +423,8 @@
   // Move selection to the next match and reveal it.
   const handleNext = () => {
     if (totalMatches === 0) return
-    const anchorIndex = lastSelectionAnchor
+    const anchorIndex =
+      currentMatchIndex <= 0 && lastSelectionAnchor
       ? getNextMatchIndexFromAnchor(lastSelectionAnchor)
       : null
     const nextIndex =
@@ -413,7 +446,8 @@
 
     const shouldResetSelection =
       nextInputs.queryKey !== lastSearchInputs.queryKey ||
-      nextInputs.scopeKey !== lastSearchInputs.scopeKey
+      nextInputs.scopeKey !== lastSearchInputs.scopeKey ||
+      nextInputs.searchRevision !== lastSearchInputs.searchRevision
     runSearch(shouldResetSelection)
     lastSearchInputs = nextInputs
   })
