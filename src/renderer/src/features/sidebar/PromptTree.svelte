@@ -148,13 +148,26 @@
     `${folderId}:prompt:${promptId}`
   const promptNavigationPromptRow = (promptId: string): PromptNavigationRow => `prompt:${promptId}`
 
-  const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
-    onPromptFolderSelect(promptFolderId)
+  const blurButtonAfterMouseClick = (event: MouseEvent) => {
+    // Side effect: keep action-slot visibility stable by defocusing only real mouse clicks.
+    if (event.detail === 0) {
+      return
+    }
 
     const button = event.currentTarget
     if (button instanceof HTMLButtonElement) {
       button.blur()
     }
+  }
+
+  const handleFolderToggleClick = (folderId: string, event: MouseEvent) => {
+    toggleFolderExpanded(folderId)
+    blurButtonAfterMouseClick(event)
+  }
+
+  const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
+    onPromptFolderSelect(promptFolderId)
+    blurButtonAfterMouseClick(event)
   }
 
   const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
@@ -210,10 +223,7 @@
       onPromptFolderSelect(promptFolderId)
     }
 
-    const button = event.currentTarget
-    if (button instanceof HTMLButtonElement) {
-      button.blur()
-    }
+    blurButtonAfterMouseClick(event)
   }
 
   // Side effect: clear local folder expand overrides when switching workspaces.
@@ -328,7 +338,7 @@
       type="button"
       aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
       aria-expanded={isFolderExpanded(props.row.folder.id)}
-      onclick={() => toggleFolderExpanded(props.row.folder.id)}
+      onclick={(event) => handleFolderToggleClick(props.row.folder.id, event)}
       data-testid={folderToggleTestId(props.row.folder)}
       class="sidebarPromptTreeToggleButton"
     >
