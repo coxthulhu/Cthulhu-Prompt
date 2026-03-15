@@ -73,6 +73,7 @@
   let lastFontSizeEffectEditor: monaco.editor.IStandaloneCodeEditor | null = null
   let lastAppliedPromptFontSize: number | null = null
   let lastAppliedPromptEditorMinLines: number | null = null
+  let suppressCursorAutoScrollDuringRestore = $state(false)
 
   const getFindController = () => {
     if (!editor) return null
@@ -149,13 +150,26 @@
   const tryRestoreEditorViewState = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     viewStateJson: string | null | undefined
-  ) => {
+  ): void => {
     if (!viewStateJson) return
 
     try {
       targetEditor.restoreViewState(JSON.parse(viewStateJson) as monaco.editor.ICodeEditorViewState)
     } catch {
       // Monaco tolerates stale or incompatible view state; ignore restoration failures.
+    }
+  }
+
+  const restoreEditorViewStateWithScrollSuppression = (
+    targetEditor: monaco.editor.IStandaloneCodeEditor,
+    viewStateJson: string | null | undefined
+  ) => {
+    suppressCursorAutoScrollDuringRestore = true
+    try {
+      tryRestoreEditorViewState(targetEditor, viewStateJson)
+    } finally {
+      // Side effect: ignore restore-driven cursor changes only during synchronous restoration.
+      suppressCursorAutoScrollDuringRestore = false
     }
   }
 
@@ -291,6 +305,10 @@
   // Keep the virtual window centered on the primary cursor after Monaco reveals it.
   const handleCursorChange = (event: monaco.editor.ICursorPositionChangedEvent) => {
     if (!editor || !scrollToWithinWindowBand) return
+    if (suppressCursorAutoScrollDuringRestore) {
+      pendingCursorPosition = null
+      return
+    }
     if (event.reason === monaco.editor.CursorChangeReason.RecoverFromMarkers) return
     if (event.reason === monaco.editor.CursorChangeReason.ContentFlush) return
     if (event.source === 'api') return
@@ -309,6 +327,10 @@
   }
 
   const handleEditorScroll = () => {
+    if (suppressCursorAutoScrollDuringRestore) {
+      pendingCursorPosition = null
+      return
+    }
     if (!pendingCursorPosition) return
     const metrics = getCursorMetrics(pendingCursorPosition)
     const isVisible = metrics?.isVisible ?? false
@@ -395,7 +417,7 @@
     const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
     layoutEditor()
-    tryRestoreEditorViewState(nextEditor, initialViewStateJson)
+    restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)
     layoutEditor()
     lastContainerWidthPx = containerWidthPx
     emitChange(nextEditor.getValue(), false, monacoHeightPx)
@@ -408,6 +430,7 @@
       focusDisposable.dispose()
       cursorDisposable.dispose()
       scrollDisposable.dispose()
+      suppressCursorAutoScrollDuringRestore = false
       if (viewStateCaptureKey) {
         unregisterMonacoViewStateSaver(viewStateCaptureKey)
       }
