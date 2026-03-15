@@ -5,6 +5,7 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
+import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,
@@ -15,6 +16,12 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const FIND_INPUT = '[data-testid="prompt-find-input"]'
 const FIND_CLOSE = '[data-testid="prompt-find-close"]'
+const FIND_MATCHES_LABEL = '[data-testid="prompt-find-widget"] .prompt-find-widget__matches'
+const SETTINGS_ROW_SELECTOR =
+  '[data-testid="prompt-folder-screen"] [data-virtual-window-row][data-testid^="prompt-folder-settings-"]'
+const LOOP_REGRESSION_QUERY = 'cthulhu-loop-regression-marker-9x4k'
+const LOOP_MATCH_PROMPT_IDS = Array.from({ length: 19 }, (_, index) => `loop-test-${2 + index * 60}`)
+const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 
 const getMonacoSelectedText = async (
   mainWindow: any,
@@ -96,6 +103,103 @@ const getMonacoWordAtCursor = async (
     },
     editorSelector
   )
+}
+
+const getFindMatchesLabelText = async (mainWindow: any): Promise<string> => {
+  return await mainWindow.evaluate((selector) => {
+    return document.querySelector<HTMLElement>(selector)?.textContent?.trim() ?? ''
+  }, FIND_MATCHES_LABEL)
+}
+
+const getCurrentFindMatchRowTestId = async (mainWindow: any): Promise<string | null> => {
+  return await mainWindow.evaluate(() => {
+    const currentFindMatch = document.querySelector('.monaco-editor .currentFindMatch')
+    if (!currentFindMatch) return null
+    const row = currentFindMatch.closest<HTMLElement>('[data-testid][data-virtual-window-row]')
+    return row?.getAttribute('data-testid') ?? null
+  })
+}
+
+const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, string | null> => {
+  const promptIdsWithMatches = new Set(LOOP_MATCH_PROMPT_IDS)
+  const basePromptBody = '\n'.repeat(80)
+  const prompts = Array.from({ length: 1200 }, (_, index) => {
+    const promptId = `loop-test-${index + 1}`
+    return {
+      id: promptId,
+      title: `Loop Prompt ${index + 1}`,
+      promptText: promptIdsWithMatches.has(promptId)
+        ? `${basePromptBody}\n${LOOP_REGRESSION_QUERY}`
+        : basePromptBody
+    }
+  })
+
+  const filesystem = createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Long',
+      displayName: 'Long',
+      prompts,
+      promptFolderId: 'loop-folder'
+    }
+  ])
+
+  const promptFolderPath = `${workspacePath}/Prompts/Long/PromptFolder.json`
+  const promptFolderRaw = filesystem[promptFolderPath]
+  if (typeof promptFolderRaw !== 'string') {
+    throw new Error('Missing Long/PromptFolder.json in loop fixture workspace')
+  }
+  const promptFolderData = JSON.parse(promptFolderRaw) as {
+    folderDescription?: string
+  }
+  promptFolderData.folderDescription = `Find marker in folder description: ${LOOP_REGRESSION_QUERY}`
+  filesystem[promptFolderPath] = JSON.stringify(promptFolderData, null, 2)
+
+  return filesystem
+}
+
+const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, string | null> => {
+  const promptMatchCounts = new Map<string, number>([
+    ['rapid-loop-2', 2],
+    ['rapid-loop-300', 7],
+    ['rapid-loop-700', 1],
+    ['rapid-loop-1100', 1]
+  ])
+  const basePromptBody = '\n'.repeat(80)
+  const prompts = Array.from({ length: 1200 }, (_, index) => {
+    const promptId = `rapid-loop-${index + 1}`
+    const matchCount = promptMatchCounts.get(promptId) ?? 0
+    const matchLines =
+      matchCount <= 0
+        ? ''
+        : `\n${Array.from({ length: matchCount }, () => RAPID_LOOP_QUERY).join('\n')}`
+    return {
+      id: promptId,
+      title: `Rapid Loop Prompt ${index + 1}`,
+      promptText: `${basePromptBody}${matchLines}`
+    }
+  })
+
+  const filesystem = createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Long',
+      displayName: 'Long',
+      prompts,
+      promptFolderId: 'rapid-loop-folder'
+    }
+  ])
+
+  const promptFolderPath = `${workspacePath}/Prompts/Long/PromptFolder.json`
+  const promptFolderRaw = filesystem[promptFolderPath]
+  if (typeof promptFolderRaw !== 'string') {
+    throw new Error('Missing Long/PromptFolder.json in rapid loop fixture workspace')
+  }
+  const promptFolderData = JSON.parse(promptFolderRaw) as {
+    folderDescription?: string
+  }
+  promptFolderData.folderDescription = `Rapid loop marker in folder description: ${RAPID_LOOP_QUERY}`
+  filesystem[promptFolderPath] = JSON.stringify(promptFolderData, null, 2)
+
+  return filesystem
 }
 
 describe('Prompt folder find dialog', () => {
@@ -492,6 +596,177 @@ describe('Prompt folder find dialog', () => {
         }, `${targetSelector} .monaco-editor .currentFindMatch`)
       })
       .toBe(true)
+  })
+
+  test('cycles correctly across 20 matches including two-digit counters', async ({ testSetup }) => {
+    test.setTimeout(180000)
+    const workspacePath = '/ws/virtual-find-loop'
+    await testSetup.setupFilesystem(buildVirtualFindLoopWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Long')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(promptEditorSelector('loop-test-1'), {
+      state: 'attached'
+    })
+    const promptIds = LOOP_MATCH_PROMPT_IDS
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await mainWindow.waitForSelector(SETTINGS_ROW_SELECTOR, { state: 'attached' })
+    const settingsRowTestId = await mainWindow.evaluate((selector) => {
+      return document.querySelector<HTMLElement>(selector)?.getAttribute('data-testid') ?? null
+    }, SETTINGS_ROW_SELECTOR)
+    expect(settingsRowTestId).not.toBeNull()
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await findInput.fill(LOOP_REGRESSION_QUERY)
+
+    const expectedRowIdsByStep = [
+      settingsRowTestId!,
+      ...promptIds.map((promptId) => `prompt-editor-${promptId}`)
+    ]
+    const totalMatches = expectedRowIdsByStep.length
+    expect(totalMatches).toBe(20)
+    const totalPresses = totalMatches * 3
+    for (let step = 1; step <= totalPresses; step += 1) {
+      await findInput.press('Enter')
+      const expectedMatchNumber = ((step - 1) % totalMatches) + 1
+      const expectedLabel = `${expectedMatchNumber} of ${totalMatches}`
+      const expectedRowId = expectedRowIdsByStep[expectedMatchNumber - 1]
+
+      await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe(
+        expectedLabel
+      )
+      await expect.poll(() => getCurrentFindMatchRowTestId(mainWindow), { timeout: 5000 }).toBe(
+        expectedRowId
+      )
+    }
+  })
+
+  test('keeps next progression stable during rapid enter across virtualized hydration', async ({
+    testSetup
+  }) => {
+    test.setTimeout(180000)
+    const workspacePath = '/ws/virtual-find-rapid-loop'
+    await testSetup.setupFilesystem(buildVirtualFindRapidWorkspace(workspacePath))
+    await testSetup.setupFileDialog([workspacePath])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Long')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(promptEditorSelector('rapid-loop-1'), {
+      state: 'attached'
+    })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await findInput.fill(RAPID_LOOP_QUERY)
+    await expect
+      .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
+      .toBe('0 of 12')
+
+    await mainWindow.evaluate((selector) => {
+      const label = document.querySelector<HTMLElement>(selector)
+      if (!label) return
+
+      const captureWindow = window as unknown as {
+        __promptFindLabelEvents?: Array<{ current: number; total: number }>
+        __promptFindLabelObserver?: MutationObserver
+      }
+      const events: Array<{ current: number; total: number }> = []
+      const captureLabel = () => {
+        const text = label.textContent?.trim() ?? ''
+        const match = text.match(/^(\d+)\s+of\s+(\d+)$/)
+        if (!match) return
+        events.push({
+          current: Number.parseInt(match[1], 10),
+          total: Number.parseInt(match[2], 10)
+        })
+      }
+
+      captureWindow.__promptFindLabelObserver?.disconnect()
+      captureWindow.__promptFindLabelEvents = events
+      captureLabel()
+
+      const observer = new MutationObserver(() => {
+        captureLabel()
+      })
+      observer.observe(label, { childList: true, characterData: true, subtree: true })
+      captureWindow.__promptFindLabelObserver = observer
+    }, FIND_MATCHES_LABEL)
+
+    const totalPresses = 36
+    for (let step = 0; step < totalPresses; step += 1) {
+      await findInput.press('Enter')
+    }
+
+    await expect
+      .poll(
+        async () =>
+          await mainWindow.evaluate(() => {
+            const events =
+              (window as unknown as {
+                __promptFindLabelEvents?: Array<{ current: number; total: number }>
+              }).__promptFindLabelEvents ?? []
+            const compressed: Array<{ current: number; total: number }> = []
+            for (const event of events) {
+              const previous = compressed.at(-1)
+              if (
+                !previous ||
+                previous.current !== event.current ||
+                previous.total !== event.total
+              ) {
+                compressed.push(event)
+              }
+            }
+            return compressed.length
+          }),
+        { timeout: 5000 }
+      )
+      .toBe(totalPresses + 1)
+
+    const labelEvents = await mainWindow.evaluate(() => {
+      const events =
+        (window as unknown as {
+          __promptFindLabelEvents?: Array<{ current: number; total: number }>
+        }).__promptFindLabelEvents ?? []
+      const compressed: Array<{ current: number; total: number }> = []
+      for (const event of events) {
+        const previous = compressed.at(-1)
+        if (!previous || previous.current !== event.current || previous.total !== event.total) {
+          compressed.push(event)
+        }
+      }
+      return compressed
+    })
+    await mainWindow.evaluate(() => {
+      const captureWindow = window as unknown as { __promptFindLabelObserver?: MutationObserver }
+      captureWindow.__promptFindLabelObserver?.disconnect()
+    })
+
+    expect(labelEvents[0]).toEqual({ current: 0, total: 12 })
+    for (let index = 1; index < labelEvents.length; index += 1) {
+      const previous = labelEvents[index - 1]
+      const next = labelEvents[index]
+      const expectedCurrent = previous.current >= previous.total ? 1 : previous.current + 1
+      expect(next.current).toBe(expectedCurrent)
+      expect(next.total).toBe(previous.total)
+    }
   })
 
   test('does not reselect the active find match after typing at a new cursor location', async ({

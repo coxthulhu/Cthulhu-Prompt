@@ -122,7 +122,6 @@
         sum + entry.sectionCounts.reduce((sectionSum, section) => sectionSum + section.count, 0),
       0
     )
-
     if (resetSelection) {
       currentMatchIndex = 0
       return

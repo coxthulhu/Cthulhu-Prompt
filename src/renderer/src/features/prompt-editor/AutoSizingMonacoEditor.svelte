@@ -267,10 +267,11 @@
 
     const selection = editor?.getSelection()
     if (!selection) return null
-    return getRowCenterOffset({
+    const centerOffsetPx = getRowCenterOffset({
       lineNumber: selection.startLineNumber,
       column: selection.startColumn
     })
+    return centerOffsetPx
   }
 
   const handleContentChange = () => {
@@ -314,6 +315,28 @@
     if (!isVisible) return
     scrollCursorIntoBand(pendingCursorPosition)
     pendingCursorPosition = null
+  }
+
+  // Mirror Monaco find anchor updates from explicit/undo/redo cursor moves.
+  const reportSelectionAnchorFromCursorChange = (
+    targetEditor: monaco.editor.IStandaloneCodeEditor,
+    event: monaco.editor.ICursorPositionChangedEvent
+  ) => {
+    if (!onSelectionChange) return
+    if (
+      event.reason !== monaco.editor.CursorChangeReason.Explicit &&
+      event.reason !== monaco.editor.CursorChangeReason.Undo &&
+      event.reason !== monaco.editor.CursorChangeReason.Redo
+    ) {
+      return
+    }
+
+    const model = targetEditor.getModel()
+    const selection = targetEditor.getSelection()
+    if (!model || !selection) return
+    const startOffset = model.getOffsetAt(selection.getStartPosition())
+    const endOffset = model.getOffsetAt(selection.getEndPosition())
+    onSelectionChange(startOffset, endOffset)
   }
 
   // Side effect: keep the initial Monaco height aligned with the current font size.
@@ -365,15 +388,9 @@
     const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
     const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
     const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
-    const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
-    const selectionDisposable = nextEditor.onDidChangeCursorSelection((event) => {
-      if (!onSelectionChange) return
-      if (event.source === 'api') return
-      const model = nextEditor.getModel()
-      if (!model) return
-      const startOffset = model.getOffsetAt(event.selection.getStartPosition())
-      const endOffset = model.getOffsetAt(event.selection.getEndPosition())
-      onSelectionChange(startOffset, endOffset)
+    const cursorDisposable = nextEditor.onDidChangeCursorPosition((event) => {
+      handleCursorChange(event)
+      reportSelectionAnchorFromCursorChange(nextEditor, event)
     })
     const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
@@ -390,7 +407,6 @@
       blurDisposable.dispose()
       focusDisposable.dispose()
       cursorDisposable.dispose()
-      selectionDisposable.dispose()
       scrollDisposable.dispose()
       if (viewStateCaptureKey) {
         unregisterMonacoViewStateSaver(viewStateCaptureKey)
