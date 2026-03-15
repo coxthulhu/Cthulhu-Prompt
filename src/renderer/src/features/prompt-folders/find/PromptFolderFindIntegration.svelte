@@ -6,7 +6,6 @@
   import {
     buildPromptFolderFindCounts,
     buildSearchInputs,
-    getMatchTextForCurrentMatch,
     getPromptFolderFindMatchForIndex,
     hasSearchInputsChanged,
     type PromptFolderFindCounts,
@@ -180,6 +179,49 @@
       startOffset: matchRange.start,
       endOffset: matchRange.end
     })
+  }
+
+  const getWordAtOffset = (text: string, offset: number): string | null => {
+    if (text.length === 0) return null
+    const clampedOffset = Math.min(Math.max(offset, 0), text.length)
+    const isWordChar = (char: string) => /[0-9A-Za-z_]/.test(char)
+
+    let anchorIndex: number | null = null
+    if (clampedOffset < text.length && isWordChar(text[clampedOffset])) {
+      anchorIndex = clampedOffset
+    } else if (clampedOffset > 0 && isWordChar(text[clampedOffset - 1])) {
+      anchorIndex = clampedOffset - 1
+    }
+    if (anchorIndex == null) return null
+
+    let start = anchorIndex
+    while (start > 0 && isWordChar(text[start - 1])) {
+      start -= 1
+    }
+    let end = anchorIndex + 1
+    while (end < text.length && isWordChar(text[end])) {
+      end += 1
+    }
+    return text.slice(start, end)
+  }
+
+  const getSelectionMatchText = (): string | null => {
+    const anchor = lastSelectionAnchor
+    if (!anchor) return null
+
+    const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
+    if (sectionText.length === 0) return null
+
+    const startOffset = Math.min(Math.max(anchor.startOffset, 0), sectionText.length)
+    const endOffset = Math.min(Math.max(anchor.endOffset, 0), sectionText.length)
+    if (endOffset > startOffset) {
+      const selectedText = sectionText.slice(startOffset, endOffset)
+      // Monaco StartFindAction only seeds from same-line selections.
+      if (selectedText.includes('\n') || selectedText.includes('\r')) return null
+      return selectedText
+    }
+
+    return getWordAtOffset(sectionText, startOffset)
   }
 
   const setCurrentMatchIndex = (nextIndex: number) => {
@@ -462,13 +504,11 @@
   onMount(() => {
     const unregisterShortcuts = registerPromptFolderFindShortcuts({
       getIsFindOpen: () => isFindOpen,
-      getCurrentMatch: () => currentMatch,
       getMatchText: () => matchText,
       setMatchText: (value) => {
         matchText = value
       },
-      getMatchTextForCurrentMatch: (match) =>
-        getMatchTextForCurrentMatch(match, trimmedQuery, getSectionText),
+      getSelectionMatchText,
       openFindDialog,
       closeFindDialog
     })

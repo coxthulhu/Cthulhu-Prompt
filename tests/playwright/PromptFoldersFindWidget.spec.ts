@@ -16,6 +16,88 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const FIND_INPUT = '[data-testid="prompt-find-input"]'
 const FIND_CLOSE = '[data-testid="prompt-find-close"]'
 
+const getMonacoSelectedText = async (
+  mainWindow: any,
+  editorSelector: string
+): Promise<string | null> => {
+  return await mainWindow.evaluate(
+    (selector) => {
+      const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+      if (!monacoNode) return null
+
+      const registry = (
+        window as unknown as {
+          __cthulhuMonacoEditors?: Array<{
+            container: HTMLElement | null
+            editor: {
+              getModel: () => {
+                getValueInRange: (range: any) => string
+              } | null
+              getSelection: () => any
+            }
+          }>
+        }
+      ).__cthulhuMonacoEditors
+
+      if (!registry?.length) return null
+
+      const entry = registry.find((item) => {
+        if (!item?.container) return false
+        return item.container === monacoNode || item.container.contains(monacoNode)
+      })
+      if (!entry) return null
+
+      const model = entry.editor.getModel()
+      const selection = entry.editor.getSelection()
+      if (!model || !selection) return null
+
+      return model.getValueInRange(selection)
+    },
+    editorSelector
+  )
+}
+
+const getMonacoWordAtCursor = async (
+  mainWindow: any,
+  editorSelector: string
+): Promise<string | null> => {
+  return await mainWindow.evaluate(
+    (selector) => {
+      const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+      if (!monacoNode) return null
+
+      const registry = (
+        window as unknown as {
+          __cthulhuMonacoEditors?: Array<{
+            container: HTMLElement | null
+            editor: {
+              getModel: () => {
+                getWordAtPosition: (position: any) => { word: string } | null
+              } | null
+              getPosition: () => any
+            }
+          }>
+        }
+      ).__cthulhuMonacoEditors
+
+      if (!registry?.length) return null
+
+      const entry = registry.find((item) => {
+        if (!item?.container) return false
+        return item.container === monacoNode || item.container.contains(monacoNode)
+      })
+      if (!entry) return null
+
+      const model = entry.editor.getModel()
+      const position = entry.editor.getPosition()
+      if (!model || !position) return null
+
+      return model.getWordAtPosition(position)?.word ?? null
+    },
+    editorSelector
+  )
+}
+
 describe('Prompt folder find dialog', () => {
   test('opens with Ctrl+F and closes with Escape or the close button', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -89,6 +171,82 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(async () => getSelectionInfo(mainWindow), { timeout: 2000 })
       .toEqual({ start: 0, end: longQuery.length, value: longQuery })
+  })
+
+  test('seeds find input from selected Monaco text on Ctrl+F', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const editorSelector = promptEditorSelector('dev-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.down('Shift')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.up('Shift')
+
+    const selectedText = await getMonacoSelectedText(mainWindow, editorSelector)
+    expect(selectedText && selectedText.length > 0).toBe(true)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue(selectedText!)
+  })
+
+  test('seeds find input from Monaco word at cursor on Ctrl+F', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const editorSelector = promptEditorSelector('dev-1')
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowRight')
+
+    const cursorWord = await getMonacoWordAtCursor(mainWindow, editorSelector)
+    expect(cursorWord && cursorWord.length > 0).toBe(true)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue(cursorWord!)
+  })
+
+  test('seeds find input from selected title text on Ctrl+F', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const titleSelector = `${promptEditorSelector('dev-2')} ${PROMPT_TITLE_SELECTOR}`
+    await mainWindow.waitForSelector(titleSelector, { state: 'attached' })
+
+    const selectedText = await mainWindow.evaluate((selector) => {
+      const input = document.querySelector<HTMLInputElement>(selector)
+      if (!input) return null
+      const start = input.value.indexOf('Analysis')
+      if (start < 0) return null
+      const end = start + 'Analysis'.length
+      input.focus({ preventScroll: true })
+      input.setSelectionRange(start, end)
+      input.dispatchEvent(new Event('select', { bubbles: true }))
+      return input.value.slice(start, end)
+    }, titleSelector)
+    expect(selectedText).toBe('Analysis')
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue('Analysis')
   })
 
   test('focuses the current match after closing the find widget', async ({ testSetup }) => {
