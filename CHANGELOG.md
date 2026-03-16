@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.10
+
+### New Features
+
+- Added prompt rows within the sidebar tree and jump/scroll synchronization between folders and the tree.
+- Added persistence for expanded and collapsed folder state in the prompt tree.
+- Added summary/full prompt loading plumbing for prompt folder views.
+
+### Changes
+
+- Shifted prompt-folder navigation/state restore from the outliner to the sidebar prompt tree.
+- Refined sidebar tree layout and interactions (spacing, insets, hover actions, icon alignment, and labels).
+- Simplified prompt navigation and sidebar sizing state, and standardized Playwright selectors to test IDs.
+
+### Fixed
+
+- Fixed prompt find behavior around Ctrl+F selection seeding, loop anchoring, and reselection jumps.
+- Fixed Monaco autoscroll during view state restore.
+- Fixed workspace prompt draft hydration and prompt-tree interaction edge cases.
+
 ## 0.0.9
 
 ### New Features
