@@ -252,6 +252,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-prompt-short-"][aria-current="true"]')
     ).toBeVisible()
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
+      .toBe(0)
+    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
   })
 
   test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {

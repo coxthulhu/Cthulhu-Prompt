@@ -132,6 +132,7 @@ export const createPromptFolderScreenController = ({
   let initialPromptFolderCenterRowId = $state<string | null>(null)
   let latestCenteredPromptTreeRow = $state<ActivePromptTreeRow | null>(null)
   let scrollTopPx = $state(getRestoredPromptFolderScrollTop())
+  const TOP_SCROLL_EPSILON_PX = 1
 
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
@@ -214,12 +215,23 @@ export const createPromptFolderScreenController = ({
     )
   }
 
+  const resolveScrollFollowRow = (
+    nextCenteredRow: ActivePromptTreeRow | null
+  ): ActivePromptTreeRow | null => {
+    // Treat near-zero virtual scroll values as "top of folder" and keep tree selection on settings.
+    if (scrollTopPx < TOP_SCROLL_EPSILON_PX) {
+      return { kind: 'folder-settings' }
+    }
+
+    return nextCenteredRow
+  }
+
   const clearManualSelectionSource = () => {
     if (!hasManualSelectionSource()) {
       return
     }
 
-    const fallbackRow = latestCenteredPromptTreeRow ?? activePromptTreeRow
+    const fallbackRow = resolveScrollFollowRow(latestCenteredPromptTreeRow ?? activePromptTreeRow)
     if (!fallbackRow) {
       return
     }
@@ -655,14 +667,12 @@ export const createPromptFolderScreenController = ({
   const handleVirtualCenterRowChange = (nextCenteredRow: ActivePromptTreeRow | null) => {
     latestCenteredPromptTreeRow = nextCenteredRow
     if (hasManualSelectionSource()) return
-    setCurrentFolderSelection(latestCenteredPromptTreeRow, 'scroll-follow')
+    setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptTreeRow), 'scroll-follow')
   }
 
   const handleVirtualUserScroll = () => {
     clearManualSelectionSource()
-    if (latestCenteredPromptTreeRow) {
-      setCurrentFolderSelection(latestCenteredPromptTreeRow, 'scroll-follow')
-    }
+    setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptTreeRow), 'scroll-follow')
   }
 
   return {
