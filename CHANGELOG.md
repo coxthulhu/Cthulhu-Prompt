@@ -6,13 +6,13 @@
 
 - Added prompt rows within the sidebar tree and jump/scroll synchronization between folders and the tree.
 - Added persistence for expanded and collapsed folder state in the prompt tree.
-- Added summary/full prompt loading plumbing for prompt folder views.
 
 ### Changes
 
 - Shifted prompt-folder navigation/state restore from the outliner to the sidebar prompt tree.
 - Refined sidebar tree layout and interactions (spacing, insets, hover actions, icon alignment, and labels).
 - Simplified prompt navigation and sidebar sizing state, and standardized Playwright selectors to test IDs.
+- Added summary/full prompt loading plumbing for prompt folder views.
 
 ### Fixed
 
