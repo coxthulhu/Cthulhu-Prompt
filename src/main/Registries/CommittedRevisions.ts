@@ -4,42 +4,76 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import type { SystemSettings } from '@shared/SystemSettings'
 import type { Workspace } from '@shared/Workspace'
 
-type CommittedRevisionEntry<TData> = {
+type CommittedRevisionEntry<TData, TFileFields> = {
   revision: number
-  committed: TData
+  committed: TData | null
+  fileFields: TFileFields | null
 }
 
-type CommittedRevisionStore<TData> = {
+type CommittedRevisionStore<TData, TFileFields> = {
   getRevision: (id: string) => number
   getCommitted: (id: string) => TData | null
   // Use this after initial disk reads.
-  setFromDisk: (id: string, data: TData) => void
+  setFromDisk: (id: string, data: TData, fileFields?: TFileFields) => void
   // Use this after disk writes succeed.
   commitAfterWrite: (id: string, data: TData) => number
   remove: (id: string) => void
 }
 
-const createCommittedRevisionStore = <TData>(): CommittedRevisionStore<TData> => {
-  let entriesById: Record<string, CommittedRevisionEntry<TData>> = {}
+type WorkspaceFileFields = {
+  workspacePath: string
+}
+
+type PromptFolderFileFields = {
+  workspaceId: string
+  workspacePath: string
+  folderName: string
+}
+
+type PromptFileFields = {
+  workspaceId: string
+  workspacePath: string
+  folderName: string
+  promptFolderId: string
+}
+
+const createCommittedRevisionStore = <TData, TFileFields>(): CommittedRevisionStore<
+  TData,
+  TFileFields
+> => {
+  let entriesById: Record<string, CommittedRevisionEntry<TData, TFileFields>> = {}
 
   return {
     getRevision: (id) => entriesById[id]?.revision ?? 0,
     getCommitted: (id) => entriesById[id]?.committed ?? null,
-    setFromDisk: (id, data) => {
-      entriesById = produce(entriesById, (draft) => {
-        draft[id] = {
+    setFromDisk: (id, data, fileFields) => {
+      entriesById = produce(entriesById, () => {
+        const nextFileFields = fileFields ?? entriesById[id]?.fileFields ?? null
+        const nextEntry: CommittedRevisionEntry<TData, TFileFields> = {
           revision: 0,
-          committed: data as (typeof draft)[string]['committed']
+          committed: data,
+          fileFields: nextFileFields
+        }
+
+        return {
+          ...entriesById,
+          [id]: nextEntry
         }
       })
     },
     commitAfterWrite: (id, data) => {
-      let nextRevision = 0
-      entriesById = produce(entriesById, (draft) => {
-        nextRevision = (draft[id]?.revision ?? 0) + 1
-        draft[id] = {
+      const nextRevision = (entriesById[id]?.revision ?? 0) + 1
+      entriesById = produce(entriesById, () => {
+        const existingFileFields = entriesById[id]?.fileFields ?? null
+        const nextEntry: CommittedRevisionEntry<TData, TFileFields> = {
           revision: nextRevision,
-          committed: data as (typeof draft)[string]['committed']
+          committed: data,
+          fileFields: existingFileFields
+        }
+
+        return {
+          ...entriesById,
+          [id]: nextEntry
         }
       })
       return nextRevision
@@ -53,8 +87,8 @@ const createCommittedRevisionStore = <TData>(): CommittedRevisionStore<TData> =>
 }
 
 export const committedRevisions = {
-  systemSettings: createCommittedRevisionStore<SystemSettings>(),
-  workspace: createCommittedRevisionStore<Workspace>(),
-  promptFolder: createCommittedRevisionStore<PromptFolder>(),
-  prompt: createCommittedRevisionStore<PromptPersisted>()
+  systemSettings: createCommittedRevisionStore<SystemSettings, never>(),
+  workspace: createCommittedRevisionStore<Workspace, WorkspaceFileFields>(),
+  promptFolder: createCommittedRevisionStore<PromptFolder, PromptFolderFileFields>(),
+  prompt: createCommittedRevisionStore<PromptPersisted, PromptFileFields>()
 }
