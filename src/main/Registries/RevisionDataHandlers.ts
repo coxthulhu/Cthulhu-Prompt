@@ -1,19 +1,15 @@
-import { produce } from 'immer'
 import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import type { CommittedStore } from './CommittedStore'
-import type { DataRecipe } from './Data'
 
-type RevisionDataHandlers<TData, TPersistenceFields> = {
+type RevisionDataHandlers<TPersistenceFields> = {
   loadDataFromPersistence: (id: string, persistenceFields: TPersistenceFields) => Promise<void>
-  changeDataAndPersist: (id: string, recipe: DataRecipe<TData>) => Promise<number | null>
 }
 
 export const createRevisionDataHandlers = <TData, TPersistenceFields>(params: {
   committedStore: CommittedStore<TData, TPersistenceFields>
   persistence: PersistenceLayer<TData, TPersistenceFields>
-  emitCommittedRevisionChanged: (id: string) => void
-}): RevisionDataHandlers<TData, TPersistenceFields> => {
-  const { committedStore, persistence, emitCommittedRevisionChanged } = params
+}): RevisionDataHandlers<TPersistenceFields> => {
+  const { committedStore, persistence } = params
 
   const loadDataFromPersistence = async (
     id: string,
@@ -28,26 +24,7 @@ export const createRevisionDataHandlers = <TData, TPersistenceFields>(params: {
     committedStore.setFromDisk(id, loadedData, persistenceFields)
   }
 
-  const changeDataAndPersist = async (
-    id: string,
-    recipe: DataRecipe<TData>
-  ): Promise<number | null> => {
-    const committedEntry = committedStore.getEntry(id)
-
-    if (!committedEntry) {
-      return null
-    }
-
-    const nextData = produce(committedEntry.committed, recipe)
-    await persistence.persistData(committedEntry.persistenceFields, nextData)
-    const nextRevision = committedStore.commitAfterWrite(id, nextData)
-    emitCommittedRevisionChanged(id)
-
-    return nextRevision
-  }
-
   return {
-    loadDataFromPersistence,
-    changeDataAndPersist
+    loadDataFromPersistence
   }
 }

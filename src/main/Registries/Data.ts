@@ -1,4 +1,5 @@
 import type { Draft } from 'immer'
+import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import type { CommittedStore } from './CommittedStore'
 import { promptData } from './PromptData'
 import { promptFolderData } from './PromptFolderData'
@@ -9,7 +10,7 @@ export type DataRecipe<TData> = (draft: Draft<TData>) => void
 
 export type RevisionData<TData, TPersistenceFields> = {
   committedStore: CommittedStore<TData, TPersistenceFields>
-  changeDataAndPersist: (id: string, recipe: DataRecipe<TData>) => Promise<number | null>
+  persistence: PersistenceLayer<TData, TPersistenceFields>
   loadDataFromPersistence: (id: string, persistenceFields: TPersistenceFields) => Promise<void>
   emitCommittedRevisionChanged: (id: string) => void
 }

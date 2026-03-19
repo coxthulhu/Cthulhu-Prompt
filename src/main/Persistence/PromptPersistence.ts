@@ -9,14 +9,18 @@ export type PromptPersistenceFields = {
 }
 
 export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersistenceFields> = {
-  persistData: async (_persistenceFields, _data) => {
-    // TODO: Persist prompt data.
+  stageChanges: async (_change) => {
+    // TODO: Stage prompt persistence changes.
+    return {}
+  },
+  commitChanges: async (_stagedChange) => {
+    // TODO: Commit staged prompt persistence changes.
+  },
+  revertChanges: async (_stagedChange) => {
+    // TODO: Revert staged prompt persistence changes.
   },
   loadData: async (_persistenceFields) => {
     // TODO: Load prompt data.
     return null
-  },
-  removeData: async (_persistenceFields) => {
-    // TODO: Remove prompt data.
   }
 }

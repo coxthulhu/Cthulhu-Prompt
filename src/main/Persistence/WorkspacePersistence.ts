@@ -6,14 +6,18 @@ export type WorkspacePersistenceFields = {
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
-  persistData: async (_persistenceFields, _data) => {
-    // TODO: Persist workspace data.
+  stageChanges: async (_change) => {
+    // TODO: Stage workspace persistence changes.
+    return {}
+  },
+  commitChanges: async (_stagedChange) => {
+    // TODO: Commit staged workspace persistence changes.
+  },
+  revertChanges: async (_stagedChange) => {
+    // TODO: Revert staged workspace persistence changes.
   },
   loadData: async (_persistenceFields) => {
     // TODO: Load workspace data.
     return null
-  },
-  removeData: async (_persistenceFields) => {
-    // TODO: Remove workspace data.
   }
 }

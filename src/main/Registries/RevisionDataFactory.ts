@@ -9,15 +9,14 @@ export const createRevisionData = <TData, TPersistenceFields>(params: {
 }): RevisionData<TData, TPersistenceFields> => {
   const { persistence, emitCommittedRevisionChanged } = params
   const committedStore = createCommittedStore<TData, TPersistenceFields>()
-  const { loadDataFromPersistence, changeDataAndPersist } = createRevisionDataHandlers({
+  const { loadDataFromPersistence } = createRevisionDataHandlers({
     committedStore,
-    persistence,
-    emitCommittedRevisionChanged
+    persistence
   })
 
   return {
     committedStore,
-    changeDataAndPersist,
+    persistence,
     loadDataFromPersistence,
     emitCommittedRevisionChanged
   }

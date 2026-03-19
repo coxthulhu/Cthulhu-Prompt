@@ -11,14 +11,18 @@ export const promptFolderPersistence: PersistenceLayer<
   PromptFolder,
   PromptFolderPersistenceFields
 > = {
-  persistData: async (_persistenceFields, _data) => {
-    // TODO: Persist prompt folder data.
+  stageChanges: async (_change) => {
+    // TODO: Stage prompt folder persistence changes.
+    return {}
+  },
+  commitChanges: async (_stagedChange) => {
+    // TODO: Commit staged prompt folder persistence changes.
+  },
+  revertChanges: async (_stagedChange) => {
+    // TODO: Revert staged prompt folder persistence changes.
   },
   loadData: async (_persistenceFields) => {
     // TODO: Load prompt folder data.
     return null
-  },
-  removeData: async (_persistenceFields) => {
-    // TODO: Remove prompt folder data.
   }
 }

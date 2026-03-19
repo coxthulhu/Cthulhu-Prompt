@@ -7,14 +7,18 @@ export const systemSettingsPersistence: PersistenceLayer<
   SystemSettings,
   SystemSettingsPersistenceFields
 > = {
-  persistData: async (_persistenceFields, _data) => {
-    // TODO: Persist system settings data.
+  stageChanges: async (_change) => {
+    // TODO: Stage system settings persistence changes.
+    return {}
+  },
+  commitChanges: async (_stagedChange) => {
+    // TODO: Commit staged system settings persistence changes.
+  },
+  revertChanges: async (_stagedChange) => {
+    // TODO: Revert staged system settings persistence changes.
   },
   loadData: async (_persistenceFields) => {
     // TODO: Load system settings data.
     return null
-  },
-  removeData: async (_persistenceFields) => {
-    // TODO: Remove system settings data.
   }
 }
