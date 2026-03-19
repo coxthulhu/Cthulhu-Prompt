@@ -1,28 +1,29 @@
-import type { FSWatcher } from 'chokidar'
 import { produce } from 'immer'
 import type { PromptPersisted } from '@shared/Prompt'
 import { createCommittedStore } from './CommittedStore'
 import type { DataRecipe, RevisionData } from './Data'
+import {
+  promptPersistence,
+  type PromptPersistenceFields
+} from '../Persistence/PromptPersistence'
 
-export type PromptFileFields = {
-  workspaceId: string
-  workspacePath: string
-  folderName: string
-  promptFolderId: string
-}
-
-const committedStore = createCommittedStore<PromptPersisted, PromptFileFields>()
+const committedStore = createCommittedStore<PromptPersisted, PromptPersistenceFields>()
 
 const emitCommittedRevisionChanged = (_id: string): void => {
   // TODO: Emit committed prompt update events.
 }
 
-const handleFilesystemChange = (_changedPath: string): void => {
-  // TODO: Handle prompt filesystem changes.
-}
+const loadDataFromPersistence = async (
+  id: string,
+  persistenceFields: PromptPersistenceFields
+): Promise<void> => {
+  const loadedData = await promptPersistence.loadData(persistenceFields)
 
-const addWatchers = (_watcher: FSWatcher): void => {
-  // TODO: Register prompt watchers.
+  if (!loadedData) {
+    return
+  }
+
+  committedStore.setFromDisk(id, loadedData, persistenceFields)
 }
 
 const changeDataAndPersist = async (
@@ -36,18 +37,22 @@ const changeDataAndPersist = async (
   }
 
   const nextData = produce(committed, recipe)
+  const persistenceFields = committedStore.getPersistenceFields(id)
 
-  // TODO: Persist prompt data to disk.
+  if (!persistenceFields) {
+    return null
+  }
+
+  await promptPersistence.persistData(persistenceFields, nextData)
   const nextRevision = committedStore.commitAfterWrite(id, nextData)
   emitCommittedRevisionChanged(id)
 
   return nextRevision
 }
 
-export const promptData: RevisionData<PromptPersisted, PromptFileFields> = {
+export const promptData: RevisionData<PromptPersisted, PromptPersistenceFields> = {
   committedStore,
   changeDataAndPersist,
-  emitCommittedRevisionChanged,
-  handleFilesystemChange,
-  addWatchers
+  loadDataFromPersistence,
+  emitCommittedRevisionChanged
 }

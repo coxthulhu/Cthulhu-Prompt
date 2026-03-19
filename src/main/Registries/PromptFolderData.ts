@@ -1,27 +1,29 @@
-import type { FSWatcher } from 'chokidar'
 import { produce } from 'immer'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { createCommittedStore } from './CommittedStore'
 import type { DataRecipe, RevisionData } from './Data'
+import {
+  promptFolderPersistence,
+  type PromptFolderPersistenceFields
+} from '../Persistence/PromptFolderPersistence'
 
-export type PromptFolderFileFields = {
-  workspaceId: string
-  workspacePath: string
-  folderName: string
-}
-
-const committedStore = createCommittedStore<PromptFolder, PromptFolderFileFields>()
+const committedStore = createCommittedStore<PromptFolder, PromptFolderPersistenceFields>()
 
 const emitCommittedRevisionChanged = (_id: string): void => {
   // TODO: Emit committed prompt folder update events.
 }
 
-const handleFilesystemChange = (_changedPath: string): void => {
-  // TODO: Handle prompt folder filesystem changes.
-}
+const loadDataFromPersistence = async (
+  id: string,
+  persistenceFields: PromptFolderPersistenceFields
+): Promise<void> => {
+  const loadedData = await promptFolderPersistence.loadData(persistenceFields)
 
-const addWatchers = (_watcher: FSWatcher): void => {
-  // TODO: Register prompt folder watchers.
+  if (!loadedData) {
+    return
+  }
+
+  committedStore.setFromDisk(id, loadedData, persistenceFields)
 }
 
 const changeDataAndPersist = async (
@@ -35,18 +37,22 @@ const changeDataAndPersist = async (
   }
 
   const nextData = produce(committed, recipe)
+  const persistenceFields = committedStore.getPersistenceFields(id)
 
-  // TODO: Persist prompt folder data to disk.
+  if (!persistenceFields) {
+    return null
+  }
+
+  await promptFolderPersistence.persistData(persistenceFields, nextData)
   const nextRevision = committedStore.commitAfterWrite(id, nextData)
   emitCommittedRevisionChanged(id)
 
   return nextRevision
 }
 
-export const promptFolderData: RevisionData<PromptFolder, PromptFolderFileFields> = {
+export const promptFolderData: RevisionData<PromptFolder, PromptFolderPersistenceFields> = {
   committedStore,
   changeDataAndPersist,
-  emitCommittedRevisionChanged,
-  handleFilesystemChange,
-  addWatchers
+  loadDataFromPersistence,
+  emitCommittedRevisionChanged
 }

@@ -1,25 +1,29 @@
-import type { FSWatcher } from 'chokidar'
 import { produce } from 'immer'
 import type { Workspace } from '@shared/Workspace'
 import { createCommittedStore } from './CommittedStore'
 import type { DataRecipe, RevisionData } from './Data'
+import {
+  workspacePersistence,
+  type WorkspacePersistenceFields
+} from '../Persistence/WorkspacePersistence'
 
-export type WorkspaceFileFields = {
-  workspacePath: string
-}
-
-const committedStore = createCommittedStore<Workspace, WorkspaceFileFields>()
+const committedStore = createCommittedStore<Workspace, WorkspacePersistenceFields>()
 
 const emitCommittedRevisionChanged = (_id: string): void => {
   // TODO: Emit committed workspace update events.
 }
 
-const handleFilesystemChange = (_changedPath: string): void => {
-  // TODO: Handle workspace filesystem changes.
-}
+const loadDataFromPersistence = async (
+  id: string,
+  persistenceFields: WorkspacePersistenceFields
+): Promise<void> => {
+  const loadedData = await workspacePersistence.loadData(persistenceFields)
 
-const addWatchers = (_watcher: FSWatcher): void => {
-  // TODO: Register workspace watchers.
+  if (!loadedData) {
+    return
+  }
+
+  committedStore.setFromDisk(id, loadedData, persistenceFields)
 }
 
 const changeDataAndPersist = async (
@@ -33,18 +37,22 @@ const changeDataAndPersist = async (
   }
 
   const nextData = produce(committed, recipe)
+  const persistenceFields = committedStore.getPersistenceFields(id)
 
-  // TODO: Persist workspace data to disk.
+  if (!persistenceFields) {
+    return null
+  }
+
+  await workspacePersistence.persistData(persistenceFields, nextData)
   const nextRevision = committedStore.commitAfterWrite(id, nextData)
   emitCommittedRevisionChanged(id)
 
   return nextRevision
 }
 
-export const workspaceData: RevisionData<Workspace, WorkspaceFileFields> = {
+export const workspaceData: RevisionData<Workspace, WorkspacePersistenceFields> = {
   committedStore,
   changeDataAndPersist,
-  emitCommittedRevisionChanged,
-  handleFilesystemChange,
-  addWatchers
+  loadDataFromPersistence,
+  emitCommittedRevisionChanged
 }

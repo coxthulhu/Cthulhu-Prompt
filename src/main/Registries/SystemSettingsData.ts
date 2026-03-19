@@ -1,21 +1,29 @@
-import type { FSWatcher } from 'chokidar'
 import { produce } from 'immer'
 import type { SystemSettings } from '@shared/SystemSettings'
 import { createCommittedStore } from './CommittedStore'
 import type { DataRecipe, RevisionData } from './Data'
+import {
+  systemSettingsPersistence,
+  type SystemSettingsPersistenceFields
+} from '../Persistence/SystemSettingsPersistence'
 
-const committedStore = createCommittedStore<SystemSettings, never>()
+const committedStore = createCommittedStore<SystemSettings, SystemSettingsPersistenceFields>()
 
 const emitCommittedRevisionChanged = (_id: string): void => {
   // TODO: Emit committed system settings update events.
 }
 
-const handleFilesystemChange = (_changedPath: string): void => {
-  // TODO: Handle system settings filesystem changes.
-}
+const loadDataFromPersistence = async (
+  id: string,
+  persistenceFields: SystemSettingsPersistenceFields
+): Promise<void> => {
+  const loadedData = await systemSettingsPersistence.loadData(persistenceFields)
 
-const addWatchers = (_watcher: FSWatcher): void => {
-  // TODO: Register system settings watchers.
+  if (!loadedData) {
+    return
+  }
+
+  committedStore.setFromDisk(id, loadedData, persistenceFields)
 }
 
 const changeDataAndPersist = async (
@@ -29,18 +37,22 @@ const changeDataAndPersist = async (
   }
 
   const nextData = produce(committed, recipe)
+  const persistenceFields = committedStore.getPersistenceFields(id)
 
-  // TODO: Persist system settings to disk.
+  if (!persistenceFields) {
+    return null
+  }
+
+  await systemSettingsPersistence.persistData(persistenceFields, nextData)
   const nextRevision = committedStore.commitAfterWrite(id, nextData)
   emitCommittedRevisionChanged(id)
 
   return nextRevision
 }
 
-export const systemSettingsData: RevisionData<SystemSettings, never> = {
+export const systemSettingsData: RevisionData<SystemSettings, SystemSettingsPersistenceFields> = {
   committedStore,
   changeDataAndPersist,
-  emitCommittedRevisionChanged,
-  handleFilesystemChange,
-  addWatchers
+  loadDataFromPersistence,
+  emitCommittedRevisionChanged
 }
