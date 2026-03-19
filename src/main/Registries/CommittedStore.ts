@@ -1,17 +1,14 @@
-import { produce } from 'immer'
-
-type CommittedEntry<TData, TPersistenceFields> = {
+export type CommittedEntry<TData, TPersistenceFields> = {
   revision: number
-  committed: TData | null
-  persistenceFields: TPersistenceFields | null
+  committed: TData
+  persistenceFields: TPersistenceFields
 }
 
 export type CommittedStore<TData, TPersistenceFields> = {
   getRevision: (id: string) => number
-  getCommitted: (id: string) => TData | null
-  getPersistenceFields: (id: string) => TPersistenceFields | null
+  getEntry: (id: string) => CommittedEntry<TData, TPersistenceFields> | null
   // Use this after initial disk reads.
-  setFromDisk: (id: string, data: TData, persistenceFields?: TPersistenceFields) => void
+  setFromDisk: (id: string, data: TData, persistenceFields: TPersistenceFields) => void
   // Use this after disk writes succeed.
   commitAfterWrite: (id: string, data: TData) => number
   remove: (id: string) => void
@@ -23,46 +20,41 @@ export const createCommittedStore = <
 >(): CommittedStore<TData, TPersistenceFields> => {
   let entriesById: Record<string, CommittedEntry<TData, TPersistenceFields>> = {}
 
+  const upsertEntry = (
+    id: string,
+    entry: CommittedEntry<TData, TPersistenceFields>
+  ): void => {
+    entriesById = {
+      ...entriesById,
+      [id]: entry
+    }
+  }
+
   return {
     getRevision: (id) => entriesById[id]?.revision ?? 0,
-    getCommitted: (id) => entriesById[id]?.committed ?? null,
-    getPersistenceFields: (id) => entriesById[id]?.persistenceFields ?? null,
+    getEntry: (id) => entriesById[id] ?? null,
     setFromDisk: (id, data, persistenceFields) => {
-      entriesById = produce(entriesById, () => {
-        const nextEntry: CommittedEntry<TData, TPersistenceFields> = {
-          revision: 0,
-          committed: data,
-          persistenceFields: persistenceFields ?? entriesById[id]?.persistenceFields ?? null
-        }
-
-        return {
-          ...entriesById,
-          [id]: nextEntry
-        }
+      upsertEntry(id, {
+        revision: 0,
+        committed: data,
+        persistenceFields
       })
     },
     commitAfterWrite: (id, data) => {
-      const nextRevision = (entriesById[id]?.revision ?? 0) + 1
+      const existingEntry = entriesById[id]!
+      const nextRevision = existingEntry.revision + 1
 
-      entriesById = produce(entriesById, () => {
-        const nextEntry: CommittedEntry<TData, TPersistenceFields> = {
-          revision: nextRevision,
-          committed: data,
-          persistenceFields: entriesById[id]?.persistenceFields ?? null
-        }
-
-        return {
-          ...entriesById,
-          [id]: nextEntry
-        }
+      upsertEntry(id, {
+        revision: nextRevision,
+        committed: data,
+        persistenceFields: existingEntry.persistenceFields
       })
 
       return nextRevision
     },
     remove: (id) => {
-      entriesById = produce(entriesById, (draft) => {
-        delete draft[id]
-      })
+      const { [id]: _removed, ...remainingEntries } = entriesById
+      entriesById = remainingEntries
     }
   }
 }

@@ -1,8 +1,7 @@
-import { produce, type Draft } from 'immer'
+import { produce } from 'immer'
 import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import type { CommittedStore } from './CommittedStore'
-
-type DataRecipe<TData> = (draft: Draft<TData>) => void
+import type { DataRecipe } from './Data'
 
 type RevisionDataHandlers<TData, TPersistenceFields> = {
   loadDataFromPersistence: (id: string, persistenceFields: TPersistenceFields) => Promise<void>
@@ -33,20 +32,14 @@ export const createRevisionDataHandlers = <TData, TPersistenceFields>(params: {
     id: string,
     recipe: DataRecipe<TData>
   ): Promise<number | null> => {
-    const committed = committedStore.getCommitted(id)
+    const committedEntry = committedStore.getEntry(id)
 
-    if (!committed) {
+    if (!committedEntry) {
       return null
     }
 
-    const nextData = produce(committed, recipe)
-    const persistenceFields = committedStore.getPersistenceFields(id)
-
-    if (!persistenceFields) {
-      return null
-    }
-
-    await persistence.persistData(persistenceFields, nextData)
+    const nextData = produce(committedEntry.committed, recipe)
+    await persistence.persistData(committedEntry.persistenceFields, nextData)
     const nextRevision = committedStore.commitAfterWrite(id, nextData)
     emitCommittedRevisionChanged(id)
 
