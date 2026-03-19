@@ -10,6 +10,7 @@ interface UnifiedFs {
   statSync: typeof nodeFs.statSync
   mkdirSync: typeof nodeFs.mkdirSync
   rmSync: typeof nodeFs.rmSync
+  renameSync: typeof nodeFs.renameSync
   writeFileSync: typeof nodeFs.writeFileSync
   // Add other fs methods as needed
 }
@@ -41,6 +42,7 @@ export function getFs(): UnifiedFs {
       statSync: fs.statSync.bind(fs) as typeof nodeFs.statSync,
       mkdirSync: fs.mkdirSync.bind(fs) as typeof nodeFs.mkdirSync,
       rmSync: fs.rmSync.bind(fs) as typeof nodeFs.rmSync,
+      renameSync: fs.renameSync.bind(fs) as typeof nodeFs.renameSync,
       writeFileSync: fs.writeFileSync.bind(fs) as typeof nodeFs.writeFileSync
     }
   }

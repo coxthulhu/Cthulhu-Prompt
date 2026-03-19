@@ -24,7 +24,9 @@ import {
   type RuntimeConfig,
   type RuntimeEnvironment
 } from '@shared/runtimeConfig'
+import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
+import { systemSettingsData } from './Data/SystemSettingsData'
 
 const WINDOW_DEFAULT_WIDTH = 900
 const WINDOW_DEFAULT_HEIGHT = 670
@@ -291,6 +293,8 @@ export function startupNormally(): void {
     setupWorkspaceDialogHandlers()
     // Side effect: create/open SQLite DB before renderer or IPC work begins.
     SqliteDataAccess.initializeDatabase()
+    // Side effect: hydrate in-memory system settings from disk before IPC handlers run.
+    await systemSettingsData.loadDataFromPersistence(SYSTEM_SETTINGS_ID, {})
     setupSystemSettingsQueryHandlers()
     setupUserPersistenceQueryHandlers()
     setupSystemSettingsMutationHandlers()
