@@ -1,5 +1,5 @@
 import { produce } from 'immer'
-import type { PersistenceChange } from '../Persistence/PersistenceTypes'
+import type { PersistenceChange, PersistenceStageResult } from '../Persistence/PersistenceTypes'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
 
@@ -33,6 +33,7 @@ type AtomicDataUpdateOperation = {
   id: string
   recipe: DataRecipe<any>
   expectedRevision?: number
+  persistenceFields?: unknown
 }
 
 type AtomicDataDeleteOperation = {
@@ -84,6 +85,7 @@ type AtomicDataStoreBuilder<TStoreKey extends DataStoreKey> = {
     id: string
     recipe: DataRecipe<StoreData<TStoreKey>>
     expectedRevision?: number
+    persistenceFields?: StorePersistenceFields<TStoreKey>
   }) => AtomicDataTransactionHandle<TStoreKey, StoreData<TStoreKey>, number>
   delete: (params: {
     id: string
@@ -232,13 +234,14 @@ const createAtomicDataBuilder = (): {
         }
         return registerOperationHandle(operation, store, id)
       },
-      update: ({ id, recipe, expectedRevision }) => {
+      update: ({ id, recipe, expectedRevision, persistenceFields }) => {
         const operation: AtomicDataUpdateOperation = {
           type: 'update',
           store,
           id,
           recipe: recipe as DataRecipe<any>,
-          expectedRevision
+          expectedRevision,
+          persistenceFields
         }
         return registerOperationHandle(operation, store, id)
       },
@@ -277,6 +280,17 @@ const stageAtomicDataOperations = async (
   operations: AtomicDataOperation[]
 ): Promise<StageAtomicDataOperationsResult> => {
   const stagedOperations: StagedOperationEntry[] = []
+
+  const isStagedChangeEnvelope = (
+    value: unknown
+  ): value is { stagedChange: unknown; nextPersistenceFields?: unknown } => {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      'stagedChange' in value
+    )
+  }
 
   for (const [operationIndex, operation] of operations.entries()) {
     const revisionData = data[operation.store] as RevisionData<any, any>
@@ -317,7 +331,10 @@ const stageAtomicDataOperations = async (
         }
       }
 
-      persistenceFields = committedEntry.persistenceFields
+      persistenceFields =
+        operation.type === 'update' && operation.persistenceFields !== undefined
+          ? operation.persistenceFields
+          : committedEntry.persistenceFields
       nextData =
         operation.type === 'update'
           ? produce(committedEntry.committed, operation.recipe as DataRecipe<any>)
@@ -329,7 +346,18 @@ const stageAtomicDataOperations = async (
         ? { type: 'remove', persistenceFields }
         : { type: 'upsert', persistenceFields, data: nextData }
 
-    const stagedChange = await revisionData.persistence.stageChanges(change)
+    const stageResult = (await revisionData.persistence.stageChanges(
+      change
+    )) as PersistenceStageResult<unknown, unknown>
+    let stagedChange: unknown = stageResult
+
+    if (isStagedChangeEnvelope(stageResult)) {
+      stagedChange = stageResult.stagedChange
+
+      if (stageResult.nextPersistenceFields !== undefined) {
+        persistenceFields = stageResult.nextPersistenceFields
+      }
+    }
 
     stagedOperations.push({
       operation,
@@ -375,9 +403,17 @@ const applyCommittedInMemoryChanges = (
         nextData,
         stagedOperation.persistenceFields
       )
-      revision = revisionData.committedStore.commitAfterWrite(operation.id, nextData)
+      revision = revisionData.committedStore.commitAfterWrite(
+        operation.id,
+        nextData,
+        stagedOperation.persistenceFields
+      )
     } else {
-      revision = revisionData.committedStore.commitAfterWrite(operation.id, nextData)
+      revision = revisionData.committedStore.commitAfterWrite(
+        operation.id,
+        nextData,
+        stagedOperation.persistenceFields
+      )
     }
 
     revisionData.emitCommittedRevisionChanged(operation.id)

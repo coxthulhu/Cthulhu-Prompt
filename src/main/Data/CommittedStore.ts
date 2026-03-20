@@ -10,7 +10,7 @@ export type CommittedStore<TData, TPersistenceFields> = {
   // Use this after initial disk reads.
   setFromDisk: (id: string, data: TData, persistenceFields: TPersistenceFields) => void
   // Use this after disk writes succeed.
-  commitAfterWrite: (id: string, data: TData) => number
+  commitAfterWrite: (id: string, data: TData, persistenceFields?: TPersistenceFields) => number
   remove: (id: string) => void
 }
 
@@ -40,14 +40,16 @@ export const createCommittedStore = <
         persistenceFields
       })
     },
-    commitAfterWrite: (id, data) => {
+    commitAfterWrite: (id, data, persistenceFields) => {
       const existingEntry = entriesById[id]!
       const nextRevision = existingEntry.revision + 1
+      const nextPersistenceFields =
+        persistenceFields === undefined ? existingEntry.persistenceFields : persistenceFields
 
       upsertEntry(id, {
         revision: nextRevision,
         committed: data,
-        persistenceFields: existingEntry.persistenceFields
+        persistenceFields: nextPersistenceFields
       })
 
       return nextRevision
