@@ -5,7 +5,6 @@ import {
   type SystemSettingsRevisionResponsePayload
 } from '@shared/SystemSettings'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
-import { getRequiredSystemSettingsEntry } from '../Data/SystemSettingsData'
 import { parseUpdateSystemSettingsRevisionRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 
@@ -27,44 +26,43 @@ export const setupSystemSettingsMutationHandlers = (): void => {
         try {
           const payload = validatedRequest.payload
           const systemSettingsEntity = payload.systemSettings
-          const currentEntry = getRequiredSystemSettingsEntry()
-
-          if (systemSettingsEntity.expectedRevision !== currentEntry.revision) {
-            return {
-              success: false,
-              conflict: true,
-              payload: {
-                systemSettings: buildRevisionPayload(currentEntry.committed, currentEntry.revision)
-              }
-            }
-          }
 
           const normalizedSettings = normalizeSystemSettings({
             promptFontSize: systemSettingsEntity.data.promptFontSize,
             promptEditorMinLines: systemSettingsEntity.data.promptEditorMinLines
           })
 
-          await runAtomicDataTransaction([
-            {
-              type: 'update',
-              store: 'systemSettings',
-              id: SYSTEM_SETTINGS_ID,
-              recipe: (draft) => {
-                const typedDraft = draft as {
-                  promptFontSize: number
-                  promptEditorMinLines: number
+          const transactionOutcome = await runAtomicDataTransaction((tx) => {
+            return {
+              systemSettings: tx.update({
+                store: 'systemSettings',
+                id: SYSTEM_SETTINGS_ID,
+                expectedRevision: systemSettingsEntity.expectedRevision,
+                recipe: (draft) => {
+                  draft.promptFontSize = normalizedSettings.promptFontSize
+                  draft.promptEditorMinLines = normalizedSettings.promptEditorMinLines
                 }
-                typedDraft.promptFontSize = normalizedSettings.promptFontSize
-                typedDraft.promptEditorMinLines = normalizedSettings.promptEditorMinLines
+              })
+            }
+          })
+
+          if (transactionOutcome.status === 'conflict') {
+            const conflict = transactionOutcome.conflicts.systemSettings
+            return {
+              success: false,
+              conflict: true,
+              payload: {
+                systemSettings: buildRevisionPayload(conflict.data, conflict.actualRevision)
               }
             }
-          ])
-          const nextEntry = getRequiredSystemSettingsEntry()
+          }
+
+          const nextSettings = transactionOutcome.results.systemSettings
 
           return {
             success: true,
             payload: {
-              systemSettings: buildRevisionPayload(nextEntry.committed, nextEntry.revision)
+              systemSettings: buildRevisionPayload(nextSettings.data, nextSettings.revision)
             }
           }
         } catch (error) {
