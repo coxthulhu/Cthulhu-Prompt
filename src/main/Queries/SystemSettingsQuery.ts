@@ -1,18 +1,17 @@
 import { ipcMain } from 'electron'
 import { SYSTEM_SETTINGS_ID, type LoadSystemSettingsResult } from '@shared/SystemSettings'
-import { SystemSettingsDataAccess } from '../DataAccess/SystemSettingsDataAccess'
-import { revisions } from '../Registries/Revisions'
+import { getRequiredSystemSettingsEntry } from '../Data/SystemSettingsData'
 
 export const setupSystemSettingsQueryHandlers = (): void => {
   ipcMain.handle('load-system-settings', async (): Promise<LoadSystemSettingsResult> => {
     try {
-      const settings = await SystemSettingsDataAccess.loadSystemSettings()
+      const settingsEntry = getRequiredSystemSettingsEntry()
       return {
         success: true,
         systemSettings: {
           id: SYSTEM_SETTINGS_ID,
-          revision: revisions.systemSettings.get(SYSTEM_SETTINGS_ID),
-          data: settings
+          revision: settingsEntry.revision,
+          data: settingsEntry.committed
         }
       }
     } catch (error) {

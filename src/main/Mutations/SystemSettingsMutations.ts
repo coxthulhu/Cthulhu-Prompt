@@ -1,12 +1,13 @@
 import { ipcMain } from 'electron'
 import {
   SYSTEM_SETTINGS_ID,
+  normalizeSystemSettings,
   type SystemSettingsRevisionResponsePayload
 } from '@shared/SystemSettings'
-import { SystemSettingsDataAccess } from '../DataAccess/SystemSettingsDataAccess'
+import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
+import { getRequiredSystemSettingsEntry } from '../Data/SystemSettingsData'
 import { parseUpdateSystemSettingsRevisionRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
-import { revisions } from '../Registries/Revisions'
 
 const buildRevisionPayload = (
   data: SystemSettingsRevisionResponsePayload['systemSettings']['data'],
@@ -25,29 +26,45 @@ export const setupSystemSettingsMutationHandlers = (): void => {
       async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
-          const currentRevision = revisions.systemSettings.get(SYSTEM_SETTINGS_ID)
           const systemSettingsEntity = payload.systemSettings
+          const currentEntry = getRequiredSystemSettingsEntry()
 
-          if (systemSettingsEntity.expectedRevision !== currentRevision) {
-            const settings = await SystemSettingsDataAccess.loadSystemSettings()
+          if (systemSettingsEntity.expectedRevision !== currentEntry.revision) {
             return {
               success: false,
               conflict: true,
               payload: {
-                systemSettings: buildRevisionPayload(settings, currentRevision)
+                systemSettings: buildRevisionPayload(currentEntry.committed, currentEntry.revision)
               }
             }
           }
 
-          const settings = await SystemSettingsDataAccess.updateSystemSettings(
-            systemSettingsEntity.data
-          )
-          const revision = revisions.systemSettings.bump(SYSTEM_SETTINGS_ID)
+          const normalizedSettings = normalizeSystemSettings({
+            promptFontSize: systemSettingsEntity.data.promptFontSize,
+            promptEditorMinLines: systemSettingsEntity.data.promptEditorMinLines
+          })
+
+          await runAtomicDataTransaction([
+            {
+              type: 'update',
+              store: 'systemSettings',
+              id: SYSTEM_SETTINGS_ID,
+              recipe: (draft) => {
+                const typedDraft = draft as {
+                  promptFontSize: number
+                  promptEditorMinLines: number
+                }
+                typedDraft.promptFontSize = normalizedSettings.promptFontSize
+                typedDraft.promptEditorMinLines = normalizedSettings.promptEditorMinLines
+              }
+            }
+          ])
+          const nextEntry = getRequiredSystemSettingsEntry()
 
           return {
             success: true,
             payload: {
-              systemSettings: buildRevisionPayload(settings, revision)
+              systemSettings: buildRevisionPayload(nextEntry.committed, nextEntry.revision)
             }
           }
         } catch (error) {
