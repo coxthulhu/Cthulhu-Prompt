@@ -7,6 +7,7 @@ import type {
   WorkspaceInfoFile
 } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
+import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
@@ -14,9 +15,8 @@ const PROMPT_FOLDER_CONFIG_FILENAME = 'PromptFolder.json'
 const PROMPTS_FILENAME = 'Prompts.json'
 
 export const readWorkspaceId = (workspacePath: string): string => {
-  const fs = getFs()
   const workspaceInfoPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
-  const parsed = JSON.parse(fs.readFileSync(workspaceInfoPath, 'utf8')) as WorkspaceInfoFile
+  const parsed = readJsonFile<WorkspaceInfoFile>(workspaceInfoPath)
 
   if (!parsed.workspaceId) {
     throw new Error('Invalid workspace info')
@@ -29,20 +29,18 @@ const readPromptFolderConfig = (
   workspacePath: string,
   folderName: string
 ): PromptFolderConfigFile => {
-  const fs = getFs()
   const configPath = path.join(
     workspacePath,
     PROMPTS_FOLDER_NAME,
     folderName,
     PROMPT_FOLDER_CONFIG_FILENAME
   )
-  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as PromptFolderConfigFile
+  return readJsonFile<PromptFolderConfigFile>(configPath)
 }
 
 const readPromptIds = (workspacePath: string, folderName: string): string[] => {
-  const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
-  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as PromptsFile
+  const parsed = readJsonFile<PromptsFile>(promptsPath)
   return parsed.prompts.map((prompt) => prompt.id)
 }
 
@@ -61,11 +59,10 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
 }
 
 export const readPrompts = (workspacePath: string, folderName: string): PromptPersisted[] => {
-  const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
-  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
+  const parsed = readJsonFile<{
     prompts?: PromptPersisted[]
-  }
+  }>(promptsPath)
   return parsed.prompts ?? []
 }
 
@@ -73,11 +70,10 @@ export const readPromptSummaries = (
   workspacePath: string,
   folderName: string
 ): PromptSummaryData[] => {
-  const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
-  const parsed = JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as {
+  const parsed = readJsonFile<{
     prompts?: PromptPersisted[]
-  }
+  }>(promptsPath)
   const prompts = parsed.prompts ?? []
   return prompts.map((prompt) => ({
     id: prompt.id,

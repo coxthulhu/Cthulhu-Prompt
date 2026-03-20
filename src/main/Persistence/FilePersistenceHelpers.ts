@@ -21,6 +21,11 @@ export const writeJsonFile = (filePath: string, data: unknown): void => {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
 }
 
+export const readJsonFile = <T = unknown>(filePath: string): T => {
+  const fs = getFs()
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T
+}
+
 export const commitStagedFileChange = (stagedChange: FilePersistenceStagedChange): void => {
   const fs = getFs()
 

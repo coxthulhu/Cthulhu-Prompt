@@ -6,6 +6,7 @@ import { getFs } from '../fs-provider'
 import type { PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChange,
+  readJsonFile,
   revertStagedFileChange,
   resolveTempPath,
   writeJsonFile,
@@ -70,7 +71,7 @@ export const systemSettingsPersistence: PersistenceLayer<
     }
 
     try {
-      const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+      const parsed = readJsonFile<unknown>(settingsPath)
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         writeJsonFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
         return DEFAULT_SYSTEM_SETTINGS
