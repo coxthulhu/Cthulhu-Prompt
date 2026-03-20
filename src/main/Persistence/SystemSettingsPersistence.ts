@@ -5,14 +5,13 @@ import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/System
 import { getFs } from '../fs-provider'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
-  commitStagedFileChange,
+  commitStagedFileChanges,
   createStagedFileRemove,
   createStagedFileUpsert,
   readJsonFile,
-  revertStagedFileChange,
+  revertStagedFileChanges,
   resolveTempPath,
-  writeJsonFile,
-  type FilePersistenceStagedChange
+  writeJsonFile
 } from './FilePersistenceHelpers'
 
 export type SystemSettingsPersistenceFields = Record<string, never>
@@ -32,14 +31,13 @@ const resolveTargetPath = (): string => {
 
 export const systemSettingsPersistence: PersistenceLayer<
   SystemSettings,
-  SystemSettingsPersistenceFields,
-  FilePersistenceStagedChange
+  SystemSettingsPersistenceFields
 > = {
   stageChanges: async (change) => {
     const targetPath = resolveTargetPath()
 
     if (change.type === 'remove') {
-      return createPersistenceStageResult(createStagedFileRemove(targetPath))
+      return createPersistenceStageResult([createStagedFileRemove(targetPath)])
     }
 
     const tempPath = resolveTempPath(targetPath)
@@ -49,13 +47,13 @@ export const systemSettingsPersistence: PersistenceLayer<
     })
     writeJsonFile(tempPath, normalizedSettings)
 
-    return createPersistenceStageResult(createStagedFileUpsert(targetPath, tempPath))
+    return createPersistenceStageResult([createStagedFileUpsert(targetPath, tempPath)])
   },
   commitChanges: async (stagedChange) => {
-    commitStagedFileChange(stagedChange)
+    commitStagedFileChanges(stagedChange)
   },
   revertChanges: async (stagedChange) => {
-    revertStagedFileChange(stagedChange)
+    revertStagedFileChanges(stagedChange)
   },
   loadData: async (_persistenceFields) => {
     const fs = getFs()

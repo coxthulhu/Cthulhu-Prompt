@@ -1,3 +1,5 @@
+import type { FilePersistenceStagedChange } from './FilePersistenceHelpers'
+
 export type PersistenceChange<TData, TPersistenceFields> =
   | {
       type: 'upsert'
@@ -9,25 +11,24 @@ export type PersistenceChange<TData, TPersistenceFields> =
       persistenceFields: TPersistenceFields
     }
 
-export type PersistenceStageResult<TPersistenceFields, TStagedChange> =
-  {
-    stagedChange: TStagedChange
-    nextPersistenceFields?: TPersistenceFields
-  }
+export type PersistenceStageResult<TPersistenceFields> = {
+  stagedChange: FilePersistenceStagedChange[]
+  nextPersistenceFields?: TPersistenceFields
+}
 
-export type PersistenceLayer<TData, TPersistenceFields, TStagedChange = unknown> = {
+export type PersistenceLayer<TData, TPersistenceFields> = {
   stageChanges: (
     change: PersistenceChange<TData, TPersistenceFields>
-  ) => Promise<PersistenceStageResult<TPersistenceFields, TStagedChange>>
-  commitChanges: (stagedChange: TStagedChange) => Promise<void>
-  revertChanges: (stagedChange: TStagedChange) => Promise<void>
+  ) => Promise<PersistenceStageResult<TPersistenceFields>>
+  commitChanges: (stagedChange: FilePersistenceStagedChange[]) => Promise<void>
+  revertChanges: (stagedChange: FilePersistenceStagedChange[]) => Promise<void>
   loadData: (persistenceFields: TPersistenceFields) => Promise<TData | null>
 }
 
-export const createPersistenceStageResult = <TPersistenceFields, TStagedChange>(
-  stagedChange: TStagedChange,
+export const createPersistenceStageResult = <TPersistenceFields>(
+  stagedChange: FilePersistenceStagedChange[],
   nextPersistenceFields?: TPersistenceFields
-): PersistenceStageResult<TPersistenceFields, TStagedChange> => {
+): PersistenceStageResult<TPersistenceFields> => {
   if (nextPersistenceFields === undefined) {
     return { stagedChange }
   }

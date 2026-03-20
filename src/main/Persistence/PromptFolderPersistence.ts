@@ -2,10 +2,8 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
-  createStagedFileChangeBatch,
   createStagedFileRemove,
   createStagedFileUpsert,
-  type FilePersistenceStagedChangeBatch,
   readJsonFile,
   revertStagedFileChanges,
   resolveTempPath,
@@ -54,26 +52,21 @@ const fromPromptFolderConfigFile = (
 
 export const promptFolderPersistence: PersistenceLayer<
   PromptFolder,
-  PromptFolderPersistenceFields,
-  FilePersistenceStagedChangeBatch
+  PromptFolderPersistenceFields
 > = {
   stageChanges: async (change) => {
     const { workspacePath, folderName } = change.persistenceFields
     const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
-      return createPersistenceStageResult(
-        createStagedFileChangeBatch(createStagedFileRemove(configPath))
-      )
+      return createPersistenceStageResult([createStagedFileRemove(configPath)])
     }
 
     const configTempPath = resolveTempPath(configPath)
     const persistedConfig = toPromptFolderConfigFile(change.data)
     writeJsonFile(configTempPath, persistedConfig)
 
-    return createPersistenceStageResult(
-      createStagedFileChangeBatch(createStagedFileUpsert(configPath, configTempPath))
-    )
+    return createPersistenceStageResult([createStagedFileUpsert(configPath, configTempPath)])
   },
   commitChanges: async (stagedChange) => {
     commitStagedFileChanges(stagedChange)

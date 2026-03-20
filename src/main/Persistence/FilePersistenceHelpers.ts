@@ -11,10 +11,6 @@ export type FilePersistenceStagedChange =
       targetPath: string
     }
 
-export type FilePersistenceStagedChangeBatch = {
-  fileChanges: FilePersistenceStagedChange[]
-}
-
 export const createStagedFileUpsert = (
   targetPath: string,
   tempPath: string
@@ -31,12 +27,6 @@ export const createStagedFileRemove = (targetPath: string): FilePersistenceStage
     type: 'remove',
     targetPath
   }
-}
-
-export const createStagedFileChangeBatch = (
-  ...fileChanges: FilePersistenceStagedChange[]
-): FilePersistenceStagedChangeBatch => {
-  return { fileChanges }
 }
 
 export const resolveTempPath = (targetPath: string): string => {
@@ -83,17 +73,17 @@ export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange
 }
 
 export const commitStagedFileChanges = (
-  stagedChangeBatch: FilePersistenceStagedChangeBatch
+  stagedChanges: FilePersistenceStagedChange[]
 ): void => {
-  for (const fileChange of stagedChangeBatch.fileChanges) {
+  for (const fileChange of stagedChanges) {
     commitStagedFileChange(fileChange)
   }
 }
 
 export const revertStagedFileChanges = (
-  stagedChangeBatch: FilePersistenceStagedChangeBatch
+  stagedChanges: FilePersistenceStagedChange[]
 ): void => {
-  for (const fileChange of stagedChangeBatch.fileChanges) {
+  for (const fileChange of stagedChanges) {
     revertStagedFileChange(fileChange)
   }
 }

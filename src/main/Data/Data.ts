@@ -8,9 +8,9 @@ import { workspaceData } from './WorkspaceData'
 
 export type DataRecipe<TData> = (draft: Draft<TData>) => void
 
-export type RevisionData<TData, TPersistenceFields, TStagedChange = unknown> = {
+export type RevisionData<TData, TPersistenceFields> = {
   committedStore: CommittedStore<TData, TPersistenceFields>
-  persistence: PersistenceLayer<TData, TPersistenceFields, TStagedChange>
+  persistence: PersistenceLayer<TData, TPersistenceFields>
   loadDataFromPersistence: (id: string, persistenceFields: TPersistenceFields) => Promise<void>
   emitCommittedRevisionChanged: (id: string) => void
 }

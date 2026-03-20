@@ -1,5 +1,6 @@
 import { produce } from 'immer'
 import type { PersistenceChange } from '../Persistence/PersistenceTypes'
+import type { FilePersistenceStagedChange } from '../Persistence/FilePersistenceHelpers'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
 
@@ -7,7 +8,6 @@ type DataStoreKey = keyof typeof data
 
 type StoreData<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extends RevisionData<
   infer TData,
-  any,
   any
 >
   ? TData
@@ -15,8 +15,7 @@ type StoreData<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extend
 
 type StorePersistenceFields<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extends RevisionData<
   any,
-  infer TPersistenceFields,
-  any
+  infer TPersistenceFields
 >
   ? TPersistenceFields
   : never
@@ -168,7 +167,7 @@ type StagedOperationEntry = {
   revisionData: RevisionData<any, any>
   nextData: unknown
   persistenceFields: unknown
-  stagedChange: unknown
+  stagedChange: FilePersistenceStagedChange[]
 }
 
 type StageAtomicDataOperationsResult =

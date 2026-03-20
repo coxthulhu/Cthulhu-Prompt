@@ -5,9 +5,9 @@ type RevisionDataHandlers<TPersistenceFields> = {
   loadDataFromPersistence: (id: string, persistenceFields: TPersistenceFields) => Promise<void>
 }
 
-export const createRevisionDataHandlers = <TData, TPersistenceFields, TStagedChange = unknown>(params: {
+export const createRevisionDataHandlers = <TData, TPersistenceFields>(params: {
   committedStore: CommittedStore<TData, TPersistenceFields>
-  persistence: PersistenceLayer<TData, TPersistenceFields, TStagedChange>
+  persistence: PersistenceLayer<TData, TPersistenceFields>
 }): RevisionDataHandlers<TPersistenceFields> => {
   const { committedStore, persistence } = params
 

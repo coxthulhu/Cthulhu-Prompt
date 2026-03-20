@@ -2,10 +2,9 @@ import type { PromptPersisted } from '@shared/Prompt'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
-  createStagedFileChangeBatch,
   createStagedFileRemove,
   createStagedFileUpsert,
-  type FilePersistenceStagedChangeBatch,
+  type FilePersistenceStagedChange,
   readJsonFile,
   revertStagedFileChanges,
   resolveTempPath,
@@ -77,8 +76,7 @@ const resolvePromptStem = (
 
 export const promptPersistence: PersistenceLayer<
   PromptPersisted,
-  PromptPersistenceFields,
-  FilePersistenceStagedChangeBatch
+  PromptPersistenceFields
 > = {
   stageChanges: async (change) => {
     const folderPath = resolvePromptFolderPath(
@@ -89,12 +87,10 @@ export const promptPersistence: PersistenceLayer<
     const currentPaths = resolvePromptPathsFromStem(folderPath, currentStem)
 
     if (change.type === 'remove') {
-      return createPersistenceStageResult(
-        createStagedFileChangeBatch(
-          createStagedFileRemove(currentPaths.metadataPath),
-          createStagedFileRemove(currentPaths.markdownPath)
-        )
-      )
+      return createPersistenceStageResult([
+        createStagedFileRemove(currentPaths.metadataPath),
+        createStagedFileRemove(currentPaths.markdownPath)
+      ])
     }
 
     const stem = resolvePromptStem(change.data.title, change.data.id, folderPath, currentStem)
@@ -112,7 +108,7 @@ export const promptPersistence: PersistenceLayer<
     const fs = getFs()
     fs.writeFileSync(markdownTempPath, change.data.promptText, 'utf8')
 
-    const fileChanges: FilePersistenceStagedChangeBatch['fileChanges'] = []
+    const fileChanges: FilePersistenceStagedChange[] = []
 
     // Side effect: remove stale title-based files when title changes.
     if (currentPaths.metadataPath !== targetPaths.metadataPath) {
@@ -125,13 +121,10 @@ export const promptPersistence: PersistenceLayer<
     fileChanges.push(createStagedFileUpsert(targetPaths.metadataPath, metadataTempPath))
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
 
-    return createPersistenceStageResult(
-      createStagedFileChangeBatch(...fileChanges),
-      {
-        ...change.persistenceFields,
-        promptStem: stem
-      }
-    )
+    return createPersistenceStageResult(fileChanges, {
+      ...change.persistenceFields,
+      promptStem: stem
+    })
   },
   commitChanges: async (stagedChange) => {
     commitStagedFileChanges(stagedChange)

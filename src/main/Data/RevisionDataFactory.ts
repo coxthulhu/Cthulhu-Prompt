@@ -3,10 +3,10 @@ import { createCommittedStore } from './CommittedStore'
 import type { RevisionData } from './Data'
 import { createRevisionDataHandlers } from './RevisionDataHandlers'
 
-export const createRevisionData = <TData, TPersistenceFields, TStagedChange = unknown>(params: {
-  persistence: PersistenceLayer<TData, TPersistenceFields, TStagedChange>
+export const createRevisionData = <TData, TPersistenceFields>(params: {
+  persistence: PersistenceLayer<TData, TPersistenceFields>
   emitCommittedRevisionChanged: (id: string) => void
-}): RevisionData<TData, TPersistenceFields, TStagedChange> => {
+}): RevisionData<TData, TPersistenceFields> => {
   const { persistence, emitCommittedRevisionChanged } = params
   const committedStore = createCommittedStore<TData, TPersistenceFields>()
   const { loadDataFromPersistence } = createRevisionDataHandlers({
