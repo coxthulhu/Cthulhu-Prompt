@@ -1,9 +1,11 @@
 import type { Workspace } from '@shared/Workspace'
 import * as path from 'path'
 import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
-import type { PersistenceLayer } from './PersistenceTypes'
+import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChange,
+  createStagedFileRemove,
+  createStagedFileUpsert,
   revertStagedFileChange,
   resolveTempPath,
   writeJsonFile,
@@ -20,31 +22,28 @@ const resolveTargetPath = (workspacePath: string): string => {
   return path.join(workspacePath, WORKSPACE_INFO_FILENAME)
 }
 
-export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
+export const workspacePersistence: PersistenceLayer<
+  Workspace,
+  WorkspacePersistenceFields,
+  FilePersistenceStagedChange
+> = {
   stageChanges: async (change) => {
     const targetPath = resolveTargetPath(change.persistenceFields.workspacePath)
 
     if (change.type === 'remove') {
-      return {
-        type: 'remove',
-        targetPath
-      }
+      return createPersistenceStageResult(createStagedFileRemove(targetPath))
     }
 
     const tempPath = resolveTempPath(targetPath)
     writeJsonFile(tempPath, { workspaceId: change.data.id })
 
-    return {
-      type: 'upsert',
-      targetPath,
-      tempPath
-    }
+    return createPersistenceStageResult(createStagedFileUpsert(targetPath, tempPath))
   },
   commitChanges: async (stagedChange) => {
-    commitStagedFileChange(stagedChange as FilePersistenceStagedChange)
+    commitStagedFileChange(stagedChange)
   },
   revertChanges: async (stagedChange) => {
-    revertStagedFileChange(stagedChange as FilePersistenceStagedChange)
+    revertStagedFileChange(stagedChange)
   },
   loadData: async (persistenceFields) => {
     const { workspacePath } = persistenceFields

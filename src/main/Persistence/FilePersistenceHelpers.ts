@@ -11,6 +11,34 @@ export type FilePersistenceStagedChange =
       targetPath: string
     }
 
+export type FilePersistenceStagedChangeBatch = {
+  fileChanges: FilePersistenceStagedChange[]
+}
+
+export const createStagedFileUpsert = (
+  targetPath: string,
+  tempPath: string
+): FilePersistenceStagedChange => {
+  return {
+    type: 'upsert',
+    targetPath,
+    tempPath
+  }
+}
+
+export const createStagedFileRemove = (targetPath: string): FilePersistenceStagedChange => {
+  return {
+    type: 'remove',
+    targetPath
+  }
+}
+
+export const createStagedFileChangeBatch = (
+  ...fileChanges: FilePersistenceStagedChange[]
+): FilePersistenceStagedChangeBatch => {
+  return { fileChanges }
+}
+
 export const resolveTempPath = (targetPath: string): string => {
   const uniqueSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
   return `${targetPath}.${uniqueSuffix}.tmp`
@@ -51,5 +79,21 @@ export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange
   const fs = getFs()
   if (fs.existsSync(stagedChange.tempPath)) {
     fs.rmSync(stagedChange.tempPath)
+  }
+}
+
+export const commitStagedFileChanges = (
+  stagedChangeBatch: FilePersistenceStagedChangeBatch
+): void => {
+  for (const fileChange of stagedChangeBatch.fileChanges) {
+    commitStagedFileChange(fileChange)
+  }
+}
+
+export const revertStagedFileChanges = (
+  stagedChangeBatch: FilePersistenceStagedChangeBatch
+): void => {
+  for (const fileChange of stagedChangeBatch.fileChanges) {
+    revertStagedFileChange(fileChange)
   }
 }

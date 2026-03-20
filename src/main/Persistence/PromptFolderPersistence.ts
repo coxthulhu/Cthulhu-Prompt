@@ -1,14 +1,17 @@
 import type { PromptFolder } from '@shared/PromptFolder'
-import * as path from 'path'
-import type { PersistenceLayer } from './PersistenceTypes'
+import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
-  commitStagedFileChange,
+  commitStagedFileChanges,
+  createStagedFileChangeBatch,
+  createStagedFileRemove,
+  createStagedFileUpsert,
+  type FilePersistenceStagedChangeBatch,
   readJsonFile,
-  revertStagedFileChange,
+  revertStagedFileChanges,
   resolveTempPath,
-  writeJsonFile,
-  type FilePersistenceStagedChange
+  writeJsonFile
 } from './FilePersistenceHelpers'
+import { resolvePromptFolderConfigPath } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
 export type PromptFolderPersistenceFields = {
@@ -17,58 +20,66 @@ export type PromptFolderPersistenceFields = {
   folderName: string
 }
 
-type PromptFolderPersistenceStagedChange = {
-  fileChanges: FilePersistenceStagedChange[]
+type PromptFolderConfigFile = {
+  foldername: string
+  promptFolderId: string
+  promptCount: number
+  folderDescription: string
+  promptIds: string[]
 }
 
-const PROMPTS_FOLDER_NAME = 'Prompts'
-const PROMPT_FOLDER_CONFIG_FILENAME = 'PromptFolder.json'
-
-const resolvePromptFolderPath = (workspacePath: string, folderName: string): string => {
-  return path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName)
+const toPromptFolderConfigFile = (promptFolder: PromptFolder): PromptFolderConfigFile => {
+  return {
+    foldername: promptFolder.displayName,
+    promptFolderId: promptFolder.id,
+    promptCount: promptFolder.promptCount,
+    folderDescription: promptFolder.folderDescription,
+    promptIds: promptFolder.promptIds
+  }
 }
 
-const resolvePromptFolderConfigPath = (workspacePath: string, folderName: string): string => {
-  return path.join(resolvePromptFolderPath(workspacePath, folderName), PROMPT_FOLDER_CONFIG_FILENAME)
+const fromPromptFolderConfigFile = (
+  persistedConfig: PromptFolderConfigFile,
+  folderName: string
+): PromptFolder => {
+  return {
+    id: persistedConfig.promptFolderId,
+    folderName,
+    displayName: persistedConfig.foldername,
+    promptCount: persistedConfig.promptCount,
+    promptIds: persistedConfig.promptIds,
+    folderDescription: persistedConfig.folderDescription
+  }
 }
 
 export const promptFolderPersistence: PersistenceLayer<
   PromptFolder,
-  PromptFolderPersistenceFields
+  PromptFolderPersistenceFields,
+  FilePersistenceStagedChangeBatch
 > = {
   stageChanges: async (change) => {
     const { workspacePath, folderName } = change.persistenceFields
     const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
-      return {
-        fileChanges: [{ type: 'remove', targetPath: configPath }]
-      }
+      return createPersistenceStageResult(
+        createStagedFileChangeBatch(createStagedFileRemove(configPath))
+      )
     }
 
     const configTempPath = resolveTempPath(configPath)
+    const persistedConfig = toPromptFolderConfigFile(change.data)
+    writeJsonFile(configTempPath, persistedConfig)
 
-    writeJsonFile(configTempPath, {
-      foldername: change.data.displayName,
-      promptFolderId: change.data.id,
-      promptCount: change.data.promptCount,
-      folderDescription: change.data.folderDescription,
-      promptIds: change.data.promptIds
-    })
-
-    return {
-      fileChanges: [{ type: 'upsert', targetPath: configPath, tempPath: configTempPath }]
-    }
+    return createPersistenceStageResult(
+      createStagedFileChangeBatch(createStagedFileUpsert(configPath, configTempPath))
+    )
   },
   commitChanges: async (stagedChange) => {
-    for (const fileChange of (stagedChange as PromptFolderPersistenceStagedChange).fileChanges) {
-      commitStagedFileChange(fileChange)
-    }
+    commitStagedFileChanges(stagedChange)
   },
   revertChanges: async (stagedChange) => {
-    for (const fileChange of (stagedChange as PromptFolderPersistenceStagedChange).fileChanges) {
-      revertStagedFileChange(fileChange)
-    }
+    revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
     const { workspacePath, folderName } = persistenceFields
@@ -79,21 +90,8 @@ export const promptFolderPersistence: PersistenceLayer<
       return null
     }
 
-    const config = readJsonFile<{
-      foldername: string
-      promptFolderId: string
-      promptCount: number
-      folderDescription: string
-      promptIds: string[]
-    }>(configPath)
+    const persistedConfig = readJsonFile<PromptFolderConfigFile>(configPath)
 
-    return {
-      id: config.promptFolderId,
-      folderName,
-      displayName: config.foldername,
-      promptCount: config.promptCount,
-      promptIds: config.promptIds,
-      folderDescription: config.folderDescription
-    }
+    return fromPromptFolderConfigFile(persistedConfig, folderName)
   }
 }

@@ -1,5 +1,5 @@
 import { produce } from 'immer'
-import type { PersistenceChange, PersistenceStageResult } from '../Persistence/PersistenceTypes'
+import type { PersistenceChange } from '../Persistence/PersistenceTypes'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
 
@@ -7,6 +7,7 @@ type DataStoreKey = keyof typeof data
 
 type StoreData<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extends RevisionData<
   infer TData,
+  any,
   any
 >
   ? TData
@@ -14,7 +15,8 @@ type StoreData<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extend
 
 type StorePersistenceFields<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extends RevisionData<
   any,
-  infer TPersistenceFields
+  infer TPersistenceFields,
+  any
 >
   ? TPersistenceFields
   : never
@@ -281,17 +283,6 @@ const stageAtomicDataOperations = async (
 ): Promise<StageAtomicDataOperationsResult> => {
   const stagedOperations: StagedOperationEntry[] = []
 
-  const isStagedChangeEnvelope = (
-    value: unknown
-  ): value is { stagedChange: unknown; nextPersistenceFields?: unknown } => {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      !Array.isArray(value) &&
-      'stagedChange' in value
-    )
-  }
-
   for (const [operationIndex, operation] of operations.entries()) {
     const revisionData = data[operation.store] as RevisionData<any, any>
 
@@ -346,17 +337,11 @@ const stageAtomicDataOperations = async (
         ? { type: 'remove', persistenceFields }
         : { type: 'upsert', persistenceFields, data: nextData }
 
-    const stageResult = (await revisionData.persistence.stageChanges(
-      change
-    )) as PersistenceStageResult<unknown, unknown>
-    let stagedChange: unknown = stageResult
+    const stageResult = await revisionData.persistence.stageChanges(change)
+    const stagedChange = stageResult.stagedChange
 
-    if (isStagedChangeEnvelope(stageResult)) {
-      stagedChange = stageResult.stagedChange
-
-      if (stageResult.nextPersistenceFields !== undefined) {
-        persistenceFields = stageResult.nextPersistenceFields
-      }
+    if (stageResult.nextPersistenceFields !== undefined) {
+      persistenceFields = stageResult.nextPersistenceFields
     }
 
     stagedOperations.push({
@@ -395,7 +380,6 @@ const applyCommittedInMemoryChanges = (
     }
 
     const nextData = stagedOperation.nextData
-    let revision: number
 
     if (operation.type === 'create') {
       revisionData.committedStore.setFromDisk(
@@ -403,18 +387,13 @@ const applyCommittedInMemoryChanges = (
         nextData,
         stagedOperation.persistenceFields
       )
-      revision = revisionData.committedStore.commitAfterWrite(
-        operation.id,
-        nextData,
-        stagedOperation.persistenceFields
-      )
-    } else {
-      revision = revisionData.committedStore.commitAfterWrite(
-        operation.id,
-        nextData,
-        stagedOperation.persistenceFields
-      )
     }
+
+    const revision = revisionData.committedStore.commitAfterWrite(
+      operation.id,
+      nextData,
+      stagedOperation.persistenceFields
+    )
 
     revisionData.emitCommittedRevisionChanged(operation.id)
     results.push({

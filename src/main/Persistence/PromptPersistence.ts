@@ -1,14 +1,17 @@
 import type { PromptPersisted } from '@shared/Prompt'
-import * as path from 'path'
-import type { PersistenceLayer } from './PersistenceTypes'
+import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
-  commitStagedFileChange,
+  commitStagedFileChanges,
+  createStagedFileChangeBatch,
+  createStagedFileRemove,
+  createStagedFileUpsert,
+  type FilePersistenceStagedChangeBatch,
   readJsonFile,
-  revertStagedFileChange,
+  revertStagedFileChanges,
   resolveTempPath,
-  writeJsonFile,
-  type FilePersistenceStagedChange
+  writeJsonFile
 } from './FilePersistenceHelpers'
+import { resolvePromptFolderPath, resolvePromptPathsFromStem } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
 export type PromptPersistenceFields = {
@@ -20,10 +23,6 @@ export type PromptPersistenceFields = {
   promptStem: string
 }
 
-type PromptPersistenceStagedChange = {
-  fileChanges: FilePersistenceStagedChange[]
-}
-
 type PromptMetadataFile = {
   id: string
   title: string
@@ -32,32 +31,16 @@ type PromptMetadataFile = {
   promptFolderCount: number
 }
 
-type PromptFilePaths = { markdownPath: string; metadataPath: string }
-
-const PROMPTS_FOLDER_NAME = 'Prompts'
-const PROMPT_METADATA_SUFFIX = '.prompt.json'
-const PROMPT_MARKDOWN_SUFFIX = '.md'
 const MAX_PROMPT_FILENAME_TITLE_LENGTH = 64
 const DEFAULT_PROMPT_FILENAME_TITLE = 'Prompt'
 // eslint-disable-next-line no-control-regex
 const ILLEGAL_WINDOWS_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/g
-
-const resolvePromptFolderPath = (workspacePath: string, folderName: string): string => {
-  return path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName)
-}
 
 const sanitizePromptTitleForFilename = (title: string): string => {
   const noIllegalChars = title.trim().replace(ILLEGAL_WINDOWS_FILENAME_CHARS, '')
   const noTrailingDotsOrSpaces = noIllegalChars.replace(/[. ]+$/g, '').trim()
   const normalizedTitle = noTrailingDotsOrSpaces || DEFAULT_PROMPT_FILENAME_TITLE
   return normalizedTitle.slice(0, MAX_PROMPT_FILENAME_TITLE_LENGTH)
-}
-
-const resolvePromptPathsFromStem = (folderPath: string, stem: string): PromptFilePaths => {
-  return {
-    markdownPath: path.join(folderPath, `${stem}${PROMPT_MARKDOWN_SUFFIX}`),
-    metadataPath: path.join(folderPath, `${stem}${PROMPT_METADATA_SUFFIX}`)
-  }
 }
 
 const isStemTaken = (folderPath: string, stem: string, currentStem: string): boolean => {
@@ -94,7 +77,8 @@ const resolvePromptStem = (
 
 export const promptPersistence: PersistenceLayer<
   PromptPersisted,
-  PromptPersistenceFields
+  PromptPersistenceFields,
+  FilePersistenceStagedChangeBatch
 > = {
   stageChanges: async (change) => {
     const folderPath = resolvePromptFolderPath(
@@ -105,12 +89,12 @@ export const promptPersistence: PersistenceLayer<
     const currentPaths = resolvePromptPathsFromStem(folderPath, currentStem)
 
     if (change.type === 'remove') {
-      return {
-        fileChanges: [
-          { type: 'remove', targetPath: currentPaths.metadataPath },
-          { type: 'remove', targetPath: currentPaths.markdownPath }
-        ]
-      }
+      return createPersistenceStageResult(
+        createStagedFileChangeBatch(
+          createStagedFileRemove(currentPaths.metadataPath),
+          createStagedFileRemove(currentPaths.markdownPath)
+        )
+      )
     }
 
     const stem = resolvePromptStem(change.data.title, change.data.id, folderPath, currentStem)
@@ -128,46 +112,32 @@ export const promptPersistence: PersistenceLayer<
     const fs = getFs()
     fs.writeFileSync(markdownTempPath, change.data.promptText, 'utf8')
 
-    const fileChanges: FilePersistenceStagedChange[] = []
+    const fileChanges: FilePersistenceStagedChangeBatch['fileChanges'] = []
 
     // Side effect: remove stale title-based files when title changes.
     if (currentPaths.metadataPath !== targetPaths.metadataPath) {
-      fileChanges.push({ type: 'remove', targetPath: currentPaths.metadataPath })
+      fileChanges.push(createStagedFileRemove(currentPaths.metadataPath))
     }
     if (currentPaths.markdownPath !== targetPaths.markdownPath) {
-      fileChanges.push({ type: 'remove', targetPath: currentPaths.markdownPath })
+      fileChanges.push(createStagedFileRemove(currentPaths.markdownPath))
     }
 
-    fileChanges.push({
-      type: 'upsert',
-      targetPath: targetPaths.metadataPath,
-      tempPath: metadataTempPath
-    })
-    fileChanges.push({
-      type: 'upsert',
-      targetPath: targetPaths.markdownPath,
-      tempPath: markdownTempPath
-    })
+    fileChanges.push(createStagedFileUpsert(targetPaths.metadataPath, metadataTempPath))
+    fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
 
-    return {
-      stagedChange: {
-        fileChanges
-      },
-      nextPersistenceFields: {
+    return createPersistenceStageResult(
+      createStagedFileChangeBatch(...fileChanges),
+      {
         ...change.persistenceFields,
         promptStem: stem
       }
-    }
+    )
   },
   commitChanges: async (stagedChange) => {
-    for (const fileChange of (stagedChange as PromptPersistenceStagedChange).fileChanges) {
-      commitStagedFileChange(fileChange)
-    }
+    commitStagedFileChanges(stagedChange)
   },
   revertChanges: async (stagedChange) => {
-    for (const fileChange of (stagedChange as PromptPersistenceStagedChange).fileChanges) {
-      revertStagedFileChange(fileChange)
-    }
+    revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
     const folderPath = resolvePromptFolderPath(
@@ -182,9 +152,6 @@ export const promptPersistence: PersistenceLayer<
     }
 
     const metadata = readJsonFile<PromptMetadataFile>(filePaths.metadataPath)
-    if (metadata.id !== persistenceFields.promptId) {
-      return null
-    }
     const promptText = fs.readFileSync(filePaths.markdownPath, 'utf8')
 
     return {

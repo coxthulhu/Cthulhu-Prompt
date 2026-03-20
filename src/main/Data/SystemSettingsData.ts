@@ -10,10 +10,7 @@ const emitCommittedRevisionChanged = (_id: string): void => {
   // TODO: Emit committed system settings update events.
 }
 
-export const systemSettingsData = createRevisionData<
-  SystemSettings,
-  SystemSettingsPersistenceFields
->({
+export const systemSettingsData = createRevisionData({
   persistence: systemSettingsPersistence,
   emitCommittedRevisionChanged
 })

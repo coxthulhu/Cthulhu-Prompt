@@ -66,7 +66,7 @@ const mockTransactionState = vi.hoisted(() => {
     return {
       committedStore: createCommittedStore(store),
       persistence: {
-        stageChanges: async (change: unknown) => change,
+        stageChanges: async (change: unknown) => ({ stagedChange: change }),
         commitChanges: async (_stagedChange: unknown) => undefined,
         revertChanges: async (_stagedChange: unknown) => undefined,
         loadData: async (_persistenceFields: unknown) => null
