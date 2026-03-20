@@ -4,19 +4,15 @@ import * as path from 'path'
 import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/SystemSettings'
 import { getFs } from '../fs-provider'
 import type { PersistenceLayer } from './PersistenceTypes'
+import {
+  commitStagedFileChange,
+  revertStagedFileChange,
+  resolveTempPath,
+  writeJsonFile,
+  type FilePersistenceStagedChange
+} from './FilePersistenceHelpers'
 
 export type SystemSettingsPersistenceFields = Record<string, never>
-
-type SystemSettingsStagedChange =
-  | {
-      type: 'upsert'
-      targetPath: string
-      tempPath: string
-    }
-  | {
-      type: 'remove'
-      targetPath: string
-    }
 
 const SYSTEM_SETTINGS_FILENAME = 'SystemSettings.json'
 
@@ -29,16 +25,6 @@ const ensureSettingsDirectory = (): string => {
 
 const resolveTargetPath = (): string => {
   return path.join(ensureSettingsDirectory(), SYSTEM_SETTINGS_FILENAME)
-}
-
-const resolveTempPath = (): string => {
-  const uniqueSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-  return `${resolveTargetPath()}.${uniqueSuffix}.tmp`
-}
-
-const writeSystemSettingsFile = (settingsPath: string, settings: SystemSettings): void => {
-  const fs = getFs()
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8')
 }
 
 export const systemSettingsPersistence: PersistenceLayer<
@@ -55,12 +41,12 @@ export const systemSettingsPersistence: PersistenceLayer<
       }
     }
 
-    const tempPath = resolveTempPath()
+    const tempPath = resolveTempPath(targetPath)
     const normalizedSettings = normalizeSystemSettings({
       promptFontSize: change.data.promptFontSize,
       promptEditorMinLines: change.data.promptEditorMinLines
     })
-    writeSystemSettingsFile(tempPath, normalizedSettings)
+    writeJsonFile(tempPath, normalizedSettings)
 
     return {
       type: 'upsert',
@@ -69,52 +55,30 @@ export const systemSettingsPersistence: PersistenceLayer<
     }
   },
   commitChanges: async (stagedChange) => {
-    const typedStagedChange = stagedChange as SystemSettingsStagedChange
-    const fs = getFs()
-
-    if (typedStagedChange.type === 'remove') {
-      if (fs.existsSync(typedStagedChange.targetPath)) {
-        fs.rmSync(typedStagedChange.targetPath)
-      }
-      return
-    }
-
-    // Side effect: replace the file atomically using delete + rename.
-    if (fs.existsSync(typedStagedChange.targetPath)) {
-      fs.rmSync(typedStagedChange.targetPath)
-    }
-    fs.renameSync(typedStagedChange.tempPath, typedStagedChange.targetPath)
+    commitStagedFileChange(stagedChange as FilePersistenceStagedChange)
   },
   revertChanges: async (stagedChange) => {
-    const typedStagedChange = stagedChange as SystemSettingsStagedChange
-    if (typedStagedChange.type !== 'upsert') {
-      return
-    }
-
-    const fs = getFs()
-    if (fs.existsSync(typedStagedChange.tempPath)) {
-      fs.rmSync(typedStagedChange.tempPath)
-    }
+    revertStagedFileChange(stagedChange as FilePersistenceStagedChange)
   },
   loadData: async (_persistenceFields) => {
     const fs = getFs()
     const settingsPath = resolveTargetPath()
 
     if (!fs.existsSync(settingsPath)) {
-      writeSystemSettingsFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
+      writeJsonFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
       return DEFAULT_SYSTEM_SETTINGS
     }
 
     try {
       const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        writeSystemSettingsFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
+        writeJsonFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
         return DEFAULT_SYSTEM_SETTINGS
       }
 
       return normalizeSystemSettings(parsed as Record<string, unknown>)
     } catch {
-      writeSystemSettingsFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
+      writeJsonFile(settingsPath, DEFAULT_SYSTEM_SETTINGS)
       return DEFAULT_SYSTEM_SETTINGS
     }
   }

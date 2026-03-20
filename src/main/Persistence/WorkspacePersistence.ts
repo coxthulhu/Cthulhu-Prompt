@@ -1,38 +1,23 @@
 import type { Workspace } from '@shared/Workspace'
 import * as path from 'path'
-import { getFs } from '../fs-provider'
 import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
 import type { PersistenceLayer } from './PersistenceTypes'
+import {
+  commitStagedFileChange,
+  revertStagedFileChange,
+  resolveTempPath,
+  writeJsonFile,
+  type FilePersistenceStagedChange
+} from './FilePersistenceHelpers'
 
 export type WorkspacePersistenceFields = {
   workspacePath: string
 }
 
-type WorkspaceStagedChange =
-  | {
-      type: 'upsert'
-      targetPath: string
-      tempPath: string
-    }
-  | {
-      type: 'remove'
-      targetPath: string
-    }
-
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 
 const resolveTargetPath = (workspacePath: string): string => {
   return path.join(workspacePath, WORKSPACE_INFO_FILENAME)
-}
-
-const resolveTempPath = (targetPath: string): string => {
-  const uniqueSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-  return `${targetPath}.${uniqueSuffix}.tmp`
-}
-
-const writeWorkspaceInfoFile = (workspaceInfoPath: string, workspaceId: string): void => {
-  const fs = getFs()
-  fs.writeFileSync(workspaceInfoPath, JSON.stringify({ workspaceId }, null, 2), 'utf8')
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
@@ -47,7 +32,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     }
 
     const tempPath = resolveTempPath(targetPath)
-    writeWorkspaceInfoFile(tempPath, change.data.id)
+    writeJsonFile(tempPath, { workspaceId: change.data.id })
 
     return {
       type: 'upsert',
@@ -56,33 +41,10 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     }
   },
   commitChanges: async (stagedChange) => {
-    const typedStagedChange = stagedChange as WorkspaceStagedChange
-    const fs = getFs()
-
-    if (typedStagedChange.type === 'remove') {
-      if (fs.existsSync(typedStagedChange.targetPath)) {
-        fs.rmSync(typedStagedChange.targetPath)
-      }
-      return
-    }
-
-    // Side effect: replace the workspace info file atomically using delete + rename.
-    if (fs.existsSync(typedStagedChange.targetPath)) {
-      fs.rmSync(typedStagedChange.targetPath)
-    }
-    fs.renameSync(typedStagedChange.tempPath, typedStagedChange.targetPath)
+    commitStagedFileChange(stagedChange as FilePersistenceStagedChange)
   },
   revertChanges: async (stagedChange) => {
-    const typedStagedChange = stagedChange as WorkspaceStagedChange
-
-    if (typedStagedChange.type !== 'upsert') {
-      return
-    }
-
-    const fs = getFs()
-    if (fs.existsSync(typedStagedChange.tempPath)) {
-      fs.rmSync(typedStagedChange.tempPath)
-    }
+    revertStagedFileChange(stagedChange as FilePersistenceStagedChange)
   },
   loadData: async (persistenceFields) => {
     const { workspacePath } = persistenceFields
