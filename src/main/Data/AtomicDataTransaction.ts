@@ -74,24 +74,25 @@ type AtomicDataTransactionHandle<
   }
 }
 
-type AtomicDataBuilder = {
-  create: <TStoreKey extends DataStoreKey>(params: {
-    store: TStoreKey
+type AtomicDataStoreBuilder<TStoreKey extends DataStoreKey> = {
+  create: (params: {
     id: string
     data: StoreData<TStoreKey>
     persistenceFields: StorePersistenceFields<TStoreKey>
   }) => AtomicDataTransactionHandle<TStoreKey, StoreData<TStoreKey>, number>
-  update: <TStoreKey extends DataStoreKey>(params: {
-    store: TStoreKey
+  update: (params: {
     id: string
     recipe: DataRecipe<StoreData<TStoreKey>>
     expectedRevision?: number
   }) => AtomicDataTransactionHandle<TStoreKey, StoreData<TStoreKey>, number>
-  delete: <TStoreKey extends DataStoreKey>(params: {
-    store: TStoreKey
+  delete: (params: {
     id: string
     expectedRevision?: number
   }) => AtomicDataTransactionHandle<TStoreKey, null, null>
+}
+
+type AtomicDataBuilder = {
+  [TStoreKey in DataStoreKey]: AtomicDataStoreBuilder<TStoreKey>
 }
 
 type AtomicDataTransactionHandles = Record<
@@ -217,10 +218,11 @@ const createAtomicDataBuilder = (): {
     }
   }
 
-  return {
-    operations,
-    tx: {
-      create: ({ store, id, data: nextData, persistenceFields }) => {
+  const createStoreBuilder = <TStoreKey extends DataStoreKey>(
+    store: TStoreKey
+  ): AtomicDataStoreBuilder<TStoreKey> => {
+    return {
+      create: ({ id, data: nextData, persistenceFields }) => {
         const operation: AtomicDataCreateOperation = {
           type: 'create',
           store,
@@ -230,7 +232,7 @@ const createAtomicDataBuilder = (): {
         }
         return registerOperationHandle(operation, store, id)
       },
-      update: ({ store, id, recipe, expectedRevision }) => {
+      update: ({ id, recipe, expectedRevision }) => {
         const operation: AtomicDataUpdateOperation = {
           type: 'update',
           store,
@@ -240,7 +242,7 @@ const createAtomicDataBuilder = (): {
         }
         return registerOperationHandle(operation, store, id)
       },
-      delete: ({ store, id, expectedRevision }) => {
+      delete: ({ id, expectedRevision }) => {
         const operation: AtomicDataDeleteOperation = {
           type: 'delete',
           store,
@@ -249,6 +251,16 @@ const createAtomicDataBuilder = (): {
         }
         return registerOperationHandle(operation, store, id)
       }
+    }
+  }
+
+  return {
+    operations,
+    tx: {
+      systemSettings: createStoreBuilder('systemSettings'),
+      workspace: createStoreBuilder('workspace'),
+      promptFolder: createStoreBuilder('promptFolder'),
+      prompt: createStoreBuilder('prompt')
     }
   }
 }

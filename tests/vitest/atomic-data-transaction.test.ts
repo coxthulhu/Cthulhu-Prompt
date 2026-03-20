@@ -130,16 +130,14 @@ describe('atomic data transaction', () => {
 
     const outcome = await runAtomicDataTransaction((tx) => {
       return {
-        systemSettings: tx.update({
-          store: 'systemSettings',
+        systemSettings: tx.systemSettings.update({
           id: SYSTEM_SETTINGS_ID,
           expectedRevision: 1,
           recipe: (draft) => {
             draft.promptFontSize = 22
           }
         }),
-        prompt: tx.delete({
-          store: 'prompt',
+        prompt: tx.prompt.delete({
           id: PROMPT_ID,
           expectedRevision: 4
         })
@@ -173,8 +171,7 @@ describe('atomic data transaction', () => {
 
     const outcome = await runAtomicDataTransaction((tx) => {
       return {
-        systemSettings: tx.update({
-          store: 'systemSettings',
+        systemSettings: tx.systemSettings.update({
           id: SYSTEM_SETTINGS_ID,
           expectedRevision: 6,
           recipe: (draft) => {

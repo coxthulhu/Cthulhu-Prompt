@@ -34,8 +34,7 @@ export const setupSystemSettingsMutationHandlers = (): void => {
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
-              systemSettings: tx.update({
-                store: 'systemSettings',
+              systemSettings: tx.systemSettings.update({
                 id: SYSTEM_SETTINGS_ID,
                 expectedRevision: systemSettingsEntity.expectedRevision,
                 recipe: (draft) => {
