@@ -10,6 +10,11 @@ export type FilePersistenceStagedChange =
       type: 'remove'
       targetPath: string
     }
+  | {
+      type: 'ensureDirectory'
+      targetPath: string
+      wasCreated: boolean
+    }
 
 export const createStagedFileUpsert = (
   targetPath: string,
@@ -26,6 +31,17 @@ export const createStagedFileRemove = (targetPath: string): FilePersistenceStage
   return {
     type: 'remove',
     targetPath
+  }
+}
+
+export const createStagedEnsureDirectory = (
+  targetPath: string,
+  wasCreated: boolean
+): FilePersistenceStagedChange => {
+  return {
+    type: 'ensureDirectory',
+    targetPath,
+    wasCreated
   }
 }
 
@@ -47,6 +63,10 @@ export const readJsonFile = <T = unknown>(filePath: string): T => {
 export const commitStagedFileChange = (stagedChange: FilePersistenceStagedChange): void => {
   const fs = getFs()
 
+  if (stagedChange.type === 'ensureDirectory') {
+    return
+  }
+
   if (stagedChange.type === 'remove') {
     if (fs.existsSync(stagedChange.targetPath)) {
       fs.rmSync(stagedChange.targetPath)
@@ -62,6 +82,21 @@ export const commitStagedFileChange = (stagedChange: FilePersistenceStagedChange
 }
 
 export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange): void => {
+  if (stagedChange.type === 'ensureDirectory') {
+    if (!stagedChange.wasCreated) {
+      return
+    }
+
+    const fs = getFs()
+
+    try {
+      fs.rmSync(stagedChange.targetPath)
+    } catch {
+      // Ignore non-empty or missing directories.
+    }
+    return
+  }
+
   if (stagedChange.type !== 'upsert') {
     return
   }

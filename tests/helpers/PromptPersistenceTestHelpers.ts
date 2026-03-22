@@ -70,6 +70,5 @@ export async function readPersistedPromptTextById(
   electronApp: any,
   lookup: PersistedPromptLookup
 ): Promise<string> {
-  // Hardcoded for now. Switch call sites to readPersistedPromptTextByIdUpdated when ready.
-  return await readPersistedPromptTextByIdLegacy(electronApp, lookup)
+  return await readPersistedPromptTextByIdUpdated(electronApp, lookup)
 }

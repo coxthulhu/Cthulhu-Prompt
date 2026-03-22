@@ -9,7 +9,10 @@ export type PromptFolderConfigFile = {
   promptFolderId: string
   promptCount: number
   folderDescription: string
+  promptIds: string[]
 }
+
+export type PromptMetadataFile = Omit<PromptPersisted, 'promptText'>
 
 export type PromptsFile = {
   prompts: PromptPersisted[]

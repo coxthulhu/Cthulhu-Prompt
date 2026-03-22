@@ -1,166 +1,93 @@
 import { ipcMain } from 'electron'
-import * as path from 'path'
-import type { Workspace } from '@shared/Workspace'
-import type { PromptFolderConfigFile, PromptsFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { getFs } from '../fs-provider'
-import { readPromptFolder } from '../DataAccess/WorkspaceReads'
+import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
+import { data } from '../Data/Data'
 import {
   parseCreatePromptFolderRequest,
   parseUpdatePromptFolderRevisionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
-import { revisions } from '../Registries/Revisions'
-import {
-  getPromptFolderLocation,
-  getPromptFolderIds,
-  getWorkspacePath,
-  registerPromptFolder,
-  registerPrompts
-} from '../Registries/WorkspaceRegistry'
 
-const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-const PROMPTS_FOLDER_NAME = 'Prompts'
-const PROMPT_FOLDER_CONFIG_FILENAME = 'PromptFolder.json'
-const PROMPTS_FILENAME = 'Prompts.json'
-
-const isWorkspacePathValid = (workspacePath: string): boolean => {
-  const fs = getFs()
-  return (
-    fs.existsSync(path.join(workspacePath, WORKSPACE_INFO_FILENAME)) &&
-    fs.existsSync(path.join(workspacePath, PROMPTS_FOLDER_NAME))
-  )
+const getLoadedWorkspacePromptFolderIds = (promptFolderIds: string[]): string[] => {
+  return promptFolderIds.filter((promptFolderId) => {
+    return data.promptFolder.committedStore.getEntry(promptFolderId) !== null
+  })
 }
 
-const hasPromptFolderNameConflict = (workspacePath: string, folderName: string): boolean => {
-  const fs = getFs()
-  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
-  const normalizedTargetName = folderName.toLowerCase()
-  const entries = fs.readdirSync(promptsPath, { withFileTypes: true })
-
-  return entries.some(
-    (entry) => entry.isDirectory() && entry.name.toLowerCase() === normalizedTargetName
-  )
+const getLoadedPromptIds = (promptIds: string[]): string[] => {
+  return promptIds.filter((promptId) => data.prompt.committedStore.getEntry(promptId) !== null)
 }
 
 const buildWorkspaceSnapshot = (
-  workspaceId: string,
-  workspacePath: string,
-  revision: number
-): { id: string; revision: number; data: Workspace } => {
+  workspaceEntry: NonNullable<ReturnType<typeof data.workspace.committedStore.getEntry>>
+) => {
   return {
-    id: workspaceId,
-    revision,
+    id: workspaceEntry.committed.id,
+    revision: workspaceEntry.revision,
     data: {
-      id: workspaceId,
-      workspacePath,
-      promptFolderIds: getPromptFolderIds(workspaceId)
+      ...workspaceEntry.committed,
+      promptFolderIds: getLoadedWorkspacePromptFolderIds(workspaceEntry.committed.promptFolderIds)
     }
   }
 }
 
 const buildPromptFolderSnapshot = (
-  promptFolder: ReturnType<typeof readPromptFolder>,
-  revision: number
+  promptFolderEntry: NonNullable<ReturnType<typeof data.promptFolder.committedStore.getEntry>>
 ) => {
   return {
-    id: promptFolder.id,
-    revision,
-    data: promptFolder
+    id: promptFolderEntry.committed.id,
+    revision: promptFolderEntry.revision,
+    data: {
+      ...promptFolderEntry.committed,
+      promptIds: getLoadedPromptIds(promptFolderEntry.committed.promptIds)
+    }
   }
 }
 
-const isPromptFolderPathValid = (workspacePath: string, folderName: string): boolean => {
-  const fs = getFs()
-  const folderPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName)
-  return (
-    fs.existsSync(path.join(folderPath, PROMPT_FOLDER_CONFIG_FILENAME)) &&
-    fs.existsSync(path.join(folderPath, PROMPTS_FILENAME))
-  )
-}
-
-const readPromptFolderConfig = (
-  workspacePath: string,
+const hasPromptFolderNameConflict = (
+  workspaceEntry: NonNullable<ReturnType<typeof data.workspace.committedStore.getEntry>>,
   folderName: string
-): PromptFolderConfigFile => {
-  const fs = getFs()
-  const configPath = path.join(
-    workspacePath,
-    PROMPTS_FOLDER_NAME,
-    folderName,
-    PROMPT_FOLDER_CONFIG_FILENAME
-  )
-  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as PromptFolderConfigFile
-}
+): boolean => {
+  const normalizedTargetName = folderName.toLowerCase()
 
-const readPromptFile = (workspacePath: string, folderName: string): PromptsFile => {
-  const fs = getFs()
-  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
-  return JSON.parse(fs.readFileSync(promptsPath, 'utf8')) as PromptsFile
-}
+  return workspaceEntry.committed.promptFolderIds.some((promptFolderId) => {
+    const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
 
-const writePromptFolderConfig = (
-  workspacePath: string,
-  folderName: string,
-  config: PromptFolderConfigFile
-): void => {
-  const fs = getFs()
-  const configPath = path.join(
-    workspacePath,
-    PROMPTS_FOLDER_NAME,
-    folderName,
-    PROMPT_FOLDER_CONFIG_FILENAME
-  )
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8')
-}
-
-const writePromptFile = (
-  workspacePath: string,
-  folderName: string,
-  promptsFile: PromptsFile
-): void => {
-  const fs = getFs()
-  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME, folderName, PROMPTS_FILENAME)
-  fs.writeFileSync(
-    promptsPath,
-    JSON.stringify(
-      {
-        prompts: promptsFile.prompts
-      },
-      null,
-      2
-    ),
-    'utf8'
-  )
-}
-
-const reorderPrompts = (
-  prompts: PromptsFile['prompts'],
-  nextPromptIds: string[]
-): PromptsFile['prompts'] | null => {
-  if (prompts.length !== nextPromptIds.length) {
-    return null
-  }
-
-  const promptById = new Map(prompts.map((prompt) => [prompt.id, prompt] as const))
-  const orderedPrompts: PromptsFile['prompts'] = []
-
-  for (const promptId of nextPromptIds) {
-    const prompt = promptById.get(promptId)
-
-    if (!prompt) {
-      return null
+    if (!promptFolderEntry) {
+      return false
     }
 
-    orderedPrompts.push(prompt)
-    promptById.delete(promptId)
+    return promptFolderEntry.committed.folderName.toLowerCase() === normalizedTargetName
+  })
+}
+
+const hasMatchingPromptIds = (existingPromptIds: string[], nextPromptIds: string[]): boolean => {
+  if (existingPromptIds.length !== nextPromptIds.length) {
+    return false
   }
 
-  if (promptById.size > 0) {
-    return null
+  const remainingCountsByPromptId = new Map<string, number>()
+
+  for (const promptId of existingPromptIds) {
+    remainingCountsByPromptId.set(promptId, (remainingCountsByPromptId.get(promptId) ?? 0) + 1)
   }
 
-  return orderedPrompts
+  for (const promptId of nextPromptIds) {
+    const remainingCount = remainingCountsByPromptId.get(promptId)
+
+    if (!remainingCount) {
+      return false
+    }
+
+    if (remainingCount === 1) {
+      remainingCountsByPromptId.delete(promptId)
+      continue
+    }
+
+    remainingCountsByPromptId.set(promptId, remainingCount - 1)
+  }
+
+  return remainingCountsByPromptId.size === 0
 }
 
 export const setupPromptFolderMutationHandlers = (): void => {
@@ -171,15 +98,11 @@ export const setupPromptFolderMutationHandlers = (): void => {
       async (validatedRequest) => {
         try {
           const payload = validatedRequest.payload
-          const workspace = payload.workspace
-          const workspacePath = getWorkspacePath(workspace.id)
+          const workspaceEntity = payload.workspace
+          const workspaceEntry = data.workspace.committedStore.getEntry(workspaceEntity.id)
 
-          if (!workspacePath) {
-            return { success: false, error: 'Workspace not registered' }
-          }
-
-          if (!isWorkspacePathValid(workspacePath)) {
-            return { success: false, error: 'Invalid workspace path' }
+          if (!workspaceEntry) {
+            return { success: false, error: 'Workspace not loaded' }
           }
 
           const {
@@ -195,72 +118,66 @@ export const setupPromptFolderMutationHandlers = (): void => {
             }
           }
 
-          const currentWorkspaceRevision = revisions.workspace.get(workspace.id)
+          if (hasPromptFolderNameConflict(workspaceEntry, folderName)) {
+            return { success: false, error: 'A folder with this name already exists' }
+          }
 
-          if (workspace.expectedRevision !== currentWorkspaceRevision) {
+          const transactionOutcome = await runAtomicDataTransaction((tx) => {
+            return {
+              workspace: tx.workspace.update({
+                id: workspaceEntity.id,
+                expectedRevision: workspaceEntity.expectedRevision,
+                recipe: (draft) => {
+                  draft.promptFolderIds = [...draft.promptFolderIds, payload.promptFolderId]
+                }
+              }),
+              promptFolder: tx.promptFolder.create({
+                id: payload.promptFolderId,
+                data: {
+                  id: payload.promptFolderId,
+                  folderName,
+                  displayName: normalizedDisplayName,
+                  promptCount: 0,
+                  promptIds: [],
+                  folderDescription: ''
+                },
+                persistenceFields: {
+                  workspaceId: workspaceEntity.id,
+                  workspacePath: workspaceEntry.committed.workspacePath,
+                  folderName
+                }
+              })
+            }
+          })
+
+          if (transactionOutcome.status === 'conflict') {
+            const latestWorkspaceEntry = data.workspace.committedStore.getEntry(workspaceEntity.id)
+
+            if (!latestWorkspaceEntry) {
+              return { success: false, error: 'Workspace not loaded' }
+            }
+
             return {
               success: false,
               conflict: true,
               payload: {
-                workspace: buildWorkspaceSnapshot(
-                  workspace.id,
-                  workspacePath,
-                  currentWorkspaceRevision
-                )
+                workspace: buildWorkspaceSnapshot(latestWorkspaceEntry)
               }
             }
           }
 
-          const fs = getFs()
-          const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
-          const folderPath = path.join(promptsPath, folderName)
+          const nextWorkspaceEntry = data.workspace.committedStore.getEntry(workspaceEntity.id)
+          const nextPromptFolderEntry = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
 
-          if (hasPromptFolderNameConflict(workspacePath, folderName) || fs.existsSync(folderPath)) {
-            return { success: false, error: 'A folder with this name already exists' }
+          if (!nextWorkspaceEntry || !nextPromptFolderEntry) {
+            return { success: false, error: 'Prompt folder create commit did not complete' }
           }
-
-          fs.mkdirSync(folderPath, { recursive: true })
-
-          const promptFolderConfigPath = path.join(folderPath, PROMPT_FOLDER_CONFIG_FILENAME)
-          fs.writeFileSync(
-            promptFolderConfigPath,
-            JSON.stringify(
-              {
-                foldername: normalizedDisplayName,
-                promptFolderId: payload.promptFolderId,
-                promptCount: 0,
-                folderDescription: ''
-              },
-              null,
-              2
-            ),
-            'utf8'
-          )
-
-          const promptsFilePath = path.join(folderPath, PROMPTS_FILENAME)
-          fs.writeFileSync(promptsFilePath, JSON.stringify({ prompts: [] }, null, 2), 'utf8')
-
-          const promptFolder = readPromptFolder(workspacePath, folderName)
-          registerPromptFolder(workspace.id, workspacePath, {
-            id: promptFolder.id,
-            folderName: promptFolder.folderName
-          })
-          registerPrompts(
-            workspace.id,
-            workspacePath,
-            promptFolder.id,
-            promptFolder.folderName,
-            promptFolder.promptIds
-          )
-
-          const promptFolderRevision = revisions.promptFolder.bump(promptFolder.id)
-          const workspaceRevision = revisions.workspace.bump(workspace.id)
 
           return {
             success: true,
             payload: {
-              workspace: buildWorkspaceSnapshot(workspace.id, workspacePath, workspaceRevision),
-              promptFolder: buildPromptFolderSnapshot(promptFolder, promptFolderRevision)
+              workspace: buildWorkspaceSnapshot(nextWorkspaceEntry),
+              promptFolder: buildPromptFolderSnapshot(nextPromptFolderEntry)
             }
           }
         } catch (error) {
@@ -278,65 +195,57 @@ export const setupPromptFolderMutationHandlers = (): void => {
       async (validatedRequest) => {
         try {
           const promptFolderEntity = validatedRequest.payload.promptFolder
-          const location = getPromptFolderLocation(promptFolderEntity.id)
+          const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderEntity.id)
 
-          if (!location) {
-            return { success: false, error: 'Prompt folder not registered' }
+          if (!promptFolderEntry) {
+            return { success: false, error: 'Prompt folder not loaded' }
           }
 
-          if (!isPromptFolderPathValid(location.workspacePath, location.folderName)) {
-            return { success: false, error: 'Invalid prompt folder path' }
+          if (
+            !hasMatchingPromptIds(promptFolderEntry.committed.promptIds, promptFolderEntity.data.promptIds)
+          ) {
+            return { success: false, error: 'Invalid prompt order' }
           }
 
-          const currentPromptFolderRevision = revisions.promptFolder.get(promptFolderEntity.id)
+          const transactionOutcome = await runAtomicDataTransaction((tx) => {
+            return {
+              promptFolder: tx.promptFolder.update({
+                id: promptFolderEntity.id,
+                expectedRevision: promptFolderEntity.expectedRevision,
+                recipe: (draft) => {
+                  draft.folderDescription = promptFolderEntity.data.folderDescription
+                  draft.promptIds = [...promptFolderEntity.data.promptIds]
+                }
+              })
+            }
+          })
 
-          if (promptFolderEntity.expectedRevision !== currentPromptFolderRevision) {
-            const promptFolder = readPromptFolder(location.workspacePath, location.folderName)
+          if (transactionOutcome.status === 'conflict') {
+            const latestPromptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderEntity.id)
+
+            if (!latestPromptFolderEntry) {
+              return { success: false, error: 'Prompt folder not loaded' }
+            }
+
             return {
               success: false,
               conflict: true,
               payload: {
-                promptFolder: buildPromptFolderSnapshot(promptFolder, currentPromptFolderRevision)
+                promptFolder: buildPromptFolderSnapshot(latestPromptFolderEntry)
               }
             }
           }
 
-          const promptFolderConfig = readPromptFolderConfig(
-            location.workspacePath,
-            location.folderName
-          )
-          const promptsFile = readPromptFile(location.workspacePath, location.folderName)
-          const reorderedPrompts = reorderPrompts(
-            promptsFile.prompts,
-            promptFolderEntity.data.promptIds
-          )
+          const nextPromptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderEntity.id)
 
-          if (!reorderedPrompts) {
-            return { success: false, error: 'Invalid prompt order' }
+          if (!nextPromptFolderEntry) {
+            return { success: false, error: 'Prompt folder update commit did not complete' }
           }
-
-          promptFolderConfig.folderDescription = promptFolderEntity.data.folderDescription
-          writePromptFolderConfig(location.workspacePath, location.folderName, promptFolderConfig)
-          writePromptFile(location.workspacePath, location.folderName, {
-            ...promptsFile,
-            prompts: reorderedPrompts
-          })
-
-          const promptFolder = readPromptFolder(location.workspacePath, location.folderName)
-          registerPrompts(
-            location.workspaceId,
-            location.workspacePath,
-            promptFolder.id,
-            promptFolder.folderName,
-            promptFolder.promptIds
-          )
-
-          const promptFolderRevision = revisions.promptFolder.bump(promptFolder.id)
 
           return {
             success: true,
             payload: {
-              promptFolder: buildPromptFolderSnapshot(promptFolder, promptFolderRevision)
+              promptFolder: buildPromptFolderSnapshot(nextPromptFolderEntry)
             }
           }
         } catch (error) {

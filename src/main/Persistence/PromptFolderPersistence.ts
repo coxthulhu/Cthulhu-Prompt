@@ -2,6 +2,7 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
+  createStagedEnsureDirectory,
   createStagedFileRemove,
   createStagedFileUpsert,
   readJsonFile,
@@ -9,7 +10,7 @@ import {
   resolveTempPath,
   writeJsonFile
 } from './FilePersistenceHelpers'
-import { resolvePromptFolderConfigPath } from './PromptPersistencePaths'
+import { resolvePromptFolderConfigPath, resolvePromptFolderPath } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
 export type PromptFolderPersistenceFields = {
@@ -56,17 +57,26 @@ export const promptFolderPersistence: PersistenceLayer<
 > = {
   stageChanges: async (change) => {
     const { workspacePath, folderName } = change.persistenceFields
+    const folderPath = resolvePromptFolderPath(workspacePath, folderName)
     const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([createStagedFileRemove(configPath)])
     }
 
+    const fs = getFs()
+    const folderPathExists = fs.existsSync(folderPath)
+    // Side effect: create prompt folder directory before staging config writes.
+    fs.mkdirSync(folderPath, { recursive: true })
+
     const configTempPath = resolveTempPath(configPath)
     const persistedConfig = toPromptFolderConfigFile(change.data)
     writeJsonFile(configTempPath, persistedConfig)
 
-    return createPersistenceStageResult([createStagedFileUpsert(configPath, configTempPath)])
+    return createPersistenceStageResult([
+      createStagedFileUpsert(configPath, configTempPath),
+      createStagedEnsureDirectory(folderPath, !folderPathExists)
+    ])
   },
   commitChanges: async (stagedChange) => {
     commitStagedFileChanges(stagedChange)

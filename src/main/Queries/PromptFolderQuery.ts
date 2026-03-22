@@ -1,14 +1,13 @@
 import { ipcMain } from 'electron'
 import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
-import { readPromptFolder, readPrompts } from '../DataAccess/WorkspaceReads'
 import {
   createPromptUiStateRevisionKey,
   PromptUiStateDataAccess
 } from '../DataAccess/PromptUiStateDataAccess'
+import { data } from '../Data/Data'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { revisions } from '../Registries/Revisions'
-import { getPromptFolderLocation, registerPrompts } from '../Registries/WorkspaceRegistry'
 
 export const setupPromptFolderQueryHandlers = (): void => {
   ipcMain.handle(
@@ -19,39 +18,50 @@ export const setupPromptFolderQueryHandlers = (): void => {
         parseLoadPromptFolderInitialRequest,
         async (validatedRequest) => {
           const payload = validatedRequest.payload
-          const location = getPromptFolderLocation(payload.promptFolderId)
+          const promptFolderEntry = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
 
-          if (!location || location.workspaceId !== payload.workspaceId) {
-            return { success: false, error: 'Prompt folder not registered' }
+          if (!promptFolderEntry) {
+            return { success: false, error: 'Prompt folder not loaded' }
+          }
+
+          if (promptFolderEntry.persistenceFields.workspaceId !== payload.workspaceId) {
+            return { success: false, error: 'Prompt folder does not belong to the workspace' }
           }
 
           try {
-            const promptFolder = readPromptFolder(location.workspacePath, location.folderName)
-            const prompts = readPrompts(location.workspacePath, location.folderName)
+            const promptIds = promptFolderEntry.committed.promptIds.filter((promptId) => {
+              return data.prompt.committedStore.getEntry(promptId) !== null
+            })
             const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
-              location.workspaceId,
-              prompts.map((prompt) => prompt.id)
-            )
-            registerPrompts(
-              location.workspaceId,
-              location.workspacePath,
-              promptFolder.id,
-              promptFolder.folderName,
-              prompts.map((prompt) => prompt.id)
+              payload.workspaceId,
+              promptIds
             )
 
             return {
               success: true,
               promptFolder: {
-                id: promptFolder.id,
-                revision: revisions.promptFolder.get(promptFolder.id),
-                data: promptFolder
+                id: promptFolderEntry.committed.id,
+                revision: promptFolderEntry.revision,
+                data: {
+                  ...promptFolderEntry.committed,
+                  promptIds
+                }
               },
-              prompts: prompts.map((prompt) => ({
-                id: prompt.id,
-                revision: revisions.prompt.get(prompt.id),
-                data: prompt
-              })),
+              prompts: promptIds
+                .map((promptId) => {
+                  const promptEntry = data.prompt.committedStore.getEntry(promptId)
+
+                  if (!promptEntry) {
+                    return null
+                  }
+
+                  return {
+                    id: promptId,
+                    revision: promptEntry.revision,
+                    data: promptEntry.committed
+                  }
+                })
+                .filter((prompt): prompt is NonNullable<typeof prompt> => prompt !== null),
               promptUiStates: promptUiStates.map((promptUiState) => ({
                 id: promptUiState.promptId,
                 revision: revisions.promptUiState.get(

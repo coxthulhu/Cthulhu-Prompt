@@ -5,7 +5,7 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
-import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithFolders } from '../fixtures/UpdatedFixtures'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,

@@ -2,22 +2,13 @@ import * as path from 'path'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
-import { revisions } from './Revisions'
-import { registerPrompts, registerPromptFolders, registerWorkspace } from './WorkspaceRegistry'
-import {
-  readPromptFolders,
-  readPromptSummaries,
-  readWorkspaceId
-} from '../DataAccess/WorkspaceReads'
+import { readPromptFolders, readPromptStemByPromptId, readWorkspaceId } from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { data } from '../Data/Data'
-import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
-import { resolvePromptFolderPath } from '../Persistence/PromptPersistencePaths'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
-const PROMPT_METADATA_SUFFIX = '.prompt.json'
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
 const isWorkspacePathValid = (workspacePath: string): boolean => {
@@ -32,85 +23,79 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
   )
 }
 
-const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload => {
-  const workspaceId = readWorkspaceId(workspacePath)
-  const promptFolders = readPromptFolders(workspacePath)
-  const prompts = promptFolders.flatMap((promptFolder) =>
-    readPromptSummaries(workspacePath, promptFolder.folderName)
-  )
-  const workspacePromptIds = promptFolders.flatMap((promptFolder) => promptFolder.promptIds)
-  // Side effect: drop stale per-folder UI state and clear invalid screen selections.
-  UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
-    workspaceId,
-    promptFolders.map((promptFolder) => promptFolder.id)
-  )
-  // Side effect: remove stale prompt editor view-state rows for prompts no longer in the workspace.
-  PromptUiStateDataAccess.cleanupWorkspacePromptUiState(workspaceId, workspacePromptIds)
+const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPayload => {
+  const workspaceEntry = data.workspace.committedStore.getEntry(workspaceId)
 
-  // Side effect: keep path/id translation in memory for later  loads.
-  registerWorkspace(workspaceId, workspacePath)
-  registerPromptFolders(
-    workspaceId,
-    workspacePath,
-    promptFolders.map((promptFolder) => ({
-      id: promptFolder.id,
-      folderName: promptFolder.folderName
-    }))
-  )
-  for (const promptFolder of promptFolders) {
-    registerPrompts(
-      workspaceId,
-      workspacePath,
-      promptFolder.id,
-      promptFolder.folderName,
-      promptFolder.promptIds
-    )
+  if (!workspaceEntry) {
+    throw new Error('Workspace data must be loaded before building workspace payload')
   }
+
+  const promptFolders: WorkspaceLoadPayload['promptFolders'] = []
+  const prompts: WorkspaceLoadPayload['prompts'] = []
+  const loadedPromptFolderIds: string[] = []
+  const loadedPromptIds: string[] = []
+
+  for (const promptFolderId of workspaceEntry.committed.promptFolderIds) {
+    const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
+
+    if (!promptFolderEntry) {
+      continue
+    }
+
+    const promptIds = promptFolderEntry.committed.promptIds.filter((promptId) => {
+      return data.prompt.committedStore.getEntry(promptId) !== null
+    })
+
+    loadedPromptFolderIds.push(promptFolderId)
+    loadedPromptIds.push(...promptIds)
+    promptFolders.push({
+      id: promptFolderId,
+      revision: promptFolderEntry.revision,
+      data: {
+        ...promptFolderEntry.committed,
+        promptIds
+      }
+    })
+
+    for (const promptId of promptIds) {
+      const promptEntry = data.prompt.committedStore.getEntry(promptId)
+
+      if (!promptEntry) {
+        continue
+      }
+
+      prompts.push({
+        id: promptId,
+        revision: promptEntry.revision,
+        data: {
+          id: promptEntry.committed.id,
+          title: promptEntry.committed.title,
+          promptFolderCount: promptEntry.committed.promptFolderCount
+        }
+      })
+    }
+  }
+
+  // Side effect: drop stale per-folder UI state and clear invalid screen selections.
+  UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(workspaceId, loadedPromptFolderIds)
+  // Side effect: remove stale prompt editor view-state rows for prompts no longer in the workspace.
+  PromptUiStateDataAccess.cleanupWorkspacePromptUiState(workspaceId, loadedPromptIds)
 
   return {
     workspace: {
       id: workspaceId,
-      revision: revisions.workspace.get(workspaceId),
+      revision: workspaceEntry.revision,
       data: {
-        id: workspaceId,
-        workspacePath,
-        promptFolderIds: promptFolders.map((promptFolder) => promptFolder.id)
+        ...workspaceEntry.committed,
+        promptFolderIds: loadedPromptFolderIds
       }
     },
-    promptFolders: promptFolders.map((promptFolder) => ({
-      id: promptFolder.id,
-      revision: revisions.promptFolder.get(promptFolder.id),
-      data: promptFolder
-    })),
-    prompts: prompts.map((prompt) => ({
-      id: prompt.id,
-      revision: revisions.prompt.get(prompt.id),
-      data: prompt
-    }))
+    promptFolders,
+    prompts
   }
 }
 
-const loadPromptStemByPromptId = (workspacePath: string, folderName: string): Map<string, string> => {
-  const fs = getFs()
-  const folderPath = resolvePromptFolderPath(workspacePath, folderName)
-  const entries = fs.readdirSync(folderPath, { withFileTypes: true })
-  const promptStemByPromptId = new Map<string, string>()
-
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(PROMPT_METADATA_SUFFIX)) {
-      continue
-    }
-
-    const promptStem = entry.name.slice(0, -PROMPT_METADATA_SUFFIX.length)
-    const metadataPath = path.join(folderPath, entry.name)
-    const metadata = readJsonFile<{ id: string }>(metadataPath)
-    promptStemByPromptId.set(metadata.id, promptStem)
-  }
-
-  return promptStemByPromptId
-}
-
-const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise<void> => {
+const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise<string> => {
   const workspaceId = readWorkspaceId(workspacePath)
   const promptFolders = readPromptFolders(workspacePath)
 
@@ -129,7 +114,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise
   )
 
   const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
-    const promptStemByPromptId = loadPromptStemByPromptId(workspacePath, promptFolder.folderName)
+    const promptStemByPromptId = readPromptStemByPromptId(workspacePath, promptFolder.folderName)
 
     return promptFolder.promptIds.map((promptId) =>
       data.prompt.loadDataFromPersistence(promptId, {
@@ -145,6 +130,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise
 
   // Side effect: hydrate all prompts only after prompt folder loads complete.
   await Promise.all(promptLoadTasks)
+
+  return workspaceId
 }
 
 export const loadWorkspaceByPath = async (
@@ -155,10 +142,8 @@ export const loadWorkspaceByPath = async (
       return { success: false, error: 'Invalid workspace path' }
     }
 
-    const [payload] = await Promise.all([
-      Promise.resolve().then(() => buildWorkspaceLoadSuccess(workspacePath)),
-      loadWorkspaceDataIntoNewDataLayer(workspacePath)
-    ])
+    const workspaceId = await loadWorkspaceDataIntoNewDataLayer(workspacePath)
+    const payload = buildWorkspaceLoadPayloadFromData(workspaceId)
 
     return {
       success: true,
