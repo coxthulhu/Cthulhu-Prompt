@@ -8,6 +8,11 @@ type PersistedPromptLookup = {
   promptTitle: string
 }
 
+type PersistedPromptFilePaths = {
+  markdownPath: string
+  metadataPath: string
+}
+
 const readTextFile = async (electronApp: any, filePath: string): Promise<string> => {
   const requestId = createTestRequestId('read')
 
@@ -25,11 +30,44 @@ const readTextFile = async (electronApp: any, filePath: string): Promise<string>
   )
 }
 
+const checkFileExists = async (electronApp: any, filePath: string): Promise<boolean> => {
+  return await electronApp.evaluate(async ({ app }, targetPath) => {
+    app.emit('test-check-file-exists', targetPath)
+    return Boolean((global as any).testFileExistsResult)
+  }, filePath)
+}
+
+export const resolvePersistedPromptFilePathsByTitle = (
+  lookup: PersistedPromptLookup
+): PersistedPromptFilePaths => {
+  const folderPath = `${lookup.workspacePath}/Prompts/${lookup.folderName}`
+  const promptStem = buildPromptStem(lookup.promptTitle, lookup.promptId)
+  return {
+    markdownPath: `${folderPath}/${promptStem}.md`,
+    metadataPath: `${folderPath}/${promptStem}.prompt.json`
+  }
+}
+
 export async function readPersistedPromptTextById(
   electronApp: any,
   lookup: PersistedPromptLookup
 ): Promise<string> {
-  const folderPath = `${lookup.workspacePath}/Prompts/${lookup.folderName}`
-  const promptStem = buildPromptStem(lookup.promptTitle, lookup.promptId)
-  return await readTextFile(electronApp, `${folderPath}/${promptStem}.md`)
+  const paths = resolvePersistedPromptFilePathsByTitle(lookup)
+  return await readTextFile(electronApp, paths.markdownPath)
+}
+
+export async function checkPersistedPromptFilesExistByTitle(
+  electronApp: any,
+  lookup: PersistedPromptLookup
+): Promise<{ markdownExists: boolean; metadataExists: boolean }> {
+  const paths = resolvePersistedPromptFilePathsByTitle(lookup)
+  const [markdownExists, metadataExists] = await Promise.all([
+    checkFileExists(electronApp, paths.markdownPath),
+    checkFileExists(electronApp, paths.metadataPath)
+  ])
+
+  return {
+    markdownExists,
+    metadataExists
+  }
 }

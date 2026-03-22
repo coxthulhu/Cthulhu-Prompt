@@ -45,6 +45,11 @@ const resolvePromptStem = (
   })
 }
 
+const resolvePromptStemTitle = (title: string, promptFolderCount: number): string => {
+  const trimmedTitle = title.trim()
+  return trimmedTitle.length > 0 ? title : `Prompt ${promptFolderCount}`
+}
+
 export const promptPersistence: PersistenceLayer<
   PromptPersisted,
   PromptPersistenceFields
@@ -64,7 +69,8 @@ export const promptPersistence: PersistenceLayer<
       ])
     }
 
-    const stem = resolvePromptStem(change.data.title, change.data.id, folderPath, currentStem)
+    const stemTitle = resolvePromptStemTitle(change.data.title, change.data.promptFolderCount)
+    const stem = resolvePromptStem(stemTitle, change.data.id, folderPath, currentStem)
     const targetPaths = resolvePromptPathsFromStem(folderPath, stem)
     const metadataTempPath = resolveTempPath(targetPaths.metadataPath)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)
