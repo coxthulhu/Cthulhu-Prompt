@@ -11,9 +11,13 @@ import {
 } from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
+import { data } from '../Data/Data'
+import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
+import { resolvePromptFolderPath } from '../Persistence/PromptPersistencePaths'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
+const PROMPT_METADATA_SUFFIX = '.prompt.json'
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
 const isWorkspacePathValid = (workspacePath: string): boolean => {
@@ -86,6 +90,63 @@ const buildWorkspaceLoadSuccess = (workspacePath: string): WorkspaceLoadPayload 
   }
 }
 
+const loadPromptStemByPromptId = (workspacePath: string, folderName: string): Map<string, string> => {
+  const fs = getFs()
+  const folderPath = resolvePromptFolderPath(workspacePath, folderName)
+  const entries = fs.readdirSync(folderPath, { withFileTypes: true })
+  const promptStemByPromptId = new Map<string, string>()
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(PROMPT_METADATA_SUFFIX)) {
+      continue
+    }
+
+    const promptStem = entry.name.slice(0, -PROMPT_METADATA_SUFFIX.length)
+    const metadataPath = path.join(folderPath, entry.name)
+    const metadata = readJsonFile<{ id: string }>(metadataPath)
+    promptStemByPromptId.set(metadata.id, promptStem)
+  }
+
+  return promptStemByPromptId
+}
+
+const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise<void> => {
+  const workspaceId = readWorkspaceId(workspacePath)
+  const promptFolders = readPromptFolders(workspacePath)
+
+  // Side effect: hydrate workspace into the new committed data store.
+  await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath })
+
+  // Side effect: hydrate all prompt folders before loading prompt records.
+  await Promise.all(
+    promptFolders.map((promptFolder) =>
+      data.promptFolder.loadDataFromPersistence(promptFolder.id, {
+        workspaceId,
+        workspacePath,
+        folderName: promptFolder.folderName
+      })
+    )
+  )
+
+  const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
+    const promptStemByPromptId = loadPromptStemByPromptId(workspacePath, promptFolder.folderName)
+
+    return promptFolder.promptIds.map((promptId) =>
+      data.prompt.loadDataFromPersistence(promptId, {
+        workspaceId,
+        workspacePath,
+        folderName: promptFolder.folderName,
+        promptFolderId: promptFolder.id,
+        promptId,
+        promptStem: promptStemByPromptId.get(promptId) ?? promptId
+      })
+    )
+  })
+
+  // Side effect: hydrate all prompts only after prompt folder loads complete.
+  await Promise.all(promptLoadTasks)
+}
+
 export const loadWorkspaceByPath = async (
   workspacePath: string
 ): Promise<LoadWorkspaceByPathResult> => {
@@ -94,7 +155,10 @@ export const loadWorkspaceByPath = async (
       return { success: false, error: 'Invalid workspace path' }
     }
 
-    const payload = buildWorkspaceLoadSuccess(workspacePath)
+    const [payload] = await Promise.all([
+      Promise.resolve().then(() => buildWorkspaceLoadSuccess(workspacePath)),
+      loadWorkspaceDataIntoNewDataLayer(workspacePath)
+    ])
 
     return {
       success: true,
