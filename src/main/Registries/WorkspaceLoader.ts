@@ -6,6 +6,10 @@ import { readPromptFolders, readPromptStemByPromptId, readWorkspaceId } from '..
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { data } from '../Data/Data'
+import {
+  buildPromptFolderSnapshot,
+  buildWorkspaceSnapshot
+} from '../Data/DataSnapshotHelpers'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 const PROMPTS_FOLDER_NAME = 'Prompts'
@@ -32,30 +36,22 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
 
   const promptFolders: WorkspaceLoadPayload['promptFolders'] = []
   const prompts: WorkspaceLoadPayload['prompts'] = []
-  const loadedPromptFolderIds: string[] = []
+  const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
+  const loadedPromptFolderIds = workspaceSnapshot.data.promptFolderIds
   const loadedPromptIds: string[] = []
 
-  for (const promptFolderId of workspaceEntry.committed.promptFolderIds) {
+  for (const promptFolderId of loadedPromptFolderIds) {
     const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
 
     if (!promptFolderEntry) {
       continue
     }
 
-    const promptIds = promptFolderEntry.committed.promptIds.filter((promptId) => {
-      return data.prompt.committedStore.getEntry(promptId) !== null
-    })
+    const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
+    const promptIds = promptFolderSnapshot.data.promptIds
 
-    loadedPromptFolderIds.push(promptFolderId)
     loadedPromptIds.push(...promptIds)
-    promptFolders.push({
-      id: promptFolderId,
-      revision: promptFolderEntry.revision,
-      data: {
-        ...promptFolderEntry.committed,
-        promptIds
-      }
-    })
+    promptFolders.push(promptFolderSnapshot)
 
     for (const promptId of promptIds) {
       const promptEntry = data.prompt.committedStore.getEntry(promptId)
@@ -82,14 +78,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   PromptUiStateDataAccess.cleanupWorkspacePromptUiState(workspaceId, loadedPromptIds)
 
   return {
-    workspace: {
-      id: workspaceId,
-      revision: workspaceEntry.revision,
-      data: {
-        ...workspaceEntry.committed,
-        promptFolderIds: loadedPromptFolderIds
-      }
-    },
+    workspace: workspaceSnapshot,
     promptFolders,
     prompts
   }

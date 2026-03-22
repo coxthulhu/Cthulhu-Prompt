@@ -1,4 +1,5 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
+import { resolveUniquePromptStem } from '@shared/promptFilename'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
   VIRTUAL_FIND_LAST_PROMPT_INDEX,
@@ -83,36 +84,12 @@ const createDeterministicId = (seed: string): string => {
   return `00000000000000000000${suffix}`
 }
 
-const MAX_PROMPT_FILENAME_TITLE_LENGTH = 64
-const DEFAULT_PROMPT_FILENAME_TITLE = 'Prompt'
 const DEFAULT_PROMPT_TIMESTAMP = '2023-01-01T00:00:00.000Z'
-// eslint-disable-next-line no-control-regex
-const ILLEGAL_WINDOWS_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/g
-
-const sanitizePromptTitleForFilename = (title: string): string => {
-  const noIllegalChars = title.trim().replace(ILLEGAL_WINDOWS_FILENAME_CHARS, '')
-  const noTrailingDotsOrSpaces = noIllegalChars.replace(/[. ]+$/g, '').trim()
-  const normalizedTitle = noTrailingDotsOrSpaces || DEFAULT_PROMPT_FILENAME_TITLE
-  return normalizedTitle.slice(0, MAX_PROMPT_FILENAME_TITLE_LENGTH)
-}
 
 const resolvePromptStem = (title: string, promptId: string, usedStems: Set<string>): string => {
-  const idPrefix = promptId.slice(0, 8)
-  const baseStem = `${sanitizePromptTitleForFilename(title)}-${idPrefix}`
-
-  if (!usedStems.has(baseStem)) {
-    usedStems.add(baseStem)
-    return baseStem
-  }
-
-  let suffix = 2
-  while (usedStems.has(`${baseStem}-${suffix}`)) {
-    suffix += 1
-  }
-
-  const nextStem = `${baseStem}-${suffix}`
-  usedStems.add(nextStem)
-  return nextStem
+  const promptStem = resolveUniquePromptStem(title, promptId, (stem) => usedStems.has(stem))
+  usedStems.add(promptStem)
+  return promptStem
 }
 
 const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {

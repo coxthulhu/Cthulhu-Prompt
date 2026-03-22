@@ -5,6 +5,11 @@ import {
   PromptUiStateDataAccess
 } from '../DataAccess/PromptUiStateDataAccess'
 import { data } from '../Data/Data'
+import {
+  buildPromptFolderSnapshot,
+  buildPromptSnapshot,
+  filterLoadedPromptIds
+} from '../Data/DataSnapshotHelpers'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 import { revisions } from '../Registries/Revisions'
@@ -29,39 +34,22 @@ export const setupPromptFolderQueryHandlers = (): void => {
           }
 
           try {
-            const promptIds = promptFolderEntry.committed.promptIds.filter((promptId) => {
-              return data.prompt.committedStore.getEntry(promptId) !== null
-            })
+            const promptIds = filterLoadedPromptIds(promptFolderEntry.committed.promptIds)
             const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
               payload.workspaceId,
               promptIds
             )
+            const prompts = promptIds
+              .map((promptId) => data.prompt.committedStore.getEntry(promptId))
+              .filter((promptEntry): promptEntry is NonNullable<typeof promptEntry> => {
+                return promptEntry !== null
+              })
+              .map((promptEntry) => buildPromptSnapshot(promptEntry))
 
             return {
               success: true,
-              promptFolder: {
-                id: promptFolderEntry.committed.id,
-                revision: promptFolderEntry.revision,
-                data: {
-                  ...promptFolderEntry.committed,
-                  promptIds
-                }
-              },
-              prompts: promptIds
-                .map((promptId) => {
-                  const promptEntry = data.prompt.committedStore.getEntry(promptId)
-
-                  if (!promptEntry) {
-                    return null
-                  }
-
-                  return {
-                    id: promptId,
-                    revision: promptEntry.revision,
-                    data: promptEntry.committed
-                  }
-                })
-                .filter((prompt): prompt is NonNullable<typeof prompt> => prompt !== null),
+              promptFolder: buildPromptFolderSnapshot(promptFolderEntry),
+              prompts,
               promptUiStates: promptUiStates.map((promptUiState) => ({
                 id: promptUiState.promptId,
                 revision: revisions.promptUiState.get(

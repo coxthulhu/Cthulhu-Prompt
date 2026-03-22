@@ -4,38 +4,15 @@ import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import {
+  buildPromptFolderSnapshot,
+  buildPromptSnapshot
+} from '../Data/DataSnapshotHelpers'
+import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
   parseUpdatePromptRevisionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
-
-const getLoadedPromptIds = (promptIds: string[]): string[] => {
-  return promptIds.filter((promptId) => data.prompt.committedStore.getEntry(promptId) !== null)
-}
-
-const buildPromptSnapshot = (
-  promptEntry: NonNullable<ReturnType<typeof data.prompt.committedStore.getEntry>>
-) => {
-  return {
-    id: promptEntry.committed.id,
-    revision: promptEntry.revision,
-    data: promptEntry.committed
-  }
-}
-
-const buildPromptFolderSnapshot = (
-  promptFolderEntry: NonNullable<ReturnType<typeof data.promptFolder.committedStore.getEntry>>
-) => {
-  return {
-    id: promptFolderEntry.committed.id,
-    revision: promptFolderEntry.revision,
-    data: {
-      ...promptFolderEntry.committed,
-      promptIds: getLoadedPromptIds(promptFolderEntry.committed.promptIds)
-    }
-  }
-}
 
 export const setupPromptMutationHandlers = (): void => {
   ipcMain.handle('create-prompt', async (_, request: unknown) => {

@@ -1,4 +1,5 @@
 import type { PromptFolder } from '@shared/PromptFolder'
+import type { PromptFolderConfigFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -17,14 +18,6 @@ export type PromptFolderPersistenceFields = {
   workspaceId: string
   workspacePath: string
   folderName: string
-}
-
-type PromptFolderConfigFile = {
-  foldername: string
-  promptFolderId: string
-  promptCount: number
-  folderDescription: string
-  promptIds: string[]
 }
 
 const toPromptFolderConfigFile = (promptFolder: PromptFolder): PromptFolderConfigFile => {

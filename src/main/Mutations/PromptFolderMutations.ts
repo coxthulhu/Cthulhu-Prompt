@@ -3,49 +3,18 @@ import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import {
+  buildPromptFolderSnapshot,
+  buildWorkspaceSnapshot,
+  type WorkspaceCommittedEntry
+} from '../Data/DataSnapshotHelpers'
+import {
   parseCreatePromptFolderRequest,
   parseUpdatePromptFolderRevisionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 
-const getLoadedWorkspacePromptFolderIds = (promptFolderIds: string[]): string[] => {
-  return promptFolderIds.filter((promptFolderId) => {
-    return data.promptFolder.committedStore.getEntry(promptFolderId) !== null
-  })
-}
-
-const getLoadedPromptIds = (promptIds: string[]): string[] => {
-  return promptIds.filter((promptId) => data.prompt.committedStore.getEntry(promptId) !== null)
-}
-
-const buildWorkspaceSnapshot = (
-  workspaceEntry: NonNullable<ReturnType<typeof data.workspace.committedStore.getEntry>>
-) => {
-  return {
-    id: workspaceEntry.committed.id,
-    revision: workspaceEntry.revision,
-    data: {
-      ...workspaceEntry.committed,
-      promptFolderIds: getLoadedWorkspacePromptFolderIds(workspaceEntry.committed.promptFolderIds)
-    }
-  }
-}
-
-const buildPromptFolderSnapshot = (
-  promptFolderEntry: NonNullable<ReturnType<typeof data.promptFolder.committedStore.getEntry>>
-) => {
-  return {
-    id: promptFolderEntry.committed.id,
-    revision: promptFolderEntry.revision,
-    data: {
-      ...promptFolderEntry.committed,
-      promptIds: getLoadedPromptIds(promptFolderEntry.committed.promptIds)
-    }
-  }
-}
-
 const hasPromptFolderNameConflict = (
-  workspaceEntry: NonNullable<ReturnType<typeof data.workspace.committedStore.getEntry>>,
+  workspaceEntry: WorkspaceCommittedEntry,
   folderName: string
 ): boolean => {
   const normalizedTargetName = folderName.toLowerCase()
@@ -66,28 +35,11 @@ const hasMatchingPromptIds = (existingPromptIds: string[], nextPromptIds: string
     return false
   }
 
-  const remainingCountsByPromptId = new Map<string, number>()
-
-  for (const promptId of existingPromptIds) {
-    remainingCountsByPromptId.set(promptId, (remainingCountsByPromptId.get(promptId) ?? 0) + 1)
-  }
-
-  for (const promptId of nextPromptIds) {
-    const remainingCount = remainingCountsByPromptId.get(promptId)
-
-    if (!remainingCount) {
-      return false
-    }
-
-    if (remainingCount === 1) {
-      remainingCountsByPromptId.delete(promptId)
-      continue
-    }
-
-    remainingCountsByPromptId.set(promptId, remainingCount - 1)
-  }
-
-  return remainingCountsByPromptId.size === 0
+  const sortedExistingPromptIds = [...existingPromptIds].sort()
+  const sortedNextPromptIds = [...nextPromptIds].sort()
+  return sortedExistingPromptIds.every(
+    (existingPromptId, index) => existingPromptId === sortedNextPromptIds[index]
+  )
 }
 
 export const setupPromptFolderMutationHandlers = (): void => {

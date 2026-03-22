@@ -13,7 +13,3 @@ export type PromptFolderConfigFile = {
 }
 
 export type PromptMetadataFile = Omit<PromptPersisted, 'promptText'>
-
-export type PromptsFile = {
-  prompts: PromptPersisted[]
-}

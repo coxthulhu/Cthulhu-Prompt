@@ -1,4 +1,6 @@
 import type { PromptPersisted } from '@shared/Prompt'
+import { resolveUniquePromptStem } from '@shared/promptFilename'
+import type { PromptMetadataFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -22,26 +24,6 @@ export type PromptPersistenceFields = {
   promptStem: string
 }
 
-type PromptMetadataFile = {
-  id: string
-  title: string
-  creationDate: string
-  lastModifiedDate: string
-  promptFolderCount: number
-}
-
-const MAX_PROMPT_FILENAME_TITLE_LENGTH = 64
-const DEFAULT_PROMPT_FILENAME_TITLE = 'Prompt'
-// eslint-disable-next-line no-control-regex
-const ILLEGAL_WINDOWS_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/g
-
-const sanitizePromptTitleForFilename = (title: string): string => {
-  const noIllegalChars = title.trim().replace(ILLEGAL_WINDOWS_FILENAME_CHARS, '')
-  const noTrailingDotsOrSpaces = noIllegalChars.replace(/[. ]+$/g, '').trim()
-  const normalizedTitle = noTrailingDotsOrSpaces || DEFAULT_PROMPT_FILENAME_TITLE
-  return normalizedTitle.slice(0, MAX_PROMPT_FILENAME_TITLE_LENGTH)
-}
-
 const isStemTaken = (folderPath: string, stem: string, currentStem: string): boolean => {
   if (stem === currentStem) {
     return false
@@ -58,20 +40,9 @@ const resolvePromptStem = (
   folderPath: string,
   currentStem: string
 ): string => {
-  const idPrefix = promptId.slice(0, 8)
-  const titlePrefix = sanitizePromptTitleForFilename(title)
-  const baseStem = `${titlePrefix}-${idPrefix}`
-
-  if (!isStemTaken(folderPath, baseStem, currentStem)) {
-    return baseStem
-  }
-
-  let suffix = 2
-  while (isStemTaken(folderPath, `${baseStem}-${suffix}`, currentStem)) {
-    suffix += 1
-  }
-
-  return `${baseStem}-${suffix}`
+  return resolveUniquePromptStem(title, promptId, (stem) => {
+    return isStemTaken(folderPath, stem, currentStem)
+  })
 }
 
 export const promptPersistence: PersistenceLayer<
