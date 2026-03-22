@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { useLiveQuery } from '@tanstack/svelte-db'
   import {
     ArrowRight,
     ChevronDown,
@@ -8,6 +9,10 @@
     Loader,
     Settings
   } from 'lucide-svelte'
+  import {
+    type PromptDraftRecord,
+    promptDraftCollection
+  } from '@renderer/data/Collections/PromptDraftCollection'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     getPromptNavigationContext,
@@ -91,6 +96,21 @@
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
   let lastWorkspaceId = $state<string | null>(workspaceSelection.selectedWorkspaceId)
+  const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
+    data: PromptDraftRecord[]
+  }
+
+  const promptTreeTitleById = $derived.by(() => {
+    const titlesById: Record<string, string> = {}
+
+    for (const promptDraft of promptDraftQuery.data) {
+      const trimmedTitle = promptDraft.title.trim()
+      titlesById[promptDraft.id] =
+        trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptDraft.promptFolderCount}`
+    }
+
+    return titlesById
+  })
 
   const lookupPersistedFolderExpandedState = (folderId: string): boolean => {
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -452,7 +472,7 @@
     >
       <FileText class="sidebarPromptTreeSettingsIcon" aria-hidden="true" />
       <span class="sidebarPromptTreeSettingsLabel"
-        >{getPromptDisplayTitle(props.row.promptId)}</span
+        >{promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}</span
       >
     </button>
   </div>

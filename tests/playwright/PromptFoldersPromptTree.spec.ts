@@ -2,7 +2,9 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
-  PROMPT_FOLDER_HOST_SELECTOR
+  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_TITLE_SELECTOR,
+  promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -15,6 +17,10 @@ const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-folder-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
+const SAMPLE_FOLDER_NAME = 'Development'
+const SAMPLE_PROMPT_ID = 'dev-1'
+const samplePromptTreeRowSelector = `[data-testid="prompt-folder-prompt-${SAMPLE_PROMPT_ID}"]`
+const samplePromptTitleSelector = `${promptEditorSelector(SAMPLE_PROMPT_ID)} ${PROMPT_TITLE_SELECTOR}`
 
 const scrollPromptTreeRowIntoView = async (
   mainWindow: any,
@@ -127,5 +133,34 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeLessThan(100)
+  })
+
+  test('updates prompt tree title while typing in title input', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SAMPLE_FOLDER_NAME)
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+
+    const titleInput = mainWindow.locator(samplePromptTitleSelector)
+    const promptTreeRow = mainWindow.locator(samplePromptTreeRowSelector)
+
+    await titleInput.waitFor({ state: 'visible' })
+    await expect(promptTreeRow).toBeVisible()
+
+    await titleInput.click()
+    await mainWindow.keyboard.press('Control+A')
+    await mainWindow.keyboard.press('Backspace')
+
+    await mainWindow.keyboard.type('Live', { delay: 20 })
+    await expect(promptTreeRow).toContainText('Live')
+
+    const nextTitle = 'Live prompt title sync'
+    await mainWindow.keyboard.type(' prompt title sync', { delay: 20 })
+    await expect(promptTreeRow).toContainText(nextTitle)
   })
 })
