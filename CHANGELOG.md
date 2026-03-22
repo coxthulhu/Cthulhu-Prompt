@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.11
+
+### New Features
+
+- Changed the way data is stored on disk to be more source-control and AI-agent friendly.
+- Added a new in-memory atomic persistence/data transaction framework with revision tracking. Should improve performance significantly.
+
+### Changes
+
+- Migrated existing IPC flows to the new data framework.
+- Refactored persistence helpers, staged change plumbing, and prompt mutation/snapshot internals.
+- Updated folder settings behavior to stay highlighted at top scroll.
+
+### Fixed
+
+- Fixed prompt tree title live updates.
+
 ## 0.0.10
 
 ### New Features
