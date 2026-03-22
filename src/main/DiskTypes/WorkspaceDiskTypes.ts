@@ -1,5 +1,3 @@
-import type { PromptPersisted } from '@shared/Prompt'
-
 export type WorkspaceInfoFile = {
   workspaceId: string
 }
@@ -12,4 +10,10 @@ export type PromptFolderConfigFile = {
   promptIds: string[]
 }
 
-export type PromptMetadataFile = Omit<PromptPersisted, 'promptText'>
+export type PromptMetadataFile = {
+  id: string
+  title: string
+  creationDate: string
+  lastModifiedDate: string
+  promptFolderCount: number
+}

@@ -1,4 +1,9 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
+import { resolveUniquePromptStem } from '@shared/promptFilename'
+import type {
+  PromptFolderConfigFile,
+  PromptMetadataFile
+} from '../../src/main/DiskTypes/WorkspaceDiskTypes'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
   VIRTUAL_FIND_LAST_PROMPT_INDEX,
@@ -6,20 +11,14 @@ import {
   virtualFindPromptId
 } from '../helpers/VirtualFindTestConstants'
 
-type PromptFolderConfigFile = {
-  foldername: string
-  promptFolderId: string
-  promptCount: number
-  folderDescription: string
-}
-
 const createPromptFolderConfig = (
   foldername: string,
   promptCount: number,
   promptFolderId: string,
+  promptIds: string[],
   folderDescription: string = ''
 ): PromptFolderConfigFile => {
-  return { foldername, promptFolderId, promptCount, folderDescription }
+  return { foldername, promptFolderId, promptCount, folderDescription, promptIds }
 }
 
 /**
@@ -73,15 +72,60 @@ const createDeterministicId = (seed: string): string => {
   return `00000000000000000000${suffix}`
 }
 
+const DEFAULT_PROMPT_TIMESTAMP = '2023-01-01T00:00:00.000Z'
+
+const resolvePromptStem = (title: string, promptId: string, usedStems: Set<string>): string => {
+  const promptStem = resolveUniquePromptStem(title, promptId, (stem) => usedStems.has(stem))
+  usedStems.add(promptStem)
+  return promptStem
+}
+
 const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
   // Normalize prompt counts for test fixtures.
   const normalized = (prompts ?? []).map((prompt, index) => {
     const promptFolderCount = index + 1
     const title = typeof prompt.title === 'string' ? prompt.title : ''
-    return { ...prompt, title, promptFolderCount }
+    return {
+      ...prompt,
+      title,
+      promptFolderCount,
+      creationDate: prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP,
+      lastModifiedDate: prompt.lastModifiedDate ?? prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP
+    }
   })
 
   return { prompts: normalized, promptCount: normalized.length }
+}
+
+const createPromptFiles = (
+  folderPath: string,
+  prompts: PromptTemplate[]
+): {
+  promptIds: string[]
+  promptFiles: Record<string, string>
+} => {
+  const usedStems = new Set<string>()
+  const promptFiles: Record<string, string> = {}
+
+  for (const prompt of prompts) {
+    const promptStem = resolvePromptStem(prompt.title ?? '', prompt.id, usedStems)
+    const metadata: PromptMetadataFile = {
+      id: prompt.id,
+      title: prompt.title ?? '',
+      creationDate: prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP,
+      lastModifiedDate: prompt.lastModifiedDate ?? DEFAULT_PROMPT_TIMESTAMP,
+      promptFolderCount: prompt.promptFolderCount ?? 0
+    }
+
+    // Side effect: split each prompt into metadata + markdown to match new persistence layout.
+    promptFiles[`${folderPath}/${promptStem}.prompt.json`] = JSON.stringify(metadata, null, 2)
+    promptFiles[`${folderPath}/${promptStem}.md`] = prompt.promptText
+  }
+
+  return {
+    promptIds: prompts.map((prompt) => prompt.id),
+    promptFiles
+  }
 }
 
 /**
@@ -193,6 +237,7 @@ export function createWorkspaceWithFolders(
   for (const folder of folderConfigs) {
     const folderPath = `${workspacePath}/Prompts/${folder.folderName}`
     const { prompts, promptCount } = normalizePrompts(folder.prompts)
+    const { promptIds, promptFiles } = createPromptFiles(folderPath, prompts)
     const promptFolderId =
       typeof folder.promptFolderId === 'string'
         ? folder.promptFolderId
@@ -200,16 +245,11 @@ export function createWorkspaceWithFolders(
 
     // Create folder metadata
     structure[`${folderPath}/PromptFolder.json`] = JSON.stringify(
-      createPromptFolderConfig(folder.displayName, promptCount, promptFolderId),
+      createPromptFolderConfig(folder.displayName, promptCount, promptFolderId, promptIds),
       null,
       2
     )
-
-    // Create prompts file
-    const promptsData = {
-      prompts
-    }
-    structure[`${folderPath}/Prompts.json`] = JSON.stringify(promptsData, null, 2)
+    Object.assign(structure, promptFiles)
   }
 
   return structure
@@ -369,6 +409,7 @@ export function addFolderToWorkspace(
 ): Record<string, string | null> {
   const folderPath = `${workspacePath}/Prompts/${folderConfig.folderName}`
   const { prompts, promptCount } = normalizePrompts(folderConfig.prompts)
+  const { promptIds, promptFiles } = createPromptFiles(folderPath, prompts)
   const promptFolderId =
     typeof folderConfig.promptFolderId === 'string'
       ? folderConfig.promptFolderId
@@ -376,17 +417,11 @@ export function addFolderToWorkspace(
 
   return {
     [`${folderPath}/PromptFolder.json`]: JSON.stringify(
-      createPromptFolderConfig(folderConfig.displayName, promptCount, promptFolderId),
+      createPromptFolderConfig(folderConfig.displayName, promptCount, promptFolderId, promptIds),
       null,
       2
     ),
-    [`${folderPath}/Prompts.json`]: JSON.stringify(
-      {
-        prompts
-      },
-      null,
-      2
-    )
+    ...promptFiles
   }
 }
 

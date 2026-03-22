@@ -58,7 +58,7 @@ export const promptFolderPersistence: PersistenceLayer<
     }
 
     const fs = getFs()
-    const folderPathExists = fs.existsSync(folderPath)
+    const folderAlreadyExists = fs.existsSync(folderPath)
     // Side effect: create prompt folder directory before staging config writes.
     fs.mkdirSync(folderPath, { recursive: true })
 
@@ -68,7 +68,7 @@ export const promptFolderPersistence: PersistenceLayer<
 
     return createPersistenceStageResult([
       createStagedFileUpsert(configPath, configTempPath),
-      createStagedEnsureDirectory(folderPath, !folderPathExists)
+      createStagedEnsureDirectory(folderPath, !folderAlreadyExists)
     ])
   },
   commitChanges: async (stagedChange) => {

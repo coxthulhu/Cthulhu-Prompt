@@ -8,12 +8,15 @@ import type {
 } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
-import { resolvePromptFolderPath, resolvePromptPathsFromStem } from '../Persistence/PromptPersistencePaths'
+import {
+  PROMPTS_DIRECTORY_NAME,
+  PROMPT_FOLDER_CONFIG_FILENAME,
+  PROMPT_METADATA_FILENAME_SUFFIX,
+  resolvePromptFolderPath,
+  resolvePromptPathsFromStem
+} from '../Persistence/PromptPersistencePaths'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-const PROMPTS_FOLDER_NAME = 'Prompts'
-const PROMPT_FOLDER_CONFIG_FILENAME = 'PromptFolder.json'
-const PROMPT_METADATA_SUFFIX = '.prompt.json'
 
 export const readWorkspaceId = (workspacePath: string): string => {
   const workspaceInfoPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
@@ -32,7 +35,7 @@ const readPromptFolderConfig = (
 ): PromptFolderConfigFile => {
   const configPath = path.join(
     workspacePath,
-    PROMPTS_FOLDER_NAME,
+    PROMPTS_DIRECTORY_NAME,
     folderName,
     PROMPT_FOLDER_CONFIG_FILENAME
   )
@@ -54,11 +57,11 @@ export const readPromptStemByPromptId = (
   const promptStemByPromptId = new Map<string, string>()
 
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(PROMPT_METADATA_SUFFIX)) {
+    if (!entry.isFile() || !entry.name.endsWith(PROMPT_METADATA_FILENAME_SUFFIX)) {
       continue
     }
 
-    const promptStem = entry.name.slice(0, -PROMPT_METADATA_SUFFIX.length)
+    const promptStem = entry.name.slice(0, -PROMPT_METADATA_FILENAME_SUFFIX.length)
     const metadata = readJsonFile<PromptMetadataFile>(path.join(folderPath, entry.name))
     promptStemByPromptId.set(metadata.id, promptStem)
   }
@@ -129,7 +132,7 @@ export const readPromptSummaries = (
 
 export const readPromptFolders = (workspacePath: string): PromptFolder[] => {
   const fs = getFs()
-  const promptsPath = path.join(workspacePath, PROMPTS_FOLDER_NAME)
+  const promptsPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME)
   const entries = fs.readdirSync(promptsPath, { withFileTypes: true })
   const promptFolders: PromptFolder[] = []
 

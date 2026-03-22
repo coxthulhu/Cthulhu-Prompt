@@ -25,7 +25,7 @@ const readTextFile = async (electronApp: any, filePath: string): Promise<string>
   )
 }
 
-export async function readPersistedPromptTextByIdUpdated(
+export async function readPersistedPromptTextById(
   electronApp: any,
   lookup: PersistedPromptLookup
 ): Promise<string> {

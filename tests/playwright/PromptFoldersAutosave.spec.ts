@@ -6,7 +6,7 @@ import {
   getMonacoCursorPosition,
   isMonacoEditorFocused
 } from '../helpers/MonacoHelpers'
-import { readPersistedPromptTextByIdUpdated } from '../helpers/PromptPersistenceTestHelpers'
+import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -77,7 +77,7 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     await expect
       .poll(
         async () => {
-          return await readPersistedPromptTextByIdUpdated(electronApp, {
+          return await readPersistedPromptTextById(electronApp, {
             workspacePath: '/ws/sample',
             folderName: 'Development',
             promptId: 'dev-1',

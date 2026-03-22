@@ -7,6 +7,7 @@ import {
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
+  getLoadedPromptEntries,
   buildPromptSnapshot,
   filterLoadedPromptIds
 } from '../Data/DataSnapshotHelpers'
@@ -39,12 +40,9 @@ export const setupPromptFolderQueryHandlers = (): void => {
               payload.workspaceId,
               promptIds
             )
-            const prompts = promptIds
-              .map((promptId) => data.prompt.committedStore.getEntry(promptId))
-              .filter((promptEntry): promptEntry is NonNullable<typeof promptEntry> => {
-                return promptEntry !== null
-              })
-              .map((promptEntry) => buildPromptSnapshot(promptEntry))
+            const prompts = getLoadedPromptEntries(promptIds).map((promptEntry) =>
+              buildPromptSnapshot(promptEntry)
+            )
 
             return {
               success: true,

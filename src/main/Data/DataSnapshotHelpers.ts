@@ -12,14 +12,36 @@ export type WorkspaceCommittedEntry = CommittedEntry<Workspace, WorkspacePersist
 export type PromptFolderCommittedEntry = CommittedEntry<PromptFolder, PromptFolderPersistenceFields>
 export type PromptCommittedEntry = CommittedEntry<PromptPersisted, PromptPersistenceFields>
 
+const filterLoadedEntityIds = <TData, TPersistenceFields>(
+  entityIds: string[],
+  getEntry: (entityId: string) => CommittedEntry<TData, TPersistenceFields> | null
+): string[] => {
+  return entityIds.filter((entityId) => getEntry(entityId) !== null)
+}
+
+const getLoadedEntries = <TData, TPersistenceFields>(
+  entityIds: string[],
+  getEntry: (entityId: string) => CommittedEntry<TData, TPersistenceFields> | null
+): CommittedEntry<TData, TPersistenceFields>[] => {
+  return entityIds
+    .map((entityId) => getEntry(entityId))
+    .filter((entry): entry is CommittedEntry<TData, TPersistenceFields> => {
+      return entry !== null
+    })
+}
+
 export const filterLoadedPromptIds = (promptIds: string[]): string[] => {
-  return promptIds.filter((promptId) => data.prompt.committedStore.getEntry(promptId) !== null)
+  return filterLoadedEntityIds(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
+}
+
+export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntry[] => {
+  return getLoadedEntries(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
 }
 
 export const filterLoadedPromptFolderIds = (promptFolderIds: string[]): string[] => {
-  return promptFolderIds.filter(
-    (promptFolderId) => data.promptFolder.committedStore.getEntry(promptFolderId) !== null
-  )
+  return filterLoadedEntityIds(promptFolderIds, (promptFolderId) => {
+    return data.promptFolder.committedStore.getEntry(promptFolderId)
+  })
 }
 
 export const buildWorkspaceSnapshot = (

@@ -1,4 +1,4 @@
-import { setupWorkspaceScenario } from '../fixtures/UpdatedFixtures'
+import { setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()

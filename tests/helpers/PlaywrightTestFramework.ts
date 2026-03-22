@@ -9,7 +9,7 @@ import {
   setupWorkspaceScenario,
   type WorkspaceScenario,
   getWorkspacePath
-} from '../fixtures/UpdatedFixtures'
+} from '../fixtures/WorkspaceFixtures'
 
 export interface PlaywrightTestOptions {
   launchOptions?: any

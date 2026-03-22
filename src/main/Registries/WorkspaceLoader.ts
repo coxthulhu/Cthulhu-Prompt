@@ -8,11 +8,12 @@ import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
-  buildWorkspaceSnapshot
+  buildWorkspaceSnapshot,
+  getLoadedPromptEntries
 } from '../Data/DataSnapshotHelpers'
+import { PROMPTS_DIRECTORY_NAME } from '../Persistence/PromptPersistencePaths'
 
 const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-const PROMPTS_FOLDER_NAME = 'Prompts'
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
 const isWorkspacePathValid = (workspacePath: string): boolean => {
@@ -23,7 +24,7 @@ const isWorkspacePathValid = (workspacePath: string): boolean => {
   const fs = getFs()
   return (
     fs.existsSync(path.join(workspacePath, WORKSPACE_INFO_FILENAME)) &&
-    fs.existsSync(path.join(workspacePath, PROMPTS_FOLDER_NAME))
+    fs.existsSync(path.join(workspacePath, PROMPTS_DIRECTORY_NAME))
   )
 }
 
@@ -49,19 +50,14 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
 
     const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
     const promptIds = promptFolderSnapshot.data.promptIds
+    const loadedPromptEntries = getLoadedPromptEntries(promptIds)
 
-    loadedPromptIds.push(...promptIds)
+    loadedPromptIds.push(...loadedPromptEntries.map((promptEntry) => promptEntry.committed.id))
     promptFolders.push(promptFolderSnapshot)
 
-    for (const promptId of promptIds) {
-      const promptEntry = data.prompt.committedStore.getEntry(promptId)
-
-      if (!promptEntry) {
-        continue
-      }
-
+    for (const promptEntry of loadedPromptEntries) {
       prompts.push({
-        id: promptId,
+        id: promptEntry.committed.id,
         revision: promptEntry.revision,
         data: {
           id: promptEntry.committed.id,

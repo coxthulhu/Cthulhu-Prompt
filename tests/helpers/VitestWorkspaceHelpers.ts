@@ -10,7 +10,7 @@ import {
   type PromptFolderConfig,
   type WorkspaceOptions,
   type WorkspaceScenario
-} from '../fixtures/UpdatedFixtures'
+} from '../fixtures/WorkspaceFixtures'
 
 /**
  * Vitest-compatible wrappers that automatically call vol.fromJSON()
