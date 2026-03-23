@@ -14,10 +14,9 @@ const createPromptFolderConfig = (
   foldername: string,
   promptCount: number,
   promptFolderId: string,
-  promptIds: string[],
-  folderDescription: string = ''
+  promptIds: string[]
 ): PromptFolderConfigFile => {
-  return { foldername, promptFolderId, promptCount, folderDescription, promptIds }
+  return { foldername, promptFolderId, promptCount, promptIds }
 }
 
 /**
@@ -27,6 +26,7 @@ export interface PromptFolderConfig {
   folderName: string
   displayName: string
   promptFolderId?: string
+  folderDescription?: string
   prompts?: Array<{
     id: string
     title?: string
@@ -242,11 +242,12 @@ export function createWorkspaceWithFolders(
         : createDeterministicId(`${workspacePath}:${folder.folderName}`)
 
     // Create folder metadata
-    structure[`${folderPath}/PromptFolder.json`] = JSON.stringify(
+    structure[`${folderPath}/FolderData.json`] = JSON.stringify(
       createPromptFolderConfig(folder.displayName, promptCount, promptFolderId, promptIds),
       null,
       2
     )
+    structure[`${folderPath}/FolderDescription.md`] = folder.folderDescription ?? ''
     Object.assign(structure, promptFiles)
   }
 
@@ -414,11 +415,12 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   return {
-    [`${folderPath}/PromptFolder.json`]: JSON.stringify(
+    [`${folderPath}/FolderData.json`]: JSON.stringify(
       createPromptFolderConfig(folderConfig.displayName, promptCount, promptFolderId, promptIds),
       null,
       2
     ),
+    [`${folderPath}/FolderDescription.md`]: folderConfig.folderDescription ?? '',
     ...promptFiles
   }
 }

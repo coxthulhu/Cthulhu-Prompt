@@ -8,6 +8,7 @@ import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
   PROMPTS_DIRECTORY_NAME,
   PROMPT_FOLDER_CONFIG_FILENAME,
+  PROMPT_FOLDER_DESCRIPTION_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX
 } from '../Persistence/PromptPersistencePaths'
 
@@ -34,6 +35,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
   const fs = getFs()
   const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_FOLDER_NAME)
   const configPath = path.join(exampleFolderPath, PROMPT_FOLDER_CONFIG_FILENAME)
+  const descriptionPath = path.join(exampleFolderPath, PROMPT_FOLDER_DESCRIPTION_FILENAME)
   const now = new Date().toISOString()
   const examplePrompts = [
     {
@@ -73,7 +75,6 @@ const writeExamplePrompts = (workspacePath: string): void => {
         foldername: EXAMPLE_FOLDER_DISPLAY_NAME,
         promptFolderId: compactGuid(randomUUID()),
         promptCount: examplePrompts.length,
-        folderDescription: '',
         promptIds
       },
       null,
@@ -81,6 +82,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
     ),
     'utf8'
   )
+  fs.writeFileSync(descriptionPath, '', 'utf8')
 }
 
 const validateNewWorkspacePath = (workspacePath: string): CreateWorkspaceResult | null => {

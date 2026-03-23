@@ -189,16 +189,11 @@ const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, st
     }
   ])
 
-  const promptFolderPath = `${workspacePath}/Prompts/Long/PromptFolder.json`
-  const promptFolderRaw = filesystem[promptFolderPath]
-  if (typeof promptFolderRaw !== 'string') {
-    throw new Error('Missing Long/PromptFolder.json in loop fixture workspace')
+  const folderDescriptionPath = `${workspacePath}/Prompts/Long/FolderDescription.md`
+  if (typeof filesystem[folderDescriptionPath] !== 'string') {
+    throw new Error('Missing Long/FolderDescription.md in loop fixture workspace')
   }
-  const promptFolderData = JSON.parse(promptFolderRaw) as {
-    folderDescription?: string
-  }
-  promptFolderData.folderDescription = `Find marker in folder description: ${LOOP_REGRESSION_QUERY}`
-  filesystem[promptFolderPath] = JSON.stringify(promptFolderData, null, 2)
+  filesystem[folderDescriptionPath] = `Find marker in folder description: ${LOOP_REGRESSION_QUERY}`
 
   return filesystem
 }
@@ -234,16 +229,11 @@ const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, s
     }
   ])
 
-  const promptFolderPath = `${workspacePath}/Prompts/Long/PromptFolder.json`
-  const promptFolderRaw = filesystem[promptFolderPath]
-  if (typeof promptFolderRaw !== 'string') {
-    throw new Error('Missing Long/PromptFolder.json in rapid loop fixture workspace')
+  const folderDescriptionPath = `${workspacePath}/Prompts/Long/FolderDescription.md`
+  if (typeof filesystem[folderDescriptionPath] !== 'string') {
+    throw new Error('Missing Long/FolderDescription.md in rapid loop fixture workspace')
   }
-  const promptFolderData = JSON.parse(promptFolderRaw) as {
-    folderDescription?: string
-  }
-  promptFolderData.folderDescription = `Rapid loop marker in folder description: ${RAPID_LOOP_QUERY}`
-  filesystem[promptFolderPath] = JSON.stringify(promptFolderData, null, 2)
+  filesystem[folderDescriptionPath] = `Rapid loop marker in folder description: ${RAPID_LOOP_QUERY}`
 
   return filesystem
 }

@@ -11,7 +11,11 @@ import {
   resolveTempPath,
   writeJsonFile
 } from './FilePersistenceHelpers'
-import { resolvePromptFolderConfigPath, resolvePromptFolderPath } from './PromptPersistencePaths'
+import {
+  resolvePromptFolderConfigPath,
+  resolvePromptFolderDescriptionPath,
+  resolvePromptFolderPath
+} from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
 export type PromptFolderPersistenceFields = {
@@ -25,14 +29,14 @@ const toPromptFolderConfigFile = (promptFolder: PromptFolder): PromptFolderConfi
     foldername: promptFolder.displayName,
     promptFolderId: promptFolder.id,
     promptCount: promptFolder.promptCount,
-    folderDescription: promptFolder.folderDescription,
     promptIds: promptFolder.promptIds
   }
 }
 
 const fromPromptFolderConfigFile = (
   persistedConfig: PromptFolderConfigFile,
-  folderName: string
+  folderName: string,
+  folderDescription: string
 ): PromptFolder => {
   return {
     id: persistedConfig.promptFolderId,
@@ -40,7 +44,7 @@ const fromPromptFolderConfigFile = (
     displayName: persistedConfig.foldername,
     promptCount: persistedConfig.promptCount,
     promptIds: persistedConfig.promptIds,
-    folderDescription: persistedConfig.folderDescription
+    folderDescription
   }
 }
 
@@ -52,9 +56,13 @@ export const promptFolderPersistence: PersistenceLayer<
     const { workspacePath, folderName } = change.persistenceFields
     const folderPath = resolvePromptFolderPath(workspacePath, folderName)
     const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
+    const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
-      return createPersistenceStageResult([createStagedFileRemove(configPath)])
+      return createPersistenceStageResult([
+        createStagedFileRemove(configPath),
+        createStagedFileRemove(descriptionPath)
+      ])
     }
 
     const fs = getFs()
@@ -65,9 +73,12 @@ export const promptFolderPersistence: PersistenceLayer<
     const configTempPath = resolveTempPath(configPath)
     const persistedConfig = toPromptFolderConfigFile(change.data)
     writeJsonFile(configTempPath, persistedConfig)
+    const descriptionTempPath = resolveTempPath(descriptionPath)
+    fs.writeFileSync(descriptionTempPath, change.data.folderDescription, 'utf8')
 
     return createPersistenceStageResult([
       createStagedFileUpsert(configPath, configTempPath),
+      createStagedFileUpsert(descriptionPath, descriptionTempPath),
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists)
     ])
   },
@@ -80,6 +91,7 @@ export const promptFolderPersistence: PersistenceLayer<
   loadData: async (persistenceFields) => {
     const { workspacePath, folderName } = persistenceFields
     const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
+    const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
     const fs = getFs()
 
     if (!fs.existsSync(configPath)) {
@@ -87,7 +99,10 @@ export const promptFolderPersistence: PersistenceLayer<
     }
 
     const persistedConfig = readJsonFile<PromptFolderConfigFile>(configPath)
+    const folderDescription = fs.existsSync(descriptionPath)
+      ? fs.readFileSync(descriptionPath, 'utf8')
+      : ''
 
-    return fromPromptFolderConfigFile(persistedConfig, folderName)
+    return fromPromptFolderConfigFile(persistedConfig, folderName, folderDescription)
   }
 }
