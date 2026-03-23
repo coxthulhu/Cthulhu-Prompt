@@ -1,17 +1,14 @@
 import * as path from 'path'
 import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
-import type {
-  PromptFolderConfigFile,
-  PromptMetadataFile,
-  WorkspaceInfoFile
-} from '../DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderConfigFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
+import { parsePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
   PROMPTS_DIRECTORY_NAME,
   PROMPT_FOLDER_CONFIG_FILENAME,
-  PROMPT_METADATA_FILENAME_SUFFIX,
+  PROMPT_MARKDOWN_FILENAME_SUFFIX,
   resolvePromptFolderPath,
   resolvePromptPathsFromStem
 } from '../Persistence/PromptPersistencePaths'
@@ -57,13 +54,16 @@ export const readPromptStemByPromptId = (
   const promptStemByPromptId = new Map<string, string>()
 
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(PROMPT_METADATA_FILENAME_SUFFIX)) {
+    if (!entry.isFile() || !entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX)) {
       continue
     }
 
-    const promptStem = entry.name.slice(0, -PROMPT_METADATA_FILENAME_SUFFIX.length)
-    const metadata = readJsonFile<PromptMetadataFile>(path.join(folderPath, entry.name))
-    promptStemByPromptId.set(metadata.id, promptStem)
+    const promptStem = entry.name.slice(0, -PROMPT_MARKDOWN_FILENAME_SUFFIX.length)
+    const prompt = parsePromptMarkdown(fs.readFileSync(path.join(folderPath, entry.name), 'utf8'))
+    if (!prompt) {
+      continue
+    }
+    promptStemByPromptId.set(prompt.id, promptStem)
   }
 
   return promptStemByPromptId
@@ -98,21 +98,15 @@ export const readPrompts = (workspacePath: string, folderName: string): PromptPe
 
     const promptPaths = resolvePromptPathsFromStem(folderPath, promptStem)
 
-    if (!fs.existsSync(promptPaths.metadataPath) || !fs.existsSync(promptPaths.markdownPath)) {
+    if (!fs.existsSync(promptPaths.markdownPath)) {
       continue
     }
 
-    const metadata = readJsonFile<PromptMetadataFile>(promptPaths.metadataPath)
-    const promptText = fs.readFileSync(promptPaths.markdownPath, 'utf8')
-
-    prompts.push({
-      id: metadata.id,
-      title: metadata.title,
-      creationDate: metadata.creationDate,
-      lastModifiedDate: metadata.lastModifiedDate,
-      promptFolderCount: metadata.promptFolderCount,
-      promptText
-    })
+    const prompt = parsePromptMarkdown(fs.readFileSync(promptPaths.markdownPath, 'utf8'))
+    if (!prompt) {
+      continue
+    }
+    prompts.push(prompt)
   }
 
   return prompts

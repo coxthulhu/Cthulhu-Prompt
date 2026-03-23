@@ -9,11 +9,3 @@ export type PromptFolderConfigFile = {
   folderDescription: string
   promptIds: string[]
 }
-
-export type PromptMetadataFile = {
-  id: string
-  title: string
-  creationDate: string
-  lastModifiedDate: string
-  promptFolderCount: number
-}

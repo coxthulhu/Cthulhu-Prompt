@@ -10,7 +10,6 @@ type PersistedPromptLookup = {
 
 type PersistedPromptFilePaths = {
   markdownPath: string
-  metadataPath: string
 }
 
 const readTextFile = async (electronApp: any, filePath: string): Promise<string> => {
@@ -43,8 +42,7 @@ export const resolvePersistedPromptFilePathsByTitle = (
   const folderPath = `${lookup.workspacePath}/Prompts/${lookup.folderName}`
   const promptStem = buildPromptStem(lookup.promptTitle, lookup.promptId)
   return {
-    markdownPath: `${folderPath}/${promptStem}.md`,
-    metadataPath: `${folderPath}/${promptStem}.prompt.json`
+    markdownPath: `${folderPath}/${promptStem}.md`
   }
 }
 
@@ -59,15 +57,11 @@ export async function readPersistedPromptTextById(
 export async function checkPersistedPromptFilesExistByTitle(
   electronApp: any,
   lookup: PersistedPromptLookup
-): Promise<{ markdownExists: boolean; metadataExists: boolean }> {
+): Promise<{ markdownExists: boolean }> {
   const paths = resolvePersistedPromptFilePathsByTitle(lookup)
-  const [markdownExists, metadataExists] = await Promise.all([
-    checkFileExists(electronApp, paths.markdownPath),
-    checkFileExists(electronApp, paths.metadataPath)
-  ])
+  const markdownExists = await checkFileExists(electronApp, paths.markdownPath)
 
   return {
-    markdownExists,
-    metadataExists
+    markdownExists
   }
 }

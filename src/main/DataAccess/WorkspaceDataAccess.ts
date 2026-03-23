@@ -4,10 +4,10 @@ import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/work
 import { compactGuid } from '@shared/compactGuid'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { getFs } from '../fs-provider'
+import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
   PROMPTS_DIRECTORY_NAME,
   PROMPT_FOLDER_CONFIG_FILENAME,
-  PROMPT_METADATA_FILENAME_SUFFIX,
   PROMPT_MARKDOWN_FILENAME_SUFFIX
 } from '../Persistence/PromptPersistencePaths'
 
@@ -60,25 +60,9 @@ const writeExamplePrompts = (workspacePath: string): void => {
 
   for (const prompt of examplePrompts) {
     const promptStem = resolvePromptStem(prompt.title, prompt.id, usedStems)
-    const metadataPath = path.join(exampleFolderPath, `${promptStem}${PROMPT_METADATA_FILENAME_SUFFIX}`)
     const markdownPath = path.join(exampleFolderPath, `${promptStem}${PROMPT_MARKDOWN_FILENAME_SUFFIX}`)
 
-    fs.writeFileSync(
-      metadataPath,
-      JSON.stringify(
-        {
-          id: prompt.id,
-          title: prompt.title,
-          creationDate: prompt.creationDate,
-          lastModifiedDate: prompt.lastModifiedDate,
-          promptFolderCount: prompt.promptFolderCount
-        },
-        null,
-        2
-      ),
-      'utf8'
-    )
-    fs.writeFileSync(markdownPath, prompt.promptText, 'utf8')
+    fs.writeFileSync(markdownPath, serializePromptMarkdown(prompt), 'utf8')
     promptIds.push(prompt.id)
   }
 

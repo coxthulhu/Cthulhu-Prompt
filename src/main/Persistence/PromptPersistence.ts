@@ -1,17 +1,15 @@
 import type { PromptPersisted } from '@shared/Prompt'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
-import type { PromptMetadataFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
   createStagedFileRemove,
   createStagedFileUpsert,
   type FilePersistenceStagedChange,
-  readJsonFile,
   revertStagedFileChanges,
-  resolveTempPath,
-  writeJsonFile
+  resolveTempPath
 } from './FilePersistenceHelpers'
+import { parsePromptMarkdown, serializePromptMarkdown } from './PromptFrontmatter'
 import { resolvePromptFolderPath, resolvePromptPathsFromStem } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
@@ -31,7 +29,7 @@ const isStemTaken = (folderPath: string, stem: string, currentStem: string): boo
 
   const stemPaths = resolvePromptPathsFromStem(folderPath, stem)
   const fs = getFs()
-  return fs.existsSync(stemPaths.metadataPath) || fs.existsSync(stemPaths.markdownPath)
+  return fs.existsSync(stemPaths.markdownPath)
 }
 
 const resolvePromptStem = (
@@ -63,39 +61,23 @@ export const promptPersistence: PersistenceLayer<
     const currentPaths = resolvePromptPathsFromStem(folderPath, currentStem)
 
     if (change.type === 'remove') {
-      return createPersistenceStageResult([
-        createStagedFileRemove(currentPaths.metadataPath),
-        createStagedFileRemove(currentPaths.markdownPath)
-      ])
+      return createPersistenceStageResult([createStagedFileRemove(currentPaths.markdownPath)])
     }
 
     const stemTitle = resolvePromptStemTitle(change.data.title, change.data.promptFolderCount)
     const stem = resolvePromptStem(stemTitle, change.data.id, folderPath, currentStem)
     const targetPaths = resolvePromptPathsFromStem(folderPath, stem)
-    const metadataTempPath = resolveTempPath(targetPaths.metadataPath)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)
-
-    writeJsonFile(metadataTempPath, {
-      id: change.data.id,
-      title: change.data.title,
-      creationDate: change.data.creationDate,
-      lastModifiedDate: change.data.lastModifiedDate,
-      promptFolderCount: change.data.promptFolderCount
-    })
     const fs = getFs()
-    fs.writeFileSync(markdownTempPath, change.data.promptText, 'utf8')
+    fs.writeFileSync(markdownTempPath, serializePromptMarkdown(change.data), 'utf8')
 
     const fileChanges: FilePersistenceStagedChange[] = []
 
     // Side effect: remove stale title-based files when title changes.
-    if (currentPaths.metadataPath !== targetPaths.metadataPath) {
-      fileChanges.push(createStagedFileRemove(currentPaths.metadataPath))
-    }
     if (currentPaths.markdownPath !== targetPaths.markdownPath) {
       fileChanges.push(createStagedFileRemove(currentPaths.markdownPath))
     }
 
-    fileChanges.push(createStagedFileUpsert(targetPaths.metadataPath, metadataTempPath))
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
 
     return createPersistenceStageResult(fileChanges, {
@@ -117,20 +99,10 @@ export const promptPersistence: PersistenceLayer<
     const filePaths = resolvePromptPathsFromStem(folderPath, persistenceFields.promptStem)
     const fs = getFs()
 
-    if (!fs.existsSync(filePaths.metadataPath) || !fs.existsSync(filePaths.markdownPath)) {
+    if (!fs.existsSync(filePaths.markdownPath)) {
       return null
     }
 
-    const metadata = readJsonFile<PromptMetadataFile>(filePaths.metadataPath)
-    const promptText = fs.readFileSync(filePaths.markdownPath, 'utf8')
-
-    return {
-      id: metadata.id,
-      title: metadata.title,
-      creationDate: metadata.creationDate,
-      lastModifiedDate: metadata.lastModifiedDate,
-      promptFolderCount: metadata.promptFolderCount,
-      promptText
-    }
+    return parsePromptMarkdown(fs.readFileSync(filePaths.markdownPath, 'utf8'))
   }
 }

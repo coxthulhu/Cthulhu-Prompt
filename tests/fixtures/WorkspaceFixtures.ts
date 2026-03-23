@@ -1,9 +1,8 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
-import type {
-  PromptFolderConfigFile,
-  PromptMetadataFile
-} from '../../src/main/DiskTypes/WorkspaceDiskTypes'
+import type { PromptPersisted } from '@shared/Prompt'
+import type { PromptFolderConfigFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
+import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
   VIRTUAL_FIND_LAST_PROMPT_INDEX,
@@ -109,17 +108,16 @@ const createPromptFiles = (
 
   for (const prompt of prompts) {
     const promptStem = resolvePromptStem(prompt.title ?? '', prompt.id, usedStems)
-    const metadata: PromptMetadataFile = {
+    const promptData: PromptPersisted = {
       id: prompt.id,
       title: prompt.title ?? '',
       creationDate: prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP,
       lastModifiedDate: prompt.lastModifiedDate ?? DEFAULT_PROMPT_TIMESTAMP,
-      promptFolderCount: prompt.promptFolderCount ?? 0
+      promptFolderCount: prompt.promptFolderCount ?? 0,
+      promptText: prompt.promptText
     }
 
-    // Side effect: split each prompt into metadata + markdown to match new persistence layout.
-    promptFiles[`${folderPath}/${promptStem}.prompt.json`] = JSON.stringify(metadata, null, 2)
-    promptFiles[`${folderPath}/${promptStem}.md`] = prompt.promptText
+    promptFiles[`${folderPath}/${promptStem}.md`] = serializePromptMarkdown(promptData)
   }
 
   return {

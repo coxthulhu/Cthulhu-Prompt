@@ -37,7 +37,7 @@ describe('Prompt persistence filenames', () => {
         promptId: PROMPT_ID,
         promptTitle: ORIGINAL_TITLE
       })
-    ).toEqual({ markdownExists: true, metadataExists: true })
+    ).toEqual({ markdownExists: true })
 
     await setPromptTitle(mainWindow, PROMPT_ID, renamedTitle)
 
@@ -64,8 +64,8 @@ describe('Prompt persistence filenames', () => {
         { timeout: 8000 }
       )
       .toEqual({
-        originalFiles: { markdownExists: false, metadataExists: false },
-        renamedFiles: { markdownExists: true, metadataExists: true }
+        originalFiles: { markdownExists: false },
+        renamedFiles: { markdownExists: true }
       })
   })
 
@@ -107,8 +107,8 @@ describe('Prompt persistence filenames', () => {
         { timeout: 8000 }
       )
       .toEqual({
-        originalFiles: { markdownExists: false, metadataExists: false },
-        fallbackFiles: { markdownExists: true, metadataExists: true }
+        originalFiles: { markdownExists: false },
+        fallbackFiles: { markdownExists: true }
       })
   })
 })
