@@ -3,6 +3,7 @@ import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type PromptFull } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
 import {
@@ -54,7 +55,6 @@ import {
   promptFolderSettingsFindEntityId
 } from './promptFolderRowIds'
 import { estimatePromptFolderSettingsHeight } from './promptFolderSettingsSizing'
-import { SvelteDate } from 'svelte/reactivity'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -533,12 +533,11 @@ export const createPromptFolderScreenController = ({
 
     isCreatingPrompt = true
     const promptId = compactGuid(window.crypto.randomUUID())
-    const now = new SvelteDate().toISOString()
+    const now = getCurrentIsoSecondTimestamp()
     const optimisticPrompt: PromptFull = {
       id: promptId,
       title: '',
-      creationDate: now,
-      lastModifiedDate: now,
+      createdAt: now,
       promptText: '',
       promptFolderCount: currentPromptFolder.promptCount + 1,
       loadingState: 'full'

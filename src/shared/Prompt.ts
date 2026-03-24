@@ -11,8 +11,7 @@ export type PromptSummary = {
 export type PromptFull = {
   id: string
   title: string
-  creationDate: string
-  lastModifiedDate: string
+  createdAt: string
   promptText: string
   promptFolderCount: number
   loadingState: 'full'
@@ -36,8 +35,7 @@ export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary =>
 export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   id: prompt.id,
   title: prompt.title,
-  creationDate: prompt.creationDate,
-  lastModifiedDate: prompt.lastModifiedDate,
+  createdAt: prompt.createdAt,
   promptText: prompt.promptText,
   promptFolderCount: prompt.promptFolderCount,
   loadingState: 'full'

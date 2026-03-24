@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import * as path from 'path'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 import { compactGuid } from '@shared/compactGuid'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
@@ -36,21 +37,19 @@ const writeExamplePrompts = (workspacePath: string): void => {
   const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_FOLDER_NAME)
   const configPath = path.join(exampleFolderPath, PROMPT_FOLDER_CONFIG_FILENAME)
   const descriptionPath = path.join(exampleFolderPath, PROMPT_FOLDER_DESCRIPTION_FILENAME)
-  const now = new Date().toISOString()
+  const now = getCurrentIsoSecondTimestamp()
   const examplePrompts = [
     {
       id: compactGuid(randomUUID()),
       title: 'Example: Add a Feature',
-      creationDate: now,
-      lastModifiedDate: now,
+      createdAt: now,
       promptText: 'Placeholder prompt text.',
       promptFolderCount: 1
     },
     {
       id: compactGuid(randomUUID()),
       title: 'Example: Fix a Bug',
-      creationDate: now,
-      lastModifiedDate: now,
+      createdAt: now,
       promptText: 'Placeholder prompt text.',
       promptFolderCount: 2
     }

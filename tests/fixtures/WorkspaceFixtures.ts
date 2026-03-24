@@ -31,8 +31,7 @@ export interface PromptFolderConfig {
     id: string
     title?: string
     promptText: string
-    creationDate?: string
-    lastModifiedDate?: string
+    createdAt?: string
     promptFolderCount?: number
   }>
 }
@@ -88,8 +87,7 @@ const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
       ...prompt,
       title,
       promptFolderCount,
-      creationDate: prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP,
-      lastModifiedDate: prompt.lastModifiedDate ?? prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP
+      createdAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP
     }
   })
 
@@ -111,8 +109,7 @@ const createPromptFiles = (
     const promptData: PromptPersisted = {
       id: prompt.id,
       title: prompt.title ?? '',
-      creationDate: prompt.creationDate ?? DEFAULT_PROMPT_TIMESTAMP,
-      lastModifiedDate: prompt.lastModifiedDate ?? DEFAULT_PROMPT_TIMESTAMP,
+      createdAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       promptFolderCount: prompt.promptFolderCount ?? 0,
       promptText: prompt.promptText
     }
@@ -145,15 +142,13 @@ const workspaceScenarios = {
           id: 'dev-1',
           title: 'Code Review',
           promptText: 'Please review this code for best practices',
-          creationDate: '2023-01-02T12:00:00.000Z',
-          lastModifiedDate: '2023-01-02T12:00:00.000Z'
+          createdAt: '2023-01-02T12:00:00.000Z'
         },
         {
           id: 'dev-2',
           title: 'Bug Analysis',
           promptText: 'Analyze this bug and suggest fixes',
-          creationDate: '2023-01-03T12:00:00.000Z',
-          lastModifiedDate: '2023-01-03T12:00:00.000Z'
+          createdAt: '2023-01-03T12:00:00.000Z'
         }
       ]
     }
@@ -338,8 +333,7 @@ export function setupWorkspaceScenario(
           id: `longmixed-${i + 1}`,
           title: `Long Mixed ${i + 1}`,
           promptText: base.promptText,
-          creationDate: base.creationDate,
-          lastModifiedDate: base.lastModifiedDate
+          createdAt: base.createdAt
         }
       })
 
@@ -358,8 +352,7 @@ export function setupWorkspaceScenario(
         id: `placeholder-${index + 1}`,
         title: `Placeholder Prompt ${index + 1}`,
         promptText: twentyLineBase.promptText,
-        creationDate: twentyLineBase.creationDate,
-        lastModifiedDate: twentyLineBase.lastModifiedDate
+        createdAt: twentyLineBase.createdAt
       }))
 
       return createWorkspaceWithFolders(workspacePath, [
@@ -377,8 +370,7 @@ export function setupWorkspaceScenario(
         id: `measurement-${index + 1}`,
         title: `Measurement Prompt ${index + 1}`,
         promptText: base.promptText,
-        creationDate: base.creationDate,
-        lastModifiedDate: base.lastModifiedDate
+        createdAt: base.createdAt
       }))
 
       return createWorkspaceWithFolders(workspacePath, [

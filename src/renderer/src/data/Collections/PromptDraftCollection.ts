@@ -4,8 +4,7 @@ import type { PromptFull } from '@shared/Prompt'
 export type PromptDraftRecord = {
   id: PromptFull['id']
   title: PromptFull['title']
-  creationDate: PromptFull['creationDate']
-  lastModifiedDate: PromptFull['lastModifiedDate']
+  createdAt: PromptFull['createdAt']
   promptText: PromptFull['promptText']
   promptFolderCount: PromptFull['promptFolderCount']
 }

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import type { PromptPersisted } from '@shared/Prompt'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
@@ -52,12 +53,11 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const nextPromptCount = committedPromptFolder.committed.promptCount + 1
-          const now = new Date().toISOString()
+          const now = getCurrentIsoSecondTimestamp()
           const prompt: PromptPersisted = {
             id: promptId,
             title: requestedPrompt.data.title,
-            creationDate: now,
-            lastModifiedDate: now,
+            createdAt: now,
             promptText: requestedPrompt.data.promptText,
             promptFolderCount: nextPromptCount
           }
@@ -216,7 +216,6 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt not loaded' }
           }
 
-          const nextLastModifiedDate = new Date().toISOString()
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               prompt: tx.prompt.update({
@@ -224,10 +223,9 @@ export const setupPromptMutationHandlers = (): void => {
                 expectedRevision: requestedPrompt.expectedRevision,
                 recipe: (draft) => {
                   draft.title = requestedPrompt.data.title
-                  draft.creationDate = requestedPrompt.data.creationDate
+                  draft.createdAt = requestedPrompt.data.createdAt
                   draft.promptText = requestedPrompt.data.promptText
                   draft.promptFolderCount = requestedPrompt.data.promptFolderCount
-                  draft.lastModifiedDate = nextLastModifiedDate
                 }
               })
             }

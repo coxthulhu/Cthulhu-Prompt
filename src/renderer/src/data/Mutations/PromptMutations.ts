@@ -31,8 +31,7 @@ const toPersistedPrompt = (prompt: Prompt): PromptPersisted => {
   return {
     id: prompt.id,
     title: prompt.title,
-    creationDate: prompt.creationDate,
-    lastModifiedDate: prompt.lastModifiedDate,
+    createdAt: prompt.createdAt,
     promptText: prompt.promptText,
     promptFolderCount: prompt.promptFolderCount
   }

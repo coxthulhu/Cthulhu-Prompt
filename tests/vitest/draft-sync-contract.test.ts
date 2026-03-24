@@ -47,8 +47,7 @@ afterEach(() => {
 const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   id: 'prompt-1',
   title: 'Original title',
-  creationDate: '2026-01-01T00:00:00.000Z',
-  lastModifiedDate: '2026-01-02T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
   promptText: 'Original text',
   promptFolderCount: 3,
   loadingState: 'full',
@@ -83,8 +82,7 @@ describe('draft sync contract', () => {
     const prompt = createPrompt()
     const updatedPrompt = createPrompt({
       title: 'Updated title',
-      promptText: 'Updated text',
-      lastModifiedDate: '2026-01-03T00:00:00.000Z'
+      promptText: 'Updated text'
     })
 
     upsertPromptDraft(prompt)
@@ -104,8 +102,7 @@ describe('draft sync contract', () => {
 
     const draftRecord = promptDraftCollection.get(fullPrompt.id)!
     expect(draftRecord.title).toBe(summaryPrompt.title)
-    expect(draftRecord.creationDate).toBe(fullPrompt.creationDate)
-    expect(draftRecord.lastModifiedDate).toBe(fullPrompt.lastModifiedDate)
+    expect(draftRecord.createdAt).toBe(fullPrompt.createdAt)
     expect(draftRecord.promptText).toBe(fullPrompt.promptText)
     expect(draftRecord.promptFolderCount).toBe(fullPrompt.promptFolderCount)
   })
@@ -119,8 +116,7 @@ describe('draft sync contract', () => {
     expect(draftRecord).toEqual({
       id: summaryPrompt.id,
       title: summaryPrompt.title,
-      creationDate: '',
-      lastModifiedDate: '',
+      createdAt: '',
       promptText: '',
       promptFolderCount: 0
     })
