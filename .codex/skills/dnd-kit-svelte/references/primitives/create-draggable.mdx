@@ -32,12 +32,24 @@ All input properties accept plain values or getter functions for reactivity.
   A unique identifier for this draggable instance.
 </ParamField>
 
+<ParamField path="type" type="Type | (() => Type)" optional>
+  The type of this draggable element. Use with droppable `accept` rules to restrict where drops are allowed.
+</ParamField>
+
 <ParamField path="disabled" type="boolean | (() => boolean)" optional>
   Whether the draggable is disabled.
 </ParamField>
 
-<ParamField path="plugins" type="PluginDescriptor[] | (() => PluginDescriptor[])" optional>
-  An array of plugin descriptors for per-entity plugin configuration. Use `Plugin.configure()` to create descriptors. For example, `Feedback.configure({ feedback: 'clone' })`.
+<ParamField
+  path="feedback"
+  type="'default' | 'move' | 'clone' | 'none' | (() => 'default' | 'move' | 'clone' | 'none')"
+  optional
+>
+  Controls how drag feedback is rendered.
+</ParamField>
+
+<ParamField path="alignment" type="Alignment | (() => Alignment)" optional>
+  Alignment used for positioning dragged geometry.
 </ParamField>
 
 <ParamField path="modifiers" type="Modifier[] | (() => Modifier[])" optional>

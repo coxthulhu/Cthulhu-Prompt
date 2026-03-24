@@ -30,16 +30,24 @@ The `createDroppable` primitive requires a unique `id`. It returns an object wit
   A unique identifier for this droppable instance.
 </ParamField>
 
-<ParamField path="accept" type="string | string[] | (() => string | string[])" optional>
-  The types of draggable elements this droppable accepts.
+<ParamField
+  path="accept"
+  type="Type | Type[] | ((source: Draggable) => boolean) | (() => Type | Type[] | ((source: Draggable) => boolean))"
+  optional
+>
+  The draggable types this droppable accepts, or a predicate function for custom acceptance logic.
 </ParamField>
 
-<ParamField path="type" type="string | (() => string)" optional>
+<ParamField path="type" type="Type | (() => Type)" optional>
   The type of this droppable element.
 </ParamField>
 
 <ParamField path="collisionDetector" type="CollisionDetector | (() => CollisionDetector)" optional>
   A custom collision detection algorithm.
+</ParamField>
+
+<ParamField path="collisionPriority" type="CollisionPriority | number | (() => CollisionPriority | number)" optional>
+  Collision priority for this droppable when targets overlap.
 </ParamField>
 
 <ParamField path="disabled" type="boolean | (() => boolean)" optional>

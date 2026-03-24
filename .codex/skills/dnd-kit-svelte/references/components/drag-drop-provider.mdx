@@ -62,3 +62,7 @@ The `DragDropProvider` accepts callback props for all drag and drop lifecycle st
 <ParamField path="modifiers" type="Modifier[] | (defaults: Modifier[]) => Modifier[]" optional>
   Modifiers to apply to drag operations. Pass an array to replace defaults, or a function to extend them.
 </ParamField>
+
+<ParamField path="renderer" type="Renderer" optional>
+  Custom renderer used for drag feedback/visual updates. Defaults to the built-in DOM renderer.
+</ParamField>

@@ -22,9 +22,10 @@ Use this skill whenever modifying drag-and-drop behavior or reviewing regression
 
 1. Wrap drag surfaces with `<DragDropProvider>` and wire only needed lifecycle handlers.
 2. Keep IDs unique and stable across renders.
-3. Prefer getter inputs for reactive primitive options inside `{#each}` (for example `index: () => index` for sortable).
-4. Check `event.canceled` before persisting state changes in drag-end handlers.
-5. Use one `<DragOverlay>` per provider and render with `{#snippet children(source)}` when custom preview is needed.
+3. Set explicit draggable `type` values and matching droppable `accept` rules when drop targets should be restricted.
+4. Prefer getter inputs for reactive primitive options inside `{#each}` (for example `index: () => index` for sortable).
+5. Check `event.canceled` before persisting state changes in drag-end handlers.
+6. Use one `<DragOverlay>` per provider and render with `{#snippet children(source)}` when custom preview is needed.
 
 ## Debug Checklist
 
