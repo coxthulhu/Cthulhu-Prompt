@@ -5,40 +5,50 @@ description: Implement and troubleshoot drag-and-drop features built with @dnd-k
 
 # DND Kit Svelte
 
-Use this skill whenever modifying drag-and-drop behavior or reviewing regressions in dnd-kit flows.
+Use this skill for drag-and-drop work powered by `@dnd-kit/svelte`.
 
-## Load References
+## Source Of Truth
 
-- Start with `references/quickstart.mdx` for baseline setup and API shape.
-- Load component references for provider-level behavior:
-  - `references/components/drag-drop-provider.mdx`
-  - `references/components/drag-overlay.mdx`
-- Load primitive references for entity behavior:
-  - `references/primitives/create-draggable.mdx`
-  - `references/primitives/create-droppable.mdx`
-  - `references/primitives/create-sortable.mdx`
+- Installed package: `node_modules/@dnd-kit/svelte` (version `0.3.2`).
+- Validate API behavior against:
+  - `node_modules/@dnd-kit/svelte/dist/core/*.d.ts`
+  - `node_modules/@dnd-kit/svelte/dist/sortable/*.d.ts`
+  - `node_modules/@dnd-kit/svelte/dist/core/**/*.svelte*`
+  - `node_modules/@dnd-kit/dom/index.d.ts`
+  - `node_modules/@dnd-kit/dom/sortable.d.ts`
 
-## Implement
+## Workflow
 
-1. Wrap drag surfaces with `<DragDropProvider>` and wire only needed lifecycle handlers.
-2. Keep IDs unique and stable across renders.
-3. Set explicit draggable `type` values and matching droppable `accept` rules when drop targets should be restricted.
-4. Prefer getter inputs for reactive primitive options inside `{#each}` (for example `index: () => index` for sortable).
-5. Check `event.canceled` before persisting state changes in drag-end handlers.
-6. Use one `<DragOverlay>` per provider and render with `{#snippet children(source)}` when custom preview is needed.
+1. Start with `references/quickstart.md`.
+2. Load only the focused reference file for your task:
+   - Provider/events/config: `references/components/drag-drop-provider.md`
+   - Overlay behavior: `references/components/drag-overlay.md`
+   - Draggable: `references/primitives/create-draggable.md`
+   - Droppable: `references/primitives/create-droppable.md`
+   - Sortable: `references/primitives/create-sortable.md`
+3. Implement with Svelte 5 runes and `{@attach ...}` attachments.
+4. Validate with lint/typecheck/tests when the task changes behavior.
 
-## Debug Checklist
+## Implementation Rules
 
-- Verify attach directives are bound to expected elements (`attach`, `attachHandle`, `attachSource`, `attachTarget`).
-- Verify drop acceptance/type config (`accept`, `type`) and collision configuration.
-- If sortable behavior is unexpected, compare optimistic plugin behavior versus manual reorder logic.
-- If drag preview is wrong, validate overlay snippet branching on `source.id`.
-- If drag callbacks do not fire, verify component nesting under the same provider.
+- Keep primitives and hooks inside the same `<DragDropProvider>` subtree.
+- Use stable unique ids for draggable/droppable/sortable entities.
+- Apply attachments to the intended elements.
+- For reactive primitive inputs (`id`, `disabled`, `index`, `group`, `accept`, etc.), use object property getters (for example `get index() { return index; }`). Do not pass callback values like `index: () => index`.
+- Import `createSortable` from `@dnd-kit/svelte/sortable`.
+- Use `event.canceled` guards in drag-end handlers before persisting changes.
+
+## Pitfalls To Check First
+
+- `getDragDropManager was called outside of a DragDropProvider`: primitive/hook created outside provider.
+- Drag callbacks not firing: wrong provider boundary or missing `{@attach ...}` directive.
+- Overlay not visible: no active source, overlay disabled, or no overlay snippet content.
+- Sortable reorder glitches: stale `index`/`group` values, incorrect source/target attachment, or missing reorder commit on drag end.
 
 ## Common Task Map
 
-- "Make item draggable" -> `references/primitives/create-draggable.mdx`
-- "Create drop zone / restrict drops" -> `references/primitives/create-droppable.mdx`
-- "Reorder list/grid" -> `references/primitives/create-sortable.mdx`
-- "Customize drag lifecycle behavior" -> `references/components/drag-drop-provider.mdx`
-- "Customize drag preview animation/UI" -> `references/components/drag-overlay.mdx`
+- Make item draggable: `references/primitives/create-draggable.md`
+- Build a drop zone: `references/primitives/create-droppable.md`
+- Reorder list/grid: `references/primitives/create-sortable.md`
+- Configure sensors/plugins/events: `references/components/drag-drop-provider.md`
+- Customize drag preview/drop animation: `references/components/drag-overlay.md`
