@@ -27,7 +27,6 @@
     "@codingame/monaco-vscode-textmate-service-override": "^26.2.1",
     "@codingame/monaco-vscode-theme-defaults-default-extension": "^26.2.1",
     "@codingame/monaco-vscode-theme-service-override": "^26.2.1",
-    "@dnd-kit/svelte": "^0.3.2",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
