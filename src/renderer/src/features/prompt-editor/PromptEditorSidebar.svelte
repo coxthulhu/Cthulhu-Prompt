@@ -1,32 +1,54 @@
 <script lang="ts">
-  import Button from '@renderer/common/ui/button/button.svelte'
-  import { ChevronDown, ChevronUp } from 'lucide-svelte'
+  import { cn } from '@renderer/common/Cn.js'
+  import { buttonVariants } from '@renderer/common/ui/button/button.svelte'
+  import { GripVertical } from 'lucide-svelte'
+  import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import {
+    PROMPT_HANDLE_DRAG_TYPE,
+    type PromptHandleDragPayload,
+    type PromptHandleDropPayload
+  } from '@renderer/features/drag-drop/promptHandleDrag'
 
   let {
+    promptId,
     onMoveUp,
     onMoveDown
-  }: { onMoveUp: () => void | Promise<void>; onMoveDown: () => void | Promise<void> } = $props()
+  }: {
+    promptId: string
+    onMoveUp: () => void | Promise<void>
+    onMoveDown: () => void | Promise<void>
+  } = $props()
+
+  const handleDragEnd = (result: { sourcePayload: unknown; dropPayload: unknown | null }) => {
+    // Keep these handlers referenced for future keyboard shortcuts.
+    void onMoveUp
+    void onMoveDown
+
+    const sourcePayload = result.sourcePayload as PromptHandleDragPayload
+    const dropPayload = result.dropPayload as PromptHandleDropPayload | null
+
+    console.log('prompt-handle-drop', {
+      fromId: sourcePayload.fromId,
+      toId: dropPayload?.toId ?? null
+    })
+  }
 </script>
 
 <div class="w-6 flex-shrink-0 flex flex-col">
-  <Button
-    variant="ghost"
-    size="icon"
-    class="flex-1 w-5 rounded-none border-none !px-0 py-1 bg-muted/30 hover:bg-accent/30 shadow-none"
-    aria-label="Move prompt up"
-    data-testid="prompt-move-up"
-    onclick={onMoveUp}
+  <button
+    use:draggable={{
+      dragType: PROMPT_HANDLE_DRAG_TYPE,
+      payload: { fromId: promptId },
+      onDragEnd: handleDragEnd
+    }}
+    type="button"
+    class={cn(
+      buttonVariants({ variant: 'ghost', size: 'icon' }),
+      'flex-1 w-5 rounded-none border-none !px-0 py-1 bg-muted/30 hover:bg-accent/30 shadow-none cursor-grab active:cursor-grabbing'
+    )}
+    aria-label="Drag prompt"
+    data-testid="prompt-drag-handle"
   >
-    <ChevronUp class="size-4 stroke-[3]" />
-  </Button>
-  <Button
-    variant="ghost"
-    size="icon"
-    class="flex-1 w-5 rounded-none border-none !px-0 py-1 bg-muted/30 hover:bg-accent/30 shadow-none"
-    aria-label="Move prompt down"
-    data-testid="prompt-move-down"
-    onclick={onMoveDown}
-  >
-    <ChevronDown class="size-4 stroke-[3]" />
-  </Button>
+    <GripVertical class="size-4 stroke-[2.5]" />
+  </button>
 </div>

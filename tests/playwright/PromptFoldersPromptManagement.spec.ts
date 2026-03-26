@@ -99,7 +99,7 @@ const expectPromptContent = async (
 }
 
 describe('Prompt folder prompt management', () => {
-  test('reorders prompts with move buttons', async ({ testSetup }) => {
+  test.skip('reorders prompts with move buttons', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })

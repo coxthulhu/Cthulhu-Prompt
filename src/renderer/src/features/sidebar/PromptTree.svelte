@@ -9,6 +9,11 @@
     Loader,
     Settings
   } from 'lucide-svelte'
+  import { droppable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import {
+    PROMPT_HANDLE_DRAG_TYPE,
+    promptFolderSettingsDropId
+  } from '@renderer/features/drag-drop/promptHandleDrag'
   import {
     type PromptDraftRecord,
     promptDraftCollection
@@ -353,7 +358,14 @@
 {#snippet promptFolderRow(props)}
   {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
 
-  <div class="sidebarPromptTreeRow group" data-active={isActive ? 'true' : 'false'}>
+  <div
+    use:droppable={{
+      dragType: PROMPT_HANDLE_DRAG_TYPE,
+      payload: { toId: props.row.folder.id }
+    }}
+    class="sidebarPromptTreeRow group"
+    data-active={isActive ? 'true' : 'false'}
+  >
     <button
       type="button"
       aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
@@ -430,7 +442,13 @@
 {#snippet folderSettingsRow(props)}
   {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
 
-  <div class="sidebarPromptTreeSettingsRow">
+  <div
+    use:droppable={{
+      dragType: PROMPT_HANDLE_DRAG_TYPE,
+      payload: { toId: promptFolderSettingsDropId(props.row.folder.id) }
+    }}
+    class="sidebarPromptTreeSettingsRow"
+  >
     <button
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
@@ -456,7 +474,13 @@
     promptNavigationPromptRow(props.row.promptId)
   )}
 
-  <div class="sidebarPromptTreeSettingsRow">
+  <div
+    use:droppable={{
+      dragType: PROMPT_HANDLE_DRAG_TYPE,
+      payload: { toId: props.row.promptId }
+    }}
+    class="sidebarPromptTreeSettingsRow"
+  >
     <button
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}

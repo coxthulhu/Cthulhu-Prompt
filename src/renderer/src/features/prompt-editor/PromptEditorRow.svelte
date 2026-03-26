@@ -319,7 +319,7 @@
   data-testid={`prompt-editor-${promptId}`}
   data-virtual-window-row
 >
-  <PromptEditorSidebar onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
+  <PromptEditorSidebar promptId={promptId} onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
 
   <div class="bg-background flex-1 min-w-0">
     <div class="flex min-w-0">

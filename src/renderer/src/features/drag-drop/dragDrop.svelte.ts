@@ -9,19 +9,22 @@ export type DragDropPreview = Snippet<[]>
 export type DraggableOptions = {
   dragType: string
   payload: unknown
-  previewSnippet: DragDropPreview
+  previewSnippet?: DragDropPreview | null
+  onDragEnd?: (result: { sourcePayload: unknown; dropPayload: unknown | null }) => void
 }
 
 export type DroppableOptions = {
   dragType: string
-  onDrop: (payload: unknown) => void
+  payload?: unknown
+  onDrop?: (payload: unknown) => void
 }
 
 type ActiveDrag = {
   sourceNode: HTMLElement
   dragType: string
   payload: unknown
-  previewSnippet: DragDropPreview
+  previewSnippet: DragDropPreview | null
+  onDragEnd: ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void) | null
 }
 
 type DroppableRegistration = {
@@ -102,7 +105,8 @@ const beginDrag = (
     sourceNode,
     dragType: options.dragType,
     payload: options.payload,
-    previewSnippet: options.previewSnippet
+    previewSnippet: options.previewSnippet ?? null,
+    onDragEnd: options.onDragEnd ?? null
   }
 
   updateDragCursor(startX, startY)
@@ -125,11 +129,16 @@ const finishDrag = (): { activeDrag: ActiveDrag | null; activeDropTarget: Droppa
 const endDrag = (): void => {
   const { activeDrag: completedDrag, activeDropTarget: completedDropTarget } = finishDrag()
 
-  if (!completedDrag || !completedDropTarget) {
+  if (!completedDrag) {
     return
   }
 
-  completedDropTarget.getOptions().onDrop(completedDrag.payload)
+  const dropPayload = completedDropTarget?.getOptions().payload ?? null
+  completedDropTarget?.getOptions().onDrop?.(completedDrag.payload)
+  completedDrag.onDragEnd?.({
+    sourcePayload: completedDrag.payload,
+    dropPayload
+  })
 }
 
 export const draggable = (node: HTMLElement, options: DraggableOptions) => {
