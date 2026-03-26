@@ -5,6 +5,7 @@
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
   import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
+  import DragDropOverlay from '@renderer/features/drag-drop/DragDropOverlay.svelte'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
@@ -450,6 +451,8 @@
     {/snippet}
   </ResizableSidebar>
 </div>
+
+<DragDropOverlay />
 
 {#if startupRestoreOverlay.isVisible()}
   <LoadingOverlay
