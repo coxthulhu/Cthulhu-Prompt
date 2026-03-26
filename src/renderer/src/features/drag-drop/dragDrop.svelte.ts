@@ -17,6 +17,11 @@ export type DroppableOptions = {
   dragType: string
   payload?: unknown
   onDrop?: (payload: unknown) => void
+  state?: DroppableState
+}
+
+export type DroppableState = {
+  isOver: boolean
 }
 
 type ActiveDrag = {
@@ -40,6 +45,26 @@ let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDropTarget = $state<DroppableRegistration | null>(null)
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
+
+const setDroppableIsOver = (
+  dropTarget: DroppableRegistration | null,
+  isOver: boolean
+): void => {
+  const dropState = dropTarget?.getOptions().state
+  if (dropState) {
+    dropState.isOver = isOver
+  }
+}
+
+const setActiveDropTarget = (nextDropTarget: DroppableRegistration | null): void => {
+  if (activeDropTarget === nextDropTarget) {
+    return
+  }
+
+  setDroppableIsOver(activeDropTarget, false)
+  activeDropTarget = nextDropTarget
+  setDroppableIsOver(activeDropTarget, true)
+}
 
 const createDragCursorStyleElement = (node: HTMLElement): HTMLStyleElement | null => {
   const activeDocument = node.ownerDocument
@@ -67,7 +92,7 @@ const squaredCenterDistance = (rect: DOMRect, x: number, y: number): number => {
 
 const updateActiveDropTarget = (): void => {
   if (!activeDrag) {
-    activeDropTarget = null
+    setActiveDropTarget(null)
     return
   }
 
@@ -92,12 +117,12 @@ const updateActiveDropTarget = (): void => {
     }
   }
 
-  activeDropTarget = closestMatch
+  setActiveDropTarget(closestMatch)
 }
 
 const clearActiveDrag = (): void => {
   activeDrag = null
-  activeDropTarget = null
+  setActiveDropTarget(null)
 }
 
 const restoreDocumentDragState = (): void => {
@@ -236,15 +261,27 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
   }
 
   droppableRegistrations.add(registration)
+  if (activeDrag) {
+    updateActiveDropTarget()
+  }
+  setDroppableIsOver(registration, activeDropTarget === registration)
 
   return {
     update(nextOptions: DroppableOptions) {
+      const previousState = droppableOptions.state
       droppableOptions = nextOptions
       if (activeDrag) {
         updateActiveDropTarget()
       }
+
+      // Side effect: keep opt-in row hover state aligned when options swap state objects.
+      if (previousState && previousState !== droppableOptions.state) {
+        previousState.isOver = false
+      }
+      setDroppableIsOver(registration, activeDropTarget === registration)
     },
     destroy() {
+      setDroppableIsOver(registration, false)
       droppableRegistrations.delete(registration)
       if (activeDropTarget === registration) {
         updateActiveDropTarget()
