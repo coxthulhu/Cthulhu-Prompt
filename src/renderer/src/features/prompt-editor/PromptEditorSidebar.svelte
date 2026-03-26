@@ -19,7 +19,7 @@
     onMoveDown: () => void | Promise<void>
   } = $props()
 
-  const handleDragEnd = (result: { sourcePayload: unknown; dropPayload: unknown | null }) => {
+  const handleDragFinish = (result: { sourcePayload: unknown; dropPayload: unknown | null }) => {
     // Keep these handlers referenced for future keyboard shortcuts.
     void onMoveUp
     void onMoveDown
@@ -35,11 +35,16 @@
 </script>
 
 <div class="w-6 flex-shrink-0 flex flex-col">
+  {#snippet emptyDragPreview()}
+    <span class="hidden" aria-hidden="true"></span>
+  {/snippet}
+
   <button
     use:draggable={{
       dragType: PROMPT_HANDLE_DRAG_TYPE,
       payload: { fromId: promptId },
-      onDragEnd: handleDragEnd
+      previewSnippet: emptyDragPreview,
+      onDragFinish: handleDragFinish
     }}
     type="button"
     class={cn(

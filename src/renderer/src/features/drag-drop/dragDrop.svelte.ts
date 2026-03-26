@@ -9,8 +9,8 @@ export type DragDropPreview = Snippet<[]>
 export type DraggableOptions = {
   dragType: string
   payload: unknown
-  previewSnippet?: DragDropPreview | null
-  onDragEnd?: (result: { sourcePayload: unknown; dropPayload: unknown | null }) => void
+  previewSnippet: DragDropPreview
+  onDragFinish?: (result: { sourcePayload: unknown; dropPayload: unknown | null }) => void
 }
 
 export type DroppableOptions = {
@@ -23,8 +23,10 @@ type ActiveDrag = {
   sourceNode: HTMLElement
   dragType: string
   payload: unknown
-  previewSnippet: DragDropPreview | null
-  onDragEnd: ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void) | null
+  previewSnippet: DragDropPreview
+  onDragFinish:
+    | ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void)
+    | null
   cursorStyleElement: HTMLStyleElement | null
 }
 
@@ -118,8 +120,8 @@ const beginDrag = (
     sourceNode,
     dragType: options.dragType,
     payload: options.payload,
-    previewSnippet: options.previewSnippet ?? null,
-    onDragEnd: options.onDragEnd ?? null,
+    previewSnippet: options.previewSnippet,
+    onDragFinish: options.onDragFinish ?? null,
     cursorStyleElement: createDragCursorStyleElement(sourceNode)
   }
 
@@ -150,7 +152,7 @@ const endDrag = (): void => {
 
   const dropPayload = completedDropTarget?.getOptions().payload ?? null
   completedDropTarget?.getOptions().onDrop?.(completedDrag.payload)
-  completedDrag.onDragEnd?.({
+  completedDrag.onDragFinish?.({
     sourcePayload: completedDrag.payload,
     dropPayload
   })
