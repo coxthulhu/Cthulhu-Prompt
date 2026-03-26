@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import { SvelteMap } from 'svelte/reactivity'
+import { SvelteSet } from 'svelte/reactivity'
 
 const DRAG_START_DISTANCE_PX = 4
 const OVERLAY_OFFSET_X_PX = 12
@@ -7,21 +7,21 @@ const OVERLAY_OFFSET_X_PX = 12
 export type DragDropPreview = Snippet<[]>
 
 export type DraggableOptions = {
-  type: string
-  data: unknown
-  preview: DragDropPreview
+  dragType: string
+  payload: unknown
+  previewSnippet: DragDropPreview
 }
 
 export type DroppableOptions = {
-  type: string
-  onDrop: (data: unknown) => void
+  dragType: string
+  onDrop: (payload: unknown) => void
 }
 
 type ActiveDrag = {
   sourceNode: HTMLElement
-  type: string
-  data: unknown
-  preview: DragDropPreview
+  dragType: string
+  payload: unknown
+  previewSnippet: DragDropPreview
 }
 
 type DroppableRegistration = {
@@ -33,7 +33,7 @@ let activeDrag = $state<ActiveDrag | null>(null)
 let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDropTarget = $state<DroppableRegistration | null>(null)
-const droppables = new SvelteMap<symbol, DroppableRegistration>()
+const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 
 const pointIsInsideRect = (rect: DOMRect, x: number, y: number): boolean => {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
@@ -56,20 +56,20 @@ const updateActiveDropTarget = (): void => {
   let closestMatch: DroppableRegistration | null = null
   let closestDistance = Number.POSITIVE_INFINITY
 
-  for (const candidate of droppables.values()) {
-    const options = candidate.getOptions()
-    if (options.type !== activeDrag.type) {
+  for (const dropTarget of droppableRegistrations) {
+    const dropOptions = dropTarget.getOptions()
+    if (dropOptions.dragType !== activeDrag.dragType) {
       continue
     }
 
-    const rect = candidate.node.getBoundingClientRect()
+    const rect = dropTarget.node.getBoundingClientRect()
     if (!pointIsInsideRect(rect, cursorX, cursorY)) {
       continue
     }
 
     const distance = squaredCenterDistance(rect, cursorX, cursorY)
     if (distance < closestDistance) {
-      closestMatch = candidate
+      closestMatch = dropTarget
       closestDistance = distance
     }
   }
@@ -80,6 +80,10 @@ const updateActiveDropTarget = (): void => {
 const clearActiveDrag = (): void => {
   activeDrag = null
   activeDropTarget = null
+}
+
+const restoreUserSelection = (): void => {
+  document.body.style.userSelect = ''
 }
 
 const updateDragCursor = (nextX: number, nextY: number): void => {
@@ -96,36 +100,40 @@ const beginDrag = (
 ): void => {
   activeDrag = {
     sourceNode,
-    type: options.type,
-    data: options.data,
-    preview: options.preview
+    dragType: options.dragType,
+    payload: options.payload,
+    previewSnippet: options.previewSnippet
   }
 
   updateDragCursor(startX, startY)
   document.body.style.userSelect = 'none'
 }
 
-const endDrag = (): void => {
-  const currentDrag = activeDrag
-  const dropTarget = activeDropTarget
+const finishDrag = (): { activeDrag: ActiveDrag | null; activeDropTarget: DroppableRegistration | null } => {
+  const currentActiveDrag = activeDrag
+  const currentActiveDropTarget = activeDropTarget
 
   clearActiveDrag()
-  document.body.style.userSelect = ''
+  restoreUserSelection()
 
-  if (!currentDrag || !dropTarget) {
+  return {
+    activeDrag: currentActiveDrag,
+    activeDropTarget: currentActiveDropTarget
+  }
+}
+
+const endDrag = (): void => {
+  const { activeDrag: completedDrag, activeDropTarget: completedDropTarget } = finishDrag()
+
+  if (!completedDrag || !completedDropTarget) {
     return
   }
 
-  dropTarget.getOptions().onDrop(currentDrag.data)
-}
-
-const cancelDrag = (): void => {
-  clearActiveDrag()
-  document.body.style.userSelect = ''
+  completedDropTarget.getOptions().onDrop(completedDrag.payload)
 }
 
 export const draggable = (node: HTMLElement, options: DraggableOptions) => {
-  let currentOptions = options
+  let draggableOptions = options
 
   const handleNativeDragStart = (event: DragEvent) => {
     event.preventDefault()
@@ -148,7 +156,7 @@ export const draggable = (node: HTMLElement, options: DraggableOptions) => {
           return
         }
 
-        beginDrag(node, currentOptions, moveEvent.clientX, moveEvent.clientY)
+        beginDrag(node, draggableOptions, moveEvent.clientX, moveEvent.clientY)
         hasStartedDrag = true
       } else {
         updateDragCursor(moveEvent.clientX, moveEvent.clientY)
@@ -181,38 +189,37 @@ export const draggable = (node: HTMLElement, options: DraggableOptions) => {
 
   return {
     update(nextOptions: DraggableOptions) {
-      currentOptions = nextOptions
+      draggableOptions = nextOptions
     },
     destroy() {
       node.removeEventListener('dragstart', handleNativeDragStart)
       node.removeEventListener('mousedown', handleMouseDown)
 
       if (activeDrag?.sourceNode === node) {
-        cancelDrag()
+        finishDrag()
       }
     }
   }
 }
 
 export const droppable = (node: HTMLElement, options: DroppableOptions) => {
-  let currentOptions = options
-  const registrationId = Symbol('droppable')
+  let droppableOptions = options
   const registration: DroppableRegistration = {
     node,
-    getOptions: () => currentOptions
+    getOptions: () => droppableOptions
   }
 
-  droppables.set(registrationId, registration)
+  droppableRegistrations.add(registration)
 
   return {
     update(nextOptions: DroppableOptions) {
-      currentOptions = nextOptions
+      droppableOptions = nextOptions
       if (activeDrag) {
         updateActiveDropTarget()
       }
     },
     destroy() {
-      droppables.delete(registrationId)
+      droppableRegistrations.delete(registration)
       if (activeDropTarget === registration) {
         updateActiveDropTarget()
       }
@@ -224,8 +231,8 @@ export const dragDropOverlayState = {
   get isVisible() {
     return activeDrag !== null
   },
-  get preview() {
-    return activeDrag?.preview ?? null
+  get previewSnippet() {
+    return activeDrag?.previewSnippet ?? null
   },
   get leftPx() {
     return cursorX + OVERLAY_OFFSET_X_PX

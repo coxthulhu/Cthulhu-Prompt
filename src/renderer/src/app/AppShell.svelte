@@ -3,9 +3,8 @@
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
-  import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
-  import DragDropOverlay from '@renderer/features/drag-drop/DragDropOverlay.svelte'
+  import AppOverlays from './AppOverlays.svelte'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
@@ -452,14 +451,7 @@
   </ResizableSidebar>
 </div>
 
-<DragDropOverlay />
-
-{#if startupRestoreOverlay.isVisible()}
-  <LoadingOverlay
-    testId="startup-loading-overlay"
-    fadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
-    isFading={startupRestoreOverlay.isFading()}
-    message="Loading workspace..."
-    fullscreen
-  />
-{/if}
+<AppOverlays
+  {startupRestoreOverlay}
+  startupLoadingOverlayFadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
+/>
