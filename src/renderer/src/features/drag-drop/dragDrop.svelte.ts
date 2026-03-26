@@ -25,6 +25,7 @@ type ActiveDrag = {
   payload: unknown
   previewSnippet: DragDropPreview | null
   onDragEnd: ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void) | null
+  cursorStyleElement: HTMLStyleElement | null
 }
 
 type DroppableRegistration = {
@@ -37,6 +38,18 @@ let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDropTarget = $state<DroppableRegistration | null>(null)
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
+
+const createDragCursorStyleElement = (node: HTMLElement): HTMLStyleElement | null => {
+  const activeDocument = node.ownerDocument
+  if (!activeDocument.head) {
+    return null
+  }
+
+  const style = activeDocument.createElement('style')
+  style.textContent = '* { cursor: grabbing !important; }'
+  activeDocument.head.appendChild(style)
+  return style
+}
 
 const pointIsInsideRect = (rect: DOMRect, x: number, y: number): boolean => {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
@@ -85,7 +98,7 @@ const clearActiveDrag = (): void => {
   activeDropTarget = null
 }
 
-const restoreUserSelection = (): void => {
+const restoreDocumentDragState = (): void => {
   document.body.style.userSelect = ''
 }
 
@@ -106,7 +119,8 @@ const beginDrag = (
     dragType: options.dragType,
     payload: options.payload,
     previewSnippet: options.previewSnippet ?? null,
-    onDragEnd: options.onDragEnd ?? null
+    onDragEnd: options.onDragEnd ?? null,
+    cursorStyleElement: createDragCursorStyleElement(sourceNode)
   }
 
   updateDragCursor(startX, startY)
@@ -118,7 +132,8 @@ const finishDrag = (): { activeDrag: ActiveDrag | null; activeDropTarget: Droppa
   const currentActiveDropTarget = activeDropTarget
 
   clearActiveDrag()
-  restoreUserSelection()
+  restoreDocumentDragState()
+  currentActiveDrag?.cursorStyleElement?.remove()
 
   return {
     activeDrag: currentActiveDrag,
