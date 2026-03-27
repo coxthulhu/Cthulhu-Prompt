@@ -249,11 +249,33 @@
       <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
         {#each visibleRows as row (row.id)}
           {#if rowNeedsOverlay(row)}
+            {@const overlayRowElement = overlayRowElements.get(row.id) ?? null}
+            {@const overlaySnippet = rowRegistry[row.rowData.kind].overlaySnippet ?? null}
             <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
               <div
                 use:registerOverlayRow={row.id}
-                style={`width:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
-              ></div>
+                style={`width:100%; height:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
+              >
+                {#if overlaySnippet}
+                  {@render overlaySnippet({
+                    index: row.index,
+                    row: row.rowData,
+                    rowId: row.id,
+                    virtualWindowWidthPx: measurementWidth,
+                    virtualWindowHeightPx: viewportHeight,
+                    devicePixelRatio,
+                    rowHeightPx: row.height,
+                    measuredHeightPx: row.measuredHeightPx,
+                    hydrationPriority:
+                      hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
+                    shouldDehydrate: shouldDehydrateRow(row),
+                    overlayRowElement,
+                    scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
+                    scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
+                    onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+                  })}
+                {/if}
+              </div>
             </div>
           {/if}
         {/each}

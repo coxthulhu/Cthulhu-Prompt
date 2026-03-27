@@ -3,6 +3,9 @@
   --sidebar-gradient-top: #11131a;
   --sidebar-gradient-bottom: #0b0d12;
   --sidebar-mockup-border: rgb(255 255 255 / 10%);
+  --sidebar-drop-accent: #3794ff;
+  --sidebar-drop-accent-fill: rgb(55 148 255 / 18%);
+  --sidebar-drop-accent-stroke: rgb(55 148 255 / 60%);
 }
 
 .sidebarSurface {
@@ -82,6 +85,12 @@
   background-color: rgb(255 255 255 / 10%);
   color: rgb(255 255 255);
   box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
+}
+
+.sidebarPromptTreeRow[data-over='true'] {
+  background-color: var(--sidebar-drop-accent-fill);
+  color: rgb(255 255 255);
+  box-shadow: inset 0 0 0 1px var(--sidebar-drop-accent-stroke);
 }
 
 .sidebarPromptTreeToggleButton {
@@ -233,4 +242,27 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.875rem;
+}
+
+.sidebarPromptTreeDropIndicator {
+  position: absolute;
+  right: 0.125rem;
+  top: 100%;
+  left: calc(var(--sidebar-drop-indicator-inset-start, 2.375rem) - 10px);
+  height: 10px;
+  transform: translateY(-50%);
+}
+
+.sidebarPromptTreeDropIndicatorSvg {
+  display: block;
+  overflow: visible;
+}
+
+.sidebarPromptTreeDropIndicatorStroke {
+  fill: none;
+  stroke: var(--sidebar-drop-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }

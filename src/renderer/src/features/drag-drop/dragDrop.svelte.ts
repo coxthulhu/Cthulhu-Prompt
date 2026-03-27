@@ -43,7 +43,7 @@ type DroppableRegistration = {
 let activeDrag = $state<ActiveDrag | null>(null)
 let cursorX = $state(0)
 let cursorY = $state(0)
-let activeDropTarget = $state<DroppableRegistration | null>(null)
+let activeDropTarget: DroppableRegistration | null = null
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 
 const setDroppableIsOver = (
