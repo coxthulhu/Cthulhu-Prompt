@@ -26,7 +26,7 @@ const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRec
   title: prompt.title,
   createdAt: '',
   promptText: '',
-  promptFolderCount: 0
+  promptFolderCount: prompt.promptFolderCount
 })
 
 const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): boolean => {

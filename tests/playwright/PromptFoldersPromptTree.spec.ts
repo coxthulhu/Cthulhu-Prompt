@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
@@ -21,6 +22,10 @@ const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
 const samplePromptTreeRowSelector = `[data-testid="prompt-folder-prompt-${SAMPLE_PROMPT_ID}"]`
 const samplePromptTitleSelector = `${promptEditorSelector(SAMPLE_PROMPT_ID)} ${PROMPT_TITLE_SELECTOR}`
+const UNOPENED_UNTITLED_WORKSPACE_PATH = '/ws/tree-untitled-summaries'
+const LOADED_FOLDER_NAME = 'Loaded'
+const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-folder-prompt-unopened-1"]'
+const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-folder-prompt-unopened-2"]'
 
 const scrollPromptTreeRowIntoView = async (
   mainWindow: any,
@@ -162,5 +167,56 @@ describe('Prompt folder prompt tree', () => {
     const nextTitle = 'Live prompt title sync'
     await mainWindow.keyboard.type(' prompt title sync', { delay: 20 })
     await expect(promptTreeRow).toContainText(nextTitle)
+  })
+
+  test('keeps placeholder fallback numbering for unopened folders with blank titles', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(UNOPENED_UNTITLED_WORKSPACE_PATH, [
+        {
+          folderName: 'Loaded',
+          displayName: LOADED_FOLDER_NAME,
+          prompts: [
+            {
+              id: 'loaded-1',
+              title: 'Loaded prompt',
+              promptText: 'Loaded folder prompt'
+            }
+          ]
+        },
+        {
+          folderName: 'UnopenedUntitled',
+          displayName: 'Unopened Untitled',
+          prompts: [
+            {
+              id: 'unopened-1',
+              title: '',
+              promptText: 'First unopened untitled prompt'
+            },
+            {
+              id: 'unopened-2',
+              title: '',
+              promptText: 'Second unopened untitled prompt'
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([UNOPENED_UNTITLED_WORKSPACE_PATH])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(LOADED_FOLDER_NAME)
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+
+    await expect(mainWindow.locator(UNOPENED_FOLDER_PROMPT_1_SELECTOR)).toHaveText('Prompt 1')
+    await expect(mainWindow.locator(UNOPENED_FOLDER_PROMPT_2_SELECTOR)).toHaveText('Prompt 2')
   })
 })

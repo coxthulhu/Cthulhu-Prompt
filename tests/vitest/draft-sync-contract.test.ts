@@ -57,7 +57,7 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
 const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): PromptSummaryData => ({
   id: 'prompt-1',
   title: 'Original title',
-  promptFolderCount: 0,
+  promptFolderCount: 3,
   ...overrides
 })
 
@@ -108,7 +108,11 @@ describe('draft sync contract', () => {
   })
 
   it('seeds prompt summary drafts when full prompt data is not loaded yet', () => {
-    const summaryPrompt = createPromptSummary({ id: 'prompt-summary-1', title: 'Summary title' })
+    const summaryPrompt = createPromptSummary({
+      id: 'prompt-summary-1',
+      title: 'Summary title',
+      promptFolderCount: 7
+    })
 
     upsertPromptSummaryDrafts([summaryPrompt])
 
@@ -118,7 +122,7 @@ describe('draft sync contract', () => {
       title: summaryPrompt.title,
       createdAt: '',
       promptText: '',
-      promptFolderCount: 0
+      promptFolderCount: summaryPrompt.promptFolderCount
     })
   })
 
