@@ -48,6 +48,7 @@ let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDropTarget: DroppableRegistration | null = null
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
+const droppableRegistrationByNode = new WeakMap<HTMLElement, DroppableRegistration>()
 
 export const createDroppableStateRegistry = <
   TKey extends string
@@ -114,16 +115,36 @@ const createDragCursorStyleElement = (node: HTMLElement): HTMLStyleElement | nul
   return style
 }
 
-const pointIsInsideRect = (rect: DOMRect, x: number, y: number): boolean => {
-  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+const getClosestRegisteredDroppable = (
+  startElement: Element | null,
+  dragType: string
+): DroppableRegistration | null => {
+  let currentElement = startElement
+
+  while (currentElement instanceof HTMLElement) {
+    const registration = droppableRegistrationByNode.get(currentElement)
+    if (registration && registration.getOptions().dragType === dragType) {
+      return registration
+    }
+
+    currentElement = currentElement.parentElement
+  }
+
+  return null
 }
 
-const squaredCenterDistance = (rect: DOMRect, x: number, y: number): number => {
-  const centerX = rect.left + rect.width / 2
-  const centerY = rect.top + rect.height / 2
-  const deltaX = centerX - x
-  const deltaY = centerY - y
-  return deltaX * deltaX + deltaY * deltaY
+const getDropTargetFromPoint = (x: number, y: number, dragType: string): DroppableRegistration | null => {
+  for (const element of document.elementsFromPoint(x, y)) {
+    const registration = getClosestRegisteredDroppable(
+      element instanceof Element ? element : null,
+      dragType
+    )
+    if (registration) {
+      return registration
+    }
+  }
+
+  return null
 }
 
 const updateActiveDropTarget = (): void => {
@@ -132,28 +153,9 @@ const updateActiveDropTarget = (): void => {
     return
   }
 
-  let closestMatch: DroppableRegistration | null = null
-  let closestDistance = Number.POSITIVE_INFINITY
+  const matchedDropTarget = getDropTargetFromPoint(cursorX, cursorY, activeDrag.dragType)
 
-  for (const dropTarget of droppableRegistrations) {
-    const dropOptions = dropTarget.getOptions()
-    if (dropOptions.dragType !== activeDrag.dragType) {
-      continue
-    }
-
-    const rect = dropTarget.node.getBoundingClientRect()
-    if (!pointIsInsideRect(rect, cursorX, cursorY)) {
-      continue
-    }
-
-    const distance = squaredCenterDistance(rect, cursorX, cursorY)
-    if (distance < closestDistance) {
-      closestMatch = dropTarget
-      closestDistance = distance
-    }
-  }
-
-  setActiveDropTarget(closestMatch)
+  setActiveDropTarget(matchedDropTarget)
 }
 
 const clearActiveDrag = (): void => {
@@ -300,6 +302,7 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
   }
 
   droppableRegistrations.add(registration)
+  droppableRegistrationByNode.set(node, registration)
   if (activeDrag) {
     updateActiveDropTarget()
   }
@@ -322,6 +325,7 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
     destroy() {
       setDroppableIsOver(registration, false)
       droppableRegistrations.delete(registration)
+      droppableRegistrationByNode.delete(node)
       if (activeDropTarget === registration) {
         updateActiveDropTarget()
       }

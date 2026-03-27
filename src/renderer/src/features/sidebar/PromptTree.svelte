@@ -468,13 +468,13 @@
   {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
 
   <div
-    use:droppable={getPromptTreeDroppableOptions(
-      props.rowId,
-      promptFolderSettingsDropId(props.row.folder.id)
-    )}
     class="sidebarPromptTreeSettingsRow"
   >
     <button
+      use:droppable={getPromptTreeDroppableOptions(
+        props.rowId,
+        promptFolderSettingsDropId(props.row.folder.id)
+      )}
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
       data-active={isActive ? 'true' : 'false'}
@@ -500,10 +500,10 @@
   )}
 
   <div
-    use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.promptId)}
     class="sidebarPromptTreeSettingsRow"
   >
     <button
+      use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.promptId)}
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}
