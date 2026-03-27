@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import { SvelteSet } from 'svelte/reactivity'
+import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 const DRAG_START_DISTANCE_PX = 4
 const OVERLAY_OFFSET_X_PX = 12
@@ -24,14 +24,17 @@ export type DroppableState = {
   isOver: boolean
 }
 
+export type DroppableStateRegistry<TKey extends string = string> = {
+  getState: (key: TKey) => DroppableState
+  isOver: (key: TKey) => boolean
+}
+
 type ActiveDrag = {
   sourceNode: HTMLElement
   dragType: string
   payload: unknown
   previewSnippet: DragDropPreview
-  onDragFinish:
-    | ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void)
-    | null
+  onDragFinish: ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void) | null
   cursorStyleElement: HTMLStyleElement | null
 }
 
@@ -46,10 +49,43 @@ let cursorY = $state(0)
 let activeDropTarget: DroppableRegistration | null = null
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 
-const setDroppableIsOver = (
-  dropTarget: DroppableRegistration | null,
-  isOver: boolean
-): void => {
+export const createDroppableStateRegistry = <
+  TKey extends string
+>(): DroppableStateRegistry<TKey> => {
+  const stateByKey = new SvelteMap<TKey, DroppableState>()
+  const isOverByKey = new SvelteMap<TKey, boolean>()
+
+  const getState = (key: TKey): DroppableState => {
+    const existingState = stateByKey.get(key)
+    if (existingState) {
+      return existingState
+    }
+
+    const nextState = {
+      get isOver() {
+        return isOverByKey.get(key) ?? false
+      },
+      set isOver(value: boolean) {
+        if (value) {
+          isOverByKey.set(key, true)
+          return
+        }
+
+        isOverByKey.delete(key)
+      }
+    } satisfies DroppableState
+
+    stateByKey.set(key, nextState)
+    return nextState
+  }
+
+  return {
+    getState,
+    isOver: (key: TKey) => isOverByKey.get(key) ?? false
+  }
+}
+
+const setDroppableIsOver = (dropTarget: DroppableRegistration | null, isOver: boolean): void => {
   const dropState = dropTarget?.getOptions().state
   if (dropState) {
     dropState.isOver = isOver
@@ -154,7 +190,10 @@ const beginDrag = (
   document.body.style.userSelect = 'none'
 }
 
-const finishDrag = (): { activeDrag: ActiveDrag | null; activeDropTarget: DroppableRegistration | null } => {
+const finishDrag = (): {
+  activeDrag: ActiveDrag | null
+  activeDropTarget: DroppableRegistration | null
+} => {
   const currentActiveDrag = activeDrag
   const currentActiveDropTarget = activeDropTarget
 

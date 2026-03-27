@@ -126,7 +126,7 @@
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
       hydrationPriorityEligible: true,
-      needsOverlayRow: true,
+      overlayRow: {},
       centerRowEligible: true,
       dehydrateOnWidthResize: true,
       snippet: folderSettingsRow
@@ -158,7 +158,7 @@
       },
       hydrationPriorityEligible: true,
       centerRowEligible: true,
-      needsOverlayRow: true,
+      overlayRow: {},
       dehydrateOnWidthResize: true,
       snippet: promptEditorRow
     },

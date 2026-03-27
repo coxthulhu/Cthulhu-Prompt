@@ -78,7 +78,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
   const centerRowData = $derived(centerRow?.rowData ?? null)
 
   const rowNeedsOverlay = (row: VirtualRowState<TRow>): boolean =>
-    getRowRegistry()[row.rowData.kind].needsOverlayRow ?? false
+    getRowRegistry()[row.rowData.kind].overlayRow != null
 
   const registerOverlayRow = (node: HTMLDivElement, rowId: string) => {
     overlayRowElements.set(rowId, node)

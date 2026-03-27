@@ -45,12 +45,15 @@ export type VirtualWindowViewportMetrics = {
   devicePixelRatio: number
 }
 
+export type VirtualWindowOverlayRowConfig<TRow> = {
+  snippet?: VirtualWindowRowSnippet<TRow>
+}
+
 export type VirtualWindowRowTypeRegistryEntry<TRow> = {
   estimateHeight: (row: TRow, widthPx: number, heightPx: number) => number
   lookupMeasuredHeight?: (row: TRow, widthPx: number, devicePixelRatio: number) => number | null
   snippet: VirtualWindowRowSnippet<TRow>
-  overlaySnippet?: VirtualWindowRowSnippet<TRow>
-  needsOverlayRow?: boolean
+  overlayRow?: VirtualWindowOverlayRowConfig<TRow>
   hydrationPriorityEligible?: boolean
   centerRowEligible?: boolean
   dehydrateOnWidthResize?: boolean

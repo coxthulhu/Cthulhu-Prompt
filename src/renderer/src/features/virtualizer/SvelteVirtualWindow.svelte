@@ -1,12 +1,15 @@
 <script lang="ts" generics="TRow extends { kind: string }">
   import {
     type VirtualWindowItem,
+    type VirtualWindowRowComponentProps,
+    type VirtualWindowRowSnippet,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
     type ScrollToAndTrackRowCentered,
     type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from './virtualWindowTypes'
+  import type { VirtualRowState } from './virtualWindowRows'
   import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
   import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
   import { useVirtualWindowCallbacks } from './virtualWindowCallbacks.svelte.ts'
@@ -176,6 +179,29 @@
     applyUserScrollTop
   })
 
+  const getRowSnippetProps = (
+    row: VirtualRowState<TRow>,
+    overlayRowElement: HTMLDivElement | null = overlayRowElements.get(row.id) ?? null
+  ): VirtualWindowRowComponentProps<TRow> => ({
+    index: row.index,
+    row: row.rowData,
+    rowId: row.id,
+    virtualWindowWidthPx: measurementWidth,
+    virtualWindowHeightPx: viewportHeight,
+    devicePixelRatio,
+    rowHeightPx: row.height,
+    measuredHeightPx: row.measuredHeightPx,
+    hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
+    shouldDehydrate: shouldDehydrateRow(row),
+    overlayRowElement,
+    scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
+    scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
+    onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+  })
+
+  const getOverlaySnippet = (row: TRow): VirtualWindowRowSnippet<TRow> | null =>
+    rowRegistry[row.kind].overlayRow?.snippet ?? null
+
   const handleWheel = (event: WheelEvent) => {
     if (viewportHeight <= 0) return
     applyUserScrollTop(scrollTopPx + event.deltaY * WHEEL_SCROLL_MULTIPLIER)
@@ -225,22 +251,7 @@
             <div
               style={`width:100%; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
             >
-              {@render row.snippet({
-                index: row.index,
-                row: row.rowData,
-                rowId: row.id,
-                virtualWindowWidthPx: measurementWidth,
-                virtualWindowHeightPx: viewportHeight,
-                devicePixelRatio,
-                rowHeightPx: row.height,
-                measuredHeightPx: row.measuredHeightPx,
-                hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
-                shouldDehydrate: shouldDehydrateRow(row),
-                overlayRowElement: overlayRowElements.get(row.id) ?? null,
-                scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
-                scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
-                onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
-              })}
+              {@render row.snippet(getRowSnippetProps(row))}
             </div>
           </div>
         {/each}
@@ -250,30 +261,14 @@
         {#each visibleRows as row (row.id)}
           {#if rowNeedsOverlay(row)}
             {@const overlayRowElement = overlayRowElements.get(row.id) ?? null}
-            {@const overlaySnippet = rowRegistry[row.rowData.kind].overlaySnippet ?? null}
+            {@const overlaySnippet = getOverlaySnippet(row.rowData)}
             <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
               <div
                 use:registerOverlayRow={row.id}
                 style={`width:100%; height:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
               >
                 {#if overlaySnippet}
-                  {@render overlaySnippet({
-                    index: row.index,
-                    row: row.rowData,
-                    rowId: row.id,
-                    virtualWindowWidthPx: measurementWidth,
-                    virtualWindowHeightPx: viewportHeight,
-                    devicePixelRatio,
-                    rowHeightPx: row.height,
-                    measuredHeightPx: row.measuredHeightPx,
-                    hydrationPriority:
-                      hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
-                    shouldDehydrate: shouldDehydrateRow(row),
-                    overlayRowElement,
-                    scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
-                    scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
-                    onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
-                  })}
+                  {@render overlaySnippet(getRowSnippetProps(row, overlayRowElement))}
                 {/if}
               </div>
             </div>

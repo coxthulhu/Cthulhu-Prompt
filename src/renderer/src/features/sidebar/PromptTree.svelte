@@ -1,6 +1,5 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { SvelteMap } from 'svelte/reactivity'
   import {
     ArrowRight,
     ChevronDown,
@@ -11,11 +10,13 @@
     Settings
   } from 'lucide-svelte'
   import {
+    createDroppableStateRegistry,
     droppable,
-    type DroppableState
+    type DroppableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
+    type PromptHandleDropPayload,
     promptFolderSettingsDropId
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import {
@@ -37,8 +38,20 @@
   import {
     defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
-    type VirtualWindowItem
+    type VirtualWindowItem,
+    type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
+  import PromptTreeDropIndicator from './PromptTreeDropIndicator.svelte'
+  import {
+    folderIconTestId,
+    folderOpenTestId,
+    folderPromptDropIndicatorTestId,
+    folderPromptTestId,
+    folderSettingsDropIndicatorTestId,
+    folderSettingsIconTestId,
+    folderSettingsTestId,
+    folderToggleTestId
+  } from './promptTreeTestIds'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
 
@@ -56,6 +69,9 @@
         folder: PromptFolder
         promptId: string
       }
+
+  type PromptTreeOverlayRow = Extract<PromptTreeRow, { kind: 'folder-settings' | 'folder-prompt' }>
+  type PromptTreeOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeOverlayRow>
 
   let {
     promptFolders,
@@ -90,15 +106,17 @@
     },
     'folder-settings': {
       estimateHeight: () => 30,
-      needsOverlayRow: true,
       snippet: folderSettingsRow,
-      overlaySnippet: folderSettingsOverlay
+      overlayRow: {
+        snippet: promptTreeRowOverlay
+      }
     },
     'folder-prompt': {
       estimateHeight: () => 30,
-      needsOverlayRow: true,
-      snippet: folderPromptRow,
-      overlaySnippet: folderPromptOverlay
+      overlayRow: {
+        snippet: promptTreeRowOverlay
+      },
+      snippet: folderPromptRow
     }
   })
 
@@ -159,61 +177,27 @@
     setFolderExpanded(folderId, !isFolderExpanded(folderId))
   }
 
-  const folderSettingsTestId = (folder: PromptFolder): string =>
-    `prompt-folder-settings-${folder.folderName.replace(/\s+/g, '')}`
-
-  const folderToggleTestId = (folder: PromptFolder): string =>
-    `prompt-folder-toggle-${folder.folderName.replace(/\s+/g, '')}`
-
-  const folderOpenTestId = (folder: PromptFolder): string =>
-    `regular-prompt-folder-${folder.folderName.replace(/\s+/g, '')}`
-
-  const folderIconTestId = (folder: PromptFolder): string =>
-    `prompt-folder-icon-${folder.folderName.replace(/\s+/g, '')}`
-
-  const folderSettingsIconTestId = (folder: PromptFolder): string =>
-    `prompt-folder-settings-icon-${folder.folderName.replace(/\s+/g, '')}`
-
-  const folderPromptTestId = (promptId: string): string => `prompt-folder-prompt-${promptId}`
-  const folderSettingsDropIndicatorTestId = (folder: PromptFolder): string =>
-    `prompt-tree-drop-indicator-settings-${folder.folderName.replace(/\s+/g, '')}`
-  const folderPromptDropIndicatorTestId = (promptId: string): string =>
-    `prompt-tree-drop-indicator-prompt-${promptId}`
   const PROMPT_TREE_CHILD_ROW_CONTENT_INSET = '2.375rem'
 
   const folderSettingsRowId = (folderId: string): string => `${folderId}:settings`
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`
   const promptNavigationPromptRow = (promptId: string): PromptNavigationRow => `prompt:${promptId}`
-  const promptTreeDropOverByRowId = new SvelteMap<string, boolean>()
-  const promptTreeDropStateByRowId: Record<string, DroppableState | undefined> = Object.create(null)
+  const promptTreeDroppableState = createDroppableStateRegistry<string>()
 
-  const getPromptTreeDropState = (rowId: string): DroppableState => {
-    const existingState = promptTreeDropStateByRowId[rowId]
-    if (existingState) {
-      return existingState
-    }
+  const getPromptTreeDroppableOptions = (rowId: string, toId: string): DroppableOptions => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    payload: { toId } satisfies PromptHandleDropPayload,
+    state: promptTreeDroppableState.getState(rowId)
+  })
 
-    const nextState = {
-      get isOver() {
-        return promptTreeDropOverByRowId.get(rowId) ?? false
-      },
-      set isOver(value: boolean) {
-        if (value) {
-          promptTreeDropOverByRowId.set(rowId, true)
-          return
-        }
+  const isPromptTreeDropTargetOver = (rowId: string): boolean =>
+    promptTreeDroppableState.isOver(rowId)
 
-        promptTreeDropOverByRowId.delete(rowId)
-      }
-    } satisfies DroppableState
-
-    promptTreeDropStateByRowId[rowId] = nextState
-    return nextState
-  }
-
-  const getDropIndicatorStyle = (insetStart: string): string =>
-    `--sidebar-drop-indicator-inset-start:${insetStart};`
+  const getPromptTreeDropIndicatorTestId = (row: PromptTreeOverlayRow): string =>
+    row.kind === 'folder-settings'
+      ? folderSettingsDropIndicatorTestId(row.folder)
+      : folderPromptDropIndicatorTestId(row.promptId)
 
   const blurButtonAfterMouseClick = (event: MouseEvent) => {
     // Side effect: keep action-slot visibility stable by defocusing only real mouse clicks.
@@ -399,15 +383,10 @@
 
 {#snippet promptFolderRow(props)}
   {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
-  {@const dropState = getPromptTreeDropState(props.rowId)}
-  {@const isDropTargetOver = promptTreeDropOverByRowId.get(props.rowId) ?? false}
+  {@const isDropTargetOver = isPromptTreeDropTargetOver(props.rowId)}
 
   <div
-    use:droppable={{
-      dragType: PROMPT_HANDLE_DRAG_TYPE,
-      payload: { toId: props.row.folder.id },
-      state: dropState
-    }}
+    use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.folder.id)}
     class="sidebarPromptTreeRow group"
     data-active={isActive ? 'true' : 'false'}
     data-over={isDropTargetOver ? 'true' : 'false'}
@@ -487,14 +466,12 @@
 
 {#snippet folderSettingsRow(props)}
   {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
-  {@const dropState = getPromptTreeDropState(props.rowId)}
 
   <div
-    use:droppable={{
-      dragType: PROMPT_HANDLE_DRAG_TYPE,
-      payload: { toId: promptFolderSettingsDropId(props.row.folder.id) },
-      state: dropState
-    }}
+    use:droppable={getPromptTreeDroppableOptions(
+      props.rowId,
+      promptFolderSettingsDropId(props.row.folder.id)
+    )}
     class="sidebarPromptTreeSettingsRow"
   >
     <button
@@ -521,14 +498,9 @@
     props.row.folder.id,
     promptNavigationPromptRow(props.row.promptId)
   )}
-  {@const dropState = getPromptTreeDropState(props.rowId)}
 
   <div
-    use:droppable={{
-      dragType: PROMPT_HANDLE_DRAG_TYPE,
-      payload: { toId: props.row.promptId },
-      state: dropState
-    }}
+    use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.promptId)}
     class="sidebarPromptTreeSettingsRow"
   >
     <button
@@ -546,39 +518,18 @@
     >
       <FileText class="sidebarPromptTreeSettingsIcon" aria-hidden="true" />
       <span class="sidebarPromptTreeSettingsLabel"
-        >{promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}</span
+        >{promptTreeTitleById[props.row.promptId] ??
+          getPromptDisplayTitle(props.row.promptId)}</span
       >
     </button>
   </div>
 {/snippet}
 
-{#snippet folderSettingsOverlay(props)}
-  {@const isDropTargetOver = promptTreeDropOverByRowId.get(props.rowId) ?? false}
-
-  {#if isDropTargetOver}
-    {@render dropIndicator({
-      testId: folderSettingsDropIndicatorTestId(props.row.folder),
-      style: getDropIndicatorStyle(PROMPT_TREE_CHILD_ROW_CONTENT_INSET)
-    })}
+{#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
+  {#if isPromptTreeDropTargetOver(rowId)}
+    <PromptTreeDropIndicator
+      testId={getPromptTreeDropIndicatorTestId(row)}
+      insetStart={PROMPT_TREE_CHILD_ROW_CONTENT_INSET}
+    />
   {/if}
-{/snippet}
-
-{#snippet folderPromptOverlay(props)}
-  {@const isDropTargetOver = promptTreeDropOverByRowId.get(props.rowId) ?? false}
-
-  {#if isDropTargetOver}
-    {@render dropIndicator({
-      testId: folderPromptDropIndicatorTestId(props.row.promptId),
-      style: getDropIndicatorStyle(PROMPT_TREE_CHILD_ROW_CONTENT_INSET)
-    })}
-  {/if}
-{/snippet}
-
-{#snippet dropIndicator({ testId, style })}
-  <div class="sidebarPromptTreeDropIndicator" {style} data-testid={testId} aria-hidden="true">
-    <svg class="sidebarPromptTreeDropIndicatorSvg" width="100%" height="10">
-      <path class="sidebarPromptTreeDropIndicatorStroke" d="M3 1.5 L8 5 L3 8.5" />
-      <line class="sidebarPromptTreeDropIndicatorStroke" x1="8" y1="5" x2="100%" y2="5"></line>
-    </svg>
-  </div>
 {/snippet}
