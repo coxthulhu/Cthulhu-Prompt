@@ -17,13 +17,19 @@ export type PromptPersistenceFields = {
   workspaceId: string
   workspacePath: string
   folderName: string
+  previousFolderName?: string
   promptFolderId: string
   promptId: string
   promptStem: string
 }
 
-const isStemTaken = (folderPath: string, stem: string, currentStem: string): boolean => {
-  if (stem === currentStem) {
+const isStemTaken = (
+  folderPath: string,
+  stem: string,
+  currentStem: string,
+  currentFolderPath: string
+): boolean => {
+  if (stem === currentStem && folderPath === currentFolderPath) {
     return false
   }
 
@@ -36,10 +42,11 @@ const resolvePromptStem = (
   title: string,
   promptId: string,
   folderPath: string,
-  currentStem: string
+  currentStem: string,
+  currentFolderPath: string
 ): string => {
   return resolveUniquePromptStem(title, promptId, (stem) => {
-    return isStemTaken(folderPath, stem, currentStem)
+    return isStemTaken(folderPath, stem, currentStem, currentFolderPath)
   })
 }
 
@@ -50,20 +57,30 @@ const resolvePromptStemTitle = (title: string, promptFolderCount: number): strin
 
 export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersistenceFields> = {
   stageChanges: async (change) => {
-    const folderPath = resolvePromptFolderPath(
+    const currentFolderPath = resolvePromptFolderPath(
+      change.persistenceFields.workspacePath,
+      change.persistenceFields.previousFolderName ?? change.persistenceFields.folderName
+    )
+    const targetFolderPath = resolvePromptFolderPath(
       change.persistenceFields.workspacePath,
       change.persistenceFields.folderName
     )
     const currentStem = change.persistenceFields.promptStem
-    const currentPaths = resolvePromptPathsFromStem(folderPath, currentStem)
+    const currentPaths = resolvePromptPathsFromStem(currentFolderPath, currentStem)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([createStagedFileRemove(currentPaths.markdownPath)])
     }
 
     const stemTitle = resolvePromptStemTitle(change.data.title, change.data.promptFolderCount)
-    const stem = resolvePromptStem(stemTitle, change.data.id, folderPath, currentStem)
-    const targetPaths = resolvePromptPathsFromStem(folderPath, stem)
+    const stem = resolvePromptStem(
+      stemTitle,
+      change.data.id,
+      targetFolderPath,
+      currentStem,
+      currentFolderPath
+    )
+    const targetPaths = resolvePromptPathsFromStem(targetFolderPath, stem)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)
     const fs = getFs()
     fs.writeFileSync(markdownTempPath, serializePromptMarkdown(change.data), 'utf8')
@@ -77,8 +94,11 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
 
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
 
+    const { previousFolderName: _previousFolderName, ...nextPersistenceFields } =
+      change.persistenceFields
+
     return createPersistenceStageResult(fileChanges, {
-      ...change.persistenceFields,
+      ...nextPersistenceFields,
       promptStem: stem
     })
   },

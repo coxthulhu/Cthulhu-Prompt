@@ -72,3 +72,16 @@ export type DeletePromptPayload = {
 export type DeletePromptResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
 }
+
+export type MovePromptPayload = {
+  sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
+  destinationPromptFolder: RevisionPayloadEntity<PromptFolder>
+  prompt: RevisionPayloadEntity<PromptPersisted>
+  orderAfterPromptId: string | null
+}
+
+export type MovePromptResponsePayload = {
+  sourcePromptFolder: RevisionEnvelope<PromptFolder>
+  destinationPromptFolder: RevisionEnvelope<PromptFolder>
+  prompt: RevisionEnvelope<PromptPersisted>
+}

@@ -1,6 +1,7 @@
 import type {
   CreatePromptPayload,
   DeletePromptPayload,
+  MovePromptPayload,
   PromptPersisted,
   PromptRevisionPayload
 } from '@shared/Prompt'
@@ -349,6 +350,51 @@ const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
 const parseDeletePromptWireRequest: Parser<IpcRequestWithPayload<DeletePromptPayload>> =
   parseWireRequestWithPayload<DeletePromptPayload>(parseDeletePromptPayload)
 
+const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const valueKeys = Object.keys(record)
+
+  if (
+    valueKeys.length !== 4 ||
+    !('sourcePromptFolder' in record) ||
+    !('destinationPromptFolder' in record) ||
+    !('prompt' in record) ||
+    !('orderAfterPromptId' in record)
+  ) {
+    return null
+  }
+
+  const sourcePromptFolder = parsePromptFolderRevisionPayloadEntity(record.sourcePromptFolder)
+  const destinationPromptFolder = parsePromptFolderRevisionPayloadEntity(
+    record.destinationPromptFolder
+  )
+  const prompt = parsePromptRevisionPayloadEntity(record.prompt)
+
+  if (sourcePromptFolder === null || destinationPromptFolder === null || prompt === null) {
+    return null
+  }
+
+  const orderAfterPromptId = record.orderAfterPromptId
+
+  if (orderAfterPromptId !== null && typeof orderAfterPromptId !== 'string') {
+    return null
+  }
+
+  return {
+    sourcePromptFolder,
+    destinationPromptFolder,
+    prompt,
+    orderAfterPromptId
+  }
+}
+
+const parseMovePromptWireRequest: Parser<IpcRequestWithPayload<MovePromptPayload>> =
+  parseWireRequestWithPayload<MovePromptPayload>(parseMovePromptPayload)
+
 const parseSystemSettingsRevisionPayload = parseObject<SystemSettingsRevisionPayload>({
   systemSettings: parseSystemSettingsRevisionPayloadEntity
 })
@@ -429,6 +475,8 @@ export const parseUpdatePromptFolderRevisionRequest = createRequestParser(
 )
 
 export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
+
+export const parseMovePromptRequest = createRequestParser(parseMovePromptWireRequest)
 
 export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
   parseUpdateSystemSettingsRevisionWireRequest
