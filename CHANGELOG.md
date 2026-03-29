@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.12
+
+### New Features
+
+- Added sidebar drag-and-drop for moving prompts within a folder and between folders.
+- Moved prompt metadata into Markdown frontmatter and split folder descriptions into their own Markdown files.
+
+### Changes
+
+- Simplified prompt file metadata by standardizing on `createdAt` and removing modified-date tracking.
+- Refined prompt-tree drag/drop indicators, overlay behavior, and cursor feedback.
+
+### Fixed
+
+- Fixed prompt-tree fallback titles for unopened untitled prompts.
+- Fixed prompt drag/drop hit testing and scroll anchoring in long prompt lists.
+
 ## 0.0.11
 
 ### New Features
