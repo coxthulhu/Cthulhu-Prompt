@@ -31,7 +31,9 @@ const getLoadedEntries = <TData, TPersistenceFields>(
 }
 
 export const filterLoadedPromptIds = (promptIds: string[]): string[] => {
-  return filterLoadedEntityIds(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
+  return filterLoadedEntityIds(promptIds, (promptId) =>
+    data.prompt.committedStore.getEntry(promptId)
+  )
 }
 
 export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntry[] => {

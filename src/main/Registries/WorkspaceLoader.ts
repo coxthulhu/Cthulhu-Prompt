@@ -2,7 +2,11 @@ import * as path from 'path'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
-import { readPromptFolders, readPromptStemByPromptId, readWorkspaceId } from '../DataAccess/WorkspaceReads'
+import {
+  readPromptFolders,
+  readPromptStemByPromptId,
+  readWorkspaceId
+} from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { data } from '../Data/Data'

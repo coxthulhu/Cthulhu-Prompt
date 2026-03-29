@@ -48,10 +48,7 @@ const resolvePromptStemTitle = (title: string, promptFolderCount: number): strin
   return trimmedTitle.length > 0 ? title : `Prompt ${promptFolderCount}`
 }
 
-export const promptPersistence: PersistenceLayer<
-  PromptPersisted,
-  PromptPersistenceFields
-> = {
+export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersistenceFields> = {
   stageChanges: async (change) => {
     const folderPath = resolvePromptFolderPath(
       change.persistenceFields.workspacePath,

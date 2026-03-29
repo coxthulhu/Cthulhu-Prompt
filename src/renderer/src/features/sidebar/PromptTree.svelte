@@ -467,9 +467,7 @@
 {#snippet folderSettingsRow(props)}
   {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
 
-  <div
-    class="sidebarPromptTreeSettingsRow"
-  >
+  <div class="sidebarPromptTreeSettingsRow">
     <button
       use:droppable={getPromptTreeDroppableOptions(
         props.rowId,
@@ -499,9 +497,7 @@
     promptNavigationPromptRow(props.row.promptId)
   )}
 
-  <div
-    class="sidebarPromptTreeSettingsRow"
-  >
+  <div class="sidebarPromptTreeSettingsRow">
     <button
       use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.promptId)}
       type="button"

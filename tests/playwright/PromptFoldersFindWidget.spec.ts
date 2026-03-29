@@ -20,7 +20,10 @@ const FIND_MATCHES_LABEL = '[data-testid="prompt-find-widget"] .prompt-find-widg
 const SETTINGS_ROW_SELECTOR =
   '[data-testid="prompt-folder-screen"] [data-virtual-window-row][data-testid^="prompt-folder-settings-"]'
 const LOOP_REGRESSION_QUERY = 'cthulhu-loop-regression-marker-9x4k'
-const LOOP_MATCH_PROMPT_IDS = Array.from({ length: 19 }, (_, index) => `loop-test-${2 + index * 60}`)
+const LOOP_MATCH_PROMPT_IDS = Array.from(
+  { length: 19 },
+  (_, index) => `loop-test-${2 + index * 60}`
+)
 const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 
@@ -28,79 +31,73 @@ const getMonacoSelectedText = async (
   mainWindow: any,
   editorSelector: string
 ): Promise<string | null> => {
-  return await mainWindow.evaluate(
-    (selector) => {
-      const monacoNode = document.querySelector(`${selector} .monaco-editor`)
-      if (!monacoNode) return null
+  return await mainWindow.evaluate((selector) => {
+    const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+    if (!monacoNode) return null
 
-      const registry = (
-        window as unknown as {
-          __cthulhuMonacoEditors?: Array<{
-            container: HTMLElement | null
-            editor: {
-              getModel: () => {
-                getValueInRange: (range: any) => string
-              } | null
-              getSelection: () => any
-            }
-          }>
-        }
-      ).__cthulhuMonacoEditors
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getModel: () => {
+              getValueInRange: (range: any) => string
+            } | null
+            getSelection: () => any
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
 
-      if (!registry?.length) return null
+    if (!registry?.length) return null
 
-      const entry = registry.find((item) => {
-        if (!item?.container) return false
-        return item.container === monacoNode || item.container.contains(monacoNode)
-      })
-      if (!entry) return null
+    const entry = registry.find((item) => {
+      if (!item?.container) return false
+      return item.container === monacoNode || item.container.contains(monacoNode)
+    })
+    if (!entry) return null
 
-      const model = entry.editor.getModel()
-      const selection = entry.editor.getSelection()
-      if (!model || !selection) return null
+    const model = entry.editor.getModel()
+    const selection = entry.editor.getSelection()
+    if (!model || !selection) return null
 
-      return model.getValueInRange(selection)
-    },
-    editorSelector
-  )
+    return model.getValueInRange(selection)
+  }, editorSelector)
 }
 
 const getMonacoWordAtCursor = async (
   mainWindow: any,
   editorSelector: string
 ): Promise<string | null> => {
-  return await mainWindow.evaluate(
-    (selector) => {
-      const monacoNode = document.querySelector(`${selector} .monaco-editor`)
-      if (!monacoNode) return null
+  return await mainWindow.evaluate((selector) => {
+    const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+    if (!monacoNode) return null
 
-      const registry = (
-        window as unknown as {
-          __cthulhuMonacoEditors?: Array<{
-            container: HTMLElement | null
-            editor: {
-              getConfiguredWordAtPosition: (position: any) => { word: string } | null
-              getPosition: () => any
-            }
-          }>
-        }
-      ).__cthulhuMonacoEditors
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getConfiguredWordAtPosition: (position: any) => { word: string } | null
+            getPosition: () => any
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
 
-      if (!registry?.length) return null
+    if (!registry?.length) return null
 
-      const entry = registry.find((item) => {
-        if (!item?.container) return false
-        return item.container === monacoNode || item.container.contains(monacoNode)
-      })
-      if (!entry) return null
+    const entry = registry.find((item) => {
+      if (!item?.container) return false
+      return item.container === monacoNode || item.container.contains(monacoNode)
+    })
+    if (!entry) return null
 
-      const position = entry.editor.getPosition()
-      if (!position) return null
+    const position = entry.editor.getPosition()
+    if (!position) return null
 
-      return entry.editor.getConfiguredWordAtPosition(position)?.word ?? null
-    },
-    editorSelector
-  )
+    return entry.editor.getConfiguredWordAtPosition(position)?.word ?? null
+  }, editorSelector)
 }
 
 const getFindMatchesLabelText = async (mainWindow: any): Promise<string> => {
@@ -121,14 +118,11 @@ const getCurrentFindMatchRowTestId = async (mainWindow: any): Promise<string | n
 const getMonacoSelectionState = async (
   mainWindow: any,
   editorSelector: string
-): Promise<
-  | {
-      selectedText: string
-      startLineNumber: number
-      startColumn: number
-    }
-  | null
-> => {
+): Promise<{
+  selectedText: string
+  startLineNumber: number
+  startColumn: number
+} | null> => {
   return await mainWindow.evaluate((selector) => {
     const monacoNode = document.querySelector(`${selector} .monaco-editor`)
     if (!monacoNode) return null
@@ -648,7 +642,9 @@ describe('Prompt folder find dialog', () => {
       .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 4, startColumn: 1 })
 
     await findInput.fill('')
-    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('No results')
+    await expect
+      .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
+      .toBe('No results')
 
     await findInput.fill(TYPING_ANCHOR_QUERY)
     await expect
@@ -835,7 +831,9 @@ describe('Prompt folder find dialog', () => {
       .toEqual({ text: bodyQuery, hasDomFocus: false })
 
     await findInput.fill('nonmatching-query-0001')
-    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('No results')
+    await expect
+      .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
+      .toBe('No results')
 
     await mainWindow.keyboard.press('Escape')
     await expect(findInput).toHaveCount(0)
@@ -1025,12 +1023,12 @@ describe('Prompt folder find dialog', () => {
       const expectedLabel = `${expectedMatchNumber} of ${totalMatches}`
       const expectedRowId = expectedRowIdsByStep[expectedMatchNumber - 1]
 
-      await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe(
-        expectedLabel
-      )
-      await expect.poll(() => getCurrentFindMatchRowTestId(mainWindow), { timeout: 5000 }).toBe(
-        expectedRowId
-      )
+      await expect
+        .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
+        .toBe(expectedLabel)
+      await expect
+        .poll(() => getCurrentFindMatchRowTestId(mainWindow), { timeout: 5000 })
+        .toBe(expectedRowId)
     }
   })
 
@@ -1059,9 +1057,7 @@ describe('Prompt folder find dialog', () => {
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
     await findInput.fill(RAPID_LOOP_QUERY)
-    await expect
-      .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
-      .toBe('1 of 12')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('1 of 12')
 
     await mainWindow.evaluate((selector) => {
       const label = document.querySelector<HTMLElement>(selector)
@@ -1103,9 +1099,11 @@ describe('Prompt folder find dialog', () => {
         async () =>
           await mainWindow.evaluate(() => {
             const events =
-              (window as unknown as {
-                __promptFindLabelEvents?: Array<{ current: number; total: number }>
-              }).__promptFindLabelEvents ?? []
+              (
+                window as unknown as {
+                  __promptFindLabelEvents?: Array<{ current: number; total: number }>
+                }
+              ).__promptFindLabelEvents ?? []
             const compressed: Array<{ current: number; total: number }> = []
             for (const event of events) {
               const previous = compressed.at(-1)
@@ -1125,9 +1123,11 @@ describe('Prompt folder find dialog', () => {
 
     const labelEvents = await mainWindow.evaluate(() => {
       const events =
-        (window as unknown as {
-          __promptFindLabelEvents?: Array<{ current: number; total: number }>
-        }).__promptFindLabelEvents ?? []
+        (
+          window as unknown as {
+            __promptFindLabelEvents?: Array<{ current: number; total: number }>
+          }
+        ).__promptFindLabelEvents ?? []
       const compressed: Array<{ current: number; total: number }> = []
       for (const event of events) {
         const previous = compressed.at(-1)

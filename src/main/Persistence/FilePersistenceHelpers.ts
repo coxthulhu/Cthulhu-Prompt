@@ -109,17 +109,13 @@ export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange
   }
 }
 
-export const commitStagedFileChanges = (
-  stagedChanges: FilePersistenceStagedChange[]
-): void => {
+export const commitStagedFileChanges = (stagedChanges: FilePersistenceStagedChange[]): void => {
   for (const fileChange of stagedChanges) {
     commitStagedFileChange(fileChange)
   }
 }
 
-export const revertStagedFileChanges = (
-  stagedChanges: FilePersistenceStagedChange[]
-): void => {
+export const revertStagedFileChanges = (stagedChanges: FilePersistenceStagedChange[]): void => {
   for (const fileChange of stagedChanges) {
     revertStagedFileChange(fileChange)
   }

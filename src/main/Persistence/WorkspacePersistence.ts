@@ -21,10 +21,7 @@ const resolveTargetPath = (workspacePath: string): string => {
   return path.join(workspacePath, WORKSPACE_INFO_FILENAME)
 }
 
-export const workspacePersistence: PersistenceLayer<
-  Workspace,
-  WorkspacePersistenceFields
-> = {
+export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
   stageChanges: async (change) => {
     const targetPath = resolveTargetPath(change.persistenceFields.workspacePath)
 

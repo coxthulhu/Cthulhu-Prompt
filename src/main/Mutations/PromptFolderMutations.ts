@@ -114,7 +114,9 @@ export const setupPromptFolderMutationHandlers = (): void => {
           }
 
           const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-          const createdPromptFolder = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
+          const createdPromptFolder = data.promptFolder.committedStore.getEntry(
+            payload.promptFolderId
+          )
 
           if (!updatedWorkspace || !createdPromptFolder) {
             return { success: false, error: 'Prompt folder create commit did not complete' }

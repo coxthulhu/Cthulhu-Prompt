@@ -24,7 +24,9 @@ export const setupPromptFolderQueryHandlers = (): void => {
         parseLoadPromptFolderInitialRequest,
         async (validatedRequest) => {
           const payload = validatedRequest.payload
-          const promptFolderEntry = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
+          const promptFolderEntry = data.promptFolder.committedStore.getEntry(
+            payload.promptFolderId
+          )
 
           if (!promptFolderEntry) {
             return { success: false, error: 'Prompt folder not loaded' }

@@ -4,7 +4,10 @@ import { WordOperations } from '@codingame/monaco-vscode-api/vscode/vs/editor/co
 
 export type PromptFolderFindSearchModel = {
   countMatchesInText: (text: string, query: string) => number
-  getWordAtOffset: (text: string, offset: number) => { word: string; start: number; end: number } | null
+  getWordAtOffset: (
+    text: string,
+    offset: number
+  ) => { word: string; start: number; end: number } | null
   dispose: () => void
 }
 

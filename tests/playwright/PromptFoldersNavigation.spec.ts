@@ -254,9 +254,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeVisible()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
-      .toBe(0)
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
     await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
   })
 

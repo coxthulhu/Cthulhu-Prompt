@@ -13,8 +13,14 @@ export const resolvePromptFolderPath = (workspacePath: string, folderName: strin
   return path.join(workspacePath, PROMPTS_DIRECTORY_NAME, folderName)
 }
 
-export const resolvePromptFolderConfigPath = (workspacePath: string, folderName: string): string => {
-  return path.join(resolvePromptFolderPath(workspacePath, folderName), PROMPT_FOLDER_CONFIG_FILENAME)
+export const resolvePromptFolderConfigPath = (
+  workspacePath: string,
+  folderName: string
+): string => {
+  return path.join(
+    resolvePromptFolderPath(workspacePath, folderName),
+    PROMPT_FOLDER_CONFIG_FILENAME
+  )
 }
 
 export const resolvePromptFolderDescriptionPath = (

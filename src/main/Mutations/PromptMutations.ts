@@ -4,10 +4,7 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
-import {
-  buildPromptFolderSnapshot,
-  buildPromptSnapshot
-} from '../Data/DataSnapshotHelpers'
+import { buildPromptFolderSnapshot, buildPromptSnapshot } from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
@@ -158,7 +155,9 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.promptIds = draft.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
+                  draft.promptIds = draft.promptIds.filter(
+                    (currentPromptId) => currentPromptId !== promptId
+                  )
                 }
               }),
               prompt: tx.prompt.delete({

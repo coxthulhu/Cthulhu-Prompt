@@ -6,19 +6,13 @@ import { enqueueGlobalMutation } from './GlobalMutationQueue'
 
 type DataStoreKey = keyof typeof data
 
-type StoreData<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extends RevisionData<
-  infer TData,
-  any
->
-  ? TData
-  : never
+type StoreData<TStoreKey extends DataStoreKey> =
+  (typeof data)[TStoreKey] extends RevisionData<infer TData, any> ? TData : never
 
-type StorePersistenceFields<TStoreKey extends DataStoreKey> = (typeof data)[TStoreKey] extends RevisionData<
-  any,
-  infer TPersistenceFields
->
-  ? TPersistenceFields
-  : never
+type StorePersistenceFields<TStoreKey extends DataStoreKey> =
+  (typeof data)[TStoreKey] extends RevisionData<any, infer TPersistenceFields>
+    ? TPersistenceFields
+    : never
 
 type AtomicDataCreateOperation = {
   type: 'create'
@@ -103,31 +97,25 @@ type AtomicDataTransactionHandles = Record<
   AtomicDataTransactionHandle<DataStoreKey, unknown, number | null>
 >
 
-type AtomicDataResultFromHandle<THandle> = THandle extends AtomicDataTransactionHandle<
-  infer TStoreKey,
-  infer TData,
-  infer TRevision
->
-  ? AtomicDataCommittedResult<TStoreKey, TData, TRevision>
-  : never
+type AtomicDataResultFromHandle<THandle> =
+  THandle extends AtomicDataTransactionHandle<infer TStoreKey, infer TData, infer TRevision>
+    ? AtomicDataCommittedResult<TStoreKey, TData, TRevision>
+    : never
 
 type AtomicDataTransactionResultMap<THandles extends AtomicDataTransactionHandles> = {
   [TKey in keyof THandles]: AtomicDataResultFromHandle<THandles[TKey]>
 }
 
-type AtomicDataConflictFromHandle<THandle> = THandle extends AtomicDataTransactionHandle<
-  infer TStoreKey,
-  any,
-  any
->
-  ? {
-      store: TStoreKey
-      id: string
-      expectedRevision: number
-      actualRevision: number
-      data: StoreData<TStoreKey>
-    }
-  : never
+type AtomicDataConflictFromHandle<THandle> =
+  THandle extends AtomicDataTransactionHandle<infer TStoreKey, any, any>
+    ? {
+        store: TStoreKey
+        id: string
+        expectedRevision: number
+        actualRevision: number
+        data: StoreData<TStoreKey>
+      }
+    : never
 
 type AtomicDataTransactionConflictsForLabel<
   THandles extends AtomicDataTransactionHandles,
@@ -299,7 +287,9 @@ const stageAtomicDataOperations = async (
       const committedEntry = revisionData.committedStore.getEntry(operation.id)
 
       if (!committedEntry) {
-        throw new Error(`Cannot ${operation.type} ${operation.store}:${operation.id}; missing entry`)
+        throw new Error(
+          `Cannot ${operation.type} ${operation.store}:${operation.id}; missing entry`
+        )
       }
 
       // Side effect: run CAS checks while this transaction is already serialized in the mutation queue.
@@ -456,7 +446,9 @@ const assertBuilderResultShape: (
   result: unknown
 ) => asserts result is AtomicDataTransactionHandles = (result) => {
   if (!result || typeof result !== 'object' || Array.isArray(result)) {
-    throw new Error('Atomic transaction builder must return a labeled object of transaction handles')
+    throw new Error(
+      'Atomic transaction builder must return a labeled object of transaction handles'
+    )
   }
 }
 
@@ -466,10 +458,9 @@ const mapResultHandlesToCommittedResults = <THandles extends AtomicDataTransacti
 ): AtomicDataTransactionResultMap<THandles> => {
   const mappedResults = {} as AtomicDataTransactionResultMap<THandles>
 
-  for (const [label, handle] of Object.entries(handles) as Array<[
-    keyof THandles,
-    THandles[keyof THandles]
-  ]>) {
+  for (const [label, handle] of Object.entries(handles) as Array<
+    [keyof THandles, THandles[keyof THandles]]
+  >) {
     const committedResult = committedResults[handle.operationIndex]
 
     if (!committedResult) {

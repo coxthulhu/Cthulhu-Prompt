@@ -61,7 +61,10 @@ const writeExamplePrompts = (workspacePath: string): void => {
 
   for (const prompt of examplePrompts) {
     const promptStem = resolvePromptStem(prompt.title, prompt.id, usedStems)
-    const markdownPath = path.join(exampleFolderPath, `${promptStem}${PROMPT_MARKDOWN_FILENAME_SUFFIX}`)
+    const markdownPath = path.join(
+      exampleFolderPath,
+      `${promptStem}${PROMPT_MARKDOWN_FILENAME_SUFFIX}`
+    )
 
     fs.writeFileSync(markdownPath, serializePromptMarkdown(prompt), 'utf8')
     promptIds.push(prompt.id)

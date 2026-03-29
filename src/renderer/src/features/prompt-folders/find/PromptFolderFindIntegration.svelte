@@ -142,9 +142,7 @@
         return
       }
       const navigationAnchor = effectiveSelectionAnchor ?? lastSelectionAnchor
-      const anchorIndex = navigationAnchor
-        ? getNextMatchIndexFromAnchor(navigationAnchor)
-        : null
+      const anchorIndex = navigationAnchor ? getNextMatchIndexFromAnchor(navigationAnchor) : null
       setCurrentMatchIndex(anchorIndex ?? 1)
       return
     }
@@ -189,7 +187,9 @@
     lastSelectionAnchor = { ...anchor, startOffset, endOffset }
   }
 
-  const getEffectiveSelectionAnchor = (anchor: PromptFolderFindAnchor): PromptFolderFindAnchor | null => {
+  const getEffectiveSelectionAnchor = (
+    anchor: PromptFolderFindAnchor
+  ): PromptFolderFindAnchor | null => {
     const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
     if (sectionText.length === 0) return null
 
@@ -413,8 +413,8 @@
     if (totalMatches === 0) return
     const anchorIndex =
       currentMatchIndex <= 0 && lastSelectionAnchor
-      ? getPreviousMatchIndexFromAnchor(lastSelectionAnchor)
-      : null
+        ? getPreviousMatchIndexFromAnchor(lastSelectionAnchor)
+        : null
     const nextIndex =
       anchorIndex ?? (currentMatchIndex <= 1 ? totalMatches : Math.max(1, currentMatchIndex - 1))
     setCurrentMatchIndex(nextIndex)
@@ -425,8 +425,8 @@
     if (totalMatches === 0) return
     const anchorIndex =
       currentMatchIndex <= 0 && lastSelectionAnchor
-      ? getNextMatchIndexFromAnchor(lastSelectionAnchor)
-      : null
+        ? getNextMatchIndexFromAnchor(lastSelectionAnchor)
+        : null
     const nextIndex =
       anchorIndex ??
       (currentMatchIndex <= 0 || currentMatchIndex >= totalMatches ? 1 : currentMatchIndex + 1)

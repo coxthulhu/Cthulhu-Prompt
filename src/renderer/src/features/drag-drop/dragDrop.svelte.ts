@@ -133,7 +133,11 @@ const getClosestRegisteredDroppable = (
   return null
 }
 
-const getDropTargetFromPoint = (x: number, y: number, dragType: string): DroppableRegistration | null => {
+const getDropTargetFromPoint = (
+  x: number,
+  y: number,
+  dragType: string
+): DroppableRegistration | null => {
   for (const element of document.elementsFromPoint(x, y)) {
     const registration = getClosestRegisteredDroppable(
       element instanceof Element ? element : null,

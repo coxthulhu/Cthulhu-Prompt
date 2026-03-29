@@ -767,10 +767,9 @@ describe('User Persistence', () => {
       workspace: { scenario: 'none' }
     })
 
-    await expect(mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')
+    ).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator('[data-testid="prompt-folder-settings-Examples"]')).toHaveCount(
       0
     )

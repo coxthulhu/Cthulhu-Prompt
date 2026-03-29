@@ -14,16 +14,13 @@ export type CommittedStore<TData, TPersistenceFields> = {
   remove: (id: string) => void
 }
 
-export const createCommittedStore = <
+export const createCommittedStore = <TData, TPersistenceFields>(): CommittedStore<
   TData,
   TPersistenceFields
->(): CommittedStore<TData, TPersistenceFields> => {
+> => {
   let entriesById: Record<string, CommittedEntry<TData, TPersistenceFields>> = {}
 
-  const upsertEntry = (
-    id: string,
-    entry: CommittedEntry<TData, TPersistenceFields>
-  ): void => {
+  const upsertEntry = (id: string, entry: CommittedEntry<TData, TPersistenceFields>): void => {
     entriesById = {
       ...entriesById,
       [id]: entry
