@@ -1,3 +1,4 @@
+import { tick } from 'svelte'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type PromptFull } from '@shared/Prompt'
@@ -25,8 +26,7 @@ import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-import { createPrompt, deletePrompt } from '@renderer/data/Mutations/PromptMutations'
-import { reorderPromptFolderPrompts } from '@renderer/data/Mutations/PromptFolderMutations'
+import { createPrompt, deletePrompt, movePrompt } from '@renderer/data/Mutations/PromptMutations'
 import {
   lookupPromptFolderDescriptionMeasuredHeight,
   lookupPromptFolderScrollTop,
@@ -55,6 +55,7 @@ import {
   promptFolderSettingsFindEntityId
 } from './promptFolderRowIds'
 import { estimatePromptFolderSettingsHeight } from './promptFolderSettingsSizing'
+import type { PromptHandleDropPayload } from '../drag-drop/promptHandleDrag'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -474,7 +475,7 @@ export const createPromptFolderScreenController = ({
   const reorderPromptIds = (
     currentPromptIds: string[],
     promptId: string,
-    previousPromptId: string | null
+    orderAfterPromptId: string | null
   ): string[] | null => {
     const currentIndex = currentPromptIds.indexOf(promptId)
     if (currentIndex === -1) {
@@ -484,12 +485,12 @@ export const createPromptFolderScreenController = ({
     const nextPromptIds = [...currentPromptIds]
     nextPromptIds.splice(currentIndex, 1)
 
-    if (previousPromptId == null) {
+    if (orderAfterPromptId == null) {
       nextPromptIds.unshift(promptId)
       return nextPromptIds
     }
 
-    const previousIndex = nextPromptIds.indexOf(previousPromptId)
+    const previousIndex = nextPromptIds.indexOf(orderAfterPromptId)
     if (previousIndex === -1) {
       return null
     }
@@ -498,27 +499,65 @@ export const createPromptFolderScreenController = ({
     return nextPromptIds
   }
 
-  const reorderPromptInFolder = async (
+  const arePromptIdOrdersEqual = (left: string[], right: string[]): boolean => {
+    return (
+      left.length === right.length && left.every((promptId, index) => promptId === right[index])
+    )
+  }
+
+  const rerunSelectionAfterPromptMove = async (): Promise<void> => {
+    await tick()
+
+    const centeredRow = latestCenteredPromptTreeRow
+    if (centeredRow?.kind === 'prompt' && !visiblePromptIds.includes(centeredRow.promptId)) {
+      setCurrentFolderSelection(resolveHeaderSelectionRow(activeHeaderRowId), 'scroll-follow', {
+        forceVersionBump: true
+      })
+      return
+    }
+
+    const nextRow =
+      resolveScrollFollowRow(centeredRow) ?? resolveHeaderSelectionRow(activeHeaderRowId)
+    setCurrentFolderSelection(nextRow, 'scroll-follow', {
+      forceVersionBump: true
+    })
+  }
+
+  const movePromptFromCurrentFolder = async (
     promptId: string,
-    previousPromptId: string | null
+    destinationPromptFolderId: string,
+    orderAfterPromptId: string | null
   ): Promise<boolean> => {
     const currentPromptFolder = promptFolder
     if (!currentPromptFolder) {
       return false
     }
 
-    const nextPromptIds = reorderPromptIds(
-      currentPromptFolder.promptIds,
-      promptId,
-      previousPromptId
-    )
-    if (!nextPromptIds) {
+    const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
+    if (!destinationPromptFolder) {
       return false
+    }
+
+    if (currentPromptFolder.id === destinationPromptFolderId) {
+      const nextPromptIds = reorderPromptIds(
+        currentPromptFolder.promptIds,
+        promptId,
+        orderAfterPromptId
+      )
+      if (!nextPromptIds || arePromptIdOrdersEqual(currentPromptFolder.promptIds, nextPromptIds)) {
+        return false
+      }
     }
 
     return await runIpcBestEffort(
       async () => {
-        await reorderPromptFolderPrompts(currentPromptFolder.id, nextPromptIds)
+        await movePrompt(
+          currentPromptFolder.id,
+          destinationPromptFolderId,
+          promptId,
+          orderAfterPromptId
+        )
+        await rerunSelectionAfterPromptMove()
         return true
       },
       () => false
@@ -571,7 +610,7 @@ export const createPromptFolderScreenController = ({
     }
 
     const previousPromptId = currentIndex <= 1 ? null : currentPromptIds[currentIndex - 2]
-    return await reorderPromptInFolder(nextPromptId, previousPromptId)
+    return await movePromptFromCurrentFolder(nextPromptId, promptFolderId, previousPromptId)
   }
 
   const handleMovePromptDown = async (nextPromptId: string): Promise<boolean> => {
@@ -582,7 +621,37 @@ export const createPromptFolderScreenController = ({
     }
 
     const previousPromptId = currentPromptIds[currentIndex + 1]
-    return await reorderPromptInFolder(nextPromptId, previousPromptId)
+    return await movePromptFromCurrentFolder(nextPromptId, promptFolderId, previousPromptId)
+  }
+
+  const handlePromptTreeDrop = (
+    draggedPromptId: string,
+    dropPayload: PromptHandleDropPayload | null
+  ) => {
+    if (!dropPayload) {
+      return
+    }
+
+    const nextMove =
+      dropPayload.kind === 'prompt'
+        ? {
+            destinationPromptFolderId: dropPayload.folderId,
+            orderAfterPromptId: dropPayload.promptId
+          }
+        : {
+            destinationPromptFolderId: dropPayload.folderId,
+            orderAfterPromptId: null
+          }
+
+    if (dropPayload.kind === 'prompt' && dropPayload.promptId === draggedPromptId) {
+      return
+    }
+
+    void movePromptFromCurrentFolder(
+      draggedPromptId,
+      nextMove.destinationPromptFolderId,
+      nextMove.orderAfterPromptId
+    )
   }
 
   const handleDescriptionChange = (text: string, measurement: TextMeasurement) => {
@@ -740,6 +809,7 @@ export const createPromptFolderScreenController = ({
     handleDeletePrompt,
     handleMovePromptUp,
     handleMovePromptDown,
+    handlePromptTreeDrop,
     handleDescriptionChange,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,

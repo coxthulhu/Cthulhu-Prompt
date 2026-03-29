@@ -16,8 +16,7 @@
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
-    type PromptHandleDropPayload,
-    promptFolderSettingsDropId
+    type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import {
     type PromptDraftRecord,
@@ -185,9 +184,12 @@
   const promptNavigationPromptRow = (promptId: string): PromptNavigationRow => `prompt:${promptId}`
   const promptTreeDroppableState = createDroppableStateRegistry<string>()
 
-  const getPromptTreeDroppableOptions = (rowId: string, toId: string): DroppableOptions => ({
+  const getPromptTreeDroppableOptions = (
+    rowId: string,
+    dropPayload: PromptHandleDropPayload
+  ): DroppableOptions => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
-    payload: { toId } satisfies PromptHandleDropPayload,
+    payload: dropPayload,
     state: promptTreeDroppableState.getState(rowId)
   })
 
@@ -386,7 +388,10 @@
   {@const isDropTargetOver = isPromptTreeDropTargetOver(props.rowId)}
 
   <div
-    use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.folder.id)}
+    use:droppable={getPromptTreeDroppableOptions(props.rowId, {
+      kind: 'folder',
+      folderId: props.row.folder.id
+    })}
     class="sidebarPromptTreeRow group"
     data-active={isActive ? 'true' : 'false'}
     data-over={isDropTargetOver ? 'true' : 'false'}
@@ -469,10 +474,10 @@
 
   <div class="sidebarPromptTreeSettingsRow">
     <button
-      use:droppable={getPromptTreeDroppableOptions(
-        props.rowId,
-        promptFolderSettingsDropId(props.row.folder.id)
-      )}
+      use:droppable={getPromptTreeDroppableOptions(props.rowId, {
+        kind: 'folder-settings',
+        folderId: props.row.folder.id
+      })}
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
       data-active={isActive ? 'true' : 'false'}
@@ -499,7 +504,11 @@
 
   <div class="sidebarPromptTreeSettingsRow">
     <button
-      use:droppable={getPromptTreeDroppableOptions(props.rowId, props.row.promptId)}
+      use:droppable={getPromptTreeDroppableOptions(props.rowId, {
+        kind: 'prompt',
+        folderId: props.row.folder.id,
+        promptId: props.row.promptId
+      })}
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}

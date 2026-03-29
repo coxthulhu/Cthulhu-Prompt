@@ -76,6 +76,7 @@
           onDeletePrompt={controller.handleDeletePrompt}
           onMovePromptUp={controller.handleMovePromptUp}
           onMovePromptDown={controller.handleMovePromptDown}
+          onPromptTreeDrop={controller.handlePromptTreeDrop}
           onDescriptionChange={controller.handleDescriptionChange}
           onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
           onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}

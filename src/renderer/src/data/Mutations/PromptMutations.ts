@@ -5,6 +5,8 @@ import {
   type CreatePromptResponsePayload,
   type DeletePromptPayload,
   type DeletePromptResponsePayload,
+  type MovePromptPayload,
+  type MovePromptResponsePayload,
   type Prompt,
   type PromptFull,
   type PromptPersisted,
@@ -60,6 +62,18 @@ const readLatestPromptFromTransaction = (
   )
 
   return toPersistedPrompt(prompt)
+}
+
+const resolvePromptInsertIndex = (
+  promptIds: string[],
+  orderAfterPromptId: string | null
+): number | null => {
+  if (orderAfterPromptId === null) {
+    return 0
+  }
+
+  const previousIndex = promptIds.indexOf(orderAfterPromptId)
+  return previousIndex === -1 ? null : previousIndex + 1
 }
 
 export const createPrompt = async (
@@ -245,5 +259,106 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
       // Side effect: clear the prompt revision cache after the delete commit succeeds.
       promptCollection.utils.deleteAuthoritative(promptId)
     }
+  })
+}
+
+export const movePrompt = async (
+  sourcePromptFolderId: string,
+  destinationPromptFolderId: string,
+  promptId: string,
+  orderAfterPromptId: string | null
+): Promise<void> => {
+  const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
+  if (!sourcePromptFolder) {
+    throw new Error('Source prompt folder not loaded')
+  }
+
+  const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
+  if (!destinationPromptFolder) {
+    throw new Error('Destination prompt folder not loaded')
+  }
+
+  const prompt = promptCollection.get(promptId)
+  if (!prompt || !isPromptFull(prompt)) {
+    throw new Error('Prompt not fully loaded')
+  }
+
+  const persistedPrompt = toPersistedPrompt(prompt)
+  const isSameFolder = sourcePromptFolderId === destinationPromptFolderId
+  const destinationPromptIds = isSameFolder
+    ? sourcePromptFolder.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
+    : destinationPromptFolder.promptIds
+  const insertIndex = resolvePromptInsertIndex(destinationPromptIds, orderAfterPromptId)
+
+  if (insertIndex === null) {
+    throw new Error('Order-after prompt not found')
+  }
+
+  await runRevisionMutation<MovePromptResponsePayload>({
+    mutateOptimistically: ({ collections }) => {
+      if (isSameFolder) {
+        collections.promptFolder.update(sourcePromptFolderId, (draft) => {
+          const nextPromptIds = draft.promptIds.filter(
+            (currentPromptId) => currentPromptId !== promptId
+          )
+          nextPromptIds.splice(insertIndex, 0, promptId)
+          draft.promptIds = nextPromptIds
+        })
+        return
+      }
+
+      collections.promptFolder.update(sourcePromptFolderId, (draft) => {
+        draft.promptIds = draft.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
+        draft.promptCount -= 1
+      })
+      collections.promptFolder.update(destinationPromptFolderId, (draft) => {
+        const nextPromptIds = [...draft.promptIds]
+        nextPromptIds.splice(insertIndex, 0, promptId)
+        draft.promptIds = nextPromptIds
+        draft.promptCount += 1
+      })
+      collections.prompt.update(promptId, (draft) => {
+        draft.promptFolderCount = destinationPromptFolder.promptCount + 1
+      })
+      collections.promptDraft.update(promptId, (draft) => {
+        draft.promptFolderCount = destinationPromptFolder.promptCount + 1
+      })
+    },
+    persistMutations: async ({ entities, transaction }) => {
+      const promptEntity = entities.prompt({
+        id: promptId,
+        data: createPromptFull(persistedPrompt)
+      })
+      const mutationResult = await ipcInvokeWithPayload<
+        IpcMutationPayloadResult<MovePromptResponsePayload>,
+        MovePromptPayload
+      >('move-prompt', {
+        sourcePromptFolder: entities.promptFolder({
+          id: sourcePromptFolderId,
+          data: sourcePromptFolder
+        }),
+        destinationPromptFolder: entities.promptFolder({
+          id: destinationPromptFolderId,
+          data: destinationPromptFolder
+        }),
+        prompt: {
+          ...promptEntity,
+          data: toPersistedPrompt(promptEntity.data)
+        },
+        orderAfterPromptId
+      })
+
+      if (mutationResult.success) {
+        promptDraftCollection.utils.acceptMutations(transaction)
+      }
+
+      return mutationResult
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      promptFolderCollection.utils.upsertAuthoritative(payload.sourcePromptFolder)
+      promptFolderCollection.utils.upsertAuthoritative(payload.destinationPromptFolder)
+      promptCollection.utils.upsertAuthoritative(toFullPromptSnapshot(payload.prompt))
+    },
+    conflictMessage: 'Prompt move conflict'
   })
 }

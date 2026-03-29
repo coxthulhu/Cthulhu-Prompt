@@ -22,6 +22,7 @@
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
   } from './promptFolderSettingsSizing'
+  import type { PromptHandleDropPayload } from '../drag-drop/promptHandleDrag'
   import type {
     ActivePromptTreeRow,
     PromptFocusRequest
@@ -56,6 +57,10 @@
     onDeletePrompt: (promptId: string) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
     onMovePromptDown: (promptId: string) => Promise<boolean>
+    onPromptTreeDrop: (
+      promptId: string,
+      dropPayload: PromptHandleDropPayload | null
+    ) => void | Promise<void>
     onDescriptionChange: (text: string, measurement: TextMeasurement) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
@@ -83,6 +88,7 @@
     onDeletePrompt,
     onMovePromptUp,
     onMovePromptDown,
+    onPromptTreeDrop,
     onDescriptionChange,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
@@ -315,6 +321,7 @@
     onDelete={() => onDeletePrompt(row.promptId)}
     onMoveUp={() => onMovePromptUp(row.promptId)}
     onMoveDown={() => onMovePromptDown(row.promptId)}
+    onPromptTreeDrop={(dropPayload) => onPromptTreeDrop(row.promptId, dropPayload)}
   />
 {/snippet}
 

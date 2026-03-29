@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte'
   import type { monaco } from '@renderer/common/Monaco'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
+  import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -52,7 +53,8 @@
     onEditorLifecycle,
     onDelete,
     onMoveUp,
-    onMoveDown
+    onMoveDown,
+    onPromptTreeDrop
   }: {
     promptId: string
     workspaceId: string | null
@@ -71,6 +73,7 @@
     onDelete: () => void
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
+    onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
@@ -319,7 +322,12 @@
   data-testid={`prompt-editor-${promptId}`}
   data-virtual-window-row
 >
-  <PromptEditorSidebar {promptId} onMoveUp={handleMoveUp} onMoveDown={handleMoveDown} />
+  <PromptEditorSidebar
+    {promptId}
+    onMoveUp={handleMoveUp}
+    onMoveDown={handleMoveDown}
+    {onPromptTreeDrop}
+  />
 
   <div class="bg-background flex-1 min-w-0">
     <div class="flex min-w-0">

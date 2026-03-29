@@ -4,9 +4,17 @@ export type PromptHandleDragPayload = {
   fromId: string
 }
 
-export type PromptHandleDropPayload = {
-  toId: string
-}
-
-export const promptFolderSettingsDropId = (folderId: string): string =>
-  `folder-settings:${folderId}`
+export type PromptHandleDropPayload =
+  | {
+      kind: 'folder'
+      folderId: string
+    }
+  | {
+      kind: 'folder-settings'
+      folderId: string
+    }
+  | {
+      kind: 'prompt'
+      folderId: string
+      promptId: string
+    }

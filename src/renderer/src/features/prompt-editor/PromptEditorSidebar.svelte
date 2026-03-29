@@ -5,18 +5,19 @@
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
-    type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
   let {
     promptId,
     onMoveUp,
-    onMoveDown
+    onMoveDown,
+    onPromptTreeDrop
   }: {
     promptId: string
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
+    onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
 
   const handleDragFinish = (result: { sourcePayload: unknown; dropPayload: unknown | null }) => {
@@ -24,13 +25,10 @@
     void onMoveUp
     void onMoveDown
 
-    const sourcePayload = result.sourcePayload as PromptHandleDragPayload
     const dropPayload = result.dropPayload as PromptHandleDropPayload | null
-
-    console.log('prompt-handle-drop', {
-      fromId: sourcePayload.fromId,
-      toId: dropPayload?.toId ?? null
-    })
+    void result.sourcePayload
+    void promptId
+    void onPromptTreeDrop(dropPayload)
   }
 </script>
 
