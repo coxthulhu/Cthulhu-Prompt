@@ -1,4 +1,3 @@
-import { tick } from 'svelte'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type PromptFull } from '@shared/Prompt'
@@ -505,24 +504,6 @@ export const createPromptFolderScreenController = ({
     )
   }
 
-  const rerunSelectionAfterPromptMove = async (): Promise<void> => {
-    await tick()
-
-    const centeredRow = latestCenteredPromptTreeRow
-    if (centeredRow?.kind === 'prompt' && !visiblePromptIds.includes(centeredRow.promptId)) {
-      setCurrentFolderSelection(resolveHeaderSelectionRow(activeHeaderRowId), 'scroll-follow', {
-        forceVersionBump: true
-      })
-      return
-    }
-
-    const nextRow =
-      resolveScrollFollowRow(centeredRow) ?? resolveHeaderSelectionRow(activeHeaderRowId)
-    setCurrentFolderSelection(nextRow, 'scroll-follow', {
-      forceVersionBump: true
-    })
-  }
-
   const movePromptFromCurrentFolder = async (
     promptId: string,
     destinationPromptFolderId: string,
@@ -557,7 +538,6 @@ export const createPromptFolderScreenController = ({
           promptId,
           orderAfterPromptId
         )
-        await rerunSelectionAfterPromptMove()
         return true
       },
       () => false

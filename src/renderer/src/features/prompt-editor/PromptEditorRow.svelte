@@ -303,16 +303,12 @@
     editorInstance.focus()
   })
 
-  const handleMovePrompt = async (offsetPx: number, moveAction: () => Promise<boolean>) => {
-    const didMove = await moveAction()
-    if (!didMove) return
-    // Side effect: wait for virtual row positions to update before scrolling to the moved prompt.
-    await tick()
-    scrollToWithinWindowBand!(rowId, offsetPx, 'minimal')
+  const handleMoveUp = async () => {
+    void (await onMoveUp())
   }
-
-  const handleMoveUp = () => handleMovePrompt(0, onMoveUp)
-  const handleMoveDown = () => handleMovePrompt(virtualRowHeightPx, onMoveDown)
+  const handleMoveDown = async () => {
+    void (await onMoveDown())
+  }
 </script>
 
 <div
