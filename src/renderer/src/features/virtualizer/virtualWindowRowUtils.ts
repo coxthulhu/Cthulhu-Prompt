@@ -22,12 +22,31 @@ export const computeAnchoredScrollTop = <TRow extends { kind: string }>(
   scrollTop: number,
   anchorOffsetPx: number
 ): number => {
+  if (didRowsOnlyReorder(previousRows, nextRows)) return scrollTop
+
   const anchorPositionPx = scrollTop + anchorOffsetPx
   const anchorRow = previousRows[findIndexAtOffset(previousRows, anchorPositionPx)]
   if (!anchorRow) return scrollTop
   const offsetInRow = anchorPositionPx - anchorRow.offset
   const nextRow = nextRows.find((row) => row.id === anchorRow.id)
   return nextRow ? nextRow.offset + offsetInRow - anchorOffsetPx : scrollTop
+}
+
+const didRowsOnlyReorder = <TRow extends { kind: string }>(
+  previousRows: readonly VirtualRowState<TRow>[],
+  nextRows: readonly VirtualRowState<TRow>[]
+): boolean => {
+  if (previousRows.length !== nextRows.length) return false
+
+  const previousIds = previousRows.map((row) => row.id)
+  const nextIds = nextRows.map((row) => row.id)
+
+  if (previousIds.every((id, index) => id === nextIds[index])) {
+    return false
+  }
+
+  const nextIdSet = new Set(nextIds)
+  return previousIds.every((id) => nextIdSet.has(id))
 }
 
 export const findNearestEligibleRow = <TRow extends { kind: string }>(

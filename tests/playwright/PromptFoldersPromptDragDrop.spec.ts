@@ -2,6 +2,8 @@ import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/Playw
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
+import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
+import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -13,6 +15,15 @@ const EXAMPLES_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${EXAMPLES_FOLDER_NAME}/
 const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
 const EXAMPLE_1_ID = 'simple-1'
+const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
+const ANCHORING_FOLDER_NAME = 'Anchoring'
+const DESTINATION_FOLDER_NAME = 'Destination'
+const ANCHORING_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${ANCHORING_FOLDER_NAME}/FolderData.json`
+const DESTINATION_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${DESTINATION_FOLDER_NAME}/FolderData.json`
+const ANCHOR_1_ID = 'anchor-1'
+const ANCHOR_2_ID = 'anchor-2'
+const ANCHOR_3_ID = 'anchor-3'
+const DESTINATION_1_ID = 'destination-1'
 
 const promptHandleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-drag-handle"]`
@@ -22,6 +33,45 @@ const promptTreeFolderSelector = (folderName: string) =>
   `[data-testid="regular-prompt-folder-${folderName}"]`
 const promptTreeFolderSettingsSelector = (folderName: string) =>
   `[data-testid="prompt-folder-settings-${folderName}"]`
+
+const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
+  const tallPrompt = heightTestPrompts.twoHundredLine
+
+  return createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: ANCHORING_FOLDER_NAME,
+      displayName: ANCHORING_FOLDER_NAME,
+      prompts: [
+        {
+          ...tallPrompt,
+          id: ANCHOR_1_ID,
+          title: 'Anchor One'
+        },
+        {
+          ...tallPrompt,
+          id: ANCHOR_2_ID,
+          title: 'Anchor Two'
+        },
+        {
+          ...tallPrompt,
+          id: ANCHOR_3_ID,
+          title: 'Anchor Three'
+        }
+      ]
+    },
+    {
+      folderName: DESTINATION_FOLDER_NAME,
+      displayName: DESTINATION_FOLDER_NAME,
+      prompts: [
+        {
+          ...heightTestPrompts.singleLine,
+          id: DESTINATION_1_ID,
+          title: 'Destination One'
+        }
+      ]
+    }
+  ])
+}
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
   return await page.evaluate(() => {
@@ -59,31 +109,145 @@ const readPromptFolderPromptIds = async (
 
 const dragPromptHandleToTarget = async (page: any, promptId: string, targetSelector: string) => {
   const handle = page.locator(promptHandleSelector(promptId))
-  const target = page.locator(targetSelector)
 
   await handle.scrollIntoViewIfNeeded()
-  await target.scrollIntoViewIfNeeded()
   await expect(handle).toBeVisible()
-  await expect(target).toBeVisible()
 
   const handleBox = await handle.boundingBox()
-  const targetBox = await target.boundingBox()
 
-  if (!handleBox || !targetBox) {
-    throw new Error(`Missing drag geometry for ${promptId} -> ${targetSelector}`)
+  if (!handleBox) {
+    throw new Error(`Missing drag geometry for ${promptId}`)
   }
 
   const handleCenterX = handleBox.x + handleBox.width / 2
   const handleCenterY = handleBox.y + handleBox.height / 2
-  const targetCenterX = targetBox.x + targetBox.width / 2
-  const targetCenterY = targetBox.y + targetBox.height / 2
 
   await page.mouse.move(handleCenterX, handleCenterY)
   await page.mouse.down()
   await page.mouse.move(handleCenterX + 8, handleCenterY + 8, { steps: 4 })
   await expect(page.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
+
+  const target = page.locator(targetSelector)
+  await target.scrollIntoViewIfNeeded()
+  await expect(target).toBeVisible()
+
+  const targetBox = await target.boundingBox()
+  if (!targetBox) {
+    throw new Error(`Missing drag geometry for ${targetSelector}`)
+  }
+
+  const targetCenterX = targetBox.x + targetBox.width / 2
+  const targetCenterY = targetBox.y + targetBox.height / 2
+
   await page.mouse.move(targetCenterX, targetCenterY, { steps: 12 })
   await page.mouse.up()
+}
+
+const beginPromptHandleDrag = async (page: any, promptId: string) => {
+  const handle = page.locator(promptHandleSelector(promptId))
+
+  await handle.scrollIntoViewIfNeeded()
+  await expect(handle).toBeVisible()
+
+  const handleBox = await handle.boundingBox()
+  if (!handleBox) {
+    throw new Error(`Missing drag geometry for ${promptId}`)
+  }
+
+  const handleCenterX = handleBox.x + handleBox.width / 2
+  const handleCenterY = handleBox.y + handleBox.height / 2
+
+  await page.mouse.move(handleCenterX, handleCenterY)
+  await page.mouse.down()
+  await page.mouse.move(handleCenterX + 8, handleCenterY + 8, { steps: 4 })
+  await expect(page.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
+}
+
+const moveActiveDragToTarget = async (page: any, targetSelector: string) => {
+  const target = page.locator(targetSelector)
+
+  await target.scrollIntoViewIfNeeded()
+  await expect(target).toBeVisible()
+
+  const targetBox = await target.boundingBox()
+  if (!targetBox) {
+    throw new Error(`Missing drag geometry for ${targetSelector}`)
+  }
+
+  const targetCenterX = targetBox.x + targetBox.width / 2
+  const targetCenterY = targetBox.y + targetBox.height / 2
+
+  await page.mouse.move(targetCenterX, targetCenterY, { steps: 12 })
+}
+
+const finishActiveDrag = async (page: any) => {
+  await page.mouse.up()
+}
+
+const getRowViewportOffsets = async (page: any, selector: string) => {
+  return await page.evaluate(
+    ({ hostSelector, rowSelector }) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      const row = document.querySelector<HTMLElement>(rowSelector)
+      if (!host || !row) {
+        return null
+      }
+
+      const hostRect = host.getBoundingClientRect()
+      const rowRect = row.getBoundingClientRect()
+
+      return {
+        top: Math.round(rowRect.top - hostRect.top),
+        bottom: Math.round(rowRect.bottom - hostRect.top)
+      }
+    },
+    {
+      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+      rowSelector: selector
+    }
+  )
+}
+
+const scrollUntilPromptEditorVisible = async (page: any, testHelpers: any, promptId: string) => {
+  const selector = promptEditorSelector(promptId)
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if ((await page.locator(selector).count()) > 0) {
+      return
+    }
+
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 600)
+  }
+
+  throw new Error(`Prompt editor did not become visible: ${promptId}`)
+}
+
+const scrollPromptEditorAcrossViewportTop = async (
+  page: any,
+  testHelpers: any,
+  promptId: string,
+  overlapPx = 24
+) => {
+  const selector = promptEditorSelector(promptId)
+  await scrollUntilPromptEditorVisible(page, testHelpers, promptId)
+
+  const offsets = await getRowViewportOffsets(page, selector)
+  if (!offsets) {
+    throw new Error(`Missing viewport offsets for ${promptId}`)
+  }
+
+  const currentScrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+  await testHelpers.scrollVirtualWindowTo(
+    PROMPT_FOLDER_HOST_SELECTOR,
+    currentScrollTop + offsets.top + overlapPx
+  )
+
+  await expect
+    .poll(async () => {
+      const nextOffsets = await getRowViewportOffsets(page, selector)
+      return nextOffsets ? nextOffsets.top <= 0 && nextOffsets.bottom > 0 : false
+    })
+    .toBe(true)
 }
 
 const expectCurrentFolderPromptEditors = async (page: any, expectedPromptIds: string[]) => {
@@ -297,5 +461,96 @@ describe('Prompt folder prompt drag-drop', () => {
         oldFiles: { markdownExists: false },
         newFiles: { markdownExists: true }
       })
+  })
+
+  test('keeps scroll position stable when a same-folder drag only reorders rows', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
+    await testSetup.setupFileDialog([DRAG_SCROLL_WORKSPACE_PATH])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(ANCHORING_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(ANCHOR_1_ID))
+
+    await scrollPromptEditorAcrossViewportTop(mainWindow, testHelpers, ANCHOR_1_ID)
+
+    const scrollTopBefore = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+
+    await dragPromptHandleToTarget(mainWindow, ANCHOR_1_ID, promptTreePromptSelector(ANCHOR_2_ID))
+
+    await expect
+      .poll(async () => (await readPromptFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH)).slice(0, 3))
+      .toEqual([ANCHOR_2_ID, ANCHOR_1_ID, ANCHOR_3_ID])
+
+    await expect
+      .poll(
+        async () =>
+          Math.abs(
+            (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
+          )
+      )
+      .toBeLessThanOrEqual(2)
+  })
+
+  test('keeps the surviving top row anchored when a drag changes the folder rows', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
+    await testSetup.setupFileDialog([DRAG_SCROLL_WORKSPACE_PATH])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(ANCHORING_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(ANCHOR_1_ID))
+
+    await beginPromptHandleDrag(mainWindow, ANCHOR_1_ID)
+    await scrollPromptEditorAcrossViewportTop(mainWindow, testHelpers, ANCHOR_2_ID)
+
+    const promptTwoOffsetsBefore = await getRowViewportOffsets(
+      mainWindow,
+      promptEditorSelector(ANCHOR_2_ID)
+    )
+    if (!promptTwoOffsetsBefore) {
+      throw new Error('Failed to capture prompt two offsets before move')
+    }
+
+    const scrollTopBefore = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+
+    await moveActiveDragToTarget(mainWindow, promptTreeFolderSelector(DESTINATION_FOLDER_NAME))
+    await finishActiveDrag(mainWindow)
+
+    await expect
+      .poll(async () => await readPromptFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH))
+      .toEqual([ANCHOR_2_ID, ANCHOR_3_ID])
+    await expect
+      .poll(async () => await readPromptFolderPromptIds(electronApp, DESTINATION_FOLDER_PATH))
+      .toEqual([ANCHOR_1_ID, DESTINATION_1_ID])
+
+    await scrollUntilPromptEditorVisible(mainWindow, testHelpers, ANCHOR_2_ID)
+
+    await expect
+      .poll(async () => {
+        const promptTwoOffsetsAfter = await getRowViewportOffsets(
+          mainWindow,
+          promptEditorSelector(ANCHOR_2_ID)
+        )
+        return promptTwoOffsetsAfter
+          ? Math.abs(promptTwoOffsetsAfter.top - promptTwoOffsetsBefore.top)
+          : Number.POSITIVE_INFINITY
+      })
+      .toBeLessThanOrEqual(2)
+
+    await expect
+      .poll(
+        async () =>
+          Math.abs(
+            (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
+          )
+      )
+      .toBeGreaterThan(100)
   })
 })
