@@ -91,7 +91,14 @@
   let activeScreen = $state<ScreenId>('home')
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = getSelectedWorkspaceId()
-    return workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
+
+    for (const workspace of workspaceQuery.data) {
+      if (workspace?.id === selectedWorkspaceId) {
+        return workspace
+      }
+    }
+
+    return null
   })
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
   let selectedPromptFolderId = $state<string | null>(null)

@@ -54,7 +54,10 @@ import {
   promptFolderSettingsFindEntityId
 } from './promptFolderRowIds'
 import { estimatePromptFolderSettingsHeight } from './promptFolderSettingsSizing'
-import type { PromptHandleDropPayload } from '../drag-drop/promptHandleDrag'
+import {
+  resolvePromptHandleDropMove,
+  type PromptHandleDropPayload
+} from '../drag-drop/promptHandleDrag'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -85,11 +88,21 @@ export const createPromptFolderScreenController = ({
   }
 
   const promptFolder = $derived.by(() => {
-    return promptFolderQuery.data.find((candidate) => candidate.id === promptFolderId) ?? null
+    for (const candidate of promptFolderQuery.data) {
+      if (candidate?.id === promptFolderId) {
+        return candidate
+      }
+    }
+
+    return null
   })
   const promptDraftById = $derived.by(() => {
     const draftsById: Record<string, PromptDraftRecord> = {}
     for (const draft of promptDraftQuery.data) {
+      if (!draft) {
+        continue
+      }
+
       draftsById[draft.id] = draft
     }
     return draftsById
@@ -97,6 +110,10 @@ export const createPromptFolderScreenController = ({
   const promptFolderDraftById = $derived.by(() => {
     const draftsById: Record<string, PromptFolderDraftRecord> = {}
     for (const draft of promptFolderDraftQuery.data) {
+      if (!draft) {
+        continue
+      }
+
       draftsById[draft.id] = draft
     }
     return draftsById
@@ -471,39 +488,6 @@ export const createPromptFolderScreenController = ({
     setCurrentFolderSelection({ kind: 'folder-settings' }, 'restore', { forceVersionBump: true })
   })
 
-  const reorderPromptIds = (
-    currentPromptIds: string[],
-    promptId: string,
-    orderAfterPromptId: string | null
-  ): string[] | null => {
-    const currentIndex = currentPromptIds.indexOf(promptId)
-    if (currentIndex === -1) {
-      return null
-    }
-
-    const nextPromptIds = [...currentPromptIds]
-    nextPromptIds.splice(currentIndex, 1)
-
-    if (orderAfterPromptId == null) {
-      nextPromptIds.unshift(promptId)
-      return nextPromptIds
-    }
-
-    const previousIndex = nextPromptIds.indexOf(orderAfterPromptId)
-    if (previousIndex === -1) {
-      return null
-    }
-
-    nextPromptIds.splice(previousIndex + 1, 0, promptId)
-    return nextPromptIds
-  }
-
-  const arePromptIdOrdersEqual = (left: string[], right: string[]): boolean => {
-    return (
-      left.length === right.length && left.every((promptId, index) => promptId === right[index])
-    )
-  }
-
   const movePromptFromCurrentFolder = async (
     promptId: string,
     destinationPromptFolderId: string,
@@ -519,15 +503,20 @@ export const createPromptFolderScreenController = ({
       return false
     }
 
-    if (currentPromptFolder.id === destinationPromptFolderId) {
-      const nextPromptIds = reorderPromptIds(
-        currentPromptFolder.promptIds,
-        promptId,
-        orderAfterPromptId
-      )
-      if (!nextPromptIds || arePromptIdOrdersEqual(currentPromptFolder.promptIds, nextPromptIds)) {
-        return false
-      }
+    const nextMove = resolvePromptHandleDropMove(
+      currentPromptFolder.id,
+      currentPromptFolder.promptIds,
+      promptId,
+      orderAfterPromptId === null
+        ? { kind: 'folder', folderId: destinationPromptFolderId }
+        : {
+            kind: 'prompt',
+            folderId: destinationPromptFolderId,
+            promptId: orderAfterPromptId
+          }
+    )
+    if (!nextMove) {
+      return false
     }
 
     return await runIpcBestEffort(
@@ -608,22 +597,18 @@ export const createPromptFolderScreenController = ({
     draggedPromptId: string,
     dropPayload: PromptHandleDropPayload | null
   ) => {
-    if (!dropPayload) {
+    const currentPromptFolder = promptFolder
+    if (!currentPromptFolder) {
       return
     }
 
-    const nextMove =
-      dropPayload.kind === 'prompt'
-        ? {
-            destinationPromptFolderId: dropPayload.folderId,
-            orderAfterPromptId: dropPayload.promptId
-          }
-        : {
-            destinationPromptFolderId: dropPayload.folderId,
-            orderAfterPromptId: null
-          }
-
-    if (dropPayload.kind === 'prompt' && dropPayload.promptId === draggedPromptId) {
+    const nextMove = resolvePromptHandleDropMove(
+      currentPromptFolder.id,
+      currentPromptFolder.promptIds,
+      draggedPromptId,
+      dropPayload
+    )
+    if (!nextMove) {
       return
     }
 

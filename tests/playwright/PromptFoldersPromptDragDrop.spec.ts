@@ -143,6 +143,42 @@ const dragPromptHandleToTarget = async (page: any, promptId: string, targetSelec
   await page.mouse.up()
 }
 
+const dragPromptTreeRowToTarget = async (page: any, promptId: string, targetSelector: string) => {
+  const row = page.locator(promptTreePromptSelector(promptId))
+
+  await row.scrollIntoViewIfNeeded()
+  await expect(row).toBeVisible()
+
+  const rowBox = await row.boundingBox()
+
+  if (!rowBox) {
+    throw new Error(`Missing prompt tree drag geometry for ${promptId}`)
+  }
+
+  const rowCenterX = rowBox.x + rowBox.width / 2
+  const rowCenterY = rowBox.y + rowBox.height / 2
+
+  await page.mouse.move(rowCenterX, rowCenterY)
+  await page.mouse.down()
+  await page.mouse.move(rowCenterX + 8, rowCenterY + 8, { steps: 4 })
+  await expect(page.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
+
+  const target = page.locator(targetSelector)
+  await target.scrollIntoViewIfNeeded()
+  await expect(target).toBeVisible()
+
+  const targetBox = await target.boundingBox()
+  if (!targetBox) {
+    throw new Error(`Missing drag geometry for ${targetSelector}`)
+  }
+
+  const targetCenterX = targetBox.x + targetBox.width / 2
+  const targetCenterY = targetBox.y + targetBox.height / 2
+
+  await page.mouse.move(targetCenterX, targetCenterY, { steps: 12 })
+  await page.mouse.up()
+}
+
 const beginPromptHandleDrag = async (page: any, promptId: string) => {
   const handle = page.locator(promptHandleSelector(promptId))
 
@@ -319,6 +355,24 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
   })
 
+  test('moves a prompt from the prompt tree after a different prompt in the same folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await dragPromptTreeRowToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(DEV_2_ID))
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
   test('moves a prompt to the start of another folder when dropped onto that folder row', async ({
     testSetup,
     electronApp
@@ -330,6 +384,11 @@ describe('Prompt folder prompt drag-drop', () => {
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+    await mainWindow.locator(promptTreePromptSelector(DEV_1_ID)).click()
+    await expect(mainWindow.locator(promptTreePromptSelector(DEV_1_ID))).toHaveAttribute(
+      'aria-current',
+      'true'
+    )
 
     await dragPromptHandleToTarget(
       mainWindow,
@@ -493,6 +552,28 @@ describe('Prompt folder prompt drag-drop', () => {
           )
       )
       .toBeLessThanOrEqual(2)
+  })
+
+  test('keeps the current screen selected when reordering prompts from a non-selected tree folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
+    await testSetup.setupFileDialog([DRAG_SCROLL_WORKSPACE_PATH])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(DESTINATION_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DESTINATION_1_ID))
+
+    await dragPromptTreeRowToTarget(mainWindow, ANCHOR_1_ID, promptTreePromptSelector(ANCHOR_2_ID))
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DESTINATION_1_ID])
+    await expectPersistedFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH, [
+      ANCHOR_2_ID,
+      ANCHOR_1_ID,
+      ANCHOR_3_ID
+    ])
   })
 
   test('keeps the surviving top row anchored when a drag changes the folder rows', async ({

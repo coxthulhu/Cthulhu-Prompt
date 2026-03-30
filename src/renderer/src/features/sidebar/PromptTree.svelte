@@ -11,17 +11,22 @@
   } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
+    draggable,
     droppable,
     type DroppableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
+    resolvePromptHandleDropMove,
+    type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import {
     type PromptDraftRecord,
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
+  import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     getPromptNavigationContext,
@@ -134,6 +139,10 @@
     const titlesById: Record<string, string> = {}
 
     for (const promptDraft of promptDraftQuery.data) {
+      if (!promptDraft) {
+        continue
+      }
+
       const trimmedTitle = promptDraft.title.trim()
       titlesById[promptDraft.id] =
         trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptDraft.promptFolderCount}`
@@ -277,6 +286,38 @@
     }
 
     blurButtonAfterMouseClick(event)
+  }
+
+  const handlePromptRowDragFinish = (result: {
+    sourcePayload: unknown
+    dropPayload: unknown | null
+  }) => {
+    const sourcePayload = result.sourcePayload as PromptHandleDragPayload
+    const sourcePromptFolder = promptFolders.find(
+      (promptFolder) => promptFolder.id === sourcePayload.sourceFolderId
+    )
+    if (!sourcePromptFolder) {
+      return
+    }
+
+    const nextMove = resolvePromptHandleDropMove(
+      sourcePromptFolder.id,
+      sourcePromptFolder.promptIds,
+      sourcePayload.fromId,
+      result.dropPayload as PromptHandleDropPayload | null
+    )
+    if (!nextMove) {
+      return
+    }
+
+    void runIpcBestEffort(async () => {
+      await movePrompt(
+        nextMove.sourcePromptFolderId,
+        nextMove.destinationPromptFolderId,
+        nextMove.promptId,
+        nextMove.orderAfterPromptId
+      )
+    })
   }
 
   // Side effect: clear local folder expand overrides when switching workspaces.
@@ -504,6 +545,15 @@
 
   <div class="sidebarPromptTreeSettingsRow">
     <button
+      use:draggable={{
+        dragType: PROMPT_HANDLE_DRAG_TYPE,
+        payload: {
+          fromId: props.row.promptId,
+          sourceFolderId: props.row.folder.id
+        },
+        previewSnippet: emptyDragPreview,
+        onDragFinish: handlePromptRowDragFinish
+      }}
       use:droppable={getPromptTreeDroppableOptions(props.rowId, {
         kind: 'prompt',
         folderId: props.row.folder.id,
@@ -528,6 +578,10 @@
       >
     </button>
   </div>
+{/snippet}
+
+{#snippet emptyDragPreview()}
+  <span class="hidden" aria-hidden="true"></span>
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}

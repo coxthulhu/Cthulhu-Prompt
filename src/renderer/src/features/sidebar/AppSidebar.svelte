@@ -1,5 +1,6 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
+  import { SvelteMap } from 'svelte/reactivity'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
@@ -68,7 +69,14 @@
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
-    return workspaceQuery.data.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
+
+    for (const workspace of workspaceQuery.data) {
+      if (workspace?.id === selectedWorkspaceId) {
+        return workspace
+      }
+    }
+
+    return null
   })
 
   const promptFolders = $derived.by((): PromptFolder[] => {
@@ -76,9 +84,14 @@
       return []
     }
 
-    const promptFolderById = new Map(
-      promptFolderQuery.data.map((promptFolder) => [promptFolder.id, promptFolder])
-    )
+    const promptFolderById = new SvelteMap<string, PromptFolder>()
+    for (const promptFolder of promptFolderQuery.data) {
+      if (!promptFolder) {
+        continue
+      }
+
+      promptFolderById.set(promptFolder.id, promptFolder)
+    }
 
     return selectedWorkspace.promptFolderIds
       .map((promptFolderId) => promptFolderById.get(promptFolderId))

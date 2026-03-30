@@ -279,11 +279,21 @@ export const movePrompt = async (
   }
 
   const prompt = promptCollection.get(promptId)
-  if (!prompt || !isPromptFull(prompt)) {
-    throw new Error('Prompt not fully loaded')
+  const promptDraft = promptDraftCollection.get(promptId)
+  const persistedPrompt = prompt && isPromptFull(prompt)
+    ? toPersistedPrompt(prompt)
+    : promptDraft
+      ? {
+          id: promptDraft.id,
+          title: promptDraft.title,
+          createdAt: promptDraft.createdAt,
+          promptText: promptDraft.promptText,
+          promptFolderCount: promptDraft.promptFolderCount
+        }
+      : null
+  if (!persistedPrompt) {
+    throw new Error('Prompt data not loaded')
   }
-
-  const persistedPrompt = toPersistedPrompt(prompt)
   const isSameFolder = sourcePromptFolderId === destinationPromptFolderId
   const destinationPromptIds = isSameFolder
     ? sourcePromptFolder.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
