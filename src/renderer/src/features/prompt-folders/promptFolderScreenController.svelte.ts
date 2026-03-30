@@ -512,8 +512,10 @@ export const createPromptFolderScreenController = ({
         : {
             kind: 'prompt',
             folderId: destinationPromptFolderId,
-            promptId: orderAfterPromptId
-          }
+            promptId: orderAfterPromptId,
+            edge: 'bottom'
+          },
+      destinationPromptFolder.promptIds
     )
     if (!nextMove) {
       return false
@@ -606,7 +608,10 @@ export const createPromptFolderScreenController = ({
       currentPromptFolder.id,
       currentPromptFolder.promptIds,
       draggedPromptId,
-      dropPayload
+      dropPayload,
+      dropPayload?.kind === 'prompt'
+        ? promptFolderQuery.data.find((folder) => folder?.id === dropPayload.folderId)?.promptIds ?? null
+        : currentPromptFolder.promptIds
     )
     if (!nextMove) {
       return

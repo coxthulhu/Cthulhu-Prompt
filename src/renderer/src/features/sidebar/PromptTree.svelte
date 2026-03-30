@@ -13,6 +13,8 @@
     createDroppableStateRegistry,
     draggable,
     droppable,
+    type DroppableAllowedEdges,
+    type DroppableEdge,
     type DroppableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
@@ -195,15 +197,25 @@
 
   const getPromptTreeDroppableOptions = (
     rowId: string,
-    dropPayload: PromptHandleDropPayload
+    allowedEdges: DroppableAllowedEdges,
+    getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload
   ): DroppableOptions => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
-    payload: dropPayload,
+    allowedEdges,
+    payload: getDropPayload,
     state: promptTreeDroppableState.getState(rowId)
   })
 
   const isPromptTreeDropTargetOver = (rowId: string): boolean =>
     promptTreeDroppableState.isOver(rowId)
+
+  const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
+    promptTreeDroppableState.edge(rowId)
+
+  const findPromptFolderPromptIds = (folderId: string): string[] | null => {
+    const promptFolder = promptFolders.find((folder) => folder.id === folderId)
+    return promptFolder?.promptIds ?? null
+  }
 
   const getPromptTreeDropIndicatorTestId = (row: PromptTreeOverlayRow): string =>
     row.kind === 'folder-settings'
@@ -293,6 +305,7 @@
     dropPayload: unknown | null
   }) => {
     const sourcePayload = result.sourcePayload as PromptHandleDragPayload
+    const dropPayload = result.dropPayload as PromptHandleDropPayload | null
     const sourcePromptFolder = promptFolders.find(
       (promptFolder) => promptFolder.id === sourcePayload.sourceFolderId
     )
@@ -304,7 +317,12 @@
       sourcePromptFolder.id,
       sourcePromptFolder.promptIds,
       sourcePayload.fromId,
-      result.dropPayload as PromptHandleDropPayload | null
+      dropPayload,
+      findPromptFolderPromptIds(
+        dropPayload?.kind === 'prompt'
+          ? dropPayload.folderId
+          : sourcePromptFolder.id
+      )
     )
     if (!nextMove) {
       return
@@ -429,10 +447,10 @@
   {@const isDropTargetOver = isPromptTreeDropTargetOver(props.rowId)}
 
   <div
-    use:droppable={getPromptTreeDroppableOptions(props.rowId, {
+    use:droppable={getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
       kind: 'folder',
       folderId: props.row.folder.id
-    })}
+    }))}
     class="sidebarPromptTreeRow group"
     data-active={isActive ? 'true' : 'false'}
     data-over={isDropTargetOver ? 'true' : 'false'}
@@ -515,10 +533,10 @@
 
   <div class="sidebarPromptTreeSettingsRow">
     <button
-      use:droppable={getPromptTreeDroppableOptions(props.rowId, {
+      use:droppable={getPromptTreeDroppableOptions(props.rowId, 'bottom', () => ({
         kind: 'folder-settings',
         folderId: props.row.folder.id
-      })}
+      }))}
       type="button"
       data-testid={folderSettingsTestId(props.row.folder)}
       data-active={isActive ? 'true' : 'false'}
@@ -554,11 +572,12 @@
         previewSnippet: emptyDragPreview,
         onDragFinish: handlePromptRowDragFinish
       }}
-      use:droppable={getPromptTreeDroppableOptions(props.rowId, {
+      use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
         kind: 'prompt',
         folderId: props.row.folder.id,
-        promptId: props.row.promptId
-      })}
+        promptId: props.row.promptId,
+        edge: edge ?? 'bottom'
+      }))}
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}
@@ -585,10 +604,13 @@
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
-  {#if isPromptTreeDropTargetOver(rowId)}
+  {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
+
+  {#if hoveredEdge}
     <PromptTreeDropIndicator
       testId={getPromptTreeDropIndicatorTestId(row)}
       insetStart={PROMPT_TREE_CHILD_ROW_CONTENT_INSET}
+      edge={hoveredEdge}
     />
   {/if}
 {/snippet}

@@ -247,9 +247,17 @@
 .sidebarPromptTreeDropIndicator {
   position: absolute;
   right: 0.125rem;
-  top: 100%;
   left: calc(var(--sidebar-drop-indicator-inset-start, 2.375rem) - 10px);
   height: 10px;
+}
+
+.sidebarPromptTreeDropIndicator[data-edge='top'] {
+  top: 0;
+  transform: translateY(-50%);
+}
+
+.sidebarPromptTreeDropIndicator[data-edge='bottom'] {
+  top: 100%;
   transform: translateY(-50%);
 }
 

@@ -33,6 +33,12 @@ const promptTreeFolderSelector = (folderName: string) =>
   `[data-testid="regular-prompt-folder-${folderName}"]`
 const promptTreeFolderSettingsSelector = (folderName: string) =>
   `[data-testid="prompt-folder-settings-${folderName}"]`
+const promptTreePromptDropIndicatorSelector = (promptId: string) =>
+  `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`
+const promptTreeFolderSettingsDropIndicatorSelector = (folderName: string) =>
+  `[data-testid="prompt-tree-drop-indicator-settings-${folderName}"]`
+
+type TargetVerticalAlign = 'top' | 'center' | 'bottom'
 
 const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
   const tallPrompt = heightTestPrompts.twoHundredLine
@@ -107,7 +113,30 @@ const readPromptFolderPromptIds = async (
   return parsed.promptIds
 }
 
-const dragPromptHandleToTarget = async (page: any, promptId: string, targetSelector: string) => {
+const getTargetPoint = (
+  targetBox: { x: number; y: number; width: number; height: number },
+  verticalAlign: TargetVerticalAlign
+) => {
+  const targetCenterX = targetBox.x + targetBox.width / 2
+  const targetY =
+    verticalAlign === 'top'
+      ? targetBox.y + targetBox.height * 0.25
+      : verticalAlign === 'bottom'
+        ? targetBox.y + targetBox.height * 0.75
+        : targetBox.y + targetBox.height / 2
+
+  return {
+    x: targetCenterX,
+    y: targetY
+  }
+}
+
+const dragPromptHandleToTarget = async (
+  page: any,
+  promptId: string,
+  targetSelector: string,
+  verticalAlign: TargetVerticalAlign = 'center'
+) => {
   const handle = page.locator(promptHandleSelector(promptId))
 
   await handle.scrollIntoViewIfNeeded()
@@ -136,14 +165,18 @@ const dragPromptHandleToTarget = async (page: any, promptId: string, targetSelec
     throw new Error(`Missing drag geometry for ${targetSelector}`)
   }
 
-  const targetCenterX = targetBox.x + targetBox.width / 2
-  const targetCenterY = targetBox.y + targetBox.height / 2
+  const targetPoint = getTargetPoint(targetBox, verticalAlign)
 
-  await page.mouse.move(targetCenterX, targetCenterY, { steps: 12 })
+  await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 12 })
   await page.mouse.up()
 }
 
-const dragPromptTreeRowToTarget = async (page: any, promptId: string, targetSelector: string) => {
+const dragPromptTreeRowToTarget = async (
+  page: any,
+  promptId: string,
+  targetSelector: string,
+  verticalAlign: TargetVerticalAlign = 'center'
+) => {
   const row = page.locator(promptTreePromptSelector(promptId))
 
   await row.scrollIntoViewIfNeeded()
@@ -172,10 +205,9 @@ const dragPromptTreeRowToTarget = async (page: any, promptId: string, targetSele
     throw new Error(`Missing drag geometry for ${targetSelector}`)
   }
 
-  const targetCenterX = targetBox.x + targetBox.width / 2
-  const targetCenterY = targetBox.y + targetBox.height / 2
+  const targetPoint = getTargetPoint(targetBox, verticalAlign)
 
-  await page.mouse.move(targetCenterX, targetCenterY, { steps: 12 })
+  await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 12 })
   await page.mouse.up()
 }
 
@@ -199,7 +231,11 @@ const beginPromptHandleDrag = async (page: any, promptId: string) => {
   await expect(page.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
 }
 
-const moveActiveDragToTarget = async (page: any, targetSelector: string) => {
+const moveActiveDragToTarget = async (
+  page: any,
+  targetSelector: string,
+  verticalAlign: TargetVerticalAlign = 'center'
+) => {
   const target = page.locator(targetSelector)
 
   await target.scrollIntoViewIfNeeded()
@@ -210,10 +246,9 @@ const moveActiveDragToTarget = async (page: any, targetSelector: string) => {
     throw new Error(`Missing drag geometry for ${targetSelector}`)
   }
 
-  const targetCenterX = targetBox.x + targetBox.width / 2
-  const targetCenterY = targetBox.y + targetBox.height / 2
+  const targetPoint = getTargetPoint(targetBox, verticalAlign)
 
-  await page.mouse.move(targetCenterX, targetCenterY, { steps: 12 })
+  await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 12 })
 }
 
 const finishActiveDrag = async (page: any) => {
@@ -331,7 +366,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await dragPromptHandleToTarget(mainWindow, DEV_2_ID, promptTreePromptSelector(DEV_1_ID))
+    await dragPromptHandleToTarget(mainWindow, DEV_2_ID, promptTreePromptSelector(DEV_1_ID), 'bottom')
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
@@ -349,7 +384,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(DEV_2_ID))
+    await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(DEV_2_ID), 'bottom')
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
@@ -367,7 +402,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await dragPromptTreeRowToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(DEV_2_ID))
+    await dragPromptTreeRowToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(DEV_2_ID), 'bottom')
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
@@ -488,7 +523,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(EXAMPLE_1_ID))
+    await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(EXAMPLE_1_ID), 'bottom')
 
     await expect(mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR)).toBeVisible()
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
@@ -538,7 +573,7 @@ describe('Prompt folder prompt drag-drop', () => {
 
     const scrollTopBefore = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
 
-    await dragPromptHandleToTarget(mainWindow, ANCHOR_1_ID, promptTreePromptSelector(ANCHOR_2_ID))
+    await dragPromptHandleToTarget(mainWindow, ANCHOR_1_ID, promptTreePromptSelector(ANCHOR_2_ID), 'bottom')
 
     await expect
       .poll(async () => (await readPromptFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH)).slice(0, 3))
@@ -566,7 +601,12 @@ describe('Prompt folder prompt drag-drop', () => {
     await testHelpers.navigateToPromptFolders(DESTINATION_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DESTINATION_1_ID))
 
-    await dragPromptTreeRowToTarget(mainWindow, ANCHOR_1_ID, promptTreePromptSelector(ANCHOR_2_ID))
+    await dragPromptTreeRowToTarget(
+      mainWindow,
+      ANCHOR_1_ID,
+      promptTreePromptSelector(ANCHOR_2_ID),
+      'bottom'
+    )
 
     await expectCurrentFolderPromptEditors(mainWindow, [DESTINATION_1_ID])
     await expectPersistedFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH, [
@@ -574,6 +614,133 @@ describe('Prompt folder prompt drag-drop', () => {
       ANCHOR_1_ID,
       ANCHOR_3_ID
     ])
+  })
+
+  test('moves a prompt before a different prompt when dropped on the top half of that prompt row', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await dragPromptHandleToTarget(
+      mainWindow,
+      DEV_2_ID,
+      promptTreePromptSelector(DEV_1_ID),
+      'top'
+    )
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
+  test('moves a prompt between folders before the prompt row it is dropped onto', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await dragPromptHandleToTarget(
+      mainWindow,
+      DEV_1_ID,
+      promptTreePromptSelector(EXAMPLE_1_ID),
+      'top'
+    )
+
+    await expect(mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR)).toBeVisible()
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
+      DEV_1_ID,
+      EXAMPLE_1_ID
+    ])
+  })
+
+  test('moves the prompt-tree indicator between the top and bottom edges of a prompt row', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+
+    const promptRow = mainWindow.locator(promptTreePromptSelector(EXAMPLE_1_ID))
+    const indicator = mainWindow.locator(promptTreePromptDropIndicatorSelector(EXAMPLE_1_ID))
+
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(EXAMPLE_1_ID), 'top')
+    await expect(indicator).toHaveAttribute('data-edge', 'top')
+
+    const promptRowBox = await promptRow.boundingBox()
+    const topIndicatorBox = await indicator.boundingBox()
+    if (!promptRowBox || !topIndicatorBox) {
+      throw new Error('Missing geometry for top-edge indicator assertion')
+    }
+
+    expect(Math.abs(topIndicatorBox.y + topIndicatorBox.height / 2 - promptRowBox.y)).toBeLessThanOrEqual(2)
+
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(EXAMPLE_1_ID), 'bottom')
+    await expect(indicator).toHaveAttribute('data-edge', 'bottom')
+
+    const bottomIndicatorBox = await indicator.boundingBox()
+    if (!bottomIndicatorBox) {
+      throw new Error('Missing geometry for bottom-edge indicator assertion')
+    }
+
+    expect(
+      Math.abs(
+        bottomIndicatorBox.y + bottomIndicatorBox.height / 2 - (promptRowBox.y + promptRowBox.height)
+      )
+    ).toBeLessThanOrEqual(2)
+
+    await finishActiveDrag(mainWindow)
+  })
+
+  test('shows the folder-settings indicator on the bottom edge', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptTreeFolderSettingsSelector(EXAMPLES_FOLDER_NAME))
+
+    const settingsRow = mainWindow.locator(promptTreeFolderSettingsSelector(EXAMPLES_FOLDER_NAME))
+    const indicator = mainWindow.locator(
+      promptTreeFolderSettingsDropIndicatorSelector(EXAMPLES_FOLDER_NAME)
+    )
+
+    await expect(indicator).toHaveAttribute('data-edge', 'bottom')
+
+    const settingsRowBox = await settingsRow.boundingBox()
+    const indicatorBox = await indicator.boundingBox()
+    if (!settingsRowBox || !indicatorBox) {
+      throw new Error('Missing geometry for folder-settings indicator assertion')
+    }
+
+    expect(
+      Math.abs(
+        indicatorBox.y + indicatorBox.height / 2 - (settingsRowBox.y + settingsRowBox.height)
+      )
+    ).toBeLessThanOrEqual(2)
+
+    await finishActiveDrag(mainWindow)
   })
 
   test('keeps the surviving top row anchored when a drag changes the folder rows', async ({

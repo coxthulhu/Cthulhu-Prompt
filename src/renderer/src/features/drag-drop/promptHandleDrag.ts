@@ -18,6 +18,7 @@ export type PromptHandleDropPayload =
       kind: 'prompt'
       folderId: string
       promptId: string
+      edge: 'top' | 'bottom'
     }
 
 export type PromptHandleMove = {
@@ -58,11 +59,33 @@ const reorderPromptIds = (
   return nextPromptIds
 }
 
+const resolveTopEdgeOrderAfterPromptId = (
+  destinationPromptIds: string[],
+  draggedPromptId: string,
+  targetPromptId: string
+): string | null => {
+  const targetIndex = destinationPromptIds.indexOf(targetPromptId)
+  if (targetIndex === -1) {
+    return null
+  }
+
+  // Skip the dragged prompt so same-folder "drop above" keeps the final ordering stable.
+  for (let index = targetIndex - 1; index >= 0; index -= 1) {
+    const previousPromptId = destinationPromptIds[index]
+    if (previousPromptId !== draggedPromptId) {
+      return previousPromptId
+    }
+  }
+
+  return null
+}
+
 export const resolvePromptHandleDropMove = (
   sourcePromptFolderId: string,
   sourcePromptIds: string[],
   promptId: string,
-  dropPayload: PromptHandleDropPayload | null
+  dropPayload: PromptHandleDropPayload | null,
+  destinationPromptIds: string[] | null
 ): PromptHandleMove | null => {
   if (!dropPayload) {
     return null
@@ -76,12 +99,25 @@ export const resolvePromptHandleDropMove = (
     dropPayload.kind === 'prompt'
       ? {
           destinationPromptFolderId: dropPayload.folderId,
-          orderAfterPromptId: dropPayload.promptId
+          orderAfterPromptId:
+            dropPayload.edge === 'top'
+              ? destinationPromptIds
+                ? resolveTopEdgeOrderAfterPromptId(
+                    destinationPromptIds,
+                    promptId,
+                    dropPayload.promptId
+                  )
+                : null
+              : dropPayload.promptId
         }
       : {
           destinationPromptFolderId: dropPayload.folderId,
           orderAfterPromptId: null
         }
+
+  if (dropPayload.kind === 'prompt' && dropPayload.edge === 'top' && !destinationPromptIds) {
+    return null
+  }
 
   if (sourcePromptFolderId === nextMove.destinationPromptFolderId) {
     const nextPromptIds = reorderPromptIds(sourcePromptIds, promptId, nextMove.orderAfterPromptId)

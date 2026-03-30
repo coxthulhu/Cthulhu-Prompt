@@ -5,6 +5,9 @@ const DRAG_START_DISTANCE_PX = 4
 const OVERLAY_OFFSET_X_PX = 12
 
 export type DragDropPreview = Snippet<[]>
+export type DroppableEdge = 'top' | 'bottom'
+export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
+type DroppablePayloadResolver = (edge: DroppableEdge | null) => unknown
 
 export type DraggableOptions = {
   dragType: string
@@ -15,18 +18,21 @@ export type DraggableOptions = {
 
 export type DroppableOptions = {
   dragType: string
-  payload?: unknown
+  payload?: unknown | DroppablePayloadResolver
+  allowedEdges?: DroppableAllowedEdges
   onDrop?: (payload: unknown) => void
   state?: DroppableState
 }
 
 export type DroppableState = {
   isOver: boolean
+  edge: DroppableEdge | null
 }
 
 export type DroppableStateRegistry<TKey extends string = string> = {
   getState: (key: TKey) => DroppableState
   isOver: (key: TKey) => boolean
+  edge: (key: TKey) => DroppableEdge | null
 }
 
 type ActiveDrag = {
@@ -43,10 +49,15 @@ type DroppableRegistration = {
   getOptions: () => DroppableOptions
 }
 
+type ActiveDropTarget = {
+  registration: DroppableRegistration
+  edge: DroppableEdge | null
+}
+
 let activeDrag = $state<ActiveDrag | null>(null)
 let cursorX = $state(0)
 let cursorY = $state(0)
-let activeDropTarget: DroppableRegistration | null = null
+let activeDropTarget: ActiveDropTarget | null = null
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 const droppableRegistrationByNode = new WeakMap<HTMLElement, DroppableRegistration>()
 
@@ -55,6 +66,7 @@ export const createDroppableStateRegistry = <
 >(): DroppableStateRegistry<TKey> => {
   const stateByKey = new SvelteMap<TKey, DroppableState>()
   const isOverByKey = new SvelteMap<TKey, boolean>()
+  const edgeByKey = new SvelteMap<TKey, DroppableEdge>()
 
   const getState = (key: TKey): DroppableState => {
     const existingState = stateByKey.get(key)
@@ -73,6 +85,17 @@ export const createDroppableStateRegistry = <
         }
 
         isOverByKey.delete(key)
+      },
+      get edge() {
+        return edgeByKey.get(key) ?? null
+      },
+      set edge(value: DroppableEdge | null) {
+        if (value) {
+          edgeByKey.set(key, value)
+          return
+        }
+
+        edgeByKey.delete(key)
       }
     } satisfies DroppableState
 
@@ -82,25 +105,34 @@ export const createDroppableStateRegistry = <
 
   return {
     getState,
-    isOver: (key: TKey) => isOverByKey.get(key) ?? false
+    isOver: (key: TKey) => isOverByKey.get(key) ?? false,
+    edge: (key: TKey) => edgeByKey.get(key) ?? null
   }
 }
 
-const setDroppableIsOver = (dropTarget: DroppableRegistration | null, isOver: boolean): void => {
-  const dropState = dropTarget?.getOptions().state
+const setDroppableState = (dropTarget: ActiveDropTarget | null, isOver: boolean): void => {
+  const dropState = dropTarget?.registration.getOptions().state
   if (dropState) {
     dropState.isOver = isOver
+    dropState.edge = isOver ? dropTarget.edge : null
   }
 }
 
-const setActiveDropTarget = (nextDropTarget: DroppableRegistration | null): void => {
-  if (activeDropTarget === nextDropTarget) {
+const areSameActiveDropTarget = (
+  left: ActiveDropTarget | null,
+  right: ActiveDropTarget | null
+): boolean => {
+  return left?.registration === right?.registration && left?.edge === right?.edge
+}
+
+const setActiveDropTarget = (nextDropTarget: ActiveDropTarget | null): void => {
+  if (areSameActiveDropTarget(activeDropTarget, nextDropTarget)) {
     return
   }
 
-  setDroppableIsOver(activeDropTarget, false)
+  setDroppableState(activeDropTarget, false)
   activeDropTarget = nextDropTarget
-  setDroppableIsOver(activeDropTarget, true)
+  setDroppableState(activeDropTarget, true)
 }
 
 const createDragCursorStyleElement = (node: HTMLElement): HTMLStyleElement | null => {
@@ -137,14 +169,30 @@ const getDropTargetFromPoint = (
   x: number,
   y: number,
   dragType: string
-): DroppableRegistration | null => {
+): ActiveDropTarget | null => {
   for (const element of document.elementsFromPoint(x, y)) {
     const registration = getClosestRegisteredDroppable(
       element instanceof Element ? element : null,
       dragType
     )
     if (registration) {
-      return registration
+      const { allowedEdges = 'none' } = registration.getOptions()
+      const edge =
+        allowedEdges === 'top'
+          ? 'top'
+          : allowedEdges === 'bottom'
+            ? 'bottom'
+            : allowedEdges === 'top-and-bottom'
+              ? y < registration.node.getBoundingClientRect().top +
+                  registration.node.getBoundingClientRect().height / 2
+                ? 'top'
+                : 'bottom'
+              : null
+
+      return {
+        registration,
+        edge
+      }
     }
   }
 
@@ -198,7 +246,7 @@ const beginDrag = (
 
 const finishDrag = (): {
   activeDrag: ActiveDrag | null
-  activeDropTarget: DroppableRegistration | null
+  activeDropTarget: ActiveDropTarget | null
 } => {
   const currentActiveDrag = activeDrag
   const currentActiveDropTarget = activeDropTarget
@@ -213,6 +261,15 @@ const finishDrag = (): {
   }
 }
 
+const resolveDropPayload = (dropTarget: ActiveDropTarget | null): unknown | null => {
+  const payload = dropTarget?.registration.getOptions().payload
+  if (typeof payload === 'function') {
+    return payload(dropTarget?.edge ?? null) ?? null
+  }
+
+  return payload ?? null
+}
+
 const endDrag = (): void => {
   const { activeDrag: completedDrag, activeDropTarget: completedDropTarget } = finishDrag()
 
@@ -220,8 +277,8 @@ const endDrag = (): void => {
     return
   }
 
-  const dropPayload = completedDropTarget?.getOptions().payload ?? null
-  completedDropTarget?.getOptions().onDrop?.(completedDrag.payload)
+  const dropPayload = resolveDropPayload(completedDropTarget)
+  completedDropTarget?.registration.getOptions().onDrop?.(completedDrag.payload)
   completedDrag.onDragFinish?.({
     sourcePayload: completedDrag.payload,
     dropPayload
@@ -310,7 +367,10 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
   if (activeDrag) {
     updateActiveDropTarget()
   }
-  setDroppableIsOver(registration, activeDropTarget === registration)
+  setDroppableState(
+    activeDropTarget?.registration === registration ? activeDropTarget : null,
+    activeDropTarget?.registration === registration
+  )
 
   return {
     update(nextOptions: DroppableOptions) {
@@ -323,14 +383,21 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
       // Side effect: keep opt-in row hover state aligned when options swap state objects.
       if (previousState && previousState !== droppableOptions.state) {
         previousState.isOver = false
+        previousState.edge = null
       }
-      setDroppableIsOver(registration, activeDropTarget === registration)
+      setDroppableState(
+        activeDropTarget?.registration === registration ? activeDropTarget : null,
+        activeDropTarget?.registration === registration
+      )
     },
     destroy() {
-      setDroppableIsOver(registration, false)
+      setDroppableState(
+        activeDropTarget?.registration === registration ? activeDropTarget : null,
+        false
+      )
       droppableRegistrations.delete(registration)
       droppableRegistrationByNode.delete(node)
-      if (activeDropTarget === registration) {
+      if (activeDropTarget?.registration === registration) {
         updateActiveDropTarget()
       }
     }
