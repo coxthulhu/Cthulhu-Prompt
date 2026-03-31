@@ -385,10 +385,7 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
     destroy() {
       node.removeEventListener('dragstart', handleNativeDragStart)
       node.removeEventListener('mousedown', handleMouseDown)
-
-      if (activeDrag?.sourceNode === node) {
-        finishDrag()
-      }
+      // Keep the active drag alive if virtualization unmounts the source row mid-drag.
     }
   }
 }

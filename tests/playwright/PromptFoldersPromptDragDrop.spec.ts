@@ -44,6 +44,35 @@ const ANCHOR_1_ID = 'anchor-1'
 const ANCHOR_2_ID = 'anchor-2'
 const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
+const SHORT_FOLDER_NAME = 'Short'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+
+const scrollPromptTreeUntilRowUnmounts = async (
+  mainWindow: Parameters<typeof beginPromptTreeRowDrag>[0],
+  promptId: string
+): Promise<void> => {
+  const promptTree = mainWindow.locator(PROMPT_TREE_HOST_SELECTOR)
+  const promptTreeBox = await promptTree.boundingBox()
+  if (!promptTreeBox) {
+    throw new Error('Missing prompt tree geometry for wheel-drag test')
+  }
+
+  // Keep wheel input over the prompt tree while the left mouse button stays held.
+  await mainWindow.mouse.move(
+    promptTreeBox.x + promptTreeBox.width / 2,
+    promptTreeBox.y + promptTreeBox.height / 2
+  )
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if ((await mainWindow.locator(promptTreePromptSelector(promptId)).count()) === 0) {
+      return
+    }
+
+    await mainWindow.mouse.wheel(0, 900)
+  }
+
+  throw new Error(`Dragged prompt row stayed mounted after wheel scrolling: ${promptId}`)
+}
 
 const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
   const tallPrompt = heightTestPrompts.twoHundredLine
@@ -438,6 +467,27 @@ describe('Prompt folder prompt drag-drop', () => {
       DEV_1_ID,
       EXAMPLE_1_ID
     ])
+  })
+
+  test('keeps dragging after wheel scrolling unloads the source prompt-tree row', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+
+    const sourcePromptId = 'short-1'
+
+    await beginPromptTreeRowDrag(mainWindow, sourcePromptId)
+    await scrollPromptTreeUntilRowUnmounts(mainWindow, sourcePromptId)
+
+    await expect(mainWindow.locator(promptTreePromptSelector(sourcePromptId))).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
+
+    await finishActiveDrag(mainWindow)
+    await expect(mainWindow.locator('[data-testid="drag-drop-overlay"]')).toHaveCount(0)
   })
 
   test('temporarily highlights the dragged prompt row while dragging from the editor handle', async ({
