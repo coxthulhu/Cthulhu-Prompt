@@ -23,24 +23,21 @@
   onRevealMatch={controller.handleFindMatchReveal}
 >
   <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    <div
-      class="flex h-9 border-b border-border items-center pl-6"
-      style="background-color: #1F1F1F;"
-    >
-      <div class="flex min-w-0 items-center text-lg font-semibold">
+    <div class="flex h-9 shrink-0 items-center border-b border-white/8 bg-[#0f1117] px-6">
+      <div class="flex min-w-0 items-center text-sm font-medium text-zinc-500">
         <button
           type="button"
           data-testid="prompt-folder-header-folder"
-          class="min-w-0 truncate underline text-foreground/85 transition-colors hover:text-foreground"
+          class="min-w-0 truncate text-zinc-500 transition-colors hover:text-zinc-300"
           onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
         >
           {controller.folderDisplayName}
         </button>
-        <span class="mx-2">/</span>
+        <span class="mx-1 px-2 text-zinc-700">/</span>
         <button
           type="button"
           data-testid="prompt-folder-header-section"
-          class="underline whitespace-nowrap text-foreground/85 transition-colors hover:text-foreground"
+          class="whitespace-nowrap text-zinc-300 transition-colors hover:text-white"
           onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
         >
           {controller.activeHeaderSection}
