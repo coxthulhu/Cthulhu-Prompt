@@ -29,7 +29,8 @@ export type ScrollToWithinWindowBandType = 'center' | 'minimal'
 export type ScrollToWithinWindowBand = (
   rowId: string,
   offsetPx: number,
-  scrollType: ScrollToWithinWindowBandType
+  scrollType: ScrollToWithinWindowBandType,
+  minimalPaddingPx?: number
 ) => void
 
 export type ScrollToAndTrackRowCentered = (rowId: string) => void

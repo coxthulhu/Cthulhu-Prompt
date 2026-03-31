@@ -670,7 +670,8 @@ export const createPromptFolderScreenController = ({
     setCurrentFolderSelection(resolveHeaderSelectionRow(rowId), 'header', {
       forceVersionBump: true
     })
-    scrollToWithinWindowBand(rowId, 0, 'minimal')
+    // Header navigation should land directly on the target section.
+    scrollToWithinWindowBand(rowId, 0, 'minimal', 0)
   }
 
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {

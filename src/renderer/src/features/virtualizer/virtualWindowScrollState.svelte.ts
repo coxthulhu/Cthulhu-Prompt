@@ -120,7 +120,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
     rowId: string,
     offsetPx: number,
-    scrollType: ScrollToWithinWindowBandType
+    scrollType: ScrollToWithinWindowBandType,
+    minimalPaddingPx = windowBandPaddingPx
   ) => {
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
@@ -130,8 +131,9 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     if (!row) return
 
     const targetOffsetPx = row.offset + offsetPx
-    const bandTopPx = scrollTopPx + windowBandPaddingPx
-    const bandBottomPx = scrollTopPx + viewportHeight - windowBandPaddingPx
+    const bandPaddingPx = scrollType === 'minimal' ? minimalPaddingPx : windowBandPaddingPx
+    const bandTopPx = scrollTopPx + bandPaddingPx
+    const bandBottomPx = scrollTopPx + viewportHeight - bandPaddingPx
 
     if (targetOffsetPx >= bandTopPx && targetOffsetPx <= bandBottomPx) return
 
@@ -140,9 +142,9 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     if (scrollType === 'center') {
       nextScrollTop = targetOffsetPx - viewportHeight / 2
     } else if (targetOffsetPx < bandTopPx) {
-      nextScrollTop = targetOffsetPx - windowBandPaddingPx
+      nextScrollTop = targetOffsetPx - bandPaddingPx
     } else {
-      nextScrollTop = targetOffsetPx + windowBandPaddingPx - viewportHeight
+      nextScrollTop = targetOffsetPx + bandPaddingPx - viewportHeight
     }
 
     nextScrollTop = clampScrollTop(nextScrollTop)
