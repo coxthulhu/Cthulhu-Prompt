@@ -1,14 +1,21 @@
 <script lang="ts">
-  import {
-    getPromptNavigationContext,
-    type PromptNavigationRow
-  } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { cn } from '@renderer/common/Cn.js'
   import { buttonVariants } from '@renderer/common/ui/button/button.svelte'
   import { GripVertical } from 'lucide-svelte'
-  import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import {
+    type DragDropPreview,
+    draggable,
+    type DragFinishResult,
+    type DraggableOptions
+  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
+  import {
+    clearDraggedPromptHighlight,
+    highlightDraggedPrompt
+  } from '@renderer/features/drag-drop/promptDragHighlight'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
+    type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
@@ -27,27 +34,35 @@
   } = $props()
 
   const promptNavigation = getPromptNavigationContext()
-  const toPromptNavigationRow = (nextPromptId: string): PromptNavigationRow => `prompt:${nextPromptId}`
 
-  const handleDragStart = () => {
-    promptNavigation.setViewedRowOverride({
-      folderId: promptFolderId,
-      row: toPromptNavigationRow(promptId)
-    })
+  const handleDragStart = (sourcePayload: PromptHandleDragPayload): void => {
+    highlightDraggedPrompt(promptNavigation, sourcePayload)
   }
 
-  const handleDragFinish = (result: { sourcePayload: unknown; dropPayload: unknown | null }) => {
-    promptNavigation.clearViewedRowOverride()
+  const handleDragFinish = ({
+    dropPayload
+  }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
+    clearDraggedPromptHighlight(promptNavigation)
 
     // Keep these handlers referenced for future keyboard shortcuts.
     void onMoveUp
     void onMoveDown
 
-    const dropPayload = result.dropPayload as PromptHandleDropPayload | null
-    void result.sourcePayload
-    void promptId
     void onPromptTreeDrop(dropPayload)
   }
+
+  const getDragHandleOptions = (
+    previewSnippet: DragDropPreview
+  ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    payload: {
+      fromId: promptId,
+      sourceFolderId: promptFolderId
+    },
+    previewSnippet,
+    onDragStart: handleDragStart,
+    onDragFinish: handleDragFinish
+  })
 </script>
 
 <div class="w-6 flex-shrink-0 flex flex-col">
@@ -56,13 +71,7 @@
   {/snippet}
 
   <button
-    use:draggable={{
-      dragType: PROMPT_HANDLE_DRAG_TYPE,
-      payload: { fromId: promptId, sourceFolderId: promptFolderId },
-      previewSnippet: emptyDragPreview,
-      onDragStart: handleDragStart,
-      onDragFinish: handleDragFinish
-    }}
+    use:draggable={getDragHandleOptions(emptyDragPreview)}
     type="button"
     class={cn(
       buttonVariants({ variant: 'ghost', size: 'icon' }),

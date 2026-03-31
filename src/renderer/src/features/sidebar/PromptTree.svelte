@@ -15,11 +15,12 @@
     droppable,
     type DroppableAllowedEdges,
     type DroppableEdge,
-    type DroppableOptions
+    type DragDropPreview,
+    type DroppableOptions,
+    type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
-    resolvePromptHandleDropMove,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
@@ -27,11 +28,10 @@
     type PromptDraftRecord,
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
-  import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
-  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     getPromptNavigationContext,
+    promptIdToPromptNavigationRow,
     type PromptNavigationRow
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
@@ -48,6 +48,7 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import PromptTreeDropIndicator from './PromptTreeDropIndicator.svelte'
+  import { createPromptTreePromptDragController } from './promptTreeDrag'
   import {
     folderIconTestId,
     folderOpenTestId,
@@ -192,14 +193,13 @@
   const folderSettingsRowId = (folderId: string): string => `${folderId}:settings`
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`
-  const promptNavigationPromptRow = (promptId: string): PromptNavigationRow => `prompt:${promptId}`
   const promptTreeDroppableState = createDroppableStateRegistry<string>()
 
   const getPromptTreeDroppableOptions = (
     rowId: string,
     allowedEdges: DroppableAllowedEdges,
     getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload
-  ): DroppableOptions => ({
+  ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges,
     payload: getDropPayload,
@@ -211,11 +211,6 @@
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreeDroppableState.edge(rowId)
-
-  const findPromptFolderPromptIds = (folderId: string): string[] | null => {
-    const promptFolder = promptFolders.find((folder) => folder.id === folderId)
-    return promptFolder?.promptIds ?? null
-  }
 
   const getPromptTreeDropIndicatorTestId = (row: PromptTreeOverlayRow): string =>
     row.kind === 'folder-settings'
@@ -256,6 +251,26 @@
     return promptNavigation.selectedRow
   })
 
+  const promptTreePromptDrag = createPromptTreePromptDragController({
+    getPromptFolders: () => promptFolders,
+    promptNavigation
+  })
+
+  const getPromptRowDragOptions = (
+    folderId: string,
+    promptId: string,
+    previewSnippet: DragDropPreview
+  ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    payload: {
+      fromId: promptId,
+      sourceFolderId: folderId
+    },
+    previewSnippet,
+    onDragStart: promptTreePromptDrag.handleDragStart,
+    onDragFinish: promptTreePromptDrag.handleDragFinish
+  })
+
   const trackedTreeRowId = $derived.by((): string | null => {
     if (!selectedPromptFolderId || !trackedNavigationRow) {
       return null
@@ -267,11 +282,13 @@
   })
 
   const isTreeEntryActive = (folderId: string, row: PromptNavigationRow): boolean => {
-    if (!isPromptFoldersScreenActive || !promptNavigation.viewedRow) {
+    if (!isPromptFoldersScreenActive || !promptNavigation.highlightedRow) {
       return false
     }
 
-    return promptNavigation.viewedFolderId === folderId && promptNavigation.viewedRow === row
+    return (
+      promptNavigation.highlightedFolderId === folderId && promptNavigation.highlightedRow === row
+    )
   }
 
   const handlePromptTreeEntrySelect = (
@@ -294,54 +311,6 @@
     }
 
     blurButtonAfterMouseClick(event)
-  }
-
-  const handlePromptRowDragStart = (payload: unknown) => {
-    const sourcePayload = payload as PromptHandleDragPayload
-    promptNavigation.setViewedRowOverride({
-      folderId: sourcePayload.sourceFolderId,
-      row: promptNavigationPromptRow(sourcePayload.fromId)
-    })
-  }
-
-  const handlePromptRowDragFinish = (result: {
-    sourcePayload: unknown
-    dropPayload: unknown | null
-  }) => {
-    promptNavigation.clearViewedRowOverride()
-
-    const sourcePayload = result.sourcePayload as PromptHandleDragPayload
-    const dropPayload = result.dropPayload as PromptHandleDropPayload | null
-    const sourcePromptFolder = promptFolders.find(
-      (promptFolder) => promptFolder.id === sourcePayload.sourceFolderId
-    )
-    if (!sourcePromptFolder) {
-      return
-    }
-
-    const nextMove = resolvePromptHandleDropMove(
-      sourcePromptFolder.id,
-      sourcePromptFolder.promptIds,
-      sourcePayload.fromId,
-      dropPayload,
-      findPromptFolderPromptIds(
-        dropPayload?.kind === 'prompt'
-          ? dropPayload.folderId
-          : sourcePromptFolder.id
-      )
-    )
-    if (!nextMove) {
-      return
-    }
-
-    void runIpcBestEffort(async () => {
-      await movePrompt(
-        nextMove.sourcePromptFolderId,
-        nextMove.destinationPromptFolderId,
-        nextMove.promptId,
-        nextMove.orderAfterPromptId
-      )
-    })
   }
 
   // Side effect: clear local folder expand overrides when switching workspaces.
@@ -564,21 +533,16 @@
 {#snippet folderPromptRow(props)}
   {@const isActive = isTreeEntryActive(
     props.row.folder.id,
-    promptNavigationPromptRow(props.row.promptId)
+    promptIdToPromptNavigationRow(props.row.promptId)
   )}
 
   <div class="sidebarPromptTreeSettingsRow">
     <button
-      use:draggable={{
-        dragType: PROMPT_HANDLE_DRAG_TYPE,
-        payload: {
-          fromId: props.row.promptId,
-          sourceFolderId: props.row.folder.id
-        },
-        previewSnippet: emptyDragPreview,
-        onDragStart: handlePromptRowDragStart,
-        onDragFinish: handlePromptRowDragFinish
-      }}
+      use:draggable={getPromptRowDragOptions(
+        props.row.folder.id,
+        props.row.promptId,
+        emptyDragPreview
+      )}
       use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
         kind: 'prompt',
         folderId: props.row.folder.id,
@@ -592,7 +556,7 @@
       onclick={(event) =>
         handlePromptTreeEntrySelect(
           props.row.folder.id,
-          promptNavigationPromptRow(props.row.promptId),
+          promptIdToPromptNavigationRow(props.row.promptId),
           event
         )}
       class="sidebarPromptTreeSettingsButton"

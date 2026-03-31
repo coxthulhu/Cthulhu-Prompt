@@ -3,6 +3,8 @@ import { getContext, setContext } from 'svelte'
 const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
 
 export type PromptNavigationRow = 'folder-settings' | `prompt:${string}`
+export const promptIdToPromptNavigationRow = (promptId: string): PromptNavigationRow =>
+  `prompt:${promptId}`
 
 export type PromptNavigationSource =
   | 'tree-click'
@@ -17,8 +19,8 @@ type PromptNavigationState = {
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
-  viewedFolderIdOverride: string | null
-  viewedRowOverride: PromptNavigationRow | null
+  highlightedFolderIdOverride: string | null
+  highlightedRowOverride: PromptNavigationRow | null
 }
 
 type SelectPromptNavigationOptions = {
@@ -33,12 +35,12 @@ export type PromptNavigationContext = {
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
-  viewedFolderId: string | null
-  viewedRow: PromptNavigationRow | null
-  hasViewedRowOverride: boolean
+  highlightedFolderId: string | null
+  highlightedRow: PromptNavigationRow | null
+  hasHighlightedRowOverride: boolean
   select: (options: SelectPromptNavigationOptions) => void
-  setViewedRowOverride: (options: { folderId: string; row: PromptNavigationRow }) => void
-  clearViewedRowOverride: () => void
+  setHighlightedRowOverride: (options: { folderId: string; row: PromptNavigationRow }) => void
+  clearHighlightedRowOverride: () => void
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
@@ -62,8 +64,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     selectedRow: null,
     selectionVersion: 0,
     selectionSource: null,
-    viewedFolderIdOverride: null,
-    viewedRowOverride: null
+    highlightedFolderIdOverride: null,
+    highlightedRowOverride: null
   })
 
   const select = ({
@@ -87,14 +89,17 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     state.selectionVersion += 1
   }
 
-  const setViewedRowOverride = (options: { folderId: string; row: PromptNavigationRow }): void => {
-    state.viewedFolderIdOverride = options.folderId
-    state.viewedRowOverride = options.row
+  const setHighlightedRowOverride = (options: {
+    folderId: string
+    row: PromptNavigationRow
+  }): void => {
+    state.highlightedFolderIdOverride = options.folderId
+    state.highlightedRowOverride = options.row
   }
 
-  const clearViewedRowOverride = (): void => {
-    state.viewedFolderIdOverride = null
-    state.viewedRowOverride = null
+  const clearHighlightedRowOverride = (): void => {
+    state.highlightedFolderIdOverride = null
+    state.highlightedRowOverride = null
   }
 
   return {
@@ -110,18 +115,18 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     get selectionSource() {
       return state.selectionSource
     },
-    get viewedFolderId() {
-      return state.viewedFolderIdOverride ?? state.selectedFolderId
+    get highlightedFolderId() {
+      return state.highlightedFolderIdOverride ?? state.selectedFolderId
     },
-    get viewedRow() {
-      return state.viewedRowOverride ?? state.selectedRow
+    get highlightedRow() {
+      return state.highlightedRowOverride ?? state.selectedRow
     },
-    get hasViewedRowOverride() {
-      return state.viewedRowOverride !== null
+    get hasHighlightedRowOverride() {
+      return state.highlightedRowOverride !== null
     },
     select,
-    setViewedRowOverride,
-    clearViewedRowOverride
+    setHighlightedRowOverride,
+    clearHighlightedRowOverride
   }
 }
 

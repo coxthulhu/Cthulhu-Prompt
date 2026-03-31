@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import { SvelteMap, SvelteSet } from 'svelte/reactivity'
+import { SvelteMap } from 'svelte/reactivity'
 
 const DRAG_START_DISTANCE_PX = 4
 const OVERLAY_OFFSET_X_PX = 12
@@ -7,21 +7,26 @@ const OVERLAY_OFFSET_X_PX = 12
 export type DragDropPreview = Snippet<[]>
 export type DroppableEdge = 'top' | 'bottom'
 export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
-type DroppablePayloadResolver = (edge: DroppableEdge | null) => unknown
+type DroppablePayloadResolver<TDropPayload> = (edge: DroppableEdge | null) => TDropPayload
 
-export type DraggableOptions = {
-  dragType: string
-  payload: unknown
-  previewSnippet: DragDropPreview
-  onDragStart?: (payload: unknown) => void
-  onDragFinish?: (result: { sourcePayload: unknown; dropPayload: unknown | null }) => void
+export type DragFinishResult<TSourcePayload, TDropPayload> = {
+  sourcePayload: TSourcePayload
+  dropPayload: TDropPayload | null
 }
 
-export type DroppableOptions = {
+export type DraggableOptions<TSourcePayload = unknown, TDropPayload = unknown> = {
   dragType: string
-  payload?: unknown | DroppablePayloadResolver
+  payload: TSourcePayload
+  previewSnippet: DragDropPreview
+  onDragStart?: (payload: TSourcePayload) => void
+  onDragFinish?: (result: DragFinishResult<TSourcePayload, TDropPayload>) => void
+}
+
+export type DroppableOptions<TDraggedPayload = unknown, TDropPayload = unknown> = {
+  dragType: string
+  payload?: TDropPayload | DroppablePayloadResolver<TDropPayload>
   allowedEdges?: DroppableAllowedEdges
-  onDrop?: (payload: unknown) => void
+  onDrop?: (payload: TDraggedPayload) => void
   state?: DroppableState
 }
 
@@ -41,14 +46,22 @@ type ActiveDrag = {
   dragType: string
   payload: unknown
   previewSnippet: DragDropPreview
-  onDragStart: ((payload: unknown) => void) | null
-  onDragFinish: ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void) | null
+  onDragStart: (() => void) | null
+  onDragFinish: ((dropPayload: unknown | null) => void) | null
   cursorStyleElement: HTMLStyleElement | null
+}
+
+type NormalizedDroppableOptions = {
+  dragType: string
+  allowedEdges: DroppableAllowedEdges
+  resolvePayload: (edge: DroppableEdge | null) => unknown | null
+  onDrop: ((payload: unknown) => void) | null
+  state?: DroppableState
 }
 
 type DroppableRegistration = {
   node: HTMLElement
-  getOptions: () => DroppableOptions
+  getOptions: () => NormalizedDroppableOptions
 }
 
 type ActiveDropTarget = {
@@ -60,7 +73,6 @@ let activeDrag = $state<ActiveDrag | null>(null)
 let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDropTarget: ActiveDropTarget | null = null
-const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 const droppableRegistrationByNode = new WeakMap<HTMLElement, DroppableRegistration>()
 
 export const createDroppableStateRegistry = <
@@ -149,6 +161,25 @@ const createDragCursorStyleElement = (node: HTMLElement): HTMLStyleElement | nul
   return style
 }
 
+const normalizeDroppableOptions = <TDraggedPayload, TDropPayload>(
+  options: DroppableOptions<TDraggedPayload, TDropPayload>
+): NormalizedDroppableOptions => {
+  const payload = options.payload
+
+  return {
+    dragType: options.dragType,
+    allowedEdges: options.allowedEdges ?? 'none',
+    resolvePayload:
+      typeof payload === 'function'
+        ? (edge) => (payload as DroppablePayloadResolver<TDropPayload>)(edge) ?? null
+        : () => payload ?? null,
+    onDrop: options.onDrop
+      ? (draggedPayload) => options.onDrop?.(draggedPayload as TDraggedPayload)
+      : null,
+    state: options.state
+  }
+}
+
 const getClosestRegisteredDroppable = (
   startElement: Element | null,
   dragType: string
@@ -167,6 +198,23 @@ const getClosestRegisteredDroppable = (
   return null
 }
 
+const resolveDropEdge = (
+  node: HTMLElement,
+  allowedEdges: DroppableAllowedEdges,
+  cursorY: number
+): DroppableEdge | null => {
+  if (allowedEdges === 'none') {
+    return null
+  }
+
+  if (allowedEdges === 'top' || allowedEdges === 'bottom') {
+    return allowedEdges
+  }
+
+  const { top, height } = node.getBoundingClientRect()
+  return cursorY < top + height / 2 ? 'top' : 'bottom'
+}
+
 const getDropTargetFromPoint = (
   x: number,
   y: number,
@@ -178,22 +226,9 @@ const getDropTargetFromPoint = (
       dragType
     )
     if (registration) {
-      const { allowedEdges = 'none' } = registration.getOptions()
-      const edge =
-        allowedEdges === 'top'
-          ? 'top'
-          : allowedEdges === 'bottom'
-            ? 'bottom'
-            : allowedEdges === 'top-and-bottom'
-              ? y < registration.node.getBoundingClientRect().top +
-                  registration.node.getBoundingClientRect().height / 2
-                ? 'top'
-                : 'bottom'
-              : null
-
       return {
         registration,
-        edge
+        edge: resolveDropEdge(registration.node, registration.getOptions().allowedEdges, y)
       }
     }
   }
@@ -227,23 +262,30 @@ const updateDragCursor = (nextX: number, nextY: number): void => {
   updateActiveDropTarget()
 }
 
-const beginDrag = (
+const beginDrag = <TSourcePayload, TDropPayload>(
   sourceNode: HTMLElement,
-  options: DraggableOptions,
+  options: DraggableOptions<TSourcePayload, TDropPayload>,
   startX: number,
   startY: number
 ): void => {
+  const sourcePayload = options.payload
   activeDrag = {
     sourceNode,
     dragType: options.dragType,
-    payload: options.payload,
+    payload: sourcePayload,
     previewSnippet: options.previewSnippet,
-    onDragStart: options.onDragStart ?? null,
-    onDragFinish: options.onDragFinish ?? null,
+    onDragStart: options.onDragStart ? () => options.onDragStart?.(sourcePayload) : null,
+    onDragFinish: options.onDragFinish
+      ? (dropPayload) =>
+          options.onDragFinish?.({
+            sourcePayload,
+            dropPayload: dropPayload as TDropPayload | null
+          })
+      : null,
     cursorStyleElement: createDragCursorStyleElement(sourceNode)
   }
 
-  activeDrag.onDragStart?.(options.payload)
+  activeDrag.onDragStart?.()
   updateDragCursor(startX, startY)
   document.body.style.userSelect = 'none'
 }
@@ -265,15 +307,6 @@ const finishDrag = (): {
   }
 }
 
-const resolveDropPayload = (dropTarget: ActiveDropTarget | null): unknown | null => {
-  const payload = dropTarget?.registration.getOptions().payload
-  if (typeof payload === 'function') {
-    return payload(dropTarget?.edge ?? null) ?? null
-  }
-
-  return payload ?? null
-}
-
 const endDrag = (): void => {
   const { activeDrag: completedDrag, activeDropTarget: completedDropTarget } = finishDrag()
 
@@ -281,15 +314,16 @@ const endDrag = (): void => {
     return
   }
 
-  const dropPayload = resolveDropPayload(completedDropTarget)
+  const dropPayload =
+    completedDropTarget?.registration.getOptions().resolvePayload(completedDropTarget.edge) ?? null
   completedDropTarget?.registration.getOptions().onDrop?.(completedDrag.payload)
-  completedDrag.onDragFinish?.({
-    sourcePayload: completedDrag.payload,
-    dropPayload
-  })
+  completedDrag.onDragFinish?.(dropPayload)
 }
 
-export const draggable = (node: HTMLElement, options: DraggableOptions) => {
+export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
+  node: HTMLElement,
+  options: DraggableOptions<TSourcePayload, TDropPayload>
+) => {
   let draggableOptions = options
 
   const handleNativeDragStart = (event: DragEvent) => {
@@ -345,7 +379,7 @@ export const draggable = (node: HTMLElement, options: DraggableOptions) => {
   node.addEventListener('mousedown', handleMouseDown)
 
   return {
-    update(nextOptions: DraggableOptions) {
+    update(nextOptions: DraggableOptions<TSourcePayload, TDropPayload>) {
       draggableOptions = nextOptions
     },
     destroy() {
@@ -359,14 +393,16 @@ export const draggable = (node: HTMLElement, options: DraggableOptions) => {
   }
 }
 
-export const droppable = (node: HTMLElement, options: DroppableOptions) => {
-  let droppableOptions = options
+export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
+  node: HTMLElement,
+  options: DroppableOptions<TDraggedPayload, TDropPayload>
+) => {
+  let droppableOptions = normalizeDroppableOptions(options)
   const registration: DroppableRegistration = {
     node,
     getOptions: () => droppableOptions
   }
 
-  droppableRegistrations.add(registration)
   droppableRegistrationByNode.set(node, registration)
   if (activeDrag) {
     updateActiveDropTarget()
@@ -377,9 +413,9 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
   )
 
   return {
-    update(nextOptions: DroppableOptions) {
+    update(nextOptions: DroppableOptions<TDraggedPayload, TDropPayload>) {
       const previousState = droppableOptions.state
-      droppableOptions = nextOptions
+      droppableOptions = normalizeDroppableOptions(nextOptions)
       if (activeDrag) {
         updateActiveDropTarget()
       }
@@ -399,7 +435,6 @@ export const droppable = (node: HTMLElement, options: DroppableOptions) => {
         activeDropTarget?.registration === registration ? activeDropTarget : null,
         false
       )
-      droppableRegistrations.delete(registration)
       droppableRegistrationByNode.delete(node)
       if (activeDropTarget?.registration === registration) {
         updateActiveDropTarget()
