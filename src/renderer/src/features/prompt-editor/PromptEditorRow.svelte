@@ -38,6 +38,7 @@
 
   let {
     promptId,
+    promptFolderId,
     workspaceId,
     promptDraftRecord,
     rowId,
@@ -57,6 +58,7 @@
     onPromptTreeDrop
   }: {
     promptId: string
+    promptFolderId: string
     workspaceId: string | null
     promptDraftRecord: PromptDraftRecord
     rowId: string
@@ -320,6 +322,7 @@
 >
   <PromptEditorSidebar
     {promptId}
+    {promptFolderId}
     onMoveUp={handleMoveUp}
     onMoveDown={handleMoveDown}
     {onPromptTreeDrop}

@@ -267,15 +267,11 @@
   })
 
   const isTreeEntryActive = (folderId: string, row: PromptNavigationRow): boolean => {
-    if (
-      !isPromptFoldersScreenActive ||
-      selectedPromptFolderId !== folderId ||
-      !trackedNavigationRow
-    ) {
+    if (!isPromptFoldersScreenActive || !promptNavigation.viewedRow) {
       return false
     }
 
-    return trackedNavigationRow === row
+    return promptNavigation.viewedFolderId === folderId && promptNavigation.viewedRow === row
   }
 
   const handlePromptTreeEntrySelect = (
@@ -300,10 +296,20 @@
     blurButtonAfterMouseClick(event)
   }
 
+  const handlePromptRowDragStart = (payload: unknown) => {
+    const sourcePayload = payload as PromptHandleDragPayload
+    promptNavigation.setViewedRowOverride({
+      folderId: sourcePayload.sourceFolderId,
+      row: promptNavigationPromptRow(sourcePayload.fromId)
+    })
+  }
+
   const handlePromptRowDragFinish = (result: {
     sourcePayload: unknown
     dropPayload: unknown | null
   }) => {
+    promptNavigation.clearViewedRowOverride()
+
     const sourcePayload = result.sourcePayload as PromptHandleDragPayload
     const dropPayload = result.dropPayload as PromptHandleDropPayload | null
     const sourcePromptFolder = promptFolders.find(
@@ -570,6 +576,7 @@
           sourceFolderId: props.row.folder.id
         },
         previewSnippet: emptyDragPreview,
+        onDragStart: handlePromptRowDragStart,
         onDragFinish: handlePromptRowDragFinish
       }}
       use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({

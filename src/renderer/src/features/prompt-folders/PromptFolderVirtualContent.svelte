@@ -306,6 +306,7 @@
 }: PromptEditorRowProps)}
   <PromptEditorRow
     {workspaceId}
+    {promptFolderId}
     promptId={row.promptId}
     promptDraftRecord={promptDraftById[row.promptId]!}
     {rowId}

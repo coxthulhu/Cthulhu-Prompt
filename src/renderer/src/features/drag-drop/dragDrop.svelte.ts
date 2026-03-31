@@ -13,6 +13,7 @@ export type DraggableOptions = {
   dragType: string
   payload: unknown
   previewSnippet: DragDropPreview
+  onDragStart?: (payload: unknown) => void
   onDragFinish?: (result: { sourcePayload: unknown; dropPayload: unknown | null }) => void
 }
 
@@ -40,6 +41,7 @@ type ActiveDrag = {
   dragType: string
   payload: unknown
   previewSnippet: DragDropPreview
+  onDragStart: ((payload: unknown) => void) | null
   onDragFinish: ((result: { sourcePayload: unknown; dropPayload: unknown | null }) => void) | null
   cursorStyleElement: HTMLStyleElement | null
 }
@@ -236,10 +238,12 @@ const beginDrag = (
     dragType: options.dragType,
     payload: options.payload,
     previewSnippet: options.previewSnippet,
+    onDragStart: options.onDragStart ?? null,
     onDragFinish: options.onDragFinish ?? null,
     cursorStyleElement: createDragCursorStyleElement(sourceNode)
   }
 
+  activeDrag.onDragStart?.(options.payload)
   updateDragCursor(startX, startY)
   document.body.style.userSelect = 'none'
 }

@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    getPromptNavigationContext,
+    type PromptNavigationRow
+  } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { cn } from '@renderer/common/Cn.js'
   import { buttonVariants } from '@renderer/common/ui/button/button.svelte'
   import { GripVertical } from 'lucide-svelte'
@@ -10,17 +14,31 @@
 
   let {
     promptId,
+    promptFolderId,
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
   }: {
     promptId: string
+    promptFolderId: string
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
 
+  const promptNavigation = getPromptNavigationContext()
+  const toPromptNavigationRow = (nextPromptId: string): PromptNavigationRow => `prompt:${nextPromptId}`
+
+  const handleDragStart = () => {
+    promptNavigation.setViewedRowOverride({
+      folderId: promptFolderId,
+      row: toPromptNavigationRow(promptId)
+    })
+  }
+
   const handleDragFinish = (result: { sourcePayload: unknown; dropPayload: unknown | null }) => {
+    promptNavigation.clearViewedRowOverride()
+
     // Keep these handlers referenced for future keyboard shortcuts.
     void onMoveUp
     void onMoveDown
@@ -40,8 +58,9 @@
   <button
     use:draggable={{
       dragType: PROMPT_HANDLE_DRAG_TYPE,
-      payload: { fromId: promptId },
+      payload: { fromId: promptId, sourceFolderId: promptFolderId },
       previewSnippet: emptyDragPreview,
+      onDragStart: handleDragStart,
       onDragFinish: handleDragFinish
     }}
     type="button"

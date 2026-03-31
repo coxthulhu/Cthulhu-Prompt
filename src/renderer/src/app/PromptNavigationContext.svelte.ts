@@ -17,6 +17,8 @@ type PromptNavigationState = {
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
+  viewedFolderIdOverride: string | null
+  viewedRowOverride: PromptNavigationRow | null
 }
 
 type SelectPromptNavigationOptions = {
@@ -31,7 +33,12 @@ export type PromptNavigationContext = {
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
+  viewedFolderId: string | null
+  viewedRow: PromptNavigationRow | null
+  hasViewedRowOverride: boolean
   select: (options: SelectPromptNavigationOptions) => void
+  setViewedRowOverride: (options: { folderId: string; row: PromptNavigationRow }) => void
+  clearViewedRowOverride: () => void
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
@@ -49,11 +56,14 @@ export const persistedPromptTreeEntryIdToPromptNavigationRow = (
 }
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {
+  // Keep drag-only tree highlighting separate from canonical navigation state.
   const state = $state<PromptNavigationState>({
     selectedFolderId: null,
     selectedRow: null,
     selectionVersion: 0,
-    selectionSource: null
+    selectionSource: null,
+    viewedFolderIdOverride: null,
+    viewedRowOverride: null
   })
 
   const select = ({
@@ -77,6 +87,16 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     state.selectionVersion += 1
   }
 
+  const setViewedRowOverride = (options: { folderId: string; row: PromptNavigationRow }): void => {
+    state.viewedFolderIdOverride = options.folderId
+    state.viewedRowOverride = options.row
+  }
+
+  const clearViewedRowOverride = (): void => {
+    state.viewedFolderIdOverride = null
+    state.viewedRowOverride = null
+  }
+
   return {
     get selectedFolderId() {
       return state.selectedFolderId
@@ -90,7 +110,18 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     get selectionSource() {
       return state.selectionSource
     },
-    select
+    get viewedFolderId() {
+      return state.viewedFolderIdOverride ?? state.selectedFolderId
+    },
+    get viewedRow() {
+      return state.viewedRowOverride ?? state.selectedRow
+    },
+    get hasViewedRowOverride() {
+      return state.viewedRowOverride !== null
+    },
+    select,
+    setViewedRowOverride,
+    clearViewedRowOverride
   }
 }
 
