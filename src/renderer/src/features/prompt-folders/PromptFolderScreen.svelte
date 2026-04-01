@@ -28,7 +28,7 @@
         <button
           type="button"
           data-testid="prompt-folder-header-folder"
-          class="min-w-0 truncate text-zinc-500 transition-colors hover:text-zinc-300"
+          class="min-w-0 cursor-pointer truncate text-zinc-500 transition-colors hover:text-zinc-300"
           onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
         >
           {controller.folderDisplayName}
@@ -37,7 +37,7 @@
         <button
           type="button"
           data-testid="prompt-folder-header-section"
-          class="whitespace-nowrap text-zinc-300 transition-colors hover:text-white"
+          class="cursor-pointer whitespace-nowrap text-zinc-300 transition-colors hover:text-white"
           onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
         >
           {controller.activeHeaderSection}
