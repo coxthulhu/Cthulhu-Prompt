@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Button } from '@renderer/common/ui/button'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
+  import { Keyboard } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -74,73 +74,108 @@
   })
 </script>
 
-<section class="flex-1 p-6 flex flex-col items-center justify-start" data-testid="settings-screen">
-  <div class="w-full max-w-2xl space-y-6">
+<section
+  class="flex min-h-0 flex-1 justify-center overflow-y-auto px-6 py-6 text-white"
+  data-testid="settings-screen"
+>
+  <div class="w-full max-w-4xl space-y-6">
     <div>
-      <h1 class="text-2xl font-bold">System Settings</h1>
-      <p class="mt-2 text-muted-foreground">Global settings saved on your local machine.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-white">System Settings</h1>
+      <p class="mt-2 text-sm text-zinc-400">Global settings saved on your local machine.</p>
     </div>
 
-    <div class="border rounded-lg bg-muted/30 p-4">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div class="space-y-1">
-          <h2 class="text-lg font-semibold">Prompt editor font size</h2>
-          <p class="text-sm text-muted-foreground">Sets the font size used in the prompt editor.</p>
+    <section
+      class="rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.02] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]"
+    >
+      <div class="flex items-start gap-4 px-2 pb-4 pt-1">
+        <div
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-500/15 ring-1 ring-violet-400/20"
+        >
+          <Keyboard class="h-5 w-5 text-violet-300" />
         </div>
-
-        <div class="flex items-center gap-3">
-          <NumericInput
-            data-testid="font-size-input"
-            class="w-24"
-            value={systemSettingsState.promptFontSizeInput}
-            oninput={(event) =>
-              setSystemSettingsDraftFontSizeInput((event.currentTarget as HTMLInputElement).value)}
-            onblur={handleInputBlur}
-          />
-          <Button size="sm" onclick={handleFontSizeReset} disabled={isFontSizeResetDisabled}>
-            Reset to Default
-          </Button>
-        </div>
-      </div>
-
-      {#if displayFontSizeError}
-        <p class="mt-3 text-sm text-red-500" data-testid="font-size-error">
-          {displayFontSizeError}
-        </p>
-      {/if}
-    </div>
-
-    <div class="border rounded-lg bg-muted/30 p-4">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div class="space-y-1">
-          <h2 class="text-lg font-semibold">Prompt editor minimum lines</h2>
-          <p class="text-sm text-muted-foreground">
-            Sets the minimum number of visible lines in prompt editors.
+        <div class="min-w-0">
+          <h2 class="text-lg font-semibold tracking-tight text-white">Editor & layout</h2>
+          <p class="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
+            Typography, spacing, autosave, and core writing ergonomics.
           </p>
         </div>
-
-        <div class="flex items-center gap-3">
-          <NumericInput
-            data-testid="min-lines-input"
-            class="w-24"
-            value={systemSettingsState.promptEditorMinLinesInput}
-            oninput={(event) =>
-              setSystemSettingsDraftPromptEditorMinLinesInput(
-                (event.currentTarget as HTMLInputElement).value
-              )}
-            onblur={handleInputBlur}
-          />
-          <Button size="sm" onclick={handleMinLinesReset} disabled={isMinLinesResetDisabled}>
-            Reset to Default
-          </Button>
-        </div>
       </div>
 
-      {#if displayMinLinesError}
-        <p class="mt-3 text-sm text-red-500" data-testid="min-lines-error">
-          {displayMinLinesError}
-        </p>
-      {/if}
-    </div>
+      <div class="space-y-3">
+        <div
+          class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        >
+          <div class="min-w-0">
+            <h3 class="text-sm font-medium text-zinc-100">Prompt editor font size</h3>
+            <p class="mt-1 text-sm leading-6 text-zinc-400">
+              Sets the base font size used inside the prompt editor.
+            </p>
+            {#if displayFontSizeError}
+              <p class="mt-3 text-sm text-red-400" data-testid="font-size-error">
+                {displayFontSizeError}
+              </p>
+            {/if}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <NumericInput
+              data-testid="font-size-input"
+              class="h-11 w-24 rounded-2xl border-white/10 bg-[#0b0d13] px-4 text-sm font-medium text-zinc-100 shadow-inner shadow-black/20"
+              value={systemSettingsState.promptFontSizeInput}
+              oninput={(event) =>
+                setSystemSettingsDraftFontSizeInput(
+                  (event.currentTarget as HTMLInputElement).value
+                )}
+              onblur={handleInputBlur}
+            />
+            <button
+              type="button"
+              class="h-11 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              onclick={handleFontSizeReset}
+              disabled={isFontSizeResetDisabled}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        >
+          <div class="min-w-0">
+            <h3 class="text-sm font-medium text-zinc-100">Prompt editor minimum lines</h3>
+            <p class="mt-1 text-sm leading-6 text-zinc-400">
+              Sets the minimum number of visible lines in prompt editors.
+            </p>
+            {#if displayMinLinesError}
+              <p class="mt-3 text-sm text-red-400" data-testid="min-lines-error">
+                {displayMinLinesError}
+              </p>
+            {/if}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <NumericInput
+              data-testid="min-lines-input"
+              class="h-11 w-24 rounded-2xl border-white/10 bg-[#0b0d13] px-4 text-sm font-medium text-zinc-100 shadow-inner shadow-black/20"
+              value={systemSettingsState.promptEditorMinLinesInput}
+              oninput={(event) =>
+                setSystemSettingsDraftPromptEditorMinLinesInput(
+                  (event.currentTarget as HTMLInputElement).value
+                )}
+              onblur={handleInputBlur}
+            />
+            <button
+              type="button"
+              class="h-11 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              onclick={handleMinLinesReset}
+              disabled={isMinLinesResetDisabled}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </section>

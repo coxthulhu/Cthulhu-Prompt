@@ -73,7 +73,7 @@
     onkeyup={handleSelectionChange}
     onmouseup={handleSelectionChange}
     onselect={handleSelectionChange}
-    class="flex-1 w-full h-[28px] font-mono text-[16px] leading-[20px] md:text-[16px] md:leading-[20px] text-[#D4D4D4] placeholder:text-[#D4D4D4]"
+    class="h-[28px] w-full flex-1 border-transparent bg-transparent px-0 py-0 text-[16px] leading-[20px] text-[#D4D4D4] shadow-none ring-0 placeholder:text-[#D4D4D4] focus-visible:border-transparent focus-visible:ring-0 md:text-[16px] md:leading-[20px] font-mono"
   />
   <PromptEditorButtonBar {title} {draftText} {onDelete} />
 </div>
