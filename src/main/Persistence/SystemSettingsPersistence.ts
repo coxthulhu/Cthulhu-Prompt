@@ -43,7 +43,8 @@ export const systemSettingsPersistence: PersistenceLayer<
     const tempPath = resolveTempPath(targetPath)
     const normalizedSettings = normalizeSystemSettings({
       promptFontSize: change.data.promptFontSize,
-      promptEditorMinLines: change.data.promptEditorMinLines
+      promptEditorMinLines: change.data.promptEditorMinLines,
+      showLineNumbers: change.data.showLineNumbers
     })
     writeJsonFile(tempPath, normalizedSettings)
 

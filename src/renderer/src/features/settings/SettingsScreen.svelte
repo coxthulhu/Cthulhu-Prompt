@@ -1,6 +1,6 @@
 <script lang="ts">
   import { NumericInput } from '@renderer/common/ui/numeric-input'
-  import { Keyboard } from 'lucide-svelte'
+  import { Keyboard, RefreshCcw } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -10,7 +10,8 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     setSystemSettingsDraftFontSizeInput,
-    setSystemSettingsDraftPromptEditorMinLinesInput
+    setSystemSettingsDraftPromptEditorMinLinesInput,
+    setSystemSettingsDraftShowLineNumbers
   } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
@@ -29,6 +30,7 @@
   const defaultFontSizeInput = formatPromptFontSizeInput(defaultFontSize)
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
+  const defaultShowLineNumbers = DEFAULT_SYSTEM_SETTINGS.showLineNumbers
 
   // Save immediately when an input loses focus to avoid delayed autosaves.
   const handleInputBlur = () => {
@@ -56,6 +58,21 @@
     )
   }
 
+  const updateShowLineNumbers = async (value: boolean) => {
+    await runIpcBestEffort(async () => {
+      setSystemSettingsDraftShowLineNumbers(value)
+      await flushSystemSettingsAutosaves()
+    })
+  }
+
+  const handleShowLineNumbersToggle = async () => {
+    await updateShowLineNumbers(!systemSettingsState.showLineNumbers)
+  }
+
+  const handleShowLineNumbersReset = async () => {
+    await updateShowLineNumbers(defaultShowLineNumbers)
+  }
+
   const validation = $derived(getSystemSettingsValidation(systemSettingsState))
   const displayFontSizeError = $derived(validation.fontSizeError)
   const displayMinLinesError = $derived(validation.minLinesError)
@@ -64,6 +81,9 @@
   )
   const isMinLinesResetDisabled = $derived(
     isUpdating || systemSettingsState.promptEditorMinLinesInput === defaultMinLinesInput
+  )
+  const isShowLineNumbersResetDisabled = $derived(
+    isUpdating || systemSettingsState.showLineNumbers === defaultShowLineNumbers
   )
 
   // Side effect: flush unsaved system settings when leaving the settings screen.
@@ -106,7 +126,7 @@
           class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
-            <h3 class="text-sm font-medium text-zinc-100">Prompt editor font size</h3>
+            <h3 class="text-sm font-medium text-zinc-100">Font Size</h3>
             <p class="mt-1 text-sm leading-6 text-zinc-400">
               Sets the base font size used inside the prompt editor.
             </p>
@@ -130,10 +150,11 @@
             />
             <button
               type="button"
-              class="h-11 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               onclick={handleFontSizeReset}
               disabled={isFontSizeResetDisabled}
             >
+              <RefreshCcw class="h-4 w-4" />
               Reset
             </button>
           </div>
@@ -143,7 +164,7 @@
           class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
-            <h3 class="text-sm font-medium text-zinc-100">Prompt editor minimum lines</h3>
+            <h3 class="text-sm font-medium text-zinc-100">Minimum Line Count</h3>
             <p class="mt-1 text-sm leading-6 text-zinc-400">
               Sets the minimum number of visible lines in prompt editors.
             </p>
@@ -167,10 +188,61 @@
             />
             <button
               type="button"
-              class="h-11 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               onclick={handleMinLinesReset}
               disabled={isMinLinesResetDisabled}
             >
+              <RefreshCcw class="h-4 w-4" />
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        >
+          <div class="min-w-0">
+            <h3 class="text-sm font-medium text-zinc-100">Show Line Numbers</h3>
+            <p class="mt-1 text-sm leading-6 text-zinc-400">
+              Display line numbers beside prompt text for easier review.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <button
+              type="button"
+              class={[
+                'flex h-11 items-center gap-3 rounded-2xl border px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50',
+                systemSettingsState.showLineNumbers
+                  ? 'border-violet-400/20 bg-violet-500/10 text-violet-100'
+                  : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 hover:text-zinc-300'
+              ].join(' ')}
+              data-testid="show-line-numbers-toggle"
+              aria-pressed={systemSettingsState.showLineNumbers}
+              onclick={handleShowLineNumbersToggle}
+              disabled={isUpdating}
+            >
+              <span
+                class={[
+                  'flex h-6 w-10 items-center rounded-full p-1 transition',
+                  systemSettingsState.showLineNumbers
+                    ? 'justify-end bg-violet-400/20'
+                    : 'justify-start bg-white/10'
+                ].join(' ')}
+              >
+                <span class="h-4 w-4 rounded-full bg-white shadow"></span>
+              </span>
+              <span class="w-[64px] text-left">
+                {systemSettingsState.showLineNumbers ? 'Enabled' : 'Disabled'}
+              </span>
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              onclick={handleShowLineNumbersReset}
+              disabled={isShowLineNumbersResetDisabled}
+            >
+              <RefreshCcw class="h-4 w-4" />
               Reset
             </button>
           </div>

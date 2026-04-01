@@ -71,7 +71,8 @@ const readValidatedSystemSettings = (
   return {
     promptFontSize: normalizePromptFontSizeInput(draftRecord.promptFontSizeInput).rounded,
     promptEditorMinLines: normalizePromptEditorMinLinesInput(draftRecord.promptEditorMinLinesInput)
-      .rounded
+      .rounded,
+    showLineNumbers: draftRecord.showLineNumbers
   }
 }
 
@@ -96,11 +97,13 @@ export const mutateSystemSettingsDraftWithAutosave = (
         systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
           draft.promptFontSize = validatedSettings.promptFontSize
           draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
+          draft.showLineNumbers = validatedSettings.showLineNumbers
         })
         systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
           const nextDraftSnapshot = toSystemSettingsDraftSnapshot(validatedSettings)
           draftRecord.promptFontSizeInput = nextDraftSnapshot.promptFontSizeInput
           draftRecord.promptEditorMinLinesInput = nextDraftSnapshot.promptEditorMinLinesInput
+          draftRecord.showLineNumbers = nextDraftSnapshot.showLineNumbers
         })
       })
 

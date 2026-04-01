@@ -67,6 +67,9 @@
     },
     get promptEditorMinLines() {
       return systemSettingsQuery.data.promptEditorMinLines
+    },
+    get showLineNumbers() {
+      return systemSettingsQuery.data.showLineNumbers
     }
   }
   const workspaceSelection: WorkspaceSelectionContext = {

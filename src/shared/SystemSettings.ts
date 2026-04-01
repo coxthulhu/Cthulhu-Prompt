@@ -4,6 +4,7 @@ import type { IpcResult } from './IpcResult'
 export interface SystemSettings {
   promptFontSize: number
   promptEditorMinLines: number
+  showLineNumbers: boolean
 }
 
 export const SYSTEM_SETTINGS_ID = 'system-settings'
@@ -14,7 +15,8 @@ export const MIN_PROMPT_EDITOR_MIN_LINES = 2
 export const MAX_PROMPT_EDITOR_MIN_LINES = 20
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = Object.freeze({
   promptFontSize: 16,
-  promptEditorMinLines: 3
+  promptEditorMinLines: 3,
+  showLineNumbers: true
 })
 
 const clampPromptFontSize = (value: number): number => {
@@ -35,6 +37,10 @@ const resolvePromptEditorMinLines = (value: unknown, fallback: number): number =
   return clampPromptEditorMinLines(Math.round(value))
 }
 
+const resolveShowLineNumbers = (value: unknown, fallback: boolean): boolean => {
+  return typeof value === 'boolean' ? value : fallback
+}
+
 export const normalizeSystemSettings = (payload: Record<string, unknown>): SystemSettings => {
   return {
     promptFontSize: resolvePromptFontSize(
@@ -44,6 +50,10 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
     promptEditorMinLines: resolvePromptEditorMinLines(
       payload.promptEditorMinLines,
       DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
+    ),
+    showLineNumbers: resolveShowLineNumbers(
+      payload.showLineNumbers,
+      DEFAULT_SYSTEM_SETTINGS.showLineNumbers
     )
   }
 }

@@ -9,6 +9,7 @@ import {
 export type SystemSettingsDraftSnapshot = {
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
+  showLineNumbers: boolean
 }
 
 export type SystemSettingsValidation = {
@@ -52,7 +53,8 @@ export const toSystemSettingsDraftSnapshot = (
   settings: SystemSettings
 ): SystemSettingsDraftSnapshot => ({
   promptFontSizeInput: formatPromptFontSizeInput(settings.promptFontSize),
-  promptEditorMinLinesInput: formatPromptEditorMinLinesInput(settings.promptEditorMinLines)
+  promptEditorMinLinesInput: formatPromptEditorMinLinesInput(settings.promptEditorMinLines),
+  showLineNumbers: settings.showLineNumbers
 })
 
 const validateFontSize = (value: string): string | null => {
@@ -104,6 +106,7 @@ export const getSystemSettingsValidation = (
 export const haveSameSystemSettings = (left: SystemSettings, right: SystemSettings): boolean => {
   return (
     left.promptFontSize === right.promptFontSize &&
-    left.promptEditorMinLines === right.promptEditorMinLines
+    left.promptEditorMinLines === right.promptEditorMinLines &&
+    left.showLineNumbers === right.showLineNumbers
   )
 }

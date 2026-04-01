@@ -29,7 +29,8 @@ export const setupSystemSettingsMutationHandlers = (): void => {
 
           const normalizedSettings = normalizeSystemSettings({
             promptFontSize: systemSettingsEntity.data.promptFontSize,
-            promptEditorMinLines: systemSettingsEntity.data.promptEditorMinLines
+            promptEditorMinLines: systemSettingsEntity.data.promptEditorMinLines,
+            showLineNumbers: systemSettingsEntity.data.showLineNumbers
           })
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
@@ -40,6 +41,7 @@ export const setupSystemSettingsMutationHandlers = (): void => {
                 recipe: (draft) => {
                   draft.promptFontSize = normalizedSettings.promptFontSize
                   draft.promptEditorMinLines = normalizedSettings.promptEditorMinLines
+                  draft.showLineNumbers = normalizedSettings.showLineNumbers
                 }
               })
             }

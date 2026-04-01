@@ -74,6 +74,7 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
 const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSettings => ({
   promptFontSize: 16,
   promptEditorMinLines: 3,
+  showLineNumbers: true,
   ...overrides
 })
 
@@ -157,17 +158,20 @@ describe('draft sync contract', () => {
     systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
       draftRecord.promptFontSizeInput = '18'
       draftRecord.promptEditorMinLinesInput = '5'
+      draftRecord.showLineNumbers = false
     })
 
     upsertSystemSettingsDraft(
       createSystemSettings({
         promptFontSize: 19,
-        promptEditorMinLines: 6
+        promptEditorMinLines: 6,
+        showLineNumbers: true
       })
     )
 
     const draftRecord = systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
     expect(draftRecord.promptFontSizeInput).toBe('19')
     expect(draftRecord.promptEditorMinLinesInput).toBe('6')
+    expect(draftRecord.showLineNumbers).toBe(true)
   })
 })

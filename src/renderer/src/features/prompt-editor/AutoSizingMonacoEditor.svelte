@@ -56,6 +56,7 @@
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const showLineNumbers = $derived(systemSettings.showLineNumbers)
   const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize, promptEditorMinLines))
 
   let container: HTMLDivElement | null = null
@@ -73,6 +74,7 @@
   let lastFontSizeEffectEditor: monaco.editor.IStandaloneCodeEditor | null = null
   let lastAppliedPromptFontSize: number | null = null
   let lastAppliedPromptEditorMinLines: number | null = null
+  let lastAppliedShowLineNumbers: boolean | null = null
   let suppressCursorAutoScrollDuringRestore = $state(false)
 
   const getFindController = () => {
@@ -384,7 +386,7 @@
       wordWrap: 'on',
       wordWrapColumn: 80,
       fontSize: promptFontSize,
-      lineNumbers: 'on',
+      lineNumbers: showLineNumbers ? 'on' : 'off',
       lineNumbersMinChars: 3,
       scrollbar: { alwaysConsumeMouseWheel: false },
       revealHorizontalRightPadding: 0,
@@ -444,20 +446,25 @@
     }
   })
 
-  // Side effect: apply font/min-lines relayout only when those settings change.
+  // Side effect: apply font, line-number, and min-line settings to hydrated Monaco editors.
   $effect(() => {
     if (!editor) return
     const editorChanged = editor !== lastFontSizeEffectEditor
     const fontSizeChanged = promptFontSize !== lastAppliedPromptFontSize
     const minLinesChanged = promptEditorMinLines !== lastAppliedPromptEditorMinLines
-    if (!editorChanged && !fontSizeChanged && !minLinesChanged) return
+    const lineNumbersChanged = showLineNumbers !== lastAppliedShowLineNumbers
+    if (!editorChanged && !fontSizeChanged && !minLinesChanged && !lineNumbersChanged) return
 
     lastFontSizeEffectEditor = editor
     lastAppliedPromptFontSize = promptFontSize
     lastAppliedPromptEditorMinLines = promptEditorMinLines
+    lastAppliedShowLineNumbers = showLineNumbers
 
-    if (editorChanged || fontSizeChanged) {
-      editor.updateOptions({ fontSize: promptFontSize })
+    if (editorChanged || fontSizeChanged || lineNumbersChanged) {
+      editor.updateOptions({
+        fontSize: promptFontSize,
+        lineNumbers: showLineNumbers ? 'on' : 'off'
+      })
     }
 
     const previousHeightPx = monacoHeightPx
