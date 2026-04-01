@@ -126,6 +126,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    cursor: default;
+  }
+
+  /* Keep text-entry surfaces on the I-beam while normal UI copy uses the arrow cursor. */
+  input,
+  textarea,
+  [contenteditable='true'] {
+    cursor: text;
   }
 
   /* Disable transitions during sidebar resize */
