@@ -76,6 +76,8 @@
   const validation = $derived(getSystemSettingsValidation(systemSettingsState))
   const displayFontSizeError = $derived(validation.fontSizeError)
   const displayMinLinesError = $derived(validation.minLinesError)
+  const settingsSecondaryButtonClass =
+    'inline-flex h-11 items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-4 text-sm font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50'
   const isFontSizeResetDisabled = $derived(
     isUpdating || systemSettingsState.promptFontSizeInput === defaultFontSizeInput
   )
@@ -140,7 +142,7 @@
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <NumericInput
               data-testid="font-size-input"
-              class="h-11 w-24 rounded-2xl border-white/10 bg-[#0b0d13] px-4 text-sm font-medium text-zinc-100 shadow-inner shadow-black/20"
+              class="h-11 w-24 px-4 text-sm font-medium"
               value={systemSettingsState.promptFontSizeInput}
               oninput={(event) =>
                 setSystemSettingsDraftFontSizeInput(
@@ -150,7 +152,7 @@
             />
             <button
               type="button"
-              class="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              class={settingsSecondaryButtonClass}
               onclick={handleFontSizeReset}
               disabled={isFontSizeResetDisabled}
             >
@@ -178,7 +180,7 @@
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <NumericInput
               data-testid="min-lines-input"
-              class="h-11 w-24 rounded-2xl border-white/10 bg-[#0b0d13] px-4 text-sm font-medium text-zinc-100 shadow-inner shadow-black/20"
+              class="h-11 w-24 px-4 text-sm font-medium"
               value={systemSettingsState.promptEditorMinLinesInput}
               oninput={(event) =>
                 setSystemSettingsDraftPromptEditorMinLinesInput(
@@ -188,7 +190,7 @@
             />
             <button
               type="button"
-              class="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              class={settingsSecondaryButtonClass}
               onclick={handleMinLinesReset}
               disabled={isMinLinesResetDisabled}
             >
@@ -214,8 +216,8 @@
               class={[
                 'flex h-11 items-center gap-3 rounded-2xl border px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50',
                 systemSettingsState.showLineNumbers
-                  ? 'border-violet-400/20 bg-violet-500/10 text-violet-100'
-                  : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 hover:text-zinc-300'
+                  ? 'border-violet-300/30 bg-violet-500/14 text-violet-50'
+                  : 'border-white/12 bg-white/[0.06] text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:bg-white/10 hover:text-white'
               ].join(' ')}
               data-testid="show-line-numbers-toggle"
               aria-pressed={systemSettingsState.showLineNumbers}
@@ -226,8 +228,8 @@
                 class={[
                   'flex h-6 w-10 items-center rounded-full p-1 transition',
                   systemSettingsState.showLineNumbers
-                    ? 'justify-end bg-violet-400/20'
-                    : 'justify-start bg-white/10'
+                    ? 'justify-end bg-violet-300/24'
+                    : 'justify-start bg-white/14'
                 ].join(' ')}
               >
                 <span class="h-4 w-4 rounded-full bg-white shadow"></span>
@@ -238,7 +240,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              class={settingsSecondaryButtonClass}
               onclick={handleShowLineNumbersReset}
               disabled={isShowLineNumbersResetDisabled}
             >
