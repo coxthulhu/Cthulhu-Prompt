@@ -23,7 +23,7 @@
   onRevealMatch={controller.handleFindMatchReveal}
 >
   <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    <div class="flex h-9 shrink-0 items-center border-b border-white/8 bg-[#0f1117] px-6">
+    <div class="flex h-9 shrink-0 items-center border-b border-white/8 bg-[#121316] px-6">
       <div class="flex min-w-0 items-center text-sm font-medium text-zinc-500">
         <button
           type="button"
