@@ -270,9 +270,9 @@
   />
 {/snippet}
 
-{#snippet promptHeaderRow({ row })}
+{#snippet promptHeaderRow()}
   <div class="pt-6 pb-4" data-virtual-window-row>
-    <h2 class="text-lg font-semibold">Prompts ({row.promptCount})</h2>
+    <h2 class="text-2xl font-bold tracking-tight text-white">Prompts</h2>
   </div>
 {/snippet}
 

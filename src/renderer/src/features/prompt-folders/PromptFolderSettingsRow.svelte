@@ -229,8 +229,13 @@
   <div class="bg-background flex-1 min-w-0">
     <div class="flex min-w-0">
       <div class="flex-1 flex flex-col min-w-0 pt-6">
-        <h2 class="text-lg font-semibold">Folder Settings</h2>
-        <p class="mt-2 text-sm font-semibold text-muted-foreground">Folder Description</p>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white">Folder Settings</h1>
+          <p class="mt-2 text-sm text-zinc-400">
+            Settings that only affect prompts in this folder, and are saved to the workspace.
+          </p>
+        </div>
+        <p class="mt-6 text-sm font-semibold text-muted-foreground">Folder Description</p>
         <div class="flex-1 min-w-0 mt-2">
           {#if overflowHost}
             {#key promptFolderId}
