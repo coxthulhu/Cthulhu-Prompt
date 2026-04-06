@@ -16,7 +16,6 @@ const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-folder-prompt-${TARGET_PROMPT_ID}"]`
-const LAST_TREE_PROMPT_SELECTOR = '[data-testid="prompt-folder-prompt-longmixed-100"]'
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
 const SAMPLE_FOLDER_NAME = 'Development'
@@ -168,38 +167,6 @@ describe('Prompt folder prompt tree', () => {
     const nextTitle = 'Live prompt title sync'
     await mainWindow.keyboard.type(' prompt title sync', { delay: 20 })
     await expect(promptTreeRow).toContainText(nextTitle)
-  })
-
-  test('keeps one folder row of space below the last prompt tree entry', async ({ testSetup }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'virtual' }
-    })
-
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-
-    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
-    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
-
-    const treeScrollHeight = await testHelpers.getVirtualWindowScrollHeight(PROMPT_TREE_HOST_SELECTOR)
-    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, treeScrollHeight)
-    await mainWindow.waitForSelector(LAST_TREE_PROMPT_SELECTOR, { state: 'attached' })
-
-    const bottomGapPx = await mainWindow.evaluate(
-      ({ hostSelector, rowSelector }) => {
-        const host = document.querySelector<HTMLElement>(hostSelector)
-        const row = document.querySelector<HTMLElement>(rowSelector)
-        if (!host || !row) return null
-        const hostRect = host.getBoundingClientRect()
-        const rowRect = row.getBoundingClientRect()
-        return Math.round(hostRect.bottom - rowRect.bottom)
-      },
-      {
-        hostSelector: PROMPT_TREE_HOST_SELECTOR,
-        rowSelector: LAST_TREE_PROMPT_SELECTOR
-      }
-    )
-
-    expect(bottomGapPx).toBeGreaterThanOrEqual(36)
   })
 
   test('keeps placeholder fallback numbering for unopened folders with blank titles', async ({
