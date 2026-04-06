@@ -1,5 +1,6 @@
 <script lang="ts">
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import { Keyboard, RefreshCcw } from 'lucide-svelte'
   import {
@@ -204,33 +205,12 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <button
-              type="button"
-              class={[
-                'flex h-11 items-center gap-3 rounded-2xl border px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50',
-                systemSettingsState.showLineNumbers
-                  ? 'border-violet-300/30 bg-violet-500/14 text-violet-50'
-                  : 'border-white/12 bg-white/[0.06] text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:bg-white/10 hover:text-white'
-              ].join(' ')}
-              data-testid="show-line-numbers-toggle"
-              aria-pressed={systemSettingsState.showLineNumbers}
+            <ToggleTextButton
+              testId="show-line-numbers-toggle"
+              pressed={systemSettingsState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}
               disabled={isUpdating}
-            >
-              <span
-                class={[
-                  'flex h-6 w-10 items-center rounded-full p-1 transition',
-                  systemSettingsState.showLineNumbers
-                    ? 'justify-end bg-violet-300/24'
-                    : 'justify-start bg-white/14'
-                ].join(' ')}
-              >
-                <span class="h-4 w-4 rounded-full bg-white shadow"></span>
-              </span>
-              <span class="w-[64px] text-left">
-                {systemSettingsState.showLineNumbers ? 'Enabled' : 'Disabled'}
-              </span>
-            </button>
+            />
             <IconTextButton
               icon={RefreshCcw}
               text="Reset"
