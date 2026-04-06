@@ -76,6 +76,9 @@
         folder: PromptFolder
         promptId: string
       }
+    | {
+        kind: 'bottom-spacer'
+      }
 
   type PromptTreeOverlayRow = Extract<PromptTreeRow, { kind: 'folder-settings' | 'folder-prompt' }>
   type PromptTreeOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeOverlayRow>
@@ -106,9 +109,11 @@
   let openFolderMenuName = $state<string | null>(null)
   */
 
+  const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX = 36
+
   const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
     'prompt-folder': {
-      estimateHeight: () => 36,
+      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
       snippet: promptFolderRow
     },
     'folder-settings': {
@@ -124,6 +129,10 @@
         snippet: promptTreeRowOverlay
       },
       snippet: folderPromptRow
+    },
+    'bottom-spacer': {
+      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
+      snippet: bottomSpacerRow
     }
   })
 
@@ -387,6 +396,14 @@
       }
     }
 
+    // Keep one folder row of trailing space at the end of the tree.
+    items.push({
+      id: 'bottom-spacer',
+      row: {
+        kind: 'bottom-spacer'
+      }
+    })
+
     return items
   })
 </script>
@@ -584,4 +601,8 @@
       edge={hoveredEdge}
     />
   {/if}
+{/snippet}
+
+{#snippet bottomSpacerRow()}
+  <div aria-hidden="true"></div>
 {/snippet}
