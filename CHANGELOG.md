@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.13
+
+### New Features
+
+- Added edge-aware prompt tree drag-and-drop, including dragging prompts directly from the sidebar tree and dropping them before or after other prompts across folders.
+- Added a setting to show or hide line numbers in prompt editors.
+
+### Changes
+
+- Restyled the system settings screen and refreshed prompt folder header/title bar visuals.
+- Refined sidebar drag/drop highlighting, cursors, and prompt folder header interactions.
+
+### Fixed
+
+- Fixed prompt drag/drop stability in virtualized lists so drags stay active while scrolling and reordering behaves more reliably.
+
 ## 0.0.12
 
 ### New Features
