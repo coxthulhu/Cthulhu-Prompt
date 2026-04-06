@@ -1,4 +1,5 @@
 <script lang="ts">
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import { NumericInput } from '@renderer/common/ui/numeric-input'
   import { Keyboard, RefreshCcw } from 'lucide-svelte'
   import {
@@ -76,8 +77,6 @@
   const validation = $derived(getSystemSettingsValidation(systemSettingsState))
   const displayFontSizeError = $derived(validation.fontSizeError)
   const displayMinLinesError = $derived(validation.minLinesError)
-  const settingsSecondaryButtonClass =
-    'inline-flex h-11 items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-4 text-sm font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50'
   const isFontSizeResetDisabled = $derived(
     isUpdating || systemSettingsState.promptFontSizeInput === defaultFontSizeInput
   )
@@ -150,15 +149,12 @@
                 )}
               onblur={handleInputBlur}
             />
-            <button
-              type="button"
-              class={settingsSecondaryButtonClass}
+            <IconTextButton
+              icon={RefreshCcw}
+              text="Reset"
               onclick={handleFontSizeReset}
               disabled={isFontSizeResetDisabled}
-            >
-              <RefreshCcw class="h-4 w-4" />
-              Reset
-            </button>
+            />
           </div>
         </div>
 
@@ -188,15 +184,12 @@
                 )}
               onblur={handleInputBlur}
             />
-            <button
-              type="button"
-              class={settingsSecondaryButtonClass}
+            <IconTextButton
+              icon={RefreshCcw}
+              text="Reset"
               onclick={handleMinLinesReset}
               disabled={isMinLinesResetDisabled}
-            >
-              <RefreshCcw class="h-4 w-4" />
-              Reset
-            </button>
+            />
           </div>
         </div>
 
@@ -238,15 +231,12 @@
                 {systemSettingsState.showLineNumbers ? 'Enabled' : 'Disabled'}
               </span>
             </button>
-            <button
-              type="button"
-              class={settingsSecondaryButtonClass}
+            <IconTextButton
+              icon={RefreshCcw}
+              text="Reset"
               onclick={handleShowLineNumbersReset}
               disabled={isShowLineNumbersResetDisabled}
-            >
-              <RefreshCcw class="h-4 w-4" />
-              Reset
-            </button>
+            />
           </div>
         </div>
       </div>
