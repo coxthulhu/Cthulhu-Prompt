@@ -1,7 +1,7 @@
 <script lang="ts">
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { NumericInput } from '@renderer/common/ui/numeric-input'
   import { Keyboard, RefreshCcw } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
