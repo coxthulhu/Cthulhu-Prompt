@@ -1,5 +1,6 @@
 <script lang="ts">
   import { FolderOpen, FolderPlus, X } from 'lucide-svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import { Button } from '@renderer/common/ui/button'
   import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
   import {
@@ -252,43 +253,34 @@
         {/if}
 
         <div class="flex w-full gap-4">
-          <Button
-            data-testid="select-workspace-folder-button"
+          <IconTextButton
+            testId="select-workspace-folder-button"
+            icon={FolderOpen}
+            text={getSelectButtonLabel()}
             onclick={handleSelectFolder}
             disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
-            variant="outline"
-            class="flex h-12 flex-1 items-center gap-2 text-white hover:text-white"
-            style="font-size: 1rem; line-height: 1.5rem;"
-          >
-            <FolderOpen class="relative top-[1px] size-5" />
-            {getSelectButtonLabel()}
-          </Button>
+            class="h-12 flex-1 justify-center text-base"
+          />
 
-          <Button
-            data-testid="create-workspace-folder-button"
+          <IconTextButton
+            testId="create-workspace-folder-button"
+            icon={FolderPlus}
+            text={getCreateButtonLabel()}
             onclick={handleCreateFolder}
             disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
-            variant="outline"
-            class="flex h-12 flex-1 items-center gap-2 text-white hover:text-white"
-            style="font-size: 1rem; line-height: 1.5rem;"
-          >
-            <FolderPlus class="relative top-[1px] size-5" />
-            {getCreateButtonLabel()}
-          </Button>
+            class="h-12 flex-1 justify-center text-base"
+          />
         </div>
 
         {#if isWorkspaceReady}
           <div class="flex w-full">
-            <Button
-              data-testid="close-workspace-button"
-              variant="outline"
+            <IconTextButton
+              testId="close-workspace-button"
+              icon={X}
+              text="Close Workspace"
               onclick={onWorkspaceClear}
-              class="flex h-12 flex-1 items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-              style="font-size: 1rem; line-height: 1.5rem;"
-            >
-              <X class="relative top-[1px] size-5" />
-              Close Workspace
-            </Button>
+              class="h-12 flex-1 justify-center text-base border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
+            />
           </div>
         {/if}
       </div>
