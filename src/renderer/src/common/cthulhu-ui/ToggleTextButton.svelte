@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { mergeClasses } from './mergeClasses'
+
   type Props = {
     pressed: boolean
+    class?: string
     disabled?: boolean
     testId?: string
     onclick?: (event: MouseEvent) => void
@@ -8,6 +11,7 @@
 
   let {
     pressed,
+    class: className,
     disabled = false,
     testId,
     onclick
@@ -31,7 +35,7 @@
 
 <button
   type="button"
-  class={getButtonClass(pressed)}
+  class={mergeClasses(getButtonClass(pressed), className)}
   data-testid={testId}
   aria-pressed={pressed}
   {onclick}
