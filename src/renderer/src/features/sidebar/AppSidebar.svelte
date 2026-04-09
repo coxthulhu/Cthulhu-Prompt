@@ -9,9 +9,9 @@
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
-  import SidebarButton from './SidebarButton.svelte'
 
   let {
     activeScreen,
@@ -113,6 +113,14 @@
     return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
   })
 
+  const getNavButtonState = (item: NavItem): 'active' | 'inactive' | 'disabled' => {
+    if (item.requiresWorkspace && !isWorkspaceReady) {
+      return 'disabled'
+    }
+
+    return activeScreen === item.id ? 'active' : 'inactive'
+  }
+
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
   const workspaceDisplay = $derived.by(() => {
     if (!workspacePath) {
@@ -167,13 +175,12 @@
         {#each primaryNavItems as item (item.id)}
           {@const Icon = item.icon}
           <li class="group/menu-item relative">
-            <SidebarButton
+            <IconTextButton
               testId={item.testId}
               icon={Icon}
-              label={item.label}
+              text={item.label}
               class="sidebarTopNavButton sidebarTopNavButtonCentered"
-              active={activeScreen === item.id}
-              disabled={item.requiresWorkspace && !isWorkspaceReady}
+              state={getNavButtonState(item)}
               onclick={() => onNavigate(item.id)}
             />
           </li>
@@ -185,13 +192,12 @@
           {#each secondaryNavItems as item (item.id)}
             {@const Icon = item.icon}
             <li class="group/menu-item relative">
-              <SidebarButton
+              <IconTextButton
                 testId={item.testId}
                 icon={Icon}
-                label={item.label}
+                text={item.label}
                 class={`sidebarTopNavButton ${item.id === 'test-screen' ? 'sidebarTopNavButtonCentered' : ''}`}
-                active={activeScreen === item.id}
-                disabled={item.requiresWorkspace && !isWorkspaceReady}
+                state={getNavButtonState(item)}
                 onclick={() => onNavigate(item.id)}
               />
             </li>

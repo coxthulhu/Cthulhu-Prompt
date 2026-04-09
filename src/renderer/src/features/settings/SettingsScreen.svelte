@@ -154,7 +154,7 @@
               icon={RefreshCcw}
               text="Reset"
               onclick={handleFontSizeReset}
-              disabled={isFontSizeResetDisabled}
+              state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
         </div>
@@ -189,7 +189,7 @@
               icon={RefreshCcw}
               text="Reset"
               onclick={handleMinLinesReset}
-              disabled={isMinLinesResetDisabled}
+              state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
         </div>
@@ -215,7 +215,7 @@
               icon={RefreshCcw}
               text="Reset"
               onclick={handleShowLineNumbersReset}
-              disabled={isShowLineNumbersResetDisabled}
+              state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
         </div>

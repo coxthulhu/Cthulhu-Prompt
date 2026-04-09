@@ -258,7 +258,7 @@
             icon={FolderOpen}
             text={getSelectButtonLabel()}
             onclick={handleSelectFolder}
-            disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
+            state={isWorkspaceLoading || isOpeningWorkspaceFolderDialog ? 'disabled' : 'enabled'}
             class="h-12 flex-1 justify-center text-base"
           />
 
@@ -267,7 +267,7 @@
             icon={FolderPlus}
             text={getCreateButtonLabel()}
             onclick={handleCreateFolder}
-            disabled={isWorkspaceLoading || isOpeningWorkspaceFolderDialog}
+            state={isWorkspaceLoading || isOpeningWorkspaceFolderDialog ? 'disabled' : 'enabled'}
             class="h-12 flex-1 justify-center text-base"
           />
         </div>

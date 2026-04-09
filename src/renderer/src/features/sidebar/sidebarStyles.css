@@ -36,25 +36,12 @@
 }
 
 .sidebarTopNavButton {
+  width: 100%;
   height: 2.25rem;
-  justify-content: flex-start;
   gap: 0.5rem;
   border-radius: 0.75rem;
-  border-color: rgb(255 255 255 / 8%);
-  background-color: rgb(255 255 255 / 3%);
   padding-inline: 0.75rem;
-  color: rgb(212 212 216);
-}
-
-.sidebarTopNavButton:hover {
-  background-color: rgb(255 255 255 / 6%);
-  color: rgb(255 255 255);
-}
-
-.sidebarTopNavButton[data-active='true'] {
-  border-color: rgb(255 255 255 / 12%);
-  background-color: rgb(255 255 255 / 10%);
-  color: rgb(255 255 255);
+  justify-content: flex-start;
 }
 
 .sidebarTopNavButtonCentered {
