@@ -37,9 +37,7 @@
 <input
   bind:this={ref}
   class={mergeClasses(
-    'flex h-9 min-w-0 rounded-2xl border border-white/12 bg-[#16181d] px-3 py-1 text-base text-zinc-50 outline-none transition-[color,box-shadow,background-color,border-color] selection:bg-primary selection:text-primary-foreground shadow-inner shadow-black/25 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-    'placeholder:text-zinc-400 focus-visible:border-white/28 focus-visible:ring-[3px] focus-visible:ring-white/14',
-    'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
+    'cthulhuUiNumericInput flex h-9 min-w-0 rounded-2xl border px-3 py-1 text-base outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
     className
   )}
   type="text"
@@ -49,3 +47,38 @@
   oninput={handleInput}
   {...restProps}
 />
+
+<style>
+  .cthulhuUiNumericInput {
+    border-color: var(--cthulhu-ui-input-border);
+    background-color: var(--cthulhu-ui-input-surface);
+    color: var(--cthulhu-ui-input-text);
+    box-shadow: inset 0 1px 2px var(--cthulhu-ui-input-shadow);
+  }
+
+  .cthulhuUiNumericInput::placeholder {
+    color: var(--cthulhu-ui-input-placeholder);
+  }
+
+  .cthulhuUiNumericInput::selection {
+    background-color: var(--cthulhu-ui-input-selection-surface);
+    color: var(--cthulhu-ui-input-selection-text);
+  }
+
+  .cthulhuUiNumericInput:focus-visible {
+    border-color: var(--cthulhu-ui-input-focus-border);
+    box-shadow:
+      0 0 0 3px var(--cthulhu-ui-input-focus-ring),
+      inset 0 1px 2px var(--cthulhu-ui-input-shadow);
+  }
+
+  .cthulhuUiNumericInput[aria-invalid='true'] {
+    border-color: var(--cthulhu-ui-input-invalid-border);
+  }
+
+  .cthulhuUiNumericInput[aria-invalid='true']:focus-visible {
+    box-shadow:
+      0 0 0 3px var(--cthulhu-ui-input-invalid-focus-ring),
+      inset 0 1px 2px var(--cthulhu-ui-input-shadow);
+  }
+</style>

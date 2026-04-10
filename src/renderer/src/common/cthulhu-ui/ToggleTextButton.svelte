@@ -16,35 +16,59 @@
     testId,
     onclick
   }: Props = $props()
-
-  // Keep this aligned with the existing settings toggle button styling.
-  const getButtonClass = (isPressed: boolean) =>
-    [
-      'flex h-11 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
-      isPressed
-        ? 'border-violet-300/30 bg-violet-500/14 text-violet-50'
-        : 'border-white/12 bg-white/[0.06] text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:bg-white/10 hover:text-white'
-    ].join(' ')
-
-  const getTrackClass = (isPressed: boolean) =>
-    [
-      'flex h-6 w-10 items-center rounded-full p-1 transition',
-      isPressed ? 'justify-end bg-violet-300/24' : 'justify-start bg-white/14'
-    ].join(' ')
 </script>
 
 <button
   type="button"
-  class={mergeClasses(getButtonClass(pressed), className)}
+  class={mergeClasses(
+    'cthulhuUiToggleTextButton flex h-11 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
+    className
+  )}
   data-testid={testId}
   aria-pressed={pressed}
   {onclick}
   {disabled}
 >
-  <span class={getTrackClass(pressed)}>
-    <span class="h-4 w-4 rounded-full bg-white shadow"></span>
+  <span class="cthulhuUiToggleTextButtonTrack flex h-6 w-10 items-center rounded-full p-1 transition">
+    <span class="cthulhuUiToggleTextButtonThumb h-4 w-4 rounded-full"></span>
   </span>
   <span class="w-[64px] text-left">
     {pressed ? 'Enabled' : 'Disabled'}
   </span>
 </button>
+
+<style>
+  .cthulhuUiToggleTextButton {
+    border-color: var(--cthulhu-ui-toggle-button-border-off);
+    background-color: var(--cthulhu-ui-toggle-button-surface-off);
+    color: var(--cthulhu-ui-toggle-button-text-off);
+    box-shadow: inset 0 1px 0 var(--cthulhu-ui-toggle-button-highlight-off);
+  }
+
+  .cthulhuUiToggleTextButton:hover {
+    background-color: var(--cthulhu-ui-toggle-button-surface-off-hover);
+    color: var(--cthulhu-ui-toggle-button-text-off-hover);
+  }
+
+  .cthulhuUiToggleTextButton[aria-pressed='true'] {
+    border-color: var(--cthulhu-ui-toggle-button-border-on);
+    background-color: var(--cthulhu-ui-toggle-button-surface-on);
+    color: var(--cthulhu-ui-toggle-button-text-on);
+    box-shadow: none;
+  }
+
+  .cthulhuUiToggleTextButtonTrack {
+    justify-content: flex-start;
+    background-color: var(--cthulhu-ui-toggle-track-off);
+  }
+
+  .cthulhuUiToggleTextButton[aria-pressed='true'] .cthulhuUiToggleTextButtonTrack {
+    justify-content: flex-end;
+    background-color: var(--cthulhu-ui-toggle-track-on);
+  }
+
+  .cthulhuUiToggleTextButtonThumb {
+    background-color: var(--cthulhu-ui-toggle-thumb-surface);
+    box-shadow: 0 1px 2px var(--cthulhu-ui-toggle-thumb-shadow);
+  }
+</style>

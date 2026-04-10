@@ -1,0 +1,44 @@
+:root {
+  --cthulhu-ui-icon-button-border-active: rgb(255 255 255 / 16%);
+  --cthulhu-ui-icon-button-border-inactive: rgb(255 255 255 / 8%);
+  --cthulhu-ui-icon-button-border-inactive-hover: rgb(255 255 255 / 10%);
+  --cthulhu-ui-icon-button-border-enabled: rgb(255 255 255 / 12%);
+  --cthulhu-ui-icon-button-surface-active: rgb(255 255 255 / 14%);
+  --cthulhu-ui-icon-button-surface-inactive: rgb(255 255 255 / 3%);
+  --cthulhu-ui-icon-button-surface-inactive-hover: rgb(255 255 255 / 6%);
+  --cthulhu-ui-icon-button-surface-enabled: rgb(255 255 255 / 6%);
+  --cthulhu-ui-icon-button-surface-enabled-hover: rgb(255 255 255 / 10%);
+  --cthulhu-ui-icon-button-text-active: rgb(255 255 255);
+  --cthulhu-ui-icon-button-text-inactive: rgb(161 161 170);
+  --cthulhu-ui-icon-button-text-inactive-hover: rgb(228 228 231);
+  --cthulhu-ui-icon-button-text-enabled: rgb(228 228 231);
+  --cthulhu-ui-icon-button-text-enabled-hover: rgb(255 255 255);
+  --cthulhu-ui-icon-button-highlight-active: rgb(255 255 255 / 6%);
+  --cthulhu-ui-icon-button-highlight-enabled: rgb(255 255 255 / 3%);
+
+  --cthulhu-ui-input-border: rgb(255 255 255 / 12%);
+  --cthulhu-ui-input-surface: rgb(22 24 29);
+  --cthulhu-ui-input-text: rgb(250 250 250);
+  --cthulhu-ui-input-placeholder: rgb(161 161 170);
+  --cthulhu-ui-input-shadow: rgb(0 0 0 / 25%);
+  --cthulhu-ui-input-selection-surface: rgb(255 255 255 / 22%);
+  --cthulhu-ui-input-selection-text: rgb(255 255 255);
+  --cthulhu-ui-input-focus-border: rgb(255 255 255 / 28%);
+  --cthulhu-ui-input-focus-ring: rgb(255 255 255 / 14%);
+  --cthulhu-ui-input-invalid-border: oklch(0.704 0.191 22.216);
+  --cthulhu-ui-input-invalid-focus-ring: rgb(255 99 71 / 40%);
+
+  --cthulhu-ui-toggle-button-border-off: rgb(255 255 255 / 12%);
+  --cthulhu-ui-toggle-button-border-on: rgb(216 180 254 / 30%);
+  --cthulhu-ui-toggle-button-surface-off: rgb(255 255 255 / 6%);
+  --cthulhu-ui-toggle-button-surface-off-hover: rgb(255 255 255 / 10%);
+  --cthulhu-ui-toggle-button-surface-on: rgb(139 92 246 / 14%);
+  --cthulhu-ui-toggle-button-text-off: rgb(228 228 231);
+  --cthulhu-ui-toggle-button-text-off-hover: rgb(255 255 255);
+  --cthulhu-ui-toggle-button-text-on: rgb(245 243 255);
+  --cthulhu-ui-toggle-button-highlight-off: rgb(255 255 255 / 3%);
+  --cthulhu-ui-toggle-track-off: rgb(255 255 255 / 14%);
+  --cthulhu-ui-toggle-track-on: rgb(216 180 254 / 24%);
+  --cthulhu-ui-toggle-thumb-surface: rgb(255 255 255);
+  --cthulhu-ui-toggle-thumb-shadow: rgb(0 0 0 / 20%);
+}
