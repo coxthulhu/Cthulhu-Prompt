@@ -39,36 +39,36 @@
 
 <style>
   .cthulhuUiToggleTextButton {
-    border-color: var(--ui-white-12);
-    background-color: var(--ui-white-6);
+    border-color: var(--ui-border-default);
+    background-color: var(--ui-surface-default);
     color: var(--ui-text);
-    box-shadow: inset 0 1px 0 var(--ui-white-3);
+    box-shadow: inset 0 1px 0 var(--ui-surface-muted);
   }
 
   .cthulhuUiToggleTextButton:hover {
-    background-color: var(--ui-white-10);
-    color: var(--ui-white);
+    background-color: var(--ui-surface-hover);
+    color: var(--ui-text-bright);
   }
 
   .cthulhuUiToggleTextButton[aria-pressed='true'] {
-    border-color: var(--ui-accent-30);
-    background-color: var(--ui-accent-14);
+    border-color: var(--ui-accent-border);
+    background-color: var(--ui-accent-surface);
     color: var(--ui-accent-text);
     box-shadow: none;
   }
 
   .cthulhuUiToggleTextButtonTrack {
     justify-content: flex-start;
-    background-color: var(--ui-white-14);
+    background-color: var(--ui-surface-emphasis);
   }
 
   .cthulhuUiToggleTextButton[aria-pressed='true'] .cthulhuUiToggleTextButtonTrack {
     justify-content: flex-end;
-    background-color: var(--ui-accent-24);
+    background-color: var(--ui-accent-fill);
   }
 
   .cthulhuUiToggleTextButtonThumb {
-    background-color: var(--ui-white);
-    box-shadow: 0 1px 2px var(--ui-shadow-20);
+    background-color: var(--ui-text-bright);
+    box-shadow: 0 1px 2px var(--ui-shadow-raised);
   }
 </style>

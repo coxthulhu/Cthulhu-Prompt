@@ -43,35 +43,35 @@
 
 <style>
   .cthulhuUiIconTextButton[data-state='active'] {
-    border-color: var(--ui-white-16);
-    background-color: var(--ui-white-14);
-    color: var(--ui-white);
-    box-shadow: inset 0 1px 0 var(--ui-white-6);
+    border-color: var(--ui-border-emphasis);
+    background-color: var(--ui-surface-emphasis);
+    color: var(--ui-text-bright);
+    box-shadow: inset 0 1px 0 var(--ui-surface-default);
   }
 
   .cthulhuUiIconTextButton[data-state='inactive'] {
-    border-color: var(--ui-white-8);
-    background-color: var(--ui-white-3);
+    border-color: var(--ui-border-muted);
+    background-color: var(--ui-surface-muted);
     color: var(--ui-text-muted);
   }
 
   .cthulhuUiIconTextButton[data-state='inactive']:hover {
-    border-color: var(--ui-white-10);
-    background-color: var(--ui-white-6);
+    border-color: var(--ui-surface-hover);
+    background-color: var(--ui-surface-default);
     color: var(--ui-text);
   }
 
   .cthulhuUiIconTextButton[data-state='enabled'],
   .cthulhuUiIconTextButton[data-state='disabled'] {
-    border-color: var(--ui-white-12);
-    background-color: var(--ui-white-6);
+    border-color: var(--ui-border-default);
+    background-color: var(--ui-surface-default);
     color: var(--ui-text);
-    box-shadow: inset 0 1px 0 var(--ui-white-3);
+    box-shadow: inset 0 1px 0 var(--ui-surface-muted);
   }
 
   .cthulhuUiIconTextButton[data-state='enabled']:hover,
   .cthulhuUiIconTextButton[data-state='disabled']:hover {
-    background-color: var(--ui-white-10);
-    color: var(--ui-white);
+    background-color: var(--ui-surface-hover);
+    color: var(--ui-text-bright);
   }
 </style>

@@ -1,29 +1,35 @@
 :root {
-  --ui-white: rgb(255 255 255);
-  --ui-white-3: rgb(255 255 255 / 3%);
-  --ui-white-6: rgb(255 255 255 / 6%);
-  --ui-white-8: rgb(255 255 255 / 8%);
-  --ui-white-10: rgb(255 255 255 / 10%);
-  --ui-white-12: rgb(255 255 255 / 12%);
-  --ui-white-14: rgb(255 255 255 / 14%);
-  --ui-white-16: rgb(255 255 255 / 16%);
-  --ui-white-22: rgb(255 255 255 / 22%);
-  --ui-white-28: rgb(255 255 255 / 28%);
-
+  /* Text */
   --ui-text-muted: rgb(161 161 170);
   --ui-text: rgb(228 228 231);
   --ui-text-strong: rgb(250 250 250);
+  --ui-text-bright: rgb(255 255 255);
 
+  /* Neutral surfaces */
+  --ui-surface-muted: rgb(255 255 255 / 3%);
+  --ui-surface-default: rgb(255 255 255 / 6%);
+  --ui-surface-hover: rgb(255 255 255 / 10%);
+  --ui-surface-emphasis: rgb(255 255 255 / 14%);
   --ui-surface-input: rgb(22 24 29);
+  --ui-selection-surface: rgb(255 255 255 / 22%);
 
-  --ui-accent-14: rgb(139 92 246 / 14%);
-  --ui-accent-24: rgb(216 180 254 / 24%);
-  --ui-accent-30: rgb(216 180 254 / 30%);
+  /* Neutral borders */
+  --ui-border-muted: rgb(255 255 255 / 8%);
+  --ui-border-default: rgb(255 255 255 / 12%);
+  --ui-border-emphasis: rgb(255 255 255 / 16%);
+  --ui-border-focus: rgb(255 255 255 / 28%);
+
+  /* Accent */
+  --ui-accent-surface: rgb(139 92 246 / 14%);
+  --ui-accent-fill: rgb(216 180 254 / 24%);
+  --ui-accent-border: rgb(216 180 254 / 30%);
   --ui-accent-text: rgb(245 243 255);
 
-  --ui-shadow-20: rgb(0 0 0 / 20%);
-  --ui-shadow-25: rgb(0 0 0 / 25%);
+  /* Shadows */
+  --ui-shadow-raised: rgb(0 0 0 / 20%);
+  --ui-shadow-inset: rgb(0 0 0 / 25%);
 
+  /* Danger */
   --ui-danger: oklch(0.704 0.191 22.216);
   --ui-danger-ring: rgb(255 99 71 / 40%);
 }
