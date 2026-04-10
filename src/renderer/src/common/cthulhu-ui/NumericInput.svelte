@@ -50,35 +50,35 @@
 
 <style>
   .cthulhuUiNumericInput {
-    border-color: var(--cthulhu-ui-input-border);
-    background-color: var(--cthulhu-ui-input-surface);
-    color: var(--cthulhu-ui-input-text);
-    box-shadow: inset 0 1px 2px var(--cthulhu-ui-input-shadow);
+    border-color: var(--ui-white-12);
+    background-color: var(--ui-surface-input);
+    color: var(--ui-text-strong);
+    box-shadow: inset 0 1px 2px var(--ui-shadow-25);
   }
 
   .cthulhuUiNumericInput::placeholder {
-    color: var(--cthulhu-ui-input-placeholder);
+    color: var(--ui-text-muted);
   }
 
   .cthulhuUiNumericInput::selection {
-    background-color: var(--cthulhu-ui-input-selection-surface);
-    color: var(--cthulhu-ui-input-selection-text);
+    background-color: var(--ui-white-22);
+    color: var(--ui-white);
   }
 
   .cthulhuUiNumericInput:focus-visible {
-    border-color: var(--cthulhu-ui-input-focus-border);
+    border-color: var(--ui-white-28);
     box-shadow:
-      0 0 0 3px var(--cthulhu-ui-input-focus-ring),
-      inset 0 1px 2px var(--cthulhu-ui-input-shadow);
+      0 0 0 3px var(--ui-white-14),
+      inset 0 1px 2px var(--ui-shadow-25);
   }
 
   .cthulhuUiNumericInput[aria-invalid='true'] {
-    border-color: var(--cthulhu-ui-input-invalid-border);
+    border-color: var(--ui-danger);
   }
 
   .cthulhuUiNumericInput[aria-invalid='true']:focus-visible {
     box-shadow:
-      0 0 0 3px var(--cthulhu-ui-input-invalid-focus-ring),
-      inset 0 1px 2px var(--cthulhu-ui-input-shadow);
+      0 0 0 3px var(--ui-danger-ring),
+      inset 0 1px 2px var(--ui-shadow-25);
   }
 </style>

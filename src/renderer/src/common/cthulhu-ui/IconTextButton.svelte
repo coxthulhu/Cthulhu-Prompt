@@ -43,35 +43,35 @@
 
 <style>
   .cthulhuUiIconTextButton[data-state='active'] {
-    border-color: var(--cthulhu-ui-icon-button-border-active);
-    background-color: var(--cthulhu-ui-icon-button-surface-active);
-    color: var(--cthulhu-ui-icon-button-text-active);
-    box-shadow: inset 0 1px 0 var(--cthulhu-ui-icon-button-highlight-active);
+    border-color: var(--ui-white-16);
+    background-color: var(--ui-white-14);
+    color: var(--ui-white);
+    box-shadow: inset 0 1px 0 var(--ui-white-6);
   }
 
   .cthulhuUiIconTextButton[data-state='inactive'] {
-    border-color: var(--cthulhu-ui-icon-button-border-inactive);
-    background-color: var(--cthulhu-ui-icon-button-surface-inactive);
-    color: var(--cthulhu-ui-icon-button-text-inactive);
+    border-color: var(--ui-white-8);
+    background-color: var(--ui-white-3);
+    color: var(--ui-text-muted);
   }
 
   .cthulhuUiIconTextButton[data-state='inactive']:hover {
-    border-color: var(--cthulhu-ui-icon-button-border-inactive-hover);
-    background-color: var(--cthulhu-ui-icon-button-surface-inactive-hover);
-    color: var(--cthulhu-ui-icon-button-text-inactive-hover);
+    border-color: var(--ui-white-10);
+    background-color: var(--ui-white-6);
+    color: var(--ui-text);
   }
 
   .cthulhuUiIconTextButton[data-state='enabled'],
   .cthulhuUiIconTextButton[data-state='disabled'] {
-    border-color: var(--cthulhu-ui-icon-button-border-enabled);
-    background-color: var(--cthulhu-ui-icon-button-surface-enabled);
-    color: var(--cthulhu-ui-icon-button-text-enabled);
-    box-shadow: inset 0 1px 0 var(--cthulhu-ui-icon-button-highlight-enabled);
+    border-color: var(--ui-white-12);
+    background-color: var(--ui-white-6);
+    color: var(--ui-text);
+    box-shadow: inset 0 1px 0 var(--ui-white-3);
   }
 
   .cthulhuUiIconTextButton[data-state='enabled']:hover,
   .cthulhuUiIconTextButton[data-state='disabled']:hover {
-    background-color: var(--cthulhu-ui-icon-button-surface-enabled-hover);
-    color: var(--cthulhu-ui-icon-button-text-enabled-hover);
+    background-color: var(--ui-white-10);
+    color: var(--ui-white);
   }
 </style>
