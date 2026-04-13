@@ -1,7 +1,7 @@
 /* Shared visual refresh for the sidebar surface and top navigation buttons. */
 :root {
-  --sidebar-gradient-top: #15161a;
-  --sidebar-gradient-bottom: #101114;
+  --sidebar-gradient-top: rgb(16 16 18);
+  --sidebar-gradient-bottom: rgb(11 14 18);
   --sidebar-mockup-border: rgb(255 255 255 / 10%);
   --sidebar-drop-accent: #3794ff;
   --sidebar-drop-accent-fill: rgb(55 148 255 / 18%);
