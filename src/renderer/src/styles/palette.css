@@ -13,11 +13,16 @@
   --ui-surface-input: rgb(22 24 29);
   --ui-selection-surface: rgb(255 255 255 / 22%);
 
+  /* Shared card surfaces */
+  --ui-card-surface-top: rgb(255 255 255 / 4%);
+  --ui-card-surface-bottom: rgb(255 255 255 / 2%);
+
   /* Neutral borders */
   --ui-border-muted: rgb(255 255 255 / 8%);
   --ui-border-default: rgb(255 255 255 / 12%);
   --ui-border-emphasis: rgb(255 255 255 / 16%);
   --ui-border-focus: rgb(255 255 255 / 28%);
+  --ui-card-border-soft: rgb(255 255 255 / 10%);
 
   /* Accent */
   --ui-accent-surface: rgb(139 92 246 / 14%);
@@ -28,6 +33,7 @@
   /* Shadows */
   --ui-shadow-raised: rgb(0 0 0 / 20%);
   --ui-shadow-inset: rgb(0 0 0 / 25%);
+  --ui-card-shadow: rgb(0 0 0 / 28%);
 
   /* Danger */
   --ui-danger: oklch(0.704 0.191 22.216);

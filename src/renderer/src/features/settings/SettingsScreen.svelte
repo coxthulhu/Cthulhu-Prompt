@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
@@ -106,9 +107,7 @@
       <p class="mt-2 text-sm text-zinc-400">Global settings saved on your local machine.</p>
     </div>
 
-    <section
-      class="rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.02] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]"
-    >
+    <CardSurface>
       <div class="flex items-start gap-4 px-2 pb-4 pt-1">
         <div
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-500/15 ring-1 ring-violet-400/20"
@@ -222,6 +221,6 @@
           </div>
         </div>
       </div>
-    </section>
+    </CardSurface>
   </div>
 </section>
