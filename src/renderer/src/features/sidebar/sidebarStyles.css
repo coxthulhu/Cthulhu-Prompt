@@ -60,10 +60,10 @@
   padding-inline: 0;
   color: var(--ui-text-muted);
   transition:
-    border-color 120ms ease-out,
-    background-color 120ms ease-out,
-    color 120ms ease-out,
-    box-shadow 120ms ease-out;
+    border-color 50ms ease-out,
+    background-color 50ms ease-out,
+    color 50ms ease-out,
+    box-shadow 50ms ease-out;
 }
 
 .sidebarPromptTreeRow:hover {
@@ -156,7 +156,7 @@
 
 .sidebarPromptTreeCountInActionSlot {
   pointer-events: none;
-  transition: opacity 120ms ease-out;
+  transition: opacity 50ms ease-out;
 }
 
 .sidebarPromptTreeOpenButton {
@@ -174,9 +174,9 @@
   pointer-events: auto;
   cursor: pointer;
   transition:
-    background-color 120ms ease-out,
-    opacity 120ms ease-out,
-    color 120ms ease-out;
+    background-color 50ms ease-out,
+    opacity 50ms ease-out,
+    color 50ms ease-out;
 }
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeOpenButton,
@@ -228,9 +228,9 @@
   color: var(--ui-text-muted);
   text-align: left;
   transition:
-    border-color 120ms ease-out,
-    background-color 120ms ease-out,
-    color 120ms ease-out;
+    border-color 50ms ease-out,
+    background-color 50ms ease-out,
+    color 50ms ease-out;
 }
 
 .sidebarPromptTreeSettingsButton:hover {
