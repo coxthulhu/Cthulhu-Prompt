@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.14
+
+### Changes
+
+- Refreshed shared UI styling across the home screen, settings screen, and sidebar prompt tree for more consistent visuals and interaction states.
+- Consolidated shared renderer UI building blocks and palette usage to keep buttons, toggles, and numeric inputs visually consistent.
+
+### Fixed
+
+- Fixed prompt tree scrolling and layout near the end of the list so bottom spacing and scrollbar behavior are more stable.
+
 ## 0.0.13
 
 ### New Features
