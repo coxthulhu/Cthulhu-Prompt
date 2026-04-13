@@ -109,6 +109,7 @@ describe('My Feature', () => {
 ## Commit & Pull Request Guidelines
 
 - Commits: short, imperative present tense (e.g., “Fix tests”, “Add virtualization test”); group related changes; reference issues.
+- Never run `git commit` and `git push` in parallel; finish the commit first, then push in a separate step.
 - PRs: include summary, rationale, testing steps, and screenshots/GIFs for UI changes.
 - Checks must pass: `lint` + `typecheck` (run together), `test`. Keep PRs focused and reviewable.
 
