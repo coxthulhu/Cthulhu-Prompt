@@ -1,7 +1,7 @@
 import type { ComponentType } from 'svelte'
-import { Bug, Home, Settings } from 'lucide-svelte'
+import { Bug, Home, PanelsTopLeft, Settings } from 'lucide-svelte'
 
-export type ScreenId = 'home' | 'settings' | 'test-screen' | 'prompt-folders'
+export type ScreenId = 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
 
 type ScreenConfig = {
   label: string
@@ -26,6 +26,13 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     requiresWorkspace: false,
     showInNav: true,
     icon: Settings
+  },
+  mockups: {
+    label: 'Mockups',
+    testId: 'nav-button-mockups',
+    requiresWorkspace: false,
+    showInNav: true,
+    icon: PanelsTopLeft
   },
   'test-screen': {
     label: 'Test Screen',

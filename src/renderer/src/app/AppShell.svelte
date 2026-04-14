@@ -8,6 +8,7 @@
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
+  import MockupsScreen from '@renderer/features/mockups/MockupsScreen.svelte'
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
@@ -447,6 +448,8 @@
           />
         {:else if activeScreen === 'settings'}
           <SettingsScreen />
+        {:else if activeScreen === 'mockups'}
+          <MockupsScreen />
         {:else if activeScreen === 'prompt-folders'}
           {#if selectedPromptFolderId && workspacePath}
             {#key selectedPromptFolderId}

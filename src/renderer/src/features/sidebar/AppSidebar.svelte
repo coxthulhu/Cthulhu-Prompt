@@ -196,7 +196,7 @@
                 testId={item.testId}
                 icon={Icon}
                 text={item.label}
-                class={`sidebarTopNavButton ${item.id === 'test-screen' ? 'sidebarTopNavButtonCentered' : ''}`}
+                class="sidebarTopNavButton"
                 state={getNavButtonState(item)}
                 onclick={() => onNavigate(item.id)}
               />
