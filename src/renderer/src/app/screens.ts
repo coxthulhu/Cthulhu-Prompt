@@ -31,6 +31,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     label: 'Mockups',
     testId: 'nav-button-mockups',
     requiresWorkspace: false,
+    devOnly: true,
     showInNav: true,
     icon: PanelsTopLeft
   },
