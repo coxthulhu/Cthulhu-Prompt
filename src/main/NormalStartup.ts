@@ -28,8 +28,8 @@ import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
 
-const WINDOW_DEFAULT_WIDTH = 900
-const WINDOW_DEFAULT_HEIGHT = 670
+const WINDOW_DEFAULT_WIDTH = 1366
+const WINDOW_DEFAULT_HEIGHT = 768
 const WINDOW_MIN_WIDTH = 800
 const WINDOW_MIN_HEIGHT = 600
 
