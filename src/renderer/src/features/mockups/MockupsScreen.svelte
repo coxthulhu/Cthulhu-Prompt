@@ -1,6 +1,12 @@
 <script lang="ts">
   import type { MockupEntry, MockupModule } from './mockupTypes'
 
+  type MockupsScreenProps = {
+    activeMockupId?: string | null
+  }
+
+  let { activeMockupId = $bindable<string | null>(null) }: MockupsScreenProps = $props()
+
   const mockupModules = import.meta.glob('./entries/**/*.mockup.svelte', {
     eager: true
   }) as Record<string, MockupModule>
@@ -37,8 +43,6 @@
         left.title.localeCompare(right.title) ||
         left.path.localeCompare(right.path)
     )
-
-  let activeMockupId = $state<string | null>(mockups[0]?.id ?? null)
 
   const activeMockup = $derived.by(
     () => mockups.find((mockup) => mockup.id === activeMockupId) ?? mockups[0] ?? null

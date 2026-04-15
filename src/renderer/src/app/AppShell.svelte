@@ -93,6 +93,7 @@
   setPromptNavigationContext(promptNavigation)
 
   let activeScreen = $state<ScreenId>('home')
+  let selectedMockupId = $state<string | null>(null)
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = getSelectedWorkspaceId()
 
@@ -449,7 +450,7 @@
         {:else if activeScreen === 'settings'}
           <SettingsScreen />
         {:else if activeScreen === 'mockups'}
-          <MockupsScreen />
+          <MockupsScreen bind:activeMockupId={selectedMockupId} />
         {:else if activeScreen === 'prompt-folders'}
           {#if selectedPromptFolderId && workspacePath}
             {#key selectedPromptFolderId}
