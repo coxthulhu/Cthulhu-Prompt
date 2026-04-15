@@ -205,7 +205,7 @@
     if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'select') {
       return 'Selecting...'
     }
-    return 'Select Workspace Folder'
+    return 'Open Workspace Folder'
   }
 
   const getCreateButtonLabel = () => {
@@ -362,11 +362,15 @@
                 description="Details about the currently open workspace."
               />
 
-              <DisplayText
-                class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
-                text={displayedWorkspacePath}
-                title={displayedWorkspacePath}
-              />
+              <div class="space-y-2">
+                <TitleBlock title="Workspace Path" variant="small" />
+
+                <DisplayText
+                  class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
+                  text={displayedWorkspacePath}
+                  title={displayedWorkspacePath}
+                />
+              </div>
             </div>
           </CardSurface>
 
@@ -375,7 +379,7 @@
               <TitleBlock
                 title="Workspace Actions"
                 variant="large"
-                description="Choose or create a workspace folder, or close the current one."
+                description="Open, Create, or Close the current workspace."
               />
 
               <div class="flex flex-col gap-3">
