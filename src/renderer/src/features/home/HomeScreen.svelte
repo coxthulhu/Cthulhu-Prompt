@@ -46,6 +46,9 @@
     filePaths: string[]
   }
 
+  const secondaryTitleText = 'CTHULHU PROMPT'
+  const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
+
   let isOpeningWorkspaceFolderDialog = $state(false)
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
@@ -53,6 +56,10 @@
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
+  let secondarySectionElement: HTMLElement | null = $state(null)
+  let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
+  let secondarySectionWidth = $state(0)
+  let secondaryTitleMeasureWidth = $state(0)
 
   const openWorkspaceFolderDialog = async (): Promise<OpenSelectWorkspaceFolderDialogResult> => {
     isOpeningWorkspaceFolderDialog = true
@@ -213,6 +220,40 @@
 
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceFolderDialog)
   const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
+  const secondaryTitleFontSizePx = $derived.by(() => {
+    if (!secondarySectionWidth || !secondaryTitleMeasureWidth) {
+      return null
+    }
+
+    return (secondarySectionWidth / secondaryTitleMeasureWidth) * SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
+  })
+
+  // Side effect: keep the temporary duplicate title scaled to the card section width.
+  $effect(() => {
+    const sectionElement = secondarySectionElement
+    const measureElement = secondaryTitleMeasureElement
+    if (!sectionElement || !measureElement) {
+      return
+    }
+
+    const updateSecondaryTitleSize = () => {
+      secondarySectionWidth = sectionElement.getBoundingClientRect().width
+      secondaryTitleMeasureWidth = measureElement.getBoundingClientRect().width
+    }
+
+    updateSecondaryTitleSize()
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateSecondaryTitleSize()
+    })
+
+    resizeObserver.observe(sectionElement)
+    resizeObserver.observe(measureElement)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  })
 </script>
 
 <main class="flex-1 overflow-y-auto p-6" data-testid="home-screen">
@@ -223,7 +264,7 @@
           class="w-full max-w-none whitespace-nowrap text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
           data-testid="home-title"
         >
-          CTHULHU PROMPT
+          {secondaryTitleText}
         </h1>
 
         <div class="flex w-full max-w-[36rem] flex-col items-center gap-4">
@@ -296,8 +337,20 @@
     </div>
 
     <!-- Temporary second-pass layout lives below the current home content. -->
-    <section class="w-full max-w-4xl space-y-6">
-      <h2 class="cthulhuHomeSecondaryTitle">CTHULHU PROMPT</h2>
+    <section bind:this={secondarySectionElement} class="relative w-full max-w-4xl space-y-6">
+      <h2
+        class="cthulhuHomeSecondaryTitle"
+        style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
+      >
+        {secondaryTitleText}
+      </h2>
+      <span
+        bind:this={secondaryTitleMeasureElement}
+        aria-hidden="true"
+        class="cthulhuHomeSecondaryTitle cthulhuHomeSecondaryTitleMeasure"
+      >
+        {secondaryTitleText}
+      </span>
 
       <CardSurface class="p-5 md:p-6">
         <div class="grid grid-cols-2 gap-4">
@@ -431,5 +484,14 @@
     line-height: 1;
     text-align: center;
     white-space: nowrap;
+  }
+
+  .cthulhuHomeSecondaryTitleMeasure {
+    left: 0;
+    position: absolute;
+    top: 0;
+    visibility: hidden;
+    width: max-content;
+    font-size: 100px;
   }
 </style>
