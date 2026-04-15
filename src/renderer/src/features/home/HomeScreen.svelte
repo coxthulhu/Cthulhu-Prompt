@@ -1,6 +1,9 @@
 <script lang="ts">
   import { FolderOpen, FolderPlus, X } from 'lucide-svelte'
+  import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import DisplayText from '@renderer/common/cthulhu-ui/DisplayText.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { Button } from '@renderer/common/ui/button'
   import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
   import {
@@ -207,84 +210,153 @@
     }
     return 'Create Workspace Folder'
   }
+
+  const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceFolderDialog)
+  const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
 </script>
 
-<main class="flex-1 p-6" data-testid="home-screen">
-  <div class="flex h-full w-full items-center justify-center">
-    <div class="flex w-full flex-col items-center gap-6 text-center">
-      <h1
-        class="w-full max-w-none whitespace-nowrap text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
-        data-testid="home-title"
-      >
-        CTHULHU PROMPT
-      </h1>
+<main class="flex-1 overflow-y-auto p-6" data-testid="home-screen">
+  <div class="flex w-full flex-col items-center gap-10">
+    <div class="flex min-h-[24rem] w-full items-center justify-center">
+      <div class="flex w-full flex-col items-center gap-6 text-center">
+        <h1
+          class="w-full max-w-none whitespace-nowrap text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
+          data-testid="home-title"
+        >
+          CTHULHU PROMPT
+        </h1>
 
-      <div class="flex w-full max-w-[36rem] flex-col items-center gap-4">
-        {#if !isWorkspaceReady}
-          <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
-            <h2 class="text-base font-semibold">Get Started</h2>
-            <p class="text-muted-foreground text-sm">
-              Select a folder to set up your workspace and start managing prompts.
-            </p>
-          </div>
-        {/if}
-
-        {#if isWorkspaceReady}
-          <div
-            class="w-full rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950"
-          >
-            <h2
-              class="text-lg font-semibold text-green-800 dark:text-green-200"
-              data-testid="workspace-ready-title"
-            >
-              Workspace Ready
-            </h2>
-            <div class="mt-1 flex w-full justify-center text-sm text-green-700 dark:text-green-300">
-              <span class="shrink-0">Workspace:</span>
-              <span
-                class="ml-2 min-w-0 max-w-[420px] truncate"
-                title={workspacePath ?? undefined}
-                data-testid="workspace-ready-path"
-              >
-                {workspacePath}
-              </span>
+        <div class="flex w-full max-w-[36rem] flex-col items-center gap-4">
+          {#if !isWorkspaceReady}
+            <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
+              <h2 class="text-base font-semibold">Get Started</h2>
+              <p class="text-muted-foreground text-sm">
+                Select a folder to set up your workspace and start managing prompts.
+              </p>
             </div>
-          </div>
-        {/if}
+          {/if}
 
-        <div class="flex w-full gap-4">
-          <IconTextButton
-            testId="select-workspace-folder-button"
-            icon={FolderOpen}
-            text={getSelectButtonLabel()}
-            onclick={handleSelectFolder}
-            state={isWorkspaceLoading || isOpeningWorkspaceFolderDialog ? 'disabled' : 'enabled'}
-            class="h-12 flex-1 justify-center text-base"
-          />
+          {#if isWorkspaceReady}
+            <div
+              class="w-full rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950"
+            >
+              <h2
+                class="text-lg font-semibold text-green-800 dark:text-green-200"
+                data-testid="workspace-ready-title"
+              >
+                Workspace Ready
+              </h2>
+              <div class="mt-1 flex w-full justify-center text-sm text-green-700 dark:text-green-300">
+                <span class="shrink-0">Workspace:</span>
+                <span
+                  class="ml-2 min-w-0 max-w-[420px] truncate"
+                  title={workspacePath ?? undefined}
+                  data-testid="workspace-ready-path"
+                >
+                  {workspacePath}
+                </span>
+              </div>
+            </div>
+          {/if}
 
-          <IconTextButton
-            testId="create-workspace-folder-button"
-            icon={FolderPlus}
-            text={getCreateButtonLabel()}
-            onclick={handleCreateFolder}
-            state={isWorkspaceLoading || isOpeningWorkspaceFolderDialog ? 'disabled' : 'enabled'}
-            class="h-12 flex-1 justify-center text-base"
-          />
-        </div>
-
-        {#if isWorkspaceReady}
-          <div class="flex w-full">
+          <div class="flex w-full gap-4">
             <IconTextButton
-              testId="close-workspace-button"
-              icon={X}
-              text="Close Workspace"
-              onclick={onWorkspaceClear}
-              class="h-12 flex-1 justify-center text-base border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
+              testId="select-workspace-folder-button"
+              icon={FolderOpen}
+              text={getSelectButtonLabel()}
+              onclick={handleSelectFolder}
+              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+              class="h-12 flex-1 justify-center text-base"
+            />
+
+            <IconTextButton
+              testId="create-workspace-folder-button"
+              icon={FolderPlus}
+              text={getCreateButtonLabel()}
+              onclick={handleCreateFolder}
+              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+              class="h-12 flex-1 justify-center text-base"
             />
           </div>
-        {/if}
+
+          {#if isWorkspaceReady}
+            <div class="flex w-full">
+              <IconTextButton
+                testId="close-workspace-button"
+                icon={X}
+                text="Close Workspace"
+                onclick={onWorkspaceClear}
+                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                class="h-12 flex-1 justify-center text-base border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
+              />
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
+
+    <!-- Temporary second-pass layout lives below the current home content. -->
+    <section class="w-full max-w-4xl space-y-6">
+      <h2 class="cthulhuHomeSecondaryTitle">CTHULHU PROMPT</h2>
+
+      <CardSurface class="p-5 md:p-6">
+        <div class="grid grid-cols-2 gap-4">
+          <CardSurface class="h-full p-5">
+            <div class="space-y-4">
+              <TitleBlock
+                title="Current Workspace"
+                variant="large"
+                description="Details about the currently open workspace."
+              />
+
+              <DisplayText
+                class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
+                text={displayedWorkspacePath}
+                title={displayedWorkspacePath}
+              />
+            </div>
+          </CardSurface>
+
+          <CardSurface class="h-full p-5">
+            <div class="space-y-4">
+              <TitleBlock
+                title="Workspace Actions"
+                variant="large"
+                description="Choose or create a workspace folder, or close the current one."
+              />
+
+              <div class="flex flex-col gap-3">
+                <IconTextButton
+                  icon={FolderOpen}
+                  text={getSelectButtonLabel()}
+                  onclick={handleSelectFolder}
+                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                  class="w-full justify-center"
+                />
+
+                <IconTextButton
+                  icon={FolderPlus}
+                  text={getCreateButtonLabel()}
+                  onclick={handleCreateFolder}
+                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                  class="w-full justify-center"
+                />
+
+                {#if isWorkspaceReady}
+                  <IconTextButton
+                    icon={X}
+                    text="Close Workspace"
+                    onclick={onWorkspaceClear}
+                    state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                    class="w-full justify-center border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
+                  />
+                {/if}
+              </div>
+            </div>
+          </CardSurface>
+        </div>
+      </CardSurface>
+    </section>
   </div>
 
   <Dialog bind:open={showSetupDialog}>
@@ -348,3 +420,16 @@
     confirmLabel="OK"
   />
 </main>
+
+<style>
+  .cthulhuHomeSecondaryTitle {
+    color: var(--ui-text-bright);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: clamp(4rem, 9vw, 5.5rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+</style>
