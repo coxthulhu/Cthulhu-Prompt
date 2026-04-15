@@ -38,9 +38,7 @@
 
 <main
   data-testid="home-screen"
-  style="min-height: 100%; padding: 32px; box-sizing: border-box; overflow: auto; background:
-    radial-gradient(circle at top, rgba(124, 58, 237, 0.18), transparent 32%),
-    linear-gradient(180deg, #0f1117 0%, #0a0c10 100%); color: #f5f5f5; font-family: 'Segoe UI', sans-serif;"
+  style="min-height: 100%; padding: 32px; box-sizing: border-box; overflow: auto; color: #f5f5f5; font-family: 'Segoe UI', sans-serif;"
 >
   <div
     style="width: 100%; max-width: 1120px; margin: 0 auto; min-height: calc(100vh - 64px); display: flex; align-items: center; justify-content: center;"
