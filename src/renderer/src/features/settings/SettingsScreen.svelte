@@ -116,7 +116,7 @@
         </div>
         <div class="min-w-0">
           <h2 class="text-lg font-semibold tracking-tight text-white">Editor & layout</h2>
-          <p class="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
+          <p class="mt-1 text-sm leading-6 text-zinc-400">
             Typography, spacing, autosave, and core writing ergonomics.
           </p>
         </div>
