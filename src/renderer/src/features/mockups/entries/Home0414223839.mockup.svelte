@@ -9,6 +9,7 @@
     Sparkles,
     X
   } from 'lucide-svelte'
+  import { untrack } from 'svelte'
 
   type WorkspaceAction = 'select' | 'create' | null
   type MockFolderScenario = 'setup' | 'existing' | 'invalid-root' | 'cancel'
@@ -49,8 +50,9 @@
     onWorkspaceClear?: () => void
   } = $props()
 
-  let previewWorkspaceReady = $state(isWorkspaceReady)
-  let previewWorkspacePath = $state(workspacePath)
+  // Snapshot the initial props so preview interactions can diverge from incoming values.
+  let previewWorkspaceReady = $state(untrack(() => isWorkspaceReady))
+  let previewWorkspacePath = $state(untrack(() => workspacePath))
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
   let showRootPathDialog = $state(false)

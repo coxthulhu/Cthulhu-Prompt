@@ -142,7 +142,7 @@
           <div
             style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;"
           >
-            {#each metrics as metric}
+            {#each metrics as metric (metric.label)}
               <div style={`${metric.accent} border-radius: 26px; padding: 18px 18px 20px; display: grid; gap: 16px;`}>
                 <div
                   style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"
@@ -166,10 +166,10 @@
                   </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                  {#each Array(6) as _, index}
+                  {#each Array.from({ length: 6 }, (_, barIndex) => barIndex) as barIndex (barIndex)}
                     <div
                       aria-hidden="true"
-                      style={`height: 8px; flex: 1; border-radius: 999px; background: ${index < 4 ? 'rgba(255, 255, 255, 0.34)' : 'rgba(255, 255, 255, 0.12)'};`}
+                      style={`height: 8px; flex: 1; border-radius: 999px; background: ${barIndex < 4 ? 'rgba(255, 255, 255, 0.34)' : 'rgba(255, 255, 255, 0.12)'};`}
                     ></div>
                   {/each}
                 </div>
@@ -239,7 +239,7 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 16px;">
-        {#each actionCards as card}
+        {#each actionCards as card (card.title)}
           <div style={`${panelStyle} padding: 22px; display: grid; gap: 16px;`}>
             <div
               style="font-size: 12px; color: rgba(161, 161, 170, 0.9); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;"
