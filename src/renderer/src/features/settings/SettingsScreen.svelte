@@ -2,6 +2,7 @@
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
+  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import { Keyboard, RefreshCcw } from 'lucide-svelte'
   import {
@@ -115,10 +116,11 @@
           <Keyboard class="h-5 w-5 text-violet-300" />
         </div>
         <div class="min-w-0">
-          <h2 class="text-lg font-semibold tracking-tight text-white">Editor & layout</h2>
-          <p class="mt-1 text-sm leading-6 text-zinc-400">
-            Typography, spacing, autosave, and core writing ergonomics.
-          </p>
+          <TitleBlock
+            title="Editor & layout"
+            variant="large"
+            description="Typography, spacing, autosave, and core writing ergonomics."
+          />
         </div>
       </div>
 
@@ -127,10 +129,11 @@
           class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
-            <h3 class="text-sm font-medium text-zinc-100">Font Size</h3>
-            <p class="mt-1 text-sm leading-6 text-zinc-400">
-              Sets the base font size used inside the prompt editor.
-            </p>
+            <TitleBlock
+              title="Font Size"
+              variant="small"
+              description="Sets the base font size used inside the prompt editor."
+            />
             {#if displayFontSizeError}
               <p class="mt-3 text-sm text-red-400" data-testid="font-size-error">
                 {displayFontSizeError}
@@ -163,10 +166,11 @@
           class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
-            <h3 class="text-sm font-medium text-zinc-100">Minimum Line Count</h3>
-            <p class="mt-1 text-sm leading-6 text-zinc-400">
-              Sets the minimum number of visible lines in prompt editors.
-            </p>
+            <TitleBlock
+              title="Minimum Line Count"
+              variant="small"
+              description="Sets the minimum number of visible lines in prompt editors."
+            />
             {#if displayMinLinesError}
               <p class="mt-3 text-sm text-red-400" data-testid="min-lines-error">
                 {displayMinLinesError}
@@ -199,10 +203,11 @@
           class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
-            <h3 class="text-sm font-medium text-zinc-100">Show Line Numbers</h3>
-            <p class="mt-1 text-sm leading-6 text-zinc-400">
-              Display line numbers beside prompt text for easier review.
-            </p>
+            <TitleBlock
+              title="Show Line Numbers"
+              variant="small"
+              description="Display line numbers beside prompt text for easier review."
+            />
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
