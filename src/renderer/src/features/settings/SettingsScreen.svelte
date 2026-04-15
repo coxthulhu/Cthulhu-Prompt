@@ -125,8 +125,9 @@
       </div>
 
       <div class="space-y-3">
-        <div
-          class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        <CardSurface
+          variant="subcard"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
@@ -160,10 +161,11 @@
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
-        </div>
+        </CardSurface>
 
-        <div
-          class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        <CardSurface
+          variant="subcard"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
@@ -197,10 +199,11 @@
               state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
-        </div>
+        </CardSurface>
 
-        <div
-          class="grid gap-4 rounded-2xl border border-white/8 bg-[#0b0e14]/90 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        <CardSurface
+          variant="subcard"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
@@ -224,7 +227,7 @@
               state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
-        </div>
+        </CardSurface>
       </div>
     </CardSurface>
   </div>
