@@ -352,67 +352,65 @@
         {secondaryTitleText}
       </span>
 
-      <CardSurface class="p-5 md:p-6">
-        <div class="grid grid-cols-2 gap-4">
-          <CardSurface class="h-full p-5">
-            <div class="space-y-4">
-              <TitleBlock
-                title="Current Workspace"
-                variant="large"
-                description="Details about the currently open workspace."
+      <div class="grid grid-cols-2 gap-4">
+        <CardSurface class="h-full p-5">
+          <div class="space-y-4">
+            <TitleBlock
+              title="Current Workspace"
+              variant="large"
+              description="Details about the currently open workspace."
+            />
+
+            <div class="space-y-2">
+              <TitleBlock title="Workspace Path" variant="small" />
+
+              <DisplayText
+                class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
+                text={displayedWorkspacePath}
+                title={displayedWorkspacePath}
+              />
+            </div>
+          </div>
+        </CardSurface>
+
+        <CardSurface class="h-full p-5">
+          <div class="space-y-4">
+            <TitleBlock
+              title="Workspace Actions"
+              variant="large"
+              description="Open, Create, or Close the current workspace."
+            />
+
+            <div class="flex flex-col gap-3">
+              <IconTextButton
+                icon={FolderOpen}
+                text={getSelectButtonLabel()}
+                onclick={handleSelectFolder}
+                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                class="w-full justify-center"
               />
 
-              <div class="space-y-2">
-                <TitleBlock title="Workspace Path" variant="small" />
-
-                <DisplayText
-                  class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
-                  text={displayedWorkspacePath}
-                  title={displayedWorkspacePath}
-                />
-              </div>
-            </div>
-          </CardSurface>
-
-          <CardSurface class="h-full p-5">
-            <div class="space-y-4">
-              <TitleBlock
-                title="Workspace Actions"
-                variant="large"
-                description="Open, Create, or Close the current workspace."
+              <IconTextButton
+                icon={FolderPlus}
+                text={getCreateButtonLabel()}
+                onclick={handleCreateFolder}
+                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                class="w-full justify-center"
               />
 
-              <div class="flex flex-col gap-3">
+              {#if isWorkspaceReady}
                 <IconTextButton
-                  icon={FolderOpen}
-                  text={getSelectButtonLabel()}
-                  onclick={handleSelectFolder}
+                  icon={X}
+                  text="Close Workspace"
+                  onclick={onWorkspaceClear}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                  class="w-full justify-center"
+                  class="w-full justify-center border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
                 />
-
-                <IconTextButton
-                  icon={FolderPlus}
-                  text={getCreateButtonLabel()}
-                  onclick={handleCreateFolder}
-                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                  class="w-full justify-center"
-                />
-
-                {#if isWorkspaceReady}
-                  <IconTextButton
-                    icon={X}
-                    text="Close Workspace"
-                    onclick={onWorkspaceClear}
-                    state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                    class="w-full justify-center border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
-                  />
-                {/if}
-              </div>
+              {/if}
             </div>
-          </CardSurface>
-        </div>
-      </CardSurface>
+          </div>
+        </CardSurface>
+      </div>
     </section>
   </div>
 
