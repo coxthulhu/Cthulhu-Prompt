@@ -370,6 +370,7 @@
               <DisplayText
                 class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
                 text={displayedWorkspacePath}
+                variant="regular"
                 title={displayedWorkspacePath}
               />
             </div>
@@ -391,7 +392,7 @@
                 text={getSelectButtonLabel()}
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                class="w-full justify-center"
+                class="h-12 w-full justify-center text-base"
               />
 
               <IconTextButton
@@ -400,7 +401,7 @@
                 text={getCreateButtonLabel()}
                 onclick={handleCreateFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                class="w-full justify-center"
+                class="h-12 w-full justify-center text-base"
               />
 
               {#if isWorkspaceReady}
@@ -410,7 +411,7 @@
                   text="Close Workspace"
                   onclick={onWorkspaceClear}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                  class="w-full justify-center border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
+                  class="h-12 w-full justify-center text-base border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
                 />
               {/if}
             </div>
