@@ -304,6 +304,7 @@
             <IconTextButton
               testId="select-workspace-folder-button"
               icon={FolderOpen}
+              iconClass="translate-y-px"
               text={getSelectButtonLabel()}
               onclick={handleSelectFolder}
               state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
@@ -313,6 +314,7 @@
             <IconTextButton
               testId="create-workspace-folder-button"
               icon={FolderPlus}
+              iconClass="translate-y-px"
               text={getCreateButtonLabel()}
               onclick={handleCreateFolder}
               state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
@@ -325,6 +327,7 @@
               <IconTextButton
                 testId="close-workspace-button"
                 icon={X}
+                iconClass="translate-y-px"
                 text="Close Workspace"
                 onclick={onWorkspaceClear}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
@@ -384,6 +387,7 @@
             <div class="flex flex-col gap-3">
               <IconTextButton
                 icon={FolderOpen}
+                iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
@@ -392,6 +396,7 @@
 
               <IconTextButton
                 icon={FolderPlus}
+                iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
                 onclick={handleCreateFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
@@ -401,6 +406,7 @@
               {#if isWorkspaceReady}
                 <IconTextButton
                   icon={X}
+                  iconClass="translate-y-px"
                   text="Close Workspace"
                   onclick={onWorkspaceClear}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}

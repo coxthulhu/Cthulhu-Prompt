@@ -9,6 +9,7 @@
     text: string
     state?: ButtonState
     class?: string
+    iconClass?: string
     testId?: string
     onclick?: (event: MouseEvent) => void
   }
@@ -18,6 +19,7 @@
     text,
     state = 'enabled',
     class: className,
+    iconClass,
     testId,
     onclick
   }: Props = $props()
@@ -37,7 +39,7 @@
   {onclick}
   disabled={isDisabled}
 >
-  <Icon class="h-4 w-4" />
+  <Icon class={mergeClasses('h-4 w-4', iconClass)} />
   {text}
 </button>
 
