@@ -256,18 +256,18 @@
   })
 </script>
 
-<main class="flex-1 overflow-y-auto p-6" data-testid="home-screen">
-  <div class="flex w-full flex-col items-center gap-10">
-    <div class="flex min-h-[24rem] w-full items-center justify-center">
-      <div class="flex w-full flex-col items-center gap-6 text-center">
+<main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
+  <div class="flex min-h-full w-full min-w-0 flex-col items-center justify-center gap-10">
+    <div class="flex w-full min-w-0 items-center justify-center">
+      <div class="flex w-full min-w-0 flex-col items-center gap-6 text-center">
         <h1
-          class="w-full max-w-none whitespace-nowrap text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
+          class="w-full max-w-none text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
           data-testid="home-title"
         >
           {secondaryTitleText}
         </h1>
 
-        <div class="flex w-full max-w-[36rem] flex-col items-center gap-4">
+        <div class="flex w-full max-w-[36rem] min-w-0 flex-col items-center gap-4">
           {#if !isWorkspaceReady}
             <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
               <h2 class="text-base font-semibold">Get Started</h2>
@@ -300,7 +300,7 @@
             </div>
           {/if}
 
-          <div class="flex w-full gap-4">
+          <div class="flex w-full flex-col gap-4 sm:flex-row">
             <IconTextButton
               testId="select-workspace-folder-button"
               icon={FolderOpen}
@@ -340,7 +340,7 @@
     </div>
 
     <!-- Temporary second-pass layout lives below the current home content. -->
-    <section bind:this={secondarySectionElement} class="relative w-full max-w-4xl space-y-6">
+    <section bind:this={secondarySectionElement} class="relative w-full max-w-4xl min-w-0 space-y-6">
       <h2
         class="cthulhuHomeSecondaryTitle"
         style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
@@ -355,8 +355,8 @@
         {secondaryTitleText}
       </span>
 
-      <div class="grid grid-cols-2 gap-4">
-        <CardSurface class="h-full p-5">
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <CardSurface class="h-full min-w-0 p-5">
           <div class="space-y-4">
             <TitleBlock
               title="Current Workspace"
@@ -368,7 +368,7 @@
               <TitleBlock title="Workspace Path" variant="small" />
 
               <DisplayText
-                class="min-h-[2.75rem] w-full text-ellipsis whitespace-nowrap"
+                class="min-h-[2.75rem] w-full min-w-0 text-ellipsis whitespace-nowrap"
                 text={displayedWorkspacePath}
                 variant="regular"
                 title={displayedWorkspacePath}
@@ -377,7 +377,7 @@
           </div>
         </CardSurface>
 
-        <CardSurface class="h-full p-5">
+        <CardSurface class="h-full min-w-0 p-5">
           <div class="space-y-4">
             <TitleBlock
               title="Workspace Actions"
@@ -496,9 +496,10 @@
   }
 
   .cthulhuHomeSecondaryTitleMeasure {
-    left: 0;
-    position: absolute;
-    top: 0;
+    left: -9999px;
+    pointer-events: none;
+    position: fixed;
+    top: -9999px;
     visibility: hidden;
     width: max-content;
     font-size: 100px;
