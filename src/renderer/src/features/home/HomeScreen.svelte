@@ -1,8 +1,8 @@
 <script lang="ts">
   import { FolderOpen, FolderPlus, X } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
-  import DisplayText from '@renderer/common/cthulhu-ui/DisplayText.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { Button } from '@renderer/common/ui/button'
   import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
@@ -364,16 +364,11 @@
               description="Details about the currently open workspace."
             />
 
-            <div class="space-y-2">
-              <TitleBlock title="Workspace Path" variant="small" />
-
-              <DisplayText
-                class="min-h-[2.75rem] w-full min-w-0 text-ellipsis whitespace-nowrap"
-                text={displayedWorkspacePath}
-                variant="regular"
-                title={displayedWorkspacePath}
-              />
-            </div>
+            <LabeledDisplayField
+              label="Workspace Path"
+              text={displayedWorkspacePath}
+              valueTitle={displayedWorkspacePath}
+            />
           </div>
         </CardSurface>
 
