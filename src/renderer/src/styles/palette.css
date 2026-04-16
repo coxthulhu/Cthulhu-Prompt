@@ -36,9 +36,9 @@
   --ui-accent-icon: rgb(196 181 253);
 
   /* Success */
-  --ui-success-surface: rgb(34 84 50 / 28%);
-  --ui-success-border: rgb(86 198 122 / 24%);
-  --ui-success-text: rgb(223 255 232);
+  --ui-success-surface: rgb(22 163 74 / 22%);
+  --ui-success-border: rgb(74 222 128 / 42%);
+  --ui-success-text: rgb(240 253 244);
 
   /* Shadows */
   --ui-shadow-raised: rgb(0 0 0 / 20%);
