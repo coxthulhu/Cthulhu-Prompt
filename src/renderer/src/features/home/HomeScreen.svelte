@@ -361,7 +361,7 @@
             <TitleBlock
               title="Current Workspace"
               variant="large"
-              description="Details about the currently open workspace."
+              description="More information about the current workspace."
             />
 
             <LabeledDisplayField
@@ -377,7 +377,7 @@
             <TitleBlock
               title="Workspace Actions"
               variant="large"
-              description="Open, Create, or Close the current workspace."
+              description="Change the current workspace."
             />
 
             <div class="flex flex-col gap-3">
