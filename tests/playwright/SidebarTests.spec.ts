@@ -43,6 +43,7 @@ test.describe('Sidebar Tests', () => {
     expect(await testHelpers.getActiveScreen()).toBe('settings')
 
     expect(await testHelpers.isNavButtonActive('Settings')).toBe(true)
+    await expect(mainWindow.locator('[data-testid="about-version-value"]')).toHaveText('v0.0.1')
   })
 
   test('allows navigating to Settings after workspace setup', async ({ testSetup }) => {

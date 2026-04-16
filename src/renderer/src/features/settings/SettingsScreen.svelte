@@ -4,7 +4,7 @@
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { Keyboard, RefreshCcw } from 'lucide-svelte'
+  import { Info, Keyboard, RefreshCcw } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -227,6 +227,43 @@
           </div>
         </CardSurface>
       </div>
+    </CardSurface>
+
+    <CardSurface>
+      <div class="flex items-start gap-4 px-2 pb-4 pt-1">
+        <div class="settingsScreenSectionIcon">
+          <Info class="h-5 w-5" />
+        </div>
+        <div class="min-w-0">
+          <TitleBlock
+            title="About"
+            variant="large"
+            description="Build and release details for this desktop app."
+          />
+        </div>
+      </div>
+
+      <CardSurface
+        variant="subcard"
+        class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+      >
+        <div class="min-w-0">
+          <TitleBlock
+            title="Current Version"
+            variant="small"
+            description="Hardcoded for now until version metadata is wired in."
+          />
+        </div>
+
+        <div class="flex items-center lg:justify-end">
+          <p
+            class="rounded-full border px-3 py-1 text-sm font-medium text-white"
+            data-testid="about-version-value"
+          >
+            v0.0.1
+          </p>
+        </div>
+      </CardSurface>
     </CardSurface>
   </div>
 </section>
