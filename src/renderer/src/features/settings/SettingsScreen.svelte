@@ -110,10 +110,8 @@
 
     <CardSurface>
       <div class="flex items-start gap-4 px-2 pb-4 pt-1">
-        <div
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-500/15 ring-1 ring-violet-400/20"
-        >
-          <Keyboard class="h-5 w-5 text-violet-300" />
+        <div class="settingsScreenSectionIcon">
+          <Keyboard class="h-5 w-5" />
         </div>
         <div class="min-w-0">
           <TitleBlock
@@ -232,3 +230,21 @@
     </CardSurface>
   </div>
 </section>
+
+<style>
+  .settingsScreenSectionIcon {
+    align-items: center;
+    background-color: var(--ui-accent-icon-surface);
+    border-radius: 1rem;
+    box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
+    display: flex;
+    flex: 0 0 auto;
+    height: 2.75rem;
+    justify-content: center;
+    width: 2.75rem;
+  }
+
+  .settingsScreenSectionIcon :global(svg) {
+    color: var(--ui-accent-icon);
+  }
+</style>

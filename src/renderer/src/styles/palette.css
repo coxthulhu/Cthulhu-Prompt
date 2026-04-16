@@ -31,6 +31,9 @@
   --ui-accent-fill: rgb(216 180 254 / 24%);
   --ui-accent-border: rgb(216 180 254 / 30%);
   --ui-accent-text: rgb(245 243 255);
+  --ui-accent-icon-surface: rgb(139 92 246 / 15%);
+  --ui-accent-icon-ring: rgb(167 139 250 / 20%);
+  --ui-accent-icon: rgb(196 181 253);
 
   /* Shadows */
   --ui-shadow-raised: rgb(0 0 0 / 20%);

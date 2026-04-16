@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { FolderOpen, FolderPlus, X } from 'lucide-svelte'
+  import { FileText, FolderClosed, FolderOpen, FolderPlus, X } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
+  import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { Button } from '@renderer/common/ui/button'
   import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
@@ -369,6 +370,11 @@
               text={displayedWorkspacePath}
               valueTitle={displayedWorkspacePath}
             />
+
+            <div class="grid grid-cols-2 gap-3">
+              <NumericStatCard label="Prompts" text="9999" icon={FileText} />
+              <NumericStatCard label="Prompt Folders" text="9999" icon={FolderClosed} />
+            </div>
           </div>
         </CardSurface>
 
