@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileText, FolderClosed, FolderOpen, FolderPlus, X } from 'lucide-svelte'
+  import { AlertCircle, Check, FileText, FolderClosed, FolderOpen, FolderPlus, X } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
@@ -380,11 +380,25 @@
 
         <CardSurface class="h-full min-w-0 p-5">
           <div class="space-y-4">
-            <TitleBlock
-              title="Workspace Actions"
-              variant="large"
-              description="Change your current workspace."
-            />
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0 flex-1 space-y-1">
+                <h2 class="cthulhuHomeCardTitle">Workspace Actions</h2>
+                <p class="cthulhuHomeCardDescription">Change your current workspace.</p>
+              </div>
+              <div
+                class:cthulhuHomeWorkspaceStatusBadgeReady={isWorkspaceReady}
+                class:cthulhuHomeWorkspaceStatusBadgeNotSelected={!isWorkspaceReady}
+                class="cthulhuHomeWorkspaceStatusBadge"
+              >
+                {#if isWorkspaceReady}
+                  <Check size={16} />
+                  <span data-testid="workspace-ready-title">Workspace Ready</span>
+                {:else}
+                  <AlertCircle size={16} />
+                  <span>Workspace Not Selected</span>
+                {/if}
+              </div>
+            </div>
 
             <div class="flex flex-col gap-3">
               <IconTextButton
@@ -485,6 +499,45 @@
 </main>
 
 <style>
+  .cthulhuHomeCardTitle {
+    color: var(--ui-text-bright);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin: 0;
+  }
+
+  .cthulhuHomeCardDescription {
+    color: var(--ui-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    margin: 0;
+  }
+
+  .cthulhuHomeWorkspaceStatusBadge {
+    align-items: center;
+    border: 1px solid;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 600;
+    gap: 8px;
+    padding: 8px 12px;
+    width: max-content;
+  }
+
+  .cthulhuHomeWorkspaceStatusBadgeReady {
+    background: var(--ui-success-surface);
+    border-color: var(--ui-success-border);
+    color: var(--ui-success-text);
+  }
+
+  .cthulhuHomeWorkspaceStatusBadgeNotSelected {
+    background: var(--ui-accent-surface);
+    border-color: var(--ui-accent-border);
+    color: var(--ui-accent-icon);
+  }
+
   .cthulhuHomeSecondaryTitle {
     color: var(--ui-text-bright);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
