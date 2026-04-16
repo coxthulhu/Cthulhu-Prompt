@@ -229,7 +229,7 @@
     return (secondarySectionWidth / secondaryTitleMeasureWidth) * SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
   })
 
-  // Side effect: keep the temporary duplicate title scaled to the card section width.
+  // Side effect: keep the home title scaled to the card section width.
   $effect(() => {
     const sectionElement = secondarySectionElement
     const measureElement = secondaryTitleMeasureElement
@@ -258,92 +258,11 @@
 </script>
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
-  <div class="flex min-h-full w-full min-w-0 flex-col items-center justify-center gap-10">
-    <div class="flex w-full min-w-0 items-center justify-center">
-      <div class="flex w-full min-w-0 flex-col items-center gap-6 text-center">
-        <h1
-          class="w-full max-w-none text-5xl font-bold font-mono tracking-[0.14em] md:text-6xl"
-          data-testid="home-title"
-        >
-          {secondaryTitleText}
-        </h1>
-
-        <div class="flex w-full max-w-[36rem] min-w-0 flex-col items-center gap-4">
-          {#if !isWorkspaceReady}
-            <div class="w-full rounded-lg border bg-muted/50 px-4 py-3">
-              <h2 class="text-base font-semibold">Get Started</h2>
-              <p class="text-muted-foreground text-sm">
-                Select a folder to set up your workspace and start managing prompts.
-              </p>
-            </div>
-          {/if}
-
-          {#if isWorkspaceReady}
-            <div
-              class="w-full rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950"
-            >
-              <h2
-                class="text-lg font-semibold text-green-800 dark:text-green-200"
-                data-testid="workspace-ready-title"
-              >
-                Workspace Ready
-              </h2>
-              <div class="mt-1 flex w-full justify-center text-sm text-green-700 dark:text-green-300">
-                <span class="shrink-0">Workspace:</span>
-                <span
-                  class="ml-2 min-w-0 max-w-[420px] truncate"
-                  title={workspacePath ?? undefined}
-                  data-testid="workspace-ready-path"
-                >
-                  {workspacePath}
-                </span>
-              </div>
-            </div>
-          {/if}
-
-          <div class="flex w-full flex-col gap-4 sm:flex-row">
-            <IconTextButton
-              testId="select-workspace-folder-button"
-              icon={FolderOpen}
-              iconClass="translate-y-px"
-              text={getSelectButtonLabel()}
-              onclick={handleSelectFolder}
-              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              class="h-12 flex-1 justify-center text-base"
-            />
-
-            <IconTextButton
-              testId="create-workspace-folder-button"
-              icon={FolderPlus}
-              iconClass="translate-y-px"
-              text={getCreateButtonLabel()}
-              onclick={handleCreateFolder}
-              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              class="h-12 flex-1 justify-center text-base"
-            />
-          </div>
-
-          {#if isWorkspaceReady}
-            <div class="flex w-full">
-              <IconTextButton
-                testId="close-workspace-button"
-                icon={X}
-                iconClass="translate-y-px"
-                text="Close Workspace"
-                onclick={onWorkspaceClear}
-                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                class="h-12 flex-1 justify-center text-base border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
-              />
-            </div>
-          {/if}
-        </div>
-      </div>
-    </div>
-
-    <!-- Temporary second-pass layout lives below the current home content. -->
+  <div class="flex min-h-full w-full min-w-0 items-center justify-center">
     <section bind:this={secondarySectionElement} class="relative w-full max-w-4xl min-w-0 space-y-6">
       <h2
         class="cthulhuHomeSecondaryTitle"
+        data-testid="home-title"
         style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
       >
         {secondaryTitleText}
@@ -369,6 +288,7 @@
               label="Workspace Path"
               text={displayedWorkspacePath}
               valueTitle={displayedWorkspacePath}
+              valueTestId={isWorkspaceReady ? 'workspace-ready-path' : undefined}
             />
 
             <div class="grid grid-cols-2 gap-3">
@@ -402,6 +322,7 @@
 
             <div class="flex flex-col gap-3">
               <IconTextButton
+                testId="select-workspace-folder-button"
                 icon={FolderOpen}
                 iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
@@ -411,6 +332,7 @@
               />
 
               <IconTextButton
+                testId="create-workspace-folder-button"
                 icon={FolderPlus}
                 iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
@@ -421,6 +343,7 @@
 
               {#if isWorkspaceReady}
                 <IconTextButton
+                  testId="close-workspace-button"
                   icon={X}
                   iconClass="translate-y-px"
                   text="Close Workspace"
