@@ -16,7 +16,7 @@
   /* Shared card surfaces */
   --ui-card-surface-top: rgb(255 255 255 / 6%);
   --ui-card-surface-bottom: rgb(255 255 255 / 3%);
-  --ui-card-subcard-surface: rgb(11 14 20 / 90%);
+  --ui-card-subcard-surface: rgb(8 10 15 / 78%);
 
   /* Neutral borders */
   --ui-border-muted: rgb(255 255 255 / 8%);
@@ -24,7 +24,7 @@
   --ui-border-emphasis: rgb(255 255 255 / 16%);
   --ui-border-focus: rgb(255 255 255 / 28%);
   --ui-card-border-soft: rgb(255 255 255 / 10%);
-  --ui-card-border-subcard: rgb(255 255 255 / 8%);
+  --ui-card-border-subcard: rgb(255 255 255 / 7%);
 
   /* Accent */
   --ui-accent-surface: rgb(139 92 246 / 14%);

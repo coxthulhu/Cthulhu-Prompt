@@ -44,6 +44,6 @@
   .cthulhuUiCardSurface--subcard {
     border-color: var(--ui-card-border-subcard);
     background-color: var(--ui-card-subcard-surface);
-    box-shadow: none;
+    box-shadow: inset 0 1px 0 var(--ui-border-muted);
   }
 </style>
