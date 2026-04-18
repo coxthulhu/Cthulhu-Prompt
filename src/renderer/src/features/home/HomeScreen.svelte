@@ -57,9 +57,9 @@
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
-  let secondarySectionElement: HTMLElement | null = $state(null)
+  let secondaryTitleContainerElement: HTMLDivElement | null = $state(null)
   let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
-  let secondarySectionWidth = $state(0)
+  let secondaryTitleContainerWidth = $state(0)
   let secondaryTitleMeasureWidth = $state(0)
 
   const openWorkspaceFolderDialog = async (): Promise<OpenSelectWorkspaceFolderDialogResult> => {
@@ -222,23 +222,25 @@
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceFolderDialog)
   const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
   const secondaryTitleFontSizePx = $derived.by(() => {
-    if (!secondarySectionWidth || !secondaryTitleMeasureWidth) {
+    if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
       return null
     }
 
-    return (secondarySectionWidth / secondaryTitleMeasureWidth) * SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
+    return (
+      (secondaryTitleContainerWidth / secondaryTitleMeasureWidth) * SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
+    )
   })
 
-  // Side effect: keep the home title scaled to the card section width.
+  // Side effect: keep the home title scaled to the shared card/title container width.
   $effect(() => {
-    const sectionElement = secondarySectionElement
+    const titleContainerElement = secondaryTitleContainerElement
     const measureElement = secondaryTitleMeasureElement
-    if (!sectionElement || !measureElement) {
+    if (!titleContainerElement || !measureElement) {
       return
     }
 
     const updateSecondaryTitleSize = () => {
-      secondarySectionWidth = sectionElement.getBoundingClientRect().width
+      secondaryTitleContainerWidth = titleContainerElement.getBoundingClientRect().width
       secondaryTitleMeasureWidth = measureElement.getBoundingClientRect().width
     }
 
@@ -248,7 +250,7 @@
       updateSecondaryTitleSize()
     })
 
-    resizeObserver.observe(sectionElement)
+    resizeObserver.observe(titleContainerElement)
     resizeObserver.observe(measureElement)
 
     return () => {
@@ -259,14 +261,16 @@
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
-    <section bind:this={secondarySectionElement} class="relative w-full max-w-5xl min-w-0 space-y-6">
-      <h2
-        class="cthulhuHomeSecondaryTitle"
-        data-testid="home-title"
-        style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
-      >
-        {secondaryTitleText}
-      </h2>
+    <section class="relative w-full max-w-5xl min-w-0 space-y-6">
+      <div bind:this={secondaryTitleContainerElement} class="mx-auto w-full max-w-[39.5rem] xl:max-w-none">
+        <h2
+          class="cthulhuHomeSecondaryTitle"
+          data-testid="home-title"
+          style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
+        >
+          {secondaryTitleText}
+        </h2>
+      </div>
       <span
         bind:this={secondaryTitleMeasureElement}
         aria-hidden="true"
@@ -275,8 +279,8 @@
         {secondaryTitleText}
       </span>
 
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <CardSurface class="h-full min-w-0 p-5">
+      <div class="grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch">
+        <CardSurface class="w-full max-w-[39.5rem] min-w-0 p-5 xl:max-w-none">
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
@@ -315,7 +319,7 @@
           </div>
         </CardSurface>
 
-        <CardSurface class="h-full min-w-0 p-5">
+        <CardSurface class="w-full max-w-[39.5rem] min-w-0 p-5 xl:max-w-none">
           <div class="space-y-4">
             <TitleBlock
               title="Workspace Actions"
