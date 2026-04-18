@@ -259,7 +259,7 @@
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
-    <section bind:this={secondarySectionElement} class="relative w-full max-w-4xl min-w-0 space-y-6">
+    <section bind:this={secondarySectionElement} class="relative w-full max-w-5xl min-w-0 space-y-6">
       <h2
         class="cthulhuHomeSecondaryTitle"
         data-testid="home-title"
@@ -301,9 +301,12 @@
         <CardSurface class="h-full min-w-0 p-5">
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0 flex-1 space-y-1">
-                <h2 class="cthulhuHomeCardTitle">Workspace Actions</h2>
-                <p class="cthulhuHomeCardDescription">Change your current workspace.</p>
+              <div class="min-w-0 flex-1">
+                <TitleBlock
+                  title="Workspace Actions"
+                  variant="large"
+                  description="Change your current workspace."
+                />
               </div>
               <div
                 class:cthulhuHomeWorkspaceStatusBadgeReady={isWorkspaceReady}
@@ -422,21 +425,6 @@
 </main>
 
 <style>
-  .cthulhuHomeCardTitle {
-    color: var(--ui-text-bright);
-    font-size: 1.125rem;
-    font-weight: 600;
-    letter-spacing: -0.025em;
-    margin: 0;
-  }
-
-  .cthulhuHomeCardDescription {
-    color: var(--ui-text-muted);
-    font-size: 0.875rem;
-    line-height: 1.5rem;
-    margin: 0;
-  }
-
   .cthulhuHomeWorkspaceStatusBadge {
     align-items: center;
     border: 1px solid;
