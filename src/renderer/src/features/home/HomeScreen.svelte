@@ -278,11 +278,28 @@
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CardSurface class="h-full min-w-0 p-5">
           <div class="space-y-4">
-            <TitleBlock
-              title="Current Workspace"
-              variant="large"
-              description="Information about your current workspace."
-            />
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <TitleBlock
+                  title="Current Workspace"
+                  variant="large"
+                  description="Information about your current workspace."
+                />
+              </div>
+              <div
+                class:cthulhuHomeWorkspaceStatusBadgeReady={isWorkspaceReady}
+                class:cthulhuHomeWorkspaceStatusBadgeNotSelected={!isWorkspaceReady}
+                class="cthulhuHomeWorkspaceStatusBadge"
+              >
+                {#if isWorkspaceReady}
+                  <Check size={16} />
+                  <span data-testid="workspace-ready-title">Workspace Ready</span>
+                {:else}
+                  <AlertCircle size={16} />
+                  <span>Workspace Not Selected</span>
+                {/if}
+              </div>
+            </div>
 
             <LabeledDisplayField
               label="Workspace Path"
@@ -300,28 +317,11 @@
 
         <CardSurface class="h-full min-w-0 p-5">
           <div class="space-y-4">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <TitleBlock
-                  title="Workspace Actions"
-                  variant="large"
-                  description="Change your current workspace."
-                />
-              </div>
-              <div
-                class:cthulhuHomeWorkspaceStatusBadgeReady={isWorkspaceReady}
-                class:cthulhuHomeWorkspaceStatusBadgeNotSelected={!isWorkspaceReady}
-                class="cthulhuHomeWorkspaceStatusBadge"
-              >
-                {#if isWorkspaceReady}
-                  <Check size={16} />
-                  <span data-testid="workspace-ready-title">Workspace Ready</span>
-                {:else}
-                  <AlertCircle size={16} />
-                  <span>Workspace Not Selected</span>
-                {/if}
-              </div>
-            </div>
+            <TitleBlock
+              title="Workspace Actions"
+              variant="large"
+              description="Change your current workspace."
+            />
 
             <div class="flex flex-col gap-3">
               <IconTextButton
