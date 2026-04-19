@@ -1,58 +1,58 @@
 :root {
   /* Text */
-  --ui-text-muted: rgb(169 169 179);
-  --ui-text: rgb(228 228 231);
-  --ui-text-strong: rgb(250 250 250);
-  --ui-text-bright: rgb(255 255 255);
+  --ui-text-muted: oklch(0.738 0.014 286.045);
+  --ui-text: oklch(0.92 0.004 286.32);
+  --ui-text-strong: oklch(0.985 0 0);
+  --ui-text-bright: oklch(1 0 0);
 
   /* Neutral surfaces */
-  --ui-surface-muted: rgb(255 255 255 / 3%);
-  --ui-surface-default: rgb(255 255 255 / 6%);
-  --ui-surface-hover: rgb(255 255 255 / 10%);
-  --ui-surface-emphasis: rgb(255 255 255 / 14%);
-  --ui-surface-input: rgb(22 24 29);
-  --ui-selection-surface: rgb(255 255 255 / 22%);
+  --ui-surface-muted: oklch(1 0 0 / 3%);
+  --ui-surface-default: oklch(1 0 0 / 6%);
+  --ui-surface-hover: oklch(1 0 0 / 10%);
+  --ui-surface-emphasis: oklch(1 0 0 / 14%);
+  --ui-surface-input: oklch(0.209 0.01 268.187);
+  --ui-selection-surface: oklch(1 0 0 / 22%);
 
   /* Shared card surfaces */
-  --ui-card-surface-top: rgb(255 255 255 / 6%);
-  --ui-card-surface-bottom: rgb(255 255 255 / 3%);
-  --ui-card-subcard-surface: rgb(8 10 15 / 78%);
+  --ui-card-surface-top: oklch(1 0 0 / 6%);
+  --ui-card-surface-bottom: oklch(1 0 0 / 3%);
+  --ui-card-subcard-surface: oklch(0.145 0.011 266.847 / 78%);
 
   /* Neutral borders */
-  --ui-border-muted: rgb(255 255 255 / 8%);
-  --ui-border-default: rgb(255 255 255 / 12%);
-  --ui-border-emphasis: rgb(255 255 255 / 16%);
-  --ui-border-focus: rgb(255 255 255 / 28%);
-  --ui-card-border-soft: rgb(255 255 255 / 10%);
-  --ui-card-border-subcard: rgb(255 255 255 / 7%);
+  --ui-border-muted: oklch(1 0 0 / 8%);
+  --ui-border-default: oklch(1 0 0 / 12%);
+  --ui-border-emphasis: oklch(1 0 0 / 16%);
+  --ui-border-focus: oklch(1 0 0 / 28%);
+  --ui-card-border-soft: oklch(1 0 0 / 10%);
+  --ui-card-border-subcard: oklch(1 0 0 / 7%);
 
   /* Accent */
-  --ui-accent-surface: rgb(139 92 246 / 17%);
-  --ui-accent-surface-hover: rgb(139 92 246 / 25%);
-  --ui-accent-fill: rgb(216 180 254 / 24%);
-  --ui-accent-border: rgb(216 180 254 / 30%);
-  --ui-accent-text: rgb(245 243 255);
-  --ui-accent-icon-surface: rgb(139 92 246 / 15%);
-  --ui-accent-icon-ring: rgb(167 139 250 / 20%);
-  --ui-accent-icon: rgb(196 181 253);
+  --ui-accent-surface: oklch(0.606 0.219 292.717 / 17%);
+  --ui-accent-surface-hover: oklch(0.606 0.219 292.717 / 25%);
+  --ui-accent-fill: oklch(0.827 0.108 306.383 / 24%);
+  --ui-accent-border: oklch(0.827 0.108 306.383 / 30%);
+  --ui-accent-text: oklch(0.969 0.016 293.756);
+  --ui-accent-icon-surface: oklch(0.606 0.219 292.717 / 15%);
+  --ui-accent-icon-ring: oklch(0.709 0.159 293.541 / 20%);
+  --ui-accent-icon: oklch(0.811 0.101 293.571);
 
   /* Success */
-  --ui-success-surface: rgb(22 163 74 / 22%);
-  --ui-success-border: rgb(74 222 128 / 42%);
-  --ui-success-text: rgb(240 253 244);
+  --ui-success-surface: oklch(0.627 0.17 149.214 / 22%);
+  --ui-success-border: oklch(0.8 0.182 151.711 / 42%);
+  --ui-success-text: oklch(0.982 0.018 155.826);
 
   /* Shadows */
-  --ui-shadow-raised: rgb(0 0 0 / 20%);
-  --ui-shadow-inset: rgb(0 0 0 / 25%);
-  --ui-card-shadow: rgb(0 0 0 / 28%);
+  --ui-shadow-raised: oklch(0 0 0 / 20%);
+  --ui-shadow-inset: oklch(0 0 0 / 25%);
+  --ui-card-shadow: oklch(0 0 0 / 28%);
 
   /* Danger */
   --ui-danger: oklch(0.704 0.191 22.216);
-  --ui-danger-ring: rgb(255 99 71 / 40%);
-  --ui-danger-surface: rgb(127 29 29 / 22%);
-  --ui-danger-surface-hover: rgb(127 29 29 / 30%);
-  --ui-danger-border: rgb(248 113 113 / 28%);
-  --ui-danger-icon-surface: rgb(248 113 113 / 14%);
-  --ui-danger-icon-ring: rgb(248 113 113 / 18%);
-  --ui-danger-icon: rgb(254 226 226);
+  --ui-danger-ring: oklch(0.696 0.196 32.321 / 40%);
+  --ui-danger-surface: oklch(0.396 0.133 25.723 / 22%);
+  --ui-danger-surface-hover: oklch(0.396 0.133 25.723 / 30%);
+  --ui-danger-border: oklch(0.711 0.166 22.216 / 28%);
+  --ui-danger-icon-surface: oklch(0.711 0.166 22.216 / 14%);
+  --ui-danger-icon-ring: oklch(0.711 0.166 22.216 / 18%);
+  --ui-danger-icon: oklch(0.936 0.031 17.717);
 }
