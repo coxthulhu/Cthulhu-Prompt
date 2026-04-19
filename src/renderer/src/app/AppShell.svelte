@@ -1,5 +1,6 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
@@ -22,6 +23,7 @@
     userPersistenceDraftCollection
   } from '@renderer/data/Collections/UserPersistenceDraftCollection'
   import { workspacePersistenceDraftCollection } from '@renderer/data/Collections/WorkspacePersistenceDraftCollection'
+  import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
@@ -52,6 +54,7 @@
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
+  import type { PromptFolder } from '@shared/PromptFolder'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
 
@@ -87,6 +90,9 @@
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
   }
+  const promptFolderQuery = useLiveQuery((q) =>
+    q.from({ promptFolder: promptFolderCollection })
+  ) as { data: PromptFolder[] }
 
   setSystemSettingsContext(systemSettings)
   setWorkspaceSelectionContext(workspaceSelection)
@@ -106,6 +112,33 @@
     return null
   })
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
+  const selectedWorkspacePromptFolders = $derived.by(() => {
+    if (!selectedWorkspace) {
+      return []
+    }
+
+    const promptFolderById = new SvelteMap<string, PromptFolder>()
+    for (const promptFolder of promptFolderQuery.data) {
+      if (promptFolder) {
+        promptFolderById.set(promptFolder.id, promptFolder)
+      }
+    }
+
+    return selectedWorkspace.promptFolderIds
+      .map((promptFolderId) => promptFolderById.get(promptFolderId))
+      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+  })
+  const workspacePromptCount = $derived.by(() => {
+    const promptIds = new SvelteSet<string>()
+    for (const promptFolder of selectedWorkspacePromptFolders) {
+      for (const promptId of promptFolder.promptIds) {
+        promptIds.add(promptId)
+      }
+    }
+
+    return promptIds.size
+  })
+  const workspacePromptFolderCount = $derived(selectedWorkspace?.promptFolderIds.length ?? 0)
   let selectedPromptFolderId = $state<string | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
@@ -443,6 +476,8 @@
             {workspacePath}
             {isWorkspaceReady}
             {isWorkspaceLoading}
+            promptCount={workspacePromptCount}
+            promptFolderCount={workspacePromptFolderCount}
             onWorkspaceSelect={selectWorkspace}
             onWorkspaceCreate={createWorkspace}
             onWorkspaceClear={() => void closeWorkspace()}

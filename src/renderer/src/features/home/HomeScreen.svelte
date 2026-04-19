@@ -27,6 +27,8 @@
     workspacePath,
     isWorkspaceReady,
     isWorkspaceLoading,
+    promptCount,
+    promptFolderCount,
     onWorkspaceSelect,
     onWorkspaceCreate,
     onWorkspaceClear
@@ -34,6 +36,8 @@
     workspacePath: string | null
     isWorkspaceReady: boolean
     isWorkspaceLoading: boolean
+    promptCount: number
+    promptFolderCount: number
     onWorkspaceSelect: (path: string) => Promise<WorkspaceSelectionResult>
     onWorkspaceCreate: (
       path: string,
@@ -221,6 +225,8 @@
 
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceFolderDialog)
   const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
+  const displayedPromptCount = $derived(String(promptCount))
+  const displayedPromptFolderCount = $derived(String(promptFolderCount))
   const secondaryTitleFontSizePx = $derived.by(() => {
     if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
       return null
@@ -308,13 +314,18 @@
             <LabeledDisplayField
               label="Workspace Path"
               text={displayedWorkspacePath}
+              icon={Check}
               valueTitle={displayedWorkspacePath}
               valueTestId={isWorkspaceReady ? 'workspace-ready-path' : undefined}
             />
 
-            <div class="grid grid-cols-2 gap-3">
-              <NumericStatCard label="Prompts" text="9999" icon={FileText} />
-              <NumericStatCard label="Prompt Folders" text="9999" icon={FolderClosed} />
+            <div class="grid grid-cols-2 gap-3.5">
+              <NumericStatCard label="Prompts" text={displayedPromptCount} icon={FileText} />
+              <NumericStatCard
+                label="Prompt Folders"
+                text={displayedPromptFolderCount}
+                icon={FolderClosed}
+              />
             </div>
           </div>
         </CardSurface>

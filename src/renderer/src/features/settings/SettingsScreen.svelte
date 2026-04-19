@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
@@ -110,9 +111,7 @@
 
     <CardSurface>
       <div class="flex items-start gap-4 px-2 pb-4 pt-1">
-        <div class="settingsScreenSectionIcon">
-          <Keyboard class="h-5 w-5" />
-        </div>
+        <AccentIconTile icon={Keyboard} />
         <div class="min-w-0">
           <TitleBlock
             title="Editor & layout"
@@ -231,9 +230,7 @@
 
     <CardSurface>
       <div class="flex items-start gap-4 px-2 pb-4 pt-1">
-        <div class="settingsScreenSectionIcon">
-          <Info class="h-5 w-5" />
-        </div>
+        <AccentIconTile icon={Info} />
         <div class="min-w-0">
           <TitleBlock
             title="About"
@@ -267,21 +264,3 @@
     </CardSurface>
   </div>
 </section>
-
-<style>
-  .settingsScreenSectionIcon {
-    align-items: center;
-    background-color: var(--ui-accent-icon-surface);
-    border-radius: 1rem;
-    box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
-    display: flex;
-    flex: 0 0 auto;
-    height: 2.75rem;
-    justify-content: center;
-    width: 2.75rem;
-  }
-
-  .settingsScreenSectionIcon :global(svg) {
-    color: var(--ui-accent-icon);
-  }
-</style>
