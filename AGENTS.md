@@ -21,6 +21,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - Avoid deprecated `<slot>` rendering; prefer `{@render ...}` or explicit children functions to keep Svelte 5 warnings clean.
 - When using render functions/snippets, declare `{#snippet ...}` inline inside the consumer’s component tags instead of passing snippet props where possible, to keep markup concise and consistent.
 - When creating renderer components, only use colors from `src/renderer/src/styles/palette.css`, and ask permission before adding new colors to that palette.
+- When adding colors to `src/renderer/src/styles/palette.css`, follow the rules at the top of that file.
 - We are only developing support for Windows. Never develop support for other operating systems.
 
 ## Project Structure & Module Organization
