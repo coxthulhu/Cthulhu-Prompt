@@ -28,6 +28,7 @@
 
   /* Accent */
   --ui-accent-surface: rgb(139 92 246 / 14%);
+  --ui-accent-surface-hover: rgb(139 92 246 / 22%);
   --ui-accent-fill: rgb(216 180 254 / 24%);
   --ui-accent-border: rgb(216 180 254 / 30%);
   --ui-accent-text: rgb(245 243 255);
@@ -49,6 +50,7 @@
   --ui-danger: oklch(0.704 0.191 22.216);
   --ui-danger-ring: rgb(255 99 71 / 40%);
   --ui-danger-surface: rgb(127 29 29 / 16%);
+  --ui-danger-surface-hover: rgb(127 29 29 / 24%);
   --ui-danger-border: rgb(248 113 113 / 28%);
   --ui-danger-icon-surface: rgb(248 113 113 / 14%);
   --ui-danger-icon-ring: rgb(248 113 113 / 18%);

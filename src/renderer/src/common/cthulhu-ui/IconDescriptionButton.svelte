@@ -109,7 +109,7 @@
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='purple']:hover {
-    background-color: var(--ui-accent-fill);
+    background-color: var(--ui-accent-surface-hover);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='purple'] .cthulhuUiIconDescriptionButtonIcon {
@@ -125,6 +125,7 @@
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='red']:hover {
+    background-color: var(--ui-danger-surface-hover);
     border-color: var(--ui-danger-ring);
   }
 

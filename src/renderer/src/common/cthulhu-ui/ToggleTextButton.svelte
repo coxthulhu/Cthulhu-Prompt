@@ -57,6 +57,10 @@
     box-shadow: none;
   }
 
+  .cthulhuUiToggleTextButton[aria-pressed='true']:hover {
+    background-color: var(--ui-accent-surface-hover);
+  }
+
   .cthulhuUiToggleTextButtonTrack {
     justify-content: flex-start;
     background-color: var(--ui-surface-emphasis);
