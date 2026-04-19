@@ -280,7 +280,7 @@
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
-    <section class="relative w-full max-w-5xl min-w-0 space-y-6">
+    <section class="relative w-full max-w-5xl min-w-0 space-y-10">
       <div bind:this={secondaryTitleContainerElement} class="mx-auto w-full max-w-[39.5rem] xl:max-w-none">
         <h2
           class="cthulhuHomeSecondaryTitle"
