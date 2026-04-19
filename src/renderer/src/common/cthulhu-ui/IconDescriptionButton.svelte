@@ -121,7 +121,6 @@
   .cthulhuUiIconDescriptionButton[data-variant='red'] {
     background-color: var(--ui-danger-surface);
     border-color: var(--ui-danger-border);
-    color: var(--ui-danger-text);
     box-shadow: inset 0 1px 0 var(--ui-surface-muted);
   }
 
