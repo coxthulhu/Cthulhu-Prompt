@@ -12,7 +12,7 @@
 </script>
 
 <!-- Shared rounded-square accent icon tile used by cards and metadata pills. -->
-<div class={mergeClasses('cthulhuUiAccentIconTile', className)} {...restProps}>
+<div class={mergeClasses('cthulhuUiAccentIconTile rounded-2xl', className)} {...restProps}>
   <Icon class={mergeClasses('h-[18px] w-[18px]', iconClass)} />
 </div>
 
@@ -20,7 +20,6 @@
   .cthulhuUiAccentIconTile {
     align-items: center;
     background-color: var(--ui-accent-icon-surface);
-    border-radius: 1rem;
     box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
     color: var(--ui-accent-icon);
     display: flex;

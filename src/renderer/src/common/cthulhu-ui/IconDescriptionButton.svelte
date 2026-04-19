@@ -35,7 +35,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconDescriptionButton flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-[24px] border px-4 py-[18px] text-left transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconDescriptionButton flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-3xl border px-4 py-[18px] text-left transition disabled:pointer-events-none disabled:opacity-50',
     className
   )}
   data-state={state}

@@ -35,19 +35,6 @@
   border-color: var(--sidebar-mockup-border);
 }
 
-.sidebarTopNavButton {
-  width: 100%;
-  height: 2.25rem;
-  gap: 0.5rem;
-  border-radius: 0.75rem;
-  padding-inline: 0.75rem;
-  justify-content: flex-start;
-}
-
-.sidebarTopNavButtonCentered {
-  justify-content: center;
-}
-
 .sidebarPromptTreeRow {
   display: flex;
   height: 2.25rem;

@@ -26,7 +26,7 @@
 <CardSurface
   variant="subcard"
   class={mergeClasses(
-    'flex min-h-0 min-w-0 items-center rounded-[24px] p-[18px]',
+    'flex min-h-0 min-w-0 items-center p-[18px]',
     gapClass,
     className
   )}

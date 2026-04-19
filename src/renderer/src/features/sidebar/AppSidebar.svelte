@@ -113,12 +113,12 @@
     return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
   })
 
-  const getNavButtonState = (item: NavItem): 'active' | 'inactive' | 'disabled' => {
+  const getNavButtonState = (item: NavItem): 'active' | 'enabled' | 'disabled' => {
     if (item.requiresWorkspace && !isWorkspaceReady) {
       return 'disabled'
     }
 
-    return activeScreen === item.id ? 'active' : 'inactive'
+    return activeScreen === item.id ? 'active' : 'enabled'
   }
 
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
@@ -179,7 +179,8 @@
               testId={item.testId}
               icon={Icon}
               text={item.label}
-              class="sidebarTopNavButton sidebarTopNavButtonCentered"
+              variant="activatable"
+              class="h-9 w-full justify-center px-3"
               state={getNavButtonState(item)}
               onclick={() => onNavigate(item.id)}
             />
@@ -196,7 +197,8 @@
                 testId={item.testId}
                 icon={Icon}
                 text={item.label}
-                class="sidebarTopNavButton"
+                variant="activatable"
+                class="h-9 w-full justify-start px-3"
                 state={getNavButtonState(item)}
                 onclick={() => onNavigate(item.id)}
               />
