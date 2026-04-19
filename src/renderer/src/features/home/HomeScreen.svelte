@@ -314,7 +314,7 @@
             <LabeledDisplayField
               label="Workspace Path"
               text={displayedWorkspacePath}
-              icon={Check}
+              icon={FolderOpen}
               valueTitle={displayedWorkspacePath}
               valueTestId={isWorkspaceReady ? 'workspace-ready-path' : undefined}
             />
