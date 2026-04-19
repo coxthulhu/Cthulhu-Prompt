@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { AlertCircle, Check, FileText, FolderClosed, FolderOpen, FolderPlus, X } from 'lucide-svelte'
+  import {
+    AlertCircle,
+    Check,
+    FileText,
+    FolderClosed,
+    FolderOpen,
+    FolderPlus,
+    Folders,
+    X
+  } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
@@ -22,6 +31,7 @@
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
+  import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
 
   let {
     workspacePath,
@@ -224,6 +234,9 @@
   }
 
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceFolderDialog)
+  const displayedWorkspaceName = $derived(
+    workspacePath ? getWorkspaceFolderName(workspacePath) : 'No workspace selected'
+  )
   const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
@@ -312,6 +325,13 @@
             </div>
 
             <LabeledDisplayField
+              label="Workspace Name"
+              text={displayedWorkspaceName}
+              icon={FolderClosed}
+              valueTitle={displayedWorkspaceName}
+            />
+
+            <LabeledDisplayField
               label="Workspace Path"
               text={displayedWorkspacePath}
               icon={FolderOpen}
@@ -324,7 +344,7 @@
               <NumericStatCard
                 label="Prompt Folders"
                 text={displayedPromptFolderCount}
-                icon={FolderClosed}
+                icon={Folders}
               />
             </div>
           </div>

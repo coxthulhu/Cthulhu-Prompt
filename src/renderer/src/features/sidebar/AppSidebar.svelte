@@ -10,6 +10,7 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
@@ -130,11 +131,8 @@
       }
     }
 
-    const segments = workspacePath.split(/[\\/]+/).filter(Boolean)
-    const title = segments.length ? segments[segments.length - 1] : workspacePath
-
     return {
-      title,
+      title: getWorkspaceFolderName(workspacePath),
       path: workspacePath
     }
   })
