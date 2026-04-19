@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AlertCircle, Check, FileText, FolderClosed, FolderOpen, FolderPlus, X } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
@@ -339,35 +339,38 @@
             />
 
             <div class="flex flex-col gap-3">
-              <IconTextButton
+              <IconDescriptionButton
                 testId="select-workspace-folder-button"
                 icon={FolderOpen}
                 iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
+                description="Select an existing workspace folder."
+                variant="gray"
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                class="h-12 w-full justify-center text-base"
               />
 
-              <IconTextButton
+              <IconDescriptionButton
                 testId="create-workspace-folder-button"
                 icon={FolderPlus}
                 iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
+                description="Choose a folder and set up a new workspace folder."
+                variant="purple"
                 onclick={handleCreateFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                class="h-12 w-full justify-center text-base"
               />
 
               {#if isWorkspaceReady}
-                <IconTextButton
+                <IconDescriptionButton
                   testId="close-workspace-button"
                   icon={X}
                   iconClass="translate-y-px"
                   text="Close Workspace"
+                  description="Unload the current workspace folder."
+                  variant="red"
                   onclick={onWorkspaceClear}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                  class="h-12 w-full justify-center text-base border-red-300/40 bg-red-500/10 text-red-200 hover:border-red-300/60 hover:bg-red-500/18 hover:text-red-100"
                 />
               {/if}
             </div>
