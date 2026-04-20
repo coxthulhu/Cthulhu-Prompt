@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.0.15
+
+### New Features
+
+- Added workspace summary details to the home screen, including workspace status, prompt count, and prompt folder count.
+- Added an About section to Settings for app version details.
+
+### Changes
+
+- Refreshed the home screen with new workspace information cards, action buttons, and responsive title sizing.
+- Updated Settings and shared UI surfaces for more consistent card, icon, button, and text styling.
+- Converted renderer palette tokens to semantic OKLCH colors and documented palette rules.
+- Increased the default app window size and tightened sidebar transition timing.
+
+### Fixed
+
+- Fixed home screen responsive layout issues.
+- Fixed colored button hover states.
+
 ## 0.0.14
 
 ### Changes
