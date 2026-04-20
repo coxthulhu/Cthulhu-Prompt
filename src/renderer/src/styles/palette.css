@@ -9,34 +9,34 @@
 
 :root {
   /* Text */
-  --ui-text-muted: oklch(0.738 0.014 286.045);
-  --ui-text: oklch(0.92 0.004 286.32);
-  --ui-text-strong: oklch(0.985 0 0);
-  --ui-text-bright: oklch(1 0 0);
+  --ui-muted-text: oklch(0.738 0.014 286.045);
+  --ui-default-text: oklch(0.92 0.004 286.32);
+  --ui-strong-text: oklch(0.985 0 0);
+  --ui-emphasis-text: oklch(1 0 0);
 
   /* Neutral surfaces */
   --ui-surface-muted: oklch(1 0 0 / 3%);
   --ui-surface-default: oklch(1 0 0 / 6%);
   --ui-surface-hover: oklch(1 0 0 / 10%);
   --ui-surface-emphasis: oklch(1 0 0 / 14%);
-  --ui-surface-input: oklch(0.209 0.01 268.187);
+  --ui-field-surface: oklch(0.209 0.01 268.187);
   --ui-selection-surface: oklch(1 0 0 / 22%);
 
-  /* Shared card surfaces */
-  --ui-card-surface-top: oklch(1 0 0 / 6%);
-  --ui-card-surface-bottom: oklch(1 0 0 / 3%);
-  --ui-card-subcard-surface: oklch(0.145 0.011 266.847 / 78%);
+  /* Raised surfaces */
+  --ui-raised-surface-gradient-start: oklch(1 0 0 / 6%);
+  --ui-raised-surface-gradient-end: oklch(1 0 0 / 3%);
+  --ui-nested-surface-default: oklch(0.145 0.011 266.847 / 78%);
 
   /* Neutral borders */
   --ui-border-muted: oklch(1 0 0 / 8%);
   --ui-border-default: oklch(1 0 0 / 12%);
   --ui-border-emphasis: oklch(1 0 0 / 16%);
   --ui-border-focus: oklch(1 0 0 / 28%);
-  --ui-card-border-soft: oklch(1 0 0 / 10%);
-  --ui-card-border-subcard: oklch(1 0 0 / 7%);
+  --ui-raised-border-default: oklch(1 0 0 / 10%);
+  --ui-nested-border-default: oklch(1 0 0 / 7%);
 
   /* Accent */
-  --ui-accent-surface: oklch(0.606 0.219 292.717 / 17%);
+  --ui-accent-surface-default: oklch(0.606 0.219 292.717 / 17%);
   --ui-accent-surface-hover: oklch(0.606 0.219 292.717 / 25%);
   --ui-accent-fill: oklch(0.827 0.108 306.383 / 24%);
   --ui-accent-border: oklch(0.827 0.108 306.383 / 30%);
@@ -53,12 +53,12 @@
   /* Shadows */
   --ui-shadow-raised: oklch(0 0 0 / 20%);
   --ui-shadow-inset: oklch(0 0 0 / 25%);
-  --ui-card-shadow: oklch(0 0 0 / 28%);
+  --ui-raised-shadow: oklch(0 0 0 / 28%);
 
   /* Danger */
-  --ui-danger: oklch(0.704 0.191 22.216);
+  --ui-danger-border-strong: oklch(0.704 0.191 22.216);
   --ui-danger-ring: oklch(0.696 0.196 32.321 / 40%);
-  --ui-danger-surface: oklch(0.396 0.133 25.723 / 22%);
+  --ui-danger-surface-default: oklch(0.396 0.133 25.723 / 22%);
   --ui-danger-surface-hover: oklch(0.396 0.133 25.723 / 30%);
   --ui-danger-border: oklch(0.711 0.166 22.216 / 28%);
   --ui-danger-icon-surface: oklch(0.711 0.166 22.216 / 14%);

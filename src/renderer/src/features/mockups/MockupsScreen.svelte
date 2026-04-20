@@ -125,14 +125,14 @@
 
   .mockups-empty h2 {
     margin: 0;
-    color: var(--ui-text-strong);
+    color: var(--ui-strong-text);
     font-weight: 600;
   }
 
   .mockups-empty p {
     margin: 0;
     line-height: 1.5;
-    color: var(--ui-text-muted);
+    color: var(--ui-muted-text);
   }
 
   .mockups-empty code {
@@ -160,7 +160,7 @@
     appearance: none;
     border: 1px solid var(--ui-border-muted);
     background: var(--ui-surface-muted);
-    color: var(--ui-text);
+    color: var(--ui-default-text);
     padding: 0.7rem 1rem;
     border-radius: 1rem;
     font: inherit;
@@ -171,7 +171,7 @@
 
   .mockups-tab[data-active='true'] {
     border-color: var(--ui-accent-border);
-    background: var(--ui-accent-surface);
+    background: var(--ui-accent-surface-default);
     color: var(--ui-accent-text);
   }
 

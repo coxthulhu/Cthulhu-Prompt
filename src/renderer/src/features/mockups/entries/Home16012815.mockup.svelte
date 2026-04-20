@@ -55,7 +55,7 @@
     >
       <h1
         data-testid="home-title"
-        style="margin:0; text-align:center; color:var(--ui-text-bright); font-family:Consolas, 'Cascadia Code', 'Courier New', monospace; font-size:clamp(2.75rem, 8.5vw, 6rem); font-weight:700; letter-spacing:0.16em; line-height:0.96; white-space:nowrap;"
+        style="margin:0; text-align:center; color:var(--ui-emphasis-text); font-family:Consolas, 'Cascadia Code', 'Courier New', monospace; font-size:clamp(2.75rem, 8.5vw, 6rem); font-weight:700; letter-spacing:0.16em; line-height:0.96; white-space:nowrap;"
       >
         CTHULHU PROMPT
       </h1>
@@ -64,7 +64,7 @@
         style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px;"
       >
         <section
-          style="display:flex; min-width:0; flex-direction:column; gap:18px; border:1px solid var(--ui-card-border-soft); border-radius:32px; padding:24px; background:linear-gradient(180deg, var(--ui-card-surface-top), var(--ui-card-surface-bottom)); box-shadow:0 24px 64px var(--ui-card-shadow);"
+          style="display:flex; min-width:0; flex-direction:column; gap:18px; border:1px solid var(--ui-raised-border-default); border-radius:32px; padding:24px; background:linear-gradient(180deg, var(--ui-raised-surface-gradient-start), var(--ui-raised-surface-gradient-end)); box-shadow:0 24px 64px var(--ui-raised-shadow);"
         >
           <div
             style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px;"
@@ -78,12 +78,12 @@
 
               <div style="min-width:0; display:flex; flex-direction:column; gap:4px;">
                 <h2
-                  style="margin:0; color:var(--ui-text-bright); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1.125rem; font-weight:650; letter-spacing:-0.025em;"
+                  style="margin:0; color:var(--ui-emphasis-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1.125rem; font-weight:650; letter-spacing:-0.025em;"
                 >
                   Current Workspace
                 </h2>
                 <p
-                  style="margin:0; color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.875rem; font-weight:500; line-height:1.45;"
+                  style="margin:0; color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.875rem; font-weight:500; line-height:1.45;"
                 >
                   Information about your current workspace.
                 </p>
@@ -104,17 +104,17 @@
           </div>
 
           <div
-            style="display:flex; min-width:0; flex-direction:column; gap:10px; border:1px solid var(--ui-card-border-subcard); border-radius:24px; background:var(--ui-card-subcard-surface); padding:18px 18px 20px; box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.03);"
+            style="display:flex; min-width:0; flex-direction:column; gap:10px; border:1px solid var(--ui-nested-border-default); border-radius:24px; background:var(--ui-nested-surface-default); padding:18px 18px 20px; box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.03);"
           >
             <div
-              style="color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.8125rem; font-weight:650; letter-spacing:0.01em;"
+              style="color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.8125rem; font-weight:650; letter-spacing:0.01em;"
             >
               Workspace Path
             </div>
             <div
               data-testid="workspace-ready-path"
               title={displayedWorkspacePath}
-              style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ui-text-strong); font-family:Consolas, 'Cascadia Code', 'Courier New', monospace; font-size:0.9rem; font-weight:500; line-height:1.5; padding-left:4px;"
+              style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ui-strong-text); font-family:Consolas, 'Cascadia Code', 'Courier New', monospace; font-size:0.9rem; font-weight:500; line-height:1.5; padding-left:4px;"
             >
               {displayedWorkspacePath}
             </div>
@@ -125,7 +125,7 @@
           >
             {#each statCards as stat (stat.label)}
               <div
-                style="display:flex; min-width:0; align-items:center; gap:14px; border:1px solid var(--ui-card-border-subcard); border-radius:24px; background:var(--ui-card-subcard-surface); padding:18px; box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.03);"
+                style="display:flex; min-width:0; align-items:center; gap:14px; border:1px solid var(--ui-nested-border-default); border-radius:24px; background:var(--ui-nested-surface-default); padding:18px; box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.03);"
               >
                 <div
                   style="display:flex; height:48px; width:48px; flex:0 0 auto; align-items:center; justify-content:center; border-radius:17px; background-color:var(--ui-accent-icon-surface); box-shadow:0 0 0 1px var(--ui-accent-icon-ring); color:var(--ui-accent-icon);"
@@ -135,12 +135,12 @@
 
                 <div style="min-width:0; display:flex; flex-direction:column; gap:7px;">
                   <div
-                    style="color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; line-height:1;"
+                    style="color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; line-height:1;"
                   >
                     {stat.label}
                   </div>
                   <div
-                    style="color:var(--ui-text-bright); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1.7rem; font-weight:750; line-height:0.95; font-variant-numeric:tabular-nums;"
+                    style="color:var(--ui-emphasis-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1.7rem; font-weight:750; line-height:0.95; font-variant-numeric:tabular-nums;"
                   >
                     {stat.value}
                   </div>
@@ -153,15 +153,15 @@
             style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px;"
           >
             <div
-              style="display:flex; min-width:0; flex-direction:column; justify-content:space-between; gap:10px; border:1px solid var(--ui-card-border-subcard); border-radius:24px; background:var(--ui-card-subcard-surface); padding:18px;"
+              style="display:flex; min-width:0; flex-direction:column; justify-content:space-between; gap:10px; border:1px solid var(--ui-nested-border-default); border-radius:24px; background:var(--ui-nested-surface-default); padding:18px;"
             >
               <div
-                style="color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
+                style="color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
               >
                 Status
               </div>
               <div
-                style="display:flex; align-items:center; gap:10px; color:var(--ui-text-bright); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1rem; font-weight:650;"
+                style="display:flex; align-items:center; gap:10px; color:var(--ui-emphasis-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1rem; font-weight:650;"
               >
                 <span
                   style="display:inline-flex; height:10px; width:10px; flex:0 0 auto; border-radius:999px; background:var(--ui-accent-fill); box-shadow:0 0 0 6px rgba(167, 139, 250, 0.12);"
@@ -171,15 +171,15 @@
             </div>
 
             <div
-              style="display:flex; min-width:0; flex-direction:column; justify-content:space-between; gap:10px; border:1px solid var(--ui-card-border-subcard); border-radius:24px; background:var(--ui-card-subcard-surface); padding:18px;"
+              style="display:flex; min-width:0; flex-direction:column; justify-content:space-between; gap:10px; border:1px solid var(--ui-nested-border-default); border-radius:24px; background:var(--ui-nested-surface-default); padding:18px;"
             >
               <div
-                style="color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
+                style="color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
               >
                 Workspace
               </div>
               <div
-                style="color:var(--ui-text-bright); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1rem; font-weight:650;"
+                style="color:var(--ui-emphasis-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1rem; font-weight:650;"
               >
                 Active
               </div>
@@ -188,26 +188,26 @@
         </section>
 
         <section
-          style="display:flex; min-width:0; flex-direction:column; gap:18px; border:1px solid var(--ui-card-border-soft); border-radius:32px; padding:24px; background:linear-gradient(180deg, var(--ui-card-surface-top), var(--ui-card-surface-bottom)); box-shadow:0 24px 64px var(--ui-card-shadow);"
+          style="display:flex; min-width:0; flex-direction:column; gap:18px; border:1px solid var(--ui-raised-border-default); border-radius:32px; padding:24px; background:linear-gradient(180deg, var(--ui-raised-surface-gradient-start), var(--ui-raised-surface-gradient-end)); box-shadow:0 24px 64px var(--ui-raised-shadow);"
         >
           <div
             style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px;"
           >
             <div style="min-width:0; display:flex; flex-direction:column; gap:4px;">
               <h2
-                style="margin:0; color:var(--ui-text-bright); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1.125rem; font-weight:650; letter-spacing:-0.025em;"
+                style="margin:0; color:var(--ui-emphasis-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:1.125rem; font-weight:650; letter-spacing:-0.025em;"
               >
                 Workspace Actions
               </h2>
               <p
-                style="margin:0; color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.875rem; font-weight:500; line-height:1.45;"
+                style="margin:0; color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.875rem; font-weight:500; line-height:1.45;"
               >
                 Change your current workspace.
               </p>
             </div>
 
             <div
-              style="display:inline-flex; width:max-content; align-items:center; gap:8px; border:1px solid var(--ui-accent-border); border-radius:999px; background:var(--ui-accent-surface); padding:9px 14px; color:var(--ui-accent-text); box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.04);"
+              style="display:inline-flex; width:max-content; align-items:center; gap:8px; border:1px solid var(--ui-accent-border); border-radius:999px; background:var(--ui-accent-surface-default); padding:9px 14px; color:var(--ui-accent-text); box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.04);"
             >
               <Check size={16} />
               <span
@@ -227,8 +227,8 @@
                   action.tone === 'danger'
                     ? 'border:1px solid rgba(248, 113, 113, 0.28); background:rgba(127, 29, 29, 0.16); color:rgb(254, 202, 202); box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.02);'
                     : action.tone === 'accent'
-                      ? 'border:1px solid var(--ui-accent-border); background:var(--ui-accent-surface); color:var(--ui-accent-text); box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.04);'
-                      : 'border:1px solid var(--ui-border-default); background:var(--ui-surface-default); color:var(--ui-text); box-shadow:inset 0 1px 0 var(--ui-surface-muted);'
+                      ? 'border:1px solid var(--ui-accent-border); background:var(--ui-accent-surface-default); color:var(--ui-accent-text); box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.04);'
+                      : 'border:1px solid var(--ui-border-default); background:var(--ui-surface-default); color:var(--ui-default-text); box-shadow:inset 0 1px 0 var(--ui-surface-muted);'
                 }`}
               >
                 <div style="display:flex; min-width:0; align-items:center; gap:14px;">
@@ -245,7 +245,7 @@
                   <div style="min-width:0; display:flex; flex-direction:column; gap:3px;">
                     <span
                       style={`font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.975rem; font-weight:700; letter-spacing:-0.015em; ${
-                        action.tone === 'danger' ? 'color:rgb(254, 226, 226);' : 'color:var(--ui-text-bright);'
+                        action.tone === 'danger' ? 'color:rgb(254, 226, 226);' : 'color:var(--ui-emphasis-text);'
                       }`}
                     >
                       {action.label}
@@ -256,7 +256,7 @@
                           ? 'color:rgba(254, 202, 202, 0.82);'
                           : action.tone === 'accent'
                             ? 'color:var(--ui-accent-text); opacity:0.8;'
-                            : 'color:var(--ui-text-muted);'
+                            : 'color:var(--ui-muted-text);'
                       }`}
                     >
                       {action.detail}
@@ -270,7 +270,7 @@
                       ? 'background:rgba(248, 113, 113, 0.12); color:rgb(254, 226, 226);'
                       : action.tone === 'accent'
                         ? 'background:rgba(255, 255, 255, 0.08); color:var(--ui-accent-text);'
-                        : 'background:var(--ui-surface-emphasis); color:var(--ui-text-strong);'
+                        : 'background:var(--ui-surface-emphasis); color:var(--ui-strong-text);'
                   }`}
                 >
                   {action.badge}
@@ -283,30 +283,30 @@
             style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:auto;"
           >
             <div
-              style="display:flex; min-width:0; flex-direction:column; gap:10px; border:1px solid var(--ui-card-border-subcard); border-radius:24px; background:var(--ui-card-subcard-surface); padding:18px;"
+              style="display:flex; min-width:0; flex-direction:column; gap:10px; border:1px solid var(--ui-nested-border-default); border-radius:24px; background:var(--ui-nested-surface-default); padding:18px;"
             >
               <div
-                style="color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
+                style="color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
               >
                 Setup Workspace
               </div>
               <div
-                style="color:var(--ui-text-strong); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.9rem; font-weight:650; line-height:1.4;"
+                style="color:var(--ui-strong-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.9rem; font-weight:650; line-height:1.4;"
               >
                 Include example prompts
               </div>
             </div>
 
             <div
-              style="display:flex; min-width:0; flex-direction:column; gap:10px; border:1px solid var(--ui-card-border-subcard); border-radius:24px; background:var(--ui-card-subcard-surface); padding:18px;"
+              style="display:flex; min-width:0; flex-direction:column; gap:10px; border:1px solid var(--ui-nested-border-default); border-radius:24px; background:var(--ui-nested-surface-default); padding:18px;"
             >
               <div
-                style="color:var(--ui-text-muted); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
+                style="color:var(--ui-muted-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;"
               >
                 Existing Workspace
               </div>
               <div
-                style="color:var(--ui-text-strong); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.9rem; font-weight:650; line-height:1.4;"
+                style="color:var(--ui-strong-text); font-family:'Segoe UI Variable Text', 'Segoe UI', sans-serif; font-size:0.9rem; font-weight:650; line-height:1.4;"
               >
                 Select Workspace
               </div>

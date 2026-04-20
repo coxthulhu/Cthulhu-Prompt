@@ -44,7 +44,7 @@
 
 <style>
   .cthulhuUiIconPillSurfaceLabel {
-    color: var(--ui-text-muted);
+    color: var(--ui-muted-text);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.08em;

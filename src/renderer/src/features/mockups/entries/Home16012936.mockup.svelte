@@ -223,7 +223,7 @@
     'flex-direction:column',
     'gap:20px',
     "font-family:'Segoe UI Variable Text','Segoe UI',sans-serif",
-    'color:var(--ui-text)'
+    'color:var(--ui-default-text)'
   ].join(';')
 
   const heroStyle = [
@@ -241,7 +241,7 @@
     'line-height:0.95',
     'text-align:center',
     'text-transform:uppercase',
-    'color:var(--ui-text-bright)',
+    'color:var(--ui-emphasis-text)',
     'text-shadow:0 10px 32px rgb(0 0 0 / 0.3)'
   ].join(';')
 
@@ -259,7 +259,7 @@
     'flex-direction:column',
     'gap:18px',
     'padding:26px',
-    'border:1px solid var(--ui-card-border-soft)',
+    'border:1px solid var(--ui-raised-border-default)',
     'border-radius:32px',
     'background:linear-gradient(180deg,rgb(255 255 255 / 0.06),rgb(255 255 255 / 0.025))',
     'box-shadow:0 26px 54px rgb(0 0 0 / 0.34), inset 0 1px 0 rgb(255 255 255 / 0.04)'
@@ -303,7 +303,7 @@
     'font-size:1.2rem',
     'font-weight:650',
     'letter-spacing:-0.03em',
-    'color:var(--ui-text-bright)'
+    'color:var(--ui-emphasis-text)'
   ].join(';')
 
   const statusBadgeStyle = (ready: boolean) =>
@@ -319,7 +319,7 @@
       'letter-spacing:0.02em',
       ready
         ? 'background:var(--ui-success-surface);border-color:var(--ui-success-border);color:var(--ui-success-text)'
-        : 'background:var(--ui-accent-surface);border-color:var(--ui-accent-border);color:var(--ui-accent-text)'
+        : 'background:var(--ui-accent-surface-default);border-color:var(--ui-accent-border);color:var(--ui-accent-text)'
     ].join(';')
 
   const insetPanelStyle = [
@@ -329,7 +329,7 @@
     'flex-direction:column',
     'gap:12px',
     'padding:18px 18px 20px',
-    'border:1px solid var(--ui-card-border-subcard)',
+    'border:1px solid var(--ui-nested-border-default)',
     'border-radius:24px',
     'background:rgb(11 14 20 / 0.88)',
     'box-shadow:inset 0 1px 0 rgb(255 255 255 / 0.03)'
@@ -340,14 +340,14 @@
     'font-weight:700',
     'letter-spacing:0.08em',
     'text-transform:uppercase',
-    'color:var(--ui-text-muted)'
+    'color:var(--ui-muted-text)'
   ].join(';')
 
   const pathValueStyle = [
     "font-family:'Cascadia Mono','Consolas',monospace",
     'font-size:0.95rem',
     'line-height:1.55',
-    'color:var(--ui-text-strong)',
+    'color:var(--ui-strong-text)',
     'overflow-wrap:anywhere'
   ].join(';')
 
@@ -364,7 +364,7 @@
     'align-items:center',
     'gap:14px',
     'padding:16px',
-    'border:1px solid var(--ui-card-border-subcard)',
+    'border:1px solid var(--ui-nested-border-default)',
     'border-radius:24px',
     'background:rgb(11 14 20 / 0.9)'
   ].join(';')
@@ -387,7 +387,7 @@
     'font-weight:700',
     'letter-spacing:0.06em',
     'text-transform:uppercase',
-    'color:var(--ui-text-muted)'
+    'color:var(--ui-muted-text)'
   ].join(';')
 
   const statValueStyle = [
@@ -396,7 +396,7 @@
     'font-size:1.75rem',
     'line-height:1',
     'font-weight:700',
-    'color:var(--ui-text-bright)'
+    'color:var(--ui-emphasis-text)'
   ].join(';')
 
   const actionsColumnStyle = [
@@ -429,7 +429,7 @@
         ? 'background:rgb(139 92 246 / 0.13);border-color:rgb(216 180 254 / 0.26);color:var(--ui-accent-text)'
         : variant === 'danger'
           ? 'background:rgb(239 68 68 / 0.09);border-color:rgb(248 113 113 / 0.22);color:rgb(254 226 226)'
-          : 'background:rgb(11 14 20 / 0.88);border-color:var(--ui-card-border-subcard);color:var(--ui-text-strong)'
+          : 'background:rgb(11 14 20 / 0.88);border-color:var(--ui-nested-border-default);color:var(--ui-strong-text)'
     ].join(';')
 
   const actionIconStyle = (variant: 'accent' | 'neutral' | 'danger') =>
@@ -445,7 +445,7 @@
         ? 'background:rgb(139 92 246 / 0.16);box-shadow:0 0 0 1px rgb(167 139 250 / 0.16);color:var(--ui-accent-icon)'
         : variant === 'danger'
           ? 'background:rgb(239 68 68 / 0.12);box-shadow:0 0 0 1px rgb(248 113 113 / 0.18);color:rgb(252 165 165)'
-          : 'background:rgb(255 255 255 / 0.04);box-shadow:0 0 0 1px rgb(255 255 255 / 0.06);color:var(--ui-text-muted)'
+          : 'background:rgb(255 255 255 / 0.04);box-shadow:0 0 0 1px rgb(255 255 255 / 0.06);color:var(--ui-muted-text)'
     ].join(';')
 
   const actionTextStyle = [
@@ -472,12 +472,12 @@
     'flex-direction:column',
     'gap:18px',
     'padding:24px',
-    'border:1px solid var(--ui-card-border-soft)',
+    'border:1px solid var(--ui-raised-border-default)',
     'border-radius:28px',
     'background:linear-gradient(180deg,rgb(23 26 33 / 0.98),rgb(16 18 24 / 0.98))',
     'box-shadow:0 30px 80px rgb(0 0 0 / 0.5)',
     "font-family:'Segoe UI Variable Text','Segoe UI',sans-serif",
-    'color:var(--ui-text)'
+    'color:var(--ui-default-text)'
   ].join(';')
 
   const modalTitleStyle = [
@@ -485,14 +485,14 @@
     'font-size:1.15rem',
     'font-weight:680',
     'letter-spacing:-0.025em',
-    'color:var(--ui-text-bright)'
+    'color:var(--ui-emphasis-text)'
   ].join(';')
 
   const modalTextStyle = [
     'margin:0',
     'font-size:0.92rem',
     'line-height:1.6',
-    'color:var(--ui-text-muted)'
+    'color:var(--ui-muted-text)'
   ].join(';')
 
   const checkboxRowStyle = [
@@ -500,7 +500,7 @@
     'align-items:flex-start',
     'gap:12px',
     'padding:14px 16px',
-    'border:1px solid var(--ui-card-border-subcard)',
+    'border:1px solid var(--ui-nested-border-default)',
     'border-radius:20px',
     'background:rgb(11 14 20 / 0.88)'
   ].join(';')
@@ -534,7 +534,7 @@
       'cursor:pointer',
       variant === 'solid'
         ? 'background:rgb(139 92 246 / 0.18);border-color:rgb(216 180 254 / 0.28);color:var(--ui-accent-text)'
-        : 'background:rgb(255 255 255 / 0.03);border-color:var(--ui-border-default);color:var(--ui-text)'
+        : 'background:rgb(255 255 255 / 0.03);border-color:var(--ui-border-default);color:var(--ui-default-text)'
     ].join(';')
 </script>
 
@@ -669,7 +669,7 @@
             bind:checked={includeExamplePrompts}
             style={checkboxStyle}
           />
-          <span style="font-size:0.92rem;line-height:1.5;color:var(--ui-text)">
+          <span style="font-size:0.92rem;line-height:1.5;color:var(--ui-default-text)">
             Include example prompts in a "My Prompts" folder.
           </span>
         </label>

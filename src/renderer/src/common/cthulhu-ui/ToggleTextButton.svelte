@@ -41,18 +41,18 @@
   .cthulhuUiToggleTextButton {
     border-color: var(--ui-border-default);
     background-color: var(--ui-surface-default);
-    color: var(--ui-text);
+    color: var(--ui-default-text);
     box-shadow: inset 0 1px 0 var(--ui-surface-muted);
   }
 
   .cthulhuUiToggleTextButton:hover {
     background-color: var(--ui-surface-hover);
-    color: var(--ui-text-bright);
+    color: var(--ui-emphasis-text);
   }
 
   .cthulhuUiToggleTextButton[aria-pressed='true'] {
     border-color: var(--ui-accent-border);
-    background-color: var(--ui-accent-surface);
+    background-color: var(--ui-accent-surface-default);
     color: var(--ui-accent-text);
     box-shadow: none;
   }
@@ -72,7 +72,7 @@
   }
 
   .cthulhuUiToggleTextButtonThumb {
-    background-color: var(--ui-text-bright);
+    background-color: var(--ui-emphasis-text);
     box-shadow: 0 1px 2px var(--ui-shadow-raised);
   }
 </style>

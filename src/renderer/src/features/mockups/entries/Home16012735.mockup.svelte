@@ -27,7 +27,7 @@
     <section style="display: flex; width: 100%; flex-direction: column; gap: 20px;">
       <h2
         data-testid="home-title"
-        style="margin: 0; text-align: center; color: var(--ui-text-bright); font-family: 'Cascadia Code', Consolas, 'Courier New', monospace; font-size: clamp(2.35rem, 8vw, 5.5rem); font-weight: 700; letter-spacing: 0.14em; line-height: 0.96; white-space: nowrap;"
+        style="margin: 0; text-align: center; color: var(--ui-emphasis-text); font-family: 'Cascadia Code', Consolas, 'Courier New', monospace; font-size: clamp(2.35rem, 8vw, 5.5rem); font-weight: 700; letter-spacing: 0.14em; line-height: 0.96; white-space: nowrap;"
       >
         {secondaryTitleText}
       </h2>
@@ -50,12 +50,12 @@
 
               <div style="min-width: 0;">
                 <h3
-                  style="margin: 0; color: var(--ui-text-bright); font-size: 1.1rem; font-weight: 650; letter-spacing: -0.02em;"
+                  style="margin: 0; color: var(--ui-emphasis-text); font-size: 1.1rem; font-weight: 650; letter-spacing: -0.02em;"
                 >
                   Current Workspace
                 </h3>
                 <p
-                  style="margin: 6px 0 0; color: var(--ui-text-muted); font-size: 0.88rem; font-weight: 600; line-height: 1.5;"
+                  style="margin: 6px 0 0; color: var(--ui-muted-text); font-size: 0.88rem; font-weight: 600; line-height: 1.5;"
                 >
                   Information about your current workspace.
                 </p>
@@ -77,14 +77,14 @@
             style="display: flex; flex-direction: column; gap: 10px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 24px; background: rgb(9 11 15 / 60%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%); padding: 16px 18px 18px;"
           >
             <span
-              style="color: var(--ui-text-muted); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;"
+              style="color: var(--ui-muted-text); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;"
             >
               Workspace Path
             </span>
             <div
               data-testid="workspace-ready-path"
               title={workspacePath}
-              style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-text); font-family: 'Cascadia Code', Consolas, 'Courier New', monospace; font-size: 0.92rem; font-weight: 600; line-height: 1.55;"
+              style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-default-text); font-family: 'Cascadia Code', Consolas, 'Courier New', monospace; font-size: 0.92rem; font-weight: 600; line-height: 1.55;"
             >
               {workspacePath}
             </div>
@@ -97,18 +97,18 @@
               style="display: flex; min-width: 0; flex-direction: column; gap: 14px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 24px; background: linear-gradient(180deg, rgb(255 255 255 / 4%), rgb(255 255 255 / 2%)); padding: 16px;"
             >
               <div
-                style="display: inline-flex; height: 38px; width: 38px; align-items: center; justify-content: center; border-radius: 14px; background: rgb(255 255 255 / 5%); color: var(--ui-text);"
+                style="display: inline-flex; height: 38px; width: 38px; align-items: center; justify-content: center; border-radius: 14px; background: rgb(255 255 255 / 5%); color: var(--ui-default-text);"
               >
                 <FileText size={18} />
               </div>
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <span
-                  style="color: var(--ui-text-muted); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;"
+                  style="color: var(--ui-muted-text); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;"
                 >
                   Prompts
                 </span>
                 <strong
-                  style="color: var(--ui-text-bright); font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1;"
+                  style="color: var(--ui-emphasis-text); font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1;"
                 >
                   {promptCount}
                 </strong>
@@ -119,18 +119,18 @@
               style="display: flex; min-width: 0; flex-direction: column; gap: 14px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 24px; background: linear-gradient(180deg, rgb(255 255 255 / 4%), rgb(255 255 255 / 2%)); padding: 16px;"
             >
               <div
-                style="display: inline-flex; height: 38px; width: 38px; align-items: center; justify-content: center; border-radius: 14px; background: rgb(255 255 255 / 5%); color: var(--ui-text);"
+                style="display: inline-flex; height: 38px; width: 38px; align-items: center; justify-content: center; border-radius: 14px; background: rgb(255 255 255 / 5%); color: var(--ui-default-text);"
               >
                 <FolderClosed size={18} />
               </div>
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <span
-                  style="color: var(--ui-text-muted); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;"
+                  style="color: var(--ui-muted-text); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;"
                 >
                   Prompt Folders
                 </span>
                 <strong
-                  style="color: var(--ui-text-bright); font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1;"
+                  style="color: var(--ui-emphasis-text); font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1;"
                 >
                   {folderCount}
                 </strong>
@@ -151,12 +151,12 @@
 
             <div style="min-width: 0;">
               <h3
-                style="margin: 0; color: var(--ui-text-bright); font-size: 1.1rem; font-weight: 650; letter-spacing: -0.02em;"
+                style="margin: 0; color: var(--ui-emphasis-text); font-size: 1.1rem; font-weight: 650; letter-spacing: -0.02em;"
               >
                 Workspace Actions
               </h3>
               <p
-                style="margin: 6px 0 0; color: var(--ui-text-muted); font-size: 0.88rem; font-weight: 600; line-height: 1.5;"
+                style="margin: 6px 0 0; color: var(--ui-muted-text); font-size: 0.88rem; font-weight: 600; line-height: 1.5;"
               >
                 Change your current workspace.
               </p>
@@ -183,11 +183,11 @@
             <button
               data-testid="select-workspace-folder-button"
               type="button"
-              style="display: flex; min-height: 64px; width: 100%; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid rgb(255 255 255 / 12%); border-radius: 22px; background: rgb(255 255 255 / 6%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%); color: var(--ui-text-bright); padding: 0 18px; font: inherit; cursor: pointer;"
+              style="display: flex; min-height: 64px; width: 100%; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid rgb(255 255 255 / 12%); border-radius: 22px; background: rgb(255 255 255 / 6%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%); color: var(--ui-emphasis-text); padding: 0 18px; font: inherit; cursor: pointer;"
             >
               <span style="display: inline-flex; align-items: center; gap: 12px;">
                 <span
-                  style="display: inline-flex; height: 38px; width: 38px; align-items: center; justify-content: center; border-radius: 14px; background: rgb(255 255 255 / 6%); color: var(--ui-text);"
+                  style="display: inline-flex; height: 38px; width: 38px; align-items: center; justify-content: center; border-radius: 14px; background: rgb(255 255 255 / 6%); color: var(--ui-default-text);"
                 >
                   <FolderOpen size={18} />
                 </span>

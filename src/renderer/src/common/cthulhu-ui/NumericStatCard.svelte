@@ -17,7 +17,7 @@
 
 <style>
   .cthulhuUiNumericStatCardText {
-    color: var(--ui-text-bright);
+    color: var(--ui-emphasis-text);
     font-size: 1.75rem;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
