@@ -13,6 +13,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Coding Guidelines
 
 - This is the only repository that uses any of this code, so you do not need to maintain backwards compability.
+- Backwards compatibility is not required when refactoring.
 - When adding Svelte lifecycle or reactivity (e.g., `onMount`, `onDestroy`, `tick`, reactive statements), include a short comment explaining its side effect/purpose; in Svelte 5 prefer runes/reactivity and avoid `beforeUpdate`/`afterUpdate`.
 - Always use Svelte 5 Runes.
 - Always use Svelte 5 Runes to store state instead of using Svelte's stores.
