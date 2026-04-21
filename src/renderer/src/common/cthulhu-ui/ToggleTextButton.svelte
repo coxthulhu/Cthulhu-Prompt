@@ -46,6 +46,7 @@
   }
 
   .cthulhuUiToggleTextButton:hover {
+    border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
@@ -58,6 +59,7 @@
   }
 
   .cthulhuUiToggleTextButton[aria-pressed='true']:hover {
+    border-color: var(--ui-accent-hover-border);
     background-color: var(--ui-accent-hover-surface);
   }
 

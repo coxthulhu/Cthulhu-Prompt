@@ -54,7 +54,7 @@
 }
 
 .sidebarPromptTreeRow:hover {
-  border-color: var(--ui-neutral-hover-surface);
+  border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-secondary-text);
 }
@@ -221,7 +221,7 @@
 }
 
 .sidebarPromptTreeSettingsButton:hover {
-  border-color: var(--ui-neutral-hover-surface);
+  border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-secondary-text);
 }

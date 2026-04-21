@@ -92,6 +92,7 @@
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='gray']:hover {
+    border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
@@ -109,6 +110,7 @@
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='purple']:hover {
+    border-color: var(--ui-accent-hover-border);
     background-color: var(--ui-accent-hover-surface);
   }
 
@@ -126,7 +128,7 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='red']:hover {
     background-color: var(--ui-danger-hover-surface);
-    border-color: var(--ui-danger-normal-ring);
+    border-color: var(--ui-danger-hover-border);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='red'] .cthulhuUiIconDescriptionButtonIcon {

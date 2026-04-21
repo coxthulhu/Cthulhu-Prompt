@@ -34,6 +34,7 @@
   --ui-neutral-normal-surface: oklch(1 0 0 / 6%);
   --ui-neutral-normal-border: oklch(1 0 0 / 12%);
   --ui-neutral-hover-surface: oklch(1 0 0 / 10%);
+  --ui-neutral-hover-border: oklch(1 0 0 / 14%);
   --ui-neutral-emphasis-surface: oklch(1 0 0 / 14%);
   --ui-neutral-emphasis-border: oklch(1 0 0 / 16%);
   --ui-neutral-field-surface: oklch(0.209 0.01 268.187);
@@ -46,6 +47,7 @@
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
   --ui-accent-hover-surface: oklch(0.606 0.219 292.717 / 25%);
+  --ui-accent-hover-border: oklch(0.827 0.108 306.383 / 42%);
   --ui-accent-icon-surface: oklch(0.606 0.219 292.717 / 15%);
   --ui-accent-icon-ring: oklch(0.709 0.159 293.541 / 20%);
   --ui-accent-icon-glyph: oklch(0.811 0.101 293.571);
@@ -60,6 +62,7 @@
   --ui-danger-normal-border: oklch(0.711 0.166 22.216 / 28%);
   --ui-danger-normal-ring: oklch(0.696 0.196 32.321 / 40%);
   --ui-danger-hover-surface: oklch(0.396 0.133 25.723 / 30%);
+  --ui-danger-hover-border: oklch(0.711 0.166 22.216 / 42%);
   --ui-danger-strong-border: oklch(0.704 0.191 22.216);
   --ui-danger-icon-surface: oklch(0.711 0.166 22.216 / 14%);
   --ui-danger-icon-ring: oklch(0.711 0.166 22.216 / 18%);

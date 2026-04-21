@@ -70,7 +70,7 @@
   }
 
   .cthulhuUiIconTextButton--activatableEnabled:hover {
-    border-color: var(--ui-neutral-hover-surface);
+    border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-normal-text);
   }
@@ -83,6 +83,7 @@
   }
 
   .cthulhuUiIconTextButton--defaultSurface:hover {
+    border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
