@@ -22,18 +22,19 @@
   --ui-field-surface: oklch(0.209 0.01 268.187);
   --ui-selection-surface: oklch(1 0 0 / 22%);
 
-  /* Raised surfaces */
-  --ui-raised-surface-gradient-start: oklch(1 0 0 / 6%);
-  --ui-raised-surface-gradient-end: oklch(1 0 0 / 3%);
-  --ui-nested-surface-default: oklch(0.145 0.011 266.847 / 78%);
+  /* Cards */
+  --ui-card-surface-gradient-start: oklch(1 0 0 / 6%);
+  --ui-card-surface-gradient-end: oklch(1 0 0 / 3%);
+  --ui-card-nested-surface-default: oklch(0.145 0.011 266.847 / 78%);
+  --ui-card-border-default: oklch(1 0 0 / 10%);
+  --ui-card-nested-border-default: oklch(1 0 0 / 7%);
+  --ui-card-shadow: oklch(0 0 0 / 28%);
 
   /* Neutral borders */
   --ui-border-muted: oklch(1 0 0 / 8%);
   --ui-border-default: oklch(1 0 0 / 12%);
   --ui-border-emphasis: oklch(1 0 0 / 16%);
   --ui-border-focus: oklch(1 0 0 / 28%);
-  --ui-raised-border-default: oklch(1 0 0 / 10%);
-  --ui-nested-border-default: oklch(1 0 0 / 7%);
 
   /* Accent */
   --ui-accent-surface-default: oklch(0.606 0.219 292.717 / 17%);
@@ -53,7 +54,6 @@
   /* Shadows */
   --ui-shadow-raised: oklch(0 0 0 / 20%);
   --ui-shadow-inset: oklch(0 0 0 / 25%);
-  --ui-raised-shadow: oklch(0 0 0 / 28%);
 
   /* Danger */
   --ui-danger-border-strong: oklch(0.704 0.191 22.216);

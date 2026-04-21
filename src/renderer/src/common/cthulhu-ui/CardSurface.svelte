@@ -32,18 +32,18 @@
   }
 
   .cthulhuUiCardSurface--default {
-    border-color: var(--ui-raised-border-default);
+    border-color: var(--ui-card-border-default);
     background-image: linear-gradient(
       to bottom,
-      var(--ui-raised-surface-gradient-start),
-      var(--ui-raised-surface-gradient-end)
+      var(--ui-card-surface-gradient-start),
+      var(--ui-card-surface-gradient-end)
     );
-    box-shadow: 0 18px 50px var(--ui-raised-shadow);
+    box-shadow: 0 18px 50px var(--ui-card-shadow);
   }
 
   .cthulhuUiCardSurface--subcard {
-    border-color: var(--ui-nested-border-default);
-    background-color: var(--ui-nested-surface-default);
+    border-color: var(--ui-card-nested-border-default);
+    background-color: var(--ui-card-nested-surface-default);
     box-shadow: inset 0 1px 0 var(--ui-border-muted);
   }
 </style>
