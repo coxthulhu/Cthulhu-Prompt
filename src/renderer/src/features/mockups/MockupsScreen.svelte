@@ -125,7 +125,7 @@
 
   .mockups-empty h2 {
     margin: 0;
-    color: var(--ui-strong-text);
+    color: var(--ui-normal-text);
     font-weight: 600;
   }
 
@@ -160,7 +160,7 @@
     appearance: none;
     border: 1px solid var(--ui-border-muted);
     background: var(--ui-surface-muted);
-    color: var(--ui-default-text);
+    color: var(--ui-secondary-text);
     padding: 0.7rem 1rem;
     border-radius: 1rem;
     font: inherit;

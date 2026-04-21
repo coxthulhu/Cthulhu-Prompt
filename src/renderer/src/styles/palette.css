@@ -8,11 +8,11 @@
 */
 
 :root {
-  /* Text */
-  --ui-muted-text: oklch(0.738 0.014 286.045);
-  --ui-default-text: oklch(0.92 0.004 286.32);
-  --ui-strong-text: oklch(0.985 0 0);
-  --ui-emphasis-text: oklch(1 0 0);
+  /* Text and icons */
+  --ui-muted-text: oklch(1 0 0 / 55%);
+  --ui-secondary-text: oklch(1 0 0 / 75%);
+  --ui-hoverable-text: oklch(1 0 0 / 90%);
+  --ui-normal-text: oklch(1 0 0);
 
   /* Neutral surfaces */
   --ui-surface-muted: oklch(1 0 0 / 3%);

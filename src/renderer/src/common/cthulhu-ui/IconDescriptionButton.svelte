@@ -71,7 +71,7 @@
   }
 
   .cthulhuUiIconDescriptionButtonText {
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
     font-size: 0.975rem;
     font-weight: 700;
     letter-spacing: 0;
@@ -79,7 +79,7 @@
   }
 
   .cthulhuUiIconDescriptionButtonDescription {
-    color: var(--ui-default-text);
+    color: var(--ui-secondary-text);
     font-size: 0.8125rem;
     font-weight: 600;
     line-height: 1.35;
@@ -88,18 +88,18 @@
   .cthulhuUiIconDescriptionButton[data-variant='gray'] {
     background-color: var(--ui-surface-default);
     border-color: var(--ui-border-default);
-    color: var(--ui-default-text);
+    color: var(--ui-secondary-text);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='gray']:hover {
     background-color: var(--ui-surface-hover);
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='gray'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-surface-emphasis);
     box-shadow: 0 0 0 1px var(--ui-border-emphasis);
-    color: var(--ui-default-text);
+    color: var(--ui-secondary-text);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='purple'] {
@@ -136,7 +136,7 @@
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='red'] .cthulhuUiIconDescriptionButtonText {
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
   }
 
 </style>

@@ -56,13 +56,13 @@
 .sidebarPromptTreeRow:hover {
   border-color: var(--ui-surface-hover);
   background-color: var(--ui-surface-default);
-  color: var(--ui-default-text);
+  color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] {
   border-color: var(--ui-border-emphasis);
   background-color: var(--ui-surface-emphasis);
-  color: var(--ui-emphasis-text);
+  color: var(--ui-normal-text);
   box-shadow: inset 0 1px 0 var(--ui-surface-default);
 }
 
@@ -174,11 +174,11 @@
 
 .sidebarPromptTreeOpenButton:hover {
   background-color: var(--ui-surface-default);
-  color: var(--ui-emphasis-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeOpenButton {
-  color: var(--ui-emphasis-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountInActionSlot,
@@ -189,12 +189,12 @@
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
   background-color: var(--ui-surface-hover);
-  color: var(--ui-default-text);
+  color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeCountBadge {
   background-color: var(--ui-surface-default);
-  color: var(--ui-emphasis-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeSettingsRow {
@@ -223,13 +223,13 @@
 .sidebarPromptTreeSettingsButton:hover {
   border-color: var(--ui-surface-hover);
   background-color: var(--ui-surface-default);
-  color: var(--ui-default-text);
+  color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeSettingsButton[data-active='true'] {
   border-color: var(--ui-border-emphasis);
   background-color: var(--ui-surface-emphasis);
-  color: var(--ui-emphasis-text);
+  color: var(--ui-normal-text);
   box-shadow: inset 0 1px 0 var(--ui-surface-default);
 }
 

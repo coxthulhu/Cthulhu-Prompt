@@ -59,31 +59,31 @@
   .cthulhuUiIconTextButton--activatableActive {
     border-color: var(--ui-border-emphasis);
     background-color: var(--ui-surface-emphasis);
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
     box-shadow: inset 0 1px 0 var(--ui-surface-default);
   }
 
   .cthulhuUiIconTextButton--activatableEnabled {
     border-color: var(--ui-border-muted);
     background-color: var(--ui-surface-muted);
-    color: var(--ui-muted-text);
+    color: var(--ui-hoverable-text);
   }
 
   .cthulhuUiIconTextButton--activatableEnabled:hover {
     border-color: var(--ui-surface-hover);
     background-color: var(--ui-surface-default);
-    color: var(--ui-default-text);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconTextButton--defaultSurface {
     border-color: var(--ui-border-default);
     background-color: var(--ui-surface-default);
-    color: var(--ui-default-text);
+    color: var(--ui-hoverable-text);
     box-shadow: inset 0 1px 0 var(--ui-surface-muted);
   }
 
   .cthulhuUiIconTextButton--defaultSurface:hover {
     background-color: var(--ui-surface-hover);
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
   }
 </style>

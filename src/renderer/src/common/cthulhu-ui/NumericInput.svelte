@@ -52,7 +52,7 @@
   .cthulhuUiNumericInput {
     border-color: var(--ui-border-default);
     background-color: var(--ui-field-surface);
-    color: var(--ui-strong-text);
+    color: var(--ui-normal-text);
     box-shadow: inset 0 1px 2px var(--ui-shadow-inset);
   }
 
@@ -62,7 +62,7 @@
 
   .cthulhuUiNumericInput::selection {
     background-color: var(--ui-selection-surface);
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiNumericInput:focus-visible {

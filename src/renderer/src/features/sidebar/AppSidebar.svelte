@@ -156,11 +156,14 @@
       <div class="min-w-0 flex-1">
         <h1
           data-testid="sidebar-workspace-name"
-          class="truncate text-sm font-semibold tracking-tight text-zinc-100"
+          class="cthulhuSidebarWorkspaceName truncate text-sm font-semibold tracking-tight"
         >
           {workspaceDisplay.title}
         </h1>
-        <p class="truncate pt-0.5 text-xs text-zinc-500" title={workspacePath ?? undefined}>
+        <p
+          class="cthulhuSidebarWorkspacePath truncate pt-0.5 text-xs"
+          title={workspacePath ?? undefined}
+        >
           {workspaceDisplay.path}
         </p>
       </div>
@@ -210,8 +213,10 @@
   <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
     <div class="mb-2 flex items-center justify-between">
       <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Prompts</p>
-        <p class="mt-0.5 text-xs text-zinc-600">{promptFolderCountLabel}</p>
+        <p class="cthulhuSidebarPromptSectionTitle text-[11px] font-semibold uppercase tracking-[0.18em]">
+          Prompts
+        </p>
+        <p class="cthulhuSidebarPromptSectionCount mt-0.5 text-xs">{promptFolderCountLabel}</p>
       </div>
       {#if isWorkspaceReady}
         <div class="shrink-0">
@@ -241,3 +246,21 @@
     />
   </div>
 </aside>
+
+<style>
+  .cthulhuSidebarPromptSectionTitle {
+    color: var(--ui-secondary-text);
+  }
+
+  .cthulhuSidebarPromptSectionCount {
+    color: var(--ui-muted-text);
+  }
+
+  .cthulhuSidebarWorkspaceName {
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuSidebarWorkspacePath {
+    color: var(--ui-muted-text);
+  }
+</style>

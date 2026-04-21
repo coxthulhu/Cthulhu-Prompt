@@ -27,14 +27,14 @@
 
 <style>
   .cthulhuUiTitleBlockTitleLarge {
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
     font-size: 1.125rem;
     font-weight: 600;
     letter-spacing: -0.025em;
   }
 
   .cthulhuUiTitleBlockTitleSmall {
-    color: var(--ui-strong-text);
+    color: var(--ui-normal-text);
     font-size: 0.875rem;
     font-weight: 500;
   }

@@ -488,7 +488,7 @@
   }
 
   .cthulhuHomeSecondaryTitle {
-    color: var(--ui-emphasis-text);
+    color: var(--ui-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: clamp(4rem, 9vw, 5.5rem);
     font-weight: 700;
