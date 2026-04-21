@@ -14,14 +14,6 @@
   --ui-hoverable-text: oklch(1 0 0 / 90%);
   --ui-normal-text: oklch(1 0 0);
 
-  /* Neutral surfaces */
-  --ui-surface-muted: oklch(1 0 0 / 3%);
-  --ui-surface-default: oklch(1 0 0 / 6%);
-  --ui-surface-hover: oklch(1 0 0 / 10%);
-  --ui-surface-emphasis: oklch(1 0 0 / 14%);
-  --ui-field-surface: oklch(0.209 0.01 268.187);
-  --ui-selection-surface: oklch(1 0 0 / 22%);
-
   /* Cards */
   --ui-card-surface-gradient-start: oklch(1 0 0 / 6%);
   --ui-card-surface-gradient-end: oklch(1 0 0 / 3%);
@@ -31,7 +23,17 @@
   --ui-card-nested-inset-highlight: oklch(1 0 0 / 8%);
   --ui-card-shadow: oklch(0 0 0 / 28%);
 
-  /* Neutral borders */
+  /* Shadows */
+  --ui-shadow-raised: oklch(0 0 0 / 20%);
+  --ui-shadow-inset: oklch(0 0 0 / 25%);
+
+  /* Neutral */
+  --ui-surface-muted: oklch(1 0 0 / 3%);
+  --ui-surface-default: oklch(1 0 0 / 6%);
+  --ui-surface-hover: oklch(1 0 0 / 10%);
+  --ui-surface-emphasis: oklch(1 0 0 / 14%);
+  --ui-field-surface: oklch(0.209 0.01 268.187);
+  --ui-selection-surface: oklch(1 0 0 / 22%);
   --ui-border-muted: oklch(1 0 0 / 8%);
   --ui-border-default: oklch(1 0 0 / 12%);
   --ui-border-emphasis: oklch(1 0 0 / 16%);
@@ -51,10 +53,6 @@
   --ui-success-surface: oklch(0.627 0.17 149.214 / 22%);
   --ui-success-border: oklch(0.8 0.182 151.711 / 42%);
   --ui-success-text: oklch(0.982 0.018 155.826);
-
-  /* Shadows */
-  --ui-shadow-raised: oklch(0 0 0 / 20%);
-  --ui-shadow-inset: oklch(0 0 0 / 25%);
 
   /* Danger */
   --ui-danger-border-strong: oklch(0.704 0.191 22.216);
