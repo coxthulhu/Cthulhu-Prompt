@@ -26,8 +26,9 @@
   --ui-card-surface-gradient-start: oklch(1 0 0 / 6%);
   --ui-card-surface-gradient-end: oklch(1 0 0 / 3%);
   --ui-card-nested-surface-default: oklch(0.145 0.011 266.847 / 80%);
-  --ui-card-border-default: oklch(1 0 0 / 15%);
+  --ui-card-border-default: oklch(1 0 0 / 12%);
   --ui-card-nested-border-default: oklch(1 0 0 / 6%);
+  --ui-card-nested-inset-highlight: oklch(1 0 0 / 8%);
   --ui-card-shadow: oklch(0 0 0 / 28%);
 
   /* Neutral borders */

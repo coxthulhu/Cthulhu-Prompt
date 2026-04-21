@@ -38,12 +38,12 @@
       var(--ui-card-surface-gradient-start),
       var(--ui-card-surface-gradient-end)
     );
-    box-shadow: 0 18px 50px var(--ui-card-shadow);
+    box-shadow: 0 14px 36px var(--ui-card-shadow);
   }
 
   .cthulhuUiCardSurface--subcard {
     border-color: var(--ui-card-nested-border-default);
     background-color: var(--ui-card-nested-surface-default);
-    box-shadow: inset 0 1px 0 var(--ui-border-muted);
+    box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);
   }
 </style>
