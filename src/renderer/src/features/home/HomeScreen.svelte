@@ -484,7 +484,7 @@
   .cthulhuHomeWorkspaceStatusBadgeNotSelected {
     background: var(--ui-accent-surface-default);
     border-color: var(--ui-accent-border);
-    color: var(--ui-accent-icon);
+    color: var(--ui-accent-text);
   }
 
   .cthulhuHomeSecondaryTitle {

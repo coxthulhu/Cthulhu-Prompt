@@ -145,7 +145,7 @@
     z-index: 1;
     width: 100%;
     padding: 0;
-    background: rgb(from var(--ui-app-background) r g b / 0.94);
+    background: rgb(11 14 18 / 94%);
     backdrop-filter: blur(16px);
   }
 
