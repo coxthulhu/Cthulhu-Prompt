@@ -50,8 +50,8 @@
 
 <style>
   .cthulhuUiNumericInput {
-    border-color: var(--ui-border-default);
-    background-color: var(--ui-field-surface);
+    border-color: var(--ui-neutral-normal-border);
+    background-color: var(--ui-neutral-field-surface);
     color: var(--ui-normal-text);
     box-shadow: inset 0 1px 2px var(--ui-shadow-inset);
   }
@@ -61,24 +61,24 @@
   }
 
   .cthulhuUiNumericInput::selection {
-    background-color: var(--ui-selection-surface);
+    background-color: var(--ui-neutral-selection-surface);
     color: var(--ui-normal-text);
   }
 
   .cthulhuUiNumericInput:focus-visible {
-    border-color: var(--ui-border-focus);
+    border-color: var(--ui-neutral-focus-border);
     box-shadow:
-      0 0 0 3px var(--ui-surface-emphasis),
+      0 0 0 3px var(--ui-neutral-emphasis-surface),
       inset 0 1px 2px var(--ui-shadow-inset);
   }
 
   .cthulhuUiNumericInput[aria-invalid='true'] {
-    border-color: var(--ui-danger-border-strong);
+    border-color: var(--ui-danger-strong-border);
   }
 
   .cthulhuUiNumericInput[aria-invalid='true']:focus-visible {
     box-shadow:
-      0 0 0 3px var(--ui-danger-ring),
+      0 0 0 3px var(--ui-danger-normal-ring),
       inset 0 1px 2px var(--ui-shadow-inset);
   }
 </style>

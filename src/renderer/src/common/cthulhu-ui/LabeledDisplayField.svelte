@@ -41,7 +41,7 @@
   }
 
   .cthulhuUiLabeledDisplayFieldValue::selection {
-    background-color: var(--ui-selection-surface);
+    background-color: var(--ui-neutral-selection-surface);
     color: var(--ui-normal-text);
   }
 </style>

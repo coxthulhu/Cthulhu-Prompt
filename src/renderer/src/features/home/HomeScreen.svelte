@@ -476,15 +476,15 @@
   }
 
   .cthulhuHomeWorkspaceStatusBadgeReady {
-    background: var(--ui-success-surface);
-    border-color: var(--ui-success-border);
-    color: var(--ui-success-text);
+    background: var(--ui-success-normal-surface);
+    border-color: var(--ui-success-normal-border);
+    color: var(--ui-success-normal-text);
   }
 
   .cthulhuHomeWorkspaceStatusBadgeNotSelected {
-    background: var(--ui-accent-surface-default);
-    border-color: var(--ui-accent-border);
-    color: var(--ui-accent-text);
+    background: var(--ui-accent-normal-surface);
+    border-color: var(--ui-accent-normal-border);
+    color: var(--ui-accent-normal-text);
   }
 
   .cthulhuHomeSecondaryTitle {

@@ -158,8 +158,8 @@
 
   .mockups-tab {
     appearance: none;
-    border: 1px solid var(--ui-border-muted);
-    background: var(--ui-surface-muted);
+    border: 1px solid var(--ui-neutral-muted-border);
+    background: var(--ui-neutral-muted-surface);
     color: var(--ui-secondary-text);
     padding: 0.7rem 1rem;
     border-radius: 1rem;
@@ -170,9 +170,9 @@
   }
 
   .mockups-tab[data-active='true'] {
-    border-color: var(--ui-accent-border);
-    background: var(--ui-accent-surface-default);
-    color: var(--ui-accent-text);
+    border-color: var(--ui-accent-normal-border);
+    background: var(--ui-accent-normal-surface);
+    color: var(--ui-accent-normal-text);
   }
 
   .mockups-preview {
@@ -192,8 +192,8 @@
     flex-direction: column;
     gap: 0.65rem;
     padding: 1rem;
-    border: 1px solid var(--ui-border-default);
-    background: var(--ui-surface-default);
+    border: 1px solid var(--ui-neutral-normal-border);
+    background: var(--ui-neutral-normal-surface);
   }
 
   @media (max-width: 900px) {

@@ -21,7 +21,7 @@
     align-items: center;
     background-color: var(--ui-accent-icon-surface);
     box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
-    color: var(--ui-accent-icon);
+    color: var(--ui-accent-icon-glyph);
     display: flex;
     flex: 0 0 auto;
     height: 3rem;

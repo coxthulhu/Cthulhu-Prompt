@@ -57,33 +57,33 @@
 <style>
   /* Activatable buttons show selected/unselected states, such as sidebar navigation. */
   .cthulhuUiIconTextButton--activatableActive {
-    border-color: var(--ui-border-emphasis);
-    background-color: var(--ui-surface-emphasis);
+    border-color: var(--ui-neutral-emphasis-border);
+    background-color: var(--ui-neutral-emphasis-surface);
     color: var(--ui-normal-text);
-    box-shadow: inset 0 1px 0 var(--ui-surface-default);
+    box-shadow: inset 0 1px 0 var(--ui-neutral-normal-surface);
   }
 
   .cthulhuUiIconTextButton--activatableEnabled {
-    border-color: var(--ui-border-muted);
-    background-color: var(--ui-surface-muted);
+    border-color: var(--ui-neutral-muted-border);
+    background-color: var(--ui-neutral-muted-surface);
     color: var(--ui-hoverable-text);
   }
 
   .cthulhuUiIconTextButton--activatableEnabled:hover {
-    border-color: var(--ui-surface-hover);
-    background-color: var(--ui-surface-default);
+    border-color: var(--ui-neutral-hover-surface);
+    background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconTextButton--defaultSurface {
-    border-color: var(--ui-border-default);
-    background-color: var(--ui-surface-default);
+    border-color: var(--ui-neutral-normal-border);
+    background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-hoverable-text);
-    box-shadow: inset 0 1px 0 var(--ui-surface-muted);
+    box-shadow: inset 0 1px 0 var(--ui-neutral-muted-surface);
   }
 
   .cthulhuUiIconTextButton--defaultSurface:hover {
-    background-color: var(--ui-surface-hover);
+    background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
 </style>
