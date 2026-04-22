@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AlertTriangle, Check, FolderOpen, FolderPlus, X } from 'lucide-svelte'
 
-  let showCreateWorkspaceDialog = $state(false)
+  let showCreateWorkspaceDialog = $state(true)
   let workspaceName = $state('My Prompts')
   let workspacePath = $state('C:\\Users\\dmin\\Documents\\Cthulhu Prompt')
   let includeExamplePrompts = $state(true)

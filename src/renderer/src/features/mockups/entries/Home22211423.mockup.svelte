@@ -7,7 +7,7 @@
     filePaths: string[]
   }
 
-  let isCreateWorkspaceDialogOpen = $state(false)
+  let isCreateWorkspaceDialogOpen = $state(true)
   let isBrowsingFolder = $state(false)
   let workspaceName = $state('Cthulhu Prompt Workspace')
   let workspacePath = $state('C:\\Users\\dmin\\Documents\\Prompt Workspace')

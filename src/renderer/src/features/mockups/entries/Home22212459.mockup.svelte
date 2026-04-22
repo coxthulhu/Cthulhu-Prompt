@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AlertTriangle, Check, FolderOpen, FolderPlus, X } from 'lucide-svelte'
 
-  let isDialogOpen = $state(false)
+  let isDialogOpen = $state(true)
   let workspaceName = $state('My Workspace')
   let workspacePath = $state('C:\\Users\\Dev\\Documents\\Prompt Workspaces\\My Workspace')
   let includeExamples = $state(true)
