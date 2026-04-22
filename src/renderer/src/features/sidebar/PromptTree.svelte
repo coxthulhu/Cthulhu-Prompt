@@ -410,14 +410,16 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
   {#if folderListState === 'no-workspace'}
-    <div class="px-2 text-xs text-muted-foreground/80">Select a Workspace to Get Started</div>
+    <div class="sidebarPromptTreeStatus px-2 text-xs">Select a Workspace to Get Started</div>
   {:else if folderListState === 'loading'}
-    <div class="px-2 flex items-center gap-2 text-xs text-muted-foreground/80">
+    <div class="sidebarPromptTreeStatus flex items-center gap-2 px-2 text-xs">
       <Loader class="size-4 animate-spin" />
       Loading folders...
     </div>
   {:else if folderListState === 'empty'}
-    <div class="px-2 text-xs text-muted-foreground/80">Create a Prompt Folder to Get Started</div>
+    <div class="sidebarPromptTreeStatus px-2 text-xs">
+      Create a Prompt Folder to Get Started
+    </div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
       <SvelteVirtualWindow

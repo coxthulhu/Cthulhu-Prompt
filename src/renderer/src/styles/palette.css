@@ -52,6 +52,11 @@
   --ui-accent-icon-ring: oklch(0.709 0.159 293.541 / 20%);
   --ui-accent-icon-glyph: oklch(0.811 0.101 293.571);
 
+  /* Info */
+  --ui-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
+  --ui-info-normal-border: oklch(0.666 0.181 254.617 / 60%);
+  --ui-info-strong-border: oklch(0.666 0.181 254.617);
+
   /* Success */
   --ui-success-normal-surface: oklch(0.627 0.17 149.214 / 22%);
   --ui-success-normal-border: oklch(0.8 0.182 151.711 / 42%);
