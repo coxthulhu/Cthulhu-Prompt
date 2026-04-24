@@ -139,7 +139,6 @@
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <NumericInput
               data-testid="font-size-input"
-              class="h-11 w-24 px-4 text-sm font-medium"
               value={systemSettingsState.promptFontSizeInput}
               aria-invalid={displayFontSizeError ? 'true' : undefined}
               oninput={(event) =>
@@ -177,7 +176,6 @@
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <NumericInput
               data-testid="min-lines-input"
-              class="h-11 w-24 px-4 text-sm font-medium"
               value={systemSettingsState.promptEditorMinLinesInput}
               aria-invalid={displayMinLinesError ? 'true' : undefined}
               oninput={(event) =>

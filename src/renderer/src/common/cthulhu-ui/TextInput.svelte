@@ -4,9 +4,8 @@
   import { mergeClasses } from './mergeClasses'
 
   type Props = WithElementRef<
-    Omit<HTMLInputAttributes, 'type' | 'inputmode' | 'pattern' | 'value' | 'oninput' | 'files'> & {
+    Omit<HTMLInputAttributes, 'type' | 'value' | 'files'> & {
       value?: string
-      oninput?: (event: Event) => void
     }
   >
 
@@ -14,69 +13,50 @@
     ref = $bindable(null),
     value = $bindable(''),
     class: className,
-    oninput: onInput,
     ...restProps
   }: Props = $props()
-
-  const sanitizeNumeric = (raw: string) => raw.replace(/\D/g, '')
-
-  // Keep input digits-only by stripping non-numeric characters.
-  const handleInput = (event: Event) => {
-    const target = event.currentTarget as HTMLInputElement
-    const sanitized = sanitizeNumeric(target.value)
-
-    if (target.value !== sanitized) {
-      target.value = sanitized
-    }
-
-    value = sanitized
-    onInput?.(event)
-  }
 </script>
 
 <input
   bind:this={ref}
   class={mergeClasses(
-    'cthulhuUiNumericInput flex h-11 w-24 min-w-0 rounded-2xl border px-4 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
+    'cthulhuUiTextInput flex h-11 min-w-0 rounded-2xl border px-4 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
     className
   )}
   type="text"
-  inputmode="numeric"
-  pattern="[0-9]*"
   bind:value
-  oninput={handleInput}
   {...restProps}
 />
 
 <style>
-  .cthulhuUiNumericInput {
+  .cthulhuUiTextInput {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-field-surface);
     color: var(--ui-normal-text);
     box-shadow: inset 0 1px 2px var(--ui-shadow-inset);
   }
 
-  .cthulhuUiNumericInput::placeholder {
+  .cthulhuUiTextInput::placeholder {
     color: var(--ui-muted-text);
   }
 
-  .cthulhuUiNumericInput::selection {
+  .cthulhuUiTextInput::selection {
     background-color: var(--ui-neutral-selection-surface);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiNumericInput:focus-visible {
+  .cthulhuUiTextInput:focus-visible {
     border-color: var(--ui-neutral-focus-border);
     box-shadow:
       0 0 0 3px var(--ui-neutral-emphasis-surface),
       inset 0 1px 2px var(--ui-shadow-inset);
   }
 
-  .cthulhuUiNumericInput[aria-invalid='true'] {
+  .cthulhuUiTextInput[aria-invalid='true'] {
     border-color: var(--ui-danger-strong-border);
   }
 
-  .cthulhuUiNumericInput[aria-invalid='true']:focus-visible {
+  .cthulhuUiTextInput[aria-invalid='true']:focus-visible {
     box-shadow:
       0 0 0 3px var(--ui-danger-normal-ring),
       inset 0 1px 2px var(--ui-shadow-inset);
