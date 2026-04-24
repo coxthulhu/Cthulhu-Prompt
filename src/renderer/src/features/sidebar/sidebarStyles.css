@@ -42,7 +42,7 @@
   border-radius: 0.75rem;
   background-color: transparent;
   padding-inline: 0;
-  color: var(--ui-secondary-text);
+  color: var(--ui-hoverable-text);
   transition:
     border-color 50ms ease-out,
     background-color 50ms ease-out,
@@ -53,7 +53,7 @@
 .sidebarPromptTreeRow:hover {
   border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
-  color: var(--ui-hoverable-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] {
@@ -91,7 +91,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.375rem;
-  color: var(--ui-secondary-text);
+  color: inherit;
 }
 
 .sidebarPromptTreeChevronIcon {
@@ -103,7 +103,7 @@
   height: 1rem;
   width: 1rem;
   flex-shrink: 0;
-  color: var(--ui-secondary-text);
+  color: inherit;
 }
 
 .sidebarPromptTreeFolderLabel {
@@ -123,7 +123,7 @@
   padding: 0 0.375rem;
   font-size: 10px;
   font-weight: 500;
-  color: var(--ui-secondary-text);
+  color: inherit;
 }
 
 .sidebarPromptTreeActionSlot {
@@ -186,7 +186,7 @@
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
   background-color: var(--ui-neutral-hover-surface);
-  color: var(--ui-secondary-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeCountBadge {
@@ -209,7 +209,7 @@
   border-radius: 0.5rem;
   background-color: transparent;
   padding-inline: 0.5rem;
-  color: var(--ui-secondary-text);
+  color: var(--ui-hoverable-text);
   text-align: left;
   transition:
     border-color 50ms ease-out,
@@ -220,7 +220,7 @@
 .sidebarPromptTreeSettingsButton:hover {
   border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
-  color: var(--ui-hoverable-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeSettingsButton[data-active='true'] {
