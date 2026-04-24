@@ -122,9 +122,6 @@
     return activeScreen === item.id ? 'active' : 'enabled'
   }
 
-  const getSecondaryNavButtonClass = (item: NavItem): string =>
-    item.id === 'mockups' ? 'h-9 w-full justify-center px-3' : 'h-9 w-full justify-start px-3'
-
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
   const workspaceDisplay = $derived.by(() => {
     if (!workspacePath) {
@@ -202,7 +199,7 @@
                 icon={Icon}
                 text={item.label}
                 variant="activatable"
-                class={getSecondaryNavButtonClass(item)}
+                class="h-9 w-full justify-center px-3"
                 state={getNavButtonState(item)}
                 onclick={() => onNavigate(item.id)}
               />
