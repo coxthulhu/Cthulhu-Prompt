@@ -112,6 +112,8 @@ describe('My Feature', () => {
 
 - Commits: short, imperative present tense (e.g., “Fix tests”, “Add virtualization test”); group related changes; reference issues.
 - Never run `git commit` and `git push` in parallel; finish the commit first, then push in a separate step.
+- Git commands that write to `.git` must use escalated permissions in the tool call, even when they do not contact a remote. This includes `git commit`, `git merge`, `git rebase`, `git cherry-pick`, `git stash`, `git tag`, and any retry after a `.git/index.lock` or read-only filesystem error.
+- For `git commit`, request escalation with a scoped persistent prefix rule for `["git", "commit"]` when available.
 - PRs: include summary, rationale, testing steps, and screenshots/GIFs for UI changes.
 - Checks must pass: `lint` + `typecheck` (run together), `test`. Keep PRs focused and reviewable.
 
