@@ -2,6 +2,7 @@
   Palette rules:
   - Use semantic role names, not color names or component-specific names.
   - Within each color category, prefer --ui-<category>-<subvariant>-<element>.
+  - Define palette colors with OKLCH.
   - Keep the renderer's glassy appearance in mind when adding surfaces, borders, shadows, and rings.
   - Text colors must be fully opaque and must use names ending in -text.
   - Gradient colors must use names ending in -gradient-start or -gradient-end.
