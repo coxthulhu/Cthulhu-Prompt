@@ -223,7 +223,7 @@
           <CreatePromptFolderDialog
             {isWorkspaceReady}
             {promptFolders}
-            triggerClass="h-8 w-8 min-w-8 justify-center rounded-xl border-0 bg-transparent px-0 py-0 text-zinc-500 hover:bg-white/5 hover:text-white"
+            triggerClass="h-8 w-8 min-w-8 justify-center rounded-xl border-0 bg-transparent px-0 py-0 text-[var(--ui-secondary-text)] hover:bg-white/5 hover:text-[var(--ui-hoverable-text)]"
             isPromptFolderListLoading={isWorkspaceLoading}
             onCreated={(promptFolderId) => {
               onPromptFolderSelect(promptFolderId)
