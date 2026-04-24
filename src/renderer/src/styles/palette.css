@@ -62,6 +62,11 @@
   --ui-success-normal-border: oklch(0.8 0.182 151.711 / 42%);
   --ui-success-normal-text: oklch(0.982 0.018 155.826);
 
+  /* Warning */
+  --ui-warning-normal-surface: oklch(0.421 0.09 57.708 / 24%);
+  --ui-warning-normal-border: oklch(0.837 0.164 84.429 / 34%);
+  --ui-warning-icon-glyph: oklch(0.924 0.115 95.746);
+
   /* Danger */
   --ui-danger-normal-surface: oklch(0.396 0.133 25.723 / 22%);
   --ui-danger-normal-border: oklch(0.711 0.166 22.216 / 28%);
