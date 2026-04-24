@@ -1,5 +1,4 @@
 <script lang="ts">
-  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
@@ -110,15 +109,13 @@
     </div>
 
     <CardSurface>
-      <div class="flex items-start gap-4 px-2 pb-4 pt-1">
-        <AccentIconTile icon={Keyboard} />
-        <div class="min-w-0">
-          <TitleBlock
-            title="Editor & layout"
-            variant="large"
-            description="Typography, spacing, autosave, and core writing ergonomics."
-          />
-        </div>
+      <div class="px-2 pb-4 pt-1">
+        <TitleBlock
+          title="Editor & layout"
+          variant="large"
+          description="Typography, spacing, autosave, and core writing ergonomics."
+          icon={Keyboard}
+        />
       </div>
 
       <div class="space-y-3">
@@ -229,15 +226,13 @@
     </CardSurface>
 
     <CardSurface>
-      <div class="flex items-start gap-4 px-2 pb-4 pt-1">
-        <AccentIconTile icon={Info} />
-        <div class="min-w-0">
-          <TitleBlock
-            title="About"
-            variant="large"
-            description="Build and release details for this desktop app."
-          />
-        </div>
+      <div class="px-2 pb-4 pt-1">
+        <TitleBlock
+          title="About"
+          variant="large"
+          description="Build and release details for this desktop app."
+          icon={Info}
+        />
       </div>
 
       <CardSurface
