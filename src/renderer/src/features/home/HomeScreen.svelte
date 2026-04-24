@@ -13,6 +13,7 @@
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
+  import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { Button } from '@renderer/common/ui/button'
   import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
@@ -343,19 +344,12 @@
                   description="Change your current workspace."
                 />
               </div>
-              <div
-                class:cthulhuHomeWorkspaceStatusBadgeReady={isWorkspaceReady}
-                class:cthulhuHomeWorkspaceStatusBadgeNotSelected={!isWorkspaceReady}
-                class="cthulhuHomeWorkspaceStatusBadge"
-              >
-                {#if isWorkspaceReady}
-                  <Check size={16} />
-                  <span data-testid="workspace-ready-title">Workspace Ready</span>
-                {:else}
-                  <AlertCircle size={16} />
-                  <span>Workspace Not Selected</span>
-                {/if}
-              </div>
+              <StatusBadge
+                icon={isWorkspaceReady ? Check : AlertCircle}
+                text={isWorkspaceReady ? 'Workspace Ready' : 'Workspace Not Selected'}
+                textTestId={isWorkspaceReady ? 'workspace-ready-title' : undefined}
+                variant={isWorkspaceReady ? 'success' : 'accent'}
+              />
             </div>
 
             <div class="flex flex-col gap-3">
@@ -463,30 +457,6 @@
 </main>
 
 <style>
-  .cthulhuHomeWorkspaceStatusBadge {
-    align-items: center;
-    border: 1px solid;
-    border-radius: 999px;
-    display: inline-flex;
-    font-size: 13px;
-    font-weight: 600;
-    gap: 8px;
-    padding: 8px 12px;
-    width: max-content;
-  }
-
-  .cthulhuHomeWorkspaceStatusBadgeReady {
-    background: var(--ui-success-normal-surface);
-    border-color: var(--ui-success-normal-border);
-    color: var(--ui-success-normal-text);
-  }
-
-  .cthulhuHomeWorkspaceStatusBadgeNotSelected {
-    background: var(--ui-accent-normal-surface);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-accent-normal-text);
-  }
-
   .cthulhuHomeSecondaryTitle {
     color: var(--ui-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
