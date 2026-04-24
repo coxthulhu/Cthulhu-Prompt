@@ -67,7 +67,7 @@
 
   {#if isCreateWorkspaceDialogOpen}
     <div class="dialogOverlay">
-      <section class="dialogPanel" aria-modal="true" role="dialog" aria-labelledby="create-workspace-title">
+      <div class="dialogPanel" aria-modal="true" role="dialog" aria-labelledby="create-workspace-title">
         <div class="dialogHeader">
           <div class="dialogTitleGroup">
             <div class="dialogIcon">
@@ -125,7 +125,7 @@
             Create Workspace
           </button>
         </div>
-      </section>
+      </div>
     </div>
   {/if}
 </main>
@@ -346,7 +346,6 @@
     font-weight: 750;
   }
 
-  input[type='text'],
   .fieldGroup input:not([type]),
   .pathControl input {
     background: var(--ui-neutral-field-surface);

@@ -77,7 +77,7 @@
 
   {#if dialogOpen}
     <div class="mockupOverlay" role="presentation">
-      <section
+      <div
         class="mockupDialog"
         role="dialog"
         aria-modal="true"
@@ -135,7 +135,7 @@
             <span>Create Workspace</span>
           </button>
         </div>
-      </section>
+      </div>
     </div>
   {/if}
 </main>
