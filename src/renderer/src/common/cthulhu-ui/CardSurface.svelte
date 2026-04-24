@@ -3,7 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  export type CardSurfaceVariant = 'default' | 'subcard'
+  export type CardSurfaceVariant = 'default' | 'solid' | 'subcard'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     children: Snippet
@@ -17,6 +17,7 @@
   class={mergeClasses(
     'cthulhuUiCardSurface border',
     variant === 'default' ? 'cthulhuUiCardSurface--default rounded-[28px] p-4' : null,
+    variant === 'solid' ? 'cthulhuUiCardSurface--solid rounded-[28px] p-4' : null,
     variant === 'subcard' ? 'cthulhuUiCardSurface--subcard rounded-2xl px-4 py-4' : null,
     className
   )}
@@ -31,14 +32,26 @@
     background-repeat: no-repeat;
   }
 
-  .cthulhuUiCardSurface--default {
+  .cthulhuUiCardSurface--default,
+  .cthulhuUiCardSurface--solid {
     border-color: var(--ui-card-normal-border);
+    box-shadow: 0 14px 36px var(--ui-card-normal-shadow);
+  }
+
+  .cthulhuUiCardSurface--default {
     background-image: linear-gradient(
       to bottom,
       var(--ui-card-normal-surface-gradient-start),
       var(--ui-card-normal-surface-gradient-end)
     );
-    box-shadow: 0 14px 36px var(--ui-card-normal-shadow);
+  }
+
+  .cthulhuUiCardSurface--solid {
+    background-color: oklch(0 0 0);
+    background-image: linear-gradient(
+      var(--ui-card-normal-surface-gradient-start),
+      var(--ui-card-normal-surface-gradient-start)
+    );
   }
 
   .cthulhuUiCardSurface--subcard {

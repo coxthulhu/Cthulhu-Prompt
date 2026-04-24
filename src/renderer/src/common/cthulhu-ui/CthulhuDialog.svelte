@@ -1,0 +1,115 @@
+<script lang="ts">
+  import { Check, X } from 'lucide-svelte'
+  import type { ComponentType, Snippet } from 'svelte'
+  import CardSurface from './CardSurface.svelte'
+  import IconOnlyButton from './IconOnlyButton.svelte'
+  import IconTextButton from './IconTextButton.svelte'
+  import TitleBlock from './TitleBlock.svelte'
+  import { mergeClasses } from './mergeClasses'
+
+  type Props = {
+    open?: boolean
+    title: string
+    description: string
+    icon: ComponentType
+    submitText: string
+    showCloseButton?: boolean
+    class?: string
+    children?: Snippet
+    cancelIcon?: ComponentType
+    submitIcon?: ComponentType
+    oncancel?: () => void
+    onsubmit?: () => void
+  }
+
+  let {
+    open = $bindable(false),
+    title,
+    description,
+    icon,
+    submitText,
+    showCloseButton = true,
+    class: className,
+    children,
+    cancelIcon = X,
+    submitIcon = Check,
+    oncancel,
+    onsubmit
+  }: Props = $props()
+
+  const closeDialog = () => {
+    open = false
+    oncancel?.()
+  }
+
+  const submitDialog = () => {
+    onsubmit?.()
+  }
+
+  // Side effect: close the open dialog when the user presses Escape.
+  $effect(() => {
+    if (!open) {
+      return
+    }
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDialog()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeydown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeydown)
+    }
+  })
+</script>
+
+{#if open}
+  <div class="cthulhuUiDialogLayer" role="presentation" onclick={closeDialog}>
+    <CardSurface
+      variant="solid"
+      class={mergeClasses('flex flex-col gap-4 p-6', className)}
+      role="dialog"
+      aria-label={title}
+      aria-modal="true"
+      onclick={(event) => event.stopPropagation()}
+    >
+      <div class="flex items-start gap-4">
+        <div class="min-w-0 flex-1">
+          <TitleBlock {title} {description} {icon} variant="large" />
+        </div>
+
+        {#if showCloseButton}
+          <IconOnlyButton icon={X} label="Close" onclick={closeDialog} />
+        {/if}
+      </div>
+
+      {#if children}
+        <div class="min-w-0">
+          {@render children()}
+        </div>
+      {/if}
+
+      <div class="flex justify-end gap-3">
+        <IconTextButton icon={cancelIcon} text="Cancel" onclick={closeDialog} />
+        <IconTextButton icon={submitIcon} text={submitText} onclick={submitDialog} />
+      </div>
+    </CardSurface>
+  </div>
+{/if}
+
+<style>
+  .cthulhuUiDialogLayer {
+    align-items: center;
+    background-color: oklch(0 0 0 / 60%);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 1rem;
+    position: fixed;
+    z-index: 50;
+  }
+
+</style>

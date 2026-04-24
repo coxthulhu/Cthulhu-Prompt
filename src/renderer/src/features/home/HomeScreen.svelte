@@ -10,6 +10,7 @@
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
@@ -68,6 +69,7 @@
   let isOpeningWorkspaceFolderDialog = $state(false)
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
+  let showTemporaryDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
@@ -212,6 +214,10 @@
   const handleCancelExistingWorkspace = () => {
     showExistingWorkspaceDialog = false
     selectedFolderPath = null
+  }
+
+  const handleSubmitTemporaryDialog = () => {
+    showTemporaryDialog = false
   }
 
   const getSelectButtonLabel = () => {
@@ -382,6 +388,7 @@
                 text="Temporary"
                 description="Placeholder action."
                 variant="gray"
+                onclick={() => (showTemporaryDialog = true)}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
@@ -403,6 +410,16 @@
       </div>
     </section>
   </div>
+
+  <CthulhuDialog
+    bind:open={showTemporaryDialog}
+    class="w-full max-w-[32rem]"
+    icon={FolderPlus}
+    title="Temporary Dialog"
+    description="This is a placeholder dialog for the temporary workspace action."
+    submitText="Continue"
+    onsubmit={handleSubmitTemporaryDialog}
+  />
 
   <Dialog bind:open={showSetupDialog}>
     <DialogContent>
