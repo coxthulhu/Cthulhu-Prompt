@@ -375,6 +375,16 @@
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
+              <IconDescriptionButton
+                testId="temporary-workspace-folder-button"
+                icon={FolderPlus}
+                iconClass="translate-y-px"
+                text="Temporary"
+                description="Placeholder action."
+                variant="gray"
+                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+              />
+
               {#if isWorkspaceReady}
                 <IconDescriptionButton
                   testId="close-workspace-button"
