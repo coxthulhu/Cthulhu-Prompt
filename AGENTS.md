@@ -53,6 +53,18 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
     timeout_ms: 300000
   })
   ```
+- When using Codex `functions.exec_command`, the `cmd` field is a shell string, not an argv array. Quote the entire command passed to `cmd.exe /C`:
+  ```json
+  {
+    "cmd": "cmd.exe /C \"cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run lint && npm run typecheck\"",
+    "workdir": "/mnt/c/Source/PromptApps/CthulhuPromptPublic",
+    "sandbox_permissions": "require_escalated",
+    "justification": "Windows cmd.exe run needs sandbox access to project artifacts",
+    "yield_time_ms": 300000
+  }
+  ```
+  Correct shell form: `cmd.exe /C "cd /d C:\Source\PromptApps\CthulhuPromptPublic && npm run lint && npm run typecheck"`
+  Incorrect shell form: `cmd.exe /C cd /d C:\Source\PromptApps\CthulhuPromptPublic && npm run lint && npm run typecheck`
 
 ### Common npm Scripts
 
