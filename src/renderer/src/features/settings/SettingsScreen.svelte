@@ -1,6 +1,7 @@
 <script lang="ts">
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
@@ -121,7 +122,7 @@
       <div class="space-y-3">
         <CardSurface
           variant="subcard"
-          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+          class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
@@ -129,11 +130,6 @@
               variant="small"
               description="Sets the base font size used inside the prompt editor."
             />
-            {#if displayFontSizeError}
-              <p class="mt-3 text-sm text-red-400" data-testid="font-size-error">
-                {displayFontSizeError}
-              </p>
-            {/if}
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -154,6 +150,16 @@
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
+
+          {#if displayFontSizeError}
+            <!-- Keep validation below the full control row so it spans the subcard. -->
+            <MessageRow
+              class="justify-self-end lg:col-span-2"
+              variant="error"
+              text={displayFontSizeError}
+              textTestId="font-size-error"
+            />
+          {/if}
         </CardSurface>
 
         <CardSurface
