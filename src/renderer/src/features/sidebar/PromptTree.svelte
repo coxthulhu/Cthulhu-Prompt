@@ -417,9 +417,7 @@
       Loading folders...
     </div>
   {:else if folderListState === 'empty'}
-    <div class="sidebarPromptTreeStatus px-2 text-xs">
-      Create a Prompt Folder to Get Started
-    </div>
+    <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Prompt Folder to Get Started</div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
       <SvelteVirtualWindow

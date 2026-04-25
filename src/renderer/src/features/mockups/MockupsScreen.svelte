@@ -11,7 +11,11 @@
     eager: true
   }) as Record<string, MockupModule>
 
-  const getMockupBasename = (path: string) => path.split('/').pop()?.replace(/\.mockup\.svelte$/, '') ?? path
+  const getMockupBasename = (path: string) =>
+    path
+      .split('/')
+      .pop()
+      ?.replace(/\.mockup\.svelte$/, '') ?? path
 
   const humanizeMockupName = (value: string) =>
     value
@@ -27,7 +31,12 @@
     return {
       path,
       component: module.default,
-      id: meta.id ?? basename.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      id:
+        meta.id ??
+        basename
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, ''),
       title: meta.title ?? humanizeMockupName(basename),
       kicker: meta.kicker ?? 'Mockup',
       description: meta.description ?? 'Preview',

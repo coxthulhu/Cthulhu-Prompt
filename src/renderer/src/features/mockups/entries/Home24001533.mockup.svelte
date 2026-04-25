@@ -41,7 +41,11 @@
         <p class="eyebrow">CTHULHU PROMPT</p>
         <h1>Home</h1>
       </div>
-      <button class="ghostButton" type="button" onclick={() => (isCreateWorkspaceDialogOpen = true)}>
+      <button
+        class="ghostButton"
+        type="button"
+        onclick={() => (isCreateWorkspaceDialogOpen = true)}
+      >
         <FolderPlus size={18} />
         Create Workspace
       </button>
@@ -67,7 +71,12 @@
 
   {#if isCreateWorkspaceDialogOpen}
     <div class="dialogOverlay">
-      <div class="dialogPanel" aria-modal="true" role="dialog" aria-labelledby="create-workspace-title">
+      <div
+        class="dialogPanel"
+        aria-modal="true"
+        role="dialog"
+        aria-labelledby="create-workspace-title"
+      >
         <div class="dialogHeader">
           <div class="dialogTitleGroup">
             <div class="dialogIcon">
@@ -117,7 +126,11 @@
         </div>
 
         <div class="dialogFooter">
-          <button class="secondaryButton" type="button" onclick={() => (isCreateWorkspaceDialogOpen = false)}>
+          <button
+            class="secondaryButton"
+            type="button"
+            onclick={() => (isCreateWorkspaceDialogOpen = false)}
+          >
             Cancel
           </button>
           <button class="primaryButton" type="button">

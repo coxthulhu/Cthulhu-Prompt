@@ -280,17 +280,18 @@ export const movePrompt = async (
 
   const prompt = promptCollection.get(promptId)
   const promptDraft = promptDraftCollection.get(promptId)
-  const persistedPrompt = prompt && isPromptFull(prompt)
-    ? toPersistedPrompt(prompt)
-    : promptDraft
-      ? {
-          id: promptDraft.id,
-          title: promptDraft.title,
-          createdAt: promptDraft.createdAt,
-          promptText: promptDraft.promptText,
-          promptFolderCount: promptDraft.promptFolderCount
-        }
-      : null
+  const persistedPrompt =
+    prompt && isPromptFull(prompt)
+      ? toPersistedPrompt(prompt)
+      : promptDraft
+        ? {
+            id: promptDraft.id,
+            title: promptDraft.title,
+            createdAt: promptDraft.createdAt,
+            promptText: promptDraft.promptText,
+            promptFolderCount: promptDraft.promptFolderCount
+          }
+        : null
   if (!persistedPrompt) {
     throw new Error('Prompt data not loaded')
   }

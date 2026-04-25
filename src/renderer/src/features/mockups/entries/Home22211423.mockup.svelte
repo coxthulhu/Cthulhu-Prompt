@@ -90,7 +90,10 @@
               </span>
             </span>
           </span>
-          <FolderOpen size={20} style="flex: 0 0 auto; color: var(--ui-accent-normal-text, rgb(216 180 254));" />
+          <FolderOpen
+            size={20}
+            style="flex: 0 0 auto; color: var(--ui-accent-normal-text, rgb(216 180 254));"
+          />
         </button>
       </div>
     </div>
@@ -123,7 +126,9 @@
               >
                 Create Workspace
               </h2>
-              <p style="margin: 7px 0 0; color: rgb(161 161 170); font-size: 13px; font-weight: 500;">
+              <p
+                style="margin: 7px 0 0; color: rgb(161 161 170); font-size: 13px; font-weight: 500;"
+              >
                 Set up a new workspace folder.
               </p>
             </div>

@@ -253,7 +253,8 @@
     }
 
     return (
-      (secondaryTitleContainerWidth / secondaryTitleMeasureWidth) * SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
+      (secondaryTitleContainerWidth / secondaryTitleMeasureWidth) *
+      SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
     )
   })
 
@@ -288,7 +289,10 @@
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
     <section class="relative w-full max-w-5xl min-w-0 space-y-10">
-      <div bind:this={secondaryTitleContainerElement} class="mx-auto w-full max-w-[39.5rem] xl:max-w-none">
+      <div
+        bind:this={secondaryTitleContainerElement}
+        class="mx-auto w-full max-w-[39.5rem] xl:max-w-none"
+      >
         <h2
           class="cthulhuHomeSecondaryTitle"
           data-testid="home-title"
@@ -305,7 +309,9 @@
         {secondaryTitleText}
       </span>
 
-      <div class="grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch">
+      <div
+        class="grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
+      >
         <CardSurface class="w-full max-w-[39.5rem] min-w-0 p-5 xl:max-w-none">
           <div class="space-y-4">
             <TitleBlock

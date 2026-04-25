@@ -11,7 +11,14 @@
     onclick?: (event: MouseEvent) => void
   }
 
-  let { icon: Icon, label, disabled = false, class: className, iconClass, onclick }: Props = $props()
+  let {
+    icon: Icon,
+    label,
+    disabled = false,
+    class: className,
+    iconClass,
+    onclick
+  }: Props = $props()
 </script>
 
 <button

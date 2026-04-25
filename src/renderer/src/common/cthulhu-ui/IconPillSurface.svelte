@@ -25,11 +25,7 @@
 <!-- Shared icon-leading pill shell for compact read-only workspace metadata. -->
 <CardSurface
   variant="subcard"
-  class={mergeClasses(
-    'flex min-h-0 min-w-0 items-center p-[18px]',
-    gapClass,
-    className
-  )}
+  class={mergeClasses('flex min-h-0 min-w-0 items-center p-[18px]', gapClass, className)}
   {...restProps}
 >
   {#if Icon}

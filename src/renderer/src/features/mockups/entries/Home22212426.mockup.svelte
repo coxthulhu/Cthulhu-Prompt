@@ -124,7 +124,11 @@
         </div>
 
         <footer class="homeMockupDialogFooter">
-          <button class="homeMockupSecondaryButton" type="button" onclick={closeCreateWorkspaceDialog}>
+          <button
+            class="homeMockupSecondaryButton"
+            type="button"
+            onclick={closeCreateWorkspaceDialog}
+          >
             Cancel
           </button>
           <button class="homeMockupPrimaryButton" type="button">
@@ -151,7 +155,13 @@
     display: flex;
     flex: 1;
     font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif;
     justify-content: center;
     min-height: 100vh;
     min-width: 0;

@@ -133,10 +133,7 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <FloatingValidationMessage
-              message={displayFontSizeError}
-              textTestId="font-size-error"
-            >
+            <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
               <NumericInput
                 data-testid="font-size-input"
                 value={systemSettingsState.promptFontSizeInput}
@@ -170,10 +167,7 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <FloatingValidationMessage
-              message={displayMinLinesError}
-              textTestId="min-lines-error"
-            >
+            <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
               <NumericInput
                 data-testid="min-lines-input"
                 value={systemSettingsState.promptEditorMinLinesInput}

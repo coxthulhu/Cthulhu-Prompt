@@ -102,7 +102,8 @@
       </div>
 
       <div class="homeMockupDialogFooter">
-        <button class="homeMockupSecondaryButton" type="button" onclick={closeDialog}>Cancel</button>
+        <button class="homeMockupSecondaryButton" type="button" onclick={closeDialog}>Cancel</button
+        >
         <button class="homeMockupCreateButton" type="button">
           <FolderPlus size={19} strokeWidth={2.35} />
           <span>Create Workspace</span>
@@ -115,15 +116,12 @@
 <style>
   :global(body) {
     background:
-      radial-gradient(circle at 50% -10%, rgba(139, 92, 246, 0.16), transparent 34rem),
-      #09090b;
+      radial-gradient(circle at 50% -10%, rgba(139, 92, 246, 0.16), transparent 34rem), #09090b;
   }
 
   .homeMockupShell {
     align-items: center;
-    background:
-      linear-gradient(180deg, rgba(24, 24, 27, 0.72), rgba(9, 9, 11, 0.94)),
-      #09090b;
+    background: linear-gradient(180deg, rgba(24, 24, 27, 0.72), rgba(9, 9, 11, 0.94)), #09090b;
     color: var(--ui-normal-text, #f4f4f5);
     display: flex;
     font-family:
@@ -132,7 +130,7 @@
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
-      "Segoe UI",
+      'Segoe UI',
       sans-serif;
     justify-content: center;
     letter-spacing: 0;

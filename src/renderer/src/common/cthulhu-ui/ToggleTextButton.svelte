@@ -9,13 +9,7 @@
     onclick?: (event: MouseEvent) => void
   }
 
-  let {
-    pressed,
-    class: className,
-    disabled = false,
-    testId,
-    onclick
-  }: Props = $props()
+  let { pressed, class: className, disabled = false, testId, onclick }: Props = $props()
 </script>
 
 <button
@@ -29,7 +23,9 @@
   {onclick}
   {disabled}
 >
-  <span class="cthulhuUiToggleTextButtonTrack flex h-6 w-10 items-center rounded-full p-1 transition">
+  <span
+    class="cthulhuUiToggleTextButtonTrack flex h-6 w-10 items-center rounded-full p-1 transition"
+  >
     <span class="cthulhuUiToggleTextButtonThumb h-4 w-4 rounded-full"></span>
   </span>
   <span class="w-[64px] text-left">

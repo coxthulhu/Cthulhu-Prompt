@@ -140,5 +140,4 @@
   .cthulhuUiIconDescriptionButton[data-variant='red'] .cthulhuUiIconDescriptionButtonText {
     color: var(--ui-normal-text);
   }
-
 </style>

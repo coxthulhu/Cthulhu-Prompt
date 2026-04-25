@@ -41,9 +41,8 @@ const buildMovePromptConflictResponse = (
       payload: MovePromptResponsePayload
     } => {
   const latestSourcePromptFolder = data.promptFolder.committedStore.getEntry(sourcePromptFolderId)
-  const latestDestinationPromptFolder = data.promptFolder.committedStore.getEntry(
-    destinationPromptFolderId
-  )
+  const latestDestinationPromptFolder =
+    data.promptFolder.committedStore.getEntry(destinationPromptFolderId)
   const latestPrompt = data.prompt.committedStore.getEntry(promptId)
 
   if (!latestSourcePromptFolder || !latestDestinationPromptFolder || !latestPrompt) {
@@ -340,9 +339,12 @@ export const setupPromptMutationHandlers = (): void => {
             )
           }
 
-          const isSameFolder = requestedSourcePromptFolder.id === requestedDestinationPromptFolder.id
+          const isSameFolder =
+            requestedSourcePromptFolder.id === requestedDestinationPromptFolder.id
           const destinationPromptIds = isSameFolder
-            ? sourcePromptFolder.committed.promptIds.filter((promptId) => promptId !== requestedPrompt.id)
+            ? sourcePromptFolder.committed.promptIds.filter(
+                (promptId) => promptId !== requestedPrompt.id
+              )
             : destinationPromptFolder.committed.promptIds
           const insertIndex = resolvePromptInsertIndex(destinationPromptIds, orderAfterPromptId)
 

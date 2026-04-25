@@ -36,10 +36,8 @@
   }
 
   const styles = {
-    page:
-      'min-height:100%;display:flex;align-items:center;justify-content:center;padding:32px;background:var(--ui-neutral-normal-surface);color:var(--ui-normal-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
-    shell:
-      'width:min(100%,920px);display:flex;flex-direction:column;align-items:center;gap:24px;',
+    page: 'min-height:100%;display:flex;align-items:center;justify-content:center;padding:32px;background:var(--ui-neutral-normal-surface);color:var(--ui-normal-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
+    shell: 'width:min(100%,920px);display:flex;flex-direction:column;align-items:center;gap:24px;',
     launchPanel:
       'width:100%;border:1px solid var(--ui-card-normal-border);border-radius:28px;background-image:linear-gradient(to bottom,var(--ui-card-normal-surface-gradient-start),var(--ui-card-normal-surface-gradient-end));box-shadow:0 14px 36px var(--ui-card-normal-shadow);padding:28px;display:flex;justify-content:center;',
     launchButton:
@@ -146,11 +144,7 @@
           </div>
 
           <label style={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              bind:checked={includeExamplePrompts}
-              style={styles.checkbox}
-            />
+            <input type="checkbox" bind:checked={includeExamplePrompts} style={styles.checkbox} />
             <span style={styles.checkboxText}>
               <span style={styles.checkboxLabel}>Include example prompts</span>
               <span style={styles.checkboxDescription}>Create a "My Prompts" folder.</span>
@@ -159,7 +153,11 @@
         </div>
 
         <footer style={styles.footer}>
-          <button type="button" style={styles.secondaryButton} onclick={() => (isDialogOpen = false)}>
+          <button
+            type="button"
+            style={styles.secondaryButton}
+            onclick={() => (isDialogOpen = false)}
+          >
             Cancel
           </button>
           <button type="button" style={styles.primaryButton}>Create Workspace</button>
