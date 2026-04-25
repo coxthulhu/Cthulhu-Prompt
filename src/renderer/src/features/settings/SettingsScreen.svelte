@@ -1,7 +1,7 @@
 <script lang="ts">
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
@@ -133,7 +133,10 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <div class="relative">
+            <FloatingValidationMessage
+              message={displayFontSizeError}
+              textTestId="font-size-error"
+            >
               <NumericInput
                 data-testid="font-size-input"
                 value={systemSettingsState.promptFontSizeInput}
@@ -144,16 +147,7 @@
                   )}
                 onblur={handleInputBlur}
               />
-              {#if displayFontSizeError}
-                <!-- Anchor validation to the input field so it floats outside the subcard flow. -->
-                <MessageRow
-                  class="settingsFloatingError absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
-                  variant="error"
-                  text={displayFontSizeError}
-                  textTestId="font-size-error"
-                />
-              {/if}
-            </div>
+            </FloatingValidationMessage>
             <IconTextButton
               icon={RefreshCcw}
               text="Reset"
@@ -176,7 +170,10 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <div class="relative">
+            <FloatingValidationMessage
+              message={displayMinLinesError}
+              textTestId="min-lines-error"
+            >
               <NumericInput
                 data-testid="min-lines-input"
                 value={systemSettingsState.promptEditorMinLinesInput}
@@ -187,16 +184,7 @@
                   )}
                 onblur={handleInputBlur}
               />
-              {#if displayMinLinesError}
-                <!-- Anchor validation to the input field so it floats outside the subcard flow. -->
-                <MessageRow
-                  class="settingsFloatingError absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
-                  variant="error"
-                  text={displayMinLinesError}
-                  textTestId="min-lines-error"
-                />
-              {/if}
-            </div>
+            </FloatingValidationMessage>
             <IconTextButton
               icon={RefreshCcw}
               text="Reset"
@@ -270,13 +258,3 @@
     </CardSurface>
   </div>
 </section>
-
-<style>
-  :global(.settingsFloatingError.cthulhuUiMessageRow[data-variant='error']) {
-    background-color: var(--background);
-    background-image: linear-gradient(
-      var(--ui-danger-normal-surface),
-      var(--ui-danger-normal-surface)
-    );
-  }
-</style>
