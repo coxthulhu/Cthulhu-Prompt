@@ -13,7 +13,7 @@
   /* Text and icons */
   --ui-muted-text: oklch(1 0 0 / 55%);
   --ui-secondary-text: oklch(1 0 0 / 75%);
-  --ui-hoverable-text: oklch(1 0 0 / 85%);
+  --ui-hoverable-text: oklch(1 0 0 / 90%);
   --ui-normal-text: oklch(1 0 0);
 
   /* Cards */
