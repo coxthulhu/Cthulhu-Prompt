@@ -11,6 +11,7 @@
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
+  import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
@@ -70,6 +71,7 @@
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
   let showTemporaryDialog = $state(false)
+  let temporaryFolderPath = $state('')
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
@@ -425,7 +427,15 @@
     description="This is a placeholder dialog for the temporary workspace action."
     submitText="Continue"
     onsubmit={handleSubmitTemporaryDialog}
-  />
+  >
+    <FileInput
+      bind:value={temporaryFolderPath}
+      aria-label="Temporary folder path"
+      placeholder="Choose a folder path"
+      buttonTestId="temporary-folder-browse-button"
+      data-testid="temporary-folder-path-input"
+    />
+  </CthulhuDialog>
 
   <Dialog bind:open={showSetupDialog}>
     <DialogContent>
