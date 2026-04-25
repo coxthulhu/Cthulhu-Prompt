@@ -10,9 +10,6 @@
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
-  import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
-  import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
-  import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
@@ -36,6 +33,7 @@
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
+  import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
 
   let {
     workspacePath,
@@ -71,9 +69,7 @@
   let isOpeningWorkspaceFolderDialog = $state(false)
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
-  let showTemporaryDialog = $state(false)
-  let temporaryFolderPath = $state('')
-  let temporaryIncludeExamples = $state(true)
+  let showCreateWorkspaceDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
@@ -218,10 +214,6 @@
   const handleCancelExistingWorkspace = () => {
     showExistingWorkspaceDialog = false
     selectedFolderPath = null
-  }
-
-  const handleSubmitTemporaryDialog = () => {
-    showTemporaryDialog = false
   }
 
   const getSelectButtonLabel = () => {
@@ -398,7 +390,7 @@
                 text="Temporary"
                 description="Placeholder action."
                 variant="gray"
-                onclick={() => (showTemporaryDialog = true)}
+                onclick={() => (showCreateWorkspaceDialog = true)}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
@@ -421,29 +413,7 @@
     </section>
   </div>
 
-  <CthulhuDialog
-    bind:open={showTemporaryDialog}
-    class="w-full max-w-[32rem]"
-    icon={FolderPlus}
-    title="Temporary Dialog"
-    description="This is a placeholder dialog for the temporary workspace action."
-    submitText="Continue"
-    onsubmit={handleSubmitTemporaryDialog}
-  >
-    <FileInput
-      bind:value={temporaryFolderPath}
-      aria-label="Temporary folder path"
-      placeholder="Choose a folder path"
-      buttonTestId="temporary-folder-browse-button"
-      data-testid="temporary-folder-path-input"
-    />
-    <CheckboxInput
-      bind:checked={temporaryIncludeExamples}
-      label='Include example prompts in a "My Prompts" folder.'
-      data-testid="temporary-include-examples-checkbox-input"
-      inputTestId="temporary-include-examples-checkbox"
-    />
-  </CthulhuDialog>
+  <CreateWorkspaceDialog bind:open={showCreateWorkspaceDialog} />
 
   <Dialog bind:open={showSetupDialog}>
     <DialogContent>
