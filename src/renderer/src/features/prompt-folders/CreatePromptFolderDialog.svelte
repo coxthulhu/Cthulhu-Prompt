@@ -2,6 +2,7 @@
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { FolderPlus, Plus } from 'lucide-svelte'
@@ -11,26 +12,18 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { preparePromptFolderName } from '@shared/promptFolderName'
-  import SidebarButton from '../sidebar/SidebarButton.svelte'
 
   let {
     isWorkspaceReady,
     promptFolders = [],
     isPromptFolderListLoading,
-    triggerClass = '',
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
     promptFolders: PromptFolder[]
     isPromptFolderListLoading: boolean
-    triggerClass?: string
     onCreated?: (promptFolderId: string) => void
   }>()
-  const defaultTriggerClass =
-    'h-7 w-7 min-w-7 justify-center border-0 bg-transparent px-0 py-0 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-sidebar-foreground'
-  const resolvedTriggerClass = $derived.by(() =>
-    triggerClass.trim().length > 0 ? triggerClass : defaultTriggerClass
-  )
 
   let isDialogOpen = $state(false)
   const workspaceSelection = getWorkspaceSelectionContext()
@@ -133,17 +126,14 @@
   }
 </script>
 
-<SidebarButton
+<IconOnlyButton
   icon={Plus}
-  label=""
+  label="New Prompt Folder"
+  title="New Prompt Folder"
+  variant="borderless"
   disabled={!isWorkspaceReady}
-  ariaDisabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
-  class={resolvedTriggerClass}
-  builderProps={{
-    'aria-label': 'New Prompt Folder',
-    title: 'New Prompt Folder'
-  }}
+  class="h-8 w-8 rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
   onclick={() => (isDialogOpen = true)}
 />
 
