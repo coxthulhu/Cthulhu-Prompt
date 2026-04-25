@@ -59,12 +59,30 @@ describe('Home Screen', () => {
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
     })
 
-    test('shows setup dialog for empty directory and completes setup', async ({ testSetup }) => {
+    test('shows an error dialog when opening an empty directory', async ({ testSetup }) => {
+      const { mainWindow } = await testSetup.setupAndStart({
+        workspace: { scenario: 'empty', path: '/empty-directory-open', autoSetup: false }
+      })
+
+      await mainWindow.click('[data-testid="select-workspace-folder-button"]')
+
+      const errorDialog = mainWindow.locator('[role="dialog"][aria-label="Workspace Not Found"]')
+      await expect(errorDialog).toBeVisible()
+      await expect(errorDialog).toContainText(
+        'The selected folder does not contain a Cthulhu Prompt workspace.'
+      )
+      await expect(errorDialog).toContainText('Workspace Not Found.')
+      await expect(mainWindow.locator('[data-testid="error-placeholder-button"]')).toHaveCount(0)
+    })
+
+    test('shows setup dialog for empty directory creation and completes setup', async ({
+      testSetup
+    }) => {
       const { testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-directory', autoSetup: false }
       })
 
-      const setupResult = await testHelpers.setupWorkspaceViaUI()
+      const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
     })
@@ -74,7 +92,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'empty', path: '/empty-with-examples', autoSetup: false }
       })
 
-      await mainWindow.click('[data-testid="select-workspace-folder-button"]')
+      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
 
       const setupDialog = mainWindow.locator('[role="dialog"]')
       await expect(setupDialog).toBeVisible()

@@ -286,6 +286,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               buttonHelpers.clickNavButton(mainWindow, buttonText, timeout),
             validatePageStructure: () => uiValidationHelpers.validatePageStructure(mainWindow),
             setupWorkspaceViaUI: () => workspaceHelpers.setupWorkspaceViaUI(mainWindow),
+            createWorkspaceViaUI: () => workspaceHelpers.createWorkspaceViaUI(mainWindow),
             clearWorkspaceViaUI: () => workspaceHelpers.clearWorkspaceViaUI(mainWindow),
             isWorkspaceReady: () => workspaceHelpers.isWorkspaceReady(mainWindow),
             isWorkspaceGetStarted: () => workspaceHelpers.isWorkspaceGetStarted(mainWindow),
@@ -348,7 +349,10 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
             options.workspace.scenario !== 'none' &&
             options.workspace.autoSetup !== false
           ) {
-            workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+            workspaceSetupResult =
+              options.workspace.scenario === 'empty'
+                ? await testHelpers.createWorkspaceViaUI()
+                : await testHelpers.setupWorkspaceViaUI()
           }
 
           // Return window, helpers, and workspace setup result

@@ -66,14 +66,14 @@
 
   const secondaryTitleText = 'CTHULHU PROMPT'
   const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
-  const errorPlaceholderText =
-    'Could not complete the placeholder action.\nExample detail: workspace operation failed.'
+  const workspaceNotFoundErrorText =
+    'Workspace Not Found.\nUse Create Workspace Folder to set up a new workspace in this location.'
 
   let isOpeningWorkspaceFolderDialog = $state(false)
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
   let showCreateWorkspaceDialog = $state(false)
-  let showErrorPlaceholderDialog = $state(false)
+  let showWorkspaceNotFoundDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
@@ -123,9 +123,8 @@
 
         if (!selectionResult.success) {
           if (selectionResult.reason === 'workspace-missing') {
-            selectedFolderPath = selectedPath
-            includeExamplePrompts = true
-            showSetupDialog = true
+            // Open Workspace Folder only selects existing workspaces.
+            showWorkspaceNotFoundDialog = true
           }
         }
       }
@@ -197,9 +196,10 @@
           showExistingWorkspaceDialog = false
           selectedFolderPath = null
         } else if (selectionResult.reason === 'workspace-missing') {
+          // The folder no longer contains a complete workspace by the time selection runs.
           showExistingWorkspaceDialog = false
-          includeExamplePrompts = true
-          showSetupDialog = true
+          selectedFolderPath = null
+          showWorkspaceNotFoundDialog = true
         }
       } finally {
         if (activeWorkspaceAction === 'select') {
@@ -398,17 +398,6 @@
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
-              <IconDescriptionButton
-                testId="error-placeholder-button"
-                icon={AlertCircle}
-                iconClass="translate-y-px"
-                text="Error Placeholder"
-                description="Open a sample error dialog."
-                variant="red"
-                onclick={() => (showErrorPlaceholderDialog = true)}
-                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              />
-
               {#if isWorkspaceReady}
                 <IconDescriptionButton
                   testId="close-workspace-button"
@@ -431,10 +420,10 @@
   <CreateWorkspaceDialog bind:open={showCreateWorkspaceDialog} />
 
   <CthulhuErrorDialog
-    bind:open={showErrorPlaceholderDialog}
-    title="Error Placeholder"
-    description="This is a placeholder for testing the shared error dialog."
-    errorText={errorPlaceholderText}
+    bind:open={showWorkspaceNotFoundDialog}
+    title="Workspace Not Found"
+    description="The selected folder does not contain a Cthulhu Prompt workspace."
+    errorText={workspaceNotFoundErrorText}
   />
 
   <Dialog bind:open={showSetupDialog}>

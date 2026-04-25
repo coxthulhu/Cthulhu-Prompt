@@ -7,7 +7,7 @@ import { isButtonVisible } from './ButtonHelpers'
  */
 
 /**
- * Sets up a workspace through UI interactions using mocked file dialog
+ * Selects an existing workspace through UI interactions using mocked file dialog
  * @param window - The Playwright window instance
  * @returns Promise that resolves with information about what happened
  */
@@ -15,32 +15,39 @@ export async function setupWorkspaceViaUI(window: any): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {
-  // Click the "Select Workspace Folder" button
   await window.click('[data-testid="select-workspace-folder-button"]')
+
+  const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
+  const WORKSPACE_SETUP_TIMEOUT_MS = 10000
+
+  await workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+
+  const workspaceReady = await isWorkspaceReady(window)
+
+  return {
+    setupDialogAppeared: false,
+    workspaceReady
+  }
+}
+
+export async function createWorkspaceViaUI(window: any): Promise<{
+  setupDialogAppeared: boolean
+  workspaceReady: boolean
+}> {
+  await window.click('[data-testid="create-workspace-folder-button"]')
 
   const setupDialog = window.locator('[role="dialog"]')
   const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
-  // Wait until either the setup dialog or ready state is visible.
-  await Promise.race([
-    setupDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS }),
-    workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
-  ])
+  await setupDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  await window.click('[data-testid="setup-workspace-button"]')
+  await workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
-  const setupDialogVisible = await setupDialog.isVisible()
-
-  if (setupDialogVisible) {
-    // Click "Setup Workspace" button in the dialog
-    await window.click('[data-testid="setup-workspace-button"]')
-    await workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
-  }
-
-  // Check if workspace is now ready
   const workspaceReady = await isWorkspaceReady(window)
 
   return {
-    setupDialogAppeared: setupDialogVisible,
+    setupDialogAppeared: true,
     workspaceReady
   }
 }
