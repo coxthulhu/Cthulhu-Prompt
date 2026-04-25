@@ -151,29 +151,27 @@
   oncancel={handleCancel}
   onsubmit={handleCreateFolder}
 >
-  <div class="space-y-2 py-4">
-    <TitleBlock title="Prompt Folder Name" variant="small" />
-    <FloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
-      <TextInput
-        id="folder-name-input"
-        class="w-full"
-        data-testid="folder-name-input"
-        placeholder="Enter folder name..."
-        bind:value={displayName}
-        aria-invalid={errorMessage ? 'true' : undefined}
-        disabled={isCreatingPromptFolder}
-        oninput={() => {
-          hasInteractedWithInput = true
-          submissionError = null
-        }}
-        onkeydown={(event) => {
-          if (event.key === 'Enter' && isValid) {
-            handleCreateFolder()
-          } else if (event.key === 'Escape') {
-            handleCancel()
-          }
-        }}
-      />
-    </FloatingValidationMessage>
-  </div>
+  <TitleBlock title="Prompt Folder Name" variant="small" />
+  <FloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
+    <TextInput
+      id="folder-name-input"
+      class="w-full"
+      data-testid="folder-name-input"
+      placeholder="Enter folder name..."
+      bind:value={displayName}
+      aria-invalid={errorMessage ? 'true' : undefined}
+      disabled={isCreatingPromptFolder}
+      oninput={() => {
+        hasInteractedWithInput = true
+        submissionError = null
+      }}
+      onkeydown={(event) => {
+        if (event.key === 'Enter' && isValid) {
+          handleCreateFolder()
+        } else if (event.key === 'Escape') {
+          handleCancel()
+        }
+      }}
+    />
+  </FloatingValidationMessage>
 </CthulhuDialog>

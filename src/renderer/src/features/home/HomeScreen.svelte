@@ -430,21 +430,19 @@
     submitText="Continue"
     onsubmit={handleSubmitTemporaryDialog}
   >
-    <div class="space-y-3">
-      <FileInput
-        bind:value={temporaryFolderPath}
-        aria-label="Temporary folder path"
-        placeholder="Choose a folder path"
-        buttonTestId="temporary-folder-browse-button"
-        data-testid="temporary-folder-path-input"
-      />
-      <CheckboxInput
-        bind:checked={temporaryIncludeExamples}
-        label='Include example prompts in a "My Prompts" folder.'
-        data-testid="temporary-include-examples-checkbox-input"
-        inputTestId="temporary-include-examples-checkbox"
-      />
-    </div>
+    <FileInput
+      bind:value={temporaryFolderPath}
+      aria-label="Temporary folder path"
+      placeholder="Choose a folder path"
+      buttonTestId="temporary-folder-browse-button"
+      data-testid="temporary-folder-path-input"
+    />
+    <CheckboxInput
+      bind:checked={temporaryIncludeExamples}
+      label='Include example prompts in a "My Prompts" folder.'
+      data-testid="temporary-include-examples-checkbox-input"
+      inputTestId="temporary-include-examples-checkbox"
+    />
   </CthulhuDialog>
 
   <Dialog bind:open={showSetupDialog}>

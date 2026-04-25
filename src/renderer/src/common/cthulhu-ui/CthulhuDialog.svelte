@@ -104,7 +104,7 @@
       </div>
 
       {#if children}
-        <div class="min-w-0">
+        <div class="min-w-0 space-y-3">
           {@render children()}
         </div>
       {/if}
