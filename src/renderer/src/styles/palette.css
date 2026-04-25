@@ -50,6 +50,8 @@
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
   --ui-accent-hover-surface: oklch(0.606 0.219 292.717 / 25%);
   --ui-accent-hover-border: oklch(0.827 0.108 306.383 / 42%);
+  --ui-accent-strong-surface: oklch(0.541 0.281 293.009);
+  --ui-accent-strong-border: oklch(0.827 0.108 306.383 / 68%);
   --ui-accent-icon-surface: oklch(0.606 0.219 292.717 / 15%);
   --ui-accent-icon-ring: oklch(0.709 0.159 293.541 / 20%);
   --ui-accent-icon-glyph: oklch(0.811 0.101 293.571);

@@ -10,6 +10,7 @@
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
@@ -72,6 +73,7 @@
   let showExistingWorkspaceDialog = $state(false)
   let showTemporaryDialog = $state(false)
   let temporaryFolderPath = $state('')
+  let temporaryIncludeExamples = $state(true)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
@@ -428,13 +430,21 @@
     submitText="Continue"
     onsubmit={handleSubmitTemporaryDialog}
   >
-    <FileInput
-      bind:value={temporaryFolderPath}
-      aria-label="Temporary folder path"
-      placeholder="Choose a folder path"
-      buttonTestId="temporary-folder-browse-button"
-      data-testid="temporary-folder-path-input"
-    />
+    <div class="space-y-3">
+      <FileInput
+        bind:value={temporaryFolderPath}
+        aria-label="Temporary folder path"
+        placeholder="Choose a folder path"
+        buttonTestId="temporary-folder-browse-button"
+        data-testid="temporary-folder-path-input"
+      />
+      <CheckboxInput
+        bind:checked={temporaryIncludeExamples}
+        label='Include example prompts in a "My Prompts" folder.'
+        data-testid="temporary-include-examples-checkbox-input"
+        inputTestId="temporary-include-examples-checkbox"
+      />
+    </div>
   </CthulhuDialog>
 
   <Dialog bind:open={showSetupDialog}>
