@@ -14,6 +14,8 @@
     icon: ComponentType
     submitText: string
     showCloseButton?: boolean
+    submitDisabled?: boolean
+    cancelDisabled?: boolean
     class?: string
     children?: Snippet
     cancelIcon?: ComponentType
@@ -29,6 +31,8 @@
     icon,
     submitText,
     showCloseButton = true,
+    submitDisabled = false,
+    cancelDisabled = false,
     class: className,
     children,
     cancelIcon = X,
@@ -38,11 +42,20 @@
   }: Props = $props()
 
   const closeDialog = () => {
+    // Keep backdrop clicks, Escape, X, and Cancel blocked through one path.
+    if (cancelDisabled) {
+      return
+    }
+
     open = false
     oncancel?.()
   }
 
   const submitDialog = () => {
+    if (submitDisabled) {
+      return
+    }
+
     onsubmit?.()
   }
 
@@ -82,7 +95,7 @@
         </div>
 
         {#if showCloseButton}
-          <IconOnlyButton icon={X} label="Close" onclick={closeDialog} />
+          <IconOnlyButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
         {/if}
       </div>
 
@@ -93,8 +106,18 @@
       {/if}
 
       <div class="flex justify-end gap-3">
-        <IconTextButton icon={cancelIcon} text="Cancel" onclick={closeDialog} />
-        <IconTextButton icon={submitIcon} text={submitText} onclick={submitDialog} />
+        <IconTextButton
+          icon={cancelIcon}
+          text="Cancel"
+          state={cancelDisabled ? 'disabled' : 'enabled'}
+          onclick={closeDialog}
+        />
+        <IconTextButton
+          icon={submitIcon}
+          text={submitText}
+          state={submitDisabled ? 'disabled' : 'enabled'}
+          onclick={submitDialog}
+        />
       </div>
     </CardSurface>
   </div>

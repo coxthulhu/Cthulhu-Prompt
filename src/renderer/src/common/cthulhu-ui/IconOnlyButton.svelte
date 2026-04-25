@@ -5,18 +5,20 @@
   type Props = {
     icon: ComponentType
     label: string
+    disabled?: boolean
     class?: string
     iconClass?: string
     onclick?: (event: MouseEvent) => void
   }
 
-  let { icon: Icon, label, class: className, iconClass, onclick }: Props = $props()
+  let { icon: Icon, label, disabled = false, class: className, iconClass, onclick }: Props = $props()
 </script>
 
 <button
   class={mergeClasses('cthulhuUiIconOnlyButton', className)}
   type="button"
   aria-label={label}
+  {disabled}
   {onclick}
 >
   <Icon class={mergeClasses('h-4 w-4', iconClass)} />
@@ -44,5 +46,11 @@
     background-color: var(--ui-neutral-hover-surface);
     border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconOnlyButton:disabled {
+    cursor: default;
+    opacity: 0.5;
+    pointer-events: none;
   }
 </style>
