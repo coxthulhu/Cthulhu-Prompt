@@ -1,16 +1,9 @@
 <script lang="ts">
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import { Plus } from 'lucide-svelte'
-  import { Button } from '@renderer/common/ui/button'
-  import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger
-  } from '@renderer/common/ui/dialog'
+  import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import { FolderPlus, Plus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
@@ -73,7 +66,7 @@
     )
   )
 
-  const closeDialog = () => {
+  const resetDialog = () => {
     isDialogOpen = false
     displayName = ''
     submissionError = null
@@ -119,7 +112,7 @@
           onCreated?.(createdPromptFolderId)
         }
 
-        closeDialog()
+        resetDialog()
         return true
       },
       () => false
@@ -132,41 +125,49 @@
     isCreatingPromptFolder = false
   }
 
-  const handleCancel = () => closeDialog()
+  const handleCancel = () => {
+    if (isCreatingPromptFolder) return
+
+    resetDialog()
+  }
 </script>
 
-{#snippet sidebarTrigger({ props })}
-  <SidebarButton
-    icon={Plus}
-    label=""
-    disabled={!isWorkspaceReady}
-    ariaDisabled={!isWorkspaceReady}
-    testId="new-prompt-folder-button"
-    class={resolvedTriggerClass}
-    builderProps={{
-      ...props,
-      'aria-label': 'New Prompt Folder',
-      title: 'New Prompt Folder'
-    }}
-  />
-{/snippet}
+<SidebarButton
+  icon={Plus}
+  label=""
+  disabled={!isWorkspaceReady}
+  ariaDisabled={!isWorkspaceReady}
+  testId="new-prompt-folder-button"
+  class={resolvedTriggerClass}
+  builderProps={{
+    'aria-label': 'New Prompt Folder',
+    title: 'New Prompt Folder'
+  }}
+  onclick={() => (isDialogOpen = true)}
+/>
 
-<Dialog bind:open={isDialogOpen}>
-  <DialogTrigger child={sidebarTrigger} />
-
-  <DialogContent showCloseButton={false}>
-    <DialogHeader>
-      <DialogTitle>Create New Prompt Folder</DialogTitle>
-      <DialogDescription>
-        Enter a name for your new prompt folder. This will help you organize your prompts.
-      </DialogDescription>
-    </DialogHeader>
-
-    <div class="py-4">
-      <input
+<CthulhuDialog
+  bind:open={isDialogOpen}
+  class="w-full max-w-[32rem]"
+  icon={FolderPlus}
+  title="Create New Prompt Folder"
+  description="Enter a name for your new prompt folder."
+  submitText={isCreatingPromptFolder ? 'Creating...' : 'Create Folder'}
+  submitDisabled={!isValid || isCreatingPromptFolder}
+  cancelDisabled={isCreatingPromptFolder}
+  submitTestId="create-folder-button"
+  oncancel={handleCancel}
+  onsubmit={handleCreateFolder}
+>
+  <div class="py-4">
+    <FloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
+      <TextInput
+        class="w-full"
         data-testid="folder-name-input"
         placeholder="Enter folder name..."
         bind:value={displayName}
+        aria-invalid={errorMessage ? 'true' : undefined}
+        disabled={isCreatingPromptFolder}
         oninput={() => {
           hasInteractedWithInput = true
           submissionError = null
@@ -178,24 +179,7 @@
             handleCancel()
           }
         }}
-        class={`file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive ${errorMessage ? 'border-red-500' : ''}`}
       />
-      {#if errorMessage}
-        <p data-testid="folder-name-error" class="text-sm text-red-500 mt-2">{errorMessage}</p>
-      {/if}
-    </div>
-
-    <DialogFooter>
-      <Button variant="outline" onclick={handleCancel} disabled={isCreatingPromptFolder}>
-        Cancel
-      </Button>
-      <Button
-        data-testid="create-folder-button"
-        onclick={handleCreateFolder}
-        disabled={!isValid || isCreatingPromptFolder}
-      >
-        {isCreatingPromptFolder ? 'Creating...' : 'Create Folder'}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+    </FloatingValidationMessage>
+  </div>
+</CthulhuDialog>

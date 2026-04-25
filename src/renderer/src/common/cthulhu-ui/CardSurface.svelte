@@ -49,8 +49,8 @@
   .cthulhuUiCardSurface--solid {
     background-color: oklch(0 0 0);
     background-image: linear-gradient(
-      var(--ui-card-normal-surface-gradient-start),
-      var(--ui-card-normal-surface-gradient-start)
+      var(--ui-card-solid-surface),
+      var(--ui-card-solid-surface)
     );
   }
 

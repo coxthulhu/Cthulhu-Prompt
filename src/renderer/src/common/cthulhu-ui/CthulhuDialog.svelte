@@ -16,6 +16,7 @@
     showCloseButton?: boolean
     submitDisabled?: boolean
     cancelDisabled?: boolean
+    submitTestId?: string
     class?: string
     children?: Snippet
     cancelIcon?: ComponentType
@@ -33,6 +34,7 @@
     showCloseButton = true,
     submitDisabled = false,
     cancelDisabled = false,
+    submitTestId,
     class: className,
     children,
     cancelIcon = X,
@@ -116,6 +118,7 @@
           icon={submitIcon}
           text={submitText}
           state={submitDisabled ? 'disabled' : 'enabled'}
+          testId={submitTestId}
           onclick={submitDialog}
         />
       </div>
@@ -126,7 +129,7 @@
 <style>
   .cthulhuUiDialogLayer {
     align-items: center;
-    background-color: oklch(0 0 0 / 60%);
+    background-color: oklch(0 0 0 / 50%);
     display: flex;
     inset: 0;
     justify-content: center;
