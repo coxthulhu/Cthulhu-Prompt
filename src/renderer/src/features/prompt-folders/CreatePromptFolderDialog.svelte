@@ -3,6 +3,7 @@
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { FolderPlus, Plus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -156,12 +157,15 @@
   submitDisabled={!isValid || isCreatingPromptFolder}
   cancelDisabled={isCreatingPromptFolder}
   submitTestId="create-folder-button"
+  submitVariant="accent"
   oncancel={handleCancel}
   onsubmit={handleCreateFolder}
 >
-  <div class="py-4">
+  <div class="space-y-2 py-4">
+    <TitleBlock title="Prompt Folder Name" variant="small" />
     <FloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
       <TextInput
+        id="folder-name-input"
         class="w-full"
         data-testid="folder-name-input"
         placeholder="Enter folder name..."

@@ -3,7 +3,7 @@
   import { mergeClasses } from './mergeClasses'
 
   type ButtonState = 'active' | 'enabled' | 'disabled'
-  type ButtonVariant = 'default' | 'activatable'
+  type ButtonVariant = 'default' | 'accent' | 'activatable'
 
   type Props = {
     icon: ComponentType
@@ -40,7 +40,8 @@
     variant === 'activatable' && state === 'enabled'
       ? 'cthulhuUiIconTextButton--activatableEnabled'
       : null,
-    variant === 'default' || state === 'disabled'
+    variant === 'accent' ? 'cthulhuUiIconTextButton--accent' : null,
+    variant === 'default' || (variant === 'activatable' && state === 'disabled')
       ? 'cthulhuUiIconTextButton--defaultSurface shadow-[inset_0_1px_0_var(--ui-neutral-muted-surface)]'
       : null,
     className
@@ -71,6 +72,19 @@
   .cthulhuUiIconTextButton--activatableEnabled:hover {
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButton--accent {
+    border-color: var(--ui-accent-normal-border);
+    background-color: var(--ui-accent-normal-surface);
+    color: var(--ui-accent-normal-text);
+    box-shadow: inset 0 1px 0 var(--ui-neutral-muted-surface);
+  }
+
+  .cthulhuUiIconTextButton--accent:hover {
+    border-color: var(--ui-accent-hover-border);
+    background-color: var(--ui-accent-hover-surface);
     color: var(--ui-normal-text);
   }
 

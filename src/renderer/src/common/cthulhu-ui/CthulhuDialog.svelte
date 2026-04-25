@@ -21,6 +21,7 @@
     children?: Snippet
     cancelIcon?: ComponentType
     submitIcon?: ComponentType
+    submitVariant?: 'default' | 'accent'
     oncancel?: () => void
     onsubmit?: () => void
   }
@@ -39,6 +40,7 @@
     children,
     cancelIcon = X,
     submitIcon = Check,
+    submitVariant = 'default',
     oncancel,
     onsubmit
   }: Props = $props()
@@ -118,6 +120,7 @@
           icon={submitIcon}
           text={submitText}
           state={submitDisabled ? 'disabled' : 'enabled'}
+          variant={submitVariant}
           testId={submitTestId}
           onclick={submitDialog}
         />
