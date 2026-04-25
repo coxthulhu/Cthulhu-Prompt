@@ -133,16 +133,27 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <NumericInput
-              data-testid="font-size-input"
-              value={systemSettingsState.promptFontSizeInput}
-              aria-invalid={displayFontSizeError ? 'true' : undefined}
-              oninput={(event) =>
-                setSystemSettingsDraftFontSizeInput(
-                  (event.currentTarget as HTMLInputElement).value
-                )}
-              onblur={handleInputBlur}
-            />
+            <div class="relative">
+              <NumericInput
+                data-testid="font-size-input"
+                value={systemSettingsState.promptFontSizeInput}
+                aria-invalid={displayFontSizeError ? 'true' : undefined}
+                oninput={(event) =>
+                  setSystemSettingsDraftFontSizeInput(
+                    (event.currentTarget as HTMLInputElement).value
+                  )}
+                onblur={handleInputBlur}
+              />
+              {#if displayFontSizeError}
+                <!-- Anchor validation to the input field so it floats outside the subcard flow. -->
+                <MessageRow
+                  class="settingsFloatingError absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
+                  variant="error"
+                  text={displayFontSizeError}
+                  textTestId="font-size-error"
+                />
+              {/if}
+            </div>
             <IconTextButton
               icon={RefreshCcw}
               text="Reset"
@@ -150,16 +161,6 @@
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
-
-          {#if displayFontSizeError}
-            <!-- Keep validation below the full control row so it spans the subcard. -->
-            <MessageRow
-              class="justify-self-end lg:col-span-2"
-              variant="error"
-              text={displayFontSizeError}
-              textTestId="font-size-error"
-            />
-          {/if}
         </CardSurface>
 
         <CardSurface
@@ -172,24 +173,30 @@
               variant="small"
               description="Sets the minimum number of visible lines in prompt editors."
             />
-            {#if displayMinLinesError}
-              <p class="mt-3 text-sm text-red-400" data-testid="min-lines-error">
-                {displayMinLinesError}
-              </p>
-            {/if}
           </div>
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <NumericInput
-              data-testid="min-lines-input"
-              value={systemSettingsState.promptEditorMinLinesInput}
-              aria-invalid={displayMinLinesError ? 'true' : undefined}
-              oninput={(event) =>
-                setSystemSettingsDraftPromptEditorMinLinesInput(
-                  (event.currentTarget as HTMLInputElement).value
-                )}
-              onblur={handleInputBlur}
-            />
+            <div class="relative">
+              <NumericInput
+                data-testid="min-lines-input"
+                value={systemSettingsState.promptEditorMinLinesInput}
+                aria-invalid={displayMinLinesError ? 'true' : undefined}
+                oninput={(event) =>
+                  setSystemSettingsDraftPromptEditorMinLinesInput(
+                    (event.currentTarget as HTMLInputElement).value
+                  )}
+                onblur={handleInputBlur}
+              />
+              {#if displayMinLinesError}
+                <!-- Anchor validation to the input field so it floats outside the subcard flow. -->
+                <MessageRow
+                  class="settingsFloatingError absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
+                  variant="error"
+                  text={displayMinLinesError}
+                  textTestId="min-lines-error"
+                />
+              {/if}
+            </div>
             <IconTextButton
               icon={RefreshCcw}
               text="Reset"
@@ -263,3 +270,13 @@
     </CardSurface>
   </div>
 </section>
+
+<style>
+  :global(.settingsFloatingError.cthulhuUiMessageRow[data-variant='error']) {
+    background-color: var(--background);
+    background-image: linear-gradient(
+      var(--ui-danger-normal-surface),
+      var(--ui-danger-normal-surface)
+    );
+  }
+</style>
