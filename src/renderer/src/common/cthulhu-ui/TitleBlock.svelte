@@ -3,22 +3,24 @@
   import AccentIconTile from './AccentIconTile.svelte'
 
   type TitleBlockVariant = 'large' | 'small'
+  type TitleBlockIconVariant = 'accent' | 'danger'
 
   type Props = {
     title: string
     variant: TitleBlockVariant
     description?: string
     icon?: ComponentType
+    iconVariant?: TitleBlockIconVariant
   }
 
-  let { title, variant, description, icon: Icon }: Props = $props()
+  let { title, variant, description, icon: Icon, iconVariant = 'accent' }: Props = $props()
 
   const titleTag = $derived(variant === 'large' ? 'h2' : 'h3')
 </script>
 
 <div class:cthulhuUiTitleBlockWithIcon={Icon}>
   {#if Icon}
-    <AccentIconTile icon={Icon} size="large" />
+    <AccentIconTile icon={Icon} size="large" variant={iconVariant} />
   {/if}
 
   <div class="cthulhuUiTitleBlockText">

@@ -4,14 +4,23 @@
   import { mergeClasses } from './mergeClasses'
 
   type AccentIconTileSize = 'default' | 'large'
+  type AccentIconTileVariant = 'accent' | 'danger'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
     iconClass?: string
     size?: AccentIconTileSize
+    variant?: AccentIconTileVariant
   }
 
-  let { icon: Icon, iconClass, size = 'default', class: className, ...restProps }: Props = $props()
+  let {
+    icon: Icon,
+    iconClass,
+    size = 'default',
+    variant = 'accent',
+    class: className,
+    ...restProps
+  }: Props = $props()
 </script>
 
 <!-- Shared rounded-square accent icon tile used by cards and metadata pills. -->
@@ -22,6 +31,7 @@
     size === 'large' ? 'cthulhuUiAccentIconTile--large' : null,
     className
   )}
+  data-variant={variant}
   {...restProps}
 >
   <Icon
@@ -36,12 +46,21 @@
 <style>
   .cthulhuUiAccentIconTile {
     align-items: center;
-    background-color: var(--ui-accent-icon-surface);
-    box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
-    color: var(--ui-accent-icon-glyph);
     display: flex;
     flex: 0 0 auto;
     justify-content: center;
+  }
+
+  .cthulhuUiAccentIconTile[data-variant='accent'] {
+    background-color: var(--ui-accent-icon-surface);
+    box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
+    color: var(--ui-accent-icon-glyph);
+  }
+
+  .cthulhuUiAccentIconTile[data-variant='danger'] {
+    background-color: var(--ui-danger-icon-surface);
+    box-shadow: 0 0 0 1px var(--ui-danger-icon-ring);
+    color: var(--ui-danger-icon-glyph);
   }
 
   .cthulhuUiAccentIconTile--default {

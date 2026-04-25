@@ -14,6 +14,8 @@
     icon: ComponentType
     submitText: string
     showCloseButton?: boolean
+    showSubmitButton?: boolean
+    iconVariant?: 'accent' | 'danger'
     submitDisabled?: boolean
     cancelDisabled?: boolean
     submitTestId?: string
@@ -33,6 +35,8 @@
     icon,
     submitText,
     showCloseButton = true,
+    showSubmitButton = true,
+    iconVariant = 'accent',
     submitDisabled = false,
     cancelDisabled = false,
     submitTestId,
@@ -95,7 +99,7 @@
     >
       <div class="flex items-start gap-4">
         <div class="min-w-0 flex-1">
-          <TitleBlock {title} {description} {icon} variant="large" />
+          <TitleBlock {title} {description} {icon} iconVariant={iconVariant} variant="large" />
         </div>
 
         {#if showCloseButton}
@@ -116,14 +120,16 @@
           state={cancelDisabled ? 'disabled' : 'enabled'}
           onclick={closeDialog}
         />
-        <IconTextButton
-          icon={submitIcon}
-          text={submitText}
-          state={submitDisabled ? 'disabled' : 'enabled'}
-          variant={submitVariant}
-          testId={submitTestId}
-          onclick={submitDialog}
-        />
+        {#if showSubmitButton}
+          <IconTextButton
+            icon={submitIcon}
+            text={submitText}
+            state={submitDisabled ? 'disabled' : 'enabled'}
+            variant={submitVariant}
+            testId={submitTestId}
+            onclick={submitDialog}
+          />
+        {/if}
       </div>
     </CardSurface>
   </div>

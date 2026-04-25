@@ -10,6 +10,7 @@
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
@@ -65,11 +66,14 @@
 
   const secondaryTitleText = 'CTHULHU PROMPT'
   const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
+  const errorPlaceholderText =
+    'Could not complete the placeholder action.\nExample detail: workspace operation failed.'
 
   let isOpeningWorkspaceFolderDialog = $state(false)
   let showSetupDialog = $state(false)
   let showExistingWorkspaceDialog = $state(false)
   let showCreateWorkspaceDialog = $state(false)
+  let showErrorPlaceholderDialog = $state(false)
   let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
   let includeExamplePrompts = $state(true)
@@ -394,6 +398,17 @@
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
+              <IconDescriptionButton
+                testId="error-placeholder-button"
+                icon={AlertCircle}
+                iconClass="translate-y-px"
+                text="Error Placeholder"
+                description="Open a sample error dialog."
+                variant="red"
+                onclick={() => (showErrorPlaceholderDialog = true)}
+                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+              />
+
               {#if isWorkspaceReady}
                 <IconDescriptionButton
                   testId="close-workspace-button"
@@ -414,6 +429,13 @@
   </div>
 
   <CreateWorkspaceDialog bind:open={showCreateWorkspaceDialog} />
+
+  <CthulhuErrorDialog
+    bind:open={showErrorPlaceholderDialog}
+    title="Error Placeholder"
+    description="This is a placeholder for testing the shared error dialog."
+    errorText={errorPlaceholderText}
+  />
 
   <Dialog bind:open={showSetupDialog}>
     <DialogContent>
