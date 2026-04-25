@@ -43,7 +43,7 @@
   />
   <span class="cthulhuUiCheckboxInputControl" aria-hidden="true">
     {#if checked}
-      <Check class="h-[15px] w-[15px]" strokeWidth={3} />
+      <Check class="h-[17px] w-[17px]" strokeWidth={4} />
     {/if}
   </span>
   <span class="min-w-0 leading-5">{label}</span>
