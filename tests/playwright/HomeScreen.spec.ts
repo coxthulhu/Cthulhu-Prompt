@@ -75,7 +75,7 @@ describe('Home Screen', () => {
       await expect(mainWindow.locator('[data-testid="error-placeholder-button"]')).toHaveCount(0)
     })
 
-    test('shows setup dialog for empty directory creation and completes setup', async ({
+    test('shows create dialog for empty directory creation and completes setup', async ({
       testSetup
     }) => {
       const { testHelpers } = await testSetup.setupAndStart({
@@ -94,16 +94,21 @@ describe('Home Screen', () => {
 
       await mainWindow.click('[data-testid="create-workspace-folder-button"]')
 
-      const setupDialog = mainWindow.locator('[role="dialog"]')
-      await expect(setupDialog).toBeVisible()
+      const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
+      await expect(createDialog).toBeVisible()
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Example Workspace')
+      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
       const includeExamplesCheckbox = mainWindow.locator(
-        '[data-testid="include-example-prompts-checkbox"]'
+        '[data-testid="create-workspace-examples-checkbox"]'
       )
       await expect(includeExamplesCheckbox).toBeVisible()
-      await expect(includeExamplesCheckbox).toHaveAttribute('data-state', 'checked')
+      await expect(includeExamplesCheckbox).toBeChecked()
 
-      await mainWindow.click('[data-testid="setup-workspace-button"]')
+      await expect(
+        mainWindow.locator('[data-testid="create-workspace-submit-button"]')
+      ).toBeEnabled()
+      await mainWindow.click('[data-testid="create-workspace-submit-button"]')
       await mainWindow.waitForSelector('[data-testid="workspace-ready-title"]', {
         state: 'visible',
         timeout: 5000
@@ -124,6 +129,57 @@ describe('Home Screen', () => {
 
       const screenInfo = await testHelpers.getPromptFolderScreenInfo()
       expect(screenInfo.promptCount).toBe(2)
+    })
+
+    test('disables Create Workspace for invalid workspace names', async ({ testSetup }) => {
+      await testSetup.setupFilesystem({ '/ws/invalid-name-containing': null })
+      await testSetup.setupFileDialog(['/ws/invalid-name-containing'])
+
+      const { mainWindow } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Bad/Name')
+      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
+
+      await expect(mainWindow.locator('[data-testid="create-workspace-name-error"]')).toContainText(
+        'Workspace name contains illegal characters'
+      )
+      await expect(
+        mainWindow.locator('[data-testid="create-workspace-submit-button"]')
+      ).toBeDisabled()
+    })
+
+    test('warns when the final workspace folder is not empty without blocking creation', async ({
+      testSetup
+    }) => {
+      await testSetup.setupFilesystem({
+        '/ws/non-empty-containing': null,
+        '/ws/non-empty-containing\\ClientPrompts': null,
+        '/ws/non-empty-containing\\ClientPrompts/notes.txt': 'Existing file'
+      })
+      await testSetup.setupFileDialog(['/ws/non-empty-containing'])
+
+      const { mainWindow } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Client Prompts')
+      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
+
+      await expect(
+        mainWindow.locator('[data-testid="create-workspace-final-path-input"]')
+      ).toHaveValue('/ws/non-empty-containing\\ClientPrompts')
+      await expect(
+        mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
+      ).toContainText(
+        'This folder is not empty. Typically, you want to create a workspace in an empty folder.'
+      )
+      await expect(
+        mainWindow.locator('[data-testid="create-workspace-submit-button"]')
+      ).toBeEnabled()
     })
   })
 })

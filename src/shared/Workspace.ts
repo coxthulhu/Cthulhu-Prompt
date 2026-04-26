@@ -22,6 +22,12 @@ export type LoadWorkspaceByPathRequest = {
   workspacePath: string
 }
 
+export type WorkspaceFolderStatus = {
+  exists: boolean
+  isWorkspace: boolean
+  isEmpty: boolean
+}
+
 export type LoadWorkspaceByPathResult = IpcResult<{
   workspace: RevisionEnvelope<Workspace>
   promptFolders: Array<RevisionEnvelope<PromptFolder>>

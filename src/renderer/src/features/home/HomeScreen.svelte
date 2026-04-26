@@ -16,17 +16,7 @@
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import { Button } from '@renderer/common/ui/button'
-  import Checkbox from '@renderer/common/ui/checkbox/checkbox.svelte'
-  import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    ErrorDialog
-  } from '@renderer/common/ui/dialog'
+  import { ErrorDialog } from '@renderer/common/ui/dialog'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
@@ -70,13 +60,9 @@
     'Workspace Not Found.\nUse Create Workspace Folder to set up a new workspace in this location.'
 
   let isOpeningWorkspaceFolderDialog = $state(false)
-  let showSetupDialog = $state(false)
-  let showExistingWorkspaceDialog = $state(false)
   let showCreateWorkspaceDialog = $state(false)
   let showWorkspaceNotFoundDialog = $state(false)
-  let selectedFolderPath: string | null = $state(null)
   let showRootPathDialog = $state(false)
-  let includeExamplePrompts = $state(true)
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
   let secondaryTitleContainerElement: HTMLDivElement | null = $state(null)
   let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
@@ -90,18 +76,6 @@
     } finally {
       isOpeningWorkspaceFolderDialog = false
     }
-  }
-
-  const checkWorkspaceFolderExists = async (path: string): Promise<boolean> => {
-    return await ipcInvoke<boolean, string>('check-folder-exists', path)
-  }
-
-  const checkWorkspaceExists = async (path: string) => {
-    const promptsPath = `${path}/Prompts`
-    const settingsPath = `${path}/WorkspaceInfo.json`
-    const promptsExists = await checkWorkspaceFolderExists(promptsPath)
-    const settingsExists = await checkWorkspaceFolderExists(settingsPath)
-    return promptsExists && settingsExists
   }
 
   const handleSelectFolder = async () => {
@@ -136,88 +110,7 @@
   }
 
   const handleCreateFolder = async () => {
-    activeWorkspaceAction = 'create'
-    try {
-      const result = await runIpcBestEffort(openWorkspaceFolderDialog, () => ({
-        dialogCancelled: true,
-        filePaths: []
-      }))
-
-      if (!result.dialogCancelled && result.filePaths.length > 0) {
-        const selectedPath = result.filePaths[0]
-        // Block root selections before checking for workspace files.
-        if (isWorkspaceRootPath(selectedPath)) {
-          showRootPathDialog = true
-          return
-        }
-
-        if (await checkWorkspaceExists(selectedPath)) {
-          selectedFolderPath = selectedPath
-          showExistingWorkspaceDialog = true
-          return
-        }
-
-        selectedFolderPath = selectedPath
-        includeExamplePrompts = true
-        showSetupDialog = true
-      }
-    } finally {
-      if (activeWorkspaceAction === 'create') {
-        activeWorkspaceAction = null
-      }
-    }
-  }
-
-  const handleSetupWorkspace = async () => {
-    if (selectedFolderPath) {
-      activeWorkspaceAction = 'create'
-      try {
-        const creationResult = await onWorkspaceCreate(selectedFolderPath, includeExamplePrompts)
-
-        if (creationResult.success) {
-          showSetupDialog = false
-          selectedFolderPath = null
-        }
-      } finally {
-        if (activeWorkspaceAction === 'create') {
-          activeWorkspaceAction = null
-        }
-      }
-    }
-  }
-
-  const handleSelectExistingWorkspace = async () => {
-    if (selectedFolderPath) {
-      activeWorkspaceAction = 'select'
-      try {
-        const selectionResult = await onWorkspaceSelect(selectedFolderPath)
-
-        if (selectionResult.success) {
-          showExistingWorkspaceDialog = false
-          selectedFolderPath = null
-        } else if (selectionResult.reason === 'workspace-missing') {
-          // The folder no longer contains a complete workspace by the time selection runs.
-          showExistingWorkspaceDialog = false
-          selectedFolderPath = null
-          showWorkspaceNotFoundDialog = true
-        }
-      } finally {
-        if (activeWorkspaceAction === 'select') {
-          activeWorkspaceAction = null
-        }
-      }
-    }
-  }
-
-  const handleCancelSetup = () => {
-    showSetupDialog = false
-    selectedFolderPath = null
-    includeExamplePrompts = true
-  }
-
-  const handleCancelExistingWorkspace = () => {
-    showExistingWorkspaceDialog = false
-    selectedFolderPath = null
+    showCreateWorkspaceDialog = true
   }
 
   const getSelectButtonLabel = () => {
@@ -387,17 +280,6 @@
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
-              <IconDescriptionButton
-                testId="temporary-workspace-folder-button"
-                icon={FolderPlus}
-                iconClass="translate-y-px"
-                text="Temporary"
-                description="Placeholder action."
-                variant="gray"
-                onclick={() => (showCreateWorkspaceDialog = true)}
-                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              />
-
               {#if isWorkspaceReady}
                 <IconDescriptionButton
                   testId="close-workspace-button"
@@ -417,7 +299,11 @@
     </section>
   </div>
 
-  <CreateWorkspaceDialog bind:open={showCreateWorkspaceDialog} />
+  <CreateWorkspaceDialog
+    bind:open={showCreateWorkspaceDialog}
+    {isWorkspaceLoading}
+    {onWorkspaceCreate}
+  />
 
   <CthulhuErrorDialog
     bind:open={showWorkspaceNotFoundDialog}
@@ -425,60 +311,6 @@
     description="The selected folder does not contain a Cthulhu Prompt workspace."
     errorText={workspaceNotFoundErrorText}
   />
-
-  <Dialog bind:open={showSetupDialog}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Setup Workspace</DialogTitle>
-        <DialogDescription>
-          This folder doesn't have a Cthulhu Prompt workspace. Would you like to set it up? This
-          will create the necessary files and subfolders.
-        </DialogDescription>
-      </DialogHeader>
-      <div class="mt-4 flex items-center gap-2">
-        <Checkbox
-          id="include-example-prompts"
-          data-testid="include-example-prompts-checkbox"
-          bind:checked={includeExamplePrompts}
-        />
-        <label for="include-example-prompts" class="text-sm text-muted-foreground">
-          Include example prompts in a "My Prompts" folder.
-        </label>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onclick={handleCancelSetup}>Cancel</Button>
-        <Button data-testid="setup-workspace-button" onclick={handleSetupWorkspace}>
-          Setup Workspace
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-
-  <Dialog bind:open={showExistingWorkspaceDialog}>
-    <DialogContent data-testid="existing-workspace-dialog">
-      <DialogHeader>
-        <DialogTitle>Workspace already exists</DialogTitle>
-        <DialogDescription>
-          This folder already has a Cthulhu Prompt workspace. Would you like to select it?
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <Button
-          data-testid="cancel-existing-workspace-button"
-          variant="outline"
-          onclick={handleCancelExistingWorkspace}
-        >
-          Cancel
-        </Button>
-        <Button
-          data-testid="select-existing-workspace-button"
-          onclick={handleSelectExistingWorkspace}
-        >
-          Select Workspace
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   <ErrorDialog
     bind:open={showRootPathDialog}

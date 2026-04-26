@@ -6,25 +6,55 @@
   type Props = WithElementRef<
     Omit<HTMLInputAttributes, 'type' | 'value' | 'files'> & {
       value?: string
+      readonlyDisplay?: boolean
     }
   >
 
   let {
     ref = $bindable(null),
     value = $bindable(''),
+    readonlyDisplay = false,
+    readonly = false,
+    tabindex,
+    onpointerdown,
+    onfocus,
     class: className,
     ...restProps
   }: Props = $props()
+
+  const inputReadonly = $derived(readonlyDisplay || readonly)
+  const inputTabindex = $derived(readonlyDisplay ? -1 : tabindex)
+
+  const handlePointerDown = (event: PointerEvent & { currentTarget: HTMLInputElement }) => {
+    if (readonlyDisplay) {
+      event.preventDefault()
+    }
+
+    onpointerdown?.(event)
+  }
+
+  const handleFocus = (event: FocusEvent & { currentTarget: HTMLInputElement }) => {
+    if (readonlyDisplay) {
+      event.currentTarget.blur()
+    }
+
+    onfocus?.(event)
+  }
 </script>
 
 <input
   bind:this={ref}
   class={mergeClasses(
     'cthulhuUiTextInput flex h-11 min-w-0 rounded-2xl border px-4 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
+    readonlyDisplay ? 'cursor-default' : null,
     className
   )}
   type="text"
   bind:value
+  readonly={inputReadonly}
+  tabindex={inputTabindex}
+  onpointerdown={handlePointerDown}
+  onfocus={handleFocus}
   {...restProps}
 />
 

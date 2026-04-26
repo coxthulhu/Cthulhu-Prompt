@@ -56,7 +56,7 @@
 </script>
 
 <div class={mergeClasses('flex min-w-0 items-center gap-3', className)}>
-  <TextInput bind:ref bind:value class="flex-1" readonly {disabled} {...restProps} />
+  <TextInput bind:ref bind:value class="flex-1" readonlyDisplay {disabled} {...restProps} />
   <IconTextButton
     icon={FolderOpen}
     text={buttonText}

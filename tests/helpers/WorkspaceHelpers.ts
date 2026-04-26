@@ -36,12 +36,20 @@ export async function createWorkspaceViaUI(window: any): Promise<{
 }> {
   await window.click('[data-testid="create-workspace-folder-button"]')
 
-  const setupDialog = window.locator('[role="dialog"]')
+  const createDialog = window.locator('[role="dialog"][aria-label="Create Workspace"]')
   const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
-  await setupDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
-  await window.click('[data-testid="setup-workspace-button"]')
+  await createDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  await window.fill('[data-testid="create-workspace-name-input"]', 'Test Workspace')
+  await window.click('[data-testid="create-workspace-path-browse-button"]')
+  await window.waitForFunction(() => {
+    const button = document.querySelector<HTMLButtonElement>(
+      '[data-testid="create-workspace-submit-button"]'
+    )
+    return button && !button.disabled
+  })
+  await window.click('[data-testid="create-workspace-submit-button"]')
   await workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
   const workspaceReady = await isWorkspaceReady(window)
