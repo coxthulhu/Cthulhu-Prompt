@@ -2,6 +2,7 @@
   import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
@@ -137,28 +138,25 @@
 >
   <div class="space-y-2">
     <TitleBlock title="Workspace Name" variant="small" />
-    <TextInput
-      id="create-workspace-name-input"
-      class="w-full"
-      bind:value={workspaceName}
-      aria-label="Workspace Name"
-      placeholder="Enter workspace name..."
-      data-testid="create-workspace-name-input"
-      aria-invalid={displayedWorkspaceNameError ? 'true' : undefined}
-      disabled={isWorkspaceLoading}
-      oninput={() => {
-        hasInteractedWithName = true
-        submissionError = null
-      }}
-    />
-    {#if displayedWorkspaceNameError}
-      <MessageRow
-        text={displayedWorkspaceNameError}
-        variant="error"
-        textTestId="create-workspace-name-error"
+    <FloatingValidationMessage
+      message={displayedWorkspaceNameError}
+      textTestId="create-workspace-name-error"
+    >
+      <TextInput
+        id="create-workspace-name-input"
         class="w-full"
+        bind:value={workspaceName}
+        aria-label="Workspace Name"
+        placeholder="Enter workspace name..."
+        data-testid="create-workspace-name-input"
+        aria-invalid={displayedWorkspaceNameError ? 'true' : undefined}
+        disabled={isWorkspaceLoading}
+        oninput={() => {
+          hasInteractedWithName = true
+          submissionError = null
+        }}
       />
-    {/if}
+    </FloatingValidationMessage>
   </div>
 
   <div class="space-y-2">
@@ -175,23 +173,21 @@
 
   <div class="space-y-2">
     <TitleBlock title="Final Workspace Path" variant="small" />
-    <TextInput
-      id="create-workspace-final-path-input"
-      class="w-full"
-      value={finalWorkspacePath}
-      aria-label="Final Workspace Path"
-      data-testid="create-workspace-final-path-input"
-      readonlyDisplay
-      aria-invalid={hasExistingWorkspace ? 'true' : undefined}
-    />
-    {#if finalPathMessage}
-      <MessageRow
-        text={finalPathMessage}
-        variant={finalPathMessageVariant}
-        textTestId="create-workspace-final-path-message"
+    <FloatingValidationMessage
+      message={finalPathMessage}
+      variant={finalPathMessageVariant}
+      textTestId="create-workspace-final-path-message"
+    >
+      <TextInput
+        id="create-workspace-final-path-input"
         class="w-full"
+        value={finalWorkspacePath}
+        aria-label="Final Workspace Path"
+        data-testid="create-workspace-final-path-input"
+        readonlyDisplay
+        aria-invalid={hasExistingWorkspace ? 'true' : undefined}
       />
-    {/if}
+    </FloatingValidationMessage>
     {#if submissionError}
       <MessageRow
         text={submissionError}
