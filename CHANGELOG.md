@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.0.16
+
+### New Features
+
+- Added a dedicated Create Workspace dialog with workspace naming, folder selection, final path preview, optional examples, and folder status validation.
+- Added clearer workspace error dialogs with expandable details.
+
+### Changes
+
+- Split opening an existing workspace and creating a new workspace into separate home screen flows.
+- Refreshed workspace and prompt folder dialogs with shared inputs, floating validation messages, status badges, and updated button styling.
+- Refined renderer palette, sidebar text colors, hover states, and shared card/button styling.
+
+### Fixed
+
+- Fixed missing-workspace handling so opening a non-workspace folder now shows an explicit Workspace Not Found message.
+- Fixed dialog disabled and cancel states during in-progress creation actions.
+
 ## 0.0.15
 
 ### New Features
