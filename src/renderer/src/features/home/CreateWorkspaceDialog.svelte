@@ -183,6 +183,7 @@
         class="w-full"
         value={finalWorkspacePath}
         aria-label="Final Workspace Path"
+        placeholder="Select a containing folder first..."
         data-testid="create-workspace-final-path-input"
         readonlyDisplay
         aria-invalid={hasExistingWorkspace ? 'true' : undefined}
