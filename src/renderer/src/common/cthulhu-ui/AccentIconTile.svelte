@@ -27,7 +27,9 @@
 <div
   class={mergeClasses(
     'cthulhuUiAccentIconTile',
-    size === 'default' ? 'cthulhuUiAccentIconTile--default rounded-2xl' : null,
+    size === 'default'
+      ? 'cthulhuUiAccentIconTile--default rounded-[var(--cthulhu-ui-radius-control)]'
+      : null,
     size === 'large' ? 'cthulhuUiAccentIconTile--large' : null,
     className
   )}
@@ -69,7 +71,7 @@
   }
 
   .cthulhuUiAccentIconTile--large {
-    border-radius: 18px;
+    border-radius: var(--cthulhu-ui-radius-large-icon);
     height: 54px;
     width: 54px;
   }

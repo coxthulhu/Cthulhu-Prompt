@@ -33,7 +33,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
     variant === 'activatable' && state === 'active'
       ? 'cthulhuUiIconTextButton--activatableActive shadow-[inset_0_1px_0_var(--ui-neutral-normal-surface)]'
       : null,

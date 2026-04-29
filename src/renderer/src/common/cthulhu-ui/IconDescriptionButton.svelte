@@ -35,7 +35,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconDescriptionButton flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-3xl border px-4 py-[18px] text-left transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconDescriptionButton flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-action)] border px-4 py-[18px] text-left transition disabled:pointer-events-none disabled:opacity-50',
     className
   )}
   data-state={state}
@@ -62,7 +62,7 @@
 
   .cthulhuUiIconDescriptionButtonIcon {
     align-items: center;
-    border-radius: 1rem;
+    border-radius: var(--cthulhu-ui-radius-control);
     display: flex;
     flex: 0 0 auto;
     height: 2.875rem;

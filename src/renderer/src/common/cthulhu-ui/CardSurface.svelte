@@ -16,9 +16,15 @@
 <div
   class={mergeClasses(
     'cthulhuUiCardSurface border',
-    variant === 'default' ? 'cthulhuUiCardSurface--default rounded-[28px] p-4' : null,
-    variant === 'solid' ? 'cthulhuUiCardSurface--solid rounded-[28px] p-4' : null,
-    variant === 'subcard' ? 'cthulhuUiCardSurface--subcard rounded-2xl px-4 py-4' : null,
+    variant === 'default'
+      ? 'cthulhuUiCardSurface--default rounded-[var(--cthulhu-ui-radius-card)] p-4'
+      : null,
+    variant === 'solid'
+      ? 'cthulhuUiCardSurface--solid rounded-[var(--cthulhu-ui-radius-card)] p-4'
+      : null,
+    variant === 'subcard'
+      ? 'cthulhuUiCardSurface--subcard rounded-[var(--cthulhu-ui-radius-control)] px-4 py-4'
+      : null,
     className
   )}
   {...restProps}

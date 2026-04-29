@@ -12,7 +12,7 @@
 <section class="space-y-2">
   <TitleBlock {title} variant="small" />
   <!-- Preserve line breaks so technical errors remain readable. -->
-  <pre class="cthulhuUiLogDetailsText rounded-2xl px-4 py-3 text-sm leading-6">{text}</pre>
+  <pre class="cthulhuUiLogDetailsText rounded-[var(--cthulhu-ui-radius-control)] px-4 py-3 text-sm leading-6">{text}</pre>
 </section>
 
 <style>

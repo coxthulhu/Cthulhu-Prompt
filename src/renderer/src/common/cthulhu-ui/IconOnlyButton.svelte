@@ -45,7 +45,7 @@
   .cthulhuUiIconOnlyButton {
     align-items: center;
     border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 0.75rem;
+    border-radius: var(--cthulhu-ui-radius-icon-button);
     color: var(--ui-hoverable-text);
     cursor: pointer;
     display: inline-flex;
