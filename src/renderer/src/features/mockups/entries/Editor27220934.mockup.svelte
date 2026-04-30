@@ -5,11 +5,11 @@
     ChevronUp,
     Copy,
     FileText,
+    Folder,
     GripVertical,
-    MoreHorizontal,
-    Sparkles,
     Trash2
   } from 'lucide-svelte'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import HydratableMonacoEditor from '@renderer/features/prompt-editor/HydratableMonacoEditor.svelte'
 
   export const mockupMeta = {
@@ -25,6 +25,7 @@
     title: string
     folder: string
     status: string
+    updated: string
     text: string
   }
 
@@ -32,8 +33,9 @@
     {
       id: 'review-current-diff',
       title: 'Review Current Diff',
-      folder: 'Code Review',
+      folder: 'Prompts',
       status: 'Ready',
+      updated: '2 min ago',
       text: `Review the current diff for correctness, maintainability, and hidden risk.
 
 Start with the highest-impact findings. Include file paths, line references, and concrete fixes where possible.`
@@ -41,8 +43,9 @@ Start with the highest-impact findings. Include file paths, line references, and
     {
       id: 'implementation-pass',
       title: 'Implementation Pass',
-      folder: 'Planning',
+      folder: 'Prompts',
       status: 'Draft',
+      updated: '15 min ago',
       text: `Turn this request into a focused implementation pass.
 
 Preserve existing patterns, keep the change scoped, and list any assumptions that affect the result.`
@@ -50,8 +53,9 @@ Preserve existing patterns, keep the change scoped, and list any assumptions tha
     {
       id: 'test-selection',
       title: 'Test Selection',
-      folder: 'Testing',
+      folder: 'Prompts',
       status: 'Ready',
+      updated: '1 hr ago',
       text: `Choose the smallest meaningful verification set for this change.
 
 Prefer behavior-level tests and include any Playwright flow needed for user-visible regressions.`
@@ -59,8 +63,9 @@ Prefer behavior-level tests and include any Playwright flow needed for user-visi
     {
       id: 'pull-request-notes',
       title: 'Pull Request Notes',
-      folder: 'Release',
+      folder: 'Prompts',
       status: 'Pinned',
+      updated: 'Yesterday',
       text: `Write concise pull request notes.
 
 Start with user-visible behavior, then include implementation details and the exact verification commands that were run.`
@@ -122,6 +127,7 @@ Start with user-visible behavior, then include implementation details and the ex
   }
 
   const getLineCount = (text: string) => text.split('\n').length
+  const getTokenEstimate = (text: string) => Math.max(1, Math.round(text.length / 4))
 
   const measureEditorWidth = (node: HTMLElement, promptId: string) => {
     const updateWidth = () => {
@@ -161,6 +167,7 @@ Start with user-visible behavior, then include implementation details and the ex
   <div style="width: 100%; display: grid; gap: 12px;">
     {#each prompts as prompt, index (prompt.id)}
       {@const lineCount = getLineCount(prompt.text)}
+      {@const tokenEstimate = getTokenEstimate(prompt.text)}
       <section
         role="group"
         aria-label={prompt.title}
@@ -219,11 +226,7 @@ Start with user-visible behavior, then include implementation details and the ex
               <div
                 style="width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 7px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-normal-text);"
               >
-                {#if prompt.status === 'Pinned'}
-                  <Sparkles size={17} strokeWidth={2.3} />
-                {:else}
-                  <FileText size={17} strokeWidth={2.3} />
-                {/if}
+                <FileText size={17} strokeWidth={2.3} />
               </div>
 
               <div style="min-width: 0; display: grid; gap: 4px;">
@@ -236,64 +239,42 @@ Start with user-visible behavior, then include implementation details and the ex
                 />
 
                 <div
-                  style="display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 6px;"
+                  style="min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--ui-muted-text); font-size: 11px; font-weight: 750; line-height: 16px;"
                 >
                   <span
-                    style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-secondary-text); font-size: 11px; font-weight: 650; line-height: 16px;"
+                    style="max-width: 220px; min-width: 0; display: inline-flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-secondary-text);"
+                    title={prompt.folder}
                   >
+                    <Folder size={12} strokeWidth={2.4} />
                     {prompt.folder}
                   </span>
-                  <span
-                    style="width: 3px; height: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
-                  ></span>
-                  <span
-                    style="color: var(--ui-muted-text); font-size: 11px; font-weight: 650; line-height: 16px;"
-                  >
-                    {lineCount} lines
-                  </span>
-                  <span
-                    style={`height: 18px; display: inline-flex; align-items: center; border: 1px solid ${prompt.status === 'Ready' ? 'var(--ui-success-normal-border)' : prompt.status === 'Pinned' ? 'var(--ui-accent-normal-border)' : 'var(--ui-neutral-normal-border)'}; border-radius: 999px; background: ${prompt.status === 'Ready' ? 'var(--ui-success-normal-surface)' : prompt.status === 'Pinned' ? 'var(--ui-accent-normal-surface)' : 'var(--ui-neutral-normal-surface)'}; color: ${prompt.status === 'Ready' ? 'var(--ui-success-normal-text)' : prompt.status === 'Pinned' ? 'var(--ui-accent-normal-text)' : 'var(--ui-secondary-text)'}; padding: 0 8px; font-size: 11px; font-weight: 700; line-height: 16px;`}
-                  >
-                    {prompt.status}
-                  </span>
+                  <span>{lineCount} lines</span>
+                  <span>{tokenEstimate} tokens</span>
+                  <span>{prompt.updated}</span>
                 </div>
               </div>
             </div>
 
             <div style="display: flex; align-items: center; gap: 6px;">
-              <button
-                type="button"
-                data-testid="prompt-copy-button"
-                aria-label="Copy prompt"
+              <IconOnlyButton
+                icon={copiedPromptId === prompt.id ? Check : Copy}
+                label="Copy prompt"
+                title={copiedPromptId === prompt.id ? 'Copied' : 'Copy prompt'}
+                appearance="bordered"
+                tone="accent"
+                testId="prompt-copy-button"
                 onclick={() => copyPrompt(prompt)}
-                style={`height: 30px; min-width: ${copiedPromptId === prompt.id ? '82px' : '34px'}; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--ui-accent-normal-border); border-radius: 6px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-normal-text); padding: 0 9px; font-size: 12px; font-weight: 700; cursor: pointer;`}
-              >
-                {#if copiedPromptId === prompt.id}
-                  <Check size={15} strokeWidth={2.4} />
-                  <span>Copied</span>
-                {:else}
-                  <Copy size={15} strokeWidth={2.3} />
-                {/if}
-              </button>
+              />
 
-              <button
-                type="button"
-                aria-label="More actions"
-                style="height: 30px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: var(--ui-neutral-muted-surface); color: var(--ui-secondary-text); cursor: pointer;"
-              >
-                <MoreHorizontal size={16} strokeWidth={2.3} />
-              </button>
-
-              <button
-                type="button"
-                aria-label="Delete prompt"
+              <IconOnlyButton
+                icon={Trash2}
+                label="Delete prompt"
+                appearance="bordered"
+                tone="danger"
                 onclick={() => {
                   prompts = prompts.filter((item) => item.id !== prompt.id)
                 }}
-                style="height: 30px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-danger-normal-border); border-radius: 6px; background: var(--ui-danger-normal-surface); color: var(--ui-danger-icon-glyph); cursor: pointer;"
-              >
-                <Trash2 size={15} strokeWidth={2.2} />
-              </button>
+              />
             </div>
           </div>
 

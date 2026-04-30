@@ -1,13 +1,16 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
+  import type { CthulhuTone } from './types'
 
   type IconOnlyButtonAppearance = 'solid' | 'bordered' | 'transparent'
+  type IconOnlyButtonTone = Extract<CthulhuTone, 'neutral' | 'accent' | 'danger'>
 
   type Props = {
     icon: ComponentType
     label: string
     appearance?: IconOnlyButtonAppearance
+    tone?: IconOnlyButtonTone
     disabled?: boolean
     class?: string
     iconClass?: string
@@ -20,6 +23,7 @@
     icon: Icon,
     label,
     appearance = 'solid',
+    tone = 'neutral',
     disabled = false,
     class: className,
     iconClass,
@@ -35,10 +39,18 @@
         ? 'cthulhuUiIconOnlyButton--bordered'
         : 'cthulhuUiIconOnlyButton--transparent'
   )
+
+  const toneClass = $derived(
+    tone === 'accent'
+      ? 'cthulhuUiIconOnlyButton--accent'
+      : tone === 'danger'
+        ? 'cthulhuUiIconOnlyButton--danger'
+        : null
+  )
 </script>
 
 <button
-  class={mergeClasses('cthulhuUiIconOnlyButton', appearanceClass, className)}
+  class={mergeClasses('cthulhuUiIconOnlyButton', appearanceClass, toneClass, className)}
   type="button"
   aria-label={label}
   data-testid={testId}
@@ -86,6 +98,18 @@
     box-shadow: none;
   }
 
+  .cthulhuUiIconOnlyButton--accent {
+    border-color: var(--ui-accent-normal-border);
+    background-color: var(--ui-accent-normal-surface);
+    color: var(--ui-accent-normal-text);
+  }
+
+  .cthulhuUiIconOnlyButton--danger {
+    border-color: var(--ui-danger-normal-border);
+    background-color: var(--ui-danger-normal-surface);
+    color: var(--ui-danger-icon-glyph);
+  }
+
   .cthulhuUiIconOnlyButton:hover {
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
@@ -98,6 +122,18 @@
 
   .cthulhuUiIconOnlyButton--transparent:hover {
     border-color: transparent;
+  }
+
+  .cthulhuUiIconOnlyButton--accent:hover {
+    border-color: var(--ui-accent-hover-border);
+    background-color: var(--ui-accent-hover-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconOnlyButton--danger:hover {
+    border-color: var(--ui-danger-hover-border);
+    background-color: var(--ui-danger-hover-surface);
+    color: var(--ui-danger-icon-glyph);
   }
 
   .cthulhuUiIconOnlyButton:disabled {
