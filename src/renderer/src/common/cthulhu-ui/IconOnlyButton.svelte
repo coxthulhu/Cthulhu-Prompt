@@ -4,7 +4,7 @@
   import type { CthulhuTone } from './types'
 
   type IconOnlyButtonAppearance = 'solid' | 'outline' | 'muted-border' | 'transparent'
-  type IconOnlyButtonSize = 'default' | 'rail'
+  type IconOnlyButtonSize = 'default' | 'rail' | 'rail-fill'
   type IconOnlyButtonTone = Extract<CthulhuTone, 'neutral' | 'accent' | 'danger'>
 
   type Props = {
@@ -18,7 +18,10 @@
     iconClass?: string
     testId?: string
     title?: string
+    draggable?: boolean
     onclick?: (event: MouseEvent) => void
+    ondragstart?: (event: DragEvent) => void
+    ondragend?: (event: DragEvent) => void
   }
 
   let {
@@ -32,7 +35,10 @@
     iconClass,
     testId,
     title,
-    onclick
+    draggable,
+    onclick,
+    ondragstart,
+    ondragend
   }: Props = $props()
 
   const appearanceClass = $derived(
@@ -53,7 +59,13 @@
         : null
   )
 
-  const sizeClass = $derived(size === 'rail' ? 'cthulhuUiIconOnlyButton--rail' : null)
+  const sizeClass = $derived(
+    size === 'rail'
+      ? 'cthulhuUiIconOnlyButton--rail'
+      : size === 'rail-fill'
+        ? 'cthulhuUiIconOnlyButton--railFill'
+        : null
+  )
 </script>
 
 <button
@@ -62,8 +74,11 @@
   aria-label={label}
   data-testid={testId}
   {title}
+  {draggable}
   {disabled}
   {onclick}
+  {ondragstart}
+  {ondragend}
 >
   <Icon class={mergeClasses('h-4 w-4', iconClass)} />
 </button>
@@ -96,6 +111,20 @@
   .cthulhuUiIconOnlyButton--rail {
     height: 2rem;
     width: 2.25rem;
+  }
+
+  .cthulhuUiIconOnlyButton--railFill {
+    height: 100%;
+    min-height: 0;
+    width: 2.25rem;
+  }
+
+  .cthulhuUiIconOnlyButton[draggable='true'] {
+    cursor: grab;
+  }
+
+  .cthulhuUiIconOnlyButton[draggable='true']:active {
+    cursor: grabbing;
   }
 
   .cthulhuUiIconOnlyButton--outline {

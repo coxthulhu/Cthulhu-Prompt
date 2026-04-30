@@ -186,21 +186,20 @@ Start with user-visible behavior, then include implementation details and the ex
             disabled={index === 0}
           />
 
-          <button
-            type="button"
-            draggable="true"
-            aria-label="Drag prompt"
-            data-testid="prompt-drag-handle"
+          <IconOnlyButton
+            icon={GripVertical}
+            label="Drag prompt"
+            appearance="muted-border"
+            size="rail-fill"
+            draggable={true}
+            testId="prompt-drag-handle"
             ondragstart={() => {
               draggedPromptId = prompt.id
             }}
             ondragend={() => {
               draggedPromptId = null
             }}
-            style="width: 34px; height: 100%; min-height: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: var(--ui-neutral-muted-surface); color: var(--ui-muted-text); cursor: grab; box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
-          >
-            <GripVertical size={17} strokeWidth={2.4} />
-          </button>
+          />
 
           <IconOnlyButton
             icon={ChevronDown}
