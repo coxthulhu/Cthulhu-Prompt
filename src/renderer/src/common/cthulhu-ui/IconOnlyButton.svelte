@@ -2,7 +2,7 @@
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
 
-  type IconOnlyButtonVariant = 'default' | 'borderless'
+  type IconOnlyButtonVariant = 'default' | 'backgroundless' | 'borderless'
 
   type Props = {
     icon: ComponentType
@@ -54,19 +54,28 @@
     justify-content: center;
     transition:
       background-color 120ms ease,
+      box-shadow 120ms ease,
       border-color 120ms ease,
       color 120ms ease;
     width: 2.25rem;
   }
 
   .cthulhuUiIconOnlyButton--default {
+    background-color: var(--ui-neutral-normal-surface);
     border-color: var(--ui-neutral-normal-border);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
+  }
+
+  .cthulhuUiIconOnlyButton--backgroundless {
+    border-color: var(--ui-neutral-normal-border);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
   .cthulhuUiIconOnlyButton--borderless {
     /* Keep the transparent border in the box model so variants do not shift layout. */
     border-color: transparent;
     background-color: transparent;
+    box-shadow: none;
   }
 
   .cthulhuUiIconOnlyButton:hover {
@@ -74,7 +83,8 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconOnlyButton--default:hover {
+  .cthulhuUiIconOnlyButton--default:hover,
+  .cthulhuUiIconOnlyButton--backgroundless:hover {
     border-color: var(--ui-neutral-hover-border);
   }
 

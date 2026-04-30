@@ -103,7 +103,13 @@
         </div>
 
         {#if showCloseButton}
-          <IconOnlyButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
+          <IconOnlyButton
+            icon={X}
+            label="Close"
+            variant="backgroundless"
+            disabled={cancelDisabled}
+            onclick={closeDialog}
+          />
         {/if}
       </div>
 
