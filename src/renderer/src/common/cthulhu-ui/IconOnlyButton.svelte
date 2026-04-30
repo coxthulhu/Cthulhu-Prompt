@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuAppearance } from './types'
 
-  type IconOnlyButtonAppearance = Extract<CthulhuAppearance, 'solid' | 'outline' | 'ghost'>
+  type IconOnlyButtonAppearance = 'solid' | 'bordered' | 'transparent'
 
   type Props = {
     icon: ComponentType
@@ -32,9 +31,9 @@
   const appearanceClass = $derived(
     appearance === 'solid'
       ? 'cthulhuUiIconOnlyButton--solid'
-      : appearance === 'outline'
-        ? 'cthulhuUiIconOnlyButton--outline'
-        : 'cthulhuUiIconOnlyButton--ghost'
+      : appearance === 'bordered'
+        ? 'cthulhuUiIconOnlyButton--bordered'
+        : 'cthulhuUiIconOnlyButton--transparent'
   )
 </script>
 
@@ -75,12 +74,12 @@
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
-  .cthulhuUiIconOnlyButton--outline {
+  .cthulhuUiIconOnlyButton--bordered {
     border-color: var(--ui-neutral-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
-  .cthulhuUiIconOnlyButton--ghost {
+  .cthulhuUiIconOnlyButton--transparent {
     /* Keep the transparent border in the box model so appearances do not shift layout. */
     border-color: transparent;
     background-color: transparent;
@@ -93,11 +92,11 @@
   }
 
   .cthulhuUiIconOnlyButton--solid:hover,
-  .cthulhuUiIconOnlyButton--outline:hover {
+  .cthulhuUiIconOnlyButton--bordered:hover {
     border-color: var(--ui-neutral-hover-border);
   }
 
-  .cthulhuUiIconOnlyButton--ghost:hover {
+  .cthulhuUiIconOnlyButton--transparent:hover {
     border-color: transparent;
   }
 

@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuAppearance, CthulhuTone } from './types'
+  import type { CthulhuTone } from './types'
 
   type ButtonState = 'active' | 'enabled' | 'disabled'
   type ButtonTone = Extract<CthulhuTone, 'neutral' | 'accent'>
-  type ButtonAppearance = Extract<CthulhuAppearance, 'solid' | 'soft'>
+  type ButtonAppearance = 'solid' | 'nav'
 
   type Props = {
     icon: ComponentType
@@ -38,11 +38,10 @@
   type="button"
   class={mergeClasses(
     'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
-    appearance === 'soft' && state === 'active' ? 'cthulhuUiIconTextButton--softActive' : null,
-    appearance === 'soft' && state === 'enabled' ? 'cthulhuUiIconTextButton--softEnabled' : null,
+    appearance === 'nav' && state === 'active' ? 'cthulhuUiIconTextButton--navActive' : null,
+    appearance === 'nav' && state === 'enabled' ? 'cthulhuUiIconTextButton--navEnabled' : null,
     appearance === 'solid' && tone === 'accent' ? 'cthulhuUiIconTextButton--accent' : null,
-    (appearance === 'solid' && tone === 'neutral') ||
-      (appearance === 'soft' && state === 'disabled')
+    (appearance === 'solid' && tone === 'neutral') || (appearance === 'nav' && state === 'disabled')
       ? 'cthulhuUiIconTextButton--neutralSolid'
       : null,
     className
@@ -57,22 +56,22 @@
 </button>
 
 <style>
-  /* Soft buttons show selected/unselected states, such as sidebar navigation. */
-  .cthulhuUiIconTextButton--softActive {
+  /* Nav buttons show selected/unselected states, such as sidebar navigation. */
+  .cthulhuUiIconTextButton--navActive {
     border-color: var(--ui-neutral-emphasis-border);
     background-color: var(--ui-neutral-emphasis-surface);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight-active);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconTextButton--softEnabled {
+  .cthulhuUiIconTextButton--navEnabled {
     border-color: var(--ui-neutral-muted-border);
     background-color: var(--ui-neutral-muted-surface);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-hoverable-text);
   }
 
-  .cthulhuUiIconTextButton--softEnabled:hover {
+  .cthulhuUiIconTextButton--navEnabled:hover {
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-normal-text);

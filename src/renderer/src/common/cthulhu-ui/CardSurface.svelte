@@ -2,23 +2,22 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuAppearance } from './types'
 
-  export type CardSurfaceAppearance = Extract<CthulhuAppearance, 'soft' | 'solid' | 'inset'>
+  export type CardSurfaceAppearance = 'panel' | 'solid' | 'inset'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     children: Snippet
     appearance?: CardSurfaceAppearance
   }
 
-  let { class: className, children, appearance = 'soft', ...restProps }: Props = $props()
+  let { class: className, children, appearance = 'panel', ...restProps }: Props = $props()
 </script>
 
 <div
   class={mergeClasses(
     'cthulhuUiCardSurface border',
-    appearance === 'soft'
-      ? 'cthulhuUiCardSurface--soft rounded-[var(--cthulhu-ui-radius-card)] p-4'
+    appearance === 'panel'
+      ? 'cthulhuUiCardSurface--panel rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
     appearance === 'solid'
       ? 'cthulhuUiCardSurface--solid rounded-[var(--cthulhu-ui-radius-card)] p-4'
@@ -39,13 +38,13 @@
     background-repeat: no-repeat;
   }
 
-  .cthulhuUiCardSurface--soft,
+  .cthulhuUiCardSurface--panel,
   .cthulhuUiCardSurface--solid {
     border-color: var(--ui-card-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-card);
   }
 
-  .cthulhuUiCardSurface--soft {
+  .cthulhuUiCardSurface--panel {
     background-image: linear-gradient(
       to bottom,
       var(--ui-card-normal-surface-gradient-start),

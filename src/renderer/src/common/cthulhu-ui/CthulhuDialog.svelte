@@ -110,7 +110,7 @@
           <IconOnlyButton
             icon={X}
             label="Close"
-            appearance="outline"
+            appearance="bordered"
             disabled={cancelDisabled}
             onclick={closeDialog}
           />
