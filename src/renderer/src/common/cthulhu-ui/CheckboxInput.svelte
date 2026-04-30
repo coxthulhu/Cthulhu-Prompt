@@ -53,8 +53,8 @@
   .cthulhuUiCheckboxInput {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-field-surface);
+    box-shadow: var(--cthulhu-ui-shadow-field);
     color: var(--ui-normal-text);
-    box-shadow: inset 0 1px 2px var(--ui-shadow-inset);
   }
 
   .cthulhuUiCheckboxInput:hover {
@@ -94,6 +94,6 @@
 
   .cthulhuUiCheckboxInputNative:focus-visible + .cthulhuUiCheckboxInputControl {
     border-color: var(--ui-neutral-focus-border);
-    box-shadow: 0 0 0 3px var(--ui-accent-icon-ring);
+    box-shadow: var(--cthulhu-ui-shadow-focus-accent);
   }
 </style>

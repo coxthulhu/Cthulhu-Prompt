@@ -35,14 +35,14 @@
   class={mergeClasses(
     'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
     variant === 'activatable' && state === 'active'
-      ? 'cthulhuUiIconTextButton--activatableActive shadow-[inset_0_1px_0_var(--ui-neutral-normal-surface)]'
+      ? 'cthulhuUiIconTextButton--activatableActive'
       : null,
     variant === 'activatable' && state === 'enabled'
       ? 'cthulhuUiIconTextButton--activatableEnabled'
       : null,
     variant === 'accent' ? 'cthulhuUiIconTextButton--accent' : null,
     variant === 'default' || (variant === 'activatable' && state === 'disabled')
-      ? 'cthulhuUiIconTextButton--defaultSurface shadow-[inset_0_1px_0_var(--ui-neutral-muted-surface)]'
+      ? 'cthulhuUiIconTextButton--defaultSurface'
       : null,
     className
   )}
@@ -60,12 +60,14 @@
   .cthulhuUiIconTextButton--activatableActive {
     border-color: var(--ui-neutral-emphasis-border);
     background-color: var(--ui-neutral-emphasis-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight-active);
     color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconTextButton--activatableEnabled {
     border-color: var(--ui-neutral-muted-border);
     background-color: var(--ui-neutral-muted-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-hoverable-text);
   }
 
@@ -78,8 +80,8 @@
   .cthulhuUiIconTextButton--accent {
     border-color: var(--ui-accent-normal-border);
     background-color: var(--ui-accent-normal-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-accent-normal-text);
-    box-shadow: inset 0 1px 0 var(--ui-neutral-muted-surface);
   }
 
   .cthulhuUiIconTextButton--accent:hover {
@@ -91,6 +93,7 @@
   .cthulhuUiIconTextButton--defaultSurface {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-normal-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-hoverable-text);
   }
 

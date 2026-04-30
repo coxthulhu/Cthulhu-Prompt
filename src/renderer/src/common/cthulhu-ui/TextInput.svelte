@@ -62,8 +62,8 @@
   .cthulhuUiTextInput {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-field-surface);
+    box-shadow: var(--cthulhu-ui-shadow-field);
     color: var(--ui-normal-text);
-    box-shadow: inset 0 1px 2px var(--ui-shadow-inset);
   }
 
   .cthulhuUiTextInput::placeholder {
@@ -78,8 +78,8 @@
   .cthulhuUiTextInput:focus-visible {
     border-color: var(--ui-neutral-focus-border);
     box-shadow:
-      0 0 0 3px var(--ui-neutral-emphasis-surface),
-      inset 0 1px 2px var(--ui-shadow-inset);
+      var(--cthulhu-ui-shadow-focus),
+      var(--cthulhu-ui-shadow-field);
   }
 
   .cthulhuUiTextInput[aria-invalid='true'] {
@@ -88,7 +88,7 @@
 
   .cthulhuUiTextInput[aria-invalid='true']:focus-visible {
     box-shadow:
-      0 0 0 3px var(--ui-danger-normal-ring),
-      inset 0 1px 2px var(--ui-shadow-inset);
+      var(--cthulhu-ui-shadow-focus-danger),
+      var(--cthulhu-ui-shadow-field);
   }
 </style>

@@ -57,7 +57,7 @@
 
 <style>
   .cthulhuUiIconDescriptionButton {
-    box-shadow: inset 0 1px 0 var(--ui-neutral-muted-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
   .cthulhuUiIconDescriptionButtonIcon {
@@ -99,7 +99,7 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='gray'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-neutral-emphasis-surface);
-    box-shadow: 0 0 0 1px var(--ui-neutral-emphasis-border);
+    box-shadow: var(--cthulhu-ui-shadow-icon-neutral);
     color: var(--ui-secondary-text);
   }
 
@@ -116,14 +116,14 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='purple'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-accent-icon-surface);
-    box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
+    box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-accent-icon-glyph);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='red'] {
     background-color: var(--ui-danger-normal-surface);
     border-color: var(--ui-danger-normal-border);
-    box-shadow: inset 0 1px 0 var(--ui-neutral-muted-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='red']:hover {
@@ -133,7 +133,7 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='red'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-danger-icon-surface);
-    box-shadow: 0 0 0 1px var(--ui-danger-icon-ring);
+    box-shadow: var(--cthulhu-ui-shadow-icon-danger);
     color: var(--ui-danger-icon-glyph);
   }
 

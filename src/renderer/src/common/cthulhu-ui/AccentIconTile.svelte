@@ -55,13 +55,13 @@
 
   .cthulhuUiAccentIconTile[data-variant='accent'] {
     background-color: var(--ui-accent-icon-surface);
-    box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
+    box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-accent-icon-glyph);
   }
 
   .cthulhuUiAccentIconTile[data-variant='danger'] {
     background-color: var(--ui-danger-icon-surface);
-    box-shadow: 0 0 0 1px var(--ui-danger-icon-ring);
+    box-shadow: var(--cthulhu-ui-shadow-icon-danger);
     color: var(--ui-danger-icon-glyph);
   }
 

@@ -41,7 +41,7 @@
   .cthulhuUiCardSurface--default,
   .cthulhuUiCardSurface--solid {
     border-color: var(--ui-card-normal-border);
-    box-shadow: 0 14px 36px var(--ui-card-normal-shadow);
+    box-shadow: var(--cthulhu-ui-shadow-card);
   }
 
   .cthulhuUiCardSurface--default {
@@ -63,6 +63,6 @@
   .cthulhuUiCardSurface--subcard {
     border-color: var(--ui-card-nested-border);
     background-color: var(--ui-card-nested-surface);
-    box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);
+    box-shadow: var(--cthulhu-ui-shadow-subcard);
   }
 </style>
