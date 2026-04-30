@@ -3,13 +3,15 @@
   import { mergeClasses } from './mergeClasses'
   import type { CthulhuTone } from './types'
 
-  type IconOnlyButtonAppearance = 'solid' | 'bordered' | 'transparent'
+  type IconOnlyButtonAppearance = 'solid' | 'outline' | 'muted-border' | 'transparent'
+  type IconOnlyButtonSize = 'default' | 'rail'
   type IconOnlyButtonTone = Extract<CthulhuTone, 'neutral' | 'accent' | 'danger'>
 
   type Props = {
     icon: ComponentType
     label: string
     appearance?: IconOnlyButtonAppearance
+    size?: IconOnlyButtonSize
     tone?: IconOnlyButtonTone
     disabled?: boolean
     class?: string
@@ -23,6 +25,7 @@
     icon: Icon,
     label,
     appearance = 'solid',
+    size = 'default',
     tone = 'neutral',
     disabled = false,
     class: className,
@@ -35,9 +38,11 @@
   const appearanceClass = $derived(
     appearance === 'solid'
       ? 'cthulhuUiIconOnlyButton--solid'
-      : appearance === 'bordered'
-        ? 'cthulhuUiIconOnlyButton--bordered'
-        : 'cthulhuUiIconOnlyButton--transparent'
+      : appearance === 'outline'
+        ? 'cthulhuUiIconOnlyButton--outline'
+        : appearance === 'muted-border'
+          ? 'cthulhuUiIconOnlyButton--mutedBorder'
+          : 'cthulhuUiIconOnlyButton--transparent'
   )
 
   const toneClass = $derived(
@@ -47,10 +52,12 @@
         ? 'cthulhuUiIconOnlyButton--danger'
         : null
   )
+
+  const sizeClass = $derived(size === 'rail' ? 'cthulhuUiIconOnlyButton--rail' : null)
 </script>
 
 <button
-  class={mergeClasses('cthulhuUiIconOnlyButton', appearanceClass, toneClass, className)}
+  class={mergeClasses('cthulhuUiIconOnlyButton', appearanceClass, toneClass, sizeClass, className)}
   type="button"
   aria-label={label}
   data-testid={testId}
@@ -86,9 +93,21 @@
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
-  .cthulhuUiIconOnlyButton--bordered {
+  .cthulhuUiIconOnlyButton--rail {
+    height: 2rem;
+    width: 2.25rem;
+  }
+
+  .cthulhuUiIconOnlyButton--outline {
     border-color: var(--ui-neutral-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
+  }
+
+  .cthulhuUiIconOnlyButton--mutedBorder {
+    background-color: var(--ui-neutral-normal-surface);
+    border-color: var(--ui-neutral-muted-border);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
+    color: var(--ui-secondary-text);
   }
 
   .cthulhuUiIconOnlyButton--transparent {
@@ -116,7 +135,8 @@
   }
 
   .cthulhuUiIconOnlyButton--solid:hover,
-  .cthulhuUiIconOnlyButton--bordered:hover {
+  .cthulhuUiIconOnlyButton--outline:hover,
+  .cthulhuUiIconOnlyButton--mutedBorder:hover {
     border-color: var(--ui-neutral-hover-border);
   }
 

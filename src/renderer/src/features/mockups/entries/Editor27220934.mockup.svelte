@@ -176,16 +176,15 @@ Start with user-visible behavior, then include implementation details and the ex
         ondrop={() => dropPrompt(prompt.id)}
         style={`display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; border: 1px solid ${draggedPromptId === prompt.id ? 'var(--ui-accent-hover-border)' : 'var(--ui-card-normal-border)'}; border-radius: 8px; background: linear-gradient(180deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end)); box-shadow: 0 16px 34px var(--ui-card-normal-shadow); padding: 10px; backdrop-filter: blur(18px);`}
       >
-        <div style="display: grid; grid-template-rows: 30px 1fr 30px; gap: 6px; min-height: 132px;">
-          <button
-            type="button"
-            aria-label="Move prompt up"
+        <div style="display: grid; grid-template-rows: 32px 1fr 32px; gap: 6px; min-height: 136px;">
+          <IconOnlyButton
+            icon={ChevronUp}
+            label="Move prompt up"
+            appearance="muted-border"
+            size="rail"
             onclick={() => movePrompt(prompt.id, -1)}
             disabled={index === 0}
-            style={`width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: ${index === 0 ? 'var(--ui-neutral-muted-surface)' : 'var(--ui-neutral-normal-surface)'}; color: ${index === 0 ? 'var(--ui-muted-text)' : 'var(--ui-secondary-text)'}; opacity: ${index === 0 ? '0.45' : '1'}; cursor: ${index === 0 ? 'default' : 'pointer'};`}
-          >
-            <ChevronUp size={16} strokeWidth={2.4} />
-          </button>
+          />
 
           <button
             type="button"
@@ -203,15 +202,14 @@ Start with user-visible behavior, then include implementation details and the ex
             <GripVertical size={17} strokeWidth={2.4} />
           </button>
 
-          <button
-            type="button"
-            aria-label="Move prompt down"
+          <IconOnlyButton
+            icon={ChevronDown}
+            label="Move prompt down"
+            appearance="muted-border"
+            size="rail"
             onclick={() => movePrompt(prompt.id, 1)}
             disabled={index === prompts.length - 1}
-            style={`width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: ${index === prompts.length - 1 ? 'var(--ui-neutral-muted-surface)' : 'var(--ui-neutral-normal-surface)'}; color: ${index === prompts.length - 1 ? 'var(--ui-muted-text)' : 'var(--ui-secondary-text)'}; opacity: ${index === prompts.length - 1 ? '0.45' : '1'}; cursor: ${index === prompts.length - 1 ? 'default' : 'pointer'};`}
-          >
-            <ChevronDown size={16} strokeWidth={2.4} />
-          </button>
+          />
         </div>
 
         <div
@@ -260,7 +258,6 @@ Start with user-visible behavior, then include implementation details and the ex
                 icon={copiedPromptId === prompt.id ? Check : Copy}
                 label="Copy prompt"
                 title={copiedPromptId === prompt.id ? 'Copied' : 'Copy prompt'}
-                appearance="bordered"
                 tone="accent"
                 testId="prompt-copy-button"
                 onclick={() => copyPrompt(prompt)}
@@ -269,7 +266,6 @@ Start with user-visible behavior, then include implementation details and the ex
               <IconOnlyButton
                 icon={Trash2}
                 label="Delete prompt"
-                appearance="bordered"
                 tone="danger"
                 onclick={() => {
                   prompts = prompts.filter((item) => item.id !== prompt.id)
