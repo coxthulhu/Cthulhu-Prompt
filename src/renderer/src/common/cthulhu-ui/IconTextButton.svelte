@@ -1,15 +1,18 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
+  import type { CthulhuAppearance, CthulhuTone } from './types'
 
   type ButtonState = 'active' | 'enabled' | 'disabled'
-  type ButtonVariant = 'default' | 'accent' | 'activatable'
+  type ButtonTone = Extract<CthulhuTone, 'neutral' | 'accent'>
+  type ButtonAppearance = Extract<CthulhuAppearance, 'solid' | 'soft'>
 
   type Props = {
     icon: ComponentType
     text: string
     state?: ButtonState
-    variant?: ButtonVariant
+    tone?: ButtonTone
+    appearance?: ButtonAppearance
     class?: string
     iconClass?: string
     testId?: string
@@ -20,7 +23,8 @@
     icon: Icon,
     text,
     state = 'enabled',
-    variant = 'default',
+    tone = 'neutral',
+    appearance = 'solid',
     class: className,
     iconClass,
     testId,
@@ -34,15 +38,12 @@
   type="button"
   class={mergeClasses(
     'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
-    variant === 'activatable' && state === 'active'
-      ? 'cthulhuUiIconTextButton--activatableActive'
-      : null,
-    variant === 'activatable' && state === 'enabled'
-      ? 'cthulhuUiIconTextButton--activatableEnabled'
-      : null,
-    variant === 'accent' ? 'cthulhuUiIconTextButton--accent' : null,
-    variant === 'default' || (variant === 'activatable' && state === 'disabled')
-      ? 'cthulhuUiIconTextButton--defaultSurface'
+    appearance === 'soft' && state === 'active' ? 'cthulhuUiIconTextButton--softActive' : null,
+    appearance === 'soft' && state === 'enabled' ? 'cthulhuUiIconTextButton--softEnabled' : null,
+    appearance === 'solid' && tone === 'accent' ? 'cthulhuUiIconTextButton--accent' : null,
+    (appearance === 'solid' && tone === 'neutral') ||
+      (appearance === 'soft' && state === 'disabled')
+      ? 'cthulhuUiIconTextButton--neutralSolid'
       : null,
     className
   )}
@@ -56,22 +57,22 @@
 </button>
 
 <style>
-  /* Activatable buttons show selected/unselected states, such as sidebar navigation. */
-  .cthulhuUiIconTextButton--activatableActive {
+  /* Soft buttons show selected/unselected states, such as sidebar navigation. */
+  .cthulhuUiIconTextButton--softActive {
     border-color: var(--ui-neutral-emphasis-border);
     background-color: var(--ui-neutral-emphasis-surface);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight-active);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconTextButton--activatableEnabled {
+  .cthulhuUiIconTextButton--softEnabled {
     border-color: var(--ui-neutral-muted-border);
     background-color: var(--ui-neutral-muted-surface);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-hoverable-text);
   }
 
-  .cthulhuUiIconTextButton--activatableEnabled:hover {
+  .cthulhuUiIconTextButton--softEnabled:hover {
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-normal-text);
@@ -90,14 +91,14 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconTextButton--defaultSurface {
+  .cthulhuUiIconTextButton--neutralSolid {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-normal-surface);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-hoverable-text);
   }
 
-  .cthulhuUiIconTextButton--defaultSurface:hover {
+  .cthulhuUiIconTextButton--neutralSolid:hover {
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);

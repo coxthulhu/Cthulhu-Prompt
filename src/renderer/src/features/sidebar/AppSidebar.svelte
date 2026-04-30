@@ -180,7 +180,7 @@
               testId={item.testId}
               icon={Icon}
               text={item.label}
-              variant="activatable"
+              appearance="soft"
               class="h-9 w-full justify-center px-3"
               state={getNavButtonState(item)}
               onclick={() => onNavigate(item.id)}
@@ -198,7 +198,7 @@
                 testId={item.testId}
                 icon={Icon}
                 text={item.label}
-                variant="activatable"
+                appearance="soft"
                 class="h-9 w-full justify-center px-3"
                 state={getNavButtonState(item)}
                 onclick={() => onNavigate(item.id)}

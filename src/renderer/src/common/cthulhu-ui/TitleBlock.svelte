@@ -1,33 +1,34 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import AccentIconTile from './AccentIconTile.svelte'
+  import type { CthulhuSize, CthulhuTone } from './types'
 
-  type TitleBlockVariant = 'large' | 'small'
-  type TitleBlockIconVariant = 'accent' | 'danger'
+  type TitleBlockSize = Extract<CthulhuSize, 'small' | 'large'>
+  type TitleBlockIconTone = Extract<CthulhuTone, 'accent' | 'danger'>
 
   type Props = {
     title: string
-    variant: TitleBlockVariant
+    size: TitleBlockSize
     description?: string
     icon?: ComponentType
-    iconVariant?: TitleBlockIconVariant
+    iconTone?: TitleBlockIconTone
   }
 
-  let { title, variant, description, icon: Icon, iconVariant = 'accent' }: Props = $props()
+  let { title, size, description, icon: Icon, iconTone = 'accent' }: Props = $props()
 
-  const titleTag = $derived(variant === 'large' ? 'h2' : 'h3')
+  const titleTag = $derived(size === 'large' ? 'h2' : 'h3')
 </script>
 
 <div class:cthulhuUiTitleBlockWithIcon={Icon}>
   {#if Icon}
-    <AccentIconTile icon={Icon} size="large" variant={iconVariant} />
+    <AccentIconTile icon={Icon} size="large" tone={iconTone} />
   {/if}
 
   <div class="cthulhuUiTitleBlockText">
     <svelte:element
       this={titleTag}
-      class:cthulhuUiTitleBlockTitleLarge={variant === 'large'}
-      class:cthulhuUiTitleBlockTitleSmall={variant === 'small'}
+      class:cthulhuUiTitleBlockTitleLarge={size === 'large'}
+      class:cthulhuUiTitleBlockTitleSmall={size === 'small'}
     >
       {title}
     </svelte:element>

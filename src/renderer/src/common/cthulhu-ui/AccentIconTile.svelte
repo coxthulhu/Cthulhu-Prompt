@@ -2,22 +2,23 @@
   import type { ComponentType } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
+  import type { CthulhuSize, CthulhuTone } from './types'
 
-  type AccentIconTileSize = 'default' | 'large'
-  type AccentIconTileVariant = 'accent' | 'danger'
+  type AccentIconTileSize = Extract<CthulhuSize, 'medium' | 'large'>
+  type AccentIconTileTone = Extract<CthulhuTone, 'accent' | 'danger'>
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
     iconClass?: string
     size?: AccentIconTileSize
-    variant?: AccentIconTileVariant
+    tone?: AccentIconTileTone
   }
 
   let {
     icon: Icon,
     iconClass,
-    size = 'default',
-    variant = 'accent',
+    size = 'medium',
+    tone = 'accent',
     class: className,
     ...restProps
   }: Props = $props()
@@ -27,18 +28,18 @@
 <div
   class={mergeClasses(
     'cthulhuUiAccentIconTile',
-    size === 'default'
-      ? 'cthulhuUiAccentIconTile--default rounded-[var(--cthulhu-ui-radius-control)]'
+    size === 'medium'
+      ? 'cthulhuUiAccentIconTile--medium rounded-[var(--cthulhu-ui-radius-control)]'
       : null,
     size === 'large' ? 'cthulhuUiAccentIconTile--large' : null,
     className
   )}
-  data-variant={variant}
+  data-tone={tone}
   {...restProps}
 >
   <Icon
     class={mergeClasses(
-      size === 'default' ? 'h-[18px] w-[18px]' : null,
+      size === 'medium' ? 'h-[18px] w-[18px]' : null,
       size === 'large' ? 'h-6 w-6' : null,
       iconClass
     )}
@@ -53,19 +54,19 @@
     justify-content: center;
   }
 
-  .cthulhuUiAccentIconTile[data-variant='accent'] {
+  .cthulhuUiAccentIconTile[data-tone='accent'] {
     background-color: var(--ui-accent-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-accent-icon-glyph);
   }
 
-  .cthulhuUiAccentIconTile[data-variant='danger'] {
+  .cthulhuUiAccentIconTile[data-tone='danger'] {
     background-color: var(--ui-danger-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-danger);
     color: var(--ui-danger-icon-glyph);
   }
 
-  .cthulhuUiAccentIconTile--default {
+  .cthulhuUiAccentIconTile--medium {
     height: 3rem;
     width: 3rem;
   }

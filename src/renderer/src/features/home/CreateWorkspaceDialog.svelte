@@ -59,7 +59,7 @@
         ? 'This folder is not empty. Typically, you want to create a workspace in an empty folder.'
         : null
   )
-  const finalPathMessageVariant = $derived(hasExistingWorkspace ? 'error' : 'warning')
+  const finalPathMessageTone = $derived(hasExistingWorkspace ? 'danger' : 'warning')
   const canCreateWorkspace = $derived(
     Boolean(
       workspaceNameValidation.isValid &&
@@ -131,13 +131,13 @@
   submitText={isWorkspaceLoading ? 'Creating...' : 'Create Workspace'}
   submitDisabled={!canCreateWorkspace}
   submitTestId="create-workspace-submit-button"
-  submitVariant="accent"
+  submitTone="accent"
   oncancel={resetDialog}
   cancelDisabled={isWorkspaceLoading}
   onsubmit={handleCreateWorkspace}
 >
   <div class="space-y-2">
-    <TitleBlock title="Workspace Name" variant="small" />
+    <TitleBlock title="Workspace Name" size="small" />
     <FloatingValidationMessage
       message={displayedWorkspaceNameError}
       textTestId="create-workspace-name-error"
@@ -160,7 +160,7 @@
   </div>
 
   <div class="space-y-2">
-    <TitleBlock title="Containing Folder" variant="small" />
+    <TitleBlock title="Containing Folder" size="small" />
     <FileInput
       bind:value={containingFolder}
       aria-label="Containing Folder"
@@ -172,10 +172,10 @@
   </div>
 
   <div class="space-y-2">
-    <TitleBlock title="Final Workspace Path" variant="small" />
+    <TitleBlock title="Final Workspace Path" size="small" />
     <FloatingValidationMessage
       message={finalPathMessage}
-      variant={finalPathMessageVariant}
+      tone={finalPathMessageTone}
       textTestId="create-workspace-final-path-message"
     >
       <TextInput
@@ -192,7 +192,7 @@
     {#if submissionError}
       <MessageRow
         text={submissionError}
-        variant="error"
+        tone="danger"
         textTestId="create-workspace-submit-error"
         class="w-full"
       />
@@ -200,10 +200,10 @@
   </div>
 
   <div class="space-y-2">
-    <TitleBlock title="Add Examples" variant="small" />
+    <TitleBlock title="Add Examples" size="small" />
     <CheckboxInput
       bind:checked={includeExamples}
-      label='Include example prompts in a "My Prompts" folder.'
+      label="Include example prompts in a &quot;My Prompts&quot; folder."
       data-testid="create-workspace-examples-checkbox-input"
       inputTestId="create-workspace-examples-checkbox"
     />

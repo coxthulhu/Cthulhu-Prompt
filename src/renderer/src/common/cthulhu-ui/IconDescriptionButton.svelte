@@ -1,15 +1,16 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
+  import type { CthulhuTone } from './types'
 
-  export type IconDescriptionButtonVariant = 'gray' | 'purple' | 'red'
+  export type IconDescriptionButtonTone = Extract<CthulhuTone, 'neutral' | 'accent' | 'danger'>
   type ButtonState = 'enabled' | 'disabled'
 
   type Props = {
     icon: ComponentType
     text: string
     description: string
-    variant?: IconDescriptionButtonVariant
+    tone?: IconDescriptionButtonTone
     state?: ButtonState
     class?: string
     iconClass?: string
@@ -21,7 +22,7 @@
     icon: Icon,
     text,
     description,
-    variant = 'gray',
+    tone = 'neutral',
     state = 'enabled',
     class: className,
     iconClass,
@@ -40,7 +41,7 @@
   )}
   data-state={state}
   data-testid={testId}
-  data-variant={variant}
+  data-tone={tone}
   {onclick}
   disabled={isDisabled}
 >
@@ -85,59 +86,59 @@
     line-height: 1.35;
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='gray'] {
+  .cthulhuUiIconDescriptionButton[data-tone='neutral'] {
     background-color: var(--ui-neutral-normal-surface);
     border-color: var(--ui-neutral-normal-border);
     color: var(--ui-secondary-text);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='gray']:hover {
+  .cthulhuUiIconDescriptionButton[data-tone='neutral']:hover {
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='gray'] .cthulhuUiIconDescriptionButtonIcon {
+  .cthulhuUiIconDescriptionButton[data-tone='neutral'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-neutral-emphasis-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-neutral);
     color: var(--ui-secondary-text);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='purple'] {
+  .cthulhuUiIconDescriptionButton[data-tone='accent'] {
     background-color: var(--ui-accent-normal-surface);
     border-color: var(--ui-accent-normal-border);
     color: var(--ui-accent-normal-text);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='purple']:hover {
+  .cthulhuUiIconDescriptionButton[data-tone='accent']:hover {
     border-color: var(--ui-accent-hover-border);
     background-color: var(--ui-accent-hover-surface);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='purple'] .cthulhuUiIconDescriptionButtonIcon {
+  .cthulhuUiIconDescriptionButton[data-tone='accent'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-accent-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-accent-icon-glyph);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='red'] {
+  .cthulhuUiIconDescriptionButton[data-tone='danger'] {
     background-color: var(--ui-danger-normal-surface);
     border-color: var(--ui-danger-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='red']:hover {
+  .cthulhuUiIconDescriptionButton[data-tone='danger']:hover {
     background-color: var(--ui-danger-hover-surface);
     border-color: var(--ui-danger-hover-border);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='red'] .cthulhuUiIconDescriptionButtonIcon {
+  .cthulhuUiIconDescriptionButton[data-tone='danger'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-danger-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-danger);
     color: var(--ui-danger-icon-glyph);
   }
 
-  .cthulhuUiIconDescriptionButton[data-variant='red'] .cthulhuUiIconDescriptionButtonText {
+  .cthulhuUiIconDescriptionButton[data-tone='danger'] .cthulhuUiIconDescriptionButtonText {
     color: var(--ui-normal-text);
   }
 </style>

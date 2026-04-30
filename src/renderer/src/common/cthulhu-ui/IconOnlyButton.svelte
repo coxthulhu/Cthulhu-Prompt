@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
+  import type { CthulhuAppearance } from './types'
 
-  type IconOnlyButtonVariant = 'default' | 'backgroundless' | 'borderless'
+  type IconOnlyButtonAppearance = Extract<CthulhuAppearance, 'solid' | 'outline' | 'ghost'>
 
   type Props = {
     icon: ComponentType
     label: string
-    variant?: IconOnlyButtonVariant
+    appearance?: IconOnlyButtonAppearance
     disabled?: boolean
     class?: string
     iconClass?: string
@@ -19,7 +20,7 @@
   let {
     icon: Icon,
     label,
-    variant = 'default',
+    appearance = 'solid',
     disabled = false,
     class: className,
     iconClass,
@@ -27,10 +28,18 @@
     title,
     onclick
   }: Props = $props()
+
+  const appearanceClass = $derived(
+    appearance === 'solid'
+      ? 'cthulhuUiIconOnlyButton--solid'
+      : appearance === 'outline'
+        ? 'cthulhuUiIconOnlyButton--outline'
+        : 'cthulhuUiIconOnlyButton--ghost'
+  )
 </script>
 
 <button
-  class={mergeClasses('cthulhuUiIconOnlyButton', `cthulhuUiIconOnlyButton--${variant}`, className)}
+  class={mergeClasses('cthulhuUiIconOnlyButton', appearanceClass, className)}
   type="button"
   aria-label={label}
   data-testid={testId}
@@ -60,19 +69,19 @@
     width: 2.25rem;
   }
 
-  .cthulhuUiIconOnlyButton--default {
+  .cthulhuUiIconOnlyButton--solid {
     background-color: var(--ui-neutral-normal-surface);
     border-color: var(--ui-neutral-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
-  .cthulhuUiIconOnlyButton--backgroundless {
+  .cthulhuUiIconOnlyButton--outline {
     border-color: var(--ui-neutral-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
-  .cthulhuUiIconOnlyButton--borderless {
-    /* Keep the transparent border in the box model so variants do not shift layout. */
+  .cthulhuUiIconOnlyButton--ghost {
+    /* Keep the transparent border in the box model so appearances do not shift layout. */
     border-color: transparent;
     background-color: transparent;
     box-shadow: none;
@@ -83,12 +92,12 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconOnlyButton--default:hover,
-  .cthulhuUiIconOnlyButton--backgroundless:hover {
+  .cthulhuUiIconOnlyButton--solid:hover,
+  .cthulhuUiIconOnlyButton--outline:hover {
     border-color: var(--ui-neutral-hover-border);
   }
 
-  .cthulhuUiIconOnlyButton--borderless:hover {
+  .cthulhuUiIconOnlyButton--ghost:hover {
     border-color: transparent;
   }
 

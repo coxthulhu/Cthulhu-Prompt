@@ -113,7 +113,7 @@
       <div class="px-2 pb-4 pt-1">
         <TitleBlock
           title="Editor & layout"
-          variant="large"
+          size="large"
           description="Typography, spacing, autosave, and core writing ergonomics."
           icon={Keyboard}
         />
@@ -121,13 +121,13 @@
 
       <div class="space-y-3">
         <CardSurface
-          variant="subcard"
+          appearance="inset"
           class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
               title="Font Size"
-              variant="small"
+              size="small"
               description="Sets the base font size used inside the prompt editor."
             />
           </div>
@@ -155,13 +155,13 @@
         </CardSurface>
 
         <CardSurface
-          variant="subcard"
+          appearance="inset"
           class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
               title="Minimum Line Count"
-              variant="small"
+              size="small"
               description="Sets the minimum number of visible lines in prompt editors."
             />
           </div>
@@ -189,13 +189,13 @@
         </CardSurface>
 
         <CardSurface
-          variant="subcard"
+          appearance="inset"
           class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
               title="Show Line Numbers"
-              variant="small"
+              size="small"
               description="Display line numbers beside prompt text for easier review."
             />
           </div>
@@ -222,20 +222,20 @@
       <div class="px-2 pb-4 pt-1">
         <TitleBlock
           title="About"
-          variant="large"
+          size="large"
           description="Build and release details for this desktop app."
           icon={Info}
         />
       </div>
 
       <CardSurface
-        variant="subcard"
+        appearance="inset"
         class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
       >
         <div class="min-w-0">
           <TitleBlock
             title="Current Version"
-            variant="small"
+            size="small"
             description="Hardcoded for now until version metadata is wired in."
           />
         </div>

@@ -209,7 +209,7 @@
           <div class="space-y-4">
             <TitleBlock
               title="Current Workspace"
-              variant="large"
+              size="large"
               description="Information about your current workspace."
             />
 
@@ -245,7 +245,7 @@
               <div class="min-w-0 flex-1">
                 <TitleBlock
                   title="Workspace Actions"
-                  variant="large"
+                  size="large"
                   description="Change your current workspace."
                 />
               </div>
@@ -253,7 +253,7 @@
                 icon={isWorkspaceReady ? Check : AlertCircle}
                 text={isWorkspaceReady ? 'Workspace Ready' : 'Workspace Not Selected'}
                 textTestId={isWorkspaceReady ? 'workspace-ready-title' : undefined}
-                variant={isWorkspaceReady ? 'success' : 'accent'}
+                tone={isWorkspaceReady ? 'success' : 'accent'}
               />
             </div>
 
@@ -264,7 +264,7 @@
                 iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
                 description="Select an existing workspace folder."
-                variant="gray"
+                tone="neutral"
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
@@ -275,7 +275,7 @@
                 iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
                 description="Choose a folder and set up a new workspace folder."
-                variant="purple"
+                tone="accent"
                 onclick={handleCreateFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
@@ -287,7 +287,7 @@
                   iconClass="translate-y-px"
                   text="Close Workspace"
                   description="Unload the current workspace folder."
-                  variant="red"
+                  tone="danger"
                   onclick={onWorkspaceClear}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                 />

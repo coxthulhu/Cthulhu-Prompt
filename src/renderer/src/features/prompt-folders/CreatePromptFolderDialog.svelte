@@ -130,7 +130,7 @@
   icon={Plus}
   label="New Prompt Folder"
   title="New Prompt Folder"
-  variant="borderless"
+  appearance="ghost"
   disabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
   class="h-8 w-8 rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
@@ -147,11 +147,11 @@
   submitDisabled={!isValid || isCreatingPromptFolder}
   cancelDisabled={isCreatingPromptFolder}
   submitTestId="create-folder-button"
-  submitVariant="accent"
+  submitTone="accent"
   oncancel={handleCancel}
   onsubmit={handleCreateFolder}
 >
-  <TitleBlock title="Prompt Folder Name" variant="small" />
+  <TitleBlock title="Prompt Folder Name" size="small" />
   <FloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
     <TextInput
       id="folder-name-input"

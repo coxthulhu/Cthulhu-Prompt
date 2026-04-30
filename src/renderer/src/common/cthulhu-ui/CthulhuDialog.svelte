@@ -6,6 +6,10 @@
   import IconTextButton from './IconTextButton.svelte'
   import TitleBlock from './TitleBlock.svelte'
   import { mergeClasses } from './mergeClasses'
+  import type { CthulhuTone } from './types'
+
+  type DialogIconTone = Extract<CthulhuTone, 'accent' | 'danger'>
+  type DialogSubmitTone = Extract<CthulhuTone, 'neutral' | 'accent'>
 
   type Props = {
     open?: boolean
@@ -15,7 +19,7 @@
     submitText: string
     showCloseButton?: boolean
     showSubmitButton?: boolean
-    iconVariant?: 'accent' | 'danger'
+    iconTone?: DialogIconTone
     submitDisabled?: boolean
     cancelDisabled?: boolean
     submitTestId?: string
@@ -23,7 +27,7 @@
     children?: Snippet
     cancelIcon?: ComponentType
     submitIcon?: ComponentType
-    submitVariant?: 'default' | 'accent'
+    submitTone?: DialogSubmitTone
     oncancel?: () => void
     onsubmit?: () => void
   }
@@ -36,7 +40,7 @@
     submitText,
     showCloseButton = true,
     showSubmitButton = true,
-    iconVariant = 'accent',
+    iconTone = 'accent',
     submitDisabled = false,
     cancelDisabled = false,
     submitTestId,
@@ -44,7 +48,7 @@
     children,
     cancelIcon = X,
     submitIcon = Check,
-    submitVariant = 'default',
+    submitTone = 'neutral',
     oncancel,
     onsubmit
   }: Props = $props()
@@ -90,7 +94,7 @@
 {#if open}
   <div class="cthulhuUiDialogLayer" role="presentation" onclick={closeDialog}>
     <CardSurface
-      variant="solid"
+      appearance="solid"
       class={mergeClasses('flex flex-col gap-4 p-6', className)}
       role="dialog"
       aria-label={title}
@@ -99,14 +103,14 @@
     >
       <div class="flex items-start gap-4">
         <div class="min-w-0 flex-1">
-          <TitleBlock {title} {description} {icon} iconVariant={iconVariant} variant="large" />
+          <TitleBlock {title} {description} {icon} {iconTone} size="large" />
         </div>
 
         {#if showCloseButton}
           <IconOnlyButton
             icon={X}
             label="Close"
-            variant="backgroundless"
+            appearance="outline"
             disabled={cancelDisabled}
             onclick={closeDialog}
           />
@@ -131,7 +135,7 @@
             icon={submitIcon}
             text={submitText}
             state={submitDisabled ? 'disabled' : 'enabled'}
-            variant={submitVariant}
+            tone={submitTone}
             testId={submitTestId}
             onclick={submitDialog}
           />

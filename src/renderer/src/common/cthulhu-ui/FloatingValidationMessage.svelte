@@ -1,15 +1,15 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import MessageRow, { type MessageRowVariant } from './MessageRow.svelte'
+  import MessageRow, { type MessageRowTone } from './MessageRow.svelte'
 
   type Props = {
     children: Snippet
     message: string | null
-    variant?: MessageRowVariant
+    tone?: MessageRowTone
     textTestId?: string
   }
 
-  let { children, message, variant = 'error', textTestId }: Props = $props()
+  let { children, message, tone = 'danger', textTestId }: Props = $props()
 </script>
 
 <div class="cthulhuUiFloatingValidationMessage relative">
@@ -18,7 +18,7 @@
     <!-- Anchor validation to the field so it floats outside the surrounding layout flow. -->
     <MessageRow
       class="cthulhuUiFloatingValidationMessageRow absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
-      {variant}
+      {tone}
       text={message}
       {textTestId}
     />
@@ -27,7 +27,7 @@
 
 <style>
   .cthulhuUiFloatingValidationMessage
-    :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow[data-variant='error']) {
+    :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow[data-tone='danger']) {
     background-color: var(--background);
     background-image: linear-gradient(
       var(--ui-danger-normal-surface),
@@ -36,7 +36,7 @@
   }
 
   .cthulhuUiFloatingValidationMessage
-    :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow[data-variant='warning']) {
+    :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow[data-tone='warning']) {
     background-color: var(--background);
     background-image: linear-gradient(
       var(--ui-warning-normal-surface),
