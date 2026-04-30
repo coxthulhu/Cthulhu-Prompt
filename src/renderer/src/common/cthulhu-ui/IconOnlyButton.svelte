@@ -110,13 +110,13 @@
 
   .cthulhuUiIconOnlyButton--rail {
     height: 2rem;
-    width: 2.25rem;
+    width: 2rem;
   }
 
   .cthulhuUiIconOnlyButton--railFill {
     height: 100%;
     min-height: 0;
-    width: 2.25rem;
+    width: 2rem;
   }
 
   .cthulhuUiIconOnlyButton[draggable='true'] {
