@@ -245,8 +245,17 @@ Start with user-visible behavior, then include implementation details and the ex
                     <Folder size={12} strokeWidth={2.4} />
                     {prompt.folder}
                   </span>
+                  <span
+                    style="width: 3px; height: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                  ></span>
                   <span>{lineCount} lines</span>
+                  <span
+                    style="width: 3px; height: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                  ></span>
                   <span>{tokenEstimate} tokens</span>
+                  <span
+                    style="width: 3px; height: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                  ></span>
                   <span>{prompt.updated}</span>
                 </div>
               </div>
