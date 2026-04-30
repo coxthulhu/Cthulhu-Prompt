@@ -146,7 +146,7 @@ Start with user-visible behavior, then include implementation details and the ex
     }
   }
 
-  const getEditorHeight = (promptId: string) => editorHeights[promptId] ?? 138
+  const getEditorHeight = (promptId: string) => editorHeights[promptId] ?? 88
   const getEditorWidth = (promptId: string) => editorWidths[promptId] ?? 820
 </script>
 
@@ -158,7 +158,7 @@ Start with user-visible behavior, then include implementation details and the ex
     style="position: fixed; inset: 0; pointer-events: none; z-index: 80;"
   ></div>
 
-  <div style="max-width: 1160px; margin: 0 auto; display: grid; gap: 12px;">
+  <div style="width: 100%; display: grid; gap: 12px;">
     {#each prompts as prompt, index (prompt.id)}
       {@const lineCount = getLineCount(prompt.text)}
       <section
@@ -169,7 +169,17 @@ Start with user-visible behavior, then include implementation details and the ex
         ondrop={() => dropPrompt(prompt.id)}
         style={`display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; border: 1px solid ${draggedPromptId === prompt.id ? 'var(--ui-accent-hover-border)' : 'var(--ui-card-normal-border)'}; border-radius: 8px; background: linear-gradient(180deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end)); box-shadow: 0 16px 34px var(--ui-card-normal-shadow); padding: 10px; backdrop-filter: blur(18px);`}
       >
-        <div style="display: grid; grid-template-rows: 1fr 30px 30px; gap: 6px; min-height: 198px;">
+        <div style="display: grid; grid-template-rows: 30px 1fr 30px; gap: 6px; min-height: 132px;">
+          <button
+            type="button"
+            aria-label="Move prompt up"
+            onclick={() => movePrompt(prompt.id, -1)}
+            disabled={index === 0}
+            style={`width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: ${index === 0 ? 'var(--ui-neutral-muted-surface)' : 'var(--ui-neutral-normal-surface)'}; color: ${index === 0 ? 'var(--ui-muted-text)' : 'var(--ui-secondary-text)'}; opacity: ${index === 0 ? '0.45' : '1'}; cursor: ${index === 0 ? 'default' : 'pointer'};`}
+          >
+            <ChevronUp size={16} strokeWidth={2.4} />
+          </button>
+
           <button
             type="button"
             draggable="true"
@@ -181,19 +191,9 @@ Start with user-visible behavior, then include implementation details and the ex
             ondragend={() => {
               draggedPromptId = null
             }}
-            style="width: 34px; min-height: 100px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: var(--ui-neutral-muted-surface); color: var(--ui-muted-text); cursor: grab; box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
+            style="width: 34px; height: 100%; min-height: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: var(--ui-neutral-muted-surface); color: var(--ui-muted-text); cursor: grab; box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
           >
             <GripVertical size={17} strokeWidth={2.4} />
-          </button>
-
-          <button
-            type="button"
-            aria-label="Move prompt up"
-            onclick={() => movePrompt(prompt.id, -1)}
-            disabled={index === 0}
-            style={`width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ui-neutral-muted-border); border-radius: 6px; background: ${index === 0 ? 'var(--ui-neutral-muted-surface)' : 'var(--ui-neutral-normal-surface)'}; color: ${index === 0 ? 'var(--ui-muted-text)' : 'var(--ui-secondary-text)'}; opacity: ${index === 0 ? '0.45' : '1'}; cursor: ${index === 0 ? 'default' : 'pointer'};`}
-          >
-            <ChevronUp size={16} strokeWidth={2.4} />
           </button>
 
           <button
@@ -208,7 +208,7 @@ Start with user-visible behavior, then include implementation details and the ex
         </div>
 
         <div
-          style="min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px;"
+          style="min-width: 0; align-self: start; display: grid; grid-template-rows: auto auto; align-content: start; gap: 8px;"
         >
           <div
             style="min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid var(--ui-card-nested-border); border-radius: 7px; background: var(--ui-neutral-muted-surface); box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight); padding: 8px 8px 8px 10px;"
