@@ -9,6 +9,7 @@
     GripVertical,
     Trash2
   } from 'lucide-svelte'
+  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import HydratableMonacoEditor from '@renderer/features/prompt-editor/HydratableMonacoEditor.svelte'
 
@@ -220,11 +221,7 @@ Start with user-visible behavior, then include implementation details and the ex
             <div
               style="min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px;"
             >
-              <div
-                style="width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-normal-text);"
-              >
-                <FileText size={17} strokeWidth={2.3} />
-              </div>
+              <AccentIconTile icon={FileText} size="small" variant="accent-bordered" />
 
               <div style="min-width: 0; display: grid; gap: 4px;">
                 <input
