@@ -2,10 +2,10 @@
   import type { ComponentType } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuSize, CthulhuTone } from './types'
+  import type { CthulhuSize } from './types'
 
   type AccentIconTileSize = Extract<CthulhuSize, 'medium' | 'large'>
-  type AccentIconTileTone = Extract<CthulhuTone, 'accent' | 'danger'>
+  type AccentIconTileTone = 'accent' | 'accent-white-icon' | 'danger'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
@@ -58,6 +58,12 @@
     background-color: var(--ui-accent-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-accent-icon-glyph);
+  }
+
+  .cthulhuUiAccentIconTile[data-tone='accent-white-icon'] {
+    background-color: var(--ui-accent-icon-surface);
+    box-shadow: var(--cthulhu-ui-shadow-icon-accent);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiAccentIconTile[data-tone='danger'] {

@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import AccentIconTile from './AccentIconTile.svelte'
-  import type { CthulhuSize, CthulhuTone } from './types'
+  import type { CthulhuSize } from './types'
 
   type TitleBlockSize = Extract<CthulhuSize, 'small' | 'large'>
-  type TitleBlockIconTone = Extract<CthulhuTone, 'accent' | 'danger'>
+  type TitleBlockIconTone = 'accent' | 'accent-white-icon' | 'danger'
 
   type Props = {
     title: string
@@ -14,7 +14,7 @@
     iconTone?: TitleBlockIconTone
   }
 
-  let { title, size, description, icon: Icon, iconTone = 'accent' }: Props = $props()
+  let { title, size, description, icon: Icon, iconTone = 'accent-white-icon' }: Props = $props()
 
   const titleTag = $derived(size === 'large' ? 'h2' : 'h3')
 </script>

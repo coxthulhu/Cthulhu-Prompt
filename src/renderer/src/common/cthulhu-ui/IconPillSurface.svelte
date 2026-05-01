@@ -29,7 +29,7 @@
   {...restProps}
 >
   {#if Icon}
-    <AccentIconTile icon={Icon} />
+    <AccentIconTile icon={Icon} tone="accent-white-icon" />
   {/if}
 
   <div class="flex min-w-0 flex-col gap-1">
