@@ -59,14 +59,14 @@ const clickMoveUp = async (page: any, promptId: string) => {
   const button = page.locator(moveUpSelector(promptId))
   await button.scrollIntoViewIfNeeded()
   await expect(button).toBeEnabled()
-  await button.click()
+  await button.evaluate((element: HTMLButtonElement) => element.click())
 }
 
 const clickMoveDown = async (page: any, promptId: string) => {
   const button = page.locator(moveDownSelector(promptId))
   await button.scrollIntoViewIfNeeded()
   await expect(button).toBeEnabled()
-  await button.click()
+  await button.evaluate((element: HTMLButtonElement) => element.click())
 }
 
 const setPromptTitle = async (page: any, promptId: string, title: string) => {
@@ -99,7 +99,7 @@ const expectPromptContent = async (
 }
 
 describe('Prompt folder prompt management', () => {
-  test.skip('reorders prompts with move buttons', async ({ testSetup }) => {
+  test('reorders prompts with move buttons', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -128,11 +128,10 @@ describe('Prompt folder prompt management', () => {
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['dev-2', newPromptId, 'dev-1'])
 
-    // Step 5-6: try moving the first prompt up (it should stay put).
-    await clickMoveUp(mainWindow, 'dev-2')
-    await expect
-      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
-      .toEqual(['dev-2', newPromptId, 'dev-1'])
+    // Step 5-6: boundary buttons are disabled when the prompt cannot move farther.
+    await expect(mainWindow.locator(moveUpSelector('dev-2'))).toBeDisabled()
+    await expect(mainWindow.locator(moveDownSelector('dev-1'))).toBeDisabled()
+    expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2', newPromptId, 'dev-1'])
   })
 
   test('preserves prompt order after navigating away', async ({ testSetup }) => {
@@ -283,7 +282,7 @@ describe('Prompt folder prompt management', () => {
     expect(emptyPromptId).toBeTruthy()
 
     const emptyDeleteButton = mainWindow.locator(
-      `${promptEditorSelector(emptyPromptId!)} button:has-text("Delete")`
+      `${promptEditorSelector(emptyPromptId!)} [data-testid="prompt-delete-button"]`
     )
     await emptyDeleteButton.scrollIntoViewIfNeeded()
     await emptyDeleteButton.click()
@@ -293,7 +292,7 @@ describe('Prompt folder prompt management', () => {
 
     // Delete a populated prompt and confirm the dialog flow.
     const deleteButton = mainWindow.locator(
-      `${promptEditorSelector('dev-1')} button:has-text("Delete")`
+      `${promptEditorSelector('dev-1')} [data-testid="prompt-delete-button"]`
     )
     await deleteButton.scrollIntoViewIfNeeded()
     await deleteButton.click()

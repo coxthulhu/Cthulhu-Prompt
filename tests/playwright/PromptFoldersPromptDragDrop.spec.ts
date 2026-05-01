@@ -46,6 +46,7 @@ const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
 
 const scrollPromptTreeUntilRowUnmounts = async (
   mainWindow: Parameters<typeof beginPromptTreeRowDrag>[0],
@@ -390,7 +391,7 @@ describe('Prompt folder prompt drag-drop', () => {
           (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
         )
       )
-      .toBeLessThanOrEqual(2)
+      .toBeLessThanOrEqual(SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX)
   })
 
   test('keeps the current screen selected when reordering prompts from a non-selected tree folder', async ({

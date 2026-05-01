@@ -1,7 +1,8 @@
 <script lang="ts">
-  import Input from '@renderer/common/ui/input/input.svelte'
+  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import { FileText, Folder } from 'lucide-svelte'
 
   type Props = {
     title: string
@@ -59,21 +60,124 @@
   }
 </script>
 
-<div class="flex items-center gap-2 py-0.5">
-  <Input
-    data-testid="prompt-title"
-    placeholder={titlePlaceholder}
-    value={title}
-    bind:ref={inputRef}
-    oninput={(event) => {
-      handleTitleInput(event)
-      handleSelectionChange(event)
-    }}
-    onfocus={handleTitleFocus}
-    onkeyup={handleSelectionChange}
-    onmouseup={handleSelectionChange}
-    onselect={handleSelectionChange}
-    class="h-[28px] w-full flex-1 border-transparent bg-transparent px-0 py-0 text-[16px] leading-[20px] text-[#D4D4D4] shadow-none ring-0 placeholder:text-[#D4D4D4] focus-visible:border-transparent focus-visible:ring-0 md:text-[16px] md:leading-[20px] font-mono"
-  />
+<div class="prompt-editor-title-bar">
+  <div class="prompt-editor-title-main">
+    <AccentIconTile icon={FileText} size="small" variant="accent-bordered" />
+
+    <div class="prompt-editor-title-copy">
+      <input
+        data-testid="prompt-title"
+        placeholder={titlePlaceholder}
+        value={title}
+        bind:this={inputRef}
+        oninput={(event) => {
+          handleTitleInput(event)
+          handleSelectionChange(event)
+        }}
+        onfocus={handleTitleFocus}
+        onkeyup={handleSelectionChange}
+        onmouseup={handleSelectionChange}
+        onselect={handleSelectionChange}
+        class="prompt-editor-title-input"
+      />
+
+      <div class="prompt-editor-metadata-row">
+        <span class="prompt-editor-metadata-folder" title="Prompts">
+          <Folder class="h-3 w-3 shrink-0 stroke-[2.4]" />
+          Prompts
+        </span>
+        <span class="prompt-editor-metadata-dot"></span>
+        <span>0 lines</span>
+        <span class="prompt-editor-metadata-dot"></span>
+        <span>0 tokens</span>
+        <span class="prompt-editor-metadata-dot"></span>
+        <span>0 min ago</span>
+      </div>
+    </div>
+  </div>
+
   <PromptEditorButtonBar {title} {draftText} {onDelete} />
 </div>
+
+<style>
+  .prompt-editor-title-bar {
+    align-items: center;
+    background: var(--ui-neutral-muted-surface);
+    border: 1px solid var(--ui-card-nested-border);
+    border-radius: 7px;
+    box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    padding: 8px 8px 8px 10px;
+  }
+
+  .prompt-editor-title-main {
+    align-items: center;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 40px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .prompt-editor-title-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .prompt-editor-title-input {
+    background: transparent;
+    border: 0;
+    color: var(--ui-normal-text);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    height: 22px;
+    line-height: 20px;
+    min-width: 0;
+    outline: none;
+    padding: 0;
+    width: 100%;
+  }
+
+  .prompt-editor-title-input::placeholder {
+    color: var(--ui-secondary-text);
+  }
+
+  .prompt-editor-metadata-row {
+    align-items: center;
+    color: var(--ui-muted-text);
+    display: flex;
+    flex-wrap: nowrap;
+    font-size: 11px;
+    font-weight: 750;
+    gap: 7px;
+    line-height: 16px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .prompt-editor-metadata-folder {
+    align-items: center;
+    color: var(--ui-secondary-text);
+    display: inline-flex;
+    flex: 0 1 auto;
+    gap: 5px;
+    max-width: 220px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .prompt-editor-metadata-dot {
+    background: var(--ui-neutral-emphasis-border);
+    border-radius: 999px;
+    flex: 0 0 auto;
+    height: 3px;
+    width: 3px;
+  }
+</style>

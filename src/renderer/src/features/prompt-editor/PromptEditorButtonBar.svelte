@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '@renderer/common/ui/button/button.svelte'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import {
     Dialog,
     DialogContent,
@@ -8,6 +9,7 @@
     DialogHeader,
     DialogTitle
   } from '@renderer/common/ui/dialog'
+  import { Check, Copy, Trash2 } from 'lucide-svelte'
 
   type Props = {
     title: string
@@ -55,24 +57,23 @@
   }
 </script>
 
-<div class="flex gap-1 shrink-0">
-  <Button variant="outline" size="xs" class="text-[rgb(248,128,112)]" onclick={handleDeleteClick}>
-    Delete
-  </Button>
-  <Button variant="outline" size="xs" onclick={handleCopyClick} data-testid="prompt-copy-button">
-    <span class="relative inline-flex items-center">
-      <span
-        class={`absolute inset-0 transition-opacity duration-[140ms] ${isCopied ? 'opacity-0 delay-0' : 'opacity-100 delay-[140ms]'}`}
-      >
-        Copy
-      </span>
-      <span
-        class={`transition-opacity duration-[140ms] ${isCopied ? 'opacity-100 delay-[140ms]' : 'opacity-0 delay-0'}`}
-      >
-        Copied
-      </span>
-    </span>
-  </Button>
+<div class="flex shrink-0 items-center gap-1.5">
+  <IconOnlyButton
+    icon={isCopied ? Check : Copy}
+    label="Copy prompt"
+    title={isCopied ? 'Copied' : 'Copy prompt'}
+    variant="accent"
+    testId="prompt-copy-button"
+    onclick={handleCopyClick}
+  />
+  <IconOnlyButton
+    icon={Trash2}
+    label="Delete prompt"
+    title="Delete prompt"
+    variant="danger"
+    testId="prompt-delete-button"
+    onclick={handleDeleteClick}
+  />
 </div>
 
 <Dialog bind:open={isDeleteDialogOpen}>

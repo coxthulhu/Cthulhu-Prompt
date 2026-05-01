@@ -304,6 +304,7 @@
   overlayRowElement,
   onHydrationChange
 }: PromptEditorRowProps)}
+  {@const promptIndex = visiblePromptIds.indexOf(row.promptId)}
   <PromptEditorRow
     {workspaceId}
     {promptFolderId}
@@ -319,6 +320,8 @@
     {onHydrationChange}
     scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
     focusRequest={promptFocusRequest}
+    isFirstPrompt={promptIndex === 0}
+    isLastPrompt={promptIndex === visiblePromptIds.length - 1}
     onDelete={() => onDeletePrompt(row.promptId)}
     onMoveUp={() => onMovePromptUp(row.promptId)}
     onMoveDown={() => onMovePromptDown(row.promptId)}

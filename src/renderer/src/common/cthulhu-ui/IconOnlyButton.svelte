@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
   type IconOnlyButtonSize = 'default' | 'rail' | 'rail-fill'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
+  type IconOnlyButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
     icon: ComponentType
@@ -15,11 +17,13 @@
     iconClass?: string
     testId?: string
     title?: string
-    draggable?: boolean
+    buttonAction?: IconOnlyButtonAction | null
+    buttonActionParameter?: unknown
+    grabCursor?: boolean
     onclick?: (event: MouseEvent) => void
-    ondragstart?: (event: DragEvent) => void
-    ondragend?: (event: DragEvent) => void
   }
+
+  const noopButtonAction: IconOnlyButtonAction = () => undefined
 
   let {
     icon: Icon,
@@ -31,10 +35,10 @@
     iconClass,
     testId,
     title,
-    draggable,
+    buttonAction = null,
+    buttonActionParameter,
+    grabCursor = false,
     onclick,
-    ondragstart,
-    ondragend
   }: Props = $props()
 
   const variantClass = $derived(
@@ -50,19 +54,19 @@
         ? 'cthulhuUiIconOnlyButton--railFill'
         : null
   )
+  const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
 
 <button
+  use:resolvedButtonAction={buttonActionParameter}
   class={mergeClasses('cthulhuUiIconOnlyButton', variantClass, sizeClass, className)}
   type="button"
   aria-label={label}
   data-testid={testId}
+  data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}
-  {draggable}
   {disabled}
   {onclick}
-  {ondragstart}
-  {ondragend}
 >
   <Icon class={mergeClasses('h-4 w-4', iconClass)} />
 </button>
@@ -97,11 +101,11 @@
     width: 2rem;
   }
 
-  .cthulhuUiIconOnlyButton[draggable='true'] {
+  .cthulhuUiIconOnlyButton[data-grab-cursor='true'] {
     cursor: grab;
   }
 
-  .cthulhuUiIconOnlyButton[draggable='true']:active {
+  .cthulhuUiIconOnlyButton[data-grab-cursor='true']:active {
     cursor: grabbing;
   }
 

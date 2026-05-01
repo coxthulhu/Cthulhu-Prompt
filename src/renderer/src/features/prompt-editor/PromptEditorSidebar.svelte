@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { cn } from '@renderer/common/Cn.js'
-  import { buttonVariants } from '@renderer/common/ui/button/button.svelte'
-  import { GripVertical } from 'lucide-svelte'
+  import type { Action } from 'svelte/action'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import { ChevronDown, ChevronUp, GripVertical } from 'lucide-svelte'
   import {
     type DragDropPreview,
     draggable,
@@ -22,12 +22,16 @@
   let {
     promptId,
     promptFolderId,
+    isFirstPrompt,
+    isLastPrompt,
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
   }: {
     promptId: string
     promptFolderId: string
+    isFirstPrompt: boolean
+    isLastPrompt: boolean
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
@@ -43,12 +47,15 @@
     dropPayload
   }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
     clearDraggedPromptHighlight(promptNavigation)
-
-    // Keep these handlers referenced for future keyboard shortcuts.
-    void onMoveUp
-    void onMoveDown
-
     void onPromptTreeDrop(dropPayload)
+  }
+
+  const handleMoveUpClick = () => {
+    void onMoveUp()
+  }
+
+  const handleMoveDownClick = () => {
+    void onMoveDown()
   }
 
   const getDragHandleOptions = (
@@ -63,23 +70,72 @@
     onDragStart: handleDragStart,
     onDragFinish: handleDragFinish
   })
+
+  const dragHandleAction: Action<HTMLButtonElement, unknown> = (node, initialOptions) => {
+    const action = draggable<PromptHandleDragPayload, PromptHandleDropPayload>(
+      node,
+      initialOptions as DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
+    )
+
+    return {
+      update(nextOptions) {
+        action.update(
+          nextOptions as DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
+        )
+      },
+      destroy() {
+        action.destroy()
+      }
+    }
+  }
 </script>
 
-<div class="w-6 flex-shrink-0 flex flex-col">
+<div class="prompt-editor-sidebar">
   {#snippet emptyDragPreview()}
     <span class="hidden" aria-hidden="true"></span>
   {/snippet}
 
-  <button
-    use:draggable={getDragHandleOptions(emptyDragPreview)}
-    type="button"
-    class={cn(
-      buttonVariants({ variant: 'ghost', size: 'icon' }),
-      'flex-1 w-5 rounded-none border-none !px-0 py-1 bg-muted/30 hover:bg-accent/30 shadow-none cursor-grab active:cursor-grabbing'
-    )}
-    aria-label="Drag prompt"
-    data-testid="prompt-drag-handle"
-  >
-    <GripVertical class="size-4 stroke-[2.5]" />
-  </button>
+  <IconOnlyButton
+    icon={ChevronUp}
+    label="Move prompt up"
+    variant="muted-border"
+    size="rail"
+    testId="prompt-move-up"
+    disabled={isFirstPrompt}
+    onclick={handleMoveUpClick}
+  />
+
+  <IconOnlyButton
+    icon={GripVertical}
+    label="Drag prompt"
+    variant="muted-border"
+    size="rail-fill"
+    iconClass="stroke-[2.5]"
+    testId="prompt-drag-handle"
+    buttonAction={dragHandleAction}
+    buttonActionParameter={getDragHandleOptions(emptyDragPreview)}
+    grabCursor={true}
+  />
+
+  <IconOnlyButton
+    icon={ChevronDown}
+    label="Move prompt down"
+    variant="muted-border"
+    size="rail"
+    testId="prompt-move-down"
+    disabled={isLastPrompt}
+    onclick={handleMoveDownClick}
+  />
 </div>
+
+<style>
+  .prompt-editor-sidebar {
+    display: grid;
+    flex: 0 0 34px;
+    gap: 6px;
+    grid-template-rows: 32px minmax(0, 1fr) 32px;
+    height: 100%;
+    min-height: 136px;
+    width: 34px;
+  }
+</style>

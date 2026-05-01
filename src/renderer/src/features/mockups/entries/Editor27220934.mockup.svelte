@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Action } from 'svelte/action'
   import {
     Check,
     ChevronDown,
@@ -130,6 +131,31 @@ Start with user-visible behavior, then include implementation details and the ex
   const getLineCount = (text: string) => text.split('\n').length
   const getTokenEstimate = (text: string) => Math.max(1, Math.round(text.length / 4))
 
+  const mockupPromptDragAction: Action<HTMLButtonElement, unknown> = (node, initialPromptId) => {
+    let promptId = String(initialPromptId)
+    const handleDragStart = () => {
+      draggedPromptId = promptId
+    }
+    const handleDragEnd = () => {
+      draggedPromptId = null
+    }
+
+    node.draggable = true
+    node.addEventListener('dragstart', handleDragStart)
+    node.addEventListener('dragend', handleDragEnd)
+
+    return {
+      update(nextPromptId) {
+        promptId = String(nextPromptId)
+      },
+      destroy() {
+        node.draggable = false
+        node.removeEventListener('dragstart', handleDragStart)
+        node.removeEventListener('dragend', handleDragEnd)
+      }
+    }
+  }
+
   const measureEditorWidth = (node: HTMLElement, promptId: string) => {
     const updateWidth = () => {
       editorWidths = {
@@ -192,14 +218,10 @@ Start with user-visible behavior, then include implementation details and the ex
             label="Drag prompt"
             variant="muted-border"
             size="rail-fill"
-            draggable={true}
             testId="prompt-drag-handle"
-            ondragstart={() => {
-              draggedPromptId = prompt.id
-            }}
-            ondragend={() => {
-              draggedPromptId = null
-            }}
+            buttonAction={mockupPromptDragAction}
+            buttonActionParameter={prompt.id}
+            grabCursor={true}
           />
 
           <IconOnlyButton
