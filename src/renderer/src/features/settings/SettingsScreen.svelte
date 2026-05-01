@@ -121,7 +121,7 @@
 
       <div class="space-y-3">
         <CardSurface
-          appearance="inset"
+          variant="inset"
           class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
@@ -155,7 +155,7 @@
         </CardSurface>
 
         <CardSurface
-          appearance="inset"
+          variant="inset"
           class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
@@ -189,7 +189,7 @@
         </CardSurface>
 
         <CardSurface
-          appearance="inset"
+          variant="inset"
           class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
@@ -229,7 +229,7 @@
       </div>
 
       <CardSurface
-        appearance="inset"
+        variant="inset"
         class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
       >
         <div class="min-w-0">

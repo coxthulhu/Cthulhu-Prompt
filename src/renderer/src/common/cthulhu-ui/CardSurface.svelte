@@ -3,26 +3,26 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  export type CardSurfaceAppearance = 'panel' | 'solid' | 'inset'
+  export type CardSurfaceVariant = 'panel' | 'solid' | 'inset'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     children: Snippet
-    appearance?: CardSurfaceAppearance
+    variant?: CardSurfaceVariant
   }
 
-  let { class: className, children, appearance = 'panel', ...restProps }: Props = $props()
+  let { class: className, children, variant = 'panel', ...restProps }: Props = $props()
 </script>
 
 <div
   class={mergeClasses(
     'cthulhuUiCardSurface border',
-    appearance === 'panel'
+    variant === 'panel'
       ? 'cthulhuUiCardSurface--panel rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
-    appearance === 'solid'
+    variant === 'solid'
       ? 'cthulhuUiCardSurface--solid rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
-    appearance === 'inset'
+    variant === 'inset'
       ? 'cthulhuUiCardSurface--inset rounded-[var(--cthulhu-ui-radius-control)] px-4 py-4'
       : null,
     className
