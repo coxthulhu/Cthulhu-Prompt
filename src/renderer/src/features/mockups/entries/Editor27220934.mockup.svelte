@@ -180,7 +180,7 @@ Start with user-visible behavior, then include implementation details and the ex
           <IconOnlyButton
             icon={ChevronUp}
             label="Move prompt up"
-            appearance="muted-border"
+            variant="muted-border"
             size="rail"
             onclick={() => movePrompt(prompt.id, -1)}
             disabled={index === 0}
@@ -189,7 +189,7 @@ Start with user-visible behavior, then include implementation details and the ex
           <IconOnlyButton
             icon={GripVertical}
             label="Drag prompt"
-            appearance="muted-border"
+            variant="muted-border"
             size="rail-fill"
             draggable={true}
             testId="prompt-drag-handle"
@@ -204,7 +204,7 @@ Start with user-visible behavior, then include implementation details and the ex
           <IconOnlyButton
             icon={ChevronDown}
             label="Move prompt down"
-            appearance="muted-border"
+            variant="muted-border"
             size="rail"
             onclick={() => movePrompt(prompt.id, 1)}
             disabled={index === prompts.length - 1}
@@ -266,7 +266,7 @@ Start with user-visible behavior, then include implementation details and the ex
                 icon={copiedPromptId === prompt.id ? Check : Copy}
                 label="Copy prompt"
                 title={copiedPromptId === prompt.id ? 'Copied' : 'Copy prompt'}
-                tone="accent"
+                variant="accent"
                 testId="prompt-copy-button"
                 onclick={() => copyPrompt(prompt)}
               />
@@ -274,7 +274,7 @@ Start with user-visible behavior, then include implementation details and the ex
               <IconOnlyButton
                 icon={Trash2}
                 label="Delete prompt"
-                tone="danger"
+                variant="danger"
                 onclick={() => {
                   prompts = prompts.filter((item) => item.id !== prompt.id)
                 }}

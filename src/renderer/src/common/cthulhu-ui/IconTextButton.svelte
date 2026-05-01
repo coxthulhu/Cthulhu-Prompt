@@ -1,18 +1,15 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuTone } from './types'
 
   type ButtonState = 'active' | 'enabled' | 'disabled'
-  type ButtonTone = Extract<CthulhuTone, 'neutral' | 'accent'>
-  type ButtonAppearance = 'solid' | 'nav'
+  type ButtonVariant = 'neutral' | 'accent' | 'nav'
 
   type Props = {
     icon: ComponentType
     text: string
     state?: ButtonState
-    tone?: ButtonTone
-    appearance?: ButtonAppearance
+    variant?: ButtonVariant
     class?: string
     iconClass?: string
     testId?: string
@@ -23,8 +20,7 @@
     icon: Icon,
     text,
     state = 'enabled',
-    tone = 'neutral',
-    appearance = 'solid',
+    variant = 'neutral',
     class: className,
     iconClass,
     testId,
@@ -32,18 +28,22 @@
   }: Props = $props()
 
   const isDisabled = $derived(state === 'disabled')
+  const variantClass = $derived(
+    variant === 'nav' && state === 'active'
+      ? 'cthulhuUiIconTextButton--navActive'
+      : variant === 'nav' && state === 'enabled'
+        ? 'cthulhuUiIconTextButton--navEnabled'
+        : variant === 'accent'
+          ? 'cthulhuUiIconTextButton--accent'
+          : 'cthulhuUiIconTextButton--neutral'
+  )
 </script>
 
 <button
   type="button"
   class={mergeClasses(
     'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
-    appearance === 'nav' && state === 'active' ? 'cthulhuUiIconTextButton--navActive' : null,
-    appearance === 'nav' && state === 'enabled' ? 'cthulhuUiIconTextButton--navEnabled' : null,
-    appearance === 'solid' && tone === 'accent' ? 'cthulhuUiIconTextButton--accent' : null,
-    (appearance === 'solid' && tone === 'neutral') || (appearance === 'nav' && state === 'disabled')
-      ? 'cthulhuUiIconTextButton--neutralSolid'
-      : null,
+    variantClass,
     className
   )}
   data-active={state === 'active'}
@@ -90,14 +90,14 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconTextButton--neutralSolid {
+  .cthulhuUiIconTextButton--neutral {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-normal-surface);
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-hoverable-text);
   }
 
-  .cthulhuUiIconTextButton--neutralSolid:hover {
+  .cthulhuUiIconTextButton--neutral:hover {
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);

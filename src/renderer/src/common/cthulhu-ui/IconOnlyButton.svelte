@@ -1,18 +1,15 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuTone } from './types'
 
-  type IconOnlyButtonAppearance = 'solid' | 'outline' | 'muted-border' | 'transparent'
   type IconOnlyButtonSize = 'default' | 'rail' | 'rail-fill'
-  type IconOnlyButtonTone = Extract<CthulhuTone, 'neutral' | 'accent' | 'danger'>
+  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
 
   type Props = {
     icon: ComponentType
     label: string
-    appearance?: IconOnlyButtonAppearance
+    variant?: IconOnlyButtonVariant
     size?: IconOnlyButtonSize
-    tone?: IconOnlyButtonTone
     disabled?: boolean
     class?: string
     iconClass?: string
@@ -27,9 +24,8 @@
   let {
     icon: Icon,
     label,
-    appearance = 'solid',
+    variant = 'outline',
     size = 'default',
-    tone = 'neutral',
     disabled = false,
     class: className,
     iconClass,
@@ -41,22 +37,10 @@
     ondragend
   }: Props = $props()
 
-  const appearanceClass = $derived(
-    appearance === 'solid'
-      ? 'cthulhuUiIconOnlyButton--solid'
-      : appearance === 'outline'
-        ? 'cthulhuUiIconOnlyButton--outline'
-        : appearance === 'muted-border'
-          ? 'cthulhuUiIconOnlyButton--mutedBorder'
-          : 'cthulhuUiIconOnlyButton--transparent'
-  )
-
-  const toneClass = $derived(
-    tone === 'accent'
-      ? 'cthulhuUiIconOnlyButton--accent'
-      : tone === 'danger'
-        ? 'cthulhuUiIconOnlyButton--danger'
-        : null
+  const variantClass = $derived(
+    variant === 'muted-border'
+      ? 'cthulhuUiIconOnlyButton--mutedBorder'
+      : `cthulhuUiIconOnlyButton--${variant}`
   )
 
   const sizeClass = $derived(
@@ -69,7 +53,7 @@
 </script>
 
 <button
-  class={mergeClasses('cthulhuUiIconOnlyButton', appearanceClass, toneClass, sizeClass, className)}
+  class={mergeClasses('cthulhuUiIconOnlyButton', variantClass, sizeClass, className)}
   type="button"
   aria-label={label}
   data-testid={testId}
@@ -100,12 +84,6 @@
       border-color 120ms ease,
       color 120ms ease;
     width: 2.25rem;
-  }
-
-  .cthulhuUiIconOnlyButton--solid {
-    background-color: var(--ui-neutral-normal-surface);
-    border-color: var(--ui-neutral-normal-border);
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
   }
 
   .cthulhuUiIconOnlyButton--rail {
@@ -149,12 +127,14 @@
   .cthulhuUiIconOnlyButton--accent {
     border-color: var(--ui-accent-normal-border);
     background-color: var(--ui-accent-normal-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-accent-normal-text);
   }
 
   .cthulhuUiIconOnlyButton--danger {
     border-color: var(--ui-danger-normal-border);
     background-color: var(--ui-danger-normal-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-danger-icon-glyph);
   }
 
@@ -163,7 +143,6 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconOnlyButton--solid:hover,
   .cthulhuUiIconOnlyButton--outline:hover,
   .cthulhuUiIconOnlyButton--mutedBorder:hover {
     border-color: var(--ui-neutral-hover-border);

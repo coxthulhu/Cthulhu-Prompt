@@ -130,7 +130,7 @@
   icon={Plus}
   label="New Prompt Folder"
   title="New Prompt Folder"
-  appearance="transparent"
+  variant="transparent"
   disabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
   class="h-8 w-8 rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
@@ -147,7 +147,7 @@
   submitDisabled={!isValid || isCreatingPromptFolder}
   cancelDisabled={isCreatingPromptFolder}
   submitTestId="create-folder-button"
-  submitTone="accent"
+  submitVariant="accent"
   oncancel={handleCancel}
   onsubmit={handleCreateFolder}
 >

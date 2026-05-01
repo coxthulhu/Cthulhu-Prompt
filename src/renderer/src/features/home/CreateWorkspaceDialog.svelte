@@ -131,7 +131,7 @@
   submitText={isWorkspaceLoading ? 'Creating...' : 'Create Workspace'}
   submitDisabled={!canCreateWorkspace}
   submitTestId="create-workspace-submit-button"
-  submitTone="accent"
+  submitVariant="accent"
   oncancel={resetDialog}
   cancelDisabled={isWorkspaceLoading}
   onsubmit={handleCreateWorkspace}

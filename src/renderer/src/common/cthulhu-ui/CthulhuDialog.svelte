@@ -9,7 +9,7 @@
   import type { CthulhuTone } from './types'
 
   type DialogIconTone = Extract<CthulhuTone, 'accent' | 'danger'>
-  type DialogSubmitTone = Extract<CthulhuTone, 'neutral' | 'accent'>
+  type DialogSubmitVariant = 'neutral' | 'accent'
 
   type Props = {
     open?: boolean
@@ -27,7 +27,7 @@
     children?: Snippet
     cancelIcon?: ComponentType
     submitIcon?: ComponentType
-    submitTone?: DialogSubmitTone
+    submitVariant?: DialogSubmitVariant
     oncancel?: () => void
     onsubmit?: () => void
   }
@@ -48,7 +48,7 @@
     children,
     cancelIcon = X,
     submitIcon = Check,
-    submitTone = 'neutral',
+    submitVariant = 'neutral',
     oncancel,
     onsubmit
   }: Props = $props()
@@ -110,7 +110,7 @@
           <IconOnlyButton
             icon={X}
             label="Close"
-            appearance="outline"
+            variant="outline"
             disabled={cancelDisabled}
             onclick={closeDialog}
           />
@@ -135,7 +135,7 @@
             icon={submitIcon}
             text={submitText}
             state={submitDisabled ? 'disabled' : 'enabled'}
-            tone={submitTone}
+            variant={submitVariant}
             testId={submitTestId}
             onclick={submitDialog}
           />
