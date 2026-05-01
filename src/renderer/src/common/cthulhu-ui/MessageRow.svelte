@@ -2,19 +2,18 @@
   import { AlertCircle, AlertTriangle } from 'lucide-svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuTone } from './types'
 
-  export type MessageRowTone = Extract<CthulhuTone, 'danger' | 'warning'>
+  export type MessageRowVariant = 'danger' | 'warning'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     text: string
-    tone: MessageRowTone
+    variant: MessageRowVariant
     textTestId?: string
   }
 
-  let { text, tone, textTestId, class: className, ...restProps }: Props = $props()
+  let { text, variant, textTestId, class: className, ...restProps }: Props = $props()
 
-  const Icon = $derived(tone === 'danger' ? AlertCircle : AlertTriangle)
+  const Icon = $derived(variant === 'danger' ? AlertCircle : AlertTriangle)
 </script>
 
 <div
@@ -22,11 +21,11 @@
     'cthulhuUiMessageRow inline-flex h-11 items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm leading-5',
     className
   )}
-  data-tone={tone}
+  data-variant={variant}
   data-testid={textTestId}
   {...restProps}
 >
-  <!-- Tone controls both the icon and the row palette. -->
+  <!-- Variant controls both the icon and the row palette. -->
   <Icon class={mergeClasses('h-4 w-4', 'cthulhuUiMessageRowIcon')} />
   {text}
 </div>
@@ -40,14 +39,14 @@
     color: var(--cthulhu-ui-message-row-icon);
   }
 
-  .cthulhuUiMessageRow[data-tone='danger'] {
+  .cthulhuUiMessageRow[data-variant='danger'] {
     --cthulhu-ui-message-row-icon: var(--ui-danger-icon-glyph);
 
     background: var(--ui-danger-normal-surface);
     border-color: var(--ui-danger-normal-border);
   }
 
-  .cthulhuUiMessageRow[data-tone='warning'] {
+  .cthulhuUiMessageRow[data-variant='warning'] {
     --cthulhu-ui-message-row-icon: var(--ui-warning-icon-glyph);
 
     background: var(--ui-warning-normal-surface);

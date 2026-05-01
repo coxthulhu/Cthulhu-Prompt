@@ -17,7 +17,7 @@
   bind:open
   class="w-full max-w-[36rem]"
   icon={AlertCircle}
-  iconTone="danger"
+  iconVariant="danger"
   {title}
   {description}
   submitText=""

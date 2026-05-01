@@ -6,9 +6,8 @@
   import IconTextButton from './IconTextButton.svelte'
   import TitleBlock from './TitleBlock.svelte'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuTone } from './types'
 
-  type DialogIconTone = Extract<CthulhuTone, 'accent' | 'danger'>
+  type DialogIconVariant = 'accent' | 'danger'
   type DialogSubmitVariant = 'neutral' | 'accent'
 
   type Props = {
@@ -19,7 +18,7 @@
     submitText: string
     showCloseButton?: boolean
     showSubmitButton?: boolean
-    iconTone?: DialogIconTone
+    iconVariant?: DialogIconVariant
     submitDisabled?: boolean
     cancelDisabled?: boolean
     submitTestId?: string
@@ -40,7 +39,7 @@
     submitText,
     showCloseButton = true,
     showSubmitButton = true,
-    iconTone = 'accent',
+    iconVariant = 'accent',
     submitDisabled = false,
     cancelDisabled = false,
     submitTestId,
@@ -103,7 +102,7 @@
     >
       <div class="flex items-start gap-4">
         <div class="min-w-0 flex-1">
-          <TitleBlock {title} {description} {icon} {iconTone} size="large" />
+          <TitleBlock {title} {description} {icon} {iconVariant} size="large" />
         </div>
 
         {#if showCloseButton}

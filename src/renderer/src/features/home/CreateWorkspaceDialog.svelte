@@ -59,7 +59,7 @@
         ? 'This folder is not empty. Typically, you want to create a workspace in an empty folder.'
         : null
   )
-  const finalPathMessageTone = $derived(hasExistingWorkspace ? 'danger' : 'warning')
+  const finalPathMessageVariant = $derived(hasExistingWorkspace ? 'danger' : 'warning')
   const canCreateWorkspace = $derived(
     Boolean(
       workspaceNameValidation.isValid &&
@@ -175,7 +175,7 @@
     <TitleBlock title="Final Workspace Path" size="small" />
     <FloatingValidationMessage
       message={finalPathMessage}
-      tone={finalPathMessageTone}
+      variant={finalPathMessageVariant}
       textTestId="create-workspace-final-path-message"
     >
       <TextInput
@@ -192,7 +192,7 @@
     {#if submissionError}
       <MessageRow
         text={submissionError}
-        tone="danger"
+        variant="danger"
         textTestId="create-workspace-submit-error"
         class="w-full"
       />

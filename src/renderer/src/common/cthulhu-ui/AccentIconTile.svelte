@@ -5,20 +5,20 @@
   import type { CthulhuSize } from './types'
 
   type AccentIconTileSize = Extract<CthulhuSize, 'medium' | 'large'>
-  type AccentIconTileTone = 'accent' | 'accent-white-icon' | 'danger'
+  type AccentIconTileVariant = 'accent' | 'accent-white-icon' | 'danger'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
     iconClass?: string
     size?: AccentIconTileSize
-    tone?: AccentIconTileTone
+    variant?: AccentIconTileVariant
   }
 
   let {
     icon: Icon,
     iconClass,
     size = 'medium',
-    tone = 'accent',
+    variant = 'accent',
     class: className,
     ...restProps
   }: Props = $props()
@@ -34,7 +34,7 @@
     size === 'large' ? 'cthulhuUiAccentIconTile--large' : null,
     className
   )}
-  data-tone={tone}
+  data-variant={variant}
   {...restProps}
 >
   <Icon
@@ -54,19 +54,19 @@
     justify-content: center;
   }
 
-  .cthulhuUiAccentIconTile[data-tone='accent'] {
+  .cthulhuUiAccentIconTile[data-variant='accent'] {
     background-color: var(--ui-accent-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-accent-icon-glyph);
   }
 
-  .cthulhuUiAccentIconTile[data-tone='accent-white-icon'] {
+  .cthulhuUiAccentIconTile[data-variant='accent-white-icon'] {
     background-color: var(--ui-accent-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiAccentIconTile[data-tone='danger'] {
+  .cthulhuUiAccentIconTile[data-variant='danger'] {
     background-color: var(--ui-danger-icon-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-danger);
     color: var(--ui-danger-icon-glyph);

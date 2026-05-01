@@ -253,7 +253,7 @@
                 icon={isWorkspaceReady ? Check : AlertCircle}
                 text={isWorkspaceReady ? 'Workspace Ready' : 'Workspace Not Selected'}
                 textTestId={isWorkspaceReady ? 'workspace-ready-title' : undefined}
-                tone={isWorkspaceReady ? 'success' : 'accent'}
+                variant={isWorkspaceReady ? 'success' : 'accent'}
               />
             </div>
 
@@ -264,7 +264,7 @@
                 iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
                 description="Select an existing workspace folder."
-                tone="neutral"
+                variant="neutral"
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
@@ -275,7 +275,7 @@
                 iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
                 description="Choose a folder and set up a new workspace folder."
-                tone="accent"
+                variant="accent"
                 onclick={handleCreateFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
@@ -287,7 +287,7 @@
                   iconClass="translate-y-px"
                   text="Close Workspace"
                   description="Unload the current workspace folder."
-                  tone="danger"
+                  variant="danger"
                   onclick={onWorkspaceClear}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                 />

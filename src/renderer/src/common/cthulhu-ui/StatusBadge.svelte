@@ -2,14 +2,13 @@
   import type { ComponentType } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
-  import type { CthulhuTone } from './types'
 
-  export type StatusBadgeTone = Extract<CthulhuTone, 'success' | 'accent'>
+  export type StatusBadgeVariant = 'success' | 'accent'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
     text: string
-    tone: StatusBadgeTone
+    variant: StatusBadgeVariant
     iconClass?: string
     textTestId?: string
   }
@@ -17,7 +16,7 @@
   let {
     icon: Icon,
     text,
-    tone,
+    variant,
     iconClass,
     textTestId,
     class: className,
@@ -25,7 +24,7 @@
   }: Props = $props()
 </script>
 
-<div class={mergeClasses('cthulhuUiStatusBadge', className)} data-tone={tone} {...restProps}>
+<div class={mergeClasses('cthulhuUiStatusBadge', className)} data-variant={variant} {...restProps}>
   <Icon class={mergeClasses('h-4 w-4', iconClass)} />
   <span class="cthulhuUiStatusBadgeText" data-testid={textTestId}>{text}</span>
 </div>
@@ -54,13 +53,13 @@
     transform: translateY(-1px);
   }
 
-  .cthulhuUiStatusBadge[data-tone='success'] {
+  .cthulhuUiStatusBadge[data-variant='success'] {
     background: var(--ui-success-normal-surface);
     border-color: var(--ui-success-normal-border);
     color: var(--ui-success-normal-text);
   }
 
-  .cthulhuUiStatusBadge[data-tone='accent'] {
+  .cthulhuUiStatusBadge[data-variant='accent'] {
     background: var(--ui-accent-normal-surface);
     border-color: var(--ui-accent-normal-border);
     color: var(--ui-accent-normal-text);
