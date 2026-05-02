@@ -17,6 +17,7 @@
   import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { ErrorDialog } from '@renderer/common/ui/dialog'
+  import { Separator } from '@renderer/common/ui/separator'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
@@ -181,19 +182,24 @@
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
-    <section class="relative w-full max-w-5xl min-w-0 space-y-10">
-      <div
-        bind:this={secondaryTitleContainerElement}
-        class="mx-auto w-full max-w-[39.5rem] xl:max-w-none"
-      >
-        <h2
-          class="cthulhuHomeSecondaryTitle"
-          data-testid="home-title"
-          style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
+    <section class="relative w-full max-w-5xl min-w-0 space-y-4">
+      <header class="space-y-4">
+        <div
+          bind:this={secondaryTitleContainerElement}
+          class="mx-auto w-full max-w-[39.5rem] xl:max-w-none"
         >
-          {secondaryTitleText}
-        </h2>
-      </div>
+          <h2
+            class="cthulhuHomeSecondaryTitle"
+            data-testid="home-title"
+            style:font-size={secondaryTitleFontSizePx
+              ? `${secondaryTitleFontSizePx}px`
+              : undefined}
+          >
+            {secondaryTitleText}
+          </h2>
+        </div>
+        <Separator class="bg-[var(--ui-neutral-muted-border)]" />
+      </header>
       <span
         bind:this={secondaryTitleMeasureElement}
         aria-hidden="true"
