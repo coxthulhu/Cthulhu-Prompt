@@ -11,47 +11,27 @@
     eager: true
   }) as Record<string, MockupModule>
 
-  const getMockupBasename = (path: string) =>
-    path
-      .split('/')
-      .pop()
-      ?.replace(/\.mockup\.svelte$/, '') ?? path
+  const getMockupFilename = (path: string) => path.split('/').pop() ?? path
 
-  const humanizeMockupName = (value: string) =>
-    value
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .replace(/[-_]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+  const getMockupBasename = (path: string) => getMockupFilename(path).replace(/\.mockup\.svelte$/, '')
 
   const buildMockupEntry = (path: string, module: MockupModule): MockupEntry => {
     const basename = getMockupBasename(path)
-    const meta = module.mockupMeta ?? {}
 
     return {
       path,
       component: module.default,
-      id:
-        meta.id ??
-        basename
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, ''),
-      title: meta.title ?? humanizeMockupName(basename),
-      kicker: meta.kicker ?? 'Mockup',
-      description: meta.description ?? 'Preview',
-      order: meta.order
+      id: basename
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, ''),
+      title: basename
     }
   }
 
   const mockups: MockupEntry[] = Object.entries(mockupModules)
     .map(([path, module]) => buildMockupEntry(path, module))
-    .sort(
-      (left, right) =>
-        (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) ||
-        left.title.localeCompare(right.title) ||
-        left.path.localeCompare(right.path)
-    )
+    .sort((left, right) => left.title.localeCompare(right.title) || left.path.localeCompare(right.path))
 
   const activeMockup = $derived.by(
     () => mockups.find((mockup) => mockup.id === activeMockupId) ?? mockups[0] ?? null
