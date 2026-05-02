@@ -57,6 +57,7 @@
     'box-sizing:border-box;width:100%;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:0.85rem;align-items:center;text-align:left;border:1px solid var(--ui-accent-hover-border);background:linear-gradient(135deg,var(--ui-accent-hover-surface),var(--ui-accent-normal-surface));color:var(--ui-accent-normal-text);border-radius:6px;padding:0.85rem 0.95rem;font:inherit;'
   const dangerActionButtonStyle =
     'box-sizing:border-box;width:100%;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:0.85rem;align-items:center;text-align:left;border:1px solid var(--ui-danger-hover-border);background:var(--ui-danger-normal-surface);color:var(--ui-normal-text);border-radius:6px;padding:0.85rem 0.95rem;font:inherit;'
+  const actionIconStyle = 'width:1.75rem;display:grid;place-items:center;'
   const buttonTitleStyle =
     'display:block;min-width:0;color:inherit;font-size:0.96rem;font-weight:730;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
   const buttonDescriptionStyle =
@@ -138,7 +139,9 @@
 
         <div style={actionListStyle}>
           <button data-testid="select-workspace-folder-button" type="button" style={actionButtonStyle}>
-            <FolderOpen size={20} strokeWidth={1.9} />
+            <span style={actionIconStyle}>
+              <FolderOpen size={20} strokeWidth={1.9} />
+            </span>
             <span style="min-width:0;">
               <span style={buttonTitleStyle}>Open Workspace Folder</span>
               <span style={buttonDescriptionStyle}>Select an existing workspace folder.</span>
@@ -146,7 +149,9 @@
           </button>
 
           <button data-testid="create-workspace-folder-button" type="button" style={accentActionButtonStyle}>
-            <FolderPlus size={20} strokeWidth={1.9} />
+            <span style={actionIconStyle}>
+              <FolderPlus size={20} strokeWidth={1.9} />
+            </span>
             <span style="min-width:0;">
               <span style={buttonTitleStyle}>Create Workspace Folder</span>
               <span style={buttonDescriptionStyle}>
@@ -156,7 +161,9 @@
           </button>
 
           <button data-testid="close-workspace-button" type="button" style={dangerActionButtonStyle}>
-            <X size={20} strokeWidth={1.9} />
+            <span style={actionIconStyle}>
+              <X size={20} strokeWidth={1.9} />
+            </span>
             <span style="min-width:0;">
               <span style={buttonTitleStyle}>Close Workspace</span>
               <span style={buttonDescriptionStyle}>Unload the current workspace folder.</span>
