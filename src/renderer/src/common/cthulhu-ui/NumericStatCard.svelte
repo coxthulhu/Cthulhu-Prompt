@@ -11,7 +11,7 @@
   let { label, text, icon: Icon }: Props = $props()
 </script>
 
-<IconPillSurface {label} icon={Icon} gapClass="gap-3.5">
+<IconPillSurface {label} icon={Icon} gapClass="gap-3" paddingClass="p-3">
   <div class="cthulhuUiNumericStatCardText">{text}</div>
 </IconPillSurface>
 

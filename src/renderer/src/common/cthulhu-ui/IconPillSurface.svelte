@@ -10,6 +10,7 @@
     children: Snippet
     icon?: ComponentType
     gapClass?: string
+    paddingClass?: string
   }
 
   let {
@@ -17,6 +18,7 @@
     children,
     icon: Icon,
     gapClass = 'gap-3',
+    paddingClass = 'p-3.5',
     class: className,
     ...restProps
   }: Props = $props()
@@ -25,7 +27,7 @@
 <!-- Shared icon-leading pill shell for compact read-only workspace metadata. -->
 <CardSurface
   variant="inset"
-  class={mergeClasses('flex min-h-0 min-w-0 items-center p-3.5', gapClass, className)}
+  class={mergeClasses('flex min-h-0 min-w-0 items-center', gapClass, paddingClass, className)}
   {...restProps}
 >
   {#if Icon}

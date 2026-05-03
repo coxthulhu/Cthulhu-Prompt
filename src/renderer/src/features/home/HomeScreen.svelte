@@ -213,34 +213,40 @@
       >
         <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
           <div class="space-y-4">
-            <TitleBlock
-              title="Current Workspace"
-              size="large"
-              description="Information about your current workspace."
-            />
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <TitleBlock
+                  title="Current Workspace"
+                  size="large"
+                  description="Information about your current workspace."
+                />
+              </div>
+            </div>
 
-            <LabeledDisplayField
-              label="Workspace Name"
-              text={displayedWorkspaceName}
-              icon={FolderClosed}
-              valueTitle={displayedWorkspaceName}
-            />
-
-            <LabeledDisplayField
-              label="Workspace Path"
-              text={displayedWorkspacePath}
-              icon={FolderOpen}
-              valueTitle={displayedWorkspacePath}
-              valueTestId={isWorkspaceReady ? 'workspace-ready-path' : undefined}
-            />
-
-            <div class="grid grid-cols-2 gap-3.5">
-              <NumericStatCard label="Prompts" text={displayedPromptCount} icon={FileText} />
-              <NumericStatCard
-                label="Prompt Folders"
-                text={displayedPromptFolderCount}
-                icon={Folders}
+            <div class="flex flex-col gap-3">
+              <LabeledDisplayField
+                label="Workspace Name"
+                text={displayedWorkspaceName}
+                icon={FolderClosed}
+                valueTitle={displayedWorkspaceName}
               />
+
+              <LabeledDisplayField
+                label="Workspace Path"
+                text={displayedWorkspacePath}
+                icon={FolderOpen}
+                valueTitle={displayedWorkspacePath}
+                valueTestId={isWorkspaceReady ? 'workspace-ready-path' : undefined}
+              />
+
+              <div class="grid grid-cols-2 gap-3">
+                <NumericStatCard label="Prompts" text={displayedPromptCount} icon={FileText} />
+                <NumericStatCard
+                  label="Prompt Folders"
+                  text={displayedPromptFolderCount}
+                  icon={Folders}
+                />
+              </div>
             </div>
           </div>
         </CardSurface>
