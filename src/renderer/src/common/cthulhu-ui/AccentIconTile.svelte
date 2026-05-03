@@ -93,7 +93,7 @@
 
   .cthulhuUiAccentIconTile--large {
     border-radius: var(--cthulhu-ui-radius-large-icon);
-    height: 54px;
-    width: 54px;
+    height: 48px;
+    width: 48px;
   }
 </style>

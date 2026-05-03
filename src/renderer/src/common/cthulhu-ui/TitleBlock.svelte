@@ -42,7 +42,7 @@
   .cthulhuUiTitleBlockWithIcon {
     align-items: flex-start;
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .cthulhuUiTitleBlockText {
@@ -51,9 +51,10 @@
 
   .cthulhuUiTitleBlockTitleLarge {
     color: var(--ui-normal-text);
-    font-size: 1.125rem;
-    font-weight: 600;
-    letter-spacing: -0.025em;
+    font-size: 1.28rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.2;
   }
 
   .cthulhuUiTitleBlockTitleSmall {
@@ -63,9 +64,9 @@
   }
 
   .cthulhuUiTitleBlockDescription {
-    margin-top: 0.25rem;
+    margin-top: 0.3rem;
     color: var(--ui-muted-text);
-    font-size: 0.875rem;
-    line-height: 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
   }
 </style>
