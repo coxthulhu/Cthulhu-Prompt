@@ -43,12 +43,12 @@
   --titlebar-button-width: 46px;
   --titlebar-controls-width: calc(var(--titlebar-button-width) * 3);
   /* Shared cthulhu-ui corner scale for non-pill components. */
-  --cthulhu-ui-radius-card: 24px;
-  --cthulhu-ui-radius-action: 20px;
-  --cthulhu-ui-radius-large-icon: 16px;
-  --cthulhu-ui-radius-control: 12px;
-  --cthulhu-ui-radius-icon-button: 8px;
-  --cthulhu-ui-radius-checkbox: 8px;
+  --cthulhu-ui-radius-card: 8px;
+  --cthulhu-ui-radius-action: 6px;
+  --cthulhu-ui-radius-large-icon: 6px;
+  --cthulhu-ui-radius-control: 6px;
+  --cthulhu-ui-radius-icon-button: 6px;
+  --cthulhu-ui-radius-checkbox: 6px;
   /* Shared cthulhu-ui shadow recipes; colors remain sourced from palette.css. */
   --cthulhu-ui-shadow-card: 0 14px 36px var(--ui-card-normal-shadow);
   --cthulhu-ui-shadow-subcard: inset 0 1px 0 var(--ui-card-nested-inset-highlight);

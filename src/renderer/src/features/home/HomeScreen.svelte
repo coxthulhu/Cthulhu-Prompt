@@ -211,7 +211,7 @@
       <div
         class="grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
-        <CardSurface class="w-full max-w-[39.5rem] min-w-0 p-5 xl:max-w-none">
+        <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
           <div class="space-y-4">
             <TitleBlock
               title="Current Workspace"
@@ -245,7 +245,7 @@
           </div>
         </CardSurface>
 
-        <CardSurface class="w-full max-w-[39.5rem] min-w-0 p-5 xl:max-w-none">
+        <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">

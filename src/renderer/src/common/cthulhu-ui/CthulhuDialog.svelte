@@ -94,7 +94,7 @@
   <div class="cthulhuUiDialogLayer" role="presentation" onclick={closeDialog}>
     <CardSurface
       variant="solid"
-      class={mergeClasses('flex flex-col gap-4 p-6', className)}
+      class={mergeClasses('flex flex-col gap-4 p-4', className)}
       role="dialog"
       aria-label={title}
       aria-modal="true"

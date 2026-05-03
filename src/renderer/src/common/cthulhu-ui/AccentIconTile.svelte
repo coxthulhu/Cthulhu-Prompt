@@ -81,14 +81,14 @@
   }
 
   .cthulhuUiAccentIconTile--small {
-    border-radius: 8px;
-    height: 40px;
-    width: 40px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    height: 36px;
+    width: 36px;
   }
 
   .cthulhuUiAccentIconTile--medium {
-    height: 3rem;
-    width: 3rem;
+    height: 2.25rem;
+    width: 2.25rem;
   }
 
   .cthulhuUiAccentIconTile--large {

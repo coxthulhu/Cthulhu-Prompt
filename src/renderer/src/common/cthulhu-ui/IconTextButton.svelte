@@ -42,7 +42,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-4 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
     variantClass,
     className
   )}

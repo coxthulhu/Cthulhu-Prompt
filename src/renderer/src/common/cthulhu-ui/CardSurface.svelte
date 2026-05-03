@@ -23,7 +23,7 @@
       ? 'cthulhuUiCardSurface--solid rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
     variant === 'inset'
-      ? 'cthulhuUiCardSurface--inset rounded-[var(--cthulhu-ui-radius-control)] px-4 py-4'
+      ? 'cthulhuUiCardSurface--inset rounded-[var(--cthulhu-ui-radius-control)] p-3.5'
       : null,
     className
   )}
