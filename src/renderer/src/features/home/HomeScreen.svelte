@@ -182,7 +182,7 @@
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
-    <section class="relative w-full max-w-5xl min-w-0 space-y-4">
+    <section class="relative w-full max-w-5xl min-w-0">
       <header class="space-y-4">
         <div
           bind:this={secondaryTitleContainerElement}
@@ -209,7 +209,7 @@
       </span>
 
       <div
-        class="grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
+        class="mt-5 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
         <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
           <div class="space-y-4">
