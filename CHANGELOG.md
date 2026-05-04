@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.17
+
+### New Features
+
+- Added prompt editor rail controls for moving prompts up or down without dragging.
+
+### Changes
+
+- Refreshed prompt editor rows with a card-based layout, icon-only copy/delete actions, updated drag handles, and prompt metadata styling.
+- Tightened home screen spacing, title separation, and workspace card layout.
+- Standardized shared UI component variants, corner radii, icon tiles, button states, shadows, and input styling.
+
+### Fixed
+
+- Fixed prompt move controls so boundary actions are disabled when a prompt cannot move farther.
+
 ## 0.0.16
 
 ### New Features
