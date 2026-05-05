@@ -23,6 +23,7 @@ const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 const LONG_FOLDER_NAME = 'Long'
 const BASELINE_EXPAND_DRAG_DISTANCE = -200
 const MIN_EXPECTED_WIDTH_DELTA_PX = 8
+const PROMPT_DIVIDER_NUDGE_PX = 40
 
 type MonacoViewStateSnapshot = {
   lineNumber: number
@@ -407,7 +408,10 @@ describe('Prompt Folder Hydration', () => {
         throw new Error('Failed to measure virtual window viewport height')
       }
 
-      await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, viewportHeight * 3)
+      await testHelpers.scrollVirtualWindowBy(
+        HOST_SELECTOR,
+        viewportHeight * 3 + PROMPT_DIVIDER_NUDGE_PX
+      )
 
       const anchorHandle = await mainWindow.waitForFunction(
         ({ hostSelector, rowSelector, placeholderSelector }) => {

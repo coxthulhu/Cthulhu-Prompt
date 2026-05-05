@@ -9,9 +9,11 @@
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
+  import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import { getMinMonacoHeightPx, MONACO_PADDING_PX } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import { Folder } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
   import { PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY } from './find/promptFolderFindSectionKeys'
   import type {
@@ -20,6 +22,9 @@
   } from './find/promptFolderFindTypes'
   import { promptFolderSettingsFindEntityId } from './promptFolderRowIds'
   import {
+    SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX,
+    SETTINGS_DESCRIPTION_CARD_PADDING_PX,
+    SETTINGS_EDITOR_LEFT_OFFSET_PX,
     SETTINGS_EDITOR_TOP_OFFSET_PX,
     getPromptFolderSettingsHeightPx,
     getPromptFolderSettingsMonacoHeightFromRowPx
@@ -100,14 +105,14 @@
     revealSectionMatch: null
   })
   const findContext = getPromptFolderFindContext()
-  const BORDER_WIDTH_PX = 1
-  const MONACO_LEFT_PADDING_PX = 12
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
   const OVERFLOW_TOP_PADDING_PX = SETTINGS_EDITOR_TOP_OFFSET_PX
-  const OVERFLOW_LEFT_PADDING_PX = BORDER_WIDTH_PX + MONACO_LEFT_PADDING_PX
-  const OVERFLOW_RIGHT_PADDING_PX = BORDER_WIDTH_PX
-  const OVERFLOW_BOTTOM_PADDING_PX = MONACO_VERTICAL_PADDING_PX
+  const OVERFLOW_LEFT_PADDING_PX = SETTINGS_EDITOR_LEFT_OFFSET_PX
+  const OVERFLOW_RIGHT_PADDING_PX =
+    SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX + SETTINGS_DESCRIPTION_CARD_PADDING_PX
+  const OVERFLOW_BOTTOM_PADDING_PX =
+    SETTINGS_DESCRIPTION_CARD_PADDING_PX + MONACO_VERTICAL_PADDING_PX
 
   // Side effect: align Monaco overflow widgets with the description editor inside the virtualized row.
   $effect(() => {
@@ -221,72 +226,129 @@
 
 <div
   bind:this={rowElement}
-  class="flex items-stretch gap-2"
+  class="prompt-folder-settings-row"
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-folder-settings-${promptFolderId}`}
   data-virtual-window-row
 >
-  <div class="bg-background flex-1 min-w-0">
-    <div class="flex min-w-0">
-      <div class="flex-1 flex flex-col min-w-0 pt-6">
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight text-white">Folder Settings</h1>
-          <p class="mt-2 text-sm text-zinc-400">
-            Settings that only affect prompts in this folder, and are saved to the workspace.
-          </p>
-        </div>
-        <p class="mt-6 text-sm font-semibold text-muted-foreground">Folder Description</p>
-        <div class="flex-1 min-w-0 mt-2">
-          {#if overflowHost}
-            {#key promptFolderId}
-              <HydratableMonacoEditor
-                initialValue={descriptionValue}
-                initialViewStateJson={initialDescriptionEditorViewStateJson}
-                viewStateCaptureKey={`prompt-folder-description:${promptFolderId}`}
-                containerWidthPx={virtualWindowWidthPx}
-                placeholderHeightPx={placeholderMonacoHeightPx}
-                overflowWidgetsDomNode={overflowHost}
-                {hydrationPriority}
-                {shouldDehydrate}
-                {rowId}
-                {scrollToWithinWindowBand}
-                onEditorLifecycle={handleEditorLifecycle}
-                findSectionKey={PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY}
-                {findRequest}
-                onFindMatches={handleFindMatches}
-                onFindMatchReveal={(handler) => {
-                  findRowHandlers.revealSectionMatch = handler
-                }}
-                onSelectionChange={reportDescriptionSelection}
-                onImmediateHydrationRequest={(request) => {
-                  findRowHandlers.requestImmediateHydration = request
-                }}
-                onViewStateCapture={(viewStateJson) => {
-                  if (!workspaceId) return
-                  setPromptFolderDescriptionEditorViewStateWithAutosave(
-                    workspaceId,
-                    promptFolderId,
-                    viewStateJson
-                  )
-                }}
-                onHydrationChange={handleHydrationChange}
-                onChange={(text, meta) => {
-                  if (meta.heightPx !== monacoHeightPx) {
-                    monacoHeightPx = meta.heightPx
-                  }
-                  onDescriptionChange(text, {
-                    measuredHeightPx: getPromptFolderSettingsHeightPx(meta.heightPx),
-                    widthPx: virtualWindowWidthPx,
-                    devicePixelRatio
-                  })
-                }}
-              />
-            {/key}
-          {:else}
-            <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
-          {/if}
-        </div>
-      </div>
+  <div class="prompt-folder-settings-header">
+    <h1>Folder Settings</h1>
+    <p>Settings that only affect prompts in this folder, and are saved to the workspace.</p>
+  </div>
+
+  <div class="prompt-folder-description-card">
+    <PromptEditorTitleBar
+      title="Folder Description"
+      draftText={descriptionValue}
+      metadataFolderLabel="Folder Settings"
+      icon={Folder}
+      copyLabel="Copy folder description"
+      copyTitle="Copy folder description"
+    />
+
+    <div class="prompt-folder-description-editor">
+      {#if overflowHost}
+        {#key promptFolderId}
+          <HydratableMonacoEditor
+            initialValue={descriptionValue}
+            initialViewStateJson={initialDescriptionEditorViewStateJson}
+            viewStateCaptureKey={`prompt-folder-description:${promptFolderId}`}
+            containerWidthPx={virtualWindowWidthPx}
+            placeholderHeightPx={placeholderMonacoHeightPx}
+            overflowWidgetsDomNode={overflowHost}
+            {hydrationPriority}
+            {shouldDehydrate}
+            {rowId}
+            {scrollToWithinWindowBand}
+            onEditorLifecycle={handleEditorLifecycle}
+            findSectionKey={PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY}
+            {findRequest}
+            onFindMatches={handleFindMatches}
+            onFindMatchReveal={(handler) => {
+              findRowHandlers.revealSectionMatch = handler
+            }}
+            onSelectionChange={reportDescriptionSelection}
+            onImmediateHydrationRequest={(request) => {
+              findRowHandlers.requestImmediateHydration = request
+            }}
+            onViewStateCapture={(viewStateJson) => {
+              if (!workspaceId) return
+              setPromptFolderDescriptionEditorViewStateWithAutosave(
+                workspaceId,
+                promptFolderId,
+                viewStateJson
+              )
+            }}
+            onHydrationChange={handleHydrationChange}
+            onChange={(text, meta) => {
+              if (meta.heightPx !== monacoHeightPx) {
+                monacoHeightPx = meta.heightPx
+              }
+              onDescriptionChange(text, {
+                measuredHeightPx: getPromptFolderSettingsHeightPx(meta.heightPx),
+                widthPx: virtualWindowWidthPx,
+                devicePixelRatio
+              })
+            }}
+          />
+        {/key}
+      {:else}
+        <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
+      {/if}
     </div>
   </div>
 </div>
+
+<style>
+  .prompt-folder-settings-row {
+    align-content: start;
+    box-sizing: border-box;
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+    padding-top: 24px;
+  }
+
+  .prompt-folder-settings-header {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .prompt-folder-settings-header h1 {
+    color: var(--ui-normal-text);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 32px;
+    margin: 0;
+  }
+
+  .prompt-folder-settings-header p {
+    color: var(--ui-muted-text);
+    font-size: 14px;
+    line-height: 20px;
+    margin: 0;
+  }
+
+  .prompt-folder-description-card {
+    align-content: start;
+    backdrop-filter: blur(18px);
+    background: linear-gradient(
+      180deg,
+      var(--ui-card-normal-surface-gradient-start),
+      var(--ui-card-normal-surface-gradient-end)
+    );
+    border: 1px solid var(--ui-card-normal-border);
+    border-radius: 8px;
+    box-shadow: 0 16px 34px var(--ui-card-normal-shadow);
+    box-sizing: border-box;
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .prompt-folder-description-editor {
+    min-width: 0;
+  }
+</style>

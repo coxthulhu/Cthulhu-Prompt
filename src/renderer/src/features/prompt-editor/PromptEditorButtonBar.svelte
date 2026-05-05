@@ -14,10 +14,18 @@
   type Props = {
     title: string
     draftText: string
-    onDelete: () => void
+    onDelete?: () => void
+    copyLabel?: string
+    copyTitle?: string
   }
 
-  let { title, draftText, onDelete }: Props = $props()
+  let {
+    title,
+    draftText,
+    onDelete,
+    copyLabel = 'Copy prompt',
+    copyTitle = 'Copy prompt'
+  }: Props = $props()
   let isCopied = $state(false)
   let resetTimeoutId: number | null = null
   let isDeleteDialogOpen = $state(false)
@@ -38,6 +46,7 @@
   }
 
   const handleDeleteClick = () => {
+    if (!onDelete) return
     const hasContent = title.trim().length > 0 || draftText.trim().length > 0
     if (hasContent) {
       isDeleteDialogOpen = true
@@ -48,6 +57,7 @@
   }
 
   const handleConfirmDelete = () => {
+    if (!onDelete) return
     isDeleteDialogOpen = false
     onDelete()
   }
@@ -60,31 +70,35 @@
 <div class="flex shrink-0 items-center gap-1.5">
   <IconOnlyButton
     icon={isCopied ? Check : Copy}
-    label="Copy prompt"
-    title={isCopied ? 'Copied' : 'Copy prompt'}
+    label={copyLabel}
+    title={isCopied ? 'Copied' : copyTitle}
     variant="accent"
     testId="prompt-copy-button"
     onclick={handleCopyClick}
   />
-  <IconOnlyButton
-    icon={Trash2}
-    label="Delete prompt"
-    title="Delete prompt"
-    variant="danger"
-    testId="prompt-delete-button"
-    onclick={handleDeleteClick}
-  />
+  {#if onDelete}
+    <IconOnlyButton
+      icon={Trash2}
+      label="Delete prompt"
+      title="Delete prompt"
+      variant="danger"
+      testId="prompt-delete-button"
+      onclick={handleDeleteClick}
+    />
+  {/if}
 </div>
 
-<Dialog bind:open={isDeleteDialogOpen}>
-  <DialogContent showCloseButton={false}>
-    <DialogHeader>
-      <DialogTitle>Delete Prompt</DialogTitle>
-      <DialogDescription>Are you sure you want to delete this prompt?</DialogDescription>
-    </DialogHeader>
-    <DialogFooter>
-      <Button variant="outline" onclick={handleCancelDelete}>Cancel</Button>
-      <Button variant="destructive" onclick={handleConfirmDelete}>Delete</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+{#if onDelete}
+  <Dialog bind:open={isDeleteDialogOpen}>
+    <DialogContent showCloseButton={false}>
+      <DialogHeader>
+        <DialogTitle>Delete Prompt</DialogTitle>
+        <DialogDescription>Are you sure you want to delete this prompt?</DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="outline" onclick={handleCancelDelete}>Cancel</Button>
+        <Button variant="destructive" onclick={handleConfirmDelete}>Delete</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+{/if}

@@ -2,30 +2,39 @@
   import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import type { ComponentType } from 'svelte'
   import { FileText, Folder } from 'lucide-svelte'
 
   type Props = {
     title: string
     draftText: string
-    onTitleChange: (value: string) => void
-    promptFolderCount: number
-    rowId: string
+    onTitleChange?: (value: string) => void
+    promptFolderCount?: number
+    rowId?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    onDelete: () => void
+    onDelete?: () => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     inputRef?: HTMLInputElement | null
+    metadataFolderLabel?: string
+    icon?: ComponentType
+    copyLabel?: string
+    copyTitle?: string
   }
 
   let {
     title,
     draftText,
     onTitleChange,
-    promptFolderCount,
+    promptFolderCount = 0,
     rowId,
     scrollToWithinWindowBand,
     onDelete,
     onSelectionChange,
-    inputRef = $bindable(null)
+    inputRef = $bindable(null),
+    metadataFolderLabel = 'Prompts',
+    icon = FileText,
+    copyLabel,
+    copyTitle
   }: Props = $props()
 
   // Derived placeholder text shows the prompt count when the title is empty.
@@ -35,9 +44,10 @@
 
   const handleTitleInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
+    if (!onTitleChange) return
     onTitleChange(input.value)
 
-    if (!scrollToWithinWindowBand) return
+    if (!scrollToWithinWindowBand || !rowId) return
     const rowElement = input.closest('[data-virtual-window-row]') as HTMLElement | null
     if (!rowElement) return
 
@@ -62,29 +72,33 @@
 
 <div class="prompt-editor-title-bar">
   <div class="prompt-editor-title-main">
-    <AccentIconTile icon={FileText} size="small" variant="accent-bordered" />
+    <AccentIconTile {icon} size="small" variant="accent-bordered" />
 
     <div class="prompt-editor-title-copy">
-      <input
-        data-testid="prompt-title"
-        placeholder={titlePlaceholder}
-        value={title}
-        bind:this={inputRef}
-        oninput={(event) => {
-          handleTitleInput(event)
-          handleSelectionChange(event)
-        }}
-        onfocus={handleTitleFocus}
-        onkeyup={handleSelectionChange}
-        onmouseup={handleSelectionChange}
-        onselect={handleSelectionChange}
-        class="prompt-editor-title-input"
-      />
+      {#if onTitleChange}
+        <input
+          data-testid="prompt-title"
+          placeholder={titlePlaceholder}
+          value={title}
+          bind:this={inputRef}
+          oninput={(event) => {
+            handleTitleInput(event)
+            handleSelectionChange(event)
+          }}
+          onfocus={handleTitleFocus}
+          onkeyup={handleSelectionChange}
+          onmouseup={handleSelectionChange}
+          onselect={handleSelectionChange}
+          class="prompt-editor-title-input"
+        />
+      {:else}
+        <p class="prompt-editor-title-text">{title}</p>
+      {/if}
 
       <div class="prompt-editor-metadata-row">
-        <span class="prompt-editor-metadata-folder" title="Prompts">
+        <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
           <Folder class="h-3 w-3 shrink-0 stroke-[2.4]" />
-          Prompts
+          {metadataFolderLabel}
         </span>
         <span class="prompt-editor-metadata-dot"></span>
         <span>0 lines</span>
@@ -96,7 +110,7 @@
     </div>
   </div>
 
-  <PromptEditorButtonBar {title} {draftText} {onDelete} />
+  <PromptEditorButtonBar {title} {draftText} {onDelete} {copyLabel} {copyTitle} />
 </div>
 
 <style>
@@ -127,7 +141,8 @@
     min-width: 0;
   }
 
-  .prompt-editor-title-input {
+  .prompt-editor-title-input,
+  .prompt-editor-title-text {
     background: transparent;
     border: 0;
     color: var(--ui-normal-text);
@@ -140,6 +155,10 @@
     outline: none;
     padding: 0;
     width: 100%;
+  }
+
+  .prompt-editor-title-text {
+    margin: 0;
   }
 
   .prompt-editor-title-input::placeholder {
