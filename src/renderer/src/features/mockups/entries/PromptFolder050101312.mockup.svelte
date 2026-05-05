@@ -14,6 +14,7 @@
   const MOCKUP_BODY_FIND_SECTION_KEY = 'mockup-prompt-body'
   const DEFAULT_MONACO_HEIGHT_PX = 126
   const PROMPT_FOLDER_ID = 'mockup-prompt-folder'
+  const EDITOR_ROW_ICON_COLOR = 'oklch(0.89 0.059 293.664)'
 
   let editorContainerWidthPx = $state(0)
   let monacoOverflowHost = $state<HTMLDivElement | null>(null)
@@ -137,7 +138,7 @@
     insertButton:
       'align-items:center;background:linear-gradient(180deg,oklch(1 0 0 / 8%),oklch(1 0 0 / 3%));border:1px solid var(--ui-neutral-normal-border);border-radius:7px;box-shadow:0 8px 18px oklch(0 0 0 / 16%),inset 0 1px 0 var(--ui-card-nested-inset-highlight);color:var(--ui-secondary-text);cursor:pointer;display:inline-flex;font:750 12px/16px Aptos, "Segoe UI Variable", "Segoe UI", sans-serif;gap:7px;height:28px;padding:0 10px;white-space:nowrap;',
     promptRow:
-      'align-items:stretch;backdrop-filter:blur(18px);background:linear-gradient(180deg,var(--ui-card-normal-surface-gradient-start),var(--ui-card-normal-surface-gradient-end));border:1px solid var(--ui-card-normal-border);border-radius:8px;box-shadow:0 16px 34px var(--ui-card-normal-shadow);box-sizing:border-box;display:grid;gap:10px;grid-template-columns:34px minmax(0, 1fr);min-height:11.25rem;min-width:0;padding:10px;',
+      `--mockup-editor-row-icon-color:${EDITOR_ROW_ICON_COLOR};align-items:stretch;backdrop-filter:blur(18px);background:linear-gradient(180deg,var(--ui-card-normal-surface-gradient-start),var(--ui-card-normal-surface-gradient-end));border:1px solid var(--ui-card-normal-border);border-radius:8px;box-shadow:0 16px 34px var(--ui-card-normal-shadow);box-sizing:border-box;display:grid;gap:10px;grid-template-columns:34px minmax(0, 1fr);min-height:11.25rem;min-width:0;padding:10px;`,
     promptBody:
       'align-content:start;display:grid;gap:8px;grid-template-rows:auto auto;min-width:0;',
     monacoShell: 'box-sizing:border-box;min-height:6rem;width:100%;',
@@ -235,6 +236,7 @@
   <article
     style={styles.promptRow}
     data-testid={`prompt-editor-${prompt.id}`}
+    data-mockup-editor-row
     data-virtual-window-row
   >
     <PromptEditorSidebar
@@ -284,3 +286,15 @@
     </div>
   </article>
 {/snippet}
+
+<style>
+  :global([data-mockup-editor-row] .cthulhuUiAccentIconTile svg),
+  :global([data-mockup-editor-row] .cthulhuUiIconOnlyButton svg),
+  :global([data-mockup-editor-row] .prompt-editor-metadata-folder svg),
+  :global([data-mockup-editor-row] .cthulhuUiIconOnlyButton:hover svg),
+  :global([data-mockup-editor-row] .cthulhuUiIconOnlyButton--accent:hover svg),
+  :global([data-mockup-editor-row] .cthulhuUiIconOnlyButton--danger:hover svg) {
+    color: var(--mockup-editor-row-icon-color);
+    stroke: var(--mockup-editor-row-icon-color);
+  }
+</style>
