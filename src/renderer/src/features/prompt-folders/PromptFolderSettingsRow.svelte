@@ -9,6 +9,7 @@
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
+  import PromptEditorCardSurface from '../prompt-editor/PromptEditorCardSurface.svelte'
   import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import { getMinMonacoHeightPx, MONACO_PADDING_PX } from '../prompt-editor/promptEditorSizing'
@@ -112,7 +113,9 @@
   const OVERFLOW_RIGHT_PADDING_PX =
     SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX + SETTINGS_DESCRIPTION_CARD_PADDING_PX
   const OVERFLOW_BOTTOM_PADDING_PX =
-    SETTINGS_DESCRIPTION_CARD_PADDING_PX + MONACO_VERTICAL_PADDING_PX
+    SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX +
+    SETTINGS_DESCRIPTION_CARD_PADDING_PX +
+    MONACO_VERTICAL_PADDING_PX
 
   // Side effect: align Monaco overflow widgets with the description editor inside the virtualized row.
   $effect(() => {
@@ -236,7 +239,7 @@
     <p>Settings that only affect prompts in this folder, and are saved to the workspace.</p>
   </div>
 
-  <div class="prompt-folder-description-card">
+  <PromptEditorCardSurface>
     <PromptEditorTitleBar
       title="Folder Description"
       draftText={descriptionValue}
@@ -296,7 +299,7 @@
         <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
       {/if}
     </div>
-  </div>
+  </PromptEditorCardSurface>
 </div>
 
 <style>
@@ -328,24 +331,6 @@
     font-size: 14px;
     line-height: 20px;
     margin: 0;
-  }
-
-  .prompt-folder-description-card {
-    align-content: start;
-    backdrop-filter: blur(18px);
-    background: linear-gradient(
-      180deg,
-      var(--ui-card-normal-surface-gradient-start),
-      var(--ui-card-normal-surface-gradient-end)
-    );
-    border: 1px solid var(--ui-card-normal-border);
-    border-radius: 8px;
-    box-shadow: 0 16px 34px var(--ui-card-normal-shadow);
-    box-sizing: border-box;
-    display: grid;
-    gap: 8px;
-    min-width: 0;
-    padding: 10px;
   }
 
   .prompt-folder-description-editor {

@@ -3,6 +3,7 @@
   import type { monaco } from '@renderer/common/Monaco'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
+  import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -133,11 +134,7 @@
   const OVERFLOW_TOP_PADDING_PX =
     CARD_PADDING_PX + TITLE_BAR_HEIGHT_PX + ADDITIONAL_GAP_PX + MONACO_VERTICAL_PADDING_PX
   const OVERFLOW_LEFT_PADDING_PX =
-    BORDER_WIDTH_PX +
-    CARD_PADDING_PX +
-    SIDEBAR_WIDTH_PX +
-    ROW_GAP_PX +
-    MONACO_LEFT_PADDING_PX
+    BORDER_WIDTH_PX + CARD_PADDING_PX + SIDEBAR_WIDTH_PX + ROW_GAP_PX + MONACO_LEFT_PADDING_PX
   const OVERFLOW_RIGHT_PADDING_PX = BORDER_WIDTH_PX + CARD_PADDING_PX
   const OVERFLOW_BOTTOM_PADDING_PX = CARD_PADDING_PX + MONACO_VERTICAL_PADDING_PX
 
@@ -322,112 +319,85 @@
   }
 </script>
 
-<div
-  bind:this={rowElement}
-  class="prompt-editor-row"
+<PromptEditorCardSurface
+  bind:rowElement
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
-  data-virtual-window-row
+  data-virtual-window-row=""
 >
-  <PromptEditorSidebar
-    {promptId}
-    {promptFolderId}
-    {isFirstPrompt}
-    {isLastPrompt}
-    onMoveUp={handleMoveUp}
-    onMoveDown={handleMoveDown}
-    {onPromptTreeDrop}
+  {#snippet sidebar()}
+    <PromptEditorSidebar
+      {promptId}
+      {promptFolderId}
+      {isFirstPrompt}
+      {isLastPrompt}
+      onMoveUp={handleMoveUp}
+      onMoveDown={handleMoveDown}
+      {onPromptTreeDrop}
+    />
+  {/snippet}
+
+  <PromptEditorTitleBar
+    title={promptData.draft.title}
+    draftText={promptData.draft.text}
+    promptFolderCount={promptData.promptFolderCount}
+    onTitleChange={promptData.setTitle}
+    onSelectionChange={reportTitleSelection}
+    bind:inputRef={titleInputRef}
+    {rowId}
+    {scrollToWithinWindowBand}
+    {onDelete}
   />
 
-  <div class="prompt-editor-row-body">
-    <PromptEditorTitleBar
-      title={promptData.draft.title}
-      draftText={promptData.draft.text}
-      promptFolderCount={promptData.promptFolderCount}
-      onTitleChange={promptData.setTitle}
-      onSelectionChange={reportTitleSelection}
-      bind:inputRef={titleInputRef}
-      {rowId}
-      {scrollToWithinWindowBand}
-      {onDelete}
-    />
-
-    <div class="prompt-editor-body-editor">
-      {#if overflowHost}
-        {#key promptId}
-          <HydratableMonacoEditor
-            initialValue={promptData.draft.text}
-            initialViewStateJson={initialEditorViewStateJson}
-            viewStateCaptureKey={`prompt:${promptId}`}
-            containerWidthPx={virtualWindowWidthPx}
-            placeholderHeightPx={placeholderMonacoHeightPx}
-            overflowWidgetsDomNode={overflowHost}
-            {hydrationPriority}
-            {shouldDehydrate}
-            {rowId}
-            {scrollToWithinWindowBand}
-            onEditorLifecycle={handleEditorLifecycle}
-            findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
-            {findRequest}
-            onFindMatches={handleFindMatches}
-            onFindMatchReveal={(handler) => {
-              findRowHandlers.revealSectionMatch = handler
-            }}
-            onSelectionChange={reportBodySelection}
-            onImmediateHydrationRequest={(request) => {
-              findRowHandlers.requestImmediateHydration = request
-            }}
-            onViewStateCapture={(viewStateJson) => {
-              if (!workspaceId) return
-              setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
-            }}
-            onHydrationChange={handleHydrationChange}
-            onChange={(text, meta) => {
-              if (meta.heightPx !== monacoHeightPx) {
-                monacoHeightPx = meta.heightPx
-              }
-              promptData.setText(text, {
-                measuredHeightPx: getRowHeightPx(meta.heightPx),
-                widthPx: virtualWindowWidthPx,
-                devicePixelRatio
-              })
-            }}
-          />
-        {/key}
-      {:else}
-        <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
-      {/if}
-    </div>
+  <div class="prompt-editor-body-editor">
+    {#if overflowHost}
+      {#key promptId}
+        <HydratableMonacoEditor
+          initialValue={promptData.draft.text}
+          initialViewStateJson={initialEditorViewStateJson}
+          viewStateCaptureKey={`prompt:${promptId}`}
+          containerWidthPx={virtualWindowWidthPx}
+          placeholderHeightPx={placeholderMonacoHeightPx}
+          overflowWidgetsDomNode={overflowHost}
+          {hydrationPriority}
+          {shouldDehydrate}
+          {rowId}
+          {scrollToWithinWindowBand}
+          onEditorLifecycle={handleEditorLifecycle}
+          findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
+          {findRequest}
+          onFindMatches={handleFindMatches}
+          onFindMatchReveal={(handler) => {
+            findRowHandlers.revealSectionMatch = handler
+          }}
+          onSelectionChange={reportBodySelection}
+          onImmediateHydrationRequest={(request) => {
+            findRowHandlers.requestImmediateHydration = request
+          }}
+          onViewStateCapture={(viewStateJson) => {
+            if (!workspaceId) return
+            setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
+          }}
+          onHydrationChange={handleHydrationChange}
+          onChange={(text, meta) => {
+            if (meta.heightPx !== monacoHeightPx) {
+              monacoHeightPx = meta.heightPx
+            }
+            promptData.setText(text, {
+              measuredHeightPx: getRowHeightPx(meta.heightPx),
+              widthPx: virtualWindowWidthPx,
+              devicePixelRatio
+            })
+          }}
+        />
+      {/key}
+    {:else}
+      <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
+    {/if}
   </div>
-</div>
+</PromptEditorCardSurface>
 
 <style>
-  .prompt-editor-row {
-    align-items: stretch;
-    backdrop-filter: blur(18px);
-    background: linear-gradient(
-      180deg,
-      var(--ui-card-normal-surface-gradient-start),
-      var(--ui-card-normal-surface-gradient-end)
-    );
-    border: 1px solid var(--ui-card-normal-border);
-    border-radius: 8px;
-    box-shadow: 0 16px 34px var(--ui-card-normal-shadow);
-    box-sizing: border-box;
-    display: grid;
-    gap: 10px;
-    grid-template-columns: 34px minmax(0, 1fr);
-    padding: 10px;
-  }
-
-  .prompt-editor-row-body {
-    align-content: start;
-    display: grid;
-    gap: 8px;
-    grid-template-rows: auto auto;
-    min-width: 0;
-  }
-
   .prompt-editor-body-editor {
     min-width: 0;
   }

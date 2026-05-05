@@ -3,22 +3,31 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  export type CardSurfaceVariant = 'panel' | 'solid' | 'inset'
+  export type CardSurfaceVariant = 'panel' | 'panel-flat' | 'solid' | 'inset'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     children: Snippet
     variant?: CardSurfaceVariant
+    elementRef?: HTMLDivElement | null
   }
 
-  let { class: className, children, variant = 'panel', ...restProps }: Props = $props()
+  let {
+    class: className,
+    children,
+    variant = 'panel',
+    elementRef = $bindable(null),
+    ...restProps
+  }: Props = $props()
 </script>
 
 <div
+  bind:this={elementRef}
   class={mergeClasses(
     'cthulhuUiCardSurface border',
-    variant === 'panel'
+    variant === 'panel' || variant === 'panel-flat'
       ? 'cthulhuUiCardSurface--panel rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
+    variant === 'panel-flat' ? 'cthulhuUiCardSurface--flat' : null,
     variant === 'solid'
       ? 'cthulhuUiCardSurface--solid rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
@@ -42,6 +51,10 @@
   .cthulhuUiCardSurface--solid {
     border-color: var(--ui-card-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-card);
+  }
+
+  .cthulhuUiCardSurface--flat {
+    box-shadow: none;
   }
 
   .cthulhuUiCardSurface--panel {
