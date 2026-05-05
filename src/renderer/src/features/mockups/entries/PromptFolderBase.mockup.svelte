@@ -2,6 +2,7 @@
   import HydratableMonacoEditor from '@renderer/features/prompt-editor/HydratableMonacoEditor.svelte'
   import PromptEditorSidebar from '@renderer/features/prompt-editor/PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from '@renderer/features/prompt-editor/PromptEditorTitleBar.svelte'
+  import { Folder } from 'lucide-svelte'
 
   type MockupPrompt = {
     id: string
@@ -11,11 +12,21 @@
   }
 
   const MOCKUP_BODY_FIND_SECTION_KEY = 'mockup-prompt-body'
+  const MOCKUP_FOLDER_DESCRIPTION_FIND_SECTION_KEY = 'mockup-folder-description'
   const DEFAULT_MONACO_HEIGHT_PX = 126
+  const DEFAULT_DESCRIPTION_MONACO_HEIGHT_PX = 106
   const PROMPT_FOLDER_ID = 'mockup-prompt-folder'
 
   let editorContainerWidthPx = $state(0)
   let monacoOverflowHost = $state<HTMLDivElement | null>(null)
+  let folderDescriptionText = $state(
+    [
+      'Use this folder for prompts that shape implementation work from planning through verification.',
+      '',
+      'Keep reusable review criteria, test-writing patterns, and release-note helpers close together so they are easy to scan before copying.'
+    ].join('\n')
+  )
+  let folderDescriptionHeightPx = $state(DEFAULT_DESCRIPTION_MONACO_HEIGHT_PX)
 
   let prompts = $state<MockupPrompt[]>([
     {
@@ -81,6 +92,45 @@
 
 <main class="prompt-folder-mockup" data-testid="prompt-folder-screen">
   <div class="prompt-editor-stack" bind:clientWidth={editorContainerWidthPx}>
+    <section
+      class="prompt-folder-description-card"
+      data-testid="prompt-folder-settings-mockup-prompt-folder"
+      data-virtual-window-row
+    >
+      <PromptEditorTitleBar
+        title="Folder Description"
+        draftText={folderDescriptionText}
+        metadataFolderLabel="Prompt Folder"
+        icon={Folder}
+        copyLabel="Copy folder description"
+        copyTitle="Copy folder description"
+      />
+
+      <div class="prompt-folder-description-editor">
+        {#if monacoOverflowHost}
+          <HydratableMonacoEditor
+            initialValue={folderDescriptionText}
+            containerWidthPx={editorContainerWidthPx}
+            placeholderHeightPx={folderDescriptionHeightPx}
+            overflowWidgetsDomNode={monacoOverflowHost}
+            hydrationPriority={0}
+            shouldDehydrate={false}
+            rowId="mockup-folder-description"
+            findSectionKey={MOCKUP_FOLDER_DESCRIPTION_FIND_SECTION_KEY}
+            onChange={(text, meta) => {
+              folderDescriptionText = text
+              folderDescriptionHeightPx = meta.heightPx
+            }}
+          />
+        {:else}
+          <div
+            class="prompt-editor-monaco-pending"
+            style={`min-height: ${folderDescriptionHeightPx}px;`}
+          ></div>
+        {/if}
+      </div>
+    </section>
+
     {#each prompts as prompt, index (prompt.id)}
       {@render promptEditor(prompt, index)}
     {/each}
@@ -181,6 +231,28 @@
     min-height: 11.25rem;
     min-width: 0;
     padding: 10px;
+  }
+
+  .prompt-folder-description-card {
+    align-content: start;
+    backdrop-filter: blur(18px);
+    background: linear-gradient(
+      180deg,
+      var(--ui-card-normal-surface-gradient-start),
+      var(--ui-card-normal-surface-gradient-end)
+    );
+    border: 1px solid var(--ui-card-normal-border);
+    border-radius: 8px;
+    box-shadow: 0 16px 34px var(--ui-card-normal-shadow);
+    box-sizing: border-box;
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .prompt-folder-description-editor {
+    min-width: 0;
   }
 
   .prompt-editor-body {
