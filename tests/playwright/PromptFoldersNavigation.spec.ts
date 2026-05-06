@@ -9,6 +9,8 @@ const DEVELOPMENT_TOGGLE = '[data-testid="prompt-folder-toggle-Development"]'
 const EXAMPLES_SETTINGS = '[data-testid="prompt-folder-settings-Examples"]'
 const DEVELOPMENT_SETTINGS = '[data-testid="prompt-folder-settings-Development"]'
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
+const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-folder-prompt-dev-1"]'
+const EXPAND_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="expand-all-prompt-folders-button"]'
 const COLLAPSE_ALL_PROMPT_FOLDERS_BUTTON =
   '[data-testid="collapse-all-prompt-folders-button"]'
 const SHORT_SETTINGS = '[data-testid="prompt-folder-settings-Short"]'
@@ -194,6 +196,35 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(0)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(0)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
+  })
+
+  test('expands all prompt folders from the sidebar action', async ({ testSetup }) => {
+    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await mainWindow.locator(EXAMPLES_TOGGLE).click()
+    await mainWindow.locator(DEVELOPMENT_TOGGLE).click()
+    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+
+    await expect(mainWindow.locator(EXPAND_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
+    await mainWindow.locator(EXPAND_ALL_PROMPT_FOLDERS_BUTTON).click()
+
+    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
+    await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
   })
 
   test('creates and navigates to a new folder', async ({ testSetup }) => {

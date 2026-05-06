@@ -4,7 +4,7 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, Home } from 'lucide-svelte'
+  import { ChevronsDownUp, ChevronsUpDown, Home } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import type { PromptFolder } from '@shared/PromptFolder'
@@ -117,6 +117,7 @@
   const canCollapsePromptFolders = $derived(
     folderListState === 'ready' && promptFolders.length > 0
   )
+  let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
 
   const getNavButtonState = (item: NavItem): 'active' | 'enabled' | 'disabled' => {
@@ -228,6 +229,19 @@
       {#if isWorkspaceReady}
         <div class="flex shrink-0 items-center">
           <IconOnlyButton
+            icon={ChevronsUpDown}
+            label="Expand All Prompt Folders"
+            title="Expand All Prompt Folders"
+            variant="transparent"
+            size="compact"
+            disabled={!canCollapsePromptFolders}
+            testId="expand-all-prompt-folders-button"
+            class="rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+            onclick={() => {
+              expandAllPromptFoldersVersion += 1
+            }}
+          />
+          <IconOnlyButton
             icon={ChevronsDownUp}
             label="Collapse All Prompt Folders"
             title="Collapse All Prompt Folders"
@@ -260,6 +274,7 @@
       {promptFolders}
       {folderListState}
       {selectedPromptFolderId}
+      expandAllRequestVersion={expandAllPromptFoldersVersion}
       collapseAllRequestVersion={collapseAllPromptFoldersVersion}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
       {onPromptFolderSelect}

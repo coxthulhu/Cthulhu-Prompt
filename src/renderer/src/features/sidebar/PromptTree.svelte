@@ -87,6 +87,7 @@
     promptFolders,
     folderListState,
     selectedPromptFolderId = null,
+    expandAllRequestVersion = 0,
     collapseAllRequestVersion = 0,
     isPromptFoldersScreenActive = false,
     onPromptFolderSelect
@@ -94,6 +95,7 @@
     promptFolders: PromptFolder[]
     folderListState: FolderListState
     selectedPromptFolderId?: string | null
+    expandAllRequestVersion?: number
     collapseAllRequestVersion?: number
     isPromptFoldersScreenActive?: boolean
     onPromptFolderSelect: (promptFolderId: string) => void
@@ -142,6 +144,7 @@
   let expandedFolderStates = $state<Record<string, boolean>>({})
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastTrackedTreeRowId = $state<string | null>(null)
+  let lastExpandAllRequestVersion = $state(0)
   let lastCollapseAllRequestVersion = $state(0)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
@@ -198,6 +201,12 @@
 
   const toggleFolderExpanded = (folderId: string) => {
     setFolderExpanded(folderId, !isFolderExpanded(folderId))
+  }
+
+  const expandAllPromptFolders = () => {
+    for (const folder of promptFolders) {
+      setFolderExpanded(folder.id, true)
+    }
   }
 
   const collapseAllPromptFolders = () => {
@@ -340,6 +349,16 @@
 
     lastWorkspaceId = workspaceId
     expandedFolderStates = {}
+  })
+
+  // Side effect: respond to the sidebar header action by expanding every prompt folder.
+  $effect(() => {
+    if (expandAllRequestVersion === lastExpandAllRequestVersion) {
+      return
+    }
+
+    lastExpandAllRequestVersion = expandAllRequestVersion
+    expandAllPromptFolders()
   })
 
   // Side effect: respond to the sidebar header action by collapsing every prompt folder.
