@@ -146,8 +146,8 @@
       snippet: placeholderRow
     },
     'prompt-divider': {
-      // Match the xs button height so the divider row doesn't clip.
-      estimateHeight: () => 28,
+      // Match the add row height: 10px top spacing, 36px control row, 10px bottom spacing.
+      estimateHeight: () => 56,
       snippet: dividerRow
     },
     'prompt-editor': {
