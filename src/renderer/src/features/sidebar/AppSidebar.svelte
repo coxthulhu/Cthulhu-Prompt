@@ -4,11 +4,12 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { Home } from 'lucide-svelte'
+  import { ChevronsDownUp, Home } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
@@ -113,6 +114,10 @@
     const folderCount = promptFolders.length
     return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
   })
+  const canCollapsePromptFolders = $derived(
+    folderListState === 'ready' && promptFolders.length > 0
+  )
+  let collapseAllPromptFoldersVersion = $state(0)
 
   const getNavButtonState = (item: NavItem): 'active' | 'enabled' | 'disabled' => {
     if (item.requiresWorkspace && !isWorkspaceReady) {
@@ -221,7 +226,20 @@
         <p class="cthulhuSidebarPromptSectionCount mt-0.5 text-xs">{promptFolderCountLabel}</p>
       </div>
       {#if isWorkspaceReady}
-        <div class="shrink-0">
+        <div class="flex shrink-0 items-center">
+          <IconOnlyButton
+            icon={ChevronsDownUp}
+            label="Collapse All Prompt Folders"
+            title="Collapse All Prompt Folders"
+            variant="transparent"
+            size="compact"
+            disabled={!canCollapsePromptFolders}
+            testId="collapse-all-prompt-folders-button"
+            class="rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+            onclick={() => {
+              collapseAllPromptFoldersVersion += 1
+            }}
+          />
           <CreatePromptFolderDialog
             {isWorkspaceReady}
             {promptFolders}
@@ -242,6 +260,7 @@
       {promptFolders}
       {folderListState}
       {selectedPromptFolderId}
+      collapseAllRequestVersion={collapseAllPromptFoldersVersion}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
       {onPromptFolderSelect}
     />

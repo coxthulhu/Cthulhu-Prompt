@@ -3,7 +3,7 @@
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
-  type IconOnlyButtonSize = 'default' | 'rail' | 'rail-fill'
+  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
   type IconOnlyButtonAction = Action<HTMLButtonElement, unknown>
 
@@ -50,7 +50,9 @@
   const sizeClass = $derived(
     size === 'rail'
       ? 'cthulhuUiIconOnlyButton--rail'
-      : size === 'rail-fill'
+      : size === 'compact'
+        ? 'cthulhuUiIconOnlyButton--compact'
+        : size === 'rail-fill'
         ? 'cthulhuUiIconOnlyButton--railFill'
         : null
   )
@@ -93,6 +95,11 @@
   .cthulhuUiIconOnlyButton--rail {
     height: 2rem;
     width: 2rem;
+  }
+
+  .cthulhuUiIconOnlyButton--compact {
+    height: 1.75rem;
+    width: 1.75rem;
   }
 
   .cthulhuUiIconOnlyButton--railFill {

@@ -87,12 +87,14 @@
     promptFolders,
     folderListState,
     selectedPromptFolderId = null,
+    collapseAllRequestVersion = 0,
     isPromptFoldersScreenActive = false,
     onPromptFolderSelect
   } = $props<{
     promptFolders: PromptFolder[]
     folderListState: FolderListState
     selectedPromptFolderId?: string | null
+    collapseAllRequestVersion?: number
     isPromptFoldersScreenActive?: boolean
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
@@ -140,6 +142,7 @@
   let expandedFolderStates = $state<Record<string, boolean>>({})
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastTrackedTreeRowId = $state<string | null>(null)
+  let lastCollapseAllRequestVersion = $state(0)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
   let lastWorkspaceId = $state<string | null>(workspaceSelection.selectedWorkspaceId)
@@ -195,6 +198,12 @@
 
   const toggleFolderExpanded = (folderId: string) => {
     setFolderExpanded(folderId, !isFolderExpanded(folderId))
+  }
+
+  const collapseAllPromptFolders = () => {
+    for (const folder of promptFolders) {
+      setFolderExpanded(folder.id, false)
+    }
   }
 
   const PROMPT_TREE_CHILD_ROW_CONTENT_INSET = '2.375rem'
@@ -331,6 +340,16 @@
 
     lastWorkspaceId = workspaceId
     expandedFolderStates = {}
+  })
+
+  // Side effect: respond to the sidebar header action by collapsing every prompt folder.
+  $effect(() => {
+    if (collapseAllRequestVersion === lastCollapseAllRequestVersion) {
+      return
+    }
+
+    lastCollapseAllRequestVersion = collapseAllRequestVersion
+    collapseAllPromptFolders()
   })
 
   // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
