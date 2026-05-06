@@ -68,6 +68,7 @@
   }: Props = $props()
 
   let isHydrated = $state(false)
+  let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let queuedEntry: MonacoHydrationEntry | null = null
   let lastReportedHydration = $state<boolean | null>(null)
 
@@ -75,6 +76,24 @@
     if (lastReportedHydration === isHydrated) return
     lastReportedHydration = isHydrated
     onHydrationChange?.(isHydrated)
+  }
+
+  const handleEditorLifecycle = (
+    editor: monaco.editor.IStandaloneCodeEditor,
+    isActive: boolean
+  ) => {
+    if (isActive) {
+      editorInstance = editor
+    } else if (editorInstance === editor) {
+      editorInstance = null
+    }
+    onEditorLifecycle?.(editor, isActive)
+  }
+
+  const handleFrameClick = (event: MouseEvent) => {
+    // Focus only direct frame clicks so Monaco keeps its existing cursor and selection behavior.
+    if (event.target !== event.currentTarget) return
+    editorInstance?.focus()
   }
 
   const requestImmediateHydration = () => {
@@ -132,7 +151,11 @@
   })
 </script>
 
-<div class={cn('border border-border rounded-md bg-[#1e1e1e] pl-3 py-1', className)}>
+<div
+  class={cn('border border-border rounded-md bg-[#1e1e1e] pl-3 py-1', className)}
+  role="presentation"
+  onclick={handleFrameClick}
+>
   {#if isHydrated}
     <AutoSizingMonacoEditor
       {initialValue}
@@ -144,7 +167,7 @@
       {scrollToWithinWindowBand}
       {onChange}
       {onBlur}
-      {onEditorLifecycle}
+      onEditorLifecycle={handleEditorLifecycle}
       {findSectionKey}
       {findRequest}
       {onFindMatches}
