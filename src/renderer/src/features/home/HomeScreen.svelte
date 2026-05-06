@@ -16,7 +16,6 @@
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import { ErrorDialog } from '@renderer/common/ui/dialog'
   import { Separator } from '@renderer/common/ui/separator'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
@@ -324,11 +323,11 @@
     errorText={workspaceNotFoundErrorText}
   />
 
-  <ErrorDialog
+  <CthulhuErrorDialog
     bind:open={showRootPathDialog}
     title="Invalid workspace folder"
-    message={workspaceRootPathErrorMessage}
-    confirmLabel="OK"
+    description="The selected folder cannot be used as a workspace."
+    errorText={workspaceRootPathErrorMessage}
   />
 </main>
 
