@@ -92,6 +92,8 @@
           </button>
         </div>
 
+        <div style="height: 1px; background: var(--ui-neutral-muted-border);"></div>
+
         <div
           style="box-sizing: border-box; display: grid; gap: 10px; min-width: 0; border: 1px solid var(--ui-card-normal-border); border-radius: 8px; background: linear-gradient(180deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end)); box-shadow: 0 16px 34px var(--ui-card-normal-shadow); padding: 10px;"
         >
@@ -144,17 +146,22 @@
 
       <section style="display: grid; gap: 14px; min-width: 0;">
         <div
-          style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; border-top: 1px solid var(--ui-neutral-muted-border); padding-top: 22px;"
+          style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 18px;"
         >
-          <div style="display: flex; min-width: 0; align-items: center; gap: 12px;">
-            <h2 style="margin: 0; color: var(--ui-normal-text); font-size: 24px; font-weight: 800; line-height: 32px;">
-              Prompts
-            </h2>
-            <span
-              style="display: inline-flex; height: 24px; align-items: center; border: 1px solid var(--ui-info-normal-border); border-radius: 999px; background: var(--ui-info-normal-surface); padding: 0 9px; color: var(--ui-secondary-text); font-size: 12px; font-weight: 800;"
-            >
-              2 prompts
-            </span>
+          <div style="display: grid; gap: 8px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span
+                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-icon-surface); box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight); color: var(--ui-accent-icon-glyph);"
+              >
+                <FileText size={16} strokeWidth={2.4} />
+              </span>
+              <h2 style="margin: 0; color: var(--ui-normal-text); font-size: 24px; line-height: 32px;">
+                Prompts
+              </h2>
+            </div>
+            <p style="margin: 0; color: var(--ui-muted-text); font-size: 14px; line-height: 20px;">
+              2 reusable prompts in this folder, ready to copy or reorder.
+            </p>
           </div>
 
           <button
@@ -165,6 +172,8 @@
             <ChevronDown size={14} strokeWidth={2.3} />
           </button>
         </div>
+
+        <div style="height: 1px; background: var(--ui-neutral-muted-border);"></div>
 
         <div
           style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;"
