@@ -401,7 +401,7 @@
 
 <style>
   .test-screen-shell {
-    background: var(--ui-neutral-field-surface);
+    background: var(--background);
     color: var(--ui-normal-text);
     height: 100%;
     min-height: 0;
@@ -436,28 +436,10 @@
     grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
   }
 
-  :global(.component-section) {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  :global(.component-section-wide) {
-    grid-column: 1 / -1;
-  }
-
   .variant-grid {
     display: grid;
     gap: 0.75rem;
     grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  }
-
-  :global(.sample-card) {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-height: 7rem;
   }
 
   .sample-title,
@@ -467,13 +449,6 @@
     font-size: 0.875rem;
     font-weight: 700;
     line-height: 1.3;
-  }
-
-  :global(.sample-card p) {
-    color: var(--ui-secondary-text);
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    margin: 0;
   }
 
   .tile-matrix,
