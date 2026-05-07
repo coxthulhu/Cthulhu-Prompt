@@ -256,10 +256,41 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(errorMessage).toHaveCount(0)
     await expect(createButton).toBeEnabled()
 
+    await mainWindow.evaluate(() => {
+      const testWindow = window as typeof window & {
+        __promptFolderCreateDuplicateErrorObserver?: MutationObserver
+        __promptFolderCreateDuplicateErrorSeen?: boolean
+      }
+
+      testWindow.__promptFolderCreateDuplicateErrorSeen = false
+
+      const observer = new MutationObserver(() => {
+        const errorMessage = document.querySelector('[data-testid="folder-name-error"]')
+
+        if (errorMessage?.textContent?.includes('A folder with this name already exists')) {
+          testWindow.__promptFolderCreateDuplicateErrorSeen = true
+        }
+      })
+
+      observer.observe(document.body, { childList: true, subtree: true })
+      testWindow.__promptFolderCreateDuplicateErrorObserver = observer
+    })
+
     await createButton.click()
     await expect(
       mainWindow.locator('[data-testid="regular-prompt-folder-TestFolder"]')
     ).toBeVisible()
+    expect(
+      await mainWindow.evaluate(() => {
+        const testWindow = window as typeof window & {
+          __promptFolderCreateDuplicateErrorObserver?: MutationObserver
+          __promptFolderCreateDuplicateErrorSeen?: boolean
+        }
+
+        testWindow.__promptFolderCreateDuplicateErrorObserver?.disconnect()
+        return testWindow.__promptFolderCreateDuplicateErrorSeen
+      })
+    ).toBe(false)
 
     await testHelpers.navigateToRegularFolder('Test Folder')
 

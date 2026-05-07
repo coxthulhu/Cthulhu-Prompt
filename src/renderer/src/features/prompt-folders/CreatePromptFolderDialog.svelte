@@ -52,7 +52,8 @@
         : null
   )
   const errorMessage = $derived(
-    submissionError ?? (hasInteractedWithInput ? validationMessage : null)
+    submissionError ??
+      (!isCreatingPromptFolder && hasInteractedWithInput ? validationMessage : null)
   )
   const isValid = $derived(
     Boolean(
