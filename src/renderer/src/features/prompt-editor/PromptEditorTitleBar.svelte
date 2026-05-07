@@ -148,7 +148,7 @@
     color: var(--ui-normal-text);
     font-family: inherit;
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 600;
     height: 22px;
     line-height: 20px;
     min-width: 0;
