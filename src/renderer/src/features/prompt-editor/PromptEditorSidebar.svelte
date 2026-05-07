@@ -133,7 +133,7 @@
     display: grid;
     flex: 0 0 1.75rem;
     gap: 6px;
-    grid-template-rows: 32px minmax(0, 1fr) 32px;
+    grid-template-rows: 1.75rem minmax(0, 1fr) 1.75rem;
     height: 100%;
     min-height: 136px;
     width: 1.75rem;

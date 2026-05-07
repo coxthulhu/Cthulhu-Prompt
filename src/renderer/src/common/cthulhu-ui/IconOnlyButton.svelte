@@ -93,7 +93,7 @@
   }
 
   .cthulhuUiIconOnlyButton--rail {
-    height: 2rem;
+    height: 1.75rem;
     width: 1.75rem;
   }
 
