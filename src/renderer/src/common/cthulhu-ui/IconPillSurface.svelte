@@ -31,7 +31,7 @@
   {...restProps}
 >
   {#if Icon}
-    <AccentIconTile icon={Icon} variant="accent-white-icon" />
+    <AccentIconTile icon={Icon} variant="accent" />
   {/if}
 
   <div class="flex min-w-0 flex-col gap-1">

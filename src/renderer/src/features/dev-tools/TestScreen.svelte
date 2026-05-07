@@ -49,20 +49,15 @@
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
-  type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'accent-white-icon' | 'danger'
+  type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'danger'
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
   type IconPillButtonVariant = 'accent' | 'neutral'
   type IconTextButtonState = 'active' | 'enabled' | 'disabled'
   type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
-  type TitleBlockIconVariant = 'accent' | 'accent-white-icon' | 'danger'
+  type TitleBlockIconVariant = 'accent' | 'danger'
 
-  const accentIconTileVariants: AccentIconTileVariant[] = [
-    'accent',
-    'accent-bordered',
-    'accent-white-icon',
-    'danger'
-  ]
+  const accentIconTileVariants: AccentIconTileVariant[] = ['accent', 'accent-bordered', 'danger']
   const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
   const cardSurfaceVariants: CardSurfaceVariant[] = ['panel', 'panel-flat', 'solid', 'inset']
   const iconDescriptionButtonVariants: IconDescriptionButtonVariant[] = [
@@ -83,7 +78,7 @@
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const messageRowVariants: MessageRowVariant[] = ['danger', 'warning']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
-  const titleBlockIconVariants: TitleBlockIconVariant[] = ['accent', 'accent-white-icon', 'danger']
+  const titleBlockIconVariants: TitleBlockIconVariant[] = ['accent', 'danger']
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
 

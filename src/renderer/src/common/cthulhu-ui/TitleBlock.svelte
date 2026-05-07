@@ -4,7 +4,7 @@
   import type { CthulhuSize } from './types'
 
   type TitleBlockSize = Extract<CthulhuSize, 'small' | 'large'>
-  type TitleBlockIconVariant = 'accent' | 'accent-white-icon' | 'danger'
+  type TitleBlockIconVariant = 'accent' | 'danger'
 
   type Props = {
     title: string
@@ -14,7 +14,7 @@
     iconVariant?: TitleBlockIconVariant
   }
 
-  let { title, size, description, icon: Icon, iconVariant = 'accent-white-icon' }: Props = $props()
+  let { title, size, description, icon: Icon, iconVariant = 'accent' }: Props = $props()
 
   const titleTag = $derived(size === 'large' ? 'h2' : 'h3')
 </script>
