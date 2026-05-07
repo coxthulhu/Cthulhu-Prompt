@@ -94,7 +94,7 @@
 
   .cthulhuUiIconOnlyButton--rail {
     height: 2rem;
-    width: 2rem;
+    width: 1.75rem;
   }
 
   .cthulhuUiIconOnlyButton--compact {
@@ -105,7 +105,7 @@
   .cthulhuUiIconOnlyButton--railFill {
     height: 100%;
     min-height: 0;
-    width: 2rem;
+    width: 1.75rem;
   }
 
   .cthulhuUiIconOnlyButton[data-grab-cursor='true'] {
