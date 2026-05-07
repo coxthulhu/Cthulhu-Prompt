@@ -115,7 +115,7 @@
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='accent'] .cthulhuUiIconDescriptionButtonIcon {
-    background-color: var(--ui-accent-icon-surface);
+    background-color: var(--ui-accent-normal-surface);
     box-shadow: var(--cthulhu-ui-shadow-icon-accent);
     color: var(--ui-normal-text);
   }

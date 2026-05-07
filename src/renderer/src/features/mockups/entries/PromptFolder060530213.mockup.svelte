@@ -54,7 +54,7 @@
   const titleMainStyle =
     'align-items:center;display:grid;gap:10px;grid-template-columns:40px minmax(0,1fr);min-width:0;'
   const accentTileStyle =
-    'align-items:center;background:var(--ui-accent-icon-surface);border:1px solid var(--ui-accent-icon-ring);border-radius:7px;box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);display:flex;height:40px;justify-content:center;width:40px;'
+    'align-items:center;background:var(--ui-accent-normal-surface);border:1px solid var(--ui-accent-icon-ring);border-radius:7px;box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);display:flex;height:40px;justify-content:center;width:40px;'
   const titleCopyStyle = 'display:grid;gap:4px;min-width:0;'
   const titleTextStyle =
     'background:transparent;border:0;color:var(--ui-normal-text);font-family:inherit;font-size:15px;font-weight:700;height:22px;line-height:20px;margin:0;min-width:0;outline:none;overflow:hidden;padding:0;text-overflow:ellipsis;white-space:nowrap;width:100%;'

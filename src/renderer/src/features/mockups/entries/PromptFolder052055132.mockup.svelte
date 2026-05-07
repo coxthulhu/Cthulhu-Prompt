@@ -74,7 +74,7 @@
         >
           <div style="display:flex; align-items:center; gap:10px;">
             <span
-              style="display:grid; height:30px; width:30px; place-items:center; border:1px solid var(--ui-accent-normal-border); border-radius:7px; background:var(--ui-accent-icon-surface); color:var(--ui-accent-icon-glyph);"
+              style="display:grid; height:30px; width:30px; place-items:center; border:1px solid var(--ui-accent-normal-border); border-radius:7px; background:var(--ui-accent-normal-surface); color:var(--ui-accent-icon-glyph);"
             >
               <Settings size={16} strokeWidth={2.4} />
             </span>
@@ -100,7 +100,7 @@
               style="display:grid; min-width:0; grid-template-columns:40px minmax(0, 1fr); align-items:center; gap:10px;"
             >
               <span
-                style="display:grid; height:38px; width:38px; place-items:center; border:1px solid var(--ui-accent-normal-border); border-radius:7px; background:var(--ui-accent-icon-surface); color:var(--ui-accent-icon-glyph); box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
+                style="display:grid; height:38px; width:38px; place-items:center; border:1px solid var(--ui-accent-normal-border); border-radius:7px; background:var(--ui-accent-normal-surface); color:var(--ui-accent-icon-glyph); box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
               >
                 <Folder size={18} strokeWidth={2.3} />
               </span>
@@ -253,7 +253,7 @@
                     style="display:grid; min-width:0; grid-template-columns:40px minmax(0, 1fr); align-items:center; gap:10px;"
                   >
                     <span
-                      style="display:grid; height:38px; width:38px; place-items:center; border:1px solid var(--ui-accent-normal-border); border-radius:7px; background:var(--ui-accent-icon-surface); color:var(--ui-accent-icon-glyph); box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
+                      style="display:grid; height:38px; width:38px; place-items:center; border:1px solid var(--ui-accent-normal-border); border-radius:7px; background:var(--ui-accent-normal-surface); color:var(--ui-accent-icon-glyph); box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);"
                     >
                       <FileText size={18} strokeWidth={2.3} />
                     </span>

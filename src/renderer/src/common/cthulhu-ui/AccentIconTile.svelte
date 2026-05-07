@@ -51,14 +51,15 @@
 <style>
   .cthulhuUiAccentIconTile {
     align-items: center;
+    box-sizing: border-box;
     display: flex;
     flex: 0 0 auto;
     justify-content: center;
   }
 
   .cthulhuUiAccentIconTile[data-variant='accent'] {
-    background-color: var(--ui-accent-icon-surface);
-    box-shadow: var(--cthulhu-ui-shadow-icon-accent);
+    background-color: var(--ui-accent-normal-surface);
+    border: 1px solid var(--ui-accent-icon-ring);
     color: var(--ui-accent-icon-glyph);
   }
 

@@ -265,7 +265,7 @@
               <span
                 style="
                   align-items: center;
-                  background: var(--ui-accent-icon-surface);
+                  background: var(--ui-accent-normal-surface);
                   border: 1px solid var(--ui-accent-normal-border);
                   border-radius: 7px;
                   box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
@@ -366,7 +366,7 @@
               style="
                 align-items: center;
                 appearance: none;
-                background: var(--ui-accent-icon-surface);
+                background: var(--ui-accent-normal-surface);
                 border: 1px solid var(--ui-accent-normal-border);
                 border-radius: 6px;
                 color: var(--ui-accent-icon-glyph);
@@ -694,7 +694,7 @@
           <span
             style="
               align-items: center;
-              background: var(--ui-accent-icon-surface);
+              background: var(--ui-accent-normal-surface);
               border: 1px solid var(--ui-accent-normal-border);
               border-radius: 7px;
               box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
@@ -796,7 +796,7 @@
             style="
               align-items: center;
               appearance: none;
-              background: var(--ui-accent-icon-surface);
+              background: var(--ui-accent-normal-surface);
               border: 1px solid var(--ui-accent-normal-border);
               border-radius: 6px;
               color: var(--ui-accent-icon-glyph);
