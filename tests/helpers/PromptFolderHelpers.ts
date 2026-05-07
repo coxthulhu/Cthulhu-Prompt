@@ -150,6 +150,61 @@ export async function scrollVirtualWindowBy(
   }
 }
 
+export async function scrollVirtualElementIntoView(
+  window: any,
+  hostSelector: string,
+  targetSelector: string,
+  paddingPx = 8
+): Promise<void> {
+  await waitForVirtualWindowControls(window)
+  await window.waitForSelector(targetSelector, { state: 'attached' })
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const measurement = await window.evaluate(
+      ({ targetHostSelector, targetElementSelector, targetPaddingPx }) => {
+        const host = document.querySelector<HTMLElement>(targetHostSelector)
+        const target = document.querySelector<HTMLElement>(targetElementSelector)
+        if (!host || !target) return null
+
+        const hostRect = host.getBoundingClientRect()
+        const targetRect = target.getBoundingClientRect()
+        const topLimit = hostRect.top + targetPaddingPx
+        const bottomLimit = hostRect.bottom - targetPaddingPx
+        const targetFits = targetRect.height <= bottomLimit - topLimit
+        const isVisible = targetFits
+          ? targetRect.top >= topLimit && targetRect.bottom <= bottomLimit
+          : targetRect.top <= topLimit && targetRect.bottom >= bottomLimit
+
+        if (isVisible) {
+          return { deltaPx: 0, isVisible: true }
+        }
+
+        const deltaPx =
+          targetRect.top < topLimit ? targetRect.top - topLimit : targetRect.bottom - bottomLimit
+
+        return { deltaPx: Math.round(deltaPx), isVisible: false }
+      },
+      {
+        targetHostSelector: hostSelector,
+        targetElementSelector: targetSelector,
+        targetPaddingPx: paddingPx
+      }
+    )
+
+    if (!measurement) {
+      throw new Error(`Failed to measure virtual element for selector: ${targetSelector}`)
+    }
+    if (measurement.isVisible || measurement.deltaPx === 0) {
+      return
+    }
+
+    await scrollVirtualWindowBy(window, hostSelector, measurement.deltaPx)
+    await window.waitForTimeout(20)
+  }
+
+  throw new Error(`Failed to scroll virtual element into view: ${targetSelector}`)
+}
+
 type PromptHydrationReadyOptions = {
   folderName: string
   hostSelector: string

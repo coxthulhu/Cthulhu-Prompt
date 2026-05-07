@@ -281,20 +281,18 @@ describe('Prompt folder prompt management', () => {
     const emptyPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
     expect(emptyPromptId).toBeTruthy()
 
-    const emptyDeleteButton = mainWindow.locator(
-      `${promptEditorSelector(emptyPromptId!)} [data-testid="prompt-delete-button"]`
-    )
-    await emptyDeleteButton.scrollIntoViewIfNeeded()
+    const emptyDeleteSelector = `${promptEditorSelector(emptyPromptId!)} [data-testid="prompt-delete-button"]`
+    await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, emptyDeleteSelector)
+    const emptyDeleteButton = mainWindow.locator(emptyDeleteSelector)
     await emptyDeleteButton.click()
     await expect(mainWindow.locator('text=Delete Prompt')).toHaveCount(0)
     await expect(mainWindow.locator(promptEditorSelector(emptyPromptId!))).toHaveCount(0)
     await waitForPromptCount(mainWindow, 2)
 
     // Delete a populated prompt and confirm the dialog flow.
-    const deleteButton = mainWindow.locator(
-      `${promptEditorSelector('dev-1')} [data-testid="prompt-delete-button"]`
-    )
-    await deleteButton.scrollIntoViewIfNeeded()
+    const deleteSelector = `${promptEditorSelector('dev-1')} [data-testid="prompt-delete-button"]`
+    await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, deleteSelector)
+    const deleteButton = mainWindow.locator(deleteSelector)
     await deleteButton.click()
 
     const dialog = mainWindow.locator('[data-slot="dialog-content"]')

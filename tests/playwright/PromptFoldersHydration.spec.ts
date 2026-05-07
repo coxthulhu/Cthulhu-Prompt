@@ -23,7 +23,12 @@ const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 const LONG_FOLDER_NAME = 'Long'
 const BASELINE_EXPAND_DRAG_DISTANCE = -200
 const MIN_EXPECTED_WIDTH_DELTA_PX = 8
-const PROMPT_DIVIDER_NUDGE_PX = 40
+
+type PromptAnchorData = {
+  rowId: string
+  offset: number
+  scrollTop: number
+}
 
 type MonacoViewStateSnapshot = {
   lineNumber: number
@@ -149,6 +154,61 @@ const setMonacoViewStateForTest = async (
     entry.editor.revealLineInCenter(targetLineNumber)
     entry.editor.setScrollTop(240)
   }, editorSelector)
+}
+
+const readPlaceholderAnchorAtViewportTop = async (
+  mainWindow: any
+): Promise<PromptAnchorData | null> => {
+  return await mainWindow.evaluate(
+    ({ hostSelector, rowSelector, placeholderSelector }) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      if (!host) return null
+      const hostTop = Math.round(host.getBoundingClientRect().top)
+      const rows = Array.from(host.querySelectorAll<HTMLElement>(rowSelector))
+      for (const row of rows) {
+        if (!row.querySelector(placeholderSelector)) continue
+        const rect = row.getBoundingClientRect()
+        if (rect.top <= hostTop && rect.bottom >= hostTop) {
+          const rowId = row.getAttribute('data-testid')
+          if (!rowId) return null
+          const testId = host.getAttribute('data-testid')
+          const scrollTop =
+            testId && window.svelteVirtualWindowTestControls?.getScrollTop
+              ? window.svelteVirtualWindowTestControls.getScrollTop(testId)
+              : host.scrollTop
+          return {
+            rowId,
+            offset: Math.round(hostTop - rect.top),
+            scrollTop: Math.round(scrollTop ?? 0)
+          }
+        }
+      }
+      return null
+    },
+    {
+      hostSelector: HOST_SELECTOR,
+      rowSelector: PROMPT_ROW_SELECTOR,
+      placeholderSelector: MONACO_PLACEHOLDER_SELECTOR
+    }
+  )
+}
+
+const scrollToPlaceholderAnchorAtViewportTop = async (
+  mainWindow: any,
+  testHelpers: { scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void> },
+  initialDeltaPx: number
+): Promise<PromptAnchorData> => {
+  await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, initialDeltaPx)
+
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const anchor = await readPlaceholderAnchorAtViewportTop(mainWindow)
+    if (anchor) return anchor
+
+    await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, 8)
+    await mainWindow.waitForTimeout(20)
+  }
+
+  throw new Error('Failed to scroll a placeholder row across the viewport top')
 }
 
 const prepareUncappedSidebarBaseline = async (
@@ -408,48 +468,11 @@ describe('Prompt Folder Hydration', () => {
         throw new Error('Failed to measure virtual window viewport height')
       }
 
-      await testHelpers.scrollVirtualWindowBy(
-        HOST_SELECTOR,
-        viewportHeight * 3 + PROMPT_DIVIDER_NUDGE_PX
+      const anchorData = await scrollToPlaceholderAnchorAtViewportTop(
+        mainWindow,
+        testHelpers,
+        viewportHeight * 3
       )
-
-      const anchorHandle = await mainWindow.waitForFunction(
-        ({ hostSelector, rowSelector, placeholderSelector }) => {
-          const host = document.querySelector<HTMLElement>(hostSelector)
-          if (!host) return false
-          const hostTop = Math.round(host.getBoundingClientRect().top)
-          const rows = Array.from(host.querySelectorAll<HTMLElement>(rowSelector))
-          for (const row of rows) {
-            if (!row.querySelector(placeholderSelector)) continue
-            const rect = row.getBoundingClientRect()
-            if (rect.top <= hostTop && rect.bottom >= hostTop) {
-              const testId = host.getAttribute('data-testid')
-              const scrollTop =
-                testId && window.svelteVirtualWindowTestControls?.getScrollTop
-                  ? window.svelteVirtualWindowTestControls.getScrollTop(testId)
-                  : host.scrollTop
-              return {
-                rowId: row.getAttribute('data-testid'),
-                offset: Math.round(hostTop - rect.top),
-                scrollTop: Math.round(scrollTop ?? 0)
-              }
-            }
-          }
-          return false
-        },
-        {
-          hostSelector: HOST_SELECTOR,
-          rowSelector: PROMPT_ROW_SELECTOR,
-          placeholderSelector: MONACO_PLACEHOLDER_SELECTOR
-        }
-      )
-
-      const anchorData = await anchorHandle.jsonValue()
-      await anchorHandle.dispose()
-
-      if (!anchorData?.rowId || typeof anchorData.offset !== 'number') {
-        throw new Error('Failed to capture placeholder anchor offset')
-      }
 
       const rowsAboveViewportHandle = await mainWindow.evaluateHandle(
         ({ hostSelector, rowSelector, placeholderSelector }) => {

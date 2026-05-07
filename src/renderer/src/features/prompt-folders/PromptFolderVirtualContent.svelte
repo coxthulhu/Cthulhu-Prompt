@@ -6,6 +6,7 @@
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
+  import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from '../prompt-editor/promptDividerSizing'
   import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -146,8 +147,8 @@
       snippet: placeholderRow
     },
     'prompt-divider': {
-      // Match the add row height: 10px top spacing, 36px control row, 10px bottom spacing.
-      estimateHeight: () => 56,
+      // Match the rendered add prompt divider height used by the virtual row.
+      estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
       snippet: dividerRow
     },
     'prompt-editor': {

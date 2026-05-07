@@ -2,6 +2,7 @@
   import { Plus } from 'lucide-svelte'
   import IconPillButton from '@renderer/common/cthulhu-ui/IconPillButton.svelte'
   import { Separator } from '@renderer/common/ui/separator'
+  import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from './promptDividerSizing'
 
   let {
     onAddPrompt,
@@ -10,7 +11,7 @@
   }: { onAddPrompt?: () => void; disabled?: boolean; testId?: string } = $props()
 </script>
 
-<div class="grid h-14 items-center">
+<div class="grid items-center" style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}>
   <div class="grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5">
     <Separator class="bg-[var(--ui-neutral-muted-border)]" />
     <IconPillButton
@@ -24,9 +25,7 @@
         onAddPrompt?.()
       }}
     />
-    <!-- Add subfolder is parked until prompt folders support nested creation.
-    <IconPillButton icon={FolderPlus} text="Add subfolder" variant="neutral" {disabled} />
-    -->
+    <!-- Add subfolder is parked until prompt folders support nested creation. -->
     <Separator class="bg-[var(--ui-neutral-muted-border)]" />
   </div>
 </div>
