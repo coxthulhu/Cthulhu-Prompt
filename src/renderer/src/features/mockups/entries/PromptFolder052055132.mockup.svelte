@@ -70,7 +70,7 @@
     <div style="box-sizing:border-box; width:min(100%, 1040px); padding:24px 28px 80px;">
       <section style="display:grid; gap:24px;">
         <div
-          style="display:grid; gap:12px; border-left:3px solid var(--ui-accent-normal-border); padding-left:16px;"
+          style="display:grid; gap:8px; border-left:3px solid var(--ui-accent-normal-border); padding-left:16px;"
         >
           <div style="display:flex; align-items:center; gap:10px;">
             <span
@@ -84,6 +84,9 @@
               Folder Settings
             </h1>
           </div>
+          <p style="margin:0; color:var(--ui-muted-text); font-size:14px; line-height:20px;">
+            Settings that only affect prompts in this folder, and are saved to the workspace.
+          </p>
         </div>
 
         <article
@@ -151,25 +154,25 @@
 
       <section style="display:grid; gap:14px; padding-top:28px;">
         <div
-          style="display:flex; align-items:center; justify-content:space-between; gap:16px; border-left:3px solid var(--ui-info-normal-border); padding-left:16px;"
+          style="display:grid; gap:8px; border-left:3px solid var(--ui-info-normal-border); padding-left:16px;"
         >
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span
-              style="display:grid; height:30px; width:30px; place-items:center; border:1px solid var(--ui-info-normal-border); border-radius:7px; background:var(--ui-info-normal-surface); color:oklch(0.88 0.07 252);"
-            >
-              <FileText size={16} strokeWidth={2.4} />
-            </span>
-            <h2
-              style="margin:0; color:var(--ui-normal-text); font-size:24px; font-weight:760; line-height:32px;"
-            >
-              Prompts
-            </h2>
+          <div style="display:grid; min-width:0; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span
+                style="display:grid; height:30px; width:30px; place-items:center; border:1px solid var(--ui-info-normal-border); border-radius:7px; background:var(--ui-info-normal-surface); color:oklch(0.88 0.07 252);"
+              >
+                <FileText size={16} strokeWidth={2.4} />
+              </span>
+              <h2
+                style="margin:0; color:var(--ui-normal-text); font-size:24px; font-weight:760; line-height:32px;"
+              >
+                Prompts
+              </h2>
+            </div>
+            <p style="margin:0; color:var(--ui-muted-text); font-size:14px; line-height:20px;">
+              3 reusable prompts in this folder, ready to copy or reorder.
+            </p>
           </div>
-          <span
-            style="border:1px solid var(--ui-neutral-muted-border); border-radius:999px; background:var(--ui-neutral-muted-surface); padding:4px 10px; color:var(--ui-muted-text); font-size:12px; font-weight:720;"
-          >
-            3 prompts
-          </span>
         </div>
 
         <div style="display:grid; gap:12px;">

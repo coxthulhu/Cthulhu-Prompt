@@ -74,7 +74,9 @@
               >
                 <Settings size={16} strokeWidth={2.4} />
               </span>
-              <h1 style="margin: 0; color: var(--ui-normal-text); font-size: 24px; line-height: 32px;">
+              <h1
+                style="margin: 0; color: var(--ui-normal-text); font-size: 24px; line-height: 32px;"
+              >
                 Folder Settings
               </h1>
             </div>
@@ -100,28 +102,40 @@
           <div
             style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid var(--ui-card-nested-border); border-radius: 7px; background: var(--ui-neutral-muted-surface); box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight); padding: 8px 8px 8px 10px;"
           >
-            <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;">
+            <div
+              style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;"
+            >
               <span
                 style="display: inline-flex; height: 40px; width: 40px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-icon-surface); color: var(--ui-accent-icon-glyph);"
               >
                 <Folder size={18} strokeWidth={2.4} />
               </span>
               <div style="display: grid; gap: 4px; min-width: 0;">
-                <p style="margin: 0; color: var(--ui-normal-text); font-size: 15px; font-weight: 700; line-height: 22px;">
+                <p
+                  style="margin: 0; color: var(--ui-normal-text); font-size: 15px; font-weight: 620; line-height: 22px;"
+                >
                   Folder Description
                 </p>
                 <div
                   style="display: flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; color: var(--ui-muted-text); font-size: 11px; font-weight: 750; line-height: 16px; white-space: nowrap;"
                 >
-                  <span style="display: inline-flex; min-width: 0; align-items: center; gap: 5px; color: var(--ui-secondary-text);">
+                  <span
+                    style="display: inline-flex; min-width: 0; align-items: center; gap: 5px; color: var(--ui-secondary-text);"
+                  >
                     <Folder size={12} strokeWidth={2.4} />
                     Folder Settings
                   </span>
-                  <span style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"></span>
+                  <span
+                    style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                  ></span>
                   <span>0 lines</span>
-                  <span style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"></span>
+                  <span
+                    style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                  ></span>
                   <span>0 tokens</span>
-                  <span style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"></span>
+                  <span
+                    style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                  ></span>
                   <span>0 min ago</span>
                 </div>
               </div>
@@ -155,7 +169,9 @@
               >
                 <FileText size={16} strokeWidth={2.4} />
               </span>
-              <h2 style="margin: 0; color: var(--ui-normal-text); font-size: 24px; line-height: 32px;">
+              <h2
+                style="margin: 0; color: var(--ui-normal-text); font-size: 24px; font-weight: 760; line-height: 32px;"
+              >
                 Prompts
               </h2>
             </div>
@@ -178,7 +194,9 @@
         <div
           style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;"
         >
-          <div style="height: 1px; background: linear-gradient(90deg, transparent, var(--ui-neutral-emphasis-border), transparent);"></div>
+          <div
+            style="height: 1px; background: linear-gradient(90deg, transparent, var(--ui-neutral-emphasis-border), transparent);"
+          ></div>
           <div
             style="display: grid; grid-template-columns: repeat(2, auto); align-items: center; gap: 8px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 999px; background: oklch(0.18 0.014 266 / 82%); padding: 5px;"
           >
@@ -210,28 +228,40 @@
               <div
                 style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid var(--ui-card-nested-border); border-radius: 7px; background: var(--ui-neutral-muted-surface); box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight); padding: 8px 8px 8px 10px;"
               >
-                <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;">
+                <div
+                  style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;"
+                >
                   <span
                     style="display: inline-flex; height: 40px; width: 40px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-icon-surface); color: var(--ui-accent-icon-glyph);"
                   >
                     <FileText size={18} strokeWidth={2.4} />
                   </span>
                   <div style="display: grid; gap: 4px; min-width: 0;">
-                    <p style="margin: 0; overflow: hidden; color: var(--ui-normal-text); font-size: 15px; font-weight: 700; line-height: 22px; text-overflow: ellipsis; white-space: nowrap;">
+                    <p
+                      style="margin: 0; overflow: hidden; color: var(--ui-normal-text); font-size: 15px; font-weight: 700; line-height: 22px; text-overflow: ellipsis; white-space: nowrap;"
+                    >
                       {prompt.title}
                     </p>
                     <div
                       style="display: flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; color: var(--ui-muted-text); font-size: 11px; font-weight: 750; line-height: 16px; white-space: nowrap;"
                     >
-                      <span style="display: inline-flex; min-width: 0; align-items: center; gap: 5px; color: var(--ui-secondary-text);">
+                      <span
+                        style="display: inline-flex; min-width: 0; align-items: center; gap: 5px; color: var(--ui-secondary-text);"
+                      >
                         <Folder size={12} strokeWidth={2.4} />
                         Refactoring
                       </span>
-                      <span style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"></span>
+                      <span
+                        style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                      ></span>
                       <span>{prompt.lines} lines</span>
-                      <span style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"></span>
+                      <span
+                        style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                      ></span>
                       <span>{prompt.tokens} tokens</span>
-                      <span style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"></span>
+                      <span
+                        style="height: 3px; width: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--ui-neutral-emphasis-border);"
+                      ></span>
                       <span>0 min ago</span>
                     </div>
                   </div>
@@ -268,7 +298,9 @@
           <div
             style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;"
           >
-            <div style="height: 1px; background: linear-gradient(90deg, transparent, var(--ui-neutral-normal-border), transparent);"></div>
+            <div
+              style="height: 1px; background: linear-gradient(90deg, transparent, var(--ui-neutral-normal-border), transparent);"
+            ></div>
             <div
               style="display: grid; grid-template-columns: repeat(2, auto); align-items: center; gap: 8px; border: 1px solid var(--ui-neutral-muted-border); border-radius: 999px; background: oklch(0.15 0.012 266 / 72%); padding: 5px;"
             >

@@ -1,725 +1,550 @@
 <script lang="ts">
-  import { FileText, FolderClosed, Home, Plus, Settings } from 'lucide-svelte'
+  import {
+    AlertCircle,
+    Bell,
+    Check,
+    CircleGauge,
+    ClipboardList,
+    FileText,
+    FolderOpen,
+    Home,
+    Info,
+    Minus,
+    Plus,
+    Save,
+    Settings,
+    ShieldAlert,
+    Sparkles,
+    Trash2,
+    X
+  } from 'lucide-svelte'
+  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
+  import CardSurface, {
+    type CardSurfaceVariant
+  } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
+  import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
+  import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
+  import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import IconDescriptionButton, {
+    type IconDescriptionButtonVariant
+  } from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import IconPillButton from '@renderer/common/cthulhu-ui/IconPillButton.svelte'
+  import IconPillSurface from '@renderer/common/cthulhu-ui/IconPillSurface.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
+  import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
+  import MessageRow, {
+    type MessageRowVariant
+  } from '@renderer/common/cthulhu-ui/MessageRow.svelte'
+  import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
+  import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
+  import StatusBadge, {
+    type StatusBadgeVariant
+  } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
+  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
+  import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
-  type PromptMockup = {
-    id: string
-    name: string
-  }
+  type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'accent-white-icon' | 'danger'
+  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
+  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
+  type IconPillButtonVariant = 'accent' | 'neutral'
+  type IconTextButtonState = 'active' | 'enabled' | 'disabled'
+  type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
+  type TitleBlockIconVariant = 'accent' | 'accent-white-icon' | 'danger'
 
-  type FolderMockup = {
-    id: string
-    name: string
-    prompts: PromptMockup[]
-  }
-
-  type SidebarMockup = {
-    id: string
-    kicker: string
-    name: string
-    description: string
-    styleClass: string
-    workspaceBadge: string
-    treeLabel: string
-    selectedScreen: 'home' | 'settings'
-    selectedPromptId: string
-  }
-
-  const workspaceName = 'Cthulhu Prompt'
-  const workspacePath = 'C:\\Source\\PromptApps\\CthulhuPromptPublic'
-
-  const navItems = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'settings', label: 'Settings', icon: Settings }
-  ] as const
-
-  const folders: FolderMockup[] = [
-    {
-      id: 'product-strategy',
-      name: 'Product Strategy',
-      prompts: [
-        { id: 'vision-brief', name: 'Vision Brief' },
-        { id: 'launch-story', name: 'Launch Story' },
-        { id: 'review-checklist', name: 'Review Checklist' }
-      ]
-    },
-    {
-      id: 'renderer-work',
-      name: 'Renderer Work',
-      prompts: [
-        { id: 'renderer-state', name: 'Renderer State Audit' },
-        { id: 'electron-packaging', name: 'Electron Packaging Plan' },
-        { id: 'sidebar-retrospective', name: 'Sidebar Retrospective' }
-      ]
-    },
-    {
-      id: 'agent-routines',
-      name: 'Agent Routines',
-      prompts: [
-        { id: 'agent-guardrails', name: 'Agent Guardrails' },
-        { id: 'pairing-routine', name: 'Pairing Routine' },
-        { id: 'release-checklist', name: 'Release Checklist' }
-      ]
-    }
+  const accentIconTileVariants: AccentIconTileVariant[] = [
+    'accent',
+    'accent-bordered',
+    'accent-white-icon',
+    'danger'
   ]
-
-  const mockups: SidebarMockup[] = [
-    {
-      id: 'command-deck',
-      kicker: 'Mockup 01',
-      name: 'Command Deck',
-      description: 'Segmented navigation with contained folder cards and a cool cyan accent.',
-      styleClass: 'mockup--cadet',
-      workspaceBadge: 'Active Workspace',
-      treeLabel: 'Prompt Library',
-      selectedScreen: 'home',
-      selectedPromptId: 'renderer-state'
-    },
-    {
-      id: 'night-ledger',
-      kicker: 'Mockup 02',
-      name: 'Night Ledger',
-      description: 'Vertical index treatment with tighter hierarchy and a muted rose accent.',
-      styleClass: 'mockup--ledger',
-      workspaceBadge: 'Workspace Index',
-      treeLabel: 'Working Tree',
-      selectedScreen: 'settings',
-      selectedPromptId: 'release-checklist'
-    },
-    {
-      id: 'signal-stack',
-      kicker: 'Mockup 03',
-      name: 'Signal Stack',
-      description: 'Terminal-like blocks with monospaced labels and a restrained olive highlight.',
-      styleClass: 'mockup--signal',
-      workspaceBadge: 'Attached Workspace',
-      treeLabel: 'Folders + Prompts',
-      selectedScreen: 'home',
-      selectedPromptId: 'agent-guardrails'
-    }
+  const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
+  const cardSurfaceVariants: CardSurfaceVariant[] = ['panel', 'panel-flat', 'solid', 'inset']
+  const iconDescriptionButtonVariants: IconDescriptionButtonVariant[] = [
+    'neutral',
+    'accent',
+    'danger'
   ]
+  const iconOnlyButtonVariants: IconOnlyButtonVariant[] = [
+    'outline',
+    'transparent',
+    'muted-border',
+    'accent',
+    'danger'
+  ]
+  const iconOnlyButtonSizes: IconOnlyButtonSize[] = ['default', 'compact', 'rail', 'rail-fill']
+  const iconPillButtonVariants: IconPillButtonVariant[] = ['neutral', 'accent']
+  const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
+  const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
+  const messageRowVariants: MessageRowVariant[] = ['danger', 'warning']
+  const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
+  const titleBlockIconVariants: TitleBlockIconVariant[] = ['accent', 'accent-white-icon', 'danger']
+  const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
+  const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
 
-  const folderCount = folders.length
-  const promptCount = folders.reduce((count, folder) => count + folder.prompts.length, 0)
+  let checked = $state(true)
+  let unchecked = $state(false)
+  let standardText = $state('Renderer prompt collection')
+  let invalidText = $state('')
+  let readonlyPath = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
+  let folderPath = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
+  let numericValue = $state('14')
+  let invalidNumericValue = $state('abc')
+  let togglePressed = $state(true)
+  let accentDialogOpen = $state(false)
+  let dangerDialogOpen = $state(false)
+  let errorDialogOpen = $state(false)
 </script>
 
 <div class="test-screen-shell" data-testid="test-screen">
   <div class="test-screen-content">
     <header class="test-screen-header">
-      <div class="test-screen-copy">
-        <p class="test-screen-kicker">Sidebar Prototypes</p>
-        <h1>Three flat dark mockups for the app sidebar</h1>
-        <p>
-          Each concept includes the workspace summary, Home and Settings buttons, a full
-          folder-and-prompt tree, and a new-folder action.
-        </p>
-      </div>
-      <div class="test-screen-summary">
-        <span>{folderCount} folders</span>
-        <span>{promptCount} prompts</span>
-        <span>Static prototype only</span>
-      </div>
+      <TitleBlock
+        title="Cthulhu UI Test Screen"
+        description="Renderer component gallery for the shared Cthulhu UI surface."
+        icon={Sparkles}
+        size="large"
+      />
+
+      <StatusBadge icon={Check} text="Dev screen restored" variant="success" />
     </header>
 
-    {#snippet sidebarPreview(mockup)}
-      <aside
-        class={`sidebar-mockup ${mockup.styleClass}`}
-        data-testid={`sidebar-mockup-${mockup.id}`}
-      >
-        <div class="sidebar-workspace">
-          <p class="workspace-badge">{mockup.workspaceBadge}</p>
-          <h3 class="workspace-name">{workspaceName}</h3>
-          <p class="workspace-path">{workspacePath}</p>
-        </div>
+    <section class="component-grid">
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="CardSurface" description="All surface variants." size="small" />
 
-        <nav class="sidebar-nav" aria-label={`${mockup.name} navigation`}>
-          {#each navItems as item (item.id)}
-            {@const Icon = item.icon}
-            <button
-              type="button"
-              class="nav-button"
-              data-active={mockup.selectedScreen === item.id}
-              aria-pressed={mockup.selectedScreen === item.id}
-            >
-              <Icon class="mockup-icon" />
-              <span>{item.label}</span>
-            </button>
+        <div class="variant-grid">
+          {#each cardSurfaceVariants as variant (variant)}
+            <CardSurface {variant} class="sample-card">
+              <div class="sample-title">{variant}</div>
+              <p>Prompt workspace metadata, compact controls, or nested content.</p>
+            </CardSurface>
           {/each}
-        </nav>
+        </div>
+      </CardSurface>
 
-        <section class="sidebar-tree-shell" aria-label={mockup.treeLabel}>
-          <div class="sidebar-tree-header">
-            <span>{mockup.treeLabel}</span>
-            <span>{folderCount} / {promptCount}</span>
-          </div>
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="AccentIconTile" description="Every tile variant and size." size="small" />
 
-          <div class="sidebar-tree">
-            {#each folders as folder (folder.id)}
-              <section class="tree-folder">
-                <header class="tree-folder-header">
-                  <div class="tree-folder-title">
-                    <FolderClosed class="mockup-icon" />
-                    <span>{folder.name}</span>
+        <div class="tile-matrix">
+          {#each accentIconTileVariants as variant (variant)}
+            <div class="variant-row">
+              <span>{variant}</span>
+              <div class="variant-controls">
+                {#each accentIconTileSizes as size (size)}
+                  <AccentIconTile icon={Sparkles} {variant} {size} />
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section component-section-wide">
+        <TitleBlock title="IconTextButton" description="Neutral, accent, and nav states." size="small" />
+
+        <div class="button-matrix">
+          {#each iconTextButtonVariants as variant (variant)}
+            <div class="variant-row">
+              <span>{variant}</span>
+              <div class="variant-controls">
+                {#each iconTextButtonStates as state (state)}
+                  <IconTextButton icon={Home} text={state} {variant} {state} />
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section component-section-wide">
+        <TitleBlock title="IconOnlyButton" description="Every icon-only variant and size." size="small" />
+
+        <div class="button-matrix">
+          {#each iconOnlyButtonVariants as variant (variant)}
+            <div class="variant-row">
+              <span>{variant}</span>
+              <div class="variant-controls icon-only-controls">
+                {#each iconOnlyButtonSizes as size (size)}
+                  <div class="icon-only-sample" data-fill-size={size === 'rail-fill'}>
+                    <IconOnlyButton
+                      icon={variant === 'danger' ? Trash2 : Settings}
+                      label={`${variant} ${size}`}
+                      {variant}
+                      {size}
+                      title={`${variant} ${size}`}
+                    />
                   </div>
-                  <span class="tree-folder-count">{folder.prompts.length}</span>
-                </header>
+                {/each}
+                <IconOnlyButton icon={Minus} label={`${variant} disabled`} {variant} disabled />
+              </div>
+            </div>
+          {/each}
+        </div>
+      </CardSurface>
 
-                <ul class="tree-prompt-list">
-                  {#each folder.prompts as prompt (prompt.id)}
-                    <li>
-                      <button
-                        type="button"
-                        class="tree-prompt"
-                        data-active={mockup.selectedPromptId === prompt.id}
-                        aria-current={mockup.selectedPromptId === prompt.id ? 'true' : undefined}
-                      >
-                        <FileText class="mockup-icon" />
-                        <span>{prompt.name}</span>
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-              </section>
-            {/each}
-          </div>
-        </section>
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock
+          title="IconDescriptionButton"
+          description="Action cards with descriptive copy."
+          size="small"
+        />
 
-        <button type="button" class="add-folder-button">
-          <Plus class="mockup-icon" />
-          <span>New Prompt Folder</span>
-        </button>
-      </aside>
-    {/snippet}
+        <div class="stack">
+          {#each iconDescriptionButtonVariants as variant (variant)}
+            <IconDescriptionButton
+              icon={variant === 'danger' ? ShieldAlert : FolderOpen}
+              text={variant}
+              description="Select a workspace action with supporting context."
+              {variant}
+            />
+          {/each}
+          <IconDescriptionButton
+            icon={FolderOpen}
+            text="disabled"
+            description="Disabled action state."
+            state="disabled"
+          />
+        </div>
+      </CardSurface>
 
-    <section class="mockup-grid" data-testid="sidebar-mockup-gallery">
-      {#each mockups as mockup (mockup.id)}
-        <article class="mockup-stage">
-          <div class="mockup-stage-copy">
-            <p class="mockup-stage-kicker">{mockup.kicker}</p>
-            <h2>{mockup.name}</h2>
-            <p>{mockup.description}</p>
-          </div>
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="IconPillButton" description="Compact pill action variants." size="small" />
 
-          <div class="mockup-stage-preview">
-            {@render sidebarPreview(mockup)}
-          </div>
-        </article>
-      {/each}
+        <div class="variant-controls">
+          {#each iconPillButtonVariants as variant (variant)}
+            <IconPillButton icon={Plus} text={variant} {variant} />
+          {/each}
+          <IconPillButton icon={X} text="disabled" disabled />
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="Inputs" description="Text, numeric, file, checkbox, and toggle controls." size="small" />
+
+        <div class="form-grid">
+          <TextInput bind:value={standardText} aria-label="Standard text input" />
+          <TextInput
+            bind:value={invalidText}
+            aria-label="Invalid text input"
+            aria-invalid="true"
+            placeholder="Invalid text"
+          />
+          <TextInput bind:value={readonlyPath} aria-label="Readonly display input" readonlyDisplay />
+          <NumericInput bind:value={numericValue} aria-label="Numeric input" />
+          <NumericInput
+            bind:value={invalidNumericValue}
+            aria-label="Invalid numeric input"
+            aria-invalid="true"
+          />
+          <FileInput bind:value={folderPath} aria-label="File input" buttonText="Browse" />
+          <CheckboxInput bind:checked label="Checked checkbox" />
+          <CheckboxInput bind:checked={unchecked} label="Unchecked checkbox" />
+          <CheckboxInput checked label="Disabled checkbox" disabled />
+          <ToggleTextButton
+            pressed={togglePressed}
+            onclick={() => {
+              togglePressed = !togglePressed
+            }}
+          />
+          <ToggleTextButton pressed={false} disabled />
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="MessageRow" description="Validation and warning rows." size="small" />
+
+        <div class="stack">
+          {#each messageRowVariants as variant (variant)}
+            <MessageRow text={`${variant} message row`} {variant} />
+          {/each}
+          <FloatingValidationMessage message="Prompt folder name is required.">
+            <TextInput value="" placeholder="Floating validation anchor" aria-label="Validation field" />
+          </FloatingValidationMessage>
+          <FloatingValidationMessage message="Review this value before saving." variant="warning">
+            <TextInput value="Draft value" aria-label="Warning validation field" />
+          </FloatingValidationMessage>
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="StatusBadge" description="Current badge variants." size="small" />
+
+        <div class="variant-controls">
+          {#each statusBadgeVariants as variant (variant)}
+            <StatusBadge
+              icon={variant === 'success' ? Check : Sparkles}
+              text={variant}
+              {variant}
+            />
+          {/each}
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="TitleBlock" description="Sizes and icon treatments." size="small" />
+
+        <div class="stack">
+          <TitleBlock title="Small title" size="small" />
+          <TitleBlock title="Large title" description="Large title with default icon variant." icon={Info} size="large" />
+          {#each titleBlockIconVariants as iconVariant (iconVariant)}
+            <TitleBlock
+              title={iconVariant}
+              description="Icon variant sample."
+              icon={iconVariant === 'danger' ? AlertCircle : Sparkles}
+              {iconVariant}
+              size="large"
+            />
+          {/each}
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="Display Components" description="Read-only fields and stat cards." size="small" />
+
+        <div class="display-grid">
+          <IconPillSurface label="Workspace" icon={FolderOpen}>
+            <div class="display-value">CthulhuPromptPublic</div>
+          </IconPillSurface>
+          <IconPillSurface label="No icon">
+            <div class="display-value">Inline metadata surface</div>
+          </IconPillSurface>
+          <LabeledDisplayField
+            label="Path"
+            text="C:\\Source\\PromptApps\\CthulhuPromptPublic"
+            icon={FileText}
+            valueTitle="C:\Source\PromptApps\CthulhuPromptPublic"
+          />
+          <NumericStatCard label="Prompts" text="128" icon={ClipboardList} />
+          <NumericStatCard label="Folders" text="12" icon={CircleGauge} />
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="LogDetails" description="Technical details block." size="small" />
+
+        <LogDetails title="Autosave" text={logDetailsText} />
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="Dialogs" description="Dialog icon and submit variants plus error dialog." size="small" />
+
+        <div class="variant-controls">
+          <IconTextButton
+            icon={Bell}
+            text="Accent dialog"
+            variant="accent"
+            onclick={() => {
+              accentDialogOpen = true
+            }}
+          />
+          <IconTextButton
+            icon={ShieldAlert}
+            text="Danger dialog"
+            onclick={() => {
+              dangerDialogOpen = true
+            }}
+          />
+          <IconTextButton
+            icon={AlertCircle}
+            text="Error dialog"
+            onclick={() => {
+              errorDialogOpen = true
+            }}
+          />
+        </div>
+      </CardSurface>
     </section>
   </div>
 </div>
 
+<CthulhuDialog
+  bind:open={accentDialogOpen}
+  title="Accent dialog"
+  description="Dialog with accent icon and accent submit button."
+  icon={Sparkles}
+  iconVariant="accent"
+  submitText="Save"
+  submitVariant="accent"
+  submitIcon={Save}
+  onsubmit={() => {
+    accentDialogOpen = false
+  }}
+/>
+
+<CthulhuDialog
+  bind:open={dangerDialogOpen}
+  title="Danger dialog"
+  description="Dialog with danger icon and neutral submit button."
+  icon={ShieldAlert}
+  iconVariant="danger"
+  submitText="Acknowledge"
+  submitVariant="neutral"
+  onsubmit={() => {
+    dangerDialogOpen = false
+  }}
+>
+  <MessageRow text="This dialog demonstrates the danger icon treatment." variant="warning" />
+</CthulhuDialog>
+
+<ErrorDialog
+  bind:open={errorDialogOpen}
+  title="Workspace error"
+  description="The selected folder did not load."
+  errorText={errorDialogText}
+/>
+
 <style>
   .test-screen-shell {
-    width: 100%;
+    background: var(--ui-neutral-field-surface);
+    color: var(--ui-normal-text);
     height: 100%;
-    min-width: 0;
     min-height: 0;
+    min-width: 0;
     overflow: auto;
-    background: #0b0d11;
-    color: #f4f6fb;
+    width: 100%;
   }
 
   .test-screen-content {
     box-sizing: border-box;
-    width: 100%;
-    min-height: 100%;
-    padding: 2rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif;
+    gap: 1rem;
+    min-height: 100%;
+    padding: 1rem;
+    width: 100%;
   }
 
   .test-screen-header {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
     display: flex;
-    flex-wrap: wrap;
+    gap: 1rem;
     justify-content: space-between;
-    gap: 1.25rem;
-    align-items: flex-end;
+    padding-bottom: 1rem;
   }
 
-  .test-screen-copy {
-    max-width: 50rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-  }
-
-  .test-screen-kicker,
-  .mockup-stage-kicker,
-  .workspace-badge,
-  .sidebar-tree-header {
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-  }
-
-  .test-screen-kicker {
-    font-size: 0.72rem;
-    color: #9198aa;
-  }
-
-  .test-screen-copy h1,
-  .mockup-stage-copy h2,
-  .workspace-name {
-    margin: 0;
-    font-weight: 600;
-  }
-
-  .test-screen-copy h1 {
-    font-size: clamp(2rem, 2vw + 1.4rem, 3rem);
-    line-height: 1.05;
-  }
-
-  .test-screen-copy p,
-  .mockup-stage-copy p {
-    margin: 0;
-    color: #abb2c3;
-    line-height: 1.45;
-  }
-
-  .test-screen-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .test-screen-summary span {
-    padding: 0.55rem 0.8rem;
-    border: 1px solid #252b39;
-    background: #121720;
-    font-size: 0.82rem;
-    color: #cad0dd;
-  }
-
-  .mockup-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-    gap: 1.25rem;
+  .component-grid {
     align-items: start;
-  }
-
-  .mockup-stage {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-    border: 1px solid #222938;
-    background: #11161e;
-  }
-
-  .mockup-stage-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .mockup-stage-kicker {
-    font-size: 0.68rem;
-    color: #82899a;
-  }
-
-  .mockup-stage-copy h2 {
-    font-size: 1.2rem;
-  }
-
-  .mockup-stage-preview {
-    display: flex;
-    justify-content: center;
-  }
-
-  .sidebar-mockup {
-    width: min(100%, 22rem);
-    min-height: 46rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-    border: 1px solid #283041;
-    background: #141925;
-  }
-
-  .sidebar-workspace {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    padding: 1rem;
-  }
-
-  .workspace-badge {
-    font-size: 0.66rem;
-  }
-
-  .workspace-name {
-    font-size: 1.4rem;
-    line-height: 1.1;
-  }
-
-  .workspace-path {
-    margin: 0;
-    color: #97a2b8;
-    font-size: 0.82rem;
-    line-height: 1.4;
-    word-break: break-all;
-  }
-
-  .sidebar-nav {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
   }
 
-  .nav-button,
-  .tree-prompt,
-  .add-folder-button {
-    width: 100%;
-    appearance: none;
-    border: 1px solid transparent;
-    background: none;
-    color: inherit;
-    cursor: default;
-    font: inherit;
-  }
-
-  .nav-button {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.85rem 0.95rem;
-    text-align: left;
-  }
-
-  .mockup-icon {
-    width: 1rem;
-    height: 1rem;
-    flex: 0 0 auto;
-  }
-
-  .sidebar-tree-shell {
-    min-height: 0;
-    flex: 1;
+  :global(.component-section) {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .sidebar-tree-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-    align-items: center;
-    font-size: 0.68rem;
-  }
-
-  .sidebar-tree {
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    overflow: auto;
-    padding-right: 0.2rem;
-  }
-
-  .tree-folder {
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-    padding: 0.8rem;
-  }
-
-  .tree-folder-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-
-  .tree-folder-title {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    min-width: 0;
-    font-size: 0.92rem;
-    font-weight: 600;
-  }
-
-  .tree-folder-title span {
+    gap: 1rem;
     min-width: 0;
   }
 
-  .tree-folder-count {
-    min-width: 1.85rem;
-    padding: 0.25rem 0.45rem;
-    text-align: center;
-    font-size: 0.72rem;
+  :global(.component-section-wide) {
+    grid-column: 1 / -1;
   }
 
-  .tree-prompt-list {
-    list-style: none;
+  .variant-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+
+  :global(.sample-card) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 7rem;
+  }
+
+  .sample-title,
+  .variant-row > span,
+  .display-value {
+    color: var(--ui-normal-text);
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  :global(.sample-card p) {
+    color: var(--ui-secondary-text);
+    font-size: 0.8125rem;
+    line-height: 1.4;
     margin: 0;
-    padding: 0 0 0 1.45rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
   }
 
-  .tree-prompt {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.62rem 0.7rem;
-    text-align: left;
-  }
-
-  .tree-prompt span {
+  .tile-matrix,
+  .button-matrix,
+  .stack,
+  .display-grid,
+  .form-grid {
+    display: grid;
+    gap: 0.75rem;
     min-width: 0;
   }
 
-  .add-folder-button {
-    display: flex;
+  .variant-row {
     align-items: center;
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 10rem minmax(0, 1fr);
+    min-width: 0;
+    padding: 0.75rem;
+  }
+
+  .variant-controls {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    min-width: 0;
+  }
+
+  .icon-only-controls {
+    align-items: stretch;
+  }
+
+  .icon-only-sample {
+    align-items: center;
+    display: inline-flex;
     justify-content: center;
-    gap: 0.6rem;
-    padding: 0.9rem 1rem;
-    margin-top: auto;
+    min-height: 2.25rem;
+    min-width: 2.25rem;
   }
 
-  .mockup--cadet {
-    border-color: #2b3848;
-    background: #10161f;
-    color: #ebf7fb;
-    font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  .icon-only-sample[data-fill-size='true'] {
+    height: 2.75rem;
   }
 
-  .mockup--cadet .sidebar-workspace {
-    border: 1px solid #314050;
-    background: #18212c;
+  .form-grid,
+  .display-grid {
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   }
 
-  .mockup--cadet .workspace-badge {
-    color: #82d6e9;
+  .display-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .mockup--cadet .workspace-path,
-  .mockup--cadet .sidebar-tree-header {
-    color: #9eb8c7;
-  }
-
-  .mockup--cadet .nav-button {
-    border-color: #314153;
-    background: #17212d;
-  }
-
-  .mockup--cadet .nav-button[data-active='true'] {
-    border-color: #66b9cd;
-    background: #1d4050;
-    color: #f5fdff;
-  }
-
-  .mockup--cadet .tree-folder {
-    border: 1px solid #2d3b4b;
-    background: #151d27;
-  }
-
-  .mockup--cadet .tree-folder-count {
-    background: #203848;
-    color: #abebfa;
-  }
-
-  .mockup--cadet .tree-prompt {
-    border-color: #253241;
-    background: #10161e;
-    color: #d6e7ef;
-  }
-
-  .mockup--cadet .tree-prompt[data-active='true'] {
-    border-color: #71c3d8;
-    background: #1c4250;
-    color: #f6feff;
-  }
-
-  .mockup--cadet .add-folder-button {
-    border-color: #355063;
-    background: #172633;
-    color: #d9f5fd;
-  }
-
-  .mockup--ledger {
-    border-color: #433147;
-    background: #130f16;
-    color: #f6ebf4;
-    font-family: Bahnschrift, 'Segoe UI Variable', 'Segoe UI', sans-serif;
-  }
-
-  .mockup--ledger .sidebar-workspace {
-    border-left: 0.4rem solid #ab5876;
-    background: #1b151d;
-  }
-
-  .mockup--ledger .workspace-badge {
-    color: #db9ab4;
-  }
-
-  .mockup--ledger .workspace-path {
-    color: #c6b4c1;
-    font-family: 'Cascadia Mono', Consolas, monospace;
-  }
-
-  .mockup--ledger .sidebar-nav {
-    grid-template-columns: 1fr;
-  }
-
-  .mockup--ledger .nav-button {
-    border-color: #4a384e;
-    background: transparent;
-  }
-
-  .mockup--ledger .nav-button[data-active='true'] {
-    border-color: #b86f8d;
-    background: #352431;
-  }
-
-  .mockup--ledger .sidebar-tree-shell {
-    padding: 0.8rem;
-    border: 1px solid #382a3b;
-    background: #171219;
-  }
-
-  .mockup--ledger .sidebar-tree-header {
-    color: #d6b4c5;
-  }
-
-  .mockup--ledger .tree-folder {
-    padding: 0;
-    background: transparent;
-    border: 0;
-  }
-
-  .mockup--ledger .tree-folder-header {
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid #372d39;
-  }
-
-  .mockup--ledger .tree-folder-count {
-    background: #2b1f2d;
-    color: #f0bfd4;
-  }
-
-  .mockup--ledger .tree-prompt-list {
-    padding-left: 0.8rem;
-    border-left: 1px solid #4b3a4e;
-    gap: 0.2rem;
-  }
-
-  .mockup--ledger .tree-prompt {
-    padding: 0.58rem 0.15rem 0.58rem 0.55rem;
-    border: 0;
-    border-bottom: 1px solid #302431;
-    background: transparent;
-    color: #decfda;
-  }
-
-  .mockup--ledger .tree-prompt[data-active='true'] {
-    background: #2d2029;
-    color: #fff2f8;
-  }
-
-  .mockup--ledger .add-folder-button {
-    border-color: #573c57;
-    background: #211724;
-    color: #f0d9e6;
-  }
-
-  .mockup--signal {
-    border-color: #344133;
-    background: #101410;
-    color: #eff7ec;
-    font-family: 'Cascadia Mono', Consolas, monospace;
-  }
-
-  .mockup--signal .sidebar-workspace {
-    border: 1px solid #334133;
-    background: #161d16;
-  }
-
-  .mockup--signal .workspace-badge {
-    color: #d8e686;
-  }
-
-  .mockup--signal .workspace-name {
-    font-size: 1.18rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .mockup--signal .workspace-path,
-  .mockup--signal .sidebar-tree-header {
-    color: #95a595;
-  }
-
-  .mockup--signal .nav-button {
-    justify-content: center;
-    border-color: #324132;
-    background: #181f18;
-    text-transform: uppercase;
-    font-size: 0.78rem;
-  }
-
-  .mockup--signal .nav-button[data-active='true'] {
-    border-color: #a4b554;
-    background: #2e3819;
-    color: #faffdc;
-  }
-
-  .mockup--signal .tree-folder {
-    border: 1px solid #2a342a;
-    background: #151a15;
-  }
-
-  .mockup--signal .tree-folder-header {
-    text-transform: uppercase;
-    font-size: 0.78rem;
-    letter-spacing: 0.08em;
-  }
-
-  .mockup--signal .tree-folder-count {
-    border: 1px solid #465646;
-    background: #202720;
-    color: #dce8b0;
-  }
-
-  .mockup--signal .tree-prompt-list {
-    padding-left: 1.1rem;
-  }
-
-  .mockup--signal .tree-prompt {
-    border-color: #263026;
-    background: #0f130f;
-    color: #d8e2d2;
-  }
-
-  .mockup--signal .tree-prompt[data-active='true'] {
-    border-color: #a7b951;
-    background: #303a18;
-    color: #fbffeb;
-  }
-
-  .mockup--signal .add-folder-button {
-    border-color: #445343;
-    background: #161d16;
-    color: #eef8de;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  @media (max-width: 42rem) {
-    .test-screen-content {
-      padding: 1rem;
+  @media (max-width: 48rem) {
+    .test-screen-header,
+    .variant-row {
+      grid-template-columns: 1fr;
     }
 
-    .sidebar-mockup {
-      width: 100%;
-      min-height: auto;
+    .test-screen-header {
+      flex-direction: column;
+    }
+
+    .component-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>

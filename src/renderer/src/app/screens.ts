@@ -40,7 +40,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     testId: 'nav-button-test-screen',
     requiresWorkspace: false,
     devOnly: true,
-    showInNav: false,
+    showInNav: true,
     icon: Bug
   },
   'prompt-folders': {
