@@ -50,7 +50,7 @@
   --cthulhu-ui-radius-icon-button: 6px;
   --cthulhu-ui-radius-checkbox: 6px;
   /* Shared cthulhu-ui shadow recipes; colors remain sourced from palette.css. */
-  --cthulhu-ui-shadow-card: 0 14px 36px var(--ui-card-normal-shadow);
+  --cthulhu-ui-shadow-card: 0 8px 12px var(--ui-card-normal-shadow);
   --cthulhu-ui-shadow-subcard: inset 0 1px 0 var(--ui-card-nested-inset-highlight);
   --cthulhu-ui-shadow-surface-highlight: inset 0 1px 0 var(--ui-neutral-muted-surface);
   --cthulhu-ui-shadow-surface-highlight-active: inset 0 1px 0
