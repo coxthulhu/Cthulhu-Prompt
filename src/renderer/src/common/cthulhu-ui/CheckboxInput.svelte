@@ -33,7 +33,7 @@
   data-disabled={disabled}
   {...restProps}
 >
-  <!-- Native input keeps label clicks and keyboard toggling without bits-ui. -->
+  <!-- Native input keeps label clicks and keyboard toggling predictable. -->
   <input
     class="cthulhuUiCheckboxInputNative"
     type="checkbox"

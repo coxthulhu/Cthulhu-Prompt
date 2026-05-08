@@ -101,18 +101,6 @@
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
-  /*
-  import { MoreHorizontal } from 'lucide-svelte'
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-  } from '@renderer/common/ui/dropdown-menu'
-
-  let openFolderMenuName = $state<string | null>(null)
-  */
-
   const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX = 36
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
@@ -525,37 +513,6 @@
       </button>
     </div>
   </div>
-
-  <!--
-  {#snippet folderMenuTrigger({ props: triggerProps })}
-    <button
-      {...triggerProps}
-      type="button"
-      aria-label={`More actions for ${props.row.folder.displayName}`}
-      class="absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground opacity-0 pointer-events-none transition-opacity duration-50 cursor-pointer group-hover/menu-item:opacity-100 group-hover/menu-item:pointer-events-auto group-has-[:focus-visible]/menu-item:opacity-100 group-has-[:focus-visible]/menu-item:pointer-events-auto group-data-[menu-open=true]/menu-item:opacity-100 group-data-[menu-open=true]/menu-item:pointer-events-auto focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-    >
-      <MoreHorizontal class="size-4" />
-    </button>
-  {/snippet}
-
-  <DropdownMenu
-    open={openFolderMenuName === props.row.folder.folderName}
-    onOpenChange={(nextOpen) => {
-      openFolderMenuName = nextOpen
-        ? props.row.folder.folderName
-        : openFolderMenuName === props.row.folder.folderName
-          ? null
-          : openFolderMenuName
-    }}
-  >
-    <DropdownMenuTrigger child={folderMenuTrigger} />
-    <DropdownMenuContent side="right" align="center" sideOffset={6}>
-      <DropdownMenuItem variant="destructive" class="cursor-pointer">
-        Delete Folder
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
-  -->
 {/snippet}
 
 {#snippet folderSettingsRow(props)}
