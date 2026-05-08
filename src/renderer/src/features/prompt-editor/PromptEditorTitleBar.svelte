@@ -72,7 +72,7 @@
 
 <div class="prompt-editor-title-bar">
   <div class="prompt-editor-title-main">
-    <AccentIconTile {icon} size="small" variant="accent-bordered" />
+    <AccentIconTile {icon} size="small" variant="accent" />
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}

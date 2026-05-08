@@ -266,9 +266,8 @@
                 style="
                   align-items: center;
                   background: var(--ui-accent-normal-surface);
-                  border: 1px solid var(--ui-accent-normal-border);
+                  border: 1px solid var(--ui-accent-icon-ring);
                   border-radius: 7px;
-                  box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
                   display: inline-flex;
                   height: 38px;
                   justify-content: center;
@@ -695,9 +694,8 @@
             style="
               align-items: center;
               background: var(--ui-accent-normal-surface);
-              border: 1px solid var(--ui-accent-normal-border);
+              border: 1px solid var(--ui-accent-icon-ring);
               border-radius: 7px;
-              box-shadow: 0 0 0 1px var(--ui-accent-icon-ring);
               display: inline-flex;
               height: 38px;
               justify-content: center;

@@ -70,7 +70,7 @@
           <div style="display: grid; gap: 8px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <span
-                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-normal-surface); box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight); color: var(--ui-accent-icon-glyph);"
+                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-icon-ring); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
               >
                 <Settings size={16} strokeWidth={2.4} />
               </span>
@@ -106,7 +106,7 @@
               style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;"
             >
               <span
-                style="display: inline-flex; height: 40px; width: 40px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
+                style="display: inline-flex; height: 40px; width: 40px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-icon-ring); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
               >
                 <Folder size={18} strokeWidth={2.4} />
               </span>
@@ -165,7 +165,7 @@
           <div style="display: grid; gap: 8px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <span
-                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-normal-surface); box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight); color: var(--ui-accent-icon-glyph);"
+                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-icon-ring); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
               >
                 <FileText size={16} strokeWidth={2.4} />
               </span>
@@ -232,7 +232,7 @@
                   style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;"
                 >
                   <span
-                    style="display: inline-flex; height: 40px; width: 40px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-normal-border); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
+                    style="display: inline-flex; height: 40px; width: 40px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-icon-ring); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
                   >
                     <FileText size={18} strokeWidth={2.4} />
                   </span>
