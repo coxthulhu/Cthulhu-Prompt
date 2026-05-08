@@ -3,9 +3,10 @@
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
+  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { Info, Keyboard, RefreshCcw } from 'lucide-svelte'
+  import { Info, Keyboard, RefreshCcw, Settings } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -104,10 +105,13 @@
   data-testid="settings-screen"
 >
   <div class="w-full max-w-4xl space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-white">System Settings</h1>
-      <p class="mt-2 text-sm text-zinc-400">Global settings saved on your local machine.</p>
-    </div>
+    <SectionHeader
+      title="System Settings"
+      description="Global settings saved on your local machine."
+      headingLevel={1}
+      icon={Settings}
+      showAccentLine
+    />
 
     <CardSurface>
       <div class="px-2 pb-4 pt-1">
