@@ -274,7 +274,7 @@
 {/snippet}
 
 {#snippet promptHeaderRow()}
-  <div class="pt-6 pb-2" data-virtual-window-row>
+  <div class="pt-6 pb-1" data-virtual-window-row>
     <SectionHeader
       title="Prompts"
       description="Create, edit, and organize prompts in this folder."
