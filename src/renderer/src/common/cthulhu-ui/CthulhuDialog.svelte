@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Check, X } from 'lucide-svelte'
   import type { ComponentType, Snippet } from 'svelte'
+  import type { Action } from 'svelte/action'
   import CardSurface from './CardSurface.svelte'
   import IconOnlyButton from './IconOnlyButton.svelte'
   import IconTextButton from './IconTextButton.svelte'
@@ -74,6 +75,17 @@
     onsubmit?.()
   }
 
+  const portalToBody: Action<HTMLDivElement> = (node) => {
+    // Move overlays out of virtualized rows so fixed positioning covers the viewport.
+    document.body.appendChild(node)
+
+    return {
+      destroy() {
+        node.remove()
+      }
+    }
+  }
+
   // Side effect: close the open dialog when the user presses Escape.
   $effect(() => {
     if (!open) {
@@ -95,7 +107,7 @@
 </script>
 
 {#if open}
-  <div class="cthulhuUiDialogLayer" role="presentation" onclick={closeDialog}>
+  <div class="cthulhuUiDialogLayer" role="presentation" use:portalToBody onclick={closeDialog}>
     <CardSurface
       variant="solid"
       class={mergeClasses('flex flex-col gap-4 p-4', className)}
@@ -160,6 +172,7 @@
 
 <style>
   .cthulhuUiDialogLayer {
+    -webkit-app-region: no-drag;
     align-items: center;
     background-color: oklch(0 0 0 / 50%);
     display: flex;
