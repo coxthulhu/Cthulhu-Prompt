@@ -5,7 +5,7 @@
   import type { CthulhuSize } from './types'
 
   type AccentIconTileSize = Extract<CthulhuSize, 'small' | 'medium' | 'large'>
-  type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'danger'
+  export type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'danger'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType

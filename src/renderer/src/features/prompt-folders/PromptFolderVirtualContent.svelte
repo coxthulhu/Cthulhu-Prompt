@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
   import { lookupPromptFolderDescriptionMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
@@ -28,6 +29,7 @@
     ActivePromptTreeRow,
     PromptFocusRequest
   } from './promptFolderScreenController.svelte.ts'
+  import { FileText } from 'lucide-svelte'
 
   type PromptFolderRow =
     | { kind: 'folder-settings' }
@@ -272,8 +274,13 @@
 {/snippet}
 
 {#snippet promptHeaderRow()}
-  <div class="pt-6 pb-4" data-virtual-window-row>
-    <h2 class="text-2xl font-bold tracking-tight text-white">Prompts</h2>
+  <div class="pt-6 pb-2" data-virtual-window-row>
+    <SectionHeader
+      title="Prompts"
+      headingLevel={2}
+      icon={FileText}
+      showAccentLine
+    />
   </div>
 {/snippet}
 

@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte'
   import type { monaco } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import {
     lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson,
@@ -14,7 +15,7 @@
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import { getMinMonacoHeightPx, MONACO_PADDING_PX } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import { Folder } from 'lucide-svelte'
+  import { Folder, Settings } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
   import { PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY } from './find/promptFolderFindSectionKeys'
   import type {
@@ -234,10 +235,13 @@
   data-testid={`prompt-folder-settings-${promptFolderId}`}
   data-virtual-window-row
 >
-  <div class="prompt-folder-settings-header">
-    <h1>Folder Settings</h1>
-    <p>Settings that only affect prompts in this folder, and are saved to the workspace.</p>
-  </div>
+  <SectionHeader
+    title="Folder Settings"
+    description="Settings that only affect prompts in this folder, and are saved to the workspace."
+    headingLevel={1}
+    icon={Settings}
+    showAccentLine
+  />
 
   <PromptEditorCardSurface>
     <PromptEditorTitleBar
@@ -310,27 +314,6 @@
     gap: 24px;
     min-width: 0;
     padding-top: 24px;
-  }
-
-  .prompt-folder-settings-header {
-    display: grid;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .prompt-folder-settings-header h1 {
-    color: var(--ui-normal-text);
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 32px;
-    margin: 0;
-  }
-
-  .prompt-folder-settings-header p {
-    color: var(--ui-muted-text);
-    font-size: 14px;
-    line-height: 20px;
-    margin: 0;
   }
 
   .prompt-folder-description-editor {
