@@ -20,6 +20,7 @@ const SETTINGS_EDITOR_CHROME_PX =
   ADDITIONAL_GAP_PX +
   MONACO_PADDING_PX
 const SETTINGS_EDITOR_VERTICAL_INSET_PX = MONACO_PADDING_PX / 2
+export const PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES = 1
 const SETTINGS_HEADER_HEIGHT_PX =
   SETTINGS_TOP_PADDING_PX +
   SETTINGS_TITLE_HEIGHT_PX +
@@ -56,10 +57,9 @@ export const SETTINGS_EDITOR_LEFT_OFFSET_PX =
 
 export const estimatePromptFolderSettingsMonacoHeight = (
   text: string,
-  fontSize: number,
-  minLines: number
+  fontSize: number
 ): number => {
-  return estimateMonacoHeightPx(text, fontSize, minLines)
+  return estimateMonacoHeightPx(text, fontSize, PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES)
 }
 
 export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number): number => {
@@ -72,10 +72,7 @@ export const getPromptFolderSettingsMonacoHeightFromRowPx = (rowHeightPx: number
 
 export const estimatePromptFolderSettingsHeight = (
   text: string,
-  fontSize: number,
-  minLines: number
+  fontSize: number
 ): number => {
-  return getPromptFolderSettingsHeightPx(
-    estimatePromptFolderSettingsMonacoHeight(text, fontSize, minLines)
-  )
+  return getPromptFolderSettingsHeightPx(estimatePromptFolderSettingsMonacoHeight(text, fontSize))
 }

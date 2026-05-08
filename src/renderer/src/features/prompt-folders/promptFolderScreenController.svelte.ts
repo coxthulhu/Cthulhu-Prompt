@@ -630,11 +630,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
-    const baseHeight = estimatePromptFolderSettingsHeight(
-      descriptionText,
-      promptFontSize,
-      promptEditorMinLines
-    )
+    const baseHeight = estimatePromptFolderSettingsHeight(descriptionText, promptFontSize)
 
     if (!viewportMetrics) {
       return baseHeight

@@ -28,6 +28,7 @@
     SETTINGS_DESCRIPTION_CARD_PADDING_PX,
     SETTINGS_EDITOR_LEFT_OFFSET_PX,
     SETTINGS_EDITOR_TOP_OFFSET_PX,
+    PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES,
     getPromptFolderSettingsHeightPx,
     getPromptFolderSettingsMonacoHeightFromRowPx
   } from './promptFolderSettingsSizing'
@@ -68,7 +69,6 @@
 
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
   const initialDescriptionEditorViewStateJson = $derived.by(() => {
     if (!workspaceId) {
       return null
@@ -84,7 +84,7 @@
   const descriptionValue = $derived(descriptionText)
   const placeholderMonacoHeightPx = $derived.by(() => {
     return Math.max(
-      getMinMonacoHeightPx(promptFontSize, promptEditorMinLines),
+      getMinMonacoHeightPx(promptFontSize, PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES),
       getPromptFolderSettingsMonacoHeightFromRowPx(virtualRowHeightPx)
     )
   })
@@ -263,6 +263,7 @@
             containerWidthPx={virtualWindowWidthPx}
             placeholderHeightPx={placeholderMonacoHeightPx}
             overflowWidgetsDomNode={overflowHost}
+            minLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES}
             {hydrationPriority}
             {shouldDehydrate}
             {rowId}
@@ -300,7 +301,10 @@
           />
         {/key}
       {:else}
-        <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
+        <MonacoEditorPlaceholder
+          heightPx={placeholderMonacoHeightPx}
+          minLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES}
+        />
       {/if}
     </div>
   </PromptEditorCardSurface>

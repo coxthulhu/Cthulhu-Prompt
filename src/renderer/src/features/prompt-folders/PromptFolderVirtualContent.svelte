@@ -131,7 +131,7 @@
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
-        estimatePromptFolderSettingsHeight(descriptionText, promptFontSize, promptEditorMinLines),
+        estimatePromptFolderSettingsHeight(descriptionText, promptFontSize),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
       hydrationPriorityEligible: true,

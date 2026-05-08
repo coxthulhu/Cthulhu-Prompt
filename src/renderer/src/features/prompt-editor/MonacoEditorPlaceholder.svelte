@@ -5,13 +5,14 @@
 
   type Props = {
     heightPx: number
+    minLines?: number
     class?: string
   }
 
-  let { heightPx, class: className }: Props = $props()
+  let { heightPx, minLines, class: className }: Props = $props()
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptEditorMinLines = $derived(minLines ?? systemSettings.promptEditorMinLines)
   const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize, promptEditorMinLines))
 
   // Derive a stable placeholder height that matches Monaco's minimum.

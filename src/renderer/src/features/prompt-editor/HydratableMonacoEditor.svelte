@@ -25,6 +25,7 @@
     hydrationPriority: number
     shouldDehydrate: boolean
     rowId: string
+    minLines?: number
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onImmediateHydrationRequest?: (request: (() => void) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
@@ -52,6 +53,7 @@
     hydrationPriority,
     shouldDehydrate,
     rowId,
+    minLines,
     scrollToWithinWindowBand,
     onImmediateHydrationRequest,
     onHydrationChange,
@@ -164,6 +166,7 @@
       {containerWidthPx}
       {overflowWidgetsDomNode}
       {rowId}
+      {minLines}
       {scrollToWithinWindowBand}
       {onChange}
       {onBlur}
@@ -176,6 +179,6 @@
       {onViewStateCapture}
     />
   {:else}
-    <MonacoEditorPlaceholder heightPx={placeholderHeightPx} />
+    <MonacoEditorPlaceholder heightPx={placeholderHeightPx} {minLines} />
   {/if}
 </div>

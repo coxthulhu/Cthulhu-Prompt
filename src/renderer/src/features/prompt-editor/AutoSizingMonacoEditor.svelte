@@ -20,6 +20,7 @@
     containerWidthPx: number
     overflowWidgetsDomNode: HTMLElement
     rowId: string
+    minLines?: number
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -41,6 +42,7 @@
     containerWidthPx,
     overflowWidgetsDomNode,
     rowId,
+    minLines,
     scrollToWithinWindowBand,
     onChange,
     onBlur,
@@ -55,7 +57,7 @@
 
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptEditorMinLines = $derived(minLines ?? systemSettings.promptEditorMinLines)
   const showLineNumbers = $derived(systemSettings.showLineNumbers)
   const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize, promptEditorMinLines))
 
