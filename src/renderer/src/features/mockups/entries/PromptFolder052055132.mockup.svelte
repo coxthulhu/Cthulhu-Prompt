@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import {
     ChevronDown,
     ChevronUp,
@@ -73,11 +74,12 @@
           style="display:grid; gap:8px; border-left:3px solid var(--ui-accent-normal-border); padding-left:16px;"
         >
           <div style="display:flex; align-items:center; gap:10px;">
-            <span
-              style="display:grid; height:30px; width:30px; place-items:center; border:1px solid var(--ui-accent-icon-ring); border-radius:7px; background:var(--ui-accent-normal-surface); color:var(--ui-accent-icon-glyph);"
-            >
-              <Settings size={16} strokeWidth={2.4} />
-            </span>
+            <AccentIconTile
+              icon={Settings}
+              size="small"
+              variant="accent"
+              iconClass="stroke-[2.4]"
+            />
             <h1
               style="margin:0; color:var(--ui-normal-text); font-size:24px; font-weight:760; line-height:32px;"
             >

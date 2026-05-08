@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import {
     ChevronDown,
     Copy,
@@ -69,11 +70,12 @@
         >
           <div style="display: grid; gap: 8px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span
-                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-icon-ring); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
-              >
-                <Settings size={16} strokeWidth={2.4} />
-              </span>
+              <AccentIconTile
+                icon={Settings}
+                size="small"
+                variant="accent"
+                iconClass="stroke-[2.4]"
+              />
               <h1
                 style="margin: 0; color: var(--ui-normal-text); font-size: 24px; line-height: 32px;"
               >
@@ -164,11 +166,12 @@
         >
           <div style="display: grid; gap: 8px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span
-                style="display: inline-flex; height: 30px; width: 30px; align-items: center; justify-content: center; border: 1px solid var(--ui-accent-icon-ring); border-radius: 8px; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph);"
-              >
-                <FileText size={16} strokeWidth={2.4} />
-              </span>
+              <AccentIconTile
+                icon={FileText}
+                size="small"
+                variant="accent"
+                iconClass="stroke-[2.4]"
+              />
               <h2
                 style="margin: 0; color: var(--ui-normal-text); font-size: 24px; font-weight: 760; line-height: 32px;"
               >

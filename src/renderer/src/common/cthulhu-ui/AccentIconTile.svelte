@@ -40,7 +40,7 @@
 >
   <Icon
     class={mergeClasses(
-      size === 'small' ? 'h-[17px] w-[17px]' : null,
+      size === 'small' ? 'h-4 w-4' : null,
       size === 'medium' ? 'h-[18px] w-[18px]' : null,
       size === 'large' ? 'h-6 w-6' : null,
       iconClass
@@ -76,9 +76,9 @@
   }
 
   .cthulhuUiAccentIconTile--small {
-    border-radius: var(--cthulhu-ui-radius-control);
-    height: 36px;
-    width: 36px;
+    border-radius: 7px;
+    height: 30px;
+    width: 30px;
   }
 
   .cthulhuUiAccentIconTile--medium {
