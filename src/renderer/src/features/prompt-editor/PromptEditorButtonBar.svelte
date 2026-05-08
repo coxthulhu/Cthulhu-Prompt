@@ -1,14 +1,6 @@
 <script lang="ts">
-  import Button from '@renderer/common/ui/button/button.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
-  } from '@renderer/common/ui/dialog'
   import { Check, Copy, Trash2 } from 'lucide-svelte'
 
   type Props = {
@@ -89,16 +81,13 @@
 </div>
 
 {#if onDelete}
-  <Dialog bind:open={isDeleteDialogOpen}>
-    <DialogContent showCloseButton={false}>
-      <DialogHeader>
-        <DialogTitle>Delete Prompt</DialogTitle>
-        <DialogDescription>Are you sure you want to delete this prompt?</DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <Button variant="outline" onclick={handleCancelDelete}>Cancel</Button>
-        <Button variant="destructive" onclick={handleConfirmDelete}>Delete</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+  <ConfirmationDialog
+    bind:open={isDeleteDialogOpen}
+    title="Delete Prompt"
+    description="Are you sure you want to delete this prompt?"
+    confirmText="Delete"
+    confirmTestId="prompt-confirm-delete-button"
+    oncancel={handleCancelDelete}
+    onconfirm={handleConfirmDelete}
+  />
 {/if}

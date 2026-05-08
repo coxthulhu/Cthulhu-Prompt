@@ -295,7 +295,7 @@ describe('Prompt folder prompt management', () => {
     const deleteButton = mainWindow.locator(deleteSelector)
     await deleteButton.click()
 
-    const dialog = mainWindow.locator('[data-slot="dialog-content"]')
+    const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('text=Delete Prompt')).toBeVisible()
 

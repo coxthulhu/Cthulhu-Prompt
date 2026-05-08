@@ -3,7 +3,7 @@
   import { mergeClasses } from './mergeClasses'
 
   type ButtonState = 'active' | 'enabled' | 'disabled'
-  type ButtonVariant = 'neutral' | 'accent' | 'nav'
+  type ButtonVariant = 'neutral' | 'accent' | 'danger' | 'nav'
 
   type Props = {
     icon: ComponentType
@@ -35,7 +35,9 @@
         ? 'cthulhuUiIconTextButton--navEnabled'
         : variant === 'accent'
           ? 'cthulhuUiIconTextButton--accent'
-          : 'cthulhuUiIconTextButton--neutral'
+          : variant === 'danger'
+            ? 'cthulhuUiIconTextButton--danger'
+            : 'cthulhuUiIconTextButton--neutral'
   )
 </script>
 
@@ -88,6 +90,19 @@
     border-color: var(--ui-accent-hover-border);
     background-color: var(--ui-accent-hover-surface);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButton--danger {
+    border-color: var(--ui-danger-normal-border);
+    background-color: var(--ui-danger-normal-surface);
+    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
+    color: var(--ui-danger-icon-glyph);
+  }
+
+  .cthulhuUiIconTextButton--danger:hover {
+    border-color: var(--ui-danger-hover-border);
+    background-color: var(--ui-danger-hover-surface);
+    color: var(--ui-danger-icon-glyph);
   }
 
   .cthulhuUiIconTextButton--neutral {

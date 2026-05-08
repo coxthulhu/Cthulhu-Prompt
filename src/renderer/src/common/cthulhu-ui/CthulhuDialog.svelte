@@ -4,11 +4,13 @@
   import CardSurface from './CardSurface.svelte'
   import IconOnlyButton from './IconOnlyButton.svelte'
   import IconTextButton from './IconTextButton.svelte'
+  import SectionHeader from './SectionHeader.svelte'
   import TitleBlock from './TitleBlock.svelte'
   import { mergeClasses } from './mergeClasses'
 
   type DialogIconVariant = 'accent' | 'danger'
-  type DialogSubmitVariant = 'neutral' | 'accent'
+  type DialogSubmitVariant = 'neutral' | 'accent' | 'danger'
+  type DialogHeaderStyle = 'dialog' | 'section'
 
   type Props = {
     open?: boolean
@@ -16,6 +18,7 @@
     description: string
     icon: ComponentType
     submitText: string
+    headerStyle?: DialogHeaderStyle
     showCloseButton?: boolean
     showSubmitButton?: boolean
     iconVariant?: DialogIconVariant
@@ -37,6 +40,7 @@
     description,
     icon,
     submitText,
+    headerStyle = 'dialog',
     showCloseButton = true,
     showSubmitButton = true,
     iconVariant = 'accent',
@@ -102,7 +106,17 @@
     >
       <div class="flex items-start gap-4">
         <div class="min-w-0 flex-1">
-          <TitleBlock {title} {description} {icon} {iconVariant} size="large" />
+          {#if headerStyle === 'section'}
+            <SectionHeader
+              {title}
+              {description}
+              {icon}
+              {iconVariant}
+              headingLevel={2}
+            />
+          {:else}
+            <TitleBlock {title} {description} {icon} {iconVariant} size="large" />
+          {/if}
         </div>
 
         {#if showCloseButton}
