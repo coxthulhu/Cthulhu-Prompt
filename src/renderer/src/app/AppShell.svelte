@@ -4,7 +4,7 @@
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
-  import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
+  import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import AppOverlays from './AppOverlays.svelte'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
+  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'

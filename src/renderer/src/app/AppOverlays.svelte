@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LoadingOverlay from '@renderer/common/ui/loading/LoadingOverlay.svelte'
+  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import DragDropOverlay from '@renderer/features/drag-drop/DragDropOverlay.svelte'
 
   type OverlayState = {

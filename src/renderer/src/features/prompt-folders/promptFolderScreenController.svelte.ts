@@ -36,7 +36,7 @@ import {
   lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
   setPromptFolderPromptTreeEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
-import { createLoadingOverlayState } from '@renderer/common/ui/loading/loadingOverlayState.svelte.ts'
+import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
   ScrollToAndTrackRowCentered,
   ScrollToWithinWindowBand,
