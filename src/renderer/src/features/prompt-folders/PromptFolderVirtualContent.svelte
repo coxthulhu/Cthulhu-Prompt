@@ -277,6 +277,7 @@
   <div class="pt-6 pb-2" data-virtual-window-row>
     <SectionHeader
       title="Prompts"
+      description="Create, edit, and organize prompts in this folder."
       headingLevel={2}
       icon={FileText}
       showAccentLine
