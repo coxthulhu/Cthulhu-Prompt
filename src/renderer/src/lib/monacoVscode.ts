@@ -1,4 +1,5 @@
 import { whenReady as whenThemeDefaultsReady } from '@codingame/monaco-vscode-theme-defaults-default-extension'
+import '@codingame/monaco-vscode-html-default-extension'
 import '@codingame/monaco-vscode-markdown-basics-default-extension'
 import '@codingame/monaco-vscode-markdown-language-features-default-extension'
 

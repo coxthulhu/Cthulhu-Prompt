@@ -20,6 +20,7 @@
   "dependencies": {
     "@codingame/monaco-vscode-api": "^26.2.1",
     "@codingame/monaco-vscode-configuration-service-override": "^26.2.1",
+    "@codingame/monaco-vscode-html-default-extension": "^26.2.2",
     "@codingame/monaco-vscode-languages-service-override": "^26.2.1",
     "@codingame/monaco-vscode-markdown-basics-default-extension": "^26.2.1",
     "@codingame/monaco-vscode-markdown-language-features-default-extension": "^26.2.1",
