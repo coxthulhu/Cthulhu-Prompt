@@ -16,7 +16,7 @@
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import { Separator } from '@renderer/common/ui/separator'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {

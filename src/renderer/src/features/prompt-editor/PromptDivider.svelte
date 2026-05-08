@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Plus } from 'lucide-svelte'
   import IconPillButton from '@renderer/common/cthulhu-ui/IconPillButton.svelte'
-  import { Separator } from '@renderer/common/ui/separator'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from './promptDividerSizing'
 
   let {
