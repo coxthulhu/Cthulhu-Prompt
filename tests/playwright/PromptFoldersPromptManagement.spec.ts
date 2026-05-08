@@ -3,6 +3,7 @@ import { stubClipboard } from '../helpers/ClipboardHelpers'
 import {
   focusMonacoEditor,
   getMonacoEditorText,
+  isMonacoEditorFocused,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import {
@@ -99,6 +100,23 @@ const expectPromptContent = async (
 }
 
 describe('Prompt folder prompt management', () => {
+  test('tabs from the prompt title to the Monaco editor', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const editorSelector = promptEditorSelector('dev-1')
+    await waitForMonacoEditor(mainWindow, editorSelector)
+
+    await mainWindow.locator(promptTitleSelector('dev-1')).focus()
+    await mainWindow.keyboard.press('Tab')
+
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+  })
+
   test('reorders prompts with move buttons', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }

@@ -14,6 +14,7 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
+    onTitleForwardTab?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string
     icon?: ComponentType
@@ -30,6 +31,7 @@
     scrollToWithinWindowBand,
     onDelete,
     onSelectionChange,
+    onTitleForwardTab,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Prompts',
     icon = FileText,
@@ -68,6 +70,13 @@
     const endOffset = input.selectionEnd ?? startOffset
     onSelectionChange?.(startOffset, endOffset)
   }
+
+  const handleTitleKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Tab' || event.shiftKey) return
+    if (!onTitleForwardTab) return
+    event.preventDefault()
+    void onTitleForwardTab()
+  }
 </script>
 
 <div class="prompt-editor-title-bar">
@@ -86,6 +95,7 @@
             handleSelectionChange(event)
           }}
           onfocus={handleTitleFocus}
+          onkeydown={handleTitleKeydown}
           onkeyup={handleSelectionChange}
           onmouseup={handleSelectionChange}
           onselect={handleSelectionChange}

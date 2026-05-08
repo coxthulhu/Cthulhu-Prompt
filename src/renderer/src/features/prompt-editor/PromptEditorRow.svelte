@@ -232,6 +232,16 @@
     return isHydrated
   }
 
+  const focusEditorFromTitleTab = async () => {
+    if (!editorInstance) {
+      await ensureHydrated()
+    }
+
+    // Side effect: wait for Monaco lifecycle registration before moving keyboard focus.
+    await tick()
+    editorInstance?.focus()
+  }
+
   // Side effect: register this row with the find integration for navigation.
   onMount(() => {
     if (!findContext) return
@@ -343,6 +353,7 @@
     promptFolderCount={promptData.promptFolderCount}
     onTitleChange={promptData.setTitle}
     onSelectionChange={reportTitleSelection}
+    onTitleForwardTab={focusEditorFromTitleTab}
     bind:inputRef={titleInputRef}
     {rowId}
     {scrollToWithinWindowBand}
