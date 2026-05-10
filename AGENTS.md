@@ -22,6 +22,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - When creating renderer components, only use colors from `src/renderer/src/styles/palette.css`, and ask permission before adding new colors to that palette.
 - When adding colors to `src/renderer/src/styles/palette.css`, follow the rules at the top of that file.
 - We are only developing support for Windows. Never develop support for other operating systems.
+- Do not run prettier or a format command unless explicitly asked.
 
 ## Project Structure & Module Organization
 
