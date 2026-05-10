@@ -39,7 +39,7 @@
   align-items: center;
   gap: 0;
   border: 1px solid transparent;
-  border-radius: 0.75rem;
+  border-radius: var(--cthulhu-ui-radius-control);
   background-color: transparent;
   padding-inline: 0;
   color: var(--ui-hoverable-text);
