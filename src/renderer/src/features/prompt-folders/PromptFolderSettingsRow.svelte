@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte'
   import type { monaco } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import {
@@ -251,6 +252,10 @@
       icon={Folder}
       copyLabel="Copy folder description"
       copyTitle="Copy folder description"
+    />
+
+    <InfoRow
+      text="A simple description of this folder and its purpose. Not used for any prompting functionality."
     />
 
     <div class="prompt-folder-description-editor">

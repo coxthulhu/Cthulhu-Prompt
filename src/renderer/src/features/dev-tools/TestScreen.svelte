@@ -34,11 +34,10 @@
   import IconPillButton from '@renderer/common/cthulhu-ui/IconPillButton.svelte'
   import IconPillSurface from '@renderer/common/cthulhu-ui/IconPillSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
-  import MessageRow, {
-    type MessageRowVariant
-  } from '@renderer/common/cthulhu-ui/MessageRow.svelte'
+  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import StatusBadge, {
@@ -76,7 +75,6 @@
   const iconPillButtonVariants: IconPillButtonVariant[] = ['neutral', 'accent']
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
-  const messageRowVariants: MessageRowVariant[] = ['danger', 'warning']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
   const titleBlockIconVariants: TitleBlockIconVariant[] = ['accent', 'danger']
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
@@ -252,12 +250,12 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="MessageRow" description="Validation and warning rows." size="small" />
+        <TitleBlock title="Message Rows" description="Inline guidance, warnings, and validation errors." size="small" />
 
         <div class="stack">
-          {#each messageRowVariants as variant (variant)}
-            <MessageRow text={`${variant} message row`} {variant} />
-          {/each}
+          <InfoRow text="Use this row for short informational guidance that helps explain the surrounding control or section." />
+          <MessageRow text="Review this value before saving." variant="warning" />
+          <MessageRow text="Prompt folder name is required." variant="danger" />
           <FloatingValidationMessage message="Prompt folder name is required.">
             <TextInput value="" placeholder="Floating validation anchor" aria-label="Validation field" />
           </FloatingValidationMessage>
