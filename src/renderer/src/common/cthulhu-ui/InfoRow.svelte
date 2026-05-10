@@ -35,7 +35,7 @@
     grid-template-columns: 18px minmax(0, 1fr);
     line-height: 18px;
     min-width: 0;
-    padding: 8px 10px;
+    padding: 6px 10px;
   }
 
   .cthulhuUiInfoRowIcon {
