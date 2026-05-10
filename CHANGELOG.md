@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.0.18
+
+### New Features
+
+- Added sidebar actions to expand or collapse all prompt folders.
+- Added HTML grammar support to the Markdown editor.
+
+### Changes
+
+- Moved folder settings into prompt tree rows and polished sidebar folder actions.
+- Refreshed prompt editor and prompt folder surfaces, including add-prompt rows, shared card styling, section headers, and spacing.
+- Consolidated shared Cthulhu UI components and removed unused shadcn UI components.
+- Upgraded Electron, Monaco, Lucide, Svelte, and development tooling dependencies.
+
+### Fixed
+
+- Fixed prompt title tab focus behavior.
+- Fixed prompt folder creation validation flicker.
+- Fixed dialog overlay positioning and invalid-workspace error dialogs.
+- Fixed prompt divider sizing in virtualized prompt lists.
+- Fixed prompt header subtitle spacing.
+- Fixed editor frame clicks so they focus the Monaco editor.
+
 ## 0.0.17
 
 ### New Features
