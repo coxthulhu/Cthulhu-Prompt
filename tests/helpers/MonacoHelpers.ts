@@ -30,7 +30,13 @@ export async function focusMonacoEditor(
   const monacoSelector = await waitForMonacoEditor(page, editorSelector, options.timeout)
   const position = options.clickPosition ?? DEFAULT_CLICK_POSITION
 
-  await page.locator(`${monacoSelector} ${MONACO_VIEW_LINES_SELECTOR}`).click({ position })
+  const viewLines = page.locator(`${monacoSelector} ${MONACO_VIEW_LINES_SELECTOR}`).first()
+  await viewLines.waitFor({ state: 'visible', timeout: options.timeout ?? DEFAULT_WAIT_TIMEOUT })
+  const box = await viewLines.boundingBox()
+  if (!box) {
+    throw new Error(`Could not measure Monaco editor view lines for selector: ${editorSelector}`)
+  }
+  await page.mouse.click(box.x + position.x, box.y + position.y)
 
   if (options.ensureInputFocus !== false) {
     await page.evaluate((selector) => {
@@ -44,12 +50,15 @@ export async function focusMonacoEditor(
 
       const registry = (
         window as unknown as {
-          __cthulhuMonacoEditors?: Array<{
-            container: HTMLElement | null
-            editor: { focus: () => void }
-          }>
-        }
-      ).__cthulhuMonacoEditors
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            focus: () => void
+            hasTextFocus?: () => boolean
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
 
       const entry = registry?.find((item) => {
         if (!item?.container) return false
@@ -75,8 +84,37 @@ export async function focusMonacoEditor(
     const container = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
       (candidate) => candidate.querySelector('.view-lines')
     )
+    if (!container) {
+      return false
+    }
+
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            focus: () => void
+            hasTextFocus?: () => boolean
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+
+    const entry = registry?.find((item) => {
+      if (!item?.container) return false
+      return (
+        item.container === container ||
+        item.container.contains(container) ||
+        container.contains(item.container)
+      )
+    })
+    entry?.editor.focus()
+
     const active = document.activeElement
-    return !!container && !!active && container.contains(active)
+    return (
+      (!!active && container.contains(active)) ||
+      (entry?.editor.hasTextFocus ? entry.editor.hasTextFocus() : false)
+    )
   }, editorSelector)
 
   return monacoSelector
@@ -115,8 +153,29 @@ export async function isMonacoEditorFocused(page: Page, editorSelector: string):
       return false
     }
 
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: { hasTextFocus?: () => boolean }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+
+    const entry = registry?.find((item) => {
+      if (!item?.container) return false
+      return (
+        item.container === container ||
+        item.container.contains(container) ||
+        container.contains(item.container)
+      )
+    })
+
     const active = document.activeElement
-    return !!active && container.contains(active)
+    return (
+      (!!active && container.contains(active)) ||
+      (entry?.editor.hasTextFocus ? entry.editor.hasTextFocus() : false)
+    )
   }, editorSelector)
 }
 
