@@ -25,7 +25,7 @@ export const promptTreePromptSelector = (promptId: string): string =>
   `[data-testid="prompt-folder-prompt-${promptId}"]`
 
 export const promptTreeFolderSelector = (folderName: string): string =>
-  `[data-testid="regular-prompt-folder-${folderName}"]`
+  `[data-testid="prompt-folder-toggle-${folderName.replace(/\s+/g, '')}"]`
 
 export const promptTreePromptDropIndicatorSelector = (promptId: string): string =>
   `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`

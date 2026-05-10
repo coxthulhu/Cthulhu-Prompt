@@ -237,6 +237,7 @@ export async function clickPromptFolderItem(
   const safeName = folderName.replace(/\s+/g, '')
   const testId = `regular-prompt-folder-${safeName}`
   const folderSelector = `[data-testid="${testId}"]`
+  const folderToggleSelector = `[data-testid="prompt-folder-toggle-${safeName}"]`
   const promptTreeSelector = '[data-testid="prompt-tree-virtual-window"]'
 
   // Sidebar tree rows are virtualized, so scroll until the target folder row is mounted.
@@ -255,6 +256,7 @@ export async function clickPromptFolderItem(
     await scrollVirtualWindowTo(window, promptTreeSelector, nextScrollTopPx)
   }
 
+  await window.locator(folderToggleSelector).hover({ timeout })
   await window.click(folderSelector, { timeout })
   await window.waitForSelector('[data-testid="prompt-folder-screen"]', {
     state: 'attached',

@@ -772,7 +772,7 @@ describe('User Persistence', () => {
     ).toHaveAttribute('aria-expanded', 'false')
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-settings-Examples"]')
-    ).toBeVisible()
+    ).toHaveCount(1)
   })
 
   test('restores and auto-scrolls prompt tree to persisted entry on startup', async ({

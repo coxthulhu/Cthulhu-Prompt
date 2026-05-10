@@ -29,7 +29,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'visible' })
+    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'attached' })
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -45,7 +45,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'visible' })
+    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'attached' })
 
     let screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -56,7 +56,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(examplesPrompt.hasPromptEditor).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
-    await mainWindow.waitForSelector(DEVELOPMENT_BUTTON, { state: 'visible' })
+    await mainWindow.waitForSelector(DEVELOPMENT_BUTTON, { state: 'attached' })
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
@@ -71,7 +71,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(examplesPrompt.found).toBe(false)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'visible' })
+    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -148,9 +148,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-icon-Examples"]')).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-settings-icon-Examples"]')
-    ).toBeVisible()
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+    ).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
 
     await testHelpers.navigateToPromptFolders('Examples')
     await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
@@ -158,16 +158,16 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
 
     await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
 
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
   })
 
   test('collapses all prompt folders from the sidebar action', async ({ testSetup }) => {
@@ -183,8 +183,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-expanded',
       'true'
     )
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
 
     await mainWindow.locator(COLLAPSE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
@@ -193,8 +193,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-expanded',
       'false'
     )
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
@@ -221,8 +221,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-expanded',
       'true'
     )
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
     await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
   })
@@ -279,7 +279,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await createButton.click()
     await expect(
       mainWindow.locator('[data-testid="regular-prompt-folder-TestFolder"]')
-    ).toBeVisible()
+    ).toHaveCount(1)
     expect(
       await mainWindow.evaluate(() => {
         const testWindow = window as typeof window & {

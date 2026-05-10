@@ -127,15 +127,12 @@
 }
 
 .sidebarPromptTreeActionSlot {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   flex-shrink: 0;
   margin-right: 0.375rem;
   pointer-events: none;
-}
-
-.sidebarPromptTreeActionSlot > * {
-  grid-area: 1 / 1;
 }
 
 .sidebarPromptTreeCountInActionSlot {
@@ -144,11 +141,9 @@
 }
 
 .sidebarPromptTreeFolderActions {
-  display: flex;
+  display: none;
   gap: 0.125rem;
-  opacity: 0;
   pointer-events: auto;
-  transition: opacity 50ms ease-out;
 }
 
 .sidebarPromptTreeActionButton {
@@ -170,7 +165,7 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeFolderActions,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeFolderActions {
-  opacity: 1;
+  display: flex;
 }
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeActionButton,
@@ -190,7 +185,7 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountInActionSlot,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountInActionSlot {
-  opacity: 0;
+  display: none;
 }
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
