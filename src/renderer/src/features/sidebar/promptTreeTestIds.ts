@@ -19,8 +19,5 @@ export const folderSettingsIconTestId = (folder: PromptFolder): string =>
 
 export const folderPromptTestId = (promptId: string): string => `prompt-folder-prompt-${promptId}`
 
-export const folderSettingsDropIndicatorTestId = (folder: PromptFolder): string =>
-  `prompt-tree-drop-indicator-settings-${getFolderTestKey(folder)}`
-
 export const folderPromptDropIndicatorTestId = (promptId: string): string =>
   `prompt-tree-drop-indicator-prompt-${promptId}`

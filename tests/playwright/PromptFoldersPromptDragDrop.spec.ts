@@ -14,8 +14,6 @@ import {
   getRowViewportOffsets,
   moveActiveDragToTarget,
   promptTreeFolderSelector,
-  promptTreeFolderSettingsDropIndicatorSelector,
-  promptTreeFolderSettingsSelector,
   promptTreePromptDropIndicatorSelector,
   promptTreePromptSelector,
   readPromptFolderPromptIds,
@@ -202,7 +200,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
   })
 
-  test('moves a prompt to the start of another folder when dropped onto that folder row', async ({
+  test('moves a dragged editor prompt to the start of another folder when dropped onto that folder row', async ({
     testSetup,
     electronApp
   }) => {
@@ -256,7 +254,7 @@ describe('Prompt folder prompt drag-drop', () => {
       })
   })
 
-  test('moves a prompt to the start of another folder when dropped onto that folder settings row', async ({
+  test('moves a prompt to the start of another folder when dropped onto that folder row', async ({
     testSetup,
     electronApp
   }) => {
@@ -271,7 +269,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await dragPromptHandleToTarget(
       mainWindow,
       DEV_1_ID,
-      promptTreeFolderSettingsSelector(EXAMPLES_FOLDER_NAME)
+      promptTreeFolderSelector(EXAMPLES_FOLDER_NAME)
     )
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
@@ -559,7 +557,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
   })
 
-  test('shows the folder-settings indicator on the bottom edge', async ({ testSetup }) => {
+  test('marks the folder row as the folder-level drop target', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -568,26 +566,12 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
-    await moveActiveDragToTarget(mainWindow, promptTreeFolderSettingsSelector(EXAMPLES_FOLDER_NAME))
+    await moveActiveDragToTarget(mainWindow, promptTreeFolderSelector(EXAMPLES_FOLDER_NAME))
 
-    const settingsRow = mainWindow.locator(promptTreeFolderSettingsSelector(EXAMPLES_FOLDER_NAME))
-    const indicator = mainWindow.locator(
-      promptTreeFolderSettingsDropIndicatorSelector(EXAMPLES_FOLDER_NAME)
-    )
-
-    await expect(indicator).toHaveAttribute('data-edge', 'bottom')
-
-    const settingsRowBox = await settingsRow.boundingBox()
-    const indicatorBox = await indicator.boundingBox()
-    if (!settingsRowBox || !indicatorBox) {
-      throw new Error('Missing geometry for folder-settings indicator assertion')
-    }
-
-    expect(
-      Math.abs(
-        indicatorBox.y + indicatorBox.height / 2 - (settingsRowBox.y + settingsRowBox.height)
-      )
-    ).toBeLessThanOrEqual(2)
+    const folderRow = mainWindow
+      .locator(promptTreeFolderSelector(EXAMPLES_FOLDER_NAME))
+      .locator('xpath=ancestor::div[contains(@class, "sidebarPromptTreeRow")]')
+    await expect(folderRow).toHaveAttribute('data-over', 'true')
 
     await finishActiveDrag(mainWindow)
   })

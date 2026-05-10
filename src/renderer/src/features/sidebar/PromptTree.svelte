@@ -54,7 +54,6 @@
     folderOpenTestId,
     folderPromptDropIndicatorTestId,
     folderPromptTestId,
-    folderSettingsDropIndicatorTestId,
     folderSettingsIconTestId,
     folderSettingsTestId,
     folderToggleTestId
@@ -68,10 +67,6 @@
         folder: PromptFolder
       }
     | {
-        kind: 'folder-settings'
-        folder: PromptFolder
-      }
-    | {
         kind: 'folder-prompt'
         folder: PromptFolder
         promptId: string
@@ -80,7 +75,7 @@
         kind: 'bottom-spacer'
       }
 
-  type PromptTreeOverlayRow = Extract<PromptTreeRow, { kind: 'folder-settings' | 'folder-prompt' }>
+  type PromptTreeOverlayRow = Extract<PromptTreeRow, { kind: 'folder-prompt' }>
   type PromptTreeOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeOverlayRow>
 
   let {
@@ -107,13 +102,6 @@
     'prompt-folder': {
       estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
       snippet: promptFolderRow
-    },
-    'folder-settings': {
-      estimateHeight: () => 30,
-      snippet: folderSettingsRow,
-      overlayRow: {
-        snippet: promptTreeRowOverlay
-      }
     },
     'folder-prompt': {
       estimateHeight: () => 30,
@@ -205,7 +193,6 @@
 
   const PROMPT_TREE_CHILD_ROW_CONTENT_INSET = '2.375rem'
 
-  const folderSettingsRowId = (folderId: string): string => `${folderId}:settings`
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`
   const promptTreeDroppableState = createDroppableStateRegistry<string>()
@@ -228,9 +215,7 @@
     promptTreeDroppableState.edge(rowId)
 
   const getPromptTreeDropIndicatorTestId = (row: PromptTreeOverlayRow): string =>
-    row.kind === 'folder-settings'
-      ? folderSettingsDropIndicatorTestId(row.folder)
-      : folderPromptDropIndicatorTestId(row.promptId)
+    folderPromptDropIndicatorTestId(row.promptId)
 
   const blurButtonAfterMouseClick = (event: MouseEvent) => {
     // Side effect: keep action-slot visibility stable by defocusing only real mouse clicks.
@@ -292,7 +277,7 @@
     }
 
     return trackedNavigationRow === 'folder-settings'
-      ? folderSettingsRowId(selectedPromptFolderId)
+      ? selectedPromptFolderId
       : folderPromptRowId(selectedPromptFolderId, trackedNavigationRow.slice('prompt:'.length))
   })
 
@@ -401,14 +386,6 @@
       })
 
       if (isFolderExpanded(folder.id)) {
-        items.push({
-          id: folderSettingsRowId(folder.id),
-          row: {
-            kind: 'folder-settings',
-            folder
-          }
-        })
-
         for (const promptId of folder.promptIds) {
           items.push({
             id: folderPromptRowId(folder.id, promptId),
@@ -462,6 +439,7 @@
 
 {#snippet promptFolderRow(props)}
   {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
+  {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
   {@const isDropTargetOver = isPromptTreeDropTargetOver(props.rowId)}
 
   <div
@@ -495,50 +473,41 @@
       <span class="sidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
     </button>
 
-    <!-- Count and open arrow share one slot; hover/focus swaps visibility. -->
+    <!-- Count and actions share one slot; hover/focus swaps visibility. -->
     <div class="sidebarPromptTreeActionSlot">
       <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
         {props.row.folder.promptIds.length}
       </span>
-      <button
-        type="button"
-        aria-label={`Open ${props.row.folder.displayName}`}
-        onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
-        data-testid={folderOpenTestId(props.row.folder)}
-        data-size="default"
-        data-active={isActive}
-        class="sidebarPromptTreeOpenButton"
-      >
-        <ArrowRight class="size-4" />
-      </button>
+      <div class="sidebarPromptTreeFolderActions">
+        <button
+          type="button"
+          aria-label={`Folder settings for ${props.row.folder.displayName}`}
+          aria-current={isSettingsActive ? 'true' : undefined}
+          onclick={(event) =>
+            handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
+          data-testid={folderSettingsTestId(props.row.folder)}
+          data-active={isSettingsActive ? 'true' : 'false'}
+          class="sidebarPromptTreeActionButton"
+        >
+          <Settings
+            class="size-4"
+            data-testid={folderSettingsIconTestId(props.row.folder)}
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
+          aria-label={`Open ${props.row.folder.displayName}`}
+          onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
+          data-testid={folderOpenTestId(props.row.folder)}
+          data-size="default"
+          data-active={isActive}
+          class="sidebarPromptTreeActionButton"
+        >
+          <ArrowRight class="size-4" />
+        </button>
+      </div>
     </div>
-  </div>
-{/snippet}
-
-{#snippet folderSettingsRow(props)}
-  {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
-
-  <div class="sidebarPromptTreeSettingsRow">
-    <button
-      use:droppable={getPromptTreeDroppableOptions(props.rowId, 'bottom', () => ({
-        kind: 'folder-settings',
-        folderId: props.row.folder.id
-      }))}
-      type="button"
-      data-testid={folderSettingsTestId(props.row.folder)}
-      data-active={isActive ? 'true' : 'false'}
-      aria-current={isActive ? 'true' : undefined}
-      onclick={(event) =>
-        handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
-      class="sidebarPromptTreeSettingsButton"
-    >
-      <Settings
-        class="sidebarPromptTreeSettingsIcon"
-        data-testid={folderSettingsIconTestId(props.row.folder)}
-        aria-hidden="true"
-      />
-      <span class="sidebarPromptTreeSettingsLabel">Folder Settings</span>
-    </button>
   </div>
 {/snippet}
 

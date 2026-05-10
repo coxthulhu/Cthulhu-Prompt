@@ -27,14 +27,8 @@ export const promptTreePromptSelector = (promptId: string): string =>
 export const promptTreeFolderSelector = (folderName: string): string =>
   `[data-testid="regular-prompt-folder-${folderName}"]`
 
-export const promptTreeFolderSettingsSelector = (folderName: string): string =>
-  `[data-testid="prompt-folder-settings-${folderName}"]`
-
 export const promptTreePromptDropIndicatorSelector = (promptId: string): string =>
   `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`
-
-export const promptTreeFolderSettingsDropIndicatorSelector = (folderName: string): string =>
-  `[data-testid="prompt-tree-drop-indicator-settings-${folderName}"]`
 
 const getRequiredBox = async (locator: Locator, errorMessage: string): Promise<ElementBox> => {
   const box = await locator.boundingBox()

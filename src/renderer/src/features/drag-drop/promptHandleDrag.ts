@@ -11,10 +11,6 @@ export type PromptHandleDropPayload =
       folderId: string
     }
   | {
-      kind: 'folder-settings'
-      folderId: string
-    }
-  | {
       kind: 'prompt'
       folderId: string
       promptId: string

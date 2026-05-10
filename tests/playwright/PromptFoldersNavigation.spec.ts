@@ -158,7 +158,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
 
     await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(0)
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
 
@@ -193,8 +193,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-expanded',
       'false'
     )
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(0)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(0)
+    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toBeVisible()
+    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toBeVisible()
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
@@ -337,7 +337,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
 
     await mainWindow.locator(SHORT_TOGGLE).click()
-    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
     await expect(mainWindow.locator(SHORT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
