@@ -118,7 +118,7 @@ describe('draft sync contract', () => {
     upsertPromptSummaryDrafts([summaryPrompt])
 
     const draftRecord = promptDraftCollection.get(summaryPrompt.id)!
-    expect(draftRecord).toEqual({
+    expect(draftRecord).toMatchObject({
       id: summaryPrompt.id,
       title: summaryPrompt.title,
       createdAt: '',

@@ -93,6 +93,12 @@ type CreateRevisionMutationTransactionOptions<
   'persistMutations' | 'handleSuccessOrConflictResponse' | 'conflictMessage'
 >
 
+const stripCollectionVirtualProps = <TRecord extends object>(record: TRecord): TRecord => {
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => !key.startsWith('$'))
+  ) as TRecord
+}
+
 // Create a manual-commit transaction using the shared revision mutation contract.
 const createRevisionMutationTransaction = <
   TRevisionCollections extends RevisionCollectionsMap,
@@ -116,7 +122,7 @@ const createRevisionMutationTransaction = <
       return {
         id: entity.id,
         expectedRevision: collection.utils.getAuthoritativeRevision(entity.id),
-        data: entity.data
+        data: stripCollectionVirtualProps(entity.data)
       }
     }) as RevisionEntityBuilders<TRevisionCollections>[typeof collectionKey]
   }
