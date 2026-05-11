@@ -160,7 +160,7 @@
   }
 
   .cthulhuUiIconOnlyButton--transparent:hover {
-    border-color: transparent;
+    border-color: var(--ui-neutral-hover-border);
   }
 
   .cthulhuUiIconOnlyButton--accent:hover {
