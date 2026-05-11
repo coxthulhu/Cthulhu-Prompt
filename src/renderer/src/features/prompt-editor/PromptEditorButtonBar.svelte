@@ -1,6 +1,7 @@
 <script lang="ts">
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { Check, Copy, Trash2 } from 'lucide-svelte'
 
   type Props = {
@@ -69,6 +70,7 @@
     onclick={handleCopyClick}
   />
   {#if onDelete}
+    <Separator orientation="vertical" class="h-6" />
     <IconOnlyButton
       icon={Trash2}
       label="Delete prompt"
