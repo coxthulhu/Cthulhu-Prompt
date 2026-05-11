@@ -34,6 +34,7 @@
     MONACO_PADDING_PX,
     TITLE_BAR_HEIGHT_PX
   } from './promptEditorSizing'
+  import { getPromptLineCount, getPromptTokenCount } from './promptEditorCounts'
 
   type PromptFocusRequest = { promptId: string; requestId: number }
 
@@ -104,6 +105,8 @@
       getMonacoHeightFromRowPx(baseHeightPx)
     )
   })
+  const lineCount = $derived(getPromptLineCount(promptData.draft.text))
+  const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let rowElement = $state<HTMLDivElement | null>(null)
@@ -350,6 +353,8 @@
     title={promptData.draft.title}
     draftText={promptData.draft.text}
     promptFolderCount={promptData.promptFolderCount}
+    {lineCount}
+    {tokenCount}
     onTitleChange={promptData.setTitle}
     onSelectionChange={reportTitleSelection}
     onTitleForwardTab={focusEditorFromTitleTab}

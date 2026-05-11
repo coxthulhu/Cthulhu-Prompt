@@ -17,6 +17,8 @@
     onTitleForwardTab?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string
+    lineCount: number
+    tokenCount: number
     icon?: ComponentType
     copyLabel?: string
     copyTitle?: string
@@ -34,6 +36,8 @@
     onTitleForwardTab,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Prompts',
+    lineCount,
+    tokenCount,
     icon = FileText,
     copyLabel,
     copyTitle
@@ -43,6 +47,8 @@
   const titlePlaceholder = $derived.by(() =>
     title.trim().length === 0 ? `Title (Prompt ${promptFolderCount})` : 'Title'
   )
+  const lineCountLabel = $derived(`${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`)
+  const tokenCountLabel = $derived(`${tokenCount} ${tokenCount === 1 ? 'token' : 'tokens'}`)
 
   const handleTitleInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
@@ -111,9 +117,9 @@
           {metadataFolderLabel}
         </span>
         <span class="prompt-editor-metadata-dot"></span>
-        <span>0 lines</span>
+        <span data-testid="prompt-line-count">{lineCountLabel}</span>
         <span class="prompt-editor-metadata-dot"></span>
-        <span>0 tokens</span>
+        <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         <span class="prompt-editor-metadata-dot"></span>
         <span>0 min ago</span>
       </div>

@@ -13,6 +13,7 @@
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
   import PromptEditorCardSurface from '../prompt-editor/PromptEditorCardSurface.svelte'
   import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
+  import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import { getMinMonacoHeightPx, MONACO_PADDING_PX } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
@@ -83,6 +84,8 @@
   const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId))
 
   const descriptionValue = $derived(descriptionText)
+  const descriptionLineCount = $derived(getPromptLineCount(descriptionValue))
+  const descriptionTokenCount = $derived(getPromptTokenCount(descriptionValue))
   const placeholderMonacoHeightPx = $derived.by(() => {
     return Math.max(
       getMinMonacoHeightPx(promptFontSize, PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES),
@@ -248,6 +251,8 @@
       title="Folder Description"
       draftText={descriptionValue}
       metadataFolderLabel="Folder Settings"
+      lineCount={descriptionLineCount}
+      tokenCount={descriptionTokenCount}
       icon={Folder}
       copyLabel="Copy folder description"
       copyTitle="Copy folder description"
