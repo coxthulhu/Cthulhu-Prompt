@@ -19,6 +19,7 @@
     initialValue: string
     initialViewStateJson?: string | null
     viewStateCaptureKey?: string
+    modelUri: monaco.Uri
     containerWidthPx: number
     placeholderHeightPx: number
     overflowWidgetsDomNode: HTMLElement
@@ -27,7 +28,7 @@
     rowId: string
     minLines?: number
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    onImmediateHydrationRequest?: (request: (() => void) | null) => void
+    onImmediateHydrationRequest?: (request: (() => Promise<void>) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -47,6 +48,7 @@
     initialValue,
     initialViewStateJson,
     viewStateCaptureKey,
+    modelUri,
     containerWidthPx,
     placeholderHeightPx,
     overflowWidgetsDomNode,
@@ -73,11 +75,21 @@
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let queuedEntry: MonacoHydrationEntry | null = null
   let lastReportedHydration = $state<boolean | null>(null)
+  let hydrationReadyPromise: Promise<void> | null = null
+  let resolveHydrationReady: (() => void) | null = null
 
-  const reportHydrationIfChanged = () => {
-    if (lastReportedHydration === isHydrated) return
-    lastReportedHydration = isHydrated
-    onHydrationChange?.(isHydrated)
+  const resolveEditorReady = () => {
+    resolveHydrationReady?.()
+    hydrationReadyPromise = null
+    resolveHydrationReady = null
+  }
+
+  const waitForEditorReady = (): Promise<void> => {
+    if (editorInstance) return Promise.resolve()
+    hydrationReadyPromise ??= new Promise<void>((resolve) => {
+      resolveHydrationReady = resolve
+    })
+    return hydrationReadyPromise
   }
 
   const handleEditorLifecycle = (
@@ -86,10 +98,18 @@
   ) => {
     if (isActive) {
       editorInstance = editor
+      resolveEditorReady()
     } else if (editorInstance === editor) {
       editorInstance = null
     }
+    reportHydration(isActive)
     onEditorLifecycle?.(editor, isActive)
+  }
+
+  const reportHydration = (nextIsHydrated: boolean) => {
+    if (lastReportedHydration === nextIsHydrated) return
+    lastReportedHydration = nextIsHydrated
+    onHydrationChange?.(nextIsHydrated)
   }
 
   const handleFrameClick = (event: MouseEvent) => {
@@ -98,17 +118,19 @@
     editorInstance?.focus()
   }
 
-  const requestImmediateHydration = () => {
-    if (shouldDehydrate || isHydrated) return
+  const requestImmediateHydration = async (): Promise<void> => {
+    if (shouldDehydrate) return
     if (isMonacoHydrationQueuePaused()) return
-    if (queuedEntry) {
-      cancelMonacoHydration(queuedEntry)
-      queuedEntry = null
+    if (!isHydrated) {
+      if (queuedEntry) {
+        cancelMonacoHydration(queuedEntry)
+        queuedEntry = null
+      }
+      const resumeHydration = pauseMonacoHydrationForFrame()
+      isHydrated = true
+      resumeHydration()
     }
-    const resumeHydration = pauseMonacoHydrationForFrame()
-    isHydrated = true
-    reportHydrationIfChanged()
-    resumeHydration()
+    await waitForEditorReady()
   }
 
   // Side effect: expose immediate hydration and clean up queued entries on unmount.
@@ -118,6 +140,8 @@
       if (queuedEntry) {
         cancelMonacoHydration(queuedEntry)
       }
+      resolveEditorReady()
+      reportHydration(false)
       onImmediateHydrationRequest?.(null)
     }
   })
@@ -132,17 +156,15 @@
       if (isHydrated) {
         isHydrated = false
       }
-      reportHydrationIfChanged()
+      reportHydration(false)
       return
     }
     if (!queuedEntry && !isHydrated) {
       queuedEntry = enqueueMonacoHydration(hydrationPriority, () => {
         queuedEntry = null
         isHydrated = true
-        reportHydrationIfChanged()
       })
     }
-    reportHydrationIfChanged()
   })
 
   // Side effect: keep queued hydration priority aligned with scroll updates.
@@ -163,6 +185,7 @@
       {initialValue}
       {initialViewStateJson}
       {viewStateCaptureKey}
+      {modelUri}
       {containerWidthPx}
       {overflowWidgetsDomNode}
       {rowId}

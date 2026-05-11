@@ -17,6 +17,7 @@
     initialValue: string
     initialViewStateJson?: string | null
     viewStateCaptureKey?: string
+    modelUri: monaco.Uri
     containerWidthPx: number
     overflowWidgetsDomNode: HTMLElement
     rowId: string
@@ -39,6 +40,7 @@
     initialValue,
     initialViewStateJson,
     viewStateCaptureKey,
+    modelUri,
     containerWidthPx,
     overflowWidgetsDomNode,
     rowId,
@@ -374,77 +376,94 @@
   // Side effect: create Monaco once the container is ready; dispose on unmount.
   onMount(() => {
     if (!container) return
+    const targetContainer = container
 
-    const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
+    const measuredWidthPx = Math.round(targetContainer.getBoundingClientRect().width)
     if (measuredWidthPx <= 0) return
 
-    const nextEditor = monaco.editor.create(container, {
-      value: initialValue,
-      language: 'markdown',
-      automaticLayout: false,
-      theme: PROMPT_EDITOR_THEME,
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      wordWrap: 'on',
-      wordWrapColumn: 80,
-      fontSize: promptFontSize,
-      lineNumbers: showLineNumbers ? 'on' : 'off',
-      lineNumbersMinChars: 3,
-      scrollbar: { alwaysConsumeMouseWheel: false },
-      revealHorizontalRightPadding: 0,
-      cursorSmoothCaretAnimation: 'off',
-      smoothScrolling: false,
-      renderLineHighlightOnlyWhenFocus: true,
-      overflowWidgetsDomNode,
-      dimension: { width: measuredWidthPx, height: minMonacoHeightPx }
-    })
+    let disposed = false
+    let cleanupEditor = (): void => {}
 
-    editor = nextEditor
-    registerMonacoEditor({ container, editor: nextEditor })
-    onEditorLifecycle?.(nextEditor, true)
-    findController = FindController.get(nextEditor)
-    const captureViewState = () => {
-      onViewStateCapture?.(serializeEditorViewState(nextEditor))
-    }
+    void (async () => {
+      const modelReference = await monaco.editor.createModelReference(modelUri, initialValue)
+      if (disposed) {
+        modelReference.dispose()
+        return
+      }
 
-    if (viewStateCaptureKey) {
-      registerMonacoViewStateSaver(viewStateCaptureKey, captureViewState)
-    }
+      const nextEditor = monaco.editor.create(targetContainer, {
+        model: modelReference.object.textEditorModel,
+        automaticLayout: false,
+        theme: PROMPT_EDITOR_THEME,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        wordWrap: 'on',
+        wordWrapColumn: 80,
+        fontSize: promptFontSize,
+        lineNumbers: showLineNumbers ? 'on' : 'off',
+        lineNumbersMinChars: 3,
+        scrollbar: { alwaysConsumeMouseWheel: false },
+        revealHorizontalRightPadding: 0,
+        cursorSmoothCaretAnimation: 'off',
+        smoothScrolling: false,
+        renderLineHighlightOnlyWhenFocus: true,
+        overflowWidgetsDomNode,
+        dimension: { width: measuredWidthPx, height: minMonacoHeightPx }
+      })
 
-    const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
-    const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
-    const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
-    const cursorDisposable = nextEditor.onDidChangeCursorPosition((event) => {
-      handleCursorChange(event)
-      reportSelectionAnchorFromCursorChange(nextEditor, event)
-    })
-    const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
+      editor = nextEditor
+      registerMonacoEditor({ container: targetContainer, editor: nextEditor })
+      onEditorLifecycle?.(nextEditor, true)
+      findController = FindController.get(nextEditor)
+      const captureViewState = () => {
+        onViewStateCapture?.(serializeEditorViewState(nextEditor))
+      }
 
-    layoutEditor()
-    restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)
-    layoutEditor()
-    lastContainerWidthPx = containerWidthPx
-    emitChange(nextEditor.getValue(), false, monacoHeightPx)
-    onFindMatchReveal?.(revealFindMatch)
+      if (viewStateCaptureKey) {
+        registerMonacoViewStateSaver(viewStateCaptureKey, captureViewState)
+      }
+
+      const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
+      const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
+      const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
+      const cursorDisposable = nextEditor.onDidChangeCursorPosition((event) => {
+        handleCursorChange(event)
+        reportSelectionAnchorFromCursorChange(nextEditor, event)
+      })
+      const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
+
+      layoutEditor()
+      restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)
+      layoutEditor()
+      lastContainerWidthPx = containerWidthPx
+      emitChange(nextEditor.getValue(), false, monacoHeightPx)
+      onFindMatchReveal?.(revealFindMatch)
+
+      cleanupEditor = () => {
+        captureViewState()
+        changeDisposable.dispose()
+        blurDisposable.dispose()
+        focusDisposable.dispose()
+        cursorDisposable.dispose()
+        scrollDisposable.dispose()
+        suppressCursorAutoScrollDuringRestore = false
+        if (viewStateCaptureKey) {
+          unregisterMonacoViewStateSaver(viewStateCaptureKey)
+        }
+        unregisterMonacoEditor(nextEditor)
+        onEditorLifecycle?.(nextEditor, false)
+        onFindMatchReveal?.(null)
+        nextEditor.dispose()
+        modelReference.dispose()
+        editor = null
+        findController = null
+        clearFindState()
+      }
+    })()
 
     return () => {
-      captureViewState()
-      changeDisposable.dispose()
-      blurDisposable.dispose()
-      focusDisposable.dispose()
-      cursorDisposable.dispose()
-      scrollDisposable.dispose()
-      suppressCursorAutoScrollDuringRestore = false
-      if (viewStateCaptureKey) {
-        unregisterMonacoViewStateSaver(viewStateCaptureKey)
-      }
-      unregisterMonacoEditor(nextEditor)
-      onEditorLifecycle?.(nextEditor, false)
-      onFindMatchReveal?.(null)
-      nextEditor.dispose()
-      editor = null
-      findController = null
-      clearFindState()
+      disposed = true
+      cleanupEditor()
     }
   })
 

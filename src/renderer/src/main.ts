@@ -15,6 +15,9 @@ const bootstrap = async (): Promise<void> => {
 
   // Side effect: initialize Monaco VS Code services once before the first editor is created.
   await initMonacoVscode()
+  // Side effect: warm Monaco after VS Code services are available so real editors mount faster.
+  const { warmupMonacoEditor } = await import('./common/Monaco')
+  await warmupMonacoEditor()
   const { default: App } = await import('./App.svelte')
 
   mount(App, {

@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 
 export const PROMPT_EDITOR_THEME = 'Dark Modern'
+export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
 
 // Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
 const DISABLED_FIND_COMMANDS = [
@@ -51,7 +52,17 @@ monaco.editor.addKeybindingRules([
   { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null }
 ])
 
-export const warmupMonacoEditor = (): void => {
+export const createPromptEditorModelUri = (promptId: string): monaco.Uri => {
+  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/prompts/${promptId}.md`)
+}
+
+export const createPromptFolderDescriptionModelUri = (promptFolderId: string): monaco.Uri => {
+  return monaco.Uri.file(
+    `${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-descriptions/${promptFolderId}.md`
+  )
+}
+
+export const warmupMonacoEditor = async (): Promise<void> => {
   const warmupHost = document.createElement('div')
   warmupHost.style.position = 'fixed'
   warmupHost.style.left = '-10000px'
@@ -60,17 +71,19 @@ export const warmupMonacoEditor = (): void => {
   warmupHost.style.height = '1px'
   document.body.append(warmupHost)
 
-  const warmupModel = monaco.editor.createModel('', 'markdown')
+  const warmupModelReference = await monaco.editor.createModelReference(
+    monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/warmup.md`),
+    ''
+  )
   const warmupEditor = monaco.editor.create(warmupHost, {
-    model: warmupModel,
-    language: 'markdown',
+    model: warmupModelReference.object.textEditorModel,
     theme: PROMPT_EDITOR_THEME,
     minimap: { enabled: false },
     dimension: { width: 1, height: 1 }
   })
 
   warmupEditor.dispose()
-  warmupModel.dispose()
+  warmupModelReference.dispose()
   warmupHost.remove()
 }
 

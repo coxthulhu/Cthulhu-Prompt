@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
-  import type { monaco } from '@renderer/common/Monaco'
+  import { onMount } from 'svelte'
+  import { createPromptFolderDescriptionModelUri, type monaco } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
@@ -100,7 +100,7 @@
   let lastFocusRequestId = $state(0)
 
   type FindRowHandlers = {
-    requestImmediateHydration: (() => void) | null
+    requestImmediateHydration: (() => Promise<void>) | null
     revealSectionMatch: ((query: string, matchIndex: number) => number | null) | null
   }
   let findRowHandlers = $state<FindRowHandlers>({
@@ -190,9 +190,8 @@
 
   const ensureHydrated = async (): Promise<boolean> => {
     if (isHydrated) return true
-    findRowHandlers.requestImmediateHydration?.()
-    // Side effect: wait for immediate hydration to mount the editor.
-    await tick()
+    // Side effect: wait for immediate hydration to mount and activate Monaco.
+    await findRowHandlers.requestImmediateHydration?.()
     return isHydrated
   }
 
@@ -265,6 +264,7 @@
             initialValue={descriptionValue}
             initialViewStateJson={initialDescriptionEditorViewStateJson}
             viewStateCaptureKey={`prompt-folder-description:${promptFolderId}`}
+            modelUri={createPromptFolderDescriptionModelUri(promptFolderId)}
             containerWidthPx={virtualWindowWidthPx}
             placeholderHeightPx={placeholderMonacoHeightPx}
             overflowWidgetsDomNode={overflowHost}

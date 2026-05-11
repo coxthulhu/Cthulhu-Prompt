@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import type { monaco } from '@renderer/common/Monaco'
+  import { createPromptEditorModelUri, type monaco } from '@renderer/common/Monaco'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
@@ -115,7 +115,7 @@
   let lastEditorFocusRequestId = $state(0)
   let isHydrated = $state(false)
   type FindRowHandlers = {
-    requestImmediateHydration: (() => void) | null
+    requestImmediateHydration: (() => Promise<void>) | null
     revealSectionMatch: ((query: string, matchIndex: number) => number | null) | null
   }
   let findRowHandlers = $state<FindRowHandlers>({
@@ -226,9 +226,8 @@
 
   const ensureHydrated = async (): Promise<boolean> => {
     if (isHydrated) return true
-    findRowHandlers.requestImmediateHydration?.()
-    // Side effect: wait for immediate hydration to mount the editor.
-    await tick()
+    // Side effect: wait for immediate hydration to mount and activate Monaco.
+    await findRowHandlers.requestImmediateHydration?.()
     return isHydrated
   }
 
@@ -367,6 +366,7 @@
           initialValue={promptData.draft.text}
           initialViewStateJson={initialEditorViewStateJson}
           viewStateCaptureKey={`prompt:${promptId}`}
+          modelUri={createPromptEditorModelUri(promptId)}
           containerWidthPx={virtualWindowWidthPx}
           placeholderHeightPx={placeholderMonacoHeightPx}
           overflowWidgetsDomNode={overflowHost}
