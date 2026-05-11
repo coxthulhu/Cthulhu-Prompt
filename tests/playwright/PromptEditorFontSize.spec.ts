@@ -99,7 +99,46 @@ async function getMonacoLineNumbersSetting(
   }, editorSelector)
 }
 
+async function getMonacoThemeState(
+  mainWindow: any,
+  editorSelector: string
+): Promise<{ className: string; backgroundColor: string } | null> {
+  return await mainWindow.evaluate((selector) => {
+    const editor = document.querySelector<HTMLElement>(`${selector} .monaco-editor`)
+    if (!editor) return null
+
+    return {
+      className: editor.className,
+      backgroundColor: window.getComputedStyle(editor).backgroundColor
+    }
+  }, editorSelector)
+}
+
 describe('Prompt editor settings', () => {
+  test('uses the dark Monaco theme', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'height' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    const prompt = heightTestPrompts.singleLine
+    const rowSelector = promptEditorSelector(prompt.id)
+    const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
+
+    await testHelpers.openPromptFolderAndWaitForHydrationReady({
+      folderName: prompt.title,
+      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+      promptSelector: rowSelector,
+      placeholderSelector
+    })
+
+    await expect.poll(async () => getMonacoThemeState(mainWindow, rowSelector)).toMatchObject({
+      className: expect.stringContaining('vs-dark'),
+      backgroundColor: 'rgb(31, 31, 31)'
+    })
+  })
+
   test('applies updated font size to Monaco editors', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'height' }

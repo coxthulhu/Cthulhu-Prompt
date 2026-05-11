@@ -13,7 +13,7 @@ import getConfigurationServiceOverride from '@codingame/monaco-vscode-configurat
 import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
-export const PROMPT_EDITOR_THEME = 'Default Dark Modern'
+const PROMPT_EDITOR_THEME = 'Dark Modern'
 
 let initializationPromise: Promise<void> | null = null
 

@@ -1,6 +1,6 @@
 import * as monaco from 'monaco-editor'
 
-const PROMPT_EDITOR_THEME_ID = 'Default Dark Modern'
+export const PROMPT_EDITOR_THEME = 'Dark Modern'
 
 // Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
 const DISABLED_FIND_COMMANDS = [
@@ -24,7 +24,7 @@ const DISABLED_FIND_COMMANDS = [
 ] as const
 
 // Side effect: apply the VS Code Dark Modern theme to all Monaco editors globally.
-monaco.editor.setTheme(PROMPT_EDITOR_THEME_ID)
+monaco.editor.setTheme(PROMPT_EDITOR_THEME)
 
 // Disable Monaco's built-in find/replace widget so we can use our external dialog.
 DISABLED_FIND_COMMANDS.forEach((id) => {
@@ -51,8 +51,6 @@ monaco.editor.addKeybindingRules([
   { keybinding: monaco.KeyMod.Alt | monaco.KeyCode.Enter, command: null }
 ])
 
-export const PROMPT_EDITOR_THEME = PROMPT_EDITOR_THEME_ID
-
 export const warmupMonacoEditor = (): void => {
   const warmupHost = document.createElement('div')
   warmupHost.style.position = 'fixed'
@@ -66,7 +64,7 @@ export const warmupMonacoEditor = (): void => {
   const warmupEditor = monaco.editor.create(warmupHost, {
     model: warmupModel,
     language: 'markdown',
-    theme: PROMPT_EDITOR_THEME_ID,
+    theme: PROMPT_EDITOR_THEME,
     minimap: { enabled: false },
     dimension: { width: 1, height: 1 }
   })
