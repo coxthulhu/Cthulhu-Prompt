@@ -52,6 +52,11 @@ const readPromptIds = (workspacePath: string, folderName: string): string[] => {
   return [...config.promptIds]
 }
 
+const readFileModifiedAt = (filePath: string): string => {
+  const fs = getFs()
+  return fs.statSync(filePath).mtime.toISOString()
+}
+
 export const readPromptStemByPromptId = (
   workspacePath: string,
   folderName: string
@@ -114,7 +119,10 @@ export const readPrompts = (workspacePath: string, folderName: string): PromptPe
       continue
     }
 
-    const prompt = parsePromptMarkdown(fs.readFileSync(promptPaths.markdownPath, 'utf8'))
+    const prompt = parsePromptMarkdown(
+      fs.readFileSync(promptPaths.markdownPath, 'utf8'),
+      readFileModifiedAt(promptPaths.markdownPath)
+    )
     if (!prompt) {
       continue
     }

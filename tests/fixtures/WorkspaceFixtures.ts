@@ -110,6 +110,7 @@ const createPromptFiles = (
       id: prompt.id,
       title: prompt.title ?? '',
       createdAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
+      modifiedAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       promptFolderCount: prompt.promptFolderCount ?? 0,
       promptText: prompt.promptText
     }

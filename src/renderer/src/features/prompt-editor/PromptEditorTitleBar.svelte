@@ -1,13 +1,16 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import type { ComponentType } from 'svelte'
   import { FileText, Folder } from 'lucide-svelte'
+  import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
   type Props = {
     title: string
     draftText: string
+    modifiedAt?: string | null
     onTitleChange?: (value: string) => void
     promptFolderCount?: number
     rowId?: string
@@ -27,6 +30,7 @@
   let {
     title,
     draftText,
+    modifiedAt = null,
     onTitleChange,
     promptFolderCount = 0,
     rowId,
@@ -49,6 +53,22 @@
   )
   const lineCountLabel = $derived(`${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`)
   const tokenCountLabel = $derived(`${tokenCount} ${tokenCount === 1 ? 'token' : 'tokens'}`)
+  let nowMs = $state(Date.now())
+  const modifiedRelativeLabel = $derived(
+    modifiedAt ? formatPromptModifiedRelative(modifiedAt, nowMs) : ''
+  )
+  const modifiedFullLabel = $derived(modifiedAt ? formatPromptModifiedFull(modifiedAt) : '')
+
+  // Side effect: keep the relative modified label fresh while the prompt folder stays open.
+  onMount(() => {
+    const intervalId = window.setInterval(() => {
+      nowMs = Date.now()
+    }, 60_000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  })
 
   const handleTitleInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement
@@ -120,8 +140,12 @@
         <span data-testid="prompt-line-count">{lineCountLabel}</span>
         <span class="prompt-editor-metadata-dot"></span>
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
-        <span class="prompt-editor-metadata-dot"></span>
-        <span>0 min ago</span>
+        {#if modifiedAt}
+          <span class="prompt-editor-metadata-dot"></span>
+          <span data-testid="prompt-modified-time" title={modifiedFullLabel}>
+            {modifiedRelativeLabel}
+          </span>
+        {/if}
       </div>
     </div>
   </div>

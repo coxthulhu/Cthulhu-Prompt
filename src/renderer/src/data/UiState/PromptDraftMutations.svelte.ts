@@ -17,6 +17,7 @@ const toPromptSnapshot = (prompt: PromptFull): PromptDraftRecord => ({
   id: prompt.id,
   title: prompt.title,
   createdAt: prompt.createdAt,
+  modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
   promptFolderCount: prompt.promptFolderCount
 })
@@ -25,6 +26,7 @@ const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRec
   id: prompt.id,
   title: prompt.title,
   createdAt: '',
+  modifiedAt: '',
   promptText: '',
   promptFolderCount: prompt.promptFolderCount
 })
@@ -34,6 +36,7 @@ const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): bool
     left.id === right.id &&
     left.title === right.title &&
     left.createdAt === right.createdAt &&
+    left.modifiedAt === right.modifiedAt &&
     left.promptText === right.promptText &&
     left.promptFolderCount === right.promptFolderCount
   )

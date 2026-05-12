@@ -352,6 +352,7 @@
   <PromptEditorTitleBar
     title={promptData.draft.title}
     draftText={promptData.draft.text}
+    modifiedAt={promptData.modifiedAt}
     promptFolderCount={promptData.promptFolderCount}
     {lineCount}
     {tokenCount}

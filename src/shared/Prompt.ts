@@ -12,6 +12,7 @@ export type PromptFull = {
   id: string
   title: string
   createdAt: string
+  modifiedAt: string
   promptText: string
   promptFolderCount: number
   loadingState: 'full'
@@ -36,6 +37,7 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   id: prompt.id,
   title: prompt.title,
   createdAt: prompt.createdAt,
+  modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
   promptFolderCount: prompt.promptFolderCount,
   loadingState: 'full'

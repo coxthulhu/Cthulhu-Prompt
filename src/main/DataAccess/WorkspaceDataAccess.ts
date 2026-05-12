@@ -43,6 +43,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
       id: compactGuid(randomUUID()),
       title: 'Example: Add a Feature',
       createdAt: now,
+      modifiedAt: now,
       promptText: 'Placeholder prompt text.',
       promptFolderCount: 1
     },
@@ -50,6 +51,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
       id: compactGuid(randomUUID()),
       title: 'Example: Fix a Bug',
       createdAt: now,
+      modifiedAt: now,
       promptText: 'Placeholder prompt text.',
       promptFolderCount: 2
     }

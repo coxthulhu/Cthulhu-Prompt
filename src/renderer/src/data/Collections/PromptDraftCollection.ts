@@ -5,6 +5,7 @@ export type PromptDraftRecord = {
   id: PromptFull['id']
   title: PromptFull['title']
   createdAt: PromptFull['createdAt']
+  modifiedAt: PromptFull['modifiedAt']
   promptText: PromptFull['promptText']
   promptFolderCount: PromptFull['promptFolderCount']
 }

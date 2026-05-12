@@ -48,6 +48,7 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   id: 'prompt-1',
   title: 'Original title',
   createdAt: '2026-01-01T00:00:00.000Z',
+  modifiedAt: '2026-01-01T00:00:00.000Z',
   promptText: 'Original text',
   promptFolderCount: 3,
   loadingState: 'full',
@@ -104,6 +105,7 @@ describe('draft sync contract', () => {
     const draftRecord = promptDraftCollection.get(fullPrompt.id)!
     expect(draftRecord.title).toBe(summaryPrompt.title)
     expect(draftRecord.createdAt).toBe(fullPrompt.createdAt)
+    expect(draftRecord.modifiedAt).toBe(fullPrompt.modifiedAt)
     expect(draftRecord.promptText).toBe(fullPrompt.promptText)
     expect(draftRecord.promptFolderCount).toBe(fullPrompt.promptFolderCount)
   })
@@ -122,6 +124,7 @@ describe('draft sync contract', () => {
       id: summaryPrompt.id,
       title: summaryPrompt.title,
       createdAt: '',
+      modifiedAt: '',
       promptText: '',
       promptFolderCount: summaryPrompt.promptFolderCount
     })

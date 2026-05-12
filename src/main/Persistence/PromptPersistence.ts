@@ -55,6 +55,16 @@ const resolvePromptStemTitle = (title: string, promptFolderCount: number): strin
   return trimmedTitle.length > 0 ? title : `Prompt ${promptFolderCount}`
 }
 
+export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {
+  const folderPath = resolvePromptFolderPath(
+    persistenceFields.workspacePath,
+    persistenceFields.folderName
+  )
+  const filePaths = resolvePromptPathsFromStem(folderPath, persistenceFields.promptStem)
+  const fs = getFs()
+  return fs.statSync(filePaths.markdownPath).mtime.toISOString()
+}
+
 export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersistenceFields> = {
   stageChanges: async (change) => {
     const currentFolderPath = resolvePromptFolderPath(
@@ -120,6 +130,9 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
       return null
     }
 
-    return parsePromptMarkdown(fs.readFileSync(filePaths.markdownPath, 'utf8'))
+    return parsePromptMarkdown(
+      fs.readFileSync(filePaths.markdownPath, 'utf8'),
+      readPromptModifiedAt(persistenceFields)
+    )
   }
 }

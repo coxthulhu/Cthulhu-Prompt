@@ -3,7 +3,10 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import type { RevisionEnvelope } from '@shared/Revision'
 import type { Workspace } from '@shared/Workspace'
 import type { PromptFolderPersistenceFields } from '../Persistence/PromptFolderPersistence'
-import type { PromptPersistenceFields } from '../Persistence/PromptPersistence'
+import {
+  readPromptModifiedAt,
+  type PromptPersistenceFields
+} from '../Persistence/PromptPersistence'
 import type { WorkspacePersistenceFields } from '../Persistence/WorkspacePersistence'
 import type { CommittedEntry } from './CommittedStore'
 import { data } from './Data'
@@ -78,6 +81,9 @@ export const buildPromptSnapshot = (
   return {
     id: promptEntry.committed.id,
     revision: promptEntry.revision,
-    data: promptEntry.committed
+    data: {
+      ...promptEntry.committed,
+      modifiedAt: readPromptModifiedAt(promptEntry.persistenceFields)
+    }
   }
 }

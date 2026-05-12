@@ -13,6 +13,7 @@ type PromptFolderScreenPromptDraft = {
 
 type PromptFolderScreenPromptData = {
   draft: PromptFolderScreenPromptDraft
+  modifiedAt: string
   promptFolderCount: number
   setTitle: (title: string) => void
   setText: (text: string, measurement: TextMeasurement) => void
@@ -36,6 +37,7 @@ export const getPromptFolderScreenPromptData = (promptId: string): PromptFolderS
       title: promptDraftState.title,
       text: promptDraftState.promptText
     },
+    modifiedAt: promptDraftState.modifiedAt,
     promptFolderCount: getPromptFolderCount(promptId),
     setTitle: (title: string) => {
       setPromptDraftTitle(promptId, title)

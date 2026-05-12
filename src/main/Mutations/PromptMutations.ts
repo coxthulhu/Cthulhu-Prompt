@@ -102,6 +102,7 @@ export const setupPromptMutationHandlers = (): void => {
             id: promptId,
             title: requestedPrompt.data.title,
             createdAt: now,
+            modifiedAt: now,
             promptText: requestedPrompt.data.promptText,
             promptFolderCount: nextPromptCount
           }
@@ -270,6 +271,7 @@ export const setupPromptMutationHandlers = (): void => {
                 recipe: (draft) => {
                   draft.title = requestedPrompt.data.title
                   draft.createdAt = requestedPrompt.data.createdAt
+                  draft.modifiedAt = requestedPrompt.data.modifiedAt
                   draft.promptText = requestedPrompt.data.promptText
                   draft.promptFolderCount = requestedPrompt.data.promptFolderCount
                 }

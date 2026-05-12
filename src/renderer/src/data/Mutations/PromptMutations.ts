@@ -34,6 +34,7 @@ const toPersistedPrompt = (prompt: Prompt): PromptPersisted => {
     id: prompt.id,
     title: prompt.title,
     createdAt: prompt.createdAt,
+    modifiedAt: prompt.modifiedAt,
     promptText: prompt.promptText,
     promptFolderCount: prompt.promptFolderCount
   }
@@ -48,6 +49,26 @@ const toFullPromptSnapshot = (snapshot: {
     ...snapshot,
     data: createPromptFull(snapshot.data)
   }
+}
+
+const upsertPromptDraftFromPrompt = (prompt: PromptFull): void => {
+  const promptDraft = {
+    id: prompt.id,
+    title: prompt.title,
+    createdAt: prompt.createdAt,
+    modifiedAt: prompt.modifiedAt,
+    promptText: prompt.promptText,
+    promptFolderCount: prompt.promptFolderCount
+  }
+
+  if (!promptDraftCollection.get(prompt.id)) {
+    promptDraftCollection.insert(promptDraft)
+    return
+  }
+
+  promptDraftCollection.update(prompt.id, (draft) => {
+    Object.assign(draft, promptDraft)
+  })
 }
 
 const readLatestPromptFromTransaction = (
@@ -149,7 +170,9 @@ export const createPrompt = async (
         return
       }
 
-      promptCollection.utils.upsertAuthoritative(toFullPromptSnapshot(payload.prompt))
+      const promptSnapshot = toFullPromptSnapshot(payload.prompt)
+      promptCollection.utils.upsertAuthoritative(promptSnapshot)
+      upsertPromptDraftFromPrompt(promptSnapshot.data)
     },
     conflictMessage: 'Prompt create conflict'
   })
@@ -199,7 +222,9 @@ export const mutatePacedPromptAutosaveUpdate = ({
       return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
-      promptCollection.utils.upsertAuthoritative(toFullPromptSnapshot(payload.prompt))
+      const promptSnapshot = toFullPromptSnapshot(payload.prompt)
+      promptCollection.utils.upsertAuthoritative(promptSnapshot)
+      upsertPromptDraftFromPrompt(promptSnapshot.data)
     },
     conflictMessage: 'Prompt update conflict'
   })
@@ -288,6 +313,7 @@ export const movePrompt = async (
             id: promptDraft.id,
             title: promptDraft.title,
             createdAt: promptDraft.createdAt,
+            modifiedAt: promptDraft.modifiedAt,
             promptText: promptDraft.promptText,
             promptFolderCount: promptDraft.promptFolderCount
           }

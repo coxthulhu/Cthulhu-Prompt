@@ -548,6 +548,7 @@ export const createPromptFolderScreenController = ({
       id: promptId,
       title: '',
       createdAt: now,
+      modifiedAt: now,
       promptText: '',
       promptFolderCount: currentPromptFolder.promptCount + 1,
       loadingState: 'full'

@@ -251,6 +251,7 @@ const parsePrompt = parseObject<PromptPersisted>({
   id: parseString,
   title: parseString,
   createdAt: parseString,
+  modifiedAt: parseString,
   promptText: parseString,
   promptFolderCount: parseNumber
 })

@@ -1,7 +1,7 @@
 import matter from 'gray-matter'
 import type { PromptPersisted } from '@shared/Prompt'
 
-type PromptFrontmatterData = Omit<PromptPersisted, 'promptText'>
+type PromptFrontmatterData = Omit<PromptPersisted, 'modifiedAt' | 'promptText'>
 
 const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData => {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
@@ -39,7 +39,10 @@ const resolveFrontmatterPrefix = (document: string): string => {
   return frontmatterPrefixMatch[0]
 }
 
-export const parsePromptMarkdown = (fileText: string): PromptPersisted | null => {
+export const parsePromptMarkdown = (
+  fileText: string,
+  modifiedAt: string = ''
+): PromptPersisted | null => {
   try {
     // Side effect: pass explicit options to avoid gray-matter's internal content cache path.
     const parsed = matter(fileText, {})
@@ -51,6 +54,7 @@ export const parsePromptMarkdown = (fileText: string): PromptPersisted | null =>
       id: parsed.data.id,
       title: parsed.data.title,
       createdAt: parsed.data.createdAt,
+      modifiedAt,
       promptFolderCount: parsed.data.promptFolderCount,
       promptText: parsed.content
     }
