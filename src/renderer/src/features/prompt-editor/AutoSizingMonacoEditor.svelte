@@ -65,6 +65,7 @@
 
   let container: HTMLDivElement | null = null
   let editor: monaco.editor.IStandaloneCodeEditor | null = null
+  let isEditorReady = $state(false)
   let monacoHeightPx = $state(0)
   let lastContainerWidthPx = 0
   let isLayingOut = false
@@ -439,8 +440,10 @@
       lastContainerWidthPx = containerWidthPx
       emitChange(nextEditor.getValue(), false, monacoHeightPx)
       onFindMatchReveal?.(revealFindMatch)
+      isEditorReady = true
 
       cleanupEditor = () => {
+        isEditorReady = false
         captureViewState()
         changeDisposable.dispose()
         blurDisposable.dispose()
@@ -470,7 +473,7 @@
 
   // Side effect: apply font, line-number, and min-line settings to hydrated Monaco editors.
   $effect(() => {
-    if (!editor) return
+    if (!isEditorReady || !editor) return
     const editorChanged = editor !== lastFontSizeEffectEditor
     const fontSizeChanged = promptFontSize !== lastAppliedPromptFontSize
     const minLinesChanged = promptEditorMinLines !== lastAppliedPromptEditorMinLines
@@ -497,7 +500,7 @@
 
   // Side effect: when the virtualized container width changes, relayout Monaco and sync cached height.
   $effect(() => {
-    if (!editor) return
+    if (!isEditorReady || !editor) return
     if (containerWidthPx <= 0) return
     if (containerWidthPx === lastContainerWidthPx) return
 
@@ -509,7 +512,7 @@
 
   // Side effect: sync Monaco find highlights + match reporting with the external find widget state.
   $effect(() => {
-    if (!editor) return
+    if (!isEditorReady || !editor) return
     const trimmedQuery = findRequest?.query.trim() ?? ''
     if (!findRequest?.isOpen || trimmedQuery.length === 0) {
       clearFindState()
