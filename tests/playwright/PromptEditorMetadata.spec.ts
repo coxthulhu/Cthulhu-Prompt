@@ -45,7 +45,7 @@ describe('Prompt editor metadata', () => {
     await testHelpers.navigateToPromptFolders('Empty')
 
     const modifiedTime = mainWindow.locator(promptModifiedTimeSelector)
-    await expect(modifiedTime).toHaveText('today')
+    await expect(modifiedTime).toHaveText('Updated today')
     await expect(modifiedTime).toHaveAttribute('title', /.+/)
   })
 })

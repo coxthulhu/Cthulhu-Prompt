@@ -57,6 +57,9 @@
   const modifiedRelativeLabel = $derived(
     modifiedAt ? formatPromptModifiedRelative(modifiedAt, nowMs) : ''
   )
+  const modifiedUpdatedLabel = $derived(
+    modifiedRelativeLabel ? `Updated ${modifiedRelativeLabel}` : ''
+  )
   const modifiedFullLabel = $derived(modifiedAt ? formatPromptModifiedFull(modifiedAt) : '')
 
   // Side effect: keep the relative modified label fresh while the prompt folder stays open.
@@ -143,7 +146,7 @@
         {#if modifiedAt}
           <span class="prompt-editor-metadata-dot"></span>
           <span data-testid="prompt-modified-time" title={modifiedFullLabel}>
-            {modifiedRelativeLabel}
+            {modifiedUpdatedLabel}
           </span>
         {/if}
       </div>
