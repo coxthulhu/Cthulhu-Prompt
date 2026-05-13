@@ -20,6 +20,7 @@ export interface TestSetupOptions {
     scenario: WorkspaceScenario | 'none'
     path?: string
     autoSetup?: boolean
+    fileModifiedTimes?: Record<string, string>
   }
 }
 
@@ -49,6 +50,10 @@ const RENDERER_ERROR_ANNOTATION = 'renderer-errors-json'
 
 export const createTestRequestId = (prefix: string): string => {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
+}
+
+type FilesystemSetupOptions = {
+  fileModifiedTimes?: Record<string, string>
 }
 
 export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
@@ -173,11 +178,14 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
       }
 
       const setupUtils = {
-        setupFilesystem: async (filesystem: Record<string, string | null>) => {
+        setupFilesystem: async (
+          filesystem: Record<string, string | null>,
+          options: FilesystemSetupOptions = {}
+        ) => {
           const requestId = createTestRequestId('fs')
 
           const result = await electronApp.evaluate(
-            async ({ app }, { filesystem, requestId }) => {
+            async ({ app }, { filesystem, fileModifiedTimes, requestId }) => {
               return await new Promise<{ success: boolean; error?: string }>((resolve) => {
                 const channel = `test-setup-filesystem-ready:${requestId}`
                 const timeout = setTimeout(() => {
@@ -189,10 +197,10 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
                   resolve(payload ?? { success: true })
                 })
 
-                app.emit('test-setup-filesystem', { filesystem, requestId })
+                app.emit('test-setup-filesystem', { filesystem, fileModifiedTimes, requestId })
               })
             },
-            { filesystem, requestId }
+            { filesystem, fileModifiedTimes: options.fileModifiedTimes, requestId }
           )
 
           if (!result?.success) {
@@ -253,7 +261,9 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               workspacePath,
               options.workspace.scenario as WorkspaceScenario
             )
-            await setupUtils.setupFilesystem(workspaceFilesystem)
+            await setupUtils.setupFilesystem(workspaceFilesystem, {
+              fileModifiedTimes: options.workspace.fileModifiedTimes
+            })
 
             // Set up file dialog for workspace path
             await setupUtils.setupFileDialog([workspacePath])

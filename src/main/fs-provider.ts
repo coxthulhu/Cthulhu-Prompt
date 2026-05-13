@@ -11,6 +11,7 @@ interface UnifiedFs {
   mkdirSync: typeof nodeFs.mkdirSync
   rmSync: typeof nodeFs.rmSync
   renameSync: typeof nodeFs.renameSync
+  utimesSync: typeof nodeFs.utimesSync
   writeFileSync: typeof nodeFs.writeFileSync
   // Add other fs methods as needed
 }
@@ -43,6 +44,7 @@ export function getFs(): UnifiedFs {
       mkdirSync: fs.mkdirSync.bind(fs) as typeof nodeFs.mkdirSync,
       rmSync: fs.rmSync.bind(fs) as typeof nodeFs.rmSync,
       renameSync: fs.renameSync.bind(fs) as typeof nodeFs.renameSync,
+      utimesSync: fs.utimesSync.bind(fs) as typeof nodeFs.utimesSync,
       writeFileSync: fs.writeFileSync.bind(fs) as typeof nodeFs.writeFileSync
     }
   }

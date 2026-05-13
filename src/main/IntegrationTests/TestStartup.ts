@@ -83,6 +83,7 @@ function initializeIpcGatingForE2E(): void {
 
 type FilesystemSetupPayload = {
   filesystem: Record<string, string | null>
+  fileModifiedTimes?: Record<string, string>
   requestId: string
 }
 
@@ -161,7 +162,11 @@ function parseFilesystemSetupPayload(payload: unknown): FilesystemSetupPayload |
 
   return {
     requestId: record.requestId,
-    filesystem: record.filesystem as Record<string, string | null>
+    filesystem: record.filesystem as Record<string, string | null>,
+    fileModifiedTimes:
+      record.fileModifiedTimes && typeof record.fileModifiedTimes === 'object'
+        ? (record.fileModifiedTimes as Record<string, string>)
+        : undefined
   }
 }
 
@@ -240,6 +245,15 @@ export function setupTestStartupListener(): void {
       vol.reset()
       vol.fromJSON(typedPayload.filesystem)
       setFs(vol)
+
+      if (typedPayload.fileModifiedTimes) {
+        const fs = getFs()
+        for (const [filePath, modifiedAt] of Object.entries(typedPayload.fileModifiedTimes)) {
+          const modifiedDate = new Date(modifiedAt)
+          fs.utimesSync(filePath, modifiedDate, modifiedDate)
+        }
+      }
+
       emitFilesystemSetupResult(typedPayload.requestId, { success: true })
     } catch (error) {
       console.error('Failed to set up mocked filesystem:', error)

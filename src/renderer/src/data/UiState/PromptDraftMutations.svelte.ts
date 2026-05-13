@@ -42,6 +42,10 @@ const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): bool
   )
 }
 
+const getPromptDraftModifiedAt = (): string => {
+  return new Date().toISOString()
+}
+
 type PromptDraftOptimisticMutationOptions = {
   mutatePromptDraft: (draft: PromptDraftRecord) => void
   mutatePrompt?: (draft: Prompt) => void
@@ -175,12 +179,17 @@ export const setPromptDraftTitle = (promptId: string, title: string): void => {
     return
   }
 
+  const modifiedAt = getPromptDraftModifiedAt()
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
       draft.title = title
+      draft.modifiedAt = modifiedAt
     },
     mutatePrompt: (draft) => {
       draft.title = title
+      if (draft.loadingState === 'full') {
+        draft.modifiedAt = modifiedAt
+      }
     }
   })
 }
@@ -198,15 +207,18 @@ export const setPromptDraftText = (
     return
   }
 
+  const modifiedAt = getPromptDraftModifiedAt()
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
       draft.promptText = promptText
+      draft.modifiedAt = modifiedAt
     },
     mutatePrompt: (draft) => {
       if (draft.loadingState === 'summary') {
         return
       }
       draft.promptText = promptText
+      draft.modifiedAt = modifiedAt
     }
   })
 }
