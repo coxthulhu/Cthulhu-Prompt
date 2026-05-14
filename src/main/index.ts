@@ -4,18 +4,24 @@ import { startupNormally } from './NormalStartup'
 import { setupTestStartupListener } from './IntegrationTests/TestStartup'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 
+const PRODUCTION_USER_DATA_DIRECTORY_NAME = 'CthulhuPrompt'
 const DEV_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptDev'
 const PLAYWRIGHT_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptPlaywright'
 
 const configureUserDataPath = (): void => {
+  const appDataPath = app.getPath('appData')
+
   if (isPlaywrightEnvironment()) {
-    app.setPath('userData', join(app.getPath('appData'), PLAYWRIGHT_USER_DATA_DIRECTORY_NAME))
+    app.setPath('userData', join(appDataPath, PLAYWRIGHT_USER_DATA_DIRECTORY_NAME))
     return
   }
 
   if (isDevEnvironment()) {
-    app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIRECTORY_NAME))
+    app.setPath('userData', join(appDataPath, DEV_USER_DATA_DIRECTORY_NAME))
+    return
   }
+
+  app.setPath('userData', join(appDataPath, PRODUCTION_USER_DATA_DIRECTORY_NAME))
 }
 
 configureUserDataPath()
