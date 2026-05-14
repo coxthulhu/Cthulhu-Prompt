@@ -22,6 +22,7 @@
     headerStyle?: DialogHeaderStyle
     showCloseButton?: boolean
     showSubmitButton?: boolean
+    closeOnOutsideClick?: boolean
     iconVariant?: DialogIconVariant
     submitDisabled?: boolean
     cancelDisabled?: boolean
@@ -44,6 +45,7 @@
     headerStyle = 'dialog',
     showCloseButton = true,
     showSubmitButton = true,
+    closeOnOutsideClick = true,
     iconVariant = 'accent',
     submitDisabled = false,
     cancelDisabled = false,
@@ -73,6 +75,14 @@
     }
 
     onsubmit?.()
+  }
+
+  const handleOutsideClick = () => {
+    if (!closeOnOutsideClick) {
+      return
+    }
+
+    closeDialog()
   }
 
   const portalToBody: Action<HTMLDivElement> = (node) => {
@@ -107,7 +117,7 @@
 </script>
 
 {#if open}
-  <div class="cthulhuUiDialogLayer" role="presentation" use:portalToBody onclick={closeDialog}>
+  <div class="cthulhuUiDialogLayer" role="presentation" use:portalToBody onclick={handleOutsideClick}>
     <CardSurface
       variant="solid"
       class={mergeClasses('flex flex-col gap-4 p-4', className)}

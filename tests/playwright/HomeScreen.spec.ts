@@ -87,6 +87,25 @@ describe('Home Screen', () => {
       expect(setupResult.workspaceReady).toBe(true)
     })
 
+    test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {
+      const { mainWindow } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+
+      const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
+      await expect(createDialog).toBeVisible()
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Example Workspace')
+
+      await mainWindow.mouse.click(10, 10)
+
+      await expect(createDialog).toBeVisible()
+      await expect(mainWindow.locator('[data-testid="create-workspace-name-input"]')).toHaveValue(
+        'Example Workspace'
+      )
+    })
+
     test('adds example prompts when setting up a new workspace', async ({ testSetup }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-with-examples', autoSetup: false }
