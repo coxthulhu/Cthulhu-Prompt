@@ -1,10 +1,10 @@
 export type WorkspaceInfoFile = {
   workspaceId: string
+  workspaceName: string
 }
 
-export type PromptFolderConfigFile = {
-  foldername: string
+export type PromptFolderInfoFile = {
+  displayName: string
   promptFolderId: string
   promptCount: number
-  promptIds: string[]
 }

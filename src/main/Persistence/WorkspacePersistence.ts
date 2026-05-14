@@ -1,6 +1,5 @@
 import type { Workspace } from '@shared/Workspace'
-import * as path from 'path'
-import { readPromptFolders, readWorkspaceId } from '../DataAccess/WorkspaceReads'
+import { readPromptFolders, readWorkspaceInfo } from '../DataAccess/WorkspaceReads'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -13,24 +12,22 @@ import {
 
 export type WorkspacePersistenceFields = {
   workspacePath: string
-}
-
-const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-
-const resolveTargetPath = (workspacePath: string): string => {
-  return path.join(workspacePath, WORKSPACE_INFO_FILENAME)
+  workspaceInfoPath: string
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
   stageChanges: async (change) => {
-    const targetPath = resolveTargetPath(change.persistenceFields.workspacePath)
+    const targetPath = change.persistenceFields.workspaceInfoPath
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([createStagedFileRemove(targetPath)])
     }
 
     const tempPath = resolveTempPath(targetPath)
-    writeJsonFile(tempPath, { workspaceId: change.data.id })
+    writeJsonFile(tempPath, {
+      workspaceId: change.data.id,
+      workspaceName: change.data.workspaceName
+    })
 
     return createPersistenceStageResult([createStagedFileUpsert(targetPath, tempPath)])
   },
@@ -41,13 +38,14 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
-    const { workspacePath } = persistenceFields
-    const workspaceId = readWorkspaceId(workspacePath)
+    const { workspacePath, workspaceInfoPath } = persistenceFields
+    const workspaceInfo = readWorkspaceInfo(workspaceInfoPath)
     const promptFolders = readPromptFolders(workspacePath)
 
     return {
-      id: workspaceId,
+      id: workspaceInfo.workspaceId,
       workspacePath,
+      workspaceName: workspaceInfo.workspaceName,
       promptFolderIds: promptFolders.map((promptFolder) => promptFolder.id)
     }
   }

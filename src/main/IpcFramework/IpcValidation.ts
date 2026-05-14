@@ -196,6 +196,7 @@ const createRequestParser = <TRequest>(requestParser: Parser<TRequest>) => {
 const parseWorkspace = parseObject<Workspace>({
   id: parseString,
   workspacePath: parseString,
+  workspaceName: parseString,
   promptFolderIds: parseArray(parseString)
 })
 
@@ -223,7 +224,7 @@ const parseSystemSettingsRevisionPayloadEntity =
   parseRevisionPayloadEntity<SystemSettings>(parseSystemSettings)
 
 const parseUserPersistence = parseObject<UserPersistence>({
-  lastWorkspacePath: parseNullableString,
+  lastWorkspaceInfoPath: parseNullableString,
   appSidebarWidthPx: parseNumber
 })
 
@@ -269,6 +270,7 @@ const parsePromptUiStateRevisionPayloadEntity =
 
 const parseCreateWorkspacePayload = parseObject<CreateWorkspacePayload>({
   workspacePath: parseString,
+  workspaceName: parseString,
   includeExamplePrompts: parseBoolean
 })
 
@@ -432,7 +434,7 @@ const parseUpdatePromptUiStateRevisionWireRequest: Parser<
 > = parseWireRequestWithPayload<PromptUiStateRevisionPayload>(parsePromptUiStateRevisionPayload)
 
 const parseLoadWorkspaceByPathPayload = parseObject<LoadWorkspaceByPathRequest>({
-  workspacePath: parseString
+  workspaceInfoPath: parseString
 })
 
 const parseLoadWorkspaceByPathWireRequest: Parser<

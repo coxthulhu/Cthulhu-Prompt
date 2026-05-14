@@ -14,12 +14,12 @@ import {
 } from '../UiState/PromptDraftMutations.svelte.ts'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
-export const loadWorkspaceByPath = async (workspacePath: string): Promise<string> => {
+export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<string> => {
   const result = await runLoad(() =>
     ipcInvokeWithPayload<LoadWorkspaceByPathResult, LoadWorkspaceByPathRequest>(
       'load-workspace-by-path',
       {
-        workspacePath
+        workspaceInfoPath
       }
     )
   )

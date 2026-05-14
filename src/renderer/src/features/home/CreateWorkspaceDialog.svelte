@@ -21,6 +21,7 @@
     isWorkspaceLoading: boolean
     onWorkspaceCreate: (
       path: string,
+      workspaceName: string,
       includeExamplePrompts: boolean
     ) => Promise<WorkspaceCreationResult>
   }>()
@@ -92,7 +93,11 @@
 
     submissionError = null
 
-    const creationResult = await onWorkspaceCreate(finalWorkspacePath, includeExamples)
+    const creationResult = await onWorkspaceCreate(
+      finalWorkspacePath,
+      workspaceName.trim(),
+      includeExamples
+    )
     if (creationResult.success) {
       resetDialog()
       return

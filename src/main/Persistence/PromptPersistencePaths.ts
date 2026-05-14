@@ -1,9 +1,12 @@
 import * as path from 'path'
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
-export const PROMPT_FOLDER_CONFIG_FILENAME = 'FolderData.json'
-export const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'FolderDescription.md'
-export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.md'
+export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cprompt.json'
+export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
+export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.cprompt'
+export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
+export const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'Description.md'
+export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 
 export type PromptFilePaths = {
   markdownPath: string
@@ -13,13 +16,45 @@ export const resolvePromptFolderPath = (workspacePath: string, folderName: strin
   return path.join(workspacePath, PROMPTS_DIRECTORY_NAME, folderName)
 }
 
-export const resolvePromptFolderConfigPath = (
+export const resolveWorkspaceInfoPath = (
+  workspacePath: string,
+  workspaceFileName: string
+): string => {
+  return path.join(workspacePath, `${workspaceFileName}${WORKSPACE_INFO_FILENAME_SUFFIX}`)
+}
+
+export const resolveWorkspacePathFromInfoPath = (workspaceInfoPath: string): string => {
+  return path.dirname(workspaceInfoPath)
+}
+
+export const isWorkspaceInfoPath = (workspaceInfoPath: string): boolean => {
+  return workspaceInfoPath.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX)
+}
+
+export const resolvePromptFolderOrderPath = (
+  workspacePath: string,
+  folderName: string
+): string => {
+  return path.join(resolvePromptFolderPath(workspacePath, folderName), PROMPT_FOLDER_ORDER_FILENAME)
+}
+
+export const resolvePromptFolderInfoDirectoryPath = (
   workspacePath: string,
   folderName: string
 ): string => {
   return path.join(
     resolvePromptFolderPath(workspacePath, folderName),
-    PROMPT_FOLDER_CONFIG_FILENAME
+    PROMPT_FOLDER_INFO_DIRECTORY_NAME
+  )
+}
+
+export const resolvePromptFolderInfoPath = (
+  workspacePath: string,
+  folderName: string
+): string => {
+  return path.join(
+    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
+    PROMPT_FOLDER_INFO_FILENAME
   )
 }
 
@@ -28,7 +63,7 @@ export const resolvePromptFolderDescriptionPath = (
   folderName: string
 ): string => {
   return path.join(
-    resolvePromptFolderPath(workspacePath, folderName),
+    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
     PROMPT_FOLDER_DESCRIPTION_FILENAME
   )
 }

@@ -58,7 +58,7 @@ const seedUserPersistence = async (
     `
     INSERT INTO app_persistence (
       id,
-      last_workspace_path,
+      last_workspace_info_path,
       app_sidebar_width_px
     )
     VALUES (
@@ -67,7 +67,7 @@ const seedUserPersistence = async (
       ${Math.round(data.appSidebarWidthPx)}
     )
     ON CONFLICT(id) DO UPDATE SET
-      last_workspace_path = excluded.last_workspace_path,
+      last_workspace_info_path = excluded.last_workspace_info_path,
       app_sidebar_width_px = excluded.app_sidebar_width_px
     `
   )

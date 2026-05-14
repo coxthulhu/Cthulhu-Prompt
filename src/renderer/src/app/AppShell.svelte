@@ -31,7 +31,7 @@
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
   } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
-  import { syncLastWorkspacePath } from '@renderer/data/Mutations/UserPersistenceMutations'
+  import { syncLastWorkspaceInfoPath } from '@renderer/data/Mutations/UserPersistenceMutations'
   import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspacePersistenceMutations'
   import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
   import { loadWorkspacePersistence } from '@renderer/data/Queries/UserPersistenceQuery'
@@ -57,6 +57,7 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
+  import { preparePromptFolderName } from '@shared/promptFolderName'
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
@@ -187,12 +188,17 @@
     clearPromptFolderSelection()
   }
 
-  const loadWorkspaceSelection = async (workspacePath: string): Promise<void> => {
-    await switchWorkspaceStoreBridge(workspacePath)
-    const workspaceId = await loadWorkspaceByPath(workspacePath)
+  const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
+    const workspaceFileName = preparePromptFolderName(workspaceName).folderName
+    return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cprompt.json`
+  }
+
+  const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {
+    await switchWorkspaceStoreBridge(workspaceInfoPath)
+    const workspaceId = await loadWorkspaceByPath(workspaceInfoPath)
     await loadWorkspacePersistence(workspaceId)
     setSelectedWorkspaceId(workspaceId)
-    await syncLastWorkspacePath(workspacePath)
+    await syncLastWorkspaceInfoPath(workspaceInfoPath)
   }
 
   const syncCurrentWorkspaceScreenSelection = async (screen: ScreenId): Promise<void> => {
@@ -275,40 +281,40 @@
   }
 
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
-    const lastWorkspacePath =
-      userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!.lastWorkspacePath
+    const lastWorkspaceInfoPath =
+      userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!.lastWorkspaceInfoPath
 
-    if (!lastWorkspacePath) {
+    if (!lastWorkspaceInfoPath) {
       return
     }
 
-    const selectionResult = await selectWorkspace(lastWorkspacePath)
+    const selectionResult = await selectWorkspace(lastWorkspaceInfoPath)
     if (selectionResult.success) {
       await restoreWorkspaceScreenFromPersistence()
       return
     }
 
     if (selectionResult.reason === 'workspace-missing') {
-      await syncLastWorkspacePath(null)
+      await syncLastWorkspaceInfoPath(null)
       console.error('Failed to restore last workspace. Cleared persisted path.', {
-        workspacePath: lastWorkspacePath,
+        workspaceInfoPath: lastWorkspaceInfoPath,
         reason: selectionResult.reason
       })
       return
     }
 
     console.error('Failed to restore last workspace.', {
-      workspacePath: lastWorkspacePath,
+      workspaceInfoPath: lastWorkspaceInfoPath,
       reason: selectionResult.reason
     })
   }
 
-  const selectWorkspace = async (workspacePath: string): Promise<WorkspaceSelectionResult> => {
+  const selectWorkspace = async (workspaceInfoPath: string): Promise<WorkspaceSelectionResult> => {
     clearPromptFolderSelection()
     beginWorkspaceAction()
 
     try {
-      await loadWorkspaceSelection(workspacePath)
+      await loadWorkspaceSelection(workspaceInfoPath)
       return { success: true }
     } catch (error) {
       const message = extractErrorMessage(error)
@@ -328,6 +334,7 @@
 
   const createWorkspace = async (
     workspacePath: string,
+    workspaceName: string,
     includeExamplePrompts: boolean
   ): Promise<WorkspaceCreationResult> => {
     clearPromptFolderSelection()
@@ -336,10 +343,14 @@
     try {
       return await runIpcBestEffort<WorkspaceCreationResult>(
         async () => {
-          const result = await createWorkspaceMutation(workspacePath, includeExamplePrompts)
+          const result = await createWorkspaceMutation(
+            workspacePath,
+            workspaceName,
+            includeExamplePrompts
+          )
 
           if (result.success) {
-            await loadWorkspaceSelection(workspacePath)
+            await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
             return { success: true }
           }
 
@@ -367,7 +378,7 @@
 
     try {
       await runIpcBestEffort(closeWorkspaceMutation)
-      await runIpcBestEffort(() => syncLastWorkspacePath(null))
+      await runIpcBestEffort(() => syncLastWorkspaceInfoPath(null))
     } finally {
       await switchWorkspaceStoreBridge(null)
       clearPromptFolderSelection()

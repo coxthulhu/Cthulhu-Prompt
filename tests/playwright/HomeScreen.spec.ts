@@ -10,7 +10,7 @@ describe('Home Screen', () => {
 
     // Confirm the app rendered the home screen before checking state.
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="create-workspace-folder-button"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="create-workspace-button"]')).toBeVisible()
 
     expect(await testHelpers.isWorkspaceGetStarted()).toBe(true)
     expect(await testHelpers.isWorkspaceReady()).toBe(false)
@@ -64,12 +64,12 @@ describe('Home Screen', () => {
         workspace: { scenario: 'empty', path: '/empty-directory-open', autoSetup: false }
       })
 
-      await mainWindow.click('[data-testid="select-workspace-folder-button"]')
+      await mainWindow.click('[data-testid="open-workspace-button"]')
 
       const errorDialog = mainWindow.locator('[role="dialog"][aria-label="Workspace Not Found"]')
       await expect(errorDialog).toBeVisible()
       await expect(errorDialog).toContainText(
-        'The selected folder does not contain a Cthulhu Prompt workspace.'
+        'The selected file is not a Cthulhu Prompt workspace.'
       )
       await expect(errorDialog).toContainText('Workspace Not Found.')
       await expect(mainWindow.locator('[data-testid="error-placeholder-button"]')).toHaveCount(0)
@@ -92,7 +92,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'none' }
       })
 
-      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+      await mainWindow.click('[data-testid="create-workspace-button"]')
 
       const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
       await expect(createDialog).toBeVisible()
@@ -111,7 +111,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'empty', path: '/empty-with-examples', autoSetup: false }
       })
 
-      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+      await mainWindow.click('[data-testid="create-workspace-button"]')
 
       const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
       await expect(createDialog).toBeVisible()
@@ -158,7 +158,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'none' }
       })
 
-      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+      await mainWindow.click('[data-testid="create-workspace-button"]')
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Bad/Name')
       await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
@@ -184,7 +184,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'none' }
       })
 
-      await mainWindow.click('[data-testid="create-workspace-folder-button"]')
+      await mainWindow.click('[data-testid="create-workspace-button"]')
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Client Prompts')
       await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 

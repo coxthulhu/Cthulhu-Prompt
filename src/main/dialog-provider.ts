@@ -3,6 +3,7 @@ import { dialog } from 'electron'
 // Define the interface for dialog operations
 interface DialogProvider {
   selectFolder(): Promise<{ dialogCancelled: boolean; filePaths: string[] }>
+  selectWorkspaceInfoFile(): Promise<{ dialogCancelled: boolean; filePaths: string[] }>
 }
 
 // Default implementation using Electron's dialog
@@ -16,6 +17,17 @@ class ElectronDialogProvider implements DialogProvider {
       filePaths: result.filePaths
     }
   }
+
+  async selectWorkspaceInfoFile(): Promise<{ dialogCancelled: boolean; filePaths: string[] }> {
+    const result = await dialog.showOpenDialog({
+      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cprompt.json'] }],
+      properties: ['openFile']
+    })
+    return {
+      dialogCancelled: result.canceled,
+      filePaths: result.filePaths
+    }
+  }
 }
 
 // Test implementation that returns mocked results
@@ -23,6 +35,13 @@ class TestDialogProvider implements DialogProvider {
   constructor(private mockResults: string[]) {}
 
   async selectFolder(): Promise<{ dialogCancelled: boolean; filePaths: string[] }> {
+    return {
+      dialogCancelled: false,
+      filePaths: this.mockResults
+    }
+  }
+
+  async selectWorkspaceInfoFile(): Promise<{ dialogCancelled: boolean; filePaths: string[] }> {
     return {
       dialogCancelled: false,
       filePaths: this.mockResults

@@ -1,5 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
@@ -203,7 +203,7 @@ describe('Prompt folder prompt tree', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([UNOPENED_UNTITLED_WORKSPACE_PATH])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(UNOPENED_UNTITLED_WORKSPACE_PATH)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }

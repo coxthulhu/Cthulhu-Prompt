@@ -12,7 +12,7 @@ import { SqliteDataAccess } from './SqliteDataAccess'
 const APP_PERSISTENCE_ID = 1
 
 type UserPersistenceRow = {
-  lastWorkspacePath: string | null
+  lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
 }
 
@@ -50,7 +50,7 @@ export class UserPersistenceDataAccess {
       .prepare(
         `
         SELECT
-          last_workspace_path AS lastWorkspacePath,
+          last_workspace_info_path AS lastWorkspaceInfoPath,
           app_sidebar_width_px AS appSidebarWidthPx
         FROM app_persistence
         WHERE id = ?
@@ -65,7 +65,7 @@ export class UserPersistenceDataAccess {
   static updateUserPersistence(userPersistence: UserPersistence): UserPersistence {
     const db = SqliteDataAccess.getDatabase()
     const nextUserPersistence = {
-      lastWorkspacePath: userPersistence.lastWorkspacePath,
+      lastWorkspaceInfoPath: userPersistence.lastWorkspaceInfoPath,
       appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx)
     }
 
@@ -73,17 +73,17 @@ export class UserPersistenceDataAccess {
       `
       INSERT INTO app_persistence (
         id,
-        last_workspace_path,
+        last_workspace_info_path,
         app_sidebar_width_px
       )
       VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
-        last_workspace_path = excluded.last_workspace_path,
+        last_workspace_info_path = excluded.last_workspace_info_path,
         app_sidebar_width_px = excluded.app_sidebar_width_px
       `
     ).run(
       APP_PERSISTENCE_ID,
-      nextUserPersistence.lastWorkspacePath,
+      nextUserPersistence.lastWorkspaceInfoPath,
       nextUserPersistence.appSidebarWidthPx
     )
 

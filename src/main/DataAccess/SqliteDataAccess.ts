@@ -35,7 +35,7 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS app_persistence (
         id INTEGER PRIMARY KEY,
-        last_workspace_path TEXT,
+        last_workspace_info_path TEXT,
         app_sidebar_width_px INTEGER NOT NULL
       );
 
@@ -57,7 +57,7 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       `
       INSERT INTO app_persistence (
         id,
-        last_workspace_path,
+        last_workspace_info_path,
         app_sidebar_width_px
       )
       VALUES (
@@ -67,7 +67,10 @@ const migrateSchemaV1ToV2 = (db: Database.Database): void => {
       )
       ON CONFLICT(id) DO NOTHING
       `
-    ).run(DEFAULT_USER_PERSISTENCE.lastWorkspacePath, DEFAULT_USER_PERSISTENCE.appSidebarWidthPx)
+    ).run(
+      DEFAULT_USER_PERSISTENCE.lastWorkspaceInfoPath,
+      DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
+    )
 
     db.prepare('UPDATE schema_version SET version = ?').run(2)
   })

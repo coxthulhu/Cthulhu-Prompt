@@ -1,4 +1,4 @@
-import { setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
+import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -51,28 +51,28 @@ const runSqlStatement = async (electronApp: any, sql: string): Promise<void> => 
 const seedUserPersistence = async (
   electronApp: any,
   data: {
-    lastWorkspacePath: string | null
+    lastWorkspaceInfoPath: string | null
     appSidebarWidthPx?: number
   }
 ): Promise<void> => {
-  const lastWorkspacePathSql =
-    data.lastWorkspacePath === null ? 'NULL' : toSqlText(data.lastWorkspacePath)
+  const lastWorkspaceInfoPathSql =
+    data.lastWorkspaceInfoPath === null ? 'NULL' : toSqlText(data.lastWorkspaceInfoPath)
 
   await runSqlStatement(
     electronApp,
     `
     INSERT INTO app_persistence (
       id,
-      last_workspace_path,
+      last_workspace_info_path,
       app_sidebar_width_px
     )
     VALUES (
       1,
-      ${lastWorkspacePathSql},
+      ${lastWorkspaceInfoPathSql},
       ${data.appSidebarWidthPx ?? 275}
     )
     ON CONFLICT(id) DO UPDATE SET
-      last_workspace_path = excluded.last_workspace_path,
+      last_workspace_info_path = excluded.last_workspace_info_path,
       app_sidebar_width_px = excluded.app_sidebar_width_px
     `
   )
@@ -181,14 +181,14 @@ const seedWorkspacePersistence = async (
 const readUserPersistence = async (
   electronApp: any
 ): Promise<{
-  lastWorkspacePath: string | null
+  lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
 }> => {
   const queryResult = await runSqlQuery(
     electronApp,
     `
     SELECT
-      last_workspace_path AS lastWorkspacePath,
+      last_workspace_info_path AS lastWorkspaceInfoPath,
       app_sidebar_width_px AS appSidebarWidthPx
     FROM app_persistence
     WHERE id = 1
@@ -200,7 +200,7 @@ const readUserPersistence = async (
   }
 
   return queryResult.rows[0] as {
-    lastWorkspacePath: string | null
+    lastWorkspaceInfoPath: string | null
     appSidebarWidthPx: number
   }
 }
@@ -357,7 +357,7 @@ describe('User Persistence', () => {
 
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'minimal'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
 
     // Startup should restore the workspace directly from user persistence.
@@ -378,7 +378,7 @@ describe('User Persistence', () => {
 
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath,
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath),
       appSidebarWidthPx: 260
     })
 
@@ -498,7 +498,7 @@ describe('User Persistence', () => {
     const persistedPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
@@ -525,7 +525,7 @@ describe('User Persistence', () => {
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
@@ -714,7 +714,7 @@ describe('User Persistence', () => {
     const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
@@ -748,7 +748,7 @@ describe('User Persistence', () => {
     const examplesPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Examples`)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
@@ -785,7 +785,7 @@ describe('User Persistence', () => {
     const persistedPromptId = 'virtualization-test-45'
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'virtual'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
@@ -819,7 +819,7 @@ describe('User Persistence', () => {
     const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
     await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
     await seedUserPersistence(electronApp, {
-      lastWorkspacePath: persistedWorkspacePath
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,

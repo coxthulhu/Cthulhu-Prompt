@@ -170,10 +170,10 @@ const readTextFile = async (
 
 export const readPromptFolderPromptIds = async (
   electronApp: ElectronApplication,
-  folderDataPath: string
+  folderOrderPath: string
 ): Promise<string[]> => {
-  const fileContents = await readTextFile(electronApp, folderDataPath)
-  return (JSON.parse(fileContents) as { promptIds: string[] }).promptIds
+  const fileContents = await readTextFile(electronApp, folderOrderPath)
+  return JSON.parse(fileContents) as string[]
 }
 
 export const expectCurrentFolderPromptEditors = async (
@@ -185,11 +185,11 @@ export const expectCurrentFolderPromptEditors = async (
 
 export const expectPersistedFolderPromptIds = async (
   electronApp: ElectronApplication,
-  folderDataPath: string,
+  folderOrderPath: string,
   expectedPromptIds: string[]
 ): Promise<void> => {
   await expect
-    .poll(async () => await readPromptFolderPromptIds(electronApp, folderDataPath))
+    .poll(async () => await readPromptFolderPromptIds(electronApp, folderOrderPath))
     .toEqual(expectedPromptIds)
 }
 

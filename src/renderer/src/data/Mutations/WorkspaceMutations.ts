@@ -43,6 +43,7 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
 
 export const createWorkspace = async (
   workspacePath: string,
+  workspaceName: string,
   includeExamplePrompts: boolean
 ): Promise<IpcMutationActionResponse> => {
   // Special-case payload: create-workspace expects command arguments,
@@ -51,6 +52,7 @@ export const createWorkspace = async (
     'create-workspace',
     {
       workspacePath,
+      workspaceName,
       includeExamplePrompts
     }
   )

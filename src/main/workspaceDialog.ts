@@ -1,11 +1,19 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
 import type { WorkspaceFolderStatus } from '@shared/Workspace'
-import { PROMPTS_DIRECTORY_NAME } from './Persistence/PromptPersistencePaths'
+import {
+  PROMPTS_DIRECTORY_NAME,
+  WORKSPACE_INFO_FILENAME_SUFFIX
+} from './Persistence/PromptPersistencePaths'
 import { getDialogProvider } from './dialog-provider'
 import { getFs } from './fs-provider'
 
-const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
+const hasWorkspaceInfoFile = (folderPath: string): boolean => {
+  const fs = getFs()
+  return fs
+    .readdirSync(folderPath)
+    .some((entryName) => entryName.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX))
+}
 
 const getWorkspaceFolderStatus = (folderPath: string): WorkspaceFolderStatus => {
   const fs = getFs()
@@ -15,8 +23,7 @@ const getWorkspaceFolderStatus = (folderPath: string): WorkspaceFolderStatus => 
   }
 
   const isWorkspace =
-    fs.existsSync(path.join(folderPath, WORKSPACE_INFO_FILENAME)) &&
-    fs.existsSync(path.join(folderPath, PROMPTS_DIRECTORY_NAME))
+    hasWorkspaceInfoFile(folderPath) && fs.existsSync(path.join(folderPath, PROMPTS_DIRECTORY_NAME))
 
   return {
     exists: true,
@@ -29,6 +36,11 @@ export const setupWorkspaceDialogHandlers = (): void => {
   ipcMain.handle('select-workspace-folder', async () => {
     const dialogProvider = getDialogProvider()
     return await dialogProvider.selectFolder()
+  })
+
+  ipcMain.handle('select-workspace-info-file', async () => {
+    const dialogProvider = getDialogProvider()
+    return await dialogProvider.selectWorkspaceInfoFile()
   })
 
   ipcMain.handle('get-workspace-folder-status', async (_, folderPath: string) => {

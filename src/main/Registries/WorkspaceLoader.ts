@@ -5,7 +5,7 @@ import { getFs } from '../fs-provider'
 import {
   readPromptFolders,
   readPromptStemByPromptId,
-  readWorkspaceId
+  readWorkspaceInfo
 } from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
@@ -15,19 +15,27 @@ import {
   buildWorkspaceSnapshot,
   getLoadedPromptEntries
 } from '../Data/DataSnapshotHelpers'
-import { PROMPTS_DIRECTORY_NAME } from '../Persistence/PromptPersistencePaths'
+import {
+  isWorkspaceInfoPath,
+  PROMPTS_DIRECTORY_NAME,
+  resolveWorkspacePathFromInfoPath
+} from '../Persistence/PromptPersistencePaths'
 
-const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
-const isWorkspacePathValid = (workspacePath: string): boolean => {
+const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
+  if (!isWorkspaceInfoPath(workspaceInfoPath)) {
+    return false
+  }
+
+  const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
   if (isWorkspaceRootPath(workspacePath)) {
     return false
   }
 
   const fs = getFs()
   return (
-    fs.existsSync(path.join(workspacePath, WORKSPACE_INFO_FILENAME)) &&
+    fs.existsSync(workspaceInfoPath) &&
     fs.existsSync(path.join(workspacePath, PROMPTS_DIRECTORY_NAME))
   )
 }
@@ -84,12 +92,13 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   }
 }
 
-const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise<string> => {
-  const workspaceId = readWorkspaceId(workspacePath)
+const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Promise<string> => {
+  const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
+  const workspaceId = readWorkspaceInfo(workspaceInfoPath).workspaceId
   const promptFolders = readPromptFolders(workspacePath)
 
   // Side effect: hydrate workspace into the new committed data store.
-  await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath })
+  await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath, workspaceInfoPath })
 
   // Side effect: hydrate all prompt folders before loading prompt records.
   await Promise.all(
@@ -124,14 +133,14 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspacePath: string): Promise
 }
 
 export const loadWorkspaceByPath = async (
-  workspacePath: string
+  workspaceInfoPath: string
 ): Promise<LoadWorkspaceByPathResult> => {
   try {
-    if (!isWorkspacePathValid(workspacePath)) {
+    if (!isWorkspaceInfoPathValid(workspaceInfoPath)) {
       return { success: false, error: 'Invalid workspace path' }
     }
 
-    const workspaceId = await loadWorkspaceDataIntoNewDataLayer(workspacePath)
+    const workspaceId = await loadWorkspaceDataIntoNewDataLayer(workspaceInfoPath)
     const payload = buildWorkspaceLoadPayloadFromData(workspaceId)
 
     return {

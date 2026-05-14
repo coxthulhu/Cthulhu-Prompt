@@ -1,7 +1,7 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import type { PromptPersisted } from '@shared/Prompt'
-import type { PromptFolderConfigFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
@@ -10,13 +10,12 @@ import {
   virtualFindPromptId
 } from '../helpers/VirtualFindTestConstants'
 
-const createPromptFolderConfig = (
-  foldername: string,
+const createPromptFolderInfo = (
+  displayName: string,
   promptCount: number,
-  promptFolderId: string,
-  promptIds: string[]
-): PromptFolderConfigFile => {
-  return { foldername, promptFolderId, promptCount, promptIds }
+  promptFolderId: string
+): PromptFolderInfoFile => {
+  return { displayName, promptFolderId, promptCount }
 }
 
 /**
@@ -115,7 +114,7 @@ const createPromptFiles = (
       promptText: prompt.promptText
     }
 
-    promptFiles[`${folderPath}/${promptStem}.md`] = serializePromptMarkdown(promptData)
+    promptFiles[`${folderPath}/${promptStem}.prompt.md`] = serializePromptMarkdown(promptData)
   }
 
   return {
@@ -185,6 +184,12 @@ export function getWorkspacePath(scenario: WorkspaceScenario): string {
   return DEFAULT_WORKSPACES[scenario]
 }
 
+export function getWorkspaceInfoPath(workspacePath: string): string {
+  const segments = workspacePath.split(/[\\/]+/).filter(Boolean)
+  const workspaceName = segments[segments.length - 1] ?? 'Workspace'
+  return `${workspacePath}/${workspaceName}.cprompt.json`
+}
+
 /**
  * Creates a basic workspace with minimal required structure
  *
@@ -202,10 +207,18 @@ export function createBasicWorkspace(
       ? settings.workspaceId
       : createDeterministicId(workspacePath)
   const settingsPayload = { ...settings, workspaceId }
+  const workspaceName =
+    typeof settings.workspaceName === 'string'
+      ? settings.workspaceName
+      : getWorkspaceInfoPath(workspacePath).split('/').pop()!.replace(/\.cprompt\.json$/, '')
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
-    [`${workspacePath}/WorkspaceInfo.json`]: JSON.stringify(settingsPayload, null, 2)
+    [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
+      { ...settingsPayload, workspaceName },
+      null,
+      2
+    )
   }
 
   return structure
@@ -238,12 +251,13 @@ export function createWorkspaceWithFolders(
         : createDeterministicId(`${workspacePath}:${folder.folderName}`)
 
     // Create folder metadata
-    structure[`${folderPath}/FolderData.json`] = JSON.stringify(
-      createPromptFolderConfig(folder.displayName, promptCount, promptFolderId, promptIds),
+    structure[`${folderPath}/FolderOrder.json`] = JSON.stringify(promptIds, null, 2)
+    structure[`${folderPath}/.cprompt/FolderInfo.json`] = JSON.stringify(
+      createPromptFolderInfo(folder.displayName, promptCount, promptFolderId),
       null,
       2
     )
-    structure[`${folderPath}/FolderDescription.md`] = folder.folderDescription ?? ''
+    structure[`${folderPath}/.cprompt/Description.md`] = folder.folderDescription ?? ''
     Object.assign(structure, promptFiles)
   }
 
@@ -408,12 +422,13 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   return {
-    [`${folderPath}/FolderData.json`]: JSON.stringify(
-      createPromptFolderConfig(folderConfig.displayName, promptCount, promptFolderId, promptIds),
+    [`${folderPath}/FolderOrder.json`]: JSON.stringify(promptIds, null, 2),
+    [`${folderPath}/.cprompt/FolderInfo.json`]: JSON.stringify(
+      createPromptFolderInfo(folderConfig.displayName, promptCount, promptFolderId),
       null,
       2
     ),
-    [`${folderPath}/FolderDescription.md`]: folderConfig.folderDescription ?? '',
+    [`${folderPath}/.cprompt/Description.md`]: folderConfig.folderDescription ?? '',
     ...promptFiles
   }
 }
@@ -512,17 +527,23 @@ export function createCorruptedWorkspace(
   switch (corruptionType) {
     case 'missing-settings':
       structure[`${workspacePath}/Prompts`] = null
-      // Missing WorkspaceInfo.json
+      // Missing .cprompt.json
       break
 
     case 'invalid-json':
       structure[`${workspacePath}/Prompts`] = null
-      structure[`${workspacePath}/WorkspaceInfo.json`] = '{ invalid json'
+      structure[getWorkspaceInfoPath(workspacePath)] = '{ invalid json'
       break
 
     case 'missing-prompts':
-      structure[`${workspacePath}/WorkspaceInfo.json`] = JSON.stringify(
-        { workspaceId: createDeterministicId(workspacePath) },
+      structure[getWorkspaceInfoPath(workspacePath)] = JSON.stringify(
+        {
+          workspaceId: createDeterministicId(workspacePath),
+          workspaceName: getWorkspaceInfoPath(workspacePath)
+            .split('/')
+            .pop()!
+            .replace(/\.cprompt\.json$/, '')
+        },
         null,
         2
       )

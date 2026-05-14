@@ -20,7 +20,7 @@ import {
   scrollPromptEditorAcrossViewportTop,
   scrollUntilPromptEditorVisible
 } from '../helpers/PromptDragDropHelpers'
-import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -28,16 +28,16 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const WORKSPACE_PATH = '/ws/sample'
 const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
-const DEVELOPMENT_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${DEVELOPMENT_FOLDER_NAME}/FolderData.json`
-const EXAMPLES_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${EXAMPLES_FOLDER_NAME}/FolderData.json`
+const DEVELOPMENT_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${DEVELOPMENT_FOLDER_NAME}/FolderOrder.json`
+const EXAMPLES_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${EXAMPLES_FOLDER_NAME}/FolderOrder.json`
 const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
 const EXAMPLE_1_ID = 'simple-1'
 const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
 const ANCHORING_FOLDER_NAME = 'Anchoring'
 const DESTINATION_FOLDER_NAME = 'Destination'
-const ANCHORING_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${ANCHORING_FOLDER_NAME}/FolderData.json`
-const DESTINATION_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${DESTINATION_FOLDER_NAME}/FolderData.json`
+const ANCHORING_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${ANCHORING_FOLDER_NAME}/FolderOrder.json`
+const DESTINATION_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${DESTINATION_FOLDER_NAME}/FolderOrder.json`
 const ANCHOR_1_ID = 'anchor-1'
 const ANCHOR_2_ID = 'anchor-2'
 const ANCHOR_3_ID = 'anchor-3'
@@ -359,7 +359,7 @@ describe('Prompt folder prompt drag-drop', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
-    await testSetup.setupFileDialog([DRAG_SCROLL_WORKSPACE_PATH])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_SCROLL_WORKSPACE_PATH)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -397,7 +397,7 @@ describe('Prompt folder prompt drag-drop', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
-    await testSetup.setupFileDialog([DRAG_SCROLL_WORKSPACE_PATH])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_SCROLL_WORKSPACE_PATH)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -581,7 +581,7 @@ describe('Prompt folder prompt drag-drop', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
-    await testSetup.setupFileDialog([DRAG_SCROLL_WORKSPACE_PATH])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_SCROLL_WORKSPACE_PATH)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()

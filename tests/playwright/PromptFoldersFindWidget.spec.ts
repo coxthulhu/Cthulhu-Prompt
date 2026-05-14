@@ -5,7 +5,7 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
-import { createWorkspaceWithFolders } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,
@@ -183,9 +183,9 @@ const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, st
     }
   ])
 
-  const folderDescriptionPath = `${workspacePath}/Prompts/Long/FolderDescription.md`
+  const folderDescriptionPath = `${workspacePath}/Prompts/Long/.cprompt/Description.md`
   if (typeof filesystem[folderDescriptionPath] !== 'string') {
-    throw new Error('Missing Long/FolderDescription.md in loop fixture workspace')
+    throw new Error('Missing Long/.cprompt/Description.md in loop fixture workspace')
   }
   filesystem[folderDescriptionPath] = `Find marker in folder description: ${LOOP_REGRESSION_QUERY}`
 
@@ -223,9 +223,9 @@ const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, s
     }
   ])
 
-  const folderDescriptionPath = `${workspacePath}/Prompts/Long/FolderDescription.md`
+  const folderDescriptionPath = `${workspacePath}/Prompts/Long/.cprompt/Description.md`
   if (typeof filesystem[folderDescriptionPath] !== 'string') {
-    throw new Error('Missing Long/FolderDescription.md in rapid loop fixture workspace')
+    throw new Error('Missing Long/.cprompt/Description.md in rapid loop fixture workspace')
   }
   filesystem[folderDescriptionPath] = `Rapid loop marker in folder description: ${RAPID_LOOP_QUERY}`
 
@@ -373,7 +373,7 @@ describe('Prompt folder find dialog', () => {
   test('starts on the currently selected Monaco match when opening find', async ({ testSetup }) => {
     const workspacePath = '/ws/find-selection-start-match'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -413,7 +413,7 @@ describe('Prompt folder find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-selection-start-match-reopen'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -459,7 +459,7 @@ describe('Prompt folder find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-clicked-word-start-match'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -511,7 +511,7 @@ describe('Prompt folder find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-configured-word-boundary'
     await testSetup.setupFilesystem(buildConfiguredWordWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -570,7 +570,7 @@ describe('Prompt folder find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-typing-anchor'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -611,7 +611,7 @@ describe('Prompt folder find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-typing-anchor-reset'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -976,7 +976,7 @@ describe('Prompt folder find dialog', () => {
     test.setTimeout(180000)
     const workspacePath = '/ws/virtual-find-loop'
     await testSetup.setupFilesystem(buildVirtualFindLoopWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1038,7 +1038,7 @@ describe('Prompt folder find dialog', () => {
     test.setTimeout(180000)
     const workspacePath = '/ws/virtual-find-rapid-loop'
     await testSetup.setupFilesystem(buildVirtualFindRapidWorkspace(workspacePath))
-    await testSetup.setupFileDialog([workspacePath])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }

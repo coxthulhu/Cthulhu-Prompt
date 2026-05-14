@@ -18,7 +18,6 @@
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -41,15 +40,16 @@
     isWorkspaceLoading: boolean
     promptCount: number
     promptFolderCount: number
-    onWorkspaceSelect: (path: string) => Promise<WorkspaceSelectionResult>
+    onWorkspaceSelect: (workspaceInfoPath: string) => Promise<WorkspaceSelectionResult>
     onWorkspaceCreate: (
       path: string,
+      workspaceName: string,
       includeExamplePrompts: boolean
     ) => Promise<WorkspaceCreationResult>
     onWorkspaceClear: () => void
   }>()
 
-  type OpenSelectWorkspaceFolderDialogResult = {
+  type OpenWorkspaceInfoFileDialogResult = {
     dialogCancelled: boolean
     filePaths: string[]
   }
@@ -57,47 +57,41 @@
   const secondaryTitleText = 'CTHULHU PROMPT'
   const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
   const workspaceNotFoundErrorText =
-    'Workspace Not Found.\nUse Create Workspace Folder to set up a new workspace in this location.'
+    'Workspace Not Found.\nUse Create Workspace to set up a new workspace in this location.'
 
-  let isOpeningWorkspaceFolderDialog = $state(false)
+  let isOpeningWorkspaceDialog = $state(false)
   let showCreateWorkspaceDialog = $state(false)
   let showWorkspaceNotFoundDialog = $state(false)
-  let showRootPathDialog = $state(false)
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
   let secondaryTitleContainerElement: HTMLDivElement | null = $state(null)
   let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
   let secondaryTitleContainerWidth = $state(0)
   let secondaryTitleMeasureWidth = $state(0)
 
-  const openWorkspaceFolderDialog = async (): Promise<OpenSelectWorkspaceFolderDialogResult> => {
-    isOpeningWorkspaceFolderDialog = true
+  const openWorkspaceInfoFileDialog = async (): Promise<OpenWorkspaceInfoFileDialogResult> => {
+    isOpeningWorkspaceDialog = true
     try {
-      return await ipcInvoke<OpenSelectWorkspaceFolderDialogResult>('select-workspace-folder')
+      return await ipcInvoke<OpenWorkspaceInfoFileDialogResult>('select-workspace-info-file')
     } finally {
-      isOpeningWorkspaceFolderDialog = false
+      isOpeningWorkspaceDialog = false
     }
   }
 
   const handleSelectFolder = async () => {
     activeWorkspaceAction = 'select'
     try {
-      const result = await runIpcBestEffort(openWorkspaceFolderDialog, () => ({
+      const result = await runIpcBestEffort(openWorkspaceInfoFileDialog, () => ({
         dialogCancelled: true,
         filePaths: []
       }))
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]
-        // Block root selections before checking for workspace files.
-        if (isWorkspaceRootPath(selectedPath)) {
-          showRootPathDialog = true
-          return
-        }
         const selectionResult = await onWorkspaceSelect(selectedPath)
 
         if (!selectionResult.success) {
           if (selectionResult.reason === 'workspace-missing') {
-            // Open Workspace Folder only selects existing workspaces.
+            // Open Workspace only selects existing workspace info files.
             showWorkspaceNotFoundDialog = true
           }
         }
@@ -117,23 +111,23 @@
     if (isWorkspaceLoading) {
       return activeWorkspaceAction === 'select' ? 'Setting up...' : 'Loading...'
     }
-    if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'select') {
+    if (isOpeningWorkspaceDialog && activeWorkspaceAction === 'select') {
       return 'Selecting...'
     }
-    return 'Open Workspace Folder'
+    return 'Open Workspace'
   }
 
   const getCreateButtonLabel = () => {
     if (isWorkspaceLoading) {
       return activeWorkspaceAction === 'create' ? 'Creating...' : 'Loading...'
     }
-    if (isOpeningWorkspaceFolderDialog && activeWorkspaceAction === 'create') {
+    if (isOpeningWorkspaceDialog && activeWorkspaceAction === 'create') {
       return 'Choosing...'
     }
-    return 'Create Workspace Folder'
+    return 'Create Workspace'
   }
 
-  const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceFolderDialog)
+  const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceDialog)
   const displayedWorkspaceName = $derived(
     workspacePath ? getWorkspaceFolderName(workspacePath) : 'No workspace selected'
   )
@@ -270,18 +264,18 @@
 
             <div class="flex flex-col gap-3">
               <IconDescriptionButton
-                testId="select-workspace-folder-button"
+                testId="open-workspace-button"
                 icon={FolderOpen}
                 iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
-                description="Select an existing workspace folder."
+                description="Select an existing workspace file."
                 variant="neutral"
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
 
               <IconDescriptionButton
-                testId="create-workspace-folder-button"
+                testId="create-workspace-button"
                 icon={FolderPlus}
                 iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
@@ -319,15 +313,8 @@
   <CthulhuErrorDialog
     bind:open={showWorkspaceNotFoundDialog}
     title="Workspace Not Found"
-    description="The selected folder does not contain a Cthulhu Prompt workspace."
+    description="The selected file is not a Cthulhu Prompt workspace."
     errorText={workspaceNotFoundErrorText}
-  />
-
-  <CthulhuErrorDialog
-    bind:open={showRootPathDialog}
-    title="Invalid workspace folder"
-    description="The selected folder cannot be used as a workspace."
-    errorText={workspaceRootPathErrorMessage}
   />
 </main>
 

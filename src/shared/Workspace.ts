@@ -6,6 +6,7 @@ import type { IpcResult } from './IpcResult'
 export interface Workspace {
   id: string
   workspacePath: string
+  workspaceName: string
   promptFolderIds: string[]
 }
 
@@ -13,13 +14,14 @@ export interface Workspace {
 // not a normal revision mutation object with entity revisions.
 export type CreateWorkspacePayload = {
   workspacePath: string
+  workspaceName: string
   includeExamplePrompts: boolean
 }
 
 export type CloseWorkspacePayload = Record<string, never>
 
 export type LoadWorkspaceByPathRequest = {
-  workspacePath: string
+  workspaceInfoPath: string
 }
 
 export type WorkspaceFolderStatus = {

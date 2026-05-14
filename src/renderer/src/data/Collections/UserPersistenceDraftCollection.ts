@@ -4,7 +4,7 @@ export const USER_PERSISTENCE_DRAFT_ID = 'user-persistence-draft'
 
 export type UserPersistenceDraftRecord = {
   id: typeof USER_PERSISTENCE_DRAFT_ID
-  lastWorkspacePath: string | null
+  lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
 }
 

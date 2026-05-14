@@ -42,7 +42,7 @@ export const resolvePersistedPromptFilePathsByTitle = (
   const folderPath = `${lookup.workspacePath}/Prompts/${lookup.folderName}`
   const promptStem = buildPromptStem(lookup.promptTitle, lookup.promptId)
   return {
-    markdownPath: `${folderPath}/${promptStem}.md`
+    markdownPath: `${folderPath}/${promptStem}.prompt.md`
   }
 }
 

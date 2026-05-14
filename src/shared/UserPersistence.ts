@@ -2,12 +2,12 @@ import type { IpcResult } from './IpcResult'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type UserPersistence = {
-  lastWorkspacePath: string | null
+  lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
-  lastWorkspacePath: null,
+  lastWorkspaceInfoPath: null,
   appSidebarWidthPx: 275
 }
 
@@ -107,8 +107,8 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
     return null
   }
 
-  const lastWorkspacePath = value.lastWorkspacePath
-  if (lastWorkspacePath !== null && typeof lastWorkspacePath !== 'string') {
+  const lastWorkspaceInfoPath = value.lastWorkspaceInfoPath
+  if (lastWorkspaceInfoPath !== null && typeof lastWorkspaceInfoPath !== 'string') {
     return null
   }
 
@@ -118,7 +118,7 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
       : DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
 
   return {
-    lastWorkspacePath,
+    lastWorkspaceInfoPath,
     appSidebarWidthPx
   }
 }

@@ -1,5 +1,5 @@
 import type { PromptFolder } from '@shared/PromptFolder'
-import type { PromptFolderConfigFile } from '../DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -12,8 +12,10 @@ import {
   writeJsonFile
 } from './FilePersistenceHelpers'
 import {
-  resolvePromptFolderConfigPath,
   resolvePromptFolderDescriptionPath,
+  resolvePromptFolderInfoDirectoryPath,
+  resolvePromptFolderInfoPath,
+  resolvePromptFolderOrderPath,
   resolvePromptFolderPath
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
@@ -24,26 +26,26 @@ export type PromptFolderPersistenceFields = {
   folderName: string
 }
 
-const toPromptFolderConfigFile = (promptFolder: PromptFolder): PromptFolderConfigFile => {
+const toPromptFolderInfoFile = (promptFolder: PromptFolder): PromptFolderInfoFile => {
   return {
-    foldername: promptFolder.displayName,
+    displayName: promptFolder.displayName,
     promptFolderId: promptFolder.id,
-    promptCount: promptFolder.promptCount,
-    promptIds: promptFolder.promptIds
+    promptCount: promptFolder.promptCount
   }
 }
 
-const fromPromptFolderConfigFile = (
-  persistedConfig: PromptFolderConfigFile,
+const fromPromptFolderInfoFile = (
+  persistedInfo: PromptFolderInfoFile,
   folderName: string,
+  promptIds: string[],
   folderDescription: string
 ): PromptFolder => {
   return {
-    id: persistedConfig.promptFolderId,
+    id: persistedInfo.promptFolderId,
     folderName,
-    displayName: persistedConfig.foldername,
-    promptCount: persistedConfig.promptCount,
-    promptIds: persistedConfig.promptIds,
+    displayName: persistedInfo.displayName,
+    promptCount: persistedInfo.promptCount,
+    promptIds,
     folderDescription
   }
 }
@@ -55,31 +57,39 @@ export const promptFolderPersistence: PersistenceLayer<
   stageChanges: async (change) => {
     const { workspacePath, folderName } = change.persistenceFields
     const folderPath = resolvePromptFolderPath(workspacePath, folderName)
-    const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
+    const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
+    const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(workspacePath, folderName)
+    const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
     const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
-        createStagedFileRemove(configPath),
+        createStagedFileRemove(orderPath),
+        createStagedFileRemove(infoPath),
         createStagedFileRemove(descriptionPath)
       ])
     }
 
     const fs = getFs()
     const folderAlreadyExists = fs.existsSync(folderPath)
-    // Side effect: create prompt folder directory before staging config writes.
+    const infoDirectoryAlreadyExists = fs.existsSync(infoDirectoryPath)
+    // Side effect: create prompt folder metadata directories before staging writes.
     fs.mkdirSync(folderPath, { recursive: true })
+    fs.mkdirSync(infoDirectoryPath, { recursive: true })
 
-    const configTempPath = resolveTempPath(configPath)
-    const persistedConfig = toPromptFolderConfigFile(change.data)
-    writeJsonFile(configTempPath, persistedConfig)
+    const orderTempPath = resolveTempPath(orderPath)
+    writeJsonFile(orderTempPath, change.data.promptIds)
+    const infoTempPath = resolveTempPath(infoPath)
+    writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const descriptionTempPath = resolveTempPath(descriptionPath)
     fs.writeFileSync(descriptionTempPath, change.data.folderDescription, 'utf8')
 
     return createPersistenceStageResult([
-      createStagedFileUpsert(configPath, configTempPath),
+      createStagedFileUpsert(orderPath, orderTempPath),
+      createStagedFileUpsert(infoPath, infoTempPath),
       createStagedFileUpsert(descriptionPath, descriptionTempPath),
-      createStagedEnsureDirectory(folderPath, !folderAlreadyExists)
+      createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
+      createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
     ])
   },
   commitChanges: async (stagedChange) => {
@@ -90,19 +100,21 @@ export const promptFolderPersistence: PersistenceLayer<
   },
   loadData: async (persistenceFields) => {
     const { workspacePath, folderName } = persistenceFields
-    const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
+    const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
+    const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
     const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
     const fs = getFs()
 
-    if (!fs.existsSync(configPath)) {
+    if (!fs.existsSync(orderPath) || !fs.existsSync(infoPath)) {
       return null
     }
 
-    const persistedConfig = readJsonFile<PromptFolderConfigFile>(configPath)
+    const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
+    const promptIds = readJsonFile<string[]>(orderPath)
     const folderDescription = fs.existsSync(descriptionPath)
       ? fs.readFileSync(descriptionPath, 'utf8')
       : ''
 
-    return fromPromptFolderConfigFile(persistedConfig, folderName, folderDescription)
+    return fromPromptFolderInfoFile(persistedInfo, folderName, promptIds, folderDescription)
   }
 }

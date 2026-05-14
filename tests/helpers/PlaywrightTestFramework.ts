@@ -8,7 +8,8 @@ import * as uiValidationHelpers from './UiValidationHelpers'
 import {
   setupWorkspaceScenario,
   type WorkspaceScenario,
-  getWorkspacePath
+  getWorkspacePath,
+  getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
 export interface PlaywrightTestOptions {
@@ -265,8 +266,11 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               fileModifiedTimes: options.workspace.fileModifiedTimes
             })
 
-            // Set up file dialog for workspace path
-            await setupUtils.setupFileDialog([workspacePath])
+            const fileDialogPath =
+              options.workspace.scenario === 'empty'
+                ? workspacePath
+                : getWorkspaceInfoPath(workspacePath)
+            await setupUtils.setupFileDialog([fileDialogPath])
           }
 
           await setupUtils.completeStartup()

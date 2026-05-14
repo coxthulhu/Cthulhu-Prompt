@@ -12,7 +12,7 @@ export const setupWorkspaceQueryHandlers = (): void => {
         request,
         parseLoadWorkspaceByPathRequest,
         async (validatedRequest) => {
-          return await loadWorkspaceByPath(validatedRequest.payload.workspacePath)
+          return await loadWorkspaceByPath(validatedRequest.payload.workspaceInfoPath)
         }
       )
     }

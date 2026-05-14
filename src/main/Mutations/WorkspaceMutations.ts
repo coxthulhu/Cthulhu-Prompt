@@ -18,7 +18,11 @@ export const setupWorkspaceMutationHandlers = (): void => {
         parseCreateWorkspaceRequest,
         async (validatedRequest) => {
           const payload = validatedRequest.payload
-          return await createWorkspace(payload.workspacePath, payload.includeExamplePrompts)
+          return await createWorkspace(
+            payload.workspacePath,
+            payload.workspaceName,
+            payload.includeExamplePrompts
+          )
         }
       )
     }

@@ -15,7 +15,7 @@ export async function setupWorkspaceViaUI(window: any): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {
-  await window.click('[data-testid="select-workspace-folder-button"]')
+  await window.click('[data-testid="open-workspace-button"]')
 
   const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
@@ -34,7 +34,7 @@ export async function createWorkspaceViaUI(window: any): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {
-  await window.click('[data-testid="create-workspace-folder-button"]')
+  await window.click('[data-testid="create-workspace-button"]')
 
   const createDialog = window.locator('[role="dialog"][aria-label="Create Workspace"]')
   const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
@@ -68,7 +68,7 @@ export async function createWorkspaceViaUI(window: any): Promise<{
 export async function clearWorkspaceViaUI(window: any): Promise<void> {
   // Click "Close Workspace" button
   await window.click('[data-testid="close-workspace-button"]')
-  await window.waitForSelector('[data-testid="select-workspace-folder-button"]', {
+  await window.waitForSelector('[data-testid="open-workspace-button"]', {
     state: 'visible',
     timeout: 5000
   })
@@ -91,7 +91,7 @@ export async function isWorkspaceReady(window: any): Promise<boolean> {
  * @returns Promise resolving to true if in get started state
  */
 export async function isWorkspaceGetStarted(window: any): Promise<boolean> {
-  return await isButtonVisible(window, 'Select Workspace Folder')
+  return await isButtonVisible(window, 'Open Workspace')
 }
 
 /**

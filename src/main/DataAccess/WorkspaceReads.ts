@@ -1,39 +1,36 @@
 import * as path from 'path'
 import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
-import type { PromptFolderConfigFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderInfoFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
 import { parsePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
   PROMPTS_DIRECTORY_NAME,
-  PROMPT_FOLDER_DESCRIPTION_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   resolvePromptFolderPath,
-  resolvePromptFolderConfigPath,
   resolvePromptFolderDescriptionPath,
+  resolvePromptFolderInfoPath,
+  resolvePromptFolderOrderPath,
   resolvePromptPathsFromStem
 } from '../Persistence/PromptPersistencePaths'
 
-const WORKSPACE_INFO_FILENAME = 'WorkspaceInfo.json'
-
-export const readWorkspaceId = (workspacePath: string): string => {
-  const workspaceInfoPath = path.join(workspacePath, WORKSPACE_INFO_FILENAME)
+export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile => {
   const parsed = readJsonFile<WorkspaceInfoFile>(workspaceInfoPath)
 
-  if (!parsed.workspaceId) {
+  if (!parsed.workspaceId || !parsed.workspaceName) {
     throw new Error('Invalid workspace info')
   }
 
-  return parsed.workspaceId
+  return parsed
 }
 
-const readPromptFolderConfig = (
+const readPromptFolderInfo = (
   workspacePath: string,
   folderName: string
-): PromptFolderConfigFile => {
-  const configPath = resolvePromptFolderConfigPath(workspacePath, folderName)
-  return readJsonFile<PromptFolderConfigFile>(configPath)
+): PromptFolderInfoFile => {
+  const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
+  return readJsonFile<PromptFolderInfoFile>(infoPath)
 }
 
 const readPromptFolderDescription = (workspacePath: string, folderName: string): string => {
@@ -48,8 +45,8 @@ const readPromptFolderDescription = (workspacePath: string, folderName: string):
 }
 
 const readPromptIds = (workspacePath: string, folderName: string): string[] => {
-  const config = readPromptFolderConfig(workspacePath, folderName)
-  return [...config.promptIds]
+  const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
+  return [...readJsonFile<string[]>(orderPath)]
 }
 
 const readFileModifiedAt = (filePath: string): string => {
@@ -70,9 +67,6 @@ export const readPromptStemByPromptId = (
     if (!entry.isFile() || !entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX)) {
       continue
     }
-    if (entry.name === PROMPT_FOLDER_DESCRIPTION_FILENAME) {
-      continue
-    }
 
     const promptStem = entry.name.slice(0, -PROMPT_MARKDOWN_FILENAME_SUFFIX.length)
     const prompt = parsePromptMarkdown(fs.readFileSync(path.join(folderPath, entry.name), 'utf8'))
@@ -86,15 +80,16 @@ export const readPromptStemByPromptId = (
 }
 
 export const readPromptFolder = (workspacePath: string, folderName: string): PromptFolder => {
-  const config = readPromptFolderConfig(workspacePath, folderName)
+  const info = readPromptFolderInfo(workspacePath, folderName)
   const folderDescription = readPromptFolderDescription(workspacePath, folderName)
+  const promptIds = readPromptIds(workspacePath, folderName)
 
   return {
-    id: config.promptFolderId,
+    id: info.promptFolderId,
     folderName,
-    displayName: config.foldername,
-    promptCount: config.promptCount,
-    promptIds: [...config.promptIds],
+    displayName: info.displayName,
+    promptCount: info.promptCount,
+    promptIds,
     folderDescription
   }
 }

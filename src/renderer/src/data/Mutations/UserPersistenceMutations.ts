@@ -79,14 +79,16 @@ export const mutatePacedUserPersistenceAutosaveUpdate = ({
   })
 }
 
-export const syncLastWorkspacePath = async (lastWorkspacePath: string | null): Promise<void> => {
+export const syncLastWorkspaceInfoPath = async (
+  lastWorkspaceInfoPath: string | null
+): Promise<void> => {
   await runRevisionMutation<UserPersistenceRevisionResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.userPersistence.update(USER_PERSISTENCE_ID, (draft) => {
-        draft.lastWorkspacePath = lastWorkspacePath
+        draft.lastWorkspaceInfoPath = lastWorkspaceInfoPath
       })
       collections.userPersistenceDraft.update(USER_PERSISTENCE_DRAFT_ID, (draft) => {
-        draft.lastWorkspacePath = lastWorkspacePath
+        draft.lastWorkspaceInfoPath = lastWorkspaceInfoPath
       })
     },
     persistMutations: persistUserPersistenceMutations,
