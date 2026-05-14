@@ -1,5 +1,6 @@
 {
   "name": "cthulhuprompt",
+  "productName": "CthulhuPrompt",
   "version": "0.0.19",
   "description": "An Electron application with Svelte and TypeScript",
   "main": "./out/main/index.js",

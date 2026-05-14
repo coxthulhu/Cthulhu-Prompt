@@ -4,8 +4,8 @@ import { startupNormally } from './NormalStartup'
 import { setupTestStartupListener } from './IntegrationTests/TestStartup'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 
-const DEV_USER_DATA_DIRECTORY_NAME = 'cthulhupromptdev'
-const PLAYWRIGHT_USER_DATA_DIRECTORY_NAME = 'cthulhupromptplaywright'
+const DEV_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptDev'
+const PLAYWRIGHT_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptPlaywright'
 
 const configureUserDataPath = (): void => {
   if (isPlaywrightEnvironment()) {
