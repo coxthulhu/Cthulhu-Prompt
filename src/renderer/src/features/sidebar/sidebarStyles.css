@@ -37,6 +37,11 @@
   overflow: hidden;
 }
 
+.sidebarPromptTreeFolderRow {
+  width: 100%;
+  padding-block: 1px;
+}
+
 .sidebarPromptTreeRow {
   display: flex;
   height: 2.25rem;
@@ -213,6 +218,7 @@
 
 .sidebarPromptTreeSettingsRow {
   width: 100%;
+  padding-block: 1px;
   padding-left: 1.875rem;
 }
 
