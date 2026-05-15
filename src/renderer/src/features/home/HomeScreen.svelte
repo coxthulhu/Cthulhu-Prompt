@@ -134,6 +134,11 @@
   const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
+  const workspaceActionsCardClass = $derived(
+    isWorkspaceReady
+      ? 'w-full max-w-[39.5rem] min-w-0 xl:max-w-none'
+      : 'w-full max-w-[39.5rem] min-w-0 xl:col-span-2 xl:max-w-[31.5rem] xl:justify-self-center'
+  )
   const secondaryTitleFontSizePx = $derived.by(() => {
     if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
       return null
@@ -204,47 +209,49 @@
       <div
         class="mt-5 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
-        <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
-          <div class="space-y-4">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <TitleBlock
-                  title="Current Workspace"
-                  size="large"
-                  description="Information about your current workspace."
+        {#if isWorkspaceReady}
+          <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
+            <div class="space-y-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <TitleBlock
+                    title="Current Workspace"
+                    size="large"
+                    description="Information about your current workspace."
+                  />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-3">
+                <LabeledDisplayField
+                  label="Workspace Name"
+                  text={displayedWorkspaceName}
+                  icon={FolderClosed}
+                  valueTitle={displayedWorkspaceName}
                 />
+
+                <LabeledDisplayField
+                  label="Workspace Path"
+                  text={displayedWorkspacePath}
+                  icon={FolderOpen}
+                  valueTitle={displayedWorkspacePath}
+                  valueTestId="workspace-ready-path"
+                />
+
+                <div class="grid grid-cols-2 gap-3">
+                  <NumericStatCard label="Prompts" text={displayedPromptCount} icon={FileText} />
+                  <NumericStatCard
+                    label="Prompt Folders"
+                    text={displayedPromptFolderCount}
+                    icon={Folders}
+                  />
+                </div>
               </div>
             </div>
+          </CardSurface>
+        {/if}
 
-            <div class="flex flex-col gap-3">
-              <LabeledDisplayField
-                label="Workspace Name"
-                text={displayedWorkspaceName}
-                icon={FolderClosed}
-                valueTitle={displayedWorkspaceName}
-              />
-
-              <LabeledDisplayField
-                label="Workspace Path"
-                text={displayedWorkspacePath}
-                icon={FolderOpen}
-                valueTitle={displayedWorkspacePath}
-                valueTestId={isWorkspaceReady ? 'workspace-ready-path' : undefined}
-              />
-
-              <div class="grid grid-cols-2 gap-3">
-                <NumericStatCard label="Prompts" text={displayedPromptCount} icon={FileText} />
-                <NumericStatCard
-                  label="Prompt Folders"
-                  text={displayedPromptFolderCount}
-                  icon={Folders}
-                />
-              </div>
-            </div>
-          </div>
-        </CardSurface>
-
-        <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
+        <CardSurface class={workspaceActionsCardClass}>
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
