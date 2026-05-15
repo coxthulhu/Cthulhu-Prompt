@@ -220,7 +220,7 @@
     <div class="mb-2 flex items-center justify-between">
       <div>
         <p
-          class="cthulhuSidebarPromptSectionTitle text-[11px] font-semibold uppercase tracking-[0.18em]"
+          class="cthulhuSidebarPromptSectionTitle text-[11px] font-semibold uppercase tracking-[0.14em]"
         >
           Prompts
         </p>
