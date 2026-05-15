@@ -127,10 +127,16 @@
   }
 
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceDialog)
-  const displayedWorkspaceName = $derived(
-    workspacePath ? getWorkspaceFolderName(workspacePath) : 'No workspace selected'
-  )
-  const displayedWorkspacePath = $derived(workspacePath ?? 'No workspace selected')
+  const currentWorkspaceDetails = $derived.by(() => {
+    if (!workspacePath) {
+      return null
+    }
+
+    return {
+      name: getWorkspaceFolderName(workspacePath),
+      path: workspacePath
+    }
+  })
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
   const workspaceActionsCardClass = $derived(
@@ -208,7 +214,7 @@
       <div
         class="mt-5 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
-        {#if isWorkspaceReady}
+        {#if currentWorkspaceDetails}
           <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
@@ -224,16 +230,16 @@
               <div class="flex flex-col gap-3">
                 <LabeledDisplayField
                   label="Workspace Name"
-                  text={displayedWorkspaceName}
+                  text={currentWorkspaceDetails.name}
                   icon={FolderClosed}
-                  valueTitle={displayedWorkspaceName}
+                  valueTitle={currentWorkspaceDetails.name}
                 />
 
                 <LabeledDisplayField
                   label="Workspace Path"
-                  text={displayedWorkspacePath}
+                  text={currentWorkspaceDetails.path}
                   icon={FolderOpen}
-                  valueTitle={displayedWorkspacePath}
+                  valueTitle={currentWorkspaceDetails.path}
                   valueTestId="workspace-ready-path"
                 />
 
