@@ -32,6 +32,11 @@
   border-color: var(--sidebar-mockup-border);
 }
 
+.mainScreenSurface {
+  border-top-left-radius: var(--cthulhu-ui-radius-control);
+  overflow: hidden;
+}
+
 .sidebarPromptTreeRow {
   display: flex;
   height: 2.25rem;

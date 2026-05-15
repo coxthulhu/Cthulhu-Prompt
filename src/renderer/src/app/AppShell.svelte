@@ -480,7 +480,7 @@
 
     {#snippet content()}
       <div
-        class="sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
+        class="mainScreenSurface sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
       >
         {#if activeScreen === 'home'}
           <HomeScreen
