@@ -1,6 +1,5 @@
 <script lang="ts">
   import {
-    AlertCircle,
     Check,
     FileText,
     FolderClosed,
@@ -261,12 +260,14 @@
                   description="Change your current workspace."
                 />
               </div>
-              <StatusBadge
-                icon={isWorkspaceReady ? Check : AlertCircle}
-                text={isWorkspaceReady ? 'Workspace Ready' : 'Workspace Not Selected'}
-                textTestId={isWorkspaceReady ? 'workspace-ready-title' : undefined}
-                variant={isWorkspaceReady ? 'success' : 'accent'}
-              />
+              {#if isWorkspaceReady}
+                <StatusBadge
+                  icon={Check}
+                  text="Workspace Ready"
+                  textTestId="workspace-ready-title"
+                  variant="success"
+                />
+              {/if}
             </div>
 
             <div class="flex flex-col gap-3">
