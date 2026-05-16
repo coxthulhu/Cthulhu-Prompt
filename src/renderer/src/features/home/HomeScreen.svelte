@@ -276,7 +276,7 @@
               {/if}
             </div>
 
-            <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-2">
               <IconDescriptionButton
                 testId="open-workspace-button"
                 icon={FolderOpen}

@@ -35,7 +35,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconDescriptionButton flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-action)] border p-[0.95rem] text-left transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconDescriptionButton grid w-full min-w-0 cursor-pointer grid-cols-[42px_minmax(0,1fr)] items-center gap-3 rounded-[7px] border p-2.5 text-left transition disabled:pointer-events-none disabled:opacity-50',
     className
   )}
   data-state={state}
@@ -49,7 +49,7 @@
     <Icon class={mergeClasses('h-5 w-5', iconClass)} />
   </span>
 
-  <span class="flex min-w-0 flex-col gap-1">
+  <span class="flex min-w-0 flex-col gap-[3px]">
     <span class="cthulhuUiIconDescriptionButtonText">{text}</span>
     <span class="cthulhuUiIconDescriptionButtonDescription">{description}</span>
   </span>
@@ -65,24 +65,24 @@
     border-radius: var(--cthulhu-ui-radius-control);
     display: flex;
     flex: 0 0 auto;
-    height: 2.25rem;
+    height: 42px;
     justify-content: center;
-    width: 2.25rem;
+    width: 42px;
   }
 
   .cthulhuUiIconDescriptionButtonText {
     color: var(--ui-normal-text);
-    font-size: 0.975rem;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 760;
     letter-spacing: 0;
-    line-height: 1.2;
+    line-height: 20px;
   }
 
   .cthulhuUiIconDescriptionButtonDescription {
     color: var(--ui-secondary-text);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.35;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='neutral'] {
