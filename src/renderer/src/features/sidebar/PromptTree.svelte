@@ -448,12 +448,14 @@
   {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
   {@const isDropTargetOver = isPromptTreeDropTargetOver(props.rowId)}
 
-  <div class="sidebarPromptTreeFolderRow">
+  <div
+    use:droppable={getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
+      kind: 'folder',
+      folderId: props.row.folder.id
+    }))}
+    class="sidebarPromptTreeFolderRow"
+  >
     <div
-      use:droppable={getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
-        kind: 'folder',
-        folderId: props.row.folder.id
-      }))}
       class="sidebarPromptTreeRow group"
       data-active={isActive ? 'true' : 'false'}
       data-over={isDropTargetOver ? 'true' : 'false'}
@@ -525,19 +527,21 @@
     promptIdToPromptNavigationRow(props.row.promptId)
   )}
 
-  <div class="sidebarPromptTreeSettingsRow">
+  <div
+    use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
+      kind: 'prompt',
+      folderId: props.row.folder.id,
+      promptId: props.row.promptId,
+      edge: edge ?? 'bottom'
+    }))}
+    class="sidebarPromptTreeSettingsRow"
+  >
     <button
       use:draggable={getPromptRowDragOptions(
         props.row.folder.id,
         props.row.promptId,
         emptyDragPreview
       )}
-      use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
-        kind: 'prompt',
-        folderId: props.row.folder.id,
-        promptId: props.row.promptId,
-        edge: edge ?? 'bottom'
-      }))}
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}
