@@ -246,7 +246,7 @@
       </section>
 
       <section
-        style="box-sizing: border-box; display: grid; min-width: 0; align-content: start; gap: 10px; border: 1px solid var(--ui-card-normal-border); border-radius: 8px; background: linear-gradient(145deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end)); box-shadow: 0 18px 48px var(--ui-card-normal-shadow), inset 0 1px 0 var(--ui-card-nested-inset-highlight); padding: 10px;"
+        style="box-sizing: border-box; display: grid; min-width: 0; align-content: start; gap: 16px; border: 1px solid var(--ui-card-normal-border); border-radius: 8px; background: linear-gradient(145deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end)); box-shadow: 0 18px 48px var(--ui-card-normal-shadow), inset 0 1px 0 var(--ui-card-nested-inset-highlight); padding: 10px;"
       >
         <div
           style="display: grid; min-width: 0; gap: 4px; border-left: 3px solid var(--ui-accent-normal-border); padding: 4px 0 4px 14px;"
