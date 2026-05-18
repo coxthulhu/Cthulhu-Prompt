@@ -18,7 +18,7 @@
     children,
     icon: Icon,
     gapClass = 'gap-3',
-    paddingClass = 'p-3.5',
+    paddingClass = 'p-2.5',
     class: className,
     ...restProps
   }: Props = $props()
@@ -26,7 +26,7 @@
 
 <!-- Shared icon-leading pill shell for compact read-only workspace metadata. -->
 <CardSurface
-  variant="inset"
+  variant="inset-muted"
   class={mergeClasses('flex min-h-0 min-w-0 items-center', gapClass, paddingClass, className)}
   {...restProps}
 >
@@ -44,8 +44,9 @@
   .cthulhuUiIconPillSurfaceLabel {
     color: var(--ui-muted-text);
     font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-weight: 750;
+    letter-spacing: 0;
+    line-height: 1rem;
     text-transform: uppercase;
   }
 </style>

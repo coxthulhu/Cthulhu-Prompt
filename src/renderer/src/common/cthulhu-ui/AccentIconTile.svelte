@@ -41,7 +41,7 @@
   <Icon
     class={mergeClasses(
       size === 'small' ? 'h-4 w-4' : null,
-      size === 'medium' ? 'h-[18px] w-[18px]' : null,
+      size === 'medium' ? 'h-5 w-5 stroke-[2.4]' : null,
       size === 'large' ? 'h-6 w-6' : null,
       iconClass
     )}
@@ -82,8 +82,8 @@
   }
 
   .cthulhuUiAccentIconTile--medium {
-    height: 2.25rem;
-    width: 2.25rem;
+    height: 42px;
+    width: 42px;
   }
 
   .cthulhuUiAccentIconTile--large {
