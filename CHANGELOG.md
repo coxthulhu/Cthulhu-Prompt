@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.0.19
+
+### New Features
+
+- Added prompt editor metadata for prompt counts and modified times.
+- Added expanded Monaco editor language support.
+
+### Changes
+
+- Reorganized the workspace disk layout.
+- Refreshed home screen, sidebar, prompt tree, and prompt editor spacing and styling.
+- Updated app data path and naming behavior.
+
+### Fixed
+
+- Fixed Monaco editor dark theme, click handling, and resize relayout behavior.
+- Fixed prompt tree drop target behavior.
+
 ## 0.0.18
 
 ### New Features
