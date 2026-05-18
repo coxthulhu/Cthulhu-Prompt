@@ -140,7 +140,7 @@
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
   const workspaceActionsDescription = $derived(
-    currentWorkspaceDetails ? 'Change your current workspace.' : 'Create or select a workspace.'
+    currentWorkspaceDetails ? 'Change your current workspace.' : 'Create or open a workspace.'
   )
   const workspaceActionsCardClass = $derived(
     isWorkspaceReady
