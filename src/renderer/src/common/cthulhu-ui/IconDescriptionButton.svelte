@@ -62,6 +62,7 @@
 
   .cthulhuUiIconDescriptionButtonIcon {
     align-items: center;
+    border: 1px solid transparent;
     border-radius: var(--cthulhu-ui-radius-control);
     display: flex;
     flex: 0 0 auto;
@@ -99,8 +100,13 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='neutral'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-neutral-emphasis-surface);
-    box-shadow: var(--cthulhu-ui-shadow-icon-neutral);
+    border-color: var(--ui-neutral-normal-border);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconDescriptionButton[data-variant='neutral']:hover
+    .cthulhuUiIconDescriptionButtonIcon {
+    border-color: var(--ui-neutral-hover-border);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='accent'] {
@@ -116,8 +122,13 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='accent'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-accent-normal-surface);
-    box-shadow: var(--cthulhu-ui-shadow-icon-accent);
+    border-color: var(--ui-accent-normal-border);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconDescriptionButton[data-variant='accent']:hover
+    .cthulhuUiIconDescriptionButtonIcon {
+    border-color: var(--ui-accent-hover-border);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='danger'] {
@@ -133,8 +144,13 @@
 
   .cthulhuUiIconDescriptionButton[data-variant='danger'] .cthulhuUiIconDescriptionButtonIcon {
     background-color: var(--ui-danger-icon-surface);
-    box-shadow: var(--cthulhu-ui-shadow-icon-danger);
+    border-color: var(--ui-danger-normal-border);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconDescriptionButton[data-variant='danger']:hover
+    .cthulhuUiIconDescriptionButtonIcon {
+    border-color: var(--ui-danger-hover-border);
   }
 
   .cthulhuUiIconDescriptionButton[data-variant='danger'] .cthulhuUiIconDescriptionButtonText {
