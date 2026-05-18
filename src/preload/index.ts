@@ -4,6 +4,7 @@ import { compactGuid } from '@shared/compactGuid'
 import {
   DEFAULT_RUNTIME_CONFIG,
   RUNTIME_ARG_PREFIX,
+  normalizeAppVersion,
   normalizeRuntimeEnvironment,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
@@ -25,10 +26,12 @@ function loadRuntimeConfig(): RuntimeConfig {
     const executionFolderName =
       typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
+    const appVersion = normalizeAppVersion(parsed.appVersion)
 
     return Object.freeze({
       executionFolderName,
-      environment
+      environment,
+      appVersion
     })
   } catch (error) {
     console.error('Failed to parse runtime config payload:', error)

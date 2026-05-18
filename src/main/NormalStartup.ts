@@ -101,10 +101,12 @@ function buildRuntimeConfig(): RuntimeConfig {
       ? 'PLAYWRIGHT'
       : ''
   const executionFolderName = getWorkingDirectoryName()
+  const appVersion = app.getVersion()
 
   return {
     executionFolderName,
-    environment
+    environment,
+    appVersion
   }
 }
 

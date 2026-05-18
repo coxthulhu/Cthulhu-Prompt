@@ -3,11 +3,13 @@ export type RuntimeEnvironment = '' | 'DEV' | 'PLAYWRIGHT'
 export type RuntimeConfig = {
   executionFolderName: string | null
   environment: RuntimeEnvironment
+  appVersion: string
 }
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   executionFolderName: null,
-  environment: ''
+  environment: '',
+  appVersion: '0.0.0'
 }
 
 export const RUNTIME_ARG_PREFIX = '--cthulhu-runtime='
@@ -26,4 +28,9 @@ export const normalizeRuntimeEnvironment = (
   }
 
   return ''
+}
+
+export const normalizeAppVersion = (value: string | undefined | null): string => {
+  const normalized = value?.trim()
+  return normalized || DEFAULT_RUNTIME_CONFIG.appVersion
 }

@@ -28,10 +28,11 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.assertHomeActive()
   })
 
-  test('allows Settings without a workspace', async ({ testSetup }) => {
+  test('allows Settings without a workspace', async ({ electronApp, testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
+    const expectedVersion = await electronApp.evaluate(({ app }) => app.getVersion())
 
     await testHelpers.assertHomeActive()
     expect(await testHelpers.isWorkspaceReady()).toBe(false)
@@ -43,7 +44,9 @@ test.describe('Sidebar Tests', () => {
     expect(await testHelpers.getActiveScreen()).toBe('settings')
 
     expect(await testHelpers.isNavButtonActive('Settings')).toBe(true)
-    await expect(mainWindow.locator('[data-testid="about-version-value"]')).toHaveText('v0.0.1')
+    await expect(mainWindow.locator('[data-testid="about-version-value"]')).toHaveText(
+      `v${expectedVersion}`
+    )
   })
 
   test('allows navigating to Settings after workspace setup', async ({ testSetup }) => {

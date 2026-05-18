@@ -24,6 +24,7 @@
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
   } from '@renderer/data/UiState/SystemSettingsFormat'
+  import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
   import { DEFAULT_SYSTEM_SETTINGS } from '@shared/SystemSettings'
 
   const systemSettingsDraftQuery = useSystemSettingsDraftQuery()
@@ -37,6 +38,7 @@
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
   const defaultShowLineNumbers = DEFAULT_SYSTEM_SETTINGS.showLineNumbers
+  const appVersionLabel = `v${getRuntimeConfig().appVersion}`
 
   // Save immediately when an input loses focus to avoid delayed autosaves.
   const handleInputBlur = () => {
@@ -240,7 +242,7 @@
           <TitleBlock
             title="Current Version"
             size="small"
-            description="Hardcoded for now until version metadata is wired in."
+            description="Read from application package metadata."
           />
         </div>
 
@@ -249,7 +251,7 @@
             class="rounded-full border px-3 py-1 text-sm font-medium text-white"
             data-testid="about-version-value"
           >
-            v0.0.1
+            {appVersionLabel}
           </p>
         </div>
       </CardSurface>
