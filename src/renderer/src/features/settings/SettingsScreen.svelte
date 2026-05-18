@@ -242,7 +242,7 @@
           <TitleBlock
             title="Current Version"
             size="small"
-            description="Read from application package metadata."
+            description="The version currently installed on this device."
           />
         </div>
 
