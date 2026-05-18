@@ -245,17 +245,19 @@
                 </p>
               </div>
 
-              <IconTextButton
-                class="self-start"
-                href={githubIssuesUrl}
-                icon={Bug}
-                endIcon={ExternalLink}
-                text="Found a bug? Add it on GitHub!"
-                variant="accent"
-                testId="get-started-github-bug-link"
-                target="_blank"
-                rel="noreferrer"
-              />
+              <div class="cthulhuHomeBugLink">
+                <IconTextButton
+                  class="self-start"
+                  href={githubIssuesUrl}
+                  icon={Bug}
+                  endIcon={ExternalLink}
+                  text="Found a bug? Add it on GitHub!"
+                  variant="accent"
+                  testId="get-started-github-bug-link"
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              </div>
             </div>
           </CardSurface>
         {:else}
@@ -413,4 +415,9 @@
     margin: 0;
   }
 
+  .cthulhuHomeBugLink {
+    border-left: 3px solid var(--ui-accent-normal-border);
+    display: flex;
+    padding-left: 16px;
+  }
 </style>
