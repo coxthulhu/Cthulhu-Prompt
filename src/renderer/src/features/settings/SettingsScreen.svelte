@@ -6,7 +6,7 @@
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { Info, Keyboard, RefreshCcw, Settings } from 'lucide-svelte'
+  import { ExternalLink, Info, Keyboard, RefreshCcw, Settings } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -234,27 +234,51 @@
         />
       </div>
 
-      <CardSurface
-        variant="inset"
-        class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
-      >
-        <div class="min-w-0">
-          <TitleBlock
-            title="Current Version"
-            size="small"
-            description="The version currently installed on this device."
-          />
-        </div>
+      <div class="space-y-3">
+        <CardSurface
+          variant="inset"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        >
+          <div class="min-w-0">
+            <TitleBlock
+              title="Report an Issue"
+              size="small"
+              description="Report bugs, request improvements, or check whether a problem is already tracked."
+            />
+          </div>
 
-        <div class="flex items-center lg:justify-end">
-          <p
-            class="rounded-full border px-3 py-1 text-sm font-medium text-white"
-            data-testid="about-version-value"
-          >
-            {appVersionLabel}
-          </p>
-        </div>
-      </CardSurface>
+          <div class="flex items-center lg:justify-end">
+            <IconTextButton
+              icon={ExternalLink}
+              text="GitHub Issues"
+              state="disabled"
+              testId="about-github-issues-button"
+            />
+          </div>
+        </CardSurface>
+
+        <CardSurface
+          variant="inset"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        >
+          <div class="min-w-0">
+            <TitleBlock
+              title="Current Version"
+              size="small"
+              description="The version currently installed on this device."
+            />
+          </div>
+
+          <div class="flex items-center lg:justify-end">
+            <p
+              class="rounded-full border px-3 py-1 text-sm font-medium text-white"
+              data-testid="about-version-value"
+            >
+              {appVersionLabel}
+            </p>
+          </div>
+        </CardSurface>
+      </div>
     </CardSurface>
   </div>
 </section>
