@@ -251,6 +251,7 @@
                 icon={Bug}
                 endIcon={ExternalLink}
                 text="Found a bug? Add it on GitHub!"
+                variant="accent"
                 testId="get-started-github-bug-link"
                 target="_blank"
                 rel="noreferrer"
