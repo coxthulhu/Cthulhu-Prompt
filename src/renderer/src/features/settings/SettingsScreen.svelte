@@ -6,7 +6,7 @@
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { ExternalLink, Info, Keyboard, RefreshCcw, Settings } from 'lucide-svelte'
+  import { Bug, ExternalLink, Info, Keyboard, RefreshCcw, Settings } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -38,6 +38,7 @@
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
   const defaultShowLineNumbers = DEFAULT_SYSTEM_SETTINGS.showLineNumbers
+  const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const appVersionLabel = `v${getRuntimeConfig().appVersion}`
 
   // Save immediately when an input loses focus to avoid delayed autosaves.
@@ -249,10 +250,14 @@
 
           <div class="flex items-center lg:justify-end">
             <IconTextButton
-              icon={ExternalLink}
-              text="GitHub Issues"
-              state="disabled"
+              href={githubIssuesUrl}
+              icon={Bug}
+              endIcon={ExternalLink}
+              text="Open Github Issues"
+              variant="accent"
               testId="about-github-issues-button"
+              target="_blank"
+              rel="noreferrer"
             />
           </div>
         </CardSurface>
