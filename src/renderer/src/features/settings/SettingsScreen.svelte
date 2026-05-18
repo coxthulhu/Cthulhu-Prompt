@@ -110,6 +110,7 @@
       description="Global settings saved on your local machine."
       headingLevel={1}
       icon={Settings}
+      showAccentLine
     />
 
     <CardSurface>
