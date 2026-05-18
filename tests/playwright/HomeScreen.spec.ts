@@ -18,7 +18,7 @@ describe('Home Screen', () => {
   })
 
   test('renders the base home layout structure', async ({ testSetup }) => {
-    const { testHelpers } = await testSetup.setupAndStart({
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
 
@@ -27,6 +27,15 @@ describe('Home Screen', () => {
     expect(pageStructure.hasMainElement).toBe(true)
     expect(pageStructure.hasSidebar).toBe(true)
     expect(pageStructure.hasWelcomeText).toBe(true)
+
+    const titleBox = await mainWindow.locator('[data-testid="home-title"]').boundingBox()
+    const separatorBox = await mainWindow
+      .locator('[data-testid="home-title-separator"]')
+      .boundingBox()
+
+    expect(titleBox).not.toBeNull()
+    expect(separatorBox).not.toBeNull()
+    expect(Math.abs(separatorBox!.width - titleBox!.width)).toBeLessThanOrEqual(1)
   })
 
   describe('Workspace Management', () => {

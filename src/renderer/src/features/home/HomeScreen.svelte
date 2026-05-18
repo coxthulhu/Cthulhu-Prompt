@@ -189,10 +189,10 @@
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-center justify-center">
     <section class="relative w-full max-w-5xl min-w-0">
-      <header class="space-y-4">
+      <header>
         <div
           bind:this={secondaryTitleContainerElement}
-          class="mx-auto w-full max-w-[39.5rem] xl:max-w-none"
+          class="mx-auto w-full max-w-[39.5rem] space-y-4 xl:max-w-none"
         >
           <h2
             class="cthulhuHomeSecondaryTitle"
@@ -203,8 +203,11 @@
           >
             {secondaryTitleText}
           </h2>
+          <Separator
+            class="bg-[var(--ui-neutral-muted-border)]"
+            data-testid="home-title-separator"
+          />
         </div>
-        <Separator class="bg-[var(--ui-neutral-muted-border)]" />
       </header>
       <span
         bind:this={secondaryTitleMeasureElement}
