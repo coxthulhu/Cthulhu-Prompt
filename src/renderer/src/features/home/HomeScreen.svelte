@@ -13,8 +13,8 @@
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
+  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
-  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
@@ -222,10 +222,10 @@
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                  <TitleBlock
+                  <SectionHeader
                     title="Current Workspace"
-                    size="large"
                     description="Information about your current workspace."
+                    showAccentLine
                   />
                 </div>
               </div>
@@ -263,10 +263,10 @@
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <TitleBlock
+                <SectionHeader
                   title="Workspace Actions"
-                  size="large"
                   description={workspaceActionsDescription}
+                  showAccentLine
                 />
               </div>
               {#if isWorkspaceReady}
