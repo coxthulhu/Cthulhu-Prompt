@@ -5,7 +5,7 @@
   import type { CthulhuSize } from './types'
 
   type AccentIconTileSize = Extract<CthulhuSize, 'small' | 'medium' | 'large'>
-  export type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'danger'
+  export type AccentIconTileVariant = 'accent' | 'danger'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
@@ -61,12 +61,6 @@
     background-color: var(--ui-accent-normal-surface);
     border: 1px solid var(--ui-accent-icon-ring);
     color: var(--ui-accent-icon-glyph);
-  }
-
-  .cthulhuUiAccentIconTile[data-variant='accent-bordered'] {
-    background-color: var(--ui-accent-normal-surface);
-    border: 1px solid var(--ui-accent-normal-border);
-    color: var(--ui-accent-normal-text);
   }
 
   .cthulhuUiAccentIconTile[data-variant='danger'] {

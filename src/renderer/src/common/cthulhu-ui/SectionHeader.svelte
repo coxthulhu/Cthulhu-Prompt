@@ -4,8 +4,6 @@
   import AccentIconTile, { type AccentIconTileVariant } from './AccentIconTile.svelte'
   import { mergeClasses } from './mergeClasses'
 
-  export type SectionHeaderLineVariant = 'accent' | 'danger' | 'neutral'
-
   type Props = HTMLAttributes<HTMLDivElement> & {
     title: string
     description?: string
@@ -13,7 +11,6 @@
     icon?: ComponentType
     iconVariant?: AccentIconTileVariant
     showAccentLine?: boolean
-    accentLineVariant?: SectionHeaderLineVariant
   }
 
   let {
@@ -23,7 +20,6 @@
     icon: Icon,
     iconVariant = 'accent',
     showAccentLine = false,
-    accentLineVariant = 'accent',
     class: className,
     ...restProps
   }: Props = $props()
@@ -38,7 +34,6 @@
     showAccentLine ? 'cthulhuUiSectionHeader--withLine' : null,
     className
   )}
-  data-line-variant={accentLineVariant}
   {...restProps}
 >
   <div class="cthulhuUiSectionHeaderTitleRow">
@@ -65,14 +60,6 @@
   .cthulhuUiSectionHeader--withLine {
     border-left: 3px solid var(--ui-accent-normal-border);
     padding-left: 16px;
-  }
-
-  .cthulhuUiSectionHeader--withLine[data-line-variant='danger'] {
-    border-left-color: var(--ui-danger-strong-border);
-  }
-
-  .cthulhuUiSectionHeader--withLine[data-line-variant='neutral'] {
-    border-left-color: var(--ui-neutral-emphasis-border);
   }
 
   .cthulhuUiSectionHeaderTitleRow {

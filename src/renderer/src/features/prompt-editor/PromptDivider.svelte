@@ -17,7 +17,6 @@
     <IconPillButton
       icon={Plus}
       text="Add prompt"
-      variant="accent"
       iconClass="stroke-[3]"
       {disabled}
       {testId}

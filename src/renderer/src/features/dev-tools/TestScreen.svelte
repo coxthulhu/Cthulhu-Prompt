@@ -40,6 +40,7 @@
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
+  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import StatusBadge, {
     type StatusBadgeVariant
   } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
@@ -48,15 +49,14 @@
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
-  type AccentIconTileVariant = 'accent' | 'accent-bordered' | 'danger'
+  type AccentIconTileVariant = 'accent' | 'danger'
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
-  type IconPillButtonVariant = 'accent' | 'neutral'
   type IconTextButtonState = 'active' | 'enabled' | 'disabled'
   type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
   type TitleBlockIconVariant = 'accent' | 'danger'
 
-  const accentIconTileVariants: AccentIconTileVariant[] = ['accent', 'accent-bordered', 'danger']
+  const accentIconTileVariants: AccentIconTileVariant[] = ['accent', 'danger']
   const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
   const cardSurfaceVariants: CardSurfaceVariant[] = ['panel', 'panel-flat', 'solid', 'inset']
   const iconDescriptionButtonVariants: IconDescriptionButtonVariant[] = [
@@ -72,7 +72,6 @@
     'danger'
   ]
   const iconOnlyButtonSizes: IconOnlyButtonSize[] = ['default', 'compact', 'rail', 'rail-fill']
-  const iconPillButtonVariants: IconPillButtonVariant[] = ['neutral', 'accent']
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
@@ -207,12 +206,10 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="IconPillButton" description="Compact pill action variants." size="small" />
+        <TitleBlock title="IconPillButton" description="Compact pill action states." size="small" />
 
         <div class="variant-controls">
-          {#each iconPillButtonVariants as variant (variant)}
-            <IconPillButton icon={Plus} text={variant} {variant} />
-          {/each}
+          <IconPillButton icon={Plus} text="enabled" />
           <IconPillButton icon={X} text="disabled" disabled />
         </div>
       </CardSurface>
@@ -262,6 +259,24 @@
           <FloatingValidationMessage message="Review this value before saving." variant="warning">
             <TextInput value="Draft value" aria-label="Warning validation field" />
           </FloatingValidationMessage>
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock title="SectionHeader" description="Section titles with optional line variants." size="small" />
+
+        <div class="stack">
+          <SectionHeader
+            title="Plain Section"
+            description="Default section header without a leading line."
+            icon={Sparkles}
+          />
+          <SectionHeader
+            title="Accent Line"
+            description="Section header with the leading accent line enabled."
+            icon={Sparkles}
+            showAccentLine
+          />
         </div>
       </CardSurface>
 
@@ -373,11 +388,11 @@
 <CthulhuDialog
   bind:open={dangerDialogOpen}
   title="Danger dialog"
-  description="Dialog with danger icon and neutral submit button."
+  description="Dialog with danger icon and danger submit button."
   icon={ShieldAlert}
   iconVariant="danger"
   submitText="Acknowledge"
-  submitVariant="neutral"
+  submitVariant="danger"
   onsubmit={() => {
     dangerDialogOpen = false
   }}

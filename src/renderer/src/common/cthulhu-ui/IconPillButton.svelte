@@ -2,12 +2,9 @@
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
 
-  type IconPillButtonVariant = 'accent' | 'neutral'
-
   type Props = {
     icon: ComponentType
     text: string
-    variant?: IconPillButtonVariant
     disabled?: boolean
     class?: string
     iconClass?: string
@@ -18,7 +15,6 @@
   let {
     icon: Icon,
     text,
-    variant = 'neutral',
     disabled = false,
     class: className,
     iconClass,
@@ -31,7 +27,6 @@
   type="button"
   class={mergeClasses('cthulhuUiIconPillButton', className)}
   data-testid={testId}
-  data-variant={variant}
   {disabled}
   {onclick}
 >
@@ -42,9 +37,11 @@
 <style>
   .cthulhuUiIconPillButton {
     align-items: center;
-    border: 1px solid transparent;
+    background-color: var(--ui-accent-normal-surface);
+    border: 1px solid var(--ui-accent-normal-border);
     border-radius: 999px;
     box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
+    color: var(--ui-accent-normal-text);
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
@@ -61,27 +58,9 @@
     white-space: nowrap;
   }
 
-  .cthulhuUiIconPillButton[data-variant='accent'] {
-    background-color: var(--ui-accent-normal-surface);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-accent-normal-text);
-  }
-
-  .cthulhuUiIconPillButton[data-variant='accent']:hover {
+  .cthulhuUiIconPillButton:hover {
     background-color: var(--ui-accent-hover-surface);
     border-color: var(--ui-accent-hover-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconPillButton[data-variant='neutral'] {
-    background-color: var(--ui-neutral-normal-surface);
-    border-color: var(--ui-neutral-normal-border);
-    color: var(--ui-hoverable-text);
-  }
-
-  .cthulhuUiIconPillButton[data-variant='neutral']:hover {
-    background-color: var(--ui-neutral-hover-surface);
-    border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
   }
 

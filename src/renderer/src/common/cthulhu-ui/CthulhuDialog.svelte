@@ -10,7 +10,7 @@
   import { mergeClasses } from './mergeClasses'
 
   type DialogIconVariant = 'accent' | 'danger'
-  type DialogSubmitVariant = 'neutral' | 'accent' | 'danger'
+  type DialogSubmitVariant = 'accent' | 'danger'
   type DialogHeaderStyle = 'dialog' | 'section'
 
   type Props = {
@@ -54,7 +54,7 @@
     children,
     cancelIcon = X,
     submitIcon = Check,
-    submitVariant = 'neutral',
+    submitVariant = 'accent',
     oncancel,
     onsubmit
   }: Props = $props()
