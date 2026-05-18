@@ -27,9 +27,11 @@
   const cardStyle = (key: HoverKey) => `
     border: 1px solid ${hovered === key ? 'var(--ui-accent-hover-border)' : 'var(--ui-card-normal-border)'};
     border-radius: 8px;
-    background:
-      linear-gradient(145deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end)),
-      linear-gradient(90deg, oklch(0.627 0.17 149.214 / 10%), oklch(0.666 0.181 254.617 / 10%));
+    background: linear-gradient(
+      to bottom,
+      var(--ui-card-normal-surface-gradient-start),
+      var(--ui-card-normal-surface-gradient-end)
+    );
     box-shadow: ${hovered === key ? '0 22px 44px var(--ui-card-normal-shadow)' : '0 14px 32px var(--ui-shadow-raised)'};
     transform: ${hovered === key ? 'translateY(-1px)' : 'translateY(0)'};
     transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
@@ -234,7 +236,7 @@
 
             <div
               style="
-                border-left: 2px solid var(--ui-success-normal-border);
+                border-left: 3px solid var(--ui-accent-normal-border);
                 color: var(--ui-secondary-text);
                 display: flex;
                 flex-direction: column;
@@ -373,7 +375,7 @@
             border: 1px solid var(--ui-card-normal-border);
             border-radius: 8px;
             background: linear-gradient(
-              145deg,
+              to bottom,
               var(--ui-card-normal-surface-gradient-start),
               var(--ui-card-normal-surface-gradient-end)
             );

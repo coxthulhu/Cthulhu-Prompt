@@ -1,6 +1,8 @@
 <script lang="ts">
   import {
+    Bug,
     Check,
+    ExternalLink,
     FileText,
     FolderClosed,
     FolderOpen,
@@ -11,6 +13,7 @@
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
@@ -55,6 +58,7 @@
 
   const secondaryTitleText = 'CTHULHU PROMPT'
   const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
+  const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const workspaceNotFoundErrorText =
     'Workspace Not Found.\nUse Create Workspace to set up a new workspace in this location.'
 
@@ -228,6 +232,29 @@
                   />
                 </div>
               </div>
+
+              <div class="cthulhuHomeGetStartedText">
+                <p>
+                  Cthulhu Prompt is a prompt editor and manager that stores your prompts as a
+                  series of Markdown files in a folder.
+                </p>
+                <p>
+                  Create a new workspace folder
+                  with the create button, or download or clone a workspace from elsewhere and
+                  use the open button to get started.
+                </p>
+              </div>
+
+              <IconTextButton
+                class="self-start"
+                href={githubIssuesUrl}
+                icon={Bug}
+                endIcon={ExternalLink}
+                text="Found a bug? Add it on GitHub!"
+                testId="get-started-github-bug-link"
+                target="_blank"
+                rel="noreferrer"
+              />
             </div>
           </CardSurface>
         {:else}
@@ -369,4 +396,20 @@
     width: max-content;
     font-size: 100px;
   }
+
+  .cthulhuHomeGetStartedText {
+    border-left: 3px solid var(--ui-accent-normal-border);
+    color: var(--ui-secondary-text);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.95rem;
+    gap: 12px;
+    line-height: 1.55;
+    padding-left: 16px;
+  }
+
+  .cthulhuHomeGetStartedText p {
+    margin: 0;
+  }
+
 </style>

@@ -7,22 +7,32 @@
 
   type Props = {
     icon: ComponentType
+    endIcon?: ComponentType
     text: string
     state?: ButtonState
     variant?: ButtonVariant
     class?: string
     iconClass?: string
+    endIconClass?: string
+    href?: string
+    target?: string
+    rel?: string
     testId?: string
     onclick?: (event: MouseEvent) => void
   }
 
   let {
     icon: Icon,
+    endIcon: EndIcon,
     text,
     state = 'enabled',
     variant = 'neutral',
     class: className,
     iconClass,
+    endIconClass,
+    href,
+    target,
+    rel,
     testId,
     onclick
   }: Props = $props()
@@ -41,21 +51,48 @@
   )
 </script>
 
-<button
-  type="button"
-  class={mergeClasses(
-    'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
-    variantClass,
-    className
-  )}
-  data-active={state === 'active'}
-  data-testid={testId}
-  {onclick}
-  disabled={isDisabled}
->
-  <Icon class={mergeClasses('h-4 w-4', iconClass)} />
-  {text}
-</button>
+{#if href}
+  <a
+    class={mergeClasses(
+      'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 text-sm font-medium leading-5 no-underline transition',
+      variantClass,
+      className
+    )}
+    data-active={state === 'active'}
+    data-disabled={isDisabled}
+    data-testid={testId}
+    href={isDisabled ? undefined : href}
+    {target}
+    {rel}
+    {onclick}
+    aria-disabled={isDisabled}
+  >
+    <Icon class={mergeClasses('h-4 w-4', iconClass)} />
+    <span>{text}</span>
+    {#if EndIcon}
+      <EndIcon class={mergeClasses('h-4 w-4', endIconClass)} />
+    {/if}
+  </a>
+{:else}
+  <button
+    type="button"
+    class={mergeClasses(
+      'cthulhuUiIconTextButton inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50',
+      variantClass,
+      className
+    )}
+    data-active={state === 'active'}
+    data-testid={testId}
+    {onclick}
+    disabled={isDisabled}
+  >
+    <Icon class={mergeClasses('h-4 w-4', iconClass)} />
+    <span>{text}</span>
+    {#if EndIcon}
+      <EndIcon class={mergeClasses('h-4 w-4', endIconClass)} />
+    {/if}
+  </button>
+{/if}
 
 <style>
   /* Nav buttons show selected/unselected states, such as sidebar navigation. */
@@ -77,6 +114,11 @@
     border-color: var(--ui-neutral-hover-border);
     background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButton[data-disabled='true'] {
+    opacity: 0.5;
+    pointer-events: none;
   }
 
   .cthulhuUiIconTextButton--accent {
