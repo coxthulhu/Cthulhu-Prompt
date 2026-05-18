@@ -164,7 +164,7 @@
         <div
           style="display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; border-left: 3px solid var(--ui-accent-normal-border); padding-left: 16px;"
         >
-          <div style="display: grid; min-width: 0; gap: 8px;">
+          <div style="display: grid; min-width: 0; gap: 6px;">
             <h2 style="margin: 0; min-width: 0; color: var(--ui-normal-text); font-size: 24px; font-weight: 760; line-height: 32px;">
               Current Workspace
             </h2>

@@ -58,7 +58,7 @@
 <style>
   .cthulhuUiSectionHeader {
     display: grid;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
   }
 
