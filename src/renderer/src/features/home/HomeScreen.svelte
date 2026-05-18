@@ -139,6 +139,9 @@
   })
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
+  const workspaceActionsDescription = $derived(
+    currentWorkspaceDetails ? 'Change your current workspace.' : 'Create or select a workspace.'
+  )
   const workspaceActionsCardClass = $derived(
     isWorkspaceReady
       ? 'w-full max-w-[39.5rem] min-w-0 xl:max-w-none'
@@ -263,7 +266,7 @@
                 <TitleBlock
                   title="Workspace Actions"
                   size="large"
-                  description="Change your current workspace."
+                  description={workspaceActionsDescription}
                 />
               </div>
               {#if isWorkspaceReady}
