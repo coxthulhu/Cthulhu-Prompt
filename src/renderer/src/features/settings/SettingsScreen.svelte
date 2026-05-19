@@ -2,7 +2,7 @@
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
+  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
@@ -25,7 +25,13 @@
     formatPromptFontSizeInput
   } from '@renderer/data/UiState/SystemSettingsFormat'
   import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
-  import { DEFAULT_SYSTEM_SETTINGS } from '@shared/SystemSettings'
+  import {
+    DEFAULT_SYSTEM_SETTINGS,
+    MAX_PROMPT_EDITOR_MIN_LINES,
+    MAX_PROMPT_FONT_SIZE,
+    MIN_PROMPT_EDITOR_MIN_LINES,
+    MIN_PROMPT_FONT_SIZE
+  } from '@shared/SystemSettings'
 
   const systemSettingsDraftQuery = useSystemSettingsDraftQuery()
   const systemSettingsState = $derived(
@@ -141,14 +147,16 @@
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
-              <NumericInput
+              <NumericStepperInput
                 data-testid="font-size-input"
                 value={systemSettingsState.promptFontSizeInput}
+                min={MIN_PROMPT_FONT_SIZE}
+                max={MAX_PROMPT_FONT_SIZE}
+                helperText="px"
                 aria-invalid={displayFontSizeError ? 'true' : undefined}
-                oninput={(event) =>
-                  setSystemSettingsDraftFontSizeInput(
-                    (event.currentTarget as HTMLInputElement).value
-                  )}
+                decreaseLabel="Decrease font size"
+                increaseLabel="Increase font size"
+                onvaluechange={setSystemSettingsDraftFontSizeInput}
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
@@ -175,14 +183,16 @@
 
           <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
-              <NumericInput
+              <NumericStepperInput
                 data-testid="min-lines-input"
                 value={systemSettingsState.promptEditorMinLinesInput}
+                min={MIN_PROMPT_EDITOR_MIN_LINES}
+                max={MAX_PROMPT_EDITOR_MIN_LINES}
+                helperText="lines"
                 aria-invalid={displayMinLinesError ? 'true' : undefined}
-                oninput={(event) =>
-                  setSystemSettingsDraftPromptEditorMinLinesInput(
-                    (event.currentTarget as HTMLInputElement).value
-                  )}
+                decreaseLabel="Decrease minimum line count"
+                increaseLabel="Increase minimum line count"
+                onvaluechange={setSystemSettingsDraftPromptEditorMinLinesInput}
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>

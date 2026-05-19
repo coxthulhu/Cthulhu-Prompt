@@ -16,6 +16,7 @@
       decreaseLabel?: string
       increaseLabel?: string
       oninput?: (event: Event) => void
+      onvaluechange?: (value: string) => void
     }
   >
 
@@ -29,7 +30,9 @@
     increaseLabel = 'Increase value',
     disabled = false,
     class: className,
+    'aria-invalid': ariaInvalid,
     oninput: onInput,
+    onvaluechange,
     ...restProps
   }: Props = $props()
 
@@ -48,18 +51,21 @@
     }
 
     value = sanitized
+    onvaluechange?.(sanitized)
     onInput?.(event)
   }
 
   const decreaseValue = () => {
     if (parsedValue !== null && canDecrease) {
       value = String(parsedValue - 1)
+      onvaluechange?.(value)
     }
   }
 
   const increaseValue = () => {
     if (parsedValue !== null && canIncrease) {
       value = String(parsedValue + 1)
+      onvaluechange?.(value)
     }
   }
 </script>
@@ -67,6 +73,7 @@
 <div
   class={mergeClasses('cthulhuUiNumericStepperInput', className)}
   data-disabled={disabled ? 'true' : undefined}
+  data-invalid={ariaInvalid === true || ariaInvalid === 'true' ? 'true' : undefined}
 >
   <button
     class="cthulhuUiNumericStepperInputButton"
@@ -87,6 +94,7 @@
       pattern="[0-9]*"
       bind:value
       {disabled}
+      aria-invalid={ariaInvalid}
       oninput={handleInput}
       {...restProps}
     />
@@ -129,6 +137,16 @@
     border-color: var(--ui-neutral-focus-border);
     box-shadow:
       var(--cthulhu-ui-shadow-focus),
+      var(--cthulhu-ui-shadow-field);
+  }
+
+  .cthulhuUiNumericStepperInput[data-invalid='true'] {
+    border-color: var(--ui-danger-strong-border);
+  }
+
+  .cthulhuUiNumericStepperInput[data-invalid='true']:focus-within {
+    box-shadow:
+      var(--cthulhu-ui-shadow-focus-danger),
       var(--cthulhu-ui-shadow-field);
   }
 
