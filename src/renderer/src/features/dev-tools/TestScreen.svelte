@@ -39,6 +39,7 @@
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
+  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import StatusBadge, {
@@ -87,6 +88,8 @@
   let folderPath = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
   let numericValue = $state('14')
   let invalidNumericValue = $state('abc')
+  let fontSizeStepperValue = $state('14')
+  let minLinesStepperValue = $state('8')
   let togglePressed = $state(true)
   let accentDialogOpen = $state(false)
   let dangerDialogOpen = $state(false)
@@ -231,6 +234,20 @@
             bind:value={invalidNumericValue}
             aria-label="Invalid numeric input"
             aria-invalid="true"
+          />
+          <NumericStepperInput
+            bind:value={fontSizeStepperValue}
+            min={8}
+            max={32}
+            helperText="px"
+            aria-label="Font size stepper input"
+          />
+          <NumericStepperInput
+            bind:value={minLinesStepperValue}
+            min={8}
+            max={24}
+            helperText="lines"
+            aria-label="Minimum lines stepper input"
           />
           <FileInput bind:value={folderPath} aria-label="File input" buttonText="Browse" />
           <CheckboxInput bind:checked label="Checked checkbox" />
