@@ -6,7 +6,17 @@
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { Bug, ExternalLink, Info, Keyboard, RefreshCcw, Settings } from 'lucide-svelte'
+  import {
+    Bug,
+    ExternalLink,
+    Hash,
+    Info,
+    Keyboard,
+    RefreshCcw,
+    Rows3,
+    Settings,
+    Type
+  } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -142,6 +152,7 @@
               title="Font Size"
               size="small"
               description="Sets the base font size used inside the prompt editor."
+              icon={Type}
             />
           </div>
 
@@ -178,6 +189,7 @@
               title="Minimum Line Count"
               size="small"
               description="Sets the minimum number of visible lines in prompt editors."
+              icon={Rows3}
             />
           </div>
 
@@ -214,6 +226,7 @@
               title="Show Line Numbers"
               size="small"
               description="Display line numbers beside prompt text for easier review."
+              icon={Hash}
             />
           </div>
 
@@ -255,6 +268,7 @@
               title="Report an Issue"
               size="small"
               description="Report bugs, request improvements, or check whether a problem is already tracked."
+              icon={Bug}
             />
           </div>
 
@@ -281,6 +295,7 @@
               title="Current Version"
               size="small"
               description="The version currently installed on this device."
+              icon={Info}
             />
           </div>
 
