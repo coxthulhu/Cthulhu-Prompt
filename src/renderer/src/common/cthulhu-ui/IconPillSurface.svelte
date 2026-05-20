@@ -26,7 +26,7 @@
 
 <!-- Shared icon-leading pill shell for compact read-only workspace metadata. -->
 <CardSurface
-  variant="inset-muted"
+  variant="inset"
   class={mergeClasses('flex min-h-0 min-w-0 items-center', gapClass, paddingClass, className)}
   {...restProps}
 >
