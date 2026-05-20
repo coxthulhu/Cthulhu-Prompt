@@ -13,7 +13,38 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
 
-export type PersistedWorkspaceScreen = 'home' | 'settings' | 'prompt-folders'
+export type PersistedWorkspaceScreen =
+  | 'home'
+  | 'settings'
+  | 'mockups'
+  | 'test-screen'
+  | 'prompt-folders'
+
+export type WorkspaceScreenSelection =
+  | {
+      selectedScreen: 'home'
+      selectedScreenData: null
+    }
+  | {
+      selectedScreen: 'settings'
+      selectedScreenData: null
+    }
+  | {
+      selectedScreen: 'test-screen'
+      selectedScreenData: null
+    }
+  | {
+      selectedScreen: 'mockups'
+      selectedScreenData: {
+        mockupId: string | null
+      }
+    }
+  | {
+      selectedScreen: 'prompt-folders'
+      selectedScreenData: {
+        promptFolderId: string | null
+      }
+    }
 
 export type WorkspacePromptFolderPromptTreeEntry = {
   promptFolderId: string
@@ -22,10 +53,8 @@ export type WorkspacePromptFolderPromptTreeEntry = {
   folderDescriptionEditorViewStateJson: string | null
 }
 
-export type WorkspacePersistence = {
+export type WorkspacePersistence = WorkspaceScreenSelection & {
   workspaceId: string
-  selectedScreen: PersistedWorkspaceScreen
-  selectedPromptFolderId: string | null
   promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
 }
 
@@ -33,7 +62,7 @@ export const createDefaultWorkspacePersistence = (workspaceId: string): Workspac
   return {
     workspaceId,
     selectedScreen: 'home',
-    selectedPromptFolderId: null,
+    selectedScreenData: null,
     promptFolderPromptTreeEntries: []
   }
 }
@@ -52,17 +81,14 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
 export const toSerializableWorkspacePersistence = (
   workspacePersistence: WorkspacePersistence
 ): WorkspacePersistence => {
-  const selectedScreen = workspacePersistence.selectedScreen
-
   return {
     workspaceId: workspacePersistence.workspaceId,
-    selectedScreen,
-    selectedPromptFolderId:
-      selectedScreen === 'prompt-folders' ? workspacePersistence.selectedPromptFolderId : null,
+    selectedScreen: workspacePersistence.selectedScreen,
+    selectedScreenData: workspacePersistence.selectedScreenData,
     promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
       workspacePersistence.promptFolderPromptTreeEntries
     )
-  }
+  } as WorkspacePersistence
 }
 
 export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
@@ -123,12 +149,66 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
   }
 }
 
-const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen => {
-  if (value === 'home' || value === 'settings' || value === 'prompt-folders') {
+const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen | null => {
+  if (
+    value === 'home' ||
+    value === 'settings' ||
+    value === 'mockups' ||
+    value === 'test-screen' ||
+    value === 'prompt-folders'
+  ) {
     return value
   }
 
-  return 'home'
+  return null
+}
+
+export const parseWorkspaceScreenSelection = (
+  selectedScreenValue: unknown,
+  selectedScreenData: unknown
+): WorkspaceScreenSelection | null => {
+  const selectedScreen = parsePersistedWorkspaceScreen(selectedScreenValue)
+  if (!selectedScreen) {
+    return null
+  }
+
+  if (selectedScreen === 'home' || selectedScreen === 'settings' || selectedScreen === 'test-screen') {
+    return selectedScreenData === null ? { selectedScreen, selectedScreenData } : null
+  }
+
+  if (selectedScreen === 'mockups') {
+    if (!isRecord(selectedScreenData)) {
+      return null
+    }
+
+    const mockupId = selectedScreenData.mockupId
+    if (mockupId !== null && typeof mockupId !== 'string') {
+      return null
+    }
+
+    return {
+      selectedScreen,
+      selectedScreenData: {
+        mockupId
+      }
+    }
+  }
+
+  if (!isRecord(selectedScreenData)) {
+    return null
+  }
+
+  const promptFolderId = selectedScreenData.promptFolderId
+  if (promptFolderId !== null && typeof promptFolderId !== 'string') {
+    return null
+  }
+
+  return {
+    selectedScreen,
+    selectedScreenData: {
+      promptFolderId
+    }
+  }
 }
 
 const parseWorkspacePromptFolderPromptTreeEntry = (
@@ -198,19 +278,21 @@ export const parseWorkspacePersistence = (
     return null
   }
 
-  const selectedScreen = parsePersistedWorkspaceScreen(value.selectedScreen)
-  const selectedPromptFolderId =
-    value.selectedPromptFolderId === null || typeof value.selectedPromptFolderId === 'string'
-      ? value.selectedPromptFolderId
-      : null
+  const workspaceScreenSelection = parseWorkspaceScreenSelection(
+    value.selectedScreen,
+    value.selectedScreenData
+  )
+  if (!workspaceScreenSelection) {
+    return null
+  }
+
   const promptFolderPromptTreeEntries = parseWorkspacePromptFolderPromptTreeEntries(
     value.promptFolderPromptTreeEntries
   )
 
   return {
     workspaceId,
-    selectedScreen,
-    selectedPromptFolderId: selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null,
+    ...workspaceScreenSelection,
     promptFolderPromptTreeEntries
-  }
+  } as WorkspacePersistence
 }

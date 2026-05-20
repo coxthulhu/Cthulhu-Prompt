@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 6
+const LATEST_SCHEMA_VERSION = 7
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -201,6 +201,61 @@ const migrateSchemaV5ToV6 = (db: Database.Database): void => {
   migrate()
 }
 
+const migrateSchemaV6ToV7 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    const workspaceUiStateRows = db
+      .prepare(
+        `
+        SELECT
+          workspace_id AS workspaceId,
+          selected_screen AS selectedScreen,
+          selected_prompt_folder_id AS selectedPromptFolderId
+        FROM workspace_ui_state
+        `
+      )
+      .all() as Array<{
+      workspaceId: string
+      selectedScreen: string
+      selectedPromptFolderId: string | null
+    }>
+
+    db.exec(`
+      CREATE TABLE workspace_ui_state_new (
+        workspace_id TEXT PRIMARY KEY,
+        selected_screen TEXT NOT NULL,
+        selected_screen_data_json TEXT
+      );
+    `)
+
+    const insertWorkspaceUiState = db.prepare(
+      `
+      INSERT INTO workspace_ui_state_new (
+        workspace_id,
+        selected_screen,
+        selected_screen_data_json
+      )
+      VALUES (?, ?, ?)
+      `
+    )
+
+    for (const row of workspaceUiStateRows) {
+      const selectedScreenDataJson =
+        row.selectedScreen === 'prompt-folders'
+          ? JSON.stringify({ promptFolderId: row.selectedPromptFolderId })
+          : null
+
+      insertWorkspaceUiState.run(row.workspaceId, row.selectedScreen, selectedScreenDataJson)
+    }
+
+    db.exec('DROP TABLE workspace_ui_state;')
+    db.exec('ALTER TABLE workspace_ui_state_new RENAME TO workspace_ui_state;')
+
+    db.prepare('UPDATE schema_version SET version = ?').run(7)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -244,6 +299,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 5) {
       migrateSchemaV5ToV6(db)
       schemaVersion = 6
+      continue
+    }
+
+    if (schemaVersion === 6) {
+      migrateSchemaV6ToV7(db)
+      schemaVersion = 7
       continue
     }
 

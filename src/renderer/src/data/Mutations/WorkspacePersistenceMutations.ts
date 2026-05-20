@@ -1,7 +1,7 @@
 import {
   UPDATE_WORKSPACE_PERSISTENCE_CHANNEL,
   toSerializableWorkspacePersistence,
-  type PersistedWorkspaceScreen,
+  type WorkspaceScreenSelection,
   type WorkspacePersistence,
   type WorkspacePersistenceRevisionResponsePayload
 } from '@shared/UserPersistence'
@@ -92,21 +92,15 @@ export const mutatePacedWorkspacePersistenceAutosaveUpdate = ({
 
 export const syncWorkspaceScreenSelection = async (
   workspaceId: string,
-  selectedScreen: PersistedWorkspaceScreen,
-  selectedPromptFolderId: string | null
+  workspaceScreenSelection: WorkspaceScreenSelection
 ): Promise<void> => {
-  const normalizedPromptFolderId =
-    selectedScreen === 'prompt-folders' ? selectedPromptFolderId : null
-
   await runRevisionMutation<WorkspacePersistenceRevisionResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        draft.selectedScreen = selectedScreen
-        draft.selectedPromptFolderId = normalizedPromptFolderId
+        Object.assign(draft, workspaceScreenSelection)
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
-        draft.selectedScreen = selectedScreen
-        draft.selectedPromptFolderId = normalizedPromptFolderId
+        Object.assign(draft, workspaceScreenSelection)
       })
     },
     persistMutations: createPersistWorkspacePersistenceMutations(workspaceId),

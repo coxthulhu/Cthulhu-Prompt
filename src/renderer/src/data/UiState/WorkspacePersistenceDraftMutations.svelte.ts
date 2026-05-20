@@ -2,7 +2,10 @@ import {
   cloneWorkspacePromptFolderPromptTreeEntries,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
-import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
+import {
+  workspacePersistenceDraftCollection,
+  type WorkspacePersistenceDraftRecord
+} from '../Collections/WorkspacePersistenceDraftCollection'
 
 export const upsertWorkspacePersistenceDraft = (
   workspacePersistence: WorkspacePersistence
@@ -13,17 +16,19 @@ export const upsertWorkspacePersistenceDraft = (
     workspacePersistenceDraftCollection.insert({
       id: workspacePersistence.workspaceId,
       selectedScreen: workspacePersistence.selectedScreen,
-      selectedPromptFolderId: workspacePersistence.selectedPromptFolderId,
+      selectedScreenData: workspacePersistence.selectedScreenData,
       promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
         workspacePersistence.promptFolderPromptTreeEntries
       )
-    })
+    } as WorkspacePersistenceDraftRecord)
     return
   }
 
   workspacePersistenceDraftCollection.update(workspacePersistence.workspaceId, (draftRecord) => {
-    draftRecord.selectedScreen = workspacePersistence.selectedScreen
-    draftRecord.selectedPromptFolderId = workspacePersistence.selectedPromptFolderId
+    Object.assign(draftRecord, {
+      selectedScreen: workspacePersistence.selectedScreen,
+      selectedScreenData: workspacePersistence.selectedScreenData
+    })
     draftRecord.promptFolderPromptTreeEntries = cloneWorkspacePromptFolderPromptTreeEntries(
       workspacePersistence.promptFolderPromptTreeEntries
     )

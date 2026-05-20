@@ -1,13 +1,11 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
 import type {
-  PersistedWorkspaceScreen,
+  WorkspaceScreenSelection,
   WorkspacePromptFolderPromptTreeEntry
 } from '@shared/UserPersistence'
 
-export type WorkspacePersistenceDraftRecord = {
+export type WorkspacePersistenceDraftRecord = WorkspaceScreenSelection & {
   id: string
-  selectedScreen: PersistedWorkspaceScreen
-  selectedPromptFolderId: string | null
   promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
 }
 

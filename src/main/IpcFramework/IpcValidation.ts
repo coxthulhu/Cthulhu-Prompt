@@ -22,6 +22,7 @@ import type {
   WorkspacePersistence,
   WorkspacePersistenceRevisionPayload
 } from '@shared/UserPersistence'
+import { parseWorkspacePersistence as parseSharedWorkspacePersistence } from '@shared/UserPersistence'
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
@@ -53,14 +54,6 @@ const parseNumber: Parser<number> = (value) => {
 
 const parseNullableString: Parser<string | null> = (value) => {
   return value === null || typeof value === 'string' ? value : null
-}
-
-const parseWorkspaceScreen: Parser<WorkspacePersistence['selectedScreen']> = (value) => {
-  if (value === 'home' || value === 'settings' || value === 'prompt-folders') {
-    return value
-  }
-
-  return null
 }
 
 const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
@@ -231,19 +224,27 @@ const parseUserPersistence = parseObject<UserPersistence>({
 const parseUserPersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
 
-const parseWorkspacePromptFolderPromptTreeEntry = parseObject({
-  promptFolderId: parseString,
-  promptTreeEntryId: parseString,
-  promptTreeIsExpanded: parseBoolean,
-  folderDescriptionEditorViewStateJson: parseNullableString
-})
+const parseWorkspacePersistence: Parser<WorkspacePersistence> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
 
-const parseWorkspacePersistence = parseObject<WorkspacePersistence>({
-  workspaceId: parseString,
-  selectedScreen: parseWorkspaceScreen,
-  selectedPromptFolderId: parseNullableString,
-  promptFolderPromptTreeEntries: parseArray(parseWorkspacePromptFolderPromptTreeEntry)
-})
+  const record = value as Record<string, unknown>
+  const valueKeys = Object.keys(record)
+
+  if (
+    valueKeys.length !== 4 ||
+    !('workspaceId' in record) ||
+    !('selectedScreen' in record) ||
+    !('selectedScreenData' in record) ||
+    !('promptFolderPromptTreeEntries' in record)
+  ) {
+    return null
+  }
+
+  const workspaceId = parseString(record.workspaceId)
+  return workspaceId ? parseSharedWorkspacePersistence(record, workspaceId) : null
+}
 
 const parseWorkspacePersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<WorkspacePersistence>(parseWorkspacePersistence)

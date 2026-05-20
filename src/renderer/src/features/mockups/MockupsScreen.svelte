@@ -1,37 +1,11 @@
 <script lang="ts">
-  import type { MockupEntry, MockupModule } from './mockupTypes'
+  import { mockups } from './mockupCatalog'
 
   type MockupsScreenProps = {
     activeMockupId?: string | null
   }
 
   let { activeMockupId = $bindable<string | null>(null) }: MockupsScreenProps = $props()
-
-  const mockupModules = import.meta.glob('./entries/**/*.mockup.svelte', {
-    eager: true
-  }) as Record<string, MockupModule>
-
-  const getMockupFilename = (path: string) => path.split('/').pop() ?? path
-
-  const getMockupBasename = (path: string) => getMockupFilename(path).replace(/\.mockup\.svelte$/, '')
-
-  const buildMockupEntry = (path: string, module: MockupModule): MockupEntry => {
-    const basename = getMockupBasename(path)
-
-    return {
-      path,
-      component: module.default,
-      id: basename
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, ''),
-      title: basename
-    }
-  }
-
-  const mockups: MockupEntry[] = Object.entries(mockupModules)
-    .map(([path, module]) => buildMockupEntry(path, module))
-    .sort((left, right) => left.title.localeCompare(right.title) || left.path.localeCompare(right.path))
 
   const activeMockup = $derived.by(
     () => mockups.find((mockup) => mockup.id === activeMockupId) ?? mockups[0] ?? null

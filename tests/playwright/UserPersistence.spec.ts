@@ -17,6 +17,10 @@ const toSqlText = (value: string): string => {
   return `'${value.replace(/'/g, "''")}'`
 }
 
+const toSqlJson = (value: unknown): string => {
+  return value === null ? 'NULL' : toSqlText(JSON.stringify(value))
+}
+
 const runSqlQuery = async (
   electronApp: any,
   sql: string
@@ -121,8 +125,8 @@ const seedWorkspacePersistence = async (
   electronApp: any,
   data: {
     workspaceId: string
-    selectedScreen: 'home' | 'settings' | 'prompt-folders'
-    selectedPromptFolderId: string | null
+    selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
+    selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
     promptFolderPromptTreeEntries: Array<{
       promptFolderId: string
       promptTreeEntryId: string
@@ -130,25 +134,22 @@ const seedWorkspacePersistence = async (
     }>
   }
 ): Promise<void> => {
-  const selectedPromptFolderIdSql =
-    data.selectedPromptFolderId === null ? 'NULL' : toSqlText(data.selectedPromptFolderId)
-
   await runSqlStatement(
     electronApp,
     `
     INSERT INTO workspace_ui_state (
       workspace_id,
       selected_screen,
-      selected_prompt_folder_id
+      selected_screen_data_json
     )
     VALUES (
       ${toSqlText(data.workspaceId)},
       ${toSqlText(data.selectedScreen)},
-      ${selectedPromptFolderIdSql}
+      ${toSqlJson(data.selectedScreenData)}
     )
     ON CONFLICT(workspace_id) DO UPDATE SET
       selected_screen = excluded.selected_screen,
-      selected_prompt_folder_id = excluded.selected_prompt_folder_id
+      selected_screen_data_json = excluded.selected_screen_data_json
     `
   )
 
@@ -210,8 +211,8 @@ const readWorkspacePersistence = async (
   workspaceId: string
 ): Promise<{
   workspaceId: string
-  selectedScreen: 'home' | 'settings' | 'prompt-folders'
-  selectedPromptFolderId: string | null
+  selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
+  selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
   promptFolderPromptTreeEntries: Array<{
     promptFolderId: string
     promptTreeEntryId: string
@@ -223,7 +224,7 @@ const readWorkspacePersistence = async (
     `
     SELECT
       selected_screen AS selectedScreen,
-      selected_prompt_folder_id AS selectedPromptFolderId
+      selected_screen_data_json AS selectedScreenDataJson
     FROM workspace_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -251,15 +252,17 @@ const readWorkspacePersistence = async (
 
   const workspaceRow = workspaceStateResult.rows?.[0] as
     | {
-        selectedScreen: 'home' | 'settings' | 'prompt-folders'
-        selectedPromptFolderId: string | null
+        selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
+        selectedScreenDataJson: string | null
       }
     | undefined
 
   return {
     workspaceId,
     selectedScreen: workspaceRow?.selectedScreen ?? 'home',
-    selectedPromptFolderId: workspaceRow?.selectedPromptFolderId ?? null,
+    selectedScreenData: workspaceRow?.selectedScreenDataJson
+      ? JSON.parse(workspaceRow.selectedScreenDataJson)
+      : null,
     promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []).map((entry) => ({
       promptFolderId: String(entry.promptFolderId),
       promptTreeEntryId: String(entry.promptTreeEntryId),
@@ -503,7 +506,7 @@ describe('User Persistence', () => {
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedPromptFolderId: persistedPromptFolderId,
+      selectedScreenData: { promptFolderId: persistedPromptFolderId },
       promptFolderPromptTreeEntries: []
     })
 
@@ -530,7 +533,7 @@ describe('User Persistence', () => {
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedPromptFolderId: 'missing-folder-id',
+      selectedScreenData: { promptFolderId: 'missing-folder-id' },
       promptFolderPromptTreeEntries: []
     })
 
@@ -543,7 +546,106 @@ describe('User Persistence', () => {
     await expect
       .poll(async () => {
         const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
+      })
+      .toBe('home:null')
+  })
+
+  test('reopens the persisted mockup screen and selected mockup on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-mockup-screen'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'mockups',
+      selectedScreenData: { mockupId: 'settings182310281' },
+      promptFolderPromptTreeEntries: []
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="mockups-screen"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="mockup-tab-settings182310281"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+  })
+
+  test('resets invalid persisted mockup startup screen to home and saves it', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-invalid-mockup-screen'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'mockups',
+      selectedScreenData: { mockupId: 'missing-mockup-id' },
+      promptFolderPromptTreeEntries: []
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
+      })
+      .toBe('home:null')
+  })
+
+  test('resets malformed persisted screen data to home and saves it', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-malformed-screen-data'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await runSqlStatement(
+      electronApp,
+      `
+      INSERT INTO workspace_ui_state (
+        workspace_id,
+        selected_screen,
+        selected_screen_data_json
+      )
+      VALUES (
+        ${toSqlText(workspaceId)},
+        'mockups',
+        '{malformed'
+      )
+      `
+    )
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
       .toBe('home:null')
   })
@@ -564,18 +666,48 @@ describe('User Persistence', () => {
     await expect
       .poll(async () => {
         const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
-      .toBe(`prompt-folders:${developmentPromptFolderId}`)
+      .toBe(`prompt-folders:{"promptFolderId":"${developmentPromptFolderId}"}`)
 
     await testHelpers.navigateToSettingsScreen()
 
     await expect
       .poll(async () => {
         const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${persisted.selectedPromptFolderId}`
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
       .toBe('settings:null')
+  })
+
+  test('syncs mockup and test screen persistence for a selected workspace', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.clickNavButton('Mockups')
+    await mainWindow.locator('[data-testid="mockup-tab-settings182310281"]').click()
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
+      })
+      .toBe('mockups:{"mockupId":"settings182310281"}')
+
+    await testHelpers.clickNavButton('Test Screen')
+
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
+      })
+      .toBe('test-screen:null')
   })
 
   test('autosaves active prompt tree entry id in workspace persistence', async ({
@@ -719,7 +851,7 @@ describe('User Persistence', () => {
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedPromptFolderId: developmentPromptFolderId,
+      selectedScreenData: { promptFolderId: developmentPromptFolderId },
       promptFolderPromptTreeEntries: [
         {
           promptFolderId: developmentPromptFolderId,
@@ -753,7 +885,7 @@ describe('User Persistence', () => {
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'home',
-      selectedPromptFolderId: null,
+      selectedScreenData: null,
       promptFolderPromptTreeEntries: [
         {
           promptFolderId: examplesPromptFolderId,
@@ -790,7 +922,7 @@ describe('User Persistence', () => {
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedPromptFolderId: longPromptFolderId,
+      selectedScreenData: { promptFolderId: longPromptFolderId },
       promptFolderPromptTreeEntries: [
         {
           promptFolderId: longPromptFolderId,
@@ -824,7 +956,7 @@ describe('User Persistence', () => {
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedPromptFolderId: developmentPromptFolderId,
+      selectedScreenData: { promptFolderId: developmentPromptFolderId },
       promptFolderPromptTreeEntries: [
         {
           promptFolderId: developmentPromptFolderId,

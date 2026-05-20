@@ -10,6 +10,7 @@
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
   import MockupsScreen from '@renderer/features/mockups/MockupsScreen.svelte'
+  import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
@@ -53,7 +54,7 @@
   import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
-  import type { PersistedWorkspaceScreen } from '@shared/UserPersistence'
+  import type { WorkspaceScreenSelection } from '@shared/UserPersistence'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
@@ -174,12 +175,39 @@
     selectedPromptFolderId = null
   }
 
-  const toPersistedWorkspaceScreen = (screen: ScreenId): PersistedWorkspaceScreen | null => {
-    if (screen === 'home' || screen === 'settings' || screen === 'prompt-folders') {
-      return screen
+  const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
+    if (screen === 'prompt-folders') {
+      return {
+        selectedScreen: screen,
+        selectedScreenData: {
+          promptFolderId: selectedPromptFolderId
+        }
+      }
     }
 
-    return null
+    if (screen === 'mockups') {
+      return {
+        selectedScreen: screen,
+        selectedScreenData: {
+          mockupId: selectedMockupId
+        }
+      }
+    }
+
+    return {
+      selectedScreen: screen,
+      selectedScreenData: null
+    }
+  }
+
+  const isWorkspaceScreenSelectionSame = (
+    left: WorkspaceScreenSelection,
+    right: WorkspaceScreenSelection
+  ): boolean => {
+    return (
+      left.selectedScreen === right.selectedScreen &&
+      JSON.stringify(left.selectedScreenData) === JSON.stringify(right.selectedScreenData)
+    )
   }
 
   const resetWorkspaceState = async () => {
@@ -201,30 +229,31 @@
     await syncLastWorkspaceInfoPath(workspaceInfoPath)
   }
 
-  const syncCurrentWorkspaceScreenSelection = async (screen: ScreenId): Promise<void> => {
+  const syncCurrentWorkspaceScreenSelection = async (
+    screen: ScreenId,
+    workspaceScreenSelection = buildWorkspaceScreenSelection(screen)
+  ): Promise<void> => {
     const workspaceId = getSelectedWorkspaceId()
     if (!workspaceId) {
       return
     }
 
-    const persistedScreen = toPersistedWorkspaceScreen(screen)
-    if (!persistedScreen) {
-      return
-    }
-
-    const persistedPromptFolderId =
-      persistedScreen === 'prompt-folders' ? selectedPromptFolderId : null
     const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
 
-    if (
-      draftRecord &&
-      draftRecord.selectedScreen === persistedScreen &&
-      draftRecord.selectedPromptFolderId === persistedPromptFolderId
-    ) {
+    if (draftRecord && isWorkspaceScreenSelectionSame(draftRecord, workspaceScreenSelection)) {
       return
     }
 
-    await syncWorkspaceScreenSelection(workspaceId, persistedScreen, persistedPromptFolderId)
+    await syncWorkspaceScreenSelection(workspaceId, workspaceScreenSelection)
+  }
+
+  const restoreWorkspaceHomeScreen = async (workspaceId: string): Promise<void> => {
+    clearPromptFolderSelection()
+    activeScreen = 'home'
+    await syncWorkspaceScreenSelection(workspaceId, {
+      selectedScreen: 'home',
+      selectedScreenData: null
+    })
   }
 
   const restoreWorkspaceScreenFromPersistence = async (): Promise<void> => {
@@ -238,9 +267,15 @@
       return
     }
 
+    const persistedScreenConfig = screens[workspacePersistence.selectedScreen]
+    if (persistedScreenConfig.devOnly && !isDevMode) {
+      await restoreWorkspaceHomeScreen(workspaceId)
+      return
+    }
+
     if (workspacePersistence.selectedScreen === 'prompt-folders') {
       const workspaceRecord = workspaceCollection.get(workspaceId)
-      const persistedPromptFolderId = workspacePersistence.selectedPromptFolderId
+      const persistedPromptFolderId = workspacePersistence.selectedScreenData.promptFolderId
       const hasPromptFolder =
         persistedPromptFolderId !== null &&
         Boolean(workspaceRecord?.promptFolderIds.includes(persistedPromptFolderId))
@@ -251,9 +286,20 @@
         return
       }
 
-      clearPromptFolderSelection()
-      activeScreen = 'home'
-      await syncWorkspaceScreenSelection(workspaceId, 'home', null)
+      await restoreWorkspaceHomeScreen(workspaceId)
+      return
+    }
+
+    if (workspacePersistence.selectedScreen === 'mockups') {
+      const persistedMockupId = workspacePersistence.selectedScreenData.mockupId
+      if (persistedMockupId === null || hasMockup(persistedMockupId)) {
+        clearPromptFolderSelection()
+        selectedMockupId = persistedMockupId
+        activeScreen = 'mockups'
+        return
+      }
+
+      await restoreWorkspaceHomeScreen(workspaceId)
       return
     }
 
@@ -407,6 +453,24 @@
   // Side effect: keep the browser window title in sync with dev mode state.
   $effect(() => {
     document.title = windowTitle
+  })
+
+  // Side effect: persist mockup tab changes while the mockups screen is active.
+  $effect(() => {
+    const workspaceScreenSelection: WorkspaceScreenSelection = {
+      selectedScreen: 'mockups',
+      selectedScreenData: {
+        mockupId: selectedMockupId
+      }
+    }
+
+    if (activeScreen !== 'mockups') {
+      return
+    }
+
+    void runIpcBestEffort(() =>
+      syncCurrentWorkspaceScreenSelection('mockups', workspaceScreenSelection)
+    )
   })
 
   // Side effect: flush pending autosaves before allowing the main process to close the window.
