@@ -1,9 +1,8 @@
-import type { PromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
 import type { DragFinishResult } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
 import {
-  clearDraggedPromptHighlight,
-  highlightDraggedPrompt
-} from '@renderer/features/drag-drop/promptDragHighlight'
+  clearDraggedPromptRow,
+  setDraggedPromptRow
+} from '@renderer/features/drag-drop/promptDragState.svelte.ts'
 import {
   resolvePromptHandleDropMove,
   type PromptHandleDragPayload,
@@ -15,7 +14,6 @@ import type { PromptFolder } from '@shared/PromptFolder'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
-  promptNavigation: PromptNavigationContext
 }
 
 const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): PromptFolder | null => {
@@ -23,18 +21,17 @@ const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): Prom
 }
 
 export const createPromptTreePromptDragController = ({
-  getPromptFolders,
-  promptNavigation
+  getPromptFolders
 }: PromptTreePromptDragControllerOptions) => {
   const handleDragStart = (sourcePayload: PromptHandleDragPayload): void => {
-    highlightDraggedPrompt(promptNavigation, sourcePayload)
+    setDraggedPromptRow(sourcePayload)
   }
 
   const handleDragFinish = ({
     sourcePayload,
     dropPayload
   }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
-    clearDraggedPromptHighlight(promptNavigation)
+    clearDraggedPromptRow()
 
     const promptFolders = getPromptFolders()
     const sourcePromptFolder = findPromptFolder(promptFolders, sourcePayload.sourceFolderId)

@@ -140,6 +140,17 @@ export const expectPromptTreeRowActiveState = async (
   )
 }
 
+export const expectPromptTreeRowDraggingState = async (
+  page: Page,
+  promptId: string,
+  isDragging: boolean
+): Promise<void> => {
+  await expect(page.locator(promptTreePromptSelector(promptId))).toHaveAttribute(
+    'data-dragging',
+    isDragging ? 'true' : 'false'
+  )
+}
+
 export const getPromptEditorIds = async (page: Page): Promise<string[]> => {
   return await page.evaluate(() => {
     return Array.from(document.querySelectorAll<HTMLElement>('[data-testid^="prompt-editor-"]'))

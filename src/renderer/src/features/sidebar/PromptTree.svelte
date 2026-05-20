@@ -24,6 +24,7 @@
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
   import {
     type PromptDraftRecord,
     promptDraftCollection
@@ -258,8 +259,7 @@
   })
 
   const promptTreePromptDrag = createPromptTreePromptDragController({
-    getPromptFolders: () => promptFolders,
-    promptNavigation
+    getPromptFolders: () => promptFolders
   })
 
   const getPromptRowDragOptions = (
@@ -288,13 +288,18 @@
   })
 
   const isTreeEntryActive = (folderId: string, row: PromptNavigationRow): boolean => {
-    if (!isPromptFoldersScreenActive || !promptNavigation.highlightedRow) {
+    if (!isPromptFoldersScreenActive || !promptNavigation.selectedRow) {
       return false
     }
 
     return (
-      promptNavigation.highlightedFolderId === folderId && promptNavigation.highlightedRow === row
+      promptNavigation.selectedFolderId === folderId && promptNavigation.selectedRow === row
     )
+  }
+
+  const isPromptRowDragging = (folderId: string, promptId: string): boolean => {
+    const draggedPromptRow = promptDragState.draggedPromptRow
+    return draggedPromptRow?.folderId === folderId && draggedPromptRow.promptId === promptId
   }
 
   const handlePromptTreeEntrySelect = (
@@ -526,6 +531,7 @@
     props.row.folder.id,
     promptIdToPromptNavigationRow(props.row.promptId)
   )}
+  {@const isDragging = isPromptRowDragging(props.row.folder.id, props.row.promptId)}
 
   <div
     use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
@@ -545,6 +551,7 @@
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}
+      data-dragging={isDragging ? 'true' : 'false'}
       aria-current={isActive ? 'true' : undefined}
       onclick={(event) =>
         handlePromptTreeEntrySelect(

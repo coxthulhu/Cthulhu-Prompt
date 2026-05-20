@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import type { Locator } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
@@ -9,6 +10,7 @@ import {
   dragPromptTreeRowToTarget,
   expectCurrentFolderPromptEditors,
   expectPersistedFolderPromptIds,
+  expectPromptTreeRowDraggingState,
   expectPromptTreeRowActiveState,
   finishActiveDrag,
   getRowViewportOffsets,
@@ -45,6 +47,43 @@ const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
+
+type PromptTreeHighlightStyles = {
+  backgroundColor: string
+  boxShadow: string
+  color: string
+}
+
+const getPromptTreeHighlightStyles = async (
+  locator: Locator
+): Promise<PromptTreeHighlightStyles> => {
+  return await locator.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      backgroundColor: style.backgroundColor,
+      boxShadow: style.boxShadow,
+      color: style.color
+    }
+  })
+}
+
+const getPromptTreeFolderRowHighlightStyles = async (
+  folderToggle: Locator
+): Promise<PromptTreeHighlightStyles> => {
+  return await folderToggle.evaluate((element) => {
+    const row = element.closest('.sidebarPromptTreeRow')
+    if (!row) {
+      throw new Error('Missing folder drop target row')
+    }
+
+    const style = getComputedStyle(row)
+    return {
+      backgroundColor: style.backgroundColor,
+      boxShadow: style.boxShadow,
+      color: style.color
+    }
+  })
+}
 
 const scrollPromptTreeUntilRowUnmounts = async (
   mainWindow: Parameters<typeof beginPromptTreeRowDrag>[0],
@@ -407,10 +446,12 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptTreeRowActiveState(mainWindow, DESTINATION_1_ID, true)
 
     await beginPromptTreeRowDrag(mainWindow, ANCHOR_1_ID)
-    await expectPromptTreeRowActiveState(mainWindow, ANCHOR_1_ID, true)
-    await expectPromptTreeRowActiveState(mainWindow, DESTINATION_1_ID, false)
+    await expectPromptTreeRowDraggingState(mainWindow, ANCHOR_1_ID, true)
+    await expectPromptTreeRowActiveState(mainWindow, ANCHOR_1_ID, false)
+    await expectPromptTreeRowActiveState(mainWindow, DESTINATION_1_ID, true)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(ANCHOR_2_ID), 'bottom')
     await finishActiveDrag(mainWindow)
+    await expectPromptTreeRowDraggingState(mainWindow, ANCHOR_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, ANCHOR_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, DESTINATION_1_ID, true)
 
@@ -489,7 +530,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await expect(mainWindow.locator('[data-testid="drag-drop-overlay"]')).toHaveCount(0)
   })
 
-  test('temporarily highlights the dragged prompt row while dragging from the editor handle', async ({
+  test('temporarily marks the dragged prompt row while dragging from the editor handle', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -502,12 +543,50 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
-    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
-    await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, false)
-
-    await finishActiveDrag(mainWindow)
+    await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, true)
     await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
+
+    await finishActiveDrag(mainWindow)
+    await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, false)
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, false)
+    await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
+  })
+
+  test('uses the folder drop highlight style for the selected dragged prompt-tree row', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await mainWindow.locator(promptTreePromptSelector(DEV_1_ID)).click()
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
+
+    await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
+    await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, true)
+    await moveActiveDragToTarget(mainWindow, promptTreeFolderSelector(EXAMPLES_FOLDER_NAME))
+
+    await expect
+      .poll(async () => {
+        const draggedRowStyles = await getPromptTreeHighlightStyles(
+          mainWindow.locator(promptTreePromptSelector(DEV_1_ID))
+        )
+        const folderDropTargetStyles = await getPromptTreeFolderRowHighlightStyles(
+          mainWindow.locator(promptTreeFolderSelector(EXAMPLES_FOLDER_NAME))
+        )
+
+        return JSON.stringify(draggedRowStyles) === JSON.stringify(folderDropTargetStyles)
+      })
+      .toBe(true)
+
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID))
+    await finishActiveDrag(mainWindow)
+    await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, false)
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
   })
 
   test('moves the prompt-tree indicator between the top and bottom edges of a prompt row', async ({

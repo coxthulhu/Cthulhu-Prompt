@@ -19,8 +19,6 @@ type PromptNavigationState = {
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
-  highlightedFolderIdOverride: string | null
-  highlightedRowOverride: PromptNavigationRow | null
 }
 
 type SelectPromptNavigationOptions = {
@@ -35,12 +33,7 @@ export type PromptNavigationContext = {
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
-  highlightedFolderId: string | null
-  highlightedRow: PromptNavigationRow | null
-  hasHighlightedRowOverride: boolean
   select: (options: SelectPromptNavigationOptions) => void
-  setHighlightedRowOverride: (options: { folderId: string; row: PromptNavigationRow }) => void
-  clearHighlightedRowOverride: () => void
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
@@ -58,14 +51,11 @@ export const persistedPromptTreeEntryIdToPromptNavigationRow = (
 }
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {
-  // Keep drag-only tree highlighting separate from canonical navigation state.
   const state = $state<PromptNavigationState>({
     selectedFolderId: null,
     selectedRow: null,
     selectionVersion: 0,
-    selectionSource: null,
-    highlightedFolderIdOverride: null,
-    highlightedRowOverride: null
+    selectionSource: null
   })
 
   const select = ({
@@ -89,19 +79,6 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     state.selectionVersion += 1
   }
 
-  const setHighlightedRowOverride = (options: {
-    folderId: string
-    row: PromptNavigationRow
-  }): void => {
-    state.highlightedFolderIdOverride = options.folderId
-    state.highlightedRowOverride = options.row
-  }
-
-  const clearHighlightedRowOverride = (): void => {
-    state.highlightedFolderIdOverride = null
-    state.highlightedRowOverride = null
-  }
-
   return {
     get selectedFolderId() {
       return state.selectedFolderId
@@ -115,18 +92,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     get selectionSource() {
       return state.selectionSource
     },
-    get highlightedFolderId() {
-      return state.highlightedFolderIdOverride ?? state.selectedFolderId
-    },
-    get highlightedRow() {
-      return state.highlightedRowOverride ?? state.selectedRow
-    },
-    get hasHighlightedRowOverride() {
-      return state.highlightedRowOverride !== null
-    },
-    select,
-    setHighlightedRowOverride,
-    clearHighlightedRowOverride
+    select
   }
 }
 
