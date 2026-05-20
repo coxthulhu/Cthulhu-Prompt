@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Loader } from 'lucide-svelte'
+  import { mergeClasses } from '../mergeClasses'
 
   let {
     fadeMs = 125,
@@ -20,9 +21,11 @@
 
 <div
   data-testid={testId}
-  class={`${positionClass} flex items-center justify-center bg-background transition-opacity ${
-    isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
-  }`}
+  data-fading={isFading ? 'true' : undefined}
+  class={mergeClasses(
+    'cthulhuUiLoadingOverlay flex items-center justify-center bg-background transition-opacity',
+    positionClass
+  )}
   style={`transition-duration: ${fadeMs}ms;`}
 >
   <div class="flex flex-col items-center gap-3 text-muted-foreground">
@@ -30,3 +33,14 @@
     <p class="text-sm font-medium">{message}</p>
   </div>
 </div>
+
+<style>
+  .cthulhuUiLoadingOverlay {
+    opacity: 1;
+  }
+
+  .cthulhuUiLoadingOverlay[data-fading='true'] {
+    opacity: 0;
+    pointer-events: none;
+  }
+</style>

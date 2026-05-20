@@ -38,7 +38,6 @@
     'cthulhuUiIconDescriptionButton grid w-full min-w-0 cursor-pointer grid-cols-[42px_minmax(0,1fr)] items-center gap-3 rounded-[7px] border p-2.5 text-left transition disabled:pointer-events-none disabled:opacity-50',
     className
   )}
-  data-state={state}
   data-testid={testId}
   data-variant={variant}
   {onclick}

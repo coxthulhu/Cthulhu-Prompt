@@ -30,7 +30,7 @@
     'cthulhuUiCheckboxInput relative flex min-h-11 items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] border p-3 text-sm font-medium transition-[color,background-color,border-color,box-shadow]',
     className
   )}
-  data-disabled={disabled}
+  data-disabled={disabled ? 'true' : undefined}
   {...restProps}
 >
   <!-- Native input keeps label clicks and keyboard toggling predictable. -->

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import AccentIconTile, { type AccentIconTileVariant } from './AccentIconTile.svelte'
+  import { mergeClasses } from './mergeClasses'
   import type { CthulhuSize } from './types'
 
   type TitleBlockSize = Extract<CthulhuSize, 'small' | 'large'>
@@ -19,7 +20,7 @@
   const iconSize = $derived(size === 'large' ? 'large' : 'medium')
 </script>
 
-<div class:cthulhuUiTitleBlockWithIcon={Icon}>
+<div class={mergeClasses('cthulhuUiTitleBlock', Icon ? 'cthulhuUiTitleBlock--withIcon' : null)}>
   {#if Icon}
     <AccentIconTile icon={Icon} size={iconSize} variant={iconVariant} />
   {/if}
@@ -27,16 +28,21 @@
   <div class="cthulhuUiTitleBlockText">
     <svelte:element
       this={titleTag}
-      class:cthulhuUiTitleBlockTitleLarge={size === 'large'}
-      class:cthulhuUiTitleBlockTitleSmall={size === 'small'}
+      class={mergeClasses(
+        'cthulhuUiTitleBlockTitle',
+        size === 'large' ? 'cthulhuUiTitleBlockTitle--large' : null,
+        size === 'small' ? 'cthulhuUiTitleBlockTitle--small' : null
+      )}
     >
       {title}
     </svelte:element>
     {#if description}
       <p
-        class="cthulhuUiTitleBlockDescription mt-1"
-        class:cthulhuUiTitleBlockDescriptionLarge={size === 'large'}
-        class:cthulhuUiTitleBlockDescriptionSmall={size === 'small'}
+        class={mergeClasses(
+          'cthulhuUiTitleBlockDescription mt-1',
+          size === 'large' ? 'cthulhuUiTitleBlockDescription--large' : null,
+          size === 'small' ? 'cthulhuUiTitleBlockDescription--small' : null
+        )}
       >
         {description}
       </p>
@@ -45,7 +51,7 @@
 </div>
 
 <style>
-  .cthulhuUiTitleBlockWithIcon {
+  .cthulhuUiTitleBlock--withIcon {
     align-items: flex-start;
     display: flex;
     gap: 12px;
@@ -55,7 +61,7 @@
     min-width: 0;
   }
 
-  .cthulhuUiTitleBlockTitleLarge {
+  .cthulhuUiTitleBlockTitle--large {
     color: var(--ui-normal-text);
     font-size: 20px;
     font-weight: 700;
@@ -63,7 +69,7 @@
     line-height: 1.2;
   }
 
-  .cthulhuUiTitleBlockTitleSmall {
+  .cthulhuUiTitleBlockTitle--small {
     color: var(--ui-normal-text);
     font-size: 14px;
     font-weight: 600;
@@ -74,11 +80,11 @@
     line-height: 1.4;
   }
 
-  .cthulhuUiTitleBlockDescriptionLarge {
+  .cthulhuUiTitleBlockDescription--large {
     font-size: 14px;
   }
 
-  .cthulhuUiTitleBlockDescriptionSmall {
+  .cthulhuUiTitleBlockDescription--small {
     font-size: 14px;
   }
 </style>

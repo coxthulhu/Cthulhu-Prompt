@@ -58,8 +58,8 @@
       variantClass,
       className
     )}
-    data-active={state === 'active'}
-    data-disabled={isDisabled}
+    data-active={state === 'active' ? 'true' : 'false'}
+    data-disabled={isDisabled ? 'true' : undefined}
     data-testid={testId}
     href={isDisabled ? undefined : href}
     {target}
@@ -81,7 +81,7 @@
       variantClass,
       className
     )}
-    data-active={state === 'active'}
+    data-active={state === 'active' ? 'true' : 'false'}
     data-testid={testId}
     {onclick}
     disabled={isDisabled}
