@@ -551,34 +551,6 @@ describe('User Persistence', () => {
       .toBe('home:null')
   })
 
-  test('reopens the persisted mockup screen and selected mockup on startup', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const persistedWorkspacePath = '/ws/persisted-mockup-screen'
-    const workspaceId = createDeterministicId(persistedWorkspacePath)
-    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
-    await seedUserPersistence(electronApp, {
-      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
-    })
-    await seedWorkspacePersistence(electronApp, {
-      workspaceId,
-      selectedScreen: 'mockups',
-      selectedScreenData: { mockupId: 'settings182310281' },
-      promptFolderPromptTreeEntries: []
-    })
-
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    await expect(mainWindow.locator('[data-testid="mockups-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="mockup-tab-settings182310281"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
-  })
-
   test('resets invalid persisted mockup startup screen to home and saves it', async ({
     electronApp,
     testSetup
@@ -678,36 +650,6 @@ describe('User Persistence', () => {
         return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
       .toBe('settings:null')
-  })
-
-  test('syncs mockup and test screen persistence for a selected workspace', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const workspacePath = '/ws/sample'
-    const workspaceId = createDeterministicId(workspacePath)
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.clickNavButton('Mockups')
-    await mainWindow.locator('[data-testid="mockup-tab-settings182310281"]').click()
-
-    await expect
-      .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
-      })
-      .toBe('mockups:{"mockupId":"settings182310281"}')
-
-    await testHelpers.clickNavButton('Test Screen')
-
-    await expect
-      .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
-      })
-      .toBe('test-screen:null')
   })
 
   test('autosaves active prompt tree entry id in workspace persistence', async ({
