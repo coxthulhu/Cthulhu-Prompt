@@ -58,6 +58,25 @@ export type WorkspacePersistence = WorkspaceScreenSelection & {
   promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
 }
 
+export const isWorkspaceScreenSelectionSame = (
+  left: WorkspaceScreenSelection,
+  right: WorkspaceScreenSelection
+): boolean => {
+  if (left.selectedScreen !== right.selectedScreen) {
+    return false
+  }
+
+  if (left.selectedScreen === 'prompt-folders' && right.selectedScreen === 'prompt-folders') {
+    return left.selectedScreenData.promptFolderId === right.selectedScreenData.promptFolderId
+  }
+
+  if (left.selectedScreen === 'mockups' && right.selectedScreen === 'mockups') {
+    return left.selectedScreenData.mockupId === right.selectedScreenData.mockupId
+  }
+
+  return true
+}
+
 export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
   return {
     workspaceId,

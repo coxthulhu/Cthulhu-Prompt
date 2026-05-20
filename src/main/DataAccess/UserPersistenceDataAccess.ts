@@ -49,15 +49,15 @@ const DEFAULT_WINDOW_PERSISTENCE: WindowPersistence = {
   isFullScreen: null
 }
 
-const parseSelectedScreenDataJson = (value: string | null): { success: true; value: unknown } => {
+const parseSelectedScreenDataJson = (value: string | null): unknown => {
   if (value === null) {
-    return { success: true, value: null }
+    return null
   }
 
   try {
-    return { success: true, value: JSON.parse(value) }
+    return JSON.parse(value)
   } catch {
-    return { success: true, value: undefined }
+    return undefined
   }
 }
 
@@ -228,9 +228,7 @@ export class UserPersistenceDataAccess {
       folderDescriptionEditorViewStateJson: row.folderDescriptionEditorViewStateJson
     }))
 
-    const selectedScreenData = parseSelectedScreenDataJson(
-      workspaceUiState.selectedScreenDataJson
-    ).value
+    const selectedScreenData = parseSelectedScreenDataJson(workspaceUiState.selectedScreenDataJson)
     const parsedPersistence = parseWorkspacePersistence(
       {
         selectedScreen: workspaceUiState.selectedScreen,
@@ -386,7 +384,7 @@ export class UserPersistenceDataAccess {
 
       const selectedScreenData = parseSelectedScreenDataJson(
         selectedWorkspaceState.selectedScreenDataJson
-      ).value
+      )
       const selectedWorkspaceScreen = parseWorkspaceScreenSelection(
         selectedWorkspaceState.selectedScreen,
         selectedScreenData

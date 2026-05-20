@@ -54,7 +54,10 @@
   import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
-  import type { WorkspaceScreenSelection } from '@shared/UserPersistence'
+  import {
+    isWorkspaceScreenSelectionSame,
+    type WorkspaceScreenSelection
+  } from '@shared/UserPersistence'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
@@ -198,16 +201,6 @@
       selectedScreen: screen,
       selectedScreenData: null
     }
-  }
-
-  const isWorkspaceScreenSelectionSame = (
-    left: WorkspaceScreenSelection,
-    right: WorkspaceScreenSelection
-  ): boolean => {
-    return (
-      left.selectedScreen === right.selectedScreen &&
-      JSON.stringify(left.selectedScreenData) === JSON.stringify(right.selectedScreenData)
-    )
   }
 
   const resetWorkspaceState = async () => {

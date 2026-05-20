@@ -230,18 +230,6 @@ const parseWorkspacePersistence: Parser<WorkspacePersistence> = (value) => {
   }
 
   const record = value as Record<string, unknown>
-  const valueKeys = Object.keys(record)
-
-  if (
-    valueKeys.length !== 4 ||
-    !('workspaceId' in record) ||
-    !('selectedScreen' in record) ||
-    !('selectedScreenData' in record) ||
-    !('promptFolderPromptTreeEntries' in record)
-  ) {
-    return null
-  }
-
   const workspaceId = parseString(record.workspaceId)
   return workspaceId ? parseSharedWorkspacePersistence(record, workspaceId) : null
 }
