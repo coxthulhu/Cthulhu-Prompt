@@ -82,30 +82,30 @@
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    height: 2.25rem;
+    height: 36px;
     justify-content: center;
     transition:
       background-color 120ms ease,
       box-shadow 120ms ease,
       border-color 120ms ease,
       color 120ms ease;
-    width: 2.25rem;
+    width: 36px;
   }
 
   .cthulhuUiIconOnlyButton--rail {
-    height: 1.75rem;
-    width: 1.75rem;
+    height: 28px;
+    width: 28px;
   }
 
   .cthulhuUiIconOnlyButton--compact {
-    height: 1.75rem;
-    width: 1.75rem;
+    height: 28px;
+    width: 28px;
   }
 
   .cthulhuUiIconOnlyButton--railFill {
     height: 100%;
     min-height: 0;
-    width: 1.75rem;
+    width: 28px;
   }
 
   .cthulhuUiIconOnlyButton[data-grab-cursor='true'] {

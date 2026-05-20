@@ -7,7 +7,7 @@
     insetStart?: string
   }
 
-  let { testId, edge, insetStart = '2.375rem' }: Props = $props()
+  let { testId, edge, insetStart = '38px' }: Props = $props()
 
   const style = $derived(`--sidebar-drop-indicator-inset-start:${insetStart};`)
 </script>

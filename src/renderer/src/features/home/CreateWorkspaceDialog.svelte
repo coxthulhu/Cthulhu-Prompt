@@ -129,7 +129,7 @@
 
 <CthulhuDialog
   bind:open
-  class="w-full max-w-[44rem]"
+  class="w-full max-w-[704px]"
   icon={FolderPlus}
   title="Create Workspace"
   description="Choose the details for your new workspace."

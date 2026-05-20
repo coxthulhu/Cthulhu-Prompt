@@ -42,7 +42,7 @@
 
 <CthulhuDialog
   bind:open
-  class="w-full max-w-[30rem]"
+  class="w-full max-w-[480px]"
   headerStyle="section"
   showCloseButton={false}
   {icon}

@@ -67,7 +67,7 @@
 
   .cthulhuUiCheckboxInputNative {
     height: 1px;
-    left: 0.75rem;
+    left: 12px;
     opacity: 0;
     pointer-events: none;
     position: absolute;
@@ -82,9 +82,9 @@
     color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
-    height: 1.5rem;
+    height: 24px;
     justify-content: center;
-    width: 1.5rem;
+    width: 24px;
   }
 
   .cthulhuUiCheckboxInputNative:checked + .cthulhuUiCheckboxInputControl {

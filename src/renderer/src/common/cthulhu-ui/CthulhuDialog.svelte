@@ -188,7 +188,7 @@
     display: flex;
     inset: 0;
     justify-content: center;
-    padding: 1rem;
+    padding: 16px;
     position: fixed;
     z-index: 50;
   }

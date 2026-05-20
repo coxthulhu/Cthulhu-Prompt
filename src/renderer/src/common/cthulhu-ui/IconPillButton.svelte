@@ -45,12 +45,12 @@
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 0.75rem;
+    font-size: 12px;
     font-weight: 750;
-    gap: 0.4375rem;
-    height: 1.875rem;
-    line-height: 1rem;
-    padding: 0 0.75rem;
+    gap: 7px;
+    height: 30px;
+    line-height: 16px;
+    padding: 0 12px;
     transition:
       background-color 120ms ease,
       border-color 120ms ease,

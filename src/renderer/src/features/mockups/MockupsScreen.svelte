@@ -82,7 +82,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 16px;
     font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   }
 
@@ -116,7 +116,7 @@
     display: flex;
     flex-wrap: wrap;
     width: 100%;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   .mockups-tab {
@@ -124,10 +124,10 @@
     border: 1px solid var(--ui-neutral-muted-border);
     background: var(--ui-neutral-muted-surface);
     color: var(--ui-secondary-text);
-    padding: 0.7rem 1rem;
-    border-radius: 1rem;
+    padding: 11px 16px;
+    border-radius: 16px;
     font: inherit;
-    font-size: 0.92rem;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
   }
@@ -150,19 +150,19 @@
   }
 
   .mockups-empty {
-    max-width: 34rem;
+    max-width: 544px;
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    padding: 1rem;
+    gap: 10px;
+    padding: 16px;
     border: 1px solid var(--ui-neutral-normal-border);
     background: var(--ui-neutral-normal-surface);
   }
 
   @media (max-width: 900px) {
     .mockups-screen {
-      padding-left: 1rem;
-      padding-right: 1rem;
+      padding-left: 16px;
+      padding-right: 16px;
     }
   }
 </style>

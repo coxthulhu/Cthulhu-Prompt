@@ -35,9 +35,9 @@
 <style>
   .cthulhuUiLabeledDisplayFieldValue {
     color: var(--ui-normal-text);
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 650;
-    line-height: 1.25rem;
+    line-height: 20px;
   }
 
   .cthulhuUiLabeledDisplayFieldValue::selection {

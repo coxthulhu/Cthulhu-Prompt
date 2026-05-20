@@ -141,7 +141,7 @@
 
 <CthulhuDialog
   bind:open={isDialogOpen}
-  class="w-full max-w-[32rem]"
+  class="w-full max-w-[512px]"
   icon={FolderPlus}
   title="Create New Prompt Folder"
   description="Enter a name for your new prompt folder."

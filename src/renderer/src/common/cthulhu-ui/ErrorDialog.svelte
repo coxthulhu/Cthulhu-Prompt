@@ -15,7 +15,7 @@
 
 <CthulhuDialog
   bind:open
-  class="w-full max-w-[36rem]"
+  class="w-full max-w-[576px]"
   icon={AlertCircle}
   iconVariant="danger"
   {title}

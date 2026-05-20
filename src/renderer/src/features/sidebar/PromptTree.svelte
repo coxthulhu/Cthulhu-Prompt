@@ -197,7 +197,7 @@
     }
   }
 
-  const PROMPT_TREE_CHILD_ROW_CONTENT_INSET = '2.375rem'
+  const PROMPT_TREE_CHILD_ROW_CONTENT_INSET = '38px'
 
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`

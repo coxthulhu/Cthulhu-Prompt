@@ -121,7 +121,7 @@
     box-sizing: border-box;
     box-shadow: var(--cthulhu-ui-shadow-field);
     color: var(--ui-normal-text);
-    grid-template-columns: 2.5rem minmax(5rem, auto) 2.5rem;
+    grid-template-columns: 40px minmax(80px, auto) 40px;
     min-width: 0;
     transition:
       background-color 120ms ease,
@@ -194,18 +194,18 @@
     border-bottom: 1px solid var(--ui-neutral-normal-border);
     border-top: 1px solid var(--ui-neutral-normal-border);
     display: inline-flex;
-    gap: 0.375rem;
+    gap: 6px;
     height: 100%;
     justify-content: center;
-    min-width: 5rem;
-    padding: 0 0.75rem;
+    min-width: 80px;
+    padding: 0 12px;
   }
 
   .cthulhuUiNumericStepperInputNative {
     background: transparent;
     border: 0;
     color: var(--ui-normal-text);
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 650;
     height: 100%;
     line-height: 1.25;
@@ -227,7 +227,7 @@
 
   .cthulhuUiNumericStepperInputHelper {
     color: var(--ui-muted-text);
-    font-size: 0.75rem;
+    font-size: 12px;
     font-weight: 600;
     line-height: 1.25;
     white-space: nowrap;

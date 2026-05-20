@@ -449,9 +449,9 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 16px;
     min-height: 100%;
-    padding: 1rem;
+    padding: 16px;
     width: 100%;
   }
 
@@ -459,29 +459,29 @@
     align-items: flex-start;
     border-bottom: 1px solid var(--ui-neutral-muted-border);
     display: flex;
-    gap: 1rem;
+    gap: 16px;
     justify-content: space-between;
-    padding-bottom: 1rem;
+    padding-bottom: 16px;
   }
 
   .component-grid {
     align-items: start;
     display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(384px, 1fr));
   }
 
   .variant-grid {
     display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
   }
 
   .sample-title,
   .variant-row > span,
   .display-value {
     color: var(--ui-normal-text);
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 700;
     line-height: 1.3;
   }
@@ -492,7 +492,7 @@
   .display-grid,
   .form-grid {
     display: grid;
-    gap: 0.75rem;
+    gap: 12px;
     min-width: 0;
   }
 
@@ -501,17 +501,17 @@
     border: 1px solid var(--ui-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-control);
     display: grid;
-    gap: 0.75rem;
-    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: 12px;
+    grid-template-columns: 160px minmax(0, 1fr);
     min-width: 0;
-    padding: 0.75rem;
+    padding: 12px;
   }
 
   .variant-controls {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.625rem;
+    gap: 10px;
     min-width: 0;
   }
 
@@ -523,17 +523,17 @@
     align-items: center;
     display: inline-flex;
     justify-content: center;
-    min-height: 2.25rem;
-    min-width: 2.25rem;
+    min-height: 36px;
+    min-width: 36px;
   }
 
   .icon-only-sample[data-fill-size='true'] {
-    height: 2.75rem;
+    height: 44px;
   }
 
   .form-grid,
   .display-grid {
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 
   .display-value {
@@ -543,7 +543,7 @@
     white-space: nowrap;
   }
 
-  @media (max-width: 48rem) {
+  @media (max-width: 768px) {
     .test-screen-header,
     .variant-row {
       grid-template-columns: 1fr;

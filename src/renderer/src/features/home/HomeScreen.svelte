@@ -146,7 +146,7 @@
   const workspaceActionsDescription = $derived(
     currentWorkspaceDetails ? 'Change your current workspace.' : 'Create or open a workspace.'
   )
-  const workspaceActionsCardClass = 'w-full max-w-[39.5rem] min-w-0 xl:max-w-none'
+  const workspaceActionsCardClass = 'w-full max-w-[632px] min-w-0 xl:max-w-none'
   const secondaryTitleFontSizePx = $derived.by(() => {
     if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
       return null
@@ -192,7 +192,7 @@
       <header>
         <div
           bind:this={secondaryTitleContainerElement}
-          class="mx-auto w-full max-w-[39.5rem] space-y-4 xl:max-w-none"
+          class="mx-auto w-full max-w-[632px] space-y-4 xl:max-w-none"
         >
           <h2
             class="cthulhuHomeSecondaryTitle"
@@ -221,7 +221,7 @@
         class="mt-5 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
         {#if !currentWorkspaceDetails}
-          <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
+          <CardSurface class="w-full max-w-[632px] min-w-0 xl:max-w-none">
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
@@ -261,7 +261,7 @@
             </div>
           </CardSurface>
         {:else}
-          <CardSurface class="w-full max-w-[39.5rem] min-w-0 xl:max-w-none">
+          <CardSurface class="w-full max-w-[632px] min-w-0 xl:max-w-none">
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
@@ -382,7 +382,7 @@
   .cthulhuHomeSecondaryTitle {
     color: var(--ui-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: clamp(4rem, 9vw, 5.5rem);
+    font-size: clamp(64px, 9vw, 88px);
     font-weight: 700;
     letter-spacing: 0.14em;
     line-height: 1;
@@ -405,7 +405,7 @@
     color: var(--ui-secondary-text);
     display: flex;
     flex-direction: column;
-    font-size: 0.95rem;
+    font-size: 15px;
     gap: 12px;
     line-height: 1.55;
     padding-left: 16px;

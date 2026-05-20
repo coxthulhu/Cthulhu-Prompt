@@ -131,11 +131,11 @@
 <style>
   .prompt-editor-sidebar {
     display: grid;
-    flex: 0 0 1.75rem;
+    flex: 0 0 28px;
     gap: 6px;
-    grid-template-rows: 1.75rem minmax(0, 1fr) 1.75rem;
+    grid-template-rows: 28px minmax(0, 1fr) 28px;
     height: 100%;
     min-height: 136px;
-    width: 1.75rem;
+    width: 28px;
   }
 </style>
