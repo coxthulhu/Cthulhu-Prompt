@@ -23,6 +23,7 @@
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { createPromptDragGhostElement } from '@renderer/features/drag-drop/promptDragGhost'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
   import {
     type PromptDraftRecord,
@@ -263,13 +264,15 @@
 
   const getPromptRowDragOptions = (
     folderId: string,
-    promptId: string
+    promptId: string,
+    title: string
   ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
       sourceFolderId: folderId
     },
+    createGhostElement: () => createPromptDragGhostElement(title),
     onDragStart: promptTreePromptDrag.handleDragStart,
     onDragFinish: promptTreePromptDrag.handleDragFinish
   })
@@ -529,6 +532,8 @@
     promptIdToPromptNavigationRow(props.row.promptId)
   )}
   {@const isDragging = isPromptRowDragging(props.row.folder.id, props.row.promptId)}
+  {@const promptTitle =
+    promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}
 
   <div
     use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
@@ -540,7 +545,11 @@
     class="sidebarPromptTreeSettingsRow"
   >
     <button
-      use:draggable={getPromptRowDragOptions(props.row.folder.id, props.row.promptId)}
+      use:draggable={getPromptRowDragOptions(
+        props.row.folder.id,
+        props.row.promptId,
+        promptTitle
+      )}
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}
@@ -555,10 +564,7 @@
       class="sidebarPromptTreeSettingsButton"
     >
       <FileText class="sidebarPromptTreeSettingsIcon" aria-hidden="true" />
-      <span class="sidebarPromptTreeSettingsLabel"
-        >{promptTreeTitleById[props.row.promptId] ??
-          getPromptDisplayTitle(props.row.promptId)}</span
-      >
+      <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
     </button>
   </div>
 {/snippet}

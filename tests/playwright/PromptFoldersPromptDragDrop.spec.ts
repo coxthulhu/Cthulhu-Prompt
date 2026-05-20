@@ -6,6 +6,7 @@ import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersiste
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
+  dragGhostSelector,
   dragPromptHandleToTarget,
   dragPromptTreeRowToTarget,
   expectCurrentFolderPromptEditors,
@@ -54,6 +55,17 @@ type PromptTreeHighlightStyles = {
   color: string
 }
 
+type PromptDragGhostSnapshot = {
+  backgroundColor: string
+  borderColor: string
+  color: string
+  height: number
+  kind: string | null
+  opacity: string
+  text: string
+  width: number
+}
+
 const getPromptTreeHighlightStyles = async (
   locator: Locator
 ): Promise<PromptTreeHighlightStyles> => {
@@ -65,6 +77,52 @@ const getPromptTreeHighlightStyles = async (
       color: style.color
     }
   })
+}
+
+const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragGhostSnapshot> => {
+  return await locator.evaluate((element) => {
+    const row = element.querySelector<HTMLElement>('.promptDragGhostButton')
+    if (!row) {
+      throw new Error('Missing prompt drag ghost row')
+    }
+
+    const ghostRect = element.getBoundingClientRect()
+    const rowRect = row.getBoundingClientRect()
+    const ghostStyle = getComputedStyle(element)
+    const rowStyle = getComputedStyle(row)
+
+    return {
+      backgroundColor: rowStyle.backgroundColor,
+      borderColor: rowStyle.borderColor,
+      color: rowStyle.color,
+      height: Math.round(rowRect.height),
+      kind: element.getAttribute('data-drag-ghost-kind'),
+      opacity: ghostStyle.opacity,
+      text: row.textContent?.trim() ?? '',
+      width: Math.round(ghostRect.width)
+    }
+  })
+}
+
+const expectDragGhostNear = async (
+  locator: Locator,
+  x: number,
+  y: number
+): Promise<void> => {
+  await expect
+    .poll(async () => {
+      const box = await locator.boundingBox()
+      return box
+        ? {
+            x: Math.round(box.x),
+            y: Math.round(box.y)
+          }
+        : null
+    })
+    .toEqual({
+      x: x + 4,
+      y: y + 4
+    })
 }
 
 const getPromptTreeFolderRowHighlightStyles = async (
@@ -551,6 +609,45 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
+  })
+
+  test('shows the same prompt row ghost from both prompt drag handles', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await mainWindow.locator(promptTreePromptSelector(DEV_2_ID)).click()
+
+    const dragGhost = mainWindow.locator(dragGhostSelector)
+
+    await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
+    await expect(dragGhost).toBeVisible()
+    const treeGhost = await getPromptDragGhostSnapshot(dragGhost)
+    await mainWindow.mouse.move(320, 320, { steps: 2 })
+    await expectDragGhostNear(dragGhost, 320, 320)
+    await finishActiveDrag(mainWindow)
+    await expect(dragGhost).toHaveCount(0)
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await expect(dragGhost).toBeVisible()
+    const handleGhost = await getPromptDragGhostSnapshot(dragGhost)
+    await mainWindow.mouse.move(360, 360, { steps: 2 })
+    await expectDragGhostNear(dragGhost, 360, 360)
+    await finishActiveDrag(mainWindow)
+    await expect(dragGhost).toHaveCount(0)
+
+    expect(treeGhost).toMatchObject({
+      height: 30,
+      kind: 'prompt',
+      opacity: '1',
+      text: 'Code Review',
+      width: 220
+    })
+    expect(treeGhost.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(treeGhost.borderColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(handleGhost).toEqual(treeGhost)
   })
 
   test('uses the folder drop highlight style for the selected dragged prompt-tree row', async ({

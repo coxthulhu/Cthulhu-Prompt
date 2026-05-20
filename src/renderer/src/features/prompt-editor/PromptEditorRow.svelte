@@ -10,7 +10,10 @@
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import { getPromptFolderScreenPromptData } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import {
+    getPromptDisplayTitle,
+    getPromptFolderScreenPromptData
+  } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import {
     lookupPromptEditorViewStateJson,
     setPromptEditorViewStateJson
@@ -107,6 +110,7 @@
   })
   const lineCount = $derived(getPromptLineCount(promptData.draft.text))
   const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
+  const promptTreeTitle = $derived(getPromptDisplayTitle(promptId))
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let rowElement = $state<HTMLDivElement | null>(null)
@@ -341,6 +345,7 @@
     <PromptEditorSidebar
       {promptId}
       {promptFolderId}
+      title={promptTreeTitle}
       {isFirstPrompt}
       {isLastPrompt}
       onMoveUp={handleMoveUp}

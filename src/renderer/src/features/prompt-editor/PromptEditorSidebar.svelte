@@ -16,10 +16,12 @@
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { createPromptDragGhostElement } from '@renderer/features/drag-drop/promptDragGhost'
 
   let {
     promptId,
     promptFolderId,
+    title,
     isFirstPrompt,
     isLastPrompt,
     onMoveUp,
@@ -28,6 +30,7 @@
   }: {
     promptId: string
     promptFolderId: string
+    title: string
     isFirstPrompt: boolean
     isLastPrompt: boolean
     onMoveUp: () => void | Promise<void>
@@ -63,6 +66,7 @@
       fromId: promptId,
       sourceFolderId: promptFolderId
     },
+    createGhostElement: () => createPromptDragGhostElement(title),
     onDragStart: handleDragStart,
     onDragFinish: handleDragFinish
   })

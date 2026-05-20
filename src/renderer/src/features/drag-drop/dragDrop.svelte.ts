@@ -1,6 +1,8 @@
 import { SvelteMap } from 'svelte/reactivity'
 
 const DRAG_START_DISTANCE_PX = 4
+const DRAG_GHOST_OFFSET_PX = 4
+const DRAG_GHOST_OPACITY = '1'
 
 export type DroppableEdge = 'top' | 'bottom'
 export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
@@ -11,9 +13,15 @@ export type DragFinishResult<TSourcePayload, TDropPayload> = {
   dropPayload: TDropPayload | null
 }
 
+export type DragGhostElementFactory<TSourcePayload> = (
+  payload: TSourcePayload,
+  sourceNode: HTMLElement
+) => HTMLElement | null
+
 export type DraggableOptions<TSourcePayload = unknown, TDropPayload = unknown> = {
   dragType: string
   payload: TSourcePayload
+  createGhostElement?: DragGhostElementFactory<TSourcePayload>
   onDragStart?: (payload: TSourcePayload) => void
   onDragFinish?: (result: DragFinishResult<TSourcePayload, TDropPayload>) => void
 }
@@ -44,6 +52,7 @@ type ActiveDrag = {
   onDragStart: (() => void) | null
   onDragFinish: ((dropPayload: unknown | null) => void) | null
   cursorStyleElement: HTMLStyleElement | null
+  ghostElement: HTMLElement | null
 }
 
 type NormalizedDroppableOptions = {
@@ -254,7 +263,33 @@ const restoreDocumentDragState = (): void => {
 const updateDragCursor = (nextX: number, nextY: number): void => {
   cursorX = nextX
   cursorY = nextY
+  if (activeDrag?.ghostElement) {
+    activeDrag.ghostElement.style.transform = `translate(${nextX + DRAG_GHOST_OFFSET_PX}px, ${nextY + DRAG_GHOST_OFFSET_PX}px)`
+  }
   updateActiveDropTarget()
+}
+
+const createDragGhostElement = <TSourcePayload, TDropPayload>(
+  sourceNode: HTMLElement,
+  options: DraggableOptions<TSourcePayload, TDropPayload>,
+  sourcePayload: TSourcePayload
+): HTMLElement | null => {
+  const ghostElement = options.createGhostElement?.(sourcePayload, sourceNode) ?? null
+  if (!ghostElement) {
+    return null
+  }
+
+  ghostElement.setAttribute('data-testid', 'drag-ghost')
+  ghostElement.style.position = 'fixed'
+  ghostElement.style.left = '0'
+  ghostElement.style.top = '0'
+  ghostElement.style.pointerEvents = 'none'
+  ghostElement.style.opacity = DRAG_GHOST_OPACITY
+  ghostElement.style.zIndex = '2147483647'
+  ghostElement.style.willChange = 'transform'
+
+  sourceNode.ownerDocument.body.appendChild(ghostElement)
+  return ghostElement
 }
 
 const beginDrag = <TSourcePayload, TDropPayload>(
@@ -276,7 +311,8 @@ const beginDrag = <TSourcePayload, TDropPayload>(
             dropPayload: dropPayload as TDropPayload | null
           })
       : null,
-    cursorStyleElement: createDragCursorStyleElement(sourceNode)
+    cursorStyleElement: createDragCursorStyleElement(sourceNode),
+    ghostElement: createDragGhostElement(sourceNode, options, sourcePayload)
   }
 
   activeDrag.onDragStart?.()
@@ -294,6 +330,7 @@ const finishDrag = (): {
   clearActiveDrag()
   restoreDocumentDragState()
   currentActiveDrag?.cursorStyleElement?.remove()
+  currentActiveDrag?.ghostElement?.remove()
 
   return {
     activeDrag: currentActiveDrag,
