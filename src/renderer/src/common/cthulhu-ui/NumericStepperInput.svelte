@@ -71,7 +71,7 @@
 </script>
 
 <div
-  class={mergeClasses('cthulhuUiNumericStepperInput', className)}
+  class={mergeClasses('cthulhuUiNumericStepperInput h-10 min-h-10', className)}
   data-disabled={disabled ? 'true' : undefined}
   data-invalid={ariaInvalid === true || ariaInvalid === 'true' ? 'true' : undefined}
 >
@@ -118,13 +118,13 @@
   .cthulhuUiNumericStepperInput {
     align-items: stretch;
     background-color: var(--ui-neutral-field-surface);
-    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
-    box-shadow: var(--cthulhu-ui-shadow-field);
+    box-shadow:
+      inset 0 0 0 1px var(--ui-neutral-normal-border),
+      var(--cthulhu-ui-shadow-field);
     color: var(--ui-normal-text);
-    display: inline-grid;
+    display: grid;
     grid-template-columns: 2.5rem minmax(5rem, auto) 2.5rem;
-    height: 2.75rem;
     min-width: 0;
     overflow: hidden;
     transition:
@@ -134,18 +134,21 @@
   }
 
   .cthulhuUiNumericStepperInput:focus-within {
-    border-color: var(--ui-neutral-focus-border);
     box-shadow:
+      inset 0 0 0 1px var(--ui-neutral-focus-border),
       var(--cthulhu-ui-shadow-focus),
       var(--cthulhu-ui-shadow-field);
   }
 
   .cthulhuUiNumericStepperInput[data-invalid='true'] {
-    border-color: var(--ui-danger-strong-border);
+    box-shadow:
+      inset 0 0 0 1px var(--ui-danger-strong-border),
+      var(--cthulhu-ui-shadow-field);
   }
 
   .cthulhuUiNumericStepperInput[data-invalid='true']:focus-within {
     box-shadow:
+      inset 0 0 0 1px var(--ui-danger-strong-border),
       var(--cthulhu-ui-shadow-focus-danger),
       var(--cthulhu-ui-shadow-field);
   }

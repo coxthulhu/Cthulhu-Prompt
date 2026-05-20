@@ -1,27 +1,27 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import AccentIconTile from './AccentIconTile.svelte'
+  import AccentIconTile, { type AccentIconTileVariant } from './AccentIconTile.svelte'
   import type { CthulhuSize } from './types'
 
   type TitleBlockSize = Extract<CthulhuSize, 'small' | 'large'>
-  type TitleBlockIconVariant = 'accent' | 'danger'
 
   type Props = {
     title: string
     size: TitleBlockSize
     description?: string
     icon?: ComponentType
-    iconVariant?: TitleBlockIconVariant
+    iconVariant?: AccentIconTileVariant
   }
 
   let { title, size, description, icon: Icon, iconVariant = 'accent' }: Props = $props()
 
   const titleTag = $derived(size === 'large' ? 'h2' : 'h3')
+  const iconSize = $derived(size === 'large' ? 'large' : 'medium')
 </script>
 
 <div class:cthulhuUiTitleBlockWithIcon={Icon}>
   {#if Icon}
-    <AccentIconTile icon={Icon} size="large" variant={iconVariant} />
+    <AccentIconTile icon={Icon} size={iconSize} variant={iconVariant} />
   {/if}
 
   <div class="cthulhuUiTitleBlockText">
@@ -33,7 +33,13 @@
       {title}
     </svelte:element>
     {#if description}
-      <p class="cthulhuUiTitleBlockDescription">{description}</p>
+      <p
+        class="cthulhuUiTitleBlockDescription mt-1"
+        class:cthulhuUiTitleBlockDescriptionLarge={size === 'large'}
+        class:cthulhuUiTitleBlockDescriptionSmall={size === 'small'}
+      >
+        {description}
+      </p>
     {/if}
   </div>
 </div>
@@ -60,13 +66,19 @@
   .cthulhuUiTitleBlockTitleSmall {
     color: var(--ui-normal-text);
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .cthulhuUiTitleBlockDescription {
-    margin-top: 0.3rem;
     color: var(--ui-muted-text);
-    font-size: 0.9rem;
     line-height: 1.4;
+  }
+
+  .cthulhuUiTitleBlockDescriptionLarge {
+    font-size: 0.9rem;
+  }
+
+  .cthulhuUiTitleBlockDescriptionSmall {
+    font-size: 0.875rem;
   }
 </style>

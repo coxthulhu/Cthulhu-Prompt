@@ -58,6 +58,16 @@
   --ui-accent-icon-ring: oklch(0.709 0.159 293.541 / 20%);
   --ui-accent-icon-glyph: oklch(1 0.07 293.571);
 
+  /* Accent blue */
+  --ui-accent-blue-normal-surface: oklch(0.666 0.181 254.617 / 18%);
+  --ui-accent-blue-normal-border: oklch(0.666 0.181 254.617 / 60%);
+  --ui-accent-blue-icon-glyph: oklch(0.91 0.07 247);
+
+  /* Accent green */
+  --ui-accent-green-normal-surface: oklch(0.627 0.17 149.214 / 22%);
+  --ui-accent-green-normal-border: oklch(0.8 0.182 151.711 / 42%);
+  --ui-accent-green-icon-glyph: oklch(0.982 0.018 155.826);
+
   /* Info */
   --ui-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
   --ui-info-normal-border: oklch(0.666 0.181 254.617 / 60%);

@@ -18,7 +18,9 @@
     Trash2,
     X
   } from 'lucide-svelte'
-  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
+  import AccentIconTile, {
+    type AccentIconTileVariant
+  } from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import CardSurface, {
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
@@ -50,14 +52,17 @@
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
-  type AccentIconTileVariant = 'accent' | 'danger'
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
   type IconTextButtonState = 'active' | 'enabled' | 'disabled'
   type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
-  type TitleBlockIconVariant = 'accent' | 'danger'
 
-  const accentIconTileVariants: AccentIconTileVariant[] = ['accent', 'danger']
+  const accentIconTileVariants: AccentIconTileVariant[] = [
+    'accent',
+    'accent-blue',
+    'accent-green',
+    'danger'
+  ]
   const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
   const cardSurfaceVariants: CardSurfaceVariant[] = ['panel', 'panel-flat', 'solid', 'inset']
   const iconDescriptionButtonVariants: IconDescriptionButtonVariant[] = [
@@ -76,7 +81,12 @@
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
-  const titleBlockIconVariants: TitleBlockIconVariant[] = ['accent', 'danger']
+  const titleBlockIconVariants: AccentIconTileVariant[] = [
+    'accent',
+    'accent-blue',
+    'accent-green',
+    'danger'
+  ]
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
 

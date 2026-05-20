@@ -190,6 +190,7 @@
               size="small"
               description="Sets the minimum number of visible lines in prompt editors."
               icon={Rows3}
+              iconVariant="accent-blue"
             />
           </div>
 
@@ -227,6 +228,7 @@
               size="small"
               description="Display line numbers beside prompt text for easier review."
               icon={Hash}
+              iconVariant="accent-green"
             />
           </div>
 
@@ -255,6 +257,7 @@
           size="large"
           description="Build and release details for this desktop app."
           icon={Info}
+          iconVariant="accent-blue"
         />
       </div>
 
@@ -296,6 +299,7 @@
               size="small"
               description="The version currently installed on this device."
               icon={Info}
+              iconVariant="accent-blue"
             />
           </div>
 
