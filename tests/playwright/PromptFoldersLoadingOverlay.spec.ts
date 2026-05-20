@@ -36,7 +36,7 @@ describe('Prompt folder loading overlay', () => {
 
       await mainWindow.waitForFunction((selector) => {
         const overlayElement = document.querySelector<HTMLElement>(selector)
-        return overlayElement?.classList.contains('opacity-0') ?? false
+        return overlayElement === null || overlayElement.dataset.fading === 'true'
       }, OVERLAY_SELECTOR)
       await mainWindow.waitForSelector(OVERLAY_SELECTOR, { state: 'detached' })
       await mainWindow.waitForSelector(PROMPT_EDITOR_PREFIX_SELECTOR, { state: 'attached' })
