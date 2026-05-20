@@ -16,7 +16,7 @@
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
-  import { createPromptDragGhostElement } from '@renderer/features/drag-drop/promptDragGhost'
+  import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
 
   let {
     promptId,
@@ -66,7 +66,7 @@
       fromId: promptId,
       sourceFolderId: promptFolderId
     },
-    createGhostElement: () => createPromptDragGhostElement(title),
+    createGhost: () => createPromptDragGhost(title),
     onDragStart: handleDragStart,
     onDragFinish: handleDragFinish
   })

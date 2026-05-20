@@ -1,5 +1,6 @@
 <script lang="ts">
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import DragGhostOverlay from '@renderer/features/drag-drop/DragGhostOverlay.svelte'
 
   type OverlayState = {
     isVisible: () => boolean
@@ -13,6 +14,8 @@
 
   const { startupRestoreOverlay, startupLoadingOverlayFadeMs }: Props = $props()
 </script>
+
+<DragGhostOverlay />
 
 {#if startupRestoreOverlay.isVisible()}
   <LoadingOverlay

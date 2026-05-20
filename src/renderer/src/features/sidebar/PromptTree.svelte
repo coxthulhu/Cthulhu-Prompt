@@ -23,7 +23,7 @@
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
-  import { createPromptDragGhostElement } from '@renderer/features/drag-drop/promptDragGhost'
+  import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
   import {
     type PromptDraftRecord,
@@ -272,7 +272,7 @@
       fromId: promptId,
       sourceFolderId: folderId
     },
-    createGhostElement: () => createPromptDragGhostElement(title),
+    createGhost: () => createPromptDragGhost(title),
     onDragStart: promptTreePromptDrag.handleDragStart,
     onDragFinish: promptTreePromptDrag.handleDragFinish
   })

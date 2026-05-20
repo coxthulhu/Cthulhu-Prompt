@@ -1,4 +1,5 @@
 import { SvelteMap } from 'svelte/reactivity'
+import type { Component } from 'svelte'
 
 const DRAG_START_DISTANCE_PX = 4
 const DRAG_GHOST_OFFSET_PX = 4
@@ -13,15 +14,21 @@ export type DragFinishResult<TSourcePayload, TDropPayload> = {
   dropPayload: TDropPayload | null
 }
 
-export type DragGhostElementFactory<TSourcePayload> = (
+export type DragGhostOptions = {
+  component: Component<any>
+  kind?: string
+  props?: Record<string, unknown>
+}
+
+export type DragGhostFactory<TSourcePayload> = (
   payload: TSourcePayload,
   sourceNode: HTMLElement
-) => HTMLElement | null
+) => DragGhostOptions | null
 
 export type DraggableOptions<TSourcePayload = unknown, TDropPayload = unknown> = {
   dragType: string
   payload: TSourcePayload
-  createGhostElement?: DragGhostElementFactory<TSourcePayload>
+  createGhost?: DragGhostFactory<TSourcePayload>
   onDragStart?: (payload: TSourcePayload) => void
   onDragFinish?: (result: DragFinishResult<TSourcePayload, TDropPayload>) => void
 }
@@ -52,7 +59,12 @@ type ActiveDrag = {
   onDragStart: (() => void) | null
   onDragFinish: ((dropPayload: unknown | null) => void) | null
   cursorStyleElement: HTMLStyleElement | null
-  ghostElement: HTMLElement | null
+}
+
+export type ActiveDragGhost = DragGhostOptions & {
+  opacity: string
+  x: number
+  y: number
 }
 
 type NormalizedDroppableOptions = {
@@ -76,8 +88,15 @@ type ActiveDropTarget = {
 let activeDrag = $state<ActiveDrag | null>(null)
 let cursorX = $state(0)
 let cursorY = $state(0)
+let activeDragGhost = $state<ActiveDragGhost | null>(null)
 let activeDropTarget: ActiveDropTarget | null = null
 const droppableRegistrationByNode = new WeakMap<HTMLElement, DroppableRegistration>()
+
+export const dragDropOverlayState = {
+  get activeDragGhost() {
+    return activeDragGhost
+  }
+}
 
 export const createDroppableStateRegistry = <
   TKey extends string
@@ -263,33 +282,33 @@ const restoreDocumentDragState = (): void => {
 const updateDragCursor = (nextX: number, nextY: number): void => {
   cursorX = nextX
   cursorY = nextY
-  if (activeDrag?.ghostElement) {
-    activeDrag.ghostElement.style.transform = `translate(${nextX + DRAG_GHOST_OFFSET_PX}px, ${nextY + DRAG_GHOST_OFFSET_PX}px)`
+  if (activeDragGhost) {
+    activeDragGhost = {
+      ...activeDragGhost,
+      x: nextX + DRAG_GHOST_OFFSET_PX,
+      y: nextY + DRAG_GHOST_OFFSET_PX
+    }
   }
   updateActiveDropTarget()
 }
 
-const createDragGhostElement = <TSourcePayload, TDropPayload>(
+const showDragGhost = <TSourcePayload, TDropPayload>(
   sourceNode: HTMLElement,
   options: DraggableOptions<TSourcePayload, TDropPayload>,
   sourcePayload: TSourcePayload
-): HTMLElement | null => {
-  const ghostElement = options.createGhostElement?.(sourcePayload, sourceNode) ?? null
-  if (!ghostElement) {
-    return null
+): void => {
+  const ghost = options.createGhost?.(sourcePayload, sourceNode) ?? null
+  if (!ghost) {
+    activeDragGhost = null
+    return
   }
 
-  ghostElement.setAttribute('data-testid', 'drag-ghost')
-  ghostElement.style.position = 'fixed'
-  ghostElement.style.left = '0'
-  ghostElement.style.top = '0'
-  ghostElement.style.pointerEvents = 'none'
-  ghostElement.style.opacity = DRAG_GHOST_OPACITY
-  ghostElement.style.zIndex = '2147483647'
-  ghostElement.style.willChange = 'transform'
-
-  sourceNode.ownerDocument.body.appendChild(ghostElement)
-  return ghostElement
+  activeDragGhost = {
+    ...ghost,
+    opacity: DRAG_GHOST_OPACITY,
+    x: cursorX + DRAG_GHOST_OFFSET_PX,
+    y: cursorY + DRAG_GHOST_OFFSET_PX
+  }
 }
 
 const beginDrag = <TSourcePayload, TDropPayload>(
@@ -311,10 +330,10 @@ const beginDrag = <TSourcePayload, TDropPayload>(
             dropPayload: dropPayload as TDropPayload | null
           })
       : null,
-    cursorStyleElement: createDragCursorStyleElement(sourceNode),
-    ghostElement: createDragGhostElement(sourceNode, options, sourcePayload)
+    cursorStyleElement: createDragCursorStyleElement(sourceNode)
   }
 
+  showDragGhost(sourceNode, options, sourcePayload)
   activeDrag.onDragStart?.()
   updateDragCursor(startX, startY)
   document.body.style.userSelect = 'none'
@@ -327,10 +346,10 @@ const finishDrag = (): {
   const currentActiveDrag = activeDrag
   const currentActiveDropTarget = activeDropTarget
 
+  activeDragGhost = null
   clearActiveDrag()
   restoreDocumentDragState()
   currentActiveDrag?.cursorStyleElement?.remove()
-  currentActiveDrag?.ghostElement?.remove()
 
   return {
     activeDrag: currentActiveDrag,
