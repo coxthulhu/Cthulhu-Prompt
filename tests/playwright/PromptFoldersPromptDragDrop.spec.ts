@@ -524,10 +524,10 @@ describe('Prompt folder prompt drag-drop', () => {
     await scrollPromptTreeUntilRowUnmounts(mainWindow, sourcePromptId)
 
     await expect(mainWindow.locator(promptTreePromptSelector(sourcePromptId))).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
+    await expect(mainWindow.locator('body')).toHaveCSS('cursor', 'grabbing')
 
     await finishActiveDrag(mainWindow)
-    await expect(mainWindow.locator('[data-testid="drag-drop-overlay"]')).toHaveCount(0)
+    await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', 'grabbing')
   })
 
   test('temporarily marks the dragged prompt row while dragging from the editor handle', async ({

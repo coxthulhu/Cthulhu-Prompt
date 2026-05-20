@@ -3,7 +3,6 @@
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import { ChevronDown, ChevronUp, GripVertical } from 'lucide-svelte'
   import {
-    type DragDropPreview,
     draggable,
     type DragFinishResult,
     type DraggableOptions
@@ -55,15 +54,15 @@
     void onMoveDown()
   }
 
-  const getDragHandleOptions = (
-    previewSnippet: DragDropPreview
-  ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
+  const getDragHandleOptions = (): DraggableOptions<
+    PromptHandleDragPayload,
+    PromptHandleDropPayload
+  > => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
       sourceFolderId: promptFolderId
     },
-    previewSnippet,
     onDragStart: handleDragStart,
     onDragFinish: handleDragFinish
   })
@@ -88,10 +87,6 @@
 </script>
 
 <div class="prompt-editor-sidebar">
-  {#snippet emptyDragPreview()}
-    <span class="hidden" aria-hidden="true"></span>
-  {/snippet}
-
   <IconOnlyButton
     icon={ChevronUp}
     label="Move prompt up"
@@ -110,7 +105,7 @@
     iconClass="stroke-[2.5]"
     testId="prompt-drag-handle"
     buttonAction={dragHandleAction}
-    buttonActionParameter={getDragHandleOptions(emptyDragPreview)}
+    buttonActionParameter={getDragHandleOptions()}
     grabCursor={true}
   />
 

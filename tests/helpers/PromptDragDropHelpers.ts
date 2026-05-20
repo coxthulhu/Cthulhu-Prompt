@@ -70,7 +70,7 @@ const beginDragFromLocator = async (
   await moveMouseToBoxCenter(page, box)
   await page.mouse.down()
   await page.mouse.move(box.x + box.width / 2 + 8, box.y + box.height / 2 + 8, { steps: 4 })
-  await expect(page.locator('[data-testid="drag-drop-overlay"]')).toBeVisible()
+  await expect(page.locator('body')).toHaveCSS('cursor', 'grabbing')
 }
 
 export const moveActiveDragToTarget = async (

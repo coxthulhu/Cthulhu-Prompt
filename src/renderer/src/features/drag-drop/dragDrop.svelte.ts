@@ -1,10 +1,7 @@
-import type { Snippet } from 'svelte'
 import { SvelteMap } from 'svelte/reactivity'
 
 const DRAG_START_DISTANCE_PX = 4
-const OVERLAY_OFFSET_X_PX = 12
 
-export type DragDropPreview = Snippet<[]>
 export type DroppableEdge = 'top' | 'bottom'
 export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
 type DroppablePayloadResolver<TDropPayload> = (edge: DroppableEdge | null) => TDropPayload
@@ -17,7 +14,6 @@ export type DragFinishResult<TSourcePayload, TDropPayload> = {
 export type DraggableOptions<TSourcePayload = unknown, TDropPayload = unknown> = {
   dragType: string
   payload: TSourcePayload
-  previewSnippet: DragDropPreview
   onDragStart?: (payload: TSourcePayload) => void
   onDragFinish?: (result: DragFinishResult<TSourcePayload, TDropPayload>) => void
 }
@@ -45,7 +41,6 @@ type ActiveDrag = {
   sourceNode: HTMLElement
   dragType: string
   payload: unknown
-  previewSnippet: DragDropPreview
   onDragStart: (() => void) | null
   onDragFinish: ((dropPayload: unknown | null) => void) | null
   cursorStyleElement: HTMLStyleElement | null
@@ -273,7 +268,6 @@ const beginDrag = <TSourcePayload, TDropPayload>(
     sourceNode,
     dragType: options.dragType,
     payload: sourcePayload,
-    previewSnippet: options.previewSnippet,
     onDragStart: options.onDragStart ? () => options.onDragStart?.(sourcePayload) : null,
     onDragFinish: options.onDragFinish
       ? (dropPayload) =>
@@ -437,20 +431,5 @@ export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
         updateActiveDropTarget()
       }
     }
-  }
-}
-
-export const dragDropOverlayState = {
-  get isVisible() {
-    return activeDrag !== null
-  },
-  get previewSnippet() {
-    return activeDrag?.previewSnippet ?? null
-  },
-  get leftPx() {
-    return cursorX + OVERLAY_OFFSET_X_PX
-  },
-  get topPx() {
-    return cursorY
   }
 }

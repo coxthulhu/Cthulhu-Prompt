@@ -15,7 +15,6 @@
     droppable,
     type DroppableAllowedEdges,
     type DroppableEdge,
-    type DragDropPreview,
     type DroppableOptions,
     type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
@@ -264,15 +263,13 @@
 
   const getPromptRowDragOptions = (
     folderId: string,
-    promptId: string,
-    previewSnippet: DragDropPreview
+    promptId: string
   ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
       sourceFolderId: folderId
     },
-    previewSnippet,
     onDragStart: promptTreePromptDrag.handleDragStart,
     onDragFinish: promptTreePromptDrag.handleDragFinish
   })
@@ -543,11 +540,7 @@
     class="sidebarPromptTreeSettingsRow"
   >
     <button
-      use:draggable={getPromptRowDragOptions(
-        props.row.folder.id,
-        props.row.promptId,
-        emptyDragPreview
-      )}
+      use:draggable={getPromptRowDragOptions(props.row.folder.id, props.row.promptId)}
       type="button"
       data-testid={folderPromptTestId(props.row.promptId)}
       data-active={isActive ? 'true' : 'false'}
@@ -568,10 +561,6 @@
       >
     </button>
   </div>
-{/snippet}
-
-{#snippet emptyDragPreview()}
-  <span class="hidden" aria-hidden="true"></span>
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
