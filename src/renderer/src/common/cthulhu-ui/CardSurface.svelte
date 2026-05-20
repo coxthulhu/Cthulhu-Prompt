@@ -72,8 +72,12 @@
   }
 
   .cthulhuUiCardSurface--inset {
-    border-color: var(--ui-card-nested-border);
-    background-color: var(--ui-card-nested-surface);
+    border-color: var(--ui-neutral-normal-border);
+    background-image: linear-gradient(
+      to bottom,
+      var(--ui-card-nested-surface-gradient-start),
+      var(--ui-card-nested-surface-gradient-end)
+    );
     box-shadow: var(--cthulhu-ui-shadow-subcard);
   }
 

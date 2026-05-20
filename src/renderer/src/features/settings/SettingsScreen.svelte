@@ -122,8 +122,8 @@
       showAccentLine
     />
 
-    <CardSurface>
-      <div class="px-2 pb-4 pt-1">
+    <CardSurface class="grid gap-2 p-2.5">
+      <div class="px-2.5 py-2">
         <TitleBlock
           title="Editor & layout"
           size="large"
@@ -135,7 +135,7 @@
       <div class="space-y-3">
         <CardSurface
           variant="inset"
-          class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
         >
           <div class="min-w-0">
             <TitleBlock
@@ -235,8 +235,8 @@
       </div>
     </CardSurface>
 
-    <CardSurface>
-      <div class="px-2 pb-4 pt-1">
+    <CardSurface class="grid gap-2 p-2.5">
+      <div class="px-2.5 py-2">
         <TitleBlock
           title="About"
           size="large"
