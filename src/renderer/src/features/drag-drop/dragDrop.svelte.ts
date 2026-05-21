@@ -393,9 +393,38 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
   options: DraggableOptions<TSourcePayload, TDropPayload>
 ) => {
   let draggableOptions = options
+  let suppressNextClick = false
+  let suppressClickResetId: number | null = null
 
   const handleNativeDragStart = (event: DragEvent) => {
     event.preventDefault()
+  }
+
+  const clearClickSuppression = () => {
+    suppressNextClick = false
+
+    if (suppressClickResetId !== null) {
+      window.clearTimeout(suppressClickResetId)
+      suppressClickResetId = null
+    }
+  }
+
+  const suppressClickAfterDrag = () => {
+    clearClickSuppression()
+    suppressNextClick = true
+    suppressClickResetId = window.setTimeout(() => {
+      clearClickSuppression()
+    }, 0)
+  }
+
+  const handleClickCapture = (event: MouseEvent) => {
+    if (!suppressNextClick) {
+      return
+    }
+
+    clearClickSuppression()
+    event.preventDefault()
+    event.stopImmediatePropagation()
   }
 
   const handleMouseDown = (event: MouseEvent) => {
@@ -433,6 +462,7 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
       cleanupPointerListeners()
 
       if (hasStartedDrag) {
+        suppressClickAfterDrag()
         endDrag()
       }
     }
@@ -443,6 +473,7 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
   }
 
   node.draggable = false
+  node.addEventListener('click', handleClickCapture, true)
   node.addEventListener('dragstart', handleNativeDragStart)
   node.addEventListener('mousedown', handleMouseDown)
 
@@ -451,6 +482,8 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
       draggableOptions = nextOptions
     },
     destroy() {
+      clearClickSuppression()
+      node.removeEventListener('click', handleClickCapture, true)
       node.removeEventListener('dragstart', handleNativeDragStart)
       node.removeEventListener('mousedown', handleMouseDown)
       // Keep the active drag alive if virtualization unmounts the source row mid-drag.

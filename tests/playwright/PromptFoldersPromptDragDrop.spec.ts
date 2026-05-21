@@ -243,6 +243,27 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
   })
 
+  test('does not select a prompt tree row after dragging and releasing it on itself', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+    await mainWindow.locator(promptTreePromptSelector(DEV_2_ID)).click()
+    await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
+
+    await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID))
+    await finishActiveDrag(mainWindow)
+
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, false)
+    await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
+  })
+
   test('silently ignores dropping a prompt onto adjacent prompt rows without moving it', async ({
     testSetup,
     electronApp
