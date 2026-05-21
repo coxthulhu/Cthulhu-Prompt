@@ -232,13 +232,18 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptTreePromptSelector(DEV_1_ID))
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID))
+    await expect(
+      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))
+    ).toHaveCount(0)
+    await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
   })
 
-  test('silently ignores dropping a prompt onto the row above when it is already after it', async ({
+  test('silently ignores dropping a prompt onto adjacent prompt rows without moving it', async ({
     testSetup,
     electronApp
   }) => {
@@ -250,12 +255,19 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await dragPromptHandleToTarget(
-      mainWindow,
-      DEV_2_ID,
-      promptTreePromptSelector(DEV_1_ID),
-      'bottom'
-    )
+    await beginPromptHandleDrag(mainWindow, DEV_2_ID)
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID), 'bottom')
+    await expect(
+      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))
+    ).toHaveCount(0)
+    await finishActiveDrag(mainWindow)
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_2_ID), 'top')
+    await expect(
+      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_2_ID))
+    ).toHaveCount(0)
+    await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])

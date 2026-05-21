@@ -37,6 +37,7 @@ export type DroppableOptions<TDraggedPayload = unknown, TDropPayload = unknown> 
   dragType: string
   payload?: TDropPayload | DroppablePayloadResolver<TDropPayload>
   allowedEdges?: DroppableAllowedEdges
+  canDrop?: (payload: TDraggedPayload, edge: DroppableEdge | null) => boolean
   onDrop?: (payload: TDraggedPayload) => void
   state?: DroppableState
 }
@@ -70,6 +71,7 @@ export type ActiveDragGhost = DragGhostOptions & {
 type NormalizedDroppableOptions = {
   dragType: string
   allowedEdges: DroppableAllowedEdges
+  canDrop: (payload: unknown, edge: DroppableEdge | null) => boolean
   resolvePayload: (edge: DroppableEdge | null) => unknown | null
   onDrop: ((payload: unknown) => void) | null
   state?: DroppableState
@@ -188,10 +190,14 @@ const normalizeDroppableOptions = <TDraggedPayload, TDropPayload>(
   options: DroppableOptions<TDraggedPayload, TDropPayload>
 ): NormalizedDroppableOptions => {
   const payload = options.payload
+  const canDrop = options.canDrop
 
   return {
     dragType: options.dragType,
     allowedEdges: options.allowedEdges ?? 'none',
+    canDrop: canDrop
+      ? (draggedPayload, edge) => canDrop(draggedPayload as TDraggedPayload, edge)
+      : () => true,
     resolvePayload:
       typeof payload === 'function'
         ? (edge) => (payload as DroppablePayloadResolver<TDropPayload>)(edge) ?? null
@@ -241,7 +247,8 @@ const resolveDropEdge = (
 const getDropTargetFromPoint = (
   x: number,
   y: number,
-  dragType: string
+  dragType: string,
+  draggedPayload: unknown
 ): ActiveDropTarget | null => {
   for (const element of document.elementsFromPoint(x, y)) {
     const registration = getClosestRegisteredDroppable(
@@ -249,9 +256,15 @@ const getDropTargetFromPoint = (
       dragType
     )
     if (registration) {
+      const options = registration.getOptions()
+      const edge = resolveDropEdge(registration.node, options.allowedEdges, y)
+      if (!options.canDrop(draggedPayload, edge)) {
+        continue
+      }
+
       return {
         registration,
-        edge: resolveDropEdge(registration.node, registration.getOptions().allowedEdges, y)
+        edge
       }
     }
   }
@@ -265,7 +278,12 @@ const updateActiveDropTarget = (): void => {
     return
   }
 
-  const matchedDropTarget = getDropTargetFromPoint(cursorX, cursorY, activeDrag.dragType)
+  const matchedDropTarget = getDropTargetFromPoint(
+    cursorX,
+    cursorY,
+    activeDrag.dragType,
+    activeDrag.payload
+  )
 
   setActiveDropTarget(matchedDropTarget)
 }

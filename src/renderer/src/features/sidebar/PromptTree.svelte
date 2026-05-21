@@ -207,13 +207,39 @@
   const getPromptTreeDroppableOptions = (
     rowId: string,
     allowedEdges: DroppableAllowedEdges,
-    getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload
+    getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload,
+    canDrop?: (payload: PromptHandleDragPayload, edge: DroppableEdge | null) => boolean
   ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges,
+    canDrop: canDrop ?? (() => true),
     payload: getDropPayload,
     state: promptTreeDroppableState.getState(rowId)
   })
+
+  const canDropOnPromptTreePromptRow = (
+    folder: PromptFolder,
+    promptId: string,
+    payload: PromptHandleDragPayload,
+    edge: DroppableEdge | null
+  ): boolean => {
+    if (payload.fromId === promptId) {
+      return false
+    }
+
+    if (payload.sourceFolderId !== folder.id) {
+      return true
+    }
+
+    const draggedIndex = folder.promptIds.indexOf(payload.fromId)
+    const targetIndex = folder.promptIds.indexOf(promptId)
+
+    // Reject same-folder prompt-row edges that would leave the dragged row in place.
+    return !(
+      (edge === 'bottom' && targetIndex === draggedIndex - 1) ||
+      (edge === 'top' && targetIndex === draggedIndex + 1)
+    )
+  }
 
   const isPromptTreeDropTargetOver = (rowId: string): boolean =>
     promptTreeDroppableState.isOver(rowId)
@@ -536,12 +562,18 @@
     promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}
 
   <div
-    use:droppable={getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
-      kind: 'prompt',
-      folderId: props.row.folder.id,
-      promptId: props.row.promptId,
-      edge: edge ?? 'bottom'
-    }))}
+    use:droppable={getPromptTreeDroppableOptions(
+      props.rowId,
+      'top-and-bottom',
+      (edge) => ({
+        kind: 'prompt',
+        folderId: props.row.folder.id,
+        promptId: props.row.promptId,
+        edge: edge ?? 'bottom'
+      }),
+      (payload, edge) =>
+        canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
+    )}
     class="sidebarPromptTreeSettingsRow"
   >
     <button
