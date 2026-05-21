@@ -3,6 +3,7 @@
   import { createPromptEditorModelUri, type monaco } from '@renderer/common/Monaco'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
   import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
@@ -111,6 +112,11 @@
   const lineCount = $derived(getPromptLineCount(promptData.draft.text))
   const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
   const promptTreeTitle = $derived(getPromptDisplayTitle(promptId))
+  // Track shared prompt drag state so both editor-handle and prompt-tree drags dim this row.
+  const isDragging = $derived(
+    promptDragState.draggedPromptRow?.folderId === promptFolderId &&
+      promptDragState.draggedPromptRow.promptId === promptId
+  )
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let rowElement = $state<HTMLDivElement | null>(null)
@@ -339,6 +345,7 @@
   bind:rowElement
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
+  data-dragging={isDragging ? 'true' : 'false'}
   data-virtual-window-row=""
 >
   {#snippet sidebar()}
@@ -420,6 +427,14 @@
 </PromptEditorCardSurface>
 
 <style>
+  :global(.prompt-editor-card-surface) {
+    transition: opacity 50ms ease-out;
+  }
+
+  :global(.prompt-editor-card-surface[data-dragging='true']) {
+    opacity: 0.72;
+  }
+
   .prompt-editor-body-editor {
     min-width: 0;
   }

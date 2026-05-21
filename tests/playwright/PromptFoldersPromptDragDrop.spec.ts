@@ -1,5 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import type { Locator } from 'playwright'
+import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
@@ -123,6 +123,16 @@ const expectDragGhostNear = async (
       x: x + 4,
       y: y + 4
     })
+}
+
+const expectPromptEditorDraggingState = async (
+  page: Page,
+  promptId: string,
+  isDragging: boolean
+): Promise<void> => {
+  const editorRow = page.locator(promptEditorSelector(promptId))
+  await expect(editorRow).toHaveAttribute('data-dragging', isDragging ? 'true' : 'false')
+  await expect(editorRow).toHaveCSS('opacity', isDragging ? '0.72' : '1')
 }
 
 const getPromptTreeFolderRowHighlightStyles = async (
@@ -609,6 +619,28 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, false)
     await expectPromptTreeRowActiveState(mainWindow, DEV_2_ID, true)
+  })
+
+  test('temporarily dims the dragged prompt editor row from both drag sources', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, false)
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, true)
+    await finishActiveDrag(mainWindow)
+    await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, false)
+
+    await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
+    await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, true)
+    await finishActiveDrag(mainWindow)
+    await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, false)
   })
 
   test('shows the same prompt row ghost from both prompt drag handles', async ({ testSetup }) => {
