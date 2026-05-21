@@ -16,10 +16,15 @@
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps,
+    type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
-  import { PROMPT_FOLDER_SETTINGS_ROW_ID, promptEditorRowId } from './promptFolderRowIds'
+  import {
+    PROMPT_FOLDER_SETTINGS_ROW_ID,
+    promptDividerRowId,
+    promptEditorRowId
+  } from './promptFolderRowIds'
   import {
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
@@ -104,6 +109,7 @@
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
+  let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
 
   // Side effect: expose the virtual window band-scroll API to the controller.
@@ -233,6 +239,31 @@
     }
     onCenterRowChange(null)
   }
+
+  const scrollByPromptBlockHeight = (direction: 'up' | 'down', promptId: string) => {
+    if (!scrollApi) return
+
+    const promptIndex = visiblePromptIds.indexOf(promptId)
+    const adjacentPromptId =
+      direction === 'up' ? visiblePromptIds[promptIndex - 1] : visiblePromptIds[promptIndex + 1]
+    if (!adjacentPromptId) return
+
+    // Keep the clicked move button anchored while the adjacent prompt block crosses it.
+    scrollApi.scrollByRowHeights(
+      [promptEditorRowId(adjacentPromptId), promptDividerRowId(adjacentPromptId)],
+      direction
+    )
+  }
+
+  const handleMovePromptUp = (promptId: string): Promise<boolean> => {
+    scrollByPromptBlockHeight('up', promptId)
+    return onMovePromptUp(promptId)
+  }
+
+  const handleMovePromptDown = (promptId: string): Promise<boolean> => {
+    scrollByPromptBlockHeight('down', promptId)
+    return onMovePromptDown(promptId)
+  }
 </script>
 
 <SvelteVirtualWindow
@@ -245,6 +276,7 @@
   onInitialScrollToRowCenteredApplied={onInitialCenterRowApplied}
   bind:scrollToWithinWindowBand
   bind:scrollToAndTrackRowCentered
+  bind:scrollApi
   bind:viewportMetrics
   {onScrollTopChange}
   onCenterRowChange={(row) => {
@@ -332,8 +364,8 @@
     isFirstPrompt={promptIndex === 0}
     isLastPrompt={promptIndex === visiblePromptIds.length - 1}
     onDelete={() => onDeletePrompt(row.promptId)}
-    onMoveUp={() => onMovePromptUp(row.promptId)}
-    onMoveDown={() => onMovePromptDown(row.promptId)}
+    onMoveUp={() => handleMovePromptUp(row.promptId)}
+    onMoveDown={() => handleMovePromptDown(row.promptId)}
     onPromptTreeDrop={(dropPayload) => onPromptTreeDrop(row.promptId, dropPayload)}
   />
 {/snippet}

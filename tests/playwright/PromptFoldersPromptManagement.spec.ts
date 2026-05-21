@@ -12,8 +12,19 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
+
+const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
+const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
+const BOUNDARY_1_ID = 'boundary-1'
+const BOUNDARY_2_ID = 'boundary-2'
+const MOVE_ANCHOR_1_ID = 'move-anchor-1'
+const MOVE_ANCHOR_2_ID = 'move-anchor-2'
+const MOVE_ANCHOR_3_ID = 'move-anchor-3'
+const MOVE_BUTTON_POSITION_TOLERANCE_PX = 1
 
 const promptTitleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} ${PROMPT_TITLE_SELECTOR}`
@@ -99,6 +110,44 @@ const expectPromptContent = async (
   expect(text).toContain(expected.text)
 }
 
+const getElementTop = async (page: any, selector: string): Promise<number> => {
+  return await page.locator(selector).evaluate((element: HTMLElement) => {
+    return element.getBoundingClientRect().top
+  })
+}
+
+const scrollUntilMounted = async (
+  page: any,
+  testHelpers: { scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void> },
+  selector: string
+): Promise<void> => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if ((await page.locator(selector).count()) > 0) return
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 600)
+  }
+
+  throw new Error(`Element did not become mounted: ${selector}`)
+}
+
+const buildMoveScrollWorkspace = () => {
+  const shortPrompt = heightTestPrompts.singleLine
+  const tallPrompt = heightTestPrompts.twoHundredLine
+
+  return createWorkspaceWithFolders(MOVE_SCROLL_WORKSPACE_PATH, [
+    {
+      folderName: MOVE_SCROLL_FOLDER_NAME,
+      displayName: MOVE_SCROLL_FOLDER_NAME,
+      prompts: [
+        { ...shortPrompt, id: BOUNDARY_1_ID, title: 'Boundary One' },
+        { ...shortPrompt, id: BOUNDARY_2_ID, title: 'Boundary Two' },
+        { ...tallPrompt, id: MOVE_ANCHOR_1_ID, title: 'Move Anchor One' },
+        { ...tallPrompt, id: MOVE_ANCHOR_2_ID, title: 'Move Anchor Two' },
+        { ...tallPrompt, id: MOVE_ANCHOR_3_ID, title: 'Move Anchor Three' }
+      ]
+    }
+  ])
+}
+
 describe('Prompt folder prompt management', () => {
   test('tabs from the prompt title to the Monaco editor', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -150,6 +199,89 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator(moveUpSelector('dev-2'))).toBeDisabled()
     await expect(mainWindow.locator(moveDownSelector('dev-1'))).toBeDisabled()
     expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2', newPromptId, 'dev-1'])
+  })
+
+  test('keeps moved prompt buttons under the cursor when move buttons reorder prompts', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(buildMoveScrollWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(MOVE_SCROLL_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(MOVE_SCROLL_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(BOUNDARY_1_ID))
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await mainWindow.locator(moveUpSelector(BOUNDARY_2_ID)).click()
+
+    await expect
+      .poll(async () => await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBe(0)
+    await expect
+      .poll(async () => await getPromptTreePromptRowIds(mainWindow))
+      .toEqual([
+        BOUNDARY_2_ID,
+        BOUNDARY_1_ID,
+        MOVE_ANCHOR_1_ID,
+        MOVE_ANCHOR_2_ID,
+        MOVE_ANCHOR_3_ID
+      ])
+
+    const moveAnchorUpSelector = moveUpSelector(MOVE_ANCHOR_2_ID)
+    await scrollUntilMounted(mainWindow, testHelpers, moveAnchorUpSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      moveAnchorUpSelector,
+      120
+    )
+
+    const moveUpTopBefore = await getElementTop(mainWindow, moveAnchorUpSelector)
+    await mainWindow.locator(moveAnchorUpSelector).click()
+
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await getElementTop(mainWindow, moveUpSelector(MOVE_ANCHOR_2_ID))) - moveUpTopBefore
+        )
+      )
+      .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    await expect
+      .poll(async () => await getPromptTreePromptRowIds(mainWindow))
+      .toEqual([
+        BOUNDARY_2_ID,
+        BOUNDARY_1_ID,
+        MOVE_ANCHOR_2_ID,
+        MOVE_ANCHOR_1_ID,
+        MOVE_ANCHOR_3_ID
+      ])
+
+    const moveAnchorDownSelector = moveDownSelector(MOVE_ANCHOR_2_ID)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      moveAnchorDownSelector,
+      120
+    )
+
+    const moveDownTopBefore = await getElementTop(mainWindow, moveAnchorDownSelector)
+    await mainWindow.locator(moveAnchorDownSelector).click()
+
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await getElementTop(mainWindow, moveAnchorDownSelector)) - moveDownTopBefore
+        )
+      )
+      .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    await expect
+      .poll(async () => await getPromptTreePromptRowIds(mainWindow))
+      .toEqual([
+        BOUNDARY_2_ID,
+        BOUNDARY_1_ID,
+        MOVE_ANCHOR_1_ID,
+        MOVE_ANCHOR_2_ID,
+        MOVE_ANCHOR_3_ID
+      ])
   })
 
   test('preserves prompt order after navigating away', async ({ testSetup }) => {

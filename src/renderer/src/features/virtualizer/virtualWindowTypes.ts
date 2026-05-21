@@ -38,6 +38,7 @@ export type ScrollToAndTrackRowCentered = (rowId: string) => void
 export type VirtualWindowScrollApi = {
   scrollTo: (scrollTopPx: number) => void
   getScrollTop: () => number
+  scrollByRowHeights: (rowIds: string[], direction: 'up' | 'down') => void
 }
 
 export type VirtualWindowViewportMetrics = {

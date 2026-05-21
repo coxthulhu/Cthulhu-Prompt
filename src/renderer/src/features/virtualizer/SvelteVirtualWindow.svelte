@@ -153,7 +153,17 @@
 
   const scrollApiInternal: VirtualWindowScrollApi = {
     scrollTo: (scrollTopPx: number) => applyProgrammaticScrollTop(scrollTopPx),
-    getScrollTop: () => getScrollTopPx()
+    getScrollTop: () => getScrollTopPx(),
+    scrollByRowHeights: (rowIds: string[], direction: 'up' | 'down') => {
+      const rows = getRowStates()
+      const blockHeight = rowIds.reduce(
+        (sum, rowId) => sum + (rows.find((row) => row.id === rowId)?.height ?? 0),
+        0
+      )
+      applyProgrammaticScrollTop(
+        getScrollTopPx() + blockHeight * (direction === 'up' ? -1 : 1)
+      )
+    }
   }
 
   scrollToWithinWindowBand = scrollToWithinWindowBandInternal
