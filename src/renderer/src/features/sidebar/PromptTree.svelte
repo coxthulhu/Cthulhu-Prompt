@@ -59,6 +59,7 @@
     folderSettingsTestId,
     folderToggleTestId
   } from './promptTreeTestIds'
+  import PromptTreeIndent from './PromptTreeIndent.svelte'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
 
@@ -576,6 +577,7 @@
     )}
     class="sidebarPromptTreeSettingsRow"
   >
+    <PromptTreeIndent />
     <button
       use:draggable={getPromptRowDragOptions(
         props.row.folder.id,
