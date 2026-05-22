@@ -145,7 +145,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await expect(mainWindow.locator('[data-testid="prompt-folder-icon-Examples"]')).toBeVisible()
+    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-settings-icon-Examples"]')
     ).toHaveCount(1)

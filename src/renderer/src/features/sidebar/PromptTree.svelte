@@ -4,8 +4,6 @@
     ArrowRight,
     ChevronDown,
     ChevronRight,
-    FileText,
-    Folder,
     Loader,
     Settings
   } from 'lucide-svelte'
@@ -51,7 +49,6 @@
   import PromptTreeDropIndicator from './PromptTreeDropIndicator.svelte'
   import { createPromptTreePromptDragController } from './promptTreeDrag'
   import {
-    folderIconTestId,
     folderOpenTestId,
     folderPromptDropIndicatorTestId,
     folderPromptTestId,
@@ -504,10 +501,6 @@
               <ChevronRight class="sidebarPromptTreeChevronIcon" />
             {/if}
           </span>
-          <Folder
-            class="sidebarPromptTreeFolderIcon"
-            data-testid={folderIconTestId(props.row.folder)}
-          />
           <span class="sidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
         </button>
 
@@ -595,7 +588,6 @@
         )}
       class="sidebarPromptTreeSettingsButton"
     >
-      <FileText class="sidebarPromptTreeSettingsIcon" aria-hidden="true" />
       <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
     </button>
   </PromptDropTarget>

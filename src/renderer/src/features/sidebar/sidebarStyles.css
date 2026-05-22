@@ -109,13 +109,6 @@
   width: 16px;
 }
 
-.sidebarPromptTreeFolderIcon {
-  height: 16px;
-  width: 16px;
-  flex-shrink: 0;
-  color: inherit;
-}
-
 .sidebarPromptTreeFolderLabel {
   min-width: 0;
   flex: 1;
@@ -278,12 +271,6 @@
   background-color: var(--ui-info-normal-surface);
   color: var(--ui-normal-text);
   box-shadow: inset 0 0 0 1px var(--ui-info-normal-border);
-}
-
-.sidebarPromptTreeSettingsIcon {
-  height: 14px;
-  width: 14px;
-  flex-shrink: 0;
 }
 
 .sidebarPromptTreeSettingsLabel {
