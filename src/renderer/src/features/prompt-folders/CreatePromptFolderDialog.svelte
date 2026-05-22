@@ -5,7 +5,7 @@
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import { FolderPlus, Plus } from 'lucide-svelte'
+  import { FolderPlus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
@@ -128,7 +128,7 @@
 </script>
 
 <IconOnlyButton
-  icon={Plus}
+  icon={FolderPlus}
   label="New Prompt Folder"
   title="New Prompt Folder"
   variant="accent"
