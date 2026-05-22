@@ -48,35 +48,28 @@
   width: 100%;
   align-items: center;
   gap: 0;
-  border: 1px solid transparent;
   border-radius: var(--cthulhu-ui-radius-control);
   background-color: transparent;
-  padding-inline: 0;
+  padding: 1px;
   color: var(--ui-hoverable-text);
   transition:
-    border-color 50ms ease-out,
     background-color 50ms ease-out,
-    color 50ms ease-out,
-    box-shadow 50ms ease-out;
+    color 50ms ease-out;
 }
 
 .sidebarPromptTreeRow:hover {
-  border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] {
-  border-color: var(--ui-neutral-emphasis-border);
   background-color: var(--ui-neutral-emphasis-surface);
   color: var(--ui-normal-text);
-  box-shadow: inset 0 1px 0 var(--ui-neutral-normal-surface);
 }
 
 .sidebarPromptTreeRow[data-over='true'] {
   background-color: var(--ui-info-normal-surface);
   color: var(--ui-normal-text);
-  box-shadow: inset 0 0 0 1px var(--ui-info-normal-border);
 }
 
 .sidebarPromptTreeToggleButton {
@@ -88,7 +81,7 @@
   gap: 8px;
   border: 0;
   background: transparent;
-  padding-inline: 8px 6px;
+  padding-inline: 10px 6px;
   color: inherit;
   text-align: left;
 }
@@ -126,10 +119,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--ui-neutral-normal-border);
   border-radius: var(--cthulhu-ui-radius-card);
   background-color: transparent;
-  padding: 0 8px;
+  padding: 1px 9px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -200,13 +192,11 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
-  border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeCountBadge {
-  border-color: var(--ui-neutral-emphasis-border);
   background-color: transparent;
   color: var(--ui-normal-text);
 }
@@ -229,7 +219,7 @@
   position: absolute;
   top: -1px;
   bottom: -1px;
-  left: 18px;
+  left: 20px;
   width: 1px;
   background-color: var(--ui-neutral-emphasis-border);
 }
@@ -241,36 +231,29 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
-  border: 1px solid transparent;
   border-radius: 8px;
   background-color: transparent;
-  padding-inline: 8px;
+  padding: 1px 8px 1px 12px;
   color: var(--ui-hoverable-text);
   text-align: left;
   transition:
-    border-color 50ms ease-out,
     background-color 50ms ease-out,
     color 50ms ease-out;
 }
 
 .sidebarPromptTreeSettingsButton:hover {
-  border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeSettingsButton[data-active='true'] {
-  border-color: var(--ui-neutral-emphasis-border);
   background-color: var(--ui-neutral-emphasis-surface);
   color: var(--ui-normal-text);
-  box-shadow: inset 0 1px 0 var(--ui-neutral-normal-surface);
 }
 
 .sidebarPromptTreeSettingsButton[data-dragging='true'] {
-  border-color: transparent;
   background-color: var(--ui-info-normal-surface);
   color: var(--ui-normal-text);
-  box-shadow: inset 0 0 0 1px var(--ui-info-normal-border);
 }
 
 .sidebarPromptTreeSettingsLabel {
@@ -288,9 +271,7 @@
 }
 
 .promptDragGhostButton {
-  border-color: var(--ui-neutral-hover-border);
   background-color: var(--ui-neutral-field-surface);
-  box-shadow: inset 0 1px 0 var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
   cursor: grabbing;
 }

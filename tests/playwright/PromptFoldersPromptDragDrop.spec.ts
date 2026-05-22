@@ -64,7 +64,6 @@ type PromptDividerHighlightStyles = {
 
 type PromptDragGhostSnapshot = {
   backgroundColor: string
-  borderColor: string
   color: string
   height: number
   kind: string | null
@@ -130,7 +129,6 @@ const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragG
 
     return {
       backgroundColor: rowStyle.backgroundColor,
-      borderColor: rowStyle.borderColor,
       color: rowStyle.color,
       height: Math.round(rowRect.height),
       kind: element.getAttribute('data-drag-ghost-kind'),
@@ -844,7 +842,6 @@ describe('Prompt folder prompt drag-drop', () => {
       text: 'Code Review'
     })
     expect(treeGhost.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
-    expect(treeGhost.borderColor).not.toBe('rgba(0, 0, 0, 0)')
     expect(handleGhost).toEqual(treeGhost)
   })
 
