@@ -335,7 +335,7 @@
 {#snippet placeholderRow()}
   <div class="text-center py-12 text-muted-foreground">
     <p>No prompts found in this folder.</p>
-    <p class="text-sm mt-2">Click the + button to create your first prompt.</p>
+    <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
   </div>
 {/snippet}
 
