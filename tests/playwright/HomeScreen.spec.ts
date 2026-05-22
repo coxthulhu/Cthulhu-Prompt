@@ -138,7 +138,7 @@ describe('Home Screen', () => {
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
       ).toBeEnabled()
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.waitForSelector('[data-testid="workspace-ready-title"]', {
+      await mainWindow.waitForSelector('[data-testid="workspace-ready-path"]', {
         state: 'visible',
         timeout: 5000
       })

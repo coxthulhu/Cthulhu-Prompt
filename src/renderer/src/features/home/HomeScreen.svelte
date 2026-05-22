@@ -1,13 +1,14 @@
 <script lang="ts">
   import {
     Bug,
-    Check,
     ExternalLink,
     FileText,
+    Folder,
     FolderClosed,
     FolderOpen,
     FolderPlus,
     Folders,
+    SlidersHorizontal,
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
@@ -16,9 +17,8 @@
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
-  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
-  import StatusBadge from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
@@ -225,10 +225,11 @@
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                  <SectionHeader
+                  <TitleBlock
                     title="Get Started"
+                    size="large"
                     description="Choose where your prompt files live."
-                    showAccentLine
+                    icon={FolderPlus}
                   />
                 </div>
               </div>
@@ -265,10 +266,11 @@
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                  <SectionHeader
+                  <TitleBlock
                     title="Current Workspace"
+                    size="large"
                     description="Information about your current workspace."
-                    showAccentLine
+                    icon={Folder}
                   />
                 </div>
               </div>
@@ -306,20 +308,13 @@
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <SectionHeader
+                <TitleBlock
                   title="Workspace Actions"
+                  size="large"
                   description={workspaceActionsDescription}
-                  showAccentLine
+                  icon={SlidersHorizontal}
                 />
               </div>
-              {#if isWorkspaceReady}
-                <StatusBadge
-                  icon={Check}
-                  text="Workspace Ready"
-                  textTestId="workspace-ready-title"
-                  variant="success"
-                />
-              {/if}
             </div>
 
             <div class="flex flex-col gap-3">

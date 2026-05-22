@@ -17,10 +17,10 @@ export async function setupWorkspaceViaUI(window: any): Promise<{
 }> {
   await window.click('[data-testid="open-workspace-button"]')
 
-  const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
+  const workspaceReadyPath = window.locator('[data-testid="workspace-ready-path"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
-  await workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  await workspaceReadyPath.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
   const workspaceReady = await isWorkspaceReady(window)
 
@@ -37,7 +37,7 @@ export async function createWorkspaceViaUI(window: any): Promise<{
   await window.click('[data-testid="create-workspace-button"]')
 
   const createDialog = window.locator('[role="dialog"][aria-label="Create Workspace"]')
-  const workspaceReadyTitle = window.locator('[data-testid="workspace-ready-title"]')
+  const workspaceReadyPath = window.locator('[data-testid="workspace-ready-path"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
   await createDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
@@ -50,7 +50,7 @@ export async function createWorkspaceViaUI(window: any): Promise<{
     return button && !button.disabled
   })
   await window.click('[data-testid="create-workspace-submit-button"]')
-  await workspaceReadyTitle.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  await workspaceReadyPath.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
   const workspaceReady = await isWorkspaceReady(window)
 
@@ -81,7 +81,7 @@ export async function clearWorkspaceViaUI(window: any): Promise<void> {
  */
 export async function isWorkspaceReady(window: any): Promise<boolean> {
   return await window.evaluate(() => {
-    return !!document.querySelector('[data-testid="workspace-ready-title"]')
+    return !!document.querySelector('[data-testid="workspace-ready-path"]')
   })
 }
 

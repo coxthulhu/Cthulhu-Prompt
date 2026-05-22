@@ -39,7 +39,7 @@
     {#if description}
       <p
         class={mergeClasses(
-          'cthulhuUiTitleBlockDescription mt-1',
+          'cthulhuUiTitleBlockDescription',
           size === 'large' ? 'cthulhuUiTitleBlockDescription--large' : null,
           size === 'small' ? 'cthulhuUiTitleBlockDescription--small' : null
         )}
@@ -78,6 +78,7 @@
   .cthulhuUiTitleBlockDescription {
     color: var(--ui-muted-text);
     line-height: 1.4;
+    margin-top: 6px;
   }
 
   .cthulhuUiTitleBlockDescription--large {
