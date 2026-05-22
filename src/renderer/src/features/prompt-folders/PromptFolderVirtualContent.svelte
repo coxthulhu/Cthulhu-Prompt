@@ -35,7 +35,16 @@
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
   } from './promptFolderSettingsSizing'
-  import type { PromptHandleDropPayload } from '../drag-drop/promptHandleDrag'
+  import {
+    createDroppableStateRegistry,
+    type DroppableOptions
+  } from '../drag-drop/dragDrop.svelte.ts'
+  import {
+    PROMPT_HANDLE_DRAG_TYPE,
+    resolvePromptHandleDropMove,
+    type PromptHandleDragPayload,
+    type PromptHandleDropPayload
+  } from '../drag-drop/promptHandleDrag'
   import type {
     ActivePromptTreeRow,
     PromptFocusRequest
@@ -115,6 +124,7 @@
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
+  const promptDividerDroppableState = createDroppableStateRegistry<string>()
 
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
@@ -279,6 +289,54 @@
     scrollByPromptBlockHeight('down', promptId)
     return onMovePromptDown(promptId)
   }
+
+  const getPromptDividerDropPayload = (
+    previousPromptId: string | null
+  ): PromptHandleDropPayload => {
+    if (previousPromptId === null) {
+      return {
+        kind: 'folder',
+        folderId: promptFolderId
+      }
+    }
+
+    return {
+      kind: 'prompt',
+      folderId: promptFolderId,
+      promptId: previousPromptId,
+      edge: 'bottom'
+    }
+  }
+
+  const canDropOnPromptDivider = (
+    previousPromptId: string | null,
+    payload: PromptHandleDragPayload
+  ): boolean => {
+    if (payload.sourceFolderId !== promptFolderId) {
+      return true
+    }
+
+    return (
+      resolvePromptHandleDropMove(
+        promptFolderId,
+        visiblePromptIds,
+        payload.fromId,
+        getPromptDividerDropPayload(previousPromptId),
+        visiblePromptIds
+      ) !== null
+    )
+  }
+
+  const getPromptDividerDropOptions = (
+    rowId: string,
+    previousPromptId: string | null
+  ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    allowedEdges: 'none',
+    payload: () => getPromptDividerDropPayload(previousPromptId),
+    canDrop: (payload) => canDropOnPromptDivider(previousPromptId, payload),
+    state: promptDividerDroppableState.getState(rowId)
+  })
 </script>
 
 <SvelteVirtualWindow
@@ -339,10 +397,11 @@
   </div>
 {/snippet}
 
-{#snippet dividerRow({ row })}
+{#snippet dividerRow({ row, rowId })}
   <PromptDivider
     disabled={isCreatingPrompt}
     onAddPrompt={() => onAddPrompt(row.previousPromptId)}
+    getDropOptions={() => getPromptDividerDropOptions(rowId, row.previousPromptId)}
     testId={row.previousPromptId
       ? `prompt-divider-add-after-${row.previousPromptId}`
       : 'prompt-divider-add-initial'}

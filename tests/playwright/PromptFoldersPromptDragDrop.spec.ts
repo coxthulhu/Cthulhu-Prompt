@@ -55,6 +55,13 @@ type PromptTreeHighlightStyles = {
   color: string
 }
 
+type PromptDividerHighlightStyles = {
+  buttonBackgroundColor: string
+  buttonBorderColor: string
+  buttonColor: string
+  separatorBackgroundColors: string[]
+}
+
 type PromptDragGhostSnapshot = {
   backgroundColor: string
   borderColor: string
@@ -75,6 +82,36 @@ const getPromptTreeHighlightStyles = async (
       backgroundColor: style.backgroundColor,
       boxShadow: style.boxShadow,
       color: style.color
+    }
+  })
+}
+
+const promptDividerSelector = (previousPromptId: string | null): string =>
+  previousPromptId
+    ? `[data-testid="prompt-divider-add-after-${previousPromptId}"]`
+    : '[data-testid="prompt-divider-add-initial"]'
+
+const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locator =>
+  page
+    .locator(promptDividerSelector(previousPromptId))
+    .locator('xpath=ancestor::div[contains(@class, "promptDividerRow")]')
+
+const getPromptDividerHighlightStyles = async (
+  locator: Locator
+): Promise<PromptDividerHighlightStyles> => {
+  return await locator.evaluate((button) => {
+    const buttonStyle = getComputedStyle(button)
+    const separators = Array.from(
+      button.parentElement?.querySelectorAll<HTMLElement>('.cthulhuUiSeparator') ?? []
+    )
+
+    return {
+      buttonBackgroundColor: buttonStyle.backgroundColor,
+      buttonBorderColor: buttonStyle.borderColor,
+      buttonColor: buttonStyle.color,
+      separatorBackgroundColors: separators.map(
+        (separator) => getComputedStyle(separator).backgroundColor
+      )
     }
   })
 }
@@ -294,6 +331,35 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
   })
 
+  test('silently ignores dropping a prompt onto no-op add prompt rows', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptDividerSelector(null))
+    await expect(getPromptDividerRow(mainWindow, null)).toHaveAttribute('data-drop-over', 'false')
+    await finishActiveDrag(mainWindow)
+
+    await beginPromptHandleDrag(mainWindow, DEV_2_ID)
+    await moveActiveDragToTarget(mainWindow, promptDividerSelector(DEV_1_ID))
+    await expect(getPromptDividerRow(mainWindow, DEV_1_ID)).toHaveAttribute(
+      'data-drop-over',
+      'false'
+    )
+    await finishActiveDrag(mainWindow)
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
+  })
+
   test('moves a prompt after a different prompt when dropped onto that prompt row', async ({
     testSetup,
     electronApp
@@ -312,6 +378,24 @@ describe('Prompt folder prompt drag-drop', () => {
       promptTreePromptSelector(DEV_2_ID),
       'bottom'
     )
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
+  test('moves a prompt after an add prompt row in the same folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptDividerSelector(DEV_2_ID))
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
@@ -338,6 +422,56 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
+  test('moves a prompt from the prompt tree to the initial add prompt row', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await dragPromptTreeRowToTarget(mainWindow, DEV_2_ID, promptDividerSelector(null))
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
+  test('marks an add prompt row as a blue drop target while hovering a valid drop', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    const dividerButton = mainWindow.locator(promptDividerSelector(DEV_2_ID))
+    const defaultStyles = await getPromptDividerHighlightStyles(dividerButton)
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptDividerSelector(DEV_2_ID))
+
+    await expect(getPromptDividerRow(mainWindow, DEV_2_ID)).toHaveAttribute(
+      'data-drop-over',
+      'true'
+    )
+    const dropStyles = await getPromptDividerHighlightStyles(dividerButton)
+
+    expect(dropStyles.buttonBackgroundColor).not.toBe(defaultStyles.buttonBackgroundColor)
+    expect(dropStyles.buttonBorderColor).not.toBe(defaultStyles.buttonBorderColor)
+    expect(dropStyles.separatorBackgroundColors).not.toEqual(
+      defaultStyles.separatorBackgroundColors
+    )
+
+    await finishActiveDrag(mainWindow)
   })
 
   test('moves a dragged editor prompt to the start of another folder when dropped onto that folder row', async ({

@@ -12,12 +12,12 @@
   import {
     createDroppableStateRegistry,
     draggable,
-    droppable,
     type DroppableAllowedEdges,
     type DroppableEdge,
     type DroppableOptions,
     type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
@@ -241,9 +241,6 @@
       (edge === 'top' && targetIndex === draggedIndex + 1)
     )
   }
-
-  const isPromptTreeDropTargetOver = (rowId: string): boolean =>
-    promptTreeDroppableState.isOver(rowId)
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreeDroppableState.edge(rowId)
@@ -478,79 +475,80 @@
 {#snippet promptFolderRow(props)}
   {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
   {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
-  {@const isDropTargetOver = isPromptTreeDropTargetOver(props.rowId)}
 
-  <div
-    use:droppable={getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
+  <PromptDropTarget
+    getOptions={() => getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
       kind: 'folder',
       folderId: props.row.folder.id
     }))}
     class="sidebarPromptTreeFolderRow"
   >
-    <div
-      class="sidebarPromptTreeRow group"
-      data-active={isActive ? 'true' : 'false'}
-      data-over={isDropTargetOver ? 'true' : 'false'}
-    >
-      <button
-        type="button"
-        aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
-        aria-expanded={isFolderExpanded(props.row.folder.id)}
-        onclick={(event) => handleFolderToggleClick(props.row.folder.id, event)}
-        data-testid={folderToggleTestId(props.row.folder)}
-        class="sidebarPromptTreeToggleButton"
+    {#snippet children({ isOver })}
+      <div
+        class="sidebarPromptTreeRow group"
+        data-active={isActive ? 'true' : 'false'}
+        data-over={isOver ? 'true' : 'false'}
       >
-        <span class="sidebarPromptTreeChevronWrap">
-          {#if isFolderExpanded(props.row.folder.id)}
-            <ChevronDown class="sidebarPromptTreeChevronIcon" />
-          {:else}
-            <ChevronRight class="sidebarPromptTreeChevronIcon" />
-          {/if}
-        </span>
-        <Folder
-          class="sidebarPromptTreeFolderIcon"
-          data-testid={folderIconTestId(props.row.folder)}
-        />
-        <span class="sidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
-      </button>
+        <button
+          type="button"
+          aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
+          aria-expanded={isFolderExpanded(props.row.folder.id)}
+          onclick={(event) => handleFolderToggleClick(props.row.folder.id, event)}
+          data-testid={folderToggleTestId(props.row.folder)}
+          class="sidebarPromptTreeToggleButton"
+        >
+          <span class="sidebarPromptTreeChevronWrap">
+            {#if isFolderExpanded(props.row.folder.id)}
+              <ChevronDown class="sidebarPromptTreeChevronIcon" />
+            {:else}
+              <ChevronRight class="sidebarPromptTreeChevronIcon" />
+            {/if}
+          </span>
+          <Folder
+            class="sidebarPromptTreeFolderIcon"
+            data-testid={folderIconTestId(props.row.folder)}
+          />
+          <span class="sidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
+        </button>
 
-      <!-- Count and actions share one slot; hover/focus swaps visibility. -->
-      <div class="sidebarPromptTreeActionSlot">
-        <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
-          {props.row.folder.promptIds.length}
-        </span>
-        <div class="sidebarPromptTreeFolderActions">
-          <button
-            type="button"
-            aria-label={`Folder settings for ${props.row.folder.displayName}`}
-            aria-current={isSettingsActive ? 'true' : undefined}
-            onclick={(event) =>
-              handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
-            data-testid={folderSettingsTestId(props.row.folder)}
-            data-active={isSettingsActive ? 'true' : 'false'}
-            class="sidebarPromptTreeActionButton"
-          >
-            <Settings
-              class="size-4"
-              data-testid={folderSettingsIconTestId(props.row.folder)}
-              aria-hidden="true"
-            />
-          </button>
-          <button
-            type="button"
-            aria-label={`Open ${props.row.folder.displayName}`}
-            onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
-            data-testid={folderOpenTestId(props.row.folder)}
-            data-size="default"
-            data-active={isActive}
-            class="sidebarPromptTreeActionButton"
-          >
-            <ArrowRight class="size-4" />
-          </button>
+        <!-- Count and actions share one slot; hover/focus swaps visibility. -->
+        <div class="sidebarPromptTreeActionSlot">
+          <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
+            {props.row.folder.promptIds.length}
+          </span>
+          <div class="sidebarPromptTreeFolderActions">
+            <button
+              type="button"
+              aria-label={`Folder settings for ${props.row.folder.displayName}`}
+              aria-current={isSettingsActive ? 'true' : undefined}
+              onclick={(event) =>
+                handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
+              data-testid={folderSettingsTestId(props.row.folder)}
+              data-active={isSettingsActive ? 'true' : 'false'}
+              class="sidebarPromptTreeActionButton"
+            >
+              <Settings
+                class="size-4"
+                data-testid={folderSettingsIconTestId(props.row.folder)}
+                aria-hidden="true"
+              />
+            </button>
+            <button
+              type="button"
+              aria-label={`Open ${props.row.folder.displayName}`}
+              onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
+              data-testid={folderOpenTestId(props.row.folder)}
+              data-size="default"
+              data-active={isActive}
+              class="sidebarPromptTreeActionButton"
+            >
+              <ArrowRight class="size-4" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    {/snippet}
+  </PromptDropTarget>
 {/snippet}
 
 {#snippet folderPromptRow(props)}
@@ -562,8 +560,8 @@
   {@const promptTitle =
     promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}
 
-  <div
-    use:droppable={getPromptTreeDroppableOptions(
+  <PromptDropTarget
+    getOptions={() => getPromptTreeDroppableOptions(
       props.rowId,
       'top-and-bottom',
       (edge) => ({
@@ -600,7 +598,7 @@
       <FileText class="sidebarPromptTreeSettingsIcon" aria-hidden="true" />
       <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
     </button>
-  </div>
+  </PromptDropTarget>
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
