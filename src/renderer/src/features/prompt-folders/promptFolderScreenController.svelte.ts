@@ -58,6 +58,7 @@ import {
   resolvePromptHandleDropMove,
   type PromptHandleDropPayload
 } from '../drag-drop/promptHandleDrag'
+import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -72,9 +73,11 @@ export const createPromptFolderScreenController = ({
   const workspaceSelection = getWorkspaceSelectionContext()
   const systemSettings = getSystemSettingsContext()
   const promptNavigation = getPromptNavigationContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
-  const promptEditorMaxLines = $derived(systemSettings.promptEditorMaxLines)
+  const promptEditorSizingConfig: PromptEditorSizingConfig = $derived({
+    fontSize: systemSettings.promptFontSize,
+    minLines: systemSettings.promptEditorMinLines,
+    maxLines: systemSettings.promptEditorMaxLines
+  })
   const promptFolderId = $derived(getPromptFolderId())
   const workspaceId = $derived(workspaceSelection.selectedWorkspaceId)
 
@@ -632,7 +635,10 @@ export const createPromptFolderScreenController = ({
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
-    const baseHeight = estimatePromptFolderSettingsHeight(descriptionText, promptFontSize)
+    const baseHeight = estimatePromptFolderSettingsHeight(
+      descriptionText,
+      promptEditorSizingConfig.fontSize
+    )
 
     if (!viewportMetrics) {
       return baseHeight
@@ -720,14 +726,8 @@ export const createPromptFolderScreenController = ({
     get promptFolderId(): string {
       return promptFolderId
     },
-    get promptFontSize(): number {
-      return promptFontSize
-    },
-    get promptEditorMinLines(): number {
-      return promptEditorMinLines
-    },
-    get promptEditorMaxLines(): number {
-      return promptEditorMaxLines
+    get promptEditorSizingConfig(): PromptEditorSizingConfig {
+      return promptEditorSizingConfig
     },
     get descriptionText(): string {
       return descriptionText

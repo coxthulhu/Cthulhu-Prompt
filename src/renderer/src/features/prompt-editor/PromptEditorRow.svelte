@@ -36,7 +36,8 @@
     getMonacoHeightFromRowPx,
     getRowHeightPx,
     MONACO_PADDING_PX,
-    TITLE_BAR_HEIGHT_PX
+    TITLE_BAR_HEIGHT_PX,
+    type PromptEditorSizingConfig
   } from './promptEditorSizing'
   import { getPromptLineCount, getPromptTokenCount } from './promptEditorCounts'
 
@@ -88,9 +89,11 @@
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
-  const promptEditorMaxLines = $derived(systemSettings.promptEditorMaxLines)
+  const promptEditorSizingConfig: PromptEditorSizingConfig = $derived({
+    fontSize: systemSettings.promptFontSize,
+    minLines: systemSettings.promptEditorMinLines,
+    maxLines: systemSettings.promptEditorMaxLines
+  })
   const initialEditorViewStateJson = $derived(lookupPromptEditorViewStateJson(promptId))
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
@@ -106,9 +109,7 @@
   const placeholderMonacoHeightPx = $derived.by(() => {
     return clampMonacoHeightPx(
       getMonacoHeightFromRowPx(virtualRowHeightPx),
-      promptFontSize,
-      promptEditorMinLines,
-      promptEditorMaxLines
+      promptEditorSizingConfig
     )
   })
   const lineCount = $derived(getPromptLineCount(promptData.draft.text))
@@ -390,6 +391,7 @@
           containerWidthPx={virtualWindowWidthPx}
           placeholderHeightPx={placeholderMonacoHeightPx}
           overflowWidgetsDomNode={overflowHost}
+          sizingConfig={promptEditorSizingConfig}
           {hydrationPriority}
           {shouldDehydrate}
           {rowId}
@@ -423,7 +425,10 @@
         />
       {/key}
     {:else}
-      <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} />
+      <MonacoEditorPlaceholder
+        heightPx={placeholderMonacoHeightPx}
+        sizingConfig={promptEditorSizingConfig}
+      />
     {/if}
   </div>
 </PromptEditorCardSurface>

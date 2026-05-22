@@ -6,6 +6,7 @@
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
+  import type { PromptEditorSizingConfig } from './promptEditorSizing'
   import {
     cancelMonacoHydration,
     enqueueMonacoHydration,
@@ -26,8 +27,7 @@
     hydrationPriority: number
     shouldDehydrate: boolean
     rowId: string
-    minLines?: number
-    maxLines?: number
+    sizingConfig: PromptEditorSizingConfig
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onImmediateHydrationRequest?: (request: (() => Promise<void>) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
@@ -56,8 +56,7 @@
     hydrationPriority,
     shouldDehydrate,
     rowId,
-    minLines,
-    maxLines,
+    sizingConfig,
     scrollToWithinWindowBand,
     onImmediateHydrationRequest,
     onHydrationChange,
@@ -191,8 +190,7 @@
       {containerWidthPx}
       {overflowWidgetsDomNode}
       {rowId}
-      {minLines}
-      {maxLines}
+      {sizingConfig}
       {scrollToWithinWindowBand}
       {onChange}
       {onBlur}
@@ -205,6 +203,6 @@
       {onViewStateCapture}
     />
   {:else}
-    <MonacoEditorPlaceholder heightPx={placeholderHeightPx} {minLines} {maxLines} />
+    <MonacoEditorPlaceholder heightPx={placeholderHeightPx} {sizingConfig} />
   {/if}
 </div>

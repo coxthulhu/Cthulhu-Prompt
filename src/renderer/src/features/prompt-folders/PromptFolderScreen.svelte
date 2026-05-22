@@ -60,9 +60,7 @@
           workspaceId={controller.workspaceId}
           promptFolderId={controller.promptFolderId}
           descriptionText={controller.descriptionText}
-          promptFontSize={controller.promptFontSize}
-          promptEditorMinLines={controller.promptEditorMinLines}
-          promptEditorMaxLines={controller.promptEditorMaxLines}
+          promptEditorSizingConfig={controller.promptEditorSizingConfig}
           promptDraftById={controller.promptDraftById}
           visiblePromptIds={controller.visiblePromptIds}
           isCreatingPrompt={controller.isCreatingPrompt}

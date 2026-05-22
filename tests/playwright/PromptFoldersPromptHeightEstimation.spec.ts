@@ -84,9 +84,11 @@ async function measurePromptFolders(
     prompt.promptText,
     0,
     0,
-    DEFAULT_SYSTEM_SETTINGS.promptFontSize,
-    DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines,
-    DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
+    {
+      fontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize,
+      minLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines,
+      maxLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
+    }
   )
   const setupPrompt =
     folderDisplayName === heightTestPrompts.singleLine.title

@@ -15,7 +15,11 @@
   import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
   import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
-  import { getMinMonacoHeightPx, MONACO_PADDING_PX } from '../prompt-editor/promptEditorSizing'
+  import {
+    getMinMonacoHeightPx,
+    MONACO_PADDING_PX,
+    type PromptEditorSizingConfig
+  } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { Folder, Settings } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
@@ -30,8 +34,7 @@
     SETTINGS_DESCRIPTION_CARD_PADDING_PX,
     SETTINGS_EDITOR_LEFT_OFFSET_PX,
     SETTINGS_EDITOR_TOP_OFFSET_PX,
-    PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES,
-    PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES,
+    getPromptFolderDescriptionSizingConfig,
     getPromptFolderSettingsHeightPx,
     getPromptFolderSettingsMonacoHeightFromRowPx
   } from './promptFolderSettingsSizing'
@@ -71,7 +74,9 @@
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
+  const descriptionSizingConfig: PromptEditorSizingConfig = $derived(
+    getPromptFolderDescriptionSizingConfig(systemSettings.promptFontSize)
+  )
   const initialDescriptionEditorViewStateJson = $derived.by(() => {
     if (!workspaceId) {
       return null
@@ -89,7 +94,7 @@
   const descriptionTokenCount = $derived(getPromptTokenCount(descriptionValue))
   const placeholderMonacoHeightPx = $derived.by(() => {
     return Math.max(
-      getMinMonacoHeightPx(promptFontSize, PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES),
+      getMinMonacoHeightPx(descriptionSizingConfig),
       getPromptFolderSettingsMonacoHeightFromRowPx(virtualRowHeightPx)
     )
   })
@@ -274,8 +279,7 @@
             containerWidthPx={virtualWindowWidthPx}
             placeholderHeightPx={placeholderMonacoHeightPx}
             overflowWidgetsDomNode={overflowHost}
-            minLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES}
-            maxLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES}
+            sizingConfig={descriptionSizingConfig}
             {hydrationPriority}
             {shouldDehydrate}
             {rowId}
@@ -315,8 +319,7 @@
       {:else}
         <MonacoEditorPlaceholder
           heightPx={placeholderMonacoHeightPx}
-          minLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES}
-          maxLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES}
+          sizingConfig={descriptionSizingConfig}
         />
       {/if}
     </div>

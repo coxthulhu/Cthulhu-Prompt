@@ -2,7 +2,8 @@ import {
   ADDITIONAL_GAP_PX,
   estimateMonacoHeightPx,
   MONACO_PADDING_PX,
-  TITLE_BAR_HEIGHT_PX
+  TITLE_BAR_HEIGHT_PX,
+  type PromptEditorSizingConfig
 } from '../prompt-editor/promptEditorSizing'
 
 const SETTINGS_TOP_PADDING_PX = 24
@@ -62,16 +63,19 @@ export const SETTINGS_EDITOR_TOP_OFFSET_PX =
 export const SETTINGS_EDITOR_LEFT_OFFSET_PX =
   SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX + SETTINGS_DESCRIPTION_CARD_PADDING_PX + 12
 
+export const getPromptFolderDescriptionSizingConfig = (
+  fontSize: number
+): PromptEditorSizingConfig => ({
+  fontSize,
+  minLines: PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES,
+  maxLines: PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES
+})
+
 export const estimatePromptFolderSettingsMonacoHeight = (
   text: string,
   fontSize: number
 ): number => {
-  return estimateMonacoHeightPx(
-    text,
-    fontSize,
-    PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES,
-    PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES
-  )
+  return estimateMonacoHeightPx(text, getPromptFolderDescriptionSizingConfig(fontSize))
 }
 
 export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number): number => {

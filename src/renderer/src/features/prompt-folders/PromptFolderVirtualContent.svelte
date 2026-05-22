@@ -9,7 +9,8 @@
     clampMonacoHeightPx,
     estimatePromptEditorHeight,
     getMonacoHeightFromRowPx,
-    getRowHeightPx
+    getRowHeightPx,
+    type PromptEditorSizingConfig
   } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
   import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from '../prompt-editor/promptDividerSizing'
@@ -57,9 +58,7 @@
     workspaceId: string | null
     promptFolderId: string
     descriptionText: string
-    promptFontSize: number
-    promptEditorMinLines: number
-    promptEditorMaxLines: number
+    promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, PromptDraftRecord>
     visiblePromptIds: string[]
     isCreatingPrompt: boolean
@@ -89,9 +88,7 @@
     workspaceId,
     promptFolderId,
     descriptionText,
-    promptFontSize,
-    promptEditorMinLines,
-    promptEditorMaxLines,
+    promptEditorSizingConfig,
     promptDraftById,
     visiblePromptIds,
     isCreatingPrompt,
@@ -144,7 +141,7 @@
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
-        estimatePromptFolderSettingsHeight(descriptionText, promptFontSize),
+        estimatePromptFolderSettingsHeight(descriptionText, promptEditorSizingConfig.fontSize),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
       hydrationPriorityEligible: true,
@@ -172,9 +169,7 @@
           promptDraftById[row.promptId]!.promptText,
           widthPx,
           heightPx,
-          promptFontSize,
-          promptEditorMinLines,
-          promptEditorMaxLines
+          promptEditorSizingConfig
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
         const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
@@ -187,9 +182,7 @@
         return getRowHeightPx(
           clampMonacoHeightPx(
             getMonacoHeightFromRowPx(measuredRowHeightPx),
-            promptFontSize,
-            promptEditorMinLines,
-            promptEditorMaxLines
+            promptEditorSizingConfig
           )
         )
       },

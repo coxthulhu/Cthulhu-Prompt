@@ -7,35 +7,37 @@ const ROW_CARD_VERTICAL_PADDING_PX = 20
 const ROW_CHROME_HEIGHT_PX =
   ROW_CARD_VERTICAL_PADDING_PX + TITLE_BAR_HEIGHT_PX + MONACO_PADDING_PX + ADDITIONAL_GAP_PX
 
+export type PromptEditorSizingConfig = {
+  fontSize: number
+  minLines: number
+  maxLines: number
+}
+
 export const getLineHeightPx = (fontSize: number): number =>
   Math.round(fontSize * LINE_HEIGHT_RATIO)
 
-export const getMinMonacoHeightPx = (fontSize: number, minLines: number): number =>
-  getLineHeightPx(fontSize) * minLines
+export const getMinMonacoHeightPx = (sizingConfig: PromptEditorSizingConfig): number =>
+  getLineHeightPx(sizingConfig.fontSize) * sizingConfig.minLines
 
-export const getMaxMonacoHeightPx = (fontSize: number, maxLines: number): number =>
-  getLineHeightPx(fontSize) * maxLines
+export const getMaxMonacoHeightPx = (sizingConfig: PromptEditorSizingConfig): number =>
+  getLineHeightPx(sizingConfig.fontSize) * sizingConfig.maxLines
 
 export const clampMonacoHeightPx = (
   heightPx: number,
-  fontSize: number,
-  minLines: number,
-  maxLines: number
+  sizingConfig: PromptEditorSizingConfig
 ): number => {
   return Math.min(
-    Math.max(heightPx, getMinMonacoHeightPx(fontSize, minLines)),
-    getMaxMonacoHeightPx(fontSize, maxLines)
+    Math.max(heightPx, getMinMonacoHeightPx(sizingConfig)),
+    getMaxMonacoHeightPx(sizingConfig)
   )
 }
 
 export const estimateMonacoHeightPx = (
   text: string,
-  fontSize: number,
-  minLines: number,
-  maxLines: number
+  sizingConfig: PromptEditorSizingConfig
 ): number => {
   const lineCount = Math.max(1, text.split('\n').length)
-  return clampMonacoHeightPx(lineCount * getLineHeightPx(fontSize), fontSize, minLines, maxLines)
+  return clampMonacoHeightPx(lineCount * getLineHeightPx(sizingConfig.fontSize), sizingConfig)
 }
 
 export const getRowHeightPx = (monacoHeightPx: number): number => {
@@ -50,11 +52,9 @@ export const estimatePromptEditorHeight = (
   promptText: string,
   _widthPx: number,
   _heightPx: number,
-  fontSize: number,
-  minLines: number,
-  maxLines: number
+  sizingConfig: PromptEditorSizingConfig
 ): number => {
   void _widthPx
   void _heightPx
-  return getRowHeightPx(estimateMonacoHeightPx(promptText, fontSize, minLines, maxLines))
+  return getRowHeightPx(estimateMonacoHeightPx(promptText, sizingConfig))
 }

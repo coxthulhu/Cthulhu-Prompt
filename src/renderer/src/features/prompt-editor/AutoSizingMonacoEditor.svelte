@@ -10,7 +10,11 @@
     registerMonacoViewStateSaver,
     unregisterMonacoViewStateSaver
   } from './MonacoViewStateRegistry'
-  import { clampMonacoHeightPx, getMinMonacoHeightPx } from './promptEditorSizing'
+  import {
+    clampMonacoHeightPx,
+    getMinMonacoHeightPx,
+    type PromptEditorSizingConfig
+  } from './promptEditorSizing'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
 
   type Props = {
@@ -21,8 +25,7 @@
     containerWidthPx: number
     overflowWidgetsDomNode: HTMLElement
     rowId: string
-    minLines?: number
-    maxLines?: number
+    sizingConfig: PromptEditorSizingConfig
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -45,8 +48,7 @@
     containerWidthPx,
     overflowWidgetsDomNode,
     rowId,
-    minLines,
-    maxLines,
+    sizingConfig,
     scrollToWithinWindowBand,
     onChange,
     onBlur,
@@ -60,11 +62,8 @@
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
-  const promptFontSize = $derived(systemSettings.promptFontSize)
-  const promptEditorMinLines = $derived(minLines ?? systemSettings.promptEditorMinLines)
-  const promptEditorMaxLines = $derived(maxLines ?? systemSettings.promptEditorMaxLines)
   const showLineNumbers = $derived(systemSettings.showLineNumbers)
-  const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize, promptEditorMinLines))
+  const minMonacoHeightPx = $derived(getMinMonacoHeightPx(sizingConfig))
 
   let container: HTMLDivElement | null = null
   let editor: monaco.editor.IStandaloneCodeEditor | null = null
@@ -117,9 +116,7 @@
     if (!editor) return monacoHeightPx
     return clampMonacoHeightPx(
       Math.ceil(editor.getContentHeight()),
-      promptFontSize,
-      promptEditorMinLines,
-      promptEditorMaxLines
+      sizingConfig
     )
   }
 
@@ -405,7 +402,7 @@
         scrollBeyondLastLine: false,
         wordWrap: 'on',
         wordWrapColumn: 80,
-        fontSize: promptFontSize,
+        fontSize: sizingConfig.fontSize,
         glyphMargin: false,
         lineNumbers: showLineNumbers ? 'on' : 'off',
         lineNumbersMinChars: 4,
@@ -480,9 +477,9 @@
   $effect(() => {
     if (!isEditorReady || !editor) return
     const editorChanged = editor !== lastFontSizeEffectEditor
-    const fontSizeChanged = promptFontSize !== lastAppliedPromptFontSize
-    const minLinesChanged = promptEditorMinLines !== lastAppliedPromptEditorMinLines
-    const maxLinesChanged = promptEditorMaxLines !== lastAppliedPromptEditorMaxLines
+    const fontSizeChanged = sizingConfig.fontSize !== lastAppliedPromptFontSize
+    const minLinesChanged = sizingConfig.minLines !== lastAppliedPromptEditorMinLines
+    const maxLinesChanged = sizingConfig.maxLines !== lastAppliedPromptEditorMaxLines
     const lineNumbersChanged = showLineNumbers !== lastAppliedShowLineNumbers
     if (
       !editorChanged &&
@@ -495,14 +492,14 @@
     }
 
     lastFontSizeEffectEditor = editor
-    lastAppliedPromptFontSize = promptFontSize
-    lastAppliedPromptEditorMinLines = promptEditorMinLines
-    lastAppliedPromptEditorMaxLines = promptEditorMaxLines
+    lastAppliedPromptFontSize = sizingConfig.fontSize
+    lastAppliedPromptEditorMinLines = sizingConfig.minLines
+    lastAppliedPromptEditorMaxLines = sizingConfig.maxLines
     lastAppliedShowLineNumbers = showLineNumbers
 
     if (editorChanged || fontSizeChanged || lineNumbersChanged) {
       editor.updateOptions({
-        fontSize: promptFontSize,
+        fontSize: sizingConfig.fontSize,
         lineNumbers: showLineNumbers ? 'on' : 'off'
       })
     }
