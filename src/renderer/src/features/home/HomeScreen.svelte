@@ -237,12 +237,10 @@
               <div class="cthulhuHomeGetStartedText">
                 <p>
                   Cthulhu Prompt is a prompt editor and manager that stores your prompts as a
-                  series of Markdown files in a folder.
+                  series of Markdown files in a workspace folder.
                 </p>
                 <p>
-                  Create a new workspace folder
-                  with the create button, or download or clone a workspace from elsewhere and
-                  use the open button to get started.
+                  To get started, you can create a new workspace folder, or open an existing workspace to continue where you left off.
                 </p>
               </div>
 
@@ -323,7 +321,7 @@
                 icon={FolderOpen}
                 iconClass="translate-y-px"
                 text={getSelectButtonLabel()}
-                description="Select an existing workspace file."
+                description="Open an existing workspace folder."
                 variant="neutral"
                 onclick={handleSelectFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
@@ -334,7 +332,7 @@
                 icon={FolderPlus}
                 iconClass="translate-y-px"
                 text={getCreateButtonLabel()}
-                description="Choose a folder and set up a new workspace folder."
+                description="Choose a folder to set up a new workspace."
                 variant="accent"
                 onclick={handleCreateFolder}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
