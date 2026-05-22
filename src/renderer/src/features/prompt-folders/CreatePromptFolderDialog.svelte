@@ -131,12 +131,11 @@
   icon={FolderPlus}
   label="New Prompt Folder"
   title="New Prompt Folder"
-  variant="accent"
+  variant="transparent"
   size="compact"
   disabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
-  class="ml-1 rounded-xl"
-  iconClass="text-[var(--ui-accent-icon-glyph)]"
+  class="rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
   onclick={() => (isDialogOpen = true)}
 />
 
