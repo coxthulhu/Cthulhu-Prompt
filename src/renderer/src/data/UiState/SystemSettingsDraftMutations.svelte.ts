@@ -19,6 +19,7 @@ export const upsertSystemSettingsDraft = (settings: SystemSettings): void => {
       id: SYSTEM_SETTINGS_DRAFT_ID,
       promptFontSizeInput: nextSnapshot.promptFontSizeInput,
       promptEditorMinLinesInput: nextSnapshot.promptEditorMinLinesInput,
+      promptEditorMaxLinesInput: nextSnapshot.promptEditorMaxLinesInput,
       showLineNumbers: nextSnapshot.showLineNumbers
     })
     return
@@ -27,6 +28,7 @@ export const upsertSystemSettingsDraft = (settings: SystemSettings): void => {
   systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
     draftRecord.promptFontSizeInput = nextSnapshot.promptFontSizeInput
     draftRecord.promptEditorMinLinesInput = nextSnapshot.promptEditorMinLinesInput
+    draftRecord.promptEditorMaxLinesInput = nextSnapshot.promptEditorMaxLinesInput
     draftRecord.showLineNumbers = nextSnapshot.showLineNumbers
   })
 }
@@ -62,6 +64,16 @@ export const setSystemSettingsDraftPromptEditorMinLinesInput = (value: string): 
     (snapshot) => snapshot.promptEditorMinLinesInput,
     (snapshot, nextValue) => {
       snapshot.promptEditorMinLinesInput = nextValue
+    }
+  )
+}
+
+export const setSystemSettingsDraftPromptEditorMaxLinesInput = (value: string): void => {
+  updateSystemSettingsDraftInput(
+    value,
+    (snapshot) => snapshot.promptEditorMaxLinesInput,
+    (snapshot, nextValue) => {
+      snapshot.promptEditorMaxLinesInput = nextValue
     }
   )
 }

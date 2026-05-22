@@ -13,6 +13,7 @@ import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutatio
 import { mutatePacedSystemSettingsAutosaveUpdate } from '../Mutations/SystemSettingsMutations'
 import {
   getSystemSettingsValidation,
+  normalizePromptEditorMaxLinesInput,
   normalizePromptEditorMinLinesInput,
   normalizePromptFontSizeInput,
   toSystemSettingsDraftSnapshot
@@ -64,13 +65,15 @@ const readValidatedSystemSettings = (
   draftRecord: SystemSettingsDraftRecord
 ): SystemSettings | null => {
   const validation = getSystemSettingsValidation(draftRecord)
-  if (validation.fontSizeError || validation.minLinesError) {
+  if (validation.fontSizeError || validation.minLinesError || validation.maxLinesError) {
     return null
   }
 
   return {
     promptFontSize: normalizePromptFontSizeInput(draftRecord.promptFontSizeInput).rounded,
     promptEditorMinLines: normalizePromptEditorMinLinesInput(draftRecord.promptEditorMinLinesInput)
+      .rounded,
+    promptEditorMaxLines: normalizePromptEditorMaxLinesInput(draftRecord.promptEditorMaxLinesInput)
       .rounded,
     showLineNumbers: draftRecord.showLineNumbers
   }
@@ -97,12 +100,14 @@ export const mutateSystemSettingsDraftWithAutosave = (
         systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
           draft.promptFontSize = validatedSettings.promptFontSize
           draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
+          draft.promptEditorMaxLines = validatedSettings.promptEditorMaxLines
           draft.showLineNumbers = validatedSettings.showLineNumbers
         })
         systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
           const nextDraftSnapshot = toSystemSettingsDraftSnapshot(validatedSettings)
           draftRecord.promptFontSizeInput = nextDraftSnapshot.promptFontSizeInput
           draftRecord.promptEditorMinLinesInput = nextDraftSnapshot.promptEditorMinLinesInput
+          draftRecord.promptEditorMaxLinesInput = nextDraftSnapshot.promptEditorMaxLinesInput
           draftRecord.showLineNumbers = nextDraftSnapshot.showLineNumbers
         })
       })

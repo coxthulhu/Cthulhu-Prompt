@@ -26,19 +26,23 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     setSystemSettingsDraftFontSizeInput,
+    setSystemSettingsDraftPromptEditorMaxLinesInput,
     setSystemSettingsDraftPromptEditorMinLinesInput,
     setSystemSettingsDraftShowLineNumbers
   } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
+    formatPromptEditorMaxLinesInput,
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
   } from '@renderer/data/UiState/SystemSettingsFormat'
   import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
   import {
     DEFAULT_SYSTEM_SETTINGS,
+    MAX_PROMPT_EDITOR_MAX_LINES,
     MAX_PROMPT_EDITOR_MIN_LINES,
     MAX_PROMPT_FONT_SIZE,
+    MIN_PROMPT_EDITOR_MAX_LINES,
     MIN_PROMPT_EDITOR_MIN_LINES,
     MIN_PROMPT_FONT_SIZE
   } from '@shared/SystemSettings'
@@ -53,6 +57,8 @@
   const defaultFontSizeInput = formatPromptFontSizeInput(defaultFontSize)
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
   const defaultMinLinesInput = formatPromptEditorMinLinesInput(defaultMinLines)
+  const defaultMaxLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
+  const defaultMaxLinesInput = formatPromptEditorMaxLinesInput(defaultMaxLines)
   const defaultShowLineNumbers = DEFAULT_SYSTEM_SETTINGS.showLineNumbers
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const appVersionLabel = `v${getRuntimeConfig().appVersion}`
@@ -83,6 +89,13 @@
     )
   }
 
+  const handleMaxLinesReset = async () => {
+    await resetSettingToDefault(
+      defaultMaxLinesInput,
+      setSystemSettingsDraftPromptEditorMaxLinesInput
+    )
+  }
+
   const updateShowLineNumbers = async (value: boolean) => {
     await runIpcBestEffort(async () => {
       setSystemSettingsDraftShowLineNumbers(value)
@@ -101,11 +114,15 @@
   const validation = $derived(getSystemSettingsValidation(systemSettingsState))
   const displayFontSizeError = $derived(validation.fontSizeError)
   const displayMinLinesError = $derived(validation.minLinesError)
+  const displayMaxLinesError = $derived(validation.maxLinesError)
   const isFontSizeResetDisabled = $derived(
     isUpdating || systemSettingsState.promptFontSizeInput === defaultFontSizeInput
   )
   const isMinLinesResetDisabled = $derived(
     isUpdating || systemSettingsState.promptEditorMinLinesInput === defaultMinLinesInput
+  )
+  const isMaxLinesResetDisabled = $derived(
+    isUpdating || systemSettingsState.promptEditorMaxLinesInput === defaultMaxLinesInput
   )
   const isShowLineNumbersResetDisabled = $derived(
     isUpdating || systemSettingsState.showLineNumbers === defaultShowLineNumbers
@@ -214,6 +231,44 @@
               text="Reset"
               onclick={handleMinLinesReset}
               state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
+            />
+          </div>
+        </CardSurface>
+
+        <CardSurface
+          variant="inset"
+          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        >
+          <div class="min-w-0">
+            <TitleBlock
+              title="Maximum Line Count"
+              size="small"
+              description="Sets the maximum number of visible lines before prompt editors begin scrolling."
+              icon={Rows3}
+              iconVariant="accent-green"
+            />
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
+              <NumericStepperInput
+                data-testid="max-lines-input"
+                value={systemSettingsState.promptEditorMaxLinesInput}
+                min={MIN_PROMPT_EDITOR_MAX_LINES}
+                max={MAX_PROMPT_EDITOR_MAX_LINES}
+                helperText="lines"
+                aria-invalid={displayMaxLinesError ? 'true' : undefined}
+                decreaseLabel="Decrease maximum line count"
+                increaseLabel="Increase maximum line count"
+                onvaluechange={setSystemSettingsDraftPromptEditorMaxLinesInput}
+                onblur={handleInputBlur}
+              />
+            </FloatingValidationMessage>
+            <IconTextButton
+              icon={RefreshCcw}
+              text="Reset"
+              onclick={handleMaxLinesReset}
+              state={isMaxLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           </div>
         </CardSurface>

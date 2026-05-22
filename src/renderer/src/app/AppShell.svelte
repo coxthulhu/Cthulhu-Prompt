@@ -77,6 +77,9 @@
     get promptEditorMinLines() {
       return systemSettingsQuery.data.promptEditorMinLines
     },
+    get promptEditorMaxLines() {
+      return systemSettingsQuery.data.promptEditorMaxLines
+    },
     get showLineNumbers() {
       return systemSettingsQuery.data.showLineNumbers
     }

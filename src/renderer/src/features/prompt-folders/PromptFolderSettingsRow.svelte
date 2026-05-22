@@ -30,6 +30,7 @@
     SETTINGS_DESCRIPTION_CARD_PADDING_PX,
     SETTINGS_EDITOR_LEFT_OFFSET_PX,
     SETTINGS_EDITOR_TOP_OFFSET_PX,
+    PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES,
     PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES,
     getPromptFolderSettingsHeightPx,
     getPromptFolderSettingsMonacoHeightFromRowPx
@@ -274,6 +275,7 @@
             placeholderHeightPx={placeholderMonacoHeightPx}
             overflowWidgetsDomNode={overflowHost}
             minLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES}
+            maxLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES}
             {hydrationPriority}
             {shouldDehydrate}
             {rowId}
@@ -314,6 +316,7 @@
         <MonacoEditorPlaceholder
           heightPx={placeholderMonacoHeightPx}
           minLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES}
+          maxLines={PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES}
         />
       {/if}
     </div>

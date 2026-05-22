@@ -30,6 +30,7 @@ export const setupSystemSettingsMutationHandlers = (): void => {
           const normalizedSettings = normalizeSystemSettings({
             promptFontSize: systemSettingsEntity.data.promptFontSize,
             promptEditorMinLines: systemSettingsEntity.data.promptEditorMinLines,
+            promptEditorMaxLines: systemSettingsEntity.data.promptEditorMaxLines,
             showLineNumbers: systemSettingsEntity.data.showLineNumbers
           })
 
@@ -41,6 +42,7 @@ export const setupSystemSettingsMutationHandlers = (): void => {
                 recipe: (draft) => {
                   draft.promptFontSize = normalizedSettings.promptFontSize
                   draft.promptEditorMinLines = normalizedSettings.promptEditorMinLines
+                  draft.promptEditorMaxLines = normalizedSettings.promptEditorMaxLines
                   draft.showLineNumbers = normalizedSettings.showLineNumbers
                 }
               })

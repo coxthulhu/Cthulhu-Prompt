@@ -119,6 +119,7 @@ describe('atomic data transaction', () => {
       committed: {
         promptFontSize: 16,
         promptEditorMinLines: 3,
+        promptEditorMaxLines: 30,
         showLineNumbers: true
       },
       persistenceFields: {}
@@ -154,6 +155,7 @@ describe('atomic data transaction', () => {
     expect(outcome.results.systemSettings.data).toEqual({
       promptFontSize: 22,
       promptEditorMinLines: 3,
+      promptEditorMaxLines: 30,
       showLineNumbers: true
     })
     expect(outcome.results.prompt.revision).toBeNull()
@@ -167,6 +169,7 @@ describe('atomic data transaction', () => {
       committed: {
         promptFontSize: 18,
         promptEditorMinLines: 4,
+        promptEditorMaxLines: 30,
         showLineNumbers: true
       },
       persistenceFields: {}
@@ -199,6 +202,7 @@ describe('atomic data transaction', () => {
         data: {
           promptFontSize: 18,
           promptEditorMinLines: 4,
+          promptEditorMaxLines: 30,
           showLineNumbers: true
         }
       }

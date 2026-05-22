@@ -74,6 +74,7 @@ export const createPromptFolderScreenController = ({
   const promptNavigation = getPromptNavigationContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptEditorMaxLines = $derived(systemSettings.promptEditorMaxLines)
   const promptFolderId = $derived(getPromptFolderId())
   const workspaceId = $derived(workspaceSelection.selectedWorkspaceId)
 
@@ -724,6 +725,9 @@ export const createPromptFolderScreenController = ({
     },
     get promptEditorMinLines(): number {
       return promptEditorMinLines
+    },
+    get promptEditorMaxLines(): number {
+      return promptEditorMaxLines
     },
     get descriptionText(): string {
       return descriptionText

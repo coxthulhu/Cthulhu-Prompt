@@ -6,6 +6,7 @@ export type SystemSettingsDraftRecord = {
   id: typeof SYSTEM_SETTINGS_DRAFT_ID
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
+  promptEditorMaxLinesInput: string
   showLineNumbers: boolean
 }
 

@@ -32,9 +32,9 @@
   } from '../prompt-folders/find/promptFolderFindSectionKeys'
   import {
     ADDITIONAL_GAP_PX,
+    clampMonacoHeightPx,
     getMonacoHeightFromRowPx,
     getRowHeightPx,
-    getMinMonacoHeightPx,
     MONACO_PADDING_PX,
     TITLE_BAR_HEIGHT_PX
   } from './promptEditorSizing'
@@ -90,6 +90,7 @@
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(systemSettings.promptEditorMinLines)
+  const promptEditorMaxLines = $derived(systemSettings.promptEditorMaxLines)
   const initialEditorViewStateJson = $derived(lookupPromptEditorViewStateJson(promptId))
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
@@ -103,10 +104,11 @@
     }
   })
   const placeholderMonacoHeightPx = $derived.by(() => {
-    const baseHeightPx = virtualRowHeightPx
-    return Math.max(
-      getMinMonacoHeightPx(promptFontSize, promptEditorMinLines),
-      getMonacoHeightFromRowPx(baseHeightPx)
+    return clampMonacoHeightPx(
+      getMonacoHeightFromRowPx(virtualRowHeightPx),
+      promptFontSize,
+      promptEditorMinLines,
+      promptEditorMaxLines
     )
   })
   const lineCount = $derived(getPromptLineCount(promptData.draft.text))

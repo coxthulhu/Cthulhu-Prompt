@@ -44,6 +44,7 @@ export const systemSettingsPersistence: PersistenceLayer<
     const normalizedSettings = normalizeSystemSettings({
       promptFontSize: change.data.promptFontSize,
       promptEditorMinLines: change.data.promptEditorMinLines,
+      promptEditorMaxLines: change.data.promptEditorMaxLines,
       showLineNumbers: change.data.showLineNumbers
     })
     writeJsonFile(tempPath, normalizedSettings)

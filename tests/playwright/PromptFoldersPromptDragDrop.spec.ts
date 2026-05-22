@@ -707,8 +707,7 @@ describe('Prompt folder prompt drag-drop', () => {
       height: 30,
       kind: 'prompt',
       opacity: '1',
-      text: 'Code Review',
-      width: 220
+      text: 'Code Review'
     })
     expect(treeGhost.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
     expect(treeGhost.borderColor).not.toBe('rgba(0, 0, 0, 0)')

@@ -28,6 +28,16 @@ async function waitForStoredShowLineNumbers(mainWindow: any, value: boolean): Pr
   }, value)
 }
 
+async function waitForStoredPromptMaxLines(mainWindow: any, value: number): Promise<void> {
+  await mainWindow.waitForFunction((expected) => {
+    const ipc = window.electron?.ipcRenderer
+    if (!ipc?.invoke) return false
+    return ipc.invoke('load-system-settings').then((result) => {
+      return result?.systemSettings?.data?.promptEditorMaxLines === expected
+    })
+  }, value)
+}
+
 async function setPromptFontSize(
   mainWindow: any,
   testHelpers: {
@@ -42,6 +52,22 @@ async function setPromptFontSize(
   await expect(input).toHaveValue(String(value))
   await testHelpers.navigateToHomeScreen()
   await waitForStoredPromptFontSize(mainWindow, value)
+}
+
+async function setPromptEditorMaxLines(
+  mainWindow: any,
+  testHelpers: {
+    navigateToSettingsScreen: () => Promise<void>
+    navigateToHomeScreen: () => Promise<void>
+  },
+  value: number
+): Promise<void> {
+  await testHelpers.navigateToSettingsScreen()
+  const input = mainWindow.locator('[data-testid="max-lines-input"]')
+  await input.fill(String(value))
+  await expect(input).toHaveValue(String(value))
+  await testHelpers.navigateToHomeScreen()
+  await waitForStoredPromptMaxLines(mainWindow, value)
 }
 
 async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Promise<number> {
@@ -64,6 +90,26 @@ async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Pro
   }
 
   return lineHeight
+}
+
+async function getMonacoRootHeight(mainWindow: any, editorSelector: string): Promise<number> {
+  const monacoSelector = `${editorSelector} .monaco-editor`
+  await mainWindow.waitForSelector(monacoSelector, { state: 'visible' })
+
+  const height = await mainWindow.evaluate(
+    ({ selector }) => {
+      const editor = document.querySelector<HTMLElement>(selector)
+      if (!editor) return null
+      return Math.round(editor.getBoundingClientRect().height)
+    },
+    { selector: monacoSelector }
+  )
+
+  if (height == null) {
+    throw new Error('Failed to measure Monaco editor height.')
+  }
+
+  return height
 }
 
 async function getMonacoLineNumbersSetting(
@@ -203,6 +249,53 @@ describe('Prompt editor settings', () => {
     await minLinesInput.click()
     await expect(input).toHaveValue(String(updatedFontSize))
     await waitForStoredPromptFontSize(mainWindow, updatedFontSize)
+  })
+
+  test('validates editor line count setting ranges', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToSettingsScreen()
+
+    const minLinesInput = mainWindow.locator('[data-testid="min-lines-input"]')
+    await minLinesInput.fill('11')
+    await expect(mainWindow.locator('[data-testid="min-lines-error"]')).toContainText(
+      'Use a value between 2 and 10.'
+    )
+
+    const maxLinesInput = mainWindow.locator('[data-testid="max-lines-input"]')
+    await maxLinesInput.fill('9')
+    await expect(mainWindow.locator('[data-testid="max-lines-error"]')).toContainText(
+      'Use a value between 10 and 40.'
+    )
+  })
+
+  test('applies maximum line count to Monaco editor height', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'height' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    const prompt = heightTestPrompts.hundredLine
+    const rowSelector = promptEditorSelector(prompt.id)
+    const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
+
+    await setPromptEditorMaxLines(mainWindow, testHelpers, 10)
+    await testHelpers.openPromptFolderAndWaitForHydrationReady({
+      folderName: prompt.title,
+      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+      promptSelector: rowSelector,
+      placeholderSelector
+    })
+
+    const lineHeight = await getMonacoLineHeight(mainWindow, rowSelector)
+    const editorHeight = await getMonacoRootHeight(mainWindow, rowSelector)
+
+    expect(editorHeight).toBeLessThanOrEqual(lineHeight * 10 + 1)
   })
 
   test('applies the line number setting to Monaco editors', async ({ testSetup }) => {

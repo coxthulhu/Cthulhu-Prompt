@@ -1,6 +1,5 @@
 // Match Monaco's default Windows line height ratio when lineHeight=0.
 const LINE_HEIGHT_RATIO = 1.35
-const MAX_VISIBLE_LINES = 40
 export const TITLE_BAR_HEIGHT_PX = 60
 export const MONACO_PADDING_PX = 10
 export const ADDITIONAL_GAP_PX = 8
@@ -14,27 +13,29 @@ export const getLineHeightPx = (fontSize: number): number =>
 export const getMinMonacoHeightPx = (fontSize: number, minLines: number): number =>
   getLineHeightPx(fontSize) * minLines
 
-const getMaxMonacoHeightPx = (fontSize: number): number =>
-  getLineHeightPx(fontSize) * MAX_VISIBLE_LINES
+export const getMaxMonacoHeightPx = (fontSize: number, maxLines: number): number =>
+  getLineHeightPx(fontSize) * maxLines
 
 export const clampMonacoHeightPx = (
   heightPx: number,
   fontSize: number,
-  minLines: number
+  minLines: number,
+  maxLines: number
 ): number => {
   return Math.min(
     Math.max(heightPx, getMinMonacoHeightPx(fontSize, minLines)),
-    getMaxMonacoHeightPx(fontSize)
+    getMaxMonacoHeightPx(fontSize, maxLines)
   )
 }
 
 export const estimateMonacoHeightPx = (
   text: string,
   fontSize: number,
-  minLines: number
+  minLines: number,
+  maxLines: number
 ): number => {
   const lineCount = Math.max(1, text.split('\n').length)
-  return clampMonacoHeightPx(lineCount * getLineHeightPx(fontSize), fontSize, minLines)
+  return clampMonacoHeightPx(lineCount * getLineHeightPx(fontSize), fontSize, minLines, maxLines)
 }
 
 export const getRowHeightPx = (monacoHeightPx: number): number => {
@@ -50,9 +51,10 @@ export const estimatePromptEditorHeight = (
   _widthPx: number,
   _heightPx: number,
   fontSize: number,
-  minLines: number
+  minLines: number,
+  maxLines: number
 ): number => {
   void _widthPx
   void _heightPx
-  return getRowHeightPx(estimateMonacoHeightPx(promptText, fontSize, minLines))
+  return getRowHeightPx(estimateMonacoHeightPx(promptText, fontSize, minLines, maxLines))
 }

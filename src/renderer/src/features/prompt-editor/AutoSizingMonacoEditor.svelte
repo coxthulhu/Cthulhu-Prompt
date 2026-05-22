@@ -22,6 +22,7 @@
     overflowWidgetsDomNode: HTMLElement
     rowId: string
     minLines?: number
+    maxLines?: number
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
     onBlur?: () => void
@@ -45,6 +46,7 @@
     overflowWidgetsDomNode,
     rowId,
     minLines,
+    maxLines,
     scrollToWithinWindowBand,
     onChange,
     onBlur,
@@ -60,6 +62,7 @@
   const systemSettings = getSystemSettingsContext()
   const promptFontSize = $derived(systemSettings.promptFontSize)
   const promptEditorMinLines = $derived(minLines ?? systemSettings.promptEditorMinLines)
+  const promptEditorMaxLines = $derived(maxLines ?? systemSettings.promptEditorMaxLines)
   const showLineNumbers = $derived(systemSettings.showLineNumbers)
   const minMonacoHeightPx = $derived(getMinMonacoHeightPx(promptFontSize, promptEditorMinLines))
 
@@ -79,6 +82,7 @@
   let lastFontSizeEffectEditor: monaco.editor.IStandaloneCodeEditor | null = null
   let lastAppliedPromptFontSize: number | null = null
   let lastAppliedPromptEditorMinLines: number | null = null
+  let lastAppliedPromptEditorMaxLines: number | null = null
   let lastAppliedShowLineNumbers: boolean | null = null
   let suppressCursorAutoScrollDuringRestore = $state(false)
 
@@ -114,7 +118,8 @@
     return clampMonacoHeightPx(
       Math.ceil(editor.getContentHeight()),
       promptFontSize,
-      promptEditorMinLines
+      promptEditorMinLines,
+      promptEditorMaxLines
     )
   }
 
@@ -471,18 +476,28 @@
     }
   })
 
-  // Side effect: apply font, line-number, and min-line settings to hydrated Monaco editors.
+  // Side effect: apply font, line-number, and line-count settings to hydrated Monaco editors.
   $effect(() => {
     if (!isEditorReady || !editor) return
     const editorChanged = editor !== lastFontSizeEffectEditor
     const fontSizeChanged = promptFontSize !== lastAppliedPromptFontSize
     const minLinesChanged = promptEditorMinLines !== lastAppliedPromptEditorMinLines
+    const maxLinesChanged = promptEditorMaxLines !== lastAppliedPromptEditorMaxLines
     const lineNumbersChanged = showLineNumbers !== lastAppliedShowLineNumbers
-    if (!editorChanged && !fontSizeChanged && !minLinesChanged && !lineNumbersChanged) return
+    if (
+      !editorChanged &&
+      !fontSizeChanged &&
+      !minLinesChanged &&
+      !maxLinesChanged &&
+      !lineNumbersChanged
+    ) {
+      return
+    }
 
     lastFontSizeEffectEditor = editor
     lastAppliedPromptFontSize = promptFontSize
     lastAppliedPromptEditorMinLines = promptEditorMinLines
+    lastAppliedPromptEditorMaxLines = promptEditorMaxLines
     lastAppliedShowLineNumbers = showLineNumbers
 
     if (editorChanged || fontSizeChanged || lineNumbersChanged) {

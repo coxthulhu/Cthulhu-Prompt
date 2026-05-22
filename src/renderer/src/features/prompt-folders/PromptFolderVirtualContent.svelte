@@ -5,7 +5,12 @@
   import { lookupPromptFolderDescriptionMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
-  import { estimatePromptEditorHeight } from '../prompt-editor/promptEditorSizing'
+  import {
+    clampMonacoHeightPx,
+    estimatePromptEditorHeight,
+    getMonacoHeightFromRowPx,
+    getRowHeightPx
+  } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
   import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from '../prompt-editor/promptDividerSizing'
   import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
@@ -54,6 +59,7 @@
     descriptionText: string
     promptFontSize: number
     promptEditorMinLines: number
+    promptEditorMaxLines: number
     promptDraftById: Record<string, PromptDraftRecord>
     visiblePromptIds: string[]
     isCreatingPrompt: boolean
@@ -85,6 +91,7 @@
     descriptionText,
     promptFontSize,
     promptEditorMinLines,
+    promptEditorMaxLines,
     promptDraftById,
     visiblePromptIds,
     isCreatingPrompt,
@@ -166,10 +173,25 @@
           widthPx,
           heightPx,
           promptFontSize,
-          promptEditorMinLines
+          promptEditorMinLines,
+          promptEditorMaxLines
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
-        return lookupPromptEditorMeasuredHeight(row.promptId, widthPx, devicePixelRatio)
+        const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
+          row.promptId,
+          widthPx,
+          devicePixelRatio
+        )
+        if (measuredRowHeightPx == null) return null
+
+        return getRowHeightPx(
+          clampMonacoHeightPx(
+            getMonacoHeightFromRowPx(measuredRowHeightPx),
+            promptFontSize,
+            promptEditorMinLines,
+            promptEditorMaxLines
+          )
+        )
       },
       hydrationPriorityEligible: true,
       centerRowEligible: true,

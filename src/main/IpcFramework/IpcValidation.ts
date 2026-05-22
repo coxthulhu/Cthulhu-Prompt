@@ -210,6 +210,7 @@ const parsePromptFolderRevisionPayloadEntity =
 const parseSystemSettings = parseObject<SystemSettings>({
   promptFontSize: parseNumber,
   promptEditorMinLines: parseNumber,
+  promptEditorMaxLines: parseNumber,
   showLineNumbers: parseBoolean
 })
 

@@ -62,6 +62,7 @@
           descriptionText={controller.descriptionText}
           promptFontSize={controller.promptFontSize}
           promptEditorMinLines={controller.promptEditorMinLines}
+          promptEditorMaxLines={controller.promptEditorMaxLines}
           promptDraftById={controller.promptDraftById}
           visiblePromptIds={controller.visiblePromptIds}
           isCreatingPrompt={controller.isCreatingPrompt}
