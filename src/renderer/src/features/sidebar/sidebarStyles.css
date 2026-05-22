@@ -278,7 +278,8 @@
 
 .promptDragGhost {
   box-sizing: border-box;
-  width: 220px;
+  min-width: 120px;
+  width: 100%;
 }
 
 .promptDragGhostButton {
