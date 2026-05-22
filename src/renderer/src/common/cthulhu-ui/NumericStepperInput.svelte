@@ -36,7 +36,8 @@
     ...restProps
   }: Props = $props()
 
-  const sanitizeNumeric = (raw: string) => raw.replace(/\D/g, '')
+  const maxInputLength = 3
+  const sanitizeNumeric = (raw: string) => raw.replace(/\D/g, '').slice(0, maxInputLength)
   const parsedValue = $derived(/^\d+$/.test(value) ? Number(value) : null)
   const canDecrease = $derived(parsedValue !== null && parsedValue - 1 >= min)
   const canIncrease = $derived(parsedValue !== null && parsedValue + 1 <= max)
@@ -85,13 +86,14 @@
     <Minus class="h-3.5 w-3.5" />
   </button>
 
-  <div class="cthulhuUiNumericStepperInputValue">
+  <label class="cthulhuUiNumericStepperInputValue">
     <input
       bind:this={ref}
       class="cthulhuUiNumericStepperInputNative"
       type="text"
       inputmode="numeric"
       pattern="[0-9]*"
+      maxlength={maxInputLength}
       bind:value
       {disabled}
       aria-invalid={ariaInvalid}
@@ -101,7 +103,7 @@
     {#if helperText}
       <span class="cthulhuUiNumericStepperInputHelper">{helperText}</span>
     {/if}
-  </div>
+  </label>
 
   <button
     class="cthulhuUiNumericStepperInputButton"

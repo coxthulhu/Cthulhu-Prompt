@@ -181,6 +181,7 @@
                 min={MIN_PROMPT_FONT_SIZE}
                 max={MAX_PROMPT_FONT_SIZE}
                 helperText="px"
+                aria-label="Font size"
                 aria-invalid={displayFontSizeError ? 'true' : undefined}
                 decreaseLabel="Decrease font size"
                 increaseLabel="Increase font size"
@@ -219,6 +220,7 @@
                 min={MIN_PROMPT_EDITOR_MIN_LINES}
                 max={MAX_PROMPT_EDITOR_MIN_LINES}
                 helperText="lines"
+                aria-label="Minimum line count"
                 aria-invalid={displayMinLinesError ? 'true' : undefined}
                 decreaseLabel="Decrease minimum line count"
                 increaseLabel="Increase minimum line count"
@@ -257,6 +259,7 @@
                 min={MIN_PROMPT_EDITOR_MAX_LINES}
                 max={MAX_PROMPT_EDITOR_MAX_LINES}
                 helperText="lines"
+                aria-label="Maximum line count"
                 aria-invalid={displayMaxLinesError ? 'true' : undefined}
                 decreaseLabel="Decrease maximum line count"
                 increaseLabel="Increase maximum line count"
