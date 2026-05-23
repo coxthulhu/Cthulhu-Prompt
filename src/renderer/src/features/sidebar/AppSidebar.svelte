@@ -219,9 +219,7 @@
   <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
     <div class="mb-2 flex items-center justify-between">
       <div>
-        <p
-          class="cthulhuSidebarPromptSectionTitle text-[11px] font-semibold uppercase tracking-[0.14em]"
-        >
+        <p class="cthulhuSidebarPromptSectionTitle text-[13px] font-semibold">
           Prompts
         </p>
         <p class="cthulhuSidebarPromptSectionCount mt-0.5 text-xs">{promptFolderCountLabel}</p>
