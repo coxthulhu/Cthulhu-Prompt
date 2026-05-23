@@ -94,7 +94,7 @@
   <IconOnlyButton
     icon={ChevronUp}
     label="Move prompt up"
-    variant="muted-border"
+    variant="dim-border"
     size="rail"
     testId="prompt-move-up"
     disabled={isFirstPrompt}
@@ -104,7 +104,7 @@
   <IconOnlyButton
     icon={GripVertical}
     label="Drag prompt"
-    variant="muted-border"
+    variant="dim-border"
     size="rail-fill"
     iconClass="stroke-[2.5]"
     testId="prompt-drag-handle"
@@ -116,7 +116,7 @@
   <IconOnlyButton
     icon={ChevronDown}
     label="Move prompt down"
-    variant="muted-border"
+    variant="dim-border"
     size="rail"
     testId="prompt-move-down"
     disabled={isLastPrompt}

@@ -236,7 +236,7 @@
             size="compact"
             disabled={!canCollapsePromptFolders}
             testId="expand-all-prompt-folders-button"
-            class="rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+            class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
             onclick={() => {
               expandAllPromptFoldersVersion += 1
             }}
@@ -249,7 +249,7 @@
             size="compact"
             disabled={!canCollapsePromptFolders}
             testId="collapse-all-prompt-folders-button"
-            class="rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+            class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
             onclick={() => {
               collapseAllPromptFoldersVersion += 1
             }}

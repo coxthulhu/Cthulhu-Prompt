@@ -38,6 +38,7 @@
     lookupWorkspacePersistedPromptFolderExpandedState,
     setPromptFolderExpandedStateWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -510,33 +511,29 @@
             {props.row.folder.promptIds.length}
           </span>
           <div class="sidebarPromptTreeFolderActions">
-            <button
-              type="button"
-              aria-label={`Folder settings for ${props.row.folder.displayName}`}
-              aria-current={isSettingsActive ? 'true' : undefined}
+            <IconOnlyButton
+              icon={Settings}
+              label={`Folder settings for ${props.row.folder.displayName}`}
+              variant="transparent"
+              size="tree-action"
               onclick={(event) =>
                 handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
-              data-testid={folderSettingsTestId(props.row.folder)}
-              data-active={isSettingsActive ? 'true' : 'false'}
+              testId={folderSettingsTestId(props.row.folder)}
+              iconTestId={folderSettingsIconTestId(props.row.folder)}
+              active={isSettingsActive}
+              ariaCurrent={isSettingsActive ? 'true' : undefined}
               class="sidebarPromptTreeActionButton"
-            >
-              <Settings
-                class="size-4"
-                data-testid={folderSettingsIconTestId(props.row.folder)}
-                aria-hidden="true"
-              />
-            </button>
-            <button
-              type="button"
-              aria-label={`Open ${props.row.folder.displayName}`}
+            />
+            <IconOnlyButton
+              icon={ArrowRight}
+              label={`Open ${props.row.folder.displayName}`}
+              variant="transparent"
+              size="tree-action"
               onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
-              data-testid={folderOpenTestId(props.row.folder)}
-              data-size="default"
-              data-active={isActive}
+              testId={folderOpenTestId(props.row.folder)}
+              active={isActive}
               class="sidebarPromptTreeActionButton"
-            >
-              <ArrowRight class="size-4" />
-            </button>
+            />
           </div>
         </div>
       </div>

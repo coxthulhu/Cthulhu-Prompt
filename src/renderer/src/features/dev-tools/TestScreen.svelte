@@ -52,8 +52,13 @@
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
-  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
-  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
+  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
+  type IconOnlyButtonVariant =
+    | 'outline'
+    | 'transparent'
+    | 'dim-border'
+    | 'accent'
+    | 'danger'
   type IconTextButtonState = 'active' | 'enabled' | 'disabled'
   type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
 
@@ -73,11 +78,17 @@
   const iconOnlyButtonVariants: IconOnlyButtonVariant[] = [
     'outline',
     'transparent',
-    'muted-border',
+    'dim-border',
     'accent',
     'danger'
   ]
-  const iconOnlyButtonSizes: IconOnlyButtonSize[] = ['default', 'compact', 'rail', 'rail-fill']
+  const iconOnlyButtonSizes: IconOnlyButtonSize[] = [
+    'default',
+    'compact',
+    'rail',
+    'rail-fill',
+    'tree-action'
+  ]
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']

@@ -3,8 +3,13 @@
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
-  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
-  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'muted-border' | 'accent' | 'danger'
+  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
+  type IconOnlyButtonVariant =
+    | 'outline'
+    | 'transparent'
+    | 'dim-border'
+    | 'accent'
+    | 'danger'
   type IconOnlyButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -15,8 +20,11 @@
     disabled?: boolean
     class?: string
     iconClass?: string
+    iconTestId?: string
     testId?: string
     title?: string
+    active?: boolean
+    ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
     buttonAction?: IconOnlyButtonAction | null
     buttonActionParameter?: unknown
     grabCursor?: boolean
@@ -29,10 +37,10 @@
   const variantClasses = {
     outline:
       'border-[var(--ui-neutral-interactive-normal-border)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-interactive-hover-border)]',
-    'muted-border':
-      'border-[var(--ui-neutral-interactive-muted-border)] bg-[var(--ui-neutral-normal-surface)] text-[var(--ui-secondary-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-interactive-hover-border)]',
+    'dim-border':
+      'border-[var(--ui-neutral-muted-border)] bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-secondary-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-hover-border)] hover:bg-[var(--ui-neutral-normal-surface)]',
     transparent:
-      'border-transparent bg-transparent shadow-none hover:border-[var(--ui-neutral-interactive-hover-border)]',
+      'border-0 bg-transparent shadow-none hover:border-0 hover:bg-[var(--ui-neutral-normal-surface)]',
     accent:
       'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-accent-normal-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-accent-hover-border)] hover:bg-[var(--ui-accent-hover-surface)] hover:text-[var(--ui-normal-text)]',
     danger:
@@ -42,7 +50,8 @@
     default: null,
     compact: 'h-7 w-7',
     rail: 'h-7 w-7',
-    'rail-fill': 'h-full min-h-0 w-7'
+    'rail-fill': 'h-full min-h-0 w-7',
+    'tree-action': 'h-7 w-7'
   } satisfies Record<IconOnlyButtonSize, string | null>
 
   let {
@@ -53,8 +62,11 @@
     disabled = false,
     class: className,
     iconClass,
+    iconTestId,
     testId,
     title,
+    active,
+    ariaCurrent,
     buttonAction = null,
     buttonActionParameter,
     grabCursor = false,
@@ -75,11 +87,13 @@
   )}
   type="button"
   aria-label={label}
+  aria-current={ariaCurrent}
+  data-active={active === undefined ? undefined : active ? 'true' : 'false'}
   data-testid={testId}
   data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}
   {disabled}
   {onclick}
 >
-  <Icon class={mergeClasses('h-4 w-4', iconClass)} />
+  <Icon class={mergeClasses('h-4 w-4', iconClass)} data-testid={iconTestId} aria-hidden="true" />
 </button>

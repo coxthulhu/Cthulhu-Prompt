@@ -135,7 +135,7 @@
   size="compact"
   disabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
-  class="rounded-xl text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+  class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
   onclick={() => (isDialogOpen = true)}
 />
 
