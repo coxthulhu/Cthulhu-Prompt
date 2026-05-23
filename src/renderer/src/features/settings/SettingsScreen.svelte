@@ -286,7 +286,7 @@
               size="small"
               description="Display line numbers beside prompt text for easier review."
               icon={Hash}
-              iconVariant="accent-green"
+              iconVariant="accent"
             />
           </div>
 
