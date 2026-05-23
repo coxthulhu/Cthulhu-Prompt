@@ -44,6 +44,7 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 ### Windows Command Execution
 
 - Required for Windows-side runs (lint + typecheck together, Vitest, Playwright). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
+- When asked to open a file, folder, or workspace in VS Code, do it from Windows so it opens in the user's Windows VS Code instance.
 - Include a short justification string explaining why elevation is needed.
 - Reusable template (swap the trailing command as needed):
   ```ts
