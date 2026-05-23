@@ -146,7 +146,7 @@
 
 <aside
   data-testid="app-sidebar"
-  class="sidebarSurface flex h-full w-full flex-col text-sidebar-foreground/80"
+  class="flex h-full w-full flex-col text-sidebar-foreground/80"
 >
   <div class="sidebarTopLevelInsetWithInnerPadding pt-2">
     <div class="flex items-start gap-2 border-b border-white/8 pb-2">

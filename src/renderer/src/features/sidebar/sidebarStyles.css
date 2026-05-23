@@ -1,7 +1,7 @@
 /* Shared visual refresh for the sidebar surface and top navigation buttons. */
 :root {
-  --sidebar-gradient-top: rgb(16 16 18);
-  --sidebar-gradient-bottom: rgb(11 14 18);
+  --sidebar-gradient-top: var(--ui-card-normal-surface-gradient-start);
+  --sidebar-gradient-bottom: var(--ui-card-normal-surface-gradient-end);
   --sidebar-mockup-border: rgb(255 255 255 / 10%);
 }
 
@@ -22,10 +22,6 @@
 .sidebarTopLevelInsetWithInnerPadding {
   padding-left: 13px;
   padding-right: 13px;
-}
-
-.sidebarTitlebarSurface {
-  background-color: var(--sidebar-gradient-top);
 }
 
 .sidebarFrameBorder {

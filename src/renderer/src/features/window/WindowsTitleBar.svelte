@@ -53,7 +53,7 @@
 </script>
 
 <div
-  class="titlebar sidebarTitlebarSurface text-foreground"
+  class="titlebar text-foreground"
   role="button"
   tabindex="0"
   aria-label="Toggle maximize"
@@ -105,6 +105,7 @@
     display: grid;
     grid-template-columns: var(--titlebar-controls-width) 1fr var(--titlebar-controls-width);
     align-items: center;
+    background-color: var(--ui-card-normal-surface-gradient-start);
     height: var(--titlebar-height);
     min-height: var(--titlebar-height);
     -webkit-app-region: drag;
