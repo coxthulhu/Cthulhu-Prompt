@@ -61,6 +61,7 @@
     icon={FolderOpen}
     text={buttonText}
     state={buttonState}
+    class="h-11"
     testId={buttonTestId}
     onclick={handleBrowse}
   />
