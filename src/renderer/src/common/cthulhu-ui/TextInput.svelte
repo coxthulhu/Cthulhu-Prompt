@@ -45,7 +45,7 @@
 <input
   bind:this={ref}
   class={mergeClasses(
-    'cthulhuUiTextInput flex h-11 min-w-0 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
+    'cthulhuUiTextInput flex h-10 min-w-0 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
     readonlyDisplay ? 'cursor-default' : null,
     className
   )}

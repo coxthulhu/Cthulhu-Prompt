@@ -27,7 +27,7 @@
 <label
   bind:this={ref}
   class={mergeClasses(
-    'cthulhuUiCheckboxInput relative flex min-h-11 items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] border p-3 text-sm font-medium transition-[color,background-color,border-color,box-shadow]',
+    'cthulhuUiCheckboxInput relative flex min-h-10 items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] border px-3 py-2 text-sm font-medium transition-[color,background-color,border-color,box-shadow]',
     className
   )}
   data-disabled={disabled ? 'true' : undefined}

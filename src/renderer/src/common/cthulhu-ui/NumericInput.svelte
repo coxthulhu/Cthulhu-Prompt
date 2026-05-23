@@ -37,7 +37,7 @@
 <input
   bind:this={ref}
   class={mergeClasses(
-    'cthulhuUiNumericInput flex h-11 w-24 min-w-0 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
+    'cthulhuUiNumericInput flex h-10 w-24 min-w-0 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 py-1 text-sm font-medium outline-none transition-[color,box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-50',
     className
   )}
   type="text"
