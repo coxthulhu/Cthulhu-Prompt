@@ -227,7 +227,7 @@
         <p class="cthulhuSidebarPromptSectionCount mt-0.5 text-xs">{promptFolderCountLabel}</p>
       </div>
       {#if isWorkspaceReady}
-        <div class="flex shrink-0 items-center">
+        <div class="flex shrink-0 items-center gap-0.5">
           <IconOnlyButton
             icon={ChevronsUpDown}
             label="Expand All Prompt Folders"
