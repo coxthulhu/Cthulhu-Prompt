@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import * as path from 'path'
 import type { WorkspaceFolderStatus } from '@shared/Workspace'
 import {
@@ -45,5 +45,12 @@ export const setupWorkspaceDialogHandlers = (): void => {
 
   ipcMain.handle('get-workspace-folder-status', async (_, folderPath: string) => {
     return getWorkspaceFolderStatus(folderPath)
+  })
+
+  ipcMain.handle('open-workspace-folder', async (_, workspacePath: string) => {
+    const openError = await shell.openPath(workspacePath)
+    if (openError) {
+      throw new Error(openError)
+    }
   })
 }

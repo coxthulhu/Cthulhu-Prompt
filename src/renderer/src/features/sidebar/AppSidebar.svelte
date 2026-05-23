@@ -4,11 +4,13 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, ChevronsUpDown, Home } from 'lucide-svelte'
+  import { ChevronsDownUp, ChevronsUpDown, ExternalLink, Home } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
+  import BareIconButton from '@renderer/common/cthulhu-ui/BareIconButton.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
@@ -128,6 +130,16 @@
     return activeScreen === item.id ? 'active' : 'enabled'
   }
 
+  const openWorkspaceFolder = () => {
+    const targetWorkspacePath = workspacePath
+    if (!targetWorkspacePath) return
+
+    // Hand off to the main process so Windows opens the folder in Explorer.
+    void runIpcBestEffort(() =>
+      ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath)
+    )
+  }
+
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
   const workspaceDisplay = $derived.by(() => {
     if (!workspacePath) {
@@ -160,12 +172,24 @@
         />
       </div>
       <div class="min-w-0 flex-1">
-        <h1
-          data-testid="sidebar-workspace-name"
-          class="cthulhuSidebarWorkspaceName truncate text-sm font-semibold tracking-tight"
-        >
-          {workspaceDisplay.title}
-        </h1>
+        <div class="cthulhuSidebarWorkspaceTitleRow">
+          <h1
+            data-testid="sidebar-workspace-name"
+            class="cthulhuSidebarWorkspaceName truncate text-sm font-semibold tracking-tight"
+          >
+            {workspaceDisplay.title}
+          </h1>
+          {#if workspacePath}
+            <BareIconButton
+              icon={ExternalLink}
+              label="Open Workspace Folder"
+              title="Open Workspace Folder"
+              testId="sidebar-open-workspace-folder-button"
+              class="ml-0.5"
+              onclick={openWorkspaceFolder}
+            />
+          {/if}
+        </div>
         <p
           class="cthulhuSidebarWorkspacePath truncate pt-0.5 text-xs"
           title={workspacePath ?? undefined}
@@ -290,10 +314,18 @@
   }
 
   .cthulhuSidebarWorkspaceName {
+    min-width: 0;
     color: var(--ui-normal-text);
   }
 
   .cthulhuSidebarWorkspacePath {
     color: var(--ui-muted-text);
+  }
+
+  .cthulhuSidebarWorkspaceTitleRow {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
   }
 </style>
