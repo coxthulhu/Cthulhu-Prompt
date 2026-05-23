@@ -2,7 +2,6 @@
 :root {
   --sidebar-gradient-top: var(--ui-card-normal-surface-gradient-start);
   --sidebar-gradient-bottom: var(--ui-card-normal-surface-gradient-end);
-  --sidebar-mockup-border: rgb(255 255 255 / 10%);
 }
 
 .sidebarSurface {
@@ -25,7 +24,7 @@
 }
 
 .sidebarFrameBorder {
-  border-color: var(--sidebar-mockup-border);
+  border-color: var(--ui-neutral-emphasis-border);
 }
 
 .mainScreenSurface {
