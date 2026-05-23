@@ -24,6 +24,26 @@
   }
 
   const noopButtonAction: IconOnlyButtonAction = () => undefined
+  const baseButtonClass =
+    'cthulhuUiIconOnlyButton inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-[var(--cthulhu-ui-radius-icon-button)] border text-[var(--ui-hoverable-text)] transition-[background-color,box-shadow,border-color,color] duration-[120ms] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50'
+  const variantClasses = {
+    outline:
+      'border-[var(--ui-neutral-interactive-normal-border)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-interactive-hover-border)]',
+    'muted-border':
+      'border-[var(--ui-neutral-interactive-muted-border)] bg-[var(--ui-neutral-normal-surface)] text-[var(--ui-secondary-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-interactive-hover-border)]',
+    transparent:
+      'border-transparent bg-transparent shadow-none hover:border-[var(--ui-neutral-interactive-hover-border)]',
+    accent:
+      'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-accent-normal-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-accent-hover-border)] hover:bg-[var(--ui-accent-hover-surface)] hover:text-[var(--ui-normal-text)]',
+    danger:
+      'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-normal-surface)] text-[var(--ui-danger-icon-glyph)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-danger-hover-border)] hover:bg-[var(--ui-danger-hover-surface)] hover:text-[var(--ui-danger-icon-glyph)]'
+  } satisfies Record<IconOnlyButtonVariant, string>
+  const sizeClasses = {
+    default: null,
+    compact: 'h-7 w-7',
+    rail: 'h-7 w-7',
+    'rail-fill': 'h-full min-h-0 w-7'
+  } satisfies Record<IconOnlyButtonSize, string | null>
 
   let {
     icon: Icon,
@@ -41,27 +61,18 @@
     onclick,
   }: Props = $props()
 
-  const variantClass = $derived(
-    variant === 'muted-border'
-      ? 'cthulhuUiIconOnlyButton--mutedBorder'
-      : `cthulhuUiIconOnlyButton--${variant}`
-  )
-
-  const sizeClass = $derived(
-    size === 'rail'
-      ? 'cthulhuUiIconOnlyButton--rail'
-      : size === 'compact'
-        ? 'cthulhuUiIconOnlyButton--compact'
-        : size === 'rail-fill'
-        ? 'cthulhuUiIconOnlyButton--railFill'
-        : null
-  )
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
 
 <button
   use:resolvedButtonAction={buttonActionParameter}
-  class={mergeClasses('cthulhuUiIconOnlyButton', variantClass, sizeClass, className)}
+  class={mergeClasses(
+    baseButtonClass,
+    variantClasses[variant],
+    sizeClasses[size],
+    grabCursor ? 'cursor-grab active:cursor-grabbing' : null,
+    className
+  )}
   type="button"
   aria-label={label}
   data-testid={testId}
@@ -72,112 +83,3 @@
 >
   <Icon class={mergeClasses('h-4 w-4', iconClass)} />
 </button>
-
-<style>
-  .cthulhuUiIconOnlyButton {
-    align-items: center;
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: var(--cthulhu-ui-radius-icon-button);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: inline-flex;
-    flex: 0 0 auto;
-    height: 36px;
-    justify-content: center;
-    transition:
-      background-color 120ms ease,
-      box-shadow 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
-    width: 36px;
-  }
-
-  .cthulhuUiIconOnlyButton--rail {
-    height: 28px;
-    width: 28px;
-  }
-
-  .cthulhuUiIconOnlyButton--compact {
-    height: 28px;
-    width: 28px;
-  }
-
-  .cthulhuUiIconOnlyButton--railFill {
-    height: 100%;
-    min-height: 0;
-    width: 28px;
-  }
-
-  .cthulhuUiIconOnlyButton[data-grab-cursor='true'] {
-    cursor: grab;
-  }
-
-  .cthulhuUiIconOnlyButton[data-grab-cursor='true']:active {
-    cursor: grabbing;
-  }
-
-  .cthulhuUiIconOnlyButton--outline {
-    border-color: var(--ui-neutral-normal-border);
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
-  }
-
-  .cthulhuUiIconOnlyButton--mutedBorder {
-    background-color: var(--ui-neutral-normal-surface);
-    border-color: var(--ui-neutral-muted-border);
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
-    color: var(--ui-secondary-text);
-  }
-
-  .cthulhuUiIconOnlyButton--transparent {
-    /* Keep the transparent border in the box model so appearances do not shift layout. */
-    border-color: transparent;
-    background-color: transparent;
-    box-shadow: none;
-  }
-
-  .cthulhuUiIconOnlyButton--accent {
-    border-color: var(--ui-accent-normal-border);
-    background-color: var(--ui-accent-normal-surface);
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
-    color: var(--ui-accent-normal-text);
-  }
-
-  .cthulhuUiIconOnlyButton--danger {
-    border-color: var(--ui-danger-normal-border);
-    background-color: var(--ui-danger-normal-surface);
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
-    color: var(--ui-danger-icon-glyph);
-  }
-
-  .cthulhuUiIconOnlyButton:hover {
-    background-color: var(--ui-neutral-hover-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconOnlyButton--outline:hover,
-  .cthulhuUiIconOnlyButton--mutedBorder:hover {
-    border-color: var(--ui-neutral-hover-border);
-  }
-
-  .cthulhuUiIconOnlyButton--transparent:hover {
-    border-color: var(--ui-neutral-hover-border);
-  }
-
-  .cthulhuUiIconOnlyButton--accent:hover {
-    border-color: var(--ui-accent-hover-border);
-    background-color: var(--ui-accent-hover-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconOnlyButton--danger:hover {
-    border-color: var(--ui-danger-hover-border);
-    background-color: var(--ui-danger-hover-surface);
-    color: var(--ui-danger-icon-glyph);
-  }
-
-  .cthulhuUiIconOnlyButton:disabled {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
-  }
-</style>

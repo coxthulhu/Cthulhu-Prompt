@@ -29,13 +29,31 @@
     onclick
   }: Props = $props()
 
+  const variantClasses = {
+    neutral:
+      'border-[var(--ui-neutral-interactive-normal-border)] bg-[var(--ui-neutral-normal-surface)] text-[var(--ui-secondary-text)] hover:border-[var(--ui-neutral-interactive-hover-border)] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)]',
+    accent:
+      'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-accent-normal-text)] hover:border-[var(--ui-accent-hover-border)] hover:bg-[var(--ui-accent-hover-surface)]',
+    danger:
+      'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-normal-surface)] hover:border-[var(--ui-danger-hover-border)] hover:bg-[var(--ui-danger-hover-surface)]'
+  } satisfies Record<IconDescriptionButtonVariant, string>
+  const iconVariantClasses = {
+    neutral:
+      'border-[var(--ui-neutral-interactive-normal-border)] bg-[var(--ui-neutral-emphasis-surface)] text-[var(--ui-normal-text)] group-hover/icon-description-button:border-[var(--ui-neutral-interactive-hover-border)]',
+    accent:
+      'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-normal-text)] group-hover/icon-description-button:border-[var(--ui-accent-hover-border)]',
+    danger:
+      'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-icon-surface)] text-[var(--ui-normal-text)] group-hover/icon-description-button:border-[var(--ui-danger-hover-border)]'
+  } satisfies Record<IconDescriptionButtonVariant, string>
+
   const isDisabled = $derived(state === 'disabled')
 </script>
 
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconDescriptionButton grid w-full min-w-0 cursor-pointer grid-cols-[42px_minmax(0,1fr)] items-center gap-3 rounded-[7px] border p-2.5 text-left transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconDescriptionButton group/icon-description-button grid w-full min-w-0 cursor-pointer grid-cols-[42px_minmax(0,1fr)] items-center gap-3 rounded-[7px] border p-2.5 text-left shadow-[var(--cthulhu-ui-shadow-surface-highlight)] transition disabled:pointer-events-none disabled:opacity-50',
+    variantClasses[variant],
     className
   )}
   data-testid={testId}
@@ -44,115 +62,23 @@
   disabled={isDisabled}
 >
   <!-- Icon-leading action button with a persistent detail line. -->
-  <span class="cthulhuUiIconDescriptionButtonIcon">
+  <span
+    class={mergeClasses(
+      'cthulhuUiIconDescriptionButtonIcon flex h-[42px] w-[42px] flex-none items-center justify-center rounded-[var(--cthulhu-ui-radius-control)] border',
+      iconVariantClasses[variant]
+    )}
+  >
     <Icon class={mergeClasses('h-5 w-5', iconClass)} />
   </span>
 
   <span class="flex min-w-0 flex-col gap-[3px]">
-    <span class="cthulhuUiIconDescriptionButtonText">{text}</span>
-    <span class="cthulhuUiIconDescriptionButtonDescription">{description}</span>
+    <span
+      class="cthulhuUiIconDescriptionButtonText text-[15px] leading-5 font-[760] text-[var(--ui-normal-text)]"
+      >{text}</span
+    >
+    <span
+      class="cthulhuUiIconDescriptionButtonDescription text-[13px] leading-[18px] font-medium text-[var(--ui-secondary-text)]"
+      >{description}</span
+    >
   </span>
 </button>
-
-<style>
-  .cthulhuUiIconDescriptionButton {
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
-  }
-
-  .cthulhuUiIconDescriptionButtonIcon {
-    align-items: center;
-    border: 1px solid transparent;
-    border-radius: var(--cthulhu-ui-radius-control);
-    display: flex;
-    flex: 0 0 auto;
-    height: 42px;
-    justify-content: center;
-    width: 42px;
-  }
-
-  .cthulhuUiIconDescriptionButtonText {
-    color: var(--ui-normal-text);
-    font-size: 15px;
-    font-weight: 760;
-    letter-spacing: 0;
-    line-height: 20px;
-  }
-
-  .cthulhuUiIconDescriptionButtonDescription {
-    color: var(--ui-secondary-text);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='neutral'] {
-    background-color: var(--ui-neutral-normal-surface);
-    border-color: var(--ui-neutral-normal-border);
-    color: var(--ui-secondary-text);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='neutral']:hover {
-    border-color: var(--ui-neutral-hover-border);
-    background-color: var(--ui-neutral-hover-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='neutral'] .cthulhuUiIconDescriptionButtonIcon {
-    background-color: var(--ui-neutral-emphasis-surface);
-    border-color: var(--ui-neutral-normal-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='neutral']:hover
-    .cthulhuUiIconDescriptionButtonIcon {
-    border-color: var(--ui-neutral-hover-border);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='accent'] {
-    background-color: var(--ui-accent-normal-surface);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-accent-normal-text);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='accent']:hover {
-    border-color: var(--ui-accent-hover-border);
-    background-color: var(--ui-accent-hover-surface);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='accent'] .cthulhuUiIconDescriptionButtonIcon {
-    background-color: var(--ui-accent-normal-surface);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='accent']:hover
-    .cthulhuUiIconDescriptionButtonIcon {
-    border-color: var(--ui-accent-hover-border);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='danger'] {
-    background-color: var(--ui-danger-normal-surface);
-    border-color: var(--ui-danger-normal-border);
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='danger']:hover {
-    background-color: var(--ui-danger-hover-surface);
-    border-color: var(--ui-danger-hover-border);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='danger'] .cthulhuUiIconDescriptionButtonIcon {
-    background-color: var(--ui-danger-icon-surface);
-    border-color: var(--ui-danger-normal-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='danger']:hover
-    .cthulhuUiIconDescriptionButtonIcon {
-    border-color: var(--ui-danger-hover-border);
-  }
-
-  .cthulhuUiIconDescriptionButton[data-variant='danger'] .cthulhuUiIconDescriptionButtonText {
-    color: var(--ui-normal-text);
-  }
-</style>

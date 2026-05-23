@@ -46,6 +46,12 @@
   --ui-neutral-selection-surface: oklch(1 0 0 / 22%);
   --ui-neutral-focus-border: oklch(1 0 0 / 28%);
 
+  /* Neutral interactive borders stay brighter than structural gray borders. */
+  --ui-neutral-interactive-muted-border: oklch(1 0 0 / 22%);
+  --ui-neutral-interactive-normal-border: oklch(1 0 0 / 30%);
+  --ui-neutral-interactive-hover-border: oklch(1 0 0 / 42%);
+  --ui-neutral-interactive-emphasis-border: oklch(1 0 0 / 50%);
+
   /* Accent */
   --ui-accent-normal-surface: oklch(0.606 0.219 292.717 / 17%);
   --ui-accent-normal-fill: oklch(0.827 0.108 306.383 / 24%);
