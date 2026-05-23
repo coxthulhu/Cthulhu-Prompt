@@ -24,7 +24,7 @@
 }
 
 .sidebarFrameBorder {
-  border-color: var(--ui-neutral-emphasis-border);
+  border-color: var(--ui-neutral-hover-border);
 }
 
 .mainScreenSurface {
