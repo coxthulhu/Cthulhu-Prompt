@@ -405,7 +405,7 @@
         fontSize: sizingConfig.fontSize,
         glyphMargin: false,
         lineNumbers: showLineNumbers ? 'on' : 'off',
-        lineNumbersMinChars: 4,
+        lineNumbersMinChars: 3,
         scrollbar: { alwaysConsumeMouseWheel: false },
         revealHorizontalRightPadding: 0,
         cursorSmoothCaretAnimation: 'off',
