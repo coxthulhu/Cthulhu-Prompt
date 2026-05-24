@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    ArrowDownToLine,
     ChevronDown,
     ChevronUp,
     Copy,
@@ -282,8 +283,13 @@
                       onmouseenter={() => setHovered(`add-${prompt.id}`)}
                       onmouseleave={() => setHovered(null)}
                     >
-                      <Plus style="width:14px;height:14px;stroke-width:3;" />
-                      Add prompt
+                      {#if promptIndex === 1}
+                        <ArrowDownToLine style="width:14px;height:14px;stroke-width:3;" />
+                        Move here
+                      {:else}
+                        <Plus style="width:14px;height:14px;stroke-width:3;" />
+                        Add prompt
+                      {/if}
                     </button>
                     <span style={addPromptSeparatorStyle(promptIndex === 1)}></span>
                   </div>
