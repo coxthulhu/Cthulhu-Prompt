@@ -90,7 +90,7 @@
   const folderRowStyle = (key: string, active = false, over = false) =>
     `display:flex;height:36px;width:100%;align-items:center;border:1px solid ${
       over
-        ? 'var(--ui-accent-normal-border)'
+        ? 'var(--ui-info-normal-border)'
         : active
           ? 'var(--ui-neutral-emphasis-border)'
           : isHovered(key)
@@ -98,13 +98,13 @@
             : 'transparent'
     };border-radius:var(--cthulhu-ui-radius-control);background:${
       over
-        ? 'linear-gradient(90deg,var(--ui-accent-normal-surface),var(--ui-neutral-normal-surface))'
+        ? 'linear-gradient(90deg,var(--ui-info-normal-surface),var(--ui-neutral-normal-surface))'
         : active
           ? 'var(--ui-neutral-emphasis-surface)'
           : isHovered(key)
             ? 'var(--ui-neutral-normal-surface)'
             : 'transparent'
-    };box-shadow:${over ? 'inset 0 0 0 1px var(--ui-accent-hover-border),0 8px 22px var(--ui-shadow-raised)' : active ? 'inset 0 1px 0 var(--ui-neutral-normal-surface)' : 'none'};color:var(--ui-normal-text);transition:background-color 80ms ease,border-color 80ms ease,box-shadow 80ms ease;`
+    };box-shadow:${over ? 'inset 0 0 0 1px var(--ui-info-normal-border),0 8px 22px var(--ui-shadow-raised)' : active ? 'inset 0 1px 0 var(--ui-neutral-normal-surface)' : 'none'};color:var(--ui-normal-text);transition:background-color 80ms ease,border-color 80ms ease,box-shadow 80ms ease;`
 
   const promptTreeButtonStyle = (key: string, active = false, dragging = false) =>
     `display:flex;height:30px;width:100%;align-items:center;gap:8px;border:1px solid ${
@@ -125,7 +125,7 @@
     'position:absolute;left:38px;right:8px;top:100%;height:18px;transform:translateY(-50%);pointer-events:none;'
 
   const folderDropIndicatorStyle =
-    'height:18px;border-radius:999px;background:linear-gradient(90deg,var(--ui-accent-normal-border),var(--ui-accent-normal-surface) 48%,transparent);box-shadow:0 0 0 1px var(--ui-accent-hover-border),0 8px 24px oklch(0.606 0.219 292.717 / 22%);display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;overflow:hidden;'
+    'height:18px;border-radius:999px;background:linear-gradient(90deg,var(--ui-info-normal-border),var(--ui-info-normal-surface) 48%,transparent);box-shadow:0 0 0 1px var(--ui-info-normal-border),0 8px 24px var(--ui-info-normal-surface);display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;overflow:hidden;'
 
   const cardSurfaceStyle = (key: string, dragging = false) =>
     `display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;min-width:0;border:1px solid var(--ui-card-normal-border);border-radius:var(--cthulhu-ui-radius-card);background-image:linear-gradient(to bottom,var(--ui-card-normal-surface-gradient-start),var(--ui-card-normal-surface-gradient-end));padding:10px;box-shadow:${isHovered(key) ? '0 14px 34px var(--ui-shadow-raised)' : 'none'};opacity:${dragging ? '0.62' : '1'};transition:box-shadow 120ms ease,opacity 120ms ease,border-color 120ms ease;`
@@ -134,11 +134,11 @@
     'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;min-width:0;border:1px solid var(--ui-card-nested-border);border-radius:7px;background:var(--ui-neutral-muted-surface);box-shadow:inset 0 1px 0 var(--ui-card-nested-inset-highlight);padding:8px 8px 8px 10px;'
 
   const addPromptButtonStyle = (key: string, highlighted = false) =>
-    `height:30px;border:1px solid ${highlighted || isHovered(key) ? 'var(--ui-accent-hover-border)' : 'var(--ui-neutral-normal-border)'};border-radius:999px;background:${highlighted || isHovered(key) ? 'var(--ui-accent-hover-surface)' : 'var(--ui-neutral-normal-surface)'};color:var(--ui-normal-text);display:inline-flex;align-items:center;gap:7px;padding:0 13px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:${highlighted ? '0 0 0 1px var(--ui-accent-normal-border),0 8px 22px var(--ui-shadow-raised),inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight)' : 'inset 0 1px 0 var(--ui-card-nested-inset-highlight)'};transition:background-color 120ms ease,border-color 120ms ease,color 120ms ease,box-shadow 120ms ease;`
+    `height:30px;border:1px solid ${highlighted ? 'var(--ui-info-normal-border)' : isHovered(key) ? 'var(--ui-accent-hover-border)' : 'var(--ui-neutral-normal-border)'};border-radius:999px;background:${highlighted ? 'var(--ui-info-normal-surface)' : isHovered(key) ? 'var(--ui-accent-hover-surface)' : 'var(--ui-neutral-normal-surface)'};color:var(--ui-normal-text);display:inline-flex;align-items:center;gap:7px;padding:0 13px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:${highlighted ? '0 0 0 1px var(--ui-info-normal-border),0 8px 22px var(--ui-shadow-raised),inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight)' : 'inset 0 1px 0 var(--ui-card-nested-inset-highlight)'};transition:background-color 120ms ease,border-color 120ms ease,color 120ms ease,box-shadow 120ms ease;`
 
   const addPromptSeparatorStyle = (highlighted = false) =>
     highlighted
-      ? 'height:10px;border:1px solid var(--ui-accent-hover-border);border-radius:999px;background:var(--ui-accent-normal-surface);box-shadow:0 0 0 1px var(--ui-accent-normal-border),inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight);'
+      ? 'height:10px;border:1px solid var(--ui-info-normal-border);border-radius:999px;background:var(--ui-info-normal-surface);box-shadow:0 0 0 1px var(--ui-info-normal-border),inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight);'
       : 'height:1px;background:var(--ui-neutral-muted-border);'
 
   const renderIconStyle = 'width:16px;height:16px;flex:0 0 auto;'
@@ -200,8 +200,8 @@
             {#if folderIndex === 0}
               <div style={dropRailStyle} aria-hidden="true">
                 <div style={folderDropIndicatorStyle}>
-                  <span style="height:18px;width:18px;border-radius:999px;background:var(--ui-accent-strong-surface);box-shadow:0 0 0 3px var(--ui-accent-normal-surface);"></span>
-                  <span style="height:2px;border-radius:999px;background:var(--ui-accent-strong-border);box-shadow:0 0 16px var(--ui-accent-normal-border);"></span>
+                  <span style="height:18px;width:18px;border-radius:999px;background:var(--ui-info-strong-border);box-shadow:0 0 0 3px var(--ui-info-normal-surface);"></span>
+                  <span style="height:2px;border-radius:999px;background:var(--ui-info-strong-border);box-shadow:0 0 16px var(--ui-info-normal-border);"></span>
                 </div>
               </div>
             {/if}
