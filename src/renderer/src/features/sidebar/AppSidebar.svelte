@@ -70,6 +70,8 @@
   const secondaryNavItems = $derived.by(() =>
     navItems.filter((item) => item.id !== 'home' && item.id !== 'settings')
   )
+  const navButtonClass =
+    'h-9 w-full min-w-0 justify-center px-2 text-[13px] [&>span]:min-w-0 [&>span]:truncate'
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
@@ -211,7 +213,7 @@
               icon={Icon}
               text={item.label}
               variant="nav"
-              class="h-9 w-full justify-center px-3"
+              class={navButtonClass}
               state={getNavButtonState(item)}
               onclick={() => onNavigate(item.id)}
             />
@@ -220,7 +222,7 @@
       </ul>
 
       {#if secondaryNavItems.length > 0}
-        <ul class="flex w-full min-w-0 flex-col gap-2">
+        <ul class="grid w-full min-w-0 grid-cols-2 gap-2">
           {#each secondaryNavItems as item (item.id)}
             {@const Icon = item.icon}
             <li class="group/menu-item relative">
@@ -229,7 +231,7 @@
                 icon={Icon}
                 text={item.label}
                 variant="nav"
-                class="h-9 w-full justify-center px-3"
+                class={navButtonClass}
                 state={getNavButtonState(item)}
                 onclick={() => onNavigate(item.id)}
               />
