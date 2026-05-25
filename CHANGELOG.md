@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.20
+
+### New Features
+
+- Added a prompt editor maximum line count setting.
+- Added prompt divider drop targets for dragging prompts directly to Add Prompt rows.
+- Added shortcuts for opening the current workspace folder and reporting issues on GitHub.
+
+### Changes
+
+- Refreshed Home, Settings, sidebar, prompt tree, and shared control styling.
+- Reworked prompt drag/drop feedback with drag ghosts, dimmed dragged rows, and clearer drop indicators.
+- Replaced separate expand/collapse folder actions with one context-aware sidebar toggle.
+- Improved workspace screen persistence and settings numeric controls.
+
+### Fixed
+
+- Fixed prompt drag/drop edge cases around no-op drops, post-drag clicks, and row selection after dragging.
+- Fixed prompt move controls so they stay anchored while reordering large prompts.
+- Fixed stale or malformed persisted workspace screen selections falling back to Home.
+
 ## 0.0.19
 
 ### New Features
