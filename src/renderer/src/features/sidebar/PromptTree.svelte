@@ -85,6 +85,7 @@
     expandAllRequestVersion = 0,
     collapseAllRequestVersion = 0,
     isPromptFoldersScreenActive = false,
+    onAllPromptFoldersCollapsedChange,
     onPromptFolderSelect
   } = $props<{
     promptFolders: PromptFolder[]
@@ -93,6 +94,7 @@
     expandAllRequestVersion?: number
     collapseAllRequestVersion?: number
     isPromptFoldersScreenActive?: boolean
+    onAllPromptFoldersCollapsedChange: (isCollapsed: boolean) => void
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
@@ -162,6 +164,10 @@
 
   const isFolderExpanded = (folderId: string): boolean =>
     expandedFolderStates[folderId] ?? lookupPersistedFolderExpandedState(folderId)
+
+  const areAllPromptFoldersCollapsed = $derived.by(() =>
+    promptFolders.every((folder) => !isFolderExpanded(folder.id))
+  )
 
   const setFolderExpanded = (folderId: string, isExpanded: boolean) => {
     if (isFolderExpanded(folderId) === isExpanded) {
@@ -355,6 +361,11 @@
 
     lastWorkspaceId = workspaceId
     expandedFolderStates = {}
+  })
+
+  // Side effect: report the current tree collapse state to the sidebar action button.
+  $effect(() => {
+    onAllPromptFoldersCollapsedChange(areAllPromptFoldersCollapsed)
   })
 
   // Side effect: respond to the sidebar header action by expanding every prompt folder.

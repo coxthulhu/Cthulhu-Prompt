@@ -118,11 +118,32 @@
     const folderCount = promptFolders.length
     return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
   })
-  const canCollapsePromptFolders = $derived(
+  const canTogglePromptFolders = $derived(
     folderListState === 'ready' && promptFolders.length > 0
   )
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
+  let areAllPromptFoldersCollapsed = $state(true)
+  const shouldShowExpandAllPromptFolders = $derived(
+    promptFolders.length === 0 || areAllPromptFoldersCollapsed
+  )
+  const promptFolderExpansionActionIcon = $derived(
+    shouldShowExpandAllPromptFolders ? ChevronsUpDown : ChevronsDownUp
+  )
+  const promptFolderExpansionActionLabel = $derived(
+    shouldShowExpandAllPromptFolders
+      ? 'Expand All Prompt Folders'
+      : 'Collapse All Prompt Folders'
+  )
+
+  const handlePromptFolderExpansionAction = () => {
+    if (shouldShowExpandAllPromptFolders) {
+      expandAllPromptFoldersVersion += 1
+      return
+    }
+
+    collapseAllPromptFoldersVersion += 1
+  }
 
   const getNavButtonState = (item: NavItem): 'active' | 'enabled' | 'disabled' => {
     if (item.requiresWorkspace && !isWorkspaceReady) {
@@ -253,30 +274,15 @@
       {#if isWorkspaceReady}
         <div class="flex shrink-0 items-center gap-0.5">
           <IconOnlyButton
-            icon={ChevronsUpDown}
-            label="Expand All Prompt Folders"
-            title="Expand All Prompt Folders"
+            icon={promptFolderExpansionActionIcon}
+            label={promptFolderExpansionActionLabel}
+            title={promptFolderExpansionActionLabel}
             variant="transparent"
             size="compact"
-            disabled={!canCollapsePromptFolders}
-            testId="expand-all-prompt-folders-button"
+            disabled={!canTogglePromptFolders}
+            testId="toggle-all-prompt-folders-button"
             class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
-            onclick={() => {
-              expandAllPromptFoldersVersion += 1
-            }}
-          />
-          <IconOnlyButton
-            icon={ChevronsDownUp}
-            label="Collapse All Prompt Folders"
-            title="Collapse All Prompt Folders"
-            variant="transparent"
-            size="compact"
-            disabled={!canCollapsePromptFolders}
-            testId="collapse-all-prompt-folders-button"
-            class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
-            onclick={() => {
-              collapseAllPromptFoldersVersion += 1
-            }}
+            onclick={handlePromptFolderExpansionAction}
           />
           <CreatePromptFolderDialog
             {isWorkspaceReady}
@@ -301,6 +307,9 @@
       expandAllRequestVersion={expandAllPromptFoldersVersion}
       collapseAllRequestVersion={collapseAllPromptFoldersVersion}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
+      onAllPromptFoldersCollapsedChange={(isCollapsed) => {
+        areAllPromptFoldersCollapsed = isCollapsed
+      }}
       {onPromptFolderSelect}
     />
   </div>

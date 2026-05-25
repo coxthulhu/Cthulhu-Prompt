@@ -10,9 +10,7 @@ const EXAMPLES_SETTINGS = '[data-testid="prompt-folder-settings-Examples"]'
 const DEVELOPMENT_SETTINGS = '[data-testid="prompt-folder-settings-Development"]'
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
 const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-folder-prompt-dev-1"]'
-const EXPAND_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="expand-all-prompt-folders-button"]'
-const COLLAPSE_ALL_PROMPT_FOLDERS_BUTTON =
-  '[data-testid="collapse-all-prompt-folders-button"]'
+const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
 const SHORT_SETTINGS = '[data-testid="prompt-folder-settings-Short"]'
 const SHORT_TOGGLE = '[data-testid="prompt-folder-toggle-Short"]'
 const SHORT_PROMPT_50 = '[data-testid="prompt-folder-prompt-short-50"]'
@@ -177,7 +175,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await expect(mainWindow.locator(COLLAPSE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Collapse All Prompt Folders'
+    )
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
@@ -186,12 +188,16 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
 
-    await mainWindow.locator(COLLAPSE_ALL_PROMPT_FOLDERS_BUTTON).click()
+    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
       'false'
+    )
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Expand All Prompt Folders'
     )
     await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
@@ -206,6 +212,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Collapse All Prompt Folders'
+    )
+
     await mainWindow.locator(DEVELOPMENT_TOGGLE).click()
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
@@ -213,13 +224,21 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'false'
     )
 
-    await expect(mainWindow.locator(EXPAND_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
-    await mainWindow.locator(EXPAND_ALL_PROMPT_FOLDERS_BUTTON).click()
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Expand All Prompt Folders'
+    )
+    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
       'true'
+    )
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Collapse All Prompt Folders'
     )
     await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
