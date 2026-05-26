@@ -52,22 +52,22 @@
   } satisfies Record<NonNavButtonVariant, string>
   const navVariantClasses = {
     active:
-      'border-[var(--ui-neutral-emphasis-border)] bg-[var(--ui-neutral-emphasis-surface)] text-[var(--ui-normal-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight-active)]',
+      'border-0 bg-[var(--ui-neutral-emphasis-surface)] text-[var(--ui-normal-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight-active)]',
     enabled:
-      'border-[var(--ui-neutral-muted-border)] bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-hover-border)] hover:bg-[var(--ui-neutral-normal-surface)] hover:text-[var(--ui-normal-text)]'
-  } satisfies Record<Exclude<ButtonState, 'disabled'>, string>
+      'border-0 bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:bg-[var(--ui-neutral-normal-surface)] hover:text-[var(--ui-normal-text)]',
+    disabled:
+      'border-0 bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)]'
+  } satisfies Record<ButtonState, string>
 
   const isDisabled = $derived(state === 'disabled')
   const variantClass = $derived(
-    variant === 'nav' && state === 'active'
-      ? navVariantClasses.active
-      : variant === 'nav' && state === 'enabled'
-        ? navVariantClasses.enabled
-        : variant === 'accent'
-          ? variantClasses.accent
-          : variant === 'danger'
-            ? variantClasses.danger
-            : variantClasses.neutral
+    variant === 'nav'
+      ? navVariantClasses[state]
+      : variant === 'accent'
+        ? variantClasses.accent
+        : variant === 'danger'
+          ? variantClasses.danger
+          : variantClasses.neutral
   )
 </script>
 
