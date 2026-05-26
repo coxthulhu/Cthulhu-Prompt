@@ -4,9 +4,9 @@
     ExternalLink,
     FileText,
     Folder,
-    FolderClosed,
     FolderOpen,
     FolderPlus,
+    FolderSymlink,
     Folders,
     SlidersHorizontal,
     X
@@ -277,14 +277,14 @@
                 <LabeledDisplayField
                   label="Workspace Name"
                   text={currentWorkspaceDetails.name}
-                  icon={FolderClosed}
+                  icon={FolderOpen}
                   valueTitle={currentWorkspaceDetails.name}
                 />
 
                 <LabeledDisplayField
                   label="Workspace Path"
                   text={currentWorkspaceDetails.path}
-                  icon={FolderOpen}
+                  icon={FolderSymlink}
                   valueTitle={currentWorkspaceDetails.path}
                   valueTestId="workspace-ready-path"
                 />
