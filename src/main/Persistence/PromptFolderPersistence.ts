@@ -32,8 +32,7 @@ export type PromptFolderPersistenceFields = {
 const toPromptFolderInfoFile = (promptFolder: PromptFolder): PromptFolderInfoFile => {
   return {
     displayName: promptFolder.displayName,
-    promptFolderId: promptFolder.id,
-    promptCount: promptFolder.promptCount
+    promptFolderId: promptFolder.id
   }
 }
 
@@ -51,7 +50,7 @@ const fromPromptFolderInfoFile = (
     id: persistedInfo.promptFolderId,
     folderName,
     displayName: persistedInfo.displayName,
-    promptCount: persistedInfo.promptCount,
+    promptCount: promptIds.length,
     promptIds,
     folderDescription
   }

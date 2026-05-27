@@ -1,6 +1,10 @@
 import { ipcMain } from 'electron'
 import type { MovePromptResponsePayload, PromptPersisted } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import {
+  DEFAULT_PROMPT_FALLBACK_TITLE,
+  resolveAvailablePromptFallbackTitle
+} from '@shared/promptFallbackTitle'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
@@ -24,6 +28,24 @@ const resolvePromptInsertIndex = (
 
   const previousIndex = promptIds.indexOf(orderAfterPromptId)
   return previousIndex === -1 ? null : previousIndex + 1
+}
+
+const getCommittedPrompts = (promptIds: string[]): PromptPersisted[] => {
+  return promptIds
+    .map((promptId) => data.prompt.committedStore.getEntry(promptId)?.committed)
+    .filter((prompt): prompt is PromptPersisted => prompt !== undefined)
+}
+
+const resolveFallbackTitleForFolder = (
+  promptIds: string[],
+  promptId: string,
+  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
+): string => {
+  return resolveAvailablePromptFallbackTitle(
+    getCommittedPrompts(promptIds),
+    promptId,
+    preferredFallbackTitle
+  )
 }
 
 const buildMovePromptConflictResponse = (
@@ -96,15 +118,23 @@ export const setupPromptMutationHandlers = (): void => {
             insertIndex = previousIndex + 1
           }
 
-          const nextPromptCount = committedPromptFolder.committed.promptCount + 1
           const now = getCurrentIsoSecondTimestamp()
+          const title =
+            requestedPrompt.data.title.trim().length > 0 ? requestedPrompt.data.title : ''
           const prompt: PromptPersisted = {
             id: promptId,
-            title: requestedPrompt.data.title,
+            title,
+            fallbackTitle:
+              title.length > 0
+                ? ''
+                : resolveFallbackTitleForFolder(
+                    committedPromptFolder.committed.promptIds,
+                    promptId,
+                    requestedPrompt.data.fallbackTitle
+                  ),
             createdAt: now,
             modifiedAt: now,
-            promptText: requestedPrompt.data.promptText,
-            promptFolderCount: nextPromptCount
+            promptText: requestedPrompt.data.promptText
           }
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
@@ -116,7 +146,7 @@ export const setupPromptMutationHandlers = (): void => {
                   const nextPromptIds = [...draft.promptIds]
                   nextPromptIds.splice(insertIndex, 0, promptId)
                   draft.promptIds = nextPromptIds
-                  draft.promptCount += 1
+                  draft.promptCount = nextPromptIds.length
                 }
               }),
               prompt: tx.prompt.create({
@@ -206,6 +236,7 @@ export const setupPromptMutationHandlers = (): void => {
                   draft.promptIds = draft.promptIds.filter(
                     (currentPromptId) => currentPromptId !== promptId
                   )
+                  draft.promptCount = draft.promptIds.length
                 }
               }),
               prompt: tx.prompt.delete({
@@ -263,17 +294,33 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt not loaded' }
           }
 
+          const requestedTitle =
+            requestedPrompt.data.title.trim().length > 0 ? requestedPrompt.data.title : ''
+          const promptFolder = data.promptFolder.committedStore.getEntry(
+            committedPrompt.persistenceFields.promptFolderId
+          )
+          const fallbackTitle =
+            requestedTitle.length > 0
+              ? ''
+              : resolveFallbackTitleForFolder(
+                  promptFolder?.committed.promptIds ?? [],
+                  requestedPrompt.id,
+                  committedPrompt.committed.title.trim().length > 0
+                    ? DEFAULT_PROMPT_FALLBACK_TITLE
+                    : requestedPrompt.data.fallbackTitle
+                )
+
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               prompt: tx.prompt.update({
                 id: requestedPrompt.id,
                 expectedRevision: requestedPrompt.expectedRevision,
                 recipe: (draft) => {
-                  draft.title = requestedPrompt.data.title
+                  draft.title = requestedTitle
+                  draft.fallbackTitle = fallbackTitle
                   draft.createdAt = requestedPrompt.data.createdAt
                   draft.modifiedAt = requestedPrompt.data.modifiedAt
                   draft.promptText = requestedPrompt.data.promptText
-                  draft.promptFolderCount = requestedPrompt.data.promptFolderCount
                 }
               })
             }
@@ -379,6 +426,7 @@ export const setupPromptMutationHandlers = (): void => {
                       draft.promptIds = draft.promptIds.filter(
                         (promptId) => promptId !== requestedPrompt.id
                       )
+                      draft.promptCount = draft.promptIds.length
                     }
                   }),
                   destinationPromptFolder: tx.promptFolder.update({
@@ -388,14 +436,20 @@ export const setupPromptMutationHandlers = (): void => {
                       const nextPromptIds = [...draft.promptIds]
                       nextPromptIds.splice(insertIndex, 0, requestedPrompt.id)
                       draft.promptIds = nextPromptIds
-                      draft.promptCount += 1
+                      draft.promptCount = nextPromptIds.length
                     }
                   }),
                   prompt: tx.prompt.update({
                     id: requestedPrompt.id,
                     expectedRevision: requestedPrompt.expectedRevision,
                     recipe: (draft) => {
-                      draft.promptFolderCount = destinationPromptFolder.committed.promptCount + 1
+                      if (draft.title.trim().length === 0) {
+                        draft.fallbackTitle = resolveFallbackTitleForFolder(
+                          destinationPromptIds,
+                          requestedPrompt.id,
+                          draft.fallbackTitle
+                        )
+                      }
                     },
                     persistenceFields: {
                       ...prompt.persistenceFields,

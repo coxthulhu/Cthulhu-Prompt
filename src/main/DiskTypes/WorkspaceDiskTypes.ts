@@ -6,7 +6,6 @@ export type WorkspaceInfoFile = {
 export type PromptFolderInfoFile = {
   displayName: string
   promptFolderId: string
-  promptCount: number
 }
 
 export type PromptFolderOrderFile = {

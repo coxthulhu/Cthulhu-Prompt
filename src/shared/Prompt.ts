@@ -4,7 +4,7 @@ import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 export type PromptSummary = {
   id: string
   title: string
-  promptFolderCount: number
+  fallbackTitle: string
   loadingState: 'summary'
 }
 
@@ -14,7 +14,7 @@ export type PromptFull = {
   createdAt: string
   modifiedAt: string
   promptText: string
-  promptFolderCount: number
+  fallbackTitle: string
   loadingState: 'full'
 }
 
@@ -24,12 +24,12 @@ export type Prompt = PromptSummary | PromptFull
 export type PromptPersisted = Omit<PromptFull, 'loadingState'>
 
 // Prompt data loaded during workspace bootstrap for tree/title hydration.
-export type PromptSummaryData = Pick<PromptPersisted, 'id' | 'title' | 'promptFolderCount'>
+export type PromptSummaryData = Pick<PromptPersisted, 'id' | 'title' | 'fallbackTitle'>
 
 export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary => ({
   id: prompt.id,
   title: prompt.title,
-  promptFolderCount: prompt.promptFolderCount,
+  fallbackTitle: prompt.fallbackTitle,
   loadingState: 'summary'
 })
 
@@ -39,7 +39,7 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
-  promptFolderCount: prompt.promptFolderCount,
+  fallbackTitle: prompt.fallbackTitle,
   loadingState: 'full'
 })
 

@@ -4,10 +4,10 @@ import type { PromptFull } from '@shared/Prompt'
 export type PromptDraftRecord = {
   id: PromptFull['id']
   title: PromptFull['title']
+  fallbackTitle: PromptFull['fallbackTitle']
   createdAt: PromptFull['createdAt']
   modifiedAt: PromptFull['modifiedAt']
   promptText: PromptFull['promptText']
-  promptFolderCount: PromptFull['promptFolderCount']
 }
 
 // Local-only UI draft state for prompt title/text editing.

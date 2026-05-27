@@ -80,8 +80,7 @@ describe('Prompt persistence filenames', () => {
     await testHelpers.navigateToPromptFolders(FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(PROMPT_ID))
 
-    // The UI fallback for this prompt is based on promptFolderCount (dev-1 => Prompt 1).
-    const fallbackTitle = 'Prompt 1'
+    const fallbackTitle = 'New Prompt'
     await setPromptTitle(mainWindow, PROMPT_ID, '')
 
     await expect

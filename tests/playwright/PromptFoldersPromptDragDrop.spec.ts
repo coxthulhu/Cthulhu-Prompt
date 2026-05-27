@@ -1,7 +1,11 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_TITLE_SELECTOR,
+  promptEditorSelector
+} from '../helpers/PromptFolderSelectors'
 import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptHandleDrag,
@@ -37,8 +41,11 @@ const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
 const EXAMPLE_1_ID = 'simple-1'
 const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
+const MOVE_FALLBACK_WORKSPACE_PATH = '/ws/drag-fallback-title'
 const ANCHORING_FOLDER_NAME = 'Anchoring'
 const DESTINATION_FOLDER_NAME = 'Destination'
+const FALLBACK_SOURCE_FOLDER_NAME = 'FallbackSource'
+const FALLBACK_DESTINATION_FOLDER_NAME = 'FallbackDestination'
 const ANCHORING_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${ANCHORING_FOLDER_NAME}/FolderOrder.json`
 const DESTINATION_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${DESTINATION_FOLDER_NAME}/FolderOrder.json`
 const ANCHOR_1_ID = 'anchor-1'
@@ -254,7 +261,82 @@ const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
   ])
 }
 
+const buildMoveFallbackWorkspace = () =>
+  createWorkspaceWithFolders(MOVE_FALLBACK_WORKSPACE_PATH, [
+    {
+      folderName: FALLBACK_SOURCE_FOLDER_NAME,
+      displayName: FALLBACK_SOURCE_FOLDER_NAME,
+      prompts: [
+        {
+          id: 'move-fallback-source',
+          title: '',
+          promptText: 'Move me.'
+        }
+      ]
+    },
+    {
+      folderName: FALLBACK_DESTINATION_FOLDER_NAME,
+      displayName: FALLBACK_DESTINATION_FOLDER_NAME,
+      prompts: [
+        {
+          id: 'move-fallback-destination',
+          title: '',
+          promptText: 'I already use New Prompt.'
+        }
+      ]
+    }
+  ])
+
 describe('Prompt folder prompt drag-drop', () => {
+  test('increments a fallback title when moving into a folder with a fallback collision', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildMoveFallbackWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(MOVE_FALLBACK_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(FALLBACK_SOURCE_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('move-fallback-source'))
+
+    await dragPromptHandleToTarget(
+      mainWindow,
+      'move-fallback-source',
+      promptTreeFolderSelector(FALLBACK_DESTINATION_FOLDER_NAME)
+    )
+
+    await testHelpers.navigateToPromptFolders(FALLBACK_DESTINATION_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('move-fallback-source'))
+    await expect(
+      mainWindow.locator(`${promptEditorSelector('move-fallback-source')} ${PROMPT_TITLE_SELECTOR}`)
+    ).toHaveAttribute('placeholder', 'Title (New Prompt 1)')
+
+    await expect
+      .poll(async () => {
+        const [oldFiles, newFiles] = await Promise.all([
+          checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: MOVE_FALLBACK_WORKSPACE_PATH,
+            folderName: FALLBACK_SOURCE_FOLDER_NAME,
+            promptId: 'move-fallback-source',
+            promptTitle: 'New Prompt'
+          }),
+          checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: MOVE_FALLBACK_WORKSPACE_PATH,
+            folderName: FALLBACK_DESTINATION_FOLDER_NAME,
+            promptId: 'move-fallback-source',
+            promptTitle: 'New Prompt 1'
+          })
+        ])
+
+        return { oldFiles, newFiles }
+      })
+      .toEqual({
+        oldFiles: { markdownExists: false },
+        newFiles: { markdownExists: true }
+      })
+  })
+
   test('silently ignores dropping a prompt onto itself in the prompt tree', async ({
     testSetup,
     electronApp

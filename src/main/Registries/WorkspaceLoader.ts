@@ -74,7 +74,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
         data: {
           id: promptEntry.committed.id,
           title: promptEntry.committed.title,
-          promptFolderCount: promptEntry.committed.promptFolderCount
+          fallbackTitle: promptEntry.committed.fallbackTitle
         }
       })
     }

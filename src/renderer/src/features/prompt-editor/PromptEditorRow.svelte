@@ -368,7 +368,7 @@
     title={promptData.draft.title}
     draftText={promptData.draft.text}
     modifiedAt={promptData.modifiedAt}
-    promptFolderCount={promptData.promptFolderCount}
+    fallbackTitle={promptData.fallbackTitle}
     {lineCount}
     {tokenCount}
     onTitleChange={promptData.setTitle}

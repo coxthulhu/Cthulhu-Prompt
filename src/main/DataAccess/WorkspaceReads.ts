@@ -92,7 +92,7 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     id: info.promptFolderId,
     folderName,
     displayName: info.displayName,
-    promptCount: info.promptCount,
+    promptCount: promptIds.length,
     promptIds,
     folderDescription
   }
@@ -139,7 +139,7 @@ export const readPromptSummaries = (
   return prompts.map((prompt) => ({
     id: prompt.id,
     title: prompt.title,
-    promptFolderCount: prompt.promptFolderCount
+    fallbackTitle: prompt.fallbackTitle
   }))
 }
 

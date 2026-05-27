@@ -1,8 +1,13 @@
 import type { Prompt, PromptFull, PromptSummaryData } from '@shared/Prompt'
+import {
+  DEFAULT_PROMPT_FALLBACK_TITLE,
+  resolveAvailablePromptFallbackTitle
+} from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
+import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
 import {
@@ -16,29 +21,29 @@ export type PromptDraftState = PromptDraftRecord
 const toPromptSnapshot = (prompt: PromptFull): PromptDraftRecord => ({
   id: prompt.id,
   title: prompt.title,
+  fallbackTitle: prompt.fallbackTitle,
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
-  promptFolderCount: prompt.promptFolderCount
 })
 
 const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRecord => ({
   id: prompt.id,
   title: prompt.title,
+  fallbackTitle: prompt.fallbackTitle,
   createdAt: '',
   modifiedAt: '',
-  promptText: '',
-  promptFolderCount: prompt.promptFolderCount
+  promptText: ''
 })
 
 const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): boolean => {
   return (
     left.id === right.id &&
     left.title === right.title &&
+    left.fallbackTitle === right.fallbackTitle &&
     left.createdAt === right.createdAt &&
     left.modifiedAt === right.modifiedAt &&
-    left.promptText === right.promptText &&
-    left.promptFolderCount === right.promptFolderCount
+    left.promptText === right.promptText
   )
 }
 
@@ -49,6 +54,33 @@ const getPromptDraftModifiedAt = (): string => {
 type PromptDraftOptimisticMutationOptions = {
   mutatePromptDraft: (draft: PromptDraftRecord) => void
   mutatePrompt?: (draft: Prompt) => void
+}
+
+const getPromptFolderIdsForPrompt = (promptId: string): string[] => {
+  for (const promptFolder of promptFolderCollection.values()) {
+    if (promptFolder.promptIds.includes(promptId)) {
+      return promptFolder.promptIds
+    }
+  }
+
+  return [promptId]
+}
+
+const resolvePromptFallbackTitle = (
+  promptId: string,
+  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
+): string => {
+  const promptIds = getPromptFolderIdsForPrompt(promptId)
+  const prompts: Prompt[] = []
+
+  for (const currentPromptId of promptIds) {
+    const prompt = promptCollection.get(currentPromptId)
+    if (prompt) {
+      prompts.push(prompt)
+    }
+  }
+
+  return resolveAvailablePromptFallbackTitle(prompts, promptId, preferredFallbackTitle)
 }
 
 const mutatePromptDraftOptimistically = (
@@ -80,7 +112,7 @@ export const upsertPromptSummaryDrafts = (prompts: PromptSummaryData[]): void =>
   }
 
   const draftInserts: PromptDraftRecord[] = []
-  const draftTitleUpdatesById: Record<string, string> = {}
+  const draftUpdatesById: Record<string, Pick<PromptSummaryData, 'title' | 'fallbackTitle'>> = {}
   const draftUpdateIds: string[] = []
 
   for (const prompt of prompts) {
@@ -90,14 +122,20 @@ export const upsertPromptSummaryDrafts = (prompts: PromptSummaryData[]): void =>
       continue
     }
 
-    if (existingRecord.title === prompt.title) {
+    if (
+      existingRecord.title === prompt.title &&
+      existingRecord.fallbackTitle === prompt.fallbackTitle
+    ) {
       continue
     }
 
-    if (!draftTitleUpdatesById[prompt.id]) {
+    if (!draftUpdatesById[prompt.id]) {
       draftUpdateIds.push(prompt.id)
     }
-    draftTitleUpdatesById[prompt.id] = prompt.title
+    draftUpdatesById[prompt.id] = {
+      title: prompt.title,
+      fallbackTitle: prompt.fallbackTitle
+    }
   }
 
   if (draftInserts.length > 0) {
@@ -107,12 +145,13 @@ export const upsertPromptSummaryDrafts = (prompts: PromptSummaryData[]): void =>
   if (draftUpdateIds.length > 0) {
     promptDraftCollection.update(draftUpdateIds, (draftRecords) => {
       for (const draftRecord of draftRecords) {
-        const nextTitle = draftTitleUpdatesById[draftRecord.id]
-        if (nextTitle == null) {
+        const nextDraft = draftUpdatesById[draftRecord.id]
+        if (!nextDraft) {
           continue
         }
 
-        draftRecord.title = nextTitle
+        draftRecord.title = nextDraft.title
+        draftRecord.fallbackTitle = nextDraft.fallbackTitle
       }
     })
   }
@@ -175,18 +214,24 @@ export const getPromptDraftState = (promptId: string): PromptDraftState => {
 
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
   const draftRecord = getPromptDraftState(promptId)
-  if (draftRecord.title === title) {
+  const nextTitle = title.trim().length > 0 ? title : ''
+  const nextFallbackTitle =
+    nextTitle.length > 0 ? '' : resolvePromptFallbackTitle(promptId, DEFAULT_PROMPT_FALLBACK_TITLE)
+
+  if (draftRecord.title === nextTitle && draftRecord.fallbackTitle === nextFallbackTitle) {
     return
   }
 
   const modifiedAt = getPromptDraftModifiedAt()
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
-      draft.title = title
+      draft.title = nextTitle
+      draft.fallbackTitle = nextFallbackTitle
       draft.modifiedAt = modifiedAt
     },
     mutatePrompt: (draft) => {
-      draft.title = title
+      draft.title = nextTitle
+      draft.fallbackTitle = nextFallbackTitle
       if (draft.loadingState === 'full') {
         draft.modifiedAt = modifiedAt
       }

@@ -18,7 +18,9 @@ import { heightTestPrompts } from '../fixtures/TestData'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
+const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
 const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
+const FALLBACK_TITLE_FOLDER_NAME = 'Fallback Titles'
 const BOUNDARY_1_ID = 'boundary-1'
 const BOUNDARY_2_ID = 'boundary-2'
 const MOVE_ANCHOR_1_ID = 'move-anchor-1'
@@ -148,7 +150,73 @@ const buildMoveScrollWorkspace = () => {
   ])
 }
 
+const buildFallbackTitleWorkspace = () =>
+  createWorkspaceWithFolders(FALLBACK_TITLE_WORKSPACE_PATH, [
+    {
+      folderName: FALLBACK_TITLE_FOLDER_NAME,
+      displayName: FALLBACK_TITLE_FOLDER_NAME,
+      prompts: [
+        {
+          id: 'active-new-prompt',
+          title: 'New Prompt',
+          promptText: 'Active titles do not reserve fallback names.'
+        },
+        {
+          id: 'fallback-new-prompt',
+          title: '',
+          promptText: 'Fallback prompt already reserves New Prompt.'
+        },
+        {
+          id: 'clear-title-target',
+          title: 'Clear Me',
+          promptText: 'Clearing this title should choose the next fallback.'
+        }
+      ]
+    }
+  ])
+
 describe('Prompt folder prompt management', () => {
+  test('names a new untitled prompt with the first available fallback title', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(buildFallbackTitleWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(FALLBACK_TITLE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(FALLBACK_TITLE_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('active-new-prompt'))
+
+    const initialIds = await getPromptEditorIds(mainWindow)
+    await clickAddAfter(mainWindow, 'active-new-prompt')
+    await waitForPromptCount(mainWindow, 4)
+
+    const newPromptId = (await getPromptEditorIds(mainWindow)).find(
+      (promptId) => !initialIds.includes(promptId)
+    )
+    expect(newPromptId).toBeTruthy()
+    await expect(mainWindow.locator(promptTitleSelector(newPromptId!))).toHaveAttribute(
+      'placeholder',
+      'Title (New Prompt 1)'
+    )
+  })
+
+  test('regenerates the fallback title when an active title is cleared', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(buildFallbackTitleWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(FALLBACK_TITLE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(FALLBACK_TITLE_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('clear-title-target'))
+
+    await setPromptTitle(mainWindow, 'clear-title-target', '')
+    await expect(mainWindow.locator(promptTitleSelector('clear-title-target'))).toHaveAttribute(
+      'placeholder',
+      'Title (New Prompt 1)'
+    )
+  })
+
   test('tabs from the prompt title to the Monaco editor', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }

@@ -12,7 +12,7 @@
     draftText: string
     modifiedAt?: string | null
     onTitleChange?: (value: string) => void
-    promptFolderCount?: number
+    fallbackTitle?: string
     rowId?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
@@ -32,7 +32,7 @@
     draftText,
     modifiedAt = null,
     onTitleChange,
-    promptFolderCount = 0,
+    fallbackTitle = '',
     rowId,
     scrollToWithinWindowBand,
     onDelete,
@@ -47,9 +47,9 @@
     copyTitle
   }: Props = $props()
 
-  // Derived placeholder text shows the prompt count when the title is empty.
+  // Derived placeholder text shows the fallback title when the title is empty.
   const titlePlaceholder = $derived.by(() =>
-    title.trim().length === 0 ? `Title (Prompt ${promptFolderCount})` : 'Title'
+    title.trim().length === 0 ? `Title (${fallbackTitle})` : 'Title'
   )
   const lineCountLabel = $derived(`${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`)
   const tokenCountLabel = $derived(`${tokenCount} ${tokenCount === 1 ? 'token' : 'tokens'}`)

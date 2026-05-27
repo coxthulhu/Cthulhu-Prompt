@@ -28,6 +28,7 @@
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
+  import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
   import {
     getPromptNavigationContext,
     promptIdToPromptNavigationRow,
@@ -145,9 +146,7 @@
         continue
       }
 
-      const trimmedTitle = promptDraft.title.trim()
-      titlesById[promptDraft.id] =
-        trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${promptDraft.promptFolderCount}`
+      titlesById[promptDraft.id] = getPromptTitleText(promptDraft)
     }
 
     return titlesById

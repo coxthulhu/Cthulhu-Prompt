@@ -47,10 +47,10 @@ afterEach(() => {
 const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   id: 'prompt-1',
   title: 'Original title',
+  fallbackTitle: '',
   createdAt: '2026-01-01T00:00:00.000Z',
   modifiedAt: '2026-01-01T00:00:00.000Z',
   promptText: 'Original text',
-  promptFolderCount: 3,
   loadingState: 'full',
   ...overrides
 })
@@ -58,7 +58,7 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
 const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): PromptSummaryData => ({
   id: 'prompt-1',
   title: 'Original title',
-  promptFolderCount: 3,
+  fallbackTitle: '',
   ...overrides
 })
 
@@ -105,17 +105,17 @@ describe('draft sync contract', () => {
 
     const draftRecord = promptDraftCollection.get(fullPrompt.id)!
     expect(draftRecord.title).toBe(summaryPrompt.title)
+    expect(draftRecord.fallbackTitle).toBe(summaryPrompt.fallbackTitle)
     expect(draftRecord.createdAt).toBe(fullPrompt.createdAt)
     expect(draftRecord.modifiedAt).toBe(fullPrompt.modifiedAt)
     expect(draftRecord.promptText).toBe(fullPrompt.promptText)
-    expect(draftRecord.promptFolderCount).toBe(fullPrompt.promptFolderCount)
   })
 
   it('seeds prompt summary drafts when full prompt data is not loaded yet', () => {
     const summaryPrompt = createPromptSummary({
       id: 'prompt-summary-1',
       title: 'Summary title',
-      promptFolderCount: 7
+      fallbackTitle: ''
     })
 
     upsertPromptSummaryDrafts([summaryPrompt])
@@ -124,10 +124,10 @@ describe('draft sync contract', () => {
     expect(draftRecord).toMatchObject({
       id: summaryPrompt.id,
       title: summaryPrompt.title,
+      fallbackTitle: summaryPrompt.fallbackTitle,
       createdAt: '',
       modifiedAt: '',
-      promptText: '',
-      promptFolderCount: summaryPrompt.promptFolderCount
+      promptText: ''
     })
   })
 

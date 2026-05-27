@@ -4,6 +4,7 @@ import { isPromptFull, type PromptFull } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
 import {
@@ -551,10 +552,10 @@ export const createPromptFolderScreenController = ({
     const optimisticPrompt: PromptFull = {
       id: promptId,
       title: '',
+      fallbackTitle: DEFAULT_PROMPT_FALLBACK_TITLE,
       createdAt: now,
       modifiedAt: now,
       promptText: '',
-      promptFolderCount: currentPromptFolder.promptCount + 1,
       loadingState: 'full'
     }
 

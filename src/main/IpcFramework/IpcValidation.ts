@@ -241,10 +241,10 @@ const parseWorkspacePersistenceRevisionPayloadEntity =
 const parsePrompt = parseObject<PromptPersisted>({
   id: parseString,
   title: parseString,
+  fallbackTitle: parseString,
   createdAt: parseString,
   modifiedAt: parseString,
-  promptText: parseString,
-  promptFolderCount: parseNumber
+  promptText: parseString
 })
 
 const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)

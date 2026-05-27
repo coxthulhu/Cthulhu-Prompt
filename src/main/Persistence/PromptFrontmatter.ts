@@ -1,33 +1,36 @@
 import matter from 'gray-matter'
 import type { PromptPersisted } from '@shared/Prompt'
 
-type PromptFrontmatterData = Omit<PromptPersisted, 'modifiedAt' | 'promptText'>
+type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
+  ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string })
 
 const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData => {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     return false
   }
 
-  const frontmatter = data as Partial<PromptFrontmatterData>
+  const frontmatter = data as Record<string, unknown>
   const keys = Object.keys(frontmatter)
-  if (keys.length !== 4) {
+  if (keys.length !== 3) {
     return false
   }
 
+  const hasTitle = keys.includes('title')
+  const hasFallbackTitle = keys.includes('fallbackTitle')
   if (
     !keys.includes('id') ||
-    !keys.includes('title') ||
     !keys.includes('createdAt') ||
-    !keys.includes('promptFolderCount')
+    hasTitle === hasFallbackTitle
   ) {
     return false
   }
 
   return (
     typeof frontmatter.id === 'string' &&
-    typeof frontmatter.title === 'string' &&
     typeof frontmatter.createdAt === 'string' &&
-    typeof frontmatter.promptFolderCount === 'number'
+    (hasTitle
+      ? typeof frontmatter.title === 'string'
+      : typeof frontmatter.fallbackTitle === 'string')
   )
 }
 
@@ -52,10 +55,10 @@ export const parsePromptMarkdown = (
 
     return {
       id: parsed.data.id,
-      title: parsed.data.title,
+      title: parsed.data.title ?? '',
+      fallbackTitle: parsed.data.fallbackTitle ?? '',
       createdAt: parsed.data.createdAt,
       modifiedAt,
-      promptFolderCount: parsed.data.promptFolderCount,
       promptText: parsed.content
     }
   } catch {
@@ -66,9 +69,10 @@ export const parsePromptMarkdown = (
 export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
   const metadata: PromptFrontmatterData = {
     id: prompt.id,
-    title: prompt.title,
     createdAt: prompt.createdAt,
-    promptFolderCount: prompt.promptFolderCount
+    ...(prompt.title.trim().length > 0
+      ? { title: prompt.title }
+      : { fallbackTitle: prompt.fallbackTitle })
   }
   const frontmatterDocument = matter.stringify('', metadata)
   const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)

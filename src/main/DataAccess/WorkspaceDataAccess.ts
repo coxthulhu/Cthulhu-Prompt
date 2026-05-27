@@ -64,18 +64,18 @@ const writeExamplePrompts = (workspacePath: string): void => {
     {
       id: compactGuid(randomUUID()),
       title: 'Example: Add a Feature',
+      fallbackTitle: '',
       createdAt: now,
       modifiedAt: now,
-      promptText: 'Placeholder prompt text.',
-      promptFolderCount: 1
+      promptText: 'Placeholder prompt text.'
     },
     {
       id: compactGuid(randomUUID()),
       title: 'Example: Fix a Bug',
+      fallbackTitle: '',
       createdAt: now,
       modifiedAt: now,
-      promptText: 'Placeholder prompt text.',
-      promptFolderCount: 2
+      promptText: 'Placeholder prompt text.'
     }
   ]
   const usedStems = new Set<string>()
@@ -101,8 +101,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
     JSON.stringify(
       {
         displayName: EXAMPLE_FOLDER_DISPLAY_NAME,
-        promptFolderId: compactGuid(randomUUID()),
-        promptCount: examplePrompts.length
+        promptFolderId: compactGuid(randomUUID())
       },
       null,
       2

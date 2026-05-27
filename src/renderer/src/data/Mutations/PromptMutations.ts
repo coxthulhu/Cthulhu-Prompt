@@ -1,4 +1,8 @@
 import {
+  DEFAULT_PROMPT_FALLBACK_TITLE,
+  resolveAvailablePromptFallbackTitle
+} from '@shared/promptFallbackTitle'
+import {
   createPromptFull,
   isPromptFull,
   type CreatePromptPayload,
@@ -33,10 +37,10 @@ const toPersistedPrompt = (prompt: Prompt): PromptPersisted => {
   return {
     id: prompt.id,
     title: prompt.title,
+    fallbackTitle: prompt.fallbackTitle,
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
-    promptText: prompt.promptText,
-    promptFolderCount: prompt.promptFolderCount
+    promptText: prompt.promptText
   }
 }
 
@@ -55,10 +59,10 @@ const upsertPromptDraftFromPrompt = (prompt: PromptFull): void => {
   const promptDraft = {
     id: prompt.id,
     title: prompt.title,
+    fallbackTitle: prompt.fallbackTitle,
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
-    promptText: prompt.promptText,
-    promptFolderCount: prompt.promptFolderCount
+    promptText: prompt.promptText
   }
 
   if (!promptDraftCollection.get(prompt.id)) {
@@ -97,6 +101,35 @@ const resolvePromptInsertIndex = (
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
+const getPromptFallbackTitleCandidates = (promptIds: string[], promptId: string): Prompt[] => {
+  const prompts: Prompt[] = []
+
+  for (const currentPromptId of promptIds) {
+    if (currentPromptId === promptId) {
+      continue
+    }
+
+    const prompt = promptCollection.get(currentPromptId)
+    if (prompt) {
+      prompts.push(prompt)
+    }
+  }
+
+  return prompts
+}
+
+const resolvePromptFallbackTitleForFolder = (
+  promptIds: string[],
+  promptId: string,
+  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
+): string => {
+  return resolveAvailablePromptFallbackTitle(
+    getPromptFallbackTitleCandidates(promptIds, promptId),
+    promptId,
+    preferredFallbackTitle
+  )
+}
+
 export const createPrompt = async (
   promptFolderId: string,
   prompt: PromptFull,
@@ -110,10 +143,17 @@ export const createPrompt = async (
 
   await runRevisionMutation<CreatePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
-      const optimisticPromptCount = promptFolder.promptCount + 1
       const optimisticPrompt = {
         ...prompt,
-        promptFolderCount: optimisticPromptCount
+        title: prompt.title.trim().length > 0 ? prompt.title : '',
+        fallbackTitle:
+          prompt.title.trim().length > 0
+            ? ''
+            : resolvePromptFallbackTitleForFolder(
+                promptFolder.promptIds,
+                prompt.id,
+                prompt.fallbackTitle
+              )
       }
 
       collections.prompt.insert(optimisticPrompt)
@@ -134,7 +174,7 @@ export const createPrompt = async (
         const nextPromptIds = [...draft.promptIds]
         nextPromptIds.splice(insertIndex, 0, prompt.id)
         draft.promptIds = nextPromptIds
-        draft.promptCount += 1
+        draft.promptCount = nextPromptIds.length
       })
     },
     persistMutations: async ({ entities, transaction }) => {
@@ -249,6 +289,7 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
       collections.promptDraft.delete(promptId)
       collections.promptFolder.update(promptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
+        draft.promptCount = draft.promptIds.length
       })
     },
     persistMutations: async ({ entities, transaction }) => {
@@ -312,10 +353,10 @@ export const movePrompt = async (
         ? {
             id: promptDraft.id,
             title: promptDraft.title,
+            fallbackTitle: promptDraft.fallbackTitle,
             createdAt: promptDraft.createdAt,
             modifiedAt: promptDraft.modifiedAt,
-            promptText: promptDraft.promptText,
-            promptFolderCount: promptDraft.promptFolderCount
+            promptText: promptDraft.promptText
           }
         : null
   if (!persistedPrompt) {
@@ -346,19 +387,31 @@ export const movePrompt = async (
 
       collections.promptFolder.update(sourcePromptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
-        draft.promptCount -= 1
+        draft.promptCount = draft.promptIds.length
       })
       collections.promptFolder.update(destinationPromptFolderId, (draft) => {
         const nextPromptIds = [...draft.promptIds]
         nextPromptIds.splice(insertIndex, 0, promptId)
         draft.promptIds = nextPromptIds
-        draft.promptCount += 1
+        draft.promptCount = nextPromptIds.length
       })
       collections.prompt.update(promptId, (draft) => {
-        draft.promptFolderCount = destinationPromptFolder.promptCount + 1
+        if (draft.title.trim().length === 0) {
+          draft.fallbackTitle = resolvePromptFallbackTitleForFolder(
+            destinationPromptIds,
+            promptId,
+            draft.fallbackTitle
+          )
+        }
       })
       collections.promptDraft.update(promptId, (draft) => {
-        draft.promptFolderCount = destinationPromptFolder.promptCount + 1
+        if (draft.title.trim().length === 0) {
+          draft.fallbackTitle = resolvePromptFallbackTitleForFolder(
+            destinationPromptIds,
+            promptId,
+            draft.fallbackTitle
+          )
+        }
       })
     },
     persistMutations: async ({ entities, transaction }) => {
@@ -394,7 +447,9 @@ export const movePrompt = async (
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.sourcePromptFolder)
       promptFolderCollection.utils.upsertAuthoritative(payload.destinationPromptFolder)
-      promptCollection.utils.upsertAuthoritative(toFullPromptSnapshot(payload.prompt))
+      const promptSnapshot = toFullPromptSnapshot(payload.prompt)
+      promptCollection.utils.upsertAuthoritative(promptSnapshot)
+      upsertPromptDraftFromPrompt(promptSnapshot.data)
     },
     conflictMessage: 'Prompt move conflict'
   })

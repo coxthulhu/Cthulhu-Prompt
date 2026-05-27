@@ -1,5 +1,5 @@
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { promptCollection } from '../Collections/PromptCollection'
+import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
 import {
   getPromptDraftState,
   setPromptDraftText,
@@ -14,20 +14,14 @@ type PromptFolderScreenPromptDraft = {
 type PromptFolderScreenPromptData = {
   draft: PromptFolderScreenPromptDraft
   modifiedAt: string
-  promptFolderCount: number
+  fallbackTitle: string
   setTitle: (title: string) => void
   setText: (text: string, measurement: TextMeasurement) => void
 }
 
-const getPromptFolderCount = (promptId: string): number => {
-  const prompt = promptCollection.get(promptId)
-  return prompt?.promptFolderCount ?? 0
-}
-
 export const getPromptDisplayTitle = (promptId: string): string => {
   const promptDraftState = getPromptDraftState(promptId)
-  const trimmedTitle = promptDraftState.title.trim()
-  return trimmedTitle.length > 0 ? trimmedTitle : `Prompt ${getPromptFolderCount(promptId)}`
+  return getPromptTitleText(promptDraftState)
 }
 
 export const getPromptFolderScreenPromptData = (promptId: string): PromptFolderScreenPromptData => {
@@ -38,7 +32,7 @@ export const getPromptFolderScreenPromptData = (promptId: string): PromptFolderS
       text: promptDraftState.promptText
     },
     modifiedAt: promptDraftState.modifiedAt,
-    promptFolderCount: getPromptFolderCount(promptId),
+    fallbackTitle: promptDraftState.fallbackTitle,
     setTitle: (title: string) => {
       setPromptDraftTitle(promptId, title)
     },

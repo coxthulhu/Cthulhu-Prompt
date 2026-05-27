@@ -1,4 +1,5 @@
 import type { PromptPersisted } from '@shared/Prompt'
+import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
@@ -50,11 +51,6 @@ const resolvePromptStem = (
   })
 }
 
-const resolvePromptStemTitle = (title: string, promptFolderCount: number): string => {
-  const trimmedTitle = title.trim()
-  return trimmedTitle.length > 0 ? title : `Prompt ${promptFolderCount}`
-}
-
 export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {
   const folderPath = resolvePromptFolderPath(
     persistenceFields.workspacePath,
@@ -82,7 +78,7 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
       return createPersistenceStageResult([createStagedFileRemove(currentPaths.markdownPath)])
     }
 
-    const stemTitle = resolvePromptStemTitle(change.data.title, change.data.promptFolderCount)
+    const stemTitle = getPromptDisplayTitle(change.data)
     const stem = resolvePromptStem(
       stemTitle,
       change.data.id,
