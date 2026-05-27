@@ -107,7 +107,7 @@ export const createPromptFolder = async (
         hasLoadedInitialData: false
       })
       collections.workspace.update(workspaceId, (draft) => {
-        draft.promptFolderIds = [...draft.promptFolderIds, optimisticPromptFolderId]
+        draft.promptFolderIds = [optimisticPromptFolderId, ...draft.promptFolderIds]
       })
     },
     persistMutations: async ({ entities, invoke, transaction }) => {

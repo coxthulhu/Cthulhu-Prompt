@@ -81,7 +81,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 id: requestedWorkspace.id,
                 expectedRevision: requestedWorkspace.expectedRevision,
                 recipe: (draft) => {
-                  draft.promptFolderIds = [...draft.promptFolderIds, payload.promptFolderId]
+                  draft.promptFolderIds = [payload.promptFolderId, ...draft.promptFolderIds]
                 }
               }),
               promptFolder: tx.promptFolder.create({

@@ -11,3 +11,7 @@ export type PromptFolderInfoFile = {
 export type PromptFolderOrderFile = {
   promptIds: string[]
 }
+
+export type WorkspacePromptFolderOrderFile = {
+  promptFolderIds: string[]
+}

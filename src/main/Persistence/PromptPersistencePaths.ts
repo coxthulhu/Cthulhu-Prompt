@@ -38,6 +38,10 @@ export const resolvePromptFolderOrderPath = (
   return path.join(resolvePromptFolderPath(workspacePath, folderName), PROMPT_FOLDER_ORDER_FILENAME)
 }
 
+export const resolveWorkspacePromptFolderOrderPath = (workspacePath: string): string => {
+  return path.join(workspacePath, PROMPTS_DIRECTORY_NAME, PROMPT_FOLDER_ORDER_FILENAME)
+}
+
 export const resolvePromptFolderInfoDirectoryPath = (
   workspacePath: string,
   folderName: string

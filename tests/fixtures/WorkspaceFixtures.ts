@@ -223,6 +223,11 @@ export function createBasicWorkspace(
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
+    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(
+      { promptFolderIds: [] },
+      null,
+      2
+    ),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,
@@ -248,6 +253,7 @@ export function createWorkspaceWithFolders(
 ): Record<string, string | null> {
   // First create basic workspace
   const structure = createBasicWorkspace(workspacePath, workspaceOptions)
+  const promptFolderIds: string[] = []
 
   // Add each folder
   for (const folder of folderConfigs) {
@@ -258,6 +264,7 @@ export function createWorkspaceWithFolders(
       typeof folder.promptFolderId === 'string'
         ? folder.promptFolderId
         : createDeterministicId(`${workspacePath}:${folder.folderName}`)
+    promptFolderIds.push(promptFolderId)
 
     // Create folder metadata
     structure[`${folderPath}/FolderOrder.json`] = JSON.stringify({ promptIds }, null, 2)
@@ -269,6 +276,11 @@ export function createWorkspaceWithFolders(
     structure[`${folderPath}/.cprompt/Description.md`] = folder.folderDescription ?? ''
     Object.assign(structure, promptFiles)
   }
+  structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
+    { promptFolderIds },
+    null,
+    2
+  )
 
   return structure
 }

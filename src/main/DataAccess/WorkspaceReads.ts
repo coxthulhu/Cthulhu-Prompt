@@ -4,6 +4,7 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import type {
   PromptFolderInfoFile,
   PromptFolderOrderFile,
+  WorkspacePromptFolderOrderFile,
   WorkspaceInfoFile
 } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
@@ -16,7 +17,8 @@ import {
   resolvePromptFolderDescriptionPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
-  resolvePromptPathsFromStem
+  resolvePromptPathsFromStem,
+  resolveWorkspacePromptFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
 export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile => {
@@ -51,6 +53,11 @@ const readPromptFolderDescription = (workspacePath: string, folderName: string):
 const readPromptIds = (workspacePath: string, folderName: string): string[] => {
   const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
   return [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
+}
+
+const readWorkspacePromptFolderIds = (workspacePath: string): string[] => {
+  const orderPath = resolveWorkspacePromptFolderOrderPath(workspacePath)
+  return [...readJsonFile<WorkspacePromptFolderOrderFile>(orderPath).promptFolderIds]
 }
 
 const readFileModifiedAt = (filePath: string): string => {
@@ -158,5 +165,27 @@ export const readPromptFolders = (workspacePath: string): PromptFolder[] => {
     promptFolders.push(readPromptFolder(workspacePath, folderName))
   }
 
-  return promptFolders
+  const promptFolderById = new Map(
+    promptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
+  )
+  const orderedPromptFolders: PromptFolder[] = []
+  const orderedPromptFolderIds = new Set<string>()
+
+  for (const promptFolderId of readWorkspacePromptFolderIds(workspacePath)) {
+    const promptFolder = promptFolderById.get(promptFolderId)
+    if (!promptFolder || orderedPromptFolderIds.has(promptFolderId)) {
+      continue
+    }
+
+    orderedPromptFolders.push(promptFolder)
+    orderedPromptFolderIds.add(promptFolderId)
+  }
+
+  const unorderedPromptFolders = promptFolders
+    .filter((promptFolder) => !orderedPromptFolderIds.has(promptFolder.id))
+    .sort((left, right) =>
+      left.folderName.toLowerCase().localeCompare(right.folderName.toLowerCase())
+    )
+
+  return [...orderedPromptFolders, ...unorderedPromptFolders]
 }
