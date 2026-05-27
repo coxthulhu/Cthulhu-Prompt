@@ -63,6 +63,7 @@
   type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
 
   const accentIconTileVariants: AccentIconTileVariant[] = [
+    'neutral',
     'accent',
     'accent-blue',
     'accent-green',
@@ -93,6 +94,7 @@
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
   const titleBlockIconVariants: AccentIconTileVariant[] = [
+    'neutral',
     'accent',
     'accent-blue',
     'accent-green',

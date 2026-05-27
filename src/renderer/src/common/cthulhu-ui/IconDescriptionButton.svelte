@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import AccentIconTile, { type AccentIconTileVariant } from './AccentIconTile.svelte'
   import { mergeClasses } from './mergeClasses'
 
   export type IconDescriptionButtonVariant = 'neutral' | 'accent' | 'danger'
@@ -37,14 +38,11 @@
     danger:
       'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-normal-surface)] hover:border-[var(--ui-danger-hover-border)] hover:bg-[var(--ui-danger-hover-surface)]'
   } satisfies Record<IconDescriptionButtonVariant, string>
-  const iconVariantClasses = {
-    neutral:
-      'border-[var(--ui-neutral-interactive-normal-border)] bg-[var(--ui-neutral-emphasis-surface)] text-[var(--ui-normal-text)] group-hover/icon-description-button:border-[var(--ui-neutral-interactive-hover-border)]',
-    accent:
-      'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-normal-text)] group-hover/icon-description-button:border-[var(--ui-accent-hover-border)]',
-    danger:
-      'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-icon-surface)] text-[var(--ui-normal-text)] group-hover/icon-description-button:border-[var(--ui-danger-hover-border)]'
-  } satisfies Record<IconDescriptionButtonVariant, string>
+  const iconTileVariants = {
+    neutral: 'neutral',
+    accent: 'accent',
+    danger: 'danger'
+  } satisfies Record<IconDescriptionButtonVariant, AccentIconTileVariant>
 
   const isDisabled = $derived(state === 'disabled')
 </script>
@@ -62,14 +60,13 @@
   disabled={isDisabled}
 >
   <!-- Icon-leading action button with a persistent detail line. -->
-  <span
-    class={mergeClasses(
-      'cthulhuUiIconDescriptionButtonIcon flex h-[42px] w-[42px] flex-none items-center justify-center rounded-[var(--cthulhu-ui-radius-control)] border',
-      iconVariantClasses[variant]
-    )}
-  >
-    <Icon class={mergeClasses('h-5 w-5', iconClass)} />
-  </span>
+  <AccentIconTile
+    icon={Icon}
+    variant={iconTileVariants[variant]}
+    size="medium"
+    class="cthulhuUiIconDescriptionButtonIcon"
+    iconClass={mergeClasses('!stroke-[2] text-[var(--ui-normal-text)]', iconClass)}
+  />
 
   <span class="flex min-w-0 flex-col gap-[3px]">
     <span

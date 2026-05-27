@@ -5,7 +5,12 @@
   import type { CthulhuSize } from './types'
 
   type AccentIconTileSize = Extract<CthulhuSize, 'small' | 'medium' | 'large'>
-  export type AccentIconTileVariant = 'accent' | 'accent-blue' | 'accent-green' | 'danger'
+  export type AccentIconTileVariant =
+    | 'neutral'
+    | 'accent'
+    | 'accent-blue'
+    | 'accent-green'
+    | 'danger'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     icon: ComponentType
@@ -57,27 +62,28 @@
     justify-content: center;
   }
 
+  .cthulhuUiAccentIconTile[data-variant='neutral'] {
+    background-color: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
   .cthulhuUiAccentIconTile[data-variant='accent'] {
     background-color: var(--ui-accent-normal-surface);
-    border: 1px solid var(--ui-accent-icon-ring);
     color: var(--ui-accent-icon-glyph);
   }
 
   .cthulhuUiAccentIconTile[data-variant='danger'] {
     background-color: var(--ui-danger-icon-surface);
-    box-shadow: var(--cthulhu-ui-shadow-icon-danger);
     color: var(--ui-danger-icon-glyph);
   }
 
   .cthulhuUiAccentIconTile[data-variant='accent-blue'] {
     background-color: var(--ui-accent-blue-normal-surface);
-    border: 1px solid var(--ui-accent-blue-normal-border);
     color: var(--ui-accent-blue-icon-glyph);
   }
 
   .cthulhuUiAccentIconTile[data-variant='accent-green'] {
     background-color: var(--ui-accent-green-normal-surface);
-    border: 1px solid var(--ui-accent-green-normal-border);
     color: var(--ui-accent-green-icon-glyph);
   }
 
