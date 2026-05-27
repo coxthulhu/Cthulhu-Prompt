@@ -114,7 +114,6 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--ui-neutral-muted-border);
   border-radius: var(--cthulhu-ui-radius-card);
   background-color: transparent;
   padding: 0 8px;
@@ -188,13 +187,11 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
-  border-color: var(--ui-neutral-normal-border);
-  background-color: var(--ui-neutral-normal-surface);
+  background-color: transparent;
   color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeCountBadge {
-  border-color: var(--ui-neutral-normal-border);
   background-color: transparent;
   color: var(--ui-secondary-text);
 }
