@@ -1,8 +1,7 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
 import {
-  DEFAULT_PROMPT_FALLBACK_TITLE,
   getPromptDisplayTitle,
-  resolvePromptTitleFields
+  resolvePromptTitleUpdate
 } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import type { PromptPersisted } from '@shared/Prompt'
@@ -86,12 +85,12 @@ const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
 
   for (const prompt of prompts ?? []) {
     const title = typeof prompt.title === 'string' ? prompt.title : ''
-    const promptTitleFields = resolvePromptTitleFields(
-      normalized,
-      prompt.id,
-      title,
-      prompt.fallbackTitle ?? DEFAULT_PROMPT_FALLBACK_TITLE
-    )
+    const promptTitleFields = resolvePromptTitleUpdate({
+      prompts: normalized,
+      promptId: prompt.id,
+      currentFallbackTitle: prompt.fallbackTitle,
+      nextTitle: title
+    })
 
     normalized.push({
       ...prompt,

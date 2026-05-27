@@ -1,5 +1,5 @@
 import type { Prompt, PromptFull, PromptSummaryData } from '@shared/Prompt'
-import { resolvePromptTitleFieldsForPromptIds } from '@shared/promptFallbackTitle'
+import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
@@ -194,12 +194,14 @@ export const getPromptDraftState = (promptId: string): PromptDraftState => {
 
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
   const draftRecord = getPromptDraftState(promptId)
-  const nextTitleFields = resolvePromptTitleFieldsForPromptIds(
-    getPromptFolderIdsForPrompt(promptId),
-    (currentPromptId) => promptCollection.get(currentPromptId),
+  const nextTitleFields = resolvePromptTitleUpdateForPromptIds({
+    promptIds: getPromptFolderIdsForPrompt(promptId),
+    lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
     promptId,
-    title
-  )
+    currentTitle: draftRecord.title,
+    currentFallbackTitle: draftRecord.fallbackTitle,
+    nextTitle: title
+  })
 
   if (
     draftRecord.title === nextTitleFields.title &&

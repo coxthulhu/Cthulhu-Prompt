@@ -1,7 +1,4 @@
-import {
-  resolvePromptFallbackTitleForPromptIds,
-  resolvePromptTitleFieldsForPromptIds
-} from '@shared/promptFallbackTitle'
+import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import {
   createPromptFull,
   isPromptFull,
@@ -114,13 +111,13 @@ export const createPrompt = async (
 
   await runRevisionMutation<CreatePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
-      const promptTitleFields = resolvePromptTitleFieldsForPromptIds(
-        promptFolder.promptIds,
-        (currentPromptId) => promptCollection.get(currentPromptId),
-        prompt.id,
-        prompt.title,
-        prompt.fallbackTitle
-      )
+      const promptTitleFields = resolvePromptTitleUpdateForPromptIds({
+        promptIds: promptFolder.promptIds,
+        lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
+        promptId: prompt.id,
+        currentFallbackTitle: prompt.fallbackTitle,
+        nextTitle: prompt.title
+      })
       const optimisticPrompt = {
         ...prompt,
         title: promptTitleFields.title,
@@ -368,22 +365,26 @@ export const movePrompt = async (
       })
       collections.prompt.update(promptId, (draft) => {
         if (draft.title.trim().length === 0) {
-          draft.fallbackTitle = resolvePromptFallbackTitleForPromptIds(
-            destinationPromptIds,
-            (currentPromptId) => promptCollection.get(currentPromptId),
+          draft.fallbackTitle = resolvePromptTitleUpdateForPromptIds({
+            promptIds: destinationPromptIds,
+            lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
             promptId,
-            draft.fallbackTitle
-          )
+            currentTitle: draft.title,
+            currentFallbackTitle: draft.fallbackTitle,
+            nextTitle: draft.title
+          }).fallbackTitle
         }
       })
       collections.promptDraft.update(promptId, (draft) => {
         if (draft.title.trim().length === 0) {
-          draft.fallbackTitle = resolvePromptFallbackTitleForPromptIds(
-            destinationPromptIds,
-            (currentPromptId) => promptCollection.get(currentPromptId),
+          draft.fallbackTitle = resolvePromptTitleUpdateForPromptIds({
+            promptIds: destinationPromptIds,
+            lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
             promptId,
-            draft.fallbackTitle
-          )
+            currentTitle: draft.title,
+            currentFallbackTitle: draft.fallbackTitle,
+            nextTitle: draft.title
+          }).fallbackTitle
         }
       })
     },
