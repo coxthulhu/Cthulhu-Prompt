@@ -186,7 +186,7 @@ export const readPromptFolderPromptIds = async (
   folderOrderPath: string
 ): Promise<string[]> => {
   const fileContents = await readTextFile(electronApp, folderOrderPath)
-  return JSON.parse(fileContents) as string[]
+  return (JSON.parse(fileContents) as { promptIds: string[] }).promptIds
 }
 
 export const expectCurrentFolderPromptEditors = async (

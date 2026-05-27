@@ -109,7 +109,7 @@ const writeExamplePrompts = (workspacePath: string): void => {
     ),
     'utf8'
   )
-  fs.writeFileSync(orderPath, JSON.stringify(promptIds, null, 2), 'utf8')
+  fs.writeFileSync(orderPath, JSON.stringify({ promptIds }, null, 2), 'utf8')
   fs.writeFileSync(descriptionPath, '', 'utf8')
 }
 

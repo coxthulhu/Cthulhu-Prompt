@@ -8,3 +8,7 @@ export type PromptFolderInfoFile = {
   promptFolderId: string
   promptCount: number
 }
+
+export type PromptFolderOrderFile = {
+  promptIds: string[]
+}

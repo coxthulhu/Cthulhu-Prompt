@@ -1,7 +1,11 @@
 import * as path from 'path'
 import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
-import type { PromptFolderInfoFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
+import type {
+  PromptFolderInfoFile,
+  PromptFolderOrderFile,
+  WorkspaceInfoFile
+} from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
 import { parsePromptMarkdown } from '../Persistence/PromptFrontmatter'
@@ -46,7 +50,7 @@ const readPromptFolderDescription = (workspacePath: string, folderName: string):
 
 const readPromptIds = (workspacePath: string, folderName: string): string[] => {
   const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
-  return [...readJsonFile<string[]>(orderPath)]
+  return [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
 }
 
 const readFileModifiedAt = (filePath: string): string => {

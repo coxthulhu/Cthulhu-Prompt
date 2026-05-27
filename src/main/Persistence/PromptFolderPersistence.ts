@@ -1,5 +1,8 @@
 import type { PromptFolder } from '@shared/PromptFolder'
-import type { PromptFolderInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
+import type {
+  PromptFolderInfoFile,
+  PromptFolderOrderFile
+} from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -32,6 +35,10 @@ const toPromptFolderInfoFile = (promptFolder: PromptFolder): PromptFolderInfoFil
     promptFolderId: promptFolder.id,
     promptCount: promptFolder.promptCount
   }
+}
+
+const toPromptFolderOrderFile = (promptIds: string[]): PromptFolderOrderFile => {
+  return { promptIds }
 }
 
 const fromPromptFolderInfoFile = (
@@ -78,7 +85,7 @@ export const promptFolderPersistence: PersistenceLayer<
     fs.mkdirSync(infoDirectoryPath, { recursive: true })
 
     const orderTempPath = resolveTempPath(orderPath)
-    writeJsonFile(orderTempPath, change.data.promptIds)
+    writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.promptIds))
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const descriptionTempPath = resolveTempPath(descriptionPath)
@@ -110,7 +117,7 @@ export const promptFolderPersistence: PersistenceLayer<
     }
 
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
-    const promptIds = readJsonFile<string[]>(orderPath)
+    const promptIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
     const folderDescription = fs.existsSync(descriptionPath)
       ? fs.readFileSync(descriptionPath, 'utf8')
       : ''

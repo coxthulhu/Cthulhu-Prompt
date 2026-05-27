@@ -251,7 +251,7 @@ export function createWorkspaceWithFolders(
         : createDeterministicId(`${workspacePath}:${folder.folderName}`)
 
     // Create folder metadata
-    structure[`${folderPath}/FolderOrder.json`] = JSON.stringify(promptIds, null, 2)
+    structure[`${folderPath}/FolderOrder.json`] = JSON.stringify({ promptIds }, null, 2)
     structure[`${folderPath}/.cprompt/FolderInfo.json`] = JSON.stringify(
       createPromptFolderInfo(folder.displayName, promptCount, promptFolderId),
       null,
@@ -422,7 +422,7 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   return {
-    [`${folderPath}/FolderOrder.json`]: JSON.stringify(promptIds, null, 2),
+    [`${folderPath}/FolderOrder.json`]: JSON.stringify({ promptIds }, null, 2),
     [`${folderPath}/.cprompt/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptCount, promptFolderId),
       null,
