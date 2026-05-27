@@ -1,5 +1,6 @@
 import matter from 'gray-matter'
 import type { PromptPersisted } from '@shared/Prompt'
+import { normalizePromptTitle } from '@shared/promptFallbackTitle'
 
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string })
@@ -70,7 +71,7 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
   const metadata: PromptFrontmatterData = {
     id: prompt.id,
     createdAt: prompt.createdAt,
-    ...(prompt.title.trim().length > 0
+    ...(normalizePromptTitle(prompt.title).length > 0
       ? { title: prompt.title }
       : { fallbackTitle: prompt.fallbackTitle })
   }

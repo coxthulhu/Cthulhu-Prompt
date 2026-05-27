@@ -3,7 +3,9 @@ import type { MovePromptResponsePayload, PromptPersisted } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
   DEFAULT_PROMPT_FALLBACK_TITLE,
-  resolveAvailablePromptFallbackTitle
+  normalizePromptTitle,
+  resolvePromptFallbackTitleForPromptIds,
+  resolvePromptTitleFieldsForPromptIds
 } from '@shared/promptFallbackTitle'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
@@ -30,19 +32,18 @@ const resolvePromptInsertIndex = (
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
-const getCommittedPrompts = (promptIds: string[]): PromptPersisted[] => {
-  return promptIds
-    .map((promptId) => data.prompt.committedStore.getEntry(promptId)?.committed)
-    .filter((prompt): prompt is PromptPersisted => prompt !== undefined)
+const lookupCommittedPrompt = (promptId: string): PromptPersisted | null => {
+  return data.prompt.committedStore.getEntry(promptId)?.committed ?? null
 }
 
-const resolveFallbackTitleForFolder = (
+const resolveCommittedFallbackTitleForPromptIds = (
   promptIds: string[],
   promptId: string,
   preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
 ): string => {
-  return resolveAvailablePromptFallbackTitle(
-    getCommittedPrompts(promptIds),
+  return resolvePromptFallbackTitleForPromptIds(
+    promptIds,
+    lookupCommittedPrompt,
     promptId,
     preferredFallbackTitle
   )
@@ -119,19 +120,17 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const now = getCurrentIsoSecondTimestamp()
-          const title =
-            requestedPrompt.data.title.trim().length > 0 ? requestedPrompt.data.title : ''
+          const promptTitleFields = resolvePromptTitleFieldsForPromptIds(
+            committedPromptFolder.committed.promptIds,
+            lookupCommittedPrompt,
+            promptId,
+            requestedPrompt.data.title,
+            requestedPrompt.data.fallbackTitle
+          )
           const prompt: PromptPersisted = {
             id: promptId,
-            title,
-            fallbackTitle:
-              title.length > 0
-                ? ''
-                : resolveFallbackTitleForFolder(
-                    committedPromptFolder.committed.promptIds,
-                    promptId,
-                    requestedPrompt.data.fallbackTitle
-                  ),
+            title: promptTitleFields.title,
+            fallbackTitle: promptTitleFields.fallbackTitle,
             createdAt: now,
             modifiedAt: now,
             promptText: requestedPrompt.data.promptText
@@ -294,18 +293,17 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt not loaded' }
           }
 
-          const requestedTitle =
-            requestedPrompt.data.title.trim().length > 0 ? requestedPrompt.data.title : ''
+          const requestedTitle = normalizePromptTitle(requestedPrompt.data.title)
           const promptFolder = data.promptFolder.committedStore.getEntry(
             committedPrompt.persistenceFields.promptFolderId
           )
           const fallbackTitle =
             requestedTitle.length > 0
               ? ''
-              : resolveFallbackTitleForFolder(
+              : resolveCommittedFallbackTitleForPromptIds(
                   promptFolder?.committed.promptIds ?? [],
                   requestedPrompt.id,
-                  committedPrompt.committed.title.trim().length > 0
+                  normalizePromptTitle(committedPrompt.committed.title).length > 0
                     ? DEFAULT_PROMPT_FALLBACK_TITLE
                     : requestedPrompt.data.fallbackTitle
                 )
@@ -444,7 +442,7 @@ export const setupPromptMutationHandlers = (): void => {
                     expectedRevision: requestedPrompt.expectedRevision,
                     recipe: (draft) => {
                       if (draft.title.trim().length === 0) {
-                        draft.fallbackTitle = resolveFallbackTitleForFolder(
+                        draft.fallbackTitle = resolveCommittedFallbackTitleForPromptIds(
                           destinationPromptIds,
                           requestedPrompt.id,
                           draft.fallbackTitle

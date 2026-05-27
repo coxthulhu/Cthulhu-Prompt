@@ -1,6 +1,6 @@
 import {
-  DEFAULT_PROMPT_FALLBACK_TITLE,
-  resolveAvailablePromptFallbackTitle
+  resolvePromptFallbackTitleForPromptIds,
+  resolvePromptTitleFieldsForPromptIds
 } from '@shared/promptFallbackTitle'
 import {
   createPromptFull,
@@ -101,35 +101,6 @@ const resolvePromptInsertIndex = (
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
-const getPromptFallbackTitleCandidates = (promptIds: string[], promptId: string): Prompt[] => {
-  const prompts: Prompt[] = []
-
-  for (const currentPromptId of promptIds) {
-    if (currentPromptId === promptId) {
-      continue
-    }
-
-    const prompt = promptCollection.get(currentPromptId)
-    if (prompt) {
-      prompts.push(prompt)
-    }
-  }
-
-  return prompts
-}
-
-const resolvePromptFallbackTitleForFolder = (
-  promptIds: string[],
-  promptId: string,
-  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
-): string => {
-  return resolveAvailablePromptFallbackTitle(
-    getPromptFallbackTitleCandidates(promptIds, promptId),
-    promptId,
-    preferredFallbackTitle
-  )
-}
-
 export const createPrompt = async (
   promptFolderId: string,
   prompt: PromptFull,
@@ -143,17 +114,17 @@ export const createPrompt = async (
 
   await runRevisionMutation<CreatePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
+      const promptTitleFields = resolvePromptTitleFieldsForPromptIds(
+        promptFolder.promptIds,
+        (currentPromptId) => promptCollection.get(currentPromptId),
+        prompt.id,
+        prompt.title,
+        prompt.fallbackTitle
+      )
       const optimisticPrompt = {
         ...prompt,
-        title: prompt.title.trim().length > 0 ? prompt.title : '',
-        fallbackTitle:
-          prompt.title.trim().length > 0
-            ? ''
-            : resolvePromptFallbackTitleForFolder(
-                promptFolder.promptIds,
-                prompt.id,
-                prompt.fallbackTitle
-              )
+        title: promptTitleFields.title,
+        fallbackTitle: promptTitleFields.fallbackTitle
       }
 
       collections.prompt.insert(optimisticPrompt)
@@ -397,8 +368,9 @@ export const movePrompt = async (
       })
       collections.prompt.update(promptId, (draft) => {
         if (draft.title.trim().length === 0) {
-          draft.fallbackTitle = resolvePromptFallbackTitleForFolder(
+          draft.fallbackTitle = resolvePromptFallbackTitleForPromptIds(
             destinationPromptIds,
+            (currentPromptId) => promptCollection.get(currentPromptId),
             promptId,
             draft.fallbackTitle
           )
@@ -406,8 +378,9 @@ export const movePrompt = async (
       })
       collections.promptDraft.update(promptId, (draft) => {
         if (draft.title.trim().length === 0) {
-          draft.fallbackTitle = resolvePromptFallbackTitleForFolder(
+          draft.fallbackTitle = resolvePromptFallbackTitleForPromptIds(
             destinationPromptIds,
+            (currentPromptId) => promptCollection.get(currentPromptId),
             promptId,
             draft.fallbackTitle
           )

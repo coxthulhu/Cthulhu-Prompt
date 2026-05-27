@@ -1,14 +1,20 @@
-import type { Prompt } from './Prompt'
-
 export const DEFAULT_PROMPT_FALLBACK_TITLE = 'New Prompt'
 
-type PromptFallbackTitleCandidate = Pick<Prompt, 'id' | 'title' | 'fallbackTitle'>
+export type PromptFallbackTitleCandidate = {
+  id: string
+  title: string
+  fallbackTitle: string
+}
 
 export const getPromptDisplayTitle = (
-  prompt: Pick<Prompt, 'title' | 'fallbackTitle'>
+  prompt: Pick<PromptFallbackTitleCandidate, 'title' | 'fallbackTitle'>
 ): string => {
   const trimmedTitle = prompt.title.trim()
   return trimmedTitle.length > 0 ? trimmedTitle : prompt.fallbackTitle
+}
+
+export const normalizePromptTitle = (title: string): string => {
+  return title.trim().length > 0 ? title : ''
 }
 
 export const resolveAvailablePromptFallbackTitle = (
@@ -33,4 +39,74 @@ export const resolveAvailablePromptFallbackTitle = (
   }
 
   return `${DEFAULT_PROMPT_FALLBACK_TITLE} ${fallbackIndex}`
+}
+
+export const collectPromptFallbackTitleCandidates = <TPrompt extends PromptFallbackTitleCandidate>(
+  promptIds: string[],
+  lookupPrompt: (promptId: string) => TPrompt | null | undefined,
+  promptId: string
+): TPrompt[] => {
+  const prompts: TPrompt[] = []
+
+  for (const currentPromptId of promptIds) {
+    if (currentPromptId === promptId) {
+      continue
+    }
+
+    const prompt = lookupPrompt(currentPromptId)
+    if (prompt) {
+      prompts.push(prompt)
+    }
+  }
+
+  return prompts
+}
+
+export const resolvePromptFallbackTitleForPromptIds = <
+  TPrompt extends PromptFallbackTitleCandidate
+>(
+  promptIds: string[],
+  lookupPrompt: (promptId: string) => TPrompt | null | undefined,
+  promptId: string,
+  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
+): string => {
+  return resolveAvailablePromptFallbackTitle(
+    collectPromptFallbackTitleCandidates(promptIds, lookupPrompt, promptId),
+    promptId,
+    preferredFallbackTitle
+  )
+}
+
+export const resolvePromptTitleFields = (
+  prompts: PromptFallbackTitleCandidate[],
+  promptId: string,
+  title: string,
+  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
+): Pick<PromptFallbackTitleCandidate, 'title' | 'fallbackTitle'> => {
+  const normalizedTitle = normalizePromptTitle(title)
+
+  return {
+    title: normalizedTitle,
+    fallbackTitle:
+      normalizedTitle.length > 0
+        ? ''
+        : resolveAvailablePromptFallbackTitle(prompts, promptId, preferredFallbackTitle)
+  }
+}
+
+export const resolvePromptTitleFieldsForPromptIds = <
+  TPrompt extends PromptFallbackTitleCandidate
+>(
+  promptIds: string[],
+  lookupPrompt: (promptId: string) => TPrompt | null | undefined,
+  promptId: string,
+  title: string,
+  preferredFallbackTitle: string = DEFAULT_PROMPT_FALLBACK_TITLE
+): Pick<PromptFallbackTitleCandidate, 'title' | 'fallbackTitle'> => {
+  return resolvePromptTitleFields(
+    collectPromptFallbackTitleCandidates(promptIds, lookupPrompt, promptId),
+    promptId,
+    title,
+    preferredFallbackTitle
+  )
 }
