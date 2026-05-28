@@ -13,8 +13,10 @@ export interface PromptFolder {
   folderDescription: string
 }
 
-export type PromptFolderRevisionPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
+export type PromptFolderDescriptionUpdate = Pick<PromptFolder, 'folderDescription'>
+
+export type UpdatePromptFolderDescriptionPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolderDescriptionUpdate>
 }
 
 export type PromptFolderRevisionResponsePayload = {

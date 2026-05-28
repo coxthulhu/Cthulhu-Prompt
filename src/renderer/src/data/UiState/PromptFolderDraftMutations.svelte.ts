@@ -7,7 +7,7 @@ import {
 } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
-import { mutatePacedPromptFolderAutosaveUpdate } from '../Mutations/PromptFolderMutations'
+import { mutatePacedPromptFolderDescriptionAutosaveUpdate } from '../Mutations/PromptFolderMutations'
 import {
   clearPromptFolderDescriptionMeasuredHeight,
   clearPromptFolderDescriptionMeasuredHeights,
@@ -37,7 +37,7 @@ const mutatePromptFolderDraftOptimistically = (
 ): void => {
   const { mutatePromptFolderDraft, mutatePromptFolder } = options
 
-  mutatePacedPromptFolderAutosaveUpdate({
+  mutatePacedPromptFolderDescriptionAutosaveUpdate({
     promptFolderId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {

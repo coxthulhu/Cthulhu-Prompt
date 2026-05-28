@@ -9,7 +9,7 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptFolderRequest,
-  parseUpdatePromptFolderRevisionRequest
+  parseUpdatePromptFolderDescriptionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
@@ -29,18 +29,6 @@ const hasPromptFolderNameConflict = (
 
     return promptFolderEntry.committed.folderName.toLowerCase() === normalizedTargetName
   })
-}
-
-const hasMatchingPromptIds = (existingPromptIds: string[], nextPromptIds: string[]): boolean => {
-  if (existingPromptIds.length !== nextPromptIds.length) {
-    return false
-  }
-
-  const sortedExistingPromptIds = [...existingPromptIds].sort()
-  const sortedNextPromptIds = [...nextPromptIds].sort()
-  return sortedExistingPromptIds.every(
-    (existingPromptId, index) => existingPromptId === sortedNextPromptIds[index]
-  )
 }
 
 export const setupPromptFolderMutationHandlers = (): void => {
@@ -137,10 +125,10 @@ export const setupPromptFolderMutationHandlers = (): void => {
     )
   })
 
-  ipcMain.handle('update-prompt-folder', async (_, request: unknown) => {
+  ipcMain.handle('update-prompt-folder-description', async (_, request: unknown) => {
     return await runMutationIpcRequest(
       request,
-      parseUpdatePromptFolderRevisionRequest,
+      parseUpdatePromptFolderDescriptionRequest,
       async (validatedRequest) => {
         try {
           const requestedPromptFolder = validatedRequest.payload.promptFolder
@@ -152,15 +140,6 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'Prompt folder not loaded' }
           }
 
-          if (
-            !hasMatchingPromptIds(
-              committedPromptFolder.committed.promptIds,
-              requestedPromptFolder.data.promptIds
-            )
-          ) {
-            return { success: false, error: 'Invalid prompt order' }
-          }
-
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               promptFolder: tx.promptFolder.update({
@@ -168,7 +147,6 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
                   draft.folderDescription = requestedPromptFolder.data.folderDescription
-                  draft.promptIds = [...requestedPromptFolder.data.promptIds]
                 }
               })
             }

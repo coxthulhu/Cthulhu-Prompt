@@ -2,9 +2,10 @@ import type {
   CreatePromptFolderPayload,
   CreatePromptFolderResponsePayload,
   PromptFolder,
-  PromptFolderRevisionPayload,
-  PromptFolderRevisionResponsePayload
+  PromptFolderRevisionResponsePayload,
+  UpdatePromptFolderDescriptionPayload
 } from '@shared/PromptFolder'
+import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { compactGuid } from '@shared/compactGuid'
 import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
@@ -15,6 +16,7 @@ import {
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
+import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 const readLatestPromptFolderFromTransaction = (
@@ -33,34 +35,38 @@ type PacedPromptFolderMutationOptions = Parameters<
   typeof mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>
 >[0]
 
-type PacedPromptFolderAutosaveUpdateOptions = Pick<
+type PacedPromptFolderDescriptionAutosaveUpdateOptions = Pick<
   PacedPromptFolderMutationOptions,
   'debounceMs' | 'mutateOptimistically'
 > & {
   promptFolderId: string
 }
 
-export const mutatePacedPromptFolderAutosaveUpdate = ({
+export const mutatePacedPromptFolderDescriptionAutosaveUpdate = ({
   promptFolderId,
   debounceMs,
   mutateOptimistically
-}: PacedPromptFolderAutosaveUpdateOptions): void => {
+}: PacedPromptFolderDescriptionAutosaveUpdateOptions): void => {
   mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
     collectionId: promptFolderCollection.id,
     elementId: promptFolderId,
     debounceMs,
     mutateOptimistically,
-    persistMutations: async ({ entities, invoke, transaction }) => {
+    persistMutations: async ({ transaction }) => {
       const latestPromptFolder = readLatestPromptFolderFromTransaction(transaction, promptFolderId)
 
-      const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
-        'update-prompt-folder',
+      const mutationResult = await ipcInvokeWithPayload<
+        IpcMutationPayloadResult<PromptFolderRevisionResponsePayload>,
+        UpdatePromptFolderDescriptionPayload
+      >(
+        'update-prompt-folder-description',
         {
-          payload: {
-            promptFolder: entities.promptFolder({
-              id: promptFolderId,
-              data: latestPromptFolder
-            })
+          promptFolder: {
+            id: promptFolderId,
+            expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
+            data: {
+              folderDescription: latestPromptFolder.folderDescription
+            }
           }
         }
       )
@@ -74,7 +80,7 @@ export const mutatePacedPromptFolderAutosaveUpdate = ({
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
     },
-    conflictMessage: 'Prompt folder update conflict'
+    conflictMessage: 'Prompt folder description update conflict'
   })
 }
 
@@ -141,72 +147,5 @@ export const createPromptFolder = async (
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
     },
     conflictMessage: 'Prompt folder create conflict'
-  })
-}
-
-const updatePromptFolder = async (promptFolder: PromptFolder): Promise<void> => {
-  if (!promptFolderCollection.get(promptFolder.id)) {
-    throw new Error('Prompt folder not loaded')
-  }
-
-  await runRevisionMutation<PromptFolderRevisionResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.update(promptFolder.id, (draft) => {
-        draft.folderName = promptFolder.folderName
-        draft.displayName = promptFolder.displayName
-        draft.promptCount = promptFolder.promptCount
-        draft.promptIds = [...promptFolder.promptIds]
-        draft.folderDescription = promptFolder.folderDescription
-      })
-      collections.promptFolderDraft.update(promptFolder.id, (draftRecord) => {
-        draftRecord.folderDescription = promptFolder.folderDescription
-      })
-    },
-    persistMutations: async ({ entities, invoke, transaction }) => {
-      const mutationResult = await invoke<{ payload: PromptFolderRevisionPayload }>(
-        'update-prompt-folder',
-        {
-          payload: {
-            promptFolder: entities.promptFolder({
-              id: promptFolder.id,
-              data: promptFolder
-            })
-          }
-        }
-      )
-
-      if (mutationResult.success) {
-        promptFolderDraftCollection.utils.acceptMutations(transaction)
-      }
-
-      return mutationResult
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-    },
-    conflictMessage: 'Prompt folder update conflict'
-  })
-}
-
-const requirePromptFolder = (promptFolderId: string): PromptFolder => {
-  const promptFolder = promptFolderCollection.get(promptFolderId)
-
-  if (!promptFolder) {
-    throw new Error('Prompt folder not loaded')
-  }
-
-  return promptFolder
-}
-
-export const updatePromptFolderDescription = async (
-  promptFolderId: string,
-  folderDescription: string
-): Promise<void> => {
-  const promptFolder = requirePromptFolder(promptFolderId)
-
-  await updatePromptFolder({
-    ...promptFolder,
-    promptIds: [...promptFolder.promptIds],
-    folderDescription
   })
 }

@@ -9,7 +9,8 @@ import type {
   CreatePromptFolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
-  PromptFolderRevisionPayload
+  PromptFolderDescriptionUpdate,
+  UpdatePromptFolderDescriptionPayload
 } from '@shared/PromptFolder'
 import type { PromptUiState, PromptUiStateRevisionPayload } from '@shared/PromptUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
@@ -208,6 +209,13 @@ const parsePromptFolder = parseObject<PromptFolder>({
 const parsePromptFolderRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
 
+const parsePromptFolderDescriptionUpdate = parseObject<PromptFolderDescriptionUpdate>({
+  folderDescription: parseString
+})
+
+const parsePromptFolderDescriptionUpdatePayloadEntity =
+  parseRevisionPayloadEntity<PromptFolderDescriptionUpdate>(parsePromptFolderDescriptionUpdate)
+
 const parseSystemSettings = parseObject<SystemSettings>({
   promptFontSize: parseNumber,
   promptEditorMinLines: parseNumber,
@@ -329,13 +337,16 @@ const parsePromptRevisionPayload = parseObject<PromptRevisionPayload>({
 const parseUpdatePromptRevisionWireRequest: Parser<IpcRequestWithPayload<PromptRevisionPayload>> =
   parseWireRequestWithPayload<PromptRevisionPayload>(parsePromptRevisionPayload)
 
-const parsePromptFolderRevisionPayload = parseObject<PromptFolderRevisionPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity
-})
+const parseUpdatePromptFolderDescriptionPayload =
+  parseObject<UpdatePromptFolderDescriptionPayload>({
+    promptFolder: parsePromptFolderDescriptionUpdatePayloadEntity
+  })
 
-const parseUpdatePromptFolderRevisionWireRequest: Parser<
-  IpcRequestWithPayload<PromptFolderRevisionPayload>
-> = parseWireRequestWithPayload<PromptFolderRevisionPayload>(parsePromptFolderRevisionPayload)
+const parseUpdatePromptFolderDescriptionWireRequest: Parser<
+  IpcRequestWithPayload<UpdatePromptFolderDescriptionPayload>
+> = parseWireRequestWithPayload<UpdatePromptFolderDescriptionPayload>(
+  parseUpdatePromptFolderDescriptionPayload
+)
 
 const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
   promptFolder: parsePromptFolderRevisionPayloadEntity,
@@ -474,8 +485,8 @@ export const parseUpdatePromptRevisionRequest = createRequestParser(
   parseUpdatePromptRevisionWireRequest
 )
 
-export const parseUpdatePromptFolderRevisionRequest = createRequestParser(
-  parseUpdatePromptFolderRevisionWireRequest
+export const parseUpdatePromptFolderDescriptionRequest = createRequestParser(
+  parseUpdatePromptFolderDescriptionWireRequest
 )
 
 export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
