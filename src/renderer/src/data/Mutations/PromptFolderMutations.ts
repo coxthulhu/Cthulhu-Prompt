@@ -210,15 +210,3 @@ export const updatePromptFolderDescription = async (
     folderDescription
   })
 }
-
-export const reorderPromptFolderPrompts = async (
-  promptFolderId: string,
-  promptIds: string[]
-): Promise<void> => {
-  const promptFolder = requirePromptFolder(promptFolderId)
-
-  await updatePromptFolder({
-    ...promptFolder,
-    promptIds: [...promptIds]
-  })
-}
