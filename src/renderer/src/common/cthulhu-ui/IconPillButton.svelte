@@ -40,7 +40,6 @@
     background-color: var(--ui-accent-normal-surface);
     border: 1px solid var(--ui-accent-normal-border);
     border-radius: 999px;
-    box-shadow: var(--cthulhu-ui-shadow-surface-highlight);
     color: var(--ui-accent-normal-text);
     cursor: pointer;
     display: inline-flex;

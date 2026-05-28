@@ -50,7 +50,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiIconDescriptionButton group/icon-description-button grid w-full min-w-0 cursor-pointer grid-cols-[42px_minmax(0,1fr)] items-center gap-3 rounded-[7px] border p-2.5 text-left shadow-[var(--cthulhu-ui-shadow-surface-highlight)] transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiIconDescriptionButton group/icon-description-button grid w-full min-w-0 cursor-pointer grid-cols-[42px_minmax(0,1fr)] items-center gap-3 rounded-[7px] border p-2.5 text-left transition disabled:pointer-events-none disabled:opacity-50',
     variantClasses[variant],
     className
   )}

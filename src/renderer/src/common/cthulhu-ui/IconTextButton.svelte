@@ -44,19 +44,17 @@
     'cthulhuUiIconTextButton inline-flex h-10 cursor-pointer items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] border px-3.5 text-sm font-medium leading-5 transition disabled:pointer-events-none disabled:opacity-50'
   const variantClasses = {
     neutral:
-      'border-[var(--ui-neutral-interactive-normal-border)] bg-[var(--ui-neutral-normal-surface)] text-[var(--ui-hoverable-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-neutral-interactive-hover-border)] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)]',
+      'border-[var(--ui-neutral-interactive-normal-border)] bg-[var(--ui-neutral-normal-surface)] text-[var(--ui-hoverable-text)] hover:border-[var(--ui-neutral-interactive-hover-border)] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)]',
     accent:
-      'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-accent-normal-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-accent-hover-border)] hover:bg-[var(--ui-accent-hover-surface)] hover:text-[var(--ui-normal-text)]',
+      'border-[var(--ui-accent-normal-border)] bg-[var(--ui-accent-normal-surface)] text-[var(--ui-accent-normal-text)] hover:border-[var(--ui-accent-hover-border)] hover:bg-[var(--ui-accent-hover-surface)] hover:text-[var(--ui-normal-text)]',
     danger:
-      'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-normal-surface)] text-[var(--ui-danger-icon-glyph)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:border-[var(--ui-danger-hover-border)] hover:bg-[var(--ui-danger-hover-surface)] hover:text-[var(--ui-danger-icon-glyph)]'
+      'border-[var(--ui-danger-normal-border)] bg-[var(--ui-danger-normal-surface)] text-[var(--ui-danger-icon-glyph)] hover:border-[var(--ui-danger-hover-border)] hover:bg-[var(--ui-danger-hover-surface)] hover:text-[var(--ui-danger-icon-glyph)]'
   } satisfies Record<NonNavButtonVariant, string>
   const navVariantClasses = {
-    active:
-      'border-0 bg-[var(--ui-neutral-emphasis-surface)] text-[var(--ui-normal-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight-active)]',
+    active: 'border-0 bg-[var(--ui-neutral-emphasis-surface)] text-[var(--ui-normal-text)]',
     enabled:
-      'border-0 bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)] hover:bg-[var(--ui-neutral-normal-surface)] hover:text-[var(--ui-normal-text)]',
-    disabled:
-      'border-0 bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)] shadow-[var(--cthulhu-ui-shadow-surface-highlight)]'
+      'border-0 bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)] hover:bg-[var(--ui-neutral-normal-surface)] hover:text-[var(--ui-normal-text)]',
+    disabled: 'border-0 bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-hoverable-text)]'
   } satisfies Record<ButtonState, string>
 
   const isDisabled = $derived(state === 'disabled')
