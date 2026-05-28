@@ -8,10 +8,6 @@ import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptUiStateAutosaveUpdate } from '../Mutations/PromptUiStateMutations'
 
-export const upsertPromptUiStateDraft = (promptUiState: PromptUiState): void => {
-  upsertPromptUiStateDrafts([promptUiState])
-}
-
 export const upsertPromptUiStateDrafts = (promptUiStates: PromptUiState[]): void => {
   if (promptUiStates.length === 0) {
     return

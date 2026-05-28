@@ -136,12 +136,3 @@ export const getSystemSettingsValidation = (
     maxLinesError: validateMaxLines(draftValues.promptEditorMaxLinesInput)
   }
 }
-
-export const haveSameSystemSettings = (left: SystemSettings, right: SystemSettings): boolean => {
-  return (
-    left.promptFontSize === right.promptFontSize &&
-    left.promptEditorMinLines === right.promptEditorMinLines &&
-    left.promptEditorMaxLines === right.promptEditorMaxLines &&
-    left.showLineNumbers === right.showLineNumbers
-  )
-}
