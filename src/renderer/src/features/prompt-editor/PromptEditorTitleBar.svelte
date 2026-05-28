@@ -162,7 +162,6 @@
     background: var(--ui-neutral-muted-surface);
     border: 1px solid var(--ui-card-nested-border);
     border-radius: 7px;
-    box-shadow: inset 0 1px 0 var(--ui-card-nested-inset-highlight);
     display: grid;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
