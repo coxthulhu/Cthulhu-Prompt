@@ -336,18 +336,18 @@
       return
     }
 
-    if (selectionResult.reason === 'workspace-missing') {
+    if (isWorkspaceMissingError(selectionResult.message)) {
       await syncLastWorkspaceInfoPath(null)
       console.error('Failed to restore last workspace. Cleared persisted path.', {
         workspaceInfoPath: lastWorkspaceInfoPath,
-        reason: selectionResult.reason
+        error: selectionResult.message
       })
       return
     }
 
     console.error('Failed to restore last workspace.', {
       workspaceInfoPath: lastWorkspaceInfoPath,
-      reason: selectionResult.reason
+      error: selectionResult.message
     })
   }
 
@@ -362,12 +362,11 @@
       const message = extractErrorMessage(error)
       const workspaceMissing = isWorkspaceMissingError(message)
       await resetWorkspaceState()
-      if (workspaceMissing) {
-        return { success: false, reason: 'workspace-missing' }
-      }
       return {
         success: false,
-        reason: 'unknown-error'
+        message: workspaceMissing
+          ? 'Invalid workspace path'
+          : (message ?? 'Failed to open workspace')
       }
     } finally {
       endWorkspaceAction()

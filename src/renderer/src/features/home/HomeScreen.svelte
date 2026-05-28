@@ -19,7 +19,7 @@
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -59,12 +59,12 @@
   const secondaryTitleText = 'CTHULHU PROMPT'
   const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
-  const workspaceNotFoundErrorText =
-    'Workspace Not Found.\nUse Create Workspace to set up a new workspace in this location.'
+  const workspaceOpenErrorFallbackText = 'Failed to open workspace. Please try again.'
 
   let isOpeningWorkspaceDialog = $state(false)
   let showCreateWorkspaceDialog = $state(false)
-  let showWorkspaceNotFoundDialog = $state(false)
+  let showWorkspaceOpenErrorDialog = $state(false)
+  let workspaceOpenErrorText = $state(workspaceOpenErrorFallbackText)
   let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
   let secondaryTitleContainerElement: HTMLDivElement | null = $state(null)
   let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
@@ -80,23 +80,31 @@
     }
   }
 
+  const getErrorMessage = (error: unknown): string | undefined =>
+    error instanceof Error ? error.message : typeof error === 'string' ? error : undefined
+
+  const showWorkspaceOpenError = (message?: string) => {
+    workspaceOpenErrorText = message?.trim() ? message : workspaceOpenErrorFallbackText
+    showWorkspaceOpenErrorDialog = true
+  }
+
   const handleSelectFolder = async () => {
     activeWorkspaceAction = 'select'
     try {
-      const result = await runIpcBestEffort(openWorkspaceInfoFileDialog, () => ({
-        dialogCancelled: true,
-        filePaths: []
-      }))
+      let result: OpenWorkspaceInfoFileDialogResult
+      try {
+        result = await openWorkspaceInfoFileDialog()
+      } catch (error) {
+        showWorkspaceOpenError(getErrorMessage(error))
+        return
+      }
 
       if (!result.dialogCancelled && result.filePaths.length > 0) {
         const selectedPath = result.filePaths[0]
         const selectionResult = await onWorkspaceSelect(selectedPath)
 
         if (!selectionResult.success) {
-          if (selectionResult.reason === 'workspace-missing') {
-            // Open Workspace only selects existing workspace info files.
-            showWorkspaceNotFoundDialog = true
-          }
+          showWorkspaceOpenError(selectionResult.message)
         }
       }
     } finally {
@@ -364,10 +372,10 @@
   />
 
   <CthulhuErrorDialog
-    bind:open={showWorkspaceNotFoundDialog}
-    title="Workspace Not Found"
-    description="The selected file is not a Cthulhu Prompt workspace."
-    errorText={workspaceNotFoundErrorText}
+    bind:open={showWorkspaceOpenErrorDialog}
+    title="Failed to Open Workspace"
+    description="The workspace could not be opened."
+    errorText={workspaceOpenErrorText}
   />
 </main>
 

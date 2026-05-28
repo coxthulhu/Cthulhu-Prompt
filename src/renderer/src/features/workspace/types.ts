@@ -1,6 +1,6 @@
 export type WorkspaceSelectionResult =
   | { success: true }
-  | { success: false; reason: 'workspace-missing' | 'unknown-error' }
+  | { success: false; message: string }
 
 export type WorkspaceCreationResult =
   | { success: true }
