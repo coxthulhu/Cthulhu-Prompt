@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 7 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 8 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,

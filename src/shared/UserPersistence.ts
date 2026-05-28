@@ -50,6 +50,7 @@ export type WorkspacePromptFolderPromptTreeEntry = {
   promptFolderId: string
   promptTreeEntryId: string
   promptTreeIsExpanded: boolean
+  promptTreeIsShowingAllPrompts: boolean
   folderDescriptionEditorViewStateJson: string | null
 }
 
@@ -93,6 +94,7 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
     promptFolderId: entry.promptFolderId,
     promptTreeEntryId: entry.promptTreeEntryId,
     promptTreeIsExpanded: entry.promptTreeIsExpanded,
+    promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts,
     folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson
   }))
 }
@@ -260,10 +262,21 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     return null
   }
 
+  const promptTreeIsShowingAllPrompts =
+    value.promptTreeIsShowingAllPrompts === undefined
+      ? false
+      : typeof value.promptTreeIsShowingAllPrompts === 'boolean'
+        ? value.promptTreeIsShowingAllPrompts
+        : null
+  if (promptTreeIsShowingAllPrompts === null) {
+    return null
+  }
+
   return {
     promptFolderId: value.promptFolderId,
     promptTreeEntryId: value.promptTreeEntryId,
     promptTreeIsExpanded,
+    promptTreeIsShowingAllPrompts,
     folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null
   }
 }

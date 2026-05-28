@@ -209,6 +209,7 @@ export class UserPersistenceDataAccess {
           prompt_folder_id AS promptFolderId,
           prompt_tree_entry_id AS promptTreeEntryId,
           prompt_tree_is_expanded AS promptTreeIsExpanded,
+          prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
           folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
@@ -218,6 +219,7 @@ export class UserPersistenceDataAccess {
       promptFolderId: string
       promptTreeEntryId: string
       promptTreeIsExpanded: number
+      promptTreeIsShowingAllPrompts: number
       folderDescriptionEditorViewStateJson: string | null
     }>
 
@@ -225,6 +227,7 @@ export class UserPersistenceDataAccess {
       promptFolderId: row.promptFolderId,
       promptTreeEntryId: row.promptTreeEntryId,
       promptTreeIsExpanded: row.promptTreeIsExpanded !== 0,
+      promptTreeIsShowingAllPrompts: row.promptTreeIsShowingAllPrompts !== 0,
       folderDescriptionEditorViewStateJson: row.folderDescriptionEditorViewStateJson
     }))
 
@@ -288,9 +291,10 @@ export class UserPersistenceDataAccess {
           prompt_folder_id,
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
+          prompt_tree_is_showing_all_prompts,
           folder_description_editor_view_state_json
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         `
       )
 
@@ -300,6 +304,7 @@ export class UserPersistenceDataAccess {
           entry.promptFolderId,
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded ? 1 : 0,
+          entry.promptTreeIsShowingAllPrompts ? 1 : 0,
           entry.folderDescriptionEditorViewStateJson
         )
       }
@@ -325,6 +330,7 @@ export class UserPersistenceDataAccess {
             prompt_folder_id AS promptFolderId,
             prompt_tree_entry_id AS promptTreeEntryId,
             prompt_tree_is_expanded AS promptTreeIsExpanded,
+            prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
             folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
@@ -334,6 +340,7 @@ export class UserPersistenceDataAccess {
         promptFolderId: string
         promptTreeEntryId: string
         promptTreeIsExpanded: number
+        promptTreeIsShowingAllPrompts: number
         folderDescriptionEditorViewStateJson: string | null
       }>
 
@@ -346,9 +353,10 @@ export class UserPersistenceDataAccess {
           prompt_folder_id,
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
+          prompt_tree_is_showing_all_prompts,
           folder_description_editor_view_state_json
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         `
       )
 
@@ -362,6 +370,7 @@ export class UserPersistenceDataAccess {
           entry.promptFolderId,
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded,
+          entry.promptTreeIsShowingAllPrompts,
           entry.folderDescriptionEditorViewStateJson
         )
       }

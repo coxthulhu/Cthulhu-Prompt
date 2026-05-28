@@ -13,6 +13,7 @@ const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-folder-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
 const SHORT_SETTINGS = '[data-testid="prompt-folder-settings-Short"]'
 const SHORT_TOGGLE = '[data-testid="prompt-folder-toggle-Short"]'
+const SHORT_SHOW_ALL = '[data-testid="prompt-folder-show-all-Short"]'
 const SHORT_PROMPT_50 = '[data-testid="prompt-folder-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
@@ -326,6 +327,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
+    await mainWindow.locator(SHORT_SHOW_ALL).click()
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 1700)
     await mainWindow.waitForSelector(SHORT_PROMPT_50, { state: 'attached' })
     await mainWindow.evaluate((selector) => {

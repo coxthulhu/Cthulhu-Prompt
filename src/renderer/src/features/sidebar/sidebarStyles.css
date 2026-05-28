@@ -259,6 +259,31 @@
   font-size: 14px;
 }
 
+.sidebarPromptTreeVisibilityRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  width: 100%;
+  align-items: center;
+  padding-block: 1px;
+}
+
+.sidebarPromptTreeVisibilityButtonWrap {
+  display: flex;
+  min-width: 0;
+  height: 22px;
+  align-items: center;
+  padding-left: 12px;
+}
+
+.sidebarPromptTreeVisibilityRow .sidebarPromptTreeIndent {
+  min-height: 22px;
+}
+
+.sidebarPromptTreeVisibilityButton {
+  --cthulhu-ui-inline-text-button-line-height: 1;
+  height: auto;
+}
+
 .promptDragGhost {
   box-sizing: border-box;
   min-width: 120px;

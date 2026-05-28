@@ -53,7 +53,9 @@ const ANCHOR_2_ID = 'anchor-2'
 const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
+const SHORT_FOLDER_PATH = `/ws/virtual/Prompts/${SHORT_FOLDER_NAME}/FolderOrder.json`
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-folder-show-all-Short"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
 
 type PromptTreeHighlightStyles = {
@@ -502,6 +504,30 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
+  test('moves a prompt after the last visible prompt when dropped onto show all', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
+
+    await dragPromptTreeRowToTarget(mainWindow, 'short-1', SHORT_SHOW_ALL_SELECTOR, 'bottom')
+
+    await expectPersistedFolderPromptIds(electronApp, SHORT_FOLDER_PATH, [
+      'short-2',
+      'short-3',
+      'short-4',
+      'short-5',
+      'short-1',
+      ...Array.from({ length: 55 }, (_, index) => `short-${index + 6}`)
+    ])
   })
 
   test('moves a prompt from the prompt tree to the initial add prompt row', async ({

@@ -7,6 +7,7 @@ import { mutatePacedWorkspacePersistenceAutosaveUpdate } from '../Mutations/Work
 
 const DEFAULT_PROMPT_TREE_ENTRY_ID = 'folder-settings'
 const DEFAULT_PROMPT_TREE_IS_EXPANDED = true
+const DEFAULT_PROMPT_TREE_IS_SHOWING_ALL_PROMPTS = false
 
 const upsertPromptFolderPromptTreeEntry = (
   entries: WorkspacePromptFolderPromptTreeEntry[],
@@ -22,6 +23,7 @@ const upsertPromptFolderPromptTreeEntry = (
         promptFolderId,
         promptTreeEntryId,
         promptTreeIsExpanded: DEFAULT_PROMPT_TREE_IS_EXPANDED,
+        promptTreeIsShowingAllPrompts: DEFAULT_PROMPT_TREE_IS_SHOWING_ALL_PROMPTS,
         folderDescriptionEditorViewStateJson: null
       }
     ]
@@ -66,6 +68,7 @@ const upsertPromptFolderDescriptionEditorViewState = (
         promptFolderId,
         promptTreeEntryId: DEFAULT_PROMPT_TREE_ENTRY_ID,
         promptTreeIsExpanded: DEFAULT_PROMPT_TREE_IS_EXPANDED,
+        promptTreeIsShowingAllPrompts: DEFAULT_PROMPT_TREE_IS_SHOWING_ALL_PROMPTS,
         folderDescriptionEditorViewStateJson: viewStateJson
       }
     ]
@@ -98,6 +101,7 @@ const upsertPromptFolderExpandedState = (
         promptFolderId,
         promptTreeEntryId: DEFAULT_PROMPT_TREE_ENTRY_ID,
         promptTreeIsExpanded,
+        promptTreeIsShowingAllPrompts: DEFAULT_PROMPT_TREE_IS_SHOWING_ALL_PROMPTS,
         folderDescriptionEditorViewStateJson: null
       }
     ]
@@ -125,6 +129,51 @@ const applyPromptFolderExpandedState = (
     record.promptFolderPromptTreeEntries,
     promptFolderId,
     promptTreeIsExpanded
+  )
+}
+
+const upsertPromptFolderShowingAllPromptsState = (
+  entries: WorkspacePromptFolderPromptTreeEntry[],
+  promptFolderId: string,
+  promptTreeIsShowingAllPrompts: boolean
+): WorkspacePromptFolderPromptTreeEntry[] => {
+  const existingIndex = entries.findIndex((entry) => entry.promptFolderId === promptFolderId)
+
+  if (existingIndex === -1) {
+    return [
+      ...entries,
+      {
+        promptFolderId,
+        promptTreeEntryId: DEFAULT_PROMPT_TREE_ENTRY_ID,
+        promptTreeIsExpanded: DEFAULT_PROMPT_TREE_IS_EXPANDED,
+        promptTreeIsShowingAllPrompts,
+        folderDescriptionEditorViewStateJson: null
+      }
+    ]
+  }
+
+  if (entries[existingIndex]?.promptTreeIsShowingAllPrompts === promptTreeIsShowingAllPrompts) {
+    return entries
+  }
+
+  const nextEntries = [...entries]
+  nextEntries[existingIndex] = {
+    ...nextEntries[existingIndex],
+    promptFolderId,
+    promptTreeIsShowingAllPrompts
+  }
+  return nextEntries
+}
+
+const applyPromptFolderShowingAllPromptsState = (
+  record: { promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[] },
+  promptFolderId: string,
+  promptTreeIsShowingAllPrompts: boolean
+): void => {
+  record.promptFolderPromptTreeEntries = upsertPromptFolderShowingAllPromptsState(
+    record.promptFolderPromptTreeEntries,
+    promptFolderId,
+    promptTreeIsShowingAllPrompts
   )
 }
 
@@ -183,6 +232,21 @@ export const lookupWorkspacePersistedPromptFolderExpandedState = (
     (entry) => entry.promptFolderId === promptFolderId
   )
   return persistedEntry?.promptTreeIsExpanded ?? null
+}
+
+export const lookupWorkspacePersistedPromptFolderShowingAllPromptsState = (
+  workspaceId: string,
+  promptFolderId: string
+): boolean | null => {
+  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+  if (!draftRecord) {
+    return null
+  }
+
+  const persistedEntry = draftRecord.promptFolderPromptTreeEntries.find(
+    (entry) => entry.promptFolderId === promptFolderId
+  )
+  return persistedEntry?.promptTreeIsShowingAllPrompts ?? null
 }
 
 export const setPromptFolderPromptTreeEntryIdWithAutosave = (
@@ -246,6 +310,47 @@ export const setPromptFolderExpandedStateWithAutosave = (
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         applyPromptFolderExpandedState(draft, promptFolderId, promptTreeIsExpanded)
+      })
+    }
+  })
+}
+
+export const setPromptFolderShowingAllPromptsStateWithAutosave = (
+  workspaceId: string,
+  promptFolderId: string,
+  promptTreeIsShowingAllPrompts: boolean
+): void => {
+  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+  if (!draftRecord) {
+    return
+  }
+
+  const nextEntries = upsertPromptFolderShowingAllPromptsState(
+    draftRecord.promptFolderPromptTreeEntries,
+    promptFolderId,
+    promptTreeIsShowingAllPrompts
+  )
+  if (nextEntries === draftRecord.promptFolderPromptTreeEntries) {
+    return
+  }
+
+  mutatePacedWorkspacePersistenceAutosaveUpdate({
+    workspaceId,
+    debounceMs: AUTOSAVE_MS,
+    mutateOptimistically: ({ collections }) => {
+      collections.workspacePersistence.update(workspaceId, (draft) => {
+        applyPromptFolderShowingAllPromptsState(
+          draft,
+          promptFolderId,
+          promptTreeIsShowingAllPrompts
+        )
+      })
+      collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
+        applyPromptFolderShowingAllPromptsState(
+          draft,
+          promptFolderId,
+          promptTreeIsShowingAllPrompts
+        )
       })
     }
   })

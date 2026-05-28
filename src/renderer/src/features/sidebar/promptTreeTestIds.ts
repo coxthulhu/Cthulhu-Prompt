@@ -16,8 +16,17 @@ export const folderSettingsIconTestId = (folder: PromptFolder): string =>
 
 export const folderPromptTestId = (promptId: string): string => `prompt-folder-prompt-${promptId}`
 
+export const folderPromptShowAllTestId = (folder: PromptFolder): string =>
+  `prompt-folder-show-all-${getFolderTestKey(folder)}`
+
+export const folderPromptShowLessTestId = (folder: PromptFolder): string =>
+  `prompt-folder-show-less-${getFolderTestKey(folder)}`
+
 export const folderPromptDropIndicatorTestId = (promptId: string): string =>
   `prompt-tree-drop-indicator-prompt-${promptId}`
+
+export const folderPromptVisibilityDropIndicatorTestId = (folder: PromptFolder): string =>
+  `prompt-tree-drop-indicator-prompt-visibility-${getFolderTestKey(folder)}`
 
 export const folderDropIndicatorTestId = (folder: PromptFolder): string =>
   `prompt-tree-drop-indicator-folder-${getFolderTestKey(folder)}`

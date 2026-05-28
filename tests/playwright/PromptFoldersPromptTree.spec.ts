@@ -18,6 +18,8 @@ const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-folder-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
+const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-folder-show-all-Short"]'
+const SHORT_SHOW_LESS_SELECTOR = '[data-testid="prompt-folder-show-less-Short"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
 const samplePromptTreeRowSelector = `[data-testid="prompt-folder-prompt-${SAMPLE_PROMPT_ID}"]`
@@ -61,6 +63,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
+    await mainWindow.locator('[data-testid="prompt-folder-show-all-LongWrappedSingles"]').click()
     await scrollPromptTreeRowIntoView(mainWindow, testHelpers, TARGET_PROMPT_TREE_ROW_SELECTOR)
     const promptTreeButton = mainWindow.locator(TARGET_PROMPT_TREE_ROW_SELECTOR)
     await expect(promptTreeButton).toHaveText(TARGET_PROMPT_TITLE)
@@ -167,6 +170,58 @@ describe('Prompt folder prompt tree', () => {
     const nextTitle = 'Live prompt title sync'
     await mainWindow.keyboard.type(' prompt title sync', { delay: 20 })
     await expect(promptTreeRow).toContainText(nextTitle)
+  })
+
+  test('caps prompt tree folders and toggles show all and show less rows', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-5"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
+
+    await mainWindow.locator(SHORT_SHOW_ALL_SELECTOR).click()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 10000)
+    await expect(mainWindow.locator(SHORT_SHOW_LESS_SELECTOR)).toBeVisible()
+
+    await mainWindow.evaluate((selector) => {
+      const button = document.querySelector<HTMLButtonElement>(selector)
+      if (!button) {
+        throw new Error(`Missing prompt tree row: ${selector}`)
+      }
+      button.click()
+    }, SHORT_SHOW_LESS_SELECTOR)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
+  })
+
+  test('hides prompt visibility toggle rows while the folder is collapsed', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    const shortToggle = mainWindow.locator('[data-testid="prompt-folder-toggle-Short"]')
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
+
+    await shortToggle.click()
+    await expect(shortToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_SHOW_LESS_SELECTOR)).toHaveCount(0)
   })
 
   test('keeps placeholder fallback numbering for unopened folders with blank titles', async ({

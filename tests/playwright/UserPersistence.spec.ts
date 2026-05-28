@@ -131,6 +131,7 @@ const seedWorkspacePersistence = async (
       promptFolderId: string
       promptTreeEntryId: string
       promptTreeIsExpanded?: boolean
+      promptTreeIsShowingAllPrompts?: boolean
     }>
   }
 ): Promise<void> => {
@@ -166,13 +167,15 @@ const seedWorkspacePersistence = async (
         workspace_id,
         prompt_folder_id,
         prompt_tree_entry_id,
-        prompt_tree_is_expanded
+        prompt_tree_is_expanded,
+        prompt_tree_is_showing_all_prompts
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
         ${toSqlText(entry.promptFolderId)},
         ${toSqlText(entry.promptTreeEntryId)},
-        ${entry.promptTreeIsExpanded === false ? 0 : 1}
+        ${entry.promptTreeIsExpanded === false ? 0 : 1},
+        ${entry.promptTreeIsShowingAllPrompts === true ? 1 : 0}
       )
       `
     )
@@ -213,11 +216,12 @@ const readWorkspacePersistence = async (
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
   selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
-  promptFolderPromptTreeEntries: Array<{
-    promptFolderId: string
-    promptTreeEntryId: string
-    promptTreeIsExpanded: boolean
-  }>
+    promptFolderPromptTreeEntries: Array<{
+      promptFolderId: string
+      promptTreeEntryId: string
+      promptTreeIsExpanded: boolean
+      promptTreeIsShowingAllPrompts: boolean
+    }>
 }> => {
   const workspaceStateResult = await runSqlQuery(
     electronApp,
@@ -240,7 +244,8 @@ const readWorkspacePersistence = async (
     SELECT
       prompt_folder_id AS promptFolderId,
       prompt_tree_entry_id AS promptTreeEntryId,
-      prompt_tree_is_expanded AS promptTreeIsExpanded
+      prompt_tree_is_expanded AS promptTreeIsExpanded,
+      prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts
     FROM prompt_folder_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -266,7 +271,8 @@ const readWorkspacePersistence = async (
     promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []).map((entry) => ({
       promptFolderId: String(entry.promptFolderId),
       promptTreeEntryId: String(entry.promptTreeEntryId),
-      promptTreeIsExpanded: entry.promptTreeIsExpanded !== 0
+      promptTreeIsExpanded: entry.promptTreeIsExpanded !== 0,
+      promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts !== 0
     }))
   }
 }
@@ -749,6 +755,34 @@ describe('User Persistence', () => {
       .toBe(false)
   })
 
+  test('autosaves prompt tree show-all state', async ({ electronApp, testSetup }) => {
+    const workspacePath = '/ws/virtual'
+    const workspaceId = createDeterministicId(workspacePath)
+    const shortPromptFolderId = createDeterministicId(`${workspacePath}:Short`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Short')
+    const showAllButton = mainWindow.locator('[data-testid="prompt-folder-show-all-Short"]')
+    await expect(showAllButton).toBeVisible()
+    await showAllButton.click()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const entry = persisted.promptFolderPromptTreeEntries.find(
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === shortPromptFolderId
+          )
+          return entry?.promptTreeIsShowingAllPrompts ?? null
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true)
+  })
+
   test('persists prompt tree auto-expand state after scroll-follow expansion', async ({
     electronApp,
     testSetup
@@ -776,6 +810,83 @@ describe('User Persistence', () => {
             (promptTreeEntry) => promptTreeEntry.promptFolderId === shortPromptFolderId
           )
           return entry?.promptTreeIsExpanded ?? null
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true)
+  })
+
+  test('restores persisted prompt tree show-all state on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-prompt-tree-show-all-state'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const shortPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Short`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'virtual'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId: shortPromptFolderId },
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: shortPromptFolderId,
+          promptTreeEntryId: 'folder-settings',
+          promptTreeIsShowingAllPrompts: true
+        }
+      ]
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+  })
+
+  test('auto-shows hidden prompt tree rows when restoring tracked prompt-folder rows', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-prompt-tree-hidden-row'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const shortPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Short`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'virtual'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId: shortPromptFolderId },
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: shortPromptFolderId,
+          promptTreeEntryId: 'short-6',
+          promptTreeIsShowingAllPrompts: false
+        }
+      ]
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const entry = persisted.promptFolderPromptTreeEntries.find(
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === shortPromptFolderId
+          )
+          return entry?.promptTreeIsShowingAllPrompts ?? null
         },
         { timeout: 15000 }
       )
