@@ -1,6 +1,10 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
+
+const workspaceFolderOrderPath = (workspacePath: string): string =>
+  `${workspacePath}/Prompts/FolderOrder.json`
 
 describe('Home Screen', () => {
   test('shows the get started state on launch without a workspace', async ({ testSetup }) => {
@@ -76,13 +80,42 @@ describe('Home Screen', () => {
 
       await mainWindow.click('[data-testid="open-workspace-button"]')
 
-      const errorDialog = mainWindow.locator('[role="dialog"][aria-label="Workspace Not Found"]')
-      await expect(errorDialog).toBeVisible()
-      await expect(errorDialog).toContainText(
-        'The selected file is not a Cthulhu Prompt workspace.'
+      const errorDialog = mainWindow.locator(
+        '[role="dialog"][aria-label="Failed to Open Workspace"]'
       )
-      await expect(errorDialog).toContainText('Workspace Not Found.')
+      await expect(errorDialog).toBeVisible()
+      await expect(errorDialog).toContainText('The workspace could not be opened.')
+      await expect(errorDialog).toContainText('Invalid workspace path')
       await expect(mainWindow.locator('[data-testid="error-placeholder-button"]')).toHaveCount(0)
+    })
+
+    test('shows an error dialog when workspace folder order is missing', async ({ testSetup }) => {
+      const workspacePath = '/ws/missing-folder-order'
+      const filesystem = createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Examples',
+          displayName: 'Examples',
+          promptFolderId: 'folder-examples'
+        }
+      ])
+      delete filesystem[workspaceFolderOrderPath(workspacePath)]
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="open-workspace-button"]')
+
+      const errorDialog = mainWindow.locator(
+        '[role="dialog"][aria-label="Failed to Open Workspace"]'
+      )
+      await expect(errorDialog).toBeVisible()
+      await expect(errorDialog).toContainText('The workspace could not be opened.')
+      await expect(errorDialog).toContainText('FolderOrder.json')
+      await expect(errorDialog).toContainText('ENOENT')
+      expect(await testHelpers.isWorkspaceReady()).toBe(false)
     })
 
     test('shows create dialog for empty directory creation and completes setup', async ({
