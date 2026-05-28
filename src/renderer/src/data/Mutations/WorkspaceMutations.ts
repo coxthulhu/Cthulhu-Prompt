@@ -1,4 +1,9 @@
-import type { CloseWorkspacePayload, CreateWorkspacePayload } from '@shared/Workspace'
+import type {
+  CloseWorkspacePayload,
+  CreateWorkspacePayload,
+  MovePromptFolderPayload,
+  MovePromptFolderResponsePayload
+} from '@shared/Workspace'
 import type { IpcMutationActionResponse } from '@shared/IpcResult'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
@@ -12,6 +17,7 @@ import {
   getSelectedWorkspaceId,
   setSelectedWorkspaceId
 } from '../UiState/WorkspaceSelection.svelte.ts'
+import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 
 const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => {
   if (!workspaceId) {
@@ -70,4 +76,66 @@ export const closeWorkspace = async (): Promise<void> => {
     setSelectedWorkspaceId(null)
     clearSelectedWorkspaceCollections(selectedWorkspaceId)
   }
+}
+
+const resolvePromptFolderInsertIndex = (
+  promptFolderIds: string[],
+  orderAfterPromptFolderId: string | null
+): number | null => {
+  if (orderAfterPromptFolderId === null) {
+    return 0
+  }
+
+  const previousIndex = promptFolderIds.indexOf(orderAfterPromptFolderId)
+  return previousIndex === -1 ? null : previousIndex + 1
+}
+
+export const movePromptFolder = async (
+  workspaceId: string,
+  promptFolderId: string,
+  orderAfterPromptFolderId: string | null
+): Promise<void> => {
+  const workspace = workspaceCollection.get(workspaceId)
+
+  if (!workspace) {
+    throw new Error('Workspace not loaded')
+  }
+
+  const destinationPromptFolderIds = workspace.promptFolderIds.filter(
+    (currentPromptFolderId) => currentPromptFolderId !== promptFolderId
+  )
+  const insertIndex = resolvePromptFolderInsertIndex(
+    destinationPromptFolderIds,
+    orderAfterPromptFolderId
+  )
+
+  if (insertIndex === null) {
+    throw new Error('Order-after prompt folder not found')
+  }
+
+  const nextPromptFolderIds = [...destinationPromptFolderIds]
+  nextPromptFolderIds.splice(insertIndex, 0, promptFolderId)
+  await runRevisionMutation<MovePromptFolderResponsePayload>({
+    mutateOptimistically: ({ collections }) => {
+      collections.workspace.update(workspaceId, (draft) => {
+        draft.promptFolderIds = [...nextPromptFolderIds]
+      })
+    },
+    persistMutations: async ({ entities, invoke }) => {
+      return await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {
+        payload: {
+          workspace: entities.workspace({
+            id: workspaceId,
+            data: workspace
+          }),
+          promptFolderId,
+          orderAfterPromptFolderId
+        }
+      })
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      workspaceCollection.utils.upsertAuthoritative(payload.workspace)
+    },
+    conflictMessage: 'Prompt folder move conflict'
+  })
 }

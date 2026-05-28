@@ -4,16 +4,27 @@ import {
   setDraggedPromptRow
 } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
 import {
+  resolvePromptFolderRowDropMove,
+  type PromptFolderRowDragPayload,
+  type PromptFolderRowDropPayload
+} from '@renderer/features/drag-drop/promptFolderDrag'
+import {
   resolvePromptHandleDropMove,
   type PromptHandleDragPayload,
   type PromptHandleDropPayload
 } from '@renderer/features/drag-drop/promptHandleDrag'
 import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
+import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/PromptFolder'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
+}
+
+type PromptTreeFolderDragControllerOptions = {
+  getPromptFolderIds: () => string[]
+  getWorkspaceId: () => string | null
 }
 
 const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): PromptFolder | null => {
@@ -64,6 +75,38 @@ export const createPromptTreePromptDragController = ({
 
   return {
     handleDragStart,
+    handleDragFinish
+  }
+}
+
+export const createPromptTreeFolderDragController = ({
+  getPromptFolderIds,
+  getWorkspaceId
+}: PromptTreeFolderDragControllerOptions) => {
+  const handleDragFinish = ({
+    sourcePayload,
+    dropPayload
+  }: DragFinishResult<PromptFolderRowDragPayload, PromptFolderRowDropPayload>): void => {
+    const workspaceId = getWorkspaceId()
+    if (!workspaceId) {
+      return
+    }
+
+    const nextMove = resolvePromptFolderRowDropMove(
+      getPromptFolderIds(),
+      sourcePayload.folderId,
+      dropPayload
+    )
+    if (!nextMove) {
+      return
+    }
+
+    void runIpcBestEffort(async () => {
+      await movePromptFolder(workspaceId, nextMove.folderId, nextMove.orderAfterFolderId)
+    })
+  }
+
+  return {
     handleDragFinish
   }
 }

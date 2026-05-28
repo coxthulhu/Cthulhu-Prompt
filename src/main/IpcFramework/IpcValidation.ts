@@ -27,6 +27,7 @@ import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
   LoadWorkspaceByPathRequest,
+  MovePromptFolderPayload,
   Workspace
 } from '@shared/Workspace'
 
@@ -389,6 +390,15 @@ const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
 const parseMovePromptWireRequest: Parser<IpcRequestWithPayload<MovePromptPayload>> =
   parseWireRequestWithPayload<MovePromptPayload>(parseMovePromptPayload)
 
+const parseMovePromptFolderPayload = parseObject<MovePromptFolderPayload>({
+  workspace: parseWorkspaceRevisionPayloadEntity,
+  promptFolderId: parseString,
+  orderAfterPromptFolderId: parseNullableString
+})
+
+const parseMovePromptFolderWireRequest: Parser<IpcRequestWithPayload<MovePromptFolderPayload>> =
+  parseWireRequestWithPayload<MovePromptFolderPayload>(parseMovePromptFolderPayload)
+
 const parseSystemSettingsRevisionPayload = parseObject<SystemSettingsRevisionPayload>({
   systemSettings: parseSystemSettingsRevisionPayloadEntity
 })
@@ -471,6 +481,8 @@ export const parseUpdatePromptFolderRevisionRequest = createRequestParser(
 export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
 
 export const parseMovePromptRequest = createRequestParser(parseMovePromptWireRequest)
+
+export const parseMovePromptFolderRequest = createRequestParser(parseMovePromptFolderWireRequest)
 
 export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
   parseUpdateSystemSettingsRevisionWireRequest

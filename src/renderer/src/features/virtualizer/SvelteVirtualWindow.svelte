@@ -243,6 +243,7 @@
       class="h-full flex-1 min-w-0"
       style="overflow-anchor: none; overflow: hidden; position: relative;"
       data-testid={testId}
+      data-virtual-window-viewport
       onwheel={(event) => {
         event.preventDefault()
         handleWheel(event)

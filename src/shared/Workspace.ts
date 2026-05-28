@@ -1,6 +1,6 @@
 import type { PromptFolder } from './PromptFolder'
 import type { PromptSummaryData } from './Prompt'
-import type { RevisionEnvelope } from './Revision'
+import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 
 export interface Workspace {
@@ -8,6 +8,16 @@ export interface Workspace {
   workspacePath: string
   workspaceName: string
   promptFolderIds: string[]
+}
+
+export type MovePromptFolderPayload = {
+  workspace: RevisionPayloadEntity<Workspace>
+  promptFolderId: string
+  orderAfterPromptFolderId: string | null
+}
+
+export type MovePromptFolderResponsePayload = {
+  workspace: RevisionEnvelope<Workspace>
 }
 
 // Special-case create payload. This is command data for workspace setup,

@@ -1,4 +1,4 @@
-import { SvelteMap } from 'svelte/reactivity'
+import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { Component } from 'svelte'
 
 const DRAG_START_DISTANCE_PX = 4
@@ -87,12 +87,17 @@ type ActiveDropTarget = {
   edge: DroppableEdge | null
 }
 
+type SnapCandidate = ActiveDropTarget & {
+  distance: number
+}
+
 let activeDrag = $state<ActiveDrag | null>(null)
 let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDragGhost = $state<ActiveDragGhost | null>(null)
 let activeDropTarget: ActiveDropTarget | null = null
 const droppableRegistrationByNode = new WeakMap<HTMLElement, DroppableRegistration>()
+const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 
 export const dragDropOverlayState = {
   get activeDragGhost() {
@@ -244,6 +249,108 @@ const resolveDropEdge = (
   return cursorY < top + height / 2 ? 'top' : 'bottom'
 }
 
+const distanceToSegment = (
+  x: number,
+  y: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): number => {
+  const clampedX = Math.min(Math.max(x, Math.min(x1, x2)), Math.max(x1, x2))
+  const clampedY = Math.min(Math.max(y, Math.min(y1, y2)), Math.max(y1, y2))
+  return Math.hypot(x - clampedX, y - clampedY)
+}
+
+const distanceToRect = (x: number, y: number, rect: DOMRect): number => {
+  const clampedX = Math.min(Math.max(x, rect.left), rect.right)
+  const clampedY = Math.min(Math.max(y, rect.top), rect.bottom)
+  return Math.hypot(x - clampedX, y - clampedY)
+}
+
+const isPointInRect = (x: number, y: number, rect: DOMRect): boolean => {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+}
+
+const getVirtualViewport = (node: HTMLElement): HTMLElement | null => {
+  return node.closest('[data-virtual-window-viewport]')
+}
+
+const getClippedVirtualRect = (node: HTMLElement, x: number, y: number): DOMRect | null => {
+  const viewport = getVirtualViewport(node)
+  if (!viewport) {
+    return null
+  }
+
+  const viewportRect = viewport.getBoundingClientRect()
+  if (!isPointInRect(x, y, viewportRect)) {
+    return null
+  }
+
+  const nodeRect = node.getBoundingClientRect()
+  const left = Math.max(nodeRect.left, viewportRect.left)
+  const right = Math.min(nodeRect.right, viewportRect.right)
+  const top = Math.max(nodeRect.top, viewportRect.top)
+  const bottom = Math.min(nodeRect.bottom, viewportRect.bottom)
+
+  if (right <= left || bottom <= top) {
+    return null
+  }
+
+  return DOMRect.fromRect({
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top
+  })
+}
+
+const getSnapCandidatesForRegistration = (
+  registration: DroppableRegistration,
+  x: number,
+  y: number
+): SnapCandidate[] => {
+  const options = registration.getOptions()
+  const rect = getClippedVirtualRect(registration.node, x, y)
+  if (!rect) {
+    return []
+  }
+
+  if (options.allowedEdges === 'top-and-bottom') {
+    return [
+      {
+        registration,
+        edge: 'top',
+        distance: distanceToSegment(x, y, rect.left, rect.top, rect.right, rect.top)
+      },
+      {
+        registration,
+        edge: 'bottom',
+        distance: distanceToSegment(x, y, rect.left, rect.bottom, rect.right, rect.bottom)
+      }
+    ]
+  }
+
+  if (options.allowedEdges === 'top' || options.allowedEdges === 'bottom') {
+    const edgeY = options.allowedEdges === 'top' ? rect.top : rect.bottom
+    return [
+      {
+        registration,
+        edge: options.allowedEdges,
+        distance: distanceToSegment(x, y, rect.left, edgeY, rect.right, edgeY)
+      }
+    ]
+  }
+
+  return [
+    {
+      registration,
+      edge: null,
+      distance: distanceToRect(x, y, rect)
+    }
+  ]
+}
+
 const getDropTargetFromPoint = (
   x: number,
   y: number,
@@ -272,18 +379,51 @@ const getDropTargetFromPoint = (
   return null
 }
 
+const getSnappedDropTarget = (
+  x: number,
+  y: number,
+  dragType: string,
+  draggedPayload: unknown
+): ActiveDropTarget | null => {
+  let nearestCandidate: SnapCandidate | null = null
+
+  for (const registration of droppableRegistrations) {
+    const options = registration.getOptions()
+    if (options.dragType !== dragType) {
+      continue
+    }
+
+    for (const candidate of getSnapCandidatesForRegistration(registration, x, y)) {
+      if (!nearestCandidate || candidate.distance < nearestCandidate.distance) {
+        nearestCandidate = candidate
+      }
+    }
+  }
+
+  if (!nearestCandidate) {
+    return null
+  }
+
+  const options = nearestCandidate.registration.getOptions()
+  if (!options.canDrop(draggedPayload, nearestCandidate.edge)) {
+    return null
+  }
+
+  return {
+    registration: nearestCandidate.registration,
+    edge: nearestCandidate.edge
+  }
+}
+
 const updateActiveDropTarget = (): void => {
   if (!activeDrag) {
     setActiveDropTarget(null)
     return
   }
 
-  const matchedDropTarget = getDropTargetFromPoint(
-    cursorX,
-    cursorY,
-    activeDrag.dragType,
-    activeDrag.payload
-  )
+  const matchedDropTarget =
+    getDropTargetFromPoint(cursorX, cursorY, activeDrag.dragType, activeDrag.payload) ??
+    getSnappedDropTarget(cursorX, cursorY, activeDrag.dragType, activeDrag.payload)
 
   setActiveDropTarget(matchedDropTarget)
 }
@@ -502,6 +642,7 @@ export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
   }
 
   droppableRegistrationByNode.set(node, registration)
+  droppableRegistrations.add(registration)
   if (activeDrag) {
     updateActiveDropTarget()
   }
@@ -534,6 +675,7 @@ export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
         false
       )
       droppableRegistrationByNode.delete(node)
+      droppableRegistrations.delete(registration)
       if (activeDropTarget?.registration === registration) {
         updateActiveDropTarget()
       }

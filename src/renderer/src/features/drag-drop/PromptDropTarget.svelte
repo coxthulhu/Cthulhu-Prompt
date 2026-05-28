@@ -8,15 +8,23 @@
     type DroppableOptions,
     type DroppableState
   } from './dragDrop.svelte.ts'
-  import type { PromptHandleDragPayload, PromptHandleDropPayload } from './promptHandleDrag'
 
   export type PromptDropTargetState = {
     isOver: boolean
     edge: DroppableEdge | null
   }
 
+  type AnyDroppableOptions = Omit<
+    DroppableOptions<never, unknown>,
+    'canDrop' | 'onDrop' | 'payload'
+  > & {
+    payload?: unknown | ((edge: DroppableEdge | null) => unknown)
+    canDrop?: (payload: never, edge: DroppableEdge | null) => boolean
+    onDrop?: (payload: never) => void
+  }
+
   type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
-    getOptions: () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
+    getOptions: () => AnyDroppableOptions
     children: Snippet<[PromptDropTargetState]>
   }
 
@@ -30,7 +38,7 @@
 
   const promptDroppable: Action<
     HTMLDivElement,
-    () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
+    () => AnyDroppableOptions
   > = (node, initialGetOptions) => {
     let resolveOptions = initialGetOptions
     const readOptions = () => {

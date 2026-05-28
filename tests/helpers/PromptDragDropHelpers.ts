@@ -30,6 +30,9 @@ export const promptTreeFolderSelector = (folderName: string): string =>
 export const promptTreePromptDropIndicatorSelector = (promptId: string): string =>
   `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`
 
+export const promptTreeFolderDropIndicatorSelector = (folderName: string): string =>
+  `[data-testid="prompt-tree-drop-indicator-folder-${folderName.replace(/\s+/g, '')}"]`
+
 export const dragGhostSelector = '[data-testid="drag-ghost"]'
 
 const getRequiredBox = async (locator: Locator, errorMessage: string): Promise<ElementBox> => {
@@ -115,6 +118,17 @@ export const dragPromptTreeRowToTarget = async (
   await finishActiveDrag(page)
 }
 
+export const dragPromptTreeFolderToTarget = async (
+  page: Page,
+  folderName: string,
+  targetSelector: string,
+  verticalAlign: TargetVerticalAlign = 'center'
+): Promise<void> => {
+  await beginPromptTreeFolderDrag(page, folderName)
+  await moveActiveDragToTarget(page, targetSelector, verticalAlign)
+  await finishActiveDrag(page)
+}
+
 export const beginPromptHandleDrag = async (page: Page, promptId: string): Promise<void> => {
   await beginDragFromLocator(
     page,
@@ -128,6 +142,14 @@ export const beginPromptTreeRowDrag = async (page: Page, promptId: string): Prom
     page,
     page.locator(promptTreePromptSelector(promptId)),
     `Missing prompt tree drag geometry for ${promptId}`
+  )
+}
+
+export const beginPromptTreeFolderDrag = async (page: Page, folderName: string): Promise<void> => {
+  await beginDragFromLocator(
+    page,
+    page.locator(promptTreeFolderSelector(folderName)),
+    `Missing prompt tree folder drag geometry for ${folderName}`
   )
 }
 
