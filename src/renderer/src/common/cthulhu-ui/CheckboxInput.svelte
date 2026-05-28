@@ -53,7 +53,6 @@
   .cthulhuUiCheckboxInput {
     border-color: var(--ui-neutral-normal-border);
     background-color: var(--ui-neutral-field-surface);
-    box-shadow: var(--cthulhu-ui-shadow-field);
     color: var(--ui-normal-text);
   }
 

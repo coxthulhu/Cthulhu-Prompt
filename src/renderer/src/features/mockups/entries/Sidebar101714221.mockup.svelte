@@ -350,7 +350,6 @@
     border: 1px solid var(--ui-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-control);
     background: var(--ui-neutral-field-surface);
-    box-shadow: var(--cthulhu-ui-shadow-field);
     color: var(--ui-muted-text);
     font-size: 0.82rem;
   }

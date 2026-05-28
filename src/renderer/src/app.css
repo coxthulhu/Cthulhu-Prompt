@@ -56,7 +56,6 @@
   --cthulhu-ui-shadow-surface-highlight: inset 0 1px 0 var(--ui-neutral-muted-surface);
   --cthulhu-ui-shadow-surface-highlight-active: inset 0 1px 0
     var(--ui-neutral-normal-surface);
-  --cthulhu-ui-shadow-field: inset 0 1px 2px var(--ui-shadow-inset);
   --cthulhu-ui-shadow-focus: 0 0 0 3px var(--ui-neutral-emphasis-surface);
   --cthulhu-ui-shadow-focus-accent: 0 0 0 3px var(--ui-accent-icon-ring);
   --cthulhu-ui-shadow-focus-danger: 0 0 0 3px var(--ui-danger-normal-ring);

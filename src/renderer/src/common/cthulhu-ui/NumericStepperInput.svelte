@@ -121,7 +121,6 @@
     align-items: stretch;
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
-    box-shadow: var(--cthulhu-ui-shadow-field);
     color: var(--ui-normal-text);
     grid-template-columns: 40px minmax(80px, auto) 40px;
     min-width: 0;
@@ -132,15 +131,11 @@
   }
 
   .cthulhuUiNumericStepperInput:focus-within {
-    box-shadow:
-      var(--cthulhu-ui-shadow-focus),
-      var(--cthulhu-ui-shadow-field);
+    box-shadow: var(--cthulhu-ui-shadow-focus);
   }
 
   .cthulhuUiNumericStepperInput[data-invalid='true']:focus-within {
-    box-shadow:
-      var(--cthulhu-ui-shadow-focus-danger),
-      var(--cthulhu-ui-shadow-field);
+    box-shadow: var(--cthulhu-ui-shadow-focus-danger);
   }
 
   .cthulhuUiNumericStepperInput:focus-within .cthulhuUiNumericStepperInputButton,

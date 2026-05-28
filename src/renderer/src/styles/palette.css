@@ -31,7 +31,6 @@
 
   /* Shadows */
   --ui-shadow-raised: oklch(0 0 0 / 20%);
-  --ui-shadow-inset: oklch(0 0 0 / 25%);
 
   /* Neutral */
   --ui-neutral-muted-surface: oklch(1 0 0 / 3%);
