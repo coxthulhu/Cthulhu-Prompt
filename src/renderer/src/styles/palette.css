@@ -19,11 +19,10 @@
   /* Cards */
   --ui-card-normal-surface-gradient-start: oklch(1 0 0 / 6%);
   --ui-card-normal-surface-gradient-end: oklch(1 0 0 / 3%);
-  --ui-card-solid-surface: oklch(1 0 0 / 4%);
+  --ui-card-solid-surface: oklch(0.16 0 0);
+  --ui-card-inset-surface: oklch(1 0 0 / 5%);
   --ui-card-normal-border: oklch(1 0 0 / 12%);
   --ui-card-normal-shadow: oklch(0 0 0 / 28%);
-  --ui-card-nested-surface-gradient-start: oklch(1 0 0 / 8%);
-  --ui-card-nested-surface-gradient-end: oklch(1 0 0 / 5%);
   --ui-card-nested-surface: oklch(0.145 0.011 266.847 / 80%);
   --ui-card-nested-border: oklch(1 0 0 / 6%);
   --ui-card-nested-inset-highlight: oklch(1 0 0 / 8%);

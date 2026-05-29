@@ -66,12 +66,11 @@
   }
 
   .cthulhuUiCardSurface--solid {
-    background-color: oklch(0 0 0);
-    background-image: linear-gradient(var(--ui-card-solid-surface), var(--ui-card-solid-surface));
+    background: var(--ui-card-solid-surface);
   }
 
   .cthulhuUiCardSurface--inset {
-    background: var(--ui-card-nested-surface-gradient-end);
+    background: var(--ui-card-inset-surface);
     border: 0;
     box-shadow: none;
   }

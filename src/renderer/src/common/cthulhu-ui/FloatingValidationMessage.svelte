@@ -28,19 +28,11 @@
 <style>
   .cthulhuUiFloatingValidationMessage
     :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow[data-variant='danger']) {
-    background-color: var(--background);
-    background-image: linear-gradient(
-      var(--ui-danger-normal-surface),
-      var(--ui-danger-normal-surface)
-    );
+    background: var(--ui-danger-normal-surface);
   }
 
   .cthulhuUiFloatingValidationMessage
     :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow[data-variant='warning']) {
-    background-color: var(--background);
-    background-image: linear-gradient(
-      var(--ui-warning-normal-surface),
-      var(--ui-warning-normal-surface)
-    );
+    background: var(--ui-warning-normal-surface);
   }
 </style>
