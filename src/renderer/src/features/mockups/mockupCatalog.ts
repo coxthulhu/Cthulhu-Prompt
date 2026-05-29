@@ -24,7 +24,9 @@ const buildMockupEntry = (path: string, module: MockupModule): MockupEntry => {
 
 export const mockups: MockupEntry[] = Object.entries(mockupModules)
   .map(([path, module]) => buildMockupEntry(path, module))
-  .sort((left, right) => left.title.localeCompare(right.title) || left.path.localeCompare(right.path))
+  .sort(
+    (left, right) => left.title.localeCompare(right.title) || left.path.localeCompare(right.path)
+  )
 
 export const hasMockup = (mockupId: string): boolean => {
   return mockups.some((mockup) => mockup.id === mockupId)

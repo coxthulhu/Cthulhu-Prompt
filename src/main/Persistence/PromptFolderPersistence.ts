@@ -1,8 +1,5 @@
 import type { PromptFolder } from '@shared/PromptFolder'
-import type {
-  PromptFolderInfoFile,
-  PromptFolderOrderFile
-} from '../DiskTypes/WorkspaceDiskTypes'
+import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,

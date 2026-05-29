@@ -193,7 +193,11 @@ export const parseWorkspaceScreenSelection = (
     return null
   }
 
-  if (selectedScreen === 'home' || selectedScreen === 'settings' || selectedScreen === 'test-screen') {
+  if (
+    selectedScreen === 'home' ||
+    selectedScreen === 'settings' ||
+    selectedScreen === 'test-screen'
+  ) {
     return selectedScreenData === null ? { selectedScreen, selectedScreenData } : null
   }
 

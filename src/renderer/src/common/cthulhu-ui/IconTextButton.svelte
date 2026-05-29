@@ -71,11 +71,7 @@
 
 {#if href}
   <a
-    class={mergeClasses(
-      baseAnchorClass,
-      variantClass,
-      className
-    )}
+    class={mergeClasses(baseAnchorClass, variantClass, className)}
     data-active={state === 'active' ? 'true' : 'false'}
     data-disabled={isDisabled ? 'true' : undefined}
     data-testid={testId}
@@ -94,11 +90,7 @@
 {:else}
   <button
     type="button"
-    class={mergeClasses(
-      baseButtonClass,
-      variantClass,
-      className
-    )}
+    class={mergeClasses(baseButtonClass, variantClass, className)}
     data-active={state === 'active' ? 'true' : 'false'}
     data-testid={testId}
     {onclick}

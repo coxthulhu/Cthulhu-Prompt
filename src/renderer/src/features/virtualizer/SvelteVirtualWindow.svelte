@@ -160,9 +160,7 @@
         (sum, rowId) => sum + (rows.find((row) => row.id === rowId)?.height ?? 0),
         0
       )
-      applyProgrammaticScrollTop(
-        getScrollTopPx() + blockHeight * (direction === 'up' ? -1 : 1)
-      )
+      applyProgrammaticScrollTop(getScrollTopPx() + blockHeight * (direction === 'up' ? -1 : 1))
     }
   }
 

@@ -36,10 +36,10 @@
     edge: dropState?.edge ?? null
   })
 
-  const promptDroppable: Action<
-    HTMLDivElement,
-    () => AnyDroppableOptions
-  > = (node, initialGetOptions) => {
+  const promptDroppable: Action<HTMLDivElement, () => AnyDroppableOptions> = (
+    node,
+    initialGetOptions
+  ) => {
     let resolveOptions = initialGetOptions
     const readOptions = () => {
       const options = resolveOptions()

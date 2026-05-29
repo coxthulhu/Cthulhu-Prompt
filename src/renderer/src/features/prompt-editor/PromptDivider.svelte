@@ -30,7 +30,9 @@
     data-drop-over={isOver ? 'true' : 'false'}
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
   >
-    <div class="grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5">
+    <div
+      class="grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5"
+    >
       <Separator
         class={isOver
           ? '!h-2.5 rounded-full border border-[var(--ui-info-normal-border)] !bg-[var(--ui-info-normal-surface)] shadow-[0_0_0_1px_var(--ui-info-normal-border),inset_0_1px_0_var(--ui-card-nested-raised-inset-highlight)]'

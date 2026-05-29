@@ -18,11 +18,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
 
   const hasTitle = keys.includes('title')
   const hasFallbackTitle = keys.includes('fallbackTitle')
-  if (
-    !keys.includes('id') ||
-    !keys.includes('createdAt') ||
-    hasTitle === hasFallbackTitle
-  ) {
+  if (!keys.includes('id') || !keys.includes('createdAt') || hasTitle === hasFallbackTitle) {
     return false
   }
 

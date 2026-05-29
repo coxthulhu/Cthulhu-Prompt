@@ -117,7 +117,12 @@
 </script>
 
 {#if open}
-  <div class="cthulhuUiDialogLayer" role="presentation" use:portalToBody onclick={handleOutsideClick}>
+  <div
+    class="cthulhuUiDialogLayer"
+    role="presentation"
+    use:portalToBody
+    onclick={handleOutsideClick}
+  >
     <CardSurface
       variant="solid"
       class={mergeClasses('flex flex-col gap-4 p-4', className)}
@@ -129,13 +134,7 @@
       <div class="flex items-start gap-4">
         <div class="min-w-0 flex-1">
           {#if headerStyle === 'section'}
-            <SectionHeader
-              {title}
-              {description}
-              {icon}
-              {iconVariant}
-              headingLevel={2}
-            />
+            <SectionHeader {title} {description} {icon} {iconVariant} headingLevel={2} />
           {:else}
             <TitleBlock {title} {description} {icon} {iconVariant} size="large" />
           {/if}

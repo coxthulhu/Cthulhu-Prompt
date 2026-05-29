@@ -7,4 +7,3 @@ export const getPromptLineCount = (text: string): number => {
 }
 
 export const getPromptTokenCount = (text: string): number => estimateTokenCount(text)
-

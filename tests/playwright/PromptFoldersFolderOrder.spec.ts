@@ -52,9 +52,7 @@ const readWorkspacePromptFolderIds = async (
 const readPromptTreeFolderTestIds = async (page: Page): Promise<string[]> => {
   return await page
     .locator('[data-testid^="regular-prompt-folder-"]')
-    .evaluateAll((elements) =>
-      elements.map((element) => element.getAttribute('data-testid') ?? '')
-    )
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid') ?? ''))
 }
 
 const createEmptyFolderWorkspace = (workspacePath: string, folderNames: string[]) =>
@@ -93,12 +91,14 @@ describe('Prompt Folder Order', () => {
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await expect.poll(async () => await readPromptTreeFolderTestIds(mainWindow)).toEqual([
-      'regular-prompt-folder-middle',
-      'regular-prompt-folder-zeta',
-      'regular-prompt-folder-Alpha',
-      'regular-prompt-folder-beta'
-    ])
+    await expect
+      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .toEqual([
+        'regular-prompt-folder-middle',
+        'regular-prompt-folder-zeta',
+        'regular-prompt-folder-Alpha',
+        'regular-prompt-folder-beta'
+      ])
     await expect(
       await readWorkspacePromptFolderIds(electronApp, FOLDER_ORDER_WORKSPACE_PATH)
     ).toEqual(['missing-folder', 'folder-middle', 'folder-zeta'])
@@ -129,13 +129,17 @@ describe('Prompt Folder Order', () => {
     await expect(mainWindow.locator('[data-testid="regular-prompt-folder-NewFolder"]')).toHaveCount(
       1
     )
-    await expect.poll(async () => await readPromptTreeFolderTestIds(mainWindow)).toEqual([
-      'regular-prompt-folder-NewFolder',
-      'regular-prompt-folder-Alpha',
-      'regular-prompt-folder-Beta'
-    ])
     await expect
-      .poll(async () => await readWorkspacePromptFolderIds(electronApp, CREATE_FOLDER_WORKSPACE_PATH))
+      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .toEqual([
+        'regular-prompt-folder-NewFolder',
+        'regular-prompt-folder-Alpha',
+        'regular-prompt-folder-Beta'
+      ])
+    await expect
+      .poll(
+        async () => await readWorkspacePromptFolderIds(electronApp, CREATE_FOLDER_WORKSPACE_PATH)
+      )
       .toEqual([expect.not.stringMatching(/^folder-(alpha|beta)$/), 'folder-alpha', 'folder-beta'])
   })
 
@@ -161,14 +165,17 @@ describe('Prompt Folder Order', () => {
       'top'
     )
 
-    await expect.poll(async () => await readPromptTreeFolderTestIds(mainWindow)).toEqual([
-      'regular-prompt-folder-Gamma',
-      'regular-prompt-folder-Alpha',
-      'regular-prompt-folder-Beta'
-    ])
     await expect
-      .poll(async () =>
-        await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
+      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .toEqual([
+        'regular-prompt-folder-Gamma',
+        'regular-prompt-folder-Alpha',
+        'regular-prompt-folder-Beta'
+      ])
+    await expect
+      .poll(
+        async () =>
+          await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
       )
       .toEqual(['folder-gamma', 'folder-alpha', 'folder-beta'])
 
@@ -179,14 +186,17 @@ describe('Prompt Folder Order', () => {
       'bottom'
     )
 
-    await expect.poll(async () => await readPromptTreeFolderTestIds(mainWindow)).toEqual([
-      'regular-prompt-folder-Alpha',
-      'regular-prompt-folder-Beta',
-      'regular-prompt-folder-Gamma'
-    ])
     await expect
-      .poll(async () =>
-        await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
+      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .toEqual([
+        'regular-prompt-folder-Alpha',
+        'regular-prompt-folder-Beta',
+        'regular-prompt-folder-Gamma'
+      ])
+    await expect
+      .poll(
+        async () =>
+          await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
       )
       .toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
   })
@@ -213,11 +223,13 @@ describe('Prompt Folder Order', () => {
     await expect(mainWindow.locator(promptTreeFolderDropIndicatorSelector('Beta'))).toHaveCount(0)
     await finishActiveDrag(mainWindow)
 
-    await expect.poll(async () => await readPromptTreeFolderTestIds(mainWindow)).toEqual([
-      'regular-prompt-folder-Alpha',
-      'regular-prompt-folder-Beta',
-      'regular-prompt-folder-Gamma'
-    ])
+    await expect
+      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .toEqual([
+        'regular-prompt-folder-Alpha',
+        'regular-prompt-folder-Beta',
+        'regular-prompt-folder-Gamma'
+      ])
     await expect(
       await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
     ).toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
@@ -247,8 +259,9 @@ describe('Prompt Folder Order', () => {
     await finishActiveDrag(mainWindow)
 
     await expect
-      .poll(async () =>
-        await readWorkspacePromptFolderIds(electronApp, SNAP_FOLDER_ORDER_WORKSPACE_PATH)
+      .poll(
+        async () =>
+          await readWorkspacePromptFolderIds(electronApp, SNAP_FOLDER_ORDER_WORKSPACE_PATH)
       )
       .toEqual(['folder-beta', 'folder-gamma', 'folder-alpha'])
   })

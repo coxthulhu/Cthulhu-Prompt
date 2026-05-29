@@ -57,9 +57,7 @@ export const createPromptEditorModelUri = (promptId: string): monaco.Uri => {
 }
 
 export const createPromptFolderDescriptionModelUri = (promptFolderId: string): monaco.Uri => {
-  return monaco.Uri.file(
-    `${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-descriptions/${promptFolderId}.md`
-  )
+  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-descriptions/${promptFolderId}.md`)
 }
 
 export const warmupMonacoEditor = async (): Promise<void> => {

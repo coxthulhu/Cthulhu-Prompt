@@ -80,16 +80,11 @@ async function measurePromptFolders(
   const folderDisplayName = prompt.title
   const rowSelector = promptEditorSelector(prompt.id)
   const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
-  const estimatedRowHeight = estimatePromptEditorHeight(
-    prompt.promptText,
-    0,
-    0,
-    {
-      fontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize,
-      minLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines,
-      maxLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
-    }
-  )
+  const estimatedRowHeight = estimatePromptEditorHeight(prompt.promptText, 0, 0, {
+    fontSize: DEFAULT_SYSTEM_SETTINGS.promptFontSize,
+    minLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines,
+    maxLines: DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
+  })
   const setupPrompt =
     folderDisplayName === heightTestPrompts.singleLine.title
       ? heightTestPrompts.tenLine

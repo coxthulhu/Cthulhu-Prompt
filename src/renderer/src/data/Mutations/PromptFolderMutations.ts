@@ -58,18 +58,15 @@ export const mutatePacedPromptFolderDescriptionAutosaveUpdate = ({
       const mutationResult = await ipcInvokeWithPayload<
         IpcMutationPayloadResult<PromptFolderRevisionResponsePayload>,
         UpdatePromptFolderDescriptionPayload
-      >(
-        'update-prompt-folder-description',
-        {
-          promptFolder: {
-            id: promptFolderId,
-            expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
-            data: {
-              folderDescription: latestPromptFolder.folderDescription
-            }
+      >('update-prompt-folder-description', {
+        promptFolder: {
+          id: promptFolderId,
+          expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
+          data: {
+            folderDescription: latestPromptFolder.folderDescription
           }
         }
-      )
+      })
 
       if (mutationResult.success) {
         promptFolderDraftCollection.utils.acceptMutations(transaction)

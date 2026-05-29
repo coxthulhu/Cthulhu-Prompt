@@ -205,9 +205,7 @@
           <h2
             class="cthulhuHomeSecondaryTitle"
             data-testid="home-title"
-            style:font-size={secondaryTitleFontSizePx
-              ? `${secondaryTitleFontSizePx}px`
-              : undefined}
+            style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
           >
             {secondaryTitleText}
           </h2>
@@ -244,11 +242,12 @@
 
               <div class="cthulhuHomeGetStartedText">
                 <p>
-                  Cthulhu Prompt is a prompt editor and manager that stores your prompts as a
-                  series of Markdown files in a workspace folder.
+                  Cthulhu Prompt is a prompt editor and manager that stores your prompts as a series
+                  of Markdown files in a workspace folder.
                 </p>
                 <p>
-                  To get started, you can create a new workspace folder, or open an existing workspace to continue where you left off.
+                  To get started, you can create a new workspace folder, or open an existing
+                  workspace to continue where you left off.
                 </p>
               </div>
 

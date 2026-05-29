@@ -31,10 +31,7 @@ export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile 
   return parsed
 }
 
-const readPromptFolderInfo = (
-  workspacePath: string,
-  folderName: string
-): PromptFolderInfoFile => {
+const readPromptFolderInfo = (workspacePath: string, folderName: string): PromptFolderInfoFile => {
   const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
   return readJsonFile<PromptFolderInfoFile>(infoPath)
 }

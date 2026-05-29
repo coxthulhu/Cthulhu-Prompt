@@ -32,11 +32,7 @@ const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string):
 const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): void => {
   const fs = getFs()
   const workspaceInfoPath = resolveWorkspaceInfoPath(workspacePath, workspaceName)
-  const content = JSON.stringify(
-    { workspaceId: compactGuid(randomUUID()), workspaceName },
-    null,
-    2
-  )
+  const content = JSON.stringify({ workspaceId: compactGuid(randomUUID()), workspaceName }, null, 2)
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
 }
 

@@ -182,20 +182,14 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Collapse All Prompt Folders'
     )
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    )
+    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
     await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
 
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    )
+    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
       'aria-label',
       'Expand All Prompt Folders'
@@ -220,10 +214,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.locator(DEVELOPMENT_TOGGLE).click()
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    )
+    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
 
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
@@ -233,10 +224,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    )
+    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
       'aria-label',
       'Collapse All Prompt Folders'

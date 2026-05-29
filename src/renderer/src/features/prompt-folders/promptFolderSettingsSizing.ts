@@ -86,9 +86,6 @@ export const getPromptFolderSettingsMonacoHeightFromRowPx = (rowHeightPx: number
   return rowHeightPx - SETTINGS_FIXED_HEIGHT_PX
 }
 
-export const estimatePromptFolderSettingsHeight = (
-  text: string,
-  fontSize: number
-): number => {
+export const estimatePromptFolderSettingsHeight = (text: string, fontSize: number): number => {
   return getPromptFolderSettingsHeightPx(estimatePromptFolderSettingsMonacoHeight(text, fontSize))
 }

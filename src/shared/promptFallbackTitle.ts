@@ -15,12 +15,11 @@ export type PromptTitleUpdateOptions = {
   fallbackTitleWhenTitleCleared?: string
 }
 
-export type PromptTitleUpdateForPromptIdsOptions<
-  TPrompt extends PromptFallbackTitleCandidate
-> = Omit<PromptTitleUpdateOptions, 'prompts'> & {
-  promptIds: string[]
-  lookupPrompt: (promptId: string) => TPrompt | null | undefined
-}
+export type PromptTitleUpdateForPromptIdsOptions<TPrompt extends PromptFallbackTitleCandidate> =
+  Omit<PromptTitleUpdateOptions, 'prompts'> & {
+    promptIds: string[]
+    lookupPrompt: (promptId: string) => TPrompt | null | undefined
+  }
 
 export const getPromptDisplayTitle = (
   prompt: Pick<PromptFallbackTitleCandidate, 'title' | 'fallbackTitle'>
@@ -103,9 +102,7 @@ export const resolvePromptTitleUpdate = ({
   }
 }
 
-export const resolvePromptTitleUpdateForPromptIds = <
-  TPrompt extends PromptFallbackTitleCandidate
->({
+export const resolvePromptTitleUpdateForPromptIds = <TPrompt extends PromptFallbackTitleCandidate>({
   promptIds,
   lookupPrompt,
   promptId,

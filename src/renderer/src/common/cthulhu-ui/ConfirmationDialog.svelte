@@ -54,6 +54,6 @@
   cancelIcon={X}
   submitVariant={styles.submitVariant}
   submitTestId={confirmTestId}
-  oncancel={oncancel}
+  {oncancel}
   onsubmit={onconfirm}
 />

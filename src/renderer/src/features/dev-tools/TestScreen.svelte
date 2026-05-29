@@ -53,12 +53,7 @@
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
-  type IconOnlyButtonVariant =
-    | 'outline'
-    | 'transparent'
-    | 'dim-border'
-    | 'accent'
-    | 'danger'
+  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'dim-border' | 'accent' | 'danger'
   type IconTextButtonState = 'active' | 'enabled' | 'disabled'
   type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
 
@@ -147,7 +142,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="AccentIconTile" description="Every tile variant and size." size="small" />
+        <TitleBlock
+          title="AccentIconTile"
+          description="Every tile variant and size."
+          size="small"
+        />
 
         <div class="tile-matrix">
           {#each accentIconTileVariants as variant (variant)}
@@ -164,7 +163,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section component-section-wide">
-        <TitleBlock title="IconTextButton" description="Neutral, accent, and nav states." size="small" />
+        <TitleBlock
+          title="IconTextButton"
+          description="Neutral, accent, and nav states."
+          size="small"
+        />
 
         <div class="button-matrix">
           {#each iconTextButtonVariants as variant (variant)}
@@ -181,7 +184,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section component-section-wide">
-        <TitleBlock title="IconOnlyButton" description="Every icon-only variant and size." size="small" />
+        <TitleBlock
+          title="IconOnlyButton"
+          description="Every icon-only variant and size."
+          size="small"
+        />
 
         <div class="button-matrix">
           {#each iconOnlyButtonVariants as variant (variant)}
@@ -241,7 +248,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="Inputs" description="Text, numeric, file, checkbox, and toggle controls." size="small" />
+        <TitleBlock
+          title="Inputs"
+          description="Text, numeric, file, checkbox, and toggle controls."
+          size="small"
+        />
 
         <div class="form-grid">
           <TextInput bind:value={standardText} aria-label="Standard text input" />
@@ -251,7 +262,11 @@
             aria-invalid="true"
             placeholder="Invalid text"
           />
-          <TextInput bind:value={readonlyPath} aria-label="Readonly display input" readonlyDisplay />
+          <TextInput
+            bind:value={readonlyPath}
+            aria-label="Readonly display input"
+            readonlyDisplay
+          />
           <NumericInput bind:value={numericValue} aria-label="Numeric input" />
           <NumericInput
             bind:value={invalidNumericValue}
@@ -287,14 +302,24 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="Message Rows" description="Inline guidance, warnings, and validation errors." size="small" />
+        <TitleBlock
+          title="Message Rows"
+          description="Inline guidance, warnings, and validation errors."
+          size="small"
+        />
 
         <div class="stack">
-          <InfoRow text="Use this row for short informational guidance that helps explain the surrounding control or section." />
+          <InfoRow
+            text="Use this row for short informational guidance that helps explain the surrounding control or section."
+          />
           <MessageRow text="Review this value before saving." variant="warning" />
           <MessageRow text="Prompt folder name is required." variant="danger" />
           <FloatingValidationMessage message="Prompt folder name is required.">
-            <TextInput value="" placeholder="Floating validation anchor" aria-label="Validation field" />
+            <TextInput
+              value=""
+              placeholder="Floating validation anchor"
+              aria-label="Validation field"
+            />
           </FloatingValidationMessage>
           <FloatingValidationMessage message="Review this value before saving." variant="warning">
             <TextInput value="Draft value" aria-label="Warning validation field" />
@@ -303,7 +328,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="SectionHeader" description="Section titles with optional line variants." size="small" />
+        <TitleBlock
+          title="SectionHeader"
+          description="Section titles with optional line variants."
+          size="small"
+        />
 
         <div class="stack">
           <SectionHeader
@@ -325,11 +354,7 @@
 
         <div class="variant-controls">
           {#each statusBadgeVariants as variant (variant)}
-            <StatusBadge
-              icon={variant === 'success' ? Check : Sparkles}
-              text={variant}
-              {variant}
-            />
+            <StatusBadge icon={variant === 'success' ? Check : Sparkles} text={variant} {variant} />
           {/each}
         </div>
       </CardSurface>
@@ -339,7 +364,12 @@
 
         <div class="stack">
           <TitleBlock title="Small title" size="small" />
-          <TitleBlock title="Large title" description="Large title with default icon variant." icon={Info} size="large" />
+          <TitleBlock
+            title="Large title"
+            description="Large title with default icon variant."
+            icon={Info}
+            size="large"
+          />
           {#each titleBlockIconVariants as iconVariant (iconVariant)}
             <TitleBlock
               title={iconVariant}
@@ -353,7 +383,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="Display Components" description="Read-only fields and stat cards." size="small" />
+        <TitleBlock
+          title="Display Components"
+          description="Read-only fields and stat cards."
+          size="small"
+        />
 
         <div class="display-grid">
           <IconPillSurface label="Workspace" icon={FolderOpen}>
@@ -380,7 +414,11 @@
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="Dialogs" description="Dialog icon and submit variants plus error dialog." size="small" />
+        <TitleBlock
+          title="Dialogs"
+          description="Dialog icon and submit variants plus error dialog."
+          size="small"
+        />
 
         <div class="variant-controls">
           <IconTextButton

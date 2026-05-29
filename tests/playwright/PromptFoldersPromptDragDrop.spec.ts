@@ -148,11 +148,7 @@ const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragG
   })
 }
 
-const expectDragGhostNear = async (
-  locator: Locator,
-  x: number,
-  y: number
-): Promise<void> => {
+const expectDragGhostNear = async (locator: Locator, x: number, y: number): Promise<void> => {
   await expect
     .poll(async () => {
       const box = await locator.boundingBox()
@@ -353,9 +349,7 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID))
-    await expect(
-      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))
-    ).toHaveCount(0)
+    await expect(mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))).toHaveCount(0)
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
@@ -397,16 +391,12 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await beginPromptHandleDrag(mainWindow, DEV_2_ID)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID), 'bottom')
-    await expect(
-      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))
-    ).toHaveCount(0)
+    await expect(mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))).toHaveCount(0)
     await finishActiveDrag(mainWindow)
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_2_ID), 'top')
-    await expect(
-      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_2_ID))
-    ).toHaveCount(0)
+    await expect(mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_2_ID))).toHaveCount(0)
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])

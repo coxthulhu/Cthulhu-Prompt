@@ -337,10 +337,11 @@ const parsePromptRevisionPayload = parseObject<PromptRevisionPayload>({
 const parseUpdatePromptRevisionWireRequest: Parser<IpcRequestWithPayload<PromptRevisionPayload>> =
   parseWireRequestWithPayload<PromptRevisionPayload>(parsePromptRevisionPayload)
 
-const parseUpdatePromptFolderDescriptionPayload =
-  parseObject<UpdatePromptFolderDescriptionPayload>({
+const parseUpdatePromptFolderDescriptionPayload = parseObject<UpdatePromptFolderDescriptionPayload>(
+  {
     promptFolder: parsePromptFolderDescriptionUpdatePayloadEntity
-  })
+  }
+)
 
 const parseUpdatePromptFolderDescriptionWireRequest: Parser<
   IpcRequestWithPayload<UpdatePromptFolderDescriptionPayload>

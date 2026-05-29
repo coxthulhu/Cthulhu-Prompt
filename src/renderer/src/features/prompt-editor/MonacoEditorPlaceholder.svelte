@@ -11,9 +11,7 @@
   let { heightPx, sizingConfig, class: className }: Props = $props()
 
   // Derive a stable placeholder height that matches Monaco's configured bounds.
-  const clampedHeightPx = $derived(
-    clampMonacoHeightPx(Math.ceil(heightPx), sizingConfig)
-  )
+  const clampedHeightPx = $derived(clampMonacoHeightPx(Math.ceil(heightPx), sizingConfig))
 </script>
 
 <div

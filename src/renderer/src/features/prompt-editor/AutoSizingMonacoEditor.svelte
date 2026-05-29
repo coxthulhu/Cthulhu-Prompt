@@ -114,10 +114,7 @@
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
-    return clampMonacoHeightPx(
-      Math.ceil(editor.getContentHeight()),
-      sizingConfig
-    )
+    return clampMonacoHeightPx(Math.ceil(editor.getContentHeight()), sizingConfig)
   }
 
   const layoutEditor = (nextHeightPx?: number): number => {

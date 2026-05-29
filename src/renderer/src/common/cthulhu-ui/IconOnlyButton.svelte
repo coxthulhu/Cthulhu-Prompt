@@ -4,12 +4,7 @@
   import { mergeClasses } from './mergeClasses'
 
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
-  type IconOnlyButtonVariant =
-    | 'outline'
-    | 'transparent'
-    | 'dim-border'
-    | 'accent'
-    | 'danger'
+  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'dim-border' | 'accent' | 'danger'
   type IconOnlyButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -70,7 +65,7 @@
     buttonAction = null,
     buttonActionParameter,
     grabCursor = false,
-    onclick,
+    onclick
   }: Props = $props()
 
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)

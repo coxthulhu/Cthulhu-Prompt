@@ -19,9 +19,7 @@ describe('prompt fallback title helpers', () => {
   })
 
   it('shows the fallback title when the explicit title is blank', () => {
-    expect(getPromptDisplayTitle({ title: '   ', fallbackTitle: 'New Prompt' })).toBe(
-      'New Prompt'
-    )
+    expect(getPromptDisplayTitle({ title: '   ', fallbackTitle: 'New Prompt' })).toBe('New Prompt')
   })
 
   it('clears the fallback title when setting an explicit title', () => {

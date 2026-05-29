@@ -1,8 +1,5 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
-import {
-  getPromptDisplayTitle,
-  resolvePromptTitleUpdate
-} from '@shared/promptFallbackTitle'
+import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import type { PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
@@ -219,15 +216,14 @@ export function createBasicWorkspace(
   const workspaceName =
     typeof settings.workspaceName === 'string'
       ? settings.workspaceName
-      : getWorkspaceInfoPath(workspacePath).split('/').pop()!.replace(/\.cprompt\.json$/, '')
+      : getWorkspaceInfoPath(workspacePath)
+          .split('/')
+          .pop()!
+          .replace(/\.cprompt\.json$/, '')
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
-    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(
-      { promptFolderIds: [] },
-      null,
-      2
-    ),
+    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify({ promptFolderIds: [] }, null, 2),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,

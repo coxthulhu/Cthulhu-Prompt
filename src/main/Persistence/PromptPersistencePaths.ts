@@ -31,10 +31,7 @@ export const isWorkspaceInfoPath = (workspaceInfoPath: string): boolean => {
   return workspaceInfoPath.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX)
 }
 
-export const resolvePromptFolderOrderPath = (
-  workspacePath: string,
-  folderName: string
-): string => {
+export const resolvePromptFolderOrderPath = (workspacePath: string, folderName: string): string => {
   return path.join(resolvePromptFolderPath(workspacePath, folderName), PROMPT_FOLDER_ORDER_FILENAME)
 }
 
@@ -52,10 +49,7 @@ export const resolvePromptFolderInfoDirectoryPath = (
   )
 }
 
-export const resolvePromptFolderInfoPath = (
-  workspacePath: string,
-  folderName: string
-): string => {
+export const resolvePromptFolderInfoPath = (workspacePath: string, folderName: string): string => {
   return path.join(
     resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
     PROMPT_FOLDER_INFO_FILENAME

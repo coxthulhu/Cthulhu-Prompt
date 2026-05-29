@@ -50,15 +50,15 @@ export async function focusMonacoEditor(
 
       const registry = (
         window as unknown as {
-        __cthulhuMonacoEditors?: Array<{
-          container: HTMLElement | null
-          editor: {
-            focus: () => void
-            hasTextFocus?: () => boolean
-          }
-        }>
-      }
-    ).__cthulhuMonacoEditors
+          __cthulhuMonacoEditors?: Array<{
+            container: HTMLElement | null
+            editor: {
+              focus: () => void
+              hasTextFocus?: () => boolean
+            }
+          }>
+        }
+      ).__cthulhuMonacoEditors
 
       const entry = registry?.find((item) => {
         if (!item?.container) return false

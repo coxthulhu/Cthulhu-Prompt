@@ -288,13 +288,7 @@ describe('Prompt folder prompt management', () => {
       .toBe(0)
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
-      .toEqual([
-        BOUNDARY_2_ID,
-        BOUNDARY_1_ID,
-        MOVE_ANCHOR_1_ID,
-        MOVE_ANCHOR_2_ID,
-        MOVE_ANCHOR_3_ID
-      ])
+      .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_3_ID])
 
     const moveAnchorUpSelector = moveUpSelector(MOVE_ANCHOR_2_ID)
     await scrollUntilMounted(mainWindow, testHelpers, moveAnchorUpSelector)
@@ -316,13 +310,7 @@ describe('Prompt folder prompt management', () => {
       .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
-      .toEqual([
-        BOUNDARY_2_ID,
-        BOUNDARY_1_ID,
-        MOVE_ANCHOR_2_ID,
-        MOVE_ANCHOR_1_ID,
-        MOVE_ANCHOR_3_ID
-      ])
+      .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_3_ID])
 
     const moveAnchorDownSelector = moveDownSelector(MOVE_ANCHOR_2_ID)
     await testHelpers.scrollVirtualElementIntoView(
@@ -336,20 +324,12 @@ describe('Prompt folder prompt management', () => {
 
     await expect
       .poll(async () =>
-        Math.abs(
-          (await getElementTop(mainWindow, moveAnchorDownSelector)) - moveDownTopBefore
-        )
+        Math.abs((await getElementTop(mainWindow, moveAnchorDownSelector)) - moveDownTopBefore)
       )
       .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
-      .toEqual([
-        BOUNDARY_2_ID,
-        BOUNDARY_1_ID,
-        MOVE_ANCHOR_1_ID,
-        MOVE_ANCHOR_2_ID,
-        MOVE_ANCHOR_3_ID
-      ])
+      .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_3_ID])
   })
 
   test('preserves prompt order after navigating away', async ({ testSetup }) => {

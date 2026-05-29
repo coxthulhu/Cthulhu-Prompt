@@ -118,9 +118,7 @@
     const folderCount = promptFolders.length
     return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
   })
-  const canTogglePromptFolders = $derived(
-    folderListState === 'ready' && promptFolders.length > 0
-  )
+  const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
   let areAllPromptFoldersCollapsed = $state(true)
@@ -131,9 +129,7 @@
     shouldShowExpandAllPromptFolders ? ChevronsUpDown : ChevronsDownUp
   )
   const promptFolderExpansionActionLabel = $derived(
-    shouldShowExpandAllPromptFolders
-      ? 'Expand All Prompt Folders'
-      : 'Collapse All Prompt Folders'
+    shouldShowExpandAllPromptFolders ? 'Expand All Prompt Folders' : 'Collapse All Prompt Folders'
   )
 
   const handlePromptFolderExpansionAction = () => {
@@ -179,10 +175,7 @@
   })
 </script>
 
-<aside
-  data-testid="app-sidebar"
-  class="flex h-full w-full flex-col text-sidebar-foreground/80"
->
+<aside data-testid="app-sidebar" class="flex h-full w-full flex-col text-sidebar-foreground/80">
   <div class="sidebarTopLevelInsetWithInnerPadding pt-2">
     <div class="flex items-start gap-2 border-b border-white/8 pb-2">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
@@ -266,9 +259,7 @@
   <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
     <div class="mb-2 flex items-center justify-between">
       <div>
-        <p class="cthulhuSidebarPromptSectionTitle text-[13px] font-semibold">
-          Prompts
-        </p>
+        <p class="cthulhuSidebarPromptSectionTitle text-[13px] font-semibold">Prompts</p>
         <p class="cthulhuSidebarPromptSectionCount mt-0.5 text-xs">{promptFolderCountLabel}</p>
       </div>
       {#if isWorkspaceReady}

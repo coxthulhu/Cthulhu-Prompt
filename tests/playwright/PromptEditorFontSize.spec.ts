@@ -179,10 +179,12 @@ describe('Prompt editor settings', () => {
       placeholderSelector
     })
 
-    await expect.poll(async () => getMonacoThemeState(mainWindow, rowSelector)).toMatchObject({
-      className: expect.stringContaining('vs-dark'),
-      backgroundColor: 'rgb(31, 31, 31)'
-    })
+    await expect
+      .poll(async () => getMonacoThemeState(mainWindow, rowSelector))
+      .toMatchObject({
+        className: expect.stringContaining('vs-dark'),
+        backgroundColor: 'rgb(31, 31, 31)'
+      })
   })
 
   test('applies updated font size to Monaco editors', async ({ testSetup }) => {
