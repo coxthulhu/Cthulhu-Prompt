@@ -264,7 +264,7 @@
       copyTitle="Copy folder description"
     />
 
-    <InfoRow text="A simple description of this folder and its purpose." />
+    <InfoRow text="A general description of this folder and the types of prompts that are within it. For informational use only." />
 
     <div class="prompt-folder-description-editor">
       {#if overflowHost}
