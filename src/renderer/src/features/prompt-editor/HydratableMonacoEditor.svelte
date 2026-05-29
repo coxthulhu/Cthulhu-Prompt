@@ -177,7 +177,10 @@
 </script>
 
 <div
-  class={cn('border border-border rounded-md bg-[#1e1e1e] pl-3 py-1', className)}
+  class={cn(
+    'border border-[var(--ui-card-nested-border)] rounded-md bg-[#1e1e1e] pl-3 py-1',
+    className
+  )}
   role="presentation"
   onclick={handleFrameClick}
 >
