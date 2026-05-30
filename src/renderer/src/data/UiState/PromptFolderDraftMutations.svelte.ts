@@ -7,7 +7,7 @@ import {
 } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
-import { mutatePacedPromptFolderDescriptionAutosaveUpdate } from '../Mutations/PromptFolderMutations'
+import { mutatePacedPromptFolderSettingsAutosaveUpdate } from '../Mutations/PromptFolderMutations'
 import {
   clearPromptFolderDescriptionMeasuredHeight,
   clearPromptFolderDescriptionMeasuredHeights,
@@ -17,13 +17,27 @@ import {
 } from './PromptFolderDraftUiCache.svelte.ts'
 
 export type PromptFolderDraftState = PromptFolderDraftRecord
+export type PromptFolderSettingsDraftField = 'folderDescription' | 'folderPrefix' | 'folderSuffix'
 
-const toPromptFolderDescription = (promptFolder: PromptFolder): string => {
-  return promptFolder.folderDescription
+const haveSamePromptFolderSettings = (
+  left: PromptFolderDraftRecord,
+  right: PromptFolder
+): boolean => {
+  return (
+    left.folderDescription === right.folderDescription &&
+    left.folderPrefix === right.folderPrefix &&
+    left.folderSuffix === right.folderSuffix
+  )
 }
 
-const haveSamePromptFolderDescription = (left: string, right: string): boolean => {
-  return left === right
+const createPromptFolderDraftRecord = (promptFolder: PromptFolder): PromptFolderDraftRecord => {
+  return {
+    id: promptFolder.id,
+    folderDescription: promptFolder.folderDescription,
+    folderPrefix: promptFolder.folderPrefix,
+    folderSuffix: promptFolder.folderSuffix,
+    hasLoadedInitialData: false
+  }
 }
 
 type PromptFolderDraftOptimisticMutationOptions = {
@@ -37,7 +51,7 @@ const mutatePromptFolderDraftOptimistically = (
 ): void => {
   const { mutatePromptFolderDraft, mutatePromptFolder } = options
 
-  mutatePacedPromptFolderDescriptionAutosaveUpdate({
+  mutatePacedPromptFolderSettingsAutosaveUpdate({
     promptFolderId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
@@ -62,25 +76,20 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
   }
 
   const draftInserts: PromptFolderDraftRecord[] = []
-  const draftUpdatesById: Record<string, string> = {}
+  const draftUpdatesById: Record<string, PromptFolder> = {}
   const draftUpdateIds: string[] = []
 
   for (const promptFolder of promptFolders) {
-    const nextDescription = toPromptFolderDescription(promptFolder)
     const existingRecord = promptFolderDraftCollection.get(promptFolder.id)
 
     if (!existingRecord) {
       clearPromptFolderDescriptionMeasuredHeight(promptFolder.id)
       clearPromptFolderScrollTop(promptFolder.id)
-      draftInserts.push({
-        id: promptFolder.id,
-        folderDescription: nextDescription,
-        hasLoadedInitialData: false
-      })
+      draftInserts.push(createPromptFolderDraftRecord(promptFolder))
       continue
     }
 
-    if (haveSamePromptFolderDescription(existingRecord.folderDescription, nextDescription)) {
+    if (haveSamePromptFolderSettings(existingRecord, promptFolder)) {
       continue
     }
 
@@ -89,7 +98,7 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
     if (!draftUpdatesById[promptFolder.id]) {
       draftUpdateIds.push(promptFolder.id)
     }
-    draftUpdatesById[promptFolder.id] = nextDescription
+    draftUpdatesById[promptFolder.id] = promptFolder
   }
 
   if (draftInserts.length > 0) {
@@ -99,12 +108,14 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
   if (draftUpdateIds.length > 0) {
     promptFolderDraftCollection.update(draftUpdateIds, (draftRecords) => {
       for (const draftRecord of draftRecords) {
-        const nextDescription = draftUpdatesById[draftRecord.id]
-        if (nextDescription == null) {
+        const nextPromptFolder = draftUpdatesById[draftRecord.id]
+        if (nextPromptFolder == null) {
           continue
         }
 
-        draftRecord.folderDescription = nextDescription
+        draftRecord.folderDescription = nextPromptFolder.folderDescription
+        draftRecord.folderPrefix = nextPromptFolder.folderPrefix
+        draftRecord.folderSuffix = nextPromptFolder.folderSuffix
       }
     })
   }
@@ -130,9 +141,10 @@ export const getPromptFolderDraftState = (
   return promptFolderDraftCollection.get(promptFolderId) ?? null
 }
 
-export const setPromptFolderDraftDescription = (
+export const setPromptFolderDraftSettingsField = (
   promptFolderId: string,
-  folderDescription: string,
+  field: PromptFolderSettingsDraftField,
+  value: string,
   measurement: TextMeasurement
 ): void => {
   const draftRecord = getPromptFolderDraftState(promptFolderId)
@@ -141,7 +153,7 @@ export const setPromptFolderDraftDescription = (
     recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, false)
     return
   }
-  const textChanged = draftRecord.folderDescription !== folderDescription
+  const textChanged = draftRecord[field] !== value
   recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, textChanged)
 
   if (!textChanged) {
@@ -150,12 +162,25 @@ export const setPromptFolderDraftDescription = (
 
   mutatePromptFolderDraftOptimistically(promptFolderId, {
     mutatePromptFolderDraft: (draft) => {
-      draft.folderDescription = folderDescription
+      draft[field] = value
     },
     mutatePromptFolder: (draft) => {
-      draft.folderDescription = folderDescription
+      draft[field] = value
     }
   })
+}
+
+export const setPromptFolderDraftDescription = (
+  promptFolderId: string,
+  folderDescription: string,
+  measurement: TextMeasurement
+): void => {
+  setPromptFolderDraftSettingsField(
+    promptFolderId,
+    'folderDescription',
+    folderDescription,
+    measurement
+  )
 }
 
 export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {

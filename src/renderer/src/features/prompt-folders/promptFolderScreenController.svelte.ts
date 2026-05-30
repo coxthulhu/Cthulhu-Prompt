@@ -32,7 +32,10 @@ import {
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
-import { setPromptFolderDraftDescription } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
+import {
+  setPromptFolderDraftSettingsField,
+  type PromptFolderSettingsDraftField
+} from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import {
   lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
   setPromptFolderPromptTreeEntryIdWithAutosave
@@ -45,6 +48,8 @@ import type {
 } from '../virtualizer/virtualWindowTypes'
 import {
   PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
+  PROMPT_FOLDER_FIND_FOLDER_PREFIX_SECTION_KEY,
+  PROMPT_FOLDER_FIND_FOLDER_SUFFIX_SECTION_KEY,
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
 } from './find/promptFolderFindSectionKeys'
@@ -128,6 +133,8 @@ export const createPromptFolderScreenController = ({
   const descriptionText = $derived(
     promptFolderDraft?.folderDescription ?? promptFolder?.folderDescription ?? ''
   )
+  const prefixText = $derived(promptFolderDraft?.folderPrefix ?? promptFolder?.folderPrefix ?? '')
+  const suffixText = $derived(promptFolderDraft?.folderSuffix ?? promptFolder?.folderSuffix ?? '')
   const folderDisplayName = $derived(promptFolder?.displayName ?? 'Prompt Folder')
 
   let previousPromptFolderLoadKey = $state<string | null>(null)
@@ -198,6 +205,14 @@ export const createPromptFolderScreenController = ({
           {
             key: PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
             text: descriptionText
+          },
+          {
+            key: PROMPT_FOLDER_FIND_FOLDER_PREFIX_SECTION_KEY,
+            text: prefixText
+          },
+          {
+            key: PROMPT_FOLDER_FIND_FOLDER_SUFFIX_SECTION_KEY,
+            text: suffixText
           }
         ]
       })
@@ -631,13 +646,17 @@ export const createPromptFolderScreenController = ({
     )
   }
 
-  const handleDescriptionChange = (text: string, measurement: TextMeasurement) => {
-    setPromptFolderDraftDescription(promptFolderId, text, measurement)
+  const handleSettingsFieldChange = (
+    field: PromptFolderSettingsDraftField,
+    text: string,
+    measurement: TextMeasurement
+  ) => {
+    setPromptFolderDraftSettingsField(promptFolderId, field, text, measurement)
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
     const baseHeight = estimatePromptFolderSettingsHeight(
-      descriptionText,
+      [descriptionText, prefixText, suffixText],
       promptEditorSizingConfig.fontSize
     )
 
@@ -733,6 +752,12 @@ export const createPromptFolderScreenController = ({
     get descriptionText(): string {
       return descriptionText
     },
+    get prefixText(): string {
+      return prefixText
+    },
+    get suffixText(): string {
+      return suffixText
+    },
     get folderDisplayName(): string {
       return folderDisplayName
     },
@@ -784,7 +809,7 @@ export const createPromptFolderScreenController = ({
     handleMovePromptUp,
     handleMovePromptDown,
     handlePromptTreeDrop,
-    handleDescriptionChange,
+    handleSettingsFieldChange,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
     setViewportMetrics,

@@ -11,12 +11,17 @@ export interface PromptFolder {
   promptCount: number
   promptIds: string[]
   folderDescription: string
+  folderPrefix: string
+  folderSuffix: string
 }
 
-export type PromptFolderDescriptionUpdate = Pick<PromptFolder, 'folderDescription'>
+export type PromptFolderSettingsUpdate = Pick<
+  PromptFolder,
+  'folderDescription' | 'folderPrefix' | 'folderSuffix'
+>
 
-export type UpdatePromptFolderDescriptionPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolderDescriptionUpdate>
+export type UpdatePromptFolderSettingsPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolderSettingsUpdate>
 }
 
 export type PromptFolderRevisionResponsePayload = {

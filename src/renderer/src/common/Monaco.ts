@@ -60,6 +60,14 @@ export const createPromptFolderDescriptionModelUri = (promptFolderId: string): m
   return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-descriptions/${promptFolderId}.md`)
 }
 
+export const createPromptFolderPrefixModelUri = (promptFolderId: string): monaco.Uri => {
+  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-prefixes/${promptFolderId}.md`)
+}
+
+export const createPromptFolderSuffixModelUri = (promptFolderId: string): monaco.Uri => {
+  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-suffixes/${promptFolderId}.md`)
+}
+
 export const warmupMonacoEditor = async (): Promise<void> => {
   const warmupHost = document.createElement('div')
   warmupHost.style.position = 'fixed'

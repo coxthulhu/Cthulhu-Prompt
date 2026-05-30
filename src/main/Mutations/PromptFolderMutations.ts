@@ -9,7 +9,7 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptFolderRequest,
-  parseUpdatePromptFolderDescriptionRequest
+  parseUpdatePromptFolderSettingsRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
@@ -80,7 +80,9 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   displayName: normalizedDisplayName,
                   promptCount: 0,
                   promptIds: [],
-                  folderDescription: ''
+                  folderDescription: '',
+                  folderPrefix: '',
+                  folderSuffix: ''
                 },
                 persistenceFields: {
                   workspaceId: requestedWorkspace.id,
@@ -125,10 +127,10 @@ export const setupPromptFolderMutationHandlers = (): void => {
     )
   })
 
-  ipcMain.handle('update-prompt-folder-description', async (_, request: unknown) => {
+  ipcMain.handle('update-prompt-folder-settings', async (_, request: unknown) => {
     return await runMutationIpcRequest(
       request,
-      parseUpdatePromptFolderDescriptionRequest,
+      parseUpdatePromptFolderSettingsRequest,
       async (validatedRequest) => {
         try {
           const requestedPromptFolder = validatedRequest.payload.promptFolder
@@ -147,6 +149,8 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
                   draft.folderDescription = requestedPromptFolder.data.folderDescription
+                  draft.folderPrefix = requestedPromptFolder.data.folderPrefix
+                  draft.folderSuffix = requestedPromptFolder.data.folderSuffix
                 }
               })
             }

@@ -4,6 +4,7 @@
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
   import { lookupPromptFolderDescriptionMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
+  import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import {
     clampMonacoHeightPx,
@@ -67,6 +68,8 @@
     workspaceId: string | null
     promptFolderId: string
     descriptionText: string
+    prefixText: string
+    suffixText: string
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, PromptDraftRecord>
     visiblePromptIds: string[]
@@ -83,7 +86,11 @@
       promptId: string,
       dropPayload: PromptHandleDropPayload | null
     ) => void | Promise<void>
-    onDescriptionChange: (text: string, measurement: TextMeasurement) => void
+    onSettingsFieldChange: (
+      field: PromptFolderSettingsDraftField,
+      text: string,
+      measurement: TextMeasurement
+    ) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
@@ -97,6 +104,8 @@
     workspaceId,
     promptFolderId,
     descriptionText,
+    prefixText,
+    suffixText,
     promptEditorSizingConfig,
     promptDraftById,
     visiblePromptIds,
@@ -110,7 +119,7 @@
     onMovePromptUp,
     onMovePromptDown,
     onPromptTreeDrop,
-    onDescriptionChange,
+    onSettingsFieldChange,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
     onViewportMetricsChange,
@@ -151,7 +160,10 @@
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
-        estimatePromptFolderSettingsHeight(descriptionText, promptEditorSizingConfig.fontSize),
+        estimatePromptFolderSettingsHeight(
+          [descriptionText, prefixText, suffixText],
+          promptEditorSizingConfig.fontSize
+        ),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
       hydrationPriorityEligible: true,
@@ -374,7 +386,9 @@
     scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
     onHydrationChange={props.onHydrationChange}
     {descriptionText}
-    {onDescriptionChange}
+    {prefixText}
+    {suffixText}
+    {onSettingsFieldChange}
   />
 {/snippet}
 
@@ -433,6 +447,8 @@
     {shouldDehydrate}
     {overlayRowElement}
     {onHydrationChange}
+    folderPrefix={prefixText}
+    folderSuffix={suffixText}
     scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
     focusRequest={promptFocusRequest}
     isFirstPrompt={promptIndex === 0}

@@ -17,6 +17,8 @@ import {
   resolvePromptFolderDescriptionPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
+  resolvePromptFolderPrefixPath,
+  resolvePromptFolderSuffixPath,
   resolvePromptPathsFromStem,
   resolveWorkspacePromptFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
@@ -36,15 +38,14 @@ const readPromptFolderInfo = (workspacePath: string, folderName: string): Prompt
   return readJsonFile<PromptFolderInfoFile>(infoPath)
 }
 
-const readPromptFolderDescription = (workspacePath: string, folderName: string): string => {
+const readOptionalTextFile = (filePath: string): string => {
   const fs = getFs()
-  const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
 
-  if (!fs.existsSync(descriptionPath)) {
+  if (!fs.existsSync(filePath)) {
     return ''
   }
 
-  return fs.readFileSync(descriptionPath, 'utf8')
+  return fs.readFileSync(filePath, 'utf8')
 }
 
 const readPromptIds = (workspacePath: string, folderName: string): string[] => {
@@ -89,7 +90,11 @@ export const readPromptStemByPromptId = (
 
 export const readPromptFolder = (workspacePath: string, folderName: string): PromptFolder => {
   const info = readPromptFolderInfo(workspacePath, folderName)
-  const folderDescription = readPromptFolderDescription(workspacePath, folderName)
+  const folderDescription = readOptionalTextFile(
+    resolvePromptFolderDescriptionPath(workspacePath, folderName)
+  )
+  const folderPrefix = readOptionalTextFile(resolvePromptFolderPrefixPath(workspacePath, folderName))
+  const folderSuffix = readOptionalTextFile(resolvePromptFolderSuffixPath(workspacePath, folderName))
   const promptIds = readPromptIds(workspacePath, folderName)
 
   return {
@@ -98,7 +103,9 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     displayName: info.displayName,
     promptCount: promptIds.length,
     promptIds,
-    folderDescription
+    folderDescription,
+    folderPrefix,
+    folderSuffix
   }
 }
 

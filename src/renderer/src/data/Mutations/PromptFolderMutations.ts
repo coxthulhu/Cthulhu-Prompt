@@ -3,7 +3,7 @@ import type {
   CreatePromptFolderResponsePayload,
   PromptFolder,
   PromptFolderRevisionResponsePayload,
-  UpdatePromptFolderDescriptionPayload
+  UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { compactGuid } from '@shared/compactGuid'
@@ -35,18 +35,18 @@ type PacedPromptFolderMutationOptions = Parameters<
   typeof mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>
 >[0]
 
-type PacedPromptFolderDescriptionAutosaveUpdateOptions = Pick<
+type PacedPromptFolderSettingsAutosaveUpdateOptions = Pick<
   PacedPromptFolderMutationOptions,
   'debounceMs' | 'mutateOptimistically'
 > & {
   promptFolderId: string
 }
 
-export const mutatePacedPromptFolderDescriptionAutosaveUpdate = ({
+export const mutatePacedPromptFolderSettingsAutosaveUpdate = ({
   promptFolderId,
   debounceMs,
   mutateOptimistically
-}: PacedPromptFolderDescriptionAutosaveUpdateOptions): void => {
+}: PacedPromptFolderSettingsAutosaveUpdateOptions): void => {
   mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
     collectionId: promptFolderCollection.id,
     elementId: promptFolderId,
@@ -57,13 +57,15 @@ export const mutatePacedPromptFolderDescriptionAutosaveUpdate = ({
 
       const mutationResult = await ipcInvokeWithPayload<
         IpcMutationPayloadResult<PromptFolderRevisionResponsePayload>,
-        UpdatePromptFolderDescriptionPayload
-      >('update-prompt-folder-description', {
+        UpdatePromptFolderSettingsPayload
+      >('update-prompt-folder-settings', {
         promptFolder: {
           id: promptFolderId,
           expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
           data: {
-            folderDescription: latestPromptFolder.folderDescription
+            folderDescription: latestPromptFolder.folderDescription,
+            folderPrefix: latestPromptFolder.folderPrefix,
+            folderSuffix: latestPromptFolder.folderSuffix
           }
         }
       })
@@ -77,7 +79,7 @@ export const mutatePacedPromptFolderDescriptionAutosaveUpdate = ({
     handleSuccessOrConflictResponse: (payload) => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
     },
-    conflictMessage: 'Prompt folder description update conflict'
+    conflictMessage: 'Prompt folder settings update conflict'
   })
 }
 
@@ -102,11 +104,15 @@ export const createPromptFolder = async (
         displayName: normalizedDisplayName,
         promptCount: 0,
         promptIds: [],
-        folderDescription: ''
+        folderDescription: '',
+        folderPrefix: '',
+        folderSuffix: ''
       })
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
         folderDescription: '',
+        folderPrefix: '',
+        folderSuffix: '',
         hasLoadedInitialData: false
       })
       collections.workspace.update(workspaceId, (draft) => {

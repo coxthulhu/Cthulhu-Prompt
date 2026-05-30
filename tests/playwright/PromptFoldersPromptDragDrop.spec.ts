@@ -124,6 +124,24 @@ const getPromptDividerHighlightStyles = async (
   })
 }
 
+const scrollUntilPromptDividerVisible = async (
+  page: Page,
+  testHelpers: { scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void> },
+  previousPromptId: string | null
+): Promise<void> => {
+  const selector = promptDividerSelector(previousPromptId)
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if ((await page.locator(selector).count()) > 0) {
+      return
+    }
+
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 300)
+  }
+
+  throw new Error(`Prompt divider did not become visible: ${previousPromptId}`)
+}
+
 const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragGhostSnapshot> => {
   return await locator.evaluate((element) => {
     const row = element.querySelector<HTMLElement>('.promptDragGhostButton')
@@ -546,8 +564,9 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+    await scrollUntilPromptEditorVisible(mainWindow, testHelpers, DEV_1_ID)
+    await scrollUntilPromptEditorVisible(mainWindow, testHelpers, DEV_2_ID)
+    await scrollUntilPromptDividerVisible(mainWindow, testHelpers, DEV_2_ID)
 
     const dividerButton = mainWindow.locator(promptDividerSelector(DEV_2_ID))
     const defaultStyles = await getPromptDividerHighlightStyles(dividerButton)

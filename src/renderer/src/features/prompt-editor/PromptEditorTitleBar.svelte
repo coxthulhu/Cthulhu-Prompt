@@ -10,6 +10,7 @@
   type Props = {
     title: string
     draftText: string
+    copyText?: string
     modifiedAt?: string | null
     onTitleChange?: (value: string) => void
     fallbackTitle?: string
@@ -30,6 +31,7 @@
   let {
     title,
     draftText,
+    copyText,
     modifiedAt = null,
     onTitleChange,
     fallbackTitle = '',
@@ -153,7 +155,7 @@
     </div>
   </div>
 
-  <PromptEditorButtonBar {title} {draftText} {onDelete} {copyLabel} {copyTitle} />
+  <PromptEditorButtonBar {title} {draftText} {copyText} {onDelete} {copyLabel} {copyTitle} />
 </div>
 
 <style>

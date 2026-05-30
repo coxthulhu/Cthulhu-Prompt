@@ -69,6 +69,8 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
   promptCount: 2,
   promptIds: ['prompt-1', 'prompt-2'],
   folderDescription: 'Original folder description',
+  folderPrefix: 'Original folder prefix',
+  folderSuffix: 'Original folder suffix',
   ...overrides
 })
 
@@ -134,7 +136,9 @@ describe('draft sync contract', () => {
   it('upserts prompt-folder drafts', () => {
     const promptFolder = createPromptFolder()
     const updatedPromptFolder = createPromptFolder({
-      folderDescription: 'Updated folder description'
+      folderDescription: 'Updated folder description',
+      folderPrefix: 'Updated folder prefix',
+      folderSuffix: 'Updated folder suffix'
     })
 
     upsertPromptFolderDraft(promptFolder)
@@ -142,6 +146,8 @@ describe('draft sync contract', () => {
 
     const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
     expect(draftRecord.folderDescription).toBe('Updated folder description')
+    expect(draftRecord.folderPrefix).toBe('Updated folder prefix')
+    expect(draftRecord.folderSuffix).toBe('Updated folder suffix')
     expect(draftRecord.hasLoadedInitialData).toBe(false)
   })
 

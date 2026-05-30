@@ -26,6 +26,8 @@ export interface PromptFolderConfig {
   displayName: string
   promptFolderId?: string
   folderDescription?: string
+  folderPrefix?: string
+  folderSuffix?: string
   prompts?: Array<{
     id: string
     title?: string
@@ -270,6 +272,8 @@ export function createWorkspaceWithFolders(
       2
     )
     structure[`${folderPath}/.folderprops/Description.md`] = folder.folderDescription ?? ''
+    structure[`${folderPath}/.folderprops/PromptPrefix.md`] = folder.folderPrefix ?? ''
+    structure[`${folderPath}/.folderprops/PromptSuffix.md`] = folder.folderSuffix ?? ''
     Object.assign(structure, promptFiles)
   }
   structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
@@ -446,6 +450,8 @@ export function addFolderToWorkspace(
       2
     ),
     [`${folderPath}/.folderprops/Description.md`]: folderConfig.folderDescription ?? '',
+    [`${folderPath}/.folderprops/PromptPrefix.md`]: folderConfig.folderPrefix ?? '',
+    [`${folderPath}/.folderprops/PromptSuffix.md`]: folderConfig.folderSuffix ?? '',
     ...promptFiles
   }
 }

@@ -350,6 +350,8 @@ describe('Prompt Folder Hydration', () => {
       promptSelector: PLACEHOLDER_PROMPT_SELECTOR,
       placeholderSelector: PLACEHOLDER_SELECTOR
     })
+    await testHelpers.scrollVirtualElementIntoView(HOST_SELECTOR, PLACEHOLDER_PROMPT_SELECTOR, 120)
+    await mainWindow.waitForSelector(PLACEHOLDER_SELECTOR, { state: 'detached' })
 
     const readPromptWidth = async () =>
       await testHelpers.getPromptRowWidth(PLACEHOLDER_PROMPT_SELECTOR)

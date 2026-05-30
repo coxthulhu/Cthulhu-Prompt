@@ -6,6 +6,8 @@ export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.folderprops'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'Description.md'
+export const PROMPT_FOLDER_PREFIX_FILENAME = 'PromptPrefix.md'
+export const PROMPT_FOLDER_SUFFIX_FILENAME = 'PromptSuffix.md'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 
 export type PromptFilePaths = {
@@ -63,6 +65,26 @@ export const resolvePromptFolderDescriptionPath = (
   return path.join(
     resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
     PROMPT_FOLDER_DESCRIPTION_FILENAME
+  )
+}
+
+export const resolvePromptFolderPrefixPath = (
+  workspacePath: string,
+  folderName: string
+): string => {
+  return path.join(
+    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
+    PROMPT_FOLDER_PREFIX_FILENAME
+  )
+}
+
+export const resolvePromptFolderSuffixPath = (
+  workspacePath: string,
+  folderName: string
+): string => {
+  return path.join(
+    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
+    PROMPT_FOLDER_SUFFIX_FILENAME
   )
 }
 

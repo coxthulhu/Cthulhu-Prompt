@@ -52,6 +52,8 @@ export type WorkspacePromptFolderPromptTreeEntry = {
   promptTreeIsExpanded: boolean
   promptTreeIsShowingAllPrompts: boolean
   folderDescriptionEditorViewStateJson: string | null
+  folderPrefixEditorViewStateJson: string | null
+  folderSuffixEditorViewStateJson: string | null
 }
 
 export type WorkspacePersistence = WorkspaceScreenSelection & {
@@ -95,7 +97,9 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
     promptTreeEntryId: entry.promptTreeEntryId,
     promptTreeIsExpanded: entry.promptTreeIsExpanded,
     promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts,
-    folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson
+    folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson,
+    folderPrefixEditorViewStateJson: entry.folderPrefixEditorViewStateJson,
+    folderSuffixEditorViewStateJson: entry.folderSuffixEditorViewStateJson
   }))
 }
 
@@ -255,6 +259,22 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
   ) {
     return null
   }
+  const folderPrefixEditorViewStateJson = value.folderPrefixEditorViewStateJson
+  if (
+    folderPrefixEditorViewStateJson !== undefined &&
+    folderPrefixEditorViewStateJson !== null &&
+    typeof folderPrefixEditorViewStateJson !== 'string'
+  ) {
+    return null
+  }
+  const folderSuffixEditorViewStateJson = value.folderSuffixEditorViewStateJson
+  if (
+    folderSuffixEditorViewStateJson !== undefined &&
+    folderSuffixEditorViewStateJson !== null &&
+    typeof folderSuffixEditorViewStateJson !== 'string'
+  ) {
+    return null
+  }
 
   const promptTreeIsExpanded =
     value.promptTreeIsExpanded === undefined
@@ -281,7 +301,9 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     promptTreeEntryId: value.promptTreeEntryId,
     promptTreeIsExpanded,
     promptTreeIsShowingAllPrompts,
-    folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null
+    folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null,
+    folderPrefixEditorViewStateJson: folderPrefixEditorViewStateJson ?? null,
+    folderSuffixEditorViewStateJson: folderSuffixEditorViewStateJson ?? null
   }
 }
 

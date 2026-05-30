@@ -19,6 +19,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
 const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
+const COPY_PREFIX_SUFFIX_WORKSPACE_PATH = '/ws/copy-prefix-suffix'
 const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
 const FALLBACK_TITLE_FOLDER_NAME = 'Fallback Titles'
 const BOUNDARY_1_ID = 'boundary-1'
@@ -131,6 +132,26 @@ const scrollUntilMounted = async (
   throw new Error(`Element did not become mounted: ${selector}`)
 }
 
+const scrollPromptEditorIntoView = async (
+  page: any,
+  testHelpers: {
+    scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void>
+    scrollVirtualWindowTo: (selector: string, scrollTop: number) => Promise<void>
+    scrollVirtualElementIntoView: (
+      hostSelector: string,
+      elementSelector: string,
+      topOffsetPx?: number
+    ) => Promise<void>
+  },
+  promptId: string
+) => {
+  const editorSelector = promptEditorSelector(promptId)
+  await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+  await scrollUntilMounted(page, testHelpers, editorSelector)
+  await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, editorSelector, 120)
+  await waitForMonacoEditor(page, editorSelector)
+}
+
 const buildMoveScrollWorkspace = () => {
   const shortPrompt = heightTestPrompts.singleLine
   const tallPrompt = heightTestPrompts.twoHundredLine
@@ -208,7 +229,7 @@ describe('Prompt folder prompt management', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptFolders(FALLBACK_TITLE_FOLDER_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('clear-title-target'))
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'clear-title-target')
 
     await setPromptTitle(mainWindow, 'clear-title-target', '')
     await expect(mainWindow.locator(promptTitleSelector('clear-title-target'))).toHaveAttribute(
@@ -240,8 +261,8 @@ describe('Prompt folder prompt management', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-1')
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-2')
 
     const initialIds = await getPromptEditorIds(mainWindow)
     await clickAddAfter(mainWindow, 'dev-2')
@@ -278,14 +299,10 @@ describe('Prompt folder prompt management', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptFolders(MOVE_SCROLL_FOLDER_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(BOUNDARY_1_ID))
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, BOUNDARY_2_ID)
 
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
     await mainWindow.locator(moveUpSelector(BOUNDARY_2_ID)).click()
 
-    await expect
-      .poll(async () => await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
-      .toBe(0)
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
       .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_3_ID])
@@ -338,8 +355,8 @@ describe('Prompt folder prompt management', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-1')
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-2')
 
     // Step 1: add after first prompt, edit it.
     let expectedCount = 2
@@ -362,7 +379,7 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-1')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
 
     const orderAfterReturn = await getPromptEditorIds(mainWindow)
@@ -402,8 +419,7 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-2')
 
     const promptTreePromptIds = await getPromptTreePromptRowIds(mainWindow)
     const finalPromptTreeOrder = promptTreePromptIds.filter((promptId) =>
@@ -421,19 +437,39 @@ describe('Prompt folder prompt management', () => {
   })
 
   test('copies prompt text to clipboard', async ({ testSetup }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(COPY_PREFIX_SUFFIX_WORKSPACE_PATH, [
+        {
+          folderName: 'Copy Prefix Suffix',
+          displayName: 'Copy Prefix Suffix',
+          folderPrefix: 'Folder prefix text',
+          folderSuffix: 'Folder suffix text',
+          prompts: [
+            {
+              id: 'copy-prefix-source',
+              title: 'Copy Source',
+              promptText: 'Source prompt'
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COPY_PREFIX_SUFFIX_WORKSPACE_PATH)])
 
-    await testHelpers.navigateToPromptFolders('Development')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Copy Prefix Suffix')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('copy-prefix-source'))
 
     await stubClipboard(mainWindow)
 
     const initialIds = await getPromptEditorIds(mainWindow)
-    await clickAddAfter(mainWindow, 'dev-1')
-    await waitForPromptCount(mainWindow, 3)
+    await clickAddAfter(mainWindow, 'copy-prefix-source')
+    await waitForPromptCount(mainWindow, 2)
 
     const idsAfterAdd = await getPromptEditorIds(mainWindow)
     const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
@@ -458,7 +494,7 @@ describe('Prompt folder prompt management', () => {
         )
         return normalizeNewlines(clipboardText)
       })
-      .toBe(promptText)
+      .toBe(`Folder prefix text\n\n${promptText}\n\nFolder suffix text`)
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {

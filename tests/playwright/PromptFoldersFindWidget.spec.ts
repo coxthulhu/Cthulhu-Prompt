@@ -26,6 +26,7 @@ const LOOP_MATCH_PROMPT_IDS = Array.from(
 )
 const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
+const PREFIX_SUFFIX_FIND_QUERY = 'cthulhu-prefix-suffix-find-marker'
 
 const getMonacoSelectedText = async (
   mainWindow: any,
@@ -297,6 +298,43 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveCount(0)
   })
 
+  test('includes folder prefix and suffix in matches', async ({ testSetup }) => {
+    const workspacePath = '/ws/find-prefix-suffix'
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Prefix Suffix Find',
+          displayName: 'Prefix Suffix Find',
+          folderPrefix: `Prefix has ${PREFIX_SUFFIX_FIND_QUERY}`,
+          folderSuffix: `Suffix has ${PREFIX_SUFFIX_FIND_QUERY}`,
+          prompts: [
+            {
+              id: 'prefix-suffix-find-prompt',
+              title: 'Find Prompt',
+              promptText: 'Body without the marker'
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Prefix Suffix Find')
+    await mainWindow.waitForSelector(SETTINGS_ROW_SELECTOR, { state: 'attached' })
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(mainWindow.locator(FIND_INPUT)).toBeVisible()
+    await mainWindow.locator(FIND_INPUT).fill(PREFIX_SUFFIX_FIND_QUERY)
+
+    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('1 of 2')
+  })
+
   test('reopens with previous query and selection', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -470,6 +508,7 @@ describe('Prompt folder find dialog', () => {
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
     await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+    await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, editorSelector, 120)
 
     await focusMonacoEditor(mainWindow, editorSelector, {
       clickPosition: { x: 28, y: 12 }

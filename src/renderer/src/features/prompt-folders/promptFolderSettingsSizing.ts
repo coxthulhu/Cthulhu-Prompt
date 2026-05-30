@@ -11,6 +11,7 @@ const SETTINGS_TITLE_HEIGHT_PX = 32
 const SETTINGS_SUBTITLE_MARGIN_TOP_PX = 8
 const SETTINGS_SUBTITLE_HEIGHT_PX = 20
 const SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX = 24
+const SETTINGS_CARD_GAP_PX = 24
 export const SETTINGS_DESCRIPTION_CARD_PADDING_PX = 10
 export const SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX = 1
 const SETTINGS_INFO_ROW_HEIGHT_PX = 32
@@ -34,7 +35,10 @@ const SETTINGS_HEADER_HEIGHT_PX =
   SETTINGS_SUBTITLE_HEIGHT_PX
 
 const SETTINGS_FIXED_HEIGHT_PX =
-  SETTINGS_HEADER_HEIGHT_PX + SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX + SETTINGS_EDITOR_CHROME_PX
+  SETTINGS_HEADER_HEIGHT_PX +
+  SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX +
+  SETTINGS_EDITOR_CHROME_PX * 3 +
+  SETTINGS_CARD_GAP_PX * 2
 
 const PROMPT_HEADER_PADDING_TOP_PX = 24
 const PROMPT_HEADER_TEXT_HEIGHT_PX = 32
@@ -78,14 +82,32 @@ export const estimatePromptFolderSettingsMonacoHeight = (
   return estimateMonacoHeightPx(text, getPromptFolderDescriptionSizingConfig(fontSize))
 }
 
-export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number): number => {
-  return Math.ceil(SETTINGS_FIXED_HEIGHT_PX + monacoHeightPx)
+export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number[]): number => {
+  return Math.ceil(
+    SETTINGS_FIXED_HEIGHT_PX + monacoHeightPx.reduce((sum, heightPx) => sum + heightPx, 0)
+  )
 }
 
 export const getPromptFolderSettingsMonacoHeightFromRowPx = (rowHeightPx: number): number => {
   return rowHeightPx - SETTINGS_FIXED_HEIGHT_PX
 }
 
-export const estimatePromptFolderSettingsHeight = (text: string, fontSize: number): number => {
-  return getPromptFolderSettingsHeightPx(estimatePromptFolderSettingsMonacoHeight(text, fontSize))
+export const getPromptFolderSettingsEditorTopOffsetPx = (
+  sectionIndex: number,
+  previousMonacoHeightsPx: number[]
+): number => {
+  return (
+    SETTINGS_EDITOR_TOP_OFFSET_PX +
+    sectionIndex * (SETTINGS_EDITOR_CHROME_PX + SETTINGS_CARD_GAP_PX) +
+    previousMonacoHeightsPx.reduce((sum, heightPx) => sum + heightPx, 0)
+  )
+}
+
+export const estimatePromptFolderSettingsHeight = (
+  texts: string[],
+  fontSize: number
+): number => {
+  return getPromptFolderSettingsHeightPx(
+    texts.map((text) => estimatePromptFolderSettingsMonacoHeight(text, fontSize))
+  )
 }

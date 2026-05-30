@@ -60,6 +60,8 @@
           workspaceId={controller.workspaceId}
           promptFolderId={controller.promptFolderId}
           descriptionText={controller.descriptionText}
+          prefixText={controller.prefixText}
+          suffixText={controller.suffixText}
           promptEditorSizingConfig={controller.promptEditorSizingConfig}
           promptDraftById={controller.promptDraftById}
           visiblePromptIds={controller.visiblePromptIds}
@@ -73,7 +75,7 @@
           onMovePromptUp={controller.handleMovePromptUp}
           onMovePromptDown={controller.handleMovePromptDown}
           onPromptTreeDrop={controller.handlePromptTreeDrop}
-          onDescriptionChange={controller.handleDescriptionChange}
+          onSettingsFieldChange={controller.handleSettingsFieldChange}
           onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
           onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
           onViewportMetricsChange={controller.setViewportMetrics}

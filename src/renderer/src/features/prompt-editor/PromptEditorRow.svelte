@@ -56,6 +56,8 @@
     shouldDehydrate,
     overlayRowElement,
     onHydrationChange,
+    folderPrefix,
+    folderSuffix,
     scrollToWithinWindowBand,
     focusRequest,
     isFirstPrompt,
@@ -78,6 +80,8 @@
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
+    folderPrefix: string
+    folderSuffix: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     focusRequest?: PromptFocusRequest | null
     isFirstPrompt: boolean
@@ -115,6 +119,17 @@
   const lineCount = $derived(getPromptLineCount(promptData.draft.text))
   const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
   const promptTreeTitle = $derived(getPromptDisplayTitle(promptId))
+  const copyText = $derived.by(() => {
+    const parts: string[] = []
+    if (folderPrefix.trim().length > 0) {
+      parts.push(folderPrefix)
+    }
+    parts.push(promptData.draft.text)
+    if (folderSuffix.trim().length > 0) {
+      parts.push(folderSuffix)
+    }
+    return parts.join('\n\n')
+  })
   // Track shared prompt drag state so both editor-handle and prompt-tree drags dim this row.
   const isDragging = $derived(
     promptDragState.draggedPromptRow?.folderId === promptFolderId &&
@@ -367,6 +382,7 @@
   <PromptEditorTitleBar
     title={promptData.draft.title}
     draftText={promptData.draft.text}
+    {copyText}
     modifiedAt={promptData.modifiedAt}
     fallbackTitle={promptData.fallbackTitle}
     {lineCount}

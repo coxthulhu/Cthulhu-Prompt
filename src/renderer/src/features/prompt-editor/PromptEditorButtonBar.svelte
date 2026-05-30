@@ -7,6 +7,7 @@
   type Props = {
     title: string
     draftText: string
+    copyText?: string
     onDelete?: () => void
     copyLabel?: string
     copyTitle?: string
@@ -15,6 +16,7 @@
   let {
     title,
     draftText,
+    copyText,
     onDelete,
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt'
@@ -24,7 +26,7 @@
   let isDeleteDialogOpen = $state(false)
 
   const handleCopyClick = () => {
-    void window.navigator.clipboard.writeText(draftText)
+    void window.navigator.clipboard.writeText(copyText ?? draftText)
     isCopied = true
 
     if (resetTimeoutId != null) {

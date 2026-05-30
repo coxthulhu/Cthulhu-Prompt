@@ -16,7 +16,9 @@ import {
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
-  resolvePromptFolderPath
+  resolvePromptFolderPath,
+  resolvePromptFolderPrefixPath,
+  resolvePromptFolderSuffixPath
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
@@ -41,7 +43,9 @@ const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
   promptIds: string[],
-  folderDescription: string
+  folderDescription: string,
+  folderPrefix: string,
+  folderSuffix: string
 ): PromptFolder => {
   return {
     id: persistedInfo.promptFolderId,
@@ -49,8 +53,15 @@ const fromPromptFolderInfoFile = (
     displayName: persistedInfo.displayName,
     promptCount: promptIds.length,
     promptIds,
-    folderDescription
+    folderDescription,
+    folderPrefix,
+    folderSuffix
   }
+}
+
+const readOptionalTextFile = (filePath: string): string => {
+  const fs = getFs()
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''
 }
 
 export const promptFolderPersistence: PersistenceLayer<
@@ -64,12 +75,16 @@ export const promptFolderPersistence: PersistenceLayer<
     const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(workspacePath, folderName)
     const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
     const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
+    const prefixPath = resolvePromptFolderPrefixPath(workspacePath, folderName)
+    const suffixPath = resolvePromptFolderSuffixPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
         createStagedFileRemove(orderPath),
         createStagedFileRemove(infoPath),
-        createStagedFileRemove(descriptionPath)
+        createStagedFileRemove(descriptionPath),
+        createStagedFileRemove(prefixPath),
+        createStagedFileRemove(suffixPath)
       ])
     }
 
@@ -86,11 +101,17 @@ export const promptFolderPersistence: PersistenceLayer<
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const descriptionTempPath = resolveTempPath(descriptionPath)
     fs.writeFileSync(descriptionTempPath, change.data.folderDescription, 'utf8')
+    const prefixTempPath = resolveTempPath(prefixPath)
+    fs.writeFileSync(prefixTempPath, change.data.folderPrefix, 'utf8')
+    const suffixTempPath = resolveTempPath(suffixPath)
+    fs.writeFileSync(suffixTempPath, change.data.folderSuffix, 'utf8')
 
     return createPersistenceStageResult([
       createStagedFileUpsert(orderPath, orderTempPath),
       createStagedFileUpsert(infoPath, infoTempPath),
       createStagedFileUpsert(descriptionPath, descriptionTempPath),
+      createStagedFileUpsert(prefixPath, prefixTempPath),
+      createStagedFileUpsert(suffixPath, suffixTempPath),
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
       createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
     ])
@@ -106,6 +127,8 @@ export const promptFolderPersistence: PersistenceLayer<
     const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
     const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
     const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
+    const prefixPath = resolvePromptFolderPrefixPath(workspacePath, folderName)
+    const suffixPath = resolvePromptFolderSuffixPath(workspacePath, folderName)
     const fs = getFs()
 
     if (!fs.existsSync(orderPath) || !fs.existsSync(infoPath)) {
@@ -114,10 +137,17 @@ export const promptFolderPersistence: PersistenceLayer<
 
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
     const promptIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
-    const folderDescription = fs.existsSync(descriptionPath)
-      ? fs.readFileSync(descriptionPath, 'utf8')
-      : ''
+    const folderDescription = readOptionalTextFile(descriptionPath)
+    const folderPrefix = readOptionalTextFile(prefixPath)
+    const folderSuffix = readOptionalTextFile(suffixPath)
 
-    return fromPromptFolderInfoFile(persistedInfo, folderName, promptIds, folderDescription)
+    return fromPromptFolderInfoFile(
+      persistedInfo,
+      folderName,
+      promptIds,
+      folderDescription,
+      folderPrefix,
+      folderSuffix
+    )
   }
 }

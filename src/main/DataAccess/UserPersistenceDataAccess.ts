@@ -210,7 +210,9 @@ export class UserPersistenceDataAccess {
           prompt_tree_entry_id AS promptTreeEntryId,
           prompt_tree_is_expanded AS promptTreeIsExpanded,
           prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
-          folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
+          folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson,
+          folder_prefix_editor_view_state_json AS folderPrefixEditorViewStateJson,
+          folder_suffix_editor_view_state_json AS folderSuffixEditorViewStateJson
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
         `
@@ -221,6 +223,8 @@ export class UserPersistenceDataAccess {
       promptTreeIsExpanded: number
       promptTreeIsShowingAllPrompts: number
       folderDescriptionEditorViewStateJson: string | null
+      folderPrefixEditorViewStateJson: string | null
+      folderSuffixEditorViewStateJson: string | null
     }>
 
     const serializablePromptFolderUiStateRows = promptFolderUiStateRows.map((row) => ({
@@ -228,7 +232,9 @@ export class UserPersistenceDataAccess {
       promptTreeEntryId: row.promptTreeEntryId,
       promptTreeIsExpanded: row.promptTreeIsExpanded !== 0,
       promptTreeIsShowingAllPrompts: row.promptTreeIsShowingAllPrompts !== 0,
-      folderDescriptionEditorViewStateJson: row.folderDescriptionEditorViewStateJson
+      folderDescriptionEditorViewStateJson: row.folderDescriptionEditorViewStateJson,
+      folderPrefixEditorViewStateJson: row.folderPrefixEditorViewStateJson,
+      folderSuffixEditorViewStateJson: row.folderSuffixEditorViewStateJson
     }))
 
     const selectedScreenData = parseSelectedScreenDataJson(workspaceUiState.selectedScreenDataJson)
@@ -292,9 +298,11 @@ export class UserPersistenceDataAccess {
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
           prompt_tree_is_showing_all_prompts,
-          folder_description_editor_view_state_json
+          folder_description_editor_view_state_json,
+          folder_prefix_editor_view_state_json,
+          folder_suffix_editor_view_state_json
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
 
@@ -305,7 +313,9 @@ export class UserPersistenceDataAccess {
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded ? 1 : 0,
           entry.promptTreeIsShowingAllPrompts ? 1 : 0,
-          entry.folderDescriptionEditorViewStateJson
+          entry.folderDescriptionEditorViewStateJson,
+          entry.folderPrefixEditorViewStateJson,
+          entry.folderSuffixEditorViewStateJson
         )
       }
     })
@@ -331,7 +341,9 @@ export class UserPersistenceDataAccess {
             prompt_tree_entry_id AS promptTreeEntryId,
             prompt_tree_is_expanded AS promptTreeIsExpanded,
             prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
-            folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson
+            folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson,
+            folder_prefix_editor_view_state_json AS folderPrefixEditorViewStateJson,
+            folder_suffix_editor_view_state_json AS folderSuffixEditorViewStateJson
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
           `
@@ -342,6 +354,8 @@ export class UserPersistenceDataAccess {
         promptTreeIsExpanded: number
         promptTreeIsShowingAllPrompts: number
         folderDescriptionEditorViewStateJson: string | null
+        folderPrefixEditorViewStateJson: string | null
+        folderSuffixEditorViewStateJson: string | null
       }>
 
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(workspaceId)
@@ -354,9 +368,11 @@ export class UserPersistenceDataAccess {
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
           prompt_tree_is_showing_all_prompts,
-          folder_description_editor_view_state_json
+          folder_description_editor_view_state_json,
+          folder_prefix_editor_view_state_json,
+          folder_suffix_editor_view_state_json
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
 
@@ -371,7 +387,9 @@ export class UserPersistenceDataAccess {
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded,
           entry.promptTreeIsShowingAllPrompts,
-          entry.folderDescriptionEditorViewStateJson
+          entry.folderDescriptionEditorViewStateJson,
+          entry.folderPrefixEditorViewStateJson,
+          entry.folderSuffixEditorViewStateJson
         )
       }
 

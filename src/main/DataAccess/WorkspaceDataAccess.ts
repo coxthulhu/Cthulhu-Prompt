@@ -13,6 +13,8 @@ import {
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_FOLDER_ORDER_FILENAME,
+  PROMPT_FOLDER_PREFIX_FILENAME,
+  PROMPT_FOLDER_SUFFIX_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolveWorkspacePromptFolderOrderPath
@@ -64,6 +66,16 @@ const writeExamplePrompts = (workspacePath: string): string => {
     exampleFolderPath,
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,
     PROMPT_FOLDER_DESCRIPTION_FILENAME
+  )
+  const prefixPath = path.join(
+    exampleFolderPath,
+    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
+    PROMPT_FOLDER_PREFIX_FILENAME
+  )
+  const suffixPath = path.join(
+    exampleFolderPath,
+    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
+    PROMPT_FOLDER_SUFFIX_FILENAME
   )
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
@@ -117,6 +129,8 @@ const writeExamplePrompts = (workspacePath: string): string => {
   )
   fs.writeFileSync(orderPath, JSON.stringify({ promptIds }, null, 2), 'utf8')
   fs.writeFileSync(descriptionPath, '', 'utf8')
+  fs.writeFileSync(prefixPath, '', 'utf8')
+  fs.writeFileSync(suffixPath, '', 'utf8')
 
   return promptFolderId
 }
