@@ -20,7 +20,7 @@ class ElectronDialogProvider implements DialogProvider {
 
   async selectWorkspaceInfoFile(): Promise<{ dialogCancelled: boolean; filePaths: string[] }> {
     const result = await dialog.showOpenDialog({
-      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cprompt.json'] }],
+      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cthulhuprompt.json'] }],
       properties: ['openFile']
     })
     return {

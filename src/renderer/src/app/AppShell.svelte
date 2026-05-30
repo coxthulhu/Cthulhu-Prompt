@@ -214,7 +214,7 @@
 
   const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
     const workspaceFileName = preparePromptFolderName(workspaceName).folderName
-    return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cprompt.json`
+    return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cthulhuprompt.json`
   }
 
   const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {

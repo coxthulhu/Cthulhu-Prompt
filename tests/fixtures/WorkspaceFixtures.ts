@@ -193,7 +193,7 @@ export function getWorkspacePath(scenario: WorkspaceScenario): string {
 export function getWorkspaceInfoPath(workspacePath: string): string {
   const segments = workspacePath.split(/[\\/]+/).filter(Boolean)
   const workspaceName = segments[segments.length - 1] ?? 'Workspace'
-  return `${workspacePath}/${workspaceName}.cprompt.json`
+  return `${workspacePath}/${workspaceName}.cthulhuprompt.json`
 }
 
 /**
@@ -219,7 +219,7 @@ export function createBasicWorkspace(
       : getWorkspaceInfoPath(workspacePath)
           .split('/')
           .pop()!
-          .replace(/\.cprompt\.json$/, '')
+          .replace(/\.cthulhuprompt\.json$/, '')
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
@@ -264,12 +264,12 @@ export function createWorkspaceWithFolders(
 
     // Create folder metadata
     structure[`${folderPath}/FolderOrder.json`] = JSON.stringify({ promptIds }, null, 2)
-    structure[`${folderPath}/.cprompt/FolderInfo.json`] = JSON.stringify(
+    structure[`${folderPath}/.folderprops/FolderInfo.json`] = JSON.stringify(
       createPromptFolderInfo(folder.displayName, promptFolderId),
       null,
       2
     )
-    structure[`${folderPath}/.cprompt/Description.md`] = folder.folderDescription ?? ''
+    structure[`${folderPath}/.folderprops/Description.md`] = folder.folderDescription ?? ''
     Object.assign(structure, promptFiles)
   }
   structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
@@ -440,12 +440,12 @@ export function addFolderToWorkspace(
 
   return {
     [`${folderPath}/FolderOrder.json`]: JSON.stringify({ promptIds }, null, 2),
-    [`${folderPath}/.cprompt/FolderInfo.json`]: JSON.stringify(
+    [`${folderPath}/.folderprops/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,
       2
     ),
-    [`${folderPath}/.cprompt/Description.md`]: folderConfig.folderDescription ?? '',
+    [`${folderPath}/.folderprops/Description.md`]: folderConfig.folderDescription ?? '',
     ...promptFiles
   }
 }
@@ -544,7 +544,7 @@ export function createCorruptedWorkspace(
   switch (corruptionType) {
     case 'missing-settings':
       structure[`${workspacePath}/Prompts`] = null
-      // Missing .cprompt.json
+      // Missing .cthulhuprompt.json
       break
 
     case 'invalid-json':
@@ -559,7 +559,7 @@ export function createCorruptedWorkspace(
           workspaceName: getWorkspaceInfoPath(workspacePath)
             .split('/')
             .pop()!
-            .replace(/\.cprompt\.json$/, '')
+            .replace(/\.cthulhuprompt\.json$/, '')
         },
         null,
         2

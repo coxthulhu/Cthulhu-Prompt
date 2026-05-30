@@ -1,9 +1,9 @@
 import * as path from 'path'
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
-export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cprompt.json'
+export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
-export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.cprompt'
+export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.folderprops'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'Description.md'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
