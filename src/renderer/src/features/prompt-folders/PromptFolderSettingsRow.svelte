@@ -91,14 +91,16 @@
     },
     folderPrefix: {
       title: 'Prompt Folder Prefix',
-      infoText: 'Text to add before each prompt copied from this folder.',
+      infoText:
+        'Text to add before each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
       copyLabel: 'Copy folder prefix',
       copyTitle: 'Copy folder prefix',
       viewStateCapturePrefix: 'prompt-folder-prefix'
     },
     folderSuffix: {
       title: 'Prompt Folder Suffix',
-      infoText: 'Text to add after each prompt copied from this folder.',
+      infoText:
+        'Text to add after each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
       copyLabel: 'Copy folder suffix',
       copyTitle: 'Copy folder suffix',
       viewStateCapturePrefix: 'prompt-folder-suffix'

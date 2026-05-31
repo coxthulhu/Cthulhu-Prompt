@@ -18,15 +18,15 @@
 
 <style>
   .cthulhuUiInfoRow {
-    align-items: start;
-    background: var(--ui-info-normal-surface);
-    border: 1px solid var(--ui-info-normal-border);
+    align-items: center;
+    background: var(--ui-neutral-muted-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
     color: var(--ui-secondary-text);
     display: grid;
     font-size: 12px;
-    font-weight: 650;
+    font-weight: 600;
     gap: 8px;
     grid-template-columns: 18px minmax(0, 1fr);
     line-height: 18px;
@@ -35,8 +35,7 @@
   }
 
   .cthulhuUiInfoRowIcon {
-    color: var(--ui-info-strong-border);
-    margin-top: 1px;
+    color: var(--ui-secondary-text);
   }
 
   .cthulhuUiInfoRowText {
