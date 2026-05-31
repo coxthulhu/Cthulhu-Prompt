@@ -5,18 +5,17 @@ import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
+import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
   PROMPTS_DIRECTORY_NAME,
-  PROMPT_FOLDER_DESCRIPTION_FILENAME,
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_FOLDER_ORDER_FILENAME,
-  PROMPT_FOLDER_PREFIX_FILENAME,
-  PROMPT_FOLDER_SUFFIX_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
+  resolvePromptFolderSettingsTextPath,
   resolveWorkspacePromptFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
@@ -62,21 +61,6 @@ const writeExamplePrompts = (workspacePath: string): string => {
     PROMPT_FOLDER_INFO_FILENAME
   )
   const orderPath = path.join(exampleFolderPath, PROMPT_FOLDER_ORDER_FILENAME)
-  const descriptionPath = path.join(
-    exampleFolderPath,
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-    PROMPT_FOLDER_DESCRIPTION_FILENAME
-  )
-  const prefixPath = path.join(
-    exampleFolderPath,
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-    PROMPT_FOLDER_PREFIX_FILENAME
-  )
-  const suffixPath = path.join(
-    exampleFolderPath,
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-    PROMPT_FOLDER_SUFFIX_FILENAME
-  )
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
   const examplePrompts = [
@@ -128,9 +112,13 @@ const writeExamplePrompts = (workspacePath: string): string => {
     'utf8'
   )
   fs.writeFileSync(orderPath, JSON.stringify({ promptIds }, null, 2), 'utf8')
-  fs.writeFileSync(descriptionPath, '', 'utf8')
-  fs.writeFileSync(prefixPath, '', 'utf8')
-  fs.writeFileSync(suffixPath, '', 'utf8')
+  for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+    fs.writeFileSync(
+      resolvePromptFolderSettingsTextPath(workspacePath, EXAMPLE_FOLDER_NAME, field),
+      '',
+      'utf8'
+    )
+  }
 
   return promptFolderId
 }

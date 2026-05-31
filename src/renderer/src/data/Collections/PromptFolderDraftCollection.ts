@@ -1,10 +1,8 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
+import type { PromptFolderSettingsUpdate } from '@shared/PromptFolder'
 
-export type PromptFolderDraftRecord = {
+export type PromptFolderDraftRecord = PromptFolderSettingsUpdate & {
   id: string
-  folderDescription: string
-  folderPrefix: string
-  folderSuffix: string
   // Tracks whether this folder has completed at least one initial screen load this session.
   hasLoadedInitialData: boolean
 }

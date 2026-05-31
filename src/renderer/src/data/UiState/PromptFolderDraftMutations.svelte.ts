@@ -1,4 +1,8 @@
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  type PromptFolder,
+  type PromptFolderSettingsField
+} from '@shared/PromptFolder'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
@@ -17,27 +21,23 @@ import {
 } from './PromptFolderDraftUiCache.svelte.ts'
 
 export type PromptFolderDraftState = PromptFolderDraftRecord
-export type PromptFolderSettingsDraftField = 'folderDescription' | 'folderPrefix' | 'folderSuffix'
+export type PromptFolderSettingsDraftField = PromptFolderSettingsField
 
 const haveSamePromptFolderSettings = (
   left: PromptFolderDraftRecord,
   right: PromptFolder
 ): boolean => {
-  return (
-    left.folderDescription === right.folderDescription &&
-    left.folderPrefix === right.folderPrefix &&
-    left.folderSuffix === right.folderSuffix
-  )
+  return PROMPT_FOLDER_SETTINGS_FIELDS.every((field) => left[field] === right[field])
 }
 
 const createPromptFolderDraftRecord = (promptFolder: PromptFolder): PromptFolderDraftRecord => {
   return {
     id: promptFolder.id,
-    folderDescription: promptFolder.folderDescription,
-    folderPrefix: promptFolder.folderPrefix,
-    folderSuffix: promptFolder.folderSuffix,
+    ...Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [field, promptFolder[field]])
+    ),
     hasLoadedInitialData: false
-  }
+  } as PromptFolderDraftRecord
 }
 
 type PromptFolderDraftOptimisticMutationOptions = {
@@ -113,9 +113,9 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
           continue
         }
 
-        draftRecord.folderDescription = nextPromptFolder.folderDescription
-        draftRecord.folderPrefix = nextPromptFolder.folderPrefix
-        draftRecord.folderSuffix = nextPromptFolder.folderSuffix
+        for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+          draftRecord[field] = nextPromptFolder[field]
+        }
       }
     })
   }

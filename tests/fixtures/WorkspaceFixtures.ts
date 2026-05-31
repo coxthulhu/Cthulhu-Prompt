@@ -1,9 +1,11 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
+import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
 import type { PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
+import { PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
   VIRTUAL_FIND_LAST_PROMPT_INDEX,
@@ -38,6 +40,17 @@ export interface PromptFolderConfig {
 }
 
 type PromptTemplate = NonNullable<PromptFolderConfig['prompts']>[number]
+
+const addPromptFolderSettingsFiles = (
+  structure: Record<string, string | null>,
+  folderPath: string,
+  folder: PromptFolderConfig
+): void => {
+  for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+    structure[`${folderPath}/.folderprops/${PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]}`] =
+      folder[field] ?? ''
+  }
+}
 
 function createSinglePromptFoldersFromPromptCollection(
   promptCollection: Record<string, PromptTemplate>
@@ -271,9 +284,7 @@ export function createWorkspaceWithFolders(
       null,
       2
     )
-    structure[`${folderPath}/.folderprops/Description.md`] = folder.folderDescription ?? ''
-    structure[`${folderPath}/.folderprops/PromptPrefix.md`] = folder.folderPrefix ?? ''
-    structure[`${folderPath}/.folderprops/PromptSuffix.md`] = folder.folderSuffix ?? ''
+    addPromptFolderSettingsFiles(structure, folderPath, folder)
     Object.assign(structure, promptFiles)
   }
   structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
@@ -442,18 +453,18 @@ export function addFolderToWorkspace(
       ? folderConfig.promptFolderId
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
-  return {
+  const structure: Record<string, string | null> = {
     [`${folderPath}/FolderOrder.json`]: JSON.stringify({ promptIds }, null, 2),
     [`${folderPath}/.folderprops/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,
       2
     ),
-    [`${folderPath}/.folderprops/Description.md`]: folderConfig.folderDescription ?? '',
-    [`${folderPath}/.folderprops/PromptPrefix.md`]: folderConfig.folderPrefix ?? '',
-    [`${folderPath}/.folderprops/PromptSuffix.md`]: folderConfig.folderSuffix ?? '',
     ...promptFiles
   }
+  addPromptFolderSettingsFiles(structure, folderPath, folderConfig)
+
+  return structure
 }
 
 /**

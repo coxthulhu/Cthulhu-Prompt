@@ -1,4 +1,5 @@
 import * as monaco from 'monaco-editor'
+import type { PromptFolderSettingsField } from '@shared/PromptFolder'
 
 export const PROMPT_EDITOR_THEME = 'Dark Modern'
 export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
@@ -56,16 +57,19 @@ export const createPromptEditorModelUri = (promptId: string): monaco.Uri => {
   return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/prompts/${promptId}.md`)
 }
 
-export const createPromptFolderDescriptionModelUri = (promptFolderId: string): monaco.Uri => {
-  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-descriptions/${promptFolderId}.md`)
+const PROMPT_FOLDER_SETTINGS_MODEL_URI_SEGMENTS: Record<PromptFolderSettingsField, string> = {
+  folderDescription: 'folder-descriptions',
+  folderPrefix: 'folder-prefixes',
+  folderSuffix: 'folder-suffixes'
 }
 
-export const createPromptFolderPrefixModelUri = (promptFolderId: string): monaco.Uri => {
-  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-prefixes/${promptFolderId}.md`)
-}
-
-export const createPromptFolderSuffixModelUri = (promptFolderId: string): monaco.Uri => {
-  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/folder-suffixes/${promptFolderId}.md`)
+export const createPromptFolderSettingsModelUri = (
+  promptFolderId: string,
+  field: PromptFolderSettingsField
+): monaco.Uri => {
+  return monaco.Uri.file(
+    `${PROMPT_EDITOR_MODEL_URI_ROOT}/${PROMPT_FOLDER_SETTINGS_MODEL_URI_SEGMENTS[field]}/${promptFolderId}.md`
+  )
 }
 
 export const warmupMonacoEditor = async (): Promise<void> => {

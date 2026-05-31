@@ -1,6 +1,10 @@
 import * as path from 'path'
 import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  type PromptFolder,
+  type PromptFolderSettingsUpdate
+} from '@shared/PromptFolder'
 import type {
   PromptFolderInfoFile,
   PromptFolderOrderFile,
@@ -14,11 +18,9 @@ import {
   PROMPTS_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   resolvePromptFolderPath,
-  resolvePromptFolderDescriptionPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
-  resolvePromptFolderPrefixPath,
-  resolvePromptFolderSuffixPath,
+  resolvePromptFolderSettingsTextPath,
   resolvePromptPathsFromStem,
   resolveWorkspacePromptFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
@@ -90,11 +92,12 @@ export const readPromptStemByPromptId = (
 
 export const readPromptFolder = (workspacePath: string, folderName: string): PromptFolder => {
   const info = readPromptFolderInfo(workspacePath, folderName)
-  const folderDescription = readOptionalTextFile(
-    resolvePromptFolderDescriptionPath(workspacePath, folderName)
-  )
-  const folderPrefix = readOptionalTextFile(resolvePromptFolderPrefixPath(workspacePath, folderName))
-  const folderSuffix = readOptionalTextFile(resolvePromptFolderSuffixPath(workspacePath, folderName))
+  const folderSettings = Object.fromEntries(
+    PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+      field,
+      readOptionalTextFile(resolvePromptFolderSettingsTextPath(workspacePath, folderName, field))
+    ])
+  ) as PromptFolderSettingsUpdate
   const promptIds = readPromptIds(workspacePath, folderName)
 
   return {
@@ -103,9 +106,7 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     displayName: info.displayName,
     promptCount: promptIds.length,
     promptIds,
-    folderDescription,
-    folderPrefix,
-    folderSuffix
+    ...folderSettings
   }
 }
 

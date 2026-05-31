@@ -1,4 +1,8 @@
 import { ipcMain } from 'electron'
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  createEmptyPromptFolderSettings
+} from '@shared/PromptFolder'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
@@ -80,9 +84,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   displayName: normalizedDisplayName,
                   promptCount: 0,
                   promptIds: [],
-                  folderDescription: '',
-                  folderPrefix: '',
-                  folderSuffix: ''
+                  ...createEmptyPromptFolderSettings()
                 },
                 persistenceFields: {
                   workspaceId: requestedWorkspace.id,
@@ -148,9 +150,9 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.folderDescription = requestedPromptFolder.data.folderDescription
-                  draft.folderPrefix = requestedPromptFolder.data.folderPrefix
-                  draft.folderSuffix = requestedPromptFolder.data.folderSuffix
+                  for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+                    draft[field] = requestedPromptFolder.data[field]
+                  }
                 }
               })
             }

@@ -1,23 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import {
-    createPromptFolderDescriptionModelUri,
-    createPromptFolderPrefixModelUri,
-    createPromptFolderSuffixModelUri,
-    type monaco
-  } from '@renderer/common/Monaco'
+  import { createPromptFolderSettingsModelUri, type monaco } from '@renderer/common/Monaco'
+  import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import {
-    lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson,
-    lookupWorkspacePersistedPromptFolderPrefixEditorViewStateJson,
-    lookupWorkspacePersistedPromptFolderSuffixEditorViewStateJson,
-    setPromptFolderDescriptionEditorViewStateWithAutosave,
-    setPromptFolderPrefixEditorViewStateWithAutosave,
-    setPromptFolderSuffixEditorViewStateWithAutosave
+    lookupWorkspacePersistedPromptFolderEditorViewStateJson,
+    setPromptFolderEditorViewStateWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
@@ -25,15 +17,14 @@
   import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
   import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
-  import { MONACO_PADDING_PX, type PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
+  import {
+    MONACO_PADDING_PX,
+    type PromptEditorSizingConfig
+  } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { Folder, Settings } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
-  import {
-    PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
-    PROMPT_FOLDER_FIND_FOLDER_PREFIX_SECTION_KEY,
-    PROMPT_FOLDER_FIND_FOLDER_SUFFIX_SECTION_KEY
-  } from './find/promptFolderFindSectionKeys'
+  import { PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS } from './find/promptFolderFindSectionKeys'
   import type {
     PromptFolderFindRequest,
     PromptFolderFindRowHandle
@@ -49,10 +40,7 @@
     estimatePromptFolderSettingsMonacoHeight
   } from './promptFolderSettingsSizing'
 
-  type SettingsSectionKey = 'description' | 'prefix' | 'suffix'
-
   type SettingsSection = {
-    key: SettingsSectionKey
     field: PromptFolderSettingsDraftField
     findSectionKey: string
     title: string
@@ -66,6 +54,18 @@
     setViewState: (viewStateJson: string | null) => void
   }
 
+  type SettingsSectionConfig = Omit<
+    SettingsSection,
+    | 'field'
+    | 'value'
+    | 'modelUri'
+    | 'initialViewStateJson'
+    | 'viewStateCaptureKey'
+    | 'setViewState'
+  > & {
+    viewStateCapturePrefix: string
+  }
+
   type SectionEditorState = {
     overflowHost: HTMLDivElement | null
     overflowPaddingHost: HTMLDivElement | null
@@ -74,6 +74,34 @@
     monacoHeightPx: number | null
     requestImmediateHydration: (() => Promise<void>) | null
     revealSectionMatch: ((query: string, matchIndex: number) => number | null) | null
+  }
+
+  const SETTINGS_SECTION_CONFIG: Record<PromptFolderSettingsDraftField, SettingsSectionConfig> = {
+    folderDescription: {
+      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS.folderDescription,
+      title: 'Folder Description',
+      infoText:
+        'A general description of this folder and the types of prompts that are within it. For informational use only.',
+      copyLabel: 'Copy folder description',
+      copyTitle: 'Copy folder description',
+      viewStateCapturePrefix: 'prompt-folder-description'
+    },
+    folderPrefix: {
+      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS.folderPrefix,
+      title: 'Prompt Folder Prefix',
+      infoText: 'Text to add before each prompt copied from this folder.',
+      copyLabel: 'Copy folder prefix',
+      copyTitle: 'Copy folder prefix',
+      viewStateCapturePrefix: 'prompt-folder-prefix'
+    },
+    folderSuffix: {
+      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS.folderSuffix,
+      title: 'Prompt Folder Suffix',
+      infoText: 'Text to add after each prompt copied from this folder.',
+      copyLabel: 'Copy folder suffix',
+      copyTitle: 'Copy folder suffix',
+      viewStateCapturePrefix: 'prompt-folder-suffix'
+    }
   }
 
   type Props = {
@@ -146,98 +174,77 @@
   let rowElement = $state<HTMLDivElement | null>(null)
   let lastFocusRequestId = $state(0)
   let pendingFindHydrationSectionKey = $state<string | null>(null)
-  let sectionStates = $state<Record<SettingsSectionKey, SectionEditorState>>({
-    description: createSectionEditorState(),
-    prefix: createSectionEditorState(),
-    suffix: createSectionEditorState()
-  })
+  let sectionStates = $state<Record<PromptFolderSettingsDraftField, SectionEditorState>>(
+    Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [field, createSectionEditorState()])
+    ) as Record<PromptFolderSettingsDraftField, SectionEditorState>
+  )
 
-  const sections = $derived.by<SettingsSection[]>(() => [
-    {
-      key: 'description',
-      field: 'folderDescription',
-      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
-      title: 'Folder Description',
-      infoText:
-        'A general description of this folder and the types of prompts that are within it. For informational use only.',
-      copyLabel: 'Copy folder description',
-      copyTitle: 'Copy folder description',
-      value: descriptionText,
-      modelUri: createPromptFolderDescriptionModelUri(promptFolderId),
-      initialViewStateJson: workspaceId
-        ? lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson(
-            workspaceId,
-            promptFolderId
-          )
-        : null,
-      viewStateCaptureKey: `prompt-folder-description:${promptFolderId}`,
-      setViewState: (viewStateJson) => {
-        if (!workspaceId) return
-        setPromptFolderDescriptionEditorViewStateWithAutosave(
-          workspaceId,
-          promptFolderId,
-          viewStateJson
-        )
-      }
-    },
-    {
-      key: 'prefix',
-      field: 'folderPrefix',
-      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_PREFIX_SECTION_KEY,
-      title: 'Prompt Folder Prefix',
-      infoText: 'Text to add before each prompt copied from this folder.',
-      copyLabel: 'Copy folder prefix',
-      copyTitle: 'Copy folder prefix',
-      value: prefixText,
-      modelUri: createPromptFolderPrefixModelUri(promptFolderId),
-      initialViewStateJson: workspaceId
-        ? lookupWorkspacePersistedPromptFolderPrefixEditorViewStateJson(workspaceId, promptFolderId)
-        : null,
-      viewStateCaptureKey: `prompt-folder-prefix:${promptFolderId}`,
-      setViewState: (viewStateJson) => {
-        if (!workspaceId) return
-        setPromptFolderPrefixEditorViewStateWithAutosave(workspaceId, promptFolderId, viewStateJson)
-      }
-    },
-    {
-      key: 'suffix',
-      field: 'folderSuffix',
-      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SUFFIX_SECTION_KEY,
-      title: 'Prompt Folder Suffix',
-      infoText: 'Text to add after each prompt copied from this folder.',
-      copyLabel: 'Copy folder suffix',
-      copyTitle: 'Copy folder suffix',
-      value: suffixText,
-      modelUri: createPromptFolderSuffixModelUri(promptFolderId),
-      initialViewStateJson: workspaceId
-        ? lookupWorkspacePersistedPromptFolderSuffixEditorViewStateJson(workspaceId, promptFolderId)
-        : null,
-      viewStateCaptureKey: `prompt-folder-suffix:${promptFolderId}`,
-      setViewState: (viewStateJson) => {
-        if (!workspaceId) return
-        setPromptFolderSuffixEditorViewStateWithAutosave(workspaceId, promptFolderId, viewStateJson)
-      }
-    }
-  ])
-
-  const placeholderMonacoHeightBySection = $derived.by<Record<SettingsSectionKey, number>>(() => ({
-    description: estimatePromptFolderSettingsMonacoHeight(descriptionText, systemSettings.promptFontSize),
-    prefix: estimatePromptFolderSettingsMonacoHeight(prefixText, systemSettings.promptFontSize),
-    suffix: estimatePromptFolderSettingsMonacoHeight(suffixText, systemSettings.promptFontSize)
+  const settingsTextByField = $derived.by<Record<PromptFolderSettingsDraftField, string>>(() => ({
+    folderDescription: descriptionText,
+    folderPrefix: prefixText,
+    folderSuffix: suffixText
   }))
 
-  const effectiveMonacoHeights = $derived.by(() =>
-    sections.map((section) => {
-      return sectionStates[section.key].monacoHeightPx ?? placeholderMonacoHeightBySection[section.key]
+  const sections = $derived.by<SettingsSection[]>(() =>
+    PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => {
+      const config = SETTINGS_SECTION_CONFIG[field]
+      return {
+        ...config,
+        field,
+        value: settingsTextByField[field],
+        modelUri: createPromptFolderSettingsModelUri(promptFolderId, field),
+        initialViewStateJson: workspaceId
+          ? lookupWorkspacePersistedPromptFolderEditorViewStateJson(
+              workspaceId,
+              promptFolderId,
+              field
+            )
+          : null,
+        viewStateCaptureKey: `${config.viewStateCapturePrefix}:${promptFolderId}`,
+        setViewState: (viewStateJson) => {
+          if (!workspaceId) return
+          setPromptFolderEditorViewStateWithAutosave(
+            workspaceId,
+            promptFolderId,
+            field,
+            viewStateJson
+          )
+        }
+      }
     })
   )
 
-  const getMeasuredRowHeightPx = (): number => getPromptFolderSettingsHeightPx(effectiveMonacoHeights)
+  const placeholderMonacoHeightBySection = $derived.by<
+    Record<PromptFolderSettingsDraftField, number>
+  >(() =>
+    Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+        field,
+        estimatePromptFolderSettingsMonacoHeight(
+          settingsTextByField[field],
+          systemSettings.promptFontSize
+        )
+      ])
+    ) as Record<PromptFolderSettingsDraftField, number>
+  )
+
+  const effectiveMonacoHeights = $derived.by(() =>
+    sections.map((section) => {
+      return (
+        sectionStates[section.field].monacoHeightPx ??
+        placeholderMonacoHeightBySection[section.field]
+      )
+    })
+  )
+
+  const getMeasuredRowHeightPx = (): number =>
+    getPromptFolderSettingsHeightPx(effectiveMonacoHeights)
 
   // Side effect: align each Monaco overflow widget host with its settings card in the virtualized row.
   $effect(() => {
     for (const [sectionIndex, section] of sections.entries()) {
-      const state = sectionStates[section.key]
+      const state = sectionStates[section.field]
       const topPaddingPx = getPromptFolderSettingsEditorTopOffsetPx(
         sectionIndex,
         effectiveMonacoHeights.slice(0, sectionIndex)
@@ -254,7 +261,7 @@
   })
 
   const reportRowHydration = () => {
-    const isAnySectionHydrated = sections.some((section) => sectionStates[section.key].isHydrated)
+    const isAnySectionHydrated = sections.some((section) => sectionStates[section.field].isHydrated)
     onHydrationChange?.(isAnySectionHydrated)
     findContext?.reportHydration(promptFolderFindEntityId, isAnySectionHydrated)
   }
@@ -275,7 +282,7 @@
   })
 
   const handleEditorLifecycle = (
-    sectionKey: SettingsSectionKey,
+    sectionKey: PromptFolderSettingsDraftField,
     editor: monaco.editor.IStandaloneCodeEditor,
     isActive: boolean
   ) => {
@@ -290,7 +297,7 @@
   const ensureHydrated = async (sectionKey: string): Promise<boolean> => {
     const section = sections.find((candidate) => candidate.findSectionKey === sectionKey)
     if (!section) return false
-    const state = sectionStates[section.key]
+    const state = sectionStates[section.field]
     if (state.isHydrated) return true
     // Side effect: wait for immediate hydration to mount and activate Monaco.
     await state.requestImmediateHydration?.()
@@ -303,7 +310,7 @@
     const handle: PromptFolderFindRowHandle = {
       entityId: promptFolderFindEntityId,
       rowId,
-      isHydrated: () => sections.some((section) => sectionStates[section.key].isHydrated),
+      isHydrated: () => sections.some((section) => sectionStates[section.field].isHydrated),
       ensureHydrated: async () => true,
       shouldEnsureHydratedForSection: (sectionKey) => {
         pendingFindHydrationSectionKey = sectionKey
@@ -312,7 +319,7 @@
       revealSectionMatch: (sectionKey, query, matchIndex) => {
         const section = sections.find((candidate) => candidate.findSectionKey === sectionKey)
         if (!section) return null
-        return sectionStates[section.key].revealSectionMatch?.(query, matchIndex) ?? null
+        return sectionStates[section.field].revealSectionMatch?.(query, matchIndex) ?? null
       },
       getSectionCenterOffset: () => null
     }
@@ -333,7 +340,7 @@
     if (!rowElement) return
     const section = sections.find((candidate) => candidate.findSectionKey === focusMatch.sectionKey)
     if (!section) return
-    sectionStates[section.key].editor?.focus()
+    sectionStates[section.field].editor?.focus()
   })
 </script>
 
@@ -352,9 +359,9 @@
     showAccentLine
   />
 
-  {#each sections as section (section.key)}
-    {@const state = sectionStates[section.key]}
-    {@const placeholderMonacoHeightPx = placeholderMonacoHeightBySection[section.key]}
+  {#each sections as section (section.field)}
+    {@const state = sectionStates[section.field]}
+    {@const placeholderMonacoHeightPx = placeholderMonacoHeightBySection[section.field]}
     <PromptEditorCardSurface>
       <PromptEditorTitleBar
         title={section.title}
@@ -371,7 +378,7 @@
 
       <div class="prompt-folder-settings-editor">
         {#if state.overflowHost}
-          {#key `${promptFolderId}:${section.key}`}
+          {#key `${promptFolderId}:${section.field}`}
             <HydratableMonacoEditor
               initialValue={section.value}
               initialViewStateJson={section.initialViewStateJson}
@@ -386,7 +393,7 @@
               {rowId}
               {scrollToWithinWindowBand}
               onEditorLifecycle={(editor, isActive) => {
-                handleEditorLifecycle(section.key, editor, isActive)
+                handleEditorLifecycle(section.field, editor, isActive)
               }}
               findSectionKey={section.findSectionKey}
               {findRequest}

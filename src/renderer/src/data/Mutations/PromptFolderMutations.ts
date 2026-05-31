@@ -1,9 +1,11 @@
-import type {
-  CreatePromptFolderPayload,
-  CreatePromptFolderResponsePayload,
-  PromptFolder,
-  PromptFolderRevisionResponsePayload,
-  UpdatePromptFolderSettingsPayload
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  createEmptyPromptFolderSettings,
+  type CreatePromptFolderPayload,
+  type CreatePromptFolderResponsePayload,
+  type PromptFolder,
+  type PromptFolderRevisionResponsePayload,
+  type UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { compactGuid } from '@shared/compactGuid'
@@ -62,11 +64,9 @@ export const mutatePacedPromptFolderSettingsAutosaveUpdate = ({
         promptFolder: {
           id: promptFolderId,
           expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
-          data: {
-            folderDescription: latestPromptFolder.folderDescription,
-            folderPrefix: latestPromptFolder.folderPrefix,
-            folderSuffix: latestPromptFolder.folderSuffix
-          }
+          data: Object.fromEntries(
+            PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [field, latestPromptFolder[field]])
+          ) as UpdatePromptFolderSettingsPayload['promptFolder']['data']
         }
       })
 
@@ -104,15 +104,11 @@ export const createPromptFolder = async (
         displayName: normalizedDisplayName,
         promptCount: 0,
         promptIds: [],
-        folderDescription: '',
-        folderPrefix: '',
-        folderSuffix: ''
+        ...createEmptyPromptFolderSettings()
       })
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
-        folderDescription: '',
-        folderPrefix: '',
-        folderSuffix: '',
+        ...createEmptyPromptFolderSettings(),
         hasLoadedInitialData: false
       })
       collections.workspace.update(workspaceId, (draft) => {

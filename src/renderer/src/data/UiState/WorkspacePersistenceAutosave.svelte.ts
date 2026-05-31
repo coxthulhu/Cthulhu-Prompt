@@ -1,3 +1,4 @@
+import type { PromptFolderSettingsField } from '@shared/PromptFolder'
 import type { WorkspacePromptFolderPromptTreeEntry } from '@shared/UserPersistence'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
@@ -12,6 +13,15 @@ type PromptFolderEditorViewStateField =
   | 'folderDescriptionEditorViewStateJson'
   | 'folderPrefixEditorViewStateJson'
   | 'folderSuffixEditorViewStateJson'
+
+const PROMPT_FOLDER_EDITOR_VIEW_STATE_FIELDS: Record<
+  PromptFolderSettingsField,
+  PromptFolderEditorViewStateField
+> = {
+  folderDescription: 'folderDescriptionEditorViewStateJson',
+  folderPrefix: 'folderPrefixEditorViewStateJson',
+  folderSuffix: 'folderSuffixEditorViewStateJson'
+}
 
 const createPromptFolderPromptTreeEntry = (
   promptFolderId: string,
@@ -38,7 +48,7 @@ const upsertPromptFolderPromptTreeEntry = (
     return [
       ...entries,
       createPromptFolderPromptTreeEntry(promptFolderId, {
-        promptTreeEntryId,
+        promptTreeEntryId
       })
     ]
   }
@@ -109,7 +119,7 @@ const upsertPromptFolderExpandedState = (
     return [
       ...entries,
       createPromptFolderPromptTreeEntry(promptFolderId, {
-        promptTreeIsExpanded,
+        promptTreeIsExpanded
       })
     ]
   }
@@ -150,7 +160,7 @@ const upsertPromptFolderShowingAllPromptsState = (
     return [
       ...entries,
       createPromptFolderPromptTreeEntry(promptFolderId, {
-        promptTreeIsShowingAllPrompts,
+        promptTreeIsShowingAllPrompts
       })
     ]
   }
@@ -209,43 +219,10 @@ export const lookupWorkspacePersistedPromptFolderPromptTreeEntryId = (
   return persistedEntry?.promptTreeEntryId ?? null
 }
 
-export const lookupWorkspacePersistedPromptFolderDescriptionEditorViewStateJson = (
-  workspaceId: string,
-  promptFolderId: string
-): string | null => {
-  return lookupWorkspacePersistedPromptFolderEditorViewStateJson(
-    workspaceId,
-    promptFolderId,
-    'folderDescriptionEditorViewStateJson'
-  )
-}
-
-export const lookupWorkspacePersistedPromptFolderPrefixEditorViewStateJson = (
-  workspaceId: string,
-  promptFolderId: string
-): string | null => {
-  return lookupWorkspacePersistedPromptFolderEditorViewStateJson(
-    workspaceId,
-    promptFolderId,
-    'folderPrefixEditorViewStateJson'
-  )
-}
-
-export const lookupWorkspacePersistedPromptFolderSuffixEditorViewStateJson = (
-  workspaceId: string,
-  promptFolderId: string
-): string | null => {
-  return lookupWorkspacePersistedPromptFolderEditorViewStateJson(
-    workspaceId,
-    promptFolderId,
-    'folderSuffixEditorViewStateJson'
-  )
-}
-
-const lookupWorkspacePersistedPromptFolderEditorViewStateJson = (
+export const lookupWorkspacePersistedPromptFolderEditorViewStateJson = (
   workspaceId: string,
   promptFolderId: string,
-  field: PromptFolderEditorViewStateField
+  field: PromptFolderSettingsField
 ): string | null => {
   const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
   if (!draftRecord) {
@@ -255,7 +232,7 @@ const lookupWorkspacePersistedPromptFolderEditorViewStateJson = (
   const persistedEntry = draftRecord.promptFolderPromptTreeEntries.find(
     (entry) => entry.promptFolderId === promptFolderId
   )
-  return persistedEntry?.[field] ?? null
+  return persistedEntry?.[PROMPT_FOLDER_EDITOR_VIEW_STATE_FIELDS[field]] ?? null
 }
 
 export const lookupWorkspacePersistedPromptFolderExpandedState = (
@@ -395,49 +372,10 @@ export const setPromptFolderShowingAllPromptsStateWithAutosave = (
   })
 }
 
-export const setPromptFolderDescriptionEditorViewStateWithAutosave = (
+export const setPromptFolderEditorViewStateWithAutosave = (
   workspaceId: string,
   promptFolderId: string,
-  viewStateJson: string | null
-): void => {
-  setPromptFolderEditorViewStateWithAutosave(
-    workspaceId,
-    promptFolderId,
-    'folderDescriptionEditorViewStateJson',
-    viewStateJson
-  )
-}
-
-export const setPromptFolderPrefixEditorViewStateWithAutosave = (
-  workspaceId: string,
-  promptFolderId: string,
-  viewStateJson: string | null
-): void => {
-  setPromptFolderEditorViewStateWithAutosave(
-    workspaceId,
-    promptFolderId,
-    'folderPrefixEditorViewStateJson',
-    viewStateJson
-  )
-}
-
-export const setPromptFolderSuffixEditorViewStateWithAutosave = (
-  workspaceId: string,
-  promptFolderId: string,
-  viewStateJson: string | null
-): void => {
-  setPromptFolderEditorViewStateWithAutosave(
-    workspaceId,
-    promptFolderId,
-    'folderSuffixEditorViewStateJson',
-    viewStateJson
-  )
-}
-
-const setPromptFolderEditorViewStateWithAutosave = (
-  workspaceId: string,
-  promptFolderId: string,
-  field: PromptFolderEditorViewStateField,
+  field: PromptFolderSettingsField,
   viewStateJson: string | null
 ): void => {
   if (viewStateJson === null) {
@@ -452,7 +390,7 @@ const setPromptFolderEditorViewStateWithAutosave = (
   const nextEntries = upsertPromptFolderEditorViewState(
     draftRecord.promptFolderPromptTreeEntries,
     promptFolderId,
-    field,
+    PROMPT_FOLDER_EDITOR_VIEW_STATE_FIELDS[field],
     viewStateJson
   )
   if (nextEntries === draftRecord.promptFolderPromptTreeEntries) {
@@ -464,10 +402,20 @@ const setPromptFolderEditorViewStateWithAutosave = (
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        applyPromptFolderEditorViewState(draft, promptFolderId, field, viewStateJson)
+        applyPromptFolderEditorViewState(
+          draft,
+          promptFolderId,
+          PROMPT_FOLDER_EDITOR_VIEW_STATE_FIELDS[field],
+          viewStateJson
+        )
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
-        applyPromptFolderEditorViewState(draft, promptFolderId, field, viewStateJson)
+        applyPromptFolderEditorViewState(
+          draft,
+          promptFolderId,
+          PROMPT_FOLDER_EDITOR_VIEW_STATE_FIELDS[field],
+          viewStateJson
+        )
       })
     }
   })

@@ -1,7 +1,11 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type PromptFull } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  type PromptFolder,
+  type PromptFolderSettingsField
+} from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
@@ -47,10 +51,8 @@ import type {
   VirtualWindowViewportMetrics
 } from '../virtualizer/virtualWindowTypes'
 import {
-  PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
-  PROMPT_FOLDER_FIND_FOLDER_PREFIX_SECTION_KEY,
-  PROMPT_FOLDER_FIND_FOLDER_SUFFIX_SECTION_KEY,
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+  PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS,
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
 } from './find/promptFolderFindSectionKeys'
 import type { PromptFolderFindItem, PromptFolderFindMatch } from './find/promptFolderFindTypes'
@@ -135,6 +137,11 @@ export const createPromptFolderScreenController = ({
   )
   const prefixText = $derived(promptFolderDraft?.folderPrefix ?? promptFolder?.folderPrefix ?? '')
   const suffixText = $derived(promptFolderDraft?.folderSuffix ?? promptFolder?.folderSuffix ?? '')
+  const folderSettingsTextByField = $derived.by<Record<PromptFolderSettingsField, string>>(() => ({
+    folderDescription: descriptionText,
+    folderPrefix: prefixText,
+    folderSuffix: suffixText
+  }))
   const folderDisplayName = $derived(promptFolder?.displayName ?? 'Prompt Folder')
 
   let previousPromptFolderLoadKey = $state<string | null>(null)
@@ -201,20 +208,10 @@ export const createPromptFolderScreenController = ({
       nextItems.push({
         entityId: promptFolderSettingsFindEntityId(promptFolderId),
         rowId: PROMPT_FOLDER_SETTINGS_ROW_ID,
-        sections: [
-          {
-            key: PROMPT_FOLDER_FIND_FOLDER_DESCRIPTION_SECTION_KEY,
-            text: descriptionText
-          },
-          {
-            key: PROMPT_FOLDER_FIND_FOLDER_PREFIX_SECTION_KEY,
-            text: prefixText
-          },
-          {
-            key: PROMPT_FOLDER_FIND_FOLDER_SUFFIX_SECTION_KEY,
-            text: suffixText
-          }
-        ]
+        sections: PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => ({
+          key: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS[field],
+          text: folderSettingsTextByField[field]
+        }))
       })
     }
 
@@ -656,7 +653,7 @@ export const createPromptFolderScreenController = ({
 
   const folderSettingsHeightPx = $derived.by(() => {
     const baseHeight = estimatePromptFolderSettingsHeight(
-      [descriptionText, prefixText, suffixText],
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => folderSettingsTextByField[field]),
       promptEditorSizingConfig.fontSize
     )
 

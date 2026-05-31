@@ -15,10 +15,21 @@ export interface PromptFolder {
   folderSuffix: string
 }
 
-export type PromptFolderSettingsUpdate = Pick<
-  PromptFolder,
-  'folderDescription' | 'folderPrefix' | 'folderSuffix'
->
+export const PROMPT_FOLDER_SETTINGS_FIELDS = [
+  'folderDescription',
+  'folderPrefix',
+  'folderSuffix'
+] as const
+
+export type PromptFolderSettingsField = (typeof PROMPT_FOLDER_SETTINGS_FIELDS)[number]
+
+export type PromptFolderSettingsUpdate = Pick<PromptFolder, PromptFolderSettingsField>
+
+export const createEmptyPromptFolderSettings = (): PromptFolderSettingsUpdate => ({
+  folderDescription: '',
+  folderPrefix: '',
+  folderSuffix: ''
+})
 
 export type UpdatePromptFolderSettingsPayload = {
   promptFolder: RevisionPayloadEntity<PromptFolderSettingsUpdate>

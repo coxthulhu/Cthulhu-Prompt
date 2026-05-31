@@ -1,4 +1,8 @@
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  type PromptFolder,
+  type PromptFolderSettingsUpdate
+} from '@shared/PromptFolder'
 import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
@@ -12,13 +16,11 @@ import {
   writeJsonFile
 } from './FilePersistenceHelpers'
 import {
-  resolvePromptFolderDescriptionPath,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
   resolvePromptFolderPath,
-  resolvePromptFolderPrefixPath,
-  resolvePromptFolderSuffixPath
+  resolvePromptFolderSettingsTextPath
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
@@ -43,9 +45,7 @@ const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
   promptIds: string[],
-  folderDescription: string,
-  folderPrefix: string,
-  folderSuffix: string
+  folderSettings: PromptFolderSettingsUpdate
 ): PromptFolder => {
   return {
     id: persistedInfo.promptFolderId,
@@ -53,9 +53,7 @@ const fromPromptFolderInfoFile = (
     displayName: persistedInfo.displayName,
     promptCount: promptIds.length,
     promptIds,
-    folderDescription,
-    folderPrefix,
-    folderSuffix
+    ...folderSettings
   }
 }
 
@@ -74,17 +72,16 @@ export const promptFolderPersistence: PersistenceLayer<
     const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
     const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(workspacePath, folderName)
     const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
-    const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
-    const prefixPath = resolvePromptFolderPrefixPath(workspacePath, folderName)
-    const suffixPath = resolvePromptFolderSuffixPath(workspacePath, folderName)
+    const settingsTextPaths = PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => ({
+      field,
+      path: resolvePromptFolderSettingsTextPath(workspacePath, folderName, field)
+    }))
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
         createStagedFileRemove(orderPath),
         createStagedFileRemove(infoPath),
-        createStagedFileRemove(descriptionPath),
-        createStagedFileRemove(prefixPath),
-        createStagedFileRemove(suffixPath)
+        ...settingsTextPaths.map(({ path }) => createStagedFileRemove(path))
       ])
     }
 
@@ -99,19 +96,16 @@ export const promptFolderPersistence: PersistenceLayer<
     writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.promptIds))
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
-    const descriptionTempPath = resolveTempPath(descriptionPath)
-    fs.writeFileSync(descriptionTempPath, change.data.folderDescription, 'utf8')
-    const prefixTempPath = resolveTempPath(prefixPath)
-    fs.writeFileSync(prefixTempPath, change.data.folderPrefix, 'utf8')
-    const suffixTempPath = resolveTempPath(suffixPath)
-    fs.writeFileSync(suffixTempPath, change.data.folderSuffix, 'utf8')
+    const settingsTextTempPaths = settingsTextPaths.map(({ field, path }) => {
+      const tempPath = resolveTempPath(path)
+      fs.writeFileSync(tempPath, change.data[field], 'utf8')
+      return { path, tempPath }
+    })
 
     return createPersistenceStageResult([
       createStagedFileUpsert(orderPath, orderTempPath),
       createStagedFileUpsert(infoPath, infoTempPath),
-      createStagedFileUpsert(descriptionPath, descriptionTempPath),
-      createStagedFileUpsert(prefixPath, prefixTempPath),
-      createStagedFileUpsert(suffixPath, suffixTempPath),
+      ...settingsTextTempPaths.map(({ path, tempPath }) => createStagedFileUpsert(path, tempPath)),
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
       createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
     ])
@@ -126,9 +120,6 @@ export const promptFolderPersistence: PersistenceLayer<
     const { workspacePath, folderName } = persistenceFields
     const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
     const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
-    const descriptionPath = resolvePromptFolderDescriptionPath(workspacePath, folderName)
-    const prefixPath = resolvePromptFolderPrefixPath(workspacePath, folderName)
-    const suffixPath = resolvePromptFolderSuffixPath(workspacePath, folderName)
     const fs = getFs()
 
     if (!fs.existsSync(orderPath) || !fs.existsSync(infoPath)) {
@@ -137,17 +128,13 @@ export const promptFolderPersistence: PersistenceLayer<
 
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
     const promptIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
-    const folderDescription = readOptionalTextFile(descriptionPath)
-    const folderPrefix = readOptionalTextFile(prefixPath)
-    const folderSuffix = readOptionalTextFile(suffixPath)
+    const folderSettings = Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+        field,
+        readOptionalTextFile(resolvePromptFolderSettingsTextPath(workspacePath, folderName, field))
+      ])
+    ) as PromptFolderSettingsUpdate
 
-    return fromPromptFolderInfoFile(
-      persistedInfo,
-      folderName,
-      promptIds,
-      folderDescription,
-      folderPrefix,
-      folderSuffix
-    )
+    return fromPromptFolderInfoFile(persistedInfo, folderName, promptIds, folderSettings)
   }
 }

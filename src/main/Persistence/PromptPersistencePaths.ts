@@ -1,14 +1,21 @@
 import * as path from 'path'
+import type { PromptFolderSettingsField } from '@shared/PromptFolder'
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.folderprops'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
-export const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'Description.md'
-export const PROMPT_FOLDER_PREFIX_FILENAME = 'PromptPrefix.md'
-export const PROMPT_FOLDER_SUFFIX_FILENAME = 'PromptSuffix.md'
+const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'Description.md'
+const PROMPT_FOLDER_PREFIX_FILENAME = 'PromptPrefix.md'
+const PROMPT_FOLDER_SUFFIX_FILENAME = 'PromptSuffix.md'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
+
+export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES: Record<PromptFolderSettingsField, string> = {
+  folderDescription: PROMPT_FOLDER_DESCRIPTION_FILENAME,
+  folderPrefix: PROMPT_FOLDER_PREFIX_FILENAME,
+  folderSuffix: PROMPT_FOLDER_SUFFIX_FILENAME
+}
 
 export type PromptFilePaths = {
   markdownPath: string
@@ -58,33 +65,14 @@ export const resolvePromptFolderInfoPath = (workspacePath: string, folderName: s
   )
 }
 
-export const resolvePromptFolderDescriptionPath = (
+export const resolvePromptFolderSettingsTextPath = (
   workspacePath: string,
-  folderName: string
+  folderName: string,
+  field: PromptFolderSettingsField
 ): string => {
   return path.join(
     resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
-    PROMPT_FOLDER_DESCRIPTION_FILENAME
-  )
-}
-
-export const resolvePromptFolderPrefixPath = (
-  workspacePath: string,
-  folderName: string
-): string => {
-  return path.join(
-    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
-    PROMPT_FOLDER_PREFIX_FILENAME
-  )
-}
-
-export const resolvePromptFolderSuffixPath = (
-  workspacePath: string,
-  folderName: string
-): string => {
-  return path.join(
-    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName),
-    PROMPT_FOLDER_SUFFIX_FILENAME
+    PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]
   )
 }
 
