@@ -1,21 +1,17 @@
 import * as path from 'path'
-import type { PromptFolderSettingsField } from '@shared/PromptFolder'
+import {
+  PROMPT_FOLDER_SETTINGS_DISK_FILENAMES,
+  type PromptFolderSettingsField
+} from '@shared/PromptFolder'
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.folderprops'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
-const PROMPT_FOLDER_DESCRIPTION_FILENAME = 'Description.md'
-const PROMPT_FOLDER_PREFIX_FILENAME = 'PromptPrefix.md'
-const PROMPT_FOLDER_SUFFIX_FILENAME = 'PromptSuffix.md'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 
-export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES: Record<PromptFolderSettingsField, string> = {
-  folderDescription: PROMPT_FOLDER_DESCRIPTION_FILENAME,
-  folderPrefix: PROMPT_FOLDER_PREFIX_FILENAME,
-  folderSuffix: PROMPT_FOLDER_SUFFIX_FILENAME
-}
+export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES = PROMPT_FOLDER_SETTINGS_DISK_FILENAMES
 
 export type PromptFilePaths = {
   markdownPath: string

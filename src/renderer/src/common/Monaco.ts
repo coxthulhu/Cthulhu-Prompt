@@ -1,5 +1,8 @@
 import * as monaco from 'monaco-editor'
-import type { PromptFolderSettingsField } from '@shared/PromptFolder'
+import {
+  PROMPT_FOLDER_SETTINGS_MONACO_MODEL_URI_SEGMENTS,
+  type PromptFolderSettingsField
+} from '@shared/PromptFolder'
 
 export const PROMPT_EDITOR_THEME = 'Dark Modern'
 export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
@@ -57,18 +60,12 @@ export const createPromptEditorModelUri = (promptId: string): monaco.Uri => {
   return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/prompts/${promptId}.md`)
 }
 
-const PROMPT_FOLDER_SETTINGS_MODEL_URI_SEGMENTS: Record<PromptFolderSettingsField, string> = {
-  folderDescription: 'folder-descriptions',
-  folderPrefix: 'folder-prefixes',
-  folderSuffix: 'folder-suffixes'
-}
-
 export const createPromptFolderSettingsModelUri = (
   promptFolderId: string,
   field: PromptFolderSettingsField
 ): monaco.Uri => {
   return monaco.Uri.file(
-    `${PROMPT_EDITOR_MODEL_URI_ROOT}/${PROMPT_FOLDER_SETTINGS_MODEL_URI_SEGMENTS[field]}/${promptFolderId}.md`
+    `${PROMPT_EDITOR_MODEL_URI_ROOT}/${PROMPT_FOLDER_SETTINGS_MONACO_MODEL_URI_SEGMENTS[field]}/${promptFolderId}.md`
   )
 }
 

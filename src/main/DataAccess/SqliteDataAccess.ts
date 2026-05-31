@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 9
+const LATEST_SCHEMA_VERSION = 10
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -285,6 +285,93 @@ const migrateSchemaV8ToV9 = (db: Database.Database): void => {
   migrate()
 }
 
+const migrateSchemaV9ToV10 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE prompt_folder_settings_editor_view_state (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        settings_field TEXT NOT NULL,
+        editor_view_state_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, prompt_folder_id, settings_field)
+      );
+
+      INSERT INTO prompt_folder_settings_editor_view_state (
+        workspace_id,
+        prompt_folder_id,
+        settings_field,
+        editor_view_state_json
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        'folderDescription',
+        folder_description_editor_view_state_json
+      FROM prompt_folder_ui_state
+      WHERE folder_description_editor_view_state_json IS NOT NULL;
+
+      INSERT INTO prompt_folder_settings_editor_view_state (
+        workspace_id,
+        prompt_folder_id,
+        settings_field,
+        editor_view_state_json
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        'folderPrefix',
+        folder_prefix_editor_view_state_json
+      FROM prompt_folder_ui_state
+      WHERE folder_prefix_editor_view_state_json IS NOT NULL;
+
+      INSERT INTO prompt_folder_settings_editor_view_state (
+        workspace_id,
+        prompt_folder_id,
+        settings_field,
+        editor_view_state_json
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        'folderSuffix',
+        folder_suffix_editor_view_state_json
+      FROM prompt_folder_ui_state
+      WHERE folder_suffix_editor_view_state_json IS NOT NULL;
+
+      CREATE TABLE prompt_folder_ui_state_new (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        prompt_tree_is_expanded INTEGER NOT NULL DEFAULT 1,
+        prompt_tree_is_showing_all_prompts INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+
+      INSERT INTO prompt_folder_ui_state_new (
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        prompt_tree_is_expanded,
+        prompt_tree_is_showing_all_prompts
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        prompt_tree_is_expanded,
+        prompt_tree_is_showing_all_prompts
+      FROM prompt_folder_ui_state;
+
+      DROP TABLE prompt_folder_ui_state;
+      ALTER TABLE prompt_folder_ui_state_new RENAME TO prompt_folder_ui_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(10)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -346,6 +433,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 8) {
       migrateSchemaV8ToV9(db)
       schemaVersion = 9
+      continue
+    }
+
+    if (schemaVersion === 9) {
+      migrateSchemaV9ToV10(db)
+      schemaVersion = 10
       continue
     }
 

@@ -158,6 +158,10 @@ const seedWorkspacePersistence = async (
     electronApp,
     `DELETE FROM prompt_folder_ui_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
+  await runSqlStatement(
+    electronApp,
+    `DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
+  )
 
   for (const entry of data.promptFolderPromptTreeEntries) {
     await runSqlStatement(

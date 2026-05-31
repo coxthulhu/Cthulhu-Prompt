@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import { createPromptEditorModelUri, type monaco } from '@renderer/common/Monaco'
+  import type { PromptFolderSettings } from '@shared/PromptFolder'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
@@ -56,8 +57,7 @@
     shouldDehydrate,
     overlayRowElement,
     onHydrationChange,
-    folderPrefix,
-    folderSuffix,
+    folderSettings,
     scrollToWithinWindowBand,
     focusRequest,
     isFirstPrompt,
@@ -80,8 +80,7 @@
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
-    folderPrefix: string
-    folderSuffix: string
+    folderSettings: PromptFolderSettings
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     focusRequest?: PromptFocusRequest | null
     isFirstPrompt: boolean
@@ -121,12 +120,12 @@
   const promptTreeTitle = $derived(getPromptDisplayTitle(promptId))
   const copyText = $derived.by(() => {
     const parts: string[] = []
-    if (folderPrefix.trim().length > 0) {
-      parts.push(folderPrefix)
+    if (folderSettings.folderPrefix.trim().length > 0) {
+      parts.push(folderSettings.folderPrefix)
     }
     parts.push(promptData.draft.text)
-    if (folderSuffix.trim().length > 0) {
-      parts.push(folderSuffix)
+    if (folderSettings.folderSuffix.trim().length > 0) {
+      parts.push(folderSettings.folderSuffix)
     }
     return parts.join('\n\n')
   })

@@ -1,8 +1,9 @@
 <script lang="ts">
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
+  import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
-  import { lookupPromptFolderDescriptionMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
+  import { lookupPromptFolderSettingsRowMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
@@ -67,9 +68,7 @@
   type PromptFolderVirtualContentProps = {
     workspaceId: string | null
     promptFolderId: string
-    descriptionText: string
-    prefixText: string
-    suffixText: string
+    folderSettings: PromptFolderSettings
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, PromptDraftRecord>
     visiblePromptIds: string[]
@@ -103,9 +102,7 @@
   let {
     workspaceId,
     promptFolderId,
-    descriptionText,
-    prefixText,
-    suffixText,
+    folderSettings,
     promptEditorSizingConfig,
     promptDraftById,
     visiblePromptIds,
@@ -150,22 +147,22 @@
     onViewportMetricsChange(viewportMetrics)
   })
 
-  const lookupPromptFolderDescriptionMeasuredHeightForScreen = (
+  const lookupPromptFolderSettingsRowMeasuredHeightForScreen = (
     widthPx: number,
     devicePixelRatio: number
   ): number | null => {
-    return lookupPromptFolderDescriptionMeasuredHeight(promptFolderId, widthPx, devicePixelRatio)
+    return lookupPromptFolderSettingsRowMeasuredHeight(promptFolderId, widthPx, devicePixelRatio)
   }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
         estimatePromptFolderSettingsHeight(
-          [descriptionText, prefixText, suffixText],
+          PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => folderSettings[field]),
           promptEditorSizingConfig.fontSize
         ),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
-        lookupPromptFolderDescriptionMeasuredHeightForScreen(widthPx, devicePixelRatio),
+        lookupPromptFolderSettingsRowMeasuredHeightForScreen(widthPx, devicePixelRatio),
       hydrationPriorityEligible: true,
       overlayRow: {},
       centerRowEligible: true,
@@ -385,9 +382,7 @@
     overlayRowElement={props.overlayRowElement ?? null}
     scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
     onHydrationChange={props.onHydrationChange}
-    {descriptionText}
-    {prefixText}
-    {suffixText}
+    {folderSettings}
     {onSettingsFieldChange}
   />
 {/snippet}
@@ -447,8 +442,7 @@
     {shouldDehydrate}
     {overlayRowElement}
     {onHydrationChange}
-    folderPrefix={prefixText}
-    folderSuffix={suffixText}
+    folderSettings={folderSettings}
     scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
     focusRequest={promptFocusRequest}
     isFirstPrompt={promptIndex === 0}

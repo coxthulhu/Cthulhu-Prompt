@@ -1,4 +1,8 @@
 import type { IpcResult } from './IpcResult'
+import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  type PromptFolderSettingsField
+} from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type UserPersistence = {
@@ -51,9 +55,7 @@ export type WorkspacePromptFolderPromptTreeEntry = {
   promptTreeEntryId: string
   promptTreeIsExpanded: boolean
   promptTreeIsShowingAllPrompts: boolean
-  folderDescriptionEditorViewStateJson: string | null
-  folderPrefixEditorViewStateJson: string | null
-  folderSuffixEditorViewStateJson: string | null
+  settingsEditorViewStates: Record<PromptFolderSettingsField, string | null>
 }
 
 export type WorkspacePersistence = WorkspaceScreenSelection & {
@@ -97,9 +99,9 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
     promptTreeEntryId: entry.promptTreeEntryId,
     promptTreeIsExpanded: entry.promptTreeIsExpanded,
     promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts,
-    folderDescriptionEditorViewStateJson: entry.folderDescriptionEditorViewStateJson,
-    folderPrefixEditorViewStateJson: entry.folderPrefixEditorViewStateJson,
-    folderSuffixEditorViewStateJson: entry.folderSuffixEditorViewStateJson
+    settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
+      entry.settingsEditorViewStates
+    )
   }))
 }
 
@@ -152,6 +154,23 @@ export type LoadWorkspacePersistenceResult = IpcResult<{
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
+
+export const createEmptyPromptFolderSettingsEditorViewStates = (): Record<
+  PromptFolderSettingsField,
+  string | null
+> => ({
+  folderDescription: null,
+  folderPrefix: null,
+  folderSuffix: null
+})
+
+export const copyPromptFolderSettingsEditorViewStates = (
+  viewStates: Record<PromptFolderSettingsField, string | null>
+): Record<PromptFolderSettingsField, string | null> => ({
+  folderDescription: viewStates.folderDescription,
+  folderPrefix: viewStates.folderPrefix,
+  folderSuffix: viewStates.folderSuffix
+})
 
 export const parseUserPersistence = (value: unknown): UserPersistence | null => {
   if (!isRecord(value)) {
@@ -251,29 +270,33 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     return null
   }
 
-  const folderDescriptionEditorViewStateJson = value.folderDescriptionEditorViewStateJson
-  if (
-    folderDescriptionEditorViewStateJson !== undefined &&
-    folderDescriptionEditorViewStateJson !== null &&
-    typeof folderDescriptionEditorViewStateJson !== 'string'
-  ) {
-    return null
-  }
-  const folderPrefixEditorViewStateJson = value.folderPrefixEditorViewStateJson
-  if (
-    folderPrefixEditorViewStateJson !== undefined &&
-    folderPrefixEditorViewStateJson !== null &&
-    typeof folderPrefixEditorViewStateJson !== 'string'
-  ) {
-    return null
-  }
-  const folderSuffixEditorViewStateJson = value.folderSuffixEditorViewStateJson
-  if (
-    folderSuffixEditorViewStateJson !== undefined &&
-    folderSuffixEditorViewStateJson !== null &&
-    typeof folderSuffixEditorViewStateJson !== 'string'
-  ) {
-    return null
+  const settingsEditorViewStates = createEmptyPromptFolderSettingsEditorViewStates()
+  if (value.settingsEditorViewStates !== undefined) {
+    if (!isRecord(value.settingsEditorViewStates)) {
+      return null
+    }
+
+    for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+      const viewState = value.settingsEditorViewStates[field]
+      if (viewState !== undefined && viewState !== null && typeof viewState !== 'string') {
+        return null
+      }
+      settingsEditorViewStates[field] = viewState ?? null
+    }
+  } else {
+    const legacyViewStateFields: Record<PromptFolderSettingsField, unknown> = {
+      folderDescription: value.folderDescriptionEditorViewStateJson,
+      folderPrefix: value.folderPrefixEditorViewStateJson,
+      folderSuffix: value.folderSuffixEditorViewStateJson
+    }
+
+    for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+      const viewState = legacyViewStateFields[field]
+      if (viewState !== undefined && viewState !== null && typeof viewState !== 'string') {
+        return null
+      }
+      settingsEditorViewStates[field] = viewState ?? null
+    }
   }
 
   const promptTreeIsExpanded =
@@ -301,9 +324,7 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     promptTreeEntryId: value.promptTreeEntryId,
     promptTreeIsExpanded,
     promptTreeIsShowingAllPrompts,
-    folderDescriptionEditorViewStateJson: folderDescriptionEditorViewStateJson ?? null,
-    folderPrefixEditorViewStateJson: folderPrefixEditorViewStateJson ?? null,
-    folderSuffixEditorViewStateJson: folderSuffixEditorViewStateJson ?? null
+    settingsEditorViewStates
   }
 }
 

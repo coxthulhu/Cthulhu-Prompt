@@ -2,8 +2,9 @@ import * as path from 'path'
 import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
+  copyPromptFolderSettings,
   type PromptFolder,
-  type PromptFolderSettingsUpdate
+  type PromptFolderSettings
 } from '@shared/PromptFolder'
 import type {
   PromptFolderInfoFile,
@@ -97,7 +98,7 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
       field,
       readOptionalTextFile(resolvePromptFolderSettingsTextPath(workspacePath, folderName, field))
     ])
-  ) as PromptFolderSettingsUpdate
+  ) as PromptFolderSettings
   const promptIds = readPromptIds(workspacePath, folderName)
 
   return {
@@ -106,7 +107,7 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     displayName: info.displayName,
     promptCount: promptIds.length,
     promptIds,
-    ...folderSettings
+    settings: copyPromptFolderSettings(folderSettings)
   }
 }
 

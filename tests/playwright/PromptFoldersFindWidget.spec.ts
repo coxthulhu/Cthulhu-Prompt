@@ -305,8 +305,10 @@ describe('Prompt folder find dialog', () => {
         {
           folderName: 'Prefix Suffix Find',
           displayName: 'Prefix Suffix Find',
-          folderPrefix: `Prefix has ${PREFIX_SUFFIX_FIND_QUERY}`,
-          folderSuffix: `Suffix has ${PREFIX_SUFFIX_FIND_QUERY}`,
+          folderSettings: {
+            folderPrefix: `Prefix has ${PREFIX_SUFFIX_FIND_QUERY}`,
+            folderSuffix: `Suffix has ${PREFIX_SUFFIX_FIND_QUERY}`
+          },
           prompts: [
             {
               id: 'prefix-suffix-find-prompt',

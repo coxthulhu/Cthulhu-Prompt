@@ -1,7 +1,8 @@
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
+  copyPromptFolderSettings,
   type PromptFolder,
-  type PromptFolderSettingsUpdate
+  type PromptFolderSettings
 } from '@shared/PromptFolder'
 import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
@@ -45,7 +46,7 @@ const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
   promptIds: string[],
-  folderSettings: PromptFolderSettingsUpdate
+  settings: PromptFolderSettings
 ): PromptFolder => {
   return {
     id: persistedInfo.promptFolderId,
@@ -53,7 +54,7 @@ const fromPromptFolderInfoFile = (
     displayName: persistedInfo.displayName,
     promptCount: promptIds.length,
     promptIds,
-    ...folderSettings
+    settings
   }
 }
 
@@ -98,7 +99,7 @@ export const promptFolderPersistence: PersistenceLayer<
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const settingsTextTempPaths = settingsTextPaths.map(({ field, path }) => {
       const tempPath = resolveTempPath(path)
-      fs.writeFileSync(tempPath, change.data[field], 'utf8')
+      fs.writeFileSync(tempPath, change.data.settings[field], 'utf8')
       return { path, tempPath }
     })
 
@@ -133,8 +134,13 @@ export const promptFolderPersistence: PersistenceLayer<
         field,
         readOptionalTextFile(resolvePromptFolderSettingsTextPath(workspacePath, folderName, field))
       ])
-    ) as PromptFolderSettingsUpdate
+    ) as PromptFolderSettings
 
-    return fromPromptFolderInfoFile(persistedInfo, folderName, promptIds, folderSettings)
+    return fromPromptFolderInfoFile(
+      persistedInfo,
+      folderName,
+      promptIds,
+      copyPromptFolderSettings(folderSettings)
+    )
   }
 }

@@ -4,44 +4,44 @@ import {
   createSessionValueCache
 } from './sessionUiCacheFactories.svelte.ts'
 
-const descriptionMeasuredHeight = createSessionMeasuredHeightCache()
+const settingsRowMeasuredHeight = createSessionMeasuredHeightCache()
 const scrollTop = createSessionValueCache<number>()
 
 export const promptFolderDraftUiCache = {
-  descriptionMeasuredHeight,
+  settingsRowMeasuredHeight,
   scrollTop
 }
 
-export const lookupPromptFolderDescriptionMeasuredHeight = (
+export const lookupPromptFolderSettingsRowMeasuredHeight = (
   promptFolderId: string,
   widthPx: number,
   devicePixelRatio: number
 ): number | null => {
-  return promptFolderDraftUiCache.descriptionMeasuredHeight.lookup(
+  return promptFolderDraftUiCache.settingsRowMeasuredHeight.lookup(
     promptFolderId,
     widthPx,
     devicePixelRatio
   )
 }
 
-export const recordPromptFolderDescriptionMeasuredHeight = (
+export const recordPromptFolderSettingsRowMeasuredHeight = (
   promptFolderId: string,
   measurement: TextMeasurement,
   textChanged: boolean
 ): void => {
-  promptFolderDraftUiCache.descriptionMeasuredHeight.record(
+  promptFolderDraftUiCache.settingsRowMeasuredHeight.record(
     promptFolderId,
     measurement,
     textChanged
   )
 }
 
-export const clearPromptFolderDescriptionMeasuredHeight = (promptFolderId: string): void => {
-  promptFolderDraftUiCache.descriptionMeasuredHeight.clear(promptFolderId)
+export const clearPromptFolderSettingsRowMeasuredHeight = (promptFolderId: string): void => {
+  promptFolderDraftUiCache.settingsRowMeasuredHeight.clear(promptFolderId)
 }
 
-export const clearPromptFolderDescriptionMeasuredHeights = (promptFolderIds: string[]): void => {
-  promptFolderDraftUiCache.descriptionMeasuredHeight.clearMany(promptFolderIds)
+export const clearPromptFolderSettingsRowMeasuredHeights = (promptFolderIds: string[]): void => {
+  promptFolderDraftUiCache.settingsRowMeasuredHeight.clearMany(promptFolderIds)
 }
 
 export const lookupPromptFolderScrollTop = (promptFolderId: string): number | null => {

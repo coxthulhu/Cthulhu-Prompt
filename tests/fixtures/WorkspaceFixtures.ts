@@ -1,7 +1,7 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
-import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
+import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
 import type { PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
@@ -27,9 +27,7 @@ export interface PromptFolderConfig {
   folderName: string
   displayName: string
   promptFolderId?: string
-  folderDescription?: string
-  folderPrefix?: string
-  folderSuffix?: string
+  folderSettings?: Partial<PromptFolderSettings>
   prompts?: Array<{
     id: string
     title?: string
@@ -48,7 +46,7 @@ const addPromptFolderSettingsFiles = (
 ): void => {
   for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
     structure[`${folderPath}/.folderprops/${PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]}`] =
-      folder[field] ?? ''
+      folder.folderSettings?.[field] ?? ''
   }
 }
 

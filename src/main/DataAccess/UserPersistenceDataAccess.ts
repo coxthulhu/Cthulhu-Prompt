@@ -1,6 +1,8 @@
 import {
   DEFAULT_USER_PERSISTENCE,
+  copyPromptFolderSettingsEditorViewStates,
   createDefaultWorkspacePersistence,
+  createEmptyPromptFolderSettingsEditorViewStates,
   parseWorkspaceScreenSelection,
   parseWorkspacePersistence,
   toSerializableWorkspacePersistence,
@@ -8,6 +10,7 @@ import {
   type UserPersistence,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
+import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
 import { SqliteDataAccess } from './SqliteDataAccess'
 
 const APP_PERSISTENCE_ID = 1
@@ -29,6 +32,19 @@ type WindowPersistenceRow = {
 type WorkspaceUiStateRow = {
   selectedScreen: string
   selectedScreenDataJson: string | null
+}
+
+type PromptFolderUiStateRow = {
+  promptFolderId: string
+  promptTreeEntryId: string
+  promptTreeIsExpanded: number
+  promptTreeIsShowingAllPrompts: number
+}
+
+type PromptFolderSettingsEditorViewStateRow = {
+  promptFolderId: string
+  settingsField: PromptFolderSettingsField
+  editorViewStateJson: string
 }
 
 export type WindowPersistence = {
@@ -209,32 +225,52 @@ export class UserPersistenceDataAccess {
           prompt_folder_id AS promptFolderId,
           prompt_tree_entry_id AS promptTreeEntryId,
           prompt_tree_is_expanded AS promptTreeIsExpanded,
-          prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
-          folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson,
-          folder_prefix_editor_view_state_json AS folderPrefixEditorViewStateJson,
-          folder_suffix_editor_view_state_json AS folderSuffixEditorViewStateJson
+          prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
         `
       )
-      .all(workspaceId) as Array<{
-      promptFolderId: string
-      promptTreeEntryId: string
-      promptTreeIsExpanded: number
-      promptTreeIsShowingAllPrompts: number
-      folderDescriptionEditorViewStateJson: string | null
-      folderPrefixEditorViewStateJson: string | null
-      folderSuffixEditorViewStateJson: string | null
-    }>
+      .all(workspaceId) as PromptFolderUiStateRow[]
+
+    const settingsEditorViewStateRows = db
+      .prepare(
+        `
+        SELECT
+          prompt_folder_id AS promptFolderId,
+          settings_field AS settingsField,
+          editor_view_state_json AS editorViewStateJson
+        FROM prompt_folder_settings_editor_view_state
+        WHERE workspace_id = ?
+        `
+      )
+      .all(workspaceId) as PromptFolderSettingsEditorViewStateRow[]
+
+    const settingsEditorViewStatesByFolderId = new Map<
+      string,
+      Record<PromptFolderSettingsField, string | null>
+    >()
+
+    for (const row of settingsEditorViewStateRows) {
+      if (!PROMPT_FOLDER_SETTINGS_FIELDS.includes(row.settingsField)) {
+        continue
+      }
+
+      const viewStates =
+        settingsEditorViewStatesByFolderId.get(row.promptFolderId) ??
+        createEmptyPromptFolderSettingsEditorViewStates()
+      viewStates[row.settingsField] = row.editorViewStateJson
+      settingsEditorViewStatesByFolderId.set(row.promptFolderId, viewStates)
+    }
 
     const serializablePromptFolderUiStateRows = promptFolderUiStateRows.map((row) => ({
       promptFolderId: row.promptFolderId,
       promptTreeEntryId: row.promptTreeEntryId,
       promptTreeIsExpanded: row.promptTreeIsExpanded !== 0,
       promptTreeIsShowingAllPrompts: row.promptTreeIsShowingAllPrompts !== 0,
-      folderDescriptionEditorViewStateJson: row.folderDescriptionEditorViewStateJson,
-      folderPrefixEditorViewStateJson: row.folderPrefixEditorViewStateJson,
-      folderSuffixEditorViewStateJson: row.folderSuffixEditorViewStateJson
+      settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
+        settingsEditorViewStatesByFolderId.get(row.promptFolderId) ??
+          createEmptyPromptFolderSettingsEditorViewStates()
+      )
     }))
 
     const selectedScreenData = parseSelectedScreenDataJson(workspaceUiState.selectedScreenDataJson)
@@ -289,6 +325,9 @@ export class UserPersistenceDataAccess {
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(
         serializableWorkspacePersistence.workspaceId
       )
+      db.prepare(
+        'DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?'
+      ).run(serializableWorkspacePersistence.workspaceId)
 
       const insertPromptFolderUiState = db.prepare(
         `
@@ -297,12 +336,20 @@ export class UserPersistenceDataAccess {
           prompt_folder_id,
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
-          prompt_tree_is_showing_all_prompts,
-          folder_description_editor_view_state_json,
-          folder_prefix_editor_view_state_json,
-          folder_suffix_editor_view_state_json
+          prompt_tree_is_showing_all_prompts
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
+        `
+      )
+      const insertSettingsEditorViewState = db.prepare(
+        `
+        INSERT INTO prompt_folder_settings_editor_view_state (
+          workspace_id,
+          prompt_folder_id,
+          settings_field,
+          editor_view_state_json
+        )
+        VALUES (?, ?, ?, ?)
         `
       )
 
@@ -312,11 +359,22 @@ export class UserPersistenceDataAccess {
           entry.promptFolderId,
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded ? 1 : 0,
-          entry.promptTreeIsShowingAllPrompts ? 1 : 0,
-          entry.folderDescriptionEditorViewStateJson,
-          entry.folderPrefixEditorViewStateJson,
-          entry.folderSuffixEditorViewStateJson
+          entry.promptTreeIsShowingAllPrompts ? 1 : 0
         )
+
+        for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+          const viewStateJson = entry.settingsEditorViewStates[field]
+          if (viewStateJson === null) {
+            continue
+          }
+
+          insertSettingsEditorViewState.run(
+            serializableWorkspacePersistence.workspaceId,
+            entry.promptFolderId,
+            field,
+            viewStateJson
+          )
+        }
       }
     })
 
@@ -340,25 +398,30 @@ export class UserPersistenceDataAccess {
             prompt_folder_id AS promptFolderId,
             prompt_tree_entry_id AS promptTreeEntryId,
             prompt_tree_is_expanded AS promptTreeIsExpanded,
-            prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
-            folder_description_editor_view_state_json AS folderDescriptionEditorViewStateJson,
-            folder_prefix_editor_view_state_json AS folderPrefixEditorViewStateJson,
-            folder_suffix_editor_view_state_json AS folderSuffixEditorViewStateJson
+            prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
           `
         )
-        .all(workspaceId) as Array<{
-        promptFolderId: string
-        promptTreeEntryId: string
-        promptTreeIsExpanded: number
-        promptTreeIsShowingAllPrompts: number
-        folderDescriptionEditorViewStateJson: string | null
-        folderPrefixEditorViewStateJson: string | null
-        folderSuffixEditorViewStateJson: string | null
-      }>
+        .all(workspaceId) as PromptFolderUiStateRow[]
+
+      const existingSettingsEditorViewStates = db
+        .prepare(
+          `
+          SELECT
+            prompt_folder_id AS promptFolderId,
+            settings_field AS settingsField,
+            editor_view_state_json AS editorViewStateJson
+          FROM prompt_folder_settings_editor_view_state
+          WHERE workspace_id = ?
+          `
+        )
+        .all(workspaceId) as PromptFolderSettingsEditorViewStateRow[]
 
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(workspaceId)
+      db.prepare(
+        'DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?'
+      ).run(workspaceId)
 
       const insertPromptFolderUiState = db.prepare(
         `
@@ -367,12 +430,20 @@ export class UserPersistenceDataAccess {
           prompt_folder_id,
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
-          prompt_tree_is_showing_all_prompts,
-          folder_description_editor_view_state_json,
-          folder_prefix_editor_view_state_json,
-          folder_suffix_editor_view_state_json
+          prompt_tree_is_showing_all_prompts
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
+        `
+      )
+      const insertSettingsEditorViewState = db.prepare(
+        `
+        INSERT INTO prompt_folder_settings_editor_view_state (
+          workspace_id,
+          prompt_folder_id,
+          settings_field,
+          editor_view_state_json
+        )
+        VALUES (?, ?, ?, ?)
         `
       )
 
@@ -386,10 +457,20 @@ export class UserPersistenceDataAccess {
           entry.promptFolderId,
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded,
-          entry.promptTreeIsShowingAllPrompts,
-          entry.folderDescriptionEditorViewStateJson,
-          entry.folderPrefixEditorViewStateJson,
-          entry.folderSuffixEditorViewStateJson
+          entry.promptTreeIsShowingAllPrompts
+        )
+      }
+
+      for (const entry of existingSettingsEditorViewStates) {
+        if (!validPromptFolderIds.has(entry.promptFolderId)) {
+          continue
+        }
+
+        insertSettingsEditorViewState.run(
+          workspaceId,
+          entry.promptFolderId,
+          entry.settingsField,
+          entry.editorViewStateJson
         )
       }
 

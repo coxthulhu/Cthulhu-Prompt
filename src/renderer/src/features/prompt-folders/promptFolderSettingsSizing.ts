@@ -26,8 +26,8 @@ const SETTINGS_EDITOR_CHROME_PX =
   SETTINGS_INFO_ROW_ADDITIONAL_GAP_PX +
   MONACO_PADDING_PX
 const SETTINGS_EDITOR_VERTICAL_INSET_PX = MONACO_PADDING_PX / 2
-export const PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES = 1
-export const PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES = 40
+export const PROMPT_FOLDER_SETTINGS_EDITOR_MIN_LINES = 1
+export const PROMPT_FOLDER_SETTINGS_EDITOR_MAX_LINES = 40
 const SETTINGS_HEADER_HEIGHT_PX =
   SETTINGS_TOP_PADDING_PX +
   SETTINGS_TITLE_HEIGHT_PX +
@@ -67,19 +67,19 @@ export const SETTINGS_EDITOR_TOP_OFFSET_PX =
 export const SETTINGS_EDITOR_LEFT_OFFSET_PX =
   SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX + SETTINGS_DESCRIPTION_CARD_PADDING_PX + 12
 
-export const getPromptFolderDescriptionSizingConfig = (
+export const getPromptFolderSettingsSizingConfig = (
   fontSize: number
 ): PromptEditorSizingConfig => ({
   fontSize,
-  minLines: PROMPT_FOLDER_DESCRIPTION_EDITOR_MIN_LINES,
-  maxLines: PROMPT_FOLDER_DESCRIPTION_EDITOR_MAX_LINES
+  minLines: PROMPT_FOLDER_SETTINGS_EDITOR_MIN_LINES,
+  maxLines: PROMPT_FOLDER_SETTINGS_EDITOR_MAX_LINES
 })
 
 export const estimatePromptFolderSettingsMonacoHeight = (
   text: string,
   fontSize: number
 ): number => {
-  return estimateMonacoHeightPx(text, getPromptFolderDescriptionSizingConfig(fontSize))
+  return estimateMonacoHeightPx(text, getPromptFolderSettingsSizingConfig(fontSize))
 }
 
 export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number[]): number => {

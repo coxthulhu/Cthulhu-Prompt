@@ -9,7 +9,7 @@ import type {
   CreatePromptFolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
-  PromptFolderSettingsUpdate,
+  PromptFolderSettings,
   UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { PromptUiState, PromptUiStateRevisionPayload } from '@shared/PromptUiState'
@@ -197,28 +197,26 @@ const parseWorkspace = parseObject<Workspace>({
 
 const parseWorkspaceRevisionPayloadEntity = parseRevisionPayloadEntity<Workspace>(parseWorkspace)
 
+const parsePromptFolderSettings = parseObject<PromptFolderSettings>({
+  folderDescription: parseString,
+  folderPrefix: parseString,
+  folderSuffix: parseString
+})
+
 const parsePromptFolder = parseObject<PromptFolder>({
   id: parseString,
   folderName: parseString,
   displayName: parseString,
   promptCount: parseNumber,
   promptIds: parseArray(parseString),
-  folderDescription: parseString,
-  folderPrefix: parseString,
-  folderSuffix: parseString
+  settings: parsePromptFolderSettings
 })
 
 const parsePromptFolderRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
 
-const parsePromptFolderSettingsUpdate = parseObject<PromptFolderSettingsUpdate>({
-  folderDescription: parseString,
-  folderPrefix: parseString,
-  folderSuffix: parseString
-})
-
-const parsePromptFolderSettingsUpdatePayloadEntity =
-  parseRevisionPayloadEntity<PromptFolderSettingsUpdate>(parsePromptFolderSettingsUpdate)
+const parsePromptFolderSettingsPayloadEntity =
+  parseRevisionPayloadEntity<PromptFolderSettings>(parsePromptFolderSettings)
 
 const parseSystemSettings = parseObject<SystemSettings>({
   promptFontSize: parseNumber,
@@ -342,7 +340,7 @@ const parseUpdatePromptRevisionWireRequest: Parser<IpcRequestWithPayload<PromptR
   parseWireRequestWithPayload<PromptRevisionPayload>(parsePromptRevisionPayload)
 
 const parseUpdatePromptFolderSettingsPayload = parseObject<UpdatePromptFolderSettingsPayload>({
-  promptFolder: parsePromptFolderSettingsUpdatePayloadEntity
+  promptFolder: parsePromptFolderSettingsPayloadEntity
 })
 
 const parseUpdatePromptFolderSettingsWireRequest: Parser<

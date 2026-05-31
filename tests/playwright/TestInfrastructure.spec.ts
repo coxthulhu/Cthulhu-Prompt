@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 9 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 10 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -102,13 +102,14 @@ describe('Test Infrastructure', () => {
             'app_persistence',
             'workspace_ui_state',
             'prompt_folder_ui_state',
+            'prompt_folder_settings_editor_view_state',
             'prompt_ui_state'
           )
         `
       )
 
       expect(persistenceTablesResult.success).toBe(true)
-      expect(persistenceTablesResult.rows).toHaveLength(4)
+      expect(persistenceTablesResult.rows).toHaveLength(5)
     })
   })
 

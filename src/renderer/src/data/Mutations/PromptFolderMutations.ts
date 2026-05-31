@@ -1,5 +1,5 @@
 import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
+  copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
   type CreatePromptFolderPayload,
   type CreatePromptFolderResponsePayload,
@@ -64,9 +64,7 @@ export const mutatePacedPromptFolderSettingsAutosaveUpdate = ({
         promptFolder: {
           id: promptFolderId,
           expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
-          data: Object.fromEntries(
-            PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [field, latestPromptFolder[field]])
-          ) as UpdatePromptFolderSettingsPayload['promptFolder']['data']
+          data: copyPromptFolderSettings(latestPromptFolder.settings)
         }
       })
 
@@ -104,11 +102,11 @@ export const createPromptFolder = async (
         displayName: normalizedDisplayName,
         promptCount: 0,
         promptIds: [],
-        ...createEmptyPromptFolderSettings()
+        settings: createEmptyPromptFolderSettings()
       })
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
-        ...createEmptyPromptFolderSettings(),
+        settings: createEmptyPromptFolderSettings(),
         hasLoadedInitialData: false
       })
       collections.workspace.update(workspaceId, (draft) => {

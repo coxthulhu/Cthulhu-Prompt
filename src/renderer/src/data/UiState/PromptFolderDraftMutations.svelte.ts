@@ -1,5 +1,6 @@
 import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
+  copyPromptFolderSettings,
+  haveSamePromptFolderSettings,
   type PromptFolder,
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
@@ -13,31 +14,22 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptFolderSettingsAutosaveUpdate } from '../Mutations/PromptFolderMutations'
 import {
-  clearPromptFolderDescriptionMeasuredHeight,
-  clearPromptFolderDescriptionMeasuredHeights,
+  clearPromptFolderSettingsRowMeasuredHeight,
+  clearPromptFolderSettingsRowMeasuredHeights,
   clearPromptFolderScrollTop,
   clearPromptFolderScrollTops,
-  recordPromptFolderDescriptionMeasuredHeight
+  recordPromptFolderSettingsRowMeasuredHeight
 } from './PromptFolderDraftUiCache.svelte.ts'
 
 export type PromptFolderDraftState = PromptFolderDraftRecord
 export type PromptFolderSettingsDraftField = PromptFolderSettingsField
 
-const haveSamePromptFolderSettings = (
-  left: PromptFolderDraftRecord,
-  right: PromptFolder
-): boolean => {
-  return PROMPT_FOLDER_SETTINGS_FIELDS.every((field) => left[field] === right[field])
-}
-
 const createPromptFolderDraftRecord = (promptFolder: PromptFolder): PromptFolderDraftRecord => {
   return {
     id: promptFolder.id,
-    ...Object.fromEntries(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [field, promptFolder[field]])
-    ),
+    settings: copyPromptFolderSettings(promptFolder.settings),
     hasLoadedInitialData: false
-  } as PromptFolderDraftRecord
+  }
 }
 
 type PromptFolderDraftOptimisticMutationOptions = {
@@ -83,17 +75,17 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
     const existingRecord = promptFolderDraftCollection.get(promptFolder.id)
 
     if (!existingRecord) {
-      clearPromptFolderDescriptionMeasuredHeight(promptFolder.id)
+      clearPromptFolderSettingsRowMeasuredHeight(promptFolder.id)
       clearPromptFolderScrollTop(promptFolder.id)
       draftInserts.push(createPromptFolderDraftRecord(promptFolder))
       continue
     }
 
-    if (haveSamePromptFolderSettings(existingRecord, promptFolder)) {
+    if (haveSamePromptFolderSettings(existingRecord.settings, promptFolder.settings)) {
       continue
     }
 
-    clearPromptFolderDescriptionMeasuredHeight(promptFolder.id)
+    clearPromptFolderSettingsRowMeasuredHeight(promptFolder.id)
 
     if (!draftUpdatesById[promptFolder.id]) {
       draftUpdateIds.push(promptFolder.id)
@@ -113,9 +105,7 @@ export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void =>
           continue
         }
 
-        for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-          draftRecord[field] = nextPromptFolder[field]
-        }
+        draftRecord.settings = copyPromptFolderSettings(nextPromptFolder.settings)
       }
     })
   }
@@ -150,11 +140,11 @@ export const setPromptFolderDraftSettingsField = (
   const draftRecord = getPromptFolderDraftState(promptFolderId)
   if (!draftRecord) {
     // Monaco can emit an initial onChange before the folder draft is hydrated.
-    recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, false)
+    recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, measurement, false)
     return
   }
-  const textChanged = draftRecord[field] !== value
-  recordPromptFolderDescriptionMeasuredHeight(promptFolderId, measurement, textChanged)
+  const textChanged = draftRecord.settings[field] !== value
+  recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, measurement, textChanged)
 
   if (!textChanged) {
     return
@@ -162,25 +152,12 @@ export const setPromptFolderDraftSettingsField = (
 
   mutatePromptFolderDraftOptimistically(promptFolderId, {
     mutatePromptFolderDraft: (draft) => {
-      draft[field] = value
+      draft.settings[field] = value
     },
     mutatePromptFolder: (draft) => {
-      draft[field] = value
+      draft.settings[field] = value
     }
   })
-}
-
-export const setPromptFolderDraftDescription = (
-  promptFolderId: string,
-  folderDescription: string,
-  measurement: TextMeasurement
-): void => {
-  setPromptFolderDraftSettingsField(
-    promptFolderId,
-    'folderDescription',
-    folderDescription,
-    measurement
-  )
 }
 
 export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {
@@ -188,7 +165,7 @@ export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {
     return
   }
 
-  clearPromptFolderDescriptionMeasuredHeights(promptFolderIds)
+  clearPromptFolderSettingsRowMeasuredHeights(promptFolderIds)
   clearPromptFolderScrollTops(promptFolderIds)
   promptFolderDraftCollection.delete(promptFolderIds)
 }

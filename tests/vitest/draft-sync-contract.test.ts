@@ -13,7 +13,7 @@ import {
   upsertPromptSummaryDrafts
 } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
 import {
-  setPromptFolderDraftDescription,
+  setPromptFolderDraftSettingsField,
   upsertPromptFolderDraft
 } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import { upsertSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
@@ -68,9 +68,11 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
   displayName: 'Folder',
   promptCount: 2,
   promptIds: ['prompt-1', 'prompt-2'],
-  folderDescription: 'Original folder description',
-  folderPrefix: 'Original folder prefix',
-  folderSuffix: 'Original folder suffix',
+  settings: {
+    folderDescription: 'Original folder description',
+    folderPrefix: 'Original folder prefix',
+    folderSuffix: 'Original folder suffix'
+  },
   ...overrides
 })
 
@@ -136,28 +138,35 @@ describe('draft sync contract', () => {
   it('upserts prompt-folder drafts', () => {
     const promptFolder = createPromptFolder()
     const updatedPromptFolder = createPromptFolder({
-      folderDescription: 'Updated folder description',
-      folderPrefix: 'Updated folder prefix',
-      folderSuffix: 'Updated folder suffix'
+      settings: {
+        folderDescription: 'Updated folder description',
+        folderPrefix: 'Updated folder prefix',
+        folderSuffix: 'Updated folder suffix'
+      }
     })
 
     upsertPromptFolderDraft(promptFolder)
     upsertPromptFolderDraft(updatedPromptFolder)
 
     const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
-    expect(draftRecord.folderDescription).toBe('Updated folder description')
-    expect(draftRecord.folderPrefix).toBe('Updated folder prefix')
-    expect(draftRecord.folderSuffix).toBe('Updated folder suffix')
+    expect(draftRecord.settings.folderDescription).toBe('Updated folder description')
+    expect(draftRecord.settings.folderPrefix).toBe('Updated folder prefix')
+    expect(draftRecord.settings.folderSuffix).toBe('Updated folder suffix')
     expect(draftRecord.hasLoadedInitialData).toBe(false)
   })
 
   it('ignores prompt-folder description updates when the draft is missing', () => {
     expect(() =>
-      setPromptFolderDraftDescription('missing-folder-id', 'Updated folder description', {
-        measuredHeightPx: 144,
-        widthPx: 700,
-        devicePixelRatio: 1
-      })
+      setPromptFolderDraftSettingsField(
+        'missing-folder-id',
+        'folderDescription',
+        'Updated folder description',
+        {
+          measuredHeightPx: 144,
+          widthPx: 700,
+          devicePixelRatio: 1
+        }
+      )
     ).not.toThrow()
     expect(promptFolderDraftCollection.get('missing-folder-id')).toBeUndefined()
   })

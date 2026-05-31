@@ -442,8 +442,10 @@ describe('Prompt folder prompt management', () => {
         {
           folderName: 'Copy Prefix Suffix',
           displayName: 'Copy Prefix Suffix',
-          folderPrefix: 'Folder prefix text',
-          folderSuffix: 'Folder suffix text',
+          folderSettings: {
+            folderPrefix: 'Folder prefix text',
+            folderSuffix: 'Folder suffix text'
+          },
           prompts: [
             {
               id: 'copy-prefix-source',

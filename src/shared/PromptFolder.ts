@@ -10,9 +10,7 @@ export interface PromptFolder {
   displayName: string
   promptCount: number
   promptIds: string[]
-  folderDescription: string
-  folderPrefix: string
-  folderSuffix: string
+  settings: PromptFolderSettings
 }
 
 export const PROMPT_FOLDER_SETTINGS_FIELDS = [
@@ -23,16 +21,77 @@ export const PROMPT_FOLDER_SETTINGS_FIELDS = [
 
 export type PromptFolderSettingsField = (typeof PROMPT_FOLDER_SETTINGS_FIELDS)[number]
 
-export type PromptFolderSettingsUpdate = Pick<PromptFolder, PromptFolderSettingsField>
+export type PromptFolderSettings = Record<PromptFolderSettingsField, string>
 
-export const createEmptyPromptFolderSettings = (): PromptFolderSettingsUpdate => ({
+export type PromptFolderSettingsFieldMetadata = {
+  field: PromptFolderSettingsField
+  diskFilename: string
+  monacoModelUriSegment: string
+  findSectionKey: string
+}
+
+export const PROMPT_FOLDER_SETTINGS_FIELD_METADATA = [
+  {
+    field: 'folderDescription',
+    diskFilename: 'Description.md',
+    monacoModelUriSegment: 'folder-descriptions',
+    findSectionKey: 'folder-description'
+  },
+  {
+    field: 'folderPrefix',
+    diskFilename: 'PromptPrefix.md',
+    monacoModelUriSegment: 'folder-prefixes',
+    findSectionKey: 'folder-prefix'
+  },
+  {
+    field: 'folderSuffix',
+    diskFilename: 'PromptSuffix.md',
+    monacoModelUriSegment: 'folder-suffixes',
+    findSectionKey: 'folder-suffix'
+  }
+] as const satisfies readonly PromptFolderSettingsFieldMetadata[]
+
+export const PROMPT_FOLDER_SETTINGS_DISK_FILENAMES = Object.fromEntries(
+  PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, diskFilename }) => [field, diskFilename])
+) as Record<PromptFolderSettingsField, string>
+
+export const PROMPT_FOLDER_SETTINGS_MONACO_MODEL_URI_SEGMENTS = Object.fromEntries(
+  PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, monacoModelUriSegment }) => [
+    field,
+    monacoModelUriSegment
+  ])
+) as Record<PromptFolderSettingsField, string>
+
+export const PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
+  PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, findSectionKey }) => [
+    field,
+    findSectionKey
+  ])
+) as Record<PromptFolderSettingsField, string>
+
+export const createEmptyPromptFolderSettings = (): PromptFolderSettings => ({
   folderDescription: '',
   folderPrefix: '',
   folderSuffix: ''
 })
 
+export const copyPromptFolderSettings = (
+  settings: PromptFolderSettings
+): PromptFolderSettings => ({
+  folderDescription: settings.folderDescription,
+  folderPrefix: settings.folderPrefix,
+  folderSuffix: settings.folderSuffix
+})
+
+export const haveSamePromptFolderSettings = (
+  left: PromptFolderSettings,
+  right: PromptFolderSettings
+): boolean => {
+  return PROMPT_FOLDER_SETTINGS_FIELDS.every((field) => left[field] === right[field])
+}
+
 export type UpdatePromptFolderSettingsPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolderSettingsUpdate>
+  promptFolder: RevisionPayloadEntity<PromptFolderSettings>
 }
 
 export type PromptFolderRevisionResponsePayload = {

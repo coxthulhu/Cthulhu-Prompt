@@ -59,9 +59,7 @@
         <PromptFolderVirtualContent
           workspaceId={controller.workspaceId}
           promptFolderId={controller.promptFolderId}
-          descriptionText={controller.descriptionText}
-          prefixText={controller.prefixText}
-          suffixText={controller.suffixText}
+          folderSettings={controller.folderSettings}
           promptEditorSizingConfig={controller.promptEditorSizingConfig}
           promptDraftById={controller.promptDraftById}
           visiblePromptIds={controller.visiblePromptIds}

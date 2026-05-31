@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { createPromptFolderSettingsModelUri, type monaco } from '@renderer/common/Monaco'
-  import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
+  import {
+    PROMPT_FOLDER_SETTINGS_FIELD_METADATA,
+    PROMPT_FOLDER_SETTINGS_FIELDS,
+    type PromptFolderSettings
+  } from '@shared/PromptFolder'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
@@ -24,7 +28,6 @@
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import { Folder, Settings } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
-  import { PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS } from './find/promptFolderFindSectionKeys'
   import type {
     PromptFolderFindRequest,
     PromptFolderFindRowHandle
@@ -34,7 +37,7 @@
     SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX,
     SETTINGS_DESCRIPTION_CARD_PADDING_PX,
     SETTINGS_EDITOR_LEFT_OFFSET_PX,
-    getPromptFolderDescriptionSizingConfig,
+    getPromptFolderSettingsSizingConfig,
     getPromptFolderSettingsEditorTopOffsetPx,
     getPromptFolderSettingsHeightPx,
     estimatePromptFolderSettingsMonacoHeight
@@ -57,6 +60,7 @@
   type SettingsSectionConfig = Omit<
     SettingsSection,
     | 'field'
+    | 'findSectionKey'
     | 'value'
     | 'modelUri'
     | 'initialViewStateJson'
@@ -78,7 +82,6 @@
 
   const SETTINGS_SECTION_CONFIG: Record<PromptFolderSettingsDraftField, SettingsSectionConfig> = {
     folderDescription: {
-      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS.folderDescription,
       title: 'Folder Description',
       infoText:
         'A general description of this folder and the types of prompts that are within it. For informational use only.',
@@ -87,7 +90,6 @@
       viewStateCapturePrefix: 'prompt-folder-description'
     },
     folderPrefix: {
-      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS.folderPrefix,
       title: 'Prompt Folder Prefix',
       infoText: 'Text to add before each prompt copied from this folder.',
       copyLabel: 'Copy folder prefix',
@@ -95,7 +97,6 @@
       viewStateCapturePrefix: 'prompt-folder-prefix'
     },
     folderSuffix: {
-      findSectionKey: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS.folderSuffix,
       title: 'Prompt Folder Suffix',
       infoText: 'Text to add after each prompt copied from this folder.',
       copyLabel: 'Copy folder suffix',
@@ -117,9 +118,7 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onHydrationChange?: (isHydrated: boolean) => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
-    descriptionText: string
-    prefixText: string
-    suffixText: string
+    folderSettings: PromptFolderSettings
     onSettingsFieldChange: (
       field: PromptFolderSettingsDraftField,
       text: string,
@@ -140,15 +139,13 @@
     scrollToWithinWindowBand,
     onHydrationChange,
     onEditorLifecycle,
-    descriptionText,
-    prefixText,
-    suffixText,
+    folderSettings,
     onSettingsFieldChange
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
   const sizingConfig: PromptEditorSizingConfig = $derived(
-    getPromptFolderDescriptionSizingConfig(systemSettings.promptFontSize)
+    getPromptFolderSettingsSizingConfig(systemSettings.promptFontSize)
   )
   const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId))
   const findContext = getPromptFolderFindContext()
@@ -180,25 +177,20 @@
     ) as Record<PromptFolderSettingsDraftField, SectionEditorState>
   )
 
-  const settingsTextByField = $derived.by<Record<PromptFolderSettingsDraftField, string>>(() => ({
-    folderDescription: descriptionText,
-    folderPrefix: prefixText,
-    folderSuffix: suffixText
-  }))
-
   const sections = $derived.by<SettingsSection[]>(() =>
-    PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => {
-      const config = SETTINGS_SECTION_CONFIG[field]
+    PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map((metadata) => {
+      const config = SETTINGS_SECTION_CONFIG[metadata.field]
       return {
         ...config,
-        field,
-        value: settingsTextByField[field],
-        modelUri: createPromptFolderSettingsModelUri(promptFolderId, field),
+        field: metadata.field,
+        findSectionKey: metadata.findSectionKey,
+        value: folderSettings[metadata.field],
+        modelUri: createPromptFolderSettingsModelUri(promptFolderId, metadata.field),
         initialViewStateJson: workspaceId
           ? lookupWorkspacePersistedPromptFolderEditorViewStateJson(
               workspaceId,
               promptFolderId,
-              field
+              metadata.field
             )
           : null,
         viewStateCaptureKey: `${config.viewStateCapturePrefix}:${promptFolderId}`,
@@ -207,7 +199,7 @@
           setPromptFolderEditorViewStateWithAutosave(
             workspaceId,
             promptFolderId,
-            field,
+            metadata.field,
             viewStateJson
           )
         }
@@ -222,7 +214,7 @@
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
         estimatePromptFolderSettingsMonacoHeight(
-          settingsTextByField[field],
+          folderSettings[field],
           systemSettings.promptFontSize
         )
       ])

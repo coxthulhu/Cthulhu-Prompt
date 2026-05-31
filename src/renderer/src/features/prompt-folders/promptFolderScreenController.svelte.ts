@@ -3,7 +3,10 @@ import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type PromptFull } from '@shared/Prompt'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
+  copyPromptFolderSettings,
+  createEmptyPromptFolderSettings,
   type PromptFolder,
+  type PromptFolderSettings,
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
@@ -32,7 +35,7 @@ import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuer
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { createPrompt, deletePrompt, movePrompt } from '@renderer/data/Mutations/PromptMutations'
 import {
-  lookupPromptFolderDescriptionMeasuredHeight,
+  lookupPromptFolderSettingsRowMeasuredHeight,
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
@@ -132,16 +135,15 @@ export const createPromptFolderScreenController = ({
   })
   const promptFolderDraft = $derived(promptFolderDraftById[promptFolderId] ?? null)
   const promptIds = $derived(promptFolder?.promptIds ?? [])
-  const descriptionText = $derived(
-    promptFolderDraft?.folderDescription ?? promptFolder?.folderDescription ?? ''
+  const emptyFolderSettings = createEmptyPromptFolderSettings()
+  const folderSettings = $derived.by<PromptFolderSettings>(() =>
+    copyPromptFolderSettings(
+      promptFolderDraft?.settings ?? promptFolder?.settings ?? emptyFolderSettings
+    )
   )
-  const prefixText = $derived(promptFolderDraft?.folderPrefix ?? promptFolder?.folderPrefix ?? '')
-  const suffixText = $derived(promptFolderDraft?.folderSuffix ?? promptFolder?.folderSuffix ?? '')
-  const folderSettingsTextByField = $derived.by<Record<PromptFolderSettingsField, string>>(() => ({
-    folderDescription: descriptionText,
-    folderPrefix: prefixText,
-    folderSuffix: suffixText
-  }))
+  const folderSettingsTextByField = $derived.by<Record<PromptFolderSettingsField, string>>(
+    () => folderSettings
+  )
   const folderDisplayName = $derived(promptFolder?.displayName ?? 'Prompt Folder')
 
   let previousPromptFolderLoadKey = $state<string | null>(null)
@@ -661,7 +663,7 @@ export const createPromptFolderScreenController = ({
       return baseHeight
     }
 
-    const measuredHeight = lookupPromptFolderDescriptionMeasuredHeight(
+    const measuredHeight = lookupPromptFolderSettingsRowMeasuredHeight(
       promptFolderId,
       viewportMetrics.widthPx,
       viewportMetrics.devicePixelRatio
@@ -746,14 +748,8 @@ export const createPromptFolderScreenController = ({
     get promptEditorSizingConfig(): PromptEditorSizingConfig {
       return promptEditorSizingConfig
     },
-    get descriptionText(): string {
-      return descriptionText
-    },
-    get prefixText(): string {
-      return prefixText
-    },
-    get suffixText(): string {
-      return suffixText
+    get folderSettings(): PromptFolderSettings {
+      return folderSettings
     },
     get folderDisplayName(): string {
       return folderDisplayName
