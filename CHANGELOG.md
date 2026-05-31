@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.0.21
+
+### New Features
+
+- Added persisted prompt folder ordering with sidebar drag reordering.
+- Added folder-level prompt prefix and suffix settings.
+- Added prompt tree controls for expanding or collapsing all folders.
+
+### Changes
+
+- Updated prompt fallback title behavior for untitled prompts.
+- Renamed workspace metadata files and updated folder order storage.
+- Refined prompt folder settings, home screen, sidebar, and shared control styling.
+
+### Fixed
+
+- Fixed workspace open failures so they show an error dialog.
+
 ## 0.0.20
 
 ### New Features
