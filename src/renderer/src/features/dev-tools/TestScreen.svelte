@@ -1,15 +1,22 @@
 <script lang="ts">
   import {
     AlertCircle,
+    Archive,
     Bell,
     Check,
     CircleGauge,
     ClipboardList,
+    Copy,
+    Download,
     FileText,
+    Folder,
     FolderOpen,
     Home,
     Info,
     Minus,
+    MoreHorizontal,
+    Pencil,
+    Pin,
     Plus,
     Save,
     Settings,
@@ -26,6 +33,9 @@
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
+  import DropdownPopup, {
+    type DropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
@@ -88,6 +98,20 @@
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
+  const folderDropdownItems: DropdownPopupItem[] = [
+    { id: 'open', label: 'Open', detail: 'Show folder contents', icon: Folder, tone: 'accent' },
+    { id: 'pin', label: 'Pin to sidebar', icon: Pin },
+    { id: 'export', label: 'Export folder', detail: 'Save prompt bundle', icon: Download },
+    { id: 'archive', label: 'Archive folder', icon: Archive },
+    { id: 'delete', label: 'Delete folder', icon: Trash2, tone: 'danger' }
+  ]
+  const promptDropdownItems: DropdownPopupItem[] = [
+    { id: 'improve', label: 'Improve wording', icon: Sparkles, tone: 'accent' },
+    { id: 'copy', label: 'Copy prompt', detail: 'Copy merged text', icon: ClipboardList },
+    { id: 'duplicate', label: 'Duplicate', detail: 'Create editable copy', icon: Copy },
+    { id: 'rename', label: 'Rename', icon: Pencil },
+    { id: 'delete', label: 'Delete prompt', detail: 'Move to trash', icon: Trash2, tone: 'danger' }
+  ]
   const titleBlockIconVariants: AccentIconTileVariant[] = [
     'neutral',
     'accent',
@@ -112,6 +136,7 @@
   let accentDialogOpen = $state(false)
   let dangerDialogOpen = $state(false)
   let errorDialogOpen = $state(false)
+  let lastDropdownAction = $state('No dropdown item selected')
 </script>
 
 <div class="test-screen-shell" data-testid="test-screen">
@@ -244,6 +269,40 @@
         <div class="variant-controls">
           <IconPillButton icon={Plus} text="enabled" />
           <IconPillButton icon={X} text="disabled" disabled />
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock
+          title="DropdownPopup"
+          description="Solid popup with optional title."
+          size="small"
+        />
+
+        <div class="stack">
+          <div class="variant-controls">
+            <DropdownPopup
+              label="Folder options"
+              title="Folder options"
+              items={folderDropdownItems}
+              menuTestId="folder-dropdown-menu"
+              onselect={(item) => {
+                lastDropdownAction = item.label
+              }}
+            />
+            <DropdownPopup
+              label="Prompt actions"
+              triggerText="Prompt actions"
+              triggerIcon={MoreHorizontal}
+              items={promptDropdownItems}
+              menuTestId="prompt-dropdown-menu"
+              onselect={(item) => {
+                lastDropdownAction = item.label
+              }}
+            />
+          </div>
+
+          <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
         </div>
       </CardSurface>
 
