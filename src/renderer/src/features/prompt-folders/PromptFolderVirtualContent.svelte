@@ -353,6 +353,7 @@
   {rowRegistry}
   {initialScrollTopPx}
   initialScrollToRowCenteredId={initialCenterRowId}
+  rightScrollPaddingPx={12}
   testId="prompt-folder-virtual-window"
   spacerTestId="prompt-folder-virtual-window-spacer"
   onInitialScrollToRowCenteredApplied={onInitialCenterRowApplied}
