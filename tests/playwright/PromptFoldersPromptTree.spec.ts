@@ -143,8 +143,9 @@ describe('Prompt folder prompt tree', () => {
     const folderSettingsSelector = '[data-testid="prompt-folder-settings-Short"]'
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
 
-    await expect(mainWindow.getByText('Folder Options')).toBeVisible()
-    await expect(mainWindow.locator(folderSettingsSelector)).toContainText(
+    await expect(mainWindow.getByText('Folder Options')).toHaveCount(0)
+    await expect(mainWindow.locator(folderSettingsSelector)).toContainText('Open folder settings')
+    await expect(mainWindow.locator(folderSettingsSelector)).not.toContainText(
       'Open folder-level settings'
     )
     await mainWindow.locator(folderSettingsSelector).click()
@@ -201,7 +202,9 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
 
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText('Show all')
+    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText(
+      'Show all prompts'
+    )
     await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
 
     await mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR).click()
@@ -209,7 +212,9 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toHaveCount(0)
 
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toContainText('Show less')
+    await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toContainText(
+      'Show less prompts'
+    )
     await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toHaveCount(0)
     await mainWindow.keyboard.press('Escape')
 
@@ -228,7 +233,9 @@ describe('Prompt folder prompt tree', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 0)
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText('Show all')
+    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText(
+      'Show all prompts'
+    )
     await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
   })
 

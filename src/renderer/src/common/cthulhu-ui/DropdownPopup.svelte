@@ -64,8 +64,8 @@
 
   const fallbackMenuWidth = 236
   const fallbackMenuHeight = 336
-  const titledMenuFirstItemCenterOffset = 54
-  const untitledMenuFirstItemCenterOffset = 29
+  const titledMenuFirstItemCenterOffset = 50
+  const untitledMenuFirstItemCenterOffset = 25
   const bottomGap = 8
   const viewportMargin = 16
   const scrollKeys = new Set([
@@ -95,7 +95,7 @@
     return {
       left: Math.max(
         viewportMargin,
-        Math.min(anchor.x + 12, window.innerWidth - menuWidthPx - viewportMargin)
+        Math.min(anchor.x, window.innerWidth - menuWidthPx - viewportMargin)
       ),
       top: Math.max(
         viewportMargin,
@@ -335,10 +335,10 @@
     color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     grid-template-columns: 18px minmax(0, 1fr);
-    min-height: 42px;
-    padding: 8px 10px;
+    min-height: 34px;
+    padding: 5px 8px;
     text-align: left;
     transition:
       background-color 120ms ease,
@@ -380,7 +380,6 @@
 
   .cthulhuUiDropdownPopupItemLabel {
     font-size: 13px;
-    font-weight: 650;
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -88,8 +88,7 @@
     (): DropdownPopupItem[] => [
       {
         id: 'folder-settings',
-        label: 'Folder Settings',
-        detail: 'Open folder-level settings',
+        label: 'Open folder settings',
         icon: Settings,
         testId: folderSettingsTestId(folder)
       },
@@ -98,15 +97,13 @@
             isShowingAllPrompts
               ? {
                   id: 'show-less-prompts',
-                  label: 'Show less',
-                  detail: `Show the first ${visiblePromptLimit} prompts`,
+                  label: 'Show less prompts',
                   icon: ChevronsUp,
                   testId: folderPromptMenuShowLessTestId(folder)
                 }
               : {
                   id: 'show-all-prompts',
-                  label: 'Show all',
-                  detail: 'Show every prompt in this folder',
+                  label: 'Show all prompts',
                   icon: ChevronsDown,
                   testId: folderPromptMenuShowAllTestId(folder)
                 }
@@ -166,9 +163,8 @@
           <div class="sidebarPromptTreeFolderActions">
             <DropdownPopup
               label={`Folder options for ${folder.displayName}`}
-              title="Folder Options"
               items={dropdownItems}
-              menuWidth="248px"
+              menuWidth="196px"
               onselect={handleFolderOptionsSelect}
             >
               {#snippet trigger(dropdown)}
