@@ -5,7 +5,7 @@
   import CardSurface from './CardSurface.svelte'
   import { mergeClasses } from './mergeClasses'
 
-  export type DropdownPopupItemVariant = 'normal' | 'accent' | 'danger'
+  export type DropdownPopupItemVariant = 'neutral' | 'accent' | 'danger'
 
   export type DropdownPopupItem = {
     id: string
@@ -34,6 +34,8 @@
     disabled?: boolean
     class?: string
     triggerClass?: string
+    menuWidth?: string
+    menuMaxHeight?: string
     testId?: string
     menuTestId?: string
     onselect?: (item: DropdownPopupItem) => void
@@ -48,23 +50,39 @@
     disabled = false,
     class: className,
     triggerClass,
+    menuWidth = '236px',
+    menuMaxHeight = 'calc(100vh - 32px)',
     testId,
     menuTestId,
     onselect
   }: Props = $props()
 
+  const fallbackMenuWidth = 236
   const fallbackMenuHeight = 336
   const bottomGap = 8
   const viewportMargin = 16
-  const scrollKeys = new Set(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home', 'PageDown', 'PageUp', ' '])
+  const scrollKeys = new Set([
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUp',
+    'End',
+    'Home',
+    'PageDown',
+    'PageUp',
+    ' '
+  ])
 
   let open = $state(false)
   let triggerRef = $state<HTMLButtonElement | null>(null)
-  let menuRef = $state<HTMLDivElement | null>(null)
+  let menuLayerRef = $state<HTMLDivElement | null>(null)
   let menuAnchor = $state<MenuAnchor>({ x: 0, y: 0 })
   let menuPosition = $state<MenuPosition>({ left: 0, top: 0 })
 
   const menuTitle = $derived(title?.trim() ? title : null)
+  const menuLayerStyle = $derived(
+    `--cthulhu-ui-dropdown-popup-menu-width: ${menuWidth}; --cthulhu-ui-dropdown-popup-menu-max-height: ${menuMaxHeight}; left: ${menuPosition.left}px; top: ${menuPosition.top}px;`
+  )
 
   const portalToBody: Action<HTMLDivElement> = (node) => {
     // Move fixed popups out of component containers so they are not clipped by local overflow.
@@ -77,9 +95,12 @@
     }
   }
 
-  const getMenuPosition = (anchor: MenuAnchor, menuHeight: number): MenuPosition => {
+  const getMenuPosition = (anchor: MenuAnchor, menuWidthPx: number, menuHeight: number): MenuPosition => {
     return {
-      left: Math.max(viewportMargin, Math.min(anchor.x + 12, window.innerWidth - 260)),
+      left: Math.max(
+        viewportMargin,
+        Math.min(anchor.x + 12, window.innerWidth - menuWidthPx - viewportMargin)
+      ),
       top: Math.max(
         viewportMargin,
         Math.min(anchor.y - 8, window.innerHeight - menuHeight - bottomGap)
@@ -111,7 +132,7 @@
     }
 
     menuAnchor = getMenuAnchor(event)
-    menuPosition = getMenuPosition(menuAnchor, fallbackMenuHeight)
+    menuPosition = getMenuPosition(menuAnchor, fallbackMenuWidth, fallbackMenuHeight)
     open = !open
   }
 
@@ -133,7 +154,7 @@
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node
 
-      if (triggerRef?.contains(target) || menuRef?.contains(target)) {
+      if (triggerRef?.contains(target) || menuLayerRef?.contains(target)) {
         return
       }
 
@@ -143,7 +164,7 @@
     const preventBackgroundScroll = (event: Event) => {
       const target = event.target as Node
 
-      if (menuRef?.contains(target)) {
+      if (menuLayerRef?.contains(target)) {
         return
       }
 
@@ -176,11 +197,12 @@
 
   // Side effect: once rendered, clamp the fixed popup using its actual measured height.
   $effect(() => {
-    if (!open || !menuRef) {
+    if (!open || !menuLayerRef) {
       return
     }
 
-    menuPosition = getMenuPosition(menuAnchor, menuRef.getBoundingClientRect().height)
+    const menuRect = menuLayerRef.getBoundingClientRect()
+    menuPosition = getMenuPosition(menuAnchor, menuRect.width, menuRect.height)
   })
 </script>
 
@@ -203,15 +225,18 @@
     <TriggerIcon size={16} aria-hidden="true" />
   </button>
   {#if open}
-    <div use:portalToBody>
+    <div
+      bind:this={menuLayerRef}
+      class="cthulhuUiDropdownPopupLayer"
+      style={menuLayerStyle}
+      use:portalToBody
+    >
       <CardSurface
-        bind:elementRef={menuRef}
         variant="solid"
         class="cthulhuUiDropdownPopupMenu p-2"
         role="menu"
         aria-label={menuTitle ?? label}
         data-testid={menuTestId}
-        style={`left: ${menuPosition.left}px; top: ${menuPosition.top}px;`}
       >
         {#if menuTitle}
           <div class="cthulhuUiDropdownPopupTitle">{menuTitle}</div>
@@ -224,7 +249,7 @@
               type="button"
               class="cthulhuUiDropdownPopupItem"
               role="menuitem"
-              data-variant={item.variant ?? 'normal'}
+              data-variant={item.variant ?? 'neutral'}
               onclick={() => selectItem(item)}
             >
               <ItemIcon size={16} aria-hidden="true" />
@@ -286,13 +311,13 @@
     line-height: 1;
   }
 
-  :global(.cthulhuUiDropdownPopupMenu) {
+  .cthulhuUiDropdownPopupLayer {
     color: var(--ui-normal-text);
-    max-height: calc(100vh - 32px);
+    max-height: var(--cthulhu-ui-dropdown-popup-menu-max-height);
     overflow-y: auto;
     overscroll-behavior: contain;
     position: fixed;
-    width: 236px;
+    width: var(--cthulhu-ui-dropdown-popup-menu-width);
     z-index: 30;
   }
 
