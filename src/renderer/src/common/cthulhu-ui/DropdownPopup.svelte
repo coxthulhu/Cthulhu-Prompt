@@ -2,16 +2,17 @@
   import { MoreHorizontal } from 'lucide-svelte'
   import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
+  import CardSurface from './CardSurface.svelte'
   import { mergeClasses } from './mergeClasses'
 
-  export type DropdownPopupItemTone = 'normal' | 'accent' | 'danger'
+  export type DropdownPopupItemVariant = 'normal' | 'accent' | 'danger'
 
   export type DropdownPopupItem = {
     id: string
     label: string
     detail?: string
     icon: ComponentType
-    tone?: DropdownPopupItemTone
+    variant?: DropdownPopupItemVariant
   }
 
   type MenuPosition = {
@@ -86,6 +87,19 @@
     }
   }
 
+  const getMenuAnchor = (event: MouseEvent): MenuAnchor => {
+    if (event.detail !== 0) {
+      return { x: event.clientX, y: event.clientY }
+    }
+
+    const triggerRect = triggerRef?.getBoundingClientRect()
+
+    return {
+      x: triggerRect?.right ?? event.clientX,
+      y: triggerRect ? triggerRect.top + triggerRect.height / 2 : event.clientY
+    }
+  }
+
   const toggleMenu = (event: MouseEvent) => {
     if (!triggerRef || disabled) {
       return
@@ -96,7 +110,7 @@
       return
     }
 
-    menuAnchor = { x: event.clientX, y: event.clientY }
+    menuAnchor = getMenuAnchor(event)
     menuPosition = getMenuPosition(menuAnchor, fallbackMenuHeight)
     open = !open
   }
@@ -126,7 +140,13 @@
       closeMenu()
     }
 
-    const preventScroll = (event: Event) => {
+    const preventBackgroundScroll = (event: Event) => {
+      const target = event.target as Node
+
+      if (menuRef?.contains(target)) {
+        return
+      }
+
       event.preventDefault()
     }
 
@@ -143,14 +163,14 @@
 
     document.addEventListener('pointerdown', handlePointerDown)
     document.addEventListener('keydown', handleKeydown)
-    document.addEventListener('wheel', preventScroll, { capture: true, passive: false })
-    document.addEventListener('touchmove', preventScroll, { capture: true, passive: false })
+    document.addEventListener('wheel', preventBackgroundScroll, { capture: true, passive: false })
+    document.addEventListener('touchmove', preventBackgroundScroll, { capture: true, passive: false })
 
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeydown)
-      document.removeEventListener('wheel', preventScroll, { capture: true })
-      document.removeEventListener('touchmove', preventScroll, { capture: true })
+      document.removeEventListener('wheel', preventBackgroundScroll, { capture: true })
+      document.removeEventListener('touchmove', preventBackgroundScroll, { capture: true })
     }
   })
 
@@ -183,40 +203,41 @@
     <TriggerIcon size={16} aria-hidden="true" />
   </button>
   {#if open}
-    <div
-      bind:this={menuRef}
-      use:portalToBody
-      class="cthulhuUiDropdownPopupMenu"
-      role="menu"
-      aria-label={menuTitle ?? label}
-      data-testid={menuTestId}
-      style:left={`${menuPosition.left}px`}
-      style:top={`${menuPosition.top}px`}
-    >
-      {#if menuTitle}
-        <div class="cthulhuUiDropdownPopupTitle">{menuTitle}</div>
-      {/if}
+    <div use:portalToBody>
+      <CardSurface
+        bind:elementRef={menuRef}
+        variant="solid"
+        class="cthulhuUiDropdownPopupMenu p-2"
+        role="menu"
+        aria-label={menuTitle ?? label}
+        data-testid={menuTestId}
+        style={`left: ${menuPosition.left}px; top: ${menuPosition.top}px;`}
+      >
+        {#if menuTitle}
+          <div class="cthulhuUiDropdownPopupTitle">{menuTitle}</div>
+        {/if}
 
-      <div class="cthulhuUiDropdownPopupItems">
-        {#each items as item (item.id)}
-          {@const ItemIcon = item.icon}
-          <button
-            type="button"
-            class="cthulhuUiDropdownPopupItem"
-            role="menuitem"
-            data-tone={item.tone ?? 'normal'}
-            onclick={() => selectItem(item)}
-          >
-            <ItemIcon size={16} aria-hidden="true" />
-            <span class="cthulhuUiDropdownPopupItemText">
-              <span class="cthulhuUiDropdownPopupItemLabel">{item.label}</span>
-              {#if item.detail}
-                <span class="cthulhuUiDropdownPopupItemDetail">{item.detail}</span>
-              {/if}
-            </span>
-          </button>
-        {/each}
-      </div>
+        <div class="cthulhuUiDropdownPopupItems">
+          {#each items as item (item.id)}
+            {@const ItemIcon = item.icon}
+            <button
+              type="button"
+              class="cthulhuUiDropdownPopupItem"
+              role="menuitem"
+              data-variant={item.variant ?? 'normal'}
+              onclick={() => selectItem(item)}
+            >
+              <ItemIcon size={16} aria-hidden="true" />
+              <span class="cthulhuUiDropdownPopupItemText">
+                <span class="cthulhuUiDropdownPopupItemLabel">{item.label}</span>
+                {#if item.detail}
+                  <span class="cthulhuUiDropdownPopupItemDetail">{item.detail}</span>
+                {/if}
+              </span>
+            </button>
+          {/each}
+        </div>
+      </CardSurface>
     </div>
   {/if}
 </div>
@@ -265,12 +286,11 @@
     line-height: 1;
   }
 
-  .cthulhuUiDropdownPopupMenu {
-    background: var(--ui-card-solid-surface);
-    border: 1px solid var(--ui-neutral-hover-border);
-    border-radius: var(--cthulhu-ui-radius-card);
+  :global(.cthulhuUiDropdownPopupMenu) {
     color: var(--ui-normal-text);
-    padding: 8px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     position: fixed;
     width: 236px;
     z-index: 30;
@@ -280,7 +300,6 @@
     color: var(--ui-muted-text);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
     line-height: 1.2;
     padding: 5px 8px 7px;
     text-transform: uppercase;
@@ -311,11 +330,11 @@
     width: 100%;
   }
 
-  .cthulhuUiDropdownPopupItem[data-tone='accent'] {
+  .cthulhuUiDropdownPopupItem[data-variant='accent'] {
     color: var(--ui-accent-normal-text);
   }
 
-  .cthulhuUiDropdownPopupItem[data-tone='danger'] {
+  .cthulhuUiDropdownPopupItem[data-variant='danger'] {
     color: var(--ui-danger-icon-glyph);
   }
 
@@ -325,12 +344,12 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiDropdownPopupItem[data-tone='accent']:hover {
+  .cthulhuUiDropdownPopupItem[data-variant='accent']:hover {
     background: var(--ui-accent-hover-surface);
     border-color: var(--ui-accent-hover-border);
   }
 
-  .cthulhuUiDropdownPopupItem[data-tone='danger']:hover {
+  .cthulhuUiDropdownPopupItem[data-variant='danger']:hover {
     background: var(--ui-danger-hover-surface);
     border-color: var(--ui-danger-hover-border);
     color: var(--ui-danger-icon-glyph);
