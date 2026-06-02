@@ -26,7 +26,8 @@
     type PromptEditorSizingConfig
   } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import { Folder, Settings } from 'lucide-svelte'
+  import type { ComponentType } from 'svelte'
+  import { Folder, ListEnd, ListStart, Settings } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
   import type {
     PromptFolderFindRequest,
@@ -50,6 +51,7 @@
     infoText: string
     copyLabel: string
     copyTitle: string
+    icon: ComponentType
     value: string
     modelUri: monaco.Uri
     initialViewStateJson: string | null
@@ -87,6 +89,7 @@
         'A general description of this folder and the types of prompts that are within it. For informational use only.',
       copyLabel: 'Copy folder description',
       copyTitle: 'Copy folder description',
+      icon: Folder,
       viewStateCapturePrefix: 'prompt-folder-description'
     },
     folderPrefix: {
@@ -95,6 +98,7 @@
         'Text to add before each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
       copyLabel: 'Copy folder prefix',
       copyTitle: 'Copy folder prefix',
+      icon: ListStart,
       viewStateCapturePrefix: 'prompt-folder-prefix'
     },
     folderSuffix: {
@@ -103,6 +107,7 @@
         'Text to add after each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
       copyLabel: 'Copy folder suffix',
       copyTitle: 'Copy folder suffix',
+      icon: ListEnd,
       viewStateCapturePrefix: 'prompt-folder-suffix'
     }
   }
@@ -363,7 +368,7 @@
         metadataFolderLabel="Folder Settings"
         lineCount={getPromptLineCount(section.value)}
         tokenCount={getPromptTokenCount(section.value)}
-        icon={Folder}
+        icon={section.icon}
         copyLabel={section.copyLabel}
         copyTitle={section.copyTitle}
       />
