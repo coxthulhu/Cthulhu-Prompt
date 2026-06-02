@@ -3,7 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  export type CardSurfaceVariant = 'panel' | 'panel-flat' | 'solid' | 'inset'
+  export type CardSurfaceVariant = 'panel' | 'panel-flat' | 'solid' | 'overlay' | 'inset'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     children: Snippet
@@ -31,6 +31,9 @@
     variant === 'solid'
       ? 'cthulhuUiCardSurface--solid rounded-[var(--cthulhu-ui-radius-card)] p-4'
       : null,
+    variant === 'overlay'
+      ? 'cthulhuUiCardSurface--overlay rounded-[var(--cthulhu-ui-radius-card)] p-4'
+      : null,
     variant === 'inset'
       ? 'cthulhuUiCardSurface--inset rounded-[var(--cthulhu-ui-radius-control)] p-3.5'
       : null,
@@ -48,7 +51,8 @@
   }
 
   .cthulhuUiCardSurface--panel,
-  .cthulhuUiCardSurface--solid {
+  .cthulhuUiCardSurface--solid,
+  .cthulhuUiCardSurface--overlay {
     border-color: var(--ui-card-normal-border);
     box-shadow: var(--cthulhu-ui-shadow-card);
   }
@@ -67,6 +71,10 @@
 
   .cthulhuUiCardSurface--solid {
     background: var(--ui-card-solid-surface);
+  }
+
+  .cthulhuUiCardSurface--overlay {
+    background: var(--ui-card-overlay-surface);
   }
 
   .cthulhuUiCardSurface--inset {

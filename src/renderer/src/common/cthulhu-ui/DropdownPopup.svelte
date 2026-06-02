@@ -267,7 +267,7 @@
     use:portalToBody
   >
     <CardSurface
-      variant="solid"
+      variant="overlay"
       class="cthulhuUiDropdownPopupMenu p-2"
       role="menu"
       aria-label={menuTitle ?? label}

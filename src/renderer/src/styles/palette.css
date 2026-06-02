@@ -20,6 +20,7 @@
   --ui-card-normal-surface-gradient-start: oklch(1 0 0 / 6%);
   --ui-card-normal-surface-gradient-end: oklch(1 0 0 / 3%);
   --ui-card-solid-surface: oklch(0.16 0 0);
+  --ui-card-overlay-surface: oklch(0.2 0 0);
   --ui-card-inset-surface: oklch(1 0 0 / 5%);
   --ui-card-normal-border: oklch(1 0 0 / 12%);
   --ui-card-normal-shadow: oklch(0 0 0 / 28%);
