@@ -268,7 +268,7 @@
   >
     <CardSurface
       variant="overlay"
-      class="cthulhuUiDropdownPopupMenu p-2"
+      class="cthulhuUiDropdownPopupMenu p-[6px]"
       role="menu"
       aria-label={menuTitle ?? label}
       data-testid={testId}
@@ -324,13 +324,12 @@
 
   .cthulhuUiDropdownPopupItems {
     display: grid;
-    gap: 2px;
   }
 
   .cthulhuUiDropdownPopupItem {
     align-items: center;
     background: transparent;
-    border: 1px solid transparent;
+    border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-text);
     cursor: pointer;
@@ -338,11 +337,10 @@
     gap: 8px;
     grid-template-columns: 18px minmax(0, 1fr);
     min-height: 34px;
-    padding: 5px 8px;
+    padding: 4px 8px;
     text-align: left;
     transition:
       background-color 120ms ease,
-      border-color 120ms ease,
       color 120ms ease;
     width: 100%;
   }
@@ -357,18 +355,15 @@
 
   .cthulhuUiDropdownPopupItem:hover {
     background: var(--ui-neutral-hover-surface);
-    border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
   }
 
   .cthulhuUiDropdownPopupItem[data-variant='accent']:hover {
     background: var(--ui-accent-hover-surface);
-    border-color: var(--ui-accent-hover-border);
   }
 
   .cthulhuUiDropdownPopupItem[data-variant='danger']:hover {
     background: var(--ui-danger-hover-surface);
-    border-color: var(--ui-danger-hover-border);
     color: var(--ui-danger-icon-glyph);
   }
 
