@@ -11,6 +11,7 @@
     label: string
     detail?: string
     icon: ComponentType
+    testId?: string
     variant?: DropdownPopupItemVariant
   }
 
@@ -45,7 +46,7 @@
     menuMaxHeight?: string
     testId?: string
     onclose?: () => void
-    onselect?: (item: DropdownPopupItem) => void
+    onselect?: (item: DropdownPopupItem, event: MouseEvent) => void
   }
 
   let {
@@ -63,6 +64,8 @@
 
   const fallbackMenuWidth = 236
   const fallbackMenuHeight = 336
+  const titledMenuFirstItemCenterOffset = 54
+  const untitledMenuFirstItemCenterOffset = 29
   const bottomGap = 8
   const viewportMargin = 16
   const scrollKeys = new Set([
@@ -83,7 +86,12 @@
   let open = $state(false)
   let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
 
-  const getMenuPosition = (anchor: MenuAnchor, menuWidthPx: number, menuHeight: number): MenuPosition => {
+  const getMenuPosition = (
+    anchor: MenuAnchor,
+    menuWidthPx: number,
+    menuHeight: number,
+    firstItemCenterOffset: number
+  ): MenuPosition => {
     return {
       left: Math.max(
         viewportMargin,
@@ -91,7 +99,7 @@
       ),
       top: Math.max(
         viewportMargin,
-        Math.min(anchor.y - 8, window.innerHeight - menuHeight - bottomGap)
+        Math.min(anchor.y - firstItemCenterOffset, window.innerHeight - menuHeight - bottomGap)
       )
     }
   }
@@ -131,7 +139,8 @@
       ? getMenuPosition(
           menuAnchor,
           measuredMenuSize.width,
-          measuredMenuSize.height
+          measuredMenuSize.height,
+          menuTitle ? titledMenuFirstItemCenterOffset : untitledMenuFirstItemCenterOffset
         )
       : { left: 0, top: 0 }
   )
@@ -182,9 +191,9 @@
     ariaExpanded: open
   })
 
-  const selectItem = (item: DropdownPopupItem) => {
+  const selectItem = (item: DropdownPopupItem, event: MouseEvent) => {
     closeMenu()
-    onselect?.(item)
+    onselect?.(item, event)
   }
 
   // Side effect: dismiss the open popup from document-level outside clicks and Escape.
@@ -276,7 +285,8 @@
             class="cthulhuUiDropdownPopupItem"
             role="menuitem"
             data-variant={item.variant ?? 'neutral'}
-            onclick={() => selectItem(item)}
+            data-testid={item.testId}
+            onclick={(event) => selectItem(item, event)}
           >
             <ItemIcon size={16} aria-hidden="true" />
             <span class="cthulhuUiDropdownPopupItemText">

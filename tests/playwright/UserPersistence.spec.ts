@@ -959,7 +959,7 @@ describe('User Persistence', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')
     ).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-settings-Examples"]')).toHaveCount(
+    await expect(mainWindow.locator('[data-testid="prompt-folder-options-Examples"]')).toHaveCount(
       1
     )
   })

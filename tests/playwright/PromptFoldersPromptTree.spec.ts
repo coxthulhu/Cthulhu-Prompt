@@ -127,6 +127,7 @@ describe('Prompt folder prompt tree', () => {
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeGreaterThan(0)
 
+    const folderOptionsSelector = '[data-testid="prompt-folder-options-Short"]'
     const folderSettingsSelector = '[data-testid="prompt-folder-settings-Short"]'
     await mainWindow.evaluate((selector) => {
       const button = document.querySelector<HTMLButtonElement>(selector)
@@ -134,10 +135,15 @@ describe('Prompt folder prompt tree', () => {
         throw new Error(`Missing prompt tree row: ${selector}`)
       }
       button.click()
-    }, folderSettingsSelector)
-    const folderSettingsButton = mainWindow.locator(folderSettingsSelector)
+    }, folderOptionsSelector)
 
-    await expect(folderSettingsButton).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.getByText('Folder Options')).toBeVisible()
+    await expect(mainWindow.locator(folderSettingsSelector)).toContainText(
+      'Open folder-level settings'
+    )
+    await mainWindow.locator(folderSettingsSelector).click()
+
+    await expect(mainWindow.locator(folderOptionsSelector)).toHaveAttribute('data-active', 'true')
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeLessThan(100)

@@ -1,6 +1,13 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { ArrowRight, ChevronDown, ChevronRight, Loader, Settings } from 'lucide-svelte'
+  import {
+    ArrowRight,
+    ChevronDown,
+    ChevronRight,
+    Loader,
+    MoreHorizontal,
+    Settings
+  } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
     draggable,
@@ -42,6 +49,9 @@
     setPromptFolderShowingAllPromptsStateWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import DropdownPopup, {
+    type DropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
@@ -59,12 +69,12 @@
   import {
     folderDropIndicatorTestId,
     folderOpenTestId,
+    folderOptionsTestId,
     folderPromptShowAllTestId,
     folderPromptShowLessTestId,
     folderPromptDropIndicatorTestId,
     folderPromptVisibilityDropIndicatorTestId,
     folderPromptTestId,
-    folderSettingsIconTestId,
     folderSettingsTestId,
     folderToggleTestId
   } from './promptTreeTestIds'
@@ -123,6 +133,7 @@
   const PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX = 30
   const PROMPT_TREE_PROMPT_VISIBILITY_ROW_CONTENT_HEIGHT_PX = 22
   const PROMPT_TREE_VISIBLE_PROMPT_LIMIT = 5
+  const FOLDER_SETTINGS_DROPDOWN_ITEM_ID = 'folder-settings'
   const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX =
     PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
   const PROMPT_TREE_PROMPT_ROW_HEIGHT_PX =
@@ -495,6 +506,16 @@
     blurButtonAfterMouseClick(event)
   }
 
+  const getFolderOptionsDropdownItems = (folder: PromptFolder): DropdownPopupItem[] => [
+    {
+      id: FOLDER_SETTINGS_DROPDOWN_ITEM_ID,
+      label: 'Folder Settings',
+      detail: 'Open folder-level settings',
+      icon: Settings,
+      testId: folderSettingsTestId(folder)
+    }
+  ]
+
   // Side effect: clear local folder expand overrides when switching workspaces.
   $effect(() => {
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -697,19 +718,35 @@
               {props.row.folder.promptIds.length}
             </span>
             <div class="sidebarPromptTreeFolderActions">
-              <IconOnlyButton
-                icon={Settings}
-                label={`Folder settings for ${props.row.folder.displayName}`}
-                variant="transparent"
-                size="tree-action"
-                onclick={(event) =>
-                  handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)}
-                testId={folderSettingsTestId(props.row.folder)}
-                iconTestId={folderSettingsIconTestId(props.row.folder)}
-                active={isSettingsActive}
-                ariaCurrent={isSettingsActive ? 'true' : undefined}
-                class="sidebarPromptTreeActionButton"
-              />
+              <DropdownPopup
+                label={`Folder options for ${props.row.folder.displayName}`}
+                title="Folder Options"
+                items={getFolderOptionsDropdownItems(props.row.folder)}
+                menuWidth="248px"
+                onselect={(item, event) => {
+                  if (item.id === FOLDER_SETTINGS_DROPDOWN_ITEM_ID) {
+                    handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)
+                  }
+                }}
+              >
+                {#snippet trigger(dropdown)}
+                  <IconOnlyButton
+                    icon={MoreHorizontal}
+                    label={`Folder options for ${props.row.folder.displayName}`}
+                    title="Folder Options"
+                    variant="transparent"
+                    size="tree-action"
+                    active={dropdown.open || isSettingsActive}
+                    ariaHaspopup={dropdown.ariaHaspopup}
+                    ariaExpanded={dropdown.ariaExpanded}
+                    ariaCurrent={isSettingsActive ? 'true' : undefined}
+                    buttonAction={dropdown.triggerAction}
+                    onclick={dropdown.toggle}
+                    testId={folderOptionsTestId(props.row.folder)}
+                    class="sidebarPromptTreeActionButton"
+                  />
+                {/snippet}
+              </DropdownPopup>
               <IconOnlyButton
                 icon={ArrowRight}
                 label={`Open ${props.row.folder.displayName}`}

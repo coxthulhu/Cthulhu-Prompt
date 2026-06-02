@@ -11,8 +11,8 @@ export const folderToggleTestId = (folder: PromptFolder): string =>
 export const folderOpenTestId = (folder: PromptFolder): string =>
   `regular-prompt-folder-${getFolderTestKey(folder)}`
 
-export const folderSettingsIconTestId = (folder: PromptFolder): string =>
-  `prompt-folder-settings-icon-${getFolderTestKey(folder)}`
+export const folderOptionsTestId = (folder: PromptFolder): string =>
+  `prompt-folder-options-${getFolderTestKey(folder)}`
 
 export const folderPromptTestId = (promptId: string): string => `prompt-folder-prompt-${promptId}`
 

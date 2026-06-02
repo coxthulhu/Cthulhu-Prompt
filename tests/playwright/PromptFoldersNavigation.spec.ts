@@ -6,12 +6,12 @@ const EXAMPLES_BUTTON = '[data-testid="regular-prompt-folder-Examples"]'
 const DEVELOPMENT_BUTTON = '[data-testid="regular-prompt-folder-Development"]'
 const EXAMPLES_TOGGLE = '[data-testid="prompt-folder-toggle-Examples"]'
 const DEVELOPMENT_TOGGLE = '[data-testid="prompt-folder-toggle-Development"]'
-const EXAMPLES_SETTINGS = '[data-testid="prompt-folder-settings-Examples"]'
-const DEVELOPMENT_SETTINGS = '[data-testid="prompt-folder-settings-Development"]'
+const EXAMPLES_OPTIONS = '[data-testid="prompt-folder-options-Examples"]'
+const DEVELOPMENT_OPTIONS = '[data-testid="prompt-folder-options-Development"]'
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
 const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-folder-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
-const SHORT_SETTINGS = '[data-testid="prompt-folder-settings-Short"]'
+const SHORT_OPTIONS = '[data-testid="prompt-folder-options-Short"]'
 const SHORT_TOGGLE = '[data-testid="prompt-folder-toggle-Short"]'
 const SHORT_SHOW_ALL = '[data-testid="prompt-folder-show-all-Short"]'
 const SHORT_PROMPT_50 = '[data-testid="prompt-folder-prompt-short-50"]'
@@ -145,11 +145,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toBeVisible()
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-settings-icon-Examples"]')
-    ).toHaveCount(1)
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
 
     await testHelpers.navigateToPromptFolders('Examples')
     await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
@@ -157,16 +154,16 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
 
     await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
 
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
   })
 
   test('collapses all prompt folders from the sidebar action', async ({ testSetup }) => {
@@ -183,8 +180,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
 
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
@@ -194,8 +191,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-label',
       'Expand All Prompt Folders'
     )
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
@@ -229,8 +226,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-label',
       'Collapse All Prompt Folders'
     )
-    await expect(mainWindow.locator(EXAMPLES_SETTINGS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_SETTINGS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
+    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
     await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
   })
@@ -343,10 +340,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
 
-    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SHORT_OPTIONS)).toHaveAttribute('data-active', 'true')
 
     await mainWindow.locator(SHORT_TOGGLE).click()
-    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SHORT_OPTIONS)).toHaveAttribute('data-active', 'true')
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
     await expect(mainWindow.locator(SHORT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
@@ -357,7 +354,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(mainWindow.locator(SHORT_SETTINGS)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SHORT_OPTIONS)).toHaveAttribute('data-active', 'true')
   })
 
   test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {
