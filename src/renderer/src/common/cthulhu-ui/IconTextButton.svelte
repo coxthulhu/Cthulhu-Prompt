@@ -1,10 +1,12 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
   type ButtonState = 'active' | 'enabled' | 'disabled'
   type ButtonVariant = 'neutral' | 'accent' | 'danger' | 'nav'
   type NonNavButtonVariant = Exclude<ButtonVariant, 'nav'>
+  type IconTextButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
     icon: ComponentType
@@ -19,8 +21,14 @@
     target?: string
     rel?: string
     testId?: string
+    ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
+    ariaExpanded?: boolean
+    buttonAction?: IconTextButtonAction | null
+    buttonActionParameter?: unknown
     onclick?: (event: MouseEvent) => void
   }
+
+  const noopButtonAction: IconTextButtonAction = () => undefined
 
   let {
     icon: Icon,
@@ -35,6 +43,10 @@
     target,
     rel,
     testId,
+    ariaHaspopup,
+    ariaExpanded,
+    buttonAction = null,
+    buttonActionParameter,
     onclick
   }: Props = $props()
 
@@ -58,6 +70,7 @@
   } satisfies Record<ButtonState, string>
 
   const isDisabled = $derived(state === 'disabled')
+  const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
   const variantClass = $derived(
     variant === 'nav'
       ? navVariantClasses[state]
@@ -79,6 +92,8 @@
     {target}
     {rel}
     {onclick}
+    aria-haspopup={ariaHaspopup}
+    aria-expanded={ariaExpanded}
     aria-disabled={isDisabled}
   >
     <Icon class={mergeClasses('h-4 w-4', iconClass)} />
@@ -89,10 +104,13 @@
   </a>
 {:else}
   <button
+    use:resolvedButtonAction={buttonActionParameter}
     type="button"
     class={mergeClasses(baseButtonClass, variantClass, className)}
     data-active={state === 'active' ? 'true' : 'false'}
     data-testid={testId}
+    aria-haspopup={ariaHaspopup}
+    aria-expanded={ariaExpanded}
     {onclick}
     disabled={isDisabled}
   >

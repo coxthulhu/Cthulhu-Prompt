@@ -19,6 +19,8 @@
     testId?: string
     title?: string
     active?: boolean
+    ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
+    ariaExpanded?: boolean
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
     buttonAction?: IconOnlyButtonAction | null
     buttonActionParameter?: unknown
@@ -61,6 +63,8 @@
     testId,
     title,
     active,
+    ariaHaspopup,
+    ariaExpanded,
     ariaCurrent,
     buttonAction = null,
     buttonActionParameter,
@@ -82,6 +86,8 @@
   )}
   type="button"
   aria-label={label}
+  aria-haspopup={ariaHaspopup}
+  aria-expanded={ariaExpanded}
   aria-current={ariaCurrent}
   data-active={active === undefined ? undefined : active ? 'true' : 'false'}
   data-testid={testId}

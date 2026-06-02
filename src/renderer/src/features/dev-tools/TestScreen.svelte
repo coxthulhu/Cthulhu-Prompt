@@ -285,21 +285,42 @@
               label="Folder options"
               title="Folder options"
               items={folderDropdownItems}
-              menuTestId="folder-dropdown-menu"
+              testId="folder-dropdown-menu"
               onselect={(item) => {
                 lastDropdownAction = item.label
               }}
-            />
+            >
+              {#snippet trigger(dropdown)}
+                <IconOnlyButton
+                  icon={MoreHorizontal}
+                  label="Folder options"
+                  active={dropdown.open}
+                  ariaHaspopup={dropdown.ariaHaspopup}
+                  ariaExpanded={dropdown.ariaExpanded}
+                  buttonAction={dropdown.triggerAction}
+                  onclick={dropdown.toggle}
+                />
+              {/snippet}
+            </DropdownPopup>
             <DropdownPopup
               label="Prompt actions"
-              triggerText="Prompt actions"
-              triggerIcon={MoreHorizontal}
               items={promptDropdownItems}
-              menuTestId="prompt-dropdown-menu"
+              testId="prompt-dropdown-menu"
               onselect={(item) => {
                 lastDropdownAction = item.label
               }}
-            />
+            >
+              {#snippet trigger(dropdown)}
+                <IconTextButton
+                  icon={MoreHorizontal}
+                  text="Prompt actions"
+                  ariaHaspopup={dropdown.ariaHaspopup}
+                  ariaExpanded={dropdown.ariaExpanded}
+                  buttonAction={dropdown.triggerAction}
+                  onclick={dropdown.toggle}
+                />
+              {/snippet}
+            </DropdownPopup>
           </div>
 
           <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />

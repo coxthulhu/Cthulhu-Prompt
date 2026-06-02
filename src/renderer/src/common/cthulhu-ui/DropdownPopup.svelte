@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { MoreHorizontal } from 'lucide-svelte'
-  import type { ComponentType } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import CardSurface from './CardSurface.svelte'
   import { mergeClasses } from './mergeClasses'
@@ -25,35 +24,40 @@
     y: number
   }
 
+  type DropdownPopupTriggerAction = Action<HTMLElement, unknown>
+
+  export type DropdownPopupTriggerContext = {
+    triggerAction: DropdownPopupTriggerAction
+    open: boolean
+    toggle: (event?: MouseEvent) => void
+    close: () => void
+    ariaHaspopup: 'menu'
+    ariaExpanded: boolean
+  }
+
   type Props = {
     label: string
     items: DropdownPopupItem[]
+    trigger: Snippet<[DropdownPopupTriggerContext]>
     title?: string
-    triggerText?: string
-    triggerIcon?: ComponentType
-    disabled?: boolean
     class?: string
-    triggerClass?: string
     menuWidth?: string
     menuMaxHeight?: string
     testId?: string
-    menuTestId?: string
+    onclose?: () => void
     onselect?: (item: DropdownPopupItem) => void
   }
 
   let {
     label,
     items,
+    trigger,
     title,
-    triggerText,
-    triggerIcon: TriggerIcon = MoreHorizontal,
-    disabled = false,
     class: className,
-    triggerClass,
     menuWidth = '236px',
     menuMaxHeight = 'calc(100vh - 32px)',
     testId,
-    menuTestId,
+    onclose,
     onselect
   }: Props = $props()
 
@@ -73,13 +77,64 @@
     ' '
   ])
 
-  let open = $state(false)
-  let triggerRef = $state<HTMLButtonElement | null>(null)
   let menuLayerRef = $state<HTMLDivElement | null>(null)
-  let menuAnchor = $state<MenuAnchor>({ x: 0, y: 0 })
-  let menuPosition = $state<MenuPosition>({ left: 0, top: 0 })
+  let anchorElement = $state<HTMLElement | null>(null)
+  let menuAnchor = $state<MenuAnchor | null>(null)
+  let open = $state(false)
+  let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
+
+  const getMenuPosition = (anchor: MenuAnchor, menuWidthPx: number, menuHeight: number): MenuPosition => {
+    return {
+      left: Math.max(
+        viewportMargin,
+        Math.min(anchor.x + 12, window.innerWidth - menuWidthPx - viewportMargin)
+      ),
+      top: Math.max(
+        viewportMargin,
+        Math.min(anchor.y - 8, window.innerHeight - menuHeight - bottomGap)
+      )
+    }
+  }
+
+  const getMenuAnchor = (element: HTMLElement): MenuAnchor => {
+    const triggerRect = element.getBoundingClientRect()
+    return {
+      x: triggerRect.right,
+      y: triggerRect.top + triggerRect.height / 2
+    }
+  }
+
+  const getOpenMenuAnchor = (event?: MouseEvent): MenuAnchor | null => {
+    if (event && event.detail !== 0) {
+      return { x: event.clientX, y: event.clientY }
+    }
+
+    return anchorElement ? getMenuAnchor(anchorElement) : null
+  }
+
+  const triggerAction: DropdownPopupTriggerAction = (node) => {
+    anchorElement = node
+
+    return {
+      destroy() {
+        if (anchorElement === node) {
+          anchorElement = null
+          closeMenu()
+        }
+      }
+    }
+  }
 
   const menuTitle = $derived(title?.trim() ? title : null)
+  const menuPosition = $derived(
+    menuAnchor
+      ? getMenuPosition(
+          menuAnchor,
+          measuredMenuSize.width,
+          measuredMenuSize.height
+        )
+      : { left: 0, top: 0 }
+  )
   const menuLayerStyle = $derived(
     `--cthulhu-ui-dropdown-popup-menu-width: ${menuWidth}; --cthulhu-ui-dropdown-popup-menu-max-height: ${menuMaxHeight}; left: ${menuPosition.left}px; top: ${menuPosition.top}px;`
   )
@@ -95,50 +150,37 @@
     }
   }
 
-  const getMenuPosition = (anchor: MenuAnchor, menuWidthPx: number, menuHeight: number): MenuPosition => {
-    return {
-      left: Math.max(
-        viewportMargin,
-        Math.min(anchor.x + 12, window.innerWidth - menuWidthPx - viewportMargin)
-      ),
-      top: Math.max(
-        viewportMargin,
-        Math.min(anchor.y - 8, window.innerHeight - menuHeight - bottomGap)
-      )
-    }
+  const closeMenu = () => {
+    open = false
+    menuAnchor = null
+    onclose?.()
   }
 
-  const getMenuAnchor = (event: MouseEvent): MenuAnchor => {
-    if (event.detail !== 0) {
-      return { x: event.clientX, y: event.clientY }
-    }
-
-    const triggerRect = triggerRef?.getBoundingClientRect()
-
-    return {
-      x: triggerRect?.right ?? event.clientX,
-      y: triggerRect ? triggerRect.top + triggerRect.height / 2 : event.clientY
-    }
-  }
-
-  const toggleMenu = (event: MouseEvent) => {
-    if (!triggerRef || disabled) {
-      return
-    }
-
+  const toggleMenu = (event?: MouseEvent) => {
     if (open) {
       closeMenu()
       return
     }
 
-    menuAnchor = getMenuAnchor(event)
-    menuPosition = getMenuPosition(menuAnchor, fallbackMenuWidth, fallbackMenuHeight)
-    open = !open
+    const nextMenuAnchor = getOpenMenuAnchor(event)
+
+    if (!nextMenuAnchor) {
+      return
+    }
+
+    menuAnchor = nextMenuAnchor
+    measuredMenuSize = { width: fallbackMenuWidth, height: fallbackMenuHeight }
+    open = true
   }
 
-  const closeMenu = () => {
-    open = false
-  }
+  const triggerContext = $derived({
+    triggerAction,
+    open,
+    toggle: toggleMenu,
+    close: closeMenu,
+    ariaHaspopup: 'menu' as const,
+    ariaExpanded: open
+  })
 
   const selectItem = (item: DropdownPopupItem) => {
     closeMenu()
@@ -154,7 +196,7 @@
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node
 
-      if (triggerRef?.contains(target) || menuLayerRef?.contains(target)) {
+      if (anchorElement?.contains(target) || menuLayerRef?.contains(target)) {
         return
       }
 
@@ -202,115 +244,55 @@
     }
 
     const menuRect = menuLayerRef.getBoundingClientRect()
-    menuPosition = getMenuPosition(menuAnchor, menuRect.width, menuRect.height)
+    measuredMenuSize = { width: menuRect.width, height: menuRect.height }
   })
 </script>
 
-<div class={mergeClasses('cthulhuUiDropdownPopup', className)}>
-  <button
-    bind:this={triggerRef}
-    type="button"
-    class={mergeClasses('cthulhuUiDropdownPopupTrigger', triggerClass)}
-    aria-label={label}
-    aria-haspopup="menu"
-    aria-expanded={open}
-    data-open={open ? 'true' : undefined}
-    data-testid={testId}
-    {disabled}
-    onclick={toggleMenu}
-  >
-    {#if triggerText}
-      <span class="cthulhuUiDropdownPopupTriggerText">{triggerText}</span>
-    {/if}
-    <TriggerIcon size={16} aria-hidden="true" />
-  </button>
-  {#if open}
-    <div
-      bind:this={menuLayerRef}
-      class="cthulhuUiDropdownPopupLayer"
-      style={menuLayerStyle}
-      use:portalToBody
-    >
-      <CardSurface
-        variant="solid"
-        class="cthulhuUiDropdownPopupMenu p-2"
-        role="menu"
-        aria-label={menuTitle ?? label}
-        data-testid={menuTestId}
-      >
-        {#if menuTitle}
-          <div class="cthulhuUiDropdownPopupTitle">{menuTitle}</div>
-        {/if}
+{@render trigger(triggerContext)}
 
-        <div class="cthulhuUiDropdownPopupItems">
-          {#each items as item (item.id)}
-            {@const ItemIcon = item.icon}
-            <button
-              type="button"
-              class="cthulhuUiDropdownPopupItem"
-              role="menuitem"
-              data-variant={item.variant ?? 'neutral'}
-              onclick={() => selectItem(item)}
-            >
-              <ItemIcon size={16} aria-hidden="true" />
-              <span class="cthulhuUiDropdownPopupItemText">
-                <span class="cthulhuUiDropdownPopupItemLabel">{item.label}</span>
-                {#if item.detail}
-                  <span class="cthulhuUiDropdownPopupItemDetail">{item.detail}</span>
-                {/if}
-              </span>
-            </button>
-          {/each}
-        </div>
-      </CardSurface>
-    </div>
-  {/if}
-</div>
+{#if open && menuAnchor}
+  <div
+    bind:this={menuLayerRef}
+    class={mergeClasses('cthulhuUiDropdownPopupLayer', className)}
+    style={menuLayerStyle}
+    use:portalToBody
+  >
+    <CardSurface
+      variant="solid"
+      class="cthulhuUiDropdownPopupMenu p-2"
+      role="menu"
+      aria-label={menuTitle ?? label}
+      data-testid={testId}
+    >
+      {#if menuTitle}
+        <div class="cthulhuUiDropdownPopupTitle">{menuTitle}</div>
+      {/if}
+
+      <div class="cthulhuUiDropdownPopupItems">
+        {#each items as item (item.id)}
+          {@const ItemIcon = item.icon}
+          <button
+            type="button"
+            class="cthulhuUiDropdownPopupItem"
+            role="menuitem"
+            data-variant={item.variant ?? 'neutral'}
+            onclick={() => selectItem(item)}
+          >
+            <ItemIcon size={16} aria-hidden="true" />
+            <span class="cthulhuUiDropdownPopupItemText">
+              <span class="cthulhuUiDropdownPopupItemLabel">{item.label}</span>
+              {#if item.detail}
+                <span class="cthulhuUiDropdownPopupItemDetail">{item.detail}</span>
+              {/if}
+            </span>
+          </button>
+        {/each}
+      </div>
+    </CardSurface>
+  </div>
+{/if}
 
 <style>
-  .cthulhuUiDropdownPopup {
-    display: inline-flex;
-    position: relative;
-  }
-
-  .cthulhuUiDropdownPopupTrigger {
-    align-items: center;
-    background: var(--ui-neutral-normal-surface);
-    border: 1px solid var(--ui-neutral-interactive-normal-border);
-    border-radius: var(--cthulhu-ui-radius-icon-button);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: inline-flex;
-    gap: 7px;
-    height: 34px;
-    justify-content: center;
-    min-width: 34px;
-    padding: 0 9px;
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
-  }
-
-  .cthulhuUiDropdownPopupTrigger:hover,
-  .cthulhuUiDropdownPopupTrigger[data-open='true'] {
-    background: var(--ui-neutral-hover-surface);
-    border-color: var(--ui-neutral-interactive-hover-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiDropdownPopupTrigger:disabled {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  .cthulhuUiDropdownPopupTriggerText {
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-  }
-
   .cthulhuUiDropdownPopupLayer {
     color: var(--ui-normal-text);
     max-height: var(--cthulhu-ui-dropdown-popup-menu-max-height);
