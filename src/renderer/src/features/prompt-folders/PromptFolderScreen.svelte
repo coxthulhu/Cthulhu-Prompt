@@ -23,21 +23,21 @@
   onRevealMatch={controller.handleFindMatchReveal}
 >
   <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    <div class="flex h-9 shrink-0 items-center border-b border-white/8 bg-[#121316] px-6">
-      <div class="flex min-w-0 items-center text-sm font-medium text-zinc-500">
+    <div class="prompt-folder-header-bar flex h-9 shrink-0 items-center px-6">
+      <div class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-medium">
         <button
           type="button"
           data-testid="prompt-folder-header-folder"
-          class="min-w-0 cursor-pointer truncate text-zinc-500 transition-colors hover:text-zinc-300"
+          class="prompt-folder-header-folder min-w-0 cursor-pointer truncate transition-colors"
           onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
         >
           {controller.folderDisplayName}
         </button>
-        <span class="mx-1 px-2 text-zinc-700">/</span>
+        <span class="prompt-folder-header-separator mx-1 px-2">/</span>
         <button
           type="button"
           data-testid="prompt-folder-header-section"
-          class="cursor-pointer whitespace-nowrap text-zinc-300 transition-colors hover:text-white"
+          class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors"
           onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
         >
           {controller.activeHeaderSection}
@@ -95,3 +95,31 @@
     {/if}
   </main>
 </PromptFolderFindIntegration>
+
+<style>
+  .prompt-folder-header-bar {
+    background: var(--ui-card-nested-surface);
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+  }
+
+  .prompt-folder-header-breadcrumb,
+  .prompt-folder-header-folder {
+    color: var(--ui-muted-text);
+  }
+
+  .prompt-folder-header-folder:hover {
+    color: var(--ui-hoverable-text);
+  }
+
+  .prompt-folder-header-separator {
+    color: var(--ui-neutral-emphasis-border);
+  }
+
+  .prompt-folder-header-section {
+    color: var(--ui-hoverable-text);
+  }
+
+  .prompt-folder-header-section:hover {
+    color: var(--ui-normal-text);
+  }
+</style>
