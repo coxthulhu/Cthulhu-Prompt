@@ -1,24 +1,13 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import {
-    ArrowRight,
-    ChevronDown,
-    ChevronRight,
-    ChevronsDown,
-    ChevronsUp,
-    Loader,
-    MoreHorizontal,
-    Settings
-  } from 'lucide-svelte'
+  import { Loader } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
-    draggable,
     type DroppableAllowedEdges,
     type DroppableEdge,
     type DroppableOptions,
     type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
@@ -50,11 +39,6 @@
     setPromptFolderExpandedStateWithAutosave,
     setPromptFolderShowingAllPromptsStateWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import DropdownPopup, {
-    type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
-  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -63,26 +47,19 @@
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
-  import PromptTreeDropIndicator from './PromptTreeDropIndicator.svelte'
   import {
     createPromptTreeFolderDragController,
     createPromptTreePromptDragController
   } from './promptTreeDrag'
+  import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
+  import PromptTreeDropIndicator from './PromptTreeDropIndicator.svelte'
+  import PromptTreePromptRow from './PromptTreePromptRow.svelte'
+  import PromptTreeVisibilityToggleRow from './PromptTreeVisibilityToggleRow.svelte'
   import {
     folderDropIndicatorTestId,
-    folderOpenTestId,
-    folderOptionsTestId,
-    folderPromptMenuShowAllTestId,
-    folderPromptMenuShowLessTestId,
-    folderPromptShowAllTestId,
-    folderPromptShowLessTestId,
     folderPromptDropIndicatorTestId,
-    folderPromptVisibilityDropIndicatorTestId,
-    folderPromptTestId,
-    folderSettingsTestId,
-    folderToggleTestId
+    folderPromptVisibilityDropIndicatorTestId
   } from './promptTreeTestIds'
-  import PromptTreeIndent from './PromptTreeIndent.svelte'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
 
@@ -137,9 +114,6 @@
   const PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX = 30
   const PROMPT_TREE_PROMPT_VISIBILITY_ROW_CONTENT_HEIGHT_PX = 22
   const PROMPT_TREE_VISIBLE_PROMPT_LIMIT = 5
-  const FOLDER_SETTINGS_DROPDOWN_ITEM_ID = 'folder-settings'
-  const SHOW_ALL_PROMPTS_DROPDOWN_ITEM_ID = 'show-all-prompts'
-  const SHOW_LESS_PROMPTS_DROPDOWN_ITEM_ID = 'show-less-prompts'
   const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX =
     PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
   const PROMPT_TREE_PROMPT_ROW_HEIGHT_PX =
@@ -269,10 +243,6 @@
     setPromptFolderShowingAllPromptsStateWithAutosave(workspaceId, folderId, isShowingAll)
   }
 
-  const toggleFolderExpanded = (folderId: string) => {
-    setFolderExpanded(folderId, !isFolderExpanded(folderId))
-  }
-
   const expandAllPromptFolders = () => {
     for (const folder of promptFolders) {
       setFolderExpanded(folder.id, true)
@@ -359,54 +329,8 @@
   const getPromptTreeFolderDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreeFolderDroppableState.edge(rowId)
 
-  const getPromptTreeDropIndicatorTestId = (row: PromptTreeOverlayRow): string =>
-    row.kind === 'prompt-folder'
-      ? folderDropIndicatorTestId(row.folder)
-      : row.kind === 'folder-prompt-visibility-toggle'
-        ? folderPromptVisibilityDropIndicatorTestId(row.folder)
-        : folderPromptDropIndicatorTestId(row.promptId)
-
-  const getPromptTreeDropIndicatorInset = (row: PromptTreeOverlayRow): string =>
-    row.kind === 'prompt-folder' ? '10px' : PROMPT_TREE_CHILD_ROW_CONTENT_INSET
-
-  const blurButtonAfterMouseClick = (event: MouseEvent) => {
-    // Side effect: keep action-slot visibility stable by defocusing only real mouse clicks.
-    if (event.detail === 0) {
-      return
-    }
-
-    const button = event.currentTarget
-    if (button instanceof HTMLButtonElement) {
-      button.blur()
-    }
-  }
-
-  const handleFolderToggleClick = (folderId: string, event: MouseEvent) => {
-    toggleFolderExpanded(folderId)
-    blurButtonAfterMouseClick(event)
-  }
-
-  const handlePromptFolderOpen = (promptFolderId: string, event: MouseEvent) => {
+  const handlePromptFolderOpen = (promptFolderId: string) => {
     onPromptFolderSelect(promptFolderId)
-    blurButtonAfterMouseClick(event)
-  }
-
-  const handlePromptVisibilityToggleClick = (
-    promptFolderId: string,
-    isShowingAll: boolean,
-    event: MouseEvent
-  ) => {
-    setFolderShowingAllPrompts(promptFolderId, !isShowingAll)
-    blurButtonAfterMouseClick(event)
-  }
-
-  const handlePromptVisibilityMenuSelect = (
-    promptFolderId: string,
-    isShowingAll: boolean,
-    event: MouseEvent
-  ) => {
-    setFolderShowingAllPrompts(promptFolderId, isShowingAll)
-    blurButtonAfterMouseClick(event)
   }
 
   const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
@@ -501,8 +425,7 @@
 
   const handlePromptTreeEntrySelect = (
     promptFolderId: string,
-    row: PromptNavigationRow,
-    event: MouseEvent
+    row: PromptNavigationRow
   ) => {
     const isSameFolderActive =
       isPromptFoldersScreenActive && selectedPromptFolderId === promptFolderId
@@ -517,63 +440,10 @@
     if (!isSameFolderActive) {
       onPromptFolderSelect(promptFolderId)
     }
-
-    blurButtonAfterMouseClick(event)
   }
 
-  const getFolderOptionsDropdownItems = (folder: PromptFolder): DropdownPopupItem[] => {
-    const items: DropdownPopupItem[] = [
-      {
-        id: FOLDER_SETTINGS_DROPDOWN_ITEM_ID,
-        label: 'Folder Settings',
-        detail: 'Open folder-level settings',
-        icon: Settings,
-        testId: folderSettingsTestId(folder)
-      }
-    ]
-
-    if (isFolderExpanded(folder.id) && folder.promptIds.length > PROMPT_TREE_VISIBLE_PROMPT_LIMIT) {
-      const isShowingAll = isFolderShowingAllPrompts(folder.id)
-      items.push(
-        isShowingAll
-          ? {
-              id: SHOW_LESS_PROMPTS_DROPDOWN_ITEM_ID,
-              label: 'Show less',
-              detail: `Show the first ${PROMPT_TREE_VISIBLE_PROMPT_LIMIT} prompts`,
-              icon: ChevronsUp,
-              testId: folderPromptMenuShowLessTestId(folder)
-            }
-          : {
-              id: SHOW_ALL_PROMPTS_DROPDOWN_ITEM_ID,
-              label: 'Show all',
-              detail: 'Show every prompt in this folder',
-              icon: ChevronsDown,
-              testId: folderPromptMenuShowAllTestId(folder)
-            }
-      )
-    }
-
-    return items
-  }
-
-  const handleFolderOptionsSelect = (
-    folder: PromptFolder,
-    item: DropdownPopupItem,
-    event: MouseEvent
-  ) => {
-    if (item.id === FOLDER_SETTINGS_DROPDOWN_ITEM_ID) {
-      handlePromptTreeEntrySelect(folder.id, 'folder-settings', event)
-      return
-    }
-
-    if (item.id === SHOW_ALL_PROMPTS_DROPDOWN_ITEM_ID) {
-      handlePromptVisibilityMenuSelect(folder.id, true, event)
-      return
-    }
-
-    if (item.id === SHOW_LESS_PROMPTS_DROPDOWN_ITEM_ID) {
-      handlePromptVisibilityMenuSelect(folder.id, false, event)
-    }
+  const handlePromptTreePromptSelect = (promptFolderId: string, promptId: string) => {
+    handlePromptTreeEntrySelect(promptFolderId, promptIdToPromptNavigationRow(promptId))
   }
 
   // Side effect: clear local folder expand overrides when switching workspaces.
@@ -735,91 +605,25 @@
   {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
   {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
 
-  <PromptDropTarget
-    getOptions={() => getPromptFolderRowDroppableOptions(props.rowId, props.row.folder.id)}
-    class="sidebarPromptTreeFolderRow"
-  >
-    <PromptDropTarget
-      getOptions={() =>
-        getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
-          kind: 'folder',
-          folderId: props.row.folder.id
-        }))}
-      class="w-full"
-    >
-      {#snippet children({ isOver })}
-        <div
-          use:draggable={getPromptFolderRowDragOptions(props.row.folder)}
-          class="sidebarPromptTreeRow group"
-          data-active={isActive ? 'true' : 'false'}
-          data-over={isOver ? 'true' : 'false'}
-        >
-          <button
-            type="button"
-            aria-label={`${isFolderExpanded(props.row.folder.id) ? 'Collapse' : 'Expand'} ${props.row.folder.displayName}`}
-            aria-expanded={isFolderExpanded(props.row.folder.id)}
-            onclick={(event) => handleFolderToggleClick(props.row.folder.id, event)}
-            data-testid={folderToggleTestId(props.row.folder)}
-            class="sidebarPromptTreeToggleButton"
-          >
-            <span class="sidebarPromptTreeChevronWrap">
-              {#if isFolderExpanded(props.row.folder.id)}
-                <ChevronDown class="sidebarPromptTreeChevronIcon" />
-              {:else}
-                <ChevronRight class="sidebarPromptTreeChevronIcon" />
-              {/if}
-            </span>
-            <span class="sidebarPromptTreeFolderLabel">{props.row.folder.displayName}</span>
-          </button>
-
-          <!-- Count and actions share one slot; hover/focus swaps visibility. -->
-          <div class="sidebarPromptTreeActionSlot">
-            <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
-              {props.row.folder.promptIds.length}
-            </span>
-            <div class="sidebarPromptTreeFolderActions">
-              <DropdownPopup
-                label={`Folder options for ${props.row.folder.displayName}`}
-                title="Folder Options"
-                items={getFolderOptionsDropdownItems(props.row.folder)}
-                menuWidth="248px"
-                onselect={(item, event) =>
-                  handleFolderOptionsSelect(props.row.folder, item, event)}
-              >
-                {#snippet trigger(dropdown)}
-                  <IconOnlyButton
-                    icon={MoreHorizontal}
-                    label={`Folder options for ${props.row.folder.displayName}`}
-                    title="Folder Options"
-                    variant="transparent"
-                    size="tree-action"
-                    active={dropdown.open || isSettingsActive}
-                    ariaHaspopup={dropdown.ariaHaspopup}
-                    ariaExpanded={dropdown.ariaExpanded}
-                    ariaCurrent={isSettingsActive ? 'true' : undefined}
-                    buttonAction={dropdown.triggerAction}
-                    onclick={dropdown.toggle}
-                    testId={folderOptionsTestId(props.row.folder)}
-                    class="sidebarPromptTreeActionButton"
-                  />
-                {/snippet}
-              </DropdownPopup>
-              <IconOnlyButton
-                icon={ArrowRight}
-                label={`Open ${props.row.folder.displayName}`}
-                variant="transparent"
-                size="tree-action"
-                onclick={(event) => handlePromptFolderOpen(props.row.folder.id, event)}
-                testId={folderOpenTestId(props.row.folder)}
-                active={isActive}
-                class="sidebarPromptTreeActionButton"
-              />
-            </div>
-          </div>
-        </div>
-      {/snippet}
-    </PromptDropTarget>
-  </PromptDropTarget>
+  <PromptTreeFolderRow
+    folder={props.row.folder}
+    {isActive}
+    {isSettingsActive}
+    isExpanded={isFolderExpanded(props.row.folder.id)}
+    isShowingAllPrompts={isFolderShowingAllPrompts(props.row.folder.id)}
+    visiblePromptLimit={PROMPT_TREE_VISIBLE_PROMPT_LIMIT}
+    getFolderRowDroppableOptions={() =>
+      getPromptFolderRowDroppableOptions(props.rowId, props.row.folder.id)}
+    getFolderPromptDroppableOptions={() => getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
+      kind: 'folder',
+      folderId: props.row.folder.id
+    }))}
+    folderDragOptions={getPromptFolderRowDragOptions(props.row.folder)}
+    onFolderExpandedChange={setFolderExpanded}
+    onPromptFolderOpen={handlePromptFolderOpen}
+    onFolderSettingsOpen={(folderId) => handlePromptTreeEntrySelect(folderId, 'folder-settings')}
+    onPromptVisibilityChange={setFolderShowingAllPrompts}
+  />
 {/snippet}
 
 {#snippet folderPromptRow(props)}
@@ -831,78 +635,56 @@
   {@const promptTitle =
     promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}
 
-  <PromptDropTarget
-    getOptions={() =>
-      getPromptTreeDroppableOptions(
-        props.rowId,
-        'top-and-bottom',
-        (edge) => ({
-          kind: 'prompt',
-          folderId: props.row.folder.id,
-          promptId: props.row.promptId,
-          edge: edge ?? 'bottom'
-        }),
-        (payload, edge) =>
-          canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
-      )}
-    class="sidebarPromptTreeSettingsRow"
-  >
-    <PromptTreeIndent />
-    <button
-      use:draggable={getPromptRowDragOptions(props.row.folder.id, props.row.promptId, promptTitle)}
-      type="button"
-      data-testid={folderPromptTestId(props.row.promptId)}
-      data-active={isActive ? 'true' : 'false'}
-      data-dragging={isDragging ? 'true' : 'false'}
-      aria-current={isActive ? 'true' : undefined}
-      onclick={(event) =>
-        handlePromptTreeEntrySelect(
-          props.row.folder.id,
-          promptIdToPromptNavigationRow(props.row.promptId),
-          event
-        )}
-      class="sidebarPromptTreeSettingsButton"
-    >
-      <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
-    </button>
-  </PromptDropTarget>
+  <PromptTreePromptRow
+    folderId={props.row.folder.id}
+    promptId={props.row.promptId}
+    {promptTitle}
+    {isActive}
+    {isDragging}
+    getPromptDroppableOptions={() => getPromptTreeDroppableOptions(
+      props.rowId,
+      'top-and-bottom',
+      (edge) => ({
+        kind: 'prompt',
+        folderId: props.row.folder.id,
+        promptId: props.row.promptId,
+        edge: edge ?? 'bottom'
+      }),
+      (payload, edge) =>
+        canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
+    )}
+    promptDragOptions={getPromptRowDragOptions(
+      props.row.folder.id,
+      props.row.promptId,
+      promptTitle
+    )}
+    onPromptSelect={handlePromptTreePromptSelect}
+  />
 {/snippet}
 
 {#snippet folderPromptVisibilityToggleRow(props)}
-  <PromptDropTarget
-    getOptions={() =>
-      getPromptTreeDroppableOptions(
-        props.rowId,
-        'bottom',
-        () => ({
-          kind: 'prompt',
-          folderId: props.row.folder.id,
-          promptId: props.row.lastVisiblePromptId,
-          edge: 'bottom'
-        }),
-        (payload) =>
-          canDropOnPromptTreePromptRow(
-            props.row.folder,
-            props.row.lastVisiblePromptId,
-            payload,
-            'bottom'
-          )
-      )}
-    class="sidebarPromptTreeVisibilityRow"
-  >
-    <PromptTreeIndent />
-    <div class="sidebarPromptTreeVisibilityButtonWrap">
-      <InlineTextButton
-        text={props.row.isShowingAll ? 'Show less' : 'Show all'}
-        testId={props.row.isShowingAll
-          ? folderPromptShowLessTestId(props.row.folder)
-          : folderPromptShowAllTestId(props.row.folder)}
-        onclick={(event) =>
-          handlePromptVisibilityToggleClick(props.row.folder.id, props.row.isShowingAll, event)}
-        class="sidebarPromptTreeVisibilityButton"
-      />
-    </div>
-  </PromptDropTarget>
+  <PromptTreeVisibilityToggleRow
+    folder={props.row.folder}
+    isShowingAll={props.row.isShowingAll}
+    getVisibilityDroppableOptions={() => getPromptTreeDroppableOptions(
+      props.rowId,
+      'bottom',
+      () => ({
+        kind: 'prompt',
+        folderId: props.row.folder.id,
+        promptId: props.row.lastVisiblePromptId,
+        edge: 'bottom'
+      }),
+      (payload) =>
+        canDropOnPromptTreePromptRow(
+          props.row.folder,
+          props.row.lastVisiblePromptId,
+          payload,
+          'bottom'
+        )
+    )}
+    onPromptVisibilityChange={setFolderShowingAllPrompts}
+  />
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
@@ -910,11 +692,17 @@
     row.kind === 'prompt-folder'
       ? getPromptTreeFolderDropTargetEdge(rowId)
       : getPromptTreeDropTargetEdge(rowId)}
+  {@const testId =
+    row.kind === 'prompt-folder'
+      ? folderDropIndicatorTestId(row.folder)
+      : row.kind === 'folder-prompt-visibility-toggle'
+        ? folderPromptVisibilityDropIndicatorTestId(row.folder)
+        : folderPromptDropIndicatorTestId(row.promptId)}
 
   {#if hoveredEdge}
     <PromptTreeDropIndicator
-      testId={getPromptTreeDropIndicatorTestId(row)}
-      insetStart={getPromptTreeDropIndicatorInset(row)}
+      {testId}
+      insetStart={row.kind === 'prompt-folder' ? '10px' : PROMPT_TREE_CHILD_ROW_CONTENT_INSET}
       edge={hoveredEdge}
     />
   {/if}
