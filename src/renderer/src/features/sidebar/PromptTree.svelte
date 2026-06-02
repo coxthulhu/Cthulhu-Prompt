@@ -4,6 +4,8 @@
     ArrowRight,
     ChevronDown,
     ChevronRight,
+    ChevronsDown,
+    ChevronsUp,
     Loader,
     MoreHorizontal,
     Settings
@@ -70,6 +72,8 @@
     folderDropIndicatorTestId,
     folderOpenTestId,
     folderOptionsTestId,
+    folderPromptMenuShowAllTestId,
+    folderPromptMenuShowLessTestId,
     folderPromptShowAllTestId,
     folderPromptShowLessTestId,
     folderPromptDropIndicatorTestId,
@@ -134,6 +138,8 @@
   const PROMPT_TREE_PROMPT_VISIBILITY_ROW_CONTENT_HEIGHT_PX = 22
   const PROMPT_TREE_VISIBLE_PROMPT_LIMIT = 5
   const FOLDER_SETTINGS_DROPDOWN_ITEM_ID = 'folder-settings'
+  const SHOW_ALL_PROMPTS_DROPDOWN_ITEM_ID = 'show-all-prompts'
+  const SHOW_LESS_PROMPTS_DROPDOWN_ITEM_ID = 'show-less-prompts'
   const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX =
     PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
   const PROMPT_TREE_PROMPT_ROW_HEIGHT_PX =
@@ -394,6 +400,15 @@
     blurButtonAfterMouseClick(event)
   }
 
+  const handlePromptVisibilityMenuSelect = (
+    promptFolderId: string,
+    isShowingAll: boolean,
+    event: MouseEvent
+  ) => {
+    setFolderShowingAllPrompts(promptFolderId, isShowingAll)
+    blurButtonAfterMouseClick(event)
+  }
+
   const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
     if (!isPromptFoldersScreenActive || !selectedPromptFolderId) {
       return null
@@ -506,15 +521,60 @@
     blurButtonAfterMouseClick(event)
   }
 
-  const getFolderOptionsDropdownItems = (folder: PromptFolder): DropdownPopupItem[] => [
-    {
-      id: FOLDER_SETTINGS_DROPDOWN_ITEM_ID,
-      label: 'Folder Settings',
-      detail: 'Open folder-level settings',
-      icon: Settings,
-      testId: folderSettingsTestId(folder)
+  const getFolderOptionsDropdownItems = (folder: PromptFolder): DropdownPopupItem[] => {
+    const items: DropdownPopupItem[] = [
+      {
+        id: FOLDER_SETTINGS_DROPDOWN_ITEM_ID,
+        label: 'Folder Settings',
+        detail: 'Open folder-level settings',
+        icon: Settings,
+        testId: folderSettingsTestId(folder)
+      }
+    ]
+
+    if (isFolderExpanded(folder.id) && folder.promptIds.length > PROMPT_TREE_VISIBLE_PROMPT_LIMIT) {
+      const isShowingAll = isFolderShowingAllPrompts(folder.id)
+      items.push(
+        isShowingAll
+          ? {
+              id: SHOW_LESS_PROMPTS_DROPDOWN_ITEM_ID,
+              label: 'Show less',
+              detail: `Show the first ${PROMPT_TREE_VISIBLE_PROMPT_LIMIT} prompts`,
+              icon: ChevronsUp,
+              testId: folderPromptMenuShowLessTestId(folder)
+            }
+          : {
+              id: SHOW_ALL_PROMPTS_DROPDOWN_ITEM_ID,
+              label: 'Show all',
+              detail: 'Show every prompt in this folder',
+              icon: ChevronsDown,
+              testId: folderPromptMenuShowAllTestId(folder)
+            }
+      )
     }
-  ]
+
+    return items
+  }
+
+  const handleFolderOptionsSelect = (
+    folder: PromptFolder,
+    item: DropdownPopupItem,
+    event: MouseEvent
+  ) => {
+    if (item.id === FOLDER_SETTINGS_DROPDOWN_ITEM_ID) {
+      handlePromptTreeEntrySelect(folder.id, 'folder-settings', event)
+      return
+    }
+
+    if (item.id === SHOW_ALL_PROMPTS_DROPDOWN_ITEM_ID) {
+      handlePromptVisibilityMenuSelect(folder.id, true, event)
+      return
+    }
+
+    if (item.id === SHOW_LESS_PROMPTS_DROPDOWN_ITEM_ID) {
+      handlePromptVisibilityMenuSelect(folder.id, false, event)
+    }
+  }
 
   // Side effect: clear local folder expand overrides when switching workspaces.
   $effect(() => {
@@ -723,11 +783,8 @@
                 title="Folder Options"
                 items={getFolderOptionsDropdownItems(props.row.folder)}
                 menuWidth="248px"
-                onselect={(item, event) => {
-                  if (item.id === FOLDER_SETTINGS_DROPDOWN_ITEM_ID) {
-                    handlePromptTreeEntrySelect(props.row.folder.id, 'folder-settings', event)
-                  }
-                }}
+                onselect={(item, event) =>
+                  handleFolderOptionsSelect(props.row.folder, item, event)}
               >
                 {#snippet trigger(dropdown)}
                   <IconOnlyButton

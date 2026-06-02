@@ -22,6 +22,12 @@ export const folderPromptShowAllTestId = (folder: PromptFolder): string =>
 export const folderPromptShowLessTestId = (folder: PromptFolder): string =>
   `prompt-folder-show-less-${getFolderTestKey(folder)}`
 
+export const folderPromptMenuShowAllTestId = (folder: PromptFolder): string =>
+  `prompt-folder-menu-show-all-${getFolderTestKey(folder)}`
+
+export const folderPromptMenuShowLessTestId = (folder: PromptFolder): string =>
+  `prompt-folder-menu-show-less-${getFolderTestKey(folder)}`
+
 export const folderPromptDropIndicatorTestId = (promptId: string): string =>
   `prompt-tree-drop-indicator-prompt-${promptId}`
 
