@@ -20,7 +20,7 @@
     background: var(--ui-accent-normal-border);
     margin-bottom: var(--prompt-folder-section-gutter-bottom-inset, 0);
     margin-top: var(--prompt-folder-section-gutter-top-inset, 0);
-    min-width: 3px;
-    width: 3px;
+    min-width: 2px;
+    width: 2px;
   }
 </style>
