@@ -51,6 +51,7 @@
     promptDraftRecord,
     rowId,
     virtualWindowWidthPx,
+    rowContentLeftOffsetPx = 0,
     devicePixelRatio,
     rowHeightPx: virtualRowHeightPx,
     hydrationPriority,
@@ -74,6 +75,7 @@
     promptDraftRecord: PromptDraftRecord
     rowId: string
     virtualWindowWidthPx: number
+    rowContentLeftOffsetPx?: number
     devicePixelRatio: number
     rowHeightPx: number
     hydrationPriority: number
@@ -163,8 +165,14 @@
 
   const OVERFLOW_TOP_PADDING_PX =
     CARD_PADDING_PX + TITLE_BAR_HEIGHT_PX + ADDITIONAL_GAP_PX + MONACO_VERTICAL_PADDING_PX
-  const OVERFLOW_LEFT_PADDING_PX =
-    BORDER_WIDTH_PX + CARD_PADDING_PX + SIDEBAR_WIDTH_PX + ROW_GAP_PX + MONACO_LEFT_PADDING_PX
+  const OVERFLOW_LEFT_PADDING_PX = $derived(
+    rowContentLeftOffsetPx +
+      BORDER_WIDTH_PX +
+      CARD_PADDING_PX +
+      SIDEBAR_WIDTH_PX +
+      ROW_GAP_PX +
+      MONACO_LEFT_PADDING_PX
+  )
   const OVERFLOW_RIGHT_PADDING_PX = BORDER_WIDTH_PX + CARD_PADDING_PX
   const OVERFLOW_BOTTOM_PADDING_PX = CARD_PADDING_PX + MONACO_VERTICAL_PADDING_PX
 

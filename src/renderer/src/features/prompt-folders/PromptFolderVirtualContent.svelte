@@ -33,6 +33,10 @@
     promptDividerRowId,
     promptEditorRowId
   } from './promptFolderRowIds'
+  import PromptFolderSectionRow, {
+    PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX,
+    PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX
+  } from './PromptFolderSectionRow.svelte'
   import {
     estimatePromptFolderSettingsHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
@@ -154,6 +158,10 @@
     return lookupPromptFolderSettingsRowMeasuredHeight(promptFolderId, widthPx, devicePixelRatio)
   }
 
+  const getSectionContentWidthPx = (virtualWindowWidthPx: number): number => {
+    return Math.max(0, virtualWindowWidthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
+  }
+
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings': {
       estimateHeight: () =>
@@ -162,7 +170,10 @@
           promptEditorSizingConfig.fontSize
         ),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
-        lookupPromptFolderSettingsRowMeasuredHeightForScreen(widthPx, devicePixelRatio),
+        lookupPromptFolderSettingsRowMeasuredHeightForScreen(
+          getSectionContentWidthPx(widthPx),
+          devicePixelRatio
+        ),
       hydrationPriorityEligible: true,
       overlayRow: {},
       centerRowEligible: true,
@@ -186,14 +197,14 @@
       estimateHeight: (row, widthPx, heightPx) =>
         estimatePromptEditorHeight(
           promptDraftById[row.promptId]!.promptText,
-          widthPx,
+          getSectionContentWidthPx(widthPx),
           heightPx,
           promptEditorSizingConfig
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
         const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
           row.promptId,
-          widthPx,
+          getSectionContentWidthPx(widthPx),
           devicePixelRatio
         )
         if (measuredRowHeightPx == null) return null
@@ -371,51 +382,63 @@
 />
 
 {#snippet folderSettingsRow(props)}
-  <PromptFolderSettingsRow
-    {workspaceId}
-    {promptFolderId}
-    rowId={props.rowId}
-    virtualWindowWidthPx={props.virtualWindowWidthPx}
-    devicePixelRatio={props.devicePixelRatio}
+  <PromptFolderSectionRow
     rowHeightPx={props.rowHeightPx}
-    hydrationPriority={props.hydrationPriority}
-    shouldDehydrate={props.shouldDehydrate}
-    overlayRowElement={props.overlayRowElement ?? null}
-    scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
-    onHydrationChange={props.onHydrationChange}
-    {folderSettings}
-    {onSettingsFieldChange}
-  />
+    topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
+  >
+    <PromptFolderSettingsRow
+      {workspaceId}
+      {promptFolderId}
+      rowId={props.rowId}
+      virtualWindowWidthPx={getSectionContentWidthPx(props.virtualWindowWidthPx)}
+      rowContentLeftOffsetPx={PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX}
+      devicePixelRatio={props.devicePixelRatio}
+      rowHeightPx={props.rowHeightPx}
+      hydrationPriority={props.hydrationPriority}
+      shouldDehydrate={props.shouldDehydrate}
+      overlayRowElement={props.overlayRowElement ?? null}
+      scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
+      onHydrationChange={props.onHydrationChange}
+      {folderSettings}
+      {onSettingsFieldChange}
+    />
+  </PromptFolderSectionRow>
 {/snippet}
 
-{#snippet promptHeaderRow()}
-  <div class="pt-6 pb-1" data-virtual-window-row>
+{#snippet promptHeaderRow({ rowHeightPx })}
+  <PromptFolderSectionRow
+    {rowHeightPx}
+    contentClass="pt-6 pb-1"
+    contentVirtualWindowRow
+    topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
+  >
     <SectionHeader
       title="Prompts"
       description="Create, edit, and organize prompts in this folder."
       headingLevel={2}
       icon={FileText}
-      showAccentLine
     />
-  </div>
+  </PromptFolderSectionRow>
 {/snippet}
 
-{#snippet placeholderRow()}
-  <div class="text-center py-12 text-muted-foreground">
+{#snippet placeholderRow({ rowHeightPx })}
+  <PromptFolderSectionRow {rowHeightPx} contentClass="text-center py-12 text-muted-foreground">
     <p>No prompts found in this folder.</p>
     <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
-  </div>
+  </PromptFolderSectionRow>
 {/snippet}
 
-{#snippet dividerRow({ row, rowId })}
-  <PromptDivider
-    disabled={isCreatingPrompt}
-    onAddPrompt={() => onAddPrompt(row.previousPromptId)}
-    getDropOptions={() => getPromptDividerDropOptions(rowId, row.previousPromptId)}
-    testId={row.previousPromptId
-      ? `prompt-divider-add-after-${row.previousPromptId}`
-      : 'prompt-divider-add-initial'}
-  />
+{#snippet dividerRow({ row, rowId, rowHeightPx })}
+  <PromptFolderSectionRow {rowHeightPx}>
+    <PromptDivider
+      disabled={isCreatingPrompt}
+      onAddPrompt={() => onAddPrompt(row.previousPromptId)}
+      getDropOptions={() => getPromptDividerDropOptions(rowId, row.previousPromptId)}
+      testId={row.previousPromptId
+        ? `prompt-divider-add-after-${row.previousPromptId}`
+        : 'prompt-divider-add-initial'}
+    />
+  </PromptFolderSectionRow>
 {/snippet}
 
 {#snippet promptEditorRow({
@@ -430,29 +453,32 @@
   onHydrationChange
 }: PromptEditorRowProps)}
   {@const promptIndex = visiblePromptIds.indexOf(row.promptId)}
-  <PromptEditorRow
-    {workspaceId}
-    {promptFolderId}
-    promptId={row.promptId}
-    promptDraftRecord={promptDraftById[row.promptId]!}
-    {rowId}
-    {virtualWindowWidthPx}
-    {devicePixelRatio}
-    {rowHeightPx}
-    {hydrationPriority}
-    {shouldDehydrate}
-    {overlayRowElement}
-    {onHydrationChange}
-    folderSettings={folderSettings}
-    scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
-    focusRequest={promptFocusRequest}
-    isFirstPrompt={promptIndex === 0}
-    isLastPrompt={promptIndex === visiblePromptIds.length - 1}
-    onDelete={() => onDeletePrompt(row.promptId)}
-    onMoveUp={() => handleMovePromptUp(row.promptId)}
-    onMoveDown={() => handleMovePromptDown(row.promptId)}
-    onPromptTreeDrop={(dropPayload) => onPromptTreeDrop(row.promptId, dropPayload)}
-  />
+  <PromptFolderSectionRow {rowHeightPx}>
+    <PromptEditorRow
+      {workspaceId}
+      {promptFolderId}
+      promptId={row.promptId}
+      promptDraftRecord={promptDraftById[row.promptId]!}
+      {rowId}
+      virtualWindowWidthPx={getSectionContentWidthPx(virtualWindowWidthPx)}
+      rowContentLeftOffsetPx={PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX}
+      {devicePixelRatio}
+      {rowHeightPx}
+      {hydrationPriority}
+      {shouldDehydrate}
+      {overlayRowElement}
+      {onHydrationChange}
+      folderSettings={folderSettings}
+      scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
+      focusRequest={promptFocusRequest}
+      isFirstPrompt={promptIndex === 0}
+      isLastPrompt={promptIndex === visiblePromptIds.length - 1}
+      onDelete={() => onDeletePrompt(row.promptId)}
+      onMoveUp={() => handleMovePromptUp(row.promptId)}
+      onMoveDown={() => handleMovePromptDown(row.promptId)}
+      onPromptTreeDrop={(dropPayload) => onPromptTreeDrop(row.promptId, dropPayload)}
+    />
+  </PromptFolderSectionRow>
 {/snippet}
 
 {#snippet bottomSpacerRow({ virtualWindowHeightPx })}

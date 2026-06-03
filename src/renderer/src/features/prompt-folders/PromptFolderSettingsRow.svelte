@@ -117,6 +117,7 @@
     promptFolderId: string
     rowId: string
     virtualWindowWidthPx: number
+    rowContentLeftOffsetPx?: number
     devicePixelRatio: number
     rowHeightPx: number
     hydrationPriority: number
@@ -138,6 +139,7 @@
     promptFolderId,
     rowId,
     virtualWindowWidthPx,
+    rowContentLeftOffsetPx = 0,
     devicePixelRatio,
     rowHeightPx: virtualRowHeightPx,
     hydrationPriority,
@@ -157,7 +159,9 @@
   const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId))
   const findContext = getPromptFolderFindContext()
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
-  const OVERFLOW_LEFT_PADDING_PX = SETTINGS_EDITOR_LEFT_OFFSET_PX
+  const OVERFLOW_LEFT_PADDING_PX = $derived(
+    SETTINGS_EDITOR_LEFT_OFFSET_PX + rowContentLeftOffsetPx
+  )
   const OVERFLOW_RIGHT_PADDING_PX =
     SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX + SETTINGS_DESCRIPTION_CARD_PADDING_PX
   const OVERFLOW_BOTTOM_PADDING_PX =
@@ -355,7 +359,6 @@
     description="Settings that only affect prompts in this folder, and are saved to the workspace."
     headingLevel={1}
     icon={Settings}
-    showAccentLine
   />
 
   {#each sections as section (section.field)}
