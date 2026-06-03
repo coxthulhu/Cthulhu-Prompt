@@ -1,10 +1,10 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
-  import { screens, type ScreenId } from '@renderer/app/screens'
+  import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, ChevronsUpDown, ExternalLink, Home } from 'lucide-svelte'
+  import { ChevronsDownUp, ChevronsUpDown, ExternalLink } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -12,7 +12,6 @@
   import type { Workspace } from '@shared/Workspace'
   import BareIconButton from '@renderer/common/cthulhu-ui/BareIconButton.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
@@ -21,19 +20,15 @@
     activeScreen,
     isWorkspaceReady = false,
     isWorkspaceLoading = false,
-    isDevMode = false,
     workspacePath = null,
     selectedPromptFolderId = null,
-    onNavigate,
     onPromptFolderSelect
   } = $props<{
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
     isWorkspaceLoading?: boolean
-    isDevMode?: boolean
     workspacePath?: string | null
     selectedPromptFolderId?: string | null
-    onNavigate: (screen: ScreenId) => void
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
@@ -44,34 +39,6 @@
   const promptFolderQuery = useLiveQuery((q) =>
     q.from({ promptFolder: promptFolderCollection })
   ) as { data: PromptFolder[] }
-
-  type NavItem = {
-    id: ScreenId
-    label: string
-    icon: typeof Home
-    requiresWorkspace: boolean
-    testId: string
-  }
-
-  const navItems = $derived<NavItem[]>(
-    Object.entries(screens)
-      .filter(([, config]) => config.showInNav && (!config.devOnly || isDevMode))
-      .map(([id, config]) => ({
-        id: id as ScreenId,
-        label: config.label,
-        icon: config.icon ?? Home,
-        requiresWorkspace: config.requiresWorkspace,
-        testId: config.testId
-      }))
-  )
-  const primaryNavItems = $derived.by(() =>
-    navItems.filter((item) => item.id === 'home' || item.id === 'settings')
-  )
-  const secondaryNavItems = $derived.by(() =>
-    navItems.filter((item) => item.id !== 'home' && item.id !== 'settings')
-  )
-  const navButtonClass =
-    'h-9 w-full min-w-0 justify-center px-2 text-[13px] [&>span]:min-w-0 [&>span]:truncate'
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
@@ -141,14 +108,6 @@
     collapseAllPromptFoldersVersion += 1
   }
 
-  const getNavButtonState = (item: NavItem): 'active' | 'enabled' | 'disabled' => {
-    if (item.requiresWorkspace && !isWorkspaceReady) {
-      return 'disabled'
-    }
-
-    return activeScreen === item.id ? 'active' : 'enabled'
-  }
-
   const openWorkspaceFolder = () => {
     const targetWorkspacePath = workspacePath
     if (!targetWorkspacePath) return
@@ -175,9 +134,12 @@
   })
 </script>
 
-<aside data-testid="app-sidebar" class="flex h-full w-full flex-col text-sidebar-foreground/80">
-  <div class="sidebarTopLevelInsetWithInnerPadding pt-2">
-    <div class="flex items-start gap-2 border-b border-white/8 pb-2">
+<aside
+  data-testid="app-sidebar"
+  class="appSidebar flex h-full w-full flex-col text-sidebar-foreground/80"
+>
+  <div class="sidebarTopLevelInsetWithInnerPadding pt-4 pb-3">
+    <div class="flex items-start gap-2 border-b border-white/8 pb-3">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
         <img
           class="h-8 w-8 object-contain"
@@ -213,46 +175,6 @@
           {workspaceDisplay.path}
         </p>
       </div>
-    </div>
-  </div>
-
-  <div class="sidebarTopLevelInsetWithInnerPadding py-3">
-    <div class="space-y-3 border-b border-white/8 pb-3">
-      <ul class="grid w-full min-w-0 grid-cols-2 gap-2">
-        {#each primaryNavItems as item (item.id)}
-          {@const Icon = item.icon}
-          <li class="group/menu-item relative">
-            <IconTextButton
-              testId={item.testId}
-              icon={Icon}
-              text={item.label}
-              variant="nav"
-              class={navButtonClass}
-              state={getNavButtonState(item)}
-              onclick={() => onNavigate(item.id)}
-            />
-          </li>
-        {/each}
-      </ul>
-
-      {#if secondaryNavItems.length > 0}
-        <ul class="grid w-full min-w-0 grid-cols-2 gap-2">
-          {#each secondaryNavItems as item (item.id)}
-            {@const Icon = item.icon}
-            <li class="group/menu-item relative">
-              <IconTextButton
-                testId={item.testId}
-                icon={Icon}
-                text={item.label}
-                variant="nav"
-                class={navButtonClass}
-                state={getNavButtonState(item)}
-                onclick={() => onNavigate(item.id)}
-              />
-            </li>
-          {/each}
-        </ul>
-      {/if}
     </div>
   </div>
 

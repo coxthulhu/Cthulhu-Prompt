@@ -3,6 +3,7 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
+  import AppActivityBar from '@renderer/features/sidebar/AppActivityBar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import AppOverlays from './AppOverlays.svelte'
@@ -511,62 +512,64 @@
     <WindowsTitleBar title={windowTitle} />
   {/if}
 
-  <ResizableSidebar
-    defaultWidth={appSidebarDefaultWidthPx}
-    minWidth={240}
-    maxWidth={400}
-    handleTestId="app-sidebar-resize-handle"
-    containerClass="sidebarSurface flex-1 min-h-0"
-    onDesiredWidthChange={(nextDesiredWidth) => {
-      setAppSidebarWidthWithAutosave(nextDesiredWidth)
-    }}
-  >
-    {#snippet sidebar()}
-      <AppSidebar
-        {activeScreen}
-        {isWorkspaceReady}
-        {isWorkspaceLoading}
-        {isDevMode}
-        {workspacePath}
-        {selectedPromptFolderId}
-        onNavigate={navigateToScreen}
-        onPromptFolderSelect={(promptFolderId) => {
-          navigateToPromptFolder(promptFolderId)
-        }}
-      />
-    {/snippet}
+  <div class="sidebarSurface flex min-h-0 flex-1">
+    <AppActivityBar {activeScreen} {isDevMode} onNavigate={navigateToScreen} />
 
-    {#snippet content()}
-      <div
-        class="mainScreenSurface sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
-      >
-        {#if activeScreen === 'home'}
-          <HomeScreen
-            {workspacePath}
-            {isWorkspaceReady}
-            {isWorkspaceLoading}
-            promptCount={workspacePromptCount}
-            promptFolderCount={workspacePromptFolderCount}
-            onWorkspaceSelect={selectWorkspace}
-            onWorkspaceCreate={createWorkspace}
-            onWorkspaceClear={() => void closeWorkspace()}
-          />
-        {:else if activeScreen === 'settings'}
-          <SettingsScreen />
-        {:else if activeScreen === 'mockups'}
-          <MockupsScreen bind:activeMockupId={selectedMockupId} />
-        {:else if activeScreen === 'prompt-folders'}
-          {#if selectedPromptFolderId && workspacePath}
-            {#key selectedPromptFolderId}
-              <PromptFolderScreen promptFolderId={selectedPromptFolderId} />
-            {/key}
+    <ResizableSidebar
+      defaultWidth={appSidebarDefaultWidthPx}
+      minWidth={240}
+      maxWidth={400}
+      handleTestId="app-sidebar-resize-handle"
+      containerClass="min-w-0 flex-1 min-h-0"
+      onDesiredWidthChange={(nextDesiredWidth) => {
+        setAppSidebarWidthWithAutosave(nextDesiredWidth)
+      }}
+    >
+      {#snippet sidebar()}
+        <AppSidebar
+          {activeScreen}
+          {isWorkspaceReady}
+          {isWorkspaceLoading}
+          {workspacePath}
+          {selectedPromptFolderId}
+          onPromptFolderSelect={(promptFolderId) => {
+            navigateToPromptFolder(promptFolderId)
+          }}
+        />
+      {/snippet}
+
+      {#snippet content()}
+        <div
+          class="mainScreenSurface sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
+        >
+          {#if activeScreen === 'home'}
+            <HomeScreen
+              {workspacePath}
+              {isWorkspaceReady}
+              {isWorkspaceLoading}
+              promptCount={workspacePromptCount}
+              promptFolderCount={workspacePromptFolderCount}
+              onWorkspaceSelect={selectWorkspace}
+              onWorkspaceCreate={createWorkspace}
+              onWorkspaceClear={() => void closeWorkspace()}
+            />
+          {:else if activeScreen === 'settings'}
+            <SettingsScreen />
+          {:else if activeScreen === 'mockups'}
+            <MockupsScreen bind:activeMockupId={selectedMockupId} />
+          {:else if activeScreen === 'prompt-folders'}
+            {#if selectedPromptFolderId && workspacePath}
+              {#key selectedPromptFolderId}
+                <PromptFolderScreen promptFolderId={selectedPromptFolderId} />
+              {/key}
+            {/if}
+          {:else if activeScreen === 'test-screen'}
+            <TestScreen />
           {/if}
-        {:else if activeScreen === 'test-screen'}
-          <TestScreen />
-        {/if}
-      </div>
-    {/snippet}
-  </ResizableSidebar>
+        </div>
+      {/snippet}
+    </ResizableSidebar>
+  </div>
 </div>
 
 <AppOverlays

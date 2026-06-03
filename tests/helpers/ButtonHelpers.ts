@@ -49,7 +49,8 @@ export async function isNavButtonActive(window: any, buttonText: string): Promis
   return await window.evaluate((text: string) => {
     const buttons = document.querySelectorAll('[data-testid^="nav-button-"]')
     for (const button of Array.from(buttons)) {
-      if (button.textContent?.includes(text) && button.getAttribute('data-active') === 'true') {
+      const label = `${button.textContent ?? ''} ${button.getAttribute('aria-label') ?? ''}`
+      if (label.includes(text) && button.getAttribute('data-active') === 'true') {
         return true
       }
     }
@@ -77,7 +78,9 @@ export async function clickNavButton(
   // Map navigation button text to their data-testid
   const navButtonMap: Record<string, string> = {
     Home: 'nav-button-home',
-    Settings: 'nav-button-settings'
+    Settings: 'nav-button-settings',
+    Mockups: 'nav-button-mockups',
+    'Test Screen': 'nav-button-test-screen'
   }
 
   const testId = navButtonMap[buttonText]

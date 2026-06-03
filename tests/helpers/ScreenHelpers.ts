@@ -18,7 +18,7 @@ export async function getActiveScreen(window: any): Promise<string> {
       return 'prompt-folder'
     }
 
-    // Check data-active attribute on sidebar menu buttons
+    // Check data-active on icon-only activity buttons and any remaining nav buttons.
     const activeButtons = document.querySelectorAll(
       '[data-active="true"][data-testid^="nav-button-"]'
     )
@@ -27,6 +27,8 @@ export async function getActiveScreen(window: any): Promise<string> {
       const text = `${button.textContent?.toLowerCase() || ''} ${button.getAttribute('aria-label')?.toLowerCase() || ''}`
       if (text.includes('home')) return 'home'
       if (text.includes('settings')) return 'settings'
+      if (text.includes('mockups')) return 'mockups'
+      if (text.includes('test screen')) return 'test-screen'
       if (text.includes('test folder') || text.includes('project prompts')) return 'prompt-folder'
     }
 
