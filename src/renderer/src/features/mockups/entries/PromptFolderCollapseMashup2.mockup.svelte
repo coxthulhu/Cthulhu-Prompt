@@ -115,19 +115,18 @@
   const sectionButtonStyle = (id: string) => `
     appearance: none;
     align-items: center;
-    background: ${hoveredId === id ? 'var(--ui-neutral-hover-surface)' : 'var(--ui-neutral-muted-surface)'};
-    border: 1px solid ${hoveredId === id ? 'var(--ui-neutral-hover-border)' : 'var(--ui-card-nested-border)'};
-    border-radius: 7px;
+    background: transparent;
+    border: 0;
     box-sizing: border-box;
-    color: var(--ui-normal-text);
+    color: ${hoveredId === id ? 'var(--ui-hoverable-text)' : 'var(--ui-normal-text)'};
     cursor: pointer;
     display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
-    padding: 10px 10px 10px 13px;
+    padding: 0;
     text-align: left;
-    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    transition: color 120ms ease;
     width: 100%;
   `
 
@@ -307,7 +306,7 @@
           border-left: 3px solid var(--ui-accent-normal-border);
           box-sizing: border-box;
           display: grid;
-          gap: 12px;
+          gap: 24px;
           min-width: 0;
           padding-left: 16px;
         "
@@ -328,82 +327,68 @@
         >
           <span
             style="
-              align-items: center;
               display: grid;
-              gap: 12px;
-              grid-template-columns: 32px minmax(0, 1fr);
+              gap: 6px;
               min-width: 0;
             "
           >
             <span
               style="
                 align-items: center;
-                background: var(--ui-accent-normal-surface);
-                border: 1px solid var(--ui-accent-normal-border);
-                border-radius: var(--cthulhu-ui-radius-control);
-                color: var(--ui-accent-icon-glyph);
-                display: inline-flex;
-                height: 32px;
-                justify-content: center;
-                width: 32px;
+                display: flex;
+                gap: 10px;
+                min-width: 0;
               "
             >
-              <Settings size={17} strokeWidth={2.4} />
-            </span>
-            <span style="display: grid; gap: 2px; min-width: 0;">
               <span
                 style="
                   align-items: center;
-                  color: var(--ui-normal-text);
-                  display: flex;
-                  font-size: 18px;
-                  font-weight: 760;
-                  gap: 8px;
-                  line-height: 24px;
-                  min-width: 0;
+                  background: var(--ui-accent-normal-surface);
+                  border: 1px solid var(--ui-accent-normal-border);
+                  border-radius: var(--cthulhu-ui-radius-control);
+                  color: var(--ui-accent-icon-glyph);
+                  display: inline-flex;
+                  flex: 0 0 auto;
+                  height: 32px;
+                  justify-content: center;
+                  width: 32px;
                 "
               >
-                {#if isFolderSettingsCollapsed}
-                  <ChevronRight size={17} strokeWidth={2.6} />
-                {:else}
-                  <ChevronDown size={17} strokeWidth={2.6} />
-                {/if}
-                <span
-                  style="
-                    min-width: 0;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                  "
-                >
-                  Folder Settings
-                </span>
+                <Settings size={17} strokeWidth={2.4} />
               </span>
               <span
                 style="
-                  color: var(--ui-muted-text);
-                  font-size: 13px;
-                  font-weight: 600;
-                  line-height: 18px;
+                  color: var(--ui-normal-text);
+                  font-size: 24px;
+                  font-weight: 760;
+                  line-height: 32px;
                   min-width: 0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
                 "
               >
-                Settings that only affect prompts in this folder.
+                Folder Settings
+              </span>
+              {#if isFolderSettingsCollapsed}
+                <ChevronRight size={17} strokeWidth={2.6} />
+              {:else}
+                <ChevronDown size={17} strokeWidth={2.6} />
+              {/if}
+              <span style={countPillStyle}>
+                {collapsedSummaryLabel(settingsCards.length, 'setting', 'settings')}
               </span>
             </span>
-          </span>
-          <span
-            style="
-              align-items: center;
-              color: var(--ui-secondary-text);
-              display: inline-flex;
-              gap: 8px;
-              justify-self: end;
-              min-width: 0;
-            "
-          >
-            <span style={countPillStyle}>
-              {collapsedSummaryLabel(settingsCards.length, 'setting', 'settings')}
+            <span
+              style="
+                color: var(--ui-muted-text);
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 20px;
+                min-width: 0;
+              "
+            >
+              Settings that only affect prompts in this folder.
             </span>
           </span>
         </button>
@@ -587,7 +572,7 @@
           border-left: 3px solid var(--ui-accent-blue-normal-border);
           box-sizing: border-box;
           display: grid;
-          gap: 12px;
+          gap: 24px;
           min-width: 0;
           padding-left: 16px;
         "
@@ -608,82 +593,68 @@
         >
           <span
             style="
-              align-items: center;
               display: grid;
-              gap: 12px;
-              grid-template-columns: 32px minmax(0, 1fr);
+              gap: 6px;
               min-width: 0;
             "
           >
             <span
               style="
                 align-items: center;
-                background: var(--ui-accent-blue-normal-surface);
-                border: 1px solid var(--ui-accent-blue-normal-border);
-                border-radius: var(--cthulhu-ui-radius-control);
-                color: var(--ui-accent-blue-icon-glyph);
-                display: inline-flex;
-                height: 32px;
-                justify-content: center;
-                width: 32px;
+                display: flex;
+                gap: 10px;
+                min-width: 0;
               "
             >
-              <FileText size={17} strokeWidth={2.4} />
-            </span>
-            <span style="display: grid; gap: 2px; min-width: 0;">
               <span
                 style="
                   align-items: center;
-                  color: var(--ui-normal-text);
-                  display: flex;
-                  font-size: 18px;
-                  font-weight: 760;
-                  gap: 8px;
-                  line-height: 24px;
-                  min-width: 0;
+                  background: var(--ui-accent-blue-normal-surface);
+                  border: 1px solid var(--ui-accent-blue-normal-border);
+                  border-radius: var(--cthulhu-ui-radius-control);
+                  color: var(--ui-accent-blue-icon-glyph);
+                  display: inline-flex;
+                  flex: 0 0 auto;
+                  height: 32px;
+                  justify-content: center;
+                  width: 32px;
                 "
               >
-                {#if isPromptsCollapsed}
-                  <ChevronRight size={17} strokeWidth={2.6} />
-                {:else}
-                  <ChevronDown size={17} strokeWidth={2.6} />
-                {/if}
-                <span
-                  style="
-                    min-width: 0;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                  "
-                >
-                  Prompts
-                </span>
+                <FileText size={17} strokeWidth={2.4} />
               </span>
               <span
                 style="
-                  color: var(--ui-muted-text);
-                  font-size: 13px;
-                  font-weight: 600;
-                  line-height: 18px;
+                  color: var(--ui-normal-text);
+                  font-size: 24px;
+                  font-weight: 760;
+                  line-height: 32px;
                   min-width: 0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
                 "
               >
-                Prompt cards saved in Product Engineering.
+                Prompts
+              </span>
+              {#if isPromptsCollapsed}
+                <ChevronRight size={17} strokeWidth={2.6} />
+              {:else}
+                <ChevronDown size={17} strokeWidth={2.6} />
+              {/if}
+              <span style={countPillStyle}>
+                {collapsedSummaryLabel(promptCards.length, 'prompt', 'prompts')}
               </span>
             </span>
-          </span>
-          <span
-            style="
-              align-items: center;
-              color: var(--ui-secondary-text);
-              display: inline-flex;
-              gap: 8px;
-              justify-self: end;
-              min-width: 0;
-            "
-          >
-            <span style={countPillStyle}>
-              {collapsedSummaryLabel(promptCards.length, 'prompt', 'prompts')}
+            <span
+              style="
+                color: var(--ui-muted-text);
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 20px;
+                min-width: 0;
+              "
+            >
+              Prompt cards saved in Product Engineering.
             </span>
           </span>
         </button>
