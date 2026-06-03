@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ComponentType } from 'svelte'
   import {
     AlignLeft,
     ArrowDown,
@@ -112,22 +113,67 @@
   const lineLabel = (count: number) => `${count} ${count === 1 ? 'line' : 'lines'}`
   const tokenLabel = (count: number) => `${count} ${count === 1 ? 'token' : 'tokens'}`
 
-  const sectionButtonStyle = (id: string) => `
+  const sectionShellStyle = (variant: 'accent' | 'accent-blue' = 'accent') => `
+    border-left: 3px solid ${
+      variant === 'accent-blue'
+        ? 'var(--ui-accent-blue-normal-border)'
+        : 'var(--ui-accent-normal-border)'
+    };
+    box-sizing: border-box;
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+    padding-left: 16px;
+  `
+
+  const sectionToggleStyle = `
     appearance: none;
-    align-items: center;
     background: transparent;
     border: 0;
     box-sizing: border-box;
-    color: ${hoveredId === id ? 'var(--ui-hoverable-text)' : 'var(--ui-normal-text)'};
+    color: inherit;
     cursor: pointer;
     display: grid;
     gap: 6px;
-    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
     padding: 0;
     text-align: left;
-    transition: color 120ms ease;
     width: 100%;
+  `
+
+  const sectionTitleStyle = (id: string) => `
+    color: ${hoveredId === id ? 'var(--ui-hoverable-text)' : 'var(--ui-normal-text)'};
+    display: inline-flex;
+    align-items: center;
+    font-size: 24px;
+    font-weight: 760;
+    height: 32px;
+    line-height: 32px;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 120ms ease;
+    white-space: nowrap;
+  `
+
+  const sectionIconTileStyle = (variant: 'accent' | 'accent-blue' = 'accent') => `
+    align-items: center;
+    background: ${
+      variant === 'accent-blue'
+        ? 'var(--ui-accent-blue-normal-surface)'
+        : 'var(--ui-accent-normal-surface)'
+    };
+    border-radius: 7px;
+    box-sizing: border-box;
+    color: ${
+      variant === 'accent-blue' ? 'var(--ui-accent-blue-icon-glyph)' : 'var(--ui-accent-icon-glyph)'
+    };
+    display: flex;
+    flex: 0 0 auto;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
   `
 
   const iconButtonStyle = (id: string, variant: 'normal' | 'accent' | 'danger' = 'normal') => {
@@ -188,24 +234,81 @@
     transition: background-image 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
   `
 
-  const collapsedSummaryLabel = (count: number, singular: string, plural: string) =>
-    `${count} ${count === 1 ? singular : plural}`
-
-  const countPillStyle = `
-    align-items: center;
-    background: var(--ui-neutral-muted-surface);
-    border: 1px solid var(--ui-neutral-muted-border);
-    border-radius: 999px;
-    color: var(--ui-secondary-text);
-    display: inline-flex;
-    font-size: 11px;
-    font-weight: 750;
-    height: 20px;
-    line-height: 18px;
-    padding: 0 8px;
-    white-space: nowrap;
-  `
 </script>
+
+{#snippet sectionHeader({
+  title,
+  description,
+  icon: Icon,
+  iconVariant = 'accent',
+  isCollapsed,
+  hoverId,
+  onToggle
+}: {
+  title: string
+  description: string
+  icon: ComponentType
+  iconVariant?: 'accent' | 'accent-blue'
+  isCollapsed: boolean
+  hoverId: string
+  onToggle: () => void
+})}
+  <button
+    type="button"
+    aria-expanded={!isCollapsed}
+    style={sectionToggleStyle}
+    onmouseenter={() => {
+      hoveredId = hoverId
+    }}
+    onmouseleave={() => {
+      hoveredId = null
+    }}
+    onclick={onToggle}
+  >
+    <span
+      style="
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        min-width: 0;
+      "
+    >
+      <span style={sectionIconTileStyle(iconVariant)}>
+        <Icon size={16} strokeWidth={2.4} />
+      </span>
+      <span style={sectionTitleStyle(hoverId)}>{title}</span>
+      <span
+        style="
+          align-items: center;
+          color: var(--ui-secondary-text);
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 32px;
+          justify-content: center;
+          line-height: 1;
+          width: 24px;
+        "
+      >
+        {#if isCollapsed}
+          <ChevronRight size={24} strokeWidth={2.4} aria-hidden="true" />
+        {:else}
+          <ChevronDown size={24} strokeWidth={2.4} aria-hidden="true" />
+        {/if}
+      </span>
+    </span>
+
+    <span
+      style="
+        color: var(--ui-muted-text);
+        font-size: 14px;
+        line-height: 20px;
+        min-width: 0;
+      "
+    >
+      {description}
+    </span>
+  </button>
+{/snippet}
 
 <main
   style="
@@ -300,98 +403,17 @@
         width: 100%;
       "
     >
-      <section
-        aria-label="Folder Settings"
-        style="
-          border-left: 3px solid var(--ui-accent-normal-border);
-          box-sizing: border-box;
-          display: grid;
-          gap: 24px;
-          min-width: 0;
-          padding-left: 16px;
-        "
-      >
-        <button
-          type="button"
-          aria-expanded={!isFolderSettingsCollapsed}
-          style={sectionButtonStyle('folder-settings-toggle')}
-          onmouseenter={() => {
-            hoveredId = 'folder-settings-toggle'
-          }}
-          onmouseleave={() => {
-            hoveredId = null
-          }}
-          onclick={() => {
+      <section aria-label="Folder Settings" style={sectionShellStyle()}>
+        {@render sectionHeader({
+          title: 'Folder Settings',
+          description: 'Settings that only affect prompts in this folder, and are saved to the workspace.',
+          icon: Settings,
+          isCollapsed: isFolderSettingsCollapsed,
+          hoverId: 'folder-settings-toggle',
+          onToggle: () => {
             isFolderSettingsCollapsed = !isFolderSettingsCollapsed
-          }}
-        >
-          <span
-            style="
-              display: grid;
-              gap: 6px;
-              min-width: 0;
-            "
-          >
-            <span
-              style="
-                align-items: center;
-                display: flex;
-                gap: 10px;
-                min-width: 0;
-              "
-            >
-              <span
-                style="
-                  align-items: center;
-                  background: var(--ui-accent-normal-surface);
-                  border: 1px solid var(--ui-accent-normal-border);
-                  border-radius: var(--cthulhu-ui-radius-control);
-                  color: var(--ui-accent-icon-glyph);
-                  display: inline-flex;
-                  flex: 0 0 auto;
-                  height: 32px;
-                  justify-content: center;
-                  width: 32px;
-                "
-              >
-                <Settings size={17} strokeWidth={2.4} />
-              </span>
-              <span
-                style="
-                  color: var(--ui-normal-text);
-                  font-size: 24px;
-                  font-weight: 760;
-                  line-height: 32px;
-                  min-width: 0;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                "
-              >
-                Folder Settings
-              </span>
-              {#if isFolderSettingsCollapsed}
-                <ChevronRight size={17} strokeWidth={2.6} />
-              {:else}
-                <ChevronDown size={17} strokeWidth={2.6} />
-              {/if}
-              <span style={countPillStyle}>
-                {collapsedSummaryLabel(settingsCards.length, 'setting', 'settings')}
-              </span>
-            </span>
-            <span
-              style="
-                color: var(--ui-muted-text);
-                font-size: 14px;
-                font-weight: 400;
-                line-height: 20px;
-                min-width: 0;
-              "
-            >
-              Settings that only affect prompts in this folder.
-            </span>
-          </span>
-        </button>
+          }
+        })}
 
         {#if !isFolderSettingsCollapsed}
           <div style="display: grid; gap: 12px; min-width: 0;">
@@ -566,98 +588,18 @@
         {/if}
       </section>
 
-      <section
-        aria-label="Prompts"
-        style="
-          border-left: 3px solid var(--ui-accent-blue-normal-border);
-          box-sizing: border-box;
-          display: grid;
-          gap: 24px;
-          min-width: 0;
-          padding-left: 16px;
-        "
-      >
-        <button
-          type="button"
-          aria-expanded={!isPromptsCollapsed}
-          style={sectionButtonStyle('prompts-toggle')}
-          onmouseenter={() => {
-            hoveredId = 'prompts-toggle'
-          }}
-          onmouseleave={() => {
-            hoveredId = null
-          }}
-          onclick={() => {
+      <section aria-label="Prompts" style={sectionShellStyle('accent-blue')}>
+        {@render sectionHeader({
+          title: 'Prompts',
+          description: 'Create, edit, and organize prompts in this folder.',
+          icon: FileText,
+          iconVariant: 'accent-blue',
+          isCollapsed: isPromptsCollapsed,
+          hoverId: 'prompts-toggle',
+          onToggle: () => {
             isPromptsCollapsed = !isPromptsCollapsed
-          }}
-        >
-          <span
-            style="
-              display: grid;
-              gap: 6px;
-              min-width: 0;
-            "
-          >
-            <span
-              style="
-                align-items: center;
-                display: flex;
-                gap: 10px;
-                min-width: 0;
-              "
-            >
-              <span
-                style="
-                  align-items: center;
-                  background: var(--ui-accent-blue-normal-surface);
-                  border: 1px solid var(--ui-accent-blue-normal-border);
-                  border-radius: var(--cthulhu-ui-radius-control);
-                  color: var(--ui-accent-blue-icon-glyph);
-                  display: inline-flex;
-                  flex: 0 0 auto;
-                  height: 32px;
-                  justify-content: center;
-                  width: 32px;
-                "
-              >
-                <FileText size={17} strokeWidth={2.4} />
-              </span>
-              <span
-                style="
-                  color: var(--ui-normal-text);
-                  font-size: 24px;
-                  font-weight: 760;
-                  line-height: 32px;
-                  min-width: 0;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                "
-              >
-                Prompts
-              </span>
-              {#if isPromptsCollapsed}
-                <ChevronRight size={17} strokeWidth={2.6} />
-              {:else}
-                <ChevronDown size={17} strokeWidth={2.6} />
-              {/if}
-              <span style={countPillStyle}>
-                {collapsedSummaryLabel(promptCards.length, 'prompt', 'prompts')}
-              </span>
-            </span>
-            <span
-              style="
-                color: var(--ui-muted-text);
-                font-size: 14px;
-                font-weight: 400;
-                line-height: 20px;
-                min-width: 0;
-              "
-            >
-              Prompt cards saved in Product Engineering.
-            </span>
-          </span>
-        </button>
+          }
+        })}
 
         {#if !isPromptsCollapsed}
           <div
