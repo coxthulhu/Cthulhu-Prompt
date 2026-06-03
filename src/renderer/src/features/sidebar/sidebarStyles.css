@@ -18,39 +18,14 @@
   min-width: 48px;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 10px 5px;
+  gap: 4px;
+  padding: 10px 0;
   border-right: 1px solid var(--ui-neutral-muted-border);
   border-top: 1px solid var(--ui-neutral-hover-border);
 }
 
 .appSidebar {
   border-top: 1px solid var(--ui-neutral-hover-border);
-}
-
-.appActivityBarButton {
-  height: 38px;
-  width: 38px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--ui-secondary-text);
-}
-
-.appActivityBarButton:hover {
-  border-color: var(--ui-neutral-hover-border);
-  background-color: var(--ui-neutral-normal-surface);
-  color: var(--ui-normal-text);
-}
-
-.appActivityBarButton[data-active='true'] {
-  border-color: var(--ui-accent-normal-border);
-  background-color: var(--ui-accent-normal-surface);
-  color: var(--ui-accent-icon-glyph);
-}
-
-.appActivityBarButtonIcon {
-  height: 20px;
-  width: 20px;
 }
 
 .sidebarTopLevelInset {

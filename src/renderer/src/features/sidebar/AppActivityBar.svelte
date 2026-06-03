@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { screens, type ScreenId } from '@renderer/app/screens'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import ActivityBarButton from '@renderer/common/cthulhu-ui/ActivityBarButton.svelte'
 
   let {
     activeScreen,
@@ -42,14 +42,12 @@
 
 <nav class="appActivityBar" aria-label="Primary navigation" data-testid="app-activity-bar">
   {#each activityItems as item (item.id)}
-    <IconOnlyButton
+    <ActivityBarButton
       icon={item.icon}
       label={item.label}
       title={item.label}
       testId={item.testId}
-      variant="transparent"
       class="appActivityBarButton"
-      iconClass="appActivityBarButtonIcon"
       active={activeScreen === item.id}
       ariaCurrent={activeScreen === item.id ? 'page' : undefined}
       onclick={() => onNavigate(item.id)}
