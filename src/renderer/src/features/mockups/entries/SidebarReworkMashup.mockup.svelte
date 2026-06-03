@@ -12,7 +12,6 @@
     MoreHorizontal,
     PanelsTopLeft,
     Plus,
-    Search,
     Settings,
     SlidersHorizontal
   } from 'lucide-svelte'
@@ -171,14 +170,13 @@
 
   let activeActivityId = $state('prompts')
   let selectedFolderId = $state('coding-workflow')
-  let isFolderSelectorOpen = $state(false)
+  let isFolderSelectorOpen = $state(true)
   let hoveredActivityId = $state<string | null>(null)
   let hoveredFolderId = $state<string | null>(null)
   let hoveredTreeFolderId = $state<string | null>(null)
   let hoveredPromptId = $state<string | null>(null)
   let hoveredIconButtonId = $state<string | null>(null)
   let isFolderSelectorHovered = $state(false)
-  let isCreateFolderHovered = $state(false)
 
   const selectedFolder = $derived(
     promptFolders.find((folder) => folder.id === selectedFolderId) ?? promptFolders[0]
@@ -190,7 +188,7 @@
   }
 
   const shellStyle =
-    'display:flex;height:100vh;width:360px;min-height:520px;color:var(--ui-secondary-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+    'display:flex;height:66vh;width:360px;min-height:360px;max-height:620px;color:var(--ui-secondary-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
 
   const activityBarStyle =
     'display:flex;width:54px;min-width:54px;flex-direction:column;align-items:center;gap:7px;padding:10px 7px;border-right:1px solid var(--ui-neutral-muted-border);background:linear-gradient(180deg,var(--ui-card-normal-surface-gradient-start),var(--ui-card-normal-surface-gradient-end));'
@@ -266,6 +264,13 @@
     };border:1px solid ${selected ? 'var(--ui-accent-normal-border)' : 'transparent'};`
   }
 
+  const newFolderDropdownRowStyle = () =>
+    `display:grid;width:100%;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:0;border-radius:7px;background:${
+      hoveredFolderId === 'new-folder' ? 'var(--ui-neutral-normal-surface)' : 'transparent'
+    };color:${
+      hoveredFolderId === 'new-folder' ? 'var(--ui-normal-text)' : 'var(--ui-secondary-text)'
+    };padding:8px 9px;text-align:left;cursor:pointer;transition:background-color 80ms ease-out,color 80ms ease-out;`
+
   const treeFolderRowStyle = (folderId: string) =>
     `display:flex;height:36px;width:100%;align-items:center;border-radius:8px;background:${
       hoveredTreeFolderId === folderId ? 'var(--ui-neutral-normal-surface)' : 'transparent'
@@ -284,16 +289,6 @@
           : 'transparent'
     };`
 
-  const createFolderRowStyle = () =>
-    `${iconButtonBase}width:100%;justify-content:flex-start;gap:9px;border-radius:8px;padding:9px;color:${
-      isCreateFolderHovered ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'
-    };background:${
-      isCreateFolderHovered ? 'var(--ui-neutral-hover-surface)' : 'var(--ui-neutral-muted-surface)'
-    };border:1px dashed ${
-      isCreateFolderHovered
-        ? 'var(--ui-neutral-interactive-hover-border)'
-        : 'var(--ui-neutral-interactive-muted-border)'
-    };`
 </script>
 
 <div style={shellStyle}>
@@ -419,84 +414,70 @@
 
         {#if isFolderSelectorOpen}
           <div
-            role="listbox"
-            aria-label="Prompt Folders"
-            style="position:absolute;z-index:5;top:calc(100% + 6px);left:0;right:0;display:flex;max-height:392px;flex-direction:column;gap:3px;overflow:auto;border-radius:8px;border:1px solid var(--ui-neutral-hover-border);background:var(--ui-card-overlay-surface);padding:6px;"
+            style="position:absolute;z-index:5;top:calc(100% + 6px);left:0;right:0;display:flex;max-height:392px;flex-direction:column;overflow:hidden;border-radius:8px;border:1px solid var(--ui-neutral-hover-border);background:var(--ui-card-overlay-surface);padding:6px;"
           >
-            <div style="display:flex;align-items:center;gap:6px;padding:3px 3px 6px;">
-              <div
-                style="display:flex;min-width:0;flex:1;align-items:center;gap:7px;border-radius:7px;border:1px solid var(--ui-neutral-muted-border);background:var(--ui-neutral-muted-surface);padding:6px 8px;color:var(--ui-muted-text);"
-              >
-                <Search size={14} strokeWidth={2} />
-                <span style="font-size:12px;">Search folders</span>
-              </div>
-              <button
-                type="button"
-                aria-label="Add Prompt Folder"
-                title="Add Prompt Folder"
-                style={smallIconButtonStyle('add-folder')}
-                onmouseenter={() => {
-                  hoveredIconButtonId = 'add-folder'
-                }}
-                onmouseleave={() => {
-                  hoveredIconButtonId = null
-                }}
-              >
-                <FolderPlus size={16} strokeWidth={2} />
-              </button>
+            <div
+              role="listbox"
+              aria-label="Prompt Folders"
+              style="display:flex;min-height:0;flex:1 1 auto;flex-direction:column;gap:3px;overflow:auto;"
+            >
+              {#each promptFolders as folder (folder.id)}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selectedFolderId === folder.id}
+                  style={dropdownRowStyle(folder.id)}
+                  onmouseenter={() => {
+                    hoveredFolderId = folder.id
+                  }}
+                  onmouseleave={() => {
+                    hoveredFolderId = null
+                  }}
+                  onclick={() => selectPromptFolder(folder.id)}
+                >
+                  <span
+                    style="display:flex;height:28px;width:28px;flex-shrink:0;align-items:center;justify-content:center;border-radius:7px;background:var(--ui-neutral-normal-surface);border:1px solid var(--ui-neutral-normal-border);color:var(--ui-secondary-text);"
+                  >
+                    <Folder size={15} strokeWidth={2} />
+                  </span>
+                  <span style="min-width:0;flex:1;">
+                    <span
+                      style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:620;line-height:1.2;"
+                    >
+                      {folder.name}
+                    </span>
+                    <span
+                      style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ui-muted-text);font-size:11px;line-height:1.2;"
+                    >
+                      {folder.metadata}
+                    </span>
+                  </span>
+                  <span
+                    style="flex-shrink:0;color:var(--ui-muted-text);font-size:11px;line-height:1.2;"
+                  >
+                    {folder.updated}
+                  </span>
+                </button>
+              {/each}
             </div>
 
-            {#each promptFolders as folder (folder.id)}
-              <button
-                type="button"
-                role="option"
-                aria-selected={selectedFolderId === folder.id}
-                style={dropdownRowStyle(folder.id)}
-                onmouseenter={() => {
-                  hoveredFolderId = folder.id
-                }}
-                onmouseleave={() => {
-                  hoveredFolderId = null
-                }}
-                onclick={() => selectPromptFolder(folder.id)}
-              >
-                <span
-                  style="display:flex;height:28px;width:28px;flex-shrink:0;align-items:center;justify-content:center;border-radius:7px;background:var(--ui-neutral-normal-surface);border:1px solid var(--ui-neutral-normal-border);color:var(--ui-secondary-text);"
-                >
-                  <Folder size={15} strokeWidth={2} />
-                </span>
-                <span style="min-width:0;flex:1;">
-                  <span
-                    style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:620;line-height:1.2;"
-                  >
-                    {folder.name}
-                  </span>
-                  <span
-                    style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ui-muted-text);font-size:11px;line-height:1.2;"
-                  >
-                    {folder.metadata}
-                  </span>
-                </span>
-                <span
-                  style="flex-shrink:0;color:var(--ui-muted-text);font-size:11px;line-height:1.2;"
-                >
-                  {folder.updated}
-                </span>
-              </button>
-            {/each}
+            <div style="height:1px;background:var(--ui-neutral-muted-border);margin:3px 2px"></div>
 
             <button
               type="button"
-              style={createFolderRowStyle()}
+              style={newFolderDropdownRowStyle()}
               onmouseenter={() => {
-                isCreateFolderHovered = true
+                hoveredFolderId = 'new-folder'
               }}
               onmouseleave={() => {
-                isCreateFolderHovered = false
+                hoveredFolderId = null
               }}
             >
-              <Plus size={15} strokeWidth={2} />
-              <span style="font-size:13px;font-weight:620;">New Prompt Folder</span>
+              <span style="display:flex;min-width:0;align-items:center;gap:8px;">
+                <FolderPlus size={15} strokeWidth={2.3} />
+                <span style="font-size:13px;font-weight:700;">New Prompt Folder</span>
+              </span>
+              <Plus size={15} strokeWidth={2.3} />
             </button>
           </div>
         {/if}
