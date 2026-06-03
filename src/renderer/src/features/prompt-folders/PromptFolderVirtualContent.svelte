@@ -1,6 +1,10 @@
 <script lang="ts">
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
-  import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
+  import {
+    PROMPT_FOLDER_SETTINGS_FIELDS,
+    type PromptFolderSettings,
+    type PromptFolderSettingsField
+  } from '@shared/PromptFolder'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
   import { lookupPromptFolderSettingsRowMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
@@ -31,14 +35,16 @@
   import {
     PROMPT_FOLDER_SETTINGS_ROW_ID,
     promptDividerRowId,
-    promptEditorRowId
+    promptEditorRowId,
+    promptFolderSettingsRowId
   } from './promptFolderRowIds'
   import PromptFolderSectionRow, {
     PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX,
     PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX
   } from './PromptFolderSectionRow.svelte'
   import {
-    estimatePromptFolderSettingsHeight,
+    PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
+    estimatePromptFolderSettingsFieldRowHeight,
     PROMPT_HEADER_ROW_HEIGHT_PX
   } from './promptFolderSettingsSizing'
   import {
@@ -55,10 +61,11 @@
     ActivePromptTreeRow,
     PromptFocusRequest
   } from './promptFolderScreenController.svelte.ts'
-  import { FileText } from 'lucide-svelte'
+  import { FileText, Settings } from 'lucide-svelte'
 
   type PromptFolderRow =
-    | { kind: 'folder-settings' }
+    | { kind: 'folder-settings-header' }
+    | { kind: 'folder-settings-field'; field: PromptFolderSettingsField; includeBottomGap: boolean }
     | { kind: 'prompt-header'; promptCount: number }
     | { kind: 'placeholder' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
@@ -152,10 +159,16 @@
   })
 
   const lookupPromptFolderSettingsRowMeasuredHeightForScreen = (
+    field: PromptFolderSettingsField,
     widthPx: number,
     devicePixelRatio: number
   ): number | null => {
-    return lookupPromptFolderSettingsRowMeasuredHeight(promptFolderId, widthPx, devicePixelRatio)
+    return lookupPromptFolderSettingsRowMeasuredHeight(
+      promptFolderId,
+      field,
+      widthPx,
+      devicePixelRatio
+    )
   }
 
   const getSectionContentWidthPx = (virtualWindowWidthPx: number): number => {
@@ -163,14 +176,21 @@
   }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
-    'folder-settings': {
-      estimateHeight: () =>
-        estimatePromptFolderSettingsHeight(
-          PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => folderSettings[field]),
-          promptEditorSizingConfig.fontSize
+    'folder-settings-header': {
+      estimateHeight: () => PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
+      centerRowEligible: true,
+      snippet: folderSettingsHeaderRow
+    },
+    'folder-settings-field': {
+      estimateHeight: (row) =>
+        estimatePromptFolderSettingsFieldRowHeight(
+          folderSettings[row.field],
+          promptEditorSizingConfig.fontSize,
+          row.includeBottomGap
         ),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
         lookupPromptFolderSettingsRowMeasuredHeightForScreen(
+          _row.field,
           getSectionContentWidthPx(widthPx),
           devicePixelRatio
         ),
@@ -178,7 +198,7 @@
       overlayRow: {},
       centerRowEligible: true,
       dehydrateOnWidthResize: true,
-      snippet: folderSettingsRow
+      snippet: folderSettingsFieldRow
     },
     'prompt-header': {
       estimateHeight: () => PROMPT_HEADER_ROW_HEIGHT_PX,
@@ -233,9 +253,23 @@
       {
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
-          kind: 'folder-settings'
+          kind: 'folder-settings-header'
         }
-      },
+      }
+    ]
+
+    PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field, index) => {
+      rows.push({
+        id: promptFolderSettingsRowId(field),
+        row: {
+          kind: 'folder-settings-field',
+          field,
+          includeBottomGap: index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
+        }
+      })
+    })
+
+    rows.push(
       {
         id: 'prompt-header',
         row: {
@@ -243,7 +277,7 @@
           promptCount: visiblePromptIds.length
         }
       }
-    ]
+    )
 
     if (visiblePromptIds.length === 0) {
       rows.push({
@@ -278,7 +312,7 @@
       onCenterRowChange({ kind: 'prompt', promptId: row.promptId })
       return
     }
-    if (row?.kind === 'folder-settings') {
+    if (row?.kind === 'folder-settings-header' || row?.kind === 'folder-settings-field') {
       onCenterRowChange({ kind: 'folder-settings' })
       return
     }
@@ -381,19 +415,34 @@
   }}
 />
 
-{#snippet folderSettingsRow(props)}
+{#snippet folderSettingsHeaderRow({ rowHeightPx })}
   <PromptFolderSectionRow
-    rowHeightPx={props.rowHeightPx}
+    {rowHeightPx}
+    contentClass="pt-6"
+    contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
+    <SectionHeader
+      title="Folder Settings"
+      description="Settings that only affect prompts in this folder, and are saved to the workspace."
+      headingLevel={1}
+      icon={Settings}
+    />
+  </PromptFolderSectionRow>
+{/snippet}
+
+{#snippet folderSettingsFieldRow(props)}
+  <PromptFolderSectionRow rowHeightPx={props.rowHeightPx}>
     <PromptFolderSettingsRow
       {workspaceId}
       {promptFolderId}
+      field={props.row.field}
       rowId={props.rowId}
       virtualWindowWidthPx={getSectionContentWidthPx(props.virtualWindowWidthPx)}
       rowContentLeftOffsetPx={PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX}
       devicePixelRatio={props.devicePixelRatio}
       rowHeightPx={props.rowHeightPx}
+      includeBottomGap={props.row.includeBottomGap}
       hydrationPriority={props.hydrationPriority}
       shouldDehydrate={props.shouldDehydrate}
       overlayRowElement={props.overlayRowElement ?? null}

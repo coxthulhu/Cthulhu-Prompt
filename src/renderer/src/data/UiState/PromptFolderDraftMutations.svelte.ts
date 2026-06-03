@@ -140,11 +140,11 @@ export const setPromptFolderDraftSettingsField = (
   const draftRecord = getPromptFolderDraftState(promptFolderId)
   if (!draftRecord) {
     // Monaco can emit an initial onChange before the folder draft is hydrated.
-    recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, measurement, false)
+    recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, field, measurement, false)
     return
   }
   const textChanged = draftRecord.settings[field] !== value
-  recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, measurement, textChanged)
+  recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, field, measurement, textChanged)
 
   if (!textChanged) {
     return

@@ -34,11 +34,10 @@ const SETTINGS_HEADER_HEIGHT_PX =
   SETTINGS_SUBTITLE_MARGIN_TOP_PX +
   SETTINGS_SUBTITLE_HEIGHT_PX
 
-const SETTINGS_FIXED_HEIGHT_PX =
-  SETTINGS_HEADER_HEIGHT_PX +
-  SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX +
-  SETTINGS_EDITOR_CHROME_PX * 3 +
-  SETTINGS_CARD_GAP_PX * 2
+export const PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX =
+  SETTINGS_HEADER_HEIGHT_PX + SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX
+
+const SETTINGS_FIELD_ROW_FIXED_HEIGHT_PX = SETTINGS_EDITOR_CHROME_PX
 
 const PROMPT_HEADER_PADDING_TOP_PX = 24
 const PROMPT_HEADER_TEXT_HEIGHT_PX = 32
@@ -54,8 +53,6 @@ export const PROMPT_HEADER_ROW_HEIGHT_PX =
   PROMPT_HEADER_PADDING_BOTTOM_PX
 
 export const SETTINGS_EDITOR_TOP_OFFSET_PX =
-  SETTINGS_HEADER_HEIGHT_PX +
-  SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX +
   SETTINGS_DESCRIPTION_CARD_BORDER_WIDTH_PX +
   SETTINGS_DESCRIPTION_CARD_PADDING_PX +
   TITLE_BAR_HEIGHT_PX +
@@ -82,32 +79,40 @@ export const estimatePromptFolderSettingsMonacoHeight = (
   return estimateMonacoHeightPx(text, getPromptFolderSettingsSizingConfig(fontSize))
 }
 
-export const getPromptFolderSettingsHeightPx = (monacoHeightPx: number[]): number => {
+export const getPromptFolderSettingsFieldRowHeightPx = (
+  monacoHeightPx: number,
+  includeBottomGap: boolean
+): number => {
   return Math.ceil(
-    SETTINGS_FIXED_HEIGHT_PX + monacoHeightPx.reduce((sum, heightPx) => sum + heightPx, 0)
+    SETTINGS_FIELD_ROW_FIXED_HEIGHT_PX +
+      monacoHeightPx +
+      (includeBottomGap ? SETTINGS_CARD_GAP_PX : 0)
   )
 }
 
-export const getPromptFolderSettingsMonacoHeightFromRowPx = (rowHeightPx: number): number => {
-  return rowHeightPx - SETTINGS_FIXED_HEIGHT_PX
-}
-
-export const getPromptFolderSettingsEditorTopOffsetPx = (
-  sectionIndex: number,
-  previousMonacoHeightsPx: number[]
+export const getPromptFolderSettingsFieldMonacoHeightFromRowPx = (
+  rowHeightPx: number,
+  includeBottomGap: boolean
 ): number => {
   return (
-    SETTINGS_EDITOR_TOP_OFFSET_PX +
-    sectionIndex * (SETTINGS_EDITOR_CHROME_PX + SETTINGS_CARD_GAP_PX) +
-    previousMonacoHeightsPx.reduce((sum, heightPx) => sum + heightPx, 0)
+    rowHeightPx -
+    SETTINGS_FIELD_ROW_FIXED_HEIGHT_PX -
+    (includeBottomGap ? SETTINGS_CARD_GAP_PX : 0)
   )
 }
 
-export const estimatePromptFolderSettingsHeight = (
-  texts: string[],
-  fontSize: number
+export const getPromptFolderSettingsCardHeightFromRowPx = (
+  rowHeightPx: number,
+  includeBottomGap: boolean
+): number => rowHeightPx - (includeBottomGap ? SETTINGS_CARD_GAP_PX : 0)
+
+export const estimatePromptFolderSettingsFieldRowHeight = (
+  text: string,
+  fontSize: number,
+  includeBottomGap: boolean
 ): number => {
-  return getPromptFolderSettingsHeightPx(
-    texts.map((text) => estimatePromptFolderSettingsMonacoHeight(text, fontSize))
+  return getPromptFolderSettingsFieldRowHeightPx(
+    estimatePromptFolderSettingsMonacoHeight(text, fontSize),
+    includeBottomGap
   )
 }

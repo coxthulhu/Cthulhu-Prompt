@@ -61,10 +61,16 @@ import {
 import type { PromptFolderFindItem, PromptFolderFindMatch } from './find/promptFolderFindTypes'
 import {
   PROMPT_FOLDER_SETTINGS_ROW_ID,
+  isPromptFolderSettingsFindEntityId,
   promptEditorRowId,
-  promptFolderSettingsFindEntityId
+  promptFolderSettingsFindEntityId,
+  promptFolderSettingsRowId
 } from './promptFolderRowIds'
-import { estimatePromptFolderSettingsHeight } from './promptFolderSettingsSizing'
+import { PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX } from './PromptFolderSectionRow.svelte'
+import {
+  PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
+  estimatePromptFolderSettingsFieldRowHeight
+} from './promptFolderSettingsSizing'
 import {
   resolvePromptHandleDropMove,
   type PromptHandleDropPayload
@@ -207,13 +213,17 @@ export const createPromptFolderScreenController = ({
   const findItems = $derived.by((): PromptFolderFindItem[] => {
     const nextItems: PromptFolderFindItem[] = []
     if (!errorMessage) {
-      nextItems.push({
-        entityId: promptFolderSettingsFindEntityId(promptFolderId),
-        rowId: PROMPT_FOLDER_SETTINGS_ROW_ID,
-        sections: PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => ({
-          key: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS[field],
-          text: folderSettingsTextByField[field]
-        }))
+      PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field) => {
+        nextItems.push({
+          entityId: promptFolderSettingsFindEntityId(promptFolderId, field),
+          rowId: promptFolderSettingsRowId(field),
+          sections: [
+            {
+              key: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS[field],
+              text: folderSettingsTextByField[field]
+            }
+          ]
+        })
       })
     }
 
@@ -654,21 +664,47 @@ export const createPromptFolderScreenController = ({
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
-    const baseHeight = estimatePromptFolderSettingsHeight(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => folderSettingsTextByField[field]),
-      promptEditorSizingConfig.fontSize
-    )
+    const getIncludeBottomGap = (index: number) => index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
+    const baseHeight =
+      PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX +
+      PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
+        return (
+          sum +
+          estimatePromptFolderSettingsFieldRowHeight(
+            folderSettingsTextByField[field],
+            promptEditorSizingConfig.fontSize,
+            getIncludeBottomGap(index)
+          )
+        )
+      }, 0)
 
     if (!viewportMetrics) {
       return baseHeight
     }
 
-    const measuredHeight = lookupPromptFolderSettingsRowMeasuredHeight(
-      promptFolderId,
-      viewportMetrics.widthPx,
-      viewportMetrics.devicePixelRatio
+    const metrics = viewportMetrics
+    const measuredWidthPx = Math.max(
+      0,
+      metrics.widthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX
     )
-    return measuredHeight ?? baseHeight
+
+    return (
+      PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX +
+      PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
+        const estimatedHeight = estimatePromptFolderSettingsFieldRowHeight(
+          folderSettingsTextByField[field],
+          promptEditorSizingConfig.fontSize,
+          getIncludeBottomGap(index)
+        )
+        const measuredHeight = lookupPromptFolderSettingsRowMeasuredHeight(
+          promptFolderId,
+          field,
+          measuredWidthPx,
+          metrics.devicePixelRatio
+        )
+        return sum + (measuredHeight ?? estimatedHeight)
+      }, 0)
+    )
   })
 
   const activeHeaderRowId = $derived(
@@ -700,7 +736,7 @@ export const createPromptFolderScreenController = ({
 
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
     const targetRow: ActivePromptTreeRow =
-      match.entityId === promptFolderSettingsFindEntityId(promptFolderId)
+      isPromptFolderSettingsFindEntityId(match.entityId, promptFolderId)
         ? { kind: 'folder-settings' }
         : { kind: 'prompt', promptId: match.entityId }
     setCurrentFolderSelection(targetRow, 'find', { forceVersionBump: true })

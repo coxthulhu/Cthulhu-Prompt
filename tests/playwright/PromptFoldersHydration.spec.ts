@@ -224,6 +224,46 @@ const prepareUncappedSidebarBaseline = async (
 }
 
 describe('Prompt Folder Hydration', () => {
+  test('renders folder settings editors as separate virtual rows', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult?.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(
+      `${HOST_SELECTOR} [data-testid^="prompt-folder-settings-"][data-virtual-window-row]`,
+      { state: 'attached' }
+    )
+
+    const settingsRows = await mainWindow.evaluate((hostSelector) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      if (!host) return []
+
+      return Array.from(
+        host.querySelectorAll<HTMLElement>(
+          '[data-testid^="prompt-folder-settings-"][data-virtual-window-row]'
+        )
+      ).map((row) => {
+        const rect = row.getBoundingClientRect()
+        return {
+          testId: row.getAttribute('data-testid'),
+          top: Math.round(rect.top)
+        }
+      })
+    }, HOST_SELECTOR)
+
+    expect(settingsRows).toHaveLength(3)
+    expect(settingsRows.map((row) => row.testId)).toEqual([
+      expect.stringContaining('folderDescription'),
+      expect.stringContaining('folderPrefix'),
+      expect.stringContaining('folderSuffix')
+    ])
+    expect(new Set(settingsRows.map((row) => row.top)).size).toBe(3)
+  })
+
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }

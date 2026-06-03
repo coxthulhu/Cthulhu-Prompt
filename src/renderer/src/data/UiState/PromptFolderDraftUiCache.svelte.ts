@@ -1,5 +1,9 @@
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import {
+  PROMPT_FOLDER_SETTINGS_FIELDS,
+  type PromptFolderSettingsField
+} from '@shared/PromptFolder'
+import {
   createSessionMeasuredHeightCache,
   createSessionValueCache
 } from './sessionUiCacheFactories.svelte.ts'
@@ -12,13 +16,19 @@ export const promptFolderDraftUiCache = {
   scrollTop
 }
 
+const promptFolderSettingsRowCacheId = (
+  promptFolderId: string,
+  field: PromptFolderSettingsField
+): string => `${promptFolderId}:${field}`
+
 export const lookupPromptFolderSettingsRowMeasuredHeight = (
   promptFolderId: string,
+  field: PromptFolderSettingsField,
   widthPx: number,
   devicePixelRatio: number
 ): number | null => {
   return promptFolderDraftUiCache.settingsRowMeasuredHeight.lookup(
-    promptFolderId,
+    promptFolderSettingsRowCacheId(promptFolderId, field),
     widthPx,
     devicePixelRatio
   )
@@ -26,22 +36,29 @@ export const lookupPromptFolderSettingsRowMeasuredHeight = (
 
 export const recordPromptFolderSettingsRowMeasuredHeight = (
   promptFolderId: string,
+  field: PromptFolderSettingsField,
   measurement: TextMeasurement,
   textChanged: boolean
 ): void => {
   promptFolderDraftUiCache.settingsRowMeasuredHeight.record(
-    promptFolderId,
+    promptFolderSettingsRowCacheId(promptFolderId, field),
     measurement,
     textChanged
   )
 }
 
 export const clearPromptFolderSettingsRowMeasuredHeight = (promptFolderId: string): void => {
-  promptFolderDraftUiCache.settingsRowMeasuredHeight.clear(promptFolderId)
+  for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+    promptFolderDraftUiCache.settingsRowMeasuredHeight.clear(
+      promptFolderSettingsRowCacheId(promptFolderId, field)
+    )
+  }
 }
 
 export const clearPromptFolderSettingsRowMeasuredHeights = (promptFolderIds: string[]): void => {
-  promptFolderDraftUiCache.settingsRowMeasuredHeight.clearMany(promptFolderIds)
+  for (const promptFolderId of promptFolderIds) {
+    clearPromptFolderSettingsRowMeasuredHeight(promptFolderId)
+  }
 }
 
 export const lookupPromptFolderScrollTop = (promptFolderId: string): number | null => {
