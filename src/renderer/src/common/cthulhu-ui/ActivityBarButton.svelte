@@ -56,7 +56,7 @@
     border: 0;
     border-radius: 0;
     background: transparent;
-    color: var(--ui-muted-text);
+    color: var(--ui-muted-icon-glyph);
     transition:
       background-color 120ms ease-out,
       color 120ms ease-out;
@@ -64,7 +64,7 @@
 
   .cthulhuUiActivityBarButton:hover {
     background-color: var(--ui-neutral-muted-surface);
-    color: var(--ui-secondary-text);
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .cthulhuUiActivityBarButton[data-active='true'] {

@@ -30,12 +30,12 @@
 
   const noopButtonAction: IconOnlyButtonAction = () => undefined
   const baseButtonClass =
-    'cthulhuUiIconOnlyButton inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-[var(--cthulhu-ui-radius-icon-button)] border text-[var(--ui-hoverable-text)] transition-[background-color,box-shadow,border-color,color] duration-[120ms] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50'
+    'cthulhuUiIconOnlyButton inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-[var(--cthulhu-ui-radius-icon-button)] border text-[var(--ui-hoverable-icon-glyph)] transition-[background-color,box-shadow,border-color,color] duration-[120ms] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50'
   const variantClasses = {
     outline:
       'border-[var(--ui-neutral-interactive-normal-border)] hover:border-[var(--ui-neutral-interactive-hover-border)]',
     'dim-border':
-      'border-[var(--ui-neutral-muted-border)] bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-secondary-text)] hover:border-[var(--ui-neutral-hover-border)] hover:bg-[var(--ui-neutral-normal-surface)]',
+      'border-[var(--ui-neutral-muted-border)] bg-[var(--ui-neutral-muted-surface)] text-[var(--ui-secondary-icon-glyph)] hover:border-[var(--ui-neutral-hover-border)] hover:bg-[var(--ui-neutral-normal-surface)]',
     transparent:
       'border-0 bg-transparent shadow-none hover:border-0 hover:bg-[var(--ui-neutral-normal-surface)]',
     accent:

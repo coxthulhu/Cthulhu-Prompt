@@ -194,7 +194,7 @@
             size="compact"
             disabled={!canTogglePromptFolders}
             testId="toggle-all-prompt-folders-button"
-            class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+            class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
             onclick={handlePromptFolderExpansionAction}
           />
           <CreatePromptFolderDialog

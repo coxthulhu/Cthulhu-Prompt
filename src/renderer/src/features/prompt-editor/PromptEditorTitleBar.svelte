@@ -138,7 +138,7 @@
 
       <div class="prompt-editor-metadata-row">
         <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
-          <Folder class="h-3 w-3 shrink-0 stroke-[2.4]" />
+          <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0 stroke-[2.4]" />
           {metadataFolderLabel}
         </span>
         <span class="prompt-editor-metadata-dot"></span>
@@ -234,6 +234,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  :global(.prompt-editor-metadata-folder-icon) {
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .prompt-editor-metadata-dot {

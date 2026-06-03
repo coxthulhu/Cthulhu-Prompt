@@ -104,7 +104,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--cthulhu-ui-radius-control);
-  color: inherit;
+  color: var(--ui-hoverable-icon-glyph);
 }
 
 .sidebarPromptTreeChevronIcon {
@@ -168,7 +168,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--ui-hoverable-text);
+  color: var(--ui-hoverable-icon-glyph);
   cursor: pointer;
   transition:
     background-color 50ms ease-out,
@@ -182,6 +182,13 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeActionButton,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeActionButton {
+  color: var(--ui-normal-text);
+}
+
+.sidebarPromptTreeRow:hover .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow:focus-within .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow[data-over='true'] .sidebarPromptTreeChevronWrap {
   color: var(--ui-normal-text);
 }
 
@@ -313,6 +320,10 @@
 
 .sidebarPromptTreeStatus {
   color: var(--ui-muted-text);
+}
+
+.sidebarPromptTreeStatus svg {
+  color: var(--ui-muted-icon-glyph);
 }
 
 .sidebarPromptTreeDropIndicator {

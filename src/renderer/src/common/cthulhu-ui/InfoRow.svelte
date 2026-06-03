@@ -35,7 +35,7 @@
   }
 
   .cthulhuUiInfoRowIcon {
-    color: var(--ui-secondary-text);
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .cthulhuUiInfoRowText {

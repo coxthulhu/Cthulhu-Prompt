@@ -327,6 +327,8 @@
   }
 
   .cthulhuUiDropdownPopupItem {
+    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
+
     align-items: center;
     background: transparent;
     border: 0;
@@ -346,14 +348,20 @@
   }
 
   .cthulhuUiDropdownPopupItem[data-variant='accent'] {
+    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-accent-normal-text);
+
     color: var(--ui-accent-normal-text);
   }
 
   .cthulhuUiDropdownPopupItem[data-variant='danger'] {
+    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
+
     color: var(--ui-danger-icon-glyph);
   }
 
   .cthulhuUiDropdownPopupItem:hover {
+    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-normal-text);
+
     background: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
@@ -363,8 +371,14 @@
   }
 
   .cthulhuUiDropdownPopupItem[data-variant='danger']:hover {
+    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
+
     background: var(--ui-danger-hover-surface);
     color: var(--ui-danger-icon-glyph);
+  }
+
+  .cthulhuUiDropdownPopupItem > :global(svg) {
+    color: var(--cthulhu-ui-dropdown-popup-item-icon-color);
   }
 
   .cthulhuUiDropdownPopupItemText {

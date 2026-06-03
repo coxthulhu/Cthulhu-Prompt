@@ -135,7 +135,7 @@
   size="compact"
   disabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
-  class="text-[var(--ui-secondary-text)] hover:text-[var(--ui-hoverable-text)]"
+  class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
   onclick={() => (isDialogOpen = true)}
 />
 

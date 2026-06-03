@@ -15,6 +15,10 @@
   --ui-secondary-text: oklch(1 0 0 / 75%);
   --ui-hoverable-text: oklch(1 0 0 / 90%);
   --ui-normal-text: oklch(1 0 0);
+  /* Opaque neutral icon glyphs approximate the text roles on dark app surfaces. */
+  --ui-muted-icon-glyph: oklch(0.66 0 0);
+  --ui-secondary-icon-glyph: oklch(0.82 0 0);
+  --ui-hoverable-icon-glyph: oklch(0.93 0 0);
 
   /* Cards */
   --ui-card-normal-surface-gradient-start: oklch(1 0 0 / 6%);

@@ -153,7 +153,7 @@
     background-color: var(--ui-neutral-field-surface);
     border: 1px solid var(--ui-neutral-normal-border);
     box-sizing: border-box;
-    color: var(--ui-hoverable-text);
+    color: var(--ui-hoverable-icon-glyph);
     cursor: pointer;
     display: inline-flex;
     height: 100%;

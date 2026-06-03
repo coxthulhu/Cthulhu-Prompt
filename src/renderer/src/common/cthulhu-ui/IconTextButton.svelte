@@ -85,6 +85,8 @@
 {#if href}
   <a
     class={mergeClasses(baseAnchorClass, variantClass, className)}
+    data-variant={variant}
+    data-state={state}
     data-active={state === 'active' ? 'true' : 'false'}
     data-disabled={isDisabled ? 'true' : undefined}
     data-testid={testId}
@@ -96,10 +98,10 @@
     aria-expanded={ariaExpanded}
     aria-disabled={isDisabled}
   >
-    <Icon class={mergeClasses('h-4 w-4', iconClass)} />
+    <Icon class={mergeClasses('cthulhuUiIconTextButtonIcon h-4 w-4', iconClass)} />
     <span>{text}</span>
     {#if EndIcon}
-      <EndIcon class={mergeClasses('h-4 w-4', endIconClass)} />
+      <EndIcon class={mergeClasses('cthulhuUiIconTextButtonIcon h-4 w-4', endIconClass)} />
     {/if}
   </a>
 {:else}
@@ -107,6 +109,8 @@
     use:resolvedButtonAction={buttonActionParameter}
     type="button"
     class={mergeClasses(baseButtonClass, variantClass, className)}
+    data-variant={variant}
+    data-state={state}
     data-active={state === 'active' ? 'true' : 'false'}
     data-testid={testId}
     aria-haspopup={ariaHaspopup}
@@ -114,10 +118,32 @@
     {onclick}
     disabled={isDisabled}
   >
-    <Icon class={mergeClasses('h-4 w-4', iconClass)} />
+    <Icon class={mergeClasses('cthulhuUiIconTextButtonIcon h-4 w-4', iconClass)} />
     <span>{text}</span>
     {#if EndIcon}
-      <EndIcon class={mergeClasses('h-4 w-4', endIconClass)} />
+      <EndIcon class={mergeClasses('cthulhuUiIconTextButtonIcon h-4 w-4', endIconClass)} />
     {/if}
   </button>
 {/if}
+
+<style>
+  .cthulhuUiIconTextButton {
+    --cthulhu-ui-icon-text-button-icon-color: currentColor;
+  }
+
+  .cthulhuUiIconTextButton[data-variant='neutral'],
+  .cthulhuUiIconTextButton[data-variant='nav'][data-state='enabled'],
+  .cthulhuUiIconTextButton[data-variant='nav'][data-state='disabled'] {
+    --cthulhu-ui-icon-text-button-icon-color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .cthulhuUiIconTextButton[data-variant='neutral']:hover,
+  .cthulhuUiIconTextButton[data-variant='nav'][data-state='enabled']:hover,
+  .cthulhuUiIconTextButton[data-variant='nav'][data-state='active'] {
+    --cthulhu-ui-icon-text-button-icon-color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButtonIcon {
+    color: var(--cthulhu-ui-icon-text-button-icon-color);
+  }
+</style>
