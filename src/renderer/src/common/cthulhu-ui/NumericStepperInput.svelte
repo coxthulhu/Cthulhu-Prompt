@@ -89,7 +89,7 @@
   <label class="cthulhuUiNumericStepperInputValue">
     <input
       bind:this={ref}
-      class="cthulhuUiNumericStepperInputNative"
+      class="cthulhuUiNumericStepperInputNative font-semibold"
       type="text"
       inputmode="numeric"
       pattern="[0-9]*"
@@ -203,7 +203,6 @@
     border: 0;
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 650;
     height: 100%;
     line-height: 1.25;
     min-width: 2ch;

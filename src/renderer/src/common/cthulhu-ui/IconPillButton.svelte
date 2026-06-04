@@ -25,7 +25,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiIconPillButton', className)}
+  class={mergeClasses('cthulhuUiIconPillButton font-bold', className)}
   data-testid={testId}
   {disabled}
   {onclick}
@@ -45,7 +45,6 @@
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 12px;
-    font-weight: 750;
     gap: 7px;
     height: 30px;
     line-height: 16px;

@@ -35,7 +35,7 @@
   {/if}
 
   <div class="flex min-w-0 flex-col gap-1">
-    <div class="cthulhuUiIconPillSurfaceLabel">{label}</div>
+    <div class="cthulhuUiIconPillSurfaceLabel font-bold">{label}</div>
     {@render children()}
   </div>
 </CardSurface>
@@ -44,7 +44,6 @@
   .cthulhuUiIconPillSurfaceLabel {
     color: var(--ui-muted-text);
     font-size: 12px;
-    font-weight: 750;
     letter-spacing: 0;
     line-height: 16px;
     text-transform: uppercase;

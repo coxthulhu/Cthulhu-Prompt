@@ -70,7 +70,7 @@
 
   <span class="flex min-w-0 flex-col gap-[3px]">
     <span
-      class="cthulhuUiIconDescriptionButtonText text-[15px] leading-5 font-[760] text-[var(--ui-normal-text)]"
+      class="cthulhuUiIconDescriptionButtonText text-[15px] leading-5 font-bold text-[var(--ui-normal-text)]"
       >{text}</span
     >
     <span

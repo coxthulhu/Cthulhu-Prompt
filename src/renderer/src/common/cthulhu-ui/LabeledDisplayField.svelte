@@ -24,7 +24,7 @@
 
 <IconPillSurface {label} icon={Icon} class={className} {...restProps}>
   <div
-    class="cthulhuUiLabeledDisplayFieldValue min-w-0 truncate"
+    class="cthulhuUiLabeledDisplayFieldValue min-w-0 truncate font-semibold"
     data-testid={valueTestId}
     title={valueTitle}
   >
@@ -36,7 +36,6 @@
   .cthulhuUiLabeledDisplayFieldValue {
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 650;
     line-height: 20px;
   }
 

@@ -40,7 +40,7 @@
     {#if Icon}
       <AccentIconTile icon={Icon} size="small" variant={iconVariant} iconClass="stroke-[2.4]" />
     {/if}
-    <svelte:element this={headingTag} class="cthulhuUiSectionHeaderTitle">
+    <svelte:element this={headingTag} class="cthulhuUiSectionHeaderTitle font-bold">
       {title}
     </svelte:element>
   </div>
@@ -72,7 +72,6 @@
   .cthulhuUiSectionHeaderTitle {
     color: var(--ui-normal-text);
     font-size: 24px;
-    font-weight: 760;
     line-height: 32px;
     margin: 0;
     min-width: 0;

@@ -136,7 +136,7 @@
         <p class="prompt-editor-title-text">{title}</p>
       {/if}
 
-      <div class="prompt-editor-metadata-row">
+      <div class="prompt-editor-metadata-row font-bold">
         <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
           <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0 stroke-[2.4]" />
           {metadataFolderLabel}
@@ -215,7 +215,6 @@
     display: flex;
     flex-wrap: nowrap;
     font-size: 11px;
-    font-weight: 750;
     gap: 7px;
     line-height: 16px;
     min-width: 0;

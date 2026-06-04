@@ -12,7 +12,7 @@
 </script>
 
 <IconPillSurface {label} icon={Icon} gapClass="gap-3">
-  <div class="cthulhuUiNumericStatCardText">{text}</div>
+  <div class="cthulhuUiNumericStatCardText font-bold">{text}</div>
 </IconPillSurface>
 
 <style>
@@ -20,7 +20,6 @@
     color: var(--ui-normal-text);
     font-size: 28px;
     font-variant-numeric: tabular-nums;
-    font-weight: 780;
     line-height: 32px;
   }
 </style>

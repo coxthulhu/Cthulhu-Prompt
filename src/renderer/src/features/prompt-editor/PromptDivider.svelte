@@ -40,7 +40,7 @@
       />
       <button
         type="button"
-        class="promptDividerPillButton"
+        class="promptDividerPillButton font-bold"
         data-drop-over={isOver ? 'true' : 'false'}
         data-testid={testId}
         aria-label={dividerText}
@@ -87,7 +87,6 @@
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 12px;
-    font-weight: 750;
     gap: 7px;
     height: 30px;
     justify-content: center;
