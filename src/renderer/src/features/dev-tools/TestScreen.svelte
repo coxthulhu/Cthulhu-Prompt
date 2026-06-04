@@ -33,9 +33,10 @@
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
-  import DropdownPopup, {
+  import DropdownPopupSimple, {
     type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
+  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
@@ -55,6 +56,7 @@
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
+  import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
   import StatusBadge, {
     type StatusBadgeVariant
   } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
@@ -113,6 +115,32 @@
     { id: 'rename', label: 'Rename', icon: Pencil },
     { id: 'delete', label: 'Delete prompt', icon: Trash2, variant: 'danger' }
   ]
+  const detailedDropdownItems: DropdownPopupDetailedItem[] = [
+    {
+      id: 'engineering',
+      label: 'Engineering Workflows',
+      detail: '18 prompts - Updated 12m ago',
+      icon: Folder
+    },
+    {
+      id: 'release',
+      label: 'Release Notes',
+      detail: '9 prompts - Updated 1h ago',
+      icon: FileText
+    },
+    {
+      id: 'review',
+      label: 'Code Review',
+      detail: '14 prompts - Updated yesterday',
+      icon: ClipboardList
+    }
+  ]
+  const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
+    id: 'add-folder',
+    label: 'Add Prompt Folder',
+    detail: 'Create a new prompt folder',
+    icon: Plus
+  }
   const titleBlockIconVariants: AccentIconTileVariant[] = [
     'neutral',
     'accent',
@@ -138,6 +166,7 @@
   let dangerDialogOpen = $state(false)
   let errorDialogOpen = $state(false)
   let lastDropdownAction = $state('No dropdown item selected')
+  let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
 </script>
 
 <div class="test-screen-shell" data-testid="test-screen">
@@ -275,14 +304,14 @@
 
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
-          title="DropdownPopup"
+          title="DropdownPopupSimple"
           description="Solid icon menu popup."
           size="small"
         />
 
         <div class="stack">
           <div class="variant-controls">
-            <DropdownPopup
+            <DropdownPopupSimple
               label="Folder options"
               items={folderDropdownItems}
               testId="folder-dropdown-menu"
@@ -301,8 +330,8 @@
                   onclick={dropdown.toggle}
                 />
               {/snippet}
-            </DropdownPopup>
-            <DropdownPopup
+            </DropdownPopupSimple>
+            <DropdownPopupSimple
               label="Prompt actions"
               items={promptDropdownItems}
               testId="prompt-dropdown-menu"
@@ -320,10 +349,35 @@
                   onclick={dropdown.toggle}
                 />
               {/snippet}
-            </DropdownPopup>
+            </DropdownPopupSimple>
           </div>
 
           <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
+        </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock
+          title="DropdownPopupDetailed"
+          description="SelectorButton rows with a fixed footer action."
+          size="small"
+        />
+
+        <div class="stack">
+          <SelectorButtonWithDropdown
+            label="Prompt folder selector"
+            items={detailedDropdownItems}
+            selectedItem={selectedDetailedDropdownItem}
+            footerItem={detailedDropdownFooterItem}
+            testId="detailed-dropdown-menu"
+            triggerTestId="detailed-dropdown-trigger"
+            onselect={(item) => {
+              selectedDetailedDropdownItem = item
+              lastDropdownAction = item.label
+            }}
+          />
+
+          <InfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
         </div>
       </CardSurface>
 

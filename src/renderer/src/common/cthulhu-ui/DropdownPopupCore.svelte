@@ -1,17 +1,9 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import CardSurface from './CardSurface.svelte'
 
-  export type DropdownPopupItemVariant = 'neutral' | 'accent' | 'danger'
-
-  export type DropdownPopupItem = {
-    id: string
-    label: string
-    icon: ComponentType
-    testId?: string
-    variant?: DropdownPopupItemVariant
-  }
+  export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
 
   type MenuPosition = {
     left: number
@@ -33,27 +25,36 @@
     ariaExpanded: boolean
   }
 
+  export type DropdownPopupContentContext = {
+    close: () => void
+  }
+
   type Props = {
     label: string
-    items: DropdownPopupItem[]
     trigger: Snippet<[DropdownPopupTriggerContext]>
+    children: Snippet<[DropdownPopupContentContext]>
     menuWidth?: string
+    menuClass?: string
     testId?: string
-    onselect?: (item: DropdownPopupItem, event: MouseEvent) => void
+    placement?: DropdownPopupPlacement
+    matchTriggerWidth?: boolean
   }
 
   let {
     label,
-    items,
     trigger,
+    children,
     menuWidth = '236px',
+    menuClass,
     testId,
-    onselect
+    placement = 'cursor',
+    matchTriggerWidth = false
   }: Props = $props()
 
   const fallbackMenuWidth = 236
   const fallbackMenuHeight = 336
   const firstItemCenterOffset = 25
+  const belowTriggerGap = 4
   const bottomGap = 8
   const viewportMargin = 16
   const scrollKeys = new Set([
@@ -73,6 +74,7 @@
   let menuAnchor = $state<MenuAnchor | null>(null)
   let open = $state(false)
   let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
+  let triggerWidth = $state(fallbackMenuWidth)
 
   const getMenuPosition = (
     anchor: MenuAnchor,
@@ -86,13 +88,26 @@
       ),
       top: Math.max(
         viewportMargin,
-        Math.min(anchor.y - firstItemCenterOffset, window.innerHeight - menuHeight - bottomGap)
+        Math.min(
+          placement === 'below-trigger' ? anchor.y : anchor.y - firstItemCenterOffset,
+          window.innerHeight - menuHeight - bottomGap
+        )
       )
     }
   }
 
-  const getMenuAnchor = (element: HTMLElement): MenuAnchor => {
+  const getTriggerAnchor = (element: HTMLElement): MenuAnchor => {
     const triggerRect = element.getBoundingClientRect()
+
+    triggerWidth = triggerRect.width
+
+    if (placement === 'below-trigger') {
+      return {
+        x: triggerRect.left,
+        y: triggerRect.bottom + belowTriggerGap
+      }
+    }
+
     return {
       x: triggerRect.right,
       y: triggerRect.top + triggerRect.height / 2
@@ -100,11 +115,16 @@
   }
 
   const getOpenMenuAnchor = (event?: MouseEvent): MenuAnchor | null => {
-    if (event && event.detail !== 0) {
+    if (placement === 'cursor' && event && event.detail !== 0) {
       return { x: event.clientX, y: event.clientY }
     }
 
-    return anchorElement ? getMenuAnchor(anchorElement) : null
+    return anchorElement ? getTriggerAnchor(anchorElement) : null
+  }
+
+  const closeMenu = () => {
+    open = false
+    menuAnchor = null
   }
 
   const triggerAction: DropdownPopupTriggerAction = (node) => {
@@ -118,31 +138,6 @@
         }
       }
     }
-  }
-
-  const menuPosition = $derived(
-    menuAnchor
-      ? getMenuPosition(menuAnchor, measuredMenuSize.width, measuredMenuSize.height)
-      : { left: 0, top: 0 }
-  )
-  const menuLayerStyle = $derived(
-    `--cthulhu-ui-dropdown-popup-menu-width: ${menuWidth}; left: ${menuPosition.left}px; top: ${menuPosition.top}px;`
-  )
-
-  const portalToBody: Action<HTMLDivElement> = (node) => {
-    // Move fixed popups out of component containers so they are not clipped by local overflow.
-    document.body.appendChild(node)
-
-    return {
-      destroy() {
-        node.remove()
-      }
-    }
-  }
-
-  const closeMenu = () => {
-    open = false
-    menuAnchor = null
   }
 
   const toggleMenu = (event?: MouseEvent) => {
@@ -162,6 +157,16 @@
     open = true
   }
 
+  const resolvedMenuWidth = $derived(matchTriggerWidth ? `${triggerWidth}px` : menuWidth)
+  const menuPosition = $derived(
+    menuAnchor
+      ? getMenuPosition(menuAnchor, measuredMenuSize.width, measuredMenuSize.height)
+      : { left: 0, top: 0 }
+  )
+  const menuLayerStyle = $derived(
+    `--cthulhu-ui-dropdown-popup-menu-width: ${resolvedMenuWidth}; left: ${menuPosition.left}px; top: ${menuPosition.top}px;`
+  )
+
   const triggerContext = $derived({
     triggerAction,
     open,
@@ -169,10 +174,17 @@
     ariaHaspopup: 'menu' as const,
     ariaExpanded: open
   })
+  const contentContext = $derived({ close: closeMenu })
 
-  const selectItem = (item: DropdownPopupItem, event: MouseEvent) => {
-    closeMenu()
-    onselect?.(item, event)
+  const portalToBody: Action<HTMLDivElement> = (node) => {
+    // Move fixed popups out of component containers so they are not clipped by local overflow.
+    document.body.appendChild(node)
+
+    return {
+      destroy() {
+        node.remove()
+      }
+    }
   }
 
   // Side effect: dismiss the open popup from document-level outside clicks and Escape.
@@ -247,27 +259,12 @@
   >
     <CardSurface
       variant="overlay"
-      class="cthulhuUiDropdownPopupMenu p-[6px]"
+      class={menuClass}
       role="menu"
       aria-label={label}
       data-testid={testId}
     >
-      <div class="cthulhuUiDropdownPopupItems">
-        {#each items as item (item.id)}
-          {@const ItemIcon = item.icon}
-          <button
-            type="button"
-            class="cthulhuUiDropdownPopupItem"
-            role="menuitem"
-            data-variant={item.variant ?? 'neutral'}
-            data-testid={item.testId}
-            onclick={(event) => selectItem(item, event)}
-          >
-            <ItemIcon size={16} aria-hidden="true" />
-            <span class="cthulhuUiDropdownPopupItemLabel">{item.label}</span>
-          </button>
-        {/each}
-      </div>
+      {@render children(contentContext)}
     </CardSurface>
   </div>
 {/if}
@@ -281,73 +278,5 @@
     position: fixed;
     width: var(--cthulhu-ui-dropdown-popup-menu-width);
     z-index: 30;
-  }
-
-  .cthulhuUiDropdownPopupItems {
-    display: grid;
-  }
-
-  .cthulhuUiDropdownPopupItem {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
-
-    align-items: center;
-    background: transparent;
-    border: 0;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: 18px minmax(0, 1fr);
-    min-height: 34px;
-    padding: 4px 8px;
-    text-align: left;
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
-    width: 100%;
-  }
-
-  .cthulhuUiDropdownPopupItem[data-variant='accent'] {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-accent-normal-text);
-
-    color: var(--ui-accent-normal-text);
-  }
-
-  .cthulhuUiDropdownPopupItem[data-variant='danger'] {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
-
-    color: var(--ui-danger-icon-glyph);
-  }
-
-  .cthulhuUiDropdownPopupItem:hover {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-normal-text);
-
-    background: var(--ui-neutral-hover-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiDropdownPopupItem[data-variant='accent']:hover {
-    background: var(--ui-accent-hover-surface);
-  }
-
-  .cthulhuUiDropdownPopupItem[data-variant='danger']:hover {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
-
-    background: var(--ui-danger-hover-surface);
-    color: var(--ui-danger-icon-glyph);
-  }
-
-  .cthulhuUiDropdownPopupItem > :global(svg) {
-    color: var(--cthulhu-ui-dropdown-popup-item-icon-color);
-  }
-
-  .cthulhuUiDropdownPopupItemLabel {
-    font-size: 13px;
-    line-height: 1.25;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 </style>

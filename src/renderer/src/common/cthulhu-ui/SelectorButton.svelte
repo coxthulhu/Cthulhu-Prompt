@@ -1,46 +1,73 @@
 <script lang="ts">
-  import { ChevronRight } from 'lucide-svelte'
   import type { ComponentType } from 'svelte'
+  import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
+  import RotatingChevron from './RotatingChevron.svelte'
 
   type SelectorButtonSize = 'compact' | 'large'
+  type SelectorButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
     icon: ComponentType
     text: string
     detail?: string
     open?: boolean
+    selected?: boolean
     showChevron?: boolean
     size?: SelectorButtonSize
     class?: string
     iconClass?: string
     testId?: string
+    role?: string
+    ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
+    ariaExpanded?: boolean
+    ariaSelected?: boolean
+    buttonAction?: SelectorButtonAction | null
+    buttonActionParameter?: unknown
+    onclick?: (event: MouseEvent) => void
   }
+
+  const noopButtonAction: SelectorButtonAction = () => undefined
 
   let {
     icon: Icon,
     text,
     detail,
     open = false,
+    selected = false,
     showChevron = true,
     size = 'compact',
     class: className,
     iconClass,
-    testId
+    testId,
+    role,
+    ariaHaspopup,
+    ariaExpanded,
+    ariaSelected,
+    buttonAction = null,
+    buttonActionParameter,
+    onclick
   }: Props = $props()
 
   const iconSize = $derived(size === 'large' ? 24 : 20)
   const chevronSize = $derived(size === 'large' ? 24 : 20)
+  const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
 
 <button
+  use:resolvedButtonAction={buttonActionParameter}
   type="button"
   class={mergeClasses('cthulhuUiSelectorButton', className)}
   data-size={size}
   data-open={open ? 'true' : 'false'}
+  data-selected={selected ? 'true' : 'false'}
   data-chevron={showChevron ? 'true' : 'false'}
   data-testid={testId}
-  aria-expanded={showChevron ? open : undefined}
+  {role}
+  aria-haspopup={ariaHaspopup}
+  aria-expanded={ariaExpanded ?? (showChevron ? open : undefined)}
+  aria-selected={ariaSelected}
+  {onclick}
 >
   <!-- Compact dropdown trigger matching the sidebar selector layout. -->
   <span class="cthulhuUiSelectorButtonIconCell">
@@ -59,16 +86,12 @@
   </span>
 
   {#if showChevron}
-    <span
+    <RotatingChevron
+      expanded={open}
+      size={22}
+      iconSize={chevronSize}
       class="cthulhuUiSelectorButtonChevronWrap"
-      data-expanded={open ? 'true' : 'false'}
-    >
-      <ChevronRight
-        class="cthulhuUiSelectorButtonChevronIcon"
-        size={chevronSize}
-        aria-hidden="true"
-      />
-    </span>
+    />
   {/if}
 </button>
 
@@ -97,7 +120,8 @@
   }
 
   .cthulhuUiSelectorButton:hover,
-  .cthulhuUiSelectorButton[data-open='true'] {
+  .cthulhuUiSelectorButton[data-open='true'],
+  .cthulhuUiSelectorButton[data-selected='true'] {
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
@@ -114,7 +138,8 @@
   }
 
   .cthulhuUiSelectorButton:hover .cthulhuUiSelectorButtonIconCell,
-  .cthulhuUiSelectorButton[data-open='true'] .cthulhuUiSelectorButtonIconCell {
+  .cthulhuUiSelectorButton[data-open='true'] .cthulhuUiSelectorButtonIconCell,
+  .cthulhuUiSelectorButton[data-selected='true'] .cthulhuUiSelectorButtonIconCell {
     color: var(--ui-normal-text);
   }
 
@@ -153,24 +178,14 @@
     font-size: 13px;
   }
 
-  .cthulhuUiSelectorButtonChevronWrap {
-    align-items: center;
+  .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonChevronWrap) {
     color: var(--ui-hoverable-icon-glyph);
-    display: flex;
-    height: 22px;
-    justify-content: center;
-    transform: rotate(0deg);
-    transform-origin: center;
-    transition: transform 50ms ease-out;
-    width: 22px;
   }
 
-  .cthulhuUiSelectorButton:hover .cthulhuUiSelectorButtonChevronWrap,
-  .cthulhuUiSelectorButton[data-open='true'] .cthulhuUiSelectorButtonChevronWrap {
+  .cthulhuUiSelectorButton:hover :global(.cthulhuUiSelectorButtonChevronWrap),
+  .cthulhuUiSelectorButton[data-open='true'] :global(.cthulhuUiSelectorButtonChevronWrap),
+  .cthulhuUiSelectorButton[data-selected='true'] :global(.cthulhuUiSelectorButtonChevronWrap) {
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiSelectorButtonChevronWrap[data-expanded='true'] {
-    transform: rotate(90deg);
-  }
 </style>

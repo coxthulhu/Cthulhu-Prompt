@@ -1,7 +1,6 @@
 <script lang="ts">
   import {
     ArrowRight,
-    ChevronRight,
     ChevronsDown,
     ChevronsUp,
     MoreHorizontal,
@@ -10,9 +9,10 @@
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import DropdownPopup, {
+  import DropdownPopupSimple, {
     type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
+  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
+  import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import {
     folderOpenTestId,
@@ -144,12 +144,12 @@
           data-testid={folderToggleTestId(folder)}
           class="sidebarPromptTreeToggleButton"
         >
-          <span
+          <RotatingChevron
+            expanded={isExpanded}
+            size={20}
+            iconSize={16}
             class="sidebarPromptTreeChevronWrap"
-            data-expanded={isExpanded ? 'true' : 'false'}
-          >
-            <ChevronRight class="sidebarPromptTreeChevronIcon" />
-          </span>
+          />
           <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
         </button>
 
@@ -159,7 +159,7 @@
             {folder.promptIds.length}
           </span>
           <div class="sidebarPromptTreeFolderActions">
-            <DropdownPopup
+            <DropdownPopupSimple
               label={`Folder options for ${folder.displayName}`}
               items={dropdownItems}
               menuWidth="196px"
@@ -182,7 +182,7 @@
                   class="sidebarPromptTreeActionButton"
                 />
               {/snippet}
-            </DropdownPopup>
+            </DropdownPopupSimple>
             <IconOnlyButton
               icon={ArrowRight}
               label={`Open ${folder.displayName}`}
