@@ -7,7 +7,6 @@
     ChevronsDownUp,
     FileText,
     Folder,
-    FolderPlus,
     Home,
     MoreHorizontal,
     PanelsTopLeft,
@@ -333,6 +332,24 @@
     ].join('; ')
   }
 
+  const addFolderButtonStyle = (isHovered: boolean) =>
+    [
+      'width: 100%',
+      'display: flex',
+      'align-items: center',
+      'gap: 8px',
+      'border: 0',
+      'border-radius: 7px',
+      'padding: 8px 9px',
+      'cursor: pointer',
+      `background: ${isHovered ? 'var(--ui-accent-hover-surface)' : 'transparent'}`,
+      `color: ${isHovered ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}`,
+      'font-size: 12px',
+      'font-weight: 650',
+      'text-align: left',
+      'transition: background-color 80ms ease-out, color 80ms ease-out'
+    ].join('; ')
+
   const selectFolder = (folderId: string) => {
     selectedFolderId = folderId
     selectedPrompt = treeByFolderId[folderId]?.rootPrompts[0] ?? ''
@@ -460,52 +477,62 @@
 
         {#if isFolderSelectorOpen}
           <div
-            style="position: absolute; z-index: 4; top: calc(100% + 8px); left: 0; right: 0; border: 1px solid var(--ui-card-normal-border); border-radius: 8px; background: var(--ui-card-overlay-surface); box-shadow: 0 18px 44px var(--ui-card-normal-shadow), inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight); padding: 6px; display: flex; flex-direction: column; gap: 2px;"
+            style="position: absolute; z-index: 4; top: calc(100% + 8px); left: 0; right: 0; max-height: 392px; border: 1px solid var(--ui-card-normal-border); border-radius: 8px; background: var(--ui-card-overlay-surface); box-shadow: 0 18px 44px var(--ui-card-normal-shadow), inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight); padding: 6px; display: flex; flex-direction: column; overflow: hidden;"
           >
-            {#each folderOptions as folder (folder.id)}
-              <button
-                type="button"
-                style={folderOptionStyle(folder.id)}
-                onmouseenter={() => {
-                  hoveredFolderId = folder.id
-                }}
-                onmouseleave={() => {
-                  hoveredFolderId = null
-                }}
-                onclick={() => {
-                  selectFolder(folder.id)
-                }}
-              >
-                <span style={selectorIconStyle(selectedFolderId === folder.id || hoveredFolderId === folder.id)}>
-                  <Folder size={18} strokeWidth={2.1} />
-                </span>
-                <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                  <span
-                    style={`display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${selectedFolderId === folder.id || hoveredFolderId === folder.id ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}; font-size: 14px; font-weight: 620;`}
-                  >
-                    {folder.name}
+            <div style="min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;">
+              {#each folderOptions as folder (folder.id)}
+                <button
+                  type="button"
+                  style={folderOptionStyle(folder.id)}
+                  onmouseenter={() => {
+                    hoveredFolderId = folder.id
+                  }}
+                  onmouseleave={() => {
+                    hoveredFolderId = null
+                  }}
+                  onclick={() => {
+                    selectFolder(folder.id)
+                  }}
+                >
+                  <span style={selectorIconStyle(selectedFolderId === folder.id || hoveredFolderId === folder.id)}>
+                    <Folder size={18} strokeWidth={2.1} />
                   </span>
-                  <span
-                    style="display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-muted-text); font-size: 11.5px;"
-                  >
-                    {folder.promptCount} prompts · {folder.updated}
+                  <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                    <span
+                      style={`display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${selectedFolderId === folder.id || hoveredFolderId === folder.id ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}; font-size: 14px; font-weight: 620;`}
+                    >
+                      {folder.name}
+                    </span>
+                    <span
+                      style="display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-muted-text); font-size: 11.5px;"
+                    >
+                      {folder.promptCount} prompts · {folder.updated}
+                    </span>
                   </span>
-                </span>
-              </button>
-            {/each}
+                </button>
+              {/each}
+            </div>
+
+            <div style="height: 1px; flex-shrink: 0; margin: 5px 2px; background: var(--ui-neutral-muted-border);"></div>
 
             <button
               type="button"
-              style={`margin-top: 5px; height: 34px; width: 100%; border: 1px solid ${hoveredNewFolder ? 'var(--ui-accent-hover-border)' : 'var(--ui-accent-normal-border)'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: ${hoveredNewFolder ? 'var(--ui-accent-hover-surface)' : 'var(--ui-accent-normal-surface)'}; color: var(--ui-accent-normal-text); cursor: pointer; font-size: 13px; font-weight: 650; transition: background 70ms ease-out, border-color 70ms ease-out;`}
+              style={addFolderButtonStyle(hoveredNewFolder)}
               onmouseenter={() => {
                 hoveredNewFolder = true
               }}
               onmouseleave={() => {
                 hoveredNewFolder = false
               }}
+              onfocus={() => {
+                hoveredNewFolder = true
+              }}
+              onblur={() => {
+                hoveredNewFolder = false
+              }}
             >
-              <FolderPlus size={16} strokeWidth={2.2} />
-              New Prompt Folder
+              <Plus size={15} strokeWidth={2} />
+              <span>Add Prompt Folder</span>
             </button>
           </div>
         {/if}
