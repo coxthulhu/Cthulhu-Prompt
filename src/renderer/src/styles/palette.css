@@ -56,6 +56,9 @@
   --ui-neutral-interactive-emphasis-border: oklch(1 0 0 / 50%);
 
   /* Accent */
+  /* Stronger flat accent surface used when no border is present. */
+  --ui-accent-subtle-surface: oklch(0.606 0.219 292.717 / 25.2%);
+  --ui-accent-subtle-hover-surface: oklch(0.606 0.219 292.717 / 36%);
   --ui-accent-normal-surface: oklch(0.606 0.219 292.717 / 17%);
   --ui-accent-normal-fill: oklch(0.827 0.108 306.383 / 24%);
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
