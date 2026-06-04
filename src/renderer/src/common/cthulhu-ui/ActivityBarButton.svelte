@@ -61,14 +61,11 @@
     border-radius: 0;
     background: transparent;
     color: var(--ui-muted-icon-glyph);
-    transition:
-      background-color 120ms ease-out,
-      color 120ms ease-out;
+    transition: color 120ms ease-out;
   }
 
   .cthulhuUiActivityBarButton:hover {
-    background-color: var(--ui-neutral-muted-surface);
-    color: var(--ui-secondary-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiActivityBarButton[data-active='true'] {
@@ -77,10 +74,10 @@
 
   .cthulhuUiActivityBarButton[data-active='true']::before {
     position: absolute;
-    top: 8px;
-    bottom: 8px;
+    top: 5px;
+    bottom: 5px;
     left: 0;
-    width: 3px;
+    width: 2px;
     border-radius: 0 2px 2px 0;
     background-color: var(--ui-accent-strong-border);
     content: '';
