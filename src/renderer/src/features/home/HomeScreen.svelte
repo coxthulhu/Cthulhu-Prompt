@@ -8,7 +8,6 @@
     FolderPlus,
     FolderSymlink,
     Folders,
-    SlidersHorizontal,
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
@@ -16,7 +15,6 @@
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
-  import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
@@ -154,9 +152,6 @@
   })
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
-  const workspaceActionsDescription = $derived(
-    currentWorkspaceDetails ? 'Change your current workspace.' : 'Create or open a workspace.'
-  )
   const homeCardClass = 'w-full max-w-[632px] min-w-0 xl:max-w-none'
   const secondaryTitleFontSizePx = $derived.by(() => {
     if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
@@ -312,62 +307,10 @@
           </CardSurface>
         {/if}
 
-        <CardSurface class={homeCardClass}>
-          <div class="space-y-4">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <TitleBlock
-                  title="Workspace Actions"
-                  size="large"
-                  description={workspaceActionsDescription}
-                  icon={SlidersHorizontal}
-                />
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-3">
-              <IconDescriptionButton
-                testId="open-workspace-button"
-                icon={FolderOpen}
-                iconClass="translate-y-px"
-                text={getSelectButtonLabel()}
-                description="Open an existing workspace folder."
-                variant="neutral"
-                onclick={handleSelectFolder}
-                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              />
-
-              <IconDescriptionButton
-                testId="create-workspace-button"
-                icon={FolderPlus}
-                iconClass="translate-y-px"
-                text={getCreateButtonLabel()}
-                description="Choose a folder to set up a new workspace."
-                variant="accent"
-                onclick={handleCreateFolder}
-                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              />
-
-              {#if isWorkspaceReady}
-                <IconDescriptionButton
-                  testId="close-workspace-button"
-                  icon={X}
-                  iconClass="translate-y-px"
-                  text="Close Workspace"
-                  description="Unload the current workspace folder."
-                  variant="danger"
-                  onclick={onWorkspaceClear}
-                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                />
-              {/if}
-            </div>
-          </div>
-        </CardSurface>
-
         <FlatCard label="Workspace Actions" class={homeCardClass}>
           <div class="flex flex-col">
             <FlatSelectorButton
-              testId="open-workspace-flat-button"
+              testId="open-workspace-button"
               icon={FolderOpen}
               iconClass="translate-y-px"
               text={getSelectButtonLabel()}
@@ -380,7 +323,7 @@
             <FlatSeparator />
 
             <FlatSelectorButton
-              testId="create-workspace-flat-button"
+              testId="create-workspace-button"
               icon={FolderPlus}
               iconClass="translate-y-px"
               text={getCreateButtonLabel()}
@@ -394,7 +337,7 @@
               <FlatSeparator />
 
               <FlatSelectorButton
-                testId="close-workspace-flat-button"
+                testId="close-workspace-button"
                 icon={X}
                 iconClass="translate-y-px"
                 text="Close Workspace"
