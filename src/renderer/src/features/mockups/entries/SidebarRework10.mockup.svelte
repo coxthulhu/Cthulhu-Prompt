@@ -260,17 +260,24 @@
       'padding: 8px',
       'text-align: left',
       'cursor: pointer',
-      'transition: background 70ms ease-out, box-shadow 70ms ease-out',
-      `background: ${
-        isSelected
-          ? 'var(--ui-neutral-emphasis-surface)'
-          : isHovered
-            ? 'var(--ui-neutral-normal-surface)'
-            : 'transparent'
-      }`,
-      `box-shadow: ${isSelected ? 'inset 0 0 0 1px var(--ui-neutral-hover-border)' : 'none'}`
+      `color: ${isSelected || isHovered ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}`,
+      'transition: background-color 120ms ease, color 120ms ease',
+      `background: ${isSelected || isHovered ? 'var(--ui-neutral-hover-surface)' : 'transparent'}`
     ].join('; ')
   }
+
+  const selectorIconStyle = (active: boolean) =>
+    [
+      'height: 34px',
+      'width: 34px',
+      'border-radius: 8px',
+      'display: flex',
+      'align-items: center',
+      'justify-content: center',
+      'background: transparent',
+      `color: ${active ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-icon-glyph)'}`,
+      'transition: color 120ms ease'
+    ].join('; ')
 
   const treeFolderRowStyle = (folder: TreeFolder) => {
     const isHovered = hoveredTreeFolderId === folder.id
@@ -418,7 +425,7 @@
           type="button"
           aria-label="Select Prompt Folder"
           aria-expanded={isFolderSelectorOpen}
-          style={`width: 100%; min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) 22px; align-items: center; gap: 9px; border: 1px solid ${hoveredSelector || isFolderSelectorOpen ? 'var(--ui-neutral-interactive-hover-border)' : 'var(--ui-neutral-muted-border)'}; border-radius: 8px; background: ${hoveredSelector || isFolderSelectorOpen ? 'var(--ui-neutral-hover-surface)' : 'transparent'}; color: var(--ui-normal-text); padding: 8px 8px; cursor: pointer; text-align: left; box-shadow: ${isFolderSelectorOpen ? '0 12px 28px var(--ui-card-normal-shadow), inset 0 1px 0 var(--ui-card-nested-raised-inset-highlight)' : 'inset 0 1px 0 var(--ui-card-nested-inset-highlight)'}; transition: background 70ms ease-out, border-color 70ms ease-out, box-shadow 70ms ease-out;`}
+          style={`width: 100%; min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) 22px; align-items: center; gap: 9px; border: 0; border-radius: 8px; background: ${hoveredSelector || isFolderSelectorOpen ? 'var(--ui-neutral-hover-surface)' : 'transparent'}; color: ${hoveredSelector || isFolderSelectorOpen ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}; padding: 8px 8px; cursor: pointer; text-align: left; transition: background-color 120ms ease, color 120ms ease;`}
           onmouseenter={() => {
             hoveredSelector = true
           }}
@@ -429,14 +436,12 @@
             isFolderSelectorOpen = !isFolderSelectorOpen
           }}
         >
-          <span
-            style="height: 34px; width: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph); box-shadow: inset 0 0 0 1px var(--ui-accent-normal-border);"
-          >
+          <span style={selectorIconStyle(hoveredSelector || isFolderSelectorOpen)}>
             <Folder size={18} strokeWidth={2.1} />
           </span>
           <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
             <span
-              style="display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-hoverable-text); font-size: 14px; font-weight: 620;"
+              style={`display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${hoveredSelector || isFolderSelectorOpen ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}; font-size: 14px; font-weight: 620;`}
             >
               {selectedFolder.name}
             </span>
@@ -449,7 +454,7 @@
           <ChevronDown
             size={18}
             strokeWidth={2.2}
-            style={`color: var(--ui-secondary-text); transform: rotate(${isFolderSelectorOpen ? '180deg' : '0deg'}); transition: transform 100ms ease-out;`}
+            style={`color: ${hoveredSelector || isFolderSelectorOpen ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-icon-glyph)'}; transform: rotate(${isFolderSelectorOpen ? '180deg' : '0deg'}); transition: color 120ms ease, transform 100ms ease-out;`}
           />
         </button>
 
@@ -471,14 +476,12 @@
                   selectFolder(folder.id)
                 }}
               >
-                <span
-                  style="height: 34px; width: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--ui-accent-normal-surface); color: var(--ui-accent-icon-glyph); box-shadow: inset 0 0 0 1px var(--ui-accent-normal-border);"
-                >
+                <span style={selectorIconStyle(selectedFolderId === folder.id || hoveredFolderId === folder.id)}>
                   <Folder size={18} strokeWidth={2.1} />
                 </span>
                 <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
                   <span
-                    style="display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-hoverable-text); font-size: 14px; font-weight: 620;"
+                    style={`display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${selectedFolderId === folder.id || hoveredFolderId === folder.id ? 'var(--ui-normal-text)' : 'var(--ui-hoverable-text)'}; font-size: 14px; font-weight: 620;`}
                   >
                     {folder.name}
                   </span>

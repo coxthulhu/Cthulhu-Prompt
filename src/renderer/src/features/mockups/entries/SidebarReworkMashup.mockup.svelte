@@ -7,7 +7,6 @@
     ChevronsDownUp,
     FileText,
     Folder,
-    FolderPlus,
     Home,
     MoreHorizontal,
     PanelsTopLeft,
@@ -25,7 +24,6 @@
   type PromptFolder = {
     id: string
     name: string
-    metadata: string
     updated: string
     promptCount: number
     folderCount: number
@@ -51,7 +49,6 @@
     {
       id: 'coding-workflow',
       name: 'Coding Workflow',
-      metadata: '18 prompts, 4 sections',
       updated: 'Updated today',
       promptCount: 18,
       folderCount: 4
@@ -59,7 +56,6 @@
     {
       id: 'review-and-debug',
       name: 'Review and Debug',
-      metadata: '12 prompts, 3 sections',
       updated: 'Updated yesterday',
       promptCount: 12,
       folderCount: 3
@@ -67,7 +63,6 @@
     {
       id: 'planning',
       name: 'Planning',
-      metadata: '9 prompts, 2 sections',
       updated: 'Updated Monday',
       promptCount: 9,
       folderCount: 2
@@ -75,7 +70,6 @@
     {
       id: 'release',
       name: 'Release Notes',
-      metadata: '7 prompts, 2 sections',
       updated: 'Updated May 29',
       promptCount: 7,
       folderCount: 2
@@ -83,7 +77,6 @@
     {
       id: 'agent-personas',
       name: 'Agent Personas',
-      metadata: '14 prompts, 5 sections',
       updated: 'Updated May 22',
       promptCount: 14,
       folderCount: 5
@@ -91,7 +84,6 @@
     {
       id: 'experiments',
       name: 'Experiments',
-      metadata: '6 prompts, 1 section',
       updated: 'Updated May 18',
       promptCount: 6,
       folderCount: 1
@@ -99,7 +91,6 @@
     {
       id: 'archive',
       name: 'Archive',
-      metadata: '31 prompts, 8 sections',
       updated: 'Updated Apr 30',
       promptCount: 31,
       folderCount: 8
@@ -107,7 +98,6 @@
     {
       id: 'docs-and-specs',
       name: 'Docs and Specs',
-      metadata: '10 prompts, 3 sections',
       updated: 'Updated Apr 18',
       promptCount: 10,
       folderCount: 3
@@ -115,7 +105,6 @@
     {
       id: 'shortcuts',
       name: 'Shortcuts',
-      metadata: '5 prompts, 1 section',
       updated: 'Updated Apr 12',
       promptCount: 5,
       folderCount: 1
@@ -123,7 +112,6 @@
     {
       id: 'local-models',
       name: 'Local Models',
-      metadata: '8 prompts, 2 sections',
       updated: 'Updated Mar 28',
       promptCount: 8,
       folderCount: 2
@@ -131,7 +119,6 @@
     {
       id: 'scratchpad',
       name: 'Scratchpad',
-      metadata: '3 prompts, 0 sections',
       updated: 'Updated Mar 10',
       promptCount: 3,
       folderCount: 0
@@ -257,19 +244,23 @@
       selected ? 'var(--ui-normal-text)' : 'var(--ui-secondary-text)'
     };background:${
       selected
-        ? 'var(--ui-accent-normal-surface)'
+        ? 'var(--ui-neutral-emphasis-surface)'
         : hovered
           ? 'var(--ui-neutral-normal-surface)'
           : 'transparent'
-    };border:1px solid ${selected ? 'var(--ui-accent-normal-border)' : 'transparent'};`
+    };border:1px solid transparent;`
   }
 
-  const newFolderDropdownRowStyle = () =>
-    `display:grid;width:100%;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:0;border-radius:7px;background:${
-      hoveredFolderId === 'new-folder' ? 'var(--ui-neutral-normal-surface)' : 'transparent'
-    };color:${
-      hoveredFolderId === 'new-folder' ? 'var(--ui-normal-text)' : 'var(--ui-secondary-text)'
-    };padding:8px 9px;text-align:left;cursor:pointer;transition:background-color 80ms ease-out,color 80ms ease-out;`
+  const folderDropdownSubtitle = (folder: PromptFolder) =>
+    `${folder.promptCount} prompts, ${folder.updated}`
+
+  const addFolderButtonStyle = (isHovered: boolean) =>
+    [
+      'width:100%;display:flex;align-items:center;gap:8px;border:0;border-radius:7px;padding:8px 9px;cursor:pointer;color:var(--ui-hoverable-text);font-size:12px;font-weight:650;text-align:left;transition:background-color 80ms ease-out,color 80ms ease-out;',
+      isHovered
+        ? 'background:var(--ui-accent-hover-surface);color:var(--ui-normal-text);'
+        : 'background:transparent;'
+    ].join('')
 
   const treeFolderRowStyle = (folderId: string) =>
     `display:flex;height:36px;width:100%;align-items:center;border-radius:8px;background:${
@@ -418,7 +409,7 @@
 
         {#if isFolderSelectorOpen}
           <div
-            style="position:absolute;z-index:5;top:calc(100% + 6px);left:0;right:0;display:flex;max-height:392px;flex-direction:column;overflow:hidden;border-radius:8px;border:1px solid var(--ui-neutral-hover-border);background:var(--ui-card-overlay-surface);padding:6px;"
+            style="position:absolute;z-index:5;top:calc(100% + 6px);left:0;right:0;display:flex;max-height:372px;flex-direction:column;overflow:hidden;border-radius:8px;border:1px solid var(--ui-neutral-hover-border);background:var(--ui-card-overlay-surface);box-shadow:0 16px 34px var(--ui-card-normal-shadow),inset 0 1px 0 var(--ui-card-nested-inset-highlight);padding:6px;"
           >
             <div
               role="listbox"
@@ -453,13 +444,8 @@
                     <span
                       style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ui-muted-text);font-size:11px;line-height:1.2;"
                     >
-                      {folder.metadata}
+                      {folderDropdownSubtitle(folder)}
                     </span>
-                  </span>
-                  <span
-                    style="flex-shrink:0;color:var(--ui-muted-text);font-size:11px;line-height:1.2;"
-                  >
-                    {folder.updated}
                   </span>
                 </button>
               {/each}
@@ -469,19 +455,22 @@
 
             <button
               type="button"
-              style={newFolderDropdownRowStyle()}
+              style={addFolderButtonStyle(hoveredFolderId === 'add-folder')}
               onmouseenter={() => {
-                hoveredFolderId = 'new-folder'
+                hoveredFolderId = 'add-folder'
               }}
               onmouseleave={() => {
                 hoveredFolderId = null
               }}
+              onfocus={() => {
+                hoveredFolderId = 'add-folder'
+              }}
+              onblur={() => {
+                hoveredFolderId = null
+              }}
             >
-              <span style="display:flex;min-width:0;align-items:center;gap:8px;">
-                <FolderPlus size={15} strokeWidth={2.3} />
-                <span style="font-size:13px;font-weight:700;">New Prompt Folder</span>
-              </span>
-              <Plus size={15} strokeWidth={2.3} />
+              <Plus size={15} strokeWidth={2} />
+              <span>Add Prompt Folder</span>
             </button>
           </div>
         {/if}
