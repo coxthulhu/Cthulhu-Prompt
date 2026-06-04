@@ -316,7 +316,6 @@
   .virtual-window-scroll-shadow {
     position: absolute;
     top: 0;
-    left: 3px;
     height: 3px;
     width: 100%;
     display: none;
