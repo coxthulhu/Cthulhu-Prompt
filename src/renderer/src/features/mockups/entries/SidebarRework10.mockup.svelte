@@ -5,6 +5,7 @@
     ChevronDown,
     ChevronRight,
     ChevronsDownUp,
+    ExternalLink,
     FileText,
     Folder,
     Home,
@@ -13,6 +14,7 @@
     Plus,
     Settings
   } from 'lucide-svelte'
+  import appIcon from '@renderer/assets/cutethulhu.png'
 
   type ActivityItem = {
     id: string
@@ -177,6 +179,11 @@
         }
       ]
     }
+  }
+
+  const workspaceDisplay = {
+    title: 'CthulhuPromptPublic',
+    path: 'C:\\Source\\PromptApps\\CthulhuPromptPublic'
   }
 
   let activeActivityId = $state('prompts')
@@ -397,47 +404,51 @@
     aria-label="Prompt sidebar"
     style="position: relative; width: 310px; min-width: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, var(--ui-card-normal-surface-gradient-start) 0%, var(--ui-card-normal-surface-gradient-end) 100%); border-right: 1px solid var(--ui-neutral-hover-border);"
   >
-    <div style="padding: 13px 13px 10px 13px; border-bottom: 1px solid var(--ui-neutral-muted-border);">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-        <div style="min-width: 0;">
-          <p style="margin: 0; color: var(--ui-secondary-text); font-size: 13px; font-weight: 650;">
-            Prompt Folders
-          </p>
+    <div style="padding: 13px 13px 4px 13px;">
+      <div style="display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid var(--ui-neutral-muted-border); margin: 0 -13px; padding: 0 13px 12px 13px;">
+        <div style="display: flex; height: 40px; width: 40px; flex-shrink: 0; align-items: center; justify-content: center;">
+          <img
+            style="height: 32px; width: 32px; object-fit: contain;"
+            src={appIcon}
+            alt="Cthulhu Prompt icon"
+            draggable="false"
+            ondragstart={(event) => event.preventDefault()}
+          />
         </div>
 
-        <div style="display: flex; align-items: center; gap: 2px;">
-          <button
-            type="button"
-            title="Collapse All"
-            aria-label="Collapse All"
-            style={iconButtonStyle('collapse-all')}
-            onmouseenter={() => {
-              hoveredActionId = 'collapse-all'
-            }}
-            onmouseleave={() => {
-              hoveredActionId = null
-            }}
+        <div style="min-width: 0; flex: 1;">
+          <div style="display: flex; min-width: 0; align-items: center; gap: 4px;">
+            <h1
+              style="margin: 0; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-normal-text); font-size: 14px; font-weight: 650; line-height: 1.25;"
+            >
+              {workspaceDisplay.title}
+            </h1>
+            <button
+              type="button"
+              title="Open Workspace Folder"
+              aria-label="Open Workspace Folder"
+              style={iconButtonStyle('open-workspace')}
+              onmouseenter={() => {
+                hoveredActionId = 'open-workspace'
+              }}
+              onmouseleave={() => {
+                hoveredActionId = null
+              }}
+            >
+              <ExternalLink size={15} strokeWidth={2.1} />
+            </button>
+          </div>
+
+          <p
+            title={workspaceDisplay.path}
+            style="margin: 2px 0 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-muted-text); font-size: 12px; line-height: 1.3;"
           >
-            <ChevronsDownUp size={17} strokeWidth={2.2} />
-          </button>
-          <button
-            type="button"
-            title="New Prompt"
-            aria-label="New Prompt"
-            style={iconButtonStyle('new-prompt')}
-            onmouseenter={() => {
-              hoveredActionId = 'new-prompt'
-            }}
-            onmouseleave={() => {
-              hoveredActionId = null
-            }}
-          >
-            <Plus size={17} strokeWidth={2.2} />
-          </button>
+            {workspaceDisplay.path}
+          </p>
         </div>
       </div>
 
-      <div style="position: relative; margin: 9px -4px 0 -4px;">
+      <div style="position: relative; margin: 6px -4px 0 -4px;">
         <button
           type="button"
           aria-label="Select Prompt Folder"
@@ -537,9 +548,48 @@
           </div>
         {/if}
       </div>
+
+      <div style="height: 1px; margin: 6px -13px 0 -13px; background: var(--ui-neutral-muted-border);"></div>
     </div>
 
-    <div style="min-height: 0; flex: 1; overflow: hidden; padding: 8px 3px 12px 5px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 13px 6px 13px;">
+      <p style="margin: 0; color: var(--ui-secondary-text); font-size: 13px; font-weight: 600;">
+        Prompts
+      </p>
+
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <button
+          type="button"
+          title="Collapse All"
+          aria-label="Collapse All"
+          style={iconButtonStyle('collapse-all')}
+          onmouseenter={() => {
+            hoveredActionId = 'collapse-all'
+          }}
+          onmouseleave={() => {
+            hoveredActionId = null
+          }}
+        >
+          <ChevronsDownUp size={17} strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          title="New Prompt"
+          aria-label="New Prompt"
+          style={iconButtonStyle('new-prompt')}
+          onmouseenter={() => {
+            hoveredActionId = 'new-prompt'
+          }}
+          onmouseleave={() => {
+            hoveredActionId = null
+          }}
+        >
+          <Plus size={17} strokeWidth={2.2} />
+        </button>
+      </div>
+    </div>
+
+    <div style="min-height: 0; flex: 1; overflow: hidden; padding: 0 3px 12px 5px;">
       <div style="height: 100%; overflow: hidden; padding-right: 2px;">
         {#each selectedTree.rootPrompts as promptName (promptName)}
           <div style={promptRowStyle(true)}>
