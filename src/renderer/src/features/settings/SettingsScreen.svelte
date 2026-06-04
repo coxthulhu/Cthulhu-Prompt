@@ -3,12 +3,12 @@
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
   import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
+  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import {
@@ -428,7 +428,7 @@
           {/snippet}
         </FlatDisplayRow>
 
-        <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
+        <FlatSeparator />
 
         <FlatDisplayRow
           testId="about-version-display-row"

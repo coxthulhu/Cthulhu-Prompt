@@ -14,6 +14,7 @@
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
+  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
@@ -368,19 +369,17 @@
             <FlatSelectorButton
               testId="open-workspace-flat-button"
               icon={FolderOpen}
-              iconClass="translate-y-px"
               text={getSelectButtonLabel()}
               detail="Open an existing workspace folder."
               onclick={handleSelectFolder}
               state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
             />
 
-            <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
+            <FlatSeparator />
 
             <FlatSelectorButton
               testId="create-workspace-flat-button"
               icon={FolderPlus}
-              iconClass="translate-y-px"
               text={getCreateButtonLabel()}
               detail="Choose a folder to set up a new workspace."
               onclick={handleCreateFolder}
@@ -388,12 +387,11 @@
             />
 
             {#if isWorkspaceReady}
-              <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
+              <FlatSeparator />
 
               <FlatSelectorButton
                 testId="close-workspace-flat-button"
                 icon={X}
-                iconClass="translate-y-px"
                 text="Close Workspace"
                 detail="Unload the current workspace folder."
                 onclick={onWorkspaceClear}

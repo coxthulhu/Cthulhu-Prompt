@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
+  import RotatingChevron from './RotatingChevron.svelte'
 
   type FlatSelectorButtonState = 'enabled' | 'disabled'
 
@@ -8,6 +9,7 @@
     icon: ComponentType
     text: string
     detail: string
+    showChevron?: boolean
     state?: FlatSelectorButtonState
     class?: string
     iconClass?: string
@@ -19,6 +21,7 @@
     icon: Icon,
     text,
     detail,
+    showChevron = true,
     state = 'enabled',
     class: className,
     iconClass,
@@ -32,6 +35,7 @@
 <button
   type="button"
   class={mergeClasses('cthulhuUiFlatSelectorButton', className)}
+  data-chevron={showChevron ? 'true' : 'false'}
   data-testid={testId}
   {onclick}
   disabled={isDisabled}
@@ -44,6 +48,15 @@
     <span class="cthulhuUiFlatSelectorButtonText">{text}</span>
     <span class="cthulhuUiFlatSelectorButtonDetail" title={detail}>{detail}</span>
   </span>
+
+  {#if showChevron}
+    <RotatingChevron
+      expanded={false}
+      size={22}
+      iconSize={24}
+      class="cthulhuUiFlatSelectorButtonChevronWrap"
+    />
+  {/if}
 </button>
 
 <style>
@@ -56,7 +69,7 @@
     cursor: pointer;
     display: grid;
     gap: 12px;
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr) 22px;
     min-width: 0;
     padding: 8px;
     text-align: left;
@@ -64,6 +77,10 @@
       background-color 120ms ease,
       color 120ms ease;
     width: 100%;
+  }
+
+  .cthulhuUiFlatSelectorButton[data-chevron='false'] {
+    grid-template-columns: 34px minmax(0, 1fr);
   }
 
   .cthulhuUiFlatSelectorButton:hover,
@@ -125,5 +142,14 @@
     display: block;
     font-size: 13px;
     text-overflow: ellipsis;
+  }
+
+  .cthulhuUiFlatSelectorButton :global(.cthulhuUiFlatSelectorButtonChevronWrap) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .cthulhuUiFlatSelectorButton:hover :global(.cthulhuUiFlatSelectorButtonChevronWrap),
+  .cthulhuUiFlatSelectorButton:focus-visible :global(.cthulhuUiFlatSelectorButtonChevronWrap) {
+    color: var(--ui-normal-text);
   }
 </style>
