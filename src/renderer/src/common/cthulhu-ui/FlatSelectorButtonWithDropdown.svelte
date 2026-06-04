@@ -1,17 +1,17 @@
 <script lang="ts">
-  import DropdownPopupDetailed, {
-    type DropdownPopupDetailedItem
-  } from './DropdownPopupDetailed.svelte'
-  import SelectorButton from './SelectorButton.svelte'
+  import FlatDropdownPopupDetailed, {
+    type FlatDropdownPopupDetailedItem
+  } from './FlatDropdownPopupDetailed.svelte'
+  import FlatSelectorButton from './FlatSelectorButton.svelte'
 
   type Props = {
     label: string
-    items: DropdownPopupDetailedItem[]
-    selectedItem: DropdownPopupDetailedItem
-    footerItem?: DropdownPopupDetailedItem
+    items: FlatDropdownPopupDetailedItem[]
+    selectedItem: FlatDropdownPopupDetailedItem
+    footerItem?: FlatDropdownPopupDetailedItem
     testId?: string
     triggerTestId?: string
-    onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
+    onselect?: (item: FlatDropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
   let {
@@ -25,7 +25,7 @@
   }: Props = $props()
 </script>
 
-<DropdownPopupDetailed
+<FlatDropdownPopupDetailed
   {label}
   {items}
   {selectedItem}
@@ -36,7 +36,7 @@
   {onselect}
 >
   {#snippet trigger(dropdown)}
-    <SelectorButton
+    <FlatSelectorButton
       icon={selectedItem.icon}
       text={selectedItem.label}
       detail={selectedItem.detail}
@@ -49,4 +49,4 @@
       testId={triggerTestId}
     />
   {/snippet}
-</DropdownPopupDetailed>
+</FlatDropdownPopupDetailed>

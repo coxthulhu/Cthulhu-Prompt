@@ -4,9 +4,9 @@
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
   } from './DropdownPopupCore.svelte'
-  import SelectorButton from './SelectorButton.svelte'
+  import FlatSelectorButton from './FlatSelectorButton.svelte'
 
-  export type DropdownPopupDetailedItem = {
+  export type FlatDropdownPopupDetailedItem = {
     id: string
     label: string
     detail?: string
@@ -17,15 +17,15 @@
 
   type Props = {
     label: string
-    items: DropdownPopupDetailedItem[]
-    selectedItem: DropdownPopupDetailedItem | null
+    items: FlatDropdownPopupDetailedItem[]
+    selectedItem: FlatDropdownPopupDetailedItem | null
     trigger: Snippet<[DropdownPopupTriggerContext]>
-    footerItem?: DropdownPopupDetailedItem
+    footerItem?: FlatDropdownPopupDetailedItem
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
     matchTriggerWidth?: boolean
-    onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
+    onselect?: (item: FlatDropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
   let {
@@ -42,7 +42,7 @@
   }: Props = $props()
 
   const selectItem = (
-    item: DropdownPopupDetailedItem,
+    item: FlatDropdownPopupDetailedItem,
     event: MouseEvent,
     close: () => void
   ) => {
@@ -58,13 +58,13 @@
   {testId}
   {placement}
   {matchTriggerWidth}
-  menuClass="cthulhuUiDropdownPopupDetailedMenu p-[6px]"
+  menuClass="cthulhuUiFlatDropdownPopupDetailedMenu p-[6px]"
 >
   {#snippet children({ close })}
-    <div class="cthulhuUiDropdownPopupDetailedContent">
-      <div class="cthulhuUiDropdownPopupDetailedItems">
+    <div class="cthulhuUiFlatDropdownPopupDetailedContent">
+      <div class="cthulhuUiFlatDropdownPopupDetailedItems">
         {#each items as item (item.id)}
-          <SelectorButton
+          <FlatSelectorButton
             icon={item.icon}
             text={item.label}
             detail={item.detail}
@@ -74,15 +74,15 @@
             role="menuitem"
             ariaSelected={selectedItem?.id === item.id}
             testId={item.testId}
-            class="cthulhuUiDropdownPopupDetailedItem"
+            class="cthulhuUiFlatDropdownPopupDetailedItem"
             onclick={(event) => selectItem(item, event, close)}
           />
         {/each}
       </div>
 
       {#if footerItem}
-        <div class="cthulhuUiDropdownPopupDetailedFooter">
-          <SelectorButton
+        <div class="cthulhuUiFlatDropdownPopupDetailedFooter">
+          <FlatSelectorButton
             icon={footerItem.icon}
             text={footerItem.label}
             detail={footerItem.detail}
@@ -92,7 +92,7 @@
             role="menuitem"
             ariaSelected={selectedItem?.id === footerItem.id}
             testId={footerItem.testId}
-            class="cthulhuUiDropdownPopupDetailedItem cthulhuUiDropdownPopupDetailedFooterItem"
+            class="cthulhuUiFlatDropdownPopupDetailedItem cthulhuUiFlatDropdownPopupDetailedFooterItem"
             onclick={(event) => selectItem(footerItem, event, close)}
           />
         </div>
@@ -102,19 +102,19 @@
 </DropdownPopupCore>
 
 <style>
-  :global(.cthulhuUiDropdownPopupDetailedMenu) {
+  :global(.cthulhuUiFlatDropdownPopupDetailedMenu) {
     max-height: min(392px, calc(100vh - 32px));
     overflow: hidden;
   }
 
-  .cthulhuUiDropdownPopupDetailedContent {
+  .cthulhuUiFlatDropdownPopupDetailedContent {
     display: flex;
     flex-direction: column;
     max-height: inherit;
     min-height: 0;
   }
 
-  .cthulhuUiDropdownPopupDetailedItems {
+  .cthulhuUiFlatDropdownPopupDetailedItems {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -122,20 +122,20 @@
     overflow-y: auto;
   }
 
-  .cthulhuUiDropdownPopupDetailedFooter {
+  .cthulhuUiFlatDropdownPopupDetailedFooter {
     border-top: 1px solid var(--ui-neutral-muted-border);
     flex-shrink: 0;
     margin: 5px -6px 0;
     padding: 5px 6px 0;
   }
 
-  :global(.cthulhuUiDropdownPopupDetailedItem) {
+  :global(.cthulhuUiFlatDropdownPopupDetailedItem) {
     border-radius: 8px;
     min-height: 50px;
   }
 
-  :global(.cthulhuUiDropdownPopupDetailedFooterItem:hover),
-  :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-selected='true']) {
+  :global(.cthulhuUiFlatDropdownPopupDetailedFooterItem:hover),
+  :global(.cthulhuUiFlatDropdownPopupDetailedFooterItem[data-selected='true']) {
     background-color: var(--ui-accent-hover-surface);
   }
 </style>

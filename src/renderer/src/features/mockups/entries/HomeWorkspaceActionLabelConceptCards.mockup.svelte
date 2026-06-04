@@ -9,7 +9,7 @@
     X
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
-  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
+  import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
 
   type ConceptVariant = 'tabbed' | 'status' | 'split' | 'question'
@@ -130,7 +130,7 @@
 
 {#snippet WorkspaceActionList(mode: 'default' | 'compact' | 'primary-create')}
   <div class="homeWorkspaceLabelConceptActions" data-mode={mode}>
-    <SelectorButton
+    <FlatSelectorButton
       icon={mode === 'primary-create' ? FolderPlus : FolderOpen}
       iconClass="translate-y-px"
       text={mode === 'primary-create' ? 'Create Workspace' : 'Open Workspace'}
@@ -145,7 +145,7 @@
 
     <Separator class="homeWorkspaceLabelConceptSeparator" />
 
-    <SelectorButton
+    <FlatSelectorButton
       icon={mode === 'primary-create' ? FolderOpen : FolderPlus}
       iconClass="translate-y-px"
       text={mode === 'primary-create' ? 'Open Existing' : 'Create Workspace'}
@@ -161,7 +161,7 @@
     {#if mode !== 'primary-create'}
       <Separator class="homeWorkspaceLabelConceptSeparator" />
 
-      <SelectorButton
+      <FlatSelectorButton
         icon={X}
         iconClass="translate-y-px"
         text="Close Workspace"

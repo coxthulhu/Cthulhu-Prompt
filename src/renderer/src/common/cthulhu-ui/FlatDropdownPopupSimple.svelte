@@ -5,25 +5,25 @@
     type DropdownPopupTriggerContext
   } from './DropdownPopupCore.svelte'
 
-  export type DropdownPopupItemVariant = 'neutral' | 'accent' | 'danger'
+  export type FlatDropdownPopupItemVariant = 'neutral' | 'accent' | 'danger'
 
-  export type DropdownPopupItem = {
+  export type FlatDropdownPopupItem = {
     id: string
     label: string
     icon: ComponentType
     testId?: string
-    variant?: DropdownPopupItemVariant
+    variant?: FlatDropdownPopupItemVariant
   }
 
   type Props = {
     label: string
-    items: DropdownPopupItem[]
+    items: FlatDropdownPopupItem[]
     trigger: Snippet<[DropdownPopupTriggerContext]>
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
     matchTriggerWidth?: boolean
-    onselect?: (item: DropdownPopupItem, event: MouseEvent) => void
+    onselect?: (item: FlatDropdownPopupItem, event: MouseEvent) => void
   }
 
   let {
@@ -45,15 +45,15 @@
   {testId}
   {placement}
   {matchTriggerWidth}
-  menuClass="cthulhuUiDropdownPopupSimpleMenu p-[6px]"
+  menuClass="cthulhuUiFlatDropdownPopupSimpleMenu p-[6px]"
 >
   {#snippet children({ close })}
-    <div class="cthulhuUiDropdownPopupSimpleItems">
+    <div class="cthulhuUiFlatDropdownPopupSimpleItems">
       {#each items as item (item.id)}
         {@const ItemIcon = item.icon}
         <button
           type="button"
-          class="cthulhuUiDropdownPopupSimpleItem"
+          class="cthulhuUiFlatDropdownPopupSimpleItem"
           role="menuitem"
           data-variant={item.variant ?? 'neutral'}
           data-testid={item.testId}
@@ -63,7 +63,7 @@
           }}
         >
           <ItemIcon size={16} aria-hidden="true" />
-          <span class="cthulhuUiDropdownPopupSimpleItemLabel">{item.label}</span>
+          <span class="cthulhuUiFlatDropdownPopupSimpleItemLabel">{item.label}</span>
         </button>
       {/each}
     </div>
@@ -71,12 +71,12 @@
 </DropdownPopupCore>
 
 <style>
-  .cthulhuUiDropdownPopupSimpleItems {
+  .cthulhuUiFlatDropdownPopupSimpleItems {
     display: grid;
   }
 
-  .cthulhuUiDropdownPopupSimpleItem {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
+  .cthulhuUiFlatDropdownPopupSimpleItem {
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
 
     align-items: center;
     background: transparent;
@@ -96,41 +96,41 @@
     width: 100%;
   }
 
-  .cthulhuUiDropdownPopupSimpleItem[data-variant='accent'] {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-accent-normal-text);
+  .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='accent'] {
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-accent-normal-text);
 
     color: var(--ui-accent-normal-text);
   }
 
-  .cthulhuUiDropdownPopupSimpleItem[data-variant='danger'] {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
+  .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger'] {
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
 
     color: var(--ui-danger-icon-glyph);
   }
 
-  .cthulhuUiDropdownPopupSimpleItem:hover {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-normal-text);
+  .cthulhuUiFlatDropdownPopupSimpleItem:hover {
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-normal-text);
 
     background: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiDropdownPopupSimpleItem[data-variant='accent']:hover {
+  .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='accent']:hover {
     background: var(--ui-accent-hover-surface);
   }
 
-  .cthulhuUiDropdownPopupSimpleItem[data-variant='danger']:hover {
-    --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
+  .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger']:hover {
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
 
     background: var(--ui-danger-hover-surface);
     color: var(--ui-danger-icon-glyph);
   }
 
-  .cthulhuUiDropdownPopupSimpleItem > :global(svg) {
-    color: var(--cthulhu-ui-dropdown-popup-item-icon-color);
+  .cthulhuUiFlatDropdownPopupSimpleItem > :global(svg) {
+    color: var(--cthulhu-ui-flat-dropdown-popup-item-icon-color);
   }
 
-  .cthulhuUiDropdownPopupSimpleItemLabel {
+  .cthulhuUiFlatDropdownPopupSimpleItemLabel {
     font-size: 13px;
     line-height: 1.25;
     min-width: 0;

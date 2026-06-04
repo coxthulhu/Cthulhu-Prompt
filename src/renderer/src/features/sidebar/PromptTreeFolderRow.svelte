@@ -9,9 +9,9 @@
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import DropdownPopupSimple, {
-    type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
+  import FlatDropdownPopupSimple, {
+    type FlatDropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import {
@@ -84,7 +84,7 @@
   }
 
   const dropdownItems = $derived.by(
-    (): DropdownPopupItem[] => [
+    (): FlatDropdownPopupItem[] => [
       {
         id: 'folder-settings',
         label: 'Open folder settings',
@@ -111,7 +111,7 @@
     ]
   )
 
-  const handleFolderOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
+  const handleFolderOptionsSelect = (item: FlatDropdownPopupItem, event: MouseEvent) => {
     if (item.id === 'folder-settings') {
       onFolderSettingsOpen(folder.id)
       blurButtonAfterMouseClick(event)
@@ -159,7 +159,7 @@
             {folder.promptIds.length}
           </span>
           <div class="sidebarPromptTreeFolderActions">
-            <DropdownPopupSimple
+            <FlatDropdownPopupSimple
               label={`Folder options for ${folder.displayName}`}
               items={dropdownItems}
               menuWidth="196px"
@@ -182,7 +182,7 @@
                   class="sidebarPromptTreeActionButton"
                 />
               {/snippet}
-            </DropdownPopupSimple>
+            </FlatDropdownPopupSimple>
             <IconOnlyButton
               icon={ArrowRight}
               label={`Open ${folder.displayName}`}

@@ -369,8 +369,10 @@
             <FlatSelectorButton
               testId="open-workspace-flat-button"
               icon={FolderOpen}
+              iconClass="translate-y-px"
               text={getSelectButtonLabel()}
               detail="Open an existing workspace folder."
+              size="large"
               onclick={handleSelectFolder}
               state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
             />
@@ -380,8 +382,10 @@
             <FlatSelectorButton
               testId="create-workspace-flat-button"
               icon={FolderPlus}
+              iconClass="translate-y-px"
               text={getCreateButtonLabel()}
               detail="Choose a folder to set up a new workspace."
+              size="large"
               onclick={handleCreateFolder}
               state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
             />
@@ -392,8 +396,10 @@
               <FlatSelectorButton
                 testId="close-workspace-flat-button"
                 icon={X}
+                iconClass="translate-y-px"
                 text="Close Workspace"
                 detail="Unload the current workspace folder."
+                size="large"
                 onclick={onWorkspaceClear}
                 state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />

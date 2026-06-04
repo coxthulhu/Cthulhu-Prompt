@@ -1,13 +1,14 @@
-# Cthulhu Prompt - A Simple and Fast Prompt Organizer
+# Cthulhu Prompt - A Note Taking App, for Prompts
 
 Are you having trouble keeping track of all the prompts you're writing? Cthulhu Prompt can help!
 
-Cthulhu Prompt is a lightweight prompt editing and organizing tool that helps you draft and organize the prompts you use to build software with AI coding tools.
+Cthulhu Prompt is a lightweight prompt editor and organizer that helps you write better prompts for your AI tools.
 
 ## Features
 
 - Write prompts in a familiar editor with Markdown support.
 - Browse all your prompts on a single screen with infinite scrolling.
+- Runs locally and quickly without any cloud or internet requirements.
 - Saves your prompts as simple markdown files. Version control them if you want to!
 
 ## Getting Started

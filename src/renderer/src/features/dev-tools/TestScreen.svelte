@@ -33,10 +33,10 @@
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
-  import DropdownPopupSimple, {
-    type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
+  import FlatDropdownPopupSimple, {
+    type FlatDropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
+  import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
@@ -55,8 +55,8 @@
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
-  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
-  import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
+  import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
+  import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
   import StatusBadge, {
     type StatusBadgeVariant
   } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
@@ -101,21 +101,21 @@
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
-  const folderDropdownItems: DropdownPopupItem[] = [
+  const folderDropdownItems: FlatDropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
     { id: 'export', label: 'Export folder', icon: Download },
     { id: 'archive', label: 'Archive folder', icon: Archive },
     { id: 'delete', label: 'Delete folder', icon: Trash2, variant: 'danger' }
   ]
-  const promptDropdownItems: DropdownPopupItem[] = [
+  const promptDropdownItems: FlatDropdownPopupItem[] = [
     { id: 'improve', label: 'Improve wording', icon: Sparkles, variant: 'accent' },
     { id: 'copy', label: 'Copy prompt', icon: ClipboardList },
     { id: 'duplicate', label: 'Duplicate', icon: Copy },
     { id: 'rename', label: 'Rename', icon: Pencil },
     { id: 'delete', label: 'Delete prompt', icon: Trash2, variant: 'danger' }
   ]
-  const detailedDropdownItems: DropdownPopupDetailedItem[] = [
+  const detailedDropdownItems: FlatDropdownPopupDetailedItem[] = [
     {
       id: 'engineering',
       label: 'Engineering Workflows',
@@ -135,7 +135,7 @@
       icon: ClipboardList
     }
   ]
-  const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
+  const detailedDropdownFooterItem: FlatDropdownPopupDetailedItem = {
     id: 'add-folder',
     label: 'Add Prompt Folder',
     detail: 'Create a new prompt folder',
@@ -304,14 +304,14 @@
 
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
-          title="DropdownPopupSimple"
+          title="FlatDropdownPopupSimple"
           description="Solid icon menu popup."
           size="small"
         />
 
         <div class="stack">
           <div class="variant-controls">
-            <DropdownPopupSimple
+            <FlatDropdownPopupSimple
               label="Folder options"
               items={folderDropdownItems}
               testId="folder-dropdown-menu"
@@ -330,8 +330,8 @@
                   onclick={dropdown.toggle}
                 />
               {/snippet}
-            </DropdownPopupSimple>
-            <DropdownPopupSimple
+            </FlatDropdownPopupSimple>
+            <FlatDropdownPopupSimple
               label="Prompt actions"
               items={promptDropdownItems}
               testId="prompt-dropdown-menu"
@@ -349,7 +349,7 @@
                   onclick={dropdown.toggle}
                 />
               {/snippet}
-            </DropdownPopupSimple>
+            </FlatDropdownPopupSimple>
           </div>
 
           <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
@@ -358,13 +358,13 @@
 
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
-          title="DropdownPopupDetailed"
-          description="SelectorButton rows with a fixed footer action."
+          title="FlatDropdownPopupDetailed"
+          description="FlatSelectorButton rows with a fixed footer action."
           size="small"
         />
 
         <div class="stack">
-          <SelectorButtonWithDropdown
+          <FlatSelectorButtonWithDropdown
             label="Prompt folder selector"
             items={detailedDropdownItems}
             selectedItem={selectedDetailedDropdownItem}
@@ -383,18 +383,18 @@
 
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
-          title="SelectorButton"
+          title="FlatSelectorButton"
           description="Sidebar-style trigger button."
           size="small"
         />
 
         <div class="stack">
-          <SelectorButton
+          <FlatSelectorButton
             icon={Folder}
             text="Engineering Workflows"
             detailParts={['18 prompts', 'Updated 12m ago']}
           />
-          <SelectorButton
+          <FlatSelectorButton
             icon={Folder}
             text="Engineering Workflows"
             detailParts={['18 prompts', 'Updated 12m ago']}
