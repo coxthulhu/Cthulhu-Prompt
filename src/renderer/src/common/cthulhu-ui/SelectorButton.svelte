@@ -131,6 +131,10 @@
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
+  .cthulhuUiSelectorButton[data-size='large'] {
+    gap: 12px;
+  }
+
   .cthulhuUiSelectorButton:hover,
   .cthulhuUiSelectorButton[data-open='true'],
   .cthulhuUiSelectorButton[data-selected='true'] {

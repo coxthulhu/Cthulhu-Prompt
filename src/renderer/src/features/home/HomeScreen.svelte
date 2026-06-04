@@ -17,6 +17,7 @@
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -154,7 +155,7 @@
   const workspaceActionsDescription = $derived(
     currentWorkspaceDetails ? 'Change your current workspace.' : 'Create or open a workspace.'
   )
-  const workspaceActionsCardClass = 'w-full max-w-[632px] min-w-0 xl:max-w-none'
+  const homeCardClass = 'w-full max-w-[632px] min-w-0 xl:max-w-none'
   const secondaryTitleFontSizePx = $derived.by(() => {
     if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
       return null
@@ -227,7 +228,7 @@
         class="mt-5 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
         {#if !currentWorkspaceDetails}
-          <CardSurface class="w-full max-w-[632px] min-w-0 xl:max-w-none">
+          <CardSurface class={homeCardClass}>
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
@@ -267,7 +268,7 @@
             </div>
           </CardSurface>
         {:else}
-          <CardSurface class="w-full max-w-[632px] min-w-0 xl:max-w-none">
+          <CardSurface class={homeCardClass}>
             <div class="space-y-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
@@ -309,7 +310,7 @@
           </CardSurface>
         {/if}
 
-        <CardSurface class={workspaceActionsCardClass}>
+        <CardSurface class={homeCardClass}>
           <div class="space-y-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
@@ -360,6 +361,47 @@
             </div>
           </div>
         </CardSurface>
+
+        <div class={homeCardClass}>
+          <div class="cthulhuHomeCardLabel">
+            <span class="cthulhuHomeCardLabelIconCell">
+              <SlidersHorizontal class="cthulhuHomeCardLabelIcon" size={24} aria-hidden="true" />
+            </span>
+            <span>Workspace Actions</span>
+          </div>
+
+          <CardSurface class="w-full min-w-0" variant="flat">
+            <div class="flex flex-col">
+              <SelectorButton
+                icon={FolderOpen}
+                iconClass="translate-y-px"
+                text={getSelectButtonLabel()}
+                detail="Open an existing workspace folder."
+                size="large"
+              />
+
+              <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
+
+              <SelectorButton
+                icon={FolderPlus}
+                iconClass="translate-y-px"
+                text={getCreateButtonLabel()}
+                detail="Choose a folder to set up a new workspace."
+                size="large"
+              />
+
+              <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
+
+              <SelectorButton
+                icon={X}
+                iconClass="translate-y-px"
+                text="Close Workspace"
+                detail="Unload the current workspace folder."
+                size="large"
+              />
+            </div>
+          </CardSurface>
+        </div>
       </div>
     </section>
   </div>
@@ -420,4 +462,33 @@
     display: flex;
     padding-left: 16px;
   }
+
+  .cthulhuHomeCardLabel {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    font-size: 20px;
+    font-weight: 500;
+    gap: 10px;
+    letter-spacing: 0;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    padding-left: 8px;
+  }
+
+  .cthulhuHomeCardLabelIcon {
+    color: var(--ui-hoverable-icon-glyph);
+    stroke-width: 2;
+  }
+
+  .cthulhuHomeCardLabelIconCell {
+    align-items: center;
+    border-radius: var(--cthulhu-ui-radius-card);
+    display: flex;
+    flex: 0 0 auto;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+  }
+
 </style>
