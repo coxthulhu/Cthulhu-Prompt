@@ -12,6 +12,7 @@
   import type { Workspace } from '@shared/Workspace'
   import BareIconButton from '@renderer/common/cthulhu-ui/BareIconButton.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
@@ -139,7 +140,7 @@
   class="appSidebar flex h-full w-full flex-col text-sidebar-foreground/80"
 >
   <div class="sidebarTopLevelInsetWithInnerPadding pt-4 pb-3">
-    <div class="flex items-start gap-2 border-b border-white/8 pb-3">
+    <div class="flex items-start gap-2">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center">
         <img
           class="h-8 w-8 object-contain"
@@ -177,8 +178,9 @@
       </div>
     </div>
   </div>
+  <Separator />
 
-  <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col">
+  <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col pt-3">
     <div class="mb-2 flex items-center justify-between">
       <div>
         <p class="cthulhuSidebarPromptSectionTitle text-[13px] font-semibold">Prompts</p>
