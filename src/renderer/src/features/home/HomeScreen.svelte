@@ -13,11 +13,12 @@
   } from 'lucide-svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
+  import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
+  import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import IconDescriptionButton from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
-  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -362,43 +363,45 @@
           </div>
         </CardSurface>
 
-        <div class={homeCardClass}>
-          <div class="cthulhuHomeCardLabel">
-            <span>Workspace Actions</span>
-          </div>
+        <FlatCard label="Workspace Actions" class={homeCardClass}>
+          <div class="flex flex-col">
+            <FlatSelectorButton
+              testId="open-workspace-flat-button"
+              icon={FolderOpen}
+              iconClass="translate-y-px"
+              text={getSelectButtonLabel()}
+              detail="Open an existing workspace folder."
+              onclick={handleSelectFolder}
+              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+            />
 
-          <CardSurface class="w-full min-w-0" variant="flat">
-            <div class="flex flex-col">
-              <SelectorButton
-                icon={FolderOpen}
-                iconClass="translate-y-px"
-                text={getSelectButtonLabel()}
-                detail="Open an existing workspace folder."
-                size="large"
-              />
+            <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
 
+            <FlatSelectorButton
+              testId="create-workspace-flat-button"
+              icon={FolderPlus}
+              iconClass="translate-y-px"
+              text={getCreateButtonLabel()}
+              detail="Choose a folder to set up a new workspace."
+              onclick={handleCreateFolder}
+              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+            />
+
+            {#if isWorkspaceReady}
               <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
 
-              <SelectorButton
-                icon={FolderPlus}
-                iconClass="translate-y-px"
-                text={getCreateButtonLabel()}
-                detail="Choose a folder to set up a new workspace."
-                size="large"
-              />
-
-              <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
-
-              <SelectorButton
+              <FlatSelectorButton
+                testId="close-workspace-flat-button"
                 icon={X}
                 iconClass="translate-y-px"
                 text="Close Workspace"
                 detail="Unload the current workspace folder."
-                size="large"
+                onclick={onWorkspaceClear}
+                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
               />
-            </div>
-          </CardSurface>
-        </div>
+            {/if}
+          </div>
+        </FlatCard>
       </div>
     </section>
   </div>
@@ -458,18 +461,5 @@
     border-left: 3px solid var(--ui-accent-normal-border);
     display: flex;
     padding-left: 16px;
-  }
-
-  .cthulhuHomeCardLabel {
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: flex;
-    font-size: 18px;
-    font-weight: 500;
-    gap: 10px;
-    letter-spacing: 0;
-    line-height: 1.2;
-    margin-bottom: 12px;
-    padding-left: 8px;
   }
 </style>

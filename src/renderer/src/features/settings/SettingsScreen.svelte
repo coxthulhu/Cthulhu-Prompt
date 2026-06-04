@@ -1,5 +1,9 @@
 <script lang="ts">
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
+  import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
+  import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
+  import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
@@ -403,241 +407,42 @@
       </div>
     </CardSurface>
 
-    <div>
-      <div class="cthulhuSettingsCardLabel">
-        <span>About</span>
+    <FlatCard label="About">
+      <div class="flex flex-col">
+        <FlatDisplayRow
+          testId="about-issue-display-row"
+          icon={Bug}
+          label="Report an Issue"
+          detail="Report bugs, request improvements, or check whether a problem is already tracked."
+        >
+          {#snippet trailing()}
+            <FlatLinkButton
+              href={githubIssuesUrl}
+              text="Open Github Issues"
+              endIcon={ExternalLink}
+              variant="accent"
+              testId="about-github-issues-flat-link"
+              target="_blank"
+              rel="noreferrer"
+            />
+          {/snippet}
+        </FlatDisplayRow>
+
+        <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
+
+        <FlatDisplayRow
+          testId="about-version-display-row"
+          icon={Info}
+          label="Current Version"
+          detail="The version currently installed on this device."
+        >
+          {#snippet trailing()}
+            <FlatValuePill text={appVersionLabel} testId="about-version-display-value" />
+          {/snippet}
+        </FlatDisplayRow>
       </div>
-
-      <CardSurface class="w-full min-w-0" variant="flat">
-        <div class="flex flex-col">
-          <div
-            class="cthulhuSettingsSelectorDisplayRow"
-            data-testid="about-issue-display-row"
-            data-value="true"
-          >
-            <span class="cthulhuSettingsSelectorDisplayIconCell">
-              <Bug size={24} style="stroke-width: 2;" aria-hidden="true" />
-            </span>
-
-            <span class="cthulhuSettingsSelectorDisplayTextStack">
-              <span class="cthulhuSettingsSelectorDisplayText">Report an Issue</span>
-              <span class="cthulhuSettingsSelectorDisplayDetail">
-                Report bugs, request improvements, or check whether a problem is already tracked.
-              </span>
-            </span>
-
-            <a
-              class="cthulhuSettingsFlatLinkButton"
-              href={githubIssuesUrl}
-              target="_blank"
-              rel="noreferrer"
-              data-testid="about-github-issues-flat-link"
-            >
-              <span>Open Github Issues</span>
-              <ExternalLink size={16} style="stroke-width: 2.2;" aria-hidden="true" />
-            </a>
-          </div>
-
-          <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
-
-          <div
-            class="cthulhuSettingsSelectorDisplayRow"
-            data-testid="about-issue-display-row-copy"
-            data-value="true"
-          >
-            <span class="cthulhuSettingsSelectorDisplayIconCell">
-              <Bug size={24} style="stroke-width: 2;" aria-hidden="true" />
-            </span>
-
-            <span class="cthulhuSettingsSelectorDisplayTextStack">
-              <span class="cthulhuSettingsSelectorDisplayText">Report an Issue</span>
-              <span class="cthulhuSettingsSelectorDisplayDetail">
-                Report bugs, request improvements, or check whether a problem is already tracked.
-              </span>
-            </span>
-
-            <a
-              class="cthulhuSettingsFlatLinkButton cthulhuSettingsFlatLinkButton--accent"
-              href={githubIssuesUrl}
-              target="_blank"
-              rel="noreferrer"
-              data-testid="about-github-issues-flat-link-copy"
-            >
-              <span>Open Github Issues</span>
-              <ExternalLink size={16} style="stroke-width: 2.2;" aria-hidden="true" />
-            </a>
-          </div>
-
-          <Separator class="my-2 bg-[var(--ui-card-nested-border)]" />
-
-          <div
-            class="cthulhuSettingsSelectorDisplayRow"
-            data-testid="about-version-display-row"
-            data-value="true"
-          >
-            <span class="cthulhuSettingsSelectorDisplayIconCell">
-              <Info size={24} style="stroke-width: 2;" aria-hidden="true" />
-            </span>
-
-            <span class="cthulhuSettingsSelectorDisplayTextStack">
-              <span class="cthulhuSettingsSelectorDisplayText">Current Version</span>
-              <span class="cthulhuSettingsSelectorDisplayDetail">
-                The version currently installed on this device.
-              </span>
-            </span>
-
-            <span
-              class="cthulhuSettingsSelectorDisplayPill"
-              title={appVersionLabel}
-              data-testid="about-version-display-value"
-            >
-              {appVersionLabel}
-            </span>
-          </div>
-        </div>
-      </CardSurface>
-    </div>
+    </FlatCard>
 
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>
 </section>
-
-<style>
-  .cthulhuSettingsCardLabel {
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: flex;
-    font-size: 18px;
-    font-weight: 500;
-    gap: 10px;
-    letter-spacing: 0;
-    line-height: 1.2;
-    margin-bottom: 12px;
-    padding-left: 8px;
-  }
-
-  .cthulhuSettingsSelectorDisplayRow {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-hoverable-text);
-    display: grid;
-    gap: 12px;
-    grid-template-columns: 34px minmax(0, 1fr);
-    min-width: 0;
-    padding: 8px;
-    text-align: left;
-    width: 100%;
-  }
-
-  .cthulhuSettingsSelectorDisplayRow[data-value='true'] {
-    grid-template-columns: 34px minmax(0, 1fr) auto;
-  }
-
-  .cthulhuSettingsSelectorDisplayIconCell {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-hoverable-icon-glyph);
-    display: flex;
-    height: 34px;
-    justify-content: center;
-    width: 34px;
-  }
-
-  .cthulhuSettingsSelectorDisplayTextStack {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .cthulhuSettingsSelectorDisplayText,
-  .cthulhuSettingsSelectorDisplayDetail {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .cthulhuSettingsSelectorDisplayText {
-    color: inherit;
-    display: block;
-    font-size: 15px;
-    font-weight: 600;
-    text-overflow: ellipsis;
-  }
-
-  .cthulhuSettingsSelectorDisplayDetail {
-    align-items: center;
-    color: var(--ui-muted-text);
-    display: flex;
-    font-size: 13px;
-    gap: 6px;
-  }
-
-  .cthulhuSettingsSelectorDisplayPill {
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 999px;
-    color: var(--ui-normal-text);
-    flex: 0 0 auto;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.25;
-    max-width: 11rem;
-    min-width: 0;
-    overflow: hidden;
-    padding: 4px 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cthulhuSettingsFlatLinkButton {
-    align-items: center;
-    background-color: var(--ui-neutral-normal-surface);
-    border: 0;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
-    display: inline-flex;
-    flex: 0 0 auto;
-    height: 40px;
-    font-size: 14px;
-    font-weight: 500;
-    gap: 8px;
-    line-height: 20px;
-    min-width: 0;
-    max-width: 14rem;
-    overflow: hidden;
-    padding: 0 14px;
-    text-decoration: none;
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
-    white-space: nowrap;
-  }
-
-  .cthulhuSettingsFlatLinkButton:hover,
-  .cthulhuSettingsFlatLinkButton:focus-visible {
-    background-color: var(--ui-neutral-hover-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuSettingsFlatLinkButton--accent {
-    background-color: var(--ui-accent-subtle-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuSettingsFlatLinkButton--accent:hover,
-  .cthulhuSettingsFlatLinkButton--accent:focus-visible {
-    background-color: var(--ui-accent-subtle-hover-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuSettingsFlatLinkButton:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
-    outline-offset: 2px;
-  }
-
-  .cthulhuSettingsFlatLinkButton span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-</style>
