@@ -409,7 +409,11 @@
               </span>
             </span>
           </span>
-          <ChevronDown size={17} strokeWidth={2} />
+          <ChevronRight
+            size={17}
+            strokeWidth={2}
+            style={`flex-shrink:0;transition:transform 80ms ease-out;transform:rotate(${isFolderSelectorOpen ? '90deg' : '0deg'});`}
+          />
         </button>
 
         {#if isFolderSelectorOpen}
