@@ -99,18 +99,18 @@
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
   const folderDropdownItems: DropdownPopupItem[] = [
-    { id: 'open', label: 'Open', detail: 'Show folder contents', icon: Folder, variant: 'accent' },
+    { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
-    { id: 'export', label: 'Export folder', detail: 'Save prompt bundle', icon: Download },
+    { id: 'export', label: 'Export folder', icon: Download },
     { id: 'archive', label: 'Archive folder', icon: Archive },
     { id: 'delete', label: 'Delete folder', icon: Trash2, variant: 'danger' }
   ]
   const promptDropdownItems: DropdownPopupItem[] = [
     { id: 'improve', label: 'Improve wording', icon: Sparkles, variant: 'accent' },
-    { id: 'copy', label: 'Copy prompt', detail: 'Copy merged text', icon: ClipboardList },
-    { id: 'duplicate', label: 'Duplicate', detail: 'Create editable copy', icon: Copy },
+    { id: 'copy', label: 'Copy prompt', icon: ClipboardList },
+    { id: 'duplicate', label: 'Duplicate', icon: Copy },
     { id: 'rename', label: 'Rename', icon: Pencil },
-    { id: 'delete', label: 'Delete prompt', detail: 'Move to trash', icon: Trash2, variant: 'danger' }
+    { id: 'delete', label: 'Delete prompt', icon: Trash2, variant: 'danger' }
   ]
   const titleBlockIconVariants: AccentIconTileVariant[] = [
     'neutral',
@@ -275,7 +275,7 @@
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
           title="DropdownPopup"
-          description="Solid popup with optional title."
+          description="Solid icon menu popup."
           size="small"
         />
 
@@ -283,7 +283,6 @@
           <div class="variant-controls">
             <DropdownPopup
               label="Folder options"
-              title="Folder options"
               items={folderDropdownItems}
               testId="folder-dropdown-menu"
               onselect={(item) => {
