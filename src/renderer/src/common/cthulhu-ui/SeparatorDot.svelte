@@ -22,7 +22,7 @@
     border-radius: 999px;
     display: inline-block;
     flex: 0 0 auto;
-    height: 2px;
-    width: 2px;
+    height: 3px;
+    width: 3px;
   }
 </style>
