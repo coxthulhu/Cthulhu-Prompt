@@ -36,7 +36,6 @@
   import DropdownPopup, {
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
-  import DropdownSelectorButton from '@renderer/common/cthulhu-ui/DropdownSelectorButton.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
@@ -55,6 +54,7 @@
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import StatusBadge, {
     type StatusBadgeVariant
   } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
@@ -329,16 +329,24 @@
 
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
-          title="DropdownSelectorButton"
+          title="SelectorButton"
           description="Sidebar-style trigger button."
           size="small"
         />
 
-        <DropdownSelectorButton
-          icon={Folder}
-          text="Engineering Workflows"
-          detail="18 prompts - Updated 12m ago"
-        />
+        <div class="stack">
+          <SelectorButton
+            icon={Folder}
+            text="Engineering Workflows"
+            detail="18 prompts - Updated 12m ago"
+          />
+          <SelectorButton
+            icon={Folder}
+            text="Engineering Workflows"
+            detail="18 prompts - Updated 12m ago"
+            size="large"
+          />
+        </div>
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">

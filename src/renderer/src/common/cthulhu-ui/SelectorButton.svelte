@@ -3,12 +3,15 @@
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
 
+  type SelectorButtonSize = 'compact' | 'large'
+
   type Props = {
     icon: ComponentType
     text: string
     detail?: string
     open?: boolean
     showChevron?: boolean
+    size?: SelectorButtonSize
     class?: string
     iconClass?: string
     testId?: string
@@ -20,47 +23,57 @@
     detail,
     open = false,
     showChevron = true,
+    size = 'compact',
     class: className,
     iconClass,
     testId
   }: Props = $props()
+
+  const iconSize = $derived(size === 'large' ? 24 : 20)
+  const chevronSize = $derived(size === 'large' ? 24 : 20)
 </script>
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiDropdownSelectorButton', className)}
+  class={mergeClasses('cthulhuUiSelectorButton', className)}
+  data-size={size}
   data-open={open ? 'true' : 'false'}
   data-chevron={showChevron ? 'true' : 'false'}
   data-testid={testId}
   aria-expanded={showChevron ? open : undefined}
 >
   <!-- Compact dropdown trigger matching the sidebar selector layout. -->
-  <span class="cthulhuUiDropdownSelectorButtonIconCell">
+  <span class="cthulhuUiSelectorButtonIconCell">
     <Icon
-      class={mergeClasses('cthulhuUiDropdownSelectorButtonIcon', iconClass)}
+      class={mergeClasses('cthulhuUiSelectorButtonIcon', iconClass)}
+      size={iconSize}
       aria-hidden="true"
     />
   </span>
 
-  <span class="cthulhuUiDropdownSelectorButtonTextStack">
-    <span class="cthulhuUiDropdownSelectorButtonText">{text}</span>
+  <span class="cthulhuUiSelectorButtonTextStack">
+    <span class="cthulhuUiSelectorButtonText">{text}</span>
     {#if detail}
-      <span class="cthulhuUiDropdownSelectorButtonDetail">{detail}</span>
+      <span class="cthulhuUiSelectorButtonDetail">{detail}</span>
     {/if}
   </span>
 
   {#if showChevron}
     <span
-      class="cthulhuUiDropdownSelectorButtonChevronWrap"
+      class="cthulhuUiSelectorButtonChevronWrap"
       data-expanded={open ? 'true' : 'false'}
     >
-      <ChevronRight class="cthulhuUiDropdownSelectorButtonChevronIcon" aria-hidden="true" />
+      <ChevronRight
+        class="cthulhuUiSelectorButtonChevronIcon"
+        size={chevronSize}
+        aria-hidden="true"
+      />
     </span>
   {/if}
 </button>
 
 <style>
-  .cthulhuUiDropdownSelectorButton {
+  .cthulhuUiSelectorButton {
     align-items: center;
     background-color: transparent;
     border: 0;
@@ -79,17 +92,17 @@
     width: 100%;
   }
 
-  .cthulhuUiDropdownSelectorButton[data-chevron='false'] {
+  .cthulhuUiSelectorButton[data-chevron='false'] {
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
-  .cthulhuUiDropdownSelectorButton:hover,
-  .cthulhuUiDropdownSelectorButton[data-open='true'] {
+  .cthulhuUiSelectorButton:hover,
+  .cthulhuUiSelectorButton[data-open='true'] {
     background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiDropdownSelectorButtonIconCell {
+  .cthulhuUiSelectorButtonIconCell {
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-hoverable-icon-glyph);
@@ -100,25 +113,20 @@
     width: 34px;
   }
 
-  .cthulhuUiDropdownSelectorButton:hover .cthulhuUiDropdownSelectorButtonIconCell,
-  .cthulhuUiDropdownSelectorButton[data-open='true'] .cthulhuUiDropdownSelectorButtonIconCell {
+  .cthulhuUiSelectorButton:hover .cthulhuUiSelectorButtonIconCell,
+  .cthulhuUiSelectorButton[data-open='true'] .cthulhuUiSelectorButtonIconCell {
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiDropdownSelectorButtonIcon {
-    height: 18px;
-    width: 18px;
-  }
-
-  .cthulhuUiDropdownSelectorButtonTextStack {
+  .cthulhuUiSelectorButtonTextStack {
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
   }
 
-  .cthulhuUiDropdownSelectorButtonText,
-  .cthulhuUiDropdownSelectorButtonDetail {
+  .cthulhuUiSelectorButtonText,
+  .cthulhuUiSelectorButtonDetail {
     display: block;
     min-width: 0;
     overflow: hidden;
@@ -126,18 +134,26 @@
     white-space: nowrap;
   }
 
-  .cthulhuUiDropdownSelectorButtonText {
+  .cthulhuUiSelectorButtonText {
     color: inherit;
     font-size: 14px;
     font-weight: 600;
   }
 
-  .cthulhuUiDropdownSelectorButtonDetail {
+  .cthulhuUiSelectorButton[data-size='large'] .cthulhuUiSelectorButtonText {
+    font-size: 15px;
+  }
+
+  .cthulhuUiSelectorButtonDetail {
     color: var(--ui-muted-text);
     font-size: 12px;
   }
 
-  .cthulhuUiDropdownSelectorButtonChevronWrap {
+  .cthulhuUiSelectorButton[data-size='large'] .cthulhuUiSelectorButtonDetail {
+    font-size: 13px;
+  }
+
+  .cthulhuUiSelectorButtonChevronWrap {
     align-items: center;
     color: var(--ui-hoverable-icon-glyph);
     display: flex;
@@ -149,17 +165,12 @@
     width: 22px;
   }
 
-  .cthulhuUiDropdownSelectorButton:hover .cthulhuUiDropdownSelectorButtonChevronWrap,
-  .cthulhuUiDropdownSelectorButton[data-open='true'] .cthulhuUiDropdownSelectorButtonChevronWrap {
+  .cthulhuUiSelectorButton:hover .cthulhuUiSelectorButtonChevronWrap,
+  .cthulhuUiSelectorButton[data-open='true'] .cthulhuUiSelectorButtonChevronWrap {
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiDropdownSelectorButtonChevronIcon {
-    height: 18px;
-    width: 18px;
-  }
-
-  .cthulhuUiDropdownSelectorButtonChevronWrap[data-expanded='true'] {
+  .cthulhuUiSelectorButtonChevronWrap[data-expanded='true'] {
     transform: rotate(90deg);
   }
 </style>
