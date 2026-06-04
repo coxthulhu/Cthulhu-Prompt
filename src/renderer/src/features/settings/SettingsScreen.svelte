@@ -405,13 +405,6 @@
 
     <div>
       <div class="cthulhuSettingsCardLabel">
-        <span class="cthulhuSettingsCardLabelIconCell">
-          <Info
-            size={24}
-            style="color: var(--ui-hoverable-icon-glyph); stroke-width: 2;"
-            aria-hidden="true"
-          />
-        </span>
         <span>About</span>
       </div>
 
@@ -514,23 +507,13 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 500;
     gap: 10px;
     letter-spacing: 0;
     line-height: 1.2;
     margin-bottom: 12px;
     padding-left: 8px;
-  }
-
-  .cthulhuSettingsCardLabelIconCell {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-card);
-    display: flex;
-    flex: 0 0 auto;
-    height: 34px;
-    justify-content: center;
-    width: 34px;
   }
 
   .cthulhuSettingsSelectorDisplayRow {

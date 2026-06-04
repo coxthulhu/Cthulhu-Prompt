@@ -364,9 +364,6 @@
 
         <div class={homeCardClass}>
           <div class="cthulhuHomeCardLabel">
-            <span class="cthulhuHomeCardLabelIconCell">
-              <SlidersHorizontal class="cthulhuHomeCardLabelIcon" size={24} aria-hidden="true" />
-            </span>
             <span>Workspace Actions</span>
           </div>
 
@@ -467,7 +464,7 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 500;
     gap: 10px;
     letter-spacing: 0;
@@ -475,20 +472,4 @@
     margin-bottom: 12px;
     padding-left: 8px;
   }
-
-  .cthulhuHomeCardLabelIcon {
-    color: var(--ui-hoverable-icon-glyph);
-    stroke-width: 2;
-  }
-
-  .cthulhuHomeCardLabelIconCell {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-card);
-    display: flex;
-    flex: 0 0 auto;
-    height: 34px;
-    justify-content: center;
-    width: 34px;
-  }
-
 </style>
