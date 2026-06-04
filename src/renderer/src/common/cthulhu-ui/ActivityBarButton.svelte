@@ -40,7 +40,11 @@
   {disabled}
   {onclick}
 >
-  <Icon class={mergeClasses('cthulhuUiActivityBarButtonIcon', iconClass)} aria-hidden="true" />
+  <Icon
+    class={mergeClasses('cthulhuUiActivityBarButtonIcon', iconClass)}
+    strokeWidth={1.5}
+    aria-hidden="true"
+  />
 </button>
 
 <style>
