@@ -109,7 +109,14 @@
 
 .sidebarPromptTreeChevronIcon {
   height: 16px;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform 50ms ease-out;
   width: 16px;
+}
+
+.sidebarPromptTreeChevronWrap[data-expanded='true'] .sidebarPromptTreeChevronIcon {
+  transform: rotate(90deg);
 }
 
 .sidebarPromptTreeFolderLabel {
@@ -149,7 +156,6 @@
 
 .sidebarPromptTreeCountInActionSlot {
   pointer-events: none;
-  transition: opacity 50ms ease-out;
 }
 
 .sidebarPromptTreeFolderActions {

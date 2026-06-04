@@ -1,7 +1,6 @@
 <script lang="ts">
   import {
     ArrowRight,
-    ChevronDown,
     ChevronRight,
     ChevronsDown,
     ChevronsUp,
@@ -145,12 +144,11 @@
           data-testid={folderToggleTestId(folder)}
           class="sidebarPromptTreeToggleButton"
         >
-          <span class="sidebarPromptTreeChevronWrap">
-            {#if isExpanded}
-              <ChevronDown class="sidebarPromptTreeChevronIcon" />
-            {:else}
-              <ChevronRight class="sidebarPromptTreeChevronIcon" />
-            {/if}
+          <span
+            class="sidebarPromptTreeChevronWrap"
+            data-expanded={isExpanded ? 'true' : 'false'}
+          >
+            <ChevronRight class="sidebarPromptTreeChevronIcon" />
           </span>
           <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
         </button>
