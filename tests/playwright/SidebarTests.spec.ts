@@ -44,7 +44,7 @@ test.describe('Sidebar Tests', () => {
     expect(await testHelpers.getActiveScreen()).toBe('settings')
 
     expect(await testHelpers.isNavButtonActive('Settings')).toBe(true)
-    await expect(mainWindow.locator('[data-testid="about-version-value"]')).toHaveText(
+    await expect(mainWindow.locator('[data-testid="about-version-display-value"]')).toHaveText(
       `v${expectedVersion}`
     )
   })
