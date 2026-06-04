@@ -1,22 +1,20 @@
 <script lang="ts">
-  import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
   import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
+  import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
-  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import {
     Bug,
     ExternalLink,
     Hash,
     Info,
-    Keyboard,
     RefreshCcw,
     Rows3,
     Settings,
@@ -183,31 +181,15 @@
       showAccentLine
     />
 
-    <CardSurface class="grid gap-2 p-2.5">
-      <div class="px-2.5 py-2">
-        <TitleBlock
-          title="Editor & layout"
-          size="large"
-          description="Typography, spacing, autosave, and core writing ergonomics."
-          icon={Keyboard}
-        />
-      </div>
-
-      <div class="space-y-3">
-        <CardSurface
-          variant="inset"
-          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+    <FlatCard label="Editor & layout">
+      <div class="flex flex-col">
+        <FlatSettingRow
+          testId="editor-layout-font-size-row"
+          icon={Type}
+          label="Font Size"
+          detail="Sets the base font size used inside the prompt editor."
         >
-          <div class="min-w-0">
-            <TitleBlock
-              title="Font Size"
-              size="small"
-              description="Sets the base font size used inside the prompt editor."
-              icon={Type}
-            />
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+          {#snippet control()}
             <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
               <NumericStepperInput
                 data-testid="font-size-input"
@@ -223,30 +205,27 @@
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
-            <IconTextButton
+          {/snippet}
+
+          {#snippet actions()}
+            <FlatButton
               icon={RefreshCcw}
               text="Reset"
               onclick={handleFontSizeReset}
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
-          </div>
-        </CardSurface>
+          {/snippet}
+        </FlatSettingRow>
 
-        <CardSurface
-          variant="inset"
-          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        <FlatSeparator />
+
+        <FlatSettingRow
+          testId="editor-layout-min-lines-row"
+          icon={Rows3}
+          label="Minimum Line Count"
+          detail="Sets the minimum number of visible lines in prompt editors."
         >
-          <div class="min-w-0">
-            <TitleBlock
-              title="Minimum Line Count"
-              size="small"
-              description="Sets the minimum number of visible lines in prompt editors."
-              icon={Rows3}
-              iconVariant="accent-blue"
-            />
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+          {#snippet control()}
             <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
               <NumericStepperInput
                 data-testid="min-lines-input"
@@ -262,30 +241,27 @@
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
-            <IconTextButton
+          {/snippet}
+
+          {#snippet actions()}
+            <FlatButton
               icon={RefreshCcw}
               text="Reset"
               onclick={handleMinLinesReset}
               state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
             />
-          </div>
-        </CardSurface>
+          {/snippet}
+        </FlatSettingRow>
 
-        <CardSurface
-          variant="inset"
-          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        <FlatSeparator />
+
+        <FlatSettingRow
+          testId="editor-layout-max-lines-row"
+          icon={Rows3}
+          label="Maximum Line Count"
+          detail="Sets the maximum number of visible lines before prompt editors begin scrolling."
         >
-          <div class="min-w-0">
-            <TitleBlock
-              title="Maximum Line Count"
-              size="small"
-              description="Sets the maximum number of visible lines before prompt editors begin scrolling."
-              icon={Rows3}
-              iconVariant="accent-green"
-            />
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+          {#snippet control()}
             <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
               <NumericStepperInput
                 data-testid="max-lines-input"
@@ -301,46 +277,46 @@
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
-            <IconTextButton
+          {/snippet}
+
+          {#snippet actions()}
+            <FlatButton
               icon={RefreshCcw}
               text="Reset"
               onclick={handleMaxLinesReset}
               state={isMaxLinesResetDisabled ? 'disabled' : 'enabled'}
             />
-          </div>
-        </CardSurface>
+          {/snippet}
+        </FlatSettingRow>
 
-        <CardSurface
-          variant="inset"
-          class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+        <FlatSeparator />
+
+        <FlatSettingRow
+          testId="editor-layout-line-numbers-row"
+          icon={Hash}
+          label="Show Line Numbers"
+          detail="Display line numbers beside prompt text for easier review."
         >
-          <div class="min-w-0">
-            <TitleBlock
-              title="Show Line Numbers"
-              size="small"
-              description="Display line numbers beside prompt text for easier review."
-              icon={Hash}
-              iconVariant="accent"
-            />
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+          {#snippet control()}
             <ToggleTextButton
               testId="show-line-numbers-toggle"
               pressed={systemSettingsState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}
               disabled={isUpdating}
             />
-            <IconTextButton
+          {/snippet}
+
+          {#snippet actions()}
+            <FlatButton
               icon={RefreshCcw}
               text="Reset"
               onclick={handleShowLineNumbersReset}
               state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
             />
-          </div>
-        </CardSurface>
+          {/snippet}
+        </FlatSettingRow>
       </div>
-    </CardSurface>
+    </FlatCard>
 
     <FlatCard label="About">
       <div class="flex flex-col">
