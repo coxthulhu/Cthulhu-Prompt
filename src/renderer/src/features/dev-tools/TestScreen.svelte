@@ -36,6 +36,7 @@
   import DropdownPopup, {
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/DropdownPopup.svelte'
+  import DropdownSelectorButton from '@renderer/common/cthulhu-ui/DropdownSelectorButton.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
@@ -324,6 +325,20 @@
 
           <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
         </div>
+      </CardSurface>
+
+      <CardSurface variant="panel" class="component-section">
+        <TitleBlock
+          title="DropdownSelectorButton"
+          description="Sidebar-style trigger button."
+          size="small"
+        />
+
+        <DropdownSelectorButton
+          icon={Folder}
+          text="Engineering Workflows"
+          detail="18 prompts - Updated 12m ago"
+        />
       </CardSurface>
 
       <CardSurface variant="panel" class="component-section">
