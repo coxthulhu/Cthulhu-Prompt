@@ -524,7 +524,7 @@
               {/each}
             </div>
 
-            <div style="height: 1px; flex-shrink: 0; margin: 5px 2px; background: var(--ui-neutral-muted-border);"></div>
+            <div style="height: 1px; flex-shrink: 0; margin: 5px -6px; background: var(--ui-neutral-muted-border);"></div>
 
             <button
               type="button"
