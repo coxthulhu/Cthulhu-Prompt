@@ -227,7 +227,7 @@
     color: var(--ui-secondary-text);
     display: inline-flex;
     flex: 0 1 auto;
-    gap: 5px;
+    gap: 4px;
     max-width: 220px;
     min-width: 0;
     overflow: hidden;

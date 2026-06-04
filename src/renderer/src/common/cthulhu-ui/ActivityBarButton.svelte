@@ -74,8 +74,8 @@
 
   .cthulhuUiActivityBarButton[data-active='true']::before {
     position: absolute;
-    top: 5px;
-    bottom: 5px;
+    top: 4px;
+    bottom: 4px;
     left: 0;
     width: 2px;
     border-radius: 0 2px 2px 0;
