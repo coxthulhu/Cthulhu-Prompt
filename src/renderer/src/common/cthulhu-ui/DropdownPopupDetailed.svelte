@@ -9,7 +9,8 @@
   export type DropdownPopupDetailedItem = {
     id: string
     label: string
-    detail: string
+    detail?: string
+    detailParts?: string[]
     icon: ComponentType
     testId?: string
   }
@@ -67,6 +68,7 @@
             icon={item.icon}
             text={item.label}
             detail={item.detail}
+            detailParts={item.detailParts}
             showChevron={false}
             selected={selectedItem?.id === item.id}
             role="menuitem"
@@ -84,6 +86,7 @@
             icon={footerItem.icon}
             text={footerItem.label}
             detail={footerItem.detail}
+            detailParts={footerItem.detailParts}
             showChevron={false}
             selected={selectedItem?.id === footerItem.id}
             role="menuitem"

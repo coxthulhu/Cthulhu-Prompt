@@ -40,6 +40,7 @@
       icon={selectedItem.icon}
       text={selectedItem.label}
       detail={selectedItem.detail}
+      detailParts={selectedItem.detailParts}
       open={dropdown.open}
       ariaHaspopup={dropdown.ariaHaspopup}
       ariaExpanded={dropdown.ariaExpanded}

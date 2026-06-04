@@ -119,19 +119,19 @@
     {
       id: 'engineering',
       label: 'Engineering Workflows',
-      detail: '18 prompts - Updated 12m ago',
+      detailParts: ['18 prompts', 'Updated 12m ago'],
       icon: Folder
     },
     {
       id: 'release',
       label: 'Release Notes',
-      detail: '9 prompts - Updated 1h ago',
+      detailParts: ['9 prompts', 'Updated 1h ago'],
       icon: FileText
     },
     {
       id: 'review',
       label: 'Code Review',
-      detail: '14 prompts - Updated yesterday',
+      detailParts: ['14 prompts', 'Updated yesterday'],
       icon: ClipboardList
     }
   ]
@@ -392,12 +392,12 @@
           <SelectorButton
             icon={Folder}
             text="Engineering Workflows"
-            detail="18 prompts - Updated 12m ago"
+            detailParts={['18 prompts', 'Updated 12m ago']}
           />
           <SelectorButton
             icon={Folder}
             text="Engineering Workflows"
-            detail="18 prompts - Updated 12m ago"
+            detailParts={['18 prompts', 'Updated 12m ago']}
             size="large"
           />
         </div>

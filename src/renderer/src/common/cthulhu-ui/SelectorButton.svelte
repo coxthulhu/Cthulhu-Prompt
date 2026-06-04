@@ -3,6 +3,7 @@
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
   import RotatingChevron from './RotatingChevron.svelte'
+  import SeparatorDot from './SeparatorDot.svelte'
 
   type SelectorButtonSize = 'compact' | 'large'
   type SelectorButtonAction = Action<HTMLButtonElement, unknown>
@@ -11,6 +12,7 @@
     icon: ComponentType
     text: string
     detail?: string
+    detailParts?: string[]
     open?: boolean
     selected?: boolean
     showChevron?: boolean
@@ -33,6 +35,7 @@
     icon: Icon,
     text,
     detail,
+    detailParts,
     open = false,
     selected = false,
     showChevron = true,
@@ -52,6 +55,8 @@
   const iconSize = $derived(size === 'large' ? 24 : 20)
   const chevronSize = $derived(size === 'large' ? 24 : 20)
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
+  const resolvedDetailParts = $derived(detailParts?.length ? detailParts : detail ? [detail] : [])
+  const detailTitle = $derived(resolvedDetailParts.join(' \u00b7 '))
 </script>
 
 <button
@@ -80,8 +85,15 @@
 
   <span class="cthulhuUiSelectorButtonTextStack">
     <span class="cthulhuUiSelectorButtonText">{text}</span>
-    {#if detail}
-      <span class="cthulhuUiSelectorButtonDetail">{detail}</span>
+    {#if resolvedDetailParts.length}
+      <span class="cthulhuUiSelectorButtonDetail" title={detailTitle}>
+        {#each resolvedDetailParts as detailPart, index (`${index}-${detailPart}`)}
+          {#if index > 0}
+            <SeparatorDot />
+          {/if}
+          <span class="cthulhuUiSelectorButtonDetailText">{detailPart}</span>
+        {/each}
+      </span>
     {/if}
   </span>
 
@@ -152,11 +164,14 @@
 
   .cthulhuUiSelectorButtonText,
   .cthulhuUiSelectorButtonDetail {
-    display: block;
     min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .cthulhuUiSelectorButtonText {
+    display: block;
+    text-overflow: ellipsis;
   }
 
   .cthulhuUiSelectorButtonText {
@@ -170,12 +185,23 @@
   }
 
   .cthulhuUiSelectorButtonDetail {
+    align-items: center;
     color: var(--ui-muted-text);
+    display: flex;
     font-size: 12px;
+    gap: 6px;
   }
 
   .cthulhuUiSelectorButton[data-size='large'] .cthulhuUiSelectorButtonDetail {
     font-size: 13px;
+  }
+
+  .cthulhuUiSelectorButtonDetailText {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonChevronWrap) {
