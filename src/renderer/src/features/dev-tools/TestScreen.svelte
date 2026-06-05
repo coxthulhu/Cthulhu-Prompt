@@ -52,7 +52,7 @@
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
-  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
+  import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
   import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
@@ -429,14 +429,14 @@
             aria-label="Invalid numeric input"
             aria-invalid="true"
           />
-          <NumericStepperInput
+          <FlatNumericStepperInput
             bind:value={fontSizeStepperValue}
             min={8}
             max={32}
             helperText="px"
             aria-label="Font size stepper input"
           />
-          <NumericStepperInput
+          <FlatNumericStepperInput
             bind:value={minLinesStepperValue}
             min={8}
             max={24}

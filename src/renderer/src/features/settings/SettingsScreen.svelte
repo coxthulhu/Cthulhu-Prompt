@@ -7,7 +7,7 @@
   import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
-  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
+  import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import {
@@ -191,7 +191,7 @@
         >
           {#snippet control()}
             <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
-              <NumericStepperInput
+              <FlatNumericStepperInput
                 data-testid="font-size-input"
                 value={systemSettingsState.promptFontSizeInput}
                 min={MIN_PROMPT_FONT_SIZE}
@@ -227,7 +227,7 @@
         >
           {#snippet control()}
             <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
-              <NumericStepperInput
+              <FlatNumericStepperInput
                 data-testid="min-lines-input"
                 value={systemSettingsState.promptEditorMinLinesInput}
                 min={MIN_PROMPT_EDITOR_MIN_LINES}
@@ -263,7 +263,7 @@
         >
           {#snippet control()}
             <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
-              <NumericStepperInput
+              <FlatNumericStepperInput
                 data-testid="max-lines-input"
                 value={systemSettingsState.promptEditorMaxLinesInput}
                 min={MIN_PROMPT_EDITOR_MAX_LINES}
