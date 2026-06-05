@@ -48,6 +48,6 @@
   }
 
   .cthulhuUiFlatLinkButtonIcon {
-    stroke-width: 2.2;
+    stroke-width: 2;
   }
 </style>

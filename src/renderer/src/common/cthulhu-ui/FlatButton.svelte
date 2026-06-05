@@ -64,6 +64,6 @@
 
   .cthulhuUiFlatButtonIcon {
     flex: 0 0 auto;
-    stroke-width: 2.2;
+    stroke-width: 2;
   }
 </style>

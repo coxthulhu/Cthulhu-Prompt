@@ -89,7 +89,7 @@
 
   .cthulhuUiFlatIconButtonIcon {
     height: 16px;
-    stroke-width: 2.2;
+    stroke-width: 2;
     width: 16px;
   }
 </style>
