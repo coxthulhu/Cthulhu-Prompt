@@ -9,17 +9,15 @@
     Folders,
     X
   } from 'lucide-svelte'
-  import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
   import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
   import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
   import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
+  import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
@@ -232,45 +230,43 @@
         class="mt-7 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
         {#if !currentWorkspaceDetails}
-          <CardSurface class={homeCardClass}>
-            <div class="space-y-4">
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <TitleBlock
-                    title="Get Started"
-                    size="large"
-                    description="Choose where your prompt files live."
-                    icon={FolderPlus}
+          <FlatCard label="Get Started" class={homeCardClass}>
+            <div class="flex flex-col">
+              <FlatDisplayRow
+                icon={FileText}
+                label="Markdown Prompt Files"
+                detail="Store and manage prompts as Markdown files in a workspace folder."
+              />
+
+              <FlatSeparator />
+
+              <FlatDisplayRow
+                icon={FolderPlus}
+                label="Choose a Workspace"
+                detail="Create a new workspace folder, or open an existing one to continue."
+              />
+
+              <FlatSeparator />
+
+              <FlatDisplayRow
+                icon={Bug}
+                label="Report an Issue"
+                detail="Report bugs or request improvements!"
+              >
+                {#snippet trailing()}
+                  <FlatLinkButton
+                    href={githubIssuesUrl}
+                    text="Open Github"
+                    endIcon={ExternalLink}
+                    variant="accent"
+                    testId="get-started-github-bug-link"
+                    target="_blank"
+                    rel="noreferrer"
                   />
-                </div>
-              </div>
-
-              <div class="cthulhuHomeGetStartedText">
-                <p>
-                  Cthulhu Prompt is a prompt editor and manager that stores your prompts as a series
-                  of Markdown files in a workspace folder.
-                </p>
-                <p>
-                  To get started, you can create a new workspace folder, or open an existing
-                  workspace to continue where you left off.
-                </p>
-              </div>
-
-              <div class="cthulhuHomeBugLink">
-                <IconTextButton
-                  class="self-start"
-                  href={githubIssuesUrl}
-                  icon={Bug}
-                  endIcon={ExternalLink}
-                  text="Found a bug? Add it on GitHub!"
-                  variant="accent"
-                  testId="get-started-github-bug-link"
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              </div>
+                {/snippet}
+              </FlatDisplayRow>
             </div>
-          </CardSurface>
+          </FlatCard>
         {:else}
           <FlatCard label="Current Workspace" class={homeCardClass}>
             <div class="flex flex-col">
@@ -415,27 +411,6 @@
     background: var(--ui-neutral-muted-border);
     height: 3px;
     width: 100%;
-  }
-
-  .cthulhuHomeGetStartedText {
-    border-left: 3px solid var(--ui-accent-normal-border);
-    color: var(--ui-secondary-text);
-    display: flex;
-    flex-direction: column;
-    font-size: 15px;
-    gap: 12px;
-    line-height: 1.55;
-    padding-left: 16px;
-  }
-
-  .cthulhuHomeGetStartedText p {
-    margin: 0;
-  }
-
-  .cthulhuHomeBugLink {
-    border-left: 3px solid var(--ui-accent-normal-border);
-    display: flex;
-    padding-left: 16px;
   }
 
   .cthulhuHomeWorkspaceStats {
