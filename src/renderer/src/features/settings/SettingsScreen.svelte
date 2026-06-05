@@ -6,7 +6,7 @@
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
   import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
   import { Bug, ExternalLink, Hash, Info, RefreshCcw, Rows3, Type } from 'lucide-svelte'
@@ -174,7 +174,7 @@
           detail="Sets the base font size used inside the prompt editor."
         >
           {#snippet control()}
-            <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
+            <FlatFloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
               <FlatNumericStepperInput
                 data-testid="font-size-input"
                 value={systemSettingsState.promptFontSizeInput}
@@ -188,7 +188,7 @@
                 onvaluechange={setSystemSettingsDraftFontSizeInput}
                 onblur={handleInputBlur}
               />
-            </FloatingValidationMessage>
+            </FlatFloatingValidationMessage>
           {/snippet}
 
           {#snippet actions()}
@@ -210,7 +210,7 @@
           detail="Sets the minimum number of visible lines in prompt editors."
         >
           {#snippet control()}
-            <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
+            <FlatFloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
               <FlatNumericStepperInput
                 data-testid="min-lines-input"
                 value={systemSettingsState.promptEditorMinLinesInput}
@@ -224,7 +224,7 @@
                 onvaluechange={setSystemSettingsDraftPromptEditorMinLinesInput}
                 onblur={handleInputBlur}
               />
-            </FloatingValidationMessage>
+            </FlatFloatingValidationMessage>
           {/snippet}
 
           {#snippet actions()}
@@ -246,7 +246,7 @@
           detail="Sets the maximum number of visible lines before prompt editors begin scrolling."
         >
           {#snippet control()}
-            <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
+            <FlatFloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
               <FlatNumericStepperInput
                 data-testid="max-lines-input"
                 value={systemSettingsState.promptEditorMaxLinesInput}
@@ -260,7 +260,7 @@
                 onvaluechange={setSystemSettingsDraftPromptEditorMaxLinesInput}
                 onblur={handleInputBlur}
               />
-            </FloatingValidationMessage>
+            </FlatFloatingValidationMessage>
           {/snippet}
 
           {#snippet actions()}

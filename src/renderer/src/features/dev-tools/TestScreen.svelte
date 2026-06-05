@@ -39,7 +39,7 @@
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import IconDescriptionButton, {
     type IconDescriptionButtonVariant
   } from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
@@ -470,16 +470,16 @@
           />
           <MessageRow text="Review this value before saving." variant="warning" />
           <MessageRow text="Prompt folder name is required." variant="danger" />
-          <FloatingValidationMessage message="Prompt folder name is required.">
+          <FlatFloatingValidationMessage message="Prompt folder name is required.">
             <TextInput
               value=""
               placeholder="Floating validation anchor"
               aria-label="Validation field"
             />
-          </FloatingValidationMessage>
-          <FloatingValidationMessage message="Review this value before saving." variant="warning">
+          </FlatFloatingValidationMessage>
+          <FlatFloatingValidationMessage message="Review this value before saving." variant="warning">
             <TextInput value="Draft value" aria-label="Warning validation field" />
-          </FloatingValidationMessage>
+          </FlatFloatingValidationMessage>
         </div>
       </CardSurface>
 

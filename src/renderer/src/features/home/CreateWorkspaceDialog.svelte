@@ -2,7 +2,7 @@
   import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
@@ -144,7 +144,7 @@
 >
   <div class="space-y-2">
     <TitleBlock title="Workspace Name" size="small" />
-    <FloatingValidationMessage
+    <FlatFloatingValidationMessage
       message={displayedWorkspaceNameError}
       textTestId="create-workspace-name-error"
     >
@@ -162,7 +162,7 @@
           submissionError = null
         }}
       />
-    </FloatingValidationMessage>
+    </FlatFloatingValidationMessage>
   </div>
 
   <div class="space-y-2">
@@ -179,7 +179,7 @@
 
   <div class="space-y-2">
     <TitleBlock title="Final Workspace Path" size="small" />
-    <FloatingValidationMessage
+    <FlatFloatingValidationMessage
       message={finalPathMessage}
       variant={finalPathMessageVariant}
       textTestId="create-workspace-final-path-message"
@@ -194,7 +194,7 @@
         readonlyDisplay
         aria-invalid={hasExistingWorkspace ? 'true' : undefined}
       />
-    </FloatingValidationMessage>
+    </FlatFloatingValidationMessage>
     {#if submissionError}
       <MessageRow
         text={submissionError}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
@@ -154,7 +154,7 @@
   onsubmit={handleCreateFolder}
 >
   <TitleBlock title="Prompt Folder Name" size="small" />
-  <FloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
+  <FlatFloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
     <TextInput
       id="folder-name-input"
       class="w-full"
@@ -175,5 +175,5 @@
         }
       }}
     />
-  </FloatingValidationMessage>
+  </FlatFloatingValidationMessage>
 </CthulhuDialog>

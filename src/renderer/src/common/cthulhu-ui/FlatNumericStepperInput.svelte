@@ -83,7 +83,7 @@
     disabled={disabled || !canDecrease}
     onclick={decreaseValue}
   >
-    <Minus class="h-3.5 w-3.5" />
+    <Minus class="h-4 w-4" />
   </button>
 
   <label class="cthulhuUiFlatNumericStepperInputValue">
@@ -112,7 +112,7 @@
     disabled={disabled || !canIncrease}
     onclick={increaseValue}
   >
-    <Plus class="h-3.5 w-3.5" />
+    <Plus class="h-4 w-4" />
   </button>
 </div>
 
@@ -175,7 +175,6 @@
   }
 
   .cthulhuUiFlatNumericStepperInputButton:hover {
-    background-color: var(--ui-neutral-hover-surface);
     color: var(--ui-normal-text);
   }
 
@@ -183,6 +182,17 @@
     cursor: default;
     opacity: 0.5;
     pointer-events: none;
+  }
+
+  .cthulhuUiFlatNumericStepperInput[data-invalid='true']
+    .cthulhuUiFlatNumericStepperInputButton:disabled {
+    opacity: 1;
+  }
+
+  .cthulhuUiFlatNumericStepperInput[data-invalid='true']
+    .cthulhuUiFlatNumericStepperInputButton:disabled
+    :global(svg) {
+    opacity: 0.5;
   }
 
   .cthulhuUiFlatNumericStepperInputValue {
