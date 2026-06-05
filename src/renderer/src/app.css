@@ -49,6 +49,8 @@
   --cthulhu-ui-radius-control: 6px;
   --cthulhu-ui-radius-icon-button: 6px;
   --cthulhu-ui-radius-checkbox: 6px;
+  /* Shared cthulhu-ui typography for primary flat row/button labels. */
+  --cthulhu-ui-font-size-flat-primary: 16px;
   /* Shared cthulhu-ui shadow recipes; colors remain sourced from palette.css. */
   --cthulhu-ui-shadow-card: 0 8px 12px var(--ui-card-normal-shadow);
   --cthulhu-ui-shadow-surface-highlight: inset 0 1px 0 var(--ui-neutral-muted-surface);

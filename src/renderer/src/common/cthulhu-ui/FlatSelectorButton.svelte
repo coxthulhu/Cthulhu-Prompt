@@ -196,7 +196,7 @@
   }
 
   .cthulhuUiFlatSelectorButton[data-size='large'] .cthulhuUiFlatSelectorButtonText {
-    font-size: 15px;
+    font-size: var(--cthulhu-ui-font-size-flat-primary);
   }
 
   .cthulhuUiFlatSelectorButtonDetail {

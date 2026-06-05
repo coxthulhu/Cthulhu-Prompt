@@ -102,7 +102,7 @@
   .cthulhuUiFlatRowText {
     color: inherit;
     display: block;
-    font-size: 15px;
+    font-size: var(--cthulhu-ui-font-size-flat-primary);
     font-weight: 600;
     text-overflow: ellipsis;
   }
