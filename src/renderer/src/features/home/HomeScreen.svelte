@@ -284,8 +284,7 @@
                 <FlatDisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
                 <Separator
                   orientation="vertical"
-                  class="self-center bg-[var(--ui-card-nested-border)] max-[520px]:hidden"
-                  style="height: 46px;"
+                  class="h-auto self-stretch bg-[var(--ui-card-nested-border)]"
                 />
                 <FlatDisplayRow
                   icon={Folders}
@@ -408,20 +407,16 @@
 
   .cthulhuHomeWorkspaceStats {
     align-items: stretch;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    display: flex;
     min-width: 0;
+  }
+
+  .cthulhuHomeWorkspaceStats :global(.cthulhuUiFlatRow) {
+    flex: 1 1 0;
   }
 
   :global(.cthulhuHomeWorkspaceActionButton) {
     justify-content: center;
     width: 82px;
-  }
-
-  @media (max-width: 520px) {
-    .cthulhuHomeWorkspaceStats {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 </style>

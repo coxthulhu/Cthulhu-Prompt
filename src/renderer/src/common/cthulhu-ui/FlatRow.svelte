@@ -58,17 +58,13 @@
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-normal-text);
-    display: grid;
-    gap: 12px;
-    grid-template-columns: 34px minmax(0, 1fr);
+    column-gap: 12px;
+    display: flex;
     min-width: 0;
-    padding: 8px;
+    padding: 16px;
+    row-gap: 8px;
     text-align: left;
     width: 100%;
-  }
-
-  .cthulhuUiFlatRow[data-trailing='true'] {
-    grid-template-columns: 34px minmax(0, 1fr) minmax(0, auto);
   }
 
   .cthulhuUiFlatRowIconCell {
@@ -76,6 +72,7 @@
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-hoverable-icon-glyph);
     display: flex;
+    flex: 0 0 34px;
     height: 34px;
     justify-content: center;
     width: 34px;
@@ -87,6 +84,7 @@
 
   .cthulhuUiFlatRowTextStack {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
@@ -117,6 +115,7 @@
   .cthulhuUiFlatRowTrailing {
     align-items: center;
     display: flex;
+    flex: 0 0 auto;
     justify-content: flex-end;
     min-width: 0;
   }
@@ -127,12 +126,15 @@
 
   @media (max-width: 720px) {
     .cthulhuUiFlatRow[data-trailing='true'][data-trailing-layout='grouped'] {
-      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: flex-start;
+      flex-wrap: wrap;
     }
 
     .cthulhuUiFlatRow[data-trailing-layout='grouped'] .cthulhuUiFlatRowTrailing {
-      grid-column: 2;
+      flex-basis: calc(100% - 46px);
       justify-content: flex-start;
+      margin-left: 46px;
+      max-width: calc(100% - 46px);
     }
   }
 </style>

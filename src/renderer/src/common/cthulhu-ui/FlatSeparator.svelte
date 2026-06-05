@@ -8,5 +8,5 @@
   let { class: className, ...restProps }: Props = $props()
 </script>
 
-<!-- Separator spacing/color used between rows inside FlatCard content. -->
-<Separator class={mergeClasses('cthulhuUiFlatSeparator my-2 bg-[var(--ui-card-nested-border)]', className)} {...restProps} />
+<!-- Separator color used between padded rows inside FlatCard content. -->
+<Separator class={mergeClasses('cthulhuUiFlatSeparator bg-[var(--ui-card-nested-border)]', className)} {...restProps} />

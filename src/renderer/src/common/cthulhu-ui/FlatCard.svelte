@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import CardSurface from './CardSurface.svelte'
+  import FlatCardSurface from './FlatCardSurface.svelte'
   import { mergeClasses } from './mergeClasses'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
@@ -25,9 +25,9 @@
   </div>
 
   <!-- Flat labelled card shell for action and display row groups. -->
-  <CardSurface class={mergeClasses('cthulhuUiFlatCardSurface w-full min-w-0', surfaceClass)} variant="flat">
+  <FlatCardSurface class={surfaceClass}>
     {@render children()}
-  </CardSurface>
+  </FlatCardSurface>
 </div>
 
 <style>
