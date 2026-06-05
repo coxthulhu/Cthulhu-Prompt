@@ -8,18 +8,8 @@
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import {
-    Bug,
-    ExternalLink,
-    Hash,
-    Info,
-    RefreshCcw,
-    Rows3,
-    Settings,
-    Type
-  } from 'lucide-svelte'
+  import { Bug, ExternalLink, Hash, Info, RefreshCcw, Rows3, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -173,13 +163,7 @@
   data-testid="settings-screen"
 >
   <div class="w-full max-w-4xl space-y-6">
-    <SectionHeader
-      title="System Settings"
-      description="Global settings saved on your local machine."
-      headingLevel={1}
-      icon={Settings}
-      showAccentLine
-    />
+    <h1 class="system-settings-title">System Settings</h1>
 
     <FlatCard label="Editor & layout">
       <div class="flex flex-col">
@@ -357,3 +341,12 @@
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>
 </section>
+
+<style>
+  .system-settings-title {
+    color: var(--ui-normal-text);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+</style>
