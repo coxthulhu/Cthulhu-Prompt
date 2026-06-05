@@ -6,6 +6,7 @@
     icon: ComponentType
     label: string
     detail: string
+    detailExtra?: Snippet
     control?: Snippet
     actions?: Snippet
     class?: string
@@ -17,6 +18,7 @@
     icon,
     label,
     detail,
+    detailExtra,
     control,
     actions,
     class: className,
@@ -29,6 +31,7 @@
   {icon}
   {label}
   {detail}
+  {detailExtra}
   class={className}
   {iconClass}
   {testId}

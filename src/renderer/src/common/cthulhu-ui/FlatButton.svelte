@@ -1,12 +1,13 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import type { HTMLButtonAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
   import './flatActionButton.css'
 
   export type FlatButtonVariant = 'neutral' | 'accent'
   type FlatButtonState = 'enabled' | 'disabled'
 
-  type Props = {
+  type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
     icon?: ComponentType
     text: string
     variant?: FlatButtonVariant
@@ -25,7 +26,8 @@
     class: className,
     iconClass,
     testId,
-    onclick
+    onclick,
+    ...restProps
   }: Props = $props()
 
   const isDisabled = $derived(state === 'disabled')
@@ -39,6 +41,7 @@
   data-testid={testId}
   {onclick}
   disabled={isDisabled}
+  {...restProps}
 >
   <!-- Flat text action button for row-level commands; icons are optional. -->
   {#if Icon}

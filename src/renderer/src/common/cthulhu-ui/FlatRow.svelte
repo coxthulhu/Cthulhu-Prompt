@@ -8,6 +8,7 @@
     icon: ComponentType
     label: string
     detail: string
+    detailExtra?: Snippet
     trailing?: Snippet
     trailingLayout?: FlatRowTrailingLayout
     class?: string
@@ -21,6 +22,7 @@
     icon: Icon,
     label,
     detail,
+    detailExtra,
     trailing,
     trailingLayout = 'single',
     class: className,
@@ -44,6 +46,11 @@
   <span class="cthulhuUiFlatRowTextStack">
     <span class="cthulhuUiFlatRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>
     <span class="cthulhuUiFlatRowDetail">{detail}</span>
+    {#if detailExtra}
+      <span class="cthulhuUiFlatRowDetailExtra">
+        {@render detailExtra()}
+      </span>
+    {/if}
   </span>
 
   {#if trailing}
@@ -105,11 +112,22 @@
     text-overflow: ellipsis;
   }
 
-  .cthulhuUiFlatRowDetail {
+  .cthulhuUiFlatRowDetail,
+  .cthulhuUiFlatRowDetailExtra {
     color: var(--ui-muted-text);
     display: block;
     font-size: 13px;
+  }
+
+  .cthulhuUiFlatRowDetail {
     text-overflow: ellipsis;
+  }
+
+  .cthulhuUiFlatRowDetailExtra {
+    color: var(--ui-secondary-text);
+    line-height: 18px;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .cthulhuUiFlatRowTrailing {

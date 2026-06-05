@@ -192,7 +192,7 @@ describe('Home Screen', () => {
         '[data-testid="create-workspace-examples-checkbox"]'
       )
       await expect(includeExamplesCheckbox).toBeVisible()
-      await expect(includeExamplesCheckbox).toBeChecked()
+      await expect(includeExamplesCheckbox).toHaveAttribute('aria-pressed', 'true')
 
       await expect(
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
@@ -260,7 +260,7 @@ describe('Home Screen', () => {
 
       await expect(
         mainWindow.locator('[data-testid="create-workspace-final-path-input"]')
-      ).toHaveValue('/ws/non-empty-containing\\ClientPrompts')
+      ).toContainText('/ws/non-empty-containing\\ClientPrompts')
       await expect(
         mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
       ).toContainText(
