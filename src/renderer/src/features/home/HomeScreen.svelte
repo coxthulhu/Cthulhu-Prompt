@@ -208,7 +208,7 @@
       <header>
         <div
           bind:this={secondaryTitleContainerElement}
-          class="mx-auto w-full max-w-[632px] space-y-4 xl:max-w-none"
+          class="mx-auto w-full max-w-[632px] space-y-6 xl:max-w-none"
         >
           <h2
             class="cthulhuHomeSecondaryTitle"
@@ -217,10 +217,7 @@
           >
             {secondaryTitleText}
           </h2>
-          <Separator
-            class="bg-[var(--ui-neutral-muted-border)]"
-            data-testid="home-title-separator"
-          />
+          <div class="cthulhuHomeTitleSeparator" data-testid="home-title-separator"></div>
         </div>
       </header>
       <span
@@ -232,7 +229,7 @@
       </span>
 
       <div
-        class="mt-5 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
+        class="mt-7 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
         {#if !currentWorkspaceDetails}
           <CardSurface class={homeCardClass}>
@@ -412,6 +409,12 @@
     visibility: hidden;
     width: max-content;
     font-size: 100px;
+  }
+
+  .cthulhuHomeTitleSeparator {
+    background: var(--ui-neutral-muted-border);
+    height: 3px;
+    width: 100%;
   }
 
   .cthulhuHomeGetStartedText {
