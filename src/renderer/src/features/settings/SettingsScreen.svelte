@@ -8,7 +8,7 @@
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
+  import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
   import { Bug, ExternalLink, Hash, Info, RefreshCcw, Rows3, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
@@ -282,7 +282,7 @@
           detail="Display line numbers beside prompt text for easier review."
         >
           {#snippet control()}
-            <ToggleTextButton
+            <FlatToggleTextButton
               testId="show-line-numbers-toggle"
               pressed={systemSettingsState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}

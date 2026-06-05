@@ -62,7 +62,7 @@
   } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
+  import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
@@ -447,13 +447,13 @@
           <CheckboxInput bind:checked label="Checked checkbox" />
           <CheckboxInput bind:checked={unchecked} label="Unchecked checkbox" />
           <CheckboxInput checked label="Disabled checkbox" disabled />
-          <ToggleTextButton
+          <FlatToggleTextButton
             pressed={togglePressed}
             onclick={() => {
               togglePressed = !togglePressed
             }}
           />
-          <ToggleTextButton pressed={false} disabled />
+          <FlatToggleTextButton pressed={false} disabled />
         </div>
       </CardSurface>
 
