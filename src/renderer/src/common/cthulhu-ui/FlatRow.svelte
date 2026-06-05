@@ -12,6 +12,8 @@
     trailingLayout?: FlatRowTrailingLayout
     class?: string
     iconClass?: string
+    labelTitle?: string
+    labelTestId?: string
     testId?: string
   }
 
@@ -23,6 +25,8 @@
     trailingLayout = 'single',
     class: className,
     iconClass,
+    labelTitle,
+    labelTestId,
     testId
   }: Props = $props()
 </script>
@@ -38,7 +42,7 @@
   </span>
 
   <span class="cthulhuUiFlatRowTextStack">
-    <span class="cthulhuUiFlatRowText">{label}</span>
+    <span class="cthulhuUiFlatRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>
     <span class="cthulhuUiFlatRowDetail">{detail}</span>
   </span>
 

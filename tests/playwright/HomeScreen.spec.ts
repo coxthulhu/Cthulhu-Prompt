@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { stubClipboard } from '../helpers/ClipboardHelpers'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -58,6 +59,32 @@ describe('Home Screen', () => {
       await testHelpers.clearWorkspaceViaUI()
       expect(await testHelpers.isWorkspaceGetStarted()).toBe(true)
       expect(await testHelpers.isWorkspaceReady()).toBe(false)
+    })
+
+    test('copies the current workspace path and briefly shows copied state', async ({
+      testSetup
+    }) => {
+      const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+        workspace: { scenario: 'minimal' }
+      })
+
+      expect(workspaceSetupResult.workspaceReady).toBe(true)
+      await testHelpers.assertWorkspaceReadyPath('/ws/minimal')
+      await stubClipboard(mainWindow)
+
+      const copyButton = mainWindow.locator('[data-testid="copy-workspace-path-button"]')
+      await expect(copyButton).toHaveAttribute('aria-label', 'Copy workspace path')
+      await copyButton.click()
+
+      await expect
+        .poll(async () => {
+          return await mainWindow.evaluate(() => (window as any).__testClipboardText ?? '')
+        })
+        .toBe('/ws/minimal')
+      await expect(copyButton).toHaveAttribute('aria-label', 'Copied')
+      await expect(copyButton).toHaveAttribute('aria-label', 'Copy workspace path', {
+        timeout: 2500
+      })
     })
 
     test('keeps workspace ready across navigation', async ({ testSetup }) => {

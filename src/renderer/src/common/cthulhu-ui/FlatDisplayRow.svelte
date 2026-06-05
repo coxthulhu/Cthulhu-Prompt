@@ -9,10 +9,32 @@
     trailing?: Snippet
     class?: string
     iconClass?: string
+    labelTitle?: string
+    labelTestId?: string
     testId?: string
   }
 
-  let { icon, label, detail, trailing, class: className, iconClass, testId }: Props = $props()
+  let {
+    icon,
+    label,
+    detail,
+    trailing,
+    class: className,
+    iconClass,
+    labelTitle,
+    labelTestId,
+    testId
+  }: Props = $props()
 </script>
 
-<FlatRow {icon} {label} {detail} {trailing} class={className} {iconClass} {testId} />
+<FlatRow
+  {icon}
+  {label}
+  {detail}
+  {trailing}
+  class={className}
+  {iconClass}
+  {labelTitle}
+  {labelTestId}
+  {testId}
+/>

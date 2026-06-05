@@ -3,7 +3,6 @@
     Bug,
     ExternalLink,
     FileText,
-    Folder,
     FolderOpen,
     FolderPlus,
     FolderSymlink,
@@ -13,14 +12,15 @@
   import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
+  import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
+  import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
+  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
-  import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
-  import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -117,6 +117,16 @@
 
   const handleCreateFolder = async () => {
     showCreateWorkspaceDialog = true
+  }
+
+  const openWorkspaceFolder = () => {
+    const targetWorkspacePath = workspacePath
+    if (!targetWorkspacePath) return
+
+    // Hand off to the main process so Windows opens the folder in Explorer.
+    void runIpcBestEffort(() =>
+      ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath)
+    )
   }
 
   const getSelectButtonLabel = () => {
@@ -265,46 +275,61 @@
             </div>
           </CardSurface>
         {:else}
-          <CardSurface class={homeCardClass}>
-            <div class="space-y-4">
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <TitleBlock
-                    title="Current Workspace"
-                    size="large"
-                    description="Information about your current workspace."
-                    icon={Folder}
+          <FlatCard label="Current Workspace" class={homeCardClass}>
+            <div class="flex flex-col">
+              <FlatDisplayRow
+                icon={FolderOpen}
+                label={currentWorkspaceDetails.name}
+                detail="Workspace Name"
+                labelTitle={currentWorkspaceDetails.name}
+              >
+                {#snippet trailing()}
+                  <FlatIconButton
+                    icon={ExternalLink}
+                    label="Open Workspace Folder"
+                    title="Open Workspace Folder"
+                    testId="home-open-workspace-folder-button"
+                    onclick={openWorkspaceFolder}
                   />
-                </div>
-              </div>
+                {/snippet}
+              </FlatDisplayRow>
 
-              <div class="flex flex-col gap-3">
-                <LabeledDisplayField
-                  label="Workspace Name"
-                  text={currentWorkspaceDetails.name}
-                  icon={FolderOpen}
-                  valueTitle={currentWorkspaceDetails.name}
-                />
+              <FlatSeparator />
 
-                <LabeledDisplayField
-                  label="Workspace Path"
-                  text={currentWorkspaceDetails.path}
-                  icon={FolderSymlink}
-                  valueTitle={currentWorkspaceDetails.path}
-                  valueTestId="workspace-ready-path"
-                />
-
-                <div class="grid grid-cols-2 gap-3">
-                  <NumericStatCard label="Prompts" text={displayedPromptCount} icon={FileText} />
-                  <NumericStatCard
-                    label="Prompt Folders"
-                    text={displayedPromptFolderCount}
-                    icon={Folders}
+              <FlatDisplayRow
+                icon={FolderSymlink}
+                label={currentWorkspaceDetails.path}
+                detail="Workspace Path"
+                labelTitle={currentWorkspaceDetails.path}
+                labelTestId="workspace-ready-path"
+              >
+                {#snippet trailing()}
+                  <FlatCopyButton
+                    text={currentWorkspaceDetails.path}
+                    label="Copy workspace path"
+                    title="Copy workspace path"
+                    testId="copy-workspace-path-button"
                   />
-                </div>
+                {/snippet}
+              </FlatDisplayRow>
+
+              <FlatSeparator />
+
+              <div class="cthulhuHomeWorkspaceStats">
+                <FlatDisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
+                <Separator
+                  orientation="vertical"
+                  class="self-center bg-[var(--ui-card-nested-border)] max-[520px]:hidden"
+                  style="height: 46px;"
+                />
+                <FlatDisplayRow
+                  icon={Folders}
+                  label={displayedPromptFolderCount}
+                  detail="Prompt Folders"
+                />
               </div>
             </div>
-          </CardSurface>
+          </FlatCard>
         {/if}
 
         <FlatCard label="Workspace Actions" class={homeCardClass}>
@@ -408,5 +433,19 @@
     border-left: 3px solid var(--ui-accent-normal-border);
     display: flex;
     padding-left: 16px;
+  }
+
+  .cthulhuHomeWorkspaceStats {
+    align-items: stretch;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  @media (max-width: 520px) {
+    .cthulhuHomeWorkspaceStats {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>
