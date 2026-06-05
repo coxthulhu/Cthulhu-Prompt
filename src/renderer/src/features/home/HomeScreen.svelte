@@ -10,13 +10,13 @@
     X
   } from 'lucide-svelte'
   import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
+  import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
   import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
   import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
   import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
-  import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
@@ -64,7 +64,6 @@
   let showCreateWorkspaceDialog = $state(false)
   let showWorkspaceOpenErrorDialog = $state(false)
   let workspaceOpenErrorText = $state(workspaceOpenErrorFallbackText)
-  let activeWorkspaceAction = $state<'select' | 'create' | null>(null)
   let secondaryTitleContainerElement: HTMLDivElement | null = $state(null)
   let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
   let secondaryTitleContainerWidth = $state(0)
@@ -88,27 +87,20 @@
   }
 
   const handleSelectFolder = async () => {
-    activeWorkspaceAction = 'select'
+    let result: OpenWorkspaceInfoFileDialogResult
     try {
-      let result: OpenWorkspaceInfoFileDialogResult
-      try {
-        result = await openWorkspaceInfoFileDialog()
-      } catch (error) {
-        showWorkspaceOpenError(getErrorMessage(error))
-        return
-      }
+      result = await openWorkspaceInfoFileDialog()
+    } catch (error) {
+      showWorkspaceOpenError(getErrorMessage(error))
+      return
+    }
 
-      if (!result.dialogCancelled && result.filePaths.length > 0) {
-        const selectedPath = result.filePaths[0]
-        const selectionResult = await onWorkspaceSelect(selectedPath)
+    if (!result.dialogCancelled && result.filePaths.length > 0) {
+      const selectedPath = result.filePaths[0]
+      const selectionResult = await onWorkspaceSelect(selectedPath)
 
-        if (!selectionResult.success) {
-          showWorkspaceOpenError(selectionResult.message)
-        }
-      }
-    } finally {
-      if (activeWorkspaceAction === 'select') {
-        activeWorkspaceAction = null
+      if (!selectionResult.success) {
+        showWorkspaceOpenError(selectionResult.message)
       }
     }
   }
@@ -125,26 +117,6 @@
     void runIpcBestEffort(() =>
       ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath)
     )
-  }
-
-  const getSelectButtonLabel = () => {
-    if (isWorkspaceLoading) {
-      return activeWorkspaceAction === 'select' ? 'Setting up...' : 'Loading...'
-    }
-    if (isOpeningWorkspaceDialog && activeWorkspaceAction === 'select') {
-      return 'Selecting...'
-    }
-    return 'Open Workspace'
-  }
-
-  const getCreateButtonLabel = () => {
-    if (isWorkspaceLoading) {
-      return activeWorkspaceAction === 'create' ? 'Creating...' : 'Loading...'
-    }
-    if (isOpeningWorkspaceDialog && activeWorkspaceAction === 'create') {
-      return 'Choosing...'
-    }
-    return 'Create Workspace'
   }
 
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceDialog)
@@ -327,43 +299,64 @@
 
         <FlatCard label="Workspace Actions" class={homeCardClass}>
           <div class="flex flex-col">
-            <FlatSelectorButton
-              testId="open-workspace-button"
+            <FlatDisplayRow
               icon={FolderOpen}
               iconClass="translate-y-px"
-              text={getSelectButtonLabel()}
+              label="Open Workspace"
               detail="Open an existing workspace folder."
-              size="large"
-              onclick={handleSelectFolder}
-              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-            />
+            >
+              {#snippet trailing()}
+                <FlatButton
+                  testId="open-workspace-button"
+                  class="cthulhuHomeWorkspaceActionButton"
+                  text="Open"
+                  variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+                  onclick={handleSelectFolder}
+                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                />
+              {/snippet}
+            </FlatDisplayRow>
 
             <FlatSeparator />
 
-            <FlatSelectorButton
-              testId="create-workspace-button"
+            <FlatDisplayRow
               icon={FolderPlus}
               iconClass="translate-y-px"
-              text={getCreateButtonLabel()}
+              label="Create Workspace"
               detail="Choose a folder to set up a new workspace."
-              size="large"
-              onclick={handleCreateFolder}
-              state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-            />
+            >
+              {#snippet trailing()}
+                <FlatButton
+                  testId="create-workspace-button"
+                  class="cthulhuHomeWorkspaceActionButton"
+                  text="Create"
+                  variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+                  onclick={handleCreateFolder}
+                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                />
+              {/snippet}
+            </FlatDisplayRow>
 
             {#if isWorkspaceReady}
               <FlatSeparator />
 
-              <FlatSelectorButton
-                testId="close-workspace-button"
+              <FlatDisplayRow
                 icon={X}
                 iconClass="translate-y-px"
-                text="Close Workspace"
+                label="Close Workspace"
                 detail="Unload the current workspace folder."
-                size="large"
-                onclick={onWorkspaceClear}
-                state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-              />
+              >
+                {#snippet trailing()}
+                  <FlatButton
+                    testId="close-workspace-button"
+                    class="cthulhuHomeWorkspaceActionButton"
+                    text="Close"
+                    variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+                    onclick={onWorkspaceClear}
+                    state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+                  />
+                {/snippet}
+              </FlatDisplayRow>
             {/if}
           </div>
         </FlatCard>
@@ -419,6 +412,11 @@
     gap: 8px;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     min-width: 0;
+  }
+
+  :global(.cthulhuHomeWorkspaceActionButton) {
+    justify-content: center;
+    width: 82px;
   }
 
   @media (max-width: 520px) {

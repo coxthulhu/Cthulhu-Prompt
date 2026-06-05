@@ -7,7 +7,7 @@
   type FlatButtonState = 'enabled' | 'disabled'
 
   type Props = {
-    icon: ComponentType
+    icon?: ComponentType
     text: string
     variant?: FlatButtonVariant
     state?: FlatButtonState
@@ -40,8 +40,14 @@
   {onclick}
   disabled={isDisabled}
 >
-  <!-- Flat text action button with a leading icon. -->
-  <Icon class={mergeClasses('cthulhuUiFlatButtonIcon', iconClass)} size={16} aria-hidden="true" />
+  <!-- Flat text action button for row-level commands; icons are optional. -->
+  {#if Icon}
+    <Icon
+      class={mergeClasses('cthulhuUiFlatButtonIcon', iconClass)}
+      size={16}
+      aria-hidden="true"
+    />
+  {/if}
   <span>{text}</span>
 </button>
 
