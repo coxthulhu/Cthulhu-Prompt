@@ -57,7 +57,7 @@
   .cthulhuUiFlatRow {
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-hoverable-text);
+    color: var(--ui-normal-text);
     display: grid;
     gap: 12px;
     grid-template-columns: 34px minmax(0, 1fr);
