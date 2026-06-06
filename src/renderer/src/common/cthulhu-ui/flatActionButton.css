@@ -38,6 +38,17 @@
   color: var(--ui-normal-text);
 }
 
+.cthulhuUiFlatActionButton[data-variant='danger'] {
+  background-color: var(--ui-danger-normal-surface);
+  color: var(--ui-danger-icon-glyph);
+}
+
+.cthulhuUiFlatActionButton[data-variant='danger']:hover,
+.cthulhuUiFlatActionButton[data-variant='danger']:focus-visible {
+  background-color: var(--ui-danger-hover-surface);
+  color: var(--ui-danger-icon-glyph);
+}
+
 .cthulhuUiFlatActionButton:focus-visible {
   outline: 2px solid var(--ui-neutral-focus-border);
   outline-offset: 2px;

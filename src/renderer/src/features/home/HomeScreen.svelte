@@ -9,7 +9,7 @@
     Folders,
     X
   } from 'lucide-svelte'
-  import CthulhuErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
+  import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
   import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
   import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
   import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
@@ -368,7 +368,7 @@
     {onWorkspaceCreate}
   />
 
-  <CthulhuErrorDialog
+  <FlatErrorDialog
     bind:open={showWorkspaceOpenErrorDialog}
     title="Failed to Open Workspace"
     description="The workspace could not be opened."

@@ -2,7 +2,6 @@
   import {
     AlertCircle,
     Archive,
-    Bell,
     Check,
     CircleGauge,
     ClipboardList,
@@ -18,7 +17,6 @@
     Pencil,
     Pin,
     Plus,
-    Save,
     Settings,
     ShieldAlert,
     Sparkles,
@@ -32,13 +30,13 @@
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
-  import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
   import FlatDropdownPopupSimple, {
     type FlatDropdownPopupItem
   } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
-  import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
+  import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
+  import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import IconDescriptionButton, {
@@ -163,9 +161,8 @@
   let fontSizeStepperValue = $state('14')
   let minLinesStepperValue = $state('8')
   let togglePressed = $state(true)
-  let accentDialogOpen = $state(false)
-  let dangerDialogOpen = $state(false)
-  let errorDialogOpen = $state(false)
+  let flatErrorDialogOpen = $state(false)
+  let flatConfirmationDialogOpen = $state(false)
   let lastDropdownAction = $state('No dropdown item selected')
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
 </script>
@@ -575,31 +572,24 @@
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
           title="Dialogs"
-          description="Dialog icon and submit variants plus error dialog."
+          description="Flat error and confirmation dialogs."
           size="small"
         />
 
         <div class="variant-controls">
           <IconTextButton
-            icon={Bell}
-            text="Accent dialog"
+            icon={AlertCircle}
+            text="Flat error"
             variant="accent"
             onclick={() => {
-              accentDialogOpen = true
+              flatErrorDialogOpen = true
             }}
           />
           <IconTextButton
-            icon={ShieldAlert}
-            text="Danger dialog"
+            icon={Trash2}
+            text="Flat confirm"
             onclick={() => {
-              dangerDialogOpen = true
-            }}
-          />
-          <IconTextButton
-            icon={AlertCircle}
-            text="Error dialog"
-            onclick={() => {
-              errorDialogOpen = true
+              flatConfirmationDialogOpen = true
             }}
           />
         </div>
@@ -608,40 +598,21 @@
   </div>
 </div>
 
-<CthulhuDialog
-  bind:open={accentDialogOpen}
-  title="Accent dialog"
-  description="Dialog with accent icon and accent submit button."
-  icon={Sparkles}
-  iconVariant="accent"
-  submitText="Save"
-  submitVariant="accent"
-  submitIcon={Save}
-  onsubmit={() => {
-    accentDialogOpen = false
-  }}
-/>
-
-<CthulhuDialog
-  bind:open={dangerDialogOpen}
-  title="Danger dialog"
-  description="Dialog with danger icon and danger submit button."
-  icon={ShieldAlert}
-  iconVariant="danger"
-  submitText="Acknowledge"
-  submitVariant="danger"
-  onsubmit={() => {
-    dangerDialogOpen = false
-  }}
->
-  <MessageRow text="This dialog demonstrates the danger icon treatment." variant="warning" />
-</CthulhuDialog>
-
-<ErrorDialog
-  bind:open={errorDialogOpen}
+<FlatErrorDialog
+  bind:open={flatErrorDialogOpen}
   title="Workspace error"
   description="The selected folder did not load."
   errorText={errorDialogText}
+/>
+
+<FlatConfirmationDialog
+  bind:open={flatConfirmationDialogOpen}
+  title="Delete Prompt"
+  description="Are you sure you want to delete this prompt?"
+  confirmText="Delete"
+  onconfirm={() => {
+    flatConfirmationDialogOpen = false
+  }}
 />
 
 <style>

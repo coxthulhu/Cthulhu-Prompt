@@ -4,7 +4,7 @@
   import { mergeClasses } from './mergeClasses'
   import './flatActionButton.css'
 
-  export type FlatButtonVariant = 'neutral' | 'accent'
+  export type FlatButtonVariant = 'neutral' | 'accent' | 'danger'
   type FlatButtonState = 'enabled' | 'disabled'
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {

@@ -12,6 +12,7 @@
     open?: boolean
     title: string
     submitText: string
+    cancelText?: string
     showCloseButton?: boolean
     showSubmitButton?: boolean
     closeOnOutsideClick?: boolean
@@ -32,6 +33,7 @@
     open = $bindable(false),
     title,
     submitText,
+    cancelText = 'Cancel',
     showCloseButton = true,
     showSubmitButton = true,
     closeOnOutsideClick = true,
@@ -144,7 +146,7 @@
       <div class="cthulhuUiFlatDialogFooter">
         <FlatButton
           icon={cancelIcon}
-          text="Cancel"
+          text={cancelText}
           state={cancelDisabled ? 'disabled' : 'enabled'}
           testId={cancelTestId}
           onclick={closeDialog}
