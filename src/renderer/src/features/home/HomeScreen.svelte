@@ -17,7 +17,6 @@
   import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
@@ -282,9 +281,9 @@
 
               <div class="cthulhuHomeWorkspaceStats">
                 <FlatDisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
-                <Separator
+                <FlatSeparator
                   orientation="vertical"
-                  class="h-auto self-stretch bg-[var(--ui-card-nested-border)]"
+                  class="h-auto self-stretch"
                 />
                 <FlatDisplayRow
                   icon={Folders}

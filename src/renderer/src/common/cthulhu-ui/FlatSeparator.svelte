@@ -3,7 +3,11 @@
   import Separator from './Separator.svelte'
   import { mergeClasses } from './mergeClasses'
 
-  type Props = HTMLAttributes<HTMLDivElement>
+  type Props = HTMLAttributes<HTMLDivElement> & {
+    orientation?: 'horizontal' | 'vertical'
+    decorative?: boolean
+    elementRef?: HTMLDivElement | null
+  }
 
   let { class: className, ...restProps }: Props = $props()
 </script>
