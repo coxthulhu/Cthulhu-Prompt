@@ -1,10 +1,10 @@
 <script lang="ts">
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import CthulhuDialog from '@renderer/common/cthulhu-ui/CthulhuDialog.svelte'
+  import FlatDialog from '@renderer/common/cthulhu-ui/FlatDialog.svelte'
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
+  import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
+  import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
-  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import { FolderPlus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -139,41 +139,56 @@
   onclick={() => (isDialogOpen = true)}
 />
 
-<CthulhuDialog
+<FlatDialog
   bind:open={isDialogOpen}
-  class="w-full max-w-[512px]"
-  icon={FolderPlus}
-  title="Create New Prompt Folder"
-  description="Enter a name for your new prompt folder."
+  class="w-full max-w-[540px]"
+  title="Create Prompt Folder"
   submitText={isCreatingPromptFolder ? 'Creating...' : 'Create Folder'}
   submitDisabled={!isValid || isCreatingPromptFolder}
   cancelDisabled={isCreatingPromptFolder}
   submitTestId="create-folder-button"
   submitVariant="accent"
+  closeOnOutsideClick={false}
   oncancel={handleCancel}
   onsubmit={handleCreateFolder}
 >
-  <TitleBlock title="Prompt Folder Name" size="small" />
-  <FlatFloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
-    <TextInput
-      id="folder-name-input"
-      class="w-full"
-      data-testid="folder-name-input"
-      placeholder="Enter folder name..."
-      bind:value={displayName}
-      aria-invalid={errorMessage ? 'true' : undefined}
-      disabled={isCreatingPromptFolder}
-      oninput={() => {
-        hasInteractedWithInput = true
-        submissionError = null
-      }}
-      onkeydown={(event) => {
-        if (event.key === 'Enter' && isValid) {
-          handleCreateFolder()
-        } else if (event.key === 'Escape') {
-          handleCancel()
-        }
-      }}
-    />
-  </FlatFloatingValidationMessage>
-</CthulhuDialog>
+  <div class="cthulhuCreatePromptFolderRows flex min-w-0 flex-col">
+    <FlatSettingRow
+      icon={FolderPlus}
+      label="Prompt Folder Name"
+      detail="Name the new prompt folder."
+    >
+      {#snippet control()}
+        <FlatFloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
+          <FlatTextInput
+            id="folder-name-input"
+            class="w-[220px]"
+            data-testid="folder-name-input"
+            placeholder="Name..."
+            bind:value={displayName}
+            aria-label="Prompt Folder Name"
+            aria-invalid={errorMessage ? 'true' : undefined}
+            disabled={isCreatingPromptFolder}
+            oninput={() => {
+              hasInteractedWithInput = true
+              submissionError = null
+            }}
+            onkeydown={(event) => {
+              if (event.key === 'Enter' && isValid) {
+                handleCreateFolder()
+              } else if (event.key === 'Escape') {
+                handleCancel()
+              }
+            }}
+          />
+        </FlatFloatingValidationMessage>
+      {/snippet}
+    </FlatSettingRow>
+  </div>
+</FlatDialog>
+
+<style>
+  .cthulhuCreatePromptFolderRows {
+    overflow: visible;
+  }
+</style>
