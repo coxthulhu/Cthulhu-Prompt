@@ -23,7 +23,7 @@
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
-  import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
+  import FlatCreateWorkspaceDialog from './FlatCreateWorkspaceDialog.svelte'
 
   let {
     workspacePath,
@@ -362,7 +362,7 @@
     </section>
   </div>
 
-  <CreateWorkspaceDialog
+  <FlatCreateWorkspaceDialog
     bind:open={showCreateWorkspaceDialog}
     {isWorkspaceLoading}
     {onWorkspaceCreate}
