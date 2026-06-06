@@ -40,6 +40,7 @@
   import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
   import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
+  import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import IconDescriptionButton, {
     type IconDescriptionButtonVariant
   } from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
@@ -470,6 +471,8 @@
           />
           <MessageRow text="Review this value before saving." variant="warning" />
           <MessageRow text="Prompt folder name is required." variant="danger" />
+          <FlatMessageRow text="Review this value before saving." variant="warning" />
+          <FlatMessageRow text="Prompt folder name is required." variant="danger" />
           <FlatFloatingValidationMessage message="Prompt folder name is required.">
             <TextInput
               value=""

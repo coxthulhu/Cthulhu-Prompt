@@ -264,7 +264,7 @@ describe('Home Screen', () => {
       await expect(
         mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
       ).toContainText(
-        'This folder is not empty. Typically, you want to create a workspace in an empty folder.'
+        'This folder is not empty. Typically, you should create a workspace in an empty folder.'
       )
       await expect(
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')

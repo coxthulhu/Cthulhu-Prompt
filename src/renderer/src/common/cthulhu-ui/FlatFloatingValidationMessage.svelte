@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import MessageRow, { type MessageRowVariant } from './MessageRow.svelte'
+  import FlatMessageRow, { type FlatMessageRowVariant } from './FlatMessageRow.svelte'
 
   type Props = {
     children: Snippet
     message: string | null
-    variant?: MessageRowVariant
+    variant?: FlatMessageRowVariant
     textTestId?: string
   }
 
@@ -16,7 +16,7 @@
   {@render children()}
   {#if message}
     <!-- Anchor validation to the field so it floats outside the surrounding layout flow. -->
-    <MessageRow
+    <FlatMessageRow
       class="cthulhuUiFlatFloatingValidationMessageRow absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
       {variant}
       text={message}
@@ -27,13 +27,12 @@
 
 <style>
   .cthulhuUiFlatFloatingValidationMessage
-    :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiMessageRow) {
-    border: 0;
+    :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiFlatMessageRow) {
     box-shadow: 0 8px 18px var(--ui-card-normal-shadow);
   }
 
   .cthulhuUiFlatFloatingValidationMessage
-    :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiMessageRow[data-variant='danger']) {
+    :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiFlatMessageRow[data-variant='danger']) {
     background: color-mix(
       in oklch,
       var(--ui-card-solid-surface) 76%,
@@ -42,7 +41,7 @@
   }
 
   .cthulhuUiFlatFloatingValidationMessage
-    :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiMessageRow[data-variant='warning']) {
+    :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiFlatMessageRow[data-variant='warning']) {
     background: color-mix(
       in oklch,
       var(--ui-card-solid-surface) 76%,

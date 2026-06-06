@@ -2,11 +2,11 @@
   import FlatDialog from '@renderer/common/cthulhu-ui/FlatDialog.svelte'
   import FlatFolderInput from '@renderer/common/cthulhu-ui/FlatFolderInput.svelte'
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
+  import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
   import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
   import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
-  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { WorkspaceFolderStatus } from '@shared/Workspace'
   import { preparePromptFolderName } from '@shared/promptFolderName'
@@ -58,7 +58,7 @@
     hasExistingWorkspace
       ? 'A workspace already exists at this path.'
       : hasNonEmptyFinalFolder
-        ? 'This folder is not empty. Typically, you want to create a workspace in an empty folder.'
+        ? 'This folder is not empty. Typically, you should create a workspace in an empty folder.'
         : null
   )
   const finalPathMessageVariant = $derived(hasExistingWorkspace ? 'danger' : 'warning')
@@ -130,7 +130,7 @@
 
 <FlatDialog
   bind:open
-  class="w-full max-w-[600px]"
+  class="w-full max-w-[608px]"
   title="Create Workspace"
   submitText={isWorkspaceLoading ? 'Creating...' : 'Create Workspace'}
   submitDisabled={!canCreateWorkspace}
@@ -213,20 +213,20 @@
     </FlatSettingRow>
 
     {#if finalPathMessage}
-      <MessageRow
+      <FlatMessageRow
         text={finalPathMessage}
         variant={finalPathMessageVariant}
         textTestId="create-workspace-final-path-message"
-        class="cthulhuCreateWorkspaceMessage mx-4 mb-3"
+        class="mb-3 w-full"
       />
     {/if}
 
     {#if submissionError}
-      <MessageRow
+      <FlatMessageRow
         text={submissionError}
         variant="danger"
         textTestId="create-workspace-submit-error"
-        class="cthulhuCreateWorkspaceMessage mx-4 mb-3"
+        class="mb-3 w-full"
       />
     {/if}
 
@@ -255,9 +255,5 @@
 <style>
   .cthulhuCreateWorkspaceRows {
     overflow: visible;
-  }
-
-  :global(.cthulhuCreateWorkspaceMessage) {
-    width: calc(100% - 32px);
   }
 </style>
