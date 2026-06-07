@@ -9,6 +9,7 @@
     items: FlatDropdownPopupDetailedItem[]
     selectedItem: FlatDropdownPopupDetailedItem
     footerItem?: FlatDropdownPopupDetailedItem
+    state?: 'enabled' | 'disabled'
     testId?: string
     triggerTestId?: string
     onselect?: (item: FlatDropdownPopupDetailedItem, event: MouseEvent) => void
@@ -19,6 +20,7 @@
     items,
     selectedItem,
     footerItem,
+    state = 'enabled',
     testId,
     triggerTestId,
     onselect
@@ -42,6 +44,7 @@
       detail={selectedItem.detail}
       detailParts={selectedItem.detailParts}
       open={dropdown.open}
+      {state}
       ariaHaspopup={dropdown.ariaHaspopup}
       ariaExpanded={dropdown.ariaExpanded}
       buttonAction={dropdown.triggerAction}

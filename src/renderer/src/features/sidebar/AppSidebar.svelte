@@ -4,12 +4,14 @@
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, ChevronsUpDown, ExternalLink } from 'lucide-svelte'
+  import { ChevronsDownUp, ChevronsUpDown, ExternalLink, Folder, Plus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
+  import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
+  import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
   import BareIconButton from '@renderer/common/cthulhu-ui/BareIconButton.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
@@ -86,6 +88,49 @@
     const folderCount = promptFolders.length
     return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
   })
+  const promptFolderSelectorPlaceholder: FlatDropdownPopupDetailedItem = {
+    id: 'no-prompt-folders',
+    label: 'No prompt folders',
+    detail: 'Select a workspace with prompt folders',
+    icon: Folder
+  }
+  const promptFolderSelectorFooterItem: FlatDropdownPopupDetailedItem = {
+    id: 'add-prompt-folder',
+    label: 'Add Prompt Folder',
+    detail: 'Create a new prompt folder',
+    icon: Plus,
+    testId: 'sidebar-prompt-folder-dropdown-add-item'
+  }
+  const promptFolderDropdownItems = $derived.by(
+    (): FlatDropdownPopupDetailedItem[] =>
+      promptFolders.map((promptFolder) => {
+        const promptCount = promptFolder.promptIds.length
+
+        return {
+          id: promptFolder.id,
+          label: promptFolder.displayName,
+          detailParts: [
+            `${promptCount} prompt${promptCount === 1 ? '' : 's'}`,
+            'Updated recently'
+          ],
+          icon: Folder,
+          testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
+        }
+      })
+  )
+  const selectedPromptFolderDropdownItem = $derived.by((): FlatDropdownPopupDetailedItem => {
+    if (promptFolderDropdownItems.length === 0) {
+      return promptFolderSelectorPlaceholder
+    }
+
+    return (
+      promptFolderDropdownItems.find((item) => item.id === selectedPromptFolderId) ??
+      promptFolderDropdownItems[0]!
+    )
+  })
+  const promptFolderSelectorState = $derived(
+    promptFolderDropdownItems.length === 0 ? 'disabled' : 'enabled'
+  )
   const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
@@ -133,6 +178,10 @@
       path: workspacePath
     }
   })
+
+  const handlePromptFolderDropdownSelect = () => {
+    // Selection is intentionally inert until folder navigation is wired in.
+  }
 </script>
 
 <aside
@@ -180,7 +229,21 @@
   </div>
   <Separator />
 
-  <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col pt-3">
+  <div class="sidebarTopLevelInsetWithInnerPadding py-1">
+    <FlatSelectorButtonWithDropdown
+      label="Prompt folder selector"
+      items={promptFolderDropdownItems}
+      selectedItem={selectedPromptFolderDropdownItem}
+      footerItem={promptFolderSelectorFooterItem}
+      state={promptFolderSelectorState}
+      testId="sidebar-prompt-folder-selector-menu"
+      triggerTestId="sidebar-prompt-folder-selector-trigger"
+      onselect={handlePromptFolderDropdownSelect}
+    />
+  </div>
+  <Separator />
+
+  <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col pt-1">
     <div class="mb-2 flex items-center justify-between">
       <div>
         <p class="cthulhuSidebarPromptSectionTitle text-[13px] font-semibold">Prompts</p>
