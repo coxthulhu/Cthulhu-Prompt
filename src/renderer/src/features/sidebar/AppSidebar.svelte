@@ -259,7 +259,7 @@
             size="compact"
             disabled={!canTogglePromptFolders}
             testId="toggle-all-prompt-folders-button"
-            class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+            class="text-[var(--ui-flat-secondary-icon-glyph)] hover:text-[var(--ui-flat-hoverable-icon-glyph)]"
             onclick={handlePromptFolderExpansionAction}
           />
           <CreatePromptFolderDialog
@@ -295,20 +295,20 @@
 
 <style>
   .cthulhuSidebarPromptSectionTitle {
-    color: var(--ui-secondary-text);
+    color: var(--ui-flat-secondary-text);
   }
 
   .cthulhuSidebarPromptSectionCount {
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
   }
 
   .cthulhuSidebarWorkspaceName {
     min-width: 0;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuSidebarWorkspacePath {
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
   }
 
   .cthulhuSidebarWorkspaceTitleRow {

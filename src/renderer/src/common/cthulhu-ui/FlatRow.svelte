@@ -64,7 +64,7 @@
   .cthulhuUiFlatRow {
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     column-gap: 12px;
     display: flex;
     min-width: 0;
@@ -77,7 +77,7 @@
   .cthulhuUiFlatRowIconCell {
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-flat-hoverable-icon-glyph);
     display: flex;
     flex: 0 0 34px;
     height: 34px;
@@ -114,7 +114,7 @@
 
   .cthulhuUiFlatRowDetail,
   .cthulhuUiFlatRowDetailExtra {
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
     display: block;
     font-size: 13px;
   }
@@ -124,7 +124,7 @@
   }
 
   .cthulhuUiFlatRowDetailExtra {
-    color: var(--ui-secondary-text);
+    color: var(--ui-flat-secondary-text);
     line-height: 18px;
     overflow-wrap: anywhere;
     white-space: normal;

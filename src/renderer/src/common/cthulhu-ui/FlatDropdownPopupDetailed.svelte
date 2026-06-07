@@ -126,7 +126,7 @@
   }
 
   .cthulhuUiFlatDropdownPopupDetailedFooter {
-    border-top: 1px solid var(--ui-neutral-muted-border);
+    border-top: 1px solid var(--ui-flat-neutral-muted-border);
     flex-shrink: 0;
     margin: 5px -6px 0;
     padding: 5px 6px 0;
@@ -140,6 +140,6 @@
 
   :global(.cthulhuUiFlatDropdownPopupDetailedFooterItem:hover),
   :global(.cthulhuUiFlatDropdownPopupDetailedFooterItem[data-selected='true']) {
-    background-color: var(--ui-accent-hover-surface);
+    background-color: var(--ui-flat-accent-hover-surface);
   }
 </style>

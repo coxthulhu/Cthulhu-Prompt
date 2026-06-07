@@ -170,7 +170,7 @@
   .cthulhuUiFlatDialogLayer {
     -webkit-app-region: no-drag;
     align-items: center;
-    background-color: var(--ui-card-normal-shadow);
+    background-color: var(--ui-flat-card-normal-shadow);
     display: flex;
     inset: 0;
     justify-content: center;
@@ -182,11 +182,11 @@
   :global(.cthulhuUiFlatDialog.cthulhuUiFlatCardSurface) {
     background:
       linear-gradient(
-        var(--ui-card-normal-surface-gradient-start),
-        var(--ui-card-normal-surface-gradient-end)
+        var(--ui-flat-card-normal-surface-gradient-start),
+        var(--ui-flat-card-normal-surface-gradient-end)
       ),
-      var(--ui-card-solid-surface);
-    border: 1px solid var(--ui-card-normal-border);
+      var(--ui-flat-card-solid-surface);
+    border: 1px solid var(--ui-flat-card-normal-border);
   }
 
   :global(.cthulhuUiFlatDialog) {
@@ -204,7 +204,7 @@
   }
 
   .cthulhuUiFlatDialogTitle {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-size: 18px;
     font-weight: 500;
     letter-spacing: 0;

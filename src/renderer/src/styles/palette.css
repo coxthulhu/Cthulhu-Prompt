@@ -16,7 +16,6 @@
   --ui-hoverable-text: oklch(1 0 0 / 90%);
   --ui-normal-text: oklch(1 0 0);
   /* Opaque neutral icon glyphs approximate the text roles on dark app surfaces. */
-  --ui-muted-icon-glyph: oklch(0.66 0 0);
   --ui-secondary-icon-glyph: oklch(0.82 0 0);
   --ui-hoverable-icon-glyph: oklch(0.93 0 0);
 
@@ -30,7 +29,6 @@
   --ui-card-normal-shadow: oklch(0 0 0 / 28%);
   --ui-card-nested-surface: oklch(0.145 0.011 266.847 / 80%);
   --ui-card-nested-border: oklch(1 0 0 / 6%);
-  --ui-card-nested-inset-highlight: oklch(1 0 0 / 8%);
   --ui-card-nested-raised-inset-highlight: oklch(1 0 0 / 12%);
 
   /* Shadows */
@@ -50,20 +48,13 @@
   --ui-neutral-focus-border: oklch(1 0 0 / 28%);
 
   /* Neutral interactive borders stay brighter than structural gray borders. */
-  --ui-neutral-interactive-muted-border: oklch(1 0 0 / 22%);
   --ui-neutral-interactive-normal-border: oklch(1 0 0 / 30%);
   --ui-neutral-interactive-hover-border: oklch(1 0 0 / 42%);
-  --ui-neutral-interactive-emphasis-border: oklch(1 0 0 / 50%);
 
   /* Accent */
-  /* Stronger flat accent surface used when no border is present. */
-  --ui-accent-subtle-surface: oklch(0.606 0.219 292.717 / 25.2%);
-  --ui-accent-subtle-hover-surface: oklch(0.606 0.219 292.717 / 36%);
   --ui-accent-normal-surface: oklch(0.606 0.219 292.717 / 17%);
-  --ui-accent-normal-fill: oklch(0.827 0.108 306.383 / 24%);
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
-  --ui-accent-strong-text: oklch(0.78 0.22 293);
   --ui-accent-hover-surface: oklch(0.606 0.219 292.717 / 25%);
   --ui-accent-hover-border: oklch(0.827 0.108 306.383 / 42%);
   --ui-accent-strong-surface: oklch(0.541 0.281 293.009);
@@ -73,18 +64,15 @@
 
   /* Accent blue */
   --ui-accent-blue-normal-surface: oklch(0.666 0.181 254.617 / 18%);
-  --ui-accent-blue-normal-border: oklch(0.666 0.181 254.617 / 22%);
   --ui-accent-blue-icon-glyph: oklch(0.91 0.07 247);
 
   /* Accent green */
   --ui-accent-green-normal-surface: oklch(0.627 0.17 149.214 / 22%);
-  --ui-accent-green-normal-border: oklch(0.8 0.182 151.711 / 22%);
   --ui-accent-green-icon-glyph: oklch(0.982 0.018 155.826);
 
   /* Info */
   --ui-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
   --ui-info-normal-border: oklch(0.666 0.181 254.617 / 60%);
-  --ui-info-strong-border: oklch(0.666 0.181 254.617);
 
   /* Success */
   --ui-success-normal-surface: oklch(0.627 0.17 149.214 / 22%);

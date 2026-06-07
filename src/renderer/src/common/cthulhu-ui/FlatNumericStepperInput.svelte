@@ -121,7 +121,7 @@
     align-items: stretch;
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     grid-template-columns: 40px minmax(80px, auto) 40px;
     min-width: 0;
     transition:
@@ -140,20 +140,20 @@
 
   .cthulhuUiFlatNumericStepperInput:focus-within .cthulhuUiFlatNumericStepperInputButton,
   .cthulhuUiFlatNumericStepperInput:focus-within .cthulhuUiFlatNumericStepperInputValue {
-    border-color: var(--ui-neutral-focus-border);
+    border-color: var(--ui-flat-neutral-focus-border);
   }
 
   .cthulhuUiFlatNumericStepperInput[data-invalid='true'] .cthulhuUiFlatNumericStepperInputButton,
   .cthulhuUiFlatNumericStepperInput[data-invalid='true'] .cthulhuUiFlatNumericStepperInputValue {
-    border-color: var(--ui-danger-strong-border);
+    border-color: var(--ui-flat-danger-strong-border);
   }
 
   .cthulhuUiFlatNumericStepperInputButton {
     align-items: center;
-    background-color: transparent;
-    border: 1px solid var(--ui-neutral-normal-border);
+    background-color: var(--ui-flat-ghost-surface);
+    border: 1px solid var(--ui-flat-neutral-normal-border);
     box-sizing: border-box;
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-flat-hoverable-icon-glyph);
     cursor: pointer;
     display: inline-flex;
     height: 100%;
@@ -175,7 +175,7 @@
   }
 
   .cthulhuUiFlatNumericStepperInputButton:hover {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatNumericStepperInputButton:disabled {
@@ -197,9 +197,9 @@
 
   .cthulhuUiFlatNumericStepperInputValue {
     align-items: center;
-    background-color: transparent;
-    border-bottom: 1px solid var(--ui-neutral-normal-border);
-    border-top: 1px solid var(--ui-neutral-normal-border);
+    background-color: var(--ui-flat-ghost-surface);
+    border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
+    border-top: 1px solid var(--ui-flat-neutral-normal-border);
     cursor: text;
     display: inline-flex;
     gap: 6px;
@@ -210,9 +210,9 @@
   }
 
   .cthulhuUiFlatNumericStepperInputNative {
-    background: transparent;
+    background: var(--ui-flat-ghost-surface);
     border: 0;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-size: 14px;
     height: 100%;
     line-height: 1.25;
@@ -224,8 +224,8 @@
   }
 
   .cthulhuUiFlatNumericStepperInputNative::selection {
-    background-color: var(--ui-neutral-selection-surface);
-    color: var(--ui-normal-text);
+    background-color: var(--ui-flat-neutral-selection-surface);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatNumericStepperInputNative:disabled {
@@ -237,7 +237,7 @@
   }
 
   .cthulhuUiFlatNumericStepperInputHelper {
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
     font-size: 12px;
     font-weight: 600;
     line-height: 1.25;

@@ -28,15 +28,15 @@
 <style>
   .cthulhuUiFlatFloatingValidationMessage
     :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiFlatMessageRow) {
-    box-shadow: 0 8px 18px var(--ui-card-normal-shadow);
+    box-shadow: 0 8px 18px var(--ui-flat-card-normal-shadow);
   }
 
   .cthulhuUiFlatFloatingValidationMessage
     :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiFlatMessageRow[data-variant='danger']) {
     background: color-mix(
       in oklch,
-      var(--ui-card-solid-surface) 76%,
-      var(--ui-danger-strong-border)
+      var(--ui-flat-card-solid-surface) 76%,
+      var(--ui-flat-danger-strong-border)
     );
   }
 
@@ -44,8 +44,8 @@
     :global(.cthulhuUiFlatFloatingValidationMessageRow.cthulhuUiFlatMessageRow[data-variant='warning']) {
     background: color-mix(
       in oklch,
-      var(--ui-card-solid-surface) 76%,
-      var(--ui-warning-normal-border)
+      var(--ui-flat-card-solid-surface) 76%,
+      var(--ui-flat-warning-normal-border)
     );
   }
 </style>

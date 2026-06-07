@@ -12,12 +12,12 @@
   let { pressed, class: className, disabled = false, testId, onclick }: Props = $props()
 
   const buttonStateClasses = {
-    off: 'bg-[var(--ui-neutral-normal-surface)] text-[var(--ui-hoverable-text)] hover:bg-[var(--ui-neutral-hover-surface)] hover:text-[var(--ui-normal-text)]',
-    on: 'bg-[var(--ui-accent-normal-surface)] text-[var(--ui-accent-normal-text)] hover:bg-[var(--ui-accent-hover-surface)]'
+    off: 'bg-[var(--ui-flat-neutral-normal-surface)] text-[var(--ui-flat-hoverable-text)] hover:bg-[var(--ui-flat-neutral-hover-surface)] hover:text-[var(--ui-flat-normal-text)]',
+    on: 'bg-[var(--ui-flat-accent-normal-surface)] text-[var(--ui-flat-accent-normal-text)] hover:bg-[var(--ui-flat-accent-hover-surface)]'
   }
   const trackStateClasses = {
-    off: 'justify-start bg-[var(--ui-neutral-emphasis-surface)]',
-    on: 'justify-end bg-[var(--ui-accent-normal-fill)]'
+    off: 'justify-start bg-[var(--ui-flat-neutral-emphasis-surface)]',
+    on: 'justify-end bg-[var(--ui-flat-accent-normal-fill)]'
   }
   const stateClassKey = $derived(pressed ? 'on' : 'off')
 </script>
@@ -41,7 +41,7 @@
     )}
   >
     <span
-      class="cthulhuUiFlatToggleTextButtonThumb h-4 w-4 rounded-full bg-[var(--ui-normal-text)] shadow-[var(--cthulhu-ui-shadow-thumb)]"
+      class="cthulhuUiFlatToggleTextButtonThumb h-4 w-4 rounded-full bg-[var(--ui-flat-normal-text)] shadow-[var(--cthulhu-ui-shadow-thumb)]"
     ></span>
   </span>
   <span class="w-[64px] text-left">

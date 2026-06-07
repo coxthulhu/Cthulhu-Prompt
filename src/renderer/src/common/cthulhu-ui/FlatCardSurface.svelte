@@ -30,7 +30,7 @@
 
 <style>
   .cthulhuUiFlatCardSurface {
-    background: var(--ui-card-normal-surface-gradient-start);
+    background: var(--ui-flat-card-normal-surface-gradient-start);
     background-repeat: no-repeat;
     box-shadow: none;
   }

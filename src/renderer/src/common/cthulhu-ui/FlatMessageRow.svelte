@@ -32,7 +32,7 @@
 
 <style>
   .cthulhuUiFlatMessageRow {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatMessageRowIcon {
@@ -40,14 +40,14 @@
   }
 
   .cthulhuUiFlatMessageRow[data-variant='danger'] {
-    --cthulhu-ui-flat-message-row-icon: var(--ui-danger-icon-glyph);
+    --cthulhu-ui-flat-message-row-icon: var(--ui-flat-danger-icon-glyph);
 
-    background: var(--ui-danger-normal-surface);
+    background: var(--ui-flat-danger-normal-surface);
   }
 
   .cthulhuUiFlatMessageRow[data-variant='warning'] {
-    --cthulhu-ui-flat-message-row-icon: var(--ui-warning-icon-glyph);
+    --cthulhu-ui-flat-message-row-icon: var(--ui-flat-warning-icon-glyph);
 
-    background: var(--ui-warning-normal-surface);
+    background: var(--ui-flat-warning-normal-surface);
   }
 </style>

@@ -46,7 +46,7 @@
 
 <style>
   .cthulhuUiFlatConfirmationDialogMessage {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-size: 14px;
     line-height: 1.5;
     margin: 0;

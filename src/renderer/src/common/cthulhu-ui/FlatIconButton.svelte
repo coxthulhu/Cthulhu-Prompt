@@ -56,10 +56,10 @@
 <style>
   .cthulhuUiFlatIconButton {
     align-items: center;
-    background: transparent;
+    background: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-flat-hoverable-icon-glyph);
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
@@ -73,11 +73,11 @@
 
   .cthulhuUiFlatIconButton:hover,
   .cthulhuUiFlatIconButton:focus-visible {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatIconButton:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
+    outline: 2px solid var(--ui-flat-neutral-focus-border);
     outline-offset: 2px;
   }
 

@@ -21,9 +21,9 @@
 
 <style>
   .cthulhuUiFlatValuePill {
-    border: 1px solid var(--ui-neutral-normal-border);
+    border: 1px solid var(--ui-flat-neutral-normal-border);
     border-radius: 999px;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     flex: 0 0 auto;
     font-size: 14px;
     font-weight: 500;

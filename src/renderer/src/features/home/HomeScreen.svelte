@@ -378,7 +378,7 @@
 
 <style>
   .cthulhuHomeSecondaryTitle {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: clamp(64px, 9vw, 88px);
     font-weight: 700;
@@ -399,7 +399,7 @@
   }
 
   .cthulhuHomeTitleSeparator {
-    background: var(--ui-neutral-muted-border);
+    background: var(--ui-flat-neutral-muted-border);
     height: 3px;
     width: 100%;
   }

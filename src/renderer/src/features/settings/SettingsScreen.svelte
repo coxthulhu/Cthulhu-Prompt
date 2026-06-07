@@ -344,7 +344,7 @@
 
 <style>
   .system-settings-title {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-size: 2rem;
     font-weight: 700;
     line-height: 1.15;

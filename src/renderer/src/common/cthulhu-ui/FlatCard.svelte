@@ -37,7 +37,7 @@
 
   .cthulhuUiFlatCardLabel {
     align-items: center;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     display: flex;
     font-size: 18px;
     font-weight: 500;

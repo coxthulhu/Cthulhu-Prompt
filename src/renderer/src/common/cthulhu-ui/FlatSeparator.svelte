@@ -13,4 +13,4 @@
 </script>
 
 <!-- Separator color used between padded rows inside FlatCard content. -->
-<Separator class={mergeClasses('cthulhuUiFlatSeparator bg-[var(--ui-card-nested-border)]', className)} {...restProps} />
+<Separator class={mergeClasses('cthulhuUiFlatSeparator bg-[var(--ui-flat-card-nested-border)]', className)} {...restProps} />

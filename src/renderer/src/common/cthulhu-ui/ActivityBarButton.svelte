@@ -59,17 +59,17 @@
     justify-content: center;
     border: 0;
     border-radius: 0;
-    background: transparent;
-    color: var(--ui-muted-icon-glyph);
+    background: var(--ui-flat-ghost-surface);
+    color: var(--ui-flat-muted-icon-glyph);
     transition: color 120ms ease-out;
   }
 
   .cthulhuUiActivityBarButton:hover {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiActivityBarButton[data-active='true'] {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiActivityBarButton[data-active='true']::before {
@@ -79,7 +79,7 @@
     left: 0;
     width: 2px;
     border-radius: 0 2px 2px 0;
-    background-color: var(--ui-accent-strong-border);
+    background-color: var(--ui-flat-accent-strong-border);
     content: '';
   }
 

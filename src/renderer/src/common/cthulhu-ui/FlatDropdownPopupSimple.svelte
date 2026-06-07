@@ -76,13 +76,13 @@
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-hoverable-icon-glyph);
 
     align-items: center;
-    background: transparent;
+    background: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-text);
+    color: var(--ui-flat-hoverable-text);
     cursor: pointer;
     display: grid;
     gap: 8px;
@@ -97,33 +97,33 @@
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='accent'] {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-accent-normal-text);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-accent-normal-text);
 
-    color: var(--ui-accent-normal-text);
+    color: var(--ui-flat-accent-normal-text);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger'] {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-danger-icon-glyph);
 
-    color: var(--ui-danger-icon-glyph);
+    color: var(--ui-flat-danger-icon-glyph);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem:hover {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-normal-text);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-normal-text);
 
-    background: var(--ui-neutral-hover-surface);
-    color: var(--ui-normal-text);
+    background: var(--ui-flat-neutral-hover-surface);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='accent']:hover {
-    background: var(--ui-accent-hover-surface);
+    background: var(--ui-flat-accent-hover-surface);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger']:hover {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-danger-icon-glyph);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-danger-icon-glyph);
 
-    background: var(--ui-danger-hover-surface);
-    color: var(--ui-danger-icon-glyph);
+    background: var(--ui-flat-danger-hover-surface);
+    color: var(--ui-flat-danger-icon-glyph);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem > :global(svg) {
