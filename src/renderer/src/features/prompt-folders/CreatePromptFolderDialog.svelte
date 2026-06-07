@@ -32,6 +32,12 @@
   let hasInteractedWithInput = $state(false)
   let isCreatingPromptFolder = $state(false)
 
+  export const openDialog = () => {
+    if (!isWorkspaceReady) return
+
+    isDialogOpen = true
+  }
+
   const preparedName = $derived(preparePromptFolderName(displayName))
   const validation = $derived(preparedName.validation)
   const normalizedDisplayName = $derived(preparedName.displayName)
@@ -136,7 +142,7 @@
   disabled={!isWorkspaceReady}
   testId="new-prompt-folder-button"
   class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-  onclick={() => (isDialogOpen = true)}
+  onclick={openDialog}
 />
 
 <FlatDialog

@@ -11,6 +11,12 @@ const DEVELOPMENT_OPTIONS = '[data-testid="prompt-folder-options-Development"]'
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
 const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-folder-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
+const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
+  '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM =
+  '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
+const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM =
+  '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
 const SHORT_OPTIONS = '[data-testid="prompt-folder-options-Short"]'
 const SHORT_TOGGLE = '[data-testid="prompt-folder-toggle-Short"]'
 const SHORT_SHOW_ALL = '[data-testid="prompt-folder-show-all-Short"]'
@@ -135,6 +141,32 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
+  })
+
+  test('selects prompt folders and opens create dialog from the sidebar dropdown', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await mainWindow
+      .locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM)
+      .filter({ hasText: 'Development Tools' })
+      .click()
+
+    await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', {
+      state: 'attached'
+    })
+    await expect(mainWindow.locator(DEVELOPMENT_BUTTON)).toHaveAttribute('data-active', 'true')
+    expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
+
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
+    await expect(mainWindow.locator('[data-testid="folder-name-input"]')).toBeVisible()
   })
 
   test('keeps selection stable while folders expand and collapse', async ({ testSetup }) => {

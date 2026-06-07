@@ -19,6 +19,10 @@
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
+  type CreatePromptFolderDialogHandle = {
+    openDialog: () => void
+  }
+
   let {
     activeScreen,
     isWorkspaceReady = false,
@@ -135,6 +139,7 @@
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
   let areAllPromptFoldersCollapsed = $state(true)
+  let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
   const shouldShowExpandAllPromptFolders = $derived(
     promptFolders.length === 0 || areAllPromptFoldersCollapsed
   )
@@ -179,8 +184,15 @@
     }
   })
 
-  const handlePromptFolderDropdownSelect = () => {
-    // Selection is intentionally inert until folder navigation is wired in.
+  const handlePromptFolderDropdownSelect = (item: FlatDropdownPopupDetailedItem) => {
+    if (item.id === promptFolderSelectorFooterItem.id) {
+      createPromptFolderDialog?.openDialog()
+      return
+    }
+
+    if (promptFolders.some((promptFolder) => promptFolder.id === item.id)) {
+      onPromptFolderSelect(item.id)
+    }
   }
 </script>
 
@@ -263,6 +275,7 @@
             onclick={handlePromptFolderExpansionAction}
           />
           <CreatePromptFolderDialog
+            bind:this={createPromptFolderDialog}
             {isWorkspaceReady}
             {promptFolders}
             isPromptFolderListLoading={isWorkspaceLoading}
