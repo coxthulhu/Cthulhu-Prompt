@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.22
+
+### New Features
+
+- Added a sidebar activity bar for primary app navigation.
+- Added a sidebar prompt folder selector with quick folder switching and add-folder access.
+- Added shared flat UI components, including flat dialogs, dropdowns, buttons, cards, rows, inputs, and separators.
+
+### Changes
+
+- Refreshed Home, Settings, workspace creation, prompt folder dialogs, and sidebar surfaces with the new flat UI styling.
+- Reworked prompt folder settings into separate virtualized rows with section gutters.
+- Moved prompt tree folder actions into a folder options dropdown and refined prompt tree row behavior.
+- Updated prompt editor, prompt folder, and sidebar spacing, typography, icons, and palette usage.
+
+### Fixed
+
+- Fixed dropdown popup positioning, sizing, dismissal, and background scroll behavior.
+- Fixed prompt folder hydration and navigation coverage around virtualized folder settings.
+
 ## 0.0.21
 
 ### New Features
