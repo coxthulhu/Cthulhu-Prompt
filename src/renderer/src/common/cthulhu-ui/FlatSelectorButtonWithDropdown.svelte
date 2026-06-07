@@ -34,7 +34,6 @@
   {footerItem}
   {testId}
   placement="below-trigger"
-  matchTriggerWidth
   {onselect}
 >
   {#snippet trigger(dropdown)}

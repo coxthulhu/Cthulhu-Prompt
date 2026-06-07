@@ -157,7 +157,13 @@
     open = true
   }
 
-  const resolvedMenuWidth = $derived(matchTriggerWidth ? `${triggerWidth}px` : menuWidth)
+  const resolvedMenuWidth = $derived(
+    matchTriggerWidth
+      ? `${triggerWidth}px`
+      : placement === 'below-trigger'
+        ? `max(${menuWidth}, ${triggerWidth}px)`
+        : menuWidth
+  )
   const menuPosition = $derived(
     menuAnchor
       ? getMenuPosition(menuAnchor, measuredMenuSize.width, measuredMenuSize.height)

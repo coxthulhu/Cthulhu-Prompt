@@ -34,7 +34,7 @@
     selectedItem,
     trigger,
     footerItem,
-    menuWidth = '280px',
+    menuWidth = '320px',
     testId,
     placement = 'cursor',
     matchTriggerWidth = false,
