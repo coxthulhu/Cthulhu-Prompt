@@ -95,10 +95,4 @@
     opacity: 0.5;
     pointer-events: none;
   }
-
-  .cthulhuUiFlatIconButtonIcon {
-    height: 16px;
-    stroke-width: 2;
-    width: 16px;
-  }
 </style>
