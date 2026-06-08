@@ -316,7 +316,7 @@
               text="Open Github Issues"
               endIcon={ExternalLink}
               variant="accent"
-              testId="about-github-issues-flat-link"
+              testId="about-github-issues-link"
               target="_blank"
               rel="noreferrer"
             />

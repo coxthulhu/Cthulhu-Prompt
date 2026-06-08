@@ -51,7 +51,7 @@ const readWorkspacePromptFolderIds = async (
 
 const readPromptTreeFolderTestIds = async (page: Page): Promise<string[]> => {
   return await page
-    .locator('[data-testid^="regular-prompt-folder-"]')
+    .locator('[data-testid^="prompt-tree-folder-open-button-"]')
     .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid') ?? ''))
 }
 
@@ -94,10 +94,10 @@ describe('Prompt Folder Order', () => {
     await expect
       .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
       .toEqual([
-        'regular-prompt-folder-middle',
-        'regular-prompt-folder-zeta',
-        'regular-prompt-folder-Alpha',
-        'regular-prompt-folder-beta'
+        'prompt-tree-folder-open-button-middle',
+        'prompt-tree-folder-open-button-zeta',
+        'prompt-tree-folder-open-button-Alpha',
+        'prompt-tree-folder-open-button-beta'
       ])
     await expect(
       await readWorkspacePromptFolderIds(electronApp, FOLDER_ORDER_WORKSPACE_PATH)
@@ -124,18 +124,18 @@ describe('Prompt Folder Order', () => {
 
     await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
     await mainWindow.locator('[data-testid="sidebar-prompt-folder-dropdown-add-item"]').click()
-    await mainWindow.locator('[data-testid="folder-name-input"]').fill('New Folder')
-    await mainWindow.locator('[data-testid="create-folder-button"]').click()
+    await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('New Folder')
+    await mainWindow.locator('[data-testid="create-prompt-folder-button"]').click()
 
-    await expect(mainWindow.locator('[data-testid="regular-prompt-folder-NewFolder"]')).toHaveCount(
+    await expect(mainWindow.locator('[data-testid="prompt-tree-folder-open-button-NewFolder"]')).toHaveCount(
       1
     )
     await expect
       .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
       .toEqual([
-        'regular-prompt-folder-NewFolder',
-        'regular-prompt-folder-Alpha',
-        'regular-prompt-folder-Beta'
+        'prompt-tree-folder-open-button-NewFolder',
+        'prompt-tree-folder-open-button-Alpha',
+        'prompt-tree-folder-open-button-Beta'
       ])
     await expect
       .poll(
@@ -169,9 +169,9 @@ describe('Prompt Folder Order', () => {
     await expect
       .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
       .toEqual([
-        'regular-prompt-folder-Gamma',
-        'regular-prompt-folder-Alpha',
-        'regular-prompt-folder-Beta'
+        'prompt-tree-folder-open-button-Gamma',
+        'prompt-tree-folder-open-button-Alpha',
+        'prompt-tree-folder-open-button-Beta'
       ])
     await expect
       .poll(
@@ -190,9 +190,9 @@ describe('Prompt Folder Order', () => {
     await expect
       .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
       .toEqual([
-        'regular-prompt-folder-Alpha',
-        'regular-prompt-folder-Beta',
-        'regular-prompt-folder-Gamma'
+        'prompt-tree-folder-open-button-Alpha',
+        'prompt-tree-folder-open-button-Beta',
+        'prompt-tree-folder-open-button-Gamma'
       ])
     await expect
       .poll(
@@ -227,9 +227,9 @@ describe('Prompt Folder Order', () => {
     await expect
       .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
       .toEqual([
-        'regular-prompt-folder-Alpha',
-        'regular-prompt-folder-Beta',
-        'regular-prompt-folder-Gamma'
+        'prompt-tree-folder-open-button-Alpha',
+        'prompt-tree-folder-open-button-Beta',
+        'prompt-tree-folder-open-button-Gamma'
       ])
     await expect(
       await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
@@ -295,7 +295,7 @@ describe('Prompt Folder Order', () => {
 
       const hostRect = host.getBoundingClientRect()
       const folderButtons = Array.from(
-        document.querySelectorAll<HTMLElement>('[data-testid^="prompt-folder-toggle-"]')
+        document.querySelectorAll<HTMLElement>('[data-testid^="prompt-tree-folder-toggle-button-"]')
       )
       const visibleButton = folderButtons.find((button) => {
         const rect = button.getBoundingClientRect()
@@ -314,8 +314,8 @@ describe('Prompt Folder Order', () => {
       const overscanRect = overscanButton.getBoundingClientRect()
 
       return {
-        sourceFolderName: visibleTestId.replace('prompt-folder-toggle-', ''),
-        overscanFolderName: overscanTestId.replace('prompt-folder-toggle-', ''),
+        sourceFolderName: visibleTestId.replace('prompt-tree-folder-toggle-button-', ''),
+        overscanFolderName: overscanTestId.replace('prompt-tree-folder-toggle-button-', ''),
         x: overscanRect.left + overscanRect.width / 2,
         y: overscanRect.top + overscanRect.height / 2
       }

@@ -179,7 +179,7 @@
     >
       {#snippet detailExtra()}
         {#if containingFolder}
-          <span data-testid="create-workspace-path-input">{containingFolder}</span>
+          <span data-testid="create-workspace-containing-folder-display">{containingFolder}</span>
         {/if}
       {/snippet}
 
@@ -203,7 +203,7 @@
       {#snippet detailExtra()}
         {#if finalWorkspacePath}
           <span
-            data-testid="create-workspace-final-path-input"
+            data-testid="create-workspace-final-path-display"
             aria-invalid={hasExistingWorkspace ? 'true' : undefined}
           >
             {finalWorkspacePath}
@@ -233,14 +233,14 @@
     <FlatSeparator />
 
     <FlatSettingRow
-      testId="create-workspace-examples-checkbox-input"
+      testId="create-workspace-examples-row"
       icon={Sparkles}
       label="Add Examples"
       detail='Include example prompts in a "My Prompts" folder.'
     >
       {#snippet control()}
         <FlatToggleTextButton
-          testId="create-workspace-examples-checkbox"
+          testId="create-workspace-examples-toggle"
           pressed={includeExamples}
           disabled={isWorkspaceLoading}
           onclick={() => {

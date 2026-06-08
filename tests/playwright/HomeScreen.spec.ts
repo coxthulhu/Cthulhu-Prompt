@@ -113,7 +113,6 @@ describe('Home Screen', () => {
       await expect(errorDialog).toBeVisible()
       await expect(errorDialog).toContainText('The workspace could not be opened.')
       await expect(errorDialog).toContainText('Invalid workspace path')
-      await expect(mainWindow.locator('[data-testid="error-placeholder-button"]')).toHaveCount(0)
     })
 
     test('shows an error dialog when workspace folder order is missing', async ({ testSetup }) => {
@@ -188,11 +187,11 @@ describe('Home Screen', () => {
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Example Workspace')
       await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
-      const includeExamplesCheckbox = mainWindow.locator(
-        '[data-testid="create-workspace-examples-checkbox"]'
+      const includeExamplesToggle = mainWindow.locator(
+        '[data-testid="create-workspace-examples-toggle"]'
       )
-      await expect(includeExamplesCheckbox).toBeVisible()
-      await expect(includeExamplesCheckbox).toHaveAttribute('aria-pressed', 'true')
+      await expect(includeExamplesToggle).toBeVisible()
+      await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'true')
 
       await expect(
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
@@ -259,7 +258,7 @@ describe('Home Screen', () => {
       await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
       await expect(
-        mainWindow.locator('[data-testid="create-workspace-final-path-input"]')
+        mainWindow.locator('[data-testid="create-workspace-final-path-display"]')
       ).toContainText('/ws/non-empty-containing\\ClientPrompts')
       await expect(
         mainWindow.locator('[data-testid="create-workspace-final-path-message"]')

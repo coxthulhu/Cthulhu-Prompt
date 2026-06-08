@@ -313,8 +313,6 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               promptFolderHelpers.clickCollapsibleTrigger(mainWindow, triggerText),
             clickPromptFolderItem: (folderName: string, timeout?: number) =>
               promptFolderHelpers.clickPromptFolderItem(mainWindow, folderName, timeout),
-            clickPromptFoldersUpdatedItem: (folderName: string, timeout?: number) =>
-              promptFolderHelpers.clickPromptFoldersUpdatedItem(mainWindow, folderName, timeout),
             getPromptRowHeight: (selector: string) =>
               promptFolderHelpers.getPromptRowHeight(mainWindow, selector),
             getPromptRowWidth: (selector: string) =>
@@ -357,8 +355,6 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               promptFolderHelpers.navigateToRegularFolder(mainWindow, folderName),
             navigateToPromptFolders: (folderName: string) =>
               promptFolderHelpers.navigateToRegularFolder(mainWindow, folderName),
-            navigateToPromptFoldersUpdated: (folderName: string) =>
-              promptFolderHelpers.navigateToPromptFoldersUpdated(mainWindow, folderName),
             pauseIpcChannel: async (channel: string) => {
               await emitIpcGateEvent('test-ipc-gate', channel)
             },

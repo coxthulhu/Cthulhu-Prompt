@@ -139,7 +139,7 @@
   submitText={isCreatingPromptFolder ? 'Creating...' : 'Create Folder'}
   submitDisabled={!isValid || isCreatingPromptFolder}
   cancelDisabled={isCreatingPromptFolder}
-  submitTestId="create-folder-button"
+  submitTestId="create-prompt-folder-button"
   submitVariant="accent"
   closeOnOutsideClick={false}
   oncancel={handleCancel}
@@ -152,11 +152,11 @@
       detail="Name the new prompt folder."
     >
       {#snippet control()}
-        <FlatFloatingValidationMessage message={errorMessage} textTestId="folder-name-error">
+        <FlatFloatingValidationMessage message={errorMessage} textTestId="create-prompt-folder-name-error">
           <FlatTextInput
-            id="folder-name-input"
+            id="create-prompt-folder-name-input"
             class="w-[220px]"
-            data-testid="folder-name-input"
+            data-testid="create-prompt-folder-name-input"
             placeholder="Name..."
             bind:value={displayName}
             aria-label="Prompt Folder Name"

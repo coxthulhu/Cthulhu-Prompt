@@ -37,7 +37,7 @@ const moveUpSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
 const moveDownSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
-const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-folder-prompt-'
+const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
   return await page.evaluate((selector: string) => {
@@ -429,7 +429,7 @@ describe('Prompt folder prompt management', () => {
 
     for (const promptId of fiveNewIds) {
       const expected = expectedById.get(promptId)!
-      const promptTreeRow = mainWindow.locator(`[data-testid="prompt-folder-prompt-${promptId}"]`)
+      const promptTreeRow = mainWindow.locator(`[data-testid="prompt-tree-prompt-${promptId}"]`)
       await expect(promptTreeRow).toBeVisible()
       await promptTreeRow.click()
       await expectPromptContent(mainWindow, promptId, expected)

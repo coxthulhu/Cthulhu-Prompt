@@ -324,7 +324,7 @@ const getActivePromptTreeTitle = async (mainWindow: any): Promise<string | null>
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
     const activeButton = host.querySelector<HTMLButtonElement>(
-      'button[data-active="true"][data-testid^="prompt-folder-"]'
+      'button[data-active="true"][data-testid^="prompt-tree-prompt-"]'
     )
     return activeButton?.textContent?.trim() ?? null
   }, PROMPT_TREE_HOST_SELECTOR)
@@ -526,7 +526,7 @@ describe('User Persistence', () => {
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Development"]')
     ).toHaveAttribute('data-active', 'true')
   })
 
@@ -674,7 +674,7 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')
+    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')
     await bugAnalysisButton.click()
     await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
     await testHelpers.navigateToHomeScreen()
@@ -704,12 +704,12 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')
+    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')
     await bugAnalysisButton.click()
     await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
 
     await testHelpers.navigateToPromptFolders('Examples')
-    const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-folder-prompt-simple-1"]')
+    const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-tree-prompt-simple-1"]')
     await simpleGreetingButton.click()
     await expect(simpleGreetingButton).toHaveAttribute('data-active', 'true')
     await testHelpers.navigateToHomeScreen()
@@ -740,7 +740,7 @@ describe('User Persistence', () => {
       workspace: { scenario: 'sample' }
     })
 
-    const examplesToggle = mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')
+    const examplesToggle = mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Examples"]')
     await expect(examplesToggle).toHaveAttribute('aria-expanded', 'true')
     await examplesToggle.click()
     await expect(examplesToggle).toHaveAttribute('aria-expanded', 'false')
@@ -768,10 +768,10 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Short')
-    const showAllButton = mainWindow.locator('[data-testid="prompt-folder-show-all-Short"]')
+    const showAllButton = mainWindow.locator('[data-testid="prompt-tree-folder-show-all-prompts-Short"]')
     await expect(showAllButton).toBeVisible()
     await showAllButton.click()
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toBeVisible()
 
     await expect
       .poll(
@@ -799,7 +799,7 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Short')
-    const shortToggle = mainWindow.locator('[data-testid="prompt-folder-toggle-Short"]')
+    const shortToggle = mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Short"]')
     await shortToggle.click()
     await expect(shortToggle).toHaveAttribute('aria-expanded', 'false')
 
@@ -849,7 +849,7 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toBeVisible()
   })
 
   test('auto-shows hidden prompt tree rows when restoring tracked prompt-folder rows', async ({
@@ -881,7 +881,7 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toBeVisible()
 
     await expect
       .poll(
@@ -923,7 +923,7 @@ describe('User Persistence', () => {
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Development"]')
     ).toHaveAttribute('data-active', 'true')
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')
   })
@@ -957,9 +957,9 @@ describe('User Persistence', () => {
     })
 
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-toggle-Examples"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Examples"]')
     ).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-options-Examples"]')).toHaveCount(
+    await expect(mainWindow.locator('[data-testid="prompt-tree-folder-options-button-Examples"]')).toHaveCount(
       1
     )
   })

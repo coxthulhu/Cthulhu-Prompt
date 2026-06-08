@@ -230,7 +230,7 @@
                     text="Open Github"
                     endIcon={ExternalLink}
                     variant="accent"
-                    testId="get-started-github-bug-link"
+                    testId="get-started-github-issues-link"
                     target="_blank"
                     rel="noreferrer"
                   />

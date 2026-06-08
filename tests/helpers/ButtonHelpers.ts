@@ -16,10 +16,9 @@ export async function isButtonVisible(window: any, buttonText: string): Promise<
     'Open Workspace': 'open-workspace-button',
     'Create Workspace': 'create-workspace-button',
     'Close Workspace': 'close-workspace-button',
-    'New Prompt Folder': 'new-prompt-folder-button',
-    'Test Folder': 'regular-prompt-folder-TestFolder', // Created folders use folderName without spaces
-    'Example Prompts': 'regular-prompt-folder-Examples',
-    'Development Tools': 'regular-prompt-folder-Development'
+    'Test Folder': 'prompt-tree-folder-open-button-TestFolder',
+    'Example Prompts': 'prompt-tree-folder-open-button-Examples',
+    'Development Tools': 'prompt-tree-folder-open-button-Development'
   }
 
   const testId = buttonMap[buttonText]

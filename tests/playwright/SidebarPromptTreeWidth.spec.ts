@@ -138,11 +138,11 @@ test.describe('Sidebar Prompt Tree Width', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-dev-2"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')).toBeVisible()
     const developmentWidth = await getSidebarWidthByHandle(mainWindow, APP_SIDEBAR_HANDLE_TEST_ID)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-simple-1"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-simple-1"]')).toBeVisible()
     const examplesWidth = await getSidebarWidthByHandle(mainWindow, APP_SIDEBAR_HANDLE_TEST_ID)
 
     expect(examplesWidth).toBe(developmentWidth)

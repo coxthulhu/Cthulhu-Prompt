@@ -55,7 +55,7 @@ const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_FOLDER_PATH = `/ws/virtual/Prompts/${SHORT_FOLDER_NAME}/FolderOrder.json`
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
-const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-folder-show-all-Short"]'
+const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
 
 type PromptTreeHighlightStyles = {

@@ -224,7 +224,7 @@ export async function clickCollapsibleTrigger(_window: any, _triggerText: string
 }
 
 /**
- * Clicks on a specific prompt folder item in the My Prompts dropdown.
+ * Clicks the prompt tree open action for a specific prompt folder.
  * @param window - The Playwright window instance
  * @param folderName - The name of the folder to click (used in data-testid)
  * @param timeout - Optional timeout for the click action
@@ -235,9 +235,9 @@ export async function clickPromptFolderItem(
   timeout = 2000
 ): Promise<void> {
   const safeName = folderName.replace(/\s+/g, '')
-  const testId = `regular-prompt-folder-${safeName}`
+  const testId = `prompt-tree-folder-open-button-${safeName}`
   const folderSelector = `[data-testid="${testId}"]`
-  const folderToggleSelector = `[data-testid="prompt-folder-toggle-${safeName}"]`
+  const folderToggleSelector = `[data-testid="prompt-tree-folder-toggle-button-${safeName}"]`
   const promptTreeSelector = '[data-testid="prompt-tree-virtual-window"]'
 
   // Sidebar tree rows are virtualized, so scroll until the target folder row is mounted.
@@ -259,21 +259,6 @@ export async function clickPromptFolderItem(
   await window.locator(folderToggleSelector).hover({ timeout })
   await window.click(folderSelector, { timeout })
   await window.waitForSelector('[data-testid="prompt-folder-screen"]', {
-    state: 'attached',
-    timeout
-  })
-}
-
-export async function clickPromptFoldersUpdatedItem(
-  window: any,
-  folderName: string,
-  timeout = 2000
-): Promise<void> {
-  const safeName = folderName.replace(/\s+/g, '')
-  const testId = `prompt-folders-updated-folder-${safeName}`
-
-  await window.click(`[data-testid="${testId}"]`, { timeout })
-  await window.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
     state: 'attached',
     timeout
   })
@@ -351,20 +336,12 @@ export async function getPromptFolderScreenInfo(window: any): Promise<{
 }
 
 /**
- * Navigates to a prompt folder within the "My Prompts" section.
- * The collapsible will be expanded if needed before the folder button is pressed.
+ * Navigates to a prompt folder from the sidebar prompt tree.
  * @param window - The Playwright window instance
  * @param folderName - The display name of the folder (e.g., 'Examples', 'Development')
  */
 export async function navigateToRegularFolder(window: any, folderName: string): Promise<void> {
   await clickPromptFolderItem(window, folderName)
-}
-
-export async function navigateToPromptFoldersUpdated(
-  window: any,
-  folderName: string
-): Promise<void> {
-  await navigateToRegularFolder(window, folderName)
 }
 
 export async function openPromptFolderAndWaitForHydrationReady(

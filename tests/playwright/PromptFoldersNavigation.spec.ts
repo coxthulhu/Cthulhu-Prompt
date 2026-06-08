@@ -2,14 +2,14 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const EXAMPLES_BUTTON = '[data-testid="regular-prompt-folder-Examples"]'
-const DEVELOPMENT_BUTTON = '[data-testid="regular-prompt-folder-Development"]'
-const EXAMPLES_TOGGLE = '[data-testid="prompt-folder-toggle-Examples"]'
-const DEVELOPMENT_TOGGLE = '[data-testid="prompt-folder-toggle-Development"]'
-const EXAMPLES_OPTIONS = '[data-testid="prompt-folder-options-Examples"]'
-const DEVELOPMENT_OPTIONS = '[data-testid="prompt-folder-options-Development"]'
-const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-folder-prompt-simple-1"]'
-const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-folder-prompt-dev-1"]'
+const EXAMPLES_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Examples"]'
+const DEVELOPMENT_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Development"]'
+const EXAMPLES_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Examples"]'
+const DEVELOPMENT_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Development"]'
+const EXAMPLES_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Examples"]'
+const DEVELOPMENT_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Development"]'
+const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-tree-prompt-simple-1"]'
+const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
@@ -17,10 +17,10 @@ const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM =
   '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM =
   '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
-const SHORT_OPTIONS = '[data-testid="prompt-folder-options-Short"]'
-const SHORT_TOGGLE = '[data-testid="prompt-folder-toggle-Short"]'
-const SHORT_SHOW_ALL = '[data-testid="prompt-folder-show-all-Short"]'
-const SHORT_PROMPT_50 = '[data-testid="prompt-folder-prompt-short-50"]'
+const SHORT_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Short"]'
+const SHORT_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Short"]'
+const SHORT_SHOW_ALL = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
+const SHORT_PROMPT_50 = '[data-testid="prompt-tree-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
@@ -34,12 +34,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(EXAMPLES_OPEN_BUTTON, { state: 'attached' })
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
   })
 
   test('restores prompt content when revisiting folders', async ({ testSetup }) => {
@@ -50,7 +50,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(EXAMPLES_OPEN_BUTTON, { state: 'attached' })
 
     let screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -61,7 +61,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(examplesPrompt.hasPromptEditor).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
-    await mainWindow.waitForSelector(DEVELOPMENT_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(DEVELOPMENT_OPEN_BUTTON, { state: 'attached' })
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
@@ -76,7 +76,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(examplesPrompt.found).toBe(false)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(EXAMPLES_OPEN_BUTTON, { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -104,7 +104,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
     await expect(
-      mainWindow.locator('[data-testid="regular-prompt-folder-Examples"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Examples"]')
     ).toHaveAttribute('data-active', 'true')
 
     const promptResult = await testHelpers.verifyPromptVisible('Simple Greeting')
@@ -119,7 +119,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(2)
     await expect(
-      mainWindow.locator('[data-testid="regular-prompt-folder-Development"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Development"]')
     ).toHaveAttribute('data-active', 'true')
 
     const codeReviewResult = await testHelpers.verifyPromptVisible('Code Review')
@@ -161,12 +161,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', {
       state: 'attached'
     })
-    await expect(mainWindow.locator(DEVELOPMENT_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(DEVELOPMENT_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
-    await expect(mainWindow.locator('[data-testid="folder-name-input"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')).toBeVisible()
   })
 
   test('keeps selection stable while folders expand and collapse', async ({ testSetup }) => {
@@ -181,11 +181,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
 
     await mainWindow.locator(EXAMPLES_TOGGLE).click()
 
-    await expect(mainWindow.locator(EXAMPLES_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
     await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
     await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
@@ -274,9 +274,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
 
-    const folderNameInput = mainWindow.locator('[data-testid="folder-name-input"]')
-    const errorMessage = mainWindow.locator('[data-testid="folder-name-error"]')
-    const createButton = mainWindow.locator('[data-testid="create-folder-button"]')
+    const folderNameInput = mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')
+    const errorMessage = mainWindow.locator('[data-testid="create-prompt-folder-name-error"]')
+    const createButton = mainWindow.locator('[data-testid="create-prompt-folder-button"]')
 
     await expect(errorMessage).toHaveCount(0)
     await expect(createButton).toBeDisabled()
@@ -302,7 +302,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       testWindow.__promptFolderCreateDuplicateErrorSeen = false
 
       const observer = new MutationObserver(() => {
-        const errorMessage = document.querySelector('[data-testid="folder-name-error"]')
+        const errorMessage = document.querySelector('[data-testid="create-prompt-folder-name-error"]')
 
         if (errorMessage?.textContent?.includes('A folder with this name already exists')) {
           testWindow.__promptFolderCreateDuplicateErrorSeen = true
@@ -315,7 +315,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await createButton.click()
     await expect(
-      mainWindow.locator('[data-testid="regular-prompt-folder-TestFolder"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-TestFolder"]')
     ).toHaveCount(1)
     expect(
       await mainWindow.evaluate(() => {
@@ -332,7 +332,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.navigateToRegularFolder('Test Folder')
 
     await expect(
-      mainWindow.locator('[data-testid="regular-prompt-folder-TestFolder"]')
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-TestFolder"]')
     ).toHaveAttribute('data-active', 'true')
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
   })
@@ -381,7 +381,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
 
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-prompt-short-"][aria-current="true"]')
+      mainWindow.locator('[data-testid^="prompt-tree-prompt-short-"][aria-current="true"]')
     ).toBeVisible()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
@@ -405,7 +405,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-prompt-short-1"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')
     ).toHaveAttribute('data-active', 'true')
   })
 })

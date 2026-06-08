@@ -22,10 +22,10 @@ export const promptHandleSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-drag-handle"]`
 
 export const promptTreePromptSelector = (promptId: string): string =>
-  `[data-testid="prompt-folder-prompt-${promptId}"]`
+  `[data-testid="prompt-tree-prompt-${promptId}"]`
 
 export const promptTreeFolderSelector = (folderName: string): string =>
-  `[data-testid="prompt-folder-toggle-${folderName.replace(/\s+/g, '')}"]`
+  `[data-testid="prompt-tree-folder-toggle-button-${folderName.replace(/\s+/g, '')}"]`
 
 export const promptTreePromptDropIndicatorSelector = (promptId: string): string =>
   `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`

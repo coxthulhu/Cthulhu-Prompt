@@ -15,22 +15,22 @@ const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
 const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
-const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-folder-prompt-${TARGET_PROMPT_ID}"]`
+const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
-const SHORT_OPTIONS_SELECTOR = '[data-testid="prompt-folder-options-Short"]'
-const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-folder-show-all-Short"]'
-const SHORT_SHOW_LESS_SELECTOR = '[data-testid="prompt-folder-show-less-Short"]'
-const SHORT_MENU_SHOW_ALL_SELECTOR = '[data-testid="prompt-folder-menu-show-all-Short"]'
-const SHORT_MENU_SHOW_LESS_SELECTOR = '[data-testid="prompt-folder-menu-show-less-Short"]'
+const SHORT_OPTIONS_SELECTOR = '[data-testid="prompt-tree-folder-options-button-Short"]'
+const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
+const SHORT_SHOW_LESS_SELECTOR = '[data-testid="prompt-tree-folder-show-less-prompts-Short"]'
+const SHORT_MENU_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-menu-show-all-prompts-Short"]'
+const SHORT_MENU_SHOW_LESS_SELECTOR = '[data-testid="prompt-tree-folder-menu-show-less-prompts-Short"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
-const samplePromptTreeRowSelector = `[data-testid="prompt-folder-prompt-${SAMPLE_PROMPT_ID}"]`
+const samplePromptTreeRowSelector = `[data-testid="prompt-tree-prompt-${SAMPLE_PROMPT_ID}"]`
 const samplePromptTitleSelector = `${promptEditorSelector(SAMPLE_PROMPT_ID)} ${PROMPT_TITLE_SELECTOR}`
 const UNOPENED_UNTITLED_WORKSPACE_PATH = '/ws/tree-untitled-summaries'
 const LOADED_FOLDER_NAME = 'Loaded'
-const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-folder-prompt-unopened-1"]'
-const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-folder-prompt-unopened-2"]'
+const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-1"]'
+const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-2"]'
 
 const scrollPromptTreeRowIntoView = async (
   mainWindow: any,
@@ -76,7 +76,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    await mainWindow.locator('[data-testid="prompt-folder-show-all-LongWrappedSingles"]').click()
+    await mainWindow.locator('[data-testid="prompt-tree-folder-show-all-prompts-LongWrappedSingles"]').click()
     await scrollPromptTreeRowIntoView(mainWindow, testHelpers, TARGET_PROMPT_TREE_ROW_SELECTOR)
     const promptTreeButton = mainWindow.locator(TARGET_PROMPT_TREE_ROW_SELECTOR)
     await expect(promptTreeButton).toHaveText(TARGET_PROMPT_TITLE)
@@ -140,7 +140,7 @@ describe('Prompt folder prompt tree', () => {
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeGreaterThan(0)
 
-    const folderSettingsSelector = '[data-testid="prompt-folder-settings-Short"]'
+    const folderSettingsSelector = '[data-testid="prompt-tree-folder-settings-menu-item-Short"]'
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
 
     await expect(mainWindow.getByText('Folder Options')).toHaveCount(0)
@@ -197,8 +197,8 @@ describe('Prompt folder prompt tree', () => {
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-5"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-5"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toHaveCount(0)
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
 
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
@@ -208,7 +208,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
 
     await mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR).click()
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toBeVisible()
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toHaveCount(0)
 
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
@@ -228,7 +228,7 @@ describe('Prompt folder prompt tree', () => {
       }
       button.click()
     }, SHORT_SHOW_LESS_SELECTOR)
-    await expect(mainWindow.locator('[data-testid="prompt-folder-prompt-short-6"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toHaveCount(0)
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 0)
@@ -249,7 +249,7 @@ describe('Prompt folder prompt tree', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
-    const shortToggle = mainWindow.locator('[data-testid="prompt-folder-toggle-Short"]')
+    const shortToggle = mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Short"]')
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
 
     await shortToggle.click()
