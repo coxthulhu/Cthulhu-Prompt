@@ -82,29 +82,10 @@ For Codex `functions.exec_command` Playwright runs, use `./scripts/codex-playwri
 Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
 Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
 
-Request the persistent approval prefix for the wrapper command, not for each test-file combination:
-
-```json
-{
-  "cmd": "./scripts/codex-playwright.sh tests/playwright/TestInfrastructure.spec.ts",
-  "workdir": "/mnt/c/Source/PromptApps/CthulhuPromptPublic",
-  "sandbox_permissions": "require_escalated",
-  "justification": "Allow the WSL Playwright wrapper to call Windows cmd.exe for this repository.",
-  "prefix_rule": ["./scripts/codex-playwright.sh"],
-  "yield_time_ms": 300000
-}
-```
-
 - Codex wrapper, all tests: `./scripts/codex-playwright.sh`
 - Codex wrapper, single file: `./scripts/codex-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
 - Codex wrapper, multiple files: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
 - Codex wrapper, single test with spaces: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
-
-- Direct Windows command, all tests: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright"`
-- Direct Windows command, single file: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/TestInfrastructure.spec.ts"`
-- Direct Windows command, single test with spaces: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/PromptFoldersPromptManagement.spec.ts --grep=^"preserves prompt order after navigating away^""`
-
-Use `cmd.exe` caret-quoted escaping for direct Windows `--grep` values: `--grep=^"pattern^"`. With the Codex wrapper, use normal shell quoting: `--grep "pattern"`.
 
 ## Coding Style & Naming Conventions
 
