@@ -31,9 +31,13 @@
 
   type PromptFolderFindIntegrationProps = {
     items: PromptFolderFindItem[]
-    children?: Snippet
+    children?: Snippet<[PromptFolderFindControls]>
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
     onRevealMatch?: (match: PromptFolderFindMatch) => void
+  }
+
+  type PromptFolderFindControls = {
+    toggleFindDialog: () => void
   }
 
   let {
@@ -229,6 +233,26 @@
     // Monaco StartFindAction only seeds from same-line selections.
     if (selectedText.includes('\n') || selectedText.includes('\r')) return null
     return selectedText
+  }
+
+  const openFindDialogFromSelection = () => {
+    const nextMatchText = getSelectionMatchText()
+    if (nextMatchText && nextMatchText !== matchText) {
+      matchText = nextMatchText
+    }
+    openFindDialog()
+  }
+
+  const toggleFindDialog = () => {
+    if (isFindOpen) {
+      closeFindDialog()
+      return
+    }
+    openFindDialogFromSelection()
+  }
+
+  const findControls: PromptFolderFindControls = {
+    toggleFindDialog
   }
 
   const setCurrentMatchIndex = (nextIndex: number) => {
@@ -537,12 +561,7 @@
   onMount(() => {
     const unregisterShortcuts = registerPromptFolderFindShortcuts({
       getIsFindOpen: () => isFindOpen,
-      getMatchText: () => matchText,
-      setMatchText: (value) => {
-        matchText = value
-      },
-      getSelectionMatchText,
-      openFindDialog,
+      openFindDialog: openFindDialogFromSelection,
       closeFindDialog
     })
 
@@ -555,7 +574,7 @@
 </script>
 
 <div class="prompt-folder-find-integration">
-  {@render children?.()}
+  {@render children?.(findControls)}
 
   {#if isFindOpen}
     <PromptFolderFindWidget

@@ -15,6 +15,7 @@ import {
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const FIND_INPUT = '[data-testid="prompt-find-input"]'
+const FIND_BUTTON = '[data-testid="prompt-folder-find-button"]'
 const FIND_CLOSE = '[data-testid="prompt-find-close"]'
 const FIND_MATCHES_LABEL = '[data-testid="prompt-find-widget"] .prompt-find-widget__matches'
 const SETTINGS_ROW_SELECTOR =
@@ -295,6 +296,28 @@ describe('Prompt folder find dialog', () => {
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
     await findClose.click()
+    await expect(findInput).toHaveCount(0)
+  })
+
+  test('toggles from the title bar find button', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(promptEditorSelector('dev-1'), { state: 'attached' })
+
+    const findButton = mainWindow.locator(FIND_BUTTON)
+    const findInput = mainWindow.locator(FIND_INPUT)
+
+    await expect(findButton).toBeVisible()
+    await expect(findButton).toHaveAttribute('title', 'Find in Folder (Control + F)')
+
+    await findButton.click()
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toBeFocused()
+
+    await findButton.click()
     await expect(findInput).toHaveCount(0)
   })
 

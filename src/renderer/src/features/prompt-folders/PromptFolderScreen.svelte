@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
+  import { Search } from 'lucide-svelte'
+  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
@@ -22,78 +24,92 @@
   scrollToWithinWindowBand={controller.scrollToWithinWindowBandWithManualClear}
   onRevealMatch={controller.handleFindMatchReveal}
 >
-  <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-    <div class="prompt-folder-header-bar flex h-9 shrink-0 items-center px-6">
-      <div class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-medium">
-        <button
-          type="button"
-          data-testid="prompt-folder-header-folder"
-          class="prompt-folder-header-folder min-w-0 cursor-pointer truncate transition-colors"
-          onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
-        >
-          {controller.folderDisplayName}
-        </button>
-        <span class="prompt-folder-header-separator mx-1 px-2">/</span>
-        <button
-          type="button"
-          data-testid="prompt-folder-header-section"
-          class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors"
-          onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
-        >
-          {controller.activeHeaderSection}
-        </button>
-      </div>
-    </div>
-
-    <div class="flex-1 min-h-0">
-      {#if controller.errorMessage}
-        <div class="flex-1 min-h-0 overflow-y-auto">
-          <div class="pt-6 pl-6">
-            <h2 class="text-lg font-semibold mb-4">
-              Prompts ({controller.visiblePromptIds.length})
-            </h2>
-            <p class="mt-6 text-red-500">Error loading prompts: {controller.errorMessage}</p>
+  {#snippet children(findControls)}
+    <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
+      <div class="prompt-folder-header-bar flex h-9 shrink-0 items-center justify-between gap-3 px-6">
+        {#if controller.isVirtualContentReady}
+          <div class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-medium">
+            <button
+              type="button"
+              data-testid="prompt-folder-header-folder"
+              class="prompt-folder-header-folder min-w-0 cursor-pointer truncate transition-colors"
+              onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
+            >
+              {controller.folderDisplayName}
+            </button>
+            <span class="prompt-folder-header-separator mx-1 px-2">/</span>
+            <button
+              type="button"
+              data-testid="prompt-folder-header-section"
+              class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors"
+              onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
+            >
+              {controller.activeHeaderSection}
+            </button>
           </div>
-        </div>
-      {:else if controller.isVirtualContentReady}
-        <PromptFolderVirtualContent
-          workspaceId={controller.workspaceId}
-          promptFolderId={controller.promptFolderId}
-          folderSettings={controller.folderSettings}
-          promptEditorSizingConfig={controller.promptEditorSizingConfig}
-          promptDraftById={controller.promptDraftById}
-          visiblePromptIds={controller.visiblePromptIds}
-          isCreatingPrompt={controller.isCreatingPrompt}
-          promptFocusRequest={controller.promptFocusRequest}
-          initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
-          initialCenterRowId={controller.initialPromptFolderCenterRowId}
-          scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
-          onAddPrompt={controller.handleAddPrompt}
-          onDeletePrompt={controller.handleDeletePrompt}
-          onMovePromptUp={controller.handleMovePromptUp}
-          onMovePromptDown={controller.handleMovePromptDown}
-          onPromptTreeDrop={controller.handlePromptTreeDrop}
-          onSettingsFieldChange={controller.handleSettingsFieldChange}
-          onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
-          onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
-          onViewportMetricsChange={controller.setViewportMetrics}
-          onScrollTopChange={controller.handleVirtualScrollTopChange}
-          onCenterRowChange={controller.handleVirtualCenterRowChange}
-          onUserScroll={controller.handleVirtualUserScroll}
-          onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
+
+          <IconOnlyButton
+            icon={Search}
+            label="Find in Folder (Control + F)"
+            title="Find in Folder (Control + F)"
+            variant="transparent"
+            size="compact"
+            testId="prompt-folder-find-button"
+            onclick={findControls.toggleFindDialog}
+          />
+        {/if}
+      </div>
+
+      <div class="flex-1 min-h-0">
+        {#if controller.errorMessage}
+          <div class="flex-1 min-h-0 overflow-y-auto">
+            <div class="pt-6 pl-6">
+              <h2 class="text-lg font-semibold mb-4">
+                Prompts ({controller.visiblePromptIds.length})
+              </h2>
+              <p class="mt-6 text-red-500">Error loading prompts: {controller.errorMessage}</p>
+            </div>
+          </div>
+        {:else if controller.isVirtualContentReady}
+          <PromptFolderVirtualContent
+            workspaceId={controller.workspaceId}
+            promptFolderId={controller.promptFolderId}
+            folderSettings={controller.folderSettings}
+            promptEditorSizingConfig={controller.promptEditorSizingConfig}
+            promptDraftById={controller.promptDraftById}
+            visiblePromptIds={controller.visiblePromptIds}
+            isCreatingPrompt={controller.isCreatingPrompt}
+            promptFocusRequest={controller.promptFocusRequest}
+            initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
+            initialCenterRowId={controller.initialPromptFolderCenterRowId}
+            scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
+            onAddPrompt={controller.handleAddPrompt}
+            onDeletePrompt={controller.handleDeletePrompt}
+            onMovePromptUp={controller.handleMovePromptUp}
+            onMovePromptDown={controller.handleMovePromptDown}
+            onPromptTreeDrop={controller.handlePromptTreeDrop}
+            onSettingsFieldChange={controller.handleSettingsFieldChange}
+            onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
+            onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
+            onViewportMetricsChange={controller.setViewportMetrics}
+            onScrollTopChange={controller.handleVirtualScrollTopChange}
+            onCenterRowChange={controller.handleVirtualCenterRowChange}
+            onUserScroll={controller.handleVirtualUserScroll}
+            onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
+          />
+        {/if}
+      </div>
+
+      {#if controller.loadingOverlay.isVisible()}
+        <LoadingOverlay
+          testId="prompt-folder-loading-overlay"
+          fadeMs={controller.loadingOverlayFadeMs}
+          isFading={controller.loadingOverlay.isFading()}
+          message="Loading prompt folder..."
         />
       {/if}
-    </div>
-
-    {#if controller.loadingOverlay.isVisible()}
-      <LoadingOverlay
-        testId="prompt-folder-loading-overlay"
-        fadeMs={controller.loadingOverlayFadeMs}
-        isFading={controller.loadingOverlay.isFading()}
-        message="Loading prompt folder..."
-      />
-    {/if}
-  </main>
+    </main>
+  {/snippet}
 </PromptFolderFindIntegration>
 
 <style>

@@ -1,17 +1,11 @@
 type PromptFolderFindShortcutHandlers = {
   getIsFindOpen: () => boolean
-  getMatchText: () => string
-  setMatchText: (value: string) => void
-  getSelectionMatchText: () => string | null
   openFindDialog: () => void
   closeFindDialog: () => void
 }
 
 export const registerPromptFolderFindShortcuts = ({
   getIsFindOpen,
-  getMatchText,
-  setMatchText,
-  getSelectionMatchText,
   openFindDialog,
   closeFindDialog
 }: PromptFolderFindShortcutHandlers) => {
@@ -33,10 +27,6 @@ export const registerPromptFolderFindShortcuts = ({
     ) {
       event.preventDefault()
       event.stopPropagation()
-      const nextMatchText = getSelectionMatchText()
-      if (nextMatchText && nextMatchText !== getMatchText()) {
-        setMatchText(nextMatchText)
-      }
       openFindDialog()
     }
   }
