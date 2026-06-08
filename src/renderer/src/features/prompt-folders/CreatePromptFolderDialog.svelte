@@ -4,7 +4,6 @@
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
   import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import { FolderPlus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -132,18 +131,6 @@
     resetDialog()
   }
 </script>
-
-<IconOnlyButton
-  icon={FolderPlus}
-  label="New Prompt Folder"
-  title="New Prompt Folder"
-  variant="transparent"
-  size="compact"
-  disabled={!isWorkspaceReady}
-  testId="new-prompt-folder-button"
-  class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-  onclick={openDialog}
-/>
 
 <FlatDialog
   bind:open={isDialogOpen}

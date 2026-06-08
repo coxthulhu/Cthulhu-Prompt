@@ -95,7 +95,7 @@
   const promptFolderSelectorPlaceholder: FlatDropdownPopupDetailedItem = {
     id: 'no-prompt-folders',
     label: 'No prompt folders',
-    detail: 'Select a workspace with prompt folders',
+    detail: 'Create one from the menu',
     icon: Folder
   }
   const promptFolderSelectorFooterItem: FlatDropdownPopupDetailedItem = {
@@ -133,7 +133,7 @@
     )
   })
   const promptFolderSelectorState = $derived(
-    promptFolderDropdownItems.length === 0 ? 'disabled' : 'enabled'
+    isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
   const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
   let expandAllPromptFoldersVersion = $state(0)

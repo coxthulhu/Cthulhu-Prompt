@@ -271,8 +271,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    const createFolderButton = mainWindow.locator('[data-testid="new-prompt-folder-button"]')
-    await createFolderButton.click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
 
     const folderNameInput = mainWindow.locator('[data-testid="folder-name-input"]')
     const errorMessage = mainWindow.locator('[data-testid="folder-name-error"]')

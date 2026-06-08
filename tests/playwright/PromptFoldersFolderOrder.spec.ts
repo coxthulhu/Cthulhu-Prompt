@@ -122,7 +122,8 @@ describe('Prompt Folder Order', () => {
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await mainWindow.locator('[data-testid="new-prompt-folder-button"]').click()
+    await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+    await mainWindow.locator('[data-testid="sidebar-prompt-folder-dropdown-add-item"]').click()
     await mainWindow.locator('[data-testid="folder-name-input"]').fill('New Folder')
     await mainWindow.locator('[data-testid="create-folder-button"]').click()
 
