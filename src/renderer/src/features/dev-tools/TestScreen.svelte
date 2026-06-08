@@ -2,7 +2,6 @@
   import {
     AlertCircle,
     Archive,
-    Check,
     ClipboardList,
     Copy,
     Download,
@@ -31,21 +30,15 @@
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
   import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
-  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
-  import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
-  import StatusBadge, {
-    type StatusBadgeVariant
-  } from '@renderer/common/cthulhu-ui/StatusBadge.svelte'
-  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
   import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
   import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
@@ -80,7 +73,6 @@
   ]
   const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
   const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
-  const statusBadgeVariants: StatusBadgeVariant[] = ['success', 'accent']
   const folderDropdownItems: FlatDropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
@@ -131,11 +123,6 @@
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
 
-  let standardText = $state('Renderer prompt collection')
-  let invalidText = $state('')
-  let readonlyPath = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
-  let numericValue = $state('14')
-  let invalidNumericValue = $state('abc')
   let fontSizeStepperValue = $state('14')
   let minLinesStepperValue = $state('8')
   let togglePressed = $state(true)
@@ -155,7 +142,6 @@
         size="large"
       />
 
-      <StatusBadge icon={Check} text="Dev screen restored" variant="success" />
     </header>
 
     <section class="component-grid">
@@ -348,29 +334,11 @@
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
           title="Inputs"
-          description="Text, numeric, and toggle controls."
+          description="Stepper and toggle controls."
           size="small"
         />
 
         <div class="form-grid">
-          <TextInput bind:value={standardText} aria-label="Standard text input" />
-          <TextInput
-            bind:value={invalidText}
-            aria-label="Invalid text input"
-            aria-invalid="true"
-            placeholder="Invalid text"
-          />
-          <TextInput
-            bind:value={readonlyPath}
-            aria-label="Readonly display input"
-            readonlyDisplay
-          />
-          <NumericInput bind:value={numericValue} aria-label="Numeric input" />
-          <NumericInput
-            bind:value={invalidNumericValue}
-            aria-label="Invalid numeric input"
-            aria-invalid="true"
-          />
           <FlatNumericStepperInput
             bind:value={fontSizeStepperValue}
             min={8}
@@ -408,16 +376,6 @@
           />
           <FlatMessageRow text="Review this value before saving." variant="warning" />
           <FlatMessageRow text="Prompt folder name is required." variant="danger" />
-          <FlatFloatingValidationMessage message="Prompt folder name is required.">
-            <TextInput
-              value=""
-              placeholder="Floating validation anchor"
-              aria-label="Validation field"
-            />
-          </FlatFloatingValidationMessage>
-          <FlatFloatingValidationMessage message="Review this value before saving." variant="warning">
-            <TextInput value="Draft value" aria-label="Warning validation field" />
-          </FlatFloatingValidationMessage>
         </div>
       </CardSurface>
 
@@ -440,16 +398,6 @@
             icon={Sparkles}
             showAccentLine
           />
-        </div>
-      </CardSurface>
-
-      <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="StatusBadge" description="Current badge variants." size="small" />
-
-        <div class="variant-controls">
-          {#each statusBadgeVariants as variant (variant)}
-            <StatusBadge icon={variant === 'success' ? Check : Sparkles} text={variant} {variant} />
-          {/each}
         </div>
       </CardSurface>
 
