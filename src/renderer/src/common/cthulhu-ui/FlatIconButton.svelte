@@ -34,6 +34,7 @@
   }: Props = $props()
 
   const isDisabled = $derived(disabled === true || state === 'disabled')
+  const iconSize = $derived(size === 'compact' ? 16 : 20)
 </script>
 
 <button
@@ -51,7 +52,7 @@
   <!-- Backgroundless flat icon button for compact row actions. -->
   <Icon
     class={mergeClasses('cthulhuUiFlatIconButtonIcon', iconClass)}
-    size={20}
+    size={iconSize}
     data-testid={iconTestId}
     aria-hidden="true"
   />
@@ -67,12 +68,14 @@
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    height: 30px;
+    height: 36px;
     justify-content: center;
     min-width: 0;
     padding: 0;
-    transition: color 120ms ease;
-    width: 30px;
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+    width: 36px;
   }
 
   .cthulhuUiFlatIconButton[data-size='compact'] {
@@ -82,6 +85,7 @@
 
   .cthulhuUiFlatIconButton:hover,
   .cthulhuUiFlatIconButton:focus-visible {
+    background: var(--ui-flat-neutral-hover-surface);
     color: var(--ui-flat-normal-text);
   }
 
