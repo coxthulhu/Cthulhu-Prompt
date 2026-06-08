@@ -182,6 +182,29 @@
     selectedPromptFolderId = null
   }
 
+  const hasWorkspacePromptFolder = (promptFolderId: string | null): promptFolderId is string => {
+    if (!selectedWorkspace || !promptFolderId) {
+      return false
+    }
+
+    return selectedWorkspace.promptFolderIds.includes(promptFolderId)
+  }
+
+  const resolvePromptFolderNavigationId = (): string | null => {
+    const workspaceId = getSelectedWorkspaceId()
+    const workspacePersistence = workspaceId
+      ? workspacePersistenceDraftCollection.get(workspaceId)
+      : null
+    const firstPromptFolderId = selectedWorkspace?.promptFolderIds[0] ?? null
+    const persistedLastPromptFolderId = workspacePersistence?.lastPromptFolderId ?? null
+
+    return hasWorkspacePromptFolder(selectedPromptFolderId)
+      ? selectedPromptFolderId
+      : hasWorkspacePromptFolder(persistedLastPromptFolderId)
+        ? persistedLastPromptFolderId
+        : firstPromptFolderId
+  }
+
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
     if (screen === 'prompt-folders') {
       return {
@@ -280,6 +303,14 @@
       if (hasPromptFolder && persistedPromptFolderId) {
         selectedPromptFolderId = persistedPromptFolderId
         activeScreen = 'prompt-folders'
+        if (workspacePersistence.lastPromptFolderId !== persistedPromptFolderId) {
+          await syncWorkspaceScreenSelection(workspaceId, {
+            selectedScreen: 'prompt-folders',
+            selectedScreenData: {
+              promptFolderId: persistedPromptFolderId
+            }
+          })
+        }
         return
       }
 
@@ -492,7 +523,11 @@
       return
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
-    if (screen === 'prompt-folders' && !selectedPromptFolderId) return
+    if (screen === 'prompt-folders') {
+      const promptFolderId = resolvePromptFolderNavigationId()
+      if (!promptFolderId) return
+      selectedPromptFolderId = promptFolderId
+    }
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }

@@ -17,6 +17,7 @@ export const upsertWorkspacePersistenceDraft = (
       id: workspacePersistence.workspaceId,
       selectedScreen: workspacePersistence.selectedScreen,
       selectedScreenData: workspacePersistence.selectedScreenData,
+      lastPromptFolderId: workspacePersistence.lastPromptFolderId,
       promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
         workspacePersistence.promptFolderPromptTreeEntries
       )
@@ -27,7 +28,8 @@ export const upsertWorkspacePersistenceDraft = (
   workspacePersistenceDraftCollection.update(workspacePersistence.workspaceId, (draftRecord) => {
     Object.assign(draftRecord, {
       selectedScreen: workspacePersistence.selectedScreen,
-      selectedScreenData: workspacePersistence.selectedScreenData
+      selectedScreenData: workspacePersistence.selectedScreenData,
+      lastPromptFolderId: workspacePersistence.lastPromptFolderId
     })
     draftRecord.promptFolderPromptTreeEntries = cloneWorkspacePromptFolderPromptTreeEntries(
       workspacePersistence.promptFolderPromptTreeEntries

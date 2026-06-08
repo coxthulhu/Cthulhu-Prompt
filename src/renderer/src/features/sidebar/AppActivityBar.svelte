@@ -20,7 +20,13 @@
     testId: string
   }
 
-  const activityScreenOrder: ScreenId[] = ['home', 'settings', 'mockups', 'test-screen']
+  const activityScreenOrder: ScreenId[] = [
+    'home',
+    'prompt-folders',
+    'settings',
+    'mockups',
+    'test-screen'
+  ]
   const activityItems = $derived<ActivityItem[]>(
     activityScreenOrder
       .map((screenId) => {

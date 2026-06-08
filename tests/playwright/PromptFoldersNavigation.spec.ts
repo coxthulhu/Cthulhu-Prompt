@@ -143,6 +143,57 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(screenInfo.promptCount).toBe(1)
   })
 
+  test('opens the first folder from the activity bar when no folder was selected', async ({
+    testSetup
+  }) => {
+    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-folders"]').click()
+
+    await mainWindow.waitForSelector('[data-testid="prompt-editor-simple-1"]', {
+      state: 'attached'
+    })
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
+  })
+
+  test('restores the last prompt folder scroll when opened from the activity bar', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Short')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 900)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
+      .toBeGreaterThan(0)
+    const savedScrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)
+
+    await testHelpers.navigateToHomeScreen()
+    await mainWindow.locator('[data-testid="nav-button-prompt-folders"]').click()
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(
+      savedScrollTop
+    )
+  })
+
   test('selects prompt folders and opens create dialog from the sidebar dropdown', async ({
     testSetup
   }) => {

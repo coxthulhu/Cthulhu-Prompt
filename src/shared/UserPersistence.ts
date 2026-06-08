@@ -60,6 +60,7 @@ export type WorkspacePromptFolderPromptTreeEntry = {
 
 export type WorkspacePersistence = WorkspaceScreenSelection & {
   workspaceId: string
+  lastPromptFolderId: string | null
   promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
 }
 
@@ -87,6 +88,7 @@ export const createDefaultWorkspacePersistence = (workspaceId: string): Workspac
     workspaceId,
     selectedScreen: 'home',
     selectedScreenData: null,
+    lastPromptFolderId: null,
     promptFolderPromptTreeEntries: []
   }
 }
@@ -112,6 +114,7 @@ export const toSerializableWorkspacePersistence = (
     workspaceId: workspacePersistence.workspaceId,
     selectedScreen: workspacePersistence.selectedScreen,
     selectedScreenData: workspacePersistence.selectedScreenData,
+    lastPromptFolderId: workspacePersistence.lastPromptFolderId,
     promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
       workspacePersistence.promptFolderPromptTreeEntries
     )
@@ -368,10 +371,15 @@ export const parseWorkspacePersistence = (
   const promptFolderPromptTreeEntries = parseWorkspacePromptFolderPromptTreeEntries(
     value.promptFolderPromptTreeEntries
   )
+  const lastPromptFolderId = value.lastPromptFolderId ?? null
+  if (lastPromptFolderId !== null && typeof lastPromptFolderId !== 'string') {
+    return null
+  }
 
   return {
     workspaceId,
     ...workspaceScreenSelection,
+    lastPromptFolderId,
     promptFolderPromptTreeEntries
   } as WorkspacePersistence
 }

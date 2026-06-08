@@ -6,6 +6,7 @@ import type {
 
 export type WorkspacePersistenceDraftRecord = WorkspaceScreenSelection & {
   id: string
+  lastPromptFolderId: string | null
   promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
 }
 

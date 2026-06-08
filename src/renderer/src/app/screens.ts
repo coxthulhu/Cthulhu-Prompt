@@ -1,5 +1,5 @@
 import type { ComponentType } from 'svelte'
-import { Bug, Home, PanelsTopLeft, Settings } from 'lucide-svelte'
+import { Bug, FileText, Home, PanelsTopLeft, Settings } from 'lucide-svelte'
 
 export type ScreenId = 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
 
@@ -47,6 +47,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     label: 'Prompt Folders',
     testId: 'nav-button-prompt-folders',
     requiresWorkspace: true,
-    showInNav: false
+    showInNav: true,
+    icon: FileText
   }
 }

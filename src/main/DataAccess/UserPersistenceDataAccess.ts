@@ -32,6 +32,7 @@ type WindowPersistenceRow = {
 type WorkspaceUiStateRow = {
   selectedScreen: string
   selectedScreenDataJson: string | null
+  lastPromptFolderId: string | null
 }
 
 type PromptFolderUiStateRow = {
@@ -207,7 +208,8 @@ export class UserPersistenceDataAccess {
         `
         SELECT
           selected_screen AS selectedScreen,
-          selected_screen_data_json AS selectedScreenDataJson
+          selected_screen_data_json AS selectedScreenDataJson,
+          last_prompt_folder_id AS lastPromptFolderId
         FROM workspace_ui_state
         WHERE workspace_id = ?
         `
@@ -278,6 +280,7 @@ export class UserPersistenceDataAccess {
       {
         selectedScreen: workspaceUiState.selectedScreen,
         selectedScreenData,
+        lastPromptFolderId: workspaceUiState.lastPromptFolderId,
         promptFolderPromptTreeEntries: serializablePromptFolderUiStateRows
       },
       workspaceId
@@ -307,19 +310,22 @@ export class UserPersistenceDataAccess {
         INSERT INTO workspace_ui_state (
           workspace_id,
           selected_screen,
-          selected_screen_data_json
+          selected_screen_data_json,
+          last_prompt_folder_id
         )
-        VALUES (?, ?, ?)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(workspace_id) DO UPDATE SET
           selected_screen = excluded.selected_screen,
-          selected_screen_data_json = excluded.selected_screen_data_json
+          selected_screen_data_json = excluded.selected_screen_data_json,
+          last_prompt_folder_id = excluded.last_prompt_folder_id
         `
       ).run(
         serializableWorkspacePersistence.workspaceId,
         serializableWorkspacePersistence.selectedScreen,
         serializableWorkspacePersistence.selectedScreenData === null
           ? null
-          : JSON.stringify(serializableWorkspacePersistence.selectedScreenData)
+          : JSON.stringify(serializableWorkspacePersistence.selectedScreenData),
+        serializableWorkspacePersistence.lastPromptFolderId
       )
 
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(
@@ -479,7 +485,8 @@ export class UserPersistenceDataAccess {
           `
           SELECT
             selected_screen AS selectedScreen,
-            selected_screen_data_json AS selectedScreenDataJson
+            selected_screen_data_json AS selectedScreenDataJson,
+            last_prompt_folder_id AS lastPromptFolderId
           FROM workspace_ui_state
           WHERE workspace_id = ?
           `
@@ -510,6 +517,19 @@ export class UserPersistenceDataAccess {
       ) {
         UserPersistenceDataAccess.resetWorkspaceScreenSelection(workspaceId)
       }
+
+      if (
+        selectedWorkspaceState.lastPromptFolderId &&
+        !validPromptFolderIds.has(selectedWorkspaceState.lastPromptFolderId)
+      ) {
+        db.prepare(
+          `
+          UPDATE workspace_ui_state
+          SET last_prompt_folder_id = NULL
+          WHERE workspace_id = ?
+          `
+        ).run(workspaceId)
+      }
     })
 
     cleanupWorkspaceState()
@@ -521,7 +541,8 @@ export class UserPersistenceDataAccess {
       `
       UPDATE workspace_ui_state
       SET selected_screen = 'home',
-          selected_screen_data_json = NULL
+          selected_screen_data_json = NULL,
+          last_prompt_folder_id = NULL
       WHERE workspace_id = ?
       `
     ).run(workspaceId)

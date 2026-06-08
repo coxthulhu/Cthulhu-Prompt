@@ -94,13 +94,24 @@ export const syncWorkspaceScreenSelection = async (
   workspaceId: string,
   workspaceScreenSelection: WorkspaceScreenSelection
 ): Promise<void> => {
+  const lastPromptFolderId =
+    workspaceScreenSelection.selectedScreen === 'prompt-folders'
+      ? workspaceScreenSelection.selectedScreenData.promptFolderId
+      : undefined
+
   await runRevisionMutation<WorkspacePersistenceRevisionResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
         Object.assign(draft, workspaceScreenSelection)
+        if (lastPromptFolderId !== undefined) {
+          draft.lastPromptFolderId = lastPromptFolderId
+        }
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         Object.assign(draft, workspaceScreenSelection)
+        if (lastPromptFolderId !== undefined) {
+          draft.lastPromptFolderId = lastPromptFolderId
+        }
       })
     },
     persistMutations: createPersistWorkspacePersistenceMutations(workspaceId),
