@@ -3,11 +3,13 @@
   import { mergeClasses } from './mergeClasses'
 
   type FlatIconButtonState = 'enabled' | 'disabled'
+  type FlatIconButtonSize = 'default' | 'compact'
 
   type Props = {
     icon: ComponentType
     label: string
     state?: FlatIconButtonState
+    size?: FlatIconButtonSize
     class?: string
     iconClass?: string
     iconTestId?: string
@@ -21,6 +23,7 @@
     icon: Icon,
     label,
     state = 'enabled',
+    size = 'default',
     class: className,
     iconClass,
     iconTestId,
@@ -39,6 +42,7 @@
   aria-label={label}
   data-disabled={isDisabled ? 'true' : 'false'}
   data-state={isDisabled ? 'disabled' : 'enabled'}
+  data-size={size}
   data-testid={testId}
   {title}
   disabled={isDisabled}
@@ -69,6 +73,11 @@
     padding: 0;
     transition: color 120ms ease;
     width: 30px;
+  }
+
+  .cthulhuUiFlatIconButton[data-size='compact'] {
+    height: 28px;
+    width: 28px;
   }
 
   .cthulhuUiFlatIconButton:hover,

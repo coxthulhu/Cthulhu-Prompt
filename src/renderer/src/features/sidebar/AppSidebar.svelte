@@ -13,7 +13,7 @@
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
   import BareIconButton from '@renderer/common/cthulhu-ui/BareIconButton.svelte'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
@@ -263,13 +263,12 @@
       </div>
       {#if isWorkspaceReady}
         <div class="flex shrink-0 items-center gap-0.5">
-          <IconOnlyButton
+          <FlatIconButton
             icon={promptFolderExpansionActionIcon}
             label={promptFolderExpansionActionLabel}
             title={promptFolderExpansionActionLabel}
-            variant="transparent"
             size="compact"
-            disabled={!canTogglePromptFolders}
+            state={canTogglePromptFolders ? 'enabled' : 'disabled'}
             testId="toggle-all-prompt-folders-button"
             class="text-[var(--ui-flat-secondary-icon-glyph)] hover:text-[var(--ui-flat-hoverable-icon-glyph)]"
             onclick={handlePromptFolderExpansionAction}
