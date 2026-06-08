@@ -38,12 +38,12 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint + typecheck** (run together), Vitest, and Playwright runs via the shared template below. When invoking them via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that `<WINDOWS_PROJECT_PATH>` and `<WSL_PROJECT_PATH>` point to the same repository location.
+Use Windows `cmd.exe` for **lint + typecheck** (run together) and Vitest via the shared template below. For Codex Playwright runs, prefer `./scripts/codex-playwright.sh`; it runs from WSL but calls Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that `<WINDOWS_PROJECT_PATH>` and `<WSL_PROJECT_PATH>` point to the same repository location.
 Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
 
-- Required for Windows-side runs (lint + typecheck together, Vitest, Playwright). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
+- Required for Windows-side runs (lint + typecheck together, Vitest, and direct Playwright commands). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
 - When asked to open a file, folder, or workspace in VS Code, do it from Windows so it opens in the user's Windows VS Code instance.
 - Include a short justification string explaining why elevation is needed.
 - Reusable template (swap the trailing command as needed):
@@ -77,13 +77,34 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 
 ### Running Playwright (Windows)
 
-Run via Windows `cmd.exe`; reuse the template and set `<command>` to the desired Playwright invocation. Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. Always keep the 300000 ms timeout. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
-Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
-Use `cmd.exe` caret-quoted escaping for every `--grep` value for consistency: `--grep=^"pattern^"`.
+For Codex `functions.exec_command` Playwright runs, use `./scripts/codex-playwright.sh`. The wrapper changes to the repository root in WSL, then calls Windows `cmd.exe` so Playwright still runs in the required Windows environment. Keep the 300000 ms timeout.
 
-- All tests: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright"`
-- Single file: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/TestInfrastructure.test.ts"`
-- Single test (full name with spaces): `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/PromptFoldersPromptManagement.spec.ts --grep=^"preserves prompt order after navigating away^""`
+Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
+Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
+
+Request the persistent approval prefix for the wrapper command, not for each test-file combination:
+
+```json
+{
+  "cmd": "./scripts/codex-playwright.sh tests/playwright/TestInfrastructure.spec.ts",
+  "workdir": "/mnt/c/Source/PromptApps/CthulhuPromptPublic",
+  "sandbox_permissions": "require_escalated",
+  "justification": "Allow the WSL Playwright wrapper to call Windows cmd.exe for this repository.",
+  "prefix_rule": ["./scripts/codex-playwright.sh"],
+  "yield_time_ms": 300000
+}
+```
+
+- Codex wrapper, all tests: `./scripts/codex-playwright.sh`
+- Codex wrapper, single file: `./scripts/codex-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
+- Codex wrapper, multiple files: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
+- Codex wrapper, single test with spaces: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
+
+- Direct Windows command, all tests: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright"`
+- Direct Windows command, single file: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/TestInfrastructure.spec.ts"`
+- Direct Windows command, single test with spaces: `cmd.exe /C "cd /d <WINDOWS_PROJECT_PATH> && npm run test:playwright -- tests/playwright/PromptFoldersPromptManagement.spec.ts --grep=^"preserves prompt order after navigating away^""`
+
+Use `cmd.exe` caret-quoted escaping for direct Windows `--grep` values: `--grep=^"pattern^"`. With the Codex wrapper, use normal shell quoting: `--grep "pattern"`.
 
 ## Coding Style & Naming Conventions
 
