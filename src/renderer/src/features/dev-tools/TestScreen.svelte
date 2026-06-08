@@ -3,13 +3,11 @@
     AlertCircle,
     Archive,
     Check,
-    CircleGauge,
     ClipboardList,
     Copy,
     Download,
     FileText,
     Folder,
-    FolderOpen,
     Home,
     Info,
     Minus,
@@ -18,10 +16,8 @@
     Pin,
     Plus,
     Settings,
-    ShieldAlert,
     Sparkles,
-    Trash2,
-    X
+    Trash2
   } from 'lucide-svelte'
   import AccentIconTile, {
     type AccentIconTileVariant
@@ -29,30 +25,20 @@
   import CardSurface, {
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
-  import CheckboxInput from '@renderer/common/cthulhu-ui/CheckboxInput.svelte'
   import FlatDropdownPopupSimple, {
     type FlatDropdownPopupItem
   } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
-  import FileInput from '@renderer/common/cthulhu-ui/FileInput.svelte'
   import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
   import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
-  import IconDescriptionButton, {
-    type IconDescriptionButtonVariant
-  } from '@renderer/common/cthulhu-ui/IconDescriptionButton.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import IconPillButton from '@renderer/common/cthulhu-ui/IconPillButton.svelte'
-  import IconPillSurface from '@renderer/common/cthulhu-ui/IconPillSurface.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
-  import LabeledDisplayField from '@renderer/common/cthulhu-ui/LabeledDisplayField.svelte'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
-  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import NumericInput from '@renderer/common/cthulhu-ui/NumericInput.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import NumericStatCard from '@renderer/common/cthulhu-ui/NumericStatCard.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
@@ -78,11 +64,6 @@
   ]
   const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
   const cardSurfaceVariants: CardSurfaceVariant[] = ['panel', 'panel-flat', 'solid', 'inset']
-  const iconDescriptionButtonVariants: IconDescriptionButtonVariant[] = [
-    'neutral',
-    'accent',
-    'danger'
-  ]
   const iconOnlyButtonVariants: IconOnlyButtonVariant[] = [
     'outline',
     'transparent',
@@ -150,12 +131,9 @@
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
 
-  let checked = $state(true)
-  let unchecked = $state(false)
   let standardText = $state('Renderer prompt collection')
   let invalidText = $state('')
   let readonlyPath = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
-  let folderPath = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
   let numericValue = $state('14')
   let invalidNumericValue = $state('abc')
   let fontSizeStepperValue = $state('14')
@@ -268,40 +246,6 @@
 
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
-          title="IconDescriptionButton"
-          description="Action cards with descriptive copy."
-          size="small"
-        />
-
-        <div class="stack">
-          {#each iconDescriptionButtonVariants as variant (variant)}
-            <IconDescriptionButton
-              icon={variant === 'danger' ? ShieldAlert : FolderOpen}
-              text={variant}
-              description="Select a workspace action with supporting context."
-              {variant}
-            />
-          {/each}
-          <IconDescriptionButton
-            icon={FolderOpen}
-            text="disabled"
-            description="Disabled action state."
-            state="disabled"
-          />
-        </div>
-      </CardSurface>
-
-      <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="IconPillButton" description="Compact pill action states." size="small" />
-
-        <div class="variant-controls">
-          <IconPillButton icon={Plus} text="enabled" />
-          <IconPillButton icon={X} text="disabled" disabled />
-        </div>
-      </CardSurface>
-
-      <CardSurface variant="panel" class="component-section">
-        <TitleBlock
           title="FlatDropdownPopupSimple"
           description="Solid icon menu popup."
           size="small"
@@ -404,7 +348,7 @@
       <CardSurface variant="panel" class="component-section">
         <TitleBlock
           title="Inputs"
-          description="Text, numeric, file, checkbox, and toggle controls."
+          description="Text, numeric, and toggle controls."
           size="small"
         />
 
@@ -441,10 +385,6 @@
             helperText="lines"
             aria-label="Minimum lines stepper input"
           />
-          <FileInput bind:value={folderPath} aria-label="File input" buttonText="Browse" />
-          <CheckboxInput bind:checked label="Checked checkbox" />
-          <CheckboxInput bind:checked={unchecked} label="Unchecked checkbox" />
-          <CheckboxInput checked label="Disabled checkbox" disabled />
           <FlatToggleTextButton
             pressed={togglePressed}
             onclick={() => {
@@ -466,8 +406,6 @@
           <InfoRow
             text="Use this row for short informational guidance that helps explain the surrounding control or section."
           />
-          <MessageRow text="Review this value before saving." variant="warning" />
-          <MessageRow text="Prompt folder name is required." variant="danger" />
           <FlatMessageRow text="Review this value before saving." variant="warning" />
           <FlatMessageRow text="Prompt folder name is required." variant="danger" />
           <FlatFloatingValidationMessage message="Prompt folder name is required.">
@@ -535,31 +473,6 @@
               size="large"
             />
           {/each}
-        </div>
-      </CardSurface>
-
-      <CardSurface variant="panel" class="component-section">
-        <TitleBlock
-          title="Display Components"
-          description="Read-only fields and stat cards."
-          size="small"
-        />
-
-        <div class="display-grid">
-          <IconPillSurface label="Workspace" icon={FolderOpen}>
-            <div class="display-value">CthulhuPromptPublic</div>
-          </IconPillSurface>
-          <IconPillSurface label="No icon">
-            <div class="display-value">Inline metadata surface</div>
-          </IconPillSurface>
-          <LabeledDisplayField
-            label="Path"
-            text="C:\\Source\\PromptApps\\CthulhuPromptPublic"
-            icon={FileText}
-            valueTitle="C:\Source\PromptApps\CthulhuPromptPublic"
-          />
-          <NumericStatCard label="Prompts" text="128" icon={ClipboardList} />
-          <NumericStatCard label="Folders" text="12" icon={CircleGauge} />
         </div>
       </CardSurface>
 
@@ -659,8 +572,7 @@
   }
 
   .sample-title,
-  .variant-row > span,
-  .display-value {
+  .variant-row > span {
     color: var(--ui-normal-text);
     font-size: 14px;
     font-weight: 700;
@@ -670,7 +582,6 @@
   .tile-matrix,
   .button-matrix,
   .stack,
-  .display-grid,
   .form-grid {
     display: grid;
     gap: 12px;
@@ -712,16 +623,8 @@
     height: 44px;
   }
 
-  .form-grid,
-  .display-grid {
+  .form-grid {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  }
-
-  .display-value {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   @media (max-width: 768px) {
