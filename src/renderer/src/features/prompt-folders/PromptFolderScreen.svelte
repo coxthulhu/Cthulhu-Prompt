@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import { Search } from 'lucide-svelte'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
@@ -48,11 +48,10 @@
             </button>
           </div>
 
-          <IconOnlyButton
+          <FlatIconButton
             icon={Search}
             label="Find in Folder (Control + F)"
             title="Find in Folder (Control + F)"
-            variant="transparent"
             size="compact"
             testId="prompt-folder-find-button"
             onclick={findControls.toggleFindDialog}
