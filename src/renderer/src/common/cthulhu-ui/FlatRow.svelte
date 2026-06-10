@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import { mergeClasses } from './mergeClasses'
+  import FlatIconCell from './FlatIconCell.svelte'
 
   export type FlatRowTrailingLayout = 'single' | 'grouped'
 
@@ -39,9 +40,7 @@
   data-trailing-layout={trailingLayout}
   data-testid={testId}
 >
-  <span class="cthulhuUiFlatRowIconCell">
-    <Icon class={mergeClasses('cthulhuUiFlatRowIcon', iconClass)} size={24} aria-hidden="true" />
-  </span>
+  <FlatIconCell icon={Icon} class="cthulhuUiFlatRowIconCell" iconClass={iconClass} />
 
   <span class="cthulhuUiFlatRowTextStack">
     <span class="cthulhuUiFlatRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>
@@ -72,21 +71,6 @@
     row-gap: 8px;
     text-align: left;
     width: 100%;
-  }
-
-  .cthulhuUiFlatRowIconCell {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-flat-hoverable-icon-glyph);
-    display: flex;
-    flex: 0 0 34px;
-    height: 34px;
-    justify-content: center;
-    width: 34px;
-  }
-
-  .cthulhuUiFlatRowIcon {
-    stroke-width: 2;
   }
 
   .cthulhuUiFlatRowTextStack {

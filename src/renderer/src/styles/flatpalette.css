@@ -54,6 +54,7 @@
 
   /* Info */
   --ui-flat-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
+  --ui-flat-info-hover-surface: oklch(0.666 0.181 254.617 / 25%);
   --ui-flat-info-strong-border: oklch(0.666 0.181 254.617);
 
   /* Warning */

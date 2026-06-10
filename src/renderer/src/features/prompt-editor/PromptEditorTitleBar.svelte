@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import AccentIconTile from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
+  import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
@@ -113,7 +113,7 @@
 
 <div class="prompt-editor-title-bar">
   <div class="prompt-editor-title-main">
-    <AccentIconTile {icon} size="medium" variant="accent" />
+    <FlatIconCell icon={icon} size="title" class="prompt-editor-title-icon" />
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}

@@ -65,9 +65,8 @@ type PromptTreeHighlightStyles = {
 }
 
 type PromptDividerHighlightStyles = {
-  buttonBackgroundColor: string
-  buttonBorderColor: string
-  buttonColor: string
+  indicatorBackgroundColor: string
+  buttonBorderWidth: string
   separatorBackgroundColors: string[]
 }
 
@@ -114,9 +113,8 @@ const getPromptDividerHighlightStyles = async (
     )
 
     return {
-      buttonBackgroundColor: buttonStyle.backgroundColor,
-      buttonBorderColor: buttonStyle.borderColor,
-      buttonColor: buttonStyle.color,
+      indicatorBackgroundColor: buttonStyle.backgroundColor,
+      buttonBorderWidth: buttonStyle.borderWidth,
       separatorBackgroundColors: separators.map(
         (separator) => getComputedStyle(separator).backgroundColor
       )
@@ -556,7 +554,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
   })
 
-  test('marks an add prompt row as a blue drop target while hovering a valid drop', async ({
+  test('marks an add prompt row divider as a drop target while hovering a valid drop', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -580,8 +578,9 @@ describe('Prompt folder prompt drag-drop', () => {
     )
     const dropStyles = await getPromptDividerHighlightStyles(dividerButton)
 
-    expect(dropStyles.buttonBackgroundColor).not.toBe(defaultStyles.buttonBackgroundColor)
-    expect(dropStyles.buttonBorderColor).not.toBe(defaultStyles.buttonBorderColor)
+    expect(dropStyles.indicatorBackgroundColor).not.toBe(defaultStyles.indicatorBackgroundColor)
+    expect(dropStyles.buttonBorderWidth).toBe(defaultStyles.buttonBorderWidth)
+    expect(dropStyles.buttonBorderWidth).toBe('0px')
     expect(dropStyles.separatorBackgroundColors).not.toEqual(
       defaultStyles.separatorBackgroundColors
     )
