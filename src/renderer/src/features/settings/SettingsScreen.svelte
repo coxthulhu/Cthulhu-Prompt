@@ -5,6 +5,7 @@
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
+  import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
@@ -163,7 +164,7 @@
   data-testid="settings-screen"
 >
   <div class="w-full max-w-4xl space-y-6">
-    <h1 class="system-settings-title">System Settings</h1>
+    <FlatTitle title="System Settings" headingLevel={1} />
 
     <FlatCard label="Editor & layout">
       <div class="flex flex-col">
@@ -341,12 +342,3 @@
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>
 </section>
-
-<style>
-  .system-settings-title {
-    color: var(--ui-flat-normal-text);
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.15;
-  }
-</style>
