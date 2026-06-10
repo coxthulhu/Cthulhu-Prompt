@@ -52,7 +52,7 @@
 
   // Derived placeholder text shows the fallback title when the title is empty.
   const titlePlaceholder = $derived.by(() =>
-    title.trim().length === 0 ? `Title (${fallbackTitle})` : 'Title'
+    title.trim().length === 0 ? `${fallbackTitle}...` : 'Title...'
   )
   const lineCountLabel = $derived(`${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`)
   const tokenCountLabel = $derived(`${tokenCount} ${tokenCount === 1 ? 'token' : 'tokens'}`)

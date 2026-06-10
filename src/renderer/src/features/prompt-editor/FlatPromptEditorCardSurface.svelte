@@ -1,5 +1,5 @@
 <script lang="ts">
-  import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import FlatCardSurface from '@renderer/common/cthulhu-ui/FlatCardSurface.svelte'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -21,9 +21,8 @@
   const layout = $derived(sidebar ? 'sidebar' : 'plain')
 </script>
 
-<CardSurface
+<FlatCardSurface
   bind:elementRef={rowElement}
-  variant="panel-flat"
   class={mergeClasses('prompt-editor-card-surface p-[10px]', className)}
   data-layout={layout}
   {...restProps}
@@ -35,7 +34,7 @@
   <div class="prompt-editor-card-body">
     {@render children()}
   </div>
-</CardSurface>
+</FlatCardSurface>
 
 <style>
   :global(.prompt-editor-card-surface) {

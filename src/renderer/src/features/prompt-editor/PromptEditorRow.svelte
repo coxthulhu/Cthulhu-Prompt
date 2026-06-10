@@ -5,7 +5,7 @@
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
-  import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
+  import FlatPromptEditorCardSurface from './FlatPromptEditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -366,7 +366,7 @@
   }
 </script>
 
-<PromptEditorCardSurface
+<FlatPromptEditorCardSurface
   bind:rowElement
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
@@ -454,7 +454,7 @@
       />
     {/if}
   </div>
-</PromptEditorCardSurface>
+</FlatPromptEditorCardSurface>
 
 <style>
   :global(.prompt-editor-card-surface) {

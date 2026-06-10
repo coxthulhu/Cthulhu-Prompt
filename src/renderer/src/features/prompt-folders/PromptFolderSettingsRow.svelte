@@ -15,7 +15,7 @@
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
-  import PromptEditorCardSurface from '../prompt-editor/PromptEditorCardSurface.svelte'
+  import FlatPromptEditorCardSurface from '../prompt-editor/FlatPromptEditorCardSurface.svelte'
   import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
   import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
@@ -301,7 +301,7 @@
   data-testid={`prompt-folder-settings-${promptFolderId}-${field}`}
   data-virtual-window-row
 >
-  <PromptEditorCardSurface
+  <FlatPromptEditorCardSurface
     style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
   >
     <PromptEditorTitleBar
@@ -376,7 +376,7 @@
         <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} {sizingConfig} />
       {/if}
     </div>
-  </PromptEditorCardSurface>
+  </FlatPromptEditorCardSurface>
 </div>
 
 <style>
