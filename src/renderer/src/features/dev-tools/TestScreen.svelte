@@ -7,7 +7,6 @@
     Download,
     FileText,
     Folder,
-    Home,
     Info,
     Minus,
     MoreHorizontal,
@@ -30,9 +29,9 @@
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
   import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
+  import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
@@ -45,8 +44,6 @@
 
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'dim-border' | 'accent' | 'danger'
-  type IconTextButtonState = 'active' | 'enabled' | 'disabled'
-  type IconTextButtonVariant = 'neutral' | 'accent' | 'nav'
 
   const accentIconTileVariants: AccentIconTileVariant[] = [
     'neutral',
@@ -71,8 +68,6 @@
     'rail-fill',
     'tree-action'
   ]
-  const iconTextButtonVariants: IconTextButtonVariant[] = ['neutral', 'accent', 'nav']
-  const iconTextButtonStates: IconTextButtonState[] = ['enabled', 'active', 'disabled']
   const folderDropdownItems: FlatDropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
@@ -181,27 +176,6 @@
 
       <CardSurface variant="panel" class="component-section component-section-wide">
         <TitleBlock
-          title="IconTextButton"
-          description="Neutral, accent, and nav states."
-          size="small"
-        />
-
-        <div class="button-matrix">
-          {#each iconTextButtonVariants as variant (variant)}
-            <div class="variant-row">
-              <span>{variant}</span>
-              <div class="variant-controls">
-                {#each iconTextButtonStates as state (state)}
-                  <IconTextButton icon={Home} text={state} {variant} {state} />
-                {/each}
-              </div>
-            </div>
-          {/each}
-        </div>
-      </CardSurface>
-
-      <CardSurface variant="panel" class="component-section component-section-wide">
-        <TitleBlock
           title="IconOnlyButton"
           description="Every icon-only variant and size."
           size="small"
@@ -268,9 +242,9 @@
               }}
             >
               {#snippet trigger(dropdown)}
-                <IconTextButton
+                <IconOnlyButton
                   icon={MoreHorizontal}
-                  text="Prompt actions"
+                  label="Prompt actions"
                   ariaHaspopup={dropdown.ariaHaspopup}
                   ariaExpanded={dropdown.ariaExpanded}
                   buttonAction={dropdown.triggerAction}
@@ -438,7 +412,7 @@
         />
 
         <div class="variant-controls">
-          <IconTextButton
+          <FlatButton
             icon={AlertCircle}
             text="Flat error"
             variant="accent"
@@ -446,7 +420,7 @@
               flatErrorDialogOpen = true
             }}
           />
-          <IconTextButton
+          <FlatButton
             icon={Trash2}
             text="Flat confirm"
             onclick={() => {
