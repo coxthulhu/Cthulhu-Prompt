@@ -98,9 +98,7 @@
   }
 
   const getEditorUri = (promptId: string) =>
-    monaco.Uri.file(
-      `/cthulhu-prompt/mockups/five-prompt-editors-row-reworked-sidebar/${promptId}.md`
-    )
+    monaco.Uri.file(`/cthulhu-prompt/mockups/five-prompt-editors-row-reworked/${promptId}.md`)
 
   const handleCopy = (text: string) => {
     void window.navigator.clipboard?.writeText(text)
@@ -258,17 +256,21 @@
 {#snippet PromptEditor(prompt: MockPrompt, index: number)}
   <article class="mockup-prompt-editor-card" data-testid={`mockup-prompt-editor-${prompt.id}`}>
     <aside class="mockup-prompt-editor-sidebar" aria-label={`${prompt.title} prompt controls`}>
-      {@render MovementButton(ChevronUpIcon, 'Move prompt up', index === 0, () =>
-        movePrompt(index, -1)
-      )}
-      {@render MovementButton(GripVerticalIcon, 'Drag prompt')}
-      {@render MovementButton(
-        ChevronDownIcon,
-        'Move prompt down',
-        index === mockPrompts.length - 1,
-        () => movePrompt(index, 1)
-      )}
+      <div class="mockup-movement-control">
+        {@render MovementButton(ChevronUpIcon, 'Move prompt up', index === 0, () =>
+          movePrompt(index, -1)
+        )}
+        {@render MovementButton(GripVerticalIcon, 'Drag prompt')}
+        {@render MovementButton(
+          ChevronDownIcon,
+          'Move prompt down',
+          index === mockPrompts.length - 1,
+          () => movePrompt(index, 1)
+        )}
+      </div>
     </aside>
+
+    <span class="mockup-layout-separator" aria-hidden="true"></span>
 
     <div class="mockup-prompt-editor-body">
       <header class="mockup-prompt-editor-title-bar">
@@ -315,8 +317,8 @@
 {/snippet}
 
 <section
-  class="five-prompt-editors-row-reworked-sidebar-mockup"
-  data-testid="five-prompt-editors-row-reworked-sidebar-mockup"
+  class="five-prompt-editors-row-reworked-mockup"
+  data-testid="five-prompt-editors-row-reworked-mockup"
 >
   <div class="mockup-editor-row">
     {#each mockPrompts as prompt, index (prompt.id)}
@@ -326,7 +328,7 @@
 </section>
 
 <style>
-  .five-prompt-editors-row-reworked-sidebar-mockup {
+  .five-prompt-editors-row-reworked-mockup {
     --mockup-monaco-editor-background: #1f1f1f;
 
     box-sizing: border-box;
@@ -346,34 +348,47 @@
 
   .mockup-prompt-editor-card {
     align-items: stretch;
-    background: var(--ui-card-overlay-surface);
+    background: var(--mockup-monaco-editor-background);
     border-radius: var(--cthulhu-ui-radius-card);
     box-sizing: border-box;
     display: grid;
-    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    grid-template-columns: 38px 1px minmax(0, 1fr);
     min-width: 0;
-    overflow: hidden;
+    padding: 10px;
   }
 
   .mockup-prompt-editor-sidebar {
     align-items: stretch;
-    background: var(--ui-card-overlay-surface);
-    display: grid;
+    display: flex;
     flex: 0 0 38px;
-    grid-template-rows: 44px minmax(44px, 1fr) 44px;
     height: 100%;
-    min-height: 156px;
-    min-width: 0;
+    justify-content: center;
+    min-height: 136px;
     width: 38px;
   }
 
-  .mockup-prompt-editor-sidebar:focus-within {
-    box-shadow: inset 0 0 0 2px var(--ui-flat-neutral-focus-border);
+  .mockup-movement-control {
+    background: var(--ui-flat-ghost-surface);
+    border: 1px solid var(--ui-flat-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: 32px minmax(32px, 1fr) 32px;
+    min-height: 136px;
+    min-width: 0;
+    overflow: hidden;
+    width: 32px;
+  }
+
+  .mockup-movement-control:focus-within {
+    border-color: var(--ui-flat-neutral-focus-border);
+    box-shadow: var(--cthulhu-ui-shadow-focus);
   }
 
   .mockup-movement-button {
     align-items: center;
-    background: transparent;
+    background: var(--ui-flat-ghost-surface);
     border: 0;
     border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
     box-sizing: border-box;
@@ -411,17 +426,20 @@
     pointer-events: none;
   }
 
+  .mockup-layout-separator {
+    align-self: stretch;
+    background: var(--ui-flat-neutral-muted-border);
+    margin-block: -10px;
+    min-height: calc(100% + 20px);
+    width: 1px;
+  }
+
   .mockup-prompt-editor-body {
     align-content: start;
-    background: var(--mockup-monaco-editor-background);
-    border-radius: var(--cthulhu-ui-radius-card) 0 0 var(--cthulhu-ui-radius-card);
     display: grid;
     gap: 8px;
     grid-template-rows: auto 1px auto;
     min-width: 0;
-    padding: 10px;
-    position: relative;
-    z-index: 1;
   }
 
   .mockup-prompt-editor-title-bar {
@@ -574,7 +592,7 @@
     height: 1px;
     margin-left: -10px;
     min-width: 0;
-    width: calc(100% + 20px);
+    width: calc(100% + 10px);
   }
 
   .mockup-monaco-shell {
