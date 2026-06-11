@@ -26,8 +26,16 @@
   } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
+  import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
+  import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
+  import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
   import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
   import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
+  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
+  import FlatFolderInput from '@renderer/common/cthulhu-ui/FlatFolderInput.svelte'
+  import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
+  import FlatIconTextButton from '@renderer/common/cthulhu-ui/FlatIconTextButton.svelte'
+  import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
@@ -35,10 +43,14 @@
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
+  import FlatRow from '@renderer/common/cthulhu-ui/FlatRow.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
+  import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
+  import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
   import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
   import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
+  import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
 
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'dim-border' | 'accent' | 'danger'
@@ -105,6 +117,9 @@
 
   let fontSizeStepperValue = $state('14')
   let minLinesStepperValue = $state('8')
+  let workspaceNameValue = $state('Engineering Prompts')
+  let readonlyPathValue = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
+  let folderInputValue = $state('')
   let togglePressed = $state(true)
   let flatErrorDialogOpen = $state(false)
   let flatConfirmationDialogOpen = $state(false)
@@ -180,6 +195,76 @@
             </FlatCardSurface>
           {/each}
         </div>
+      </FlatCardSurface>
+
+      <FlatCardSurface id="flat-action-buttons" class="component-section">
+        {@render componentTitle('Flat action buttons', 'Copy, link, icon text, and icon cell samples.')}
+
+        <div class="variant-controls">
+          <FlatCopyButton
+            text="Copyable prompt text"
+            label="Copy prompt"
+            copiedLabel="Copied prompt"
+            testId="test-screen-flat-copy-button"
+          />
+          <FlatIconTextButton icon={Sparkles} text="Improve" variant="info" />
+          <FlatIconTextButton icon={Archive} text="Archive" />
+          <FlatLinkButton href="#flat-action-buttons" text="Anchor link" endIcon={Download} />
+          <FlatIconCell icon={Folder} />
+          <FlatIconCell icon={FileText} size="title" />
+        </div>
+      </FlatCardSurface>
+
+      <FlatCardSurface class="component-section component-section-wide">
+        {@render componentTitle('FlatCard and rows', 'Display, setting, and generic row compositions.')}
+
+        <FlatCard label="Workspace details" surfaceClass="flat-card-gallery-surface">
+          <FlatDisplayRow
+            icon={FileText}
+            label="Active workspace"
+            detail="Prompt library metadata"
+          >
+            {#snippet trailing()}
+              <FlatValuePill text="Sample" />
+            {/snippet}
+          </FlatDisplayRow>
+
+          <FlatRow
+            icon={ClipboardList}
+            label="Prompt inventory"
+            detail="42 prompts across 6 folders"
+            trailingLayout="grouped"
+          >
+            {#snippet detailExtra()}
+              Last generated prompt was updated during the current gallery session.
+            {/snippet}
+
+            {#snippet trailing()}
+              <FlatValuePill text="Ready" />
+              <FlatCopyButton text="42 prompts across 6 folders" label="Copy summary" />
+            {/snippet}
+          </FlatRow>
+
+          <FlatSettingRow
+            icon={Settings}
+            label="Autosave drafts"
+            detail="Keep prompt edits available between app launches"
+          >
+            {#snippet control()}
+              <FlatToggleTextButton
+                pressed={togglePressed}
+                onclick={() => {
+                  togglePressed = !togglePressed
+                }}
+              />
+            {/snippet}
+
+            {#snippet actions()}
+              <FlatButton icon={Download} text="Export" />
+              <FlatLinkButton href="#flat-action-buttons" text="More" variant="accent" />
+            {/snippet}
+          </FlatSettingRow>
+        </FlatCard>
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section component-section-wide">
@@ -301,9 +386,38 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        {@render componentTitle('Inputs', 'Stepper and toggle controls.')}
+        {@render componentTitle('Inputs', 'Text, folder, stepper, and toggle controls.')}
 
         <div class="form-grid">
+          <FlatTextInput
+            bind:value={workspaceNameValue}
+            aria-label="Workspace name sample"
+            placeholder="Workspace name"
+          />
+          <FlatTextInput
+            bind:value={readonlyPathValue}
+            readonlyDisplay
+            aria-label="Readonly workspace path sample"
+          />
+          <div class="validation-sample">
+            <FlatFloatingValidationMessage
+              message="Workspace name is required."
+              textTestId="test-screen-floating-validation"
+            >
+              <FlatTextInput
+                value=""
+                aria-label="Invalid workspace name sample"
+                aria-invalid="true"
+                placeholder="Invalid value"
+              />
+            </FlatFloatingValidationMessage>
+          </div>
+          <FlatFolderInput
+            bind:value={folderInputValue}
+            buttonText="Browse workspace"
+            ariaLabel="Browse workspace sample"
+            disabled
+          />
           <FlatNumericStepperInput
             bind:value={fontSizeStepperValue}
             min={8}
@@ -525,8 +639,17 @@
     height: 44px;
   }
 
+  :global(.flat-card-gallery-surface) {
+    border: 1px solid var(--ui-flat-card-normal-border);
+  }
+
   .form-grid {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .validation-sample {
+    min-width: 0;
+    padding-bottom: 34px;
   }
 
   @media (max-width: 768px) {
