@@ -403,6 +403,7 @@
         glyphMargin: false,
         lineNumbers: showLineNumbers ? 'on' : 'off',
         lineNumbersMinChars: 3,
+        overviewRulerBorder: false,
         scrollbar: { alwaysConsumeMouseWheel: false },
         revealHorizontalRightPadding: 0,
         cursorSmoothCaretAnimation: 'off',
