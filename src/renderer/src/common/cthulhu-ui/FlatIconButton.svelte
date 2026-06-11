@@ -3,9 +3,9 @@
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
-  type FlatIconButtonState = 'enabled' | 'disabled'
-  type FlatIconButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
-  type FlatIconButtonVariant = 'ghost' | 'neutral'
+  export type FlatIconButtonState = 'enabled' | 'disabled'
+  export type FlatIconButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
+  export type FlatIconButtonVariant = 'ghost' | 'neutral'
   type FlatIconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -20,6 +20,10 @@
     testId?: string
     title?: string
     disabled?: boolean
+    active?: boolean
+    ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
+    ariaExpanded?: boolean
+    ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
     buttonAction?: FlatIconButtonAction | null
     buttonActionParameter?: unknown
     grabCursor?: boolean
@@ -40,6 +44,10 @@
     testId,
     title,
     disabled,
+    active,
+    ariaHaspopup,
+    ariaExpanded,
+    ariaCurrent,
     buttonAction = null,
     buttonActionParameter,
     grabCursor = false,
@@ -56,10 +64,14 @@
   type="button"
   class={mergeClasses('cthulhuUiFlatIconButton', className)}
   aria-label={label}
+  aria-haspopup={ariaHaspopup}
+  aria-expanded={ariaExpanded}
+  aria-current={ariaCurrent}
   data-disabled={isDisabled ? 'true' : 'false'}
   data-state={isDisabled ? 'disabled' : 'enabled'}
   data-size={size}
   data-variant={variant}
+  data-active={active === undefined ? undefined : active ? 'true' : 'false'}
   data-testid={testId}
   data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}

@@ -6,9 +6,6 @@ wrappers.
 
 ## App-Facing Components
 
-- [ ] `IconOnlyButton.svelte`
-  - Used by `features/sidebar/PromptTreeFolderRow.svelte` and `features/dev-tools/TestScreen.svelte`.
-  - Already uses flat palette tokens; migrate by renaming or folding missing sizes/variants into `FlatIconButton`.
 - [ ] `InfoRow.svelte`
   - Used by `features/prompt-folders/PromptFolderSettingsRow.svelte` and `features/dev-tools/TestScreen.svelte`.
   - Needs a `FlatInfoRow` equivalent using only flat palette tokens.
@@ -36,6 +33,9 @@ wrappers.
 
 ## Completed
 
+- [x] Removed `IconOnlyButton.svelte`.
+  - Folded active/dropdown accessibility attributes into `FlatIconButton`.
+  - `PromptTreeFolderRow` and the dev tools catalog now use `FlatIconButton` directly.
 - [x] Renamed `ActivityBarButton.svelte` to `FlatActivityBarButton.svelte`.
   - `features/sidebar/AppActivityBar.svelte` now imports the flat-prefixed component.
   - Visual styling and behavior were preserved.

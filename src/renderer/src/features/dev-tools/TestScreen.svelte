@@ -34,10 +34,13 @@
   import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
   import FlatFolderInput from '@renderer/common/cthulhu-ui/FlatFolderInput.svelte'
   import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
+  import FlatIconButton, {
+    type FlatIconButtonSize,
+    type FlatIconButtonVariant
+  } from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatIconTextButton from '@renderer/common/cthulhu-ui/FlatIconTextButton.svelte'
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
@@ -52,24 +55,9 @@
   import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
 
-  type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
-  type IconOnlyButtonVariant = 'outline' | 'transparent' | 'dim-border' | 'accent' | 'danger'
-
   const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
-  const iconOnlyButtonVariants: IconOnlyButtonVariant[] = [
-    'outline',
-    'transparent',
-    'dim-border',
-    'accent',
-    'danger'
-  ]
-  const iconOnlyButtonSizes: IconOnlyButtonSize[] = [
-    'default',
-    'compact',
-    'rail',
-    'rail-fill',
-    'tree-action'
-  ]
+  const flatIconButtonVariants: FlatIconButtonVariant[] = ['ghost', 'neutral']
+  const flatIconButtonSizes: FlatIconButtonSize[] = ['default', 'compact', 'rail', 'rail-fill']
   const folderDropdownItems: FlatDropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
@@ -268,17 +256,17 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section component-section-wide">
-        {@render componentTitle('IconOnlyButton', 'Every icon-only variant and size.')}
+        {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
 
         <div class="button-matrix">
-          {#each iconOnlyButtonVariants as variant (variant)}
+          {#each flatIconButtonVariants as variant (variant)}
             <div class="variant-row">
               <span>{variant}</span>
               <div class="variant-controls icon-only-controls">
-                {#each iconOnlyButtonSizes as size (size)}
+                {#each flatIconButtonSizes as size (size)}
                   <div class="icon-only-sample" data-fill-size={size === 'rail-fill'}>
-                    <IconOnlyButton
-                      icon={variant === 'danger' ? Trash2 : Settings}
+                    <FlatIconButton
+                      icon={Settings}
                       label={`${variant} ${size}`}
                       {variant}
                       {size}
@@ -286,7 +274,7 @@
                     />
                   </div>
                 {/each}
-                <IconOnlyButton icon={Minus} label={`${variant} disabled`} {variant} disabled />
+                <FlatIconButton icon={Minus} label={`${variant} disabled`} {variant} disabled />
               </div>
             </div>
           {/each}
@@ -307,7 +295,7 @@
               }}
             >
               {#snippet trigger(dropdown)}
-                <IconOnlyButton
+                <FlatIconButton
                   icon={MoreHorizontal}
                   label="Folder options"
                   active={dropdown.open}
@@ -327,7 +315,7 @@
               }}
             >
               {#snippet trigger(dropdown)}
-                <IconOnlyButton
+                <FlatIconButton
                   icon={MoreHorizontal}
                   label="Prompt actions"
                   ariaHaspopup={dropdown.ariaHaspopup}

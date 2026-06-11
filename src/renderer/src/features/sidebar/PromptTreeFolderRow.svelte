@@ -8,7 +8,7 @@
   } from 'lucide-svelte'
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
+  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatDropdownPopupSimple, {
     type FlatDropdownPopupItem
   } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
@@ -166,12 +166,11 @@
               onselect={handleFolderOptionsSelect}
             >
               {#snippet trigger(dropdown)}
-                <IconOnlyButton
+                <FlatIconButton
                   icon={MoreHorizontal}
                   label={`Folder options for ${folder.displayName}`}
                   title="Folder Options"
-                  variant="transparent"
-                  size="tree-action"
+                  size="compact"
                   active={dropdown.open || isSettingsActive}
                   ariaHaspopup={dropdown.ariaHaspopup}
                   ariaExpanded={dropdown.ariaExpanded}
@@ -183,11 +182,10 @@
                 />
               {/snippet}
             </FlatDropdownPopupSimple>
-            <IconOnlyButton
+            <FlatIconButton
               icon={ArrowRight}
               label={`Open ${folder.displayName}`}
-              variant="transparent"
-              size="tree-action"
+              size="compact"
               onclick={handlePromptFolderOpen}
               testId={folderOpenTestId(folder)}
               active={isActive}
