@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import {
     AlertCircle,
     Archive,
@@ -8,6 +9,7 @@
     FileText,
     Folder,
     Info,
+    Loader,
     Minus,
     MoreHorizontal,
     Pencil,
@@ -33,6 +35,8 @@
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
+  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
   import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
@@ -117,6 +121,8 @@
   ]
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
+  const TEST_LOADING_OVERLAY_VISIBLE_MS = 5000
+  const TEST_LOADING_OVERLAY_FADE_MS = 125
 
   let fontSizeStepperValue = $state('14')
   let minLinesStepperValue = $state('8')
@@ -125,6 +131,34 @@
   let flatConfirmationDialogOpen = $state(false)
   let lastDropdownAction = $state('No dropdown item selected')
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
+  let testLoadingOverlayActive = $state(false)
+  let testLoadingOverlayTimeoutId: number | null = null
+
+  const testLoadingOverlay = createLoadingOverlayState({
+    fadeMs: TEST_LOADING_OVERLAY_FADE_MS,
+    isLoading: () => testLoadingOverlayActive
+  })
+
+  const clearTestLoadingOverlayTimeout = (): void => {
+    if (testLoadingOverlayTimeoutId !== null) {
+      window.clearTimeout(testLoadingOverlayTimeoutId)
+      testLoadingOverlayTimeoutId = null
+    }
+  }
+
+  const showTestLoadingOverlay = (): void => {
+    clearTestLoadingOverlayTimeout()
+    testLoadingOverlayActive = true
+    testLoadingOverlayTimeoutId = window.setTimeout(() => {
+      testLoadingOverlayActive = false
+      testLoadingOverlayTimeoutId = null
+    }, TEST_LOADING_OVERLAY_VISIBLE_MS)
+  }
+
+  // Side effect: clear the demo overlay timer when leaving the test screen.
+  onDestroy(() => {
+    clearTestLoadingOverlayTimeout()
+  })
 </script>
 
 <div class="test-screen-shell" data-testid="test-screen">
@@ -137,6 +171,13 @@
         size="large"
       />
 
+      <FlatButton
+        icon={Loader}
+        text="Show loading overlay"
+        variant="accent"
+        testId="test-screen-show-loading-overlay"
+        onclick={showTestLoadingOverlay}
+      />
     </header>
 
     <section class="component-grid">
@@ -431,6 +472,15 @@
       </FlatCardSurface>
     </section>
   </div>
+
+  {#if testLoadingOverlay.isVisible()}
+    <LoadingOverlay
+      testId="test-screen-loading-overlay"
+      fadeMs={TEST_LOADING_OVERLAY_FADE_MS}
+      isFading={testLoadingOverlay.isFading()}
+      message="Loading test screen..."
+    />
+  {/if}
 </div>
 
 <FlatErrorDialog
@@ -458,6 +508,7 @@
     min-height: 0;
     min-width: 0;
     overflow: auto;
+    position: relative;
     width: 100%;
   }
 
