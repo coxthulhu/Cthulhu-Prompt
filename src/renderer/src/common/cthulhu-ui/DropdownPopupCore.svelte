@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
-  import CardSurface from './CardSurface.svelte'
+  import FlatCardSurface from './FlatCardSurface.svelte'
 
   export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
 
@@ -263,7 +263,7 @@
     style={menuLayerStyle}
     use:portalToBody
   >
-    <CardSurface
+    <FlatCardSurface
       variant="overlay"
       class={menuClass}
       role="menu"
@@ -271,7 +271,7 @@
       data-testid={testId}
     >
       {@render children(contentContext)}
-    </CardSurface>
+    </FlatCardSurface>
   </div>
 {/if}
 
