@@ -7,6 +7,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Response Guidelines
 
 - I do not ask rhetorical questions. Answer my questions before proceeding.
+- Do not answer my questions generically or abstractly. Read over the code and be concrete in your answers.
 
 ## Coding Guidelines
 

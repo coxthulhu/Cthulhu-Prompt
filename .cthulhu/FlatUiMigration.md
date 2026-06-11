@@ -62,3 +62,8 @@ wrappers.
 - [x] Removed `TitleBlock.svelte` and `AccentIconTile.svelte`.
   - `FlatTitle` now has a `small` variant for section labels.
   - Dialog/details headings and dev tools section headings now use `FlatTitle`.
+- [x] Unified `FlatTitle` variants.
+  - `FlatTitle` now owns page, small, card, and dialog title styling.
+  - `FlatCard` and `FlatDialog` no longer keep local duplicate title styles.
+  - Rechecked legacy title components; `TitleBlock.svelte`, `AccentIconTile.svelte`, and
+    `SectionHeader.svelte` have no tracked files, untracked files, or imports remaining.
