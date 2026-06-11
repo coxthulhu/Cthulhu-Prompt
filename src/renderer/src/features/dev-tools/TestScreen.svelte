@@ -20,9 +20,9 @@
   import AccentIconTile, {
     type AccentIconTileVariant
   } from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
-  import CardSurface, {
-    type CardSurfaceVariant
-  } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import FlatCardSurface, {
+    type FlatCardSurfaceVariant
+  } from '@renderer/common/cthulhu-ui/FlatCardSurface.svelte'
   import FlatDropdownPopupSimple, {
     type FlatDropdownPopupItem
   } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
@@ -53,7 +53,7 @@
     'danger'
   ]
   const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
-  const cardSurfaceVariants: CardSurfaceVariant[] = ['panel', 'panel-flat', 'solid', 'inset']
+  const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
   const iconOnlyButtonVariants: IconOnlyButtonVariant[] = [
     'outline',
     'transparent',
@@ -140,20 +140,20 @@
     </header>
 
     <section class="component-grid">
-      <CardSurface variant="panel" class="component-section">
-        <TitleBlock title="CardSurface" description="All surface variants." size="small" />
+      <FlatCardSurface class="component-section">
+        <TitleBlock title="FlatCardSurface" description="All flat surface variants." size="small" />
 
         <div class="variant-grid">
-          {#each cardSurfaceVariants as variant (variant)}
-            <CardSurface {variant} class="sample-card">
+          {#each flatCardSurfaceVariants as variant (variant)}
+            <FlatCardSurface {variant} class="sample-card">
               <div class="sample-title">{variant}</div>
               <p>Prompt workspace metadata, compact controls, or nested content.</p>
-            </CardSurface>
+            </FlatCardSurface>
           {/each}
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="AccentIconTile"
           description="Every tile variant and size."
@@ -172,9 +172,9 @@
             </div>
           {/each}
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section component-section-wide">
+      <FlatCardSurface class="component-section component-section-wide">
         <TitleBlock
           title="IconOnlyButton"
           description="Every icon-only variant and size."
@@ -202,9 +202,9 @@
             </div>
           {/each}
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="FlatDropdownPopupSimple"
           description="Solid icon menu popup."
@@ -256,9 +256,9 @@
 
           <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="FlatDropdownPopupDetailed"
           description="FlatSelectorButton rows with a fixed footer action."
@@ -281,9 +281,9 @@
 
           <InfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="FlatSelectorButton"
           description="Sidebar-style trigger button."
@@ -303,9 +303,9 @@
             size="large"
           />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="Inputs"
           description="Stepper and toggle controls."
@@ -335,9 +335,9 @@
           />
           <FlatToggleTextButton pressed={false} disabled />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="Message Rows"
           description="Inline guidance, warnings, and validation errors."
@@ -351,9 +351,9 @@
           <FlatMessageRow text="Review this value before saving." variant="warning" />
           <FlatMessageRow text="Prompt folder name is required." variant="danger" />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="SectionHeader"
           description="Section titles with optional line variants."
@@ -373,9 +373,9 @@
             showAccentLine
           />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock title="TitleBlock" description="Sizes and icon treatments." size="small" />
 
         <div class="stack">
@@ -396,15 +396,15 @@
             />
           {/each}
         </div>
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock title="LogDetails" description="Technical details block." size="small" />
 
         <LogDetails title="Autosave" text={logDetailsText} />
-      </CardSurface>
+      </FlatCardSurface>
 
-      <CardSurface variant="panel" class="component-section">
+      <FlatCardSurface class="component-section">
         <TitleBlock
           title="Dialogs"
           description="Flat error and confirmation dialogs."
@@ -428,7 +428,7 @@
             }}
           />
         </div>
-      </CardSurface>
+      </FlatCardSurface>
     </section>
   </div>
 </div>
@@ -491,6 +491,15 @@
     display: grid;
     gap: 12px;
     grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
+  }
+
+  :global(.component-section),
+  :global(.sample-card) {
+    border: 1px solid var(--ui-flat-card-normal-border);
+    box-sizing: border-box;
+    display: grid;
+    gap: 12px;
+    padding: 16px;
   }
 
   .sample-title,

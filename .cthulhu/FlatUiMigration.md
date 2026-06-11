@@ -52,20 +52,12 @@ wrappers.
   - Used by `FlatErrorDialog`, `LogDetails`, and `features/dev-tools/TestScreen.svelte`.
   - Needs a `FlatTitleBlock` equivalent or replacement with existing flat title/message components.
 
-## Dev-Tools-Only Live Components
-
-- [ ] `CardSurface.svelte`
-  - Used by `features/dev-tools/TestScreen.svelte`.
-  - Needs migration or removal from the dev tools catalog once flat surface coverage is complete.
-
-## Flat Palette Cleanup
-
-- [ ] `FlatCardSurface.svelte`
-  - Its overlay variant still uses `--ui-card-overlay-surface` and `--ui-card-normal-border`.
-  - Replace these with existing flat palette tokens or add approved flat palette tokens.
-
 ## Completed
 
+- [x] Removed `CardSurface.svelte`.
+  - It was only kept alive by the dev tools catalog. The catalog now uses `FlatCardSurface`
+    for section shells and surface variant examples.
+  - `FlatCardSurface` overlay styling now uses existing flat palette tokens.
 - [x] Removed legacy `CthulhuDialog.svelte`, `ConfirmationDialog.svelte`, and `ErrorDialog.svelte`.
   - These had no live imports from app or feature screens; current dialog UI uses `FlatDialog`,
     `FlatErrorDialog`, and `FlatConfirmationDialog`.
