@@ -24,9 +24,6 @@ wrappers.
 - [ ] `LoadingOverlay.svelte`
   - Used by `app/AppOverlays.svelte` and `features/prompt-folders/PromptFolderScreen.svelte`.
   - Needs a `FlatLoadingOverlay` equivalent using flat palette tokens instead of app background utility colors.
-- [ ] `SectionHeader.svelte`
-  - Used by `features/prompt-folders/PromptFolderVirtualContent.svelte` and `features/dev-tools/TestScreen.svelte`.
-  - Needs a `FlatSectionHeader` equivalent; it currently depends on `AccentIconTile`.
 - [ ] `Separator.svelte`
   - Used directly by `features/sidebar/AppSidebar.svelte` and `features/prompt-editor/PromptDivider.svelte`.
   - Also used by `FlatSeparator`; migration is mostly a rename or replacement with a flat primitive.
@@ -39,18 +36,12 @@ wrappers.
 
 ## Internal Flat Wrapper Dependencies
 
-- [ ] `AccentIconTile.svelte`
-  - Used by `SectionHeader`, `TitleBlock`, and `features/dev-tools/TestScreen.svelte`.
-  - Needs a `FlatAccentIconTile` equivalent using only flat palette tokens.
 - [ ] `DropdownPopupCore.svelte`
   - Used by `FlatDropdownPopupSimple` and `FlatDropdownPopupDetailed`.
   - Needs a flat-prefixed name and replacement of its remaining non-flat text token.
 - [ ] `LogDetails.svelte`
   - Used by `FlatErrorDialog` and `features/dev-tools/TestScreen.svelte`.
   - Needs a `FlatLogDetails` equivalent using only flat palette tokens.
-- [ ] `TitleBlock.svelte`
-  - Used by `FlatErrorDialog`, `LogDetails`, and `features/dev-tools/TestScreen.svelte`.
-  - Needs a `FlatTitleBlock` equivalent or replacement with existing flat title/message components.
 
 ## Completed
 
@@ -65,3 +56,9 @@ wrappers.
   - It was only kept alive by the legacy dialog stack and the dev tools catalog. The dev tools
     examples now use existing live flat/button components.
   - Verified with `npm run lint && npm run typecheck`.
+- [x] Removed `SectionHeader.svelte`.
+  - App-facing prompt folder section headings now use `FlatTitle`.
+  - The remaining dev tools examples were removed before deleting the component.
+- [x] Removed `TitleBlock.svelte` and `AccentIconTile.svelte`.
+  - `FlatTitle` now has a `small` variant for section labels.
+  - Dialog/details headings and dev tools section headings now use `FlatTitle`.

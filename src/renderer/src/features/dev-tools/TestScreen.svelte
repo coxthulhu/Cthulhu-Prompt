@@ -8,7 +8,6 @@
     Download,
     FileText,
     Folder,
-    Info,
     Loader,
     Minus,
     MoreHorizontal,
@@ -19,9 +18,6 @@
     Sparkles,
     Trash2
   } from 'lucide-svelte'
-  import AccentIconTile, {
-    type AccentIconTileVariant
-  } from '@renderer/common/cthulhu-ui/AccentIconTile.svelte'
   import FlatCardSurface, {
     type FlatCardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/FlatCardSurface.svelte'
@@ -39,24 +35,14 @@
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
-  import TitleBlock from '@renderer/common/cthulhu-ui/TitleBlock.svelte'
+  import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
   import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
-  import type { CthulhuSize } from '@renderer/common/cthulhu-ui/types'
 
   type IconOnlyButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'tree-action'
   type IconOnlyButtonVariant = 'outline' | 'transparent' | 'dim-border' | 'accent' | 'danger'
 
-  const accentIconTileVariants: AccentIconTileVariant[] = [
-    'neutral',
-    'accent',
-    'accent-blue',
-    'accent-green',
-    'danger'
-  ]
-  const accentIconTileSizes: CthulhuSize[] = ['small', 'medium', 'large']
   const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
   const iconOnlyButtonVariants: IconOnlyButtonVariant[] = [
     'outline',
@@ -112,13 +98,6 @@
     detail: 'Create a new prompt folder',
     icon: Plus
   }
-  const titleBlockIconVariants: AccentIconTileVariant[] = [
-    'neutral',
-    'accent',
-    'accent-blue',
-    'accent-green',
-    'danger'
-  ]
   const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
   const TEST_LOADING_OVERLAY_VISIBLE_MS = 5000
@@ -161,15 +140,24 @@
   })
 </script>
 
+{#snippet componentTitle(title: string, description?: string)}
+  <div class="component-title-block">
+    <FlatTitle {title} size="small" headingLevel={3} />
+    {#if description}
+      <p class="component-title-description">{description}</p>
+    {/if}
+  </div>
+{/snippet}
+
 <div class="test-screen-shell" data-testid="test-screen">
   <div class="test-screen-content">
     <header class="test-screen-header">
-      <TitleBlock
-        title="Cthulhu UI Test Screen"
-        description="Renderer component gallery for the shared Cthulhu UI surface."
-        icon={Sparkles}
-        size="large"
-      />
+      <div class="test-screen-title-block">
+        <FlatTitle title="Cthulhu UI Test Screen" />
+        <p class="component-title-description">
+          Renderer component gallery for the shared Cthulhu UI surface.
+        </p>
+      </div>
 
       <FlatButton
         icon={Loader}
@@ -182,7 +170,7 @@
 
     <section class="component-grid">
       <FlatCardSurface class="component-section">
-        <TitleBlock title="FlatCardSurface" description="All flat surface variants." size="small" />
+        {@render componentTitle('FlatCardSurface', 'All flat surface variants.')}
 
         <div class="variant-grid">
           {#each flatCardSurfaceVariants as variant (variant)}
@@ -194,33 +182,8 @@
         </div>
       </FlatCardSurface>
 
-      <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="AccentIconTile"
-          description="Every tile variant and size."
-          size="small"
-        />
-
-        <div class="tile-matrix">
-          {#each accentIconTileVariants as variant (variant)}
-            <div class="variant-row">
-              <span>{variant}</span>
-              <div class="variant-controls">
-                {#each accentIconTileSizes as size (size)}
-                  <AccentIconTile icon={Sparkles} {variant} {size} />
-                {/each}
-              </div>
-            </div>
-          {/each}
-        </div>
-      </FlatCardSurface>
-
       <FlatCardSurface class="component-section component-section-wide">
-        <TitleBlock
-          title="IconOnlyButton"
-          description="Every icon-only variant and size."
-          size="small"
-        />
+        {@render componentTitle('IconOnlyButton', 'Every icon-only variant and size.')}
 
         <div class="button-matrix">
           {#each iconOnlyButtonVariants as variant (variant)}
@@ -246,11 +209,7 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="FlatDropdownPopupSimple"
-          description="Solid icon menu popup."
-          size="small"
-        />
+        {@render componentTitle('FlatDropdownPopupSimple', 'Solid icon menu popup.')}
 
         <div class="stack">
           <div class="variant-controls">
@@ -300,11 +259,10 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="FlatDropdownPopupDetailed"
-          description="FlatSelectorButton rows with a fixed footer action."
-          size="small"
-        />
+        {@render componentTitle(
+          'FlatDropdownPopupDetailed',
+          'FlatSelectorButton rows with a fixed footer action.'
+        )}
 
         <div class="stack">
           <FlatSelectorButtonWithDropdown
@@ -325,11 +283,7 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="FlatSelectorButton"
-          description="Sidebar-style trigger button."
-          size="small"
-        />
+        {@render componentTitle('FlatSelectorButton', 'Sidebar-style trigger button.')}
 
         <div class="stack">
           <FlatSelectorButton
@@ -347,11 +301,7 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="Inputs"
-          description="Stepper and toggle controls."
-          size="small"
-        />
+        {@render componentTitle('Inputs', 'Stepper and toggle controls.')}
 
         <div class="form-grid">
           <FlatNumericStepperInput
@@ -379,11 +329,7 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="Message Rows"
-          description="Inline guidance, warnings, and validation errors."
-          size="small"
-        />
+        {@render componentTitle('Message Rows', 'Inline guidance, warnings, and validation errors.')}
 
         <div class="stack">
           <InfoRow
@@ -395,62 +341,22 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="SectionHeader"
-          description="Section titles with optional line variants."
-          size="small"
-        />
+        {@render componentTitle('FlatTitle', 'Page and small title variants.')}
 
         <div class="stack">
-          <SectionHeader
-            title="Plain Section"
-            description="Default section header without a leading line."
-            icon={Sparkles}
-          />
-          <SectionHeader
-            title="Accent Line"
-            description="Section header with the leading accent line enabled."
-            icon={Sparkles}
-            showAccentLine
-          />
+          <FlatTitle title="Page title" headingLevel={2} />
+          <FlatTitle title="Small title" size="small" headingLevel={3} />
         </div>
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock title="TitleBlock" description="Sizes and icon treatments." size="small" />
-
-        <div class="stack">
-          <TitleBlock title="Small title" size="small" />
-          <TitleBlock
-            title="Large title"
-            description="Large title with default icon variant."
-            icon={Info}
-            size="large"
-          />
-          {#each titleBlockIconVariants as iconVariant (iconVariant)}
-            <TitleBlock
-              title={iconVariant}
-              description="Icon variant sample."
-              icon={iconVariant === 'danger' ? AlertCircle : Sparkles}
-              {iconVariant}
-              size="large"
-            />
-          {/each}
-        </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section">
-        <TitleBlock title="LogDetails" description="Technical details block." size="small" />
+        {@render componentTitle('LogDetails', 'Technical details block.')}
 
         <LogDetails title="Autosave" text={logDetailsText} />
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        <TitleBlock
-          title="Dialogs"
-          description="Flat error and confirmation dialogs."
-          size="small"
-        />
+        {@render componentTitle('Dialogs', 'Flat error and confirmation dialogs.')}
 
         <div class="variant-controls">
           <FlatButton
@@ -538,6 +444,21 @@
     grid-template-columns: repeat(auto-fit, minmax(384px, 1fr));
   }
 
+  .test-screen-title-block,
+  .component-title-block {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .component-title-description {
+    color: var(--ui-muted-text);
+    font-size: 14px;
+    line-height: 1.4;
+    margin: 0;
+    min-width: 0;
+  }
+
   .variant-grid {
     display: grid;
     gap: 12px;
@@ -561,7 +482,6 @@
     line-height: 1.3;
   }
 
-  .tile-matrix,
   .button-matrix,
   .stack,
   .form-grid {

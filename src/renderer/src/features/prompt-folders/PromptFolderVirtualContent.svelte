@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SectionHeader from '@renderer/common/cthulhu-ui/SectionHeader.svelte'
+  import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     type PromptFolderSettings,
@@ -61,7 +61,6 @@
     ActivePromptTreeRow,
     PromptFocusRequest
   } from './promptFolderScreenController.svelte.ts'
-  import { FileText, Settings } from 'lucide-svelte'
 
   type PromptFolderRow =
     | { kind: 'folder-settings-header' }
@@ -422,12 +421,7 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <SectionHeader
-      title="Folder Settings"
-      description="Settings that only affect prompts in this folder, and are saved to the workspace."
-      headingLevel={1}
-      icon={Settings}
-    />
+    <FlatTitle title="Folder Settings" headingLevel={1} />
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -461,12 +455,7 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <SectionHeader
-      title="Prompts"
-      description="Create, edit, and organize prompts in this folder."
-      headingLevel={2}
-      icon={FileText}
-    />
+    <FlatTitle title="Prompts" headingLevel={2} />
   </PromptFolderSectionRow>
 {/snippet}
 
