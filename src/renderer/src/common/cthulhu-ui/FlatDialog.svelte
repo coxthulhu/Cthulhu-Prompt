@@ -6,6 +6,7 @@
   import FlatCardSurface from './FlatCardSurface.svelte'
   import FlatIconButton from './FlatIconButton.svelte'
   import FlatSeparator from './FlatSeparator.svelte'
+  import FlatTitle from './FlatTitle.svelte'
   import { mergeClasses } from './mergeClasses'
 
   type Props = {
@@ -119,7 +120,7 @@
       onclick={(event) => event.stopPropagation()}
     >
       <div class="cthulhuUiFlatDialogHeader">
-        <h2 class="cthulhuUiFlatDialogTitle">{title}</h2>
+        <FlatTitle {title} variant="dialog" />
 
         {#if showCloseButton}
           <FlatIconButton
@@ -201,19 +202,6 @@
     justify-content: space-between;
     min-width: 0;
     padding: 0 4px 12px;
-  }
-
-  .cthulhuUiFlatDialogTitle {
-    color: var(--ui-flat-normal-text);
-    font-size: 18px;
-    font-weight: 500;
-    letter-spacing: 0;
-    line-height: 1.2;
-    margin: 0;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiFlatDialogBody {

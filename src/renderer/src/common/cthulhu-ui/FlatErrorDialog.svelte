@@ -23,7 +23,7 @@
 >
   <div class="flex min-w-0 flex-col gap-3 py-4">
     <section class="space-y-2">
-      <FlatTitle title="Message" size="small" headingLevel={3} />
+      <FlatTitle title="Message" variant="small" />
       <p class="cthulhuUiFlatErrorDialogMessage">{description}</p>
     </section>
     <LogDetails title="Details" text={errorText} />

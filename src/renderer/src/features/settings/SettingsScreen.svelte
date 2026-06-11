@@ -164,7 +164,7 @@
   data-testid="settings-screen"
 >
   <div class="flex w-full max-w-4xl flex-col gap-6">
-    <FlatTitle title="System Settings" headingLevel={1} />
+    <FlatTitle title="System Settings" />
 
     <FlatCard label="Editor & layout">
       <div class="flex flex-col">

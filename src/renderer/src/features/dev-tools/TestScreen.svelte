@@ -157,7 +157,7 @@
 
 {#snippet componentTitle(title: string, description?: string)}
   <div class="component-title-block">
-    <FlatTitle {title} size="small" headingLevel={3} />
+    <FlatTitle {title} variant="small" />
     {#if description}
       <p class="component-title-description">{description}</p>
     {/if}
@@ -455,11 +455,13 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        {@render componentTitle('FlatTitle', 'Page and small title variants.')}
+        {@render componentTitle('FlatTitle', 'Page, small, card, and dialog title variants.')}
 
         <div class="stack">
-          <FlatTitle title="Page title" headingLevel={2} />
-          <FlatTitle title="Small title" size="small" headingLevel={3} />
+          <FlatTitle title="Page title" />
+          <FlatTitle title="Small title" variant="small" />
+          <FlatTitle title="Card title" variant="card" />
+          <FlatTitle title="Dialog title" variant="dialog" />
         </div>
       </FlatCardSurface>
 

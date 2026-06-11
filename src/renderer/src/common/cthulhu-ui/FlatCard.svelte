@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import FlatCardSurface from './FlatCardSurface.svelte'
+  import FlatTitle from './FlatTitle.svelte'
   import { mergeClasses } from './mergeClasses'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
@@ -21,7 +22,7 @@
 
 <div class={mergeClasses('cthulhuUiFlatCard', className)} {...restProps}>
   <div class="cthulhuUiFlatCardLabel">
-    <span>{label}</span>
+    <FlatTitle title={label} variant="card" />
   </div>
 
   <!-- Flat labelled card shell for action and display row groups. -->
@@ -37,13 +38,8 @@
 
   .cthulhuUiFlatCardLabel {
     align-items: center;
-    color: var(--ui-flat-normal-text);
     display: flex;
-    font-size: 18px;
-    font-weight: 500;
     gap: 10px;
-    letter-spacing: 0;
-    line-height: 1.2;
     margin-bottom: 12px;
     padding-left: 8px;
   }

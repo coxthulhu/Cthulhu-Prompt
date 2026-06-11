@@ -2,64 +2,52 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  type FlatTitleSize = 'page' | 'small'
-  type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
+  type FlatTitleVariant = 'page' | 'small' | 'card' | 'dialog'
 
-  type Props = HTMLAttributes<HTMLElement> & {
+  type Props = HTMLAttributes<HTMLDivElement> & {
     title: string
-    headingLevel?: HeadingLevel
-    size?: FlatTitleSize
+    variant?: FlatTitleVariant
   }
 
   let {
     title,
-    headingLevel = 1,
-    size = 'page',
+    variant = 'page',
     class: className,
     ...restProps
   }: Props = $props()
-
-  const titleTag = $derived(`h${headingLevel}`)
 </script>
 
-{#if size === 'small'}
-  <div class={mergeClasses('cthulhuUiFlatTitle', className)} data-size={size} {...restProps}>
-    <div class="cthulhuUiFlatTitleSmallText">
-      <svelte:element this={titleTag} class="cthulhuUiFlatTitleSmallHeading">
-        {title}
-      </svelte:element>
-    </div>
-  </div>
-{:else}
-  <svelte:element
-    this={titleTag}
-    class={mergeClasses('cthulhuUiFlatTitle', className)}
-    data-size={size}
-    {...restProps}
-  >
-    {title}
-  </svelte:element>
-{/if}
+<div class={mergeClasses('cthulhuUiFlatTitle', className)} data-variant={variant} {...restProps}>
+  {title}
+</div>
 
 <style>
-  .cthulhuUiFlatTitle[data-size='page'] {
+  .cthulhuUiFlatTitle[data-variant='page'] {
     color: var(--ui-flat-normal-text);
-    font-size: 2rem;
+    font-size: 32px;
     font-weight: 700;
-    letter-spacing: 0;
-    line-height: 1.15;
-    margin: 0;
-    min-width: 0;
+    line-height: 37px;
     overflow-wrap: anywhere;
   }
 
-  .cthulhuUiFlatTitleSmallText {
-    min-width: 0;
-  }
-
-  .cthulhuUiFlatTitleSmallHeading {
+  .cthulhuUiFlatTitle[data-variant='small'] {
     color: var(--ui-normal-text);
     font-size: 14px;
     font-weight: 600;
+    line-height: 21px;
+  }
+
+  .cthulhuUiFlatTitle[data-variant='card'],
+  .cthulhuUiFlatTitle[data-variant='dialog'] {
+    color: var(--ui-flat-normal-text);
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 22px;
+  }
+
+  .cthulhuUiFlatTitle[data-variant='dialog'] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

@@ -421,7 +421,7 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <FlatTitle title="Folder Settings" headingLevel={1} />
+    <FlatTitle title="Folder Settings" />
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -455,7 +455,7 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <FlatTitle title="Prompts" headingLevel={2} />
+    <FlatTitle title="Prompts" />
   </PromptFolderSectionRow>
 {/snippet}
 

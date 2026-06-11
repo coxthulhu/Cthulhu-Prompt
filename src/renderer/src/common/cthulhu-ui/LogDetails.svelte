@@ -10,7 +10,7 @@
 </script>
 
 <section class="space-y-2">
-  <FlatTitle {title} size="small" headingLevel={3} />
+  <FlatTitle {title} variant="small" />
   <!-- Preserve line breaks so technical errors remain readable. -->
   <pre
     class="cthulhuUiLogDetailsText rounded-[var(--cthulhu-ui-radius-control)] p-3 text-sm leading-6">{text}</pre>
