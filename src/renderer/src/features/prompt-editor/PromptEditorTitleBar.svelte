@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
-  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
+  import FlatSeparatorDot from '@renderer/common/cthulhu-ui/FlatSeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import type { ComponentType } from 'svelte'
@@ -142,12 +142,12 @@
           <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0 stroke-[2.4]" />
           {metadataFolderLabel}
         </span>
-        <SeparatorDot />
+        <FlatSeparatorDot />
         <span data-testid="prompt-line-count">{lineCountLabel}</span>
-        <SeparatorDot />
+        <FlatSeparatorDot />
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         {#if modifiedAt}
-          <SeparatorDot />
+          <FlatSeparatorDot />
           <span data-testid="prompt-modified-time" title={modifiedFullLabel}>
             {modifiedUpdatedLabel}
           </span>

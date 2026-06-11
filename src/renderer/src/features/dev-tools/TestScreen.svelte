@@ -44,7 +44,7 @@
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
-  import LogDetails from '@renderer/common/cthulhu-ui/LogDetails.svelte'
+  import FlatLogDetails from '@renderer/common/cthulhu-ui/FlatLogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
   import FlatRow from '@renderer/common/cthulhu-ui/FlatRow.svelte'
   import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
@@ -454,9 +454,9 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
-        {@render componentTitle('LogDetails', 'Technical details block.')}
+        {@render componentTitle('FlatLogDetails', 'Technical details block.')}
 
-        <LogDetails title="Autosave" text={logDetailsText} />
+        <FlatLogDetails title="Autosave" text={logDetailsText} />
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">

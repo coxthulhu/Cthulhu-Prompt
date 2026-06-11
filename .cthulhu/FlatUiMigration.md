@@ -15,21 +15,21 @@ wrappers.
 - [ ] `LoadingOverlay.svelte`
   - Used by `app/AppOverlays.svelte` and `features/prompt-folders/PromptFolderScreen.svelte`.
   - Needs a `FlatLoadingOverlay` equivalent using flat palette tokens instead of app background utility colors.
-- [ ] `SeparatorDot.svelte`
-  - Used by `features/prompt-editor/PromptEditorTitleBar.svelte` and `FlatSelectorButton.svelte`.
-  - Needs a flat-prefixed primitive name.
-- [ ] `RotatingChevron.svelte`
-  - Used by `features/sidebar/PromptTreeFolderRow.svelte` and `FlatSelectorButton.svelte`.
-  - Needs a flat-prefixed primitive name.
-
-## Internal Flat Wrapper Dependencies
-
-- [ ] `LogDetails.svelte`
-  - Used by `FlatErrorDialog` and `features/dev-tools/TestScreen.svelte`.
-  - Needs a `FlatLogDetails` equivalent using only flat palette tokens.
-
 ## Completed
 
+- [x] Renamed `LogDetails.svelte` to `FlatLogDetails.svelte`.
+  - `FlatErrorDialog` and `features/dev-tools/TestScreen.svelte` now import the flat-prefixed
+    component directly.
+  - Replaced the remaining non-flat palette token names with matching flat palette tokens, which
+    preserve the same color values.
+- [x] Renamed `SeparatorDot.svelte` to `FlatSeparatorDot.svelte`.
+  - `features/prompt-editor/PromptEditorTitleBar.svelte` and `FlatSelectorButton.svelte` now
+    import the flat-prefixed primitive directly.
+  - Visual styling was preserved.
+- [x] Renamed `RotatingChevron.svelte` to `FlatRotatingChevron.svelte`.
+  - `features/sidebar/PromptTreeFolderRow.svelte` and `FlatSelectorButton.svelte` now import
+    the flat-prefixed primitive directly.
+  - Visual styling and rotation behavior were preserved.
 - [x] Removed `Separator.svelte`.
   - `FlatSeparator.svelte` now owns the separator implementation directly, including orientation,
     accessibility attributes, sizing, element binding, and scoped flat styling.

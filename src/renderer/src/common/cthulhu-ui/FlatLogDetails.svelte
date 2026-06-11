@@ -9,17 +9,17 @@
   let { title, text }: Props = $props()
 </script>
 
-<section class="space-y-2">
+<section class="cthulhuUiFlatLogDetails space-y-2">
   <FlatTitle {title} variant="small" />
   <!-- Preserve line breaks so technical errors remain readable. -->
   <pre
-    class="cthulhuUiLogDetailsText rounded-[var(--cthulhu-ui-radius-control)] p-3 text-sm leading-6">{text}</pre>
+    class="cthulhuUiFlatLogDetailsText rounded-[var(--cthulhu-ui-radius-control)] p-3 text-sm leading-6">{text}</pre>
 </section>
 
 <style>
-  .cthulhuUiLogDetailsText {
-    background-color: var(--ui-neutral-field-surface);
-    color: var(--ui-normal-text);
+  .cthulhuUiFlatLogDetailsText {
+    background-color: var(--ui-flat-neutral-field-surface);
+    color: var(--ui-flat-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     margin: 0;
     overflow-x: auto;

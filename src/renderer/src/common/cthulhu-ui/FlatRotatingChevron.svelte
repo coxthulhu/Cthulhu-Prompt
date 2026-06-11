@@ -19,41 +19,41 @@
   }: Props = $props()
 
   const chevronStyle = $derived(
-    `--cthulhu-ui-rotating-chevron-size: ${size}px; --cthulhu-ui-rotating-chevron-icon-size: ${iconSize}px;`
+    `--cthulhu-ui-flat-rotating-chevron-size: ${size}px; --cthulhu-ui-flat-rotating-chevron-icon-size: ${iconSize}px;`
   )
 </script>
 
 <span
-  class={mergeClasses('cthulhuUiRotatingChevron', className)}
+  class={mergeClasses('cthulhuUiFlatRotatingChevron', className)}
   data-expanded={expanded ? 'true' : 'false'}
   style={chevronStyle}
 >
   <ChevronRight
-    class={mergeClasses('cthulhuUiRotatingChevronIcon', iconClass)}
+    class={mergeClasses('cthulhuUiFlatRotatingChevronIcon', iconClass)}
     size={iconSize}
     aria-hidden="true"
   />
 </span>
 
 <style>
-  .cthulhuUiRotatingChevron {
+  .cthulhuUiFlatRotatingChevron {
     align-items: center;
     display: flex;
     flex-shrink: 0;
-    height: var(--cthulhu-ui-rotating-chevron-size);
+    height: var(--cthulhu-ui-flat-rotating-chevron-size);
     justify-content: center;
     transform: rotate(0deg);
     transform-origin: center;
     transition: transform 50ms ease-out;
-    width: var(--cthulhu-ui-rotating-chevron-size);
+    width: var(--cthulhu-ui-flat-rotating-chevron-size);
   }
 
-  .cthulhuUiRotatingChevron[data-expanded='true'] {
+  .cthulhuUiFlatRotatingChevron[data-expanded='true'] {
     transform: rotate(90deg);
   }
 
-  .cthulhuUiRotatingChevronIcon {
-    height: var(--cthulhu-ui-rotating-chevron-icon-size);
-    width: var(--cthulhu-ui-rotating-chevron-icon-size);
+  .cthulhuUiFlatRotatingChevronIcon {
+    height: var(--cthulhu-ui-flat-rotating-chevron-icon-size);
+    width: var(--cthulhu-ui-flat-rotating-chevron-icon-size);
   }
 </style>

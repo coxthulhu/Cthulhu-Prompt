@@ -12,12 +12,12 @@
 <span
   bind:this={elementRef}
   aria-hidden="true"
-  class={mergeClasses('cthulhuUiSeparatorDot', className)}
+  class={mergeClasses('cthulhuUiFlatSeparatorDot', className)}
   {...restProps}
 ></span>
 
 <style>
-  .cthulhuUiSeparatorDot {
+  .cthulhuUiFlatSeparatorDot {
     background: currentColor;
     border-radius: 999px;
     display: inline-block;

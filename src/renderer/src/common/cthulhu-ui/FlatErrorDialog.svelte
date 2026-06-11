@@ -1,7 +1,7 @@
 <script lang="ts">
   import FlatDialog from './FlatDialog.svelte'
+  import FlatLogDetails from './FlatLogDetails.svelte'
   import FlatTitle from './FlatTitle.svelte'
-  import LogDetails from './LogDetails.svelte'
 
   type Props = {
     open?: boolean
@@ -26,7 +26,7 @@
       <FlatTitle title="Message" variant="small" />
       <p class="cthulhuUiFlatErrorDialogMessage">{description}</p>
     </section>
-    <LogDetails title="Details" text={errorText} />
+    <FlatLogDetails title="Details" text={errorText} />
   </div>
 </FlatDialog>
 

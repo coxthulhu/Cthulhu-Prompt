@@ -2,8 +2,8 @@
   import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
-  import RotatingChevron from './RotatingChevron.svelte'
-  import SeparatorDot from './SeparatorDot.svelte'
+  import FlatRotatingChevron from './FlatRotatingChevron.svelte'
+  import FlatSeparatorDot from './FlatSeparatorDot.svelte'
 
   type FlatSelectorButtonSize = 'compact' | 'large'
   type FlatSelectorButtonState = 'enabled' | 'disabled'
@@ -95,7 +95,7 @@
       <span class="cthulhuUiFlatSelectorButtonDetail" title={detailTitle}>
         {#each resolvedDetailParts as detailPart, index (`${index}-${detailPart}`)}
           {#if index > 0}
-            <SeparatorDot />
+            <FlatSeparatorDot />
           {/if}
           <span class="cthulhuUiFlatSelectorButtonDetailText">{detailPart}</span>
         {/each}
@@ -104,7 +104,7 @@
   </span>
 
   {#if showChevron}
-    <RotatingChevron
+    <FlatRotatingChevron
       expanded={open}
       size={22}
       iconSize={chevronSize}

@@ -12,7 +12,7 @@
   import FlatDropdownPopupSimple, {
     type FlatDropdownPopupItem
   } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
-  import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
+  import FlatRotatingChevron from '@renderer/common/cthulhu-ui/FlatRotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import {
     folderOpenTestId,
@@ -144,7 +144,7 @@
           data-testid={folderToggleTestId(folder)}
           class="sidebarPromptTreeToggleButton"
         >
-          <RotatingChevron
+          <FlatRotatingChevron
             expanded={isExpanded}
             size={20}
             iconSize={16}
