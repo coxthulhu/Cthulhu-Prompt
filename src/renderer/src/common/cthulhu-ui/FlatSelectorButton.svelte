@@ -145,7 +145,7 @@
   .cthulhuUiFlatSelectorButton:not(:disabled):focus-visible,
   .cthulhuUiFlatSelectorButton[data-open='true'],
   .cthulhuUiFlatSelectorButton[data-selected='true'] {
-    background-color: var(--ui-flat-neutral-hover-surface);
+    background-color: var(--ui-flat-neutral-action-hover-fill);
     color: var(--ui-flat-normal-text);
   }
 

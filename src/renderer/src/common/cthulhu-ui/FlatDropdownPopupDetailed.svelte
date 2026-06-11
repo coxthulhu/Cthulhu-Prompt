@@ -140,6 +140,6 @@
 
   :global(.cthulhuUiFlatDropdownPopupDetailedFooterItem:hover),
   :global(.cthulhuUiFlatDropdownPopupDetailedFooterItem[data-selected='true']) {
-    background-color: var(--ui-flat-accent-hover-surface);
+    background-color: var(--ui-flat-accent-action-hover-fill);
   }
 </style>

@@ -27,11 +27,9 @@
 
   /* Neutral */
   --ui-flat-ghost-surface: transparent;
-  --ui-flat-neutral-muted-surface: oklch(1 0 0 / 3%);
   --ui-flat-neutral-muted-border: oklch(1 0 0 / 8%);
   --ui-flat-neutral-normal-surface: oklch(1 0 0 / 6%);
   --ui-flat-neutral-normal-border: oklch(1 0 0 / 12%);
-  --ui-flat-neutral-hover-surface: oklch(1 0 0 / 10%);
   --ui-flat-neutral-hover-border: oklch(1 0 0 / 14%);
   --ui-flat-neutral-emphasis-surface: oklch(1 0 0 / 14%);
   --ui-flat-neutral-emphasis-border: oklch(1 0 0 / 16%);
@@ -40,17 +38,16 @@
   --ui-flat-neutral-focus-border: oklch(1 0 0 / 28%);
   --ui-flat-neutral-interactive-normal-border: oklch(1 0 0 / 30%);
   --ui-flat-neutral-interactive-hover-border: oklch(1 0 0 / 42%);
+  --ui-flat-neutral-action-fill: oklch(1 0 0 / 11.3%);
+  --ui-flat-neutral-action-hover-fill: oklch(1 0 0 / 16.3%);
 
   /* Accent */
-  --ui-flat-accent-subtle-surface: oklch(0.606 0.219 292.717 / 25.2%);
-  --ui-flat-accent-subtle-hover-surface: oklch(0.606 0.219 292.717 / 36%);
-  --ui-flat-accent-normal-surface: oklch(0.606 0.219 292.717 / 17%);
-  --ui-flat-accent-normal-fill: oklch(0.827 0.108 306.383 / 24%);
   --ui-flat-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-flat-accent-normal-text: oklch(0.969 0.016 293.756);
-  --ui-flat-accent-hover-surface: oklch(0.606 0.219 292.717 / 25%);
   --ui-flat-accent-hover-border: oklch(0.827 0.108 306.383 / 42%);
   --ui-flat-accent-strong-border: oklch(0.827 0.108 306.383 / 68%);
+  --ui-flat-accent-action-fill: oklch(0.606 0.219 292.717 / 25.2%);
+  --ui-flat-accent-action-hover-fill: oklch(0.606 0.219 292.717 / 36%);
 
   /* Info */
   --ui-flat-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
@@ -65,8 +62,9 @@
   /* Danger */
   --ui-flat-danger-normal-surface: oklch(0.396 0.133 25.723 / 22%);
   --ui-flat-danger-normal-border: oklch(0.711 0.166 22.216 / 28%);
-  --ui-flat-danger-hover-surface: oklch(0.396 0.133 25.723 / 30%);
   --ui-flat-danger-hover-border: oklch(0.711 0.166 22.216 / 42%);
   --ui-flat-danger-strong-border: oklch(0.704 0.191 22.216);
   --ui-flat-danger-icon-glyph: oklch(1 0.07 17.717);
+  --ui-flat-danger-action-fill: oklch(0.396 0.133 25.723 / 52.4%);
+  --ui-flat-danger-action-hover-fill: oklch(0.396 0.133 25.723 / 73%);
 }

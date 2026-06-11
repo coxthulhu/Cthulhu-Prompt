@@ -120,12 +120,12 @@
   }
 
   .cthulhuUiFlatIconButton[data-variant='neutral'] {
-    background: var(--ui-flat-neutral-normal-surface);
+    background: var(--ui-flat-neutral-action-fill);
   }
 
   .cthulhuUiFlatIconButton:hover,
   .cthulhuUiFlatIconButton:focus-visible {
-    background: var(--ui-flat-neutral-hover-surface);
+    background: var(--ui-flat-neutral-action-hover-fill);
     color: var(--ui-flat-normal-text);
   }
 

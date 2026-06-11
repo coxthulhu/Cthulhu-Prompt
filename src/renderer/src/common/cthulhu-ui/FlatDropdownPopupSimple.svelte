@@ -111,18 +111,18 @@
   .cthulhuUiFlatDropdownPopupSimpleItem:hover {
     --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-normal-text);
 
-    background: var(--ui-flat-neutral-hover-surface);
+    background: var(--ui-flat-neutral-action-hover-fill);
     color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='accent']:hover {
-    background: var(--ui-flat-accent-hover-surface);
+    background: var(--ui-flat-accent-action-hover-fill);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger']:hover {
     --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-danger-icon-glyph);
 
-    background: var(--ui-flat-danger-hover-surface);
+    background: var(--ui-flat-danger-action-hover-fill);
     color: var(--ui-flat-danger-icon-glyph);
   }
 

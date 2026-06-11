@@ -1,6 +1,6 @@
 .cthulhuUiFlatActionButton {
   align-items: center;
-  background-color: var(--ui-flat-neutral-normal-surface);
+  background-color: var(--ui-flat-neutral-action-fill);
   border: 0;
   border-radius: var(--cthulhu-ui-radius-control);
   color: var(--ui-flat-normal-text);
@@ -23,29 +23,29 @@
 
 .cthulhuUiFlatActionButton:hover,
 .cthulhuUiFlatActionButton:focus-visible {
-  background-color: var(--ui-flat-neutral-hover-surface);
+  background-color: var(--ui-flat-neutral-action-hover-fill);
   color: var(--ui-flat-normal-text);
 }
 
 .cthulhuUiFlatActionButton[data-variant='accent'] {
-  background-color: var(--ui-flat-accent-subtle-surface);
+  background-color: var(--ui-flat-accent-action-fill);
   color: var(--ui-flat-normal-text);
 }
 
 .cthulhuUiFlatActionButton[data-variant='accent']:hover,
 .cthulhuUiFlatActionButton[data-variant='accent']:focus-visible {
-  background-color: var(--ui-flat-accent-subtle-hover-surface);
+  background-color: var(--ui-flat-accent-action-hover-fill);
   color: var(--ui-flat-normal-text);
 }
 
 .cthulhuUiFlatActionButton[data-variant='danger'] {
-  background-color: var(--ui-flat-danger-normal-surface);
+  background-color: var(--ui-flat-danger-action-fill);
   color: var(--ui-flat-danger-icon-glyph);
 }
 
 .cthulhuUiFlatActionButton[data-variant='danger']:hover,
 .cthulhuUiFlatActionButton[data-variant='danger']:focus-visible {
-  background-color: var(--ui-flat-danger-hover-surface);
+  background-color: var(--ui-flat-danger-action-hover-fill);
   color: var(--ui-flat-danger-icon-glyph);
 }
 

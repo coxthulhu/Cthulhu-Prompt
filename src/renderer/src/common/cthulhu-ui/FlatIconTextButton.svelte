@@ -79,7 +79,7 @@
 
   .cthulhuUiFlatIconTextButton:hover,
   .cthulhuUiFlatIconTextButton:focus-visible {
-    background: var(--ui-flat-neutral-normal-surface);
+    background: var(--ui-flat-neutral-action-fill);
     color: var(--ui-flat-normal-text);
   }
 

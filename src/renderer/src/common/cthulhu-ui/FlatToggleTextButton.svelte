@@ -12,12 +12,12 @@
   let { pressed, class: className, disabled = false, testId, onclick }: Props = $props()
 
   const buttonStateClasses = {
-    off: 'bg-[var(--ui-flat-neutral-normal-surface)] text-[var(--ui-flat-hoverable-text)] hover:bg-[var(--ui-flat-neutral-hover-surface)] hover:text-[var(--ui-flat-normal-text)]',
-    on: 'bg-[var(--ui-flat-accent-normal-surface)] text-[var(--ui-flat-accent-normal-text)] hover:bg-[var(--ui-flat-accent-hover-surface)]'
+    off: 'bg-[var(--ui-flat-neutral-action-fill)] text-[var(--ui-flat-hoverable-text)] hover:bg-[var(--ui-flat-neutral-action-hover-fill)] hover:text-[var(--ui-flat-normal-text)]',
+    on: 'bg-[var(--ui-flat-accent-action-fill)] text-[var(--ui-flat-accent-normal-text)] hover:bg-[var(--ui-flat-accent-action-hover-fill)]'
   }
   const trackStateClasses = {
     off: 'justify-start bg-[var(--ui-flat-neutral-emphasis-surface)]',
-    on: 'justify-end bg-[var(--ui-flat-accent-normal-fill)]'
+    on: 'justify-end bg-[var(--ui-flat-accent-action-fill)]'
   }
   const stateClassKey = $derived(pressed ? 'on' : 'off')
 </script>
