@@ -40,13 +40,13 @@
 
 .cthulhuUiFlatActionButton[data-variant='danger'] {
   background-color: var(--ui-flat-danger-action-fill);
-  color: var(--ui-flat-danger-icon-glyph);
+  color: var(--ui-flat-normal-text);
 }
 
 .cthulhuUiFlatActionButton[data-variant='danger']:hover,
 .cthulhuUiFlatActionButton[data-variant='danger']:focus-visible {
   background-color: var(--ui-flat-danger-action-hover-fill);
-  color: var(--ui-flat-danger-icon-glyph);
+  color: var(--ui-flat-normal-text);
 }
 
 .cthulhuUiFlatActionButton:focus-visible {

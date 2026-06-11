@@ -81,7 +81,7 @@
     background: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-flat-hoverable-icon-glyph);
+    color: var(--ui-flat-normal-text);
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
@@ -126,7 +126,6 @@
   .cthulhuUiFlatIconButton:hover,
   .cthulhuUiFlatIconButton:focus-visible {
     background: var(--ui-flat-neutral-action-hover-fill);
-    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatIconButton:focus-visible {

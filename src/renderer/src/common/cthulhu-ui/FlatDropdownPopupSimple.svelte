@@ -76,13 +76,13 @@
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-hoverable-icon-glyph);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-normal-text);
 
     align-items: center;
     background: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-flat-hoverable-text);
+    color: var(--ui-flat-normal-text);
     cursor: pointer;
     display: grid;
     gap: 8px;
@@ -97,15 +97,15 @@
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='accent'] {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-accent-normal-text);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-normal-text);
 
-    color: var(--ui-flat-accent-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger'] {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-danger-icon-glyph);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-normal-text);
 
-    color: var(--ui-flat-danger-icon-glyph);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem:hover {
@@ -120,10 +120,10 @@
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem[data-variant='danger']:hover {
-    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-danger-icon-glyph);
+    --cthulhu-ui-flat-dropdown-popup-item-icon-color: var(--ui-flat-normal-text);
 
     background: var(--ui-flat-danger-action-hover-fill);
-    color: var(--ui-flat-danger-icon-glyph);
+    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatDropdownPopupSimpleItem > :global(svg) {

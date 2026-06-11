@@ -30,18 +30,18 @@
 
   const noopButtonAction: IconOnlyButtonAction = () => undefined
   const baseButtonClass =
-    'cthulhuUiIconOnlyButton inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-[var(--cthulhu-ui-radius-icon-button)] border text-[var(--ui-flat-hoverable-icon-glyph)] transition-[background-color,box-shadow,border-color,color] duration-[120ms] hover:bg-[var(--ui-flat-neutral-action-hover-fill)] hover:text-[var(--ui-flat-normal-text)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50'
+    'cthulhuUiIconOnlyButton inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-[var(--cthulhu-ui-radius-icon-button)] border text-[var(--ui-flat-normal-text)] transition-[background-color,box-shadow,border-color,color] duration-[120ms] hover:bg-[var(--ui-flat-neutral-action-hover-fill)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50'
   const variantClasses = {
     outline:
       'border-[var(--ui-flat-neutral-interactive-normal-border)] hover:border-[var(--ui-flat-neutral-interactive-hover-border)]',
     'dim-border':
-      'border-[var(--ui-flat-neutral-muted-border)] bg-[var(--ui-flat-neutral-action-fill)] text-[var(--ui-flat-secondary-icon-glyph)] hover:border-[var(--ui-flat-neutral-hover-border)] hover:bg-[var(--ui-flat-neutral-action-hover-fill)]',
+      'border-[var(--ui-flat-neutral-muted-border)] bg-[var(--ui-flat-neutral-action-fill)] hover:border-[var(--ui-flat-neutral-hover-border)] hover:bg-[var(--ui-flat-neutral-action-hover-fill)]',
     transparent:
       'border-0 bg-[var(--ui-flat-ghost-surface)] shadow-none hover:border-0 hover:bg-[var(--ui-flat-neutral-action-fill)]',
     accent:
-      'border-[var(--ui-flat-accent-normal-border)] bg-[var(--ui-flat-accent-action-fill)] text-[var(--ui-flat-accent-normal-text)] hover:border-[var(--ui-flat-accent-hover-border)] hover:bg-[var(--ui-flat-accent-action-hover-fill)] hover:text-[var(--ui-flat-normal-text)]',
+      'border-[var(--ui-flat-accent-normal-border)] bg-[var(--ui-flat-accent-action-fill)] hover:border-[var(--ui-flat-accent-hover-border)] hover:bg-[var(--ui-flat-accent-action-hover-fill)]',
     danger:
-      'border-[var(--ui-flat-danger-normal-border)] bg-[var(--ui-flat-danger-action-fill)] text-[var(--ui-flat-danger-icon-glyph)] hover:border-[var(--ui-flat-danger-hover-border)] hover:bg-[var(--ui-flat-danger-action-hover-fill)] hover:text-[var(--ui-flat-danger-icon-glyph)]'
+      'border-[var(--ui-flat-danger-normal-border)] bg-[var(--ui-flat-danger-action-fill)] hover:border-[var(--ui-flat-danger-hover-border)] hover:bg-[var(--ui-flat-danger-action-hover-fill)]'
   } satisfies Record<IconOnlyButtonVariant, string>
   const sizeClasses = {
     default: null,

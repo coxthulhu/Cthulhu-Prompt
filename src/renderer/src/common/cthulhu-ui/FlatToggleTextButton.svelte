@@ -12,8 +12,8 @@
   let { pressed, class: className, disabled = false, testId, onclick }: Props = $props()
 
   const buttonStateClasses = {
-    off: 'bg-[var(--ui-flat-neutral-action-fill)] text-[var(--ui-flat-hoverable-text)] hover:bg-[var(--ui-flat-neutral-action-hover-fill)] hover:text-[var(--ui-flat-normal-text)]',
-    on: 'bg-[var(--ui-flat-accent-action-fill)] text-[var(--ui-flat-accent-normal-text)] hover:bg-[var(--ui-flat-accent-action-hover-fill)]'
+    off: 'bg-[var(--ui-flat-neutral-action-fill)] text-[var(--ui-flat-normal-text)] hover:bg-[var(--ui-flat-neutral-action-hover-fill)]',
+    on: 'bg-[var(--ui-flat-accent-action-fill)] text-[var(--ui-flat-normal-text)] hover:bg-[var(--ui-flat-accent-action-hover-fill)]'
   }
   const trackStateClasses = {
     off: 'justify-start bg-[var(--ui-flat-neutral-emphasis-surface)]',

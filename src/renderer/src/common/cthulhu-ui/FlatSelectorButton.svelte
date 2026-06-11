@@ -119,7 +119,7 @@
     background-color: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-flat-hoverable-text);
+    color: var(--ui-flat-normal-text);
     cursor: pointer;
     display: grid;
     gap: 8px;
@@ -146,7 +146,6 @@
   .cthulhuUiFlatSelectorButton[data-open='true'],
   .cthulhuUiFlatSelectorButton[data-selected='true'] {
     background-color: var(--ui-flat-neutral-action-hover-fill);
-    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatSelectorButton[data-disabled='true'] {
@@ -158,19 +157,12 @@
   .cthulhuUiFlatSelectorButtonIconCell {
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-flat-hoverable-icon-glyph);
+    color: var(--ui-flat-normal-text);
     display: flex;
     height: 34px;
     justify-content: center;
     transition: color 120ms ease;
     width: 34px;
-  }
-
-  .cthulhuUiFlatSelectorButton:not(:disabled):hover .cthulhuUiFlatSelectorButtonIconCell,
-  .cthulhuUiFlatSelectorButton:not(:disabled):focus-visible .cthulhuUiFlatSelectorButtonIconCell,
-  .cthulhuUiFlatSelectorButton[data-open='true'] .cthulhuUiFlatSelectorButtonIconCell,
-  .cthulhuUiFlatSelectorButton[data-selected='true'] .cthulhuUiFlatSelectorButtonIconCell {
-    color: var(--ui-flat-normal-text);
   }
 
   .cthulhuUiFlatSelectorButtonTextStack {
@@ -201,7 +193,7 @@
 
   .cthulhuUiFlatSelectorButtonDetail {
     align-items: center;
-    color: var(--ui-flat-muted-text);
+    color: var(--ui-flat-normal-text);
     display: flex;
     font-size: 12px;
     gap: 6px;
@@ -220,16 +212,7 @@
   }
 
   .cthulhuUiFlatSelectorButton :global(.cthulhuUiFlatSelectorButtonChevronWrap) {
-    color: var(--ui-flat-hoverable-icon-glyph);
-  }
-
-  .cthulhuUiFlatSelectorButton:not(:disabled):hover
-    :global(.cthulhuUiFlatSelectorButtonChevronWrap),
-  .cthulhuUiFlatSelectorButton:not(:disabled):focus-visible
-    :global(.cthulhuUiFlatSelectorButtonChevronWrap),
-  .cthulhuUiFlatSelectorButton[data-open='true'] :global(.cthulhuUiFlatSelectorButtonChevronWrap),
-  .cthulhuUiFlatSelectorButton[data-selected='true']
-    :global(.cthulhuUiFlatSelectorButtonChevronWrap) {
     color: var(--ui-flat-normal-text);
   }
+
 </style>
