@@ -6,12 +6,6 @@ wrappers.
 
 ## App-Facing Components
 
-- [ ] `ActivityBarButton.svelte`
-  - Used by `features/sidebar/AppActivityBar.svelte`.
-  - Already uses flat palette tokens; migration is mostly a rename to `FlatActivityBarButton`.
-- [ ] `BareIconButton.svelte`
-  - Used by `features/sidebar/AppSidebar.svelte`.
-  - Already uses flat palette tokens; migration is mostly a rename to `FlatBareIconButton`.
 - [ ] `IconOnlyButton.svelte`
   - Used by `features/sidebar/PromptTreeFolderRow.svelte` and `features/dev-tools/TestScreen.svelte`.
   - Already uses flat palette tokens; migrate by renaming or folding missing sizes/variants into `FlatIconButton`.
@@ -36,15 +30,21 @@ wrappers.
 
 ## Internal Flat Wrapper Dependencies
 
-- [ ] `DropdownPopupCore.svelte`
-  - Used by `FlatDropdownPopupSimple` and `FlatDropdownPopupDetailed`.
-  - Needs a flat-prefixed name and replacement of its remaining non-flat text token.
 - [ ] `LogDetails.svelte`
   - Used by `FlatErrorDialog` and `features/dev-tools/TestScreen.svelte`.
   - Needs a `FlatLogDetails` equivalent using only flat palette tokens.
 
 ## Completed
 
+- [x] Renamed `ActivityBarButton.svelte` to `FlatActivityBarButton.svelte`.
+  - `features/sidebar/AppActivityBar.svelte` now imports the flat-prefixed component.
+  - Visual styling and behavior were preserved.
+- [x] Renamed `BareIconButton.svelte` to `FlatBareIconButton.svelte`.
+  - `features/sidebar/AppSidebar.svelte` now imports the flat-prefixed component.
+  - Visual styling and behavior were preserved.
+- [x] Renamed `DropdownPopupCore.svelte` to `FlatDropdownPopupCore.svelte`.
+  - `FlatDropdownPopupSimple` and `FlatDropdownPopupDetailed` now import the flat-prefixed core.
+  - Replaced the remaining non-flat text token with `--ui-flat-normal-text`.
 - [x] Removed `CardSurface.svelte`.
   - It was only kept alive by the dev tools catalog. The catalog now uses `FlatCardSurface`
     for section shells and surface variant examples.

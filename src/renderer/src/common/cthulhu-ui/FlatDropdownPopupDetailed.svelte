@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
-  import DropdownPopupCore, {
+  import FlatDropdownPopupCore, {
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
-  } from './DropdownPopupCore.svelte'
+  } from './FlatDropdownPopupCore.svelte'
   import FlatSelectorButton from './FlatSelectorButton.svelte'
 
   export type FlatDropdownPopupDetailedItem = {
@@ -51,7 +51,7 @@
   }
 </script>
 
-<DropdownPopupCore
+<FlatDropdownPopupCore
   {label}
   {trigger}
   {menuWidth}
@@ -99,7 +99,7 @@
       {/if}
     </div>
   {/snippet}
-</DropdownPopupCore>
+</FlatDropdownPopupCore>
 
 <style>
   :global(.cthulhuUiFlatDropdownPopupDetailedMenu) {

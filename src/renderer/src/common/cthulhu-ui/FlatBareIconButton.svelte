@@ -28,7 +28,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiBareIconButton inline-flex h-[18px] w-[18px] flex-none cursor-pointer items-center justify-center border-0 bg-[var(--ui-flat-ghost-surface)] p-0 text-[var(--ui-flat-muted-icon-glyph)] transition-colors duration-[120ms] hover:text-[var(--ui-flat-hoverable-icon-glyph)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50',
+    'cthulhuUiFlatBareIconButton inline-flex h-[18px] w-[18px] flex-none cursor-pointer items-center justify-center border-0 bg-[var(--ui-flat-ghost-surface)] p-0 text-[var(--ui-flat-muted-icon-glyph)] transition-colors duration-[120ms] hover:text-[var(--ui-flat-hoverable-icon-glyph)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50',
     className
   )}
   aria-label={label}
@@ -38,7 +38,7 @@
   {onclick}
 >
   <Icon
-    class={mergeClasses('cthulhuUiBareIconButtonIcon h-3.5 w-3.5', iconClass)}
+    class={mergeClasses('cthulhuUiFlatBareIconButtonIcon h-3.5 w-3.5', iconClass)}
     aria-hidden="true"
   />
 </button>

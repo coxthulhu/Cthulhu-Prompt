@@ -12,7 +12,7 @@
   import type { Workspace } from '@shared/Workspace'
   import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
-  import BareIconButton from '@renderer/common/cthulhu-ui/BareIconButton.svelte'
+  import FlatBareIconButton from '@renderer/common/cthulhu-ui/FlatBareIconButton.svelte'
   import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
@@ -220,7 +220,7 @@
             {workspaceDisplay.title}
           </h1>
           {#if workspacePath}
-            <BareIconButton
+            <FlatBareIconButton
               icon={ExternalLink}
               label="Open Workspace Folder"
               title="Open Workspace Folder"

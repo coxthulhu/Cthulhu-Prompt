@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
-  import DropdownPopupCore, {
+  import FlatDropdownPopupCore, {
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
-  } from './DropdownPopupCore.svelte'
+  } from './FlatDropdownPopupCore.svelte'
 
   export type FlatDropdownPopupItemVariant = 'neutral' | 'accent' | 'danger'
 
@@ -38,7 +38,7 @@
   }: Props = $props()
 </script>
 
-<DropdownPopupCore
+<FlatDropdownPopupCore
   {label}
   {trigger}
   {menuWidth}
@@ -68,7 +68,7 @@
       {/each}
     </div>
   {/snippet}
-</DropdownPopupCore>
+</FlatDropdownPopupCore>
 
 <style>
   .cthulhuUiFlatDropdownPopupSimpleItems {

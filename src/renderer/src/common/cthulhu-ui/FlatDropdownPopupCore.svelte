@@ -259,7 +259,7 @@
 {#if open && menuAnchor}
   <div
     bind:this={menuLayerRef}
-    class="cthulhuUiDropdownPopupLayer"
+    class="cthulhuUiFlatDropdownPopupLayer"
     style={menuLayerStyle}
     use:portalToBody
   >
@@ -276,8 +276,8 @@
 {/if}
 
 <style>
-  .cthulhuUiDropdownPopupLayer {
-    color: var(--ui-normal-text);
+  .cthulhuUiFlatDropdownPopupLayer {
+    color: var(--ui-flat-normal-text);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     overscroll-behavior: contain;

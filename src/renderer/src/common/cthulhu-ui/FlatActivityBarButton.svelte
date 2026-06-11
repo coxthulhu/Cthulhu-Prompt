@@ -31,7 +31,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiActivityBarButton', className)}
+  class={mergeClasses('cthulhuUiFlatActivityBarButton', className)}
   aria-label={label}
   aria-current={ariaCurrent}
   data-active={active ? 'true' : 'false'}
@@ -41,14 +41,14 @@
   {onclick}
 >
   <Icon
-    class={mergeClasses('cthulhuUiActivityBarButtonIcon', iconClass)}
+    class={mergeClasses('cthulhuUiFlatActivityBarButtonIcon', iconClass)}
     strokeWidth={1.5}
     aria-hidden="true"
   />
 </button>
 
 <style>
-  .cthulhuUiActivityBarButton {
+  .cthulhuUiFlatActivityBarButton {
     position: relative;
     display: inline-flex;
     height: 44px;
@@ -64,15 +64,15 @@
     transition: color 120ms ease-out;
   }
 
-  .cthulhuUiActivityBarButton:hover {
+  .cthulhuUiFlatActivityBarButton:hover {
     color: var(--ui-flat-normal-text);
   }
 
-  .cthulhuUiActivityBarButton[data-active='true'] {
+  .cthulhuUiFlatActivityBarButton[data-active='true'] {
     color: var(--ui-flat-normal-text);
   }
 
-  .cthulhuUiActivityBarButton[data-active='true']::before {
+  .cthulhuUiFlatActivityBarButton[data-active='true']::before {
     position: absolute;
     top: 4px;
     bottom: 4px;
@@ -83,13 +83,13 @@
     content: '';
   }
 
-  .cthulhuUiActivityBarButton:disabled {
+  .cthulhuUiFlatActivityBarButton:disabled {
     pointer-events: none;
     cursor: default;
     opacity: 0.5;
   }
 
-  .cthulhuUiActivityBarButtonIcon {
+  .cthulhuUiFlatActivityBarButtonIcon {
     height: 24px;
     width: 24px;
     flex: none;
