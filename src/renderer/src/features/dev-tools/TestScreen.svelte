@@ -42,7 +42,7 @@
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
-  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import FlatLogDetails from '@renderer/common/cthulhu-ui/FlatLogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
@@ -484,7 +484,7 @@
   </div>
 
   {#if testLoadingOverlay.isVisible()}
-    <LoadingOverlay
+    <FlatLoadingOverlay
       testId="test-screen-loading-overlay"
       fadeMs={TEST_LOADING_OVERLAY_FADE_MS}
       isFading={testLoadingOverlay.isFading()}

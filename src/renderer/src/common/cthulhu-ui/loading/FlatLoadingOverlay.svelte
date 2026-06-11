@@ -23,24 +23,29 @@
   data-testid={testId}
   data-fading={isFading ? 'true' : undefined}
   class={mergeClasses(
-    'cthulhuUiLoadingOverlay flex items-center justify-center bg-background transition-opacity',
+    'cthulhuUiFlatLoadingOverlay flex items-center justify-center transition-opacity',
     positionClass
   )}
   style={`transition-duration: ${fadeMs}ms;`}
 >
-  <div class="flex flex-col items-center gap-3 text-muted-foreground">
+  <div class="cthulhuUiFlatLoadingOverlayContent flex flex-col items-center gap-3">
     <Loader class="size-6 animate-spin" />
     <p class="text-sm font-medium">{message}</p>
   </div>
 </div>
 
 <style>
-  .cthulhuUiLoadingOverlay {
+  .cthulhuUiFlatLoadingOverlay {
+    background-color: var(--background);
     opacity: 1;
   }
 
-  .cthulhuUiLoadingOverlay[data-fading='true'] {
+  .cthulhuUiFlatLoadingOverlay[data-fading='true'] {
     opacity: 0;
     pointer-events: none;
+  }
+
+  .cthulhuUiFlatLoadingOverlayContent {
+    color: var(--ui-flat-secondary-text);
   }
 </style>

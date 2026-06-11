@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte'
   import { Search } from 'lucide-svelte'
   import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
@@ -100,7 +100,7 @@
       </div>
 
       {#if controller.loadingOverlay.isVisible()}
-        <LoadingOverlay
+        <FlatLoadingOverlay
           testId="prompt-folder-loading-overlay"
           fadeMs={controller.loadingOverlayFadeMs}
           isFading={controller.loadingOverlay.isFading()}

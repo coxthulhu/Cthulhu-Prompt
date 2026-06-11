@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
   import DragGhostOverlay from '@renderer/features/drag-drop/DragGhostOverlay.svelte'
 
   type OverlayState = {
@@ -18,7 +18,7 @@
 <DragGhostOverlay />
 
 {#if startupRestoreOverlay.isVisible()}
-  <LoadingOverlay
+  <FlatLoadingOverlay
     testId="startup-loading-overlay"
     fadeMs={startupLoadingOverlayFadeMs}
     isFading={startupRestoreOverlay.isFading()}

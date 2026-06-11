@@ -12,11 +12,13 @@ wrappers.
 - [ ] `InlineTextButton.svelte`
   - Used by `features/sidebar/PromptTreeVisibilityToggleRow.svelte`.
   - Needs a `FlatInlineTextButton` equivalent using only flat palette tokens.
-- [ ] `LoadingOverlay.svelte`
-  - Used by `app/AppOverlays.svelte` and `features/prompt-folders/PromptFolderScreen.svelte`.
-  - Needs a `FlatLoadingOverlay` equivalent using flat palette tokens instead of app background utility colors.
 ## Completed
 
+- [x] Renamed `LoadingOverlay.svelte` to `FlatLoadingOverlay.svelte`.
+  - `app/AppOverlays.svelte`, `features/prompt-folders/PromptFolderScreen.svelte`, and the dev
+    tools catalog now import the flat-prefixed component directly.
+  - Kept the overlay background on `--background` so it matches the main window background.
+  - Replaced the spinner/message utility color with `--ui-flat-secondary-text`.
 - [x] Renamed `LogDetails.svelte` to `FlatLogDetails.svelte`.
   - `FlatErrorDialog` and `features/dev-tools/TestScreen.svelte` now import the flat-prefixed
     component directly.
