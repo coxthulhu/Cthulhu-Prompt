@@ -163,7 +163,7 @@
   class="flex min-h-0 flex-1 justify-center overflow-y-auto px-6 py-6"
   data-testid="settings-screen"
 >
-  <div class="w-full max-w-4xl space-y-6">
+  <div class="flex w-full max-w-4xl flex-col gap-6">
     <FlatTitle title="System Settings" headingLevel={1} />
 
     <FlatCard label="Editor & layout">
