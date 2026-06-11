@@ -1,8 +1,9 @@
 <script lang="ts">
-  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
-  import IconOnlyButton from '@renderer/common/cthulhu-ui/IconOnlyButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import { Check, Copy, Trash2 } from 'lucide-svelte'
+  import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
+  import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
+  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
+  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
+  import { Trash2 } from 'lucide-svelte'
 
   type Props = {
     title: string
@@ -21,24 +22,7 @@
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt'
   }: Props = $props()
-  let isCopied = $state(false)
-  let resetTimeoutId: number | null = null
   let isDeleteDialogOpen = $state(false)
-
-  const handleCopyClick = () => {
-    void window.navigator.clipboard.writeText(copyText ?? draftText)
-    isCopied = true
-
-    if (resetTimeoutId != null) {
-      window.clearTimeout(resetTimeoutId)
-    }
-
-    // Keep "Copied" visible for 1.5 seconds after each click.
-    resetTimeoutId = window.setTimeout(() => {
-      isCopied = false
-      resetTimeoutId = null
-    }, 1500)
-  }
 
   const handleDeleteClick = () => {
     if (!onDelete) return
@@ -63,21 +47,18 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-1.5">
-  <IconOnlyButton
-    icon={isCopied ? Check : Copy}
+  <FlatCopyButton
+    text={copyText ?? draftText}
     label={copyLabel}
-    title={isCopied ? 'Copied' : copyTitle}
-    variant="accent"
+    title={copyTitle}
     testId="prompt-copy-button"
-    onclick={handleCopyClick}
   />
   {#if onDelete}
-    <Separator orientation="vertical" class="h-6" />
-    <IconOnlyButton
+    <FlatSeparator orientation="vertical" class="h-6" />
+    <FlatIconButton
       icon={Trash2}
       label="Delete prompt"
       title="Delete prompt"
-      variant="danger"
       testId="prompt-delete-button"
       onclick={handleDeleteClick}
     />
@@ -85,7 +66,7 @@
 </div>
 
 {#if onDelete}
-  <ConfirmationDialog
+  <FlatConfirmationDialog
     bind:open={isDeleteDialogOpen}
     title="Delete Prompt"
     description="Are you sure you want to delete this prompt?"

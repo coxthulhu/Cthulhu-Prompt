@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Check, X } from 'lucide-svelte'
-  import type { ComponentType, Snippet } from 'svelte'
+  import { X } from 'lucide-svelte'
+  import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import FlatButton, { type FlatButtonVariant } from './FlatButton.svelte'
   import FlatCardSurface from './FlatCardSurface.svelte'
@@ -15,6 +15,7 @@
     cancelText?: string
     showCloseButton?: boolean
     showSubmitButton?: boolean
+    showSeparators?: boolean
     closeOnOutsideClick?: boolean
     submitDisabled?: boolean
     cancelDisabled?: boolean
@@ -22,8 +23,6 @@
     cancelTestId?: string
     class?: string
     children?: Snippet
-    cancelIcon?: ComponentType
-    submitIcon?: ComponentType
     submitVariant?: FlatButtonVariant
     oncancel?: () => void
     onsubmit?: () => void
@@ -36,6 +35,7 @@
     cancelText = 'Cancel',
     showCloseButton = true,
     showSubmitButton = true,
+    showSeparators = true,
     closeOnOutsideClick = true,
     submitDisabled = false,
     cancelDisabled = false,
@@ -43,8 +43,6 @@
     cancelTestId,
     class: className,
     children,
-    cancelIcon = X,
-    submitIcon = Check,
     submitVariant = 'accent',
     oncancel,
     onsubmit
@@ -133,7 +131,9 @@
         {/if}
       </div>
 
-      <FlatSeparator />
+      {#if showSeparators}
+        <FlatSeparator />
+      {/if}
 
       {#if children}
         <div class="cthulhuUiFlatDialogBody">
@@ -141,19 +141,13 @@
         </div>
       {/if}
 
-      <FlatSeparator />
+      {#if showSeparators}
+        <FlatSeparator />
+      {/if}
 
       <div class="cthulhuUiFlatDialogFooter">
-        <FlatButton
-          icon={cancelIcon}
-          text={cancelText}
-          state={cancelDisabled ? 'disabled' : 'enabled'}
-          testId={cancelTestId}
-          onclick={closeDialog}
-        />
         {#if showSubmitButton}
           <FlatButton
-            icon={submitIcon}
             text={submitText}
             state={submitDisabled ? 'disabled' : 'enabled'}
             variant={submitVariant}
@@ -161,6 +155,12 @@
             onclick={submitDialog}
           />
         {/if}
+        <FlatButton
+          text={cancelText}
+          state={cancelDisabled ? 'disabled' : 'enabled'}
+          testId={cancelTestId}
+          onclick={closeDialog}
+        />
       </div>
     </FlatCardSurface>
   </div>

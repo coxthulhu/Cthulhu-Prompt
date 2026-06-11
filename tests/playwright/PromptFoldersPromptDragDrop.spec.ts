@@ -324,7 +324,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector('move-fallback-source'))
     await expect(
       mainWindow.locator(`${promptEditorSelector('move-fallback-source')} ${PROMPT_TITLE_SELECTOR}`)
-    ).toHaveAttribute('placeholder', 'Title (New Prompt 1)')
+    ).toHaveAttribute('placeholder', 'New Prompt 1...')
 
     await expect
       .poll(async () => {

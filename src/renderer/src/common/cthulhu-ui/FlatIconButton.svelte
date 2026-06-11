@@ -66,7 +66,7 @@
   disabled={isDisabled}
   {onclick}
 >
-  <!-- Flat icon button with optional filled treatment for persistent row actions. -->
+  <!-- Flat icon button for compact icon-only actions. -->
   <Icon
     class={mergeClasses('cthulhuUiFlatIconButtonIcon', iconClass)}
     size={iconSize}

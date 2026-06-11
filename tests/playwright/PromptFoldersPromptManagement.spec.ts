@@ -218,7 +218,7 @@ describe('Prompt folder prompt management', () => {
     expect(newPromptId).toBeTruthy()
     await expect(mainWindow.locator(promptTitleSelector(newPromptId!))).toHaveAttribute(
       'placeholder',
-      'Title (New Prompt 1)'
+      'New Prompt 1...'
     )
   })
 
@@ -234,7 +234,7 @@ describe('Prompt folder prompt management', () => {
     await setPromptTitle(mainWindow, 'clear-title-target', '')
     await expect(mainWindow.locator(promptTitleSelector('clear-title-target'))).toHaveAttribute(
       'placeholder',
-      'Title (New Prompt 1)'
+      'New Prompt 1...'
     )
   })
 
