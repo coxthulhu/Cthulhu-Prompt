@@ -14,7 +14,7 @@
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
   import FlatBareIconButton from '@renderer/common/cthulhu-ui/FlatBareIconButton.svelte'
   import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
@@ -239,7 +239,7 @@
       </div>
     </div>
   </div>
-  <Separator />
+  <FlatSeparator />
 
   <div class="sidebarTopLevelInsetWithInnerPadding py-1">
     <FlatSelectorButtonWithDropdown
@@ -253,7 +253,7 @@
       onselect={handlePromptFolderDropdownSelect}
     />
   </div>
-  <Separator />
+  <FlatSeparator />
 
   <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col pt-1">
     <div class="mb-2 flex items-center justify-between">

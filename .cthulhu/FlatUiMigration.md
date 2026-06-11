@@ -15,9 +15,6 @@ wrappers.
 - [ ] `LoadingOverlay.svelte`
   - Used by `app/AppOverlays.svelte` and `features/prompt-folders/PromptFolderScreen.svelte`.
   - Needs a `FlatLoadingOverlay` equivalent using flat palette tokens instead of app background utility colors.
-- [ ] `Separator.svelte`
-  - Used directly by `features/sidebar/AppSidebar.svelte` and `features/prompt-editor/PromptDivider.svelte`.
-  - Also used by `FlatSeparator`; migration is mostly a rename or replacement with a flat primitive.
 - [ ] `SeparatorDot.svelte`
   - Used by `features/prompt-editor/PromptEditorTitleBar.svelte` and `FlatSelectorButton.svelte`.
   - Needs a flat-prefixed primitive name.
@@ -33,6 +30,14 @@ wrappers.
 
 ## Completed
 
+- [x] Removed `Separator.svelte`.
+  - `FlatSeparator.svelte` now owns the separator implementation directly, including orientation,
+    accessibility attributes, sizing, element binding, and scoped flat styling.
+  - `features/sidebar/AppSidebar.svelte` and `features/prompt-editor/PromptDivider.svelte` now
+    import `FlatSeparator` directly.
+  - Updated the prompt drag/drop Playwright helper selector to `.cthulhuUiFlatSeparator`.
+  - Verified with `npm run lint && npm run typecheck` and
+    `./scripts/codex-playwright.sh tests/playwright/PromptFoldersPromptDragDrop.spec.ts`.
 - [x] Removed `IconOnlyButton.svelte`.
   - Folded active/dropdown accessibility attributes into `FlatIconButton`.
   - `PromptTreeFolderRow` and the dev tools catalog now use `FlatIconButton` directly.

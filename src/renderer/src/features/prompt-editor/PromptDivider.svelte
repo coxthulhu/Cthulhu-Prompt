@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ArrowDownToLine, Plus } from 'lucide-svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatIconTextButton from '@renderer/common/cthulhu-ui/FlatIconTextButton.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type { DroppableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
@@ -34,7 +34,7 @@
     <div
       class="grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5"
     >
-      <Separator
+      <FlatSeparator
         class={isOver
           ? '!h-2.5 rounded-full !bg-[var(--ui-flat-info-strong-border)]'
           : 'bg-[var(--ui-flat-neutral-muted-border)]'}
@@ -66,7 +66,7 @@
         />
       {/if}
       <!-- Add subfolder is parked until prompt folders support nested creation. -->
-      <Separator
+      <FlatSeparator
         class={isOver
           ? '!h-2.5 rounded-full !bg-[var(--ui-flat-info-strong-border)]'
           : 'bg-[var(--ui-flat-neutral-muted-border)]'}
