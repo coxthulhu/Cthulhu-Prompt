@@ -132,10 +132,8 @@
 
   .cthulhuUiFlatDropdownPopupSimpleItemLabel {
     font-size: 13px;
-    line-height: 1.25;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 </style>
