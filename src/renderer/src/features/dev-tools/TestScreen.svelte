@@ -44,10 +44,7 @@
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
   import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
-  import FlatLogDetails from '@renderer/common/cthulhu-ui/FlatLogDetails.svelte'
   import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import FlatRow from '@renderer/common/cthulhu-ui/FlatRow.svelte'
-  import FlatSelectorButton from '@renderer/common/cthulhu-ui/FlatSelectorButton.svelte'
   import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
   import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
   import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
@@ -103,7 +100,6 @@
     detail: 'Create a new prompt folder',
     icon: Plus
   }
-  const logDetailsText = 'Queued revision sync\nworkspaceId: demo-workspace\nstatus: ready'
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
   const TEST_LOADING_OVERLAY_VISIBLE_MS = 5000
   const TEST_LOADING_OVERLAY_FADE_MS = 125
@@ -209,7 +205,7 @@
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section component-section-wide">
-        {@render componentTitle('FlatCard and rows', 'Display, setting, and generic row compositions.')}
+        {@render componentTitle('FlatCard and rows', 'Display and setting row compositions.')}
 
         <FlatCard label="Workspace details" surfaceClass="flat-card-gallery-surface">
           <FlatDisplayRow
@@ -221,22 +217,6 @@
               <FlatValuePill text="Sample" />
             {/snippet}
           </FlatDisplayRow>
-
-          <FlatRow
-            icon={ClipboardList}
-            label="Prompt inventory"
-            detail="42 prompts across 6 folders"
-            trailingLayout="grouped"
-          >
-            {#snippet detailExtra()}
-              Last generated prompt was updated during the current gallery session.
-            {/snippet}
-
-            {#snippet trailing()}
-              <FlatValuePill text="Ready" />
-              <FlatCopyButton text="42 prompts across 6 folders" label="Copy summary" />
-            {/snippet}
-          </FlatRow>
 
           <FlatSettingRow
             icon={Settings}
@@ -343,8 +323,8 @@
 
       <FlatCardSurface class="component-section">
         {@render componentTitle(
-          'FlatDropdownPopupDetailed',
-          'FlatSelectorButton rows with a fixed footer action.'
+          'FlatSelectorButtonWithDropdown',
+          'Prompt-folder selector dropdown with a fixed footer action.'
         )}
 
         <div class="stack">
@@ -362,24 +342,6 @@
           />
 
           <FlatInfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
-        </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('FlatSelectorButton', 'Sidebar-style trigger button.')}
-
-        <div class="stack">
-          <FlatSelectorButton
-            icon={Folder}
-            text="Engineering Workflows"
-            detailParts={['18 prompts', 'Updated 12m ago']}
-          />
-          <FlatSelectorButton
-            icon={Folder}
-            text="Engineering Workflows"
-            detailParts={['18 prompts', 'Updated 12m ago']}
-            size="large"
-          />
         </div>
       </FlatCardSurface>
 
@@ -461,12 +423,6 @@
           <FlatTitle title="Card title" variant="card" />
           <FlatTitle title="Dialog title" variant="dialog" />
         </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('FlatLogDetails', 'Technical details block.')}
-
-        <FlatLogDetails title="Autosave" text={logDetailsText} />
       </FlatCardSurface>
 
       <FlatCardSurface class="component-section">
