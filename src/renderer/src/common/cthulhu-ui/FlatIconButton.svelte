@@ -4,9 +4,9 @@
   import { mergeClasses } from './mergeClasses'
 
   export type FlatIconButtonState = 'enabled' | 'disabled'
-  export type FlatIconButtonSize = 'default' | 'compact' | 'sidebar-rail'
-  export type FlatIconButtonBaseVariant = 'normal' | 'dim'
-  export type FlatIconButtonHoverVariant = 'neutral' | 'accent' | 'danger'
+  export type FlatIconButtonSize = 'default' | 'compact' | 'tiny' | 'sidebar-rail'
+  export type FlatIconButtonBaseVariant = 'normal' | 'dim' | 'muted'
+  export type FlatIconButtonHoverVariant = 'neutral' | 'accent' | 'danger' | 'glyph'
   type FlatIconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -58,7 +58,7 @@
   }: Props = $props()
 
   const isDisabled = $derived(disabled === true || state === 'disabled')
-  const iconSize = $derived(size === 'default' ? 20 : 16)
+  const iconSize = $derived(size === 'default' ? 20 : size === 'tiny' ? 14 : 16)
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
 
@@ -116,6 +116,12 @@
     width: 28px;
   }
 
+  .cthulhuUiFlatIconButton[data-size='tiny'] {
+    border-radius: 0;
+    height: 18px;
+    width: 18px;
+  }
+
   .cthulhuUiFlatIconButton[data-size='sidebar-rail'] {
     border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
     border-radius: 0;
@@ -141,6 +147,10 @@
     color: var(--ui-flat-hoverable-icon-glyph);
   }
 
+  .cthulhuUiFlatIconButton[data-base-variant='muted'] {
+    color: var(--ui-flat-muted-icon-glyph);
+  }
+
   .cthulhuUiFlatIconButton:hover,
   .cthulhuUiFlatIconButton:focus-visible {
     background: var(--ui-flat-neutral-action-hover-fill);
@@ -156,13 +166,19 @@
     background: var(--ui-flat-danger-action-hover-fill);
   }
 
+  .cthulhuUiFlatIconButton[data-hover-variant='glyph']:hover,
+  .cthulhuUiFlatIconButton[data-hover-variant='glyph']:focus-visible {
+    background: var(--ui-flat-ghost-surface);
+    color: var(--ui-flat-hoverable-icon-glyph);
+  }
+
   .cthulhuUiFlatIconButton:focus-visible {
     outline: 2px solid var(--ui-flat-neutral-focus-border);
     outline-offset: 2px;
   }
 
-  .cthulhuUiFlatIconButton[data-base-variant='dim']:hover,
-  .cthulhuUiFlatIconButton[data-base-variant='dim']:focus-visible {
+  .cthulhuUiFlatIconButton[data-base-variant='dim']:not([data-hover-variant='glyph']):hover,
+  .cthulhuUiFlatIconButton[data-base-variant='dim']:not([data-hover-variant='glyph']):focus-visible {
     color: var(--ui-flat-normal-text);
   }
 

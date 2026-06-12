@@ -53,11 +53,17 @@
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
 
   const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
-  const flatIconButtonBaseVariants: FlatIconButtonBaseVariant[] = ['normal', 'dim']
-  const flatIconButtonHoverVariants: FlatIconButtonHoverVariant[] = ['neutral', 'accent', 'danger']
+  const flatIconButtonBaseVariants: FlatIconButtonBaseVariant[] = ['normal', 'dim', 'muted']
+  const flatIconButtonHoverVariants: FlatIconButtonHoverVariant[] = [
+    'neutral',
+    'accent',
+    'danger',
+    'glyph'
+  ]
   const flatIconButtonSizes: FlatIconButtonSize[] = [
     'default',
     'compact',
+    'tiny',
     'sidebar-rail'
   ]
   const folderDropdownItems: FlatDropdownPopupItem[] = [
@@ -274,41 +280,6 @@
                 {/snippet}
               </FlatSettingRow>
             </FlatCard>
-          </div>
-        </FlatCardSurface>
-      </div>
-
-      <div class="component-section">
-        <FlatCardSurface>
-          <div class="component-section-content">
-            {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
-
-            <div class="button-matrix">
-              {#each flatIconButtonBaseVariants as baseVariant (baseVariant)}
-                {#each flatIconButtonHoverVariants as hoverVariant (hoverVariant)}
-                  <div class="variant-row">
-                    <span>FlatIconButton: {baseVariant} / {hoverVariant}</span>
-                    <div class="variant-controls icon-only-controls">
-                      {#each flatIconButtonSizes as size (size)}
-                        <div
-                          class="icon-only-sample"
-                          data-fill-size={size === 'sidebar-rail'}
-                        >
-                          <FlatIconButton
-                            icon={Settings}
-                            label={`${baseVariant} ${hoverVariant} ${size}`}
-                            {baseVariant}
-                            {hoverVariant}
-                            {size}
-                            title={`${baseVariant} ${hoverVariant} ${size}`}
-                          />
-                        </div>
-                      {/each}
-                    </div>
-                  </div>
-                {/each}
-              {/each}
-            </div>
           </div>
         </FlatCardSurface>
       </div>
@@ -565,6 +536,41 @@
                   }}
                 />
               </div>
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
+
+            <div class="button-matrix">
+              {#each flatIconButtonBaseVariants as baseVariant (baseVariant)}
+                {#each flatIconButtonHoverVariants as hoverVariant (hoverVariant)}
+                  <div class="variant-row">
+                    <span>FlatIconButton: {baseVariant} / {hoverVariant}</span>
+                    <div class="variant-controls icon-only-controls">
+                      {#each flatIconButtonSizes as size (size)}
+                        <div
+                          class="icon-only-sample"
+                          data-fill-size={size === 'sidebar-rail'}
+                        >
+                          <FlatIconButton
+                            icon={Settings}
+                            label={`${baseVariant} ${hoverVariant} ${size}`}
+                            {baseVariant}
+                            {hoverVariant}
+                            {size}
+                            title={`${baseVariant} ${hoverVariant} ${size}`}
+                          />
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/each}
+              {/each}
             </div>
           </div>
         </FlatCardSurface>
