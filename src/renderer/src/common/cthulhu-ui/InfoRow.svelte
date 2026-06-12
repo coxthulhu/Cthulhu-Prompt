@@ -12,7 +12,7 @@
 </script>
 
 <div class={mergeClasses('cthulhuUiInfoRow', className)} data-testid={textTestId} {...restProps}>
-  <Info class="cthulhuUiInfoRowIcon" size={16} strokeWidth={2.4} />
+  <Info class="cthulhuUiInfoRowIcon" size={16} />
   <span class="cthulhuUiInfoRowText">{text}</span>
 </div>
 

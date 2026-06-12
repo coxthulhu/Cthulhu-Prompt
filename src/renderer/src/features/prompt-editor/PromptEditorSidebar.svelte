@@ -106,7 +106,6 @@
     label="Drag prompt"
     size="sidebar-rail"
     variant="dim-sidebar"
-    iconClass="stroke-[2.5]"
     testId="prompt-drag-handle"
     buttonAction={dragHandleAction}
     buttonActionParameter={getDragHandleOptions()}

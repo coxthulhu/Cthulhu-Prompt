@@ -139,7 +139,7 @@
 
       <div class="prompt-editor-metadata-row">
         <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
-          <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0 stroke-[2.4]" />
+          <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
           {metadataFolderLabel}
         </span>
         <FlatSeparatorDot />
