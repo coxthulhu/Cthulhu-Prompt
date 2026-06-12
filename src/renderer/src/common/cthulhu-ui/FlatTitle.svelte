@@ -24,9 +24,9 @@
 <style>
   .cthulhuUiFlatTitle[data-variant='page'] {
     color: var(--ui-flat-normal-text);
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
-    line-height: 37px;
+    line-height: 29px;
     overflow-wrap: anywhere;
   }
 
