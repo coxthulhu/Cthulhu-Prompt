@@ -15,21 +15,14 @@
   --ui-secondary-text: oklch(1 0 0 / 75%);
   --ui-hoverable-text: oklch(1 0 0 / 90%);
   --ui-normal-text: oklch(1 0 0);
-  /* Opaque neutral icon glyphs approximate the text roles on dark app surfaces. */
+  /* The opaque neutral icon glyph approximates the text roles on dark app surfaces. */
   --ui-secondary-icon-glyph: oklch(0.82 0 0);
-  --ui-hoverable-icon-glyph: oklch(0.93 0 0);
 
   /* Cards */
-  --ui-card-normal-surface-gradient-start: oklch(1 0 0 / 6%);
-  --ui-card-normal-surface-gradient-end: oklch(1 0 0 / 3%);
-  --ui-card-solid-surface: oklch(0.16 0 0);
   --ui-card-overlay-surface: oklch(0.2 0 0);
-  --ui-card-inset-surface: oklch(1 0 0 / 5%);
-  --ui-card-normal-border: oklch(1 0 0 / 12%);
   --ui-card-normal-shadow: oklch(0 0 0 / 28%);
   --ui-card-nested-surface: oklch(0.145 0.011 266.847 / 80%);
   --ui-card-nested-border: oklch(1 0 0 / 6%);
-  --ui-card-nested-raised-inset-highlight: oklch(1 0 0 / 12%);
 
   /* Shadows */
   --ui-shadow-raised: oklch(0 0 0 / 20%);
@@ -39,59 +32,16 @@
   --ui-neutral-muted-border: oklch(1 0 0 / 8%);
   --ui-neutral-normal-surface: oklch(1 0 0 / 6%);
   --ui-neutral-normal-border: oklch(1 0 0 / 12%);
-  --ui-neutral-hover-surface: oklch(1 0 0 / 10%);
-  --ui-neutral-hover-border: oklch(1 0 0 / 14%);
   --ui-neutral-emphasis-surface: oklch(1 0 0 / 14%);
   --ui-neutral-emphasis-border: oklch(1 0 0 / 16%);
-  --ui-neutral-field-surface: oklch(0.209 0.01 268.187);
-  --ui-neutral-selection-surface: oklch(1 0 0 / 22%);
-  --ui-neutral-focus-border: oklch(1 0 0 / 28%);
-
-  /* Neutral interactive borders stay brighter than structural gray borders. */
-  --ui-neutral-interactive-normal-border: oklch(1 0 0 / 30%);
-  --ui-neutral-interactive-hover-border: oklch(1 0 0 / 42%);
 
   /* Accent */
   --ui-accent-normal-surface: oklch(0.606 0.219 292.717 / 17%);
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
-  --ui-accent-hover-surface: oklch(0.606 0.219 292.717 / 25%);
-  --ui-accent-hover-border: oklch(0.827 0.108 306.383 / 42%);
-  --ui-accent-strong-surface: oklch(0.541 0.281 293.009);
-  --ui-accent-strong-border: oklch(0.827 0.108 306.383 / 68%);
   --ui-accent-icon-ring: oklch(0.709 0.159 293.541 / 20%);
-  --ui-accent-icon-glyph: oklch(1 0.07 293.571);
-
-  /* Accent blue */
-  --ui-accent-blue-normal-surface: oklch(0.666 0.181 254.617 / 18%);
-  --ui-accent-blue-icon-glyph: oklch(0.91 0.07 247);
-
-  /* Accent green */
-  --ui-accent-green-normal-surface: oklch(0.627 0.17 149.214 / 22%);
-  --ui-accent-green-icon-glyph: oklch(0.982 0.018 155.826);
-
-  /* Info */
-  --ui-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
-  --ui-info-normal-border: oklch(0.666 0.181 254.617 / 60%);
-
-  /* Success */
-  --ui-success-normal-surface: oklch(0.627 0.17 149.214 / 22%);
-  --ui-success-normal-border: oklch(0.8 0.182 151.711 / 42%);
-  --ui-success-normal-text: oklch(0.982 0.018 155.826);
-
-  /* Warning */
-  --ui-warning-normal-surface: oklch(0.421 0.09 57.708 / 24%);
-  --ui-warning-normal-border: oklch(0.837 0.164 84.429 / 34%);
-  --ui-warning-icon-glyph: oklch(0.924 0.115 95.746);
 
   /* Danger */
-  --ui-danger-normal-surface: oklch(0.396 0.133 25.723 / 22%);
-  --ui-danger-normal-border: oklch(0.711 0.166 22.216 / 28%);
   --ui-danger-normal-ring: oklch(0.696 0.196 32.321 / 40%);
-  --ui-danger-hover-surface: oklch(0.396 0.133 25.723 / 30%);
-  --ui-danger-hover-border: oklch(0.711 0.166 22.216 / 42%);
-  --ui-danger-strong-border: oklch(0.704 0.191 22.216);
-  --ui-danger-icon-surface: oklch(0.711 0.166 22.216 / 14%);
   --ui-danger-icon-ring: oklch(0.711 0.166 22.216 / 18%);
-  --ui-danger-icon-glyph: oklch(1 0.07 17.717);
 }
