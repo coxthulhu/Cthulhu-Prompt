@@ -17,7 +17,7 @@
 <style>
   .promptFolderSectionGutter {
     align-self: stretch;
-    background: var(--ui-accent-normal-border);
+    background: var(--ui-flat-neutral-emphasis-border);
     margin-bottom: var(--prompt-folder-section-gutter-bottom-inset, 0);
     margin-top: var(--prompt-folder-section-gutter-top-inset, 0);
     min-width: 2px;
