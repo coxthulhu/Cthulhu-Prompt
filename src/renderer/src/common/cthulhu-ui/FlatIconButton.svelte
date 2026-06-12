@@ -5,7 +5,7 @@
 
   export type FlatIconButtonState = 'enabled' | 'disabled'
   export type FlatIconButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'sidebar-rail'
-  export type FlatIconButtonVariant = 'ghost' | 'neutral' | 'dim-sidebar'
+  export type FlatIconButtonVariant = 'normal' | 'dim'
   type FlatIconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -37,7 +37,7 @@
     label,
     state = 'enabled',
     size = 'default',
-    variant = 'ghost',
+    variant = 'normal',
     class: className,
     iconClass,
     iconTestId,
@@ -137,18 +137,14 @@
     cursor: grabbing;
   }
 
-  .cthulhuUiFlatIconButton[data-variant='neutral'] {
-    background: var(--ui-flat-neutral-action-fill);
-  }
-
-  .cthulhuUiFlatIconButton[data-variant='dim-sidebar'] {
+  .cthulhuUiFlatIconButton[data-variant='dim'] {
     background: transparent;
     border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
     border-radius: 0;
     color: var(--ui-flat-hoverable-icon-glyph);
   }
 
-  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:last-child {
+  .cthulhuUiFlatIconButton[data-variant='dim']:last-child {
     border-bottom: 0;
   }
 
@@ -162,12 +158,12 @@
     outline-offset: 2px;
   }
 
-  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:hover,
-  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:focus-visible {
+  .cthulhuUiFlatIconButton[data-variant='dim']:hover,
+  .cthulhuUiFlatIconButton[data-variant='dim']:focus-visible {
     color: var(--ui-flat-normal-text);
   }
 
-  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:focus-visible {
+  .cthulhuUiFlatIconButton[data-variant='dim']:focus-visible {
     outline: none;
   }
 

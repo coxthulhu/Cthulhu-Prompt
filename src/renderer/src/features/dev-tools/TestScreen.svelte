@@ -56,7 +56,7 @@
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
 
   const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
-  const flatIconButtonVariants: FlatIconButtonVariant[] = ['ghost', 'neutral', 'dim-sidebar']
+  const flatIconButtonVariants: FlatIconButtonVariant[] = ['normal', 'dim']
   const flatIconButtonSizes: FlatIconButtonSize[] = [
     'default',
     'compact',
