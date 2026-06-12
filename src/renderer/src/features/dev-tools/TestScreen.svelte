@@ -153,6 +153,10 @@
   </div>
 {/snippet}
 
+{#snippet componentLabel(label: string)}
+  <span class="component-sample-label">{label}</span>
+{/snippet}
+
 <div class="test-screen-shell" data-testid="test-screen">
   <div class="test-screen-content">
     <header class="test-screen-header">
@@ -165,7 +169,7 @@
 
       <FlatButton
         icon={Loader}
-        text="Show loading overlay"
+        text="Show FlatLoadingOverlay"
         variant="accent"
         testId="test-screen-show-loading-overlay"
         onclick={showTestLoadingOverlay}
@@ -173,279 +177,398 @@
     </header>
 
     <section class="component-grid">
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('FlatCardSurface', 'All flat surface variants.')}
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('FlatCardSurface', 'All flat surface variants.')}
 
-        <div class="variant-grid">
-          {#each flatCardSurfaceVariants as variant (variant)}
-            <FlatCardSurface {variant} class="sample-card">
-              <div class="sample-title">{variant}</div>
-              <p>Prompt workspace metadata, compact controls, or nested content.</p>
-            </FlatCardSurface>
-          {/each}
-        </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface id="flat-action-buttons" class="component-section">
-        {@render componentTitle('Flat action buttons', 'Copy, link, icon text, and icon cell samples.')}
-
-        <div class="variant-controls">
-          <FlatCopyButton
-            text="Copyable prompt text"
-            label="Copy prompt"
-            copiedLabel="Copied prompt"
-            testId="test-screen-flat-copy-button"
-          />
-          <FlatIconTextButton icon={Sparkles} text="Improve" variant="info" />
-          <FlatIconTextButton icon={Archive} text="Archive" />
-          <FlatLinkButton href="#flat-action-buttons" text="Anchor link" endIcon={Download} />
-          <FlatIconCell icon={Folder} />
-          <FlatIconCell icon={FileText} size="title" />
-        </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section component-section-wide">
-        {@render componentTitle('FlatCard and rows', 'Display and setting row compositions.')}
-
-        <FlatCard label="Workspace details" surfaceClass="flat-card-gallery-surface">
-          <FlatDisplayRow
-            icon={FileText}
-            label="Active workspace"
-            detail="Prompt library metadata"
-          >
-            {#snippet trailing()}
-              <FlatValuePill text="Sample" />
-            {/snippet}
-          </FlatDisplayRow>
-
-          <FlatSettingRow
-            icon={Settings}
-            label="Autosave drafts"
-            detail="Keep prompt edits available between app launches"
-          >
-            {#snippet control()}
-              <FlatToggleTextButton
-                pressed={togglePressed}
-                onclick={() => {
-                  togglePressed = !togglePressed
-                }}
-              />
-            {/snippet}
-
-            {#snippet actions()}
-              <FlatButton icon={Download} text="Export" />
-              <FlatLinkButton href="#flat-action-buttons" text="More" variant="accent" />
-            {/snippet}
-          </FlatSettingRow>
-        </FlatCard>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section component-section-wide">
-        {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
-
-        <div class="button-matrix">
-          {#each flatIconButtonBaseVariants as baseVariant (baseVariant)}
-            {#each flatIconButtonHoverVariants as hoverVariant (hoverVariant)}
-              <div class="variant-row">
-                <span>{baseVariant} / {hoverVariant}</span>
-                <div class="variant-controls icon-only-controls">
-                  {#each flatIconButtonSizes as size (size)}
-                    <div
-                      class="icon-only-sample"
-                      data-fill-size={size === 'sidebar-rail'}
-                    >
-                      <FlatIconButton
-                        icon={Settings}
-                        label={`${baseVariant} ${hoverVariant} ${size}`}
-                        {baseVariant}
-                        {hoverVariant}
-                        {size}
-                        title={`${baseVariant} ${hoverVariant} ${size}`}
-                      />
+            <div class="variant-grid">
+              {#each flatCardSurfaceVariants as variant (variant)}
+                <div class="sample-card">
+                  <FlatCardSurface {variant}>
+                    <div class="sample-card-content">
+                      <div class="sample-title">FlatCardSurface: {variant}</div>
+                      <p>Prompt workspace metadata, compact controls, or nested content.</p>
                     </div>
-                  {/each}
+                  </FlatCardSurface>
+                </div>
+              {/each}
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div id="flat-action-buttons" class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('Flat action buttons', 'Copy, link, icon text, and icon cell samples.')}
+
+            <div class="component-sample-grid">
+              <div class="component-sample">
+                {@render componentLabel('FlatCopyButton')}
+                <FlatCopyButton
+                  text="Copyable prompt text"
+                  label="Copy prompt"
+                  copiedLabel="Copied prompt"
+                  testId="test-screen-flat-copy-button"
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatIconTextButton')}
+                <div class="variant-controls">
+                  <FlatIconTextButton icon={Sparkles} text="Improve" variant="info" />
+                  <FlatIconTextButton icon={Archive} text="Archive" />
                 </div>
               </div>
-            {/each}
-          {/each}
-        </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('FlatDropdownPopupSimple', 'Solid icon menu popup.')}
-
-        <div class="stack">
-          <div class="variant-controls">
-            <FlatDropdownPopupSimple
-              label="Folder options"
-              items={folderDropdownItems}
-              testId="folder-dropdown-menu"
-              onselect={(item) => {
-                lastDropdownAction = item.label
-              }}
-            >
-              {#snippet trigger(dropdown)}
-                <FlatIconButton
-                  icon={MoreHorizontal}
-                  label="Folder options"
-                  active={dropdown.open}
-                  ariaHaspopup={dropdown.ariaHaspopup}
-                  ariaExpanded={dropdown.ariaExpanded}
-                  buttonAction={dropdown.triggerAction}
-                  onclick={dropdown.toggle}
-                />
-              {/snippet}
-            </FlatDropdownPopupSimple>
-            <FlatDropdownPopupSimple
-              label="Prompt actions"
-              items={promptDropdownItems}
-              testId="prompt-dropdown-menu"
-              onselect={(item) => {
-                lastDropdownAction = item.label
-              }}
-            >
-              {#snippet trigger(dropdown)}
-                <FlatIconButton
-                  icon={MoreHorizontal}
-                  label="Prompt actions"
-                  ariaHaspopup={dropdown.ariaHaspopup}
-                  ariaExpanded={dropdown.ariaExpanded}
-                  buttonAction={dropdown.triggerAction}
-                  onclick={dropdown.toggle}
-                />
-              {/snippet}
-            </FlatDropdownPopupSimple>
+              <div class="component-sample">
+                {@render componentLabel('FlatLinkButton')}
+                <FlatLinkButton href="#flat-action-buttons" text="Anchor link" endIcon={Download} />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatIconCell')}
+                <div class="variant-controls">
+                  <FlatIconCell icon={Folder} />
+                  <FlatIconCell icon={FileText} size="title" />
+                </div>
+              </div>
+            </div>
           </div>
+        </FlatCardSurface>
+      </div>
 
-          <FlatInfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
-        </div>
-      </FlatCardSurface>
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle(
+              'FlatCard and rows',
+              'FlatCard, display row, setting row, and value pill composition.'
+            )}
 
-      <FlatCardSurface class="component-section">
-        {@render componentTitle(
-          'FlatSelectorButtonWithDropdown',
-          'Prompt-folder selector dropdown with a fixed footer action.'
-        )}
+            <FlatCard label="FlatCard: Workspace details">
+              <FlatDisplayRow
+                icon={FileText}
+                label="FlatDisplayRow: Active workspace"
+                detail="Prompt library metadata"
+              >
+                {#snippet trailing()}
+                  <FlatValuePill text="FlatValuePill" />
+                {/snippet}
+              </FlatDisplayRow>
 
-        <div class="stack">
-          <FlatSelectorButtonWithDropdown
-            label="Prompt folder selector"
-            items={detailedDropdownItems}
-            selectedItem={selectedDetailedDropdownItem}
-            footerItem={detailedDropdownFooterItem}
-            testId="detailed-dropdown-menu"
-            triggerTestId="detailed-dropdown-trigger"
-            onselect={(item) => {
-              selectedDetailedDropdownItem = item
-              lastDropdownAction = item.label
-            }}
-          />
+              <FlatSettingRow
+                icon={Settings}
+                label="FlatSettingRow: Autosave drafts"
+                detail="Keep prompt edits available between app launches"
+              >
+                {#snippet detailExtra()}
+                  Control: FlatToggleTextButton
+                {/snippet}
 
-          <FlatInfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
-        </div>
-      </FlatCardSurface>
-
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('Inputs', 'Text, folder, stepper, and toggle controls.')}
-
-        <div class="form-grid">
-          <FlatTextInput
-            bind:value={workspaceNameValue}
-            aria-label="Workspace name sample"
-            placeholder="Workspace name"
-          />
-          <FlatTextInput
-            bind:value={readonlyPathValue}
-            readonlyDisplay
-            aria-label="Readonly workspace path sample"
-          />
-          <div class="validation-sample">
-            <FlatFloatingValidationMessage
-              message="Workspace name is required."
-              textTestId="test-screen-floating-validation"
-            >
-              <FlatTextInput
-                value=""
-                aria-label="Invalid workspace name sample"
-                aria-invalid="true"
-                placeholder="Invalid value"
-              />
-            </FlatFloatingValidationMessage>
+                {#snippet control()}
+                  <FlatToggleTextButton
+                    pressed={togglePressed}
+                    onclick={() => {
+                      togglePressed = !togglePressed
+                    }}
+                  />
+                {/snippet}
+              </FlatSettingRow>
+            </FlatCard>
           </div>
-          <FlatFolderInput
-            bind:value={folderInputValue}
-            buttonText="Browse workspace"
-            ariaLabel="Browse workspace sample"
-            disabled
-          />
-          <FlatNumericStepperInput
-            bind:value={fontSizeStepperValue}
-            min={8}
-            max={32}
-            helperText="px"
-            aria-label="Font size stepper input"
-          />
-          <FlatNumericStepperInput
-            bind:value={minLinesStepperValue}
-            min={8}
-            max={24}
-            helperText="lines"
-            aria-label="Minimum lines stepper input"
-          />
-          <FlatToggleTextButton
-            pressed={togglePressed}
-            onclick={() => {
-              togglePressed = !togglePressed
-            }}
-          />
-          <FlatToggleTextButton pressed={false} disabled />
-        </div>
-      </FlatCardSurface>
+        </FlatCardSurface>
+      </div>
 
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('Message Rows', 'Inline guidance, warnings, and validation errors.')}
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
 
-        <div class="stack">
-          <FlatInfoRow
-            text="Use this row for short informational guidance that helps explain the surrounding control or section."
-          />
-          <FlatMessageRow text="Review this value before saving." variant="warning" />
-          <FlatMessageRow text="Prompt folder name is required." variant="danger" />
-        </div>
-      </FlatCardSurface>
+            <div class="button-matrix">
+              {#each flatIconButtonBaseVariants as baseVariant (baseVariant)}
+                {#each flatIconButtonHoverVariants as hoverVariant (hoverVariant)}
+                  <div class="variant-row">
+                    <span>FlatIconButton: {baseVariant} / {hoverVariant}</span>
+                    <div class="variant-controls icon-only-controls">
+                      {#each flatIconButtonSizes as size (size)}
+                        <div
+                          class="icon-only-sample"
+                          data-fill-size={size === 'sidebar-rail'}
+                        >
+                          <FlatIconButton
+                            icon={Settings}
+                            label={`${baseVariant} ${hoverVariant} ${size}`}
+                            {baseVariant}
+                            {hoverVariant}
+                            {size}
+                            title={`${baseVariant} ${hoverVariant} ${size}`}
+                          />
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/each}
+              {/each}
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
 
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('FlatTitle', 'Page, small, card, and dialog title variants.')}
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('FlatDropdownPopupSimple', 'Solid icon menu popup.')}
 
-        <div class="stack">
-          <FlatTitle title="Page title" />
-          <FlatTitle title="Small title" variant="small" />
-          <FlatTitle title="Card title" variant="card" />
-          <FlatTitle title="Dialog title" variant="dialog" />
-        </div>
-      </FlatCardSurface>
+            <div class="stack">
+              <div class="button-matrix">
+                <div class="variant-row">
+                  <span>FlatDropdownPopupSimple: folders</span>
+                  <div class="variant-controls">
+                    <FlatDropdownPopupSimple
+                      label="Folder options"
+                      items={folderDropdownItems}
+                      testId="folder-dropdown-menu"
+                      onselect={(item) => {
+                        lastDropdownAction = item.label
+                      }}
+                    >
+                      {#snippet trigger(dropdown)}
+                        <FlatIconButton
+                          icon={MoreHorizontal}
+                          label="Folder options"
+                          active={dropdown.open}
+                          ariaHaspopup={dropdown.ariaHaspopup}
+                          ariaExpanded={dropdown.ariaExpanded}
+                          buttonAction={dropdown.triggerAction}
+                          onclick={dropdown.toggle}
+                        />
+                      {/snippet}
+                    </FlatDropdownPopupSimple>
+                  </div>
+                </div>
 
-      <FlatCardSurface class="component-section">
-        {@render componentTitle('Dialogs', 'Flat error and confirmation dialogs.')}
+                <div class="variant-row">
+                  <span>FlatDropdownPopupSimple: prompts</span>
+                  <div class="variant-controls">
+                    <FlatDropdownPopupSimple
+                      label="Prompt actions"
+                      items={promptDropdownItems}
+                      testId="prompt-dropdown-menu"
+                      onselect={(item) => {
+                        lastDropdownAction = item.label
+                      }}
+                    >
+                      {#snippet trigger(dropdown)}
+                        <FlatIconButton
+                          icon={MoreHorizontal}
+                          label="Prompt actions"
+                          ariaHaspopup={dropdown.ariaHaspopup}
+                          ariaExpanded={dropdown.ariaExpanded}
+                          buttonAction={dropdown.triggerAction}
+                          onclick={dropdown.toggle}
+                        />
+                      {/snippet}
+                    </FlatDropdownPopupSimple>
+                  </div>
+                </div>
+              </div>
 
-        <div class="variant-controls">
-          <FlatButton
-            icon={AlertCircle}
-            text="Flat error"
-            variant="accent"
-            onclick={() => {
-              flatErrorDialogOpen = true
-            }}
-          />
-          <FlatButton
-            icon={Trash2}
-            text="Flat confirm"
-            onclick={() => {
-              flatConfirmationDialogOpen = true
-            }}
-          />
-        </div>
-      </FlatCardSurface>
+              <div class="component-sample">
+                {@render componentLabel('FlatInfoRow')}
+                <FlatInfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
+              </div>
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle(
+              'FlatSelectorButtonWithDropdown',
+              'Prompt-folder selector dropdown with a fixed footer action.'
+            )}
+
+            <div class="stack">
+              <div class="component-sample">
+                {@render componentLabel('FlatSelectorButtonWithDropdown')}
+                <FlatSelectorButtonWithDropdown
+                  label="Prompt folder selector"
+                  items={detailedDropdownItems}
+                  selectedItem={selectedDetailedDropdownItem}
+                  footerItem={detailedDropdownFooterItem}
+                  testId="detailed-dropdown-menu"
+                  triggerTestId="detailed-dropdown-trigger"
+                  onselect={(item) => {
+                    selectedDetailedDropdownItem = item
+                    lastDropdownAction = item.label
+                  }}
+                />
+              </div>
+
+              <div class="component-sample">
+                {@render componentLabel('FlatInfoRow')}
+                <FlatInfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
+              </div>
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('Inputs', 'Text, folder, stepper, and toggle controls.')}
+
+            <div class="form-grid">
+              <div class="component-sample">
+                {@render componentLabel('FlatTextInput')}
+                <FlatTextInput
+                  bind:value={workspaceNameValue}
+                  aria-label="Workspace name sample"
+                  placeholder="Workspace name"
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatTextInput: readonlyDisplay')}
+                <FlatTextInput
+                  bind:value={readonlyPathValue}
+                  readonlyDisplay
+                  aria-label="Readonly workspace path sample"
+                />
+              </div>
+              <div class="component-sample validation-sample">
+                {@render componentLabel('FlatFloatingValidationMessage')}
+                <FlatFloatingValidationMessage
+                  message="Workspace name is required."
+                  textTestId="test-screen-floating-validation"
+                >
+                  <FlatTextInput
+                    value=""
+                    aria-label="Invalid workspace name sample"
+                    aria-invalid="true"
+                    placeholder="Invalid value"
+                  />
+                </FlatFloatingValidationMessage>
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatFolderInput')}
+                <FlatFolderInput
+                  bind:value={folderInputValue}
+                  buttonText="Browse workspace"
+                  ariaLabel="Browse workspace sample"
+                  disabled
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatNumericStepperInput')}
+                <FlatNumericStepperInput
+                  bind:value={fontSizeStepperValue}
+                  min={8}
+                  max={32}
+                  helperText="px"
+                  aria-label="Font size stepper input"
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatNumericStepperInput')}
+                <FlatNumericStepperInput
+                  bind:value={minLinesStepperValue}
+                  min={8}
+                  max={24}
+                  helperText="lines"
+                  aria-label="Minimum lines stepper input"
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatToggleTextButton')}
+                <FlatToggleTextButton
+                  pressed={togglePressed}
+                  onclick={() => {
+                    togglePressed = !togglePressed
+                  }}
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatToggleTextButton: disabled')}
+                <FlatToggleTextButton pressed={false} disabled />
+              </div>
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('Message Rows', 'Inline guidance, warnings, and validation errors.')}
+
+            <div class="stack">
+              <div class="component-sample">
+                {@render componentLabel('FlatInfoRow')}
+                <FlatInfoRow
+                  text="Use this row for short informational guidance that helps explain the surrounding control or section."
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatMessageRow: warning')}
+                <FlatMessageRow text="Review this value before saving." variant="warning" />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatMessageRow: danger')}
+                <FlatMessageRow text="Prompt folder name is required." variant="danger" />
+              </div>
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('FlatTitle', 'Page, small, card, and dialog title variants.')}
+
+            <div class="stack">
+              <FlatTitle title="FlatTitle: Page title" />
+              <FlatTitle title="FlatTitle: Small title" variant="small" />
+              <FlatTitle title="FlatTitle: Card title" variant="card" />
+              <FlatTitle title="FlatTitle: Dialog title" variant="dialog" />
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
+
+      <div class="component-section">
+        <FlatCardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('Dialogs', 'Flat error and confirmation dialogs.')}
+
+            <div class="component-sample-grid">
+              <div class="component-sample">
+                {@render componentLabel('FlatErrorDialog')}
+                <FlatButton
+                  icon={AlertCircle}
+                  text="Open FlatErrorDialog"
+                  variant="accent"
+                  onclick={() => {
+                    flatErrorDialogOpen = true
+                  }}
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('FlatConfirmationDialog')}
+                <FlatButton
+                  icon={Trash2}
+                  text="Open FlatConfirmationDialog"
+                  onclick={() => {
+                    flatConfirmationDialogOpen = true
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </FlatCardSurface>
+      </div>
     </section>
   </div>
 
@@ -454,7 +577,7 @@
       testId="test-screen-loading-overlay"
       fadeMs={TEST_LOADING_OVERLAY_FADE_MS}
       isFading={testLoadingOverlay.isFading()}
-      message="Loading test screen..."
+      message="FlatLoadingOverlay"
     />
   {/if}
 </div>
@@ -511,14 +634,29 @@
     align-items: start;
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(384px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .component-section,
+  .sample-card {
+    min-width: 0;
   }
 
   .test-screen-title-block,
-  .component-title-block {
+  .component-title-block,
+  .component-sample {
     display: grid;
     gap: 6px;
     min-width: 0;
+  }
+
+  .component-section-content,
+  .sample-card-content {
+    box-sizing: border-box;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 16px;
   }
 
   .component-title-description {
@@ -529,19 +667,18 @@
     min-width: 0;
   }
 
-  .variant-grid {
+  .component-sample-label {
+    color: var(--ui-flat-muted-text);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .variant-grid,
+  .component-sample-grid {
     display: grid;
     gap: 12px;
     grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
-  }
-
-  :global(.component-section),
-  :global(.sample-card) {
-    border: 1px solid var(--ui-flat-card-normal-border);
-    box-sizing: border-box;
-    display: grid;
-    gap: 12px;
-    padding: 16px;
   }
 
   .sample-title,
@@ -566,7 +703,7 @@
     border-radius: var(--cthulhu-ui-radius-control);
     display: grid;
     gap: 12px;
-    grid-template-columns: 160px minmax(0, 1fr);
+    grid-template-columns: 192px minmax(0, 1fr);
     min-width: 0;
     padding: 12px;
   }
@@ -595,10 +732,6 @@
     height: 44px;
   }
 
-  :global(.flat-card-gallery-surface) {
-    border: 1px solid var(--ui-flat-card-normal-border);
-  }
-
   .form-grid {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
@@ -606,6 +739,18 @@
   .validation-sample {
     min-width: 0;
     padding-bottom: 34px;
+  }
+
+  @media (max-width: 1400px) {
+    .component-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .component-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   @media (max-width: 768px) {
@@ -616,10 +761,6 @@
 
     .test-screen-header {
       flex-direction: column;
-    }
-
-    .component-grid {
-      grid-template-columns: 1fr;
     }
   }
 </style>
