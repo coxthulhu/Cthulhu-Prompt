@@ -40,7 +40,7 @@
   data-trailing-layout={trailingLayout}
   data-testid={testId}
 >
-  <FlatIconCell icon={Icon} class="cthulhuUiFlatRowIconCell" iconClass={iconClass} />
+  <FlatIconCell icon={Icon} iconClass={iconClass} />
 
   <span class="cthulhuUiFlatRowTextStack">
     <span class="cthulhuUiFlatRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>

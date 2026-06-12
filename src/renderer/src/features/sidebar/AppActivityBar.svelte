@@ -53,7 +53,6 @@
       label={item.label}
       title={item.label}
       testId={item.testId}
-      class="appActivityBarButton"
       active={activeScreen === item.id}
       ariaCurrent={activeScreen === item.id ? 'page' : undefined}
       onclick={() => onNavigate(item.id)}

@@ -41,7 +41,7 @@
     )}
   >
     <span
-      class="cthulhuUiFlatToggleTextButtonThumb h-4 w-4 rounded-full bg-[var(--ui-flat-normal-text)] shadow-[var(--cthulhu-ui-shadow-thumb)]"
+      class="h-4 w-4 rounded-full bg-[var(--ui-flat-normal-text)] shadow-[var(--cthulhu-ui-shadow-thumb)]"
     ></span>
   </span>
   <span class="w-[64px] text-left">

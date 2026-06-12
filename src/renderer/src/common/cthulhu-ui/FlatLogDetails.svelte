@@ -9,7 +9,7 @@
   let { title, text }: Props = $props()
 </script>
 
-<section class="cthulhuUiFlatLogDetails space-y-2">
+<section class="space-y-2">
   <FlatTitle {title} variant="small" />
   <!-- Preserve line breaks so technical errors remain readable. -->
   <pre

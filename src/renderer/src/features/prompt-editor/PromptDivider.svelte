@@ -27,7 +27,7 @@
   {@const DividerIcon = isOver ? ArrowDownToLine : Plus}
   {@const dividerText = isOver ? 'Move here' : 'Add Prompt'}
   <div
-    class="promptDividerRow grid items-center"
+    class="grid items-center"
     data-drop-over={isOver ? 'true' : 'false'}
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
   >
