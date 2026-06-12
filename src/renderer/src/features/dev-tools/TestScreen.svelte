@@ -34,8 +34,9 @@
   import FlatFolderInput from '@renderer/common/cthulhu-ui/FlatFolderInput.svelte'
   import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
   import FlatIconButton, {
-    type FlatIconButtonSize,
-    type FlatIconButtonVariant
+    type FlatIconButtonBaseVariant,
+    type FlatIconButtonHoverVariant,
+    type FlatIconButtonSize
   } from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatIconTextButton from '@renderer/common/cthulhu-ui/FlatIconTextButton.svelte'
   import FlatInfoRow from '@renderer/common/cthulhu-ui/FlatInfoRow.svelte'
@@ -55,11 +56,11 @@
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
 
   const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
-  const flatIconButtonVariants: FlatIconButtonVariant[] = ['normal', 'dim']
+  const flatIconButtonBaseVariants: FlatIconButtonBaseVariant[] = ['normal', 'dim']
+  const flatIconButtonHoverVariants: FlatIconButtonHoverVariant[] = ['neutral', 'accent', 'danger']
   const flatIconButtonSizes: FlatIconButtonSize[] = [
     'default',
     'compact',
-    'rail-fill',
     'sidebar-rail'
   ]
   const folderDropdownItems: FlatDropdownPopupItem[] = [
@@ -263,26 +264,29 @@
         {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
 
         <div class="button-matrix">
-          {#each flatIconButtonVariants as variant (variant)}
-            <div class="variant-row">
-              <span>{variant}</span>
-              <div class="variant-controls icon-only-controls">
-                {#each flatIconButtonSizes as size (size)}
-                  <div
-                    class="icon-only-sample"
-                    data-fill-size={size === 'rail-fill' || size === 'sidebar-rail'}
-                  >
-                    <FlatIconButton
-                      icon={Settings}
-                      label={`${variant} ${size}`}
-                      {variant}
-                      {size}
-                      title={`${variant} ${size}`}
-                    />
-                  </div>
-                {/each}
+          {#each flatIconButtonBaseVariants as baseVariant (baseVariant)}
+            {#each flatIconButtonHoverVariants as hoverVariant (hoverVariant)}
+              <div class="variant-row">
+                <span>{baseVariant} / {hoverVariant}</span>
+                <div class="variant-controls icon-only-controls">
+                  {#each flatIconButtonSizes as size (size)}
+                    <div
+                      class="icon-only-sample"
+                      data-fill-size={size === 'sidebar-rail'}
+                    >
+                      <FlatIconButton
+                        icon={Settings}
+                        label={`${baseVariant} ${hoverVariant} ${size}`}
+                        {baseVariant}
+                        {hoverVariant}
+                        {size}
+                        title={`${baseVariant} ${hoverVariant} ${size}`}
+                      />
+                    </div>
+                  {/each}
+                </div>
               </div>
-            </div>
+            {/each}
           {/each}
         </div>
       </FlatCardSurface>

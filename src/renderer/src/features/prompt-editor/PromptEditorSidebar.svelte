@@ -95,7 +95,7 @@
     icon={ChevronUp}
     label="Move prompt up"
     size="sidebar-rail"
-    variant="dim"
+    baseVariant="dim"
     testId="prompt-move-up"
     disabled={isFirstPrompt}
     onclick={handleMoveUpClick}
@@ -105,7 +105,7 @@
     icon={GripVertical}
     label="Drag prompt"
     size="sidebar-rail"
-    variant="dim"
+    baseVariant="dim"
     testId="prompt-drag-handle"
     buttonAction={dragHandleAction}
     buttonActionParameter={getDragHandleOptions()}
@@ -116,7 +116,7 @@
     icon={ChevronDown}
     label="Move prompt down"
     size="sidebar-rail"
-    variant="dim"
+    baseVariant="dim"
     testId="prompt-move-down"
     disabled={isLastPrompt}
     onclick={handleMoveDownClick}

@@ -59,6 +59,7 @@
       icon={Trash2}
       label="Delete prompt"
       title="Delete prompt"
+      hoverVariant="danger"
       testId="prompt-delete-button"
       onclick={handleDeleteClick}
     />

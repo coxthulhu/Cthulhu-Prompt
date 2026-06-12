@@ -4,8 +4,9 @@
   import { mergeClasses } from './mergeClasses'
 
   export type FlatIconButtonState = 'enabled' | 'disabled'
-  export type FlatIconButtonSize = 'default' | 'compact' | 'rail-fill' | 'sidebar-rail'
-  export type FlatIconButtonVariant = 'normal' | 'dim'
+  export type FlatIconButtonSize = 'default' | 'compact' | 'sidebar-rail'
+  export type FlatIconButtonBaseVariant = 'normal' | 'dim'
+  export type FlatIconButtonHoverVariant = 'neutral' | 'accent' | 'danger'
   type FlatIconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -13,7 +14,8 @@
     label: string
     state?: FlatIconButtonState
     size?: FlatIconButtonSize
-    variant?: FlatIconButtonVariant
+    baseVariant?: FlatIconButtonBaseVariant
+    hoverVariant?: FlatIconButtonHoverVariant
     class?: string
     iconClass?: string
     iconTestId?: string
@@ -37,7 +39,8 @@
     label,
     state = 'enabled',
     size = 'default',
-    variant = 'normal',
+    baseVariant = 'normal',
+    hoverVariant = 'neutral',
     class: className,
     iconClass,
     iconTestId,
@@ -70,7 +73,8 @@
   data-disabled={isDisabled ? 'true' : 'false'}
   data-state={isDisabled ? 'disabled' : 'enabled'}
   data-size={size}
-  data-variant={variant}
+  data-base-variant={baseVariant}
+  data-hover-variant={hoverVariant}
   data-active={active === undefined ? undefined : active ? 'true' : 'false'}
   data-testid={testId}
   data-grab-cursor={grabCursor ? 'true' : undefined}
@@ -112,16 +116,16 @@
     width: 28px;
   }
 
-  .cthulhuUiFlatIconButton[data-size='rail-fill'] {
-    height: 100%;
-    min-height: 0;
-    width: 28px;
-  }
-
   .cthulhuUiFlatIconButton[data-size='sidebar-rail'] {
+    border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
+    border-radius: 0;
     height: 100%;
     min-height: 0;
     width: 100%;
+  }
+
+  .cthulhuUiFlatIconButton[data-size='sidebar-rail']:last-child {
+    border-bottom: 0;
   }
 
   .cthulhuUiFlatIconButton[data-grab-cursor='true'] {
@@ -132,15 +136,9 @@
     cursor: grabbing;
   }
 
-  .cthulhuUiFlatIconButton[data-variant='dim'] {
+  .cthulhuUiFlatIconButton[data-base-variant='dim'] {
     background: transparent;
-    border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
-    border-radius: 0;
     color: var(--ui-flat-hoverable-icon-glyph);
-  }
-
-  .cthulhuUiFlatIconButton[data-variant='dim']:last-child {
-    border-bottom: 0;
   }
 
   .cthulhuUiFlatIconButton:hover,
@@ -148,17 +146,27 @@
     background: var(--ui-flat-neutral-action-hover-fill);
   }
 
+  .cthulhuUiFlatIconButton[data-hover-variant='accent']:hover,
+  .cthulhuUiFlatIconButton[data-hover-variant='accent']:focus-visible {
+    background: var(--ui-flat-accent-action-hover-fill);
+  }
+
+  .cthulhuUiFlatIconButton[data-hover-variant='danger']:hover,
+  .cthulhuUiFlatIconButton[data-hover-variant='danger']:focus-visible {
+    background: var(--ui-flat-danger-action-hover-fill);
+  }
+
   .cthulhuUiFlatIconButton:focus-visible {
     outline: 2px solid var(--ui-flat-neutral-focus-border);
     outline-offset: 2px;
   }
 
-  .cthulhuUiFlatIconButton[data-variant='dim']:hover,
-  .cthulhuUiFlatIconButton[data-variant='dim']:focus-visible {
+  .cthulhuUiFlatIconButton[data-base-variant='dim']:hover,
+  .cthulhuUiFlatIconButton[data-base-variant='dim']:focus-visible {
     color: var(--ui-flat-normal-text);
   }
 
-  .cthulhuUiFlatIconButton[data-variant='dim']:focus-visible {
+  .cthulhuUiFlatIconButton[data-base-variant='dim']:focus-visible {
     outline: none;
   }
 
