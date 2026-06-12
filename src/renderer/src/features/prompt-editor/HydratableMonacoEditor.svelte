@@ -170,32 +170,32 @@
   })
 </script>
 
-<div
-  class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
-  role="presentation"
->
-  {#if isHydrated}
-    <AutoSizingMonacoEditor
-      {initialValue}
-      {initialViewStateJson}
-      {viewStateCaptureKey}
-      {modelUri}
-      {containerWidthPx}
-      {overflowWidgetsDomNode}
-      {rowId}
-      {sizingConfig}
-      {scrollToWithinWindowBand}
-      {onChange}
-      {onBlur}
-      onEditorLifecycle={handleEditorLifecycle}
-      {findSectionKey}
-      {findRequest}
-      {onFindMatches}
-      {onFindMatchReveal}
-      {onSelectionChange}
-      {onViewStateCapture}
-    />
-  {:else}
-    <MonacoEditorPlaceholder heightPx={placeholderHeightPx} {sizingConfig} />
-  {/if}
-</div>
+{#if isHydrated}
+  <AutoSizingMonacoEditor
+    class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
+    {initialValue}
+    {initialViewStateJson}
+    {viewStateCaptureKey}
+    {modelUri}
+    {containerWidthPx}
+    {overflowWidgetsDomNode}
+    {rowId}
+    {sizingConfig}
+    {scrollToWithinWindowBand}
+    {onChange}
+    {onBlur}
+    onEditorLifecycle={handleEditorLifecycle}
+    {findSectionKey}
+    {findRequest}
+    {onFindMatches}
+    {onFindMatchReveal}
+    {onSelectionChange}
+    {onViewStateCapture}
+  />
+{:else}
+  <MonacoEditorPlaceholder
+    class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
+    heightPx={placeholderHeightPx}
+    {sizingConfig}
+  />
+{/if}

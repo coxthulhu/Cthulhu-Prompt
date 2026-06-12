@@ -61,13 +61,11 @@
 
       <div class="flex-1 min-h-0">
         {#if controller.errorMessage}
-          <div class="flex-1 min-h-0 overflow-y-auto">
-            <div class="pt-6 pl-6">
-              <h2 class="text-lg font-semibold mb-4">
-                Prompts ({controller.visiblePromptIds.length})
-              </h2>
-              <p class="mt-6 text-red-500">Error loading prompts: {controller.errorMessage}</p>
-            </div>
+          <div class="h-full min-h-0 overflow-y-auto pt-6 pl-6">
+            <h2 class="text-lg font-semibold mb-4">
+              Prompts ({controller.visiblePromptIds.length})
+            </h2>
+            <p class="mt-6 text-red-500">Error loading prompts: {controller.errorMessage}</p>
           </div>
         {:else if controller.isVirtualContentReady}
           <PromptFolderVirtualContent

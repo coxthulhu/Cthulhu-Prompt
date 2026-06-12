@@ -431,57 +431,55 @@
   <FlatSeparator />
 
   <div class="prompt-editor-body-editor-section" use:focusEditorSectionClickAction>
-    <div class="prompt-editor-body-editor">
-      {#if overflowHost}
-        {#key promptId}
-          <HydratableMonacoEditor
-            initialValue={promptData.draft.text}
-            initialViewStateJson={initialEditorViewStateJson}
-            viewStateCaptureKey={`prompt:${promptId}`}
-            modelUri={createPromptEditorModelUri(promptId)}
-            containerWidthPx={virtualWindowWidthPx}
-            placeholderHeightPx={placeholderMonacoHeightPx}
-            overflowWidgetsDomNode={overflowHost}
-            sizingConfig={promptEditorSizingConfig}
-            {hydrationPriority}
-            {shouldDehydrate}
-            {rowId}
-            {scrollToWithinWindowBand}
-            onEditorLifecycle={handleEditorLifecycle}
-            findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
-            {findRequest}
-            onFindMatches={handleFindMatches}
-            onFindMatchReveal={(handler) => {
-              findRowHandlers.revealSectionMatch = handler
-            }}
-            onSelectionChange={reportBodySelection}
-            onImmediateHydrationRequest={(request) => {
-              findRowHandlers.requestImmediateHydration = request
-            }}
-            onViewStateCapture={(viewStateJson) => {
-              if (!workspaceId) return
-              setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
-            }}
-            onHydrationChange={handleHydrationChange}
-            onChange={(text, meta) => {
-              if (meta.heightPx !== monacoHeightPx) {
-                monacoHeightPx = meta.heightPx
-              }
-              promptData.setText(text, {
-                measuredHeightPx: getRowHeightPx(meta.heightPx),
-                widthPx: virtualWindowWidthPx,
-                devicePixelRatio
-              })
-            }}
-          />
-        {/key}
-      {:else}
-        <MonacoEditorPlaceholder
-          heightPx={placeholderMonacoHeightPx}
+    {#if overflowHost}
+      {#key promptId}
+        <HydratableMonacoEditor
+          initialValue={promptData.draft.text}
+          initialViewStateJson={initialEditorViewStateJson}
+          viewStateCaptureKey={`prompt:${promptId}`}
+          modelUri={createPromptEditorModelUri(promptId)}
+          containerWidthPx={virtualWindowWidthPx}
+          placeholderHeightPx={placeholderMonacoHeightPx}
+          overflowWidgetsDomNode={overflowHost}
           sizingConfig={promptEditorSizingConfig}
+          {hydrationPriority}
+          {shouldDehydrate}
+          {rowId}
+          {scrollToWithinWindowBand}
+          onEditorLifecycle={handleEditorLifecycle}
+          findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
+          {findRequest}
+          onFindMatches={handleFindMatches}
+          onFindMatchReveal={(handler) => {
+            findRowHandlers.revealSectionMatch = handler
+          }}
+          onSelectionChange={reportBodySelection}
+          onImmediateHydrationRequest={(request) => {
+            findRowHandlers.requestImmediateHydration = request
+          }}
+          onViewStateCapture={(viewStateJson) => {
+            if (!workspaceId) return
+            setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
+          }}
+          onHydrationChange={handleHydrationChange}
+          onChange={(text, meta) => {
+            if (meta.heightPx !== monacoHeightPx) {
+              monacoHeightPx = meta.heightPx
+            }
+            promptData.setText(text, {
+              measuredHeightPx: getRowHeightPx(meta.heightPx),
+              widthPx: virtualWindowWidthPx,
+              devicePixelRatio
+            })
+          }}
         />
-      {/if}
-    </div>
+      {/key}
+    {:else}
+      <MonacoEditorPlaceholder
+        heightPx={placeholderMonacoHeightPx}
+        sizingConfig={promptEditorSizingConfig}
+      />
+    {/if}
   </div>
 </FlatPromptEditorCardSurface>
 
@@ -506,8 +504,7 @@
     padding: 8px 10px 10px;
   }
 
-  .prompt-editor-body-editor-section,
-  .prompt-editor-body-editor {
+  .prompt-editor-body-editor-section {
     min-width: 0;
   }
 </style>

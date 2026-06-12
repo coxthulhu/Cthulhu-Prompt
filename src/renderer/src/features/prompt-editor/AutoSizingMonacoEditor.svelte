@@ -38,6 +38,7 @@
     ) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
+    class?: string
   }
 
   let {
@@ -58,7 +59,8 @@
     onFindMatches,
     onFindMatchReveal,
     onSelectionChange,
-    onViewStateCapture
+    onViewStateCapture,
+    class: className
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
@@ -548,4 +550,8 @@
   })
 </script>
 
-<div bind:this={container} style={`min-height:${minMonacoHeightPx}px; position: relative;`}></div>
+<div
+  bind:this={container}
+  class={className}
+  style={`min-height:${minMonacoHeightPx}px; position: relative;`}
+></div>
