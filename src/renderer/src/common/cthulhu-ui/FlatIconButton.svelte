@@ -4,7 +4,7 @@
   import { mergeClasses } from './mergeClasses'
 
   export type FlatIconButtonState = 'enabled' | 'disabled'
-  export type FlatIconButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'sidebar-rail'
+  export type FlatIconButtonSize = 'default' | 'compact' | 'rail-fill' | 'sidebar-rail'
   export type FlatIconButtonVariant = 'normal' | 'dim'
   type FlatIconButtonAction = Action<HTMLButtonElement, unknown>
 
@@ -108,11 +108,6 @@
   }
 
   .cthulhuUiFlatIconButton[data-size='compact'] {
-    height: 28px;
-    width: 28px;
-  }
-
-  .cthulhuUiFlatIconButton[data-size='rail'] {
     height: 28px;
     width: 28px;
   }

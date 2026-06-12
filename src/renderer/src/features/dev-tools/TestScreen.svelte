@@ -9,7 +9,6 @@
     FileText,
     Folder,
     Loader,
-    Minus,
     MoreHorizontal,
     Pencil,
     Pin,
@@ -60,7 +59,6 @@
   const flatIconButtonSizes: FlatIconButtonSize[] = [
     'default',
     'compact',
-    'rail',
     'rail-fill',
     'sidebar-rail'
   ]
@@ -283,7 +281,6 @@
                     />
                   </div>
                 {/each}
-                <FlatIconButton icon={Minus} label={`${variant} disabled`} {variant} disabled />
               </div>
             </div>
           {/each}
