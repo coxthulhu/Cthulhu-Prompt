@@ -88,10 +88,6 @@
           : 'ready'
   )
 
-  const promptFolderCountLabel = $derived.by(() => {
-    const folderCount = promptFolders.length
-    return `${folderCount} folder${folderCount === 1 ? '' : 's'}`
-  })
   const promptFolderSelectorPlaceholder: FlatDropdownPopupDetailedItem = {
     id: 'no-prompt-folders',
     label: 'No prompt folders',
@@ -255,36 +251,31 @@
   </div>
   <FlatSeparator />
 
-  <div class="sidebarTopLevelInsetWithInnerPadding flex min-h-0 flex-col pt-1">
-    <div class="mb-2 flex items-center justify-between">
-      <div>
-        <p class="cthulhuSidebarPromptSectionTitle text-[13px] font-semibold">Prompts</p>
-        <p class="cthulhuSidebarPromptSectionCount mt-0.5 text-xs">{promptFolderCountLabel}</p>
+  <div class="cthulhuSidebarPromptSectionHeader">
+    <p class="cthulhuSidebarPromptSectionTitle">Prompts</p>
+    {#if isWorkspaceReady}
+      <div class="cthulhuSidebarPromptSectionActions">
+        <FlatIconButton
+          icon={promptFolderExpansionActionIcon}
+          label={promptFolderExpansionActionLabel}
+          title={promptFolderExpansionActionLabel}
+          size="compact"
+          state={canTogglePromptFolders ? 'enabled' : 'disabled'}
+          testId="toggle-all-prompt-folders-button"
+          class="text-[var(--ui-flat-secondary-icon-glyph)] hover:text-[var(--ui-flat-hoverable-icon-glyph)]"
+          onclick={handlePromptFolderExpansionAction}
+        />
+        <CreatePromptFolderDialog
+          bind:this={createPromptFolderDialog}
+          {isWorkspaceReady}
+          {promptFolders}
+          isPromptFolderListLoading={isWorkspaceLoading}
+          onCreated={(promptFolderId) => {
+            onPromptFolderSelect(promptFolderId)
+          }}
+        />
       </div>
-      {#if isWorkspaceReady}
-        <div class="flex shrink-0 items-center gap-0.5">
-          <FlatIconButton
-            icon={promptFolderExpansionActionIcon}
-            label={promptFolderExpansionActionLabel}
-            title={promptFolderExpansionActionLabel}
-            size="compact"
-            state={canTogglePromptFolders ? 'enabled' : 'disabled'}
-            testId="toggle-all-prompt-folders-button"
-            class="text-[var(--ui-flat-secondary-icon-glyph)] hover:text-[var(--ui-flat-hoverable-icon-glyph)]"
-            onclick={handlePromptFolderExpansionAction}
-          />
-          <CreatePromptFolderDialog
-            bind:this={createPromptFolderDialog}
-            {isWorkspaceReady}
-            {promptFolders}
-            isPromptFolderListLoading={isWorkspaceLoading}
-            onCreated={(promptFolderId) => {
-              onPromptFolderSelect(promptFolderId)
-            }}
-          />
-        </div>
-      {/if}
-    </div>
+    {/if}
   </div>
 
   <div
@@ -307,11 +298,27 @@
 
 <style>
   .cthulhuSidebarPromptSectionTitle {
-    color: var(--ui-flat-secondary-text);
+    margin: 0;
+    color: var(--ui-flat-normal-text);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
   }
 
-  .cthulhuSidebarPromptSectionCount {
-    color: var(--ui-flat-muted-text);
+  .cthulhuSidebarPromptSectionHeader {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px 0 12px;
+  }
+
+  .cthulhuSidebarPromptSectionActions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
   }
 
   .cthulhuSidebarWorkspaceName {
