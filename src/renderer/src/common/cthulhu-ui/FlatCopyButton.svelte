@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Check, Copy } from 'lucide-svelte'
-  import FlatIconButton from './FlatIconButton.svelte'
+  import FlatIconButton, { type FlatIconButtonHoverVariant } from './FlatIconButton.svelte'
 
   type FlatCopyButtonState = 'enabled' | 'disabled'
 
@@ -12,6 +12,7 @@
     copiedTitle?: string
     state?: FlatCopyButtonState
     resetDelayMs?: number
+    hoverVariant?: FlatIconButtonHoverVariant
     class?: string
     iconClass?: string
     testId?: string
@@ -25,6 +26,7 @@
     copiedTitle = copiedLabel,
     state: buttonState = 'enabled',
     resetDelayMs = 1500,
+    hoverVariant = 'neutral',
     class: className,
     iconClass,
     testId
@@ -67,6 +69,7 @@
   label={isCopied ? copiedLabel : label}
   title={isCopied ? copiedTitle : title}
   state={buttonState}
+  {hoverVariant}
   class={className}
   {iconClass}
   {testId}

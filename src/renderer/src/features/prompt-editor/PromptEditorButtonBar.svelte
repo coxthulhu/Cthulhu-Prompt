@@ -51,6 +51,7 @@
     text={copyText ?? draftText}
     label={copyLabel}
     title={copyTitle}
+    hoverVariant="accent"
     testId="prompt-copy-button"
   />
   {#if onDelete}
