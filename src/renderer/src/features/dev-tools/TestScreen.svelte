@@ -39,9 +39,9 @@
     type FlatIconButtonVariant
   } from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
   import FlatIconTextButton from '@renderer/common/cthulhu-ui/FlatIconTextButton.svelte'
+  import FlatInfoRow from '@renderer/common/cthulhu-ui/FlatInfoRow.svelte'
   import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
   import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
-  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import FlatLogDetails from '@renderer/common/cthulhu-ui/FlatLogDetails.svelte'
@@ -336,7 +336,7 @@
             </FlatDropdownPopupSimple>
           </div>
 
-          <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
+          <FlatInfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
         </div>
       </FlatCardSurface>
 
@@ -360,7 +360,7 @@
             }}
           />
 
-          <InfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
+          <FlatInfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
         </div>
       </FlatCardSurface>
 
@@ -443,7 +443,7 @@
         {@render componentTitle('Message Rows', 'Inline guidance, warnings, and validation errors.')}
 
         <div class="stack">
-          <InfoRow
+          <FlatInfoRow
             text="Use this row for short informational guidance that helps explain the surrounding control or section."
           />
           <FlatMessageRow text="Review this value before saving." variant="warning" />
