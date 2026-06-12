@@ -31,7 +31,7 @@
   }
 
   .cthulhuUiFlatTitle[data-variant='small'] {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-size: 14px;
     font-weight: 600;
     line-height: 21px;

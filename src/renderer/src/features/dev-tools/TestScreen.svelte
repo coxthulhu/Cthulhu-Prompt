@@ -522,7 +522,7 @@
 <style>
   .test-screen-shell {
     background: var(--background);
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     height: 100%;
     min-height: 0;
     min-width: 0;
@@ -543,7 +543,7 @@
 
   .test-screen-header {
     align-items: flex-start;
-    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    border-bottom: 1px solid var(--ui-flat-neutral-muted-border);
     display: flex;
     gap: 16px;
     justify-content: space-between;
@@ -565,7 +565,7 @@
   }
 
   .component-title-description {
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
     font-size: 14px;
     line-height: 1.4;
     margin: 0;
@@ -589,7 +589,7 @@
 
   .sample-title,
   .variant-row > span {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-size: 14px;
     font-weight: 700;
     line-height: 1.3;
@@ -605,7 +605,7 @@
 
   .variant-row {
     align-items: center;
-    border: 1px solid var(--ui-neutral-muted-border);
+    border: 1px solid var(--ui-flat-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-control);
     display: grid;
     gap: 12px;

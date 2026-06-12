@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './styles/palette.css';
 @import './styles/flatpalette.css';
 @import './features/sidebar/sidebarStyles.css';
 
@@ -52,16 +51,13 @@
   --cthulhu-ui-radius-checkbox: 6px;
   /* Shared cthulhu-ui typography for primary flat row/button labels. */
   --cthulhu-ui-font-size-flat-primary: 16px;
-  /* Shared cthulhu-ui shadow recipes; colors remain sourced from palette.css. */
-  --cthulhu-ui-shadow-card: 0 8px 12px var(--ui-card-normal-shadow);
-  --cthulhu-ui-shadow-surface-highlight: inset 0 1px 0 var(--ui-neutral-muted-surface);
-  --cthulhu-ui-shadow-focus: 0 0 0 3px var(--ui-neutral-emphasis-surface);
-  --cthulhu-ui-shadow-focus-accent: 0 0 0 3px var(--ui-accent-icon-ring);
-  --cthulhu-ui-shadow-focus-danger: 0 0 0 3px var(--ui-danger-normal-ring);
-  --cthulhu-ui-shadow-icon-neutral: 0 0 0 1px var(--ui-neutral-emphasis-border);
-  --cthulhu-ui-shadow-icon-accent: 0 0 0 1px var(--ui-accent-icon-ring);
-  --cthulhu-ui-shadow-icon-danger: 0 0 0 1px var(--ui-danger-icon-ring);
-  --cthulhu-ui-shadow-thumb: 0 1px 2px var(--ui-shadow-raised);
+  /* Shared cthulhu-ui shadow recipes. */
+  --cthulhu-ui-shadow-card: 0 8px 12px var(--ui-flat-card-normal-shadow);
+  --cthulhu-ui-shadow-surface-highlight: inset 0 1px 0 var(--ui-flat-card-normal-surface-gradient-end);
+  --cthulhu-ui-shadow-focus: 0 0 0 3px var(--ui-flat-neutral-emphasis-surface);
+  --cthulhu-ui-shadow-focus-danger: 0 0 0 3px var(--ui-flat-danger-normal-ring);
+  --cthulhu-ui-shadow-icon-neutral: 0 0 0 1px var(--ui-flat-neutral-emphasis-border);
+  --cthulhu-ui-shadow-thumb: 0 1px 2px var(--ui-flat-shadow-raised);
 }
 
 .dark {

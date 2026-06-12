@@ -88,14 +88,14 @@
 
   .mockups-empty h2 {
     margin: 0;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-weight: 600;
   }
 
   .mockups-empty p {
     margin: 0;
     line-height: 1.5;
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
   }
 
   .mockups-empty code {
@@ -121,9 +121,9 @@
 
   .mockups-tab {
     appearance: none;
-    border: 1px solid var(--ui-neutral-muted-border);
-    background: var(--ui-neutral-muted-surface);
-    color: var(--ui-secondary-text);
+    border: 1px solid var(--ui-flat-neutral-muted-border);
+    background: var(--ui-flat-card-normal-surface-gradient-end);
+    color: var(--ui-flat-secondary-text);
     padding: 11px 16px;
     border-radius: 16px;
     font: inherit;
@@ -133,9 +133,9 @@
   }
 
   .mockups-tab[data-active='true'] {
-    border-color: var(--ui-accent-normal-border);
-    background: var(--ui-accent-normal-surface);
-    color: var(--ui-accent-normal-text);
+    border-color: var(--ui-flat-accent-normal-border);
+    background: var(--ui-flat-accent-action-fill);
+    color: var(--ui-flat-accent-normal-text);
   }
 
   .mockups-preview {
@@ -155,8 +155,8 @@
     flex-direction: column;
     gap: 10px;
     padding: 16px;
-    border: 1px solid var(--ui-neutral-normal-border);
-    background: var(--ui-neutral-normal-surface);
+    border: 1px solid var(--ui-flat-neutral-normal-border);
+    background: var(--ui-flat-neutral-normal-surface);
   }
 
   @media (max-width: 900px) {

@@ -482,7 +482,7 @@
   .mockup-title-input {
     background: transparent;
     border: 0;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-family: inherit;
     font-size: 15px;
     font-weight: 600;
@@ -495,12 +495,12 @@
   }
 
   .mockup-title-input::placeholder {
-    color: var(--ui-secondary-text);
+    color: var(--ui-flat-secondary-text);
   }
 
   .mockup-metadata-row {
     align-items: center;
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
     display: flex;
     flex-wrap: nowrap;
     font-size: 12px;
@@ -513,7 +513,7 @@
 
   .mockup-metadata-folder {
     align-items: center;
-    color: var(--ui-secondary-text);
+    color: var(--ui-flat-secondary-text);
     display: inline-flex;
     flex: 0 1 auto;
     gap: 4px;
@@ -525,13 +525,13 @@
   }
 
   :global(.mockup-metadata-folder-icon) {
-    color: var(--ui-secondary-icon-glyph);
+    color: var(--ui-flat-secondary-icon-glyph);
     flex: 0 0 auto;
     stroke-width: 2.4;
   }
 
   .mockup-separator-dot {
-    background: var(--ui-muted-text);
+    background: var(--ui-flat-muted-text);
     border-radius: var(--cthulhu-ui-radius-control);
     flex: 0 0 3px;
     height: 3px;
@@ -581,7 +581,7 @@
   }
 
   .mockup-vertical-separator {
-    background: var(--ui-neutral-muted-border);
+    background: var(--ui-flat-neutral-muted-border);
     flex: 0 0 1px;
     height: 24px;
     width: 1px;

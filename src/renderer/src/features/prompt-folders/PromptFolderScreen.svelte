@@ -111,28 +111,27 @@
 
 <style>
   .prompt-folder-header-bar {
-    background: var(--ui-card-nested-surface);
-    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    border-bottom: 1px solid var(--ui-flat-neutral-muted-border);
   }
 
   .prompt-folder-header-breadcrumb,
   .prompt-folder-header-folder {
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
   }
 
   .prompt-folder-header-folder:hover {
-    color: var(--ui-hoverable-text);
+    color: var(--ui-flat-hoverable-text);
   }
 
   .prompt-folder-header-separator {
-    color: var(--ui-neutral-emphasis-border);
+    color: var(--ui-flat-neutral-emphasis-border);
   }
 
   .prompt-folder-header-section {
-    color: var(--ui-hoverable-text);
+    color: var(--ui-flat-hoverable-text);
   }
 
   .prompt-folder-header-section:hover {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 </style>

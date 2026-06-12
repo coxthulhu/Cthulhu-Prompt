@@ -31,7 +31,7 @@
     border: 0;
     background: transparent;
     padding: var(--cthulhu-ui-inline-text-button-padding, 0);
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
     font-size: 13px;
     font-weight: 400;
     line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
@@ -41,6 +41,6 @@
 
   .cthulhuUiFlatInlineTextButton:hover,
   .cthulhuUiFlatInlineTextButton:focus-visible {
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
   }
 </style>

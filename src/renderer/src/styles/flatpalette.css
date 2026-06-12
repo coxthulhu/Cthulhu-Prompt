@@ -26,6 +26,9 @@
   --ui-flat-card-normal-shadow: oklch(0 0 0 / 28%);
   --ui-flat-card-nested-border: oklch(1 0 0 / 6%);
 
+  /* Shadows */
+  --ui-flat-shadow-raised: oklch(0 0 0 / 20%);
+
   /* Editor */
   --ui-flat-editor-normal-surface: oklch(0.24 0 0);
 
@@ -66,6 +69,7 @@
   /* Danger */
   --ui-flat-danger-normal-surface: oklch(0.396 0.133 25.723 / 22%);
   --ui-flat-danger-normal-border: oklch(0.711 0.166 22.216 / 28%);
+  --ui-flat-danger-normal-ring: oklch(0.696 0.196 32.321 / 40%);
   --ui-flat-danger-hover-border: oklch(0.711 0.166 22.216 / 42%);
   --ui-flat-danger-strong-border: oklch(0.704 0.191 22.216);
   --ui-flat-danger-icon-glyph: oklch(1 0.07 17.717);
