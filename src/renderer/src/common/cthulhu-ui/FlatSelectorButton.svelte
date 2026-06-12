@@ -5,7 +5,6 @@
   import FlatRotatingChevron from './FlatRotatingChevron.svelte'
   import FlatSeparatorDot from './FlatSeparatorDot.svelte'
 
-  type FlatSelectorButtonSize = 'compact' | 'large'
   type FlatSelectorButtonState = 'enabled' | 'disabled'
   type FlatSelectorButtonAction = Action<HTMLButtonElement, unknown>
 
@@ -17,7 +16,6 @@
     open?: boolean
     selected?: boolean
     showChevron?: boolean
-    size?: FlatSelectorButtonSize
     state?: FlatSelectorButtonState
     class?: string
     iconClass?: string
@@ -41,7 +39,6 @@
     open = false,
     selected = false,
     showChevron = true,
-    size = 'compact',
     state = 'enabled',
     class: className,
     iconClass,
@@ -55,8 +52,6 @@
     onclick
   }: Props = $props()
 
-  const iconSize = $derived(size === 'large' ? 24 : 20)
-  const chevronSize = $derived(size === 'large' ? 24 : 20)
   const isDisabled = $derived(state === 'disabled')
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
   const resolvedDetailParts = $derived(detailParts?.length ? detailParts : detail ? [detail] : [])
@@ -67,7 +62,6 @@
   use:resolvedButtonAction={buttonActionParameter}
   type="button"
   class={mergeClasses('cthulhuUiFlatSelectorButton', className)}
-  data-size={size}
   data-open={open ? 'true' : 'false'}
   data-selected={selected ? 'true' : 'false'}
   data-chevron={showChevron ? 'true' : 'false'}
@@ -84,7 +78,7 @@
   <span class="cthulhuUiFlatSelectorButtonIconCell">
     <Icon
       class={mergeClasses('cthulhuUiFlatSelectorButtonIcon', iconClass)}
-      size={iconSize}
+      size={20}
       aria-hidden="true"
     />
   </span>
@@ -107,7 +101,7 @@
     <FlatRotatingChevron
       expanded={open}
       size={22}
-      iconSize={chevronSize}
+      iconSize={20}
       class="cthulhuUiFlatSelectorButtonChevronWrap"
     />
   {/if}
@@ -135,10 +129,6 @@
 
   .cthulhuUiFlatSelectorButton[data-chevron='false'] {
     grid-template-columns: 34px minmax(0, 1fr);
-  }
-
-  .cthulhuUiFlatSelectorButton[data-size='large'] {
-    gap: 12px;
   }
 
   .cthulhuUiFlatSelectorButton:not(:disabled):hover,
@@ -187,20 +177,12 @@
     white-space: nowrap;
   }
 
-  .cthulhuUiFlatSelectorButton[data-size='large'] .cthulhuUiFlatSelectorButtonText {
-    font-size: var(--cthulhu-ui-font-size-flat-primary);
-  }
-
   .cthulhuUiFlatSelectorButtonDetail {
     align-items: center;
     color: var(--ui-flat-normal-text);
     display: flex;
     font-size: 12px;
     gap: 6px;
-  }
-
-  .cthulhuUiFlatSelectorButton[data-size='large'] .cthulhuUiFlatSelectorButtonDetail {
-    font-size: 13px;
   }
 
   .cthulhuUiFlatSelectorButtonDetailText {

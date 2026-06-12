@@ -4,13 +4,11 @@
   import { mergeClasses } from './mergeClasses'
 
   type FlatIconTextButtonState = 'enabled' | 'disabled'
-  type FlatIconTextButtonVariant = 'neutral' | 'info'
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
     icon: ComponentType
     text: string
     state?: FlatIconTextButtonState
-    variant?: FlatIconTextButtonVariant
     class?: string
     iconClass?: string
     iconSize?: number
@@ -22,7 +20,6 @@
     icon: Icon,
     text,
     state = 'enabled',
-    variant = 'neutral',
     class: className,
     iconClass,
     iconSize = 16,
@@ -39,7 +36,6 @@
   type="button"
   class={mergeClasses('cthulhuUiFlatIconTextButton', className)}
   data-state={state}
-  data-variant={variant}
   data-testid={testId}
   disabled={isDisabled}
   {onclick}

@@ -37,7 +37,6 @@
     menuClass?: string
     testId?: string
     placement?: DropdownPopupPlacement
-    matchTriggerWidth?: boolean
   }
 
   let {
@@ -47,8 +46,7 @@
     menuWidth = '236px',
     menuClass,
     testId,
-    placement = 'cursor',
-    matchTriggerWidth = false
+    placement = 'cursor'
   }: Props = $props()
 
   const fallbackMenuWidth = 236
@@ -158,11 +156,7 @@
   }
 
   const resolvedMenuWidth = $derived(
-    matchTriggerWidth
-      ? `${triggerWidth}px`
-      : placement === 'below-trigger'
-        ? `max(${menuWidth}, ${triggerWidth}px)`
-        : menuWidth
+    placement === 'below-trigger' ? `max(${menuWidth}, ${triggerWidth}px)` : menuWidth
   )
   const menuPosition = $derived(
     menuAnchor

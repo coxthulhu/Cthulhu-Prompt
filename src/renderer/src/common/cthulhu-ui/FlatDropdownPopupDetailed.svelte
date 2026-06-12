@@ -24,7 +24,6 @@
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
-    matchTriggerWidth?: boolean
     onselect?: (item: FlatDropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -37,7 +36,6 @@
     menuWidth = '320px',
     testId,
     placement = 'cursor',
-    matchTriggerWidth = false,
     onselect
   }: Props = $props()
 
@@ -57,7 +55,6 @@
   {menuWidth}
   {testId}
   {placement}
-  {matchTriggerWidth}
   menuClass="cthulhuUiFlatDropdownPopupDetailedMenu p-[6px]"
 >
   {#snippet children({ close })}

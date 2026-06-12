@@ -71,7 +71,6 @@
   aria-expanded={ariaExpanded}
   aria-current={ariaCurrent}
   data-disabled={isDisabled ? 'true' : 'false'}
-  data-state={isDisabled ? 'disabled' : 'enabled'}
   data-size={size}
   data-base-variant={baseVariant}
   data-hover-variant={hoverVariant}

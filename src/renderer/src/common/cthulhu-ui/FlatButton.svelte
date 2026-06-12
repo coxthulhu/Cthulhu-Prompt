@@ -37,7 +37,6 @@
   type="button"
   class={mergeClasses('cthulhuUiFlatActionButton cthulhuUiFlatButton', className)}
   data-variant={variant}
-  data-state={state}
   data-testid={testId}
   {onclick}
   disabled={isDisabled}

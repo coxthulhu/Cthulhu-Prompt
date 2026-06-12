@@ -222,7 +222,7 @@
               <div class="component-sample">
                 {@render componentLabel('FlatIconTextButton')}
                 <div class="variant-controls">
-                  <FlatIconTextButton icon={Sparkles} text="Improve" variant="info" />
+                  <FlatIconTextButton icon={Sparkles} text="Improve" />
                   <FlatIconTextButton icon={Archive} text="Archive" />
                 </div>
               </div>
