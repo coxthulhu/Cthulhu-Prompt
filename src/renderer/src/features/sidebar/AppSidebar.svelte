@@ -262,7 +262,7 @@
           label={promptFolderExpansionActionLabel}
           title={promptFolderExpansionActionLabel}
           size="compact"
-          state={canTogglePromptFolders ? 'enabled' : 'disabled'}
+          disabled={!canTogglePromptFolders}
           testId="toggle-all-prompt-folders-button"
           class="text-[var(--ui-flat-secondary-icon-glyph)] hover:text-[var(--ui-flat-hoverable-icon-glyph)]"
           onclick={handlePromptFolderExpansionAction}

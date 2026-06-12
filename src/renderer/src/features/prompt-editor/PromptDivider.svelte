@@ -56,7 +56,7 @@
           iconSize={14}
           iconClass="stroke-[3]"
           state={disabled ? 'disabled' : 'enabled'}
-          class="promptDividerPillButton min-w-24 font-bold"
+          class="min-w-24 font-bold"
           data-drop-over="false"
           aria-label={dividerText}
           testId={testId}

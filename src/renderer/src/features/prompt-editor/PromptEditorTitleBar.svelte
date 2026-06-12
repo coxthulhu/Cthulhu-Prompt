@@ -113,7 +113,7 @@
 
 <div class="prompt-editor-title-bar">
   <div class="prompt-editor-title-main">
-    <FlatIconCell icon={icon} size="title" class="prompt-editor-title-icon" />
+    <FlatIconCell icon={icon} size="title" />
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}

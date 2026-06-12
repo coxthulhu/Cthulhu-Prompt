@@ -25,7 +25,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiFlatToggleTextButton flex h-10 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] px-3.5 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
+    'flex h-10 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] px-3.5 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
     buttonStateClasses[stateClassKey],
     className
   )}
@@ -36,7 +36,7 @@
 >
   <span
     class={mergeClasses(
-      'cthulhuUiFlatToggleTextButtonTrack flex h-6 w-10 items-center rounded-full p-1 transition',
+      'flex h-6 w-10 items-center rounded-full p-1 transition',
       trackStateClasses[stateClassKey]
     )}
   >

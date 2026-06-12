@@ -76,11 +76,7 @@
 >
   <!-- Compact dropdown trigger matching the sidebar selector layout. -->
   <span class="cthulhuUiFlatSelectorButtonIconCell">
-    <Icon
-      class={mergeClasses('cthulhuUiFlatSelectorButtonIcon', iconClass)}
-      size={20}
-      aria-hidden="true"
-    />
+    <Icon class={iconClass} size={20} aria-hidden="true" />
   </span>
 
   <span class="cthulhuUiFlatSelectorButtonTextStack">

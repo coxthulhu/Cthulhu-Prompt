@@ -2,15 +2,12 @@
   import { Check, Copy } from 'lucide-svelte'
   import FlatIconButton, { type FlatIconButtonHoverVariant } from './FlatIconButton.svelte'
 
-  type FlatCopyButtonState = 'enabled' | 'disabled'
-
   type Props = {
     text: string
     label?: string
     copiedLabel?: string
     title?: string
     copiedTitle?: string
-    state?: FlatCopyButtonState
     resetDelayMs?: number
     hoverVariant?: FlatIconButtonHoverVariant
     class?: string
@@ -24,7 +21,6 @@
     copiedLabel = 'Copied',
     title = label,
     copiedTitle = copiedLabel,
-    state: buttonState = 'enabled',
     resetDelayMs = 1500,
     hoverVariant = 'neutral',
     class: className,
@@ -68,7 +64,6 @@
   icon={isCopied ? Check : Copy}
   label={isCopied ? copiedLabel : label}
   title={isCopied ? copiedTitle : title}
-  state={buttonState}
   {hoverVariant}
   class={className}
   {iconClass}

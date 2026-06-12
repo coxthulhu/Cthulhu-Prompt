@@ -3,7 +3,6 @@
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
-  export type FlatIconButtonState = 'enabled' | 'disabled'
   export type FlatIconButtonSize = 'default' | 'compact' | 'tiny' | 'sidebar-rail'
   export type FlatIconButtonBaseVariant = 'normal' | 'dim' | 'muted'
   export type FlatIconButtonHoverVariant = 'neutral' | 'accent' | 'danger' | 'glyph'
@@ -12,7 +11,6 @@
   type Props = {
     icon: ComponentType
     label: string
-    state?: FlatIconButtonState
     size?: FlatIconButtonSize
     baseVariant?: FlatIconButtonBaseVariant
     hoverVariant?: FlatIconButtonHoverVariant
@@ -37,7 +35,6 @@
   let {
     icon: Icon,
     label,
-    state = 'enabled',
     size = 'default',
     baseVariant = 'normal',
     hoverVariant = 'neutral',
@@ -57,7 +54,7 @@
     onclick
   }: Props = $props()
 
-  const isDisabled = $derived(disabled === true || state === 'disabled')
+  const isDisabled = $derived(disabled === true)
   const iconSize = $derived(size === 'default' ? 20 : size === 'tiny' ? 14 : 16)
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
@@ -82,12 +79,7 @@
   {onclick}
 >
   <!-- Flat icon button for compact icon-only actions. -->
-  <Icon
-    class={mergeClasses('cthulhuUiFlatIconButtonIcon', iconClass)}
-    size={iconSize}
-    data-testid={iconTestId}
-    aria-hidden="true"
-  />
+  <Icon class={iconClass} size={iconSize} data-testid={iconTestId} aria-hidden="true" />
 </button>
 
 <style>
@@ -96,7 +88,7 @@
     background: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-flat-hoverable-icon-glyph);
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
@@ -143,7 +135,7 @@
 
   .cthulhuUiFlatIconButton[data-base-variant='dim'] {
     background: transparent;
-    color: var(--ui-flat-hoverable-icon-glyph);
+    color: var(--ui-flat-secondary-icon-glyph);
   }
 
   .cthulhuUiFlatIconButton[data-base-variant='muted'] {
@@ -171,6 +163,11 @@
     color: var(--ui-flat-hoverable-icon-glyph);
   }
 
+  .cthulhuUiFlatIconButton[data-active='true'] {
+    background: var(--ui-flat-neutral-action-fill);
+    color: var(--ui-flat-hoverable-icon-glyph);
+  }
+
   .cthulhuUiFlatIconButton:focus-visible {
     outline: 2px solid var(--ui-flat-neutral-focus-border);
     outline-offset: 2px;
@@ -178,7 +175,7 @@
 
   .cthulhuUiFlatIconButton[data-base-variant='dim']:not([data-hover-variant='glyph']):hover,
   .cthulhuUiFlatIconButton[data-base-variant='dim']:not([data-hover-variant='glyph']):focus-visible {
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-flat-hoverable-icon-glyph);
   }
 
   .cthulhuUiFlatIconButton[data-base-variant='dim']:focus-visible {
@@ -190,4 +187,5 @@
     opacity: 0.5;
     pointer-events: none;
   }
+
 </style>
