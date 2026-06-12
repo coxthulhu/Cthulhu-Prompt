@@ -38,6 +38,7 @@
 <style>
   .cthulhuUiFlatRotatingChevron {
     align-items: center;
+    color: var(--ui-flat-hoverable-icon-glyph);
     display: flex;
     flex-shrink: 0;
     height: var(--cthulhu-ui-flat-rotating-chevron-size);

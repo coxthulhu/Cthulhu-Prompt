@@ -29,7 +29,7 @@
   style={`transition-duration: ${fadeMs}ms;`}
 >
   <div class="cthulhuUiFlatLoadingOverlayContent flex flex-col items-center gap-3">
-    <Loader class="size-6 animate-spin" />
+    <Loader class="cthulhuUiFlatLoadingOverlayIcon size-6 animate-spin" />
     <p class="text-sm font-medium">{message}</p>
   </div>
 </div>
@@ -47,5 +47,9 @@
 
   .cthulhuUiFlatLoadingOverlayContent {
     color: var(--ui-flat-secondary-text);
+  }
+
+  .cthulhuUiFlatLoadingOverlayIcon {
+    color: var(--ui-flat-secondary-icon-glyph);
   }
 </style>

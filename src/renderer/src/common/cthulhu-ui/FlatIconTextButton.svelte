@@ -94,6 +94,7 @@
   }
 
   .cthulhuUiFlatIconTextButtonIcon {
+    color: var(--ui-flat-hoverable-icon-glyph);
     flex: 0 0 auto;
     stroke-width: 2;
   }
