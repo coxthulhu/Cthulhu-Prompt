@@ -23,7 +23,7 @@
 
 <FlatCardSurface
   bind:elementRef={rowElement}
-  class={mergeClasses('prompt-editor-card-surface p-[10px]', className)}
+  class={mergeClasses('prompt-editor-card-surface', className)}
   data-layout={layout}
   {...restProps}
 >
@@ -39,14 +39,15 @@
 <style>
   :global(.prompt-editor-card-surface) {
     align-items: stretch;
+    background: var(--ui-flat-card-overlay-surface);
     box-sizing: border-box;
     display: grid;
-    gap: 10px;
     min-width: 0;
+    overflow: hidden;
   }
 
   :global(.prompt-editor-card-surface[data-layout='sidebar']) {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 38px minmax(0, 1fr);
   }
 
   :global(.prompt-editor-card-surface[data-layout='plain']) {
@@ -55,9 +56,15 @@
 
   .prompt-editor-card-body {
     align-content: start;
+    background: var(--ui-flat-editor-normal-surface);
+    border-radius: var(--cthulhu-ui-radius-card);
     display: grid;
-    gap: 8px;
-    grid-template-rows: auto auto;
     min-width: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  :global(.prompt-editor-card-surface[data-layout='sidebar']) .prompt-editor-card-body {
+    border-radius: var(--cthulhu-ui-radius-card) 0 0 var(--cthulhu-ui-radius-card);
   }
 </style>

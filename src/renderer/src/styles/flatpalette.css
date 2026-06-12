@@ -21,9 +21,13 @@
   --ui-flat-card-normal-surface-gradient-start: oklch(1 0 0 / 6%);
   --ui-flat-card-normal-surface-gradient-end: oklch(1 0 0 / 3%);
   --ui-flat-card-solid-surface: oklch(0.16 0 0);
+  --ui-flat-card-overlay-surface: oklch(0.2 0 0);
   --ui-flat-card-normal-border: oklch(1 0 0 / 12%);
   --ui-flat-card-normal-shadow: oklch(0 0 0 / 28%);
   --ui-flat-card-nested-border: oklch(1 0 0 / 6%);
+
+  /* Editor */
+  --ui-flat-editor-normal-surface: oklch(0.24 0 0);
 
   /* Neutral */
   --ui-flat-ghost-surface: transparent;

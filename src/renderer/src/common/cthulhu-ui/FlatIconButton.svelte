@@ -4,8 +4,8 @@
   import { mergeClasses } from './mergeClasses'
 
   export type FlatIconButtonState = 'enabled' | 'disabled'
-  export type FlatIconButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill'
-  export type FlatIconButtonVariant = 'ghost' | 'neutral'
+  export type FlatIconButtonSize = 'default' | 'compact' | 'rail' | 'rail-fill' | 'sidebar-rail'
+  export type FlatIconButtonVariant = 'ghost' | 'neutral' | 'dim-sidebar'
   type FlatIconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -123,6 +123,12 @@
     width: 28px;
   }
 
+  .cthulhuUiFlatIconButton[data-size='sidebar-rail'] {
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+  }
+
   .cthulhuUiFlatIconButton[data-grab-cursor='true'] {
     cursor: grab;
   }
@@ -135,6 +141,17 @@
     background: var(--ui-flat-neutral-action-fill);
   }
 
+  .cthulhuUiFlatIconButton[data-variant='dim-sidebar'] {
+    background: transparent;
+    border-bottom: 1px solid var(--ui-flat-neutral-normal-border);
+    border-radius: 0;
+    color: var(--ui-flat-hoverable-icon-glyph);
+  }
+
+  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:last-child {
+    border-bottom: 0;
+  }
+
   .cthulhuUiFlatIconButton:hover,
   .cthulhuUiFlatIconButton:focus-visible {
     background: var(--ui-flat-neutral-action-hover-fill);
@@ -143,6 +160,15 @@
   .cthulhuUiFlatIconButton:focus-visible {
     outline: 2px solid var(--ui-flat-neutral-focus-border);
     outline-offset: 2px;
+  }
+
+  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:hover,
+  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:focus-visible {
+    color: var(--ui-flat-normal-text);
+  }
+
+  .cthulhuUiFlatIconButton[data-variant='dim-sidebar']:focus-visible {
+    outline: none;
   }
 
   .cthulhuUiFlatIconButton[data-disabled='true'] {

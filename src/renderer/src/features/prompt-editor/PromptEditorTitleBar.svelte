@@ -162,20 +162,20 @@
 <style>
   .prompt-editor-title-bar {
     align-items: center;
-    background: var(--ui-neutral-muted-surface);
-    border: 1px solid var(--ui-card-nested-border);
-    border-radius: 7px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     display: grid;
-    gap: 12px;
+    gap: 8px;
     grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
-    padding: 8px 8px 8px 10px;
+    padding: 4px 6px;
   }
 
   .prompt-editor-title-main {
     align-items: center;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
   }
@@ -190,7 +190,7 @@
   .prompt-editor-title-text {
     background: transparent;
     border: 0;
-    color: var(--ui-normal-text);
+    color: var(--ui-flat-normal-text);
     font-family: inherit;
     font-size: 15px;
     font-weight: 600;
@@ -207,12 +207,12 @@
   }
 
   .prompt-editor-title-input::placeholder {
-    color: var(--ui-secondary-text);
+    color: var(--ui-flat-secondary-text);
   }
 
   .prompt-editor-metadata-row {
     align-items: center;
-    color: var(--ui-muted-text);
+    color: var(--ui-flat-muted-text);
     display: flex;
     flex-wrap: nowrap;
     font-size: 12px;
@@ -225,7 +225,7 @@
 
   .prompt-editor-metadata-folder {
     align-items: center;
-    color: var(--ui-secondary-text);
+    color: var(--ui-flat-secondary-text);
     display: inline-flex;
     flex: 0 1 auto;
     gap: 4px;
@@ -237,7 +237,7 @@
   }
 
   :global(.prompt-editor-metadata-folder-icon) {
-    color: var(--ui-secondary-icon-glyph);
+    color: var(--ui-flat-secondary-icon-glyph);
   }
 
 </style>

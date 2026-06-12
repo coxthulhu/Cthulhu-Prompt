@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
+  import type { Action } from 'svelte/action'
   import { createPromptEditorModelUri, type monaco } from '@renderer/common/Monaco'
   import type { PromptFolderSettings } from '@shared/PromptFolder'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
+  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
   import FlatPromptEditorCardSurface from './FlatPromptEditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
@@ -156,25 +158,20 @@
   })
   const findContext = getPromptFolderFindContext()
 
-  const CARD_PADDING_PX = 10
-  const SIDEBAR_WIDTH_PX = 34
-  const ROW_GAP_PX = 10
-  const BORDER_WIDTH_PX = 1
-  const MONACO_LEFT_PADDING_PX = 12
+  const MONACO_SECTION_PADDING_PX = 10
+  const SIDEBAR_WIDTH_PX = 38
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
   const OVERFLOW_TOP_PADDING_PX =
-    CARD_PADDING_PX + TITLE_BAR_HEIGHT_PX + ADDITIONAL_GAP_PX + MONACO_VERTICAL_PADDING_PX
+    MONACO_SECTION_PADDING_PX +
+    TITLE_BAR_HEIGHT_PX +
+    ADDITIONAL_GAP_PX +
+    MONACO_VERTICAL_PADDING_PX
   const OVERFLOW_LEFT_PADDING_PX = $derived(
-    rowContentLeftOffsetPx +
-      BORDER_WIDTH_PX +
-      CARD_PADDING_PX +
-      SIDEBAR_WIDTH_PX +
-      ROW_GAP_PX +
-      MONACO_LEFT_PADDING_PX
+    rowContentLeftOffsetPx + SIDEBAR_WIDTH_PX + MONACO_SECTION_PADDING_PX
   )
-  const OVERFLOW_RIGHT_PADDING_PX = BORDER_WIDTH_PX + CARD_PADDING_PX
-  const OVERFLOW_BOTTOM_PADDING_PX = CARD_PADDING_PX + MONACO_VERTICAL_PADDING_PX
+  const OVERFLOW_RIGHT_PADDING_PX = MONACO_SECTION_PADDING_PX
+  const OVERFLOW_BOTTOM_PADDING_PX = MONACO_SECTION_PADDING_PX + MONACO_VERTICAL_PADDING_PX
 
   // Side effect: keep the Monaco overflow host aligned with the prompt editor chrome.
   $effect(() => {
@@ -277,6 +274,32 @@
     // Side effect: wait for Monaco lifecycle registration before moving keyboard focus.
     await tick()
     editorInstance?.focus()
+  }
+
+  const focusEditorFromBodyClick = async (event: MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    if (target?.closest('.monaco-editor')) return
+    if (!editorInstance) {
+      await ensureHydrated()
+    }
+
+    // Side effect: wait for click-triggered hydration before focusing the editor.
+    await tick()
+    editorInstance?.focus()
+  }
+
+  const focusEditorSectionClickAction: Action<HTMLDivElement, unknown> = (node) => {
+    const handleClick = (event: MouseEvent) => {
+      void focusEditorFromBodyClick(event)
+    }
+
+    node.addEventListener('click', handleClick)
+
+    return {
+      destroy() {
+        node.removeEventListener('click', handleClick)
+      }
+    }
   }
 
   // Side effect: register this row with the find integration for navigation.
@@ -386,73 +409,79 @@
     />
   {/snippet}
 
-  <PromptEditorTitleBar
-    title={promptData.draft.title}
-    draftText={promptData.draft.text}
-    {copyText}
-    modifiedAt={promptData.modifiedAt}
-    fallbackTitle={promptData.fallbackTitle}
-    {lineCount}
-    {tokenCount}
-    onTitleChange={promptData.setTitle}
-    onSelectionChange={reportTitleSelection}
-    onTitleForwardTab={focusEditorFromTitleTab}
-    bind:inputRef={titleInputRef}
-    {rowId}
-    {scrollToWithinWindowBand}
-    {onDelete}
-  />
+  <div class="prompt-editor-title-section">
+    <PromptEditorTitleBar
+      title={promptData.draft.title}
+      draftText={promptData.draft.text}
+      {copyText}
+      modifiedAt={promptData.modifiedAt}
+      fallbackTitle={promptData.fallbackTitle}
+      {lineCount}
+      {tokenCount}
+      onTitleChange={promptData.setTitle}
+      onSelectionChange={reportTitleSelection}
+      onTitleForwardTab={focusEditorFromTitleTab}
+      bind:inputRef={titleInputRef}
+      {rowId}
+      {scrollToWithinWindowBand}
+      {onDelete}
+    />
+  </div>
 
-  <div class="prompt-editor-body-editor">
-    {#if overflowHost}
-      {#key promptId}
-        <HydratableMonacoEditor
-          initialValue={promptData.draft.text}
-          initialViewStateJson={initialEditorViewStateJson}
-          viewStateCaptureKey={`prompt:${promptId}`}
-          modelUri={createPromptEditorModelUri(promptId)}
-          containerWidthPx={virtualWindowWidthPx}
-          placeholderHeightPx={placeholderMonacoHeightPx}
-          overflowWidgetsDomNode={overflowHost}
+  <FlatSeparator />
+
+  <div class="prompt-editor-body-editor-section" use:focusEditorSectionClickAction>
+    <div class="prompt-editor-body-editor">
+      {#if overflowHost}
+        {#key promptId}
+          <HydratableMonacoEditor
+            initialValue={promptData.draft.text}
+            initialViewStateJson={initialEditorViewStateJson}
+            viewStateCaptureKey={`prompt:${promptId}`}
+            modelUri={createPromptEditorModelUri(promptId)}
+            containerWidthPx={virtualWindowWidthPx}
+            placeholderHeightPx={placeholderMonacoHeightPx}
+            overflowWidgetsDomNode={overflowHost}
+            sizingConfig={promptEditorSizingConfig}
+            {hydrationPriority}
+            {shouldDehydrate}
+            {rowId}
+            {scrollToWithinWindowBand}
+            onEditorLifecycle={handleEditorLifecycle}
+            findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
+            {findRequest}
+            onFindMatches={handleFindMatches}
+            onFindMatchReveal={(handler) => {
+              findRowHandlers.revealSectionMatch = handler
+            }}
+            onSelectionChange={reportBodySelection}
+            onImmediateHydrationRequest={(request) => {
+              findRowHandlers.requestImmediateHydration = request
+            }}
+            onViewStateCapture={(viewStateJson) => {
+              if (!workspaceId) return
+              setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
+            }}
+            onHydrationChange={handleHydrationChange}
+            onChange={(text, meta) => {
+              if (meta.heightPx !== monacoHeightPx) {
+                monacoHeightPx = meta.heightPx
+              }
+              promptData.setText(text, {
+                measuredHeightPx: getRowHeightPx(meta.heightPx),
+                widthPx: virtualWindowWidthPx,
+                devicePixelRatio
+              })
+            }}
+          />
+        {/key}
+      {:else}
+        <MonacoEditorPlaceholder
+          heightPx={placeholderMonacoHeightPx}
           sizingConfig={promptEditorSizingConfig}
-          {hydrationPriority}
-          {shouldDehydrate}
-          {rowId}
-          {scrollToWithinWindowBand}
-          onEditorLifecycle={handleEditorLifecycle}
-          findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
-          {findRequest}
-          onFindMatches={handleFindMatches}
-          onFindMatchReveal={(handler) => {
-            findRowHandlers.revealSectionMatch = handler
-          }}
-          onSelectionChange={reportBodySelection}
-          onImmediateHydrationRequest={(request) => {
-            findRowHandlers.requestImmediateHydration = request
-          }}
-          onViewStateCapture={(viewStateJson) => {
-            if (!workspaceId) return
-            setPromptEditorViewStateJson(workspaceId, promptId, viewStateJson)
-          }}
-          onHydrationChange={handleHydrationChange}
-          onChange={(text, meta) => {
-            if (meta.heightPx !== monacoHeightPx) {
-              monacoHeightPx = meta.heightPx
-            }
-            promptData.setText(text, {
-              measuredHeightPx: getRowHeightPx(meta.heightPx),
-              widthPx: virtualWindowWidthPx,
-              devicePixelRatio
-            })
-          }}
         />
-      {/key}
-    {:else}
-      <MonacoEditorPlaceholder
-        heightPx={placeholderMonacoHeightPx}
-        sizingConfig={promptEditorSizingConfig}
-      />
-    {/if}
+      {/if}
+    </div>
   </div>
 </FlatPromptEditorCardSurface>
 
@@ -465,6 +494,19 @@
     opacity: 0.72;
   }
 
+  .prompt-editor-title-section {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 10px 10px 8px;
+  }
+
+  .prompt-editor-body-editor-section {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 8px 10px 10px;
+  }
+
+  .prompt-editor-body-editor-section,
   .prompt-editor-body-editor {
     min-width: 0;
   }

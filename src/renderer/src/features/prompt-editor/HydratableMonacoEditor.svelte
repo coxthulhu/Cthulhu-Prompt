@@ -113,12 +113,6 @@
     onHydrationChange?.(nextIsHydrated)
   }
 
-  const handleFrameClick = (event: MouseEvent) => {
-    // Focus only direct frame clicks so Monaco keeps its existing cursor and selection behavior.
-    if (event.target !== event.currentTarget) return
-    editorInstance?.focus()
-  }
-
   const requestImmediateHydration = async (): Promise<void> => {
     if (shouldDehydrate) return
     if (isMonacoHydrationQueuePaused()) return
@@ -177,12 +171,8 @@
 </script>
 
 <div
-  class={cn(
-    'border border-[var(--ui-card-nested-border)] rounded-md bg-[#1e1e1e] pl-3 py-1',
-    className
-  )}
+  class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
   role="presentation"
-  onclick={handleFrameClick}
 >
   {#if isHydrated}
     <AutoSizingMonacoEditor

@@ -56,8 +56,14 @@
   import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
 
   const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
-  const flatIconButtonVariants: FlatIconButtonVariant[] = ['ghost', 'neutral']
-  const flatIconButtonSizes: FlatIconButtonSize[] = ['default', 'compact', 'rail', 'rail-fill']
+  const flatIconButtonVariants: FlatIconButtonVariant[] = ['ghost', 'neutral', 'dim-sidebar']
+  const flatIconButtonSizes: FlatIconButtonSize[] = [
+    'default',
+    'compact',
+    'rail',
+    'rail-fill',
+    'sidebar-rail'
+  ]
   const folderDropdownItems: FlatDropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
@@ -264,7 +270,10 @@
               <span>{variant}</span>
               <div class="variant-controls icon-only-controls">
                 {#each flatIconButtonSizes as size (size)}
-                  <div class="icon-only-sample" data-fill-size={size === 'rail-fill'}>
+                  <div
+                    class="icon-only-sample"
+                    data-fill-size={size === 'rail-fill' || size === 'sidebar-rail'}
+                  >
                     <FlatIconButton
                       icon={Settings}
                       label={`${variant} ${size}`}

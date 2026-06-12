@@ -1,8 +1,8 @@
 // Match Monaco's default Windows line height ratio when lineHeight=0.
 const LINE_HEIGHT_RATIO = 1.35
-export const TITLE_BAR_HEIGHT_PX = 60
-export const MONACO_PADDING_PX = 10
-export const ADDITIONAL_GAP_PX = 8
+export const TITLE_BAR_HEIGHT_PX = 48
+export const MONACO_PADDING_PX = 0
+export const ADDITIONAL_GAP_PX = 17
 const ROW_CARD_VERTICAL_PADDING_PX = 20
 const ROW_CHROME_HEIGHT_PX =
   ROW_CARD_VERTICAL_PADDING_PX + TITLE_BAR_HEIGHT_PX + MONACO_PADDING_PX + ADDITIONAL_GAP_PX

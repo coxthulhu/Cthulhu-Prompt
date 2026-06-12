@@ -94,8 +94,8 @@
   <FlatIconButton
     icon={ChevronUp}
     label="Move prompt up"
-    size="rail"
-    variant="neutral"
+    size="sidebar-rail"
+    variant="dim-sidebar"
     testId="prompt-move-up"
     disabled={isFirstPrompt}
     onclick={handleMoveUpClick}
@@ -104,8 +104,8 @@
   <FlatIconButton
     icon={GripVertical}
     label="Drag prompt"
-    size="rail-fill"
-    variant="neutral"
+    size="sidebar-rail"
+    variant="dim-sidebar"
     iconClass="stroke-[2.5]"
     testId="prompt-drag-handle"
     buttonAction={dragHandleAction}
@@ -116,8 +116,8 @@
   <FlatIconButton
     icon={ChevronDown}
     label="Move prompt down"
-    size="rail"
-    variant="neutral"
+    size="sidebar-rail"
+    variant="dim-sidebar"
     testId="prompt-move-down"
     disabled={isLastPrompt}
     onclick={handleMoveDownClick}
@@ -126,12 +126,17 @@
 
 <style>
   .prompt-editor-sidebar {
+    background: var(--ui-flat-card-overlay-surface);
     display: grid;
-    flex: 0 0 28px;
-    gap: 6px;
-    grid-template-rows: 28px minmax(0, 1fr) 28px;
+    flex: 0 0 38px;
+    grid-template-rows: 44px minmax(44px, 1fr) 44px;
     height: 100%;
-    min-height: 136px;
-    width: 28px;
+    min-height: 156px;
+    min-width: 0;
+    width: 38px;
+  }
+
+  .prompt-editor-sidebar:focus-within {
+    box-shadow: inset 0 0 0 2px var(--ui-flat-neutral-focus-border);
   }
 </style>

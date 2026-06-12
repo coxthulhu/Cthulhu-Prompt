@@ -59,11 +59,11 @@
     background: var(--ui-flat-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-flat-hoverable-text);
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     gap: 7px;
     height: 30px;

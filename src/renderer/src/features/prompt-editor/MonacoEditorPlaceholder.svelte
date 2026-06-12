@@ -15,7 +15,7 @@
 </script>
 
 <div
-  class={cn('bg-[#1e1e1e]', className)}
+  class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
   style={`height:${clampedHeightPx}px; position: relative;`}
   data-testid="monaco-placeholder"
 ></div>

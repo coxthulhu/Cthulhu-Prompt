@@ -25,7 +25,7 @@
 
 {#snippet dividerContent({ isOver = false } = {})}
   {@const DividerIcon = isOver ? ArrowDownToLine : Plus}
-  {@const dividerText = isOver ? 'Move here' : 'Add prompt'}
+  {@const dividerText = isOver ? 'Move here' : 'Add Prompt'}
   <div
     class="promptDividerRow grid items-center"
     data-drop-over={isOver ? 'true' : 'false'}
