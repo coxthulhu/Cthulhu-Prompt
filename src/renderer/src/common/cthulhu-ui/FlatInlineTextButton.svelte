@@ -14,7 +14,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiInlineTextButton', className)}
+  class={mergeClasses('cthulhuUiFlatInlineTextButton', className)}
   data-testid={testId}
   {title}
   {onclick}
@@ -23,7 +23,7 @@
 </button>
 
 <style>
-  .cthulhuUiInlineTextButton {
+  .cthulhuUiFlatInlineTextButton {
     display: inline-flex;
     min-width: 0;
     cursor: pointer;
@@ -31,7 +31,7 @@
     border: 0;
     background: transparent;
     padding: var(--cthulhu-ui-inline-text-button-padding, 0);
-    color: var(--ui-normal-text);
+    color: var(--ui-muted-text);
     font-size: 13px;
     font-weight: 400;
     line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
@@ -39,4 +39,8 @@
     transition: color 50ms ease-out;
   }
 
+  .cthulhuUiFlatInlineTextButton:hover,
+  .cthulhuUiFlatInlineTextButton:focus-visible {
+    color: var(--ui-normal-text);
+  }
 </style>

@@ -200,6 +200,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-5"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toHaveCount(0)
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toContainText('Show all (55 more)')
 
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
     await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText(
@@ -230,6 +231,7 @@ describe('Prompt folder prompt tree', () => {
     }, SHORT_SHOW_LESS_SELECTOR)
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toHaveCount(0)
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toContainText('Show all (55 more)')
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 0)
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)

@@ -77,6 +77,7 @@
         kind: 'folder-prompt-visibility-toggle'
         folder: PromptFolder
         isShowingAll: boolean
+        hiddenPromptCount: number
         lastVisiblePromptId: string
       }
     | {
@@ -548,6 +549,7 @@
 
         if (folder.promptIds.length > PROMPT_TREE_VISIBLE_PROMPT_LIMIT) {
           const lastVisiblePromptId = visiblePromptIds[visiblePromptIds.length - 1]
+          const hiddenPromptCount = folder.promptIds.length - visiblePromptIds.length
           if (lastVisiblePromptId) {
             items.push({
               id: folderPromptVisibilityToggleRowId(folder.id),
@@ -555,6 +557,7 @@
                 kind: 'folder-prompt-visibility-toggle',
                 folder,
                 isShowingAll,
+                hiddenPromptCount,
                 lastVisiblePromptId
               }
             })
@@ -666,6 +669,7 @@
   <PromptTreeVisibilityToggleRow
     folder={props.row.folder}
     isShowingAll={props.row.isShowingAll}
+    hiddenPromptCount={props.row.hiddenPromptCount}
     getVisibilityDroppableOptions={() => getPromptTreeDroppableOptions(
       props.rowId,
       'bottom',
