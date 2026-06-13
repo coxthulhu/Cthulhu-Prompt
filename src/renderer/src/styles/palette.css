@@ -43,15 +43,12 @@
   --ui-neutral-field-surface: oklch(0.209 0.01 268.187);
   --ui-neutral-selection-surface: oklch(1 0 0 / 22%);
   --ui-neutral-focus-border: oklch(1 0 0 / 28%);
-  --ui-neutral-interactive-normal-border: oklch(1 0 0 / 30%);
-  --ui-neutral-interactive-hover-border: oklch(1 0 0 / 42%);
   --ui-neutral-action-fill: oklch(1 0 0 / 11.3%);
   --ui-neutral-action-hover-fill: oklch(1 0 0 / 16.3%);
 
   /* Accent */
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
-  --ui-accent-hover-border: oklch(0.827 0.108 306.383 / 42%);
   --ui-accent-strong-border: oklch(0.827 0.108 306.383 / 68%);
   --ui-accent-action-fill: oklch(0.606 0.219 292.717 / 25.2%);
   --ui-accent-action-hover-fill: oklch(0.606 0.219 292.717 / 36%);
@@ -68,9 +65,7 @@
 
   /* Danger */
   --ui-danger-normal-surface: oklch(0.396 0.133 25.723 / 22%);
-  --ui-danger-normal-border: oklch(0.711 0.166 22.216 / 28%);
   --ui-danger-normal-ring: oklch(0.696 0.196 32.321 / 40%);
-  --ui-danger-hover-border: oklch(0.711 0.166 22.216 / 42%);
   --ui-danger-strong-border: oklch(0.704 0.191 22.216);
   --ui-danger-icon-glyph: oklch(1 0.07 17.717);
   --ui-danger-action-fill: oklch(0.396 0.133 25.723 / 52.4%);
