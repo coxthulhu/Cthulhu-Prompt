@@ -70,6 +70,6 @@
     gap: 8px;
     min-width: 0;
     overflow: hidden;
-    padding: 12px 16px;
+    padding: 8px 16px;
   }
 </style>

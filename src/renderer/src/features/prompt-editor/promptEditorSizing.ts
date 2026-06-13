@@ -1,6 +1,6 @@
 // Match Monaco's default Windows line height ratio when lineHeight=0.
 const LINE_HEIGHT_RATIO = 1.35
-export const PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX = 67
+export const PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX = 59
 export const PROMPT_EDITOR_SEPARATOR_HEIGHT_PX = 1
 export const PROMPT_EDITOR_BODY_PADDING_TOP_PX = 8
 export const PROMPT_EDITOR_BODY_PADDING_RIGHT_PX = 10
