@@ -109,7 +109,7 @@ const getPromptDividerHighlightStyles = async (
   return await locator.evaluate((button) => {
     const buttonStyle = getComputedStyle(button)
     const separators = Array.from(
-      button.parentElement?.querySelectorAll<HTMLElement>('.cthulhuUiFlatSeparator') ?? []
+      button.parentElement?.querySelectorAll<HTMLElement>('.cthulhuUiSeparator') ?? []
     )
 
     return {

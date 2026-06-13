@@ -10,10 +10,10 @@
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
-  import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
-  import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
-  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
+  import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
@@ -87,13 +87,13 @@
           : 'ready'
   )
 
-  const promptFolderSelectorPlaceholder: FlatDropdownPopupDetailedItem = {
+  const promptFolderSelectorPlaceholder: DropdownPopupDetailedItem = {
     id: 'no-prompt-folders',
     label: 'No prompt folders',
     detail: 'Create one from the menu',
     icon: Folder
   }
-  const promptFolderSelectorFooterItem: FlatDropdownPopupDetailedItem = {
+  const promptFolderSelectorFooterItem: DropdownPopupDetailedItem = {
     id: 'add-prompt-folder',
     label: 'Add Prompt Folder',
     detail: 'Create a new prompt folder',
@@ -101,7 +101,7 @@
     testId: 'sidebar-prompt-folder-dropdown-add-item'
   }
   const promptFolderDropdownItems = $derived.by(
-    (): FlatDropdownPopupDetailedItem[] =>
+    (): DropdownPopupDetailedItem[] =>
       promptFolders.map((promptFolder) => {
         const promptCount = promptFolder.promptIds.length
 
@@ -117,7 +117,7 @@
         }
       })
   )
-  const selectedPromptFolderDropdownItem = $derived.by((): FlatDropdownPopupDetailedItem => {
+  const selectedPromptFolderDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
     if (promptFolderDropdownItems.length === 0) {
       return promptFolderSelectorPlaceholder
     }
@@ -179,7 +179,7 @@
     }
   })
 
-  const handlePromptFolderDropdownSelect = (item: FlatDropdownPopupDetailedItem) => {
+  const handlePromptFolderDropdownSelect = (item: DropdownPopupDetailedItem) => {
     if (item.id === promptFolderSelectorFooterItem.id) {
       createPromptFolderDialog?.openDialog()
       return
@@ -215,7 +215,7 @@
             {workspaceDisplay.title}
           </h1>
           {#if workspacePath}
-            <FlatIconButton
+            <IconButton
               icon={ExternalLink}
               label="Open Workspace Folder"
               title="Open Workspace Folder"
@@ -237,10 +237,10 @@
       </div>
     </div>
   </div>
-  <FlatSeparator />
+  <Separator />
 
   <div class="sidebarTopLevelInsetWithInnerPadding py-1">
-    <FlatSelectorButtonWithDropdown
+    <SelectorButtonWithDropdown
       label="Prompt folder selector"
       items={promptFolderDropdownItems}
       selectedItem={selectedPromptFolderDropdownItem}
@@ -251,20 +251,20 @@
       onselect={handlePromptFolderDropdownSelect}
     />
   </div>
-  <FlatSeparator />
+  <Separator />
 
   <div class="cthulhuSidebarPromptSectionHeader">
     <p class="cthulhuSidebarPromptSectionTitle">Prompts</p>
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
-        <FlatIconButton
+        <IconButton
           icon={promptFolderExpansionActionIcon}
           label={promptFolderExpansionActionLabel}
           title={promptFolderExpansionActionLabel}
           size="compact"
           disabled={!canTogglePromptFolders}
           testId="toggle-all-prompt-folders-button"
-          class="text-[var(--ui-flat-secondary-icon-glyph)] hover:text-[var(--ui-flat-hoverable-icon-glyph)]"
+          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={handlePromptFolderExpansionAction}
         />
         <CreatePromptFolderDialog
@@ -301,7 +301,7 @@
 <style>
   .cthulhuSidebarPromptSectionTitle {
     margin: 0;
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
     font-size: 15px;
     font-weight: 600;
     line-height: 20px;
@@ -325,11 +325,11 @@
 
   .cthulhuSidebarWorkspaceName {
     min-width: 0;
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuSidebarWorkspacePath {
-    color: var(--ui-flat-muted-text);
+    color: var(--ui-muted-text);
   }
 
   .cthulhuSidebarWorkspaceTitleRow {

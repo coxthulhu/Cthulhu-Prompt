@@ -1,7 +1,7 @@
 /* Shared visual refresh for the sidebar surface and top navigation buttons. */
 :root {
-  --sidebar-gradient-top: var(--ui-flat-card-normal-surface-gradient-start);
-  --sidebar-gradient-bottom: var(--ui-flat-card-normal-surface-gradient-end);
+  --sidebar-gradient-top: var(--ui-card-normal-surface-gradient-start);
+  --sidebar-gradient-bottom: var(--ui-card-normal-surface-gradient-end);
 }
 
 .sidebarSurface {
@@ -20,12 +20,12 @@
   align-items: center;
   gap: 4px;
   padding: 10px 0;
-  border-right: 1px solid var(--ui-flat-neutral-muted-border);
-  border-top: 1px solid var(--ui-flat-neutral-hover-border);
+  border-right: 1px solid var(--ui-neutral-muted-border);
+  border-top: 1px solid var(--ui-neutral-hover-border);
 }
 
 .appSidebar {
-  border-top: 1px solid var(--ui-flat-neutral-hover-border);
+  border-top: 1px solid var(--ui-neutral-hover-border);
 }
 
 .sidebarTopLevelInset {
@@ -40,7 +40,7 @@
 }
 
 .sidebarFrameBorder {
-  border-color: var(--ui-flat-neutral-hover-border);
+  border-color: var(--ui-neutral-hover-border);
 }
 
 .mainScreenSurface {
@@ -59,27 +59,27 @@
   align-items: center;
   gap: 0;
   border-radius: var(--cthulhu-ui-radius-control);
-  background-color: var(--ui-flat-ghost-surface);
+  background-color: var(--ui-ghost-surface);
   padding: 1px;
-  color: var(--ui-flat-hoverable-text);
+  color: var(--ui-hoverable-text);
   transition:
     background-color 50ms ease-out,
     color 50ms ease-out;
 }
 
 .sidebarPromptTreeRow:hover {
-  background-color: var(--ui-flat-neutral-normal-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-neutral-normal-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] {
-  background-color: var(--ui-flat-neutral-emphasis-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-neutral-emphasis-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-over='true'] {
-  background-color: var(--ui-flat-info-normal-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-info-normal-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeToggleButton {
@@ -90,7 +90,7 @@
   align-items: center;
   gap: 8px;
   border: 0;
-  background: var(--ui-flat-ghost-surface);
+  background: var(--ui-ghost-surface);
   padding-inline: 10px 6px;
   color: inherit;
   text-align: left;
@@ -98,7 +98,7 @@
 
 .sidebarPromptTreeChevronWrap {
   border-radius: var(--cthulhu-ui-radius-control);
-  color: var(--ui-flat-hoverable-icon-glyph);
+  color: var(--ui-hoverable-icon-glyph);
 }
 
 .sidebarPromptTreeFolderLabel {
@@ -119,12 +119,12 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--cthulhu-ui-radius-card);
-  background-color: var(--ui-flat-ghost-surface);
+  background-color: var(--ui-ghost-surface);
   padding: 0 8px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  color: var(--ui-flat-secondary-text);
+  color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeActionSlot {
@@ -155,8 +155,8 @@
   justify-content: center;
   border: 0;
   border-radius: 6px;
-  background: var(--ui-flat-ghost-surface);
-  color: var(--ui-flat-hoverable-icon-glyph);
+  background: var(--ui-ghost-surface);
+  color: var(--ui-hoverable-icon-glyph);
   cursor: pointer;
   transition:
     background-color 50ms ease-out,
@@ -170,24 +170,24 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeActionButton,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeActionButton {
-  color: var(--ui-flat-normal-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeChevronWrap,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeChevronWrap,
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeChevronWrap,
 .sidebarPromptTreeRow[data-over='true'] .sidebarPromptTreeChevronWrap {
-  color: var(--ui-flat-normal-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeActionButton:hover {
-  background-color: var(--ui-flat-neutral-normal-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-neutral-normal-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeActionButton[data-active='true'],
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeActionButton {
-  color: var(--ui-flat-normal-text);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountInActionSlot,
@@ -197,13 +197,13 @@
 
 .sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
-  background-color: var(--ui-flat-ghost-surface);
-  color: var(--ui-flat-secondary-text);
+  background-color: var(--ui-ghost-surface);
+  color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeCountBadge {
-  background-color: var(--ui-flat-ghost-surface);
-  color: var(--ui-flat-secondary-text);
+  background-color: var(--ui-ghost-surface);
+  color: var(--ui-secondary-text);
 }
 
 .sidebarPromptTreeSettingsRow {
@@ -226,7 +226,7 @@
   bottom: -1px;
   left: 20px;
   width: 1px;
-  background-color: var(--ui-flat-neutral-emphasis-border);
+  background-color: var(--ui-neutral-emphasis-border);
 }
 
 .sidebarPromptTreeSettingsButton {
@@ -237,9 +237,9 @@
   align-items: center;
   gap: 8px;
   border-radius: 8px;
-  background-color: var(--ui-flat-ghost-surface);
+  background-color: var(--ui-ghost-surface);
   padding: 1px 8px 1px 12px;
-  color: var(--ui-flat-hoverable-text);
+  color: var(--ui-hoverable-text);
   text-align: left;
   transition:
     background-color 50ms ease-out,
@@ -247,18 +247,18 @@
 }
 
 .sidebarPromptTreeSettingsButton:hover {
-  background-color: var(--ui-flat-neutral-normal-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-neutral-normal-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeSettingsButton[data-active='true'] {
-  background-color: var(--ui-flat-neutral-emphasis-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-neutral-emphasis-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeSettingsButton[data-dragging='true'] {
-  background-color: var(--ui-flat-info-normal-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-info-normal-surface);
+  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeSettingsLabel {
@@ -301,17 +301,17 @@
 }
 
 .promptDragGhostButton {
-  background-color: var(--ui-flat-neutral-field-surface);
-  color: var(--ui-flat-normal-text);
+  background-color: var(--ui-neutral-field-surface);
+  color: var(--ui-normal-text);
   cursor: grabbing;
 }
 
 .sidebarPromptTreeStatus {
-  color: var(--ui-flat-muted-text);
+  color: var(--ui-muted-text);
 }
 
 .sidebarPromptTreeStatus svg {
-  color: var(--ui-flat-muted-icon-glyph);
+  color: var(--ui-muted-icon-glyph);
 }
 
 .sidebarPromptTreeDropIndicator {
@@ -338,7 +338,7 @@
 
 .sidebarPromptTreeDropIndicatorStroke {
   fill: none;
-  stroke: var(--ui-flat-info-strong-border);
+  stroke: var(--ui-info-strong-border);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;

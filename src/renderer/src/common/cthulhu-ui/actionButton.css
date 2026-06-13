@@ -1,0 +1,61 @@
+.cthulhuUiActionButton {
+  align-items: center;
+  background-color: var(--ui-neutral-action-fill);
+  border: 0;
+  border-radius: var(--cthulhu-ui-radius-control);
+  color: var(--ui-normal-text);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+  height: 40px;
+  line-height: 20px;
+  max-width: 14rem;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 14px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+  white-space: nowrap;
+}
+
+.cthulhuUiActionButton:hover,
+.cthulhuUiActionButton:focus-visible {
+  background-color: var(--ui-neutral-action-hover-fill);
+  color: var(--ui-normal-text);
+}
+
+.cthulhuUiActionButton[data-variant='accent'] {
+  background-color: var(--ui-accent-action-fill);
+  color: var(--ui-normal-text);
+}
+
+.cthulhuUiActionButton[data-variant='accent']:hover,
+.cthulhuUiActionButton[data-variant='accent']:focus-visible {
+  background-color: var(--ui-accent-action-hover-fill);
+  color: var(--ui-normal-text);
+}
+
+.cthulhuUiActionButton[data-variant='danger'] {
+  background-color: var(--ui-danger-action-fill);
+  color: var(--ui-normal-text);
+}
+
+.cthulhuUiActionButton[data-variant='danger']:hover,
+.cthulhuUiActionButton[data-variant='danger']:focus-visible {
+  background-color: var(--ui-danger-action-hover-fill);
+  color: var(--ui-normal-text);
+}
+
+.cthulhuUiActionButton:focus-visible {
+  outline: 2px solid var(--ui-neutral-focus-border);
+  outline-offset: 2px;
+}
+
+.cthulhuUiActionButton span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

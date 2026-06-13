@@ -1,8 +1,8 @@
 <script lang="ts">
-  import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
-  import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
-  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
+  import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { Trash2 } from 'lucide-svelte'
 
   type Props = {
@@ -47,7 +47,7 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-1.5">
-  <FlatCopyButton
+  <CopyButton
     text={copyText ?? draftText}
     label={copyLabel}
     title={copyTitle}
@@ -55,8 +55,8 @@
     testId="prompt-copy-button"
   />
   {#if onDelete}
-    <FlatSeparator orientation="vertical" class="h-6" />
-    <FlatIconButton
+    <Separator orientation="vertical" class="h-6" />
+    <IconButton
       icon={Trash2}
       label="Delete prompt"
       title="Delete prompt"
@@ -68,7 +68,7 @@
 </div>
 
 {#if onDelete}
-  <FlatConfirmationDialog
+  <ConfirmationDialog
     bind:open={isDeleteDialogOpen}
     title="Delete Prompt"
     description="Are you sure you want to delete this prompt?"

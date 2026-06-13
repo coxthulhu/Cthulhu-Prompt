@@ -7,8 +7,8 @@
     type PromptFolderSettings
   } from '@shared/PromptFolder'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import FlatInfoRow from '@renderer/common/cthulhu-ui/FlatInfoRow.svelte'
-  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
+  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import {
@@ -17,7 +17,7 @@
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
-  import FlatPromptEditorCardSurface from '../prompt-editor/FlatPromptEditorCardSurface.svelte'
+  import PromptEditorCardSurface from '../prompt-editor/PromptEditorCardSurface.svelte'
   import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
   import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
@@ -325,7 +325,7 @@
   data-testid={`prompt-folder-settings-${promptFolderId}-${field}`}
   data-virtual-window-row
 >
-  <FlatPromptEditorCardSurface
+  <PromptEditorCardSurface
     style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
   >
     <div class="prompt-folder-settings-title-section">
@@ -340,10 +340,10 @@
         copyTitle={section.copyTitle}
       />
 
-      <FlatInfoRow text={section.infoText} />
+      <InfoRow text={section.infoText} />
     </div>
 
-    <FlatSeparator />
+    <Separator />
 
     <div class="prompt-folder-settings-editor-section" use:focusEditorBodyClickAction>
       {#if overflowHost}
@@ -404,7 +404,7 @@
         <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} {sizingConfig} />
       {/if}
     </div>
-  </FlatPromptEditorCardSurface>
+  </PromptEditorCardSurface>
 </div>
 
 <style>

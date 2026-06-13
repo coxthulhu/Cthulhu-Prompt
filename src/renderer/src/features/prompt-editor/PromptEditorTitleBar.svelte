@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
-  import FlatSeparatorDot from '@renderer/common/cthulhu-ui/FlatSeparatorDot.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import type { ComponentType } from 'svelte'
@@ -113,7 +113,7 @@
 
 <div class="prompt-editor-title-bar">
   <div class="prompt-editor-title-main">
-    <FlatIconCell icon={icon} size="title" />
+    <IconCell icon={icon} size="title" />
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}
@@ -142,12 +142,12 @@
           <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
           {metadataFolderLabel}
         </span>
-        <FlatSeparatorDot />
+        <SeparatorDot />
         <span data-testid="prompt-line-count">{lineCountLabel}</span>
-        <FlatSeparatorDot />
+        <SeparatorDot />
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         {#if modifiedAt}
-          <FlatSeparatorDot />
+          <SeparatorDot />
           <span data-testid="prompt-modified-time" title={modifiedFullLabel}>
             {modifiedUpdatedLabel}
           </span>
@@ -190,7 +190,7 @@
   .prompt-editor-title-text {
     background: transparent;
     border: 0;
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
     font-family: inherit;
     font-size: 15px;
     font-weight: 600;
@@ -207,12 +207,12 @@
   }
 
   .prompt-editor-title-input::placeholder {
-    color: var(--ui-flat-secondary-text);
+    color: var(--ui-secondary-text);
   }
 
   .prompt-editor-metadata-row {
     align-items: center;
-    color: var(--ui-flat-muted-text);
+    color: var(--ui-muted-text);
     display: flex;
     flex-wrap: nowrap;
     font-size: 12px;
@@ -225,7 +225,7 @@
 
   .prompt-editor-metadata-folder {
     align-items: center;
-    color: var(--ui-flat-secondary-text);
+    color: var(--ui-secondary-text);
     display: inline-flex;
     flex: 0 1 auto;
     gap: 4px;
@@ -237,7 +237,7 @@
   }
 
   :global(.prompt-editor-metadata-folder-icon) {
-    color: var(--ui-flat-secondary-icon-glyph);
+    color: var(--ui-secondary-icon-glyph);
   }
 
 </style>

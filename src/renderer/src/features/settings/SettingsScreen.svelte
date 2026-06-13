@@ -1,15 +1,15 @@
 <script lang="ts">
-  import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
-  import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
-  import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
-  import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
-  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
-  import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
-  import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
-  import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
-  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
-  import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
+  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
+  import Card from '@renderer/common/cthulhu-ui/Card.svelte'
+  import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
+  import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
+  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import { Bug, ExternalLink, Hash, Info, RefreshCcw, Rows3, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
@@ -164,19 +164,19 @@
   data-testid="settings-screen"
 >
   <div class="flex w-full max-w-4xl flex-col gap-4">
-    <FlatTitle title="System Settings" />
+    <Title title="System Settings" />
 
-    <FlatCard label="Editor & layout">
+    <Card label="Editor & layout">
       <div class="flex flex-col">
-        <FlatSettingRow
+        <SettingRow
           testId="editor-layout-font-size-row"
           icon={Type}
           label="Font Size"
           detail="Sets the base font size used inside the prompt editor."
         >
           {#snippet control()}
-            <FlatFloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
-              <FlatNumericStepperInput
+            <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
+              <NumericStepperInput
                 data-testid="font-size-input"
                 value={systemSettingsState.promptFontSizeInput}
                 min={MIN_PROMPT_FONT_SIZE}
@@ -189,30 +189,30 @@
                 onvaluechange={setSystemSettingsDraftFontSizeInput}
                 onblur={handleInputBlur}
               />
-            </FlatFloatingValidationMessage>
+            </FloatingValidationMessage>
           {/snippet}
 
           {#snippet actions()}
-            <FlatButton
+            <Button
               icon={RefreshCcw}
               text="Reset"
               onclick={handleFontSizeReset}
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </FlatSettingRow>
+        </SettingRow>
 
-        <FlatSeparator />
+        <Separator />
 
-        <FlatSettingRow
+        <SettingRow
           testId="editor-layout-min-lines-row"
           icon={Rows3}
           label="Minimum Line Count"
           detail="Sets the minimum number of visible lines in prompt editors."
         >
           {#snippet control()}
-            <FlatFloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
-              <FlatNumericStepperInput
+            <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
+              <NumericStepperInput
                 data-testid="min-lines-input"
                 value={systemSettingsState.promptEditorMinLinesInput}
                 min={MIN_PROMPT_EDITOR_MIN_LINES}
@@ -225,30 +225,30 @@
                 onvaluechange={setSystemSettingsDraftPromptEditorMinLinesInput}
                 onblur={handleInputBlur}
               />
-            </FlatFloatingValidationMessage>
+            </FloatingValidationMessage>
           {/snippet}
 
           {#snippet actions()}
-            <FlatButton
+            <Button
               icon={RefreshCcw}
               text="Reset"
               onclick={handleMinLinesReset}
               state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </FlatSettingRow>
+        </SettingRow>
 
-        <FlatSeparator />
+        <Separator />
 
-        <FlatSettingRow
+        <SettingRow
           testId="editor-layout-max-lines-row"
           icon={Rows3}
           label="Maximum Line Count"
           detail="Sets the maximum number of visible lines before prompt editors begin scrolling."
         >
           {#snippet control()}
-            <FlatFloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
-              <FlatNumericStepperInput
+            <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
+              <NumericStepperInput
                 data-testid="max-lines-input"
                 value={systemSettingsState.promptEditorMaxLinesInput}
                 min={MIN_PROMPT_EDITOR_MAX_LINES}
@@ -261,29 +261,29 @@
                 onvaluechange={setSystemSettingsDraftPromptEditorMaxLinesInput}
                 onblur={handleInputBlur}
               />
-            </FlatFloatingValidationMessage>
+            </FloatingValidationMessage>
           {/snippet}
 
           {#snippet actions()}
-            <FlatButton
+            <Button
               icon={RefreshCcw}
               text="Reset"
               onclick={handleMaxLinesReset}
               state={isMaxLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </FlatSettingRow>
+        </SettingRow>
 
-        <FlatSeparator />
+        <Separator />
 
-        <FlatSettingRow
+        <SettingRow
           testId="editor-layout-line-numbers-row"
           icon={Hash}
           label="Show Line Numbers"
           detail="Display line numbers beside prompt text for easier review."
         >
           {#snippet control()}
-            <FlatToggleTextButton
+            <ToggleTextButton
               testId="show-line-numbers-toggle"
               pressed={systemSettingsState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}
@@ -292,27 +292,27 @@
           {/snippet}
 
           {#snippet actions()}
-            <FlatButton
+            <Button
               icon={RefreshCcw}
               text="Reset"
               onclick={handleShowLineNumbersReset}
               state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </FlatSettingRow>
+        </SettingRow>
       </div>
-    </FlatCard>
+    </Card>
 
-    <FlatCard label="About">
+    <Card label="About">
       <div class="flex flex-col">
-        <FlatDisplayRow
+        <DisplayRow
           testId="about-issue-display-row"
           icon={Bug}
           label="Report an Issue"
           detail="Report bugs, request improvements, or check whether a problem is already tracked."
         >
           {#snippet trailing()}
-            <FlatLinkButton
+            <LinkButton
               href={githubIssuesUrl}
               text="Open Github Issues"
               endIcon={ExternalLink}
@@ -322,22 +322,22 @@
               rel="noreferrer"
             />
           {/snippet}
-        </FlatDisplayRow>
+        </DisplayRow>
 
-        <FlatSeparator />
+        <Separator />
 
-        <FlatDisplayRow
+        <DisplayRow
           testId="about-version-display-row"
           icon={Info}
           label="Current Version"
           detail="The version currently installed on this device."
         >
           {#snippet trailing()}
-            <FlatValuePill text={appVersionLabel} testId="about-version-display-value" />
+            <ValuePill text={appVersionLabel} testId="about-version-display-value" />
           {/snippet}
-        </FlatDisplayRow>
+        </DisplayRow>
       </div>
-    </FlatCard>
+    </Card>
 
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>

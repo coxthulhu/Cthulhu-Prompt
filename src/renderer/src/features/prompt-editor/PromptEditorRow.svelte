@@ -6,8 +6,8 @@
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
-  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
-  import FlatPromptEditorCardSurface from './FlatPromptEditorCardSurface.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -389,7 +389,7 @@
   }
 </script>
 
-<FlatPromptEditorCardSurface
+<PromptEditorCardSurface
   bind:rowElement
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
@@ -428,7 +428,7 @@
     />
   </div>
 
-  <FlatSeparator />
+  <Separator />
 
   <div class="prompt-editor-body-editor-section" use:focusEditorSectionClickAction>
     {#if overflowHost}
@@ -481,7 +481,7 @@
       />
     {/if}
   </div>
-</FlatPromptEditorCardSurface>
+</PromptEditorCardSurface>
 
 <style>
   :global(.prompt-editor-card-surface) {

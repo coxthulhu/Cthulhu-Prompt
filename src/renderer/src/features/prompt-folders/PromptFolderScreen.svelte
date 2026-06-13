@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import { Search } from 'lucide-svelte'
-  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
@@ -48,7 +48,7 @@
             </button>
           </div>
 
-          <FlatIconButton
+          <IconButton
             icon={Search}
             label="Find in Folder (Control + F)"
             title="Find in Folder (Control + F)"
@@ -98,7 +98,7 @@
       </div>
 
       {#if controller.loadingOverlay.isVisible()}
-        <FlatLoadingOverlay
+        <LoadingOverlay
           testId="prompt-folder-loading-overlay"
           fadeMs={controller.loadingOverlayFadeMs}
           isFading={controller.loadingOverlay.isFading()}
@@ -111,27 +111,27 @@
 
 <style>
   .prompt-folder-header-bar {
-    border-bottom: 1px solid var(--ui-flat-neutral-muted-border);
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
   }
 
   .prompt-folder-header-breadcrumb,
   .prompt-folder-header-folder {
-    color: var(--ui-flat-muted-text);
+    color: var(--ui-muted-text);
   }
 
   .prompt-folder-header-folder:hover {
-    color: var(--ui-flat-hoverable-text);
+    color: var(--ui-hoverable-text);
   }
 
   .prompt-folder-header-separator {
-    color: var(--ui-flat-neutral-emphasis-border);
+    color: var(--ui-neutral-emphasis-border);
   }
 
   .prompt-folder-header-section {
-    color: var(--ui-flat-hoverable-text);
+    color: var(--ui-hoverable-text);
   }
 
   .prompt-folder-header-section:hover {
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
   }
 </style>

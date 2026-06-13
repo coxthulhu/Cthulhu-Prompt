@@ -102,7 +102,7 @@
 
         <button
           type="button"
-          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-[var(--ui-flat-ghost-surface)] z-10"
+          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-[var(--ui-ghost-surface)] z-10"
           data-testid={handleTestId}
           aria-label="Resize sidebar"
           onmousedown={handleMouseDown}

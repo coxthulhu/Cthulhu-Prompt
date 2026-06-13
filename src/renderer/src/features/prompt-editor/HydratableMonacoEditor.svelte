@@ -172,7 +172,7 @@
 
 {#if isHydrated}
   <AutoSizingMonacoEditor
-    class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
+    class={cn('bg-[var(--ui-editor-normal-surface)]', className)}
     {initialValue}
     {initialViewStateJson}
     {viewStateCaptureKey}
@@ -194,7 +194,7 @@
   />
 {:else}
   <MonacoEditorPlaceholder
-    class={cn('bg-[var(--ui-flat-editor-normal-surface)]', className)}
+    class={cn('bg-[var(--ui-editor-normal-surface)]', className)}
     heightPx={placeholderHeightPx}
     {sizingConfig}
   />

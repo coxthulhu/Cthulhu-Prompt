@@ -1,9 +1,9 @@
 <script lang="ts">
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import FlatDialog from '@renderer/common/cthulhu-ui/FlatDialog.svelte'
-  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
-  import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
-  import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
+  import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import { FolderPlus } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -132,7 +132,7 @@
   }
 </script>
 
-<FlatDialog
+<Dialog
   bind:open={isDialogOpen}
   class="w-full max-w-[540px]"
   title="Create Prompt Folder"
@@ -146,14 +146,14 @@
   onsubmit={handleCreateFolder}
 >
   <div class="cthulhuCreatePromptFolderRows flex min-w-0 flex-col">
-    <FlatSettingRow
+    <SettingRow
       icon={FolderPlus}
       label="Prompt Folder Name"
       detail="Name the new prompt folder."
     >
       {#snippet control()}
-        <FlatFloatingValidationMessage message={errorMessage} textTestId="create-prompt-folder-name-error">
-          <FlatTextInput
+        <FloatingValidationMessage message={errorMessage} textTestId="create-prompt-folder-name-error">
+          <TextInput
             id="create-prompt-folder-name-input"
             class="w-[220px]"
             data-testid="create-prompt-folder-name-input"
@@ -174,11 +174,11 @@
               }
             }}
           />
-        </FlatFloatingValidationMessage>
+        </FloatingValidationMessage>
       {/snippet}
-    </FlatSettingRow>
+    </SettingRow>
   </div>
-</FlatDialog>
+</Dialog>
 
 <style>
   .cthulhuCreatePromptFolderRows {

@@ -9,21 +9,21 @@
     Folders,
     X
   } from 'lucide-svelte'
-  import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
-  import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
-  import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
-  import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
-  import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
-  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
-  import FlatSeparator from '@renderer/common/cthulhu-ui/FlatSeparator.svelte'
+  import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
+  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
+  import Card from '@renderer/common/cthulhu-ui/Card.svelte'
+  import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
+  import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
-  import FlatCreateWorkspaceDialog from './FlatCreateWorkspaceDialog.svelte'
+  import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
 
   let {
     workspacePath,
@@ -201,31 +201,31 @@
         class="mt-7 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
       >
         {#if !currentWorkspaceDetails}
-          <FlatCard label="Get Started" class={homeCardClass}>
+          <Card label="Get Started" class={homeCardClass}>
             <div class="flex flex-col">
-              <FlatDisplayRow
+              <DisplayRow
                 icon={FileText}
                 label="Markdown Prompt Files"
                 detail="Store and manage prompts as Markdown files in a workspace folder."
               />
 
-              <FlatSeparator />
+              <Separator />
 
-              <FlatDisplayRow
+              <DisplayRow
                 icon={FolderPlus}
                 label="Choose a Workspace"
                 detail="Create a new workspace folder, or open an existing one to continue."
               />
 
-              <FlatSeparator />
+              <Separator />
 
-              <FlatDisplayRow
+              <DisplayRow
                 icon={Bug}
                 label="Report an Issue"
                 detail="Report bugs or request improvements!"
               >
                 {#snippet trailing()}
-                  <FlatLinkButton
+                  <LinkButton
                     href={githubIssuesUrl}
                     text="Open Github"
                     endIcon={ExternalLink}
@@ -235,20 +235,20 @@
                     rel="noreferrer"
                   />
                 {/snippet}
-              </FlatDisplayRow>
+              </DisplayRow>
             </div>
-          </FlatCard>
+          </Card>
         {:else}
-          <FlatCard label="Current Workspace" class={homeCardClass}>
+          <Card label="Current Workspace" class={homeCardClass}>
             <div class="flex flex-col">
-              <FlatDisplayRow
+              <DisplayRow
                 icon={FolderOpen}
                 label={currentWorkspaceDetails.name}
                 detail="Workspace Name"
                 labelTitle={currentWorkspaceDetails.name}
               >
                 {#snippet trailing()}
-                  <FlatIconButton
+                  <IconButton
                     icon={ExternalLink}
                     label="Open Workspace Folder"
                     title="Open Workspace Folder"
@@ -256,11 +256,11 @@
                     onclick={openWorkspaceFolder}
                   />
                 {/snippet}
-              </FlatDisplayRow>
+              </DisplayRow>
 
-              <FlatSeparator />
+              <Separator />
 
-              <FlatDisplayRow
+              <DisplayRow
                 icon={FolderSymlink}
                 label={currentWorkspaceDetails.path}
                 detail="Workspace Path"
@@ -268,43 +268,43 @@
                 labelTestId="workspace-ready-path"
               >
                 {#snippet trailing()}
-                  <FlatCopyButton
+                  <CopyButton
                     text={currentWorkspaceDetails.path}
                     label="Copy workspace path"
                     title="Copy workspace path"
                     testId="copy-workspace-path-button"
                   />
                 {/snippet}
-              </FlatDisplayRow>
+              </DisplayRow>
 
-              <FlatSeparator />
+              <Separator />
 
               <div class="cthulhuHomeWorkspaceStats">
-                <FlatDisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
-                <FlatSeparator
+                <DisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
+                <Separator
                   orientation="vertical"
                   class="h-auto self-stretch"
                 />
-                <FlatDisplayRow
+                <DisplayRow
                   icon={Folders}
                   label={displayedPromptFolderCount}
                   detail="Prompt Folders"
                 />
               </div>
             </div>
-          </FlatCard>
+          </Card>
         {/if}
 
-        <FlatCard label="Workspace Actions" class={homeCardClass}>
+        <Card label="Workspace Actions" class={homeCardClass}>
           <div class="flex flex-col">
-            <FlatDisplayRow
+            <DisplayRow
               icon={FolderOpen}
               iconClass="translate-y-px"
               label="Open Workspace"
               detail="Open an existing workspace folder."
             >
               {#snippet trailing()}
-                <FlatButton
+                <Button
                   testId="open-workspace-button"
                   class="cthulhuHomeWorkspaceActionButton"
                   text="Open"
@@ -313,18 +313,18 @@
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                 />
               {/snippet}
-            </FlatDisplayRow>
+            </DisplayRow>
 
-            <FlatSeparator />
+            <Separator />
 
-            <FlatDisplayRow
+            <DisplayRow
               icon={FolderPlus}
               iconClass="translate-y-px"
               label="Create Workspace"
               detail="Choose a folder to set up a new workspace."
             >
               {#snippet trailing()}
-                <FlatButton
+                <Button
                   testId="create-workspace-button"
                   class="cthulhuHomeWorkspaceActionButton"
                   text="Create"
@@ -333,19 +333,19 @@
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                 />
               {/snippet}
-            </FlatDisplayRow>
+            </DisplayRow>
 
             {#if isWorkspaceReady}
-              <FlatSeparator />
+              <Separator />
 
-              <FlatDisplayRow
+              <DisplayRow
                 icon={X}
                 iconClass="translate-y-px"
                 label="Close Workspace"
                 detail="Unload the current workspace folder."
               >
                 {#snippet trailing()}
-                  <FlatButton
+                  <Button
                     testId="close-workspace-button"
                     class="cthulhuHomeWorkspaceActionButton"
                     text="Close"
@@ -354,21 +354,21 @@
                     state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                   />
                 {/snippet}
-              </FlatDisplayRow>
+              </DisplayRow>
             {/if}
           </div>
-        </FlatCard>
+        </Card>
       </div>
     </section>
   </div>
 
-  <FlatCreateWorkspaceDialog
+  <CreateWorkspaceDialog
     bind:open={showCreateWorkspaceDialog}
     {isWorkspaceLoading}
     {onWorkspaceCreate}
   />
 
-  <FlatErrorDialog
+  <ErrorDialog
     bind:open={showWorkspaceOpenErrorDialog}
     title="Failed to Open Workspace"
     description="The workspace could not be opened."
@@ -378,7 +378,7 @@
 
 <style>
   .cthulhuHomeSecondaryTitle {
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: clamp(64px, 9vw, 88px);
     font-weight: 700;
@@ -399,7 +399,7 @@
   }
 
   .cthulhuHomeTitleSeparator {
-    background: var(--ui-flat-neutral-muted-border);
+    background: var(--ui-neutral-muted-border);
     height: 3px;
     width: 100%;
   }
@@ -410,7 +410,7 @@
     min-width: 0;
   }
 
-  .cthulhuHomeWorkspaceStats :global(.cthulhuUiFlatRow) {
+  .cthulhuHomeWorkspaceStats :global(.cthulhuUiRow) {
     flex: 1 1 0;
   }
 

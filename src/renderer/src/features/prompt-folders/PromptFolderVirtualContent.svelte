@@ -1,5 +1,5 @@
 <script lang="ts">
-  import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     type PromptFolderSettings,
@@ -421,7 +421,7 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <FlatTitle title="Folder Settings" />
+    <Title title="Folder Settings" />
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -455,7 +455,7 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <FlatTitle title="Prompts" />
+    <Title title="Prompts" />
   </PromptFolderSectionRow>
 {/snippet}
 

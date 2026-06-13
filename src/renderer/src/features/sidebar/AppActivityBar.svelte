@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { screens, type ScreenId } from '@renderer/app/screens'
-  import FlatActivityBarButton from '@renderer/common/cthulhu-ui/FlatActivityBarButton.svelte'
+  import ActivityBarButton from '@renderer/common/cthulhu-ui/ActivityBarButton.svelte'
 
   let {
     activeScreen,
@@ -48,7 +48,7 @@
 
 <nav class="appActivityBar" aria-label="Primary navigation" data-testid="app-activity-bar">
   {#each activityItems as item (item.id)}
-    <FlatActivityBarButton
+    <ActivityBarButton
       icon={item.icon}
       label={item.label}
       title={item.label}

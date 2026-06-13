@@ -17,70 +17,70 @@
     Sparkles,
     Trash2
   } from 'lucide-svelte'
-  import FlatCardSurface, {
-    type FlatCardSurfaceVariant
-  } from '@renderer/common/cthulhu-ui/FlatCardSurface.svelte'
-  import FlatDropdownPopupSimple, {
-    type FlatDropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
-  import type { FlatDropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/FlatDropdownPopupDetailed.svelte'
-  import FlatConfirmationDialog from '@renderer/common/cthulhu-ui/FlatConfirmationDialog.svelte'
-  import FlatCard from '@renderer/common/cthulhu-ui/FlatCard.svelte'
-  import FlatCopyButton from '@renderer/common/cthulhu-ui/FlatCopyButton.svelte'
-  import FlatDisplayRow from '@renderer/common/cthulhu-ui/FlatDisplayRow.svelte'
-  import FlatErrorDialog from '@renderer/common/cthulhu-ui/FlatErrorDialog.svelte'
-  import FlatButton from '@renderer/common/cthulhu-ui/FlatButton.svelte'
-  import FlatFloatingValidationMessage from '@renderer/common/cthulhu-ui/FlatFloatingValidationMessage.svelte'
-  import FlatFolderInput from '@renderer/common/cthulhu-ui/FlatFolderInput.svelte'
-  import FlatIconCell from '@renderer/common/cthulhu-ui/FlatIconCell.svelte'
-  import FlatIconButton, {
-    type FlatIconButtonBaseVariant,
-    type FlatIconButtonHoverVariant,
-    type FlatIconButtonSize
-  } from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import FlatIconTextButton from '@renderer/common/cthulhu-ui/FlatIconTextButton.svelte'
-  import FlatInfoRow from '@renderer/common/cthulhu-ui/FlatInfoRow.svelte'
-  import FlatLinkButton from '@renderer/common/cthulhu-ui/FlatLinkButton.svelte'
-  import FlatMessageRow from '@renderer/common/cthulhu-ui/FlatMessageRow.svelte'
-  import FlatLoadingOverlay from '@renderer/common/cthulhu-ui/loading/FlatLoadingOverlay.svelte'
+  import CardSurface, {
+    type CardSurfaceVariant
+  } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  import DropdownPopupSimple, {
+    type DropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
+  import Card from '@renderer/common/cthulhu-ui/Card.svelte'
+  import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
+  import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
+  import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
+  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import FolderInput from '@renderer/common/cthulhu-ui/FolderInput.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import IconButton, {
+    type IconButtonBaseVariant,
+    type IconButtonHoverVariant,
+    type IconButtonSize
+  } from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
+  import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
+  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
+  import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
-  import FlatNumericStepperInput from '@renderer/common/cthulhu-ui/FlatNumericStepperInput.svelte'
-  import FlatSelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/FlatSelectorButtonWithDropdown.svelte'
-  import FlatSettingRow from '@renderer/common/cthulhu-ui/FlatSettingRow.svelte'
-  import FlatTextInput from '@renderer/common/cthulhu-ui/FlatTextInput.svelte'
-  import FlatTitle from '@renderer/common/cthulhu-ui/FlatTitle.svelte'
-  import FlatToggleTextButton from '@renderer/common/cthulhu-ui/FlatToggleTextButton.svelte'
-  import FlatValuePill from '@renderer/common/cthulhu-ui/FlatValuePill.svelte'
+  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
+  import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
+  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
+  import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
 
-  const flatCardSurfaceVariants: FlatCardSurfaceVariant[] = ['default', 'overlay']
-  const flatIconButtonBaseVariants: FlatIconButtonBaseVariant[] = ['normal', 'dim', 'muted']
-  const flatIconButtonHoverVariants: FlatIconButtonHoverVariant[] = [
+  const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
+  const IconButtonBaseVariants: IconButtonBaseVariant[] = ['normal', 'dim', 'muted']
+  const IconButtonHoverVariants: IconButtonHoverVariant[] = [
     'neutral',
     'accent',
     'danger',
     'glyph'
   ]
-  const flatIconButtonSizes: FlatIconButtonSize[] = [
+  const IconButtonSizes: IconButtonSize[] = [
     'default',
     'compact',
     'tiny',
     'sidebar-rail'
   ]
-  const folderDropdownItems: FlatDropdownPopupItem[] = [
+  const folderDropdownItems: DropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
     { id: 'export', label: 'Export folder', icon: Download },
     { id: 'archive', label: 'Archive folder', icon: Archive },
     { id: 'delete', label: 'Delete folder', icon: Trash2, variant: 'danger' }
   ]
-  const promptDropdownItems: FlatDropdownPopupItem[] = [
+  const promptDropdownItems: DropdownPopupItem[] = [
     { id: 'improve', label: 'Improve wording', icon: Sparkles, variant: 'accent' },
     { id: 'copy', label: 'Copy prompt', icon: ClipboardList },
     { id: 'duplicate', label: 'Duplicate', icon: Copy },
     { id: 'rename', label: 'Rename', icon: Pencil },
     { id: 'delete', label: 'Delete prompt', icon: Trash2, variant: 'danger' }
   ]
-  const detailedDropdownItems: FlatDropdownPopupDetailedItem[] = [
+  const detailedDropdownItems: DropdownPopupDetailedItem[] = [
     {
       id: 'engineering',
       label: 'Engineering Workflows',
@@ -100,7 +100,7 @@
       icon: ClipboardList
     }
   ]
-  const detailedDropdownFooterItem: FlatDropdownPopupDetailedItem = {
+  const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
     id: 'add-folder',
     label: 'Add Prompt Folder',
     detail: 'Create a new prompt folder',
@@ -116,8 +116,8 @@
   let readonlyPathValue = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
   let folderInputValue = $state('')
   let togglePressed = $state(true)
-  let flatErrorDialogOpen = $state(false)
-  let flatConfirmationDialogOpen = $state(false)
+  let ErrorDialogOpen = $state(false)
+  let ConfirmationDialogOpen = $state(false)
   let lastDropdownAction = $state('No dropdown item selected')
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
   let testLoadingOverlayActive = $state(false)
@@ -152,7 +152,7 @@
 
 {#snippet componentTitle(title: string, description?: string)}
   <div class="component-title-block">
-    <FlatTitle {title} variant="small" />
+    <Title {title} variant="small" />
     {#if description}
       <p class="component-title-description">{description}</p>
     {/if}
@@ -167,15 +167,15 @@
   <div class="test-screen-content">
     <header class="test-screen-header">
       <div class="test-screen-title-block">
-        <FlatTitle title="Cthulhu UI Test Screen" />
+        <Title title="Cthulhu UI Test Screen" />
         <p class="component-title-description">
           Renderer component gallery for the shared Cthulhu UI surface.
         </p>
       </div>
 
-      <FlatButton
+      <Button
         icon={Loader}
-        text="Show FlatLoadingOverlay"
+        text="Show LoadingOverlay"
         variant="accent"
         testId="test-screen-show-loading-overlay"
         onclick={showTestLoadingOverlay}
@@ -184,117 +184,117 @@
 
     <section class="component-grid">
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('FlatCardSurface', 'All flat surface variants.')}
+            {@render componentTitle('CardSurface', 'All surface variants.')}
 
             <div class="variant-grid">
-              {#each flatCardSurfaceVariants as variant (variant)}
+              {#each CardSurfaceVariants as variant (variant)}
                 <div class="sample-card">
-                  <FlatCardSurface {variant}>
+                  <CardSurface {variant}>
                     <div class="sample-card-content">
-                      <div class="sample-title">FlatCardSurface: {variant}</div>
+                      <div class="sample-title">CardSurface: {variant}</div>
                       <p>Prompt workspace metadata, compact controls, or nested content.</p>
                     </div>
-                  </FlatCardSurface>
+                  </CardSurface>
                 </div>
               {/each}
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
-      <div id="flat-action-buttons" class="component-section">
-        <FlatCardSurface>
+      <div id="action-buttons" class="component-section">
+        <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('Flat action buttons', 'Copy, link, icon text, and icon cell samples.')}
+            {@render componentTitle('Action buttons', 'Copy, link, icon text, and icon cell samples.')}
 
             <div class="component-sample-grid">
               <div class="component-sample">
-                {@render componentLabel('FlatCopyButton')}
-                <FlatCopyButton
+                {@render componentLabel('CopyButton')}
+                <CopyButton
                   text="Copyable prompt text"
                   label="Copy prompt"
                   copiedLabel="Copied prompt"
-                  testId="test-screen-flat-copy-button"
+                  testId="test-screen-copy-button"
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatIconTextButton')}
+                {@render componentLabel('IconTextButton')}
                 <div class="variant-controls">
-                  <FlatIconTextButton icon={Sparkles} text="Improve" />
-                  <FlatIconTextButton icon={Archive} text="Archive" />
+                  <IconTextButton icon={Sparkles} text="Improve" />
+                  <IconTextButton icon={Archive} text="Archive" />
                 </div>
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatLinkButton')}
-                <FlatLinkButton href="#flat-action-buttons" text="Anchor link" endIcon={Download} />
+                {@render componentLabel('LinkButton')}
+                <LinkButton href="#action-buttons" text="Anchor link" endIcon={Download} />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatIconCell')}
+                {@render componentLabel('IconCell')}
                 <div class="variant-controls">
-                  <FlatIconCell icon={Folder} />
-                  <FlatIconCell icon={FileText} size="title" />
+                  <IconCell icon={Folder} />
+                  <IconCell icon={FileText} size="title" />
                 </div>
               </div>
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
             {@render componentTitle(
-              'FlatCard and rows',
-              'FlatCard, display row, setting row, and value pill composition.'
+              'Card and rows',
+              'Card, display row, setting row, and value pill composition.'
             )}
 
-            <FlatCard label="FlatCard: Workspace details">
-              <FlatDisplayRow
+            <Card label="Card: Workspace details">
+              <DisplayRow
                 icon={FileText}
-                label="FlatDisplayRow: Active workspace"
+                label="DisplayRow: Active workspace"
                 detail="Prompt library metadata"
               >
                 {#snippet trailing()}
-                  <FlatValuePill text="FlatValuePill" />
+                  <ValuePill text="ValuePill" />
                 {/snippet}
-              </FlatDisplayRow>
+              </DisplayRow>
 
-              <FlatSettingRow
+              <SettingRow
                 icon={Settings}
-                label="FlatSettingRow: Autosave drafts"
+                label="SettingRow: Autosave drafts"
                 detail="Keep prompt edits available between app launches"
               >
                 {#snippet detailExtra()}
-                  Control: FlatToggleTextButton
+                  Control: ToggleTextButton
                 {/snippet}
 
                 {#snippet control()}
-                  <FlatToggleTextButton
+                  <ToggleTextButton
                     pressed={togglePressed}
                     onclick={() => {
                       togglePressed = !togglePressed
                     }}
                   />
                 {/snippet}
-              </FlatSettingRow>
-            </FlatCard>
+              </SettingRow>
+            </Card>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('FlatDropdownPopupSimple', 'Solid icon menu popup.')}
+            {@render componentTitle('DropdownPopupSimple', 'Solid icon menu popup.')}
 
             <div class="stack">
               <div class="button-matrix">
                 <div class="variant-row">
-                  <span>FlatDropdownPopupSimple: folders</span>
+                  <span>DropdownPopupSimple: folders</span>
                   <div class="variant-controls">
-                    <FlatDropdownPopupSimple
+                    <DropdownPopupSimple
                       label="Folder options"
                       items={folderDropdownItems}
                       testId="folder-dropdown-menu"
@@ -303,7 +303,7 @@
                       }}
                     >
                       {#snippet trigger(dropdown)}
-                        <FlatIconButton
+                        <IconButton
                           icon={MoreHorizontal}
                           label="Folder options"
                           active={dropdown.open}
@@ -313,14 +313,14 @@
                           onclick={dropdown.toggle}
                         />
                       {/snippet}
-                    </FlatDropdownPopupSimple>
+                    </DropdownPopupSimple>
                   </div>
                 </div>
 
                 <div class="variant-row">
-                  <span>FlatDropdownPopupSimple: prompts</span>
+                  <span>DropdownPopupSimple: prompts</span>
                   <div class="variant-controls">
-                    <FlatDropdownPopupSimple
+                    <DropdownPopupSimple
                       label="Prompt actions"
                       items={promptDropdownItems}
                       testId="prompt-dropdown-menu"
@@ -329,7 +329,7 @@
                       }}
                     >
                       {#snippet trigger(dropdown)}
-                        <FlatIconButton
+                        <IconButton
                           icon={MoreHorizontal}
                           label="Prompt actions"
                           ariaHaspopup={dropdown.ariaHaspopup}
@@ -338,32 +338,32 @@
                           onclick={dropdown.toggle}
                         />
                       {/snippet}
-                    </FlatDropdownPopupSimple>
+                    </DropdownPopupSimple>
                   </div>
                 </div>
               </div>
 
               <div class="component-sample">
-                {@render componentLabel('FlatInfoRow')}
-                <FlatInfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
+                {@render componentLabel('InfoRow')}
+                <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
               </div>
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
             {@render componentTitle(
-              'FlatSelectorButtonWithDropdown',
+              'SelectorButtonWithDropdown',
               'Prompt-folder selector dropdown with a fixed footer action.'
             )}
 
             <div class="stack">
               <div class="component-sample">
-                {@render componentLabel('FlatSelectorButtonWithDropdown')}
-                <FlatSelectorButtonWithDropdown
+                {@render componentLabel('SelectorButtonWithDropdown')}
+                <SelectorButtonWithDropdown
                   label="Prompt folder selector"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
@@ -378,53 +378,53 @@
               </div>
 
               <div class="component-sample">
-                {@render componentLabel('FlatInfoRow')}
-                <FlatInfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
+                {@render componentLabel('InfoRow')}
+                <InfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
               </div>
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
             {@render componentTitle('Inputs', 'Text, folder, stepper, and toggle controls.')}
 
             <div class="form-grid">
               <div class="component-sample">
-                {@render componentLabel('FlatTextInput')}
-                <FlatTextInput
+                {@render componentLabel('TextInput')}
+                <TextInput
                   bind:value={workspaceNameValue}
                   aria-label="Workspace name sample"
                   placeholder="Workspace name"
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatTextInput: readonlyDisplay')}
-                <FlatTextInput
+                {@render componentLabel('TextInput: readonlyDisplay')}
+                <TextInput
                   bind:value={readonlyPathValue}
                   readonlyDisplay
                   aria-label="Readonly workspace path sample"
                 />
               </div>
               <div class="component-sample validation-sample">
-                {@render componentLabel('FlatFloatingValidationMessage')}
-                <FlatFloatingValidationMessage
+                {@render componentLabel('FloatingValidationMessage')}
+                <FloatingValidationMessage
                   message="Workspace name is required."
                   textTestId="test-screen-floating-validation"
                 >
-                  <FlatTextInput
+                  <TextInput
                     value=""
                     aria-label="Invalid workspace name sample"
                     aria-invalid="true"
                     placeholder="Invalid value"
                   />
-                </FlatFloatingValidationMessage>
+                </FloatingValidationMessage>
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatFolderInput')}
-                <FlatFolderInput
+                {@render componentLabel('FolderInput')}
+                <FolderInput
                   bind:value={folderInputValue}
                   buttonText="Browse workspace"
                   ariaLabel="Browse workspace sample"
@@ -432,8 +432,8 @@
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatNumericStepperInput')}
-                <FlatNumericStepperInput
+                {@render componentLabel('NumericStepperInput')}
+                <NumericStepperInput
                   bind:value={fontSizeStepperValue}
                   min={8}
                   max={32}
@@ -442,8 +442,8 @@
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatNumericStepperInput')}
-                <FlatNumericStepperInput
+                {@render componentLabel('NumericStepperInput')}
+                <NumericStepperInput
                   bind:value={minLinesStepperValue}
                   min={8}
                   max={24}
@@ -452,8 +452,8 @@
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatToggleTextButton')}
-                <FlatToggleTextButton
+                {@render componentLabel('ToggleTextButton')}
+                <ToggleTextButton
                   pressed={togglePressed}
                   onclick={() => {
                     togglePressed = !togglePressed
@@ -461,103 +461,103 @@
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatToggleTextButton: disabled')}
-                <FlatToggleTextButton pressed={false} disabled />
+                {@render componentLabel('ToggleTextButton: disabled')}
+                <ToggleTextButton pressed={false} disabled />
               </div>
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
             {@render componentTitle('Message Rows', 'Inline guidance, warnings, and validation errors.')}
 
             <div class="stack">
               <div class="component-sample">
-                {@render componentLabel('FlatInfoRow')}
-                <FlatInfoRow
+                {@render componentLabel('InfoRow')}
+                <InfoRow
                   text="Use this row for short informational guidance that helps explain the surrounding control or section."
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatMessageRow: warning')}
-                <FlatMessageRow text="Review this value before saving." variant="warning" />
+                {@render componentLabel('MessageRow: warning')}
+                <MessageRow text="Review this value before saving." variant="warning" />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatMessageRow: danger')}
-                <FlatMessageRow text="Prompt folder name is required." variant="danger" />
+                {@render componentLabel('MessageRow: danger')}
+                <MessageRow text="Prompt folder name is required." variant="danger" />
               </div>
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('FlatTitle', 'Page, small, card, and dialog title variants.')}
+            {@render componentTitle('Title', 'Page, small, card, and dialog title variants.')}
 
             <div class="stack">
-              <FlatTitle title="FlatTitle: Page title" />
-              <FlatTitle title="FlatTitle: Small title" variant="small" />
-              <FlatTitle title="FlatTitle: Card title" variant="card" />
-              <FlatTitle title="FlatTitle: Dialog title" variant="dialog" />
+              <Title title="Title: Page title" />
+              <Title title="Title: Small title" variant="small" />
+              <Title title="Title: Card title" variant="card" />
+              <Title title="Title: Dialog title" variant="dialog" />
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('Dialogs', 'Flat error and confirmation dialogs.')}
+            {@render componentTitle('Dialogs', 'Error and confirmation dialogs.')}
 
             <div class="component-sample-grid">
               <div class="component-sample">
-                {@render componentLabel('FlatErrorDialog')}
-                <FlatButton
+                {@render componentLabel('ErrorDialog')}
+                <Button
                   icon={AlertCircle}
-                  text="Open FlatErrorDialog"
+                  text="Open ErrorDialog"
                   variant="accent"
                   onclick={() => {
-                    flatErrorDialogOpen = true
+                    ErrorDialogOpen = true
                   }}
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('FlatConfirmationDialog')}
-                <FlatButton
+                {@render componentLabel('ConfirmationDialog')}
+                <Button
                   icon={Trash2}
-                  text="Open FlatConfirmationDialog"
+                  text="Open ConfirmationDialog"
                   onclick={() => {
-                    flatConfirmationDialogOpen = true
+                    ConfirmationDialogOpen = true
                   }}
                 />
               </div>
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
 
       <div class="component-section">
-        <FlatCardSurface>
+        <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('FlatIconButton', 'Every flat icon-only variant and size.')}
+            {@render componentTitle('IconButton', 'Every icon-only variant and size.')}
 
             <div class="button-matrix">
-              {#each flatIconButtonBaseVariants as baseVariant (baseVariant)}
-                {#each flatIconButtonHoverVariants as hoverVariant (hoverVariant)}
+              {#each IconButtonBaseVariants as baseVariant (baseVariant)}
+                {#each IconButtonHoverVariants as hoverVariant (hoverVariant)}
                   <div class="variant-row">
-                    <span>FlatIconButton: {baseVariant} / {hoverVariant}</span>
+                    <span>IconButton: {baseVariant} / {hoverVariant}</span>
                     <div class="variant-controls icon-only-controls">
-                      {#each flatIconButtonSizes as size (size)}
+                      {#each IconButtonSizes as size (size)}
                         <div
                           class="icon-only-sample"
                           data-fill-size={size === 'sidebar-rail'}
                         >
-                          <FlatIconButton
+                          <IconButton
                             icon={Settings}
                             label={`${baseVariant} ${hoverVariant} ${size}`}
                             {baseVariant}
@@ -573,42 +573,42 @@
               {/each}
             </div>
           </div>
-        </FlatCardSurface>
+        </CardSurface>
       </div>
     </section>
   </div>
 
   {#if testLoadingOverlay.isVisible()}
-    <FlatLoadingOverlay
+    <LoadingOverlay
       testId="test-screen-loading-overlay"
       fadeMs={TEST_LOADING_OVERLAY_FADE_MS}
       isFading={testLoadingOverlay.isFading()}
-      message="FlatLoadingOverlay"
+      message="LoadingOverlay"
     />
   {/if}
 </div>
 
-<FlatErrorDialog
-  bind:open={flatErrorDialogOpen}
+<ErrorDialog
+  bind:open={ErrorDialogOpen}
   title="Workspace error"
   description="The selected folder did not load."
   errorText={errorDialogText}
 />
 
-<FlatConfirmationDialog
-  bind:open={flatConfirmationDialogOpen}
+<ConfirmationDialog
+  bind:open={ConfirmationDialogOpen}
   title="Delete Prompt"
   description="Are you sure you want to delete this prompt?"
   confirmText="Delete"
   onconfirm={() => {
-    flatConfirmationDialogOpen = false
+    ConfirmationDialogOpen = false
   }}
 />
 
 <style>
   .test-screen-shell {
     background: var(--background);
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
     height: 100%;
     min-height: 0;
     min-width: 0;
@@ -629,7 +629,7 @@
 
   .test-screen-header {
     align-items: flex-start;
-    border-bottom: 1px solid var(--ui-flat-neutral-muted-border);
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
     display: flex;
     gap: 16px;
     justify-content: space-between;
@@ -666,7 +666,7 @@
   }
 
   .component-title-description {
-    color: var(--ui-flat-muted-text);
+    color: var(--ui-muted-text);
     font-size: 14px;
     line-height: 1.4;
     margin: 0;
@@ -674,7 +674,7 @@
   }
 
   .component-sample-label {
-    color: var(--ui-flat-muted-text);
+    color: var(--ui-muted-text);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.3;
@@ -689,7 +689,7 @@
 
   .sample-title,
   .variant-row > span {
-    color: var(--ui-flat-normal-text);
+    color: var(--ui-normal-text);
     font-size: 14px;
     font-weight: 700;
     line-height: 1.3;
@@ -705,7 +705,7 @@
 
   .variant-row {
     align-items: center;
-    border: 1px solid var(--ui-flat-neutral-muted-border);
+    border: 1px solid var(--ui-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-control);
     display: grid;
     gap: 12px;

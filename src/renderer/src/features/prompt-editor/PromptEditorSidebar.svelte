@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Action } from 'svelte/action'
-  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { ChevronDown, ChevronUp, GripVertical } from 'lucide-svelte'
   import {
     draggable,
@@ -91,7 +91,7 @@
 </script>
 
 <div class="prompt-editor-sidebar">
-  <FlatIconButton
+  <IconButton
     icon={ChevronUp}
     label="Move prompt up"
     size="sidebar-rail"
@@ -101,7 +101,7 @@
     onclick={handleMoveUpClick}
   />
 
-  <FlatIconButton
+  <IconButton
     icon={GripVertical}
     label="Drag prompt"
     size="sidebar-rail"
@@ -112,7 +112,7 @@
     grabCursor={true}
   />
 
-  <FlatIconButton
+  <IconButton
     icon={ChevronDown}
     label="Move prompt down"
     size="sidebar-rail"
@@ -125,7 +125,7 @@
 
 <style>
   .prompt-editor-sidebar {
-    background: var(--ui-flat-card-overlay-surface);
+    background: var(--ui-card-overlay-surface);
     display: grid;
     flex: 0 0 38px;
     grid-template-rows: 44px minmax(44px, 1fr) 44px;
@@ -136,6 +136,6 @@
   }
 
   .prompt-editor-sidebar:focus-within {
-    box-shadow: inset 0 0 0 2px var(--ui-flat-neutral-focus-border);
+    box-shadow: inset 0 0 0 2px var(--ui-neutral-focus-border);
   }
 </style>

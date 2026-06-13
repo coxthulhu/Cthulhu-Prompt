@@ -1,6 +1,6 @@
 <script lang="ts">
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
-  import FlatInlineTextButton from '@renderer/common/cthulhu-ui/FlatInlineTextButton.svelte'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import PromptTreeIndent from './PromptTreeIndent.svelte'
   import { folderPromptShowAllTestId, folderPromptShowLessTestId } from './promptTreeTestIds'
@@ -45,7 +45,7 @@
 >
   <PromptTreeIndent />
   <div class="sidebarPromptTreeVisibilityButtonWrap">
-    <FlatInlineTextButton
+    <InlineTextButton
       text={buttonText}
       {testId}
       onclick={handleVisibilityClick}

@@ -8,11 +8,11 @@
   } from 'lucide-svelte'
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
-  import FlatIconButton from '@renderer/common/cthulhu-ui/FlatIconButton.svelte'
-  import FlatDropdownPopupSimple, {
-    type FlatDropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/FlatDropdownPopupSimple.svelte'
-  import FlatRotatingChevron from '@renderer/common/cthulhu-ui/FlatRotatingChevron.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import DropdownPopupSimple, {
+    type DropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
+  import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import {
     folderOpenTestId,
@@ -84,7 +84,7 @@
   }
 
   const dropdownItems = $derived.by(
-    (): FlatDropdownPopupItem[] => [
+    (): DropdownPopupItem[] => [
       {
         id: 'folder-settings',
         label: 'Open folder settings',
@@ -111,7 +111,7 @@
     ]
   )
 
-  const handleFolderOptionsSelect = (item: FlatDropdownPopupItem, event: MouseEvent) => {
+  const handleFolderOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
     if (item.id === 'folder-settings') {
       onFolderSettingsOpen(folder.id)
       blurButtonAfterMouseClick(event)
@@ -144,7 +144,7 @@
           data-testid={folderToggleTestId(folder)}
           class="sidebarPromptTreeToggleButton"
         >
-          <FlatRotatingChevron
+          <RotatingChevron
             expanded={isExpanded}
             size={20}
             iconSize={16}
@@ -159,14 +159,14 @@
             {folder.promptIds.length}
           </span>
           <div class="sidebarPromptTreeFolderActions">
-            <FlatDropdownPopupSimple
+            <DropdownPopupSimple
               label={`Folder options for ${folder.displayName}`}
               items={dropdownItems}
               menuWidth="196px"
               onselect={handleFolderOptionsSelect}
             >
               {#snippet trigger(dropdown)}
-                <FlatIconButton
+                <IconButton
                   icon={MoreHorizontal}
                   label={`Folder options for ${folder.displayName}`}
                   title="Folder Options"
@@ -181,8 +181,8 @@
                   class="sidebarPromptTreeActionButton"
                 />
               {/snippet}
-            </FlatDropdownPopupSimple>
-            <FlatIconButton
+            </DropdownPopupSimple>
+            <IconButton
               icon={ArrowRight}
               label={`Open ${folder.displayName}`}
               size="compact"
