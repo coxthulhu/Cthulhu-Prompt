@@ -7,7 +7,6 @@
     type PromptFolderSettings
   } from '@shared/PromptFolder'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
@@ -18,7 +17,7 @@
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
   import PromptEditorCardSurface from '../prompt-editor/PromptEditorCardSurface.svelte'
-  import PromptEditorTitleBar from '../prompt-editor/PromptEditorTitleBar.svelte'
+  import PromptEditorTitleArea from '../prompt-editor/PromptEditorTitleArea.svelte'
   import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import {
@@ -36,7 +35,10 @@
   import { promptFolderSettingsFindEntityId } from './promptFolderRowIds'
   import {
     SETTINGS_EDITOR_LEFT_OFFSET_PX,
-    SETTINGS_EDITOR_SECTION_PADDING_PX,
+    PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX,
+    SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX,
+    SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX,
+    SETTINGS_EDITOR_SECTION_PADDING_TOP_PX,
     SETTINGS_EDITOR_TOP_OFFSET_PX,
     getPromptFolderSettingsCardHeightFromRowPx,
     getPromptFolderSettingsFieldMonacoHeightFromRowPx,
@@ -160,9 +162,9 @@
   const OVERFLOW_LEFT_PADDING_PX = $derived(
     SETTINGS_EDITOR_LEFT_OFFSET_PX + rowContentLeftOffsetPx
   )
-  const OVERFLOW_RIGHT_PADDING_PX = SETTINGS_EDITOR_SECTION_PADDING_PX
+  const OVERFLOW_RIGHT_PADDING_PX = SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX
   const OVERFLOW_BOTTOM_PADDING_PX =
-    SETTINGS_EDITOR_SECTION_PADDING_PX + MONACO_VERTICAL_PADDING_PX
+    SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX + MONACO_VERTICAL_PADDING_PX
 
   let rowElement = $state<HTMLDivElement | null>(null)
   let lastFocusRequestId = $state(0)
@@ -328,24 +330,26 @@
   <PromptEditorCardSurface
     style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
   >
-    <div class="prompt-folder-settings-title-section">
-      <PromptEditorTitleBar
-        title={section.title}
-        draftText={section.value}
-        metadataFolderLabel="Folder Settings"
-        lineCount={getPromptLineCount(section.value)}
-        tokenCount={getPromptTokenCount(section.value)}
-        icon={section.icon}
-        copyLabel={section.copyLabel}
-        copyTitle={section.copyTitle}
-      />
-
-      <InfoRow text={section.infoText} />
-    </div>
+    <PromptEditorTitleArea
+      title={section.title}
+      draftText={section.value}
+      metadataFolderLabel="Folder Settings"
+      lineCount={getPromptLineCount(section.value)}
+      tokenCount={getPromptTokenCount(section.value)}
+      icon={section.icon}
+      copyLabel={section.copyLabel}
+      copyTitle={section.copyTitle}
+      titleAreaHeightPx={PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX}
+      infoText={section.infoText}
+    />
 
     <Separator />
 
-    <div class="prompt-folder-settings-editor-section" use:focusEditorBodyClickAction>
+    <div
+      class="prompt-folder-settings-editor-section"
+      style={`padding:${SETTINGS_EDITOR_SECTION_PADDING_TOP_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX}px ${SETTINGS_EDITOR_LEFT_OFFSET_PX}px;`}
+      use:focusEditorBodyClickAction
+    >
       {#if overflowHost}
         {#key `${promptFolderId}:${field}`}
           <HydratableMonacoEditor
@@ -413,21 +417,8 @@
     min-width: 0;
   }
 
-  .prompt-folder-settings-title-section {
-    box-sizing: border-box;
-    display: grid;
-    gap: 8px;
-    min-width: 0;
-    padding: 10px 10px 8px;
-  }
-
   .prompt-folder-settings-editor-section {
     box-sizing: border-box;
-    min-width: 0;
-    padding: 8px 10px 10px;
-  }
-
-  .prompt-folder-settings-editor-section {
     min-width: 0;
   }
 </style>

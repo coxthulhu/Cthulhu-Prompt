@@ -9,7 +9,7 @@
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
-  import PromptEditorTitleBar from './PromptEditorTitleBar.svelte'
+  import PromptEditorTitleArea from './PromptEditorTitleArea.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
@@ -34,12 +34,16 @@
     PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
   } from '../prompt-folders/find/promptFolderFindSectionKeys'
   import {
-    ADDITIONAL_GAP_PX,
     clampMonacoHeightPx,
     getMonacoHeightFromRowPx,
     getRowHeightPx,
     MONACO_PADDING_PX,
-    TITLE_BAR_HEIGHT_PX,
+    PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX,
+    PROMPT_EDITOR_BODY_PADDING_LEFT_PX,
+    PROMPT_EDITOR_BODY_PADDING_RIGHT_PX,
+    PROMPT_EDITOR_BODY_PADDING_TOP_PX,
+    PROMPT_EDITOR_SEPARATOR_HEIGHT_PX,
+    PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX,
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
   import { getPromptLineCount, getPromptTokenCount } from './promptEditorCounts'
@@ -158,20 +162,20 @@
   })
   const findContext = getPromptFolderFindContext()
 
-  const MONACO_SECTION_PADDING_PX = 10
   const SIDEBAR_WIDTH_PX = 38
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
   const OVERFLOW_TOP_PADDING_PX =
-    MONACO_SECTION_PADDING_PX +
-    TITLE_BAR_HEIGHT_PX +
-    ADDITIONAL_GAP_PX +
+    PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX +
+    PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
+    PROMPT_EDITOR_BODY_PADDING_TOP_PX +
     MONACO_VERTICAL_PADDING_PX
   const OVERFLOW_LEFT_PADDING_PX = $derived(
-    rowContentLeftOffsetPx + SIDEBAR_WIDTH_PX + MONACO_SECTION_PADDING_PX
+    rowContentLeftOffsetPx + SIDEBAR_WIDTH_PX + PROMPT_EDITOR_BODY_PADDING_LEFT_PX
   )
-  const OVERFLOW_RIGHT_PADDING_PX = MONACO_SECTION_PADDING_PX
-  const OVERFLOW_BOTTOM_PADDING_PX = MONACO_SECTION_PADDING_PX + MONACO_VERTICAL_PADDING_PX
+  const OVERFLOW_RIGHT_PADDING_PX = PROMPT_EDITOR_BODY_PADDING_RIGHT_PX
+  const OVERFLOW_BOTTOM_PADDING_PX =
+    PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX + MONACO_VERTICAL_PADDING_PX
 
   // Side effect: keep the Monaco overflow host aligned with the prompt editor chrome.
   $effect(() => {
@@ -409,28 +413,31 @@
     />
   {/snippet}
 
-  <div class="prompt-editor-title-section">
-    <PromptEditorTitleBar
-      title={promptData.draft.title}
-      draftText={promptData.draft.text}
-      {copyText}
-      modifiedAt={promptData.modifiedAt}
-      fallbackTitle={promptData.fallbackTitle}
-      {lineCount}
-      {tokenCount}
-      onTitleChange={promptData.setTitle}
-      onSelectionChange={reportTitleSelection}
-      onTitleForwardTab={focusEditorFromTitleTab}
-      bind:inputRef={titleInputRef}
-      {rowId}
-      {scrollToWithinWindowBand}
-      {onDelete}
-    />
-  </div>
+  <PromptEditorTitleArea
+    title={promptData.draft.title}
+    draftText={promptData.draft.text}
+    {copyText}
+    modifiedAt={promptData.modifiedAt}
+    fallbackTitle={promptData.fallbackTitle}
+    {lineCount}
+    {tokenCount}
+    onTitleChange={promptData.setTitle}
+    onSelectionChange={reportTitleSelection}
+    onTitleForwardTab={focusEditorFromTitleTab}
+    bind:inputRef={titleInputRef}
+    {rowId}
+    {scrollToWithinWindowBand}
+    {onDelete}
+    titleAreaHeightPx={PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}
+  />
 
   <Separator />
 
-  <div class="prompt-editor-body-editor-section" use:focusEditorSectionClickAction>
+  <div
+    class="prompt-editor-body-editor-section"
+    style={`padding:${PROMPT_EDITOR_BODY_PADDING_TOP_PX}px ${PROMPT_EDITOR_BODY_PADDING_RIGHT_PX}px ${PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX}px ${PROMPT_EDITOR_BODY_PADDING_LEFT_PX}px;`}
+    use:focusEditorSectionClickAction
+  >
     {#if overflowHost}
       {#key promptId}
         <HydratableMonacoEditor
@@ -492,19 +499,8 @@
     opacity: 0.72;
   }
 
-  .prompt-editor-title-section {
-    box-sizing: border-box;
-    min-width: 0;
-    padding: 10px 10px 8px;
-  }
-
   .prompt-editor-body-editor-section {
     box-sizing: border-box;
-    min-width: 0;
-    padding: 8px 10px 10px;
-  }
-
-  .prompt-editor-body-editor-section {
     min-width: 0;
   }
 </style>

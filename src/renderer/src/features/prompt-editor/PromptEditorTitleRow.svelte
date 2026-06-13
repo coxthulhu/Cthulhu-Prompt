@@ -1,14 +1,8 @@
-<script lang="ts">
-  import { onMount } from 'svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
-  import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+<script module lang="ts">
   import type { ComponentType } from 'svelte'
-  import { FileText, Folder } from 'lucide-svelte'
-  import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
+  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
 
-  type Props = {
+  export type PromptEditorTitleRowProps = {
     title: string
     draftText: string
     copyText?: string
@@ -28,6 +22,15 @@
     copyLabel?: string
     copyTitle?: string
   }
+</script>
+
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
+  import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
+  import { FileText, Folder } from 'lucide-svelte'
+  import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
   let {
     title,
@@ -48,7 +51,7 @@
     icon = FileText,
     copyLabel,
     copyTitle
-  }: Props = $props()
+  }: PromptEditorTitleRowProps = $props()
 
   // Derived placeholder text shows the fallback title when the title is empty.
   const titlePlaceholder = $derived.by(() =>
@@ -111,7 +114,7 @@
   }
 </script>
 
-<div class="prompt-editor-title-bar">
+<div class="prompt-editor-title-row">
   <div class="prompt-editor-title-main">
     <IconCell icon={icon} size="title" />
 
@@ -160,7 +163,7 @@
 </div>
 
 <style>
-  .prompt-editor-title-bar {
+  .prompt-editor-title-row {
     align-items: center;
     background: transparent;
     border: 0;
@@ -169,7 +172,6 @@
     gap: 8px;
     grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
-    padding: 4px 6px;
   }
 
   .prompt-editor-title-main {
@@ -216,7 +218,7 @@
     display: flex;
     flex-wrap: nowrap;
     font-size: 12px;
-    gap: 7px;
+    gap: 8px;
     line-height: 16px;
     min-width: 0;
     overflow: hidden;
@@ -239,5 +241,4 @@
   :global(.prompt-editor-metadata-folder-icon) {
     color: var(--ui-secondary-icon-glyph);
   }
-
 </style>
