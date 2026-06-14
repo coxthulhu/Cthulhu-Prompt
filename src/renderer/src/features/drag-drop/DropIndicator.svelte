@@ -5,11 +5,14 @@
     testId: string
     edge: DroppableEdge
     insetStart?: string
+    edgeOffset?: string
   }
 
-  let { testId, edge, insetStart = '38px' }: Props = $props()
+  let { testId, edge, insetStart = '38px', edgeOffset = '0px' }: Props = $props()
 
-  const style = $derived(`--drag-drop-indicator-inset-start:${insetStart};`)
+  const style = $derived(
+    `--drag-drop-indicator-inset-start:${insetStart};--drag-drop-indicator-edge-offset:${edgeOffset};`
+  )
 </script>
 
 <div class="dragDropIndicator" {style} data-testid={testId} data-edge={edge} aria-hidden="true">
@@ -28,12 +31,12 @@
   }
 
   .dragDropIndicator[data-edge='top'] {
-    top: 0;
+    top: calc(0px - var(--drag-drop-indicator-edge-offset, 0px));
     transform: translateY(-50%);
   }
 
   .dragDropIndicator[data-edge='bottom'] {
-    top: 100%;
+    top: calc(100% + var(--drag-drop-indicator-edge-offset, 0px));
     transform: translateY(-50%);
   }
 

@@ -111,6 +111,7 @@
                   <DropIndicator
                     testId={itemDragOptions.getDropIndicatorTestId(item)}
                     {edge}
+                    edgeOffset="1px"
                     insetStart="8px"
                   />
                 {/if}
