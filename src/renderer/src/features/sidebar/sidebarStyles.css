@@ -313,34 +313,3 @@
 .sidebarPromptTreeStatus svg {
   color: var(--ui-muted-icon-glyph);
 }
-
-.sidebarPromptTreeDropIndicator {
-  position: absolute;
-  right: 2px;
-  left: calc(var(--sidebar-drop-indicator-inset-start, 38px) - 10px);
-  height: 10px;
-}
-
-.sidebarPromptTreeDropIndicator[data-edge='top'] {
-  top: 0;
-  transform: translateY(-50%);
-}
-
-.sidebarPromptTreeDropIndicator[data-edge='bottom'] {
-  top: 100%;
-  transform: translateY(-50%);
-}
-
-.sidebarPromptTreeDropIndicatorSvg {
-  display: block;
-  overflow: visible;
-}
-
-.sidebarPromptTreeDropIndicatorStroke {
-  fill: none;
-  stroke: var(--ui-info-strong-border);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}

@@ -1,5 +1,6 @@
 <script lang="ts">
   import DropdownPopupDetailed, {
+    type DropdownPopupDetailedItemDragOptions,
     type DropdownPopupDetailedItem
   } from './DropdownPopupDetailed.svelte'
   import SelectorButton from './SelectorButton.svelte'
@@ -12,6 +13,7 @@
     state?: 'enabled' | 'disabled'
     testId?: string
     triggerTestId?: string
+    itemDragOptions?: DropdownPopupDetailedItemDragOptions
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -23,6 +25,7 @@
     state = 'enabled',
     testId,
     triggerTestId,
+    itemDragOptions,
     onselect
   }: Props = $props()
 </script>
@@ -32,6 +35,7 @@
   {items}
   {selectedItem}
   {footerItem}
+  {itemDragOptions}
   {testId}
   placement="below-trigger"
   {onselect}

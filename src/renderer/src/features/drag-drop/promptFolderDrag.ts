@@ -1,4 +1,5 @@
 export const PROMPT_FOLDER_ROW_DRAG_TYPE = 'prompt-folder-row'
+export const PROMPT_FOLDER_SELECTOR_DRAG_TYPE = 'prompt-folder-selector-row'
 
 export type PromptFolderRowDragPayload = {
   folderId: string

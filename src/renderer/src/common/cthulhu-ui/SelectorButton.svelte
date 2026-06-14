@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
   import RotatingChevron from './RotatingChevron.svelte'
@@ -15,10 +15,14 @@
     detailParts?: string[]
     open?: boolean
     selected?: boolean
+    dragging?: boolean
+    over?: boolean
     showChevron?: boolean
     state?: SelectorButtonState
     class?: string
     iconClass?: string
+    leadingAccessory?: Snippet
+    leadingAccessoryTestId?: string
     testId?: string
     role?: string
     ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
@@ -38,10 +42,14 @@
     detailParts,
     open = false,
     selected = false,
+    dragging = false,
+    over = false,
     showChevron = true,
     state = 'enabled',
     class: className,
     iconClass,
+    leadingAccessory,
+    leadingAccessoryTestId,
     testId,
     role,
     ariaHaspopup,
@@ -64,7 +72,10 @@
   class={mergeClasses('cthulhuUiSelectorButton', className)}
   data-open={open ? 'true' : 'false'}
   data-selected={selected ? 'true' : 'false'}
+  data-dragging={dragging ? 'true' : 'false'}
+  data-over={over ? 'true' : 'false'}
   data-chevron={showChevron ? 'true' : 'false'}
+  data-leading-accessory={leadingAccessory ? 'true' : 'false'}
   data-disabled={isDisabled ? 'true' : 'false'}
   data-testid={testId}
   disabled={isDisabled}
@@ -75,6 +86,12 @@
   {onclick}
 >
   <!-- Compact dropdown trigger matching the sidebar selector layout. -->
+  {#if leadingAccessory}
+    <span class="cthulhuUiSelectorButtonLeadingCell" data-testid={leadingAccessoryTestId}>
+      {@render leadingAccessory()}
+    </span>
+  {/if}
+
   <span class="cthulhuUiSelectorButtonIconCell">
     <Icon class={iconClass} size={20} aria-hidden="true" />
   </span>
@@ -127,11 +144,25 @@
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
+  .cthulhuUiSelectorButton[data-leading-accessory='true'] {
+    grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
+  }
+
+  .cthulhuUiSelectorButton[data-leading-accessory='true'][data-chevron='false'] {
+    grid-template-columns: 22px 34px minmax(0, 1fr);
+  }
+
   .cthulhuUiSelectorButton:not(:disabled):hover,
   .cthulhuUiSelectorButton:not(:disabled):focus-visible,
   .cthulhuUiSelectorButton[data-open='true'],
   .cthulhuUiSelectorButton[data-selected='true'] {
     background-color: var(--ui-neutral-action-hover-fill);
+  }
+
+  .cthulhuUiSelectorButton[data-dragging='true'],
+  .cthulhuUiSelectorButton[data-over='true'] {
+    background-color: var(--ui-info-normal-surface);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiSelectorButton[data-disabled='true'] {
@@ -149,6 +180,15 @@
     justify-content: center;
     transition: color 120ms ease;
     width: 34px;
+  }
+
+  .cthulhuUiSelectorButtonLeadingCell {
+    align-items: center;
+    color: var(--ui-muted-icon-glyph);
+    display: flex;
+    height: 34px;
+    justify-content: center;
+    width: 22px;
   }
 
   .cthulhuUiSelectorButtonTextStack {

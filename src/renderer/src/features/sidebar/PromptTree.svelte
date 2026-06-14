@@ -47,12 +47,12 @@
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
+  import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import {
     createPromptTreeFolderDragController,
     createPromptTreePromptDragController
   } from './promptTreeDrag'
   import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
-  import PromptTreeDropIndicator from './PromptTreeDropIndicator.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import PromptTreeVisibilityToggleRow from './PromptTreeVisibilityToggleRow.svelte'
   import {
@@ -704,7 +704,7 @@
         : folderPromptDropIndicatorTestId(row.promptId)}
 
   {#if hoveredEdge}
-    <PromptTreeDropIndicator
+    <DropIndicator
       {testId}
       insetStart={row.kind === 'prompt-folder' ? '10px' : PROMPT_TREE_CHILD_ROW_CONTENT_INSET}
       edge={hoveredEdge}

@@ -1,6 +1,20 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
+  import type {
+    DragFinishResult,
+    DraggableOptions,
+    DroppableOptions
+  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import { createDroppableStateRegistry } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
+  import {
+    PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
+    resolvePromptFolderRowDropMove,
+    type PromptFolderRowDragPayload,
+    type PromptFolderRowDropPayload
+  } from '@renderer/features/drag-drop/promptFolderDrag'
+  import { createPromptFolderMoveDragController } from '@renderer/features/drag-drop/promptFolderMoveDrag'
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
@@ -135,7 +149,13 @@
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
   let areAllPromptFoldersCollapsed = $state(true)
+  let draggedPromptFolderSelectorId = $state<string | null>(null)
   let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
+  const promptFolderSelectorDroppableState = createDroppableStateRegistry<string>()
+  const promptFolderSelectorMoveDrag = createPromptFolderMoveDragController({
+    getWorkspaceId: () => workspaceSelection.selectedWorkspaceId,
+    getPromptFolderIds: () => promptFolders.map((promptFolder) => promptFolder.id)
+  })
   const shouldShowExpandAllPromptFolders = $derived(
     promptFolders.length === 0 || areAllPromptFoldersCollapsed
   )
@@ -193,6 +213,58 @@
     if (promptFolders.some((promptFolder) => promptFolder.id === item.id)) {
       onPromptFolderSelect(item.id)
     }
+  }
+
+  const getPromptFolderSelectorDropPayload = (
+    item: DropdownPopupDetailedItem,
+    edge: PromptFolderRowDropPayload['edge'] | null
+  ): PromptFolderRowDropPayload => ({
+    folderId: item.id,
+    edge: edge ?? 'bottom'
+  })
+
+  const getPromptFolderSelectorDraggableOptions = (
+    item: DropdownPopupDetailedItem
+  ): DraggableOptions<unknown, unknown> => ({
+    dragType: PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
+    payload: {
+      folderId: item.id
+    },
+    createGhost: () => createPromptDragGhost(item.label, 'prompt-folder-selector'),
+    onDragStart: (payload) => {
+      draggedPromptFolderSelectorId = (payload as PromptFolderRowDragPayload).folderId
+    },
+    onDragFinish: (result) => {
+      draggedPromptFolderSelectorId = null
+      promptFolderSelectorMoveDrag.handleDragFinish(
+        result as DragFinishResult<PromptFolderRowDragPayload, PromptFolderRowDropPayload>
+      )
+    }
+  })
+
+  const getPromptFolderSelectorDroppableOptions = (
+    item: DropdownPopupDetailedItem
+  ): DroppableOptions<unknown, unknown> => ({
+    dragType: PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
+    allowedEdges: 'top-and-bottom',
+    payload: (edge) => getPromptFolderSelectorDropPayload(item, edge),
+    canDrop: (payload, edge) =>
+      resolvePromptFolderRowDropMove(
+        promptFolders.map((promptFolder) => promptFolder.id),
+        (payload as PromptFolderRowDragPayload).folderId,
+        getPromptFolderSelectorDropPayload(item, edge)
+      ) !== null,
+    state: promptFolderSelectorDroppableState.getState(item.id)
+  })
+
+  const promptFolderSelectorItemDragOptions = {
+    getDraggableOptions: getPromptFolderSelectorDraggableOptions,
+    getDroppableOptions: getPromptFolderSelectorDroppableOptions,
+    getDragHandleTestId: (item: DropdownPopupDetailedItem) =>
+      `sidebar-prompt-folder-dropdown-drag-handle-${item.id}`,
+    getDropIndicatorTestId: (item: DropdownPopupDetailedItem) =>
+      `sidebar-prompt-folder-dropdown-drop-indicator-${item.id}`,
+    isDragging: (item: DropdownPopupDetailedItem) => draggedPromptFolderSelectorId === item.id
   }
 </script>
 
@@ -262,6 +334,7 @@
         selectedItem={selectedPromptFolderDropdownItem}
         footerItem={promptFolderSelectorFooterItem}
         state={promptFolderSelectorState}
+        itemDragOptions={promptFolderSelectorItemDragOptions}
         testId="sidebar-prompt-folder-selector-menu"
         triggerTestId="sidebar-prompt-folder-selector-trigger"
         onselect={handlePromptFolderDropdownSelect}

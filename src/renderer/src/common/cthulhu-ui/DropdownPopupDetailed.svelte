@@ -1,5 +1,14 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
+  import type { Action } from 'svelte/action'
+  import { GripVertical } from 'lucide-svelte'
+  import {
+    draggable,
+    type DraggableOptions,
+    type DroppableOptions
+  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import DropIndicator from '@renderer/features/drag-drop/DropIndicator.svelte'
+  import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import DropdownPopupCore, {
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
@@ -15,6 +24,14 @@
     testId?: string
   }
 
+  export type DropdownPopupDetailedItemDragOptions = {
+    getDraggableOptions: (item: DropdownPopupDetailedItem) => DraggableOptions<unknown, unknown>
+    getDroppableOptions: (item: DropdownPopupDetailedItem) => DroppableOptions<unknown, unknown>
+    getDragHandleTestId: (item: DropdownPopupDetailedItem) => string
+    getDropIndicatorTestId: (item: DropdownPopupDetailedItem) => string
+    isDragging: (item: DropdownPopupDetailedItem) => boolean
+  }
+
   type Props = {
     label: string
     items: DropdownPopupDetailedItem[]
@@ -24,6 +41,7 @@
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
+    itemDragOptions?: DropdownPopupDetailedItemDragOptions
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -36,8 +54,11 @@
     menuWidth = '320px',
     testId,
     placement = 'cursor',
+    itemDragOptions,
     onselect
   }: Props = $props()
+
+  const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
 
   const selectItem = (
     item: DropdownPopupDetailedItem,
@@ -61,19 +82,59 @@
     <div class="cthulhuUiDropdownPopupDetailedContent">
       <div class="cthulhuUiDropdownPopupDetailedItems">
         {#each items as item (item.id)}
-          <SelectorButton
-            icon={item.icon}
-            text={item.label}
-            detail={item.detail}
-            detailParts={item.detailParts}
-            showChevron={false}
-            selected={selectedItem?.id === item.id}
-            role="menuitem"
-            ariaSelected={selectedItem?.id === item.id}
-            testId={item.testId}
-            class="cthulhuUiDropdownPopupDetailedItem"
-            onclick={(event) => selectItem(item, event, close)}
-          />
+          {#if itemDragOptions}
+            <PromptDropTarget
+              getOptions={() => itemDragOptions.getDroppableOptions(item)}
+              class="cthulhuUiDropdownPopupDetailedDragTarget"
+            >
+              {#snippet children({ isOver, edge })}
+                <SelectorButton
+                  icon={item.icon}
+                  text={item.label}
+                  detail={item.detail}
+                  detailParts={item.detailParts}
+                  showChevron={false}
+                  selected={selectedItem?.id === item.id}
+                  dragging={itemDragOptions.isDragging(item)}
+                  over={isOver}
+                  role="menuitem"
+                  ariaSelected={selectedItem?.id === item.id}
+                  testId={item.testId}
+                  leadingAccessoryTestId={itemDragOptions.getDragHandleTestId(item)}
+                  buttonAction={draggableButtonAction}
+                  buttonActionParameter={itemDragOptions.getDraggableOptions(item)}
+                  class="cthulhuUiDropdownPopupDetailedItem cthulhuUiDropdownPopupDetailedDragItem"
+                  onclick={(event) => selectItem(item, event, close)}
+                >
+                  {#snippet leadingAccessory()}
+                    <GripVertical size={16} aria-hidden="true" />
+                  {/snippet}
+                </SelectorButton>
+
+                {#if edge}
+                  <DropIndicator
+                    testId={itemDragOptions.getDropIndicatorTestId(item)}
+                    {edge}
+                    insetStart="8px"
+                  />
+                {/if}
+              {/snippet}
+            </PromptDropTarget>
+          {:else}
+            <SelectorButton
+              icon={item.icon}
+              text={item.label}
+              detail={item.detail}
+              detailParts={item.detailParts}
+              showChevron={false}
+              selected={selectedItem?.id === item.id}
+              role="menuitem"
+              ariaSelected={selectedItem?.id === item.id}
+              testId={item.testId}
+              class="cthulhuUiDropdownPopupDetailedItem"
+              onclick={(event) => selectItem(item, event, close)}
+            />
+          {/if}
         {/each}
       </div>
 
@@ -133,6 +194,19 @@
     border-radius: 8px;
     flex: 0 0 auto;
     height: 58px;
+  }
+
+  :global(.cthulhuUiDropdownPopupDetailedDragTarget) {
+    flex: 0 0 auto;
+    position: relative;
+  }
+
+  :global(.cthulhuUiDropdownPopupDetailedDragItem .cthulhuUiSelectorButtonLeadingCell) {
+    cursor: grab;
+  }
+
+  :global(.cthulhuUiDropdownPopupDetailedDragItem:active .cthulhuUiSelectorButtonLeadingCell) {
+    cursor: grabbing;
   }
 
   :global(.cthulhuUiDropdownPopupDetailedFooterItem:hover),
