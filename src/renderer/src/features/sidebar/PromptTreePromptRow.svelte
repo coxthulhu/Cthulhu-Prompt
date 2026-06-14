@@ -1,7 +1,7 @@
 <script lang="ts">
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
-  import PromptTreeIndent from './PromptTreeIndent.svelte'
+  import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
 
@@ -52,7 +52,7 @@
 </script>
 
 <PromptDropTarget getOptions={getPromptDroppableOptions} class="sidebarPromptTreeSettingsRow">
-  <PromptTreeIndent />
+  <PromptTreeGutter />
   <button
     use:draggable={promptDragOptions}
     type="button"

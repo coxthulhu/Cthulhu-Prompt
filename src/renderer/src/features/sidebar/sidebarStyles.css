@@ -223,13 +223,13 @@
   padding-block: 1px;
 }
 
-.sidebarPromptTreeIndent {
+.sidebarPromptTreeGutter {
   position: relative;
   min-height: 30px;
   align-self: stretch;
 }
 
-.sidebarPromptTreeIndentLine {
+.sidebarPromptTreeGutterLine {
   display: block;
   position: absolute;
   top: -1px;
@@ -297,7 +297,7 @@
   padding-left: 12px;
 }
 
-.sidebarPromptTreeVisibilityRow .sidebarPromptTreeIndent {
+.sidebarPromptTreeVisibilityRow .sidebarPromptTreeGutter {
   min-height: 22px;
 }
 

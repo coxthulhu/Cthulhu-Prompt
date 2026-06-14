@@ -2,7 +2,7 @@
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
-  import PromptTreeIndent from './PromptTreeIndent.svelte'
+  import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptShowAllTestId, folderPromptShowLessTestId } from './promptTreeTestIds'
   import type { PromptRowDropOptions } from './promptTreeRowOptions'
 
@@ -41,7 +41,7 @@
 </script>
 
 <PromptDropTarget getOptions={getVisibilityDroppableOptions} class="sidebarPromptTreeVisibilityRow">
-  <PromptTreeIndent />
+  <PromptTreeGutter />
   <div class="sidebarPromptTreeVisibilityButtonWrap">
     <InlineTextButton
       text={buttonText}
