@@ -3,7 +3,6 @@ import {
   clearDraggedPromptRow,
   setDraggedPromptRow
 } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
-import { createPromptFolderMoveDragController } from '@renderer/features/drag-drop/promptFolderMoveDrag'
 import {
   resolvePromptHandleDropMove,
   type PromptHandleDragPayload,
@@ -15,11 +14,6 @@ import type { PromptFolder } from '@shared/PromptFolder'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
-}
-
-type PromptTreeFolderDragControllerOptions = {
-  getPromptFolderIds: () => string[]
-  getWorkspaceId: () => string | null
 }
 
 const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): PromptFolder | null => {
@@ -72,14 +66,4 @@ export const createPromptTreePromptDragController = ({
     handleDragStart,
     handleDragFinish
   }
-}
-
-export const createPromptTreeFolderDragController = ({
-  getPromptFolderIds,
-  getWorkspaceId
-}: PromptTreeFolderDragControllerOptions) => {
-  return createPromptFolderMoveDragController({
-    getPromptFolderIds,
-    getWorkspaceId
-  })
 }

@@ -1,8 +1,8 @@
 import type { DragFinishResult } from './dragDrop.svelte.ts'
 import {
-  resolvePromptFolderRowDropMove,
-  type PromptFolderRowDragPayload,
-  type PromptFolderRowDropPayload
+  resolvePromptFolderDropMove,
+  type PromptFolderDragPayload,
+  type PromptFolderDropPayload
 } from './promptFolderDrag'
 import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -19,13 +19,13 @@ export const createPromptFolderMoveDragController = ({
   const handleDragFinish = ({
     sourcePayload,
     dropPayload
-  }: DragFinishResult<PromptFolderRowDragPayload, PromptFolderRowDropPayload>): void => {
+  }: DragFinishResult<PromptFolderDragPayload, PromptFolderDropPayload>): void => {
     const workspaceId = getWorkspaceId()
     if (!workspaceId) {
       return
     }
 
-    const nextMove = resolvePromptFolderRowDropMove(
+    const nextMove = resolvePromptFolderDropMove(
       getPromptFolderIds(),
       sourcePayload.folderId,
       dropPayload

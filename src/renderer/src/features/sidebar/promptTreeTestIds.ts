@@ -33,6 +33,3 @@ export const folderPromptDropIndicatorTestId = (promptId: string): string =>
 
 export const folderPromptVisibilityDropIndicatorTestId = (folder: PromptFolder): string =>
   `prompt-tree-drop-indicator-prompt-visibility-${getFolderTestKey(folder)}`
-
-export const folderDropIndicatorTestId = (folder: PromptFolder): string =>
-  `prompt-tree-drop-indicator-folder-${getFolderTestKey(folder)}`

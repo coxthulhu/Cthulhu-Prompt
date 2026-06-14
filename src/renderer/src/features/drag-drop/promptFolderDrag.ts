@@ -1,16 +1,15 @@
-export const PROMPT_FOLDER_ROW_DRAG_TYPE = 'prompt-folder-row'
-export const PROMPT_FOLDER_SELECTOR_DRAG_TYPE = 'prompt-folder-selector-row'
+export const PROMPT_FOLDER_SELECTOR_DRAG_TYPE = 'prompt-folder-selector'
 
-export type PromptFolderRowDragPayload = {
+export type PromptFolderDragPayload = {
   folderId: string
 }
 
-export type PromptFolderRowDropPayload = {
+export type PromptFolderDropPayload = {
   folderId: string
   edge: 'top' | 'bottom'
 }
 
-export type PromptFolderRowMove = {
+export type PromptFolderMove = {
   folderId: string
   orderAfterFolderId: string | null
 }
@@ -67,11 +66,11 @@ const resolveTopEdgeOrderAfterFolderId = (
   return null
 }
 
-export const resolvePromptFolderRowDropMove = (
+export const resolvePromptFolderDropMove = (
   folderIds: string[],
   draggedFolderId: string,
-  dropPayload: PromptFolderRowDropPayload | null
-): PromptFolderRowMove | null => {
+  dropPayload: PromptFolderDropPayload | null
+): PromptFolderMove | null => {
   if (!dropPayload || dropPayload.folderId === draggedFolderId) {
     return null
   }

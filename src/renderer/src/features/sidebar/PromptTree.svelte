@@ -13,12 +13,6 @@
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
-  import {
-    PROMPT_FOLDER_ROW_DRAG_TYPE,
-    resolvePromptFolderRowDropMove,
-    type PromptFolderRowDragPayload,
-    type PromptFolderRowDropPayload
-  } from '@renderer/features/drag-drop/promptFolderDrag'
   import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
   import {
@@ -48,15 +42,11 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
-  import {
-    createPromptTreeFolderDragController,
-    createPromptTreePromptDragController
-  } from './promptTreeDrag'
+  import { createPromptTreePromptDragController } from './promptTreeDrag'
   import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import PromptTreeVisibilityToggleRow from './PromptTreeVisibilityToggleRow.svelte'
   import {
-    folderDropIndicatorTestId,
     folderPromptDropIndicatorTestId,
     folderPromptVisibilityDropIndicatorTestId
   } from './promptTreeTestIds'
@@ -263,7 +253,6 @@
   const folderPromptVisibilityToggleRowId = (folderId: string): string =>
     `${folderId}:prompt-visibility-toggle`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
-  const promptTreeFolderDroppableState = createDroppableStateRegistry<string>()
 
   const getPromptTreeDroppableOptions = (
     rowId: string,
@@ -276,28 +265,6 @@
     canDrop: canDrop ?? (() => true),
     payload: getDropPayload,
     state: promptTreePromptDroppableState.getState(rowId)
-  })
-
-  const getPromptFolderRowDroppableOptions = (
-    rowId: string,
-    targetFolderId: string
-  ): DroppableOptions<PromptFolderRowDragPayload, PromptFolderRowDropPayload> => ({
-    dragType: PROMPT_FOLDER_ROW_DRAG_TYPE,
-    allowedEdges: 'top-and-bottom',
-    payload: (edge) => ({
-      folderId: targetFolderId,
-      edge: edge ?? 'bottom'
-    }),
-    canDrop: (payload, edge) =>
-      resolvePromptFolderRowDropMove(
-        promptFolders.map((folder) => folder.id),
-        payload.folderId,
-        {
-          folderId: targetFolderId,
-          edge: edge ?? 'bottom'
-        }
-      ) !== null,
-    state: promptTreeFolderDroppableState.getState(rowId)
   })
 
   const canDropOnPromptTreePromptRow = (
@@ -327,9 +294,6 @@
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreePromptDroppableState.edge(rowId)
 
-  const getPromptTreeFolderDropTargetEdge = (rowId: string): DroppableEdge | null =>
-    promptTreeFolderDroppableState.edge(rowId)
-
   const handlePromptFolderOpen = (promptFolderId: string) => {
     onPromptFolderSelect(promptFolderId)
   }
@@ -349,10 +313,6 @@
   const promptTreePromptDrag = createPromptTreePromptDragController({
     getPromptFolders: () => promptFolders
   })
-  const promptTreeFolderDrag = createPromptTreeFolderDragController({
-    getWorkspaceId: () => workspaceSelection.selectedWorkspaceId,
-    getPromptFolderIds: () => promptFolders.map((folder) => folder.id)
-  })
 
   const getPromptRowDragOptions = (
     folderId: string,
@@ -367,17 +327,6 @@
     createGhost: () => createPromptDragGhost(title),
     onDragStart: promptTreePromptDrag.handleDragStart,
     onDragFinish: promptTreePromptDrag.handleDragFinish
-  })
-
-  const getPromptFolderRowDragOptions = (
-    folder: PromptFolder
-  ): DraggableOptions<PromptFolderRowDragPayload, PromptFolderRowDropPayload> => ({
-    dragType: PROMPT_FOLDER_ROW_DRAG_TYPE,
-    payload: {
-      folderId: folder.id
-    },
-    createGhost: () => createPromptDragGhost(folder.displayName, 'prompt-folder'),
-    onDragFinish: promptTreeFolderDrag.handleDragFinish
   })
 
   const trackedTreeRowId = $derived.by((): string | null => {
@@ -615,13 +564,10 @@
     isExpanded={isFolderExpanded(props.row.folder.id)}
     isShowingAllPrompts={isFolderShowingAllPrompts(props.row.folder.id)}
     visiblePromptLimit={PROMPT_TREE_VISIBLE_PROMPT_LIMIT}
-    getFolderRowDroppableOptions={() =>
-      getPromptFolderRowDroppableOptions(props.rowId, props.row.folder.id)}
     getFolderPromptDroppableOptions={() => getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
       kind: 'folder',
       folderId: props.row.folder.id
     }))}
-    folderDragOptions={getPromptFolderRowDragOptions(props.row.folder)}
     onFolderExpandedChange={setFolderExpanded}
     onPromptFolderOpen={handlePromptFolderOpen}
     onFolderSettingsOpen={(folderId) => handlePromptTreeEntrySelect(folderId, 'folder-settings')}
@@ -692,18 +638,15 @@
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
-  {@const hoveredEdge =
-    row.kind === 'prompt-folder'
-      ? getPromptTreeFolderDropTargetEdge(rowId)
-      : getPromptTreeDropTargetEdge(rowId)}
+  {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
   {@const testId =
-    row.kind === 'prompt-folder'
-      ? folderDropIndicatorTestId(row.folder)
-      : row.kind === 'folder-prompt-visibility-toggle'
+    row.kind === 'folder-prompt-visibility-toggle'
         ? folderPromptVisibilityDropIndicatorTestId(row.folder)
-        : folderPromptDropIndicatorTestId(row.promptId)}
+        : row.kind === 'folder-prompt'
+          ? folderPromptDropIndicatorTestId(row.promptId)
+          : null}
 
-  {#if hoveredEdge}
+  {#if hoveredEdge && testId}
     <DropIndicator
       {testId}
       insetStart={row.kind === 'prompt-folder' ? '10px' : PROMPT_TREE_CHILD_ROW_CONTENT_INSET}

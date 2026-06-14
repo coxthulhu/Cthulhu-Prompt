@@ -2,25 +2,17 @@ import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
-  beginPromptTreeFolderDrag,
-  dragPromptTreeFolderToTarget,
   finishActiveDrag,
-  moveActiveDragToTarget,
-  promptTreeFolderDropIndicatorSelector,
-  promptTreeFolderSelector
+  moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order'
 const CREATE_FOLDER_WORKSPACE_PATH = '/ws/folder-order-create'
-const DRAG_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-drag'
 const DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-drag'
 const DROPDOWN_FOOTER_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-footer'
 const DROPDOWN_NOOP_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-noop'
-const SNAP_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-snap'
-const OVERSCAN_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-overscan'
-const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_FOLDER_SELECTOR_MENU = '[data-testid="sidebar-prompt-folder-selector-menu"]'
 const PROMPT_FOLDER_SELECTOR_TRIGGER = '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const PROMPT_FOLDER_DROPDOWN_ITEM_PREFIX = 'sidebar-prompt-folder-dropdown-item-'
@@ -79,14 +71,14 @@ const promptFolderDropdownDragHandleSelector = (folderId: string): string =>
 const promptFolderDropdownDropIndicatorSelector = (folderId: string): string =>
   `[data-testid="${PROMPT_FOLDER_DROPDOWN_DROP_INDICATOR_PREFIX}${folderId}"]`
 
-const beginPromptFolderDropdownRowDrag = async (page: Page, folderId: string): Promise<void> => {
-  const row = page.locator(promptFolderDropdownItemSelector(folderId))
-  await row.scrollIntoViewIfNeeded()
-  await expect(row).toBeVisible()
+const beginPromptFolderDropdownDrag = async (page: Page, folderId: string): Promise<void> => {
+  const item = page.locator(promptFolderDropdownItemSelector(folderId))
+  await item.scrollIntoViewIfNeeded()
+  await expect(item).toBeVisible()
 
-  const box = await row.boundingBox()
+  const box = await item.boundingBox()
   if (!box) {
-    throw new Error(`Missing prompt folder dropdown row geometry for ${folderId}`)
+    throw new Error(`Missing prompt folder dropdown geometry for ${folderId}`)
   }
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
@@ -184,98 +176,6 @@ describe('Prompt Folder Order', () => {
       .toEqual([expect.not.stringMatching(/^folder-(alpha|beta)$/), 'folder-alpha', 'folder-beta'])
   })
 
-  test('reorders folders from folder row drag and drop edges', async ({
-    electronApp,
-    testSetup
-  }) => {
-    await testSetup.setupFilesystem(
-      createEmptyFolderWorkspace(DRAG_FOLDER_ORDER_WORKSPACE_PATH, ['Alpha', 'Beta', 'Gamma'])
-    )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_FOLDER_ORDER_WORKSPACE_PATH)])
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-
-    await dragPromptTreeFolderToTarget(
-      mainWindow,
-      'Gamma',
-      promptTreeFolderSelector('Alpha'),
-      'top'
-    )
-
-    await expect
-      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
-      .toEqual([
-        'prompt-tree-folder-open-button-Gamma',
-        'prompt-tree-folder-open-button-Alpha',
-        'prompt-tree-folder-open-button-Beta'
-      ])
-    await expect
-      .poll(
-        async () =>
-          await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
-      )
-      .toEqual(['folder-gamma', 'folder-alpha', 'folder-beta'])
-
-    await dragPromptTreeFolderToTarget(
-      mainWindow,
-      'Gamma',
-      promptTreeFolderSelector('Beta'),
-      'bottom'
-    )
-
-    await expect
-      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
-      .toEqual([
-        'prompt-tree-folder-open-button-Alpha',
-        'prompt-tree-folder-open-button-Beta',
-        'prompt-tree-folder-open-button-Gamma'
-      ])
-    await expect
-      .poll(
-        async () =>
-          await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
-      )
-      .toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
-  })
-
-  test('silently ignores folder drops that would not move the folder', async ({
-    electronApp,
-    testSetup
-  }) => {
-    await testSetup.setupFilesystem(
-      createEmptyFolderWorkspace(DRAG_FOLDER_ORDER_WORKSPACE_PATH, ['Alpha', 'Beta', 'Gamma'])
-    )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_FOLDER_ORDER_WORKSPACE_PATH)])
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-
-    await beginPromptTreeFolderDrag(mainWindow, 'Alpha')
-    await mainWindow.locator(promptTreeFolderSelector('Beta')).hover({
-      position: { x: 12, y: 4 }
-    })
-    await expect(mainWindow.locator(promptTreeFolderDropIndicatorSelector('Beta'))).toHaveCount(0)
-    await finishActiveDrag(mainWindow)
-
-    await expect
-      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
-      .toEqual([
-        'prompt-tree-folder-open-button-Alpha',
-        'prompt-tree-folder-open-button-Beta',
-        'prompt-tree-folder-open-button-Gamma'
-      ])
-    await expect(
-      await readWorkspacePromptFolderIds(electronApp, DRAG_FOLDER_ORDER_WORKSPACE_PATH)
-    ).toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
-  })
-
   test('reorders folders from the folder selector dropdown without changing selection', async ({
     electronApp,
     testSetup
@@ -305,7 +205,7 @@ describe('Prompt Folder Order', () => {
       mainWindow.locator(promptFolderDropdownDragHandleSelector('folder-gamma'))
     ).toHaveCSS('cursor', 'grab')
 
-    await beginPromptFolderDropdownRowDrag(mainWindow, 'folder-gamma')
+    await beginPromptFolderDropdownDrag(mainWindow, 'folder-gamma')
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
     ).toHaveAttribute('data-dragging', 'true')
@@ -361,7 +261,7 @@ describe('Prompt Folder Order', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
-    await beginPromptFolderDropdownRowDrag(mainWindow, 'folder-alpha')
+    await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')
     await moveActiveDragToTarget(
       mainWindow,
       '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
@@ -396,7 +296,7 @@ describe('Prompt Folder Order', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
-    await beginPromptFolderDropdownRowDrag(mainWindow, 'folder-alpha')
+    await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')
     await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-beta'), 'top')
     await expect(
       mainWindow.locator(promptFolderDropdownDropIndicatorSelector('folder-beta'))
@@ -409,104 +309,4 @@ describe('Prompt Folder Order', () => {
     ).toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
   })
 
-  test('snaps folder drops to the nearest visible row edge', async ({ electronApp, testSetup }) => {
-    await testSetup.setupFilesystem(
-      createEmptyFolderWorkspace(SNAP_FOLDER_ORDER_WORKSPACE_PATH, ['Alpha', 'Beta', 'Gamma'])
-    )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(SNAP_FOLDER_ORDER_WORKSPACE_PATH)])
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-
-    await beginPromptTreeFolderDrag(mainWindow, 'Alpha')
-
-    const gammaBox = await mainWindow.locator(promptTreeFolderSelector('Gamma')).boundingBox()
-    if (!gammaBox) {
-      throw new Error('Missing Gamma folder row geometry')
-    }
-
-    await mainWindow.mouse.move(gammaBox.x + gammaBox.width / 2, gammaBox.y + gammaBox.height + 8)
-    await expect(mainWindow.locator(promptTreeFolderDropIndicatorSelector('Gamma'))).toHaveCount(1)
-    await finishActiveDrag(mainWindow)
-
-    await expect
-      .poll(
-        async () =>
-          await readWorkspacePromptFolderIds(electronApp, SNAP_FOLDER_ORDER_WORKSPACE_PATH)
-      )
-      .toEqual(['folder-beta', 'folder-gamma', 'folder-alpha'])
-  })
-
-  test('does not snap folder drops to virtual overscan rows outside the viewport', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const folderNames = Array.from(
-      { length: 36 },
-      (_, index) => `Folder${String(index + 1).padStart(2, '0')}`
-    )
-    await testSetup.setupFilesystem(
-      createEmptyFolderWorkspace(OVERSCAN_FOLDER_ORDER_WORKSPACE_PATH, folderNames)
-    )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(OVERSCAN_FOLDER_ORDER_WORKSPACE_PATH)])
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 620)
-
-    const geometry = await mainWindow.evaluate((hostSelector) => {
-      const host = document.querySelector<HTMLElement>(hostSelector)
-      if (!host) {
-        return null
-      }
-
-      const hostRect = host.getBoundingClientRect()
-      const folderButtons = Array.from(
-        document.querySelectorAll<HTMLElement>('[data-testid^="prompt-tree-folder-toggle-button-"]')
-      )
-      const visibleButton = folderButtons.find((button) => {
-        const rect = button.getBoundingClientRect()
-        return rect.top >= hostRect.top && rect.bottom <= hostRect.bottom
-      })
-      const overscanButton = folderButtons
-        .filter((button) => button.getBoundingClientRect().bottom < hostRect.top)
-        .at(-1)
-
-      if (!visibleButton || !overscanButton) {
-        return null
-      }
-
-      const visibleTestId = visibleButton.getAttribute('data-testid') ?? ''
-      const overscanTestId = overscanButton.getAttribute('data-testid') ?? ''
-      const overscanRect = overscanButton.getBoundingClientRect()
-
-      return {
-        sourceFolderName: visibleTestId.replace('prompt-tree-folder-toggle-button-', ''),
-        overscanFolderName: overscanTestId.replace('prompt-tree-folder-toggle-button-', ''),
-        x: overscanRect.left + overscanRect.width / 2,
-        y: overscanRect.top + overscanRect.height / 2
-      }
-    }, PROMPT_TREE_HOST_SELECTOR)
-
-    if (!geometry) {
-      throw new Error('Missing prompt tree overscan geometry')
-    }
-
-    await beginPromptTreeFolderDrag(mainWindow, geometry.sourceFolderName)
-    await mainWindow.mouse.move(geometry.x, geometry.y)
-    await expect(
-      mainWindow.locator(promptTreeFolderDropIndicatorSelector(geometry.overscanFolderName))
-    ).toHaveCount(0)
-    await finishActiveDrag(mainWindow)
-
-    await expect(
-      await readWorkspacePromptFolderIds(electronApp, OVERSCAN_FOLDER_ORDER_WORKSPACE_PATH)
-    ).toEqual(folderNames.map((folderName) => `folder-${folderName.toLowerCase()}`))
-  })
 })

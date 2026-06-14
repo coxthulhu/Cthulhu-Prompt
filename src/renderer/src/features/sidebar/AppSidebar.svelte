@@ -10,9 +10,9 @@
   import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
   import {
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
-    resolvePromptFolderRowDropMove,
-    type PromptFolderRowDragPayload,
-    type PromptFolderRowDropPayload
+    resolvePromptFolderDropMove,
+    type PromptFolderDragPayload,
+    type PromptFolderDropPayload
   } from '@renderer/features/drag-drop/promptFolderDrag'
   import { createPromptFolderMoveDragController } from '@renderer/features/drag-drop/promptFolderMoveDrag'
   import type { ScreenId } from '@renderer/app/screens'
@@ -217,8 +217,8 @@
 
   const getPromptFolderSelectorDropPayload = (
     item: DropdownPopupDetailedItem,
-    edge: PromptFolderRowDropPayload['edge'] | null
-  ): PromptFolderRowDropPayload => ({
+    edge: PromptFolderDropPayload['edge'] | null
+  ): PromptFolderDropPayload => ({
     folderId: item.id,
     edge: edge ?? 'bottom'
   })
@@ -232,12 +232,12 @@
     },
     createGhost: () => createPromptDragGhost(item.label, 'prompt-folder-selector'),
     onDragStart: (payload) => {
-      draggedPromptFolderSelectorId = (payload as PromptFolderRowDragPayload).folderId
+      draggedPromptFolderSelectorId = (payload as PromptFolderDragPayload).folderId
     },
     onDragFinish: (result) => {
       draggedPromptFolderSelectorId = null
       promptFolderSelectorMoveDrag.handleDragFinish(
-        result as DragFinishResult<PromptFolderRowDragPayload, PromptFolderRowDropPayload>
+        result as DragFinishResult<PromptFolderDragPayload, PromptFolderDropPayload>
       )
     }
   })
@@ -249,9 +249,9 @@
     allowedEdges: 'top-and-bottom',
     payload: (edge) => getPromptFolderSelectorDropPayload(item, edge),
     canDrop: (payload, edge) =>
-      resolvePromptFolderRowDropMove(
+      resolvePromptFolderDropMove(
         promptFolders.map((promptFolder) => promptFolder.id),
-        (payload as PromptFolderRowDragPayload).folderId,
+        (payload as PromptFolderDragPayload).folderId,
         getPromptFolderSelectorDropPayload(item, edge)
       ) !== null,
     state: promptFolderSelectorDroppableState.getState(item.id)
