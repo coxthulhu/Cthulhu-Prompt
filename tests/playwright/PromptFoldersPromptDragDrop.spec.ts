@@ -56,6 +56,8 @@ const SHORT_FOLDER_NAME = 'Short'
 const SHORT_FOLDER_PATH = `/ws/virtual/Prompts/${SHORT_FOLDER_NAME}/FolderOrder.json`
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
+const SHORT_SHOW_ALL_DROP_INDICATOR_SELECTOR =
+  '[data-testid="prompt-tree-drop-indicator-prompt-visibility-Short"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
 
 type PromptTreeHighlightStyles = {
@@ -524,7 +526,13 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
 
-    await dragPromptTreeRowToTarget(mainWindow, 'short-1', SHORT_SHOW_ALL_SELECTOR, 'bottom')
+    await beginPromptTreeRowDrag(mainWindow, 'short-1')
+    await moveActiveDragToTarget(mainWindow, SHORT_SHOW_ALL_SELECTOR, 'bottom')
+    await expect(mainWindow.locator(SHORT_SHOW_ALL_DROP_INDICATOR_SELECTOR)).toHaveAttribute(
+      'data-edge',
+      'top'
+    )
+    await finishActiveDrag(mainWindow)
 
     await expectPersistedFolderPromptIds(electronApp, SHORT_FOLDER_PATH, [
       'short-2',

@@ -622,7 +622,7 @@
     getVisibilityDroppableOptions={() =>
       getPromptTreeDroppableOptions(
         props.rowId,
-        'bottom',
+        'top',
         () => ({
           kind: 'prompt',
           folderId: props.row.folder.id,
