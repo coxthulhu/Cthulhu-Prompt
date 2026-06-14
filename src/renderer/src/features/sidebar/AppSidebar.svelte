@@ -11,6 +11,7 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
@@ -179,9 +180,13 @@
     }
   })
 
+  const openCreatePromptFolderDialog = () => {
+    createPromptFolderDialog?.openDialog()
+  }
+
   const handlePromptFolderDropdownSelect = (item: DropdownPopupDetailedItem) => {
     if (item.id === promptFolderSelectorFooterItem.id) {
-      createPromptFolderDialog?.openDialog()
+      openCreatePromptFolderDialog()
       return
     }
 
@@ -240,16 +245,28 @@
   <Separator />
 
   <div class="sidebarTopLevelInsetWithInnerPadding py-1">
-    <SelectorButtonWithDropdown
-      label="Prompt folder selector"
-      items={promptFolderDropdownItems}
-      selectedItem={selectedPromptFolderDropdownItem}
-      footerItem={promptFolderSelectorFooterItem}
-      state={promptFolderSelectorState}
-      testId="sidebar-prompt-folder-selector-menu"
-      triggerTestId="sidebar-prompt-folder-selector-trigger"
-      onselect={handlePromptFolderDropdownSelect}
-    />
+    {#if folderListState === 'empty'}
+      <SelectorButton
+        icon={promptFolderSelectorFooterItem.icon}
+        text={promptFolderSelectorFooterItem.label}
+        detail={promptFolderSelectorFooterItem.detail}
+        showChevron={false}
+        state={promptFolderSelectorState}
+        testId="sidebar-prompt-folder-add-button"
+        onclick={openCreatePromptFolderDialog}
+      />
+    {:else}
+      <SelectorButtonWithDropdown
+        label="Prompt folder selector"
+        items={promptFolderDropdownItems}
+        selectedItem={selectedPromptFolderDropdownItem}
+        footerItem={promptFolderSelectorFooterItem}
+        state={promptFolderSelectorState}
+        testId="sidebar-prompt-folder-selector-menu"
+        triggerTestId="sidebar-prompt-folder-selector-trigger"
+        onselect={handlePromptFolderDropdownSelect}
+      />
+    {/if}
   </div>
   <Separator />
 

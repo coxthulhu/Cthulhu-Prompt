@@ -219,6 +219,46 @@ describe('Home Screen', () => {
       expect(screenInfo.promptCount).toBe(2)
     })
 
+    test('creates a blank My Prompts folder when examples are disabled', async ({
+      testSetup
+    }) => {
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'empty', path: '/empty-without-examples', autoSetup: false }
+      })
+
+      await mainWindow.click('[data-testid="create-workspace-button"]')
+
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
+      ).toBeVisible()
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Blank Workspace')
+      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
+
+      const includeExamplesToggle = mainWindow.locator(
+        '[data-testid="create-workspace-examples-toggle"]'
+      )
+      await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'true')
+      await includeExamplesToggle.click()
+      await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'false')
+
+      await mainWindow.click('[data-testid="create-workspace-submit-button"]')
+      await mainWindow.waitForSelector('[data-testid="workspace-ready-path"]', {
+        state: 'visible',
+        timeout: 5000
+      })
+
+      expect(await testHelpers.isWorkspaceReady()).toBe(true)
+
+      await testHelpers.navigateToPromptFolders('My Prompts')
+      await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toHaveText(
+        'My Prompts'
+      )
+
+      const screenInfo = await testHelpers.getPromptFolderScreenInfo()
+      expect(screenInfo.hasPromptEditors).toBe(false)
+      expect(screenInfo.promptCount).toBe(0)
+    })
+
     test('disables Create Workspace for invalid workspace names', async ({ testSetup }) => {
       await testSetup.setupFilesystem({ '/ws/invalid-name-containing': null })
       await testSetup.setupFileDialog(['/ws/invalid-name-containing'])

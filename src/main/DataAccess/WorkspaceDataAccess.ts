@@ -52,7 +52,7 @@ const resolvePromptStem = (title: string, promptId: string, usedStems: Set<strin
   return promptStem
 }
 
-const writeExamplePrompts = (workspacePath: string): string => {
+const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: boolean): string => {
   const fs = getFs()
   const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_FOLDER_NAME)
   const folderInfoPath = path.join(
@@ -63,24 +63,26 @@ const writeExamplePrompts = (workspacePath: string): string => {
   const orderPath = path.join(exampleFolderPath, PROMPT_FOLDER_ORDER_FILENAME)
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
-  const examplePrompts = [
-    {
-      id: compactGuid(randomUUID()),
-      title: 'Example: Add a Feature',
-      fallbackTitle: '',
-      createdAt: now,
-      modifiedAt: now,
-      promptText: 'Placeholder prompt text.'
-    },
-    {
-      id: compactGuid(randomUUID()),
-      title: 'Example: Fix a Bug',
-      fallbackTitle: '',
-      createdAt: now,
-      modifiedAt: now,
-      promptText: 'Placeholder prompt text.'
-    }
-  ]
+  const examplePrompts = includeExamplePrompts
+    ? [
+        {
+          id: compactGuid(randomUUID()),
+          title: 'Example: Add a Feature',
+          fallbackTitle: '',
+          createdAt: now,
+          modifiedAt: now,
+          promptText: 'Placeholder prompt text.'
+        },
+        {
+          id: compactGuid(randomUUID()),
+          title: 'Example: Fix a Bug',
+          fallbackTitle: '',
+          createdAt: now,
+          modifiedAt: now,
+          promptText: 'Placeholder prompt text.'
+        }
+      ]
+    : []
   const usedStems = new Set<string>()
   const promptIds: string[] = []
 
@@ -163,9 +165,7 @@ export const createWorkspace = async (
     fs.mkdirSync(promptsPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
-    if (includeExamplePrompts) {
-      promptFolderIds.push(writeExamplePrompts(workspacePath))
-    }
+    promptFolderIds.push(writeMyPromptsFolder(workspacePath, includeExamplePrompts))
     writeWorkspacePromptFolderOrderFile(workspacePath, promptFolderIds)
 
     return { success: true }

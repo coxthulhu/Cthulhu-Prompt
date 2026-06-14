@@ -17,6 +17,7 @@ const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM =
   '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM =
   '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
+const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-add-button"]'
 const SHORT_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Short"]'
 const SHORT_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Short"]'
 const SHORT_SHOW_ALL = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
@@ -220,6 +221,26 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')).toBeVisible()
   })
 
+  test('shows add prompt folder button when the workspace has no prompt folders', async ({
+    testSetup
+  }) => {
+    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'minimal' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toBeVisible()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
+      'Add Prompt Folder'
+    )
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toHaveCount(0)
+    await expect(mainWindow.locator('text=Create a Prompt Folder to Get Started')).toBeVisible()
+
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
+    await expect(mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')).toBeVisible()
+  })
+
   test('keeps selection stable while folders expand and collapse', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -322,8 +343,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
-    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
 
     const folderNameInput = mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')
     const errorMessage = mainWindow.locator('[data-testid="create-prompt-folder-name-error"]')
