@@ -9,6 +9,7 @@
   type Props = {
     folder: PromptFolder
     isShowingAll: boolean
+    isPromptDragActive: boolean
     hiddenPromptCount: number
     getVisibilityDroppableOptions: () => PromptRowDropOptions
     onPromptVisibilityChange: (folderId: string, isShowingAllPrompts: boolean) => void
@@ -17,6 +18,7 @@
   let {
     folder,
     isShowingAll,
+    isPromptDragActive,
     hiddenPromptCount,
     getVisibilityDroppableOptions,
     onPromptVisibilityChange
@@ -26,6 +28,7 @@
     isShowingAll ? folderPromptShowLessTestId(folder) : folderPromptShowAllTestId(folder)
   )
   const buttonText = $derived(isShowingAll ? 'Show less' : `Show all (${hiddenPromptCount} more)`)
+  const rowState = $derived(isPromptDragActive ? 'drag-idle' : 'idle')
 
   const handleVisibilityClick = (event: MouseEvent) => {
     onPromptVisibilityChange(folder.id, !isShowingAll)
@@ -42,6 +45,7 @@
   <div class="sidebarPromptTreeVisibilityButtonWrap">
     <InlineTextButton
       text={buttonText}
+      {rowState}
       {testId}
       onclick={handleVisibilityClick}
       class="sidebarPromptTreeVisibilityButton"

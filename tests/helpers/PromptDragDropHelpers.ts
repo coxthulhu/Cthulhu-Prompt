@@ -136,10 +136,14 @@ export const expectPromptTreeRowActiveState = async (
   promptId: string,
   isActive: boolean
 ): Promise<void> => {
-  await expect(page.locator(promptTreePromptSelector(promptId))).toHaveAttribute(
-    'data-active',
-    isActive ? 'true' : 'false'
-  )
+  const row = page.locator(promptTreePromptSelector(promptId))
+
+  if (isActive) {
+    await expect(row).toHaveAttribute('data-row-state', /^(active|drag-active)$/)
+    return
+  }
+
+  await expect(row).not.toHaveAttribute('data-row-state', /^(active|drag-active)$/)
 }
 
 export const expectPromptTreeRowDraggingState = async (
@@ -147,10 +151,14 @@ export const expectPromptTreeRowDraggingState = async (
   promptId: string,
   isDragging: boolean
 ): Promise<void> => {
-  await expect(page.locator(promptTreePromptSelector(promptId))).toHaveAttribute(
-    'data-dragging',
-    isDragging ? 'true' : 'false'
-  )
+  const row = page.locator(promptTreePromptSelector(promptId))
+
+  if (isDragging) {
+    await expect(row).toHaveAttribute('data-row-state', 'dragging')
+    return
+  }
+
+  await expect(row).not.toHaveAttribute('data-row-state', 'dragging')
 }
 
 export const getPromptEditorIds = async (page: Page): Promise<string[]> => {

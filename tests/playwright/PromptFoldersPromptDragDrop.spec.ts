@@ -974,7 +974,6 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
 
     await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
-    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
     await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, true)
     await moveActiveDragToTarget(mainWindow, promptTreeFolderSelector(EXAMPLES_FOLDER_NAME))
 
@@ -1058,7 +1057,7 @@ describe('Prompt folder prompt drag-drop', () => {
     const folderRow = mainWindow
       .locator(promptTreeFolderSelector(EXAMPLES_FOLDER_NAME))
       .locator('xpath=ancestor::div[contains(@class, "sidebarPromptTreeRow")]')
-    await expect(folderRow).toHaveAttribute('data-over', 'true')
+    await expect(folderRow).toHaveAttribute('data-row-state', 'over')
 
     await finishActiveDrag(mainWindow)
   })

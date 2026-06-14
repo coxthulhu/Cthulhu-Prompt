@@ -6,6 +6,13 @@
   import SeparatorDot from './SeparatorDot.svelte'
 
   type SelectorButtonState = 'enabled' | 'disabled'
+  export type SelectorButtonRowState =
+    | 'idle'
+    | 'active'
+    | 'drag-idle'
+    | 'drag-active'
+    | 'dragging'
+    | 'over'
   type SelectorButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -15,8 +22,7 @@
     detailParts?: string[]
     open?: boolean
     selected?: boolean
-    dragging?: boolean
-    over?: boolean
+    rowState?: SelectorButtonRowState
     showChevron?: boolean
     state?: SelectorButtonState
     class?: string
@@ -42,8 +48,7 @@
     detailParts,
     open = false,
     selected = false,
-    dragging = false,
-    over = false,
+    rowState = 'idle',
     showChevron = true,
     state = 'enabled',
     class: className,
@@ -72,8 +77,7 @@
   class={mergeClasses('cthulhuUiSelectorButton', className)}
   data-open={open ? 'true' : 'false'}
   data-selected={selected ? 'true' : 'false'}
-  data-dragging={dragging ? 'true' : 'false'}
-  data-over={over ? 'true' : 'false'}
+  data-row-state={rowState}
   data-chevron={showChevron ? 'true' : 'false'}
   data-leading-accessory={leadingAccessory ? 'true' : 'false'}
   data-disabled={isDisabled ? 'true' : 'false'}
@@ -152,15 +156,21 @@
     grid-template-columns: 22px 34px minmax(0, 1fr);
   }
 
-  .cthulhuUiSelectorButton:not(:disabled):hover,
+  .cthulhuUiSelectorButton:not(:disabled)[data-row-state='idle']:hover,
+  .cthulhuUiSelectorButton:not(:disabled)[data-row-state='active']:hover,
   .cthulhuUiSelectorButton:not(:disabled):focus-visible,
   .cthulhuUiSelectorButton[data-open='true'],
   .cthulhuUiSelectorButton[data-selected='true'] {
     background-color: var(--ui-neutral-action-hover-fill);
   }
 
-  .cthulhuUiSelectorButton[data-dragging='true'],
-  .cthulhuUiSelectorButton[data-over='true'] {
+  .cthulhuUiSelectorButton[data-row-state='active'],
+  .cthulhuUiSelectorButton[data-row-state='drag-active'] {
+    background-color: var(--ui-neutral-action-hover-fill);
+  }
+
+  .cthulhuUiSelectorButton[data-row-state='dragging'],
+  .cthulhuUiSelectorButton[data-row-state='over'] {
     background-color: var(--ui-info-normal-surface);
     color: var(--ui-normal-text);
   }

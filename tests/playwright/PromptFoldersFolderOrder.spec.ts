@@ -205,12 +205,15 @@ describe('Prompt Folder Order', () => {
     await beginPromptFolderDropdownDrag(mainWindow, 'folder-gamma')
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
-    ).toHaveAttribute('data-dragging', 'true')
+    ).toHaveAttribute('data-row-state', 'dragging')
     await moveActiveDragToTarget(
       mainWindow,
       promptFolderDropdownItemSelector('folder-alpha'),
       'top'
     )
+    await expect(
+      mainWindow.locator(promptFolderDropdownItemSelector('folder-alpha'))
+    ).toHaveAttribute('data-row-state', 'drag-idle')
     await expect(
       mainWindow.locator(promptFolderDropdownDropIndicatorSelector('folder-alpha'))
     ).toHaveCount(1)

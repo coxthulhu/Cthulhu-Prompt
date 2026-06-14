@@ -24,7 +24,7 @@ const getActivePromptTreeEntryTestId = async (mainWindow: Page): Promise<string 
     if (!host) return null
     const activeButton = host.querySelector<HTMLButtonElement>(
       [
-        'button[data-active="true"][data-testid^="prompt-tree-prompt-"]',
+        'button[data-row-state="active"][data-testid^="prompt-tree-prompt-"]',
         'button[data-active="true"][data-testid^="prompt-tree-folder-options-button-"]'
       ].join(', ')
     )

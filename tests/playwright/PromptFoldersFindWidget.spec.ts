@@ -825,8 +825,8 @@ describe('Prompt folder find dialog', () => {
       .toEqual({ selectedText: titleQuery, hasFocus: true })
 
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')).toHaveAttribute(
-      'data-active',
-      'true'
+      'data-row-state',
+      'active'
     )
   })
 

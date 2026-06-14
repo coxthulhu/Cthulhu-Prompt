@@ -21,6 +21,7 @@
     folder: PromptFolder
     isActive: boolean
     isSettingsActive: boolean
+    isPromptDragActive: boolean
     isExpanded: boolean
     isShowingAllPrompts: boolean
     visiblePromptLimit: number
@@ -35,6 +36,7 @@
     folder,
     isActive,
     isSettingsActive,
+    isPromptDragActive,
     isExpanded,
     isShowingAllPrompts,
     visiblePromptLimit,
@@ -112,10 +114,18 @@
 
 <PromptDropTarget getOptions={getFolderPromptDroppableOptions} class="sidebarPromptTreeFolderRow">
   {#snippet children({ isOver })}
+    {@const rowState = isOver
+      ? 'over'
+      : isActive
+        ? isPromptDragActive
+          ? 'drag-active'
+          : 'active'
+        : isPromptDragActive
+          ? 'drag-idle'
+          : 'idle'}
     <div
       class="sidebarPromptTreeRow group"
-      data-active={isActive ? 'true' : 'false'}
-      data-over={isOver ? 'true' : 'false'}
+      data-row-state={rowState}
     >
       <button
         type="button"

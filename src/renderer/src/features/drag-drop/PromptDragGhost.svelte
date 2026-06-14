@@ -5,8 +5,7 @@
 <div class="promptDragGhost">
   <div
     class="sidebarPromptTreeSettingsButton promptDragGhostButton"
-    data-active="false"
-    data-dragging="false"
+    data-row-state="idle"
   >
     <span class="sidebarPromptTreeSettingsLabel">{title}</span>
   </div>

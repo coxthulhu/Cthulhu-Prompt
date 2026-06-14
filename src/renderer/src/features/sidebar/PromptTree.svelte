@@ -372,6 +372,7 @@
     const draggedPromptRow = promptDragState.draggedPromptRow
     return draggedPromptRow?.folderId === folderId && draggedPromptRow.promptId === promptId
   }
+  const isPromptDragActive = $derived(promptDragState.draggedPromptRow !== null)
 
   const handlePromptTreeEntrySelect = (promptFolderId: string, row: PromptNavigationRow) => {
     const isSameFolderActive =
@@ -558,6 +559,7 @@
     folder={props.row.folder}
     {isActive}
     {isSettingsActive}
+    {isPromptDragActive}
     isExpanded={isFolderExpanded(props.row.folder.id)}
     isShowingAllPrompts={isFolderShowingAllPrompts(props.row.folder.id)}
     visiblePromptLimit={PROMPT_TREE_VISIBLE_PROMPT_LIMIT}
@@ -588,6 +590,7 @@
     {promptTitle}
     {isActive}
     {isDragging}
+    {isPromptDragActive}
     getPromptDroppableOptions={() =>
       getPromptTreeDroppableOptions(
         props.rowId,
@@ -614,6 +617,7 @@
   <PromptTreeVisibilityToggleRow
     folder={props.row.folder}
     isShowingAll={props.row.isShowingAll}
+    {isPromptDragActive}
     hiddenPromptCount={props.row.hiddenPromptCount}
     getVisibilityDroppableOptions={() =>
       getPromptTreeDroppableOptions(

@@ -67,17 +67,19 @@
     color 50ms ease-out;
 }
 
-.sidebarPromptTreeRow:hover {
+.sidebarPromptTreeRow[data-row-state='idle']:hover,
+.sidebarPromptTreeRow[data-row-state='active']:hover {
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-active='true'] {
+.sidebarPromptTreeRow[data-row-state='active'],
+.sidebarPromptTreeRow[data-row-state='drag-active'] {
   background-color: var(--ui-neutral-emphasis-surface);
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-over='true'] {
+.sidebarPromptTreeRow[data-row-state='over'] {
   background-color: var(--ui-info-normal-surface);
   color: var(--ui-normal-text);
 }
@@ -163,20 +165,24 @@
     color 50ms ease-out;
 }
 
-.sidebarPromptTreeRow:hover .sidebarPromptTreeFolderActions,
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeFolderActions,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeFolderActions,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeFolderActions {
   display: flex;
 }
 
-.sidebarPromptTreeRow:hover .sidebarPromptTreeActionButton,
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeActionButton,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeActionButton,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeActionButton {
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow:hover .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeChevronWrap,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeChevronWrap,
-.sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeChevronWrap,
-.sidebarPromptTreeRow[data-over='true'] .sidebarPromptTreeChevronWrap {
+.sidebarPromptTreeRow[data-row-state='active'] .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow[data-row-state='drag-active'] .sidebarPromptTreeChevronWrap,
+.sidebarPromptTreeRow[data-row-state='over'] .sidebarPromptTreeChevronWrap {
   color: var(--ui-normal-text);
 }
 
@@ -186,22 +192,26 @@
 }
 
 .sidebarPromptTreeActionButton[data-active='true'],
-.sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeActionButton {
+.sidebarPromptTreeRow[data-row-state='active'] .sidebarPromptTreeActionButton,
+.sidebarPromptTreeRow[data-row-state='drag-active'] .sidebarPromptTreeActionButton {
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow:hover .sidebarPromptTreeCountInActionSlot,
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeCountInActionSlot,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeCountInActionSlot,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountInActionSlot {
   display: none;
 }
 
-.sidebarPromptTreeRow:hover .sidebarPromptTreeCountBadge,
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeCountBadge,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeCountBadge,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
   background-color: var(--ui-ghost-surface);
   color: var(--ui-secondary-text);
 }
 
-.sidebarPromptTreeRow[data-active='true'] .sidebarPromptTreeCountBadge {
+.sidebarPromptTreeRow[data-row-state='active'] .sidebarPromptTreeCountBadge,
+.sidebarPromptTreeRow[data-row-state='drag-active'] .sidebarPromptTreeCountBadge {
   background-color: var(--ui-ghost-surface);
   color: var(--ui-secondary-text);
 }
@@ -246,17 +256,19 @@
     color 50ms ease-out;
 }
 
-.sidebarPromptTreeSettingsButton:hover {
+.sidebarPromptTreeSettingsButton[data-row-state='idle']:hover,
+.sidebarPromptTreeSettingsButton[data-row-state='active']:hover {
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeSettingsButton[data-active='true'] {
+.sidebarPromptTreeSettingsButton[data-row-state='active'],
+.sidebarPromptTreeSettingsButton[data-row-state='drag-active'] {
   background-color: var(--ui-neutral-emphasis-surface);
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeSettingsButton[data-dragging='true'] {
+.sidebarPromptTreeSettingsButton[data-row-state='dragging'] {
   background-color: var(--ui-info-normal-surface);
   color: var(--ui-normal-text);
 }

@@ -11,6 +11,7 @@
     promptTitle: string
     isActive: boolean
     isDragging: boolean
+    isPromptDragActive: boolean
     getPromptDroppableOptions: () => PromptRowDropOptions
     promptDragOptions: PromptRowDragOptions
     onPromptSelect: (folderId: string, promptId: string) => void
@@ -22,6 +23,7 @@
     promptTitle,
     isActive,
     isDragging,
+    isPromptDragActive,
     getPromptDroppableOptions,
     promptDragOptions,
     onPromptSelect
@@ -35,6 +37,18 @@
       button.blur()
     }
   }
+
+  const rowState = $derived(
+    isDragging
+      ? 'dragging'
+      : isActive
+        ? isPromptDragActive
+          ? 'drag-active'
+          : 'active'
+        : isPromptDragActive
+          ? 'drag-idle'
+          : 'idle'
+  )
 </script>
 
 <PromptDropTarget getOptions={getPromptDroppableOptions} class="sidebarPromptTreeSettingsRow">
@@ -43,8 +57,7 @@
     use:draggable={promptDragOptions}
     type="button"
     data-testid={folderPromptTestId(promptId)}
-    data-active={isActive ? 'true' : 'false'}
-    data-dragging={isDragging ? 'true' : 'false'}
+    data-row-state={rowState}
     aria-current={isActive ? 'true' : undefined}
     onclick={handlePromptSelect}
     class="sidebarPromptTreeSettingsButton"

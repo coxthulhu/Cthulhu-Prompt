@@ -260,7 +260,8 @@
       `sidebar-prompt-folder-dropdown-drag-handle-${item.id}`,
     getDropIndicatorTestId: (item: DropdownPopupDetailedItem) =>
       `sidebar-prompt-folder-dropdown-drop-indicator-${item.id}`,
-    isDragging: (item: DropdownPopupDetailedItem) => draggedPromptFolderSelectorId === item.id
+    isDragging: (item: DropdownPopupDetailedItem) => draggedPromptFolderSelectorId === item.id,
+    isDraggingAny: () => draggedPromptFolderSelectorId !== null
   }
 </script>
 

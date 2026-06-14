@@ -336,7 +336,7 @@ const getActivePromptTreeTitle = async (mainWindow: any): Promise<string | null>
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
     const activeButton = host.querySelector<HTMLButtonElement>(
-      'button[data-active="true"][data-testid^="prompt-tree-prompt-"]'
+      'button[data-row-state="active"][data-testid^="prompt-tree-prompt-"]'
     )
     return activeButton?.textContent?.trim() ?? null
   }, PROMPT_TREE_HOST_SELECTOR)
@@ -734,7 +734,7 @@ describe('User Persistence', () => {
     await testHelpers.navigateToPromptFolders('Development')
     const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')
     await bugAnalysisButton.click()
-    await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
+    await expect(bugAnalysisButton).toHaveAttribute('data-row-state', 'active')
     await testHelpers.navigateToHomeScreen()
 
     await expect
@@ -764,12 +764,12 @@ describe('User Persistence', () => {
     await testHelpers.navigateToPromptFolders('Development')
     const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')
     await bugAnalysisButton.click()
-    await expect(bugAnalysisButton).toHaveAttribute('data-active', 'true')
+    await expect(bugAnalysisButton).toHaveAttribute('data-row-state', 'active')
 
     await testHelpers.navigateToPromptFolders('Examples')
     const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-tree-prompt-simple-1"]')
     await simpleGreetingButton.click()
-    await expect(simpleGreetingButton).toHaveAttribute('data-active', 'true')
+    await expect(simpleGreetingButton).toHaveAttribute('data-row-state', 'active')
     await testHelpers.navigateToHomeScreen()
 
     await expect

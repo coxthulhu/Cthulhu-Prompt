@@ -433,7 +433,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
     await mainWindow.waitForSelector(SHORT_EDITOR_50, { state: 'attached' })
-    await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
   test('tracks centered prompt scroll in tree, including folder settings and auto-expand', async ({
@@ -481,8 +481,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toHaveAttribute(
-      'data-active',
-      'true'
+      'data-row-state',
+      'active'
     )
   })
 })

@@ -3,18 +3,20 @@
 
   type Props = {
     text: string
+    rowState?: string
     class?: string
     testId?: string
     title?: string
     onclick?: (event: MouseEvent) => void
   }
 
-  let { text, class: className, testId, title, onclick }: Props = $props()
+  let { text, rowState, class: className, testId, title, onclick }: Props = $props()
 </script>
 
 <button
   type="button"
   class={mergeClasses('cthulhuUiInlineTextButton', className)}
+  data-row-state={rowState}
   data-testid={testId}
   {title}
   {onclick}
@@ -39,7 +41,7 @@
     transition: color 50ms ease-out;
   }
 
-  .cthulhuUiInlineTextButton:hover,
+  .cthulhuUiInlineTextButton:not([data-row-state='drag-idle']):hover,
   .cthulhuUiInlineTextButton:focus-visible {
     color: var(--ui-normal-text);
   }

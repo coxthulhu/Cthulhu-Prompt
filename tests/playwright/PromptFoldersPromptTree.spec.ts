@@ -123,7 +123,7 @@ describe('Prompt folder prompt tree', () => {
     const expectedCenteredRowId = `prompt-editor-${TARGET_PROMPT_ID}`
     expect(centeredRowId).toBe(expectedCenteredRowId)
 
-    await expect(promptTreeButton).toHaveAttribute('data-active', 'true')
+    await expect(promptTreeButton).toHaveAttribute('data-row-state', 'active')
   })
 
   test('scrolls back to folder settings when selecting settings in the prompt tree', async ({

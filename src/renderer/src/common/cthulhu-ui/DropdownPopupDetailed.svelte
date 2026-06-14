@@ -13,7 +13,7 @@
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
   } from './DropdownPopupCore.svelte'
-  import SelectorButton from './SelectorButton.svelte'
+  import SelectorButton, { type SelectorButtonRowState } from './SelectorButton.svelte'
 
   export type DropdownPopupDetailedItem = {
     id: string
@@ -30,6 +30,7 @@
     getDragHandleTestId: (item: DropdownPopupDetailedItem) => string
     getDropIndicatorTestId: (item: DropdownPopupDetailedItem) => string
     isDragging: (item: DropdownPopupDetailedItem) => boolean
+    isDraggingAny: () => boolean
   }
 
   type Props = {
@@ -60,6 +61,14 @@
 
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
 
+  const getItemRowState = (item: DropdownPopupDetailedItem): SelectorButtonRowState => {
+    const isDraggingAny = itemDragOptions?.isDraggingAny() ?? false
+
+    if (itemDragOptions?.isDragging(item)) return 'dragging'
+    if (selectedItem?.id === item.id) return isDraggingAny ? 'drag-active' : 'active'
+    return isDraggingAny ? 'drag-idle' : 'idle'
+  }
+
   const selectItem = (item: DropdownPopupDetailedItem, event: MouseEvent, close: () => void) => {
     close()
     onselect?.(item, event)
@@ -83,7 +92,7 @@
               getOptions={() => itemDragOptions.getDroppableOptions(item)}
               class="cthulhuUiDropdownPopupDetailedDragTarget"
             >
-              {#snippet children({ isOver, edge })}
+              {#snippet children({ edge })}
                 <SelectorButton
                   icon={item.icon}
                   text={item.label}
@@ -91,8 +100,7 @@
                   detailParts={item.detailParts}
                   showChevron={false}
                   selected={selectedItem?.id === item.id}
-                  dragging={itemDragOptions.isDragging(item)}
-                  over={isOver}
+                  rowState={getItemRowState(item)}
                   role="menuitem"
                   ariaSelected={selectedItem?.id === item.id}
                   testId={item.testId}
@@ -125,6 +133,7 @@
               detailParts={item.detailParts}
               showChevron={false}
               selected={selectedItem?.id === item.id}
+              rowState={getItemRowState(item)}
               role="menuitem"
               ariaSelected={selectedItem?.id === item.id}
               testId={item.testId}
@@ -144,6 +153,7 @@
             detailParts={footerItem.detailParts}
             showChevron={false}
             selected={selectedItem?.id === footerItem.id}
+            rowState={getItemRowState(footerItem)}
             role="menuitem"
             ariaSelected={selectedItem?.id === footerItem.id}
             testId={footerItem.testId}
@@ -206,7 +216,8 @@
     cursor: grabbing;
   }
 
-  :global(.cthulhuUiDropdownPopupDetailedFooterItem:hover),
+  :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-row-state='idle']:hover),
+  :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-row-state='active']:hover),
   :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-selected='true']) {
     background-color: var(--ui-accent-action-hover-fill);
   }
