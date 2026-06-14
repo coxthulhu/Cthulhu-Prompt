@@ -54,18 +54,8 @@
 
   const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
   const IconButtonBaseVariants: IconButtonBaseVariant[] = ['normal', 'dim', 'muted']
-  const IconButtonHoverVariants: IconButtonHoverVariant[] = [
-    'neutral',
-    'accent',
-    'danger',
-    'glyph'
-  ]
-  const IconButtonSizes: IconButtonSize[] = [
-    'default',
-    'compact',
-    'tiny',
-    'sidebar-rail'
-  ]
+  const IconButtonHoverVariants: IconButtonHoverVariant[] = ['neutral', 'accent', 'danger', 'glyph']
+  const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'tiny', 'sidebar-rail']
   const folderDropdownItems: DropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
@@ -207,7 +197,10 @@
       <div id="action-buttons" class="component-section">
         <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('Action buttons', 'Copy, link, icon text, and icon cell samples.')}
+            {@render componentTitle(
+              'Action buttons',
+              'Copy, link, icon text, and icon cell samples.'
+            )}
 
             <div class="component-sample-grid">
               <div class="component-sample">
@@ -472,7 +465,10 @@
       <div class="component-section">
         <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('Message Rows', 'Inline guidance, warnings, and validation errors.')}
+            {@render componentTitle(
+              'Message Rows',
+              'Inline guidance, warnings, and validation errors.'
+            )}
 
             <div class="stack">
               <div class="component-sample">
@@ -553,10 +549,7 @@
                     <span>IconButton: {baseVariant} / {hoverVariant}</span>
                     <div class="variant-controls icon-only-controls">
                       {#each IconButtonSizes as size (size)}
-                        <div
-                          class="icon-only-sample"
-                          data-fill-size={size === 'sidebar-rail'}
-                        >
+                        <div class="icon-only-sample" data-fill-size={size === 'sidebar-rail'}>
                           <IconButton
                             icon={Settings}
                             label={`${baseVariant} ${hoverVariant} ${size}`}

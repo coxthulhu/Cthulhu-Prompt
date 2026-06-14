@@ -1,8 +1,5 @@
 import type { IpcResult } from './IpcResult'
-import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
-  type PromptFolderSettingsField
-} from './PromptFolder'
+import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type UserPersistence = {

@@ -44,11 +44,7 @@
 >
   <!-- Text action button for row-level commands; icons are optional. -->
   {#if Icon}
-    <Icon
-      class={mergeClasses('cthulhuUiButtonIcon', iconClass)}
-      size={16}
-      aria-hidden="true"
-    />
+    <Icon class={mergeClasses('cthulhuUiButtonIcon', iconClass)} size={16} aria-hidden="true" />
   {/if}
   <span>{text}</span>
 </button>

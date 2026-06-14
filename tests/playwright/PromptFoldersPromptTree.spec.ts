@@ -21,8 +21,10 @@ const SHORT_SCROLL_TARGET_PX = 2000
 const SHORT_OPTIONS_SELECTOR = '[data-testid="prompt-tree-folder-options-button-Short"]'
 const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
 const SHORT_SHOW_LESS_SELECTOR = '[data-testid="prompt-tree-folder-show-less-prompts-Short"]'
-const SHORT_MENU_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-menu-show-all-prompts-Short"]'
-const SHORT_MENU_SHOW_LESS_SELECTOR = '[data-testid="prompt-tree-folder-menu-show-less-prompts-Short"]'
+const SHORT_MENU_SHOW_ALL_SELECTOR =
+  '[data-testid="prompt-tree-folder-menu-show-all-prompts-Short"]'
+const SHORT_MENU_SHOW_LESS_SELECTOR =
+  '[data-testid="prompt-tree-folder-menu-show-less-prompts-Short"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
 const samplePromptTreeRowSelector = `[data-testid="prompt-tree-prompt-${SAMPLE_PROMPT_ID}"]`
@@ -76,7 +78,9 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    await mainWindow.locator('[data-testid="prompt-tree-folder-show-all-prompts-LongWrappedSingles"]').click()
+    await mainWindow
+      .locator('[data-testid="prompt-tree-folder-show-all-prompts-LongWrappedSingles"]')
+      .click()
     await scrollPromptTreeRowIntoView(mainWindow, testHelpers, TARGET_PROMPT_TREE_ROW_SELECTOR)
     const promptTreeButton = mainWindow.locator(TARGET_PROMPT_TREE_ROW_SELECTOR)
     await expect(promptTreeButton).toHaveText(TARGET_PROMPT_TITLE)
@@ -203,9 +207,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toContainText('Show all (55 more)')
 
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText(
-      'Show all prompts'
-    )
+    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText('Show all prompts')
     await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
 
     await mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR).click()
@@ -235,9 +237,7 @@ describe('Prompt folder prompt tree', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 0)
     await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText(
-      'Show all prompts'
-    )
+    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText('Show all prompts')
     await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
   })
 

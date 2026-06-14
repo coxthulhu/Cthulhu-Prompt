@@ -59,7 +59,7 @@
           class="min-w-24 font-bold"
           data-drop-over="false"
           aria-label={dividerText}
-          testId={testId}
+          {testId}
           onclick={() => {
             onAddPrompt?.()
           }}

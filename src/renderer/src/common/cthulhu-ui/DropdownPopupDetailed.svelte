@@ -60,11 +60,7 @@
 
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
 
-  const selectItem = (
-    item: DropdownPopupDetailedItem,
-    event: MouseEvent,
-    close: () => void
-  ) => {
+  const selectItem = (item: DropdownPopupDetailedItem, event: MouseEvent, close: () => void) => {
     close()
     onselect?.(item, event)
   }

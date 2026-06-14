@@ -123,12 +123,7 @@
         <Title {title} variant="dialog" />
 
         {#if showCloseButton}
-          <IconButton
-            icon={X}
-            label="Close"
-            disabled={cancelDisabled}
-            onclick={closeDialog}
-          />
+          <IconButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
         {/if}
       </div>
 

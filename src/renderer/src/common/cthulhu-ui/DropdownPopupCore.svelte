@@ -227,7 +227,10 @@
     document.addEventListener('pointerdown', handlePointerDown)
     document.addEventListener('keydown', handleKeydown)
     document.addEventListener('wheel', preventBackgroundScroll, { capture: true, passive: false })
-    document.addEventListener('touchmove', preventBackgroundScroll, { capture: true, passive: false })
+    document.addEventListener('touchmove', preventBackgroundScroll, {
+      capture: true,
+      passive: false
+    })
 
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown)

@@ -232,5 +232,4 @@
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonChevronWrap) {
     color: var(--ui-normal-text);
   }
-
 </style>

@@ -106,7 +106,10 @@
 
   const SETTINGS_FIELD_METADATA_BY_FIELD = Object.fromEntries(
     PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map((metadata) => [metadata.field, metadata])
-  ) as Record<PromptFolderSettingsDraftField, (typeof PROMPT_FOLDER_SETTINGS_FIELD_METADATA)[number]>
+  ) as Record<
+    PromptFolderSettingsDraftField,
+    (typeof PROMPT_FOLDER_SETTINGS_FIELD_METADATA)[number]
+  >
 
   type Props = {
     workspaceId: string | null
@@ -159,9 +162,7 @@
   const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId, field))
   const findContext = getPromptFolderFindContext()
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
-  const OVERFLOW_LEFT_PADDING_PX = $derived(
-    SETTINGS_EDITOR_LEFT_OFFSET_PX + rowContentLeftOffsetPx
-  )
+  const OVERFLOW_LEFT_PADDING_PX = $derived(SETTINGS_EDITOR_LEFT_OFFSET_PX + rowContentLeftOffsetPx)
   const OVERFLOW_RIGHT_PADDING_PX = SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX
   const OVERFLOW_BOTTOM_PADDING_PX =
     SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX + MONACO_VERTICAL_PADDING_PX
@@ -187,7 +188,11 @@
       value: folderSettings[field],
       modelUri: createPromptFolderSettingsModelUri(promptFolderId, field),
       initialViewStateJson: workspaceId
-        ? lookupWorkspacePersistedPromptFolderEditorViewStateJson(workspaceId, promptFolderId, field)
+        ? lookupWorkspacePersistedPromptFolderEditorViewStateJson(
+            workspaceId,
+            promptFolderId,
+            field
+          )
         : null,
       viewStateCaptureKey: `${config.viewStateCapturePrefix}:${promptFolderId}`,
       setViewState: (viewStateJson) => {

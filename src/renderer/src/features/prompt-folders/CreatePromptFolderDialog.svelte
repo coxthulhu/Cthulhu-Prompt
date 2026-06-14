@@ -146,13 +146,12 @@
   onsubmit={handleCreateFolder}
 >
   <div class="cthulhuCreatePromptFolderRows flex min-w-0 flex-col">
-    <SettingRow
-      icon={FolderPlus}
-      label="Prompt Folder Name"
-      detail="Name the new prompt folder."
-    >
+    <SettingRow icon={FolderPlus} label="Prompt Folder Name" detail="Name the new prompt folder.">
       {#snippet control()}
-        <FloatingValidationMessage message={errorMessage} textTestId="create-prompt-folder-name-error">
+        <FloatingValidationMessage
+          message={errorMessage}
+          textTestId="create-prompt-folder-name-error"
+        >
           <TextInput
             id="create-prompt-folder-name-input"
             class="w-[220px]"

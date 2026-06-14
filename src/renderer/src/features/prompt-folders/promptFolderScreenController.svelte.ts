@@ -683,10 +683,7 @@ export const createPromptFolderScreenController = ({
     }
 
     const metrics = viewportMetrics
-    const measuredWidthPx = Math.max(
-      0,
-      metrics.widthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX
-    )
+    const measuredWidthPx = Math.max(0, metrics.widthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
 
     return (
       PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX +
@@ -735,10 +732,12 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
-    const targetRow: ActivePromptTreeRow =
-      isPromptFolderSettingsFindEntityId(match.entityId, promptFolderId)
-        ? { kind: 'folder-settings' }
-        : { kind: 'prompt', promptId: match.entityId }
+    const targetRow: ActivePromptTreeRow = isPromptFolderSettingsFindEntityId(
+      match.entityId,
+      promptFolderId
+    )
+      ? { kind: 'folder-settings' }
+      : { kind: 'prompt', promptId: match.entityId }
     setCurrentFolderSelection(targetRow, 'find', { forceVersionBump: true })
   }
 

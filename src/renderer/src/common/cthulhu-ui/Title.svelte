@@ -9,12 +9,7 @@
     variant?: TitleVariant
   }
 
-  let {
-    title,
-    variant = 'page',
-    class: className,
-    ...restProps
-  }: Props = $props()
+  let { title, variant = 'page', class: className, ...restProps }: Props = $props()
 </script>
 
 <div class={mergeClasses('cthulhuUiTitle', className)} data-variant={variant} {...restProps}>

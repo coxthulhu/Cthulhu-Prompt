@@ -1,8 +1,5 @@
 import { ipcMain } from 'electron'
-import {
-  copyPromptFolderSettings,
-  createEmptyPromptFolderSettings
-} from '@shared/PromptFolder'
+import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'

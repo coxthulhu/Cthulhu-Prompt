@@ -25,9 +25,7 @@
   const testId = $derived(
     isShowingAll ? folderPromptShowLessTestId(folder) : folderPromptShowAllTestId(folder)
   )
-  const buttonText = $derived(
-    isShowingAll ? 'Show less' : `Show all (${hiddenPromptCount} more)`
-  )
+  const buttonText = $derived(isShowingAll ? 'Show less' : `Show all (${hiddenPromptCount} more)`)
 
   const handleVisibilityClick = (event: MouseEvent) => {
     onPromptVisibilityChange(folder.id, !isShowingAll)
@@ -39,10 +37,7 @@
   }
 </script>
 
-<PromptDropTarget
-  getOptions={getVisibilityDroppableOptions}
-  class="sidebarPromptTreeVisibilityRow"
->
+<PromptDropTarget getOptions={getVisibilityDroppableOptions} class="sidebarPromptTreeVisibilityRow">
   <PromptTreeIndent />
   <div class="sidebarPromptTreeVisibilityButtonWrap">
     <InlineTextButton

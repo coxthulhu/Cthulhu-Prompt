@@ -331,9 +331,9 @@ export class UserPersistenceDataAccess {
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(
         serializableWorkspacePersistence.workspaceId
       )
-      db.prepare(
-        'DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?'
-      ).run(serializableWorkspacePersistence.workspaceId)
+      db.prepare('DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?').run(
+        serializableWorkspacePersistence.workspaceId
+      )
 
       const insertPromptFolderUiState = db.prepare(
         `
@@ -425,9 +425,9 @@ export class UserPersistenceDataAccess {
         .all(workspaceId) as PromptFolderSettingsEditorViewStateRow[]
 
       db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(workspaceId)
-      db.prepare(
-        'DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?'
-      ).run(workspaceId)
+      db.prepare('DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?').run(
+        workspaceId
+      )
 
       const insertPromptFolderUiState = db.prepare(
         `

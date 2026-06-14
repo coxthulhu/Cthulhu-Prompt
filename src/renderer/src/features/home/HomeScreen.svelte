@@ -281,10 +281,7 @@
 
               <div class="cthulhuHomeWorkspaceStats">
                 <DisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
-                <Separator
-                  orientation="vertical"
-                  class="h-auto self-stretch"
-                />
+                <Separator orientation="vertical" class="h-auto self-stretch" />
                 <DisplayRow
                   icon={Folders}
                   label={displayedPromptFolderCount}

@@ -402,20 +402,10 @@ export const setPromptFolderEditorViewStateWithAutosave = (
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        applyPromptFolderEditorViewState(
-          draft,
-          promptFolderId,
-          field,
-          viewStateJson
-        )
+        applyPromptFolderEditorViewState(draft, promptFolderId, field, viewStateJson)
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
-        applyPromptFolderEditorViewState(
-          draft,
-          promptFolderId,
-          field,
-          viewStateJson
-        )
+        applyPromptFolderEditorViewState(draft, promptFolderId, field, viewStateJson)
       })
     }
   })

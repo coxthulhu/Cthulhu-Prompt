@@ -12,13 +12,7 @@
   const style = $derived(`--drag-drop-indicator-inset-start:${insetStart};`)
 </script>
 
-<div
-  class="dragDropIndicator"
-  {style}
-  data-testid={testId}
-  data-edge={edge}
-  aria-hidden="true"
->
+<div class="dragDropIndicator" {style} data-testid={testId} data-edge={edge} aria-hidden="true">
   <svg class="dragDropIndicatorSvg" width="100%" height="10">
     <path class="dragDropIndicatorStroke" d="M3 1.5 L8 5 L3 8.5" />
     <line class="dragDropIndicatorStroke" x1="8" y1="5" x2="100%" y2="5"></line>

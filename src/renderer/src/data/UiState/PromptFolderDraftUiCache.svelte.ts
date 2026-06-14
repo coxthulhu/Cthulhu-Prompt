@@ -1,8 +1,5 @@
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
-  type PromptFolderSettingsField
-} from '@shared/PromptFolder'
+import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
 import {
   createSessionMeasuredHeightCache,
   createSessionValueCache

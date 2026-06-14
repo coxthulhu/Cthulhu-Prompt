@@ -142,11 +142,7 @@
   onsubmit={handleCreateWorkspace}
 >
   <div class="cthulhuCreateWorkspaceRows flex min-w-0 flex-col">
-    <SettingRow
-      icon={Type}
-      label="Workspace Name"
-      detail="Name the new workspace folder."
-    >
+    <SettingRow icon={Type} label="Workspace Name" detail="Name the new workspace folder.">
       {#snippet control()}
         <FloatingValidationMessage
           message={displayedWorkspaceNameError}

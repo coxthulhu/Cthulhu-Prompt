@@ -10,13 +10,7 @@
     iconClass?: string
   }
 
-  let {
-    expanded,
-    size = 22,
-    iconSize = 20,
-    class: className,
-    iconClass
-  }: Props = $props()
+  let { expanded, size = 22, iconSize = 20, class: className, iconClass }: Props = $props()
 
   const chevronStyle = $derived(
     `--cthulhu-ui-rotating-chevron-size: ${size}px; --cthulhu-ui-rotating-chevron-icon-size: ${iconSize}px;`

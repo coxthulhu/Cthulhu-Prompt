@@ -219,9 +219,7 @@ describe('Home Screen', () => {
       expect(screenInfo.promptCount).toBe(2)
     })
 
-    test('creates a blank My Prompts folder when examples are disabled', async ({
-      testSetup
-    }) => {
+    test('creates a blank My Prompts folder when examples are disabled', async ({ testSetup }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-without-examples', autoSetup: false }
       })

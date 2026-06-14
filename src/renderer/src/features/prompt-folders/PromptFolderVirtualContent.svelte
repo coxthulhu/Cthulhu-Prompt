@@ -268,15 +268,13 @@
       })
     })
 
-    rows.push(
-      {
-        id: 'prompt-header',
-        row: {
-          kind: 'prompt-header',
-          promptCount: visiblePromptIds.length
-        }
+    rows.push({
+      id: 'prompt-header',
+      row: {
+        kind: 'prompt-header',
+        promptCount: visiblePromptIds.length
       }
-    )
+    })
 
     if (visiblePromptIds.length === 0) {
       rows.push({
@@ -506,7 +504,7 @@
       {shouldDehydrate}
       {overlayRowElement}
       {onHydrationChange}
-      folderSettings={folderSettings}
+      {folderSettings}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       focusRequest={promptFocusRequest}
       isFirstPrompt={promptIndex === 0}

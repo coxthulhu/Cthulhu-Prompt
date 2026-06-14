@@ -11,13 +11,7 @@
     surfaceClass?: string
   }
 
-  let {
-    label,
-    children,
-    surfaceClass,
-    class: className,
-    ...restProps
-  }: Props = $props()
+  let { label, children, surfaceClass, class: className, ...restProps }: Props = $props()
 </script>
 
 <div class={mergeClasses('cthulhuUiCard', className)} {...restProps}>

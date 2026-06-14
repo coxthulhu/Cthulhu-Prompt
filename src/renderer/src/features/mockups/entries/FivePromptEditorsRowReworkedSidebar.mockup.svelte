@@ -230,7 +230,7 @@
     aria-label={label}
     title={label}
     data-disabled={disabled ? 'true' : 'false'}
-    disabled={disabled}
+    {disabled}
     {onclick}
   >
     {@render icon()}
@@ -244,7 +244,7 @@
     aria-label={label}
     title={label}
     data-disabled={disabled ? 'true' : 'false'}
-    disabled={disabled}
+    {disabled}
     {onclick}
   >
     {@render icon()}

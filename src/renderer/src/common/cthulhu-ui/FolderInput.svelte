@@ -23,7 +23,7 @@
     buttonTestId,
     ariaLabel,
     class: className,
-    disabled = false,
+    disabled = false
   }: Props = $props()
 
   let isBrowsing = $state(false)

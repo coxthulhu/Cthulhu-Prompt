@@ -13,8 +13,7 @@ const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
-const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM =
-  '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
+const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM =
   '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
 const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-add-button"]'
@@ -190,9 +189,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'data-active',
       'true'
     )
-    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(
-      savedScrollTop
-    )
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
+      .toBe(savedScrollTop)
   })
 
   test('selects prompt folders and opens create dialog from the sidebar dropdown', async ({
@@ -218,7 +217,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
-    await expect(mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')
+    ).toBeVisible()
   })
 
   test('shows add prompt folder button when the workspace has no prompt folders', async ({
@@ -238,7 +239,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('text=Create a Prompt Folder to Get Started')).toBeVisible()
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
-    await expect(mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')
+    ).toBeVisible()
   })
 
   test('keeps selection stable while folders expand and collapse', async ({ testSetup }) => {
@@ -373,7 +376,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       testWindow.__promptFolderCreateDuplicateErrorSeen = false
 
       const observer = new MutationObserver(() => {
-        const errorMessage = document.querySelector('[data-testid="create-prompt-folder-name-error"]')
+        const errorMessage = document.querySelector(
+          '[data-testid="create-prompt-folder-name-error"]'
+        )
 
         if (errorMessage?.textContent?.includes('A folder with this name already exists')) {
           testWindow.__promptFolderCreateDuplicateErrorSeen = true
@@ -475,8 +480,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
 
     await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')
-    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
   })
 })

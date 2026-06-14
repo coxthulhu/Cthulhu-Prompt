@@ -63,10 +63,7 @@ export const PROMPT_FOLDER_SETTINGS_MONACO_MODEL_URI_SEGMENTS = Object.fromEntri
 ) as Record<PromptFolderSettingsField, string>
 
 export const PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
-  PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, findSectionKey }) => [
-    field,
-    findSectionKey
-  ])
+  PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, findSectionKey }) => [field, findSectionKey])
 ) as Record<PromptFolderSettingsField, string>
 
 export const createEmptyPromptFolderSettings = (): PromptFolderSettings => ({
@@ -75,9 +72,7 @@ export const createEmptyPromptFolderSettings = (): PromptFolderSettings => ({
   folderSuffix: ''
 })
 
-export const copyPromptFolderSettings = (
-  settings: PromptFolderSettings
-): PromptFolderSettings => ({
+export const copyPromptFolderSettings = (settings: PromptFolderSettings): PromptFolderSettings => ({
   folderDescription: settings.folderDescription,
   folderPrefix: settings.folderPrefix,
   folderSuffix: settings.folderSuffix

@@ -1,10 +1,7 @@
 import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import {
-  finishActiveDrag,
-  moveActiveDragToTarget
-} from '../helpers/PromptDragDropHelpers'
+import { finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -159,9 +156,9 @@ describe('Prompt Folder Order', () => {
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('New Folder')
     await mainWindow.locator('[data-testid="create-prompt-folder-button"]').click()
 
-    await expect(mainWindow.locator('[data-testid="prompt-tree-folder-open-button-NewFolder"]')).toHaveCount(
-      1
-    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-NewFolder"]')
+    ).toHaveCount(1)
     await expect
       .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
       .toEqual([
@@ -308,5 +305,4 @@ describe('Prompt Folder Order', () => {
       await readWorkspacePromptFolderIds(electronApp, DROPDOWN_NOOP_FOLDER_ORDER_WORKSPACE_PATH)
     ).toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
   })
-
 })

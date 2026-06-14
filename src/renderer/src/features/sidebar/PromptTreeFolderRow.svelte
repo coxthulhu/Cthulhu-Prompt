@@ -1,11 +1,5 @@
 <script lang="ts">
-  import {
-    ArrowRight,
-    ChevronsDown,
-    ChevronsUp,
-    MoreHorizontal,
-    Settings
-  } from 'lucide-svelte'
+  import { ArrowRight, ChevronsDown, ChevronsUp, MoreHorizontal, Settings } from 'lucide-svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -69,38 +63,39 @@
     blurButtonAfterMouseClick(event)
   }
 
-  const handlePromptVisibilityMenuSelect = (isNextShowingAllPrompts: boolean, event: MouseEvent) => {
+  const handlePromptVisibilityMenuSelect = (
+    isNextShowingAllPrompts: boolean,
+    event: MouseEvent
+  ) => {
     onPromptVisibilityChange(folder.id, isNextShowingAllPrompts)
     blurButtonAfterMouseClick(event)
   }
 
-  const dropdownItems = $derived.by(
-    (): DropdownPopupItem[] => [
-      {
-        id: 'folder-settings',
-        label: 'Open folder settings',
-        icon: Settings,
-        testId: folderSettingsTestId(folder)
-      },
-      ...(isExpanded && folder.promptIds.length > visiblePromptLimit
-        ? [
-            isShowingAllPrompts
-              ? {
-                  id: 'show-less-prompts',
-                  label: 'Show less prompts',
-                  icon: ChevronsUp,
-                  testId: folderPromptMenuShowLessTestId(folder)
-                }
-              : {
-                  id: 'show-all-prompts',
-                  label: 'Show all prompts',
-                  icon: ChevronsDown,
-                  testId: folderPromptMenuShowAllTestId(folder)
-                }
-          ]
-        : [])
-    ]
-  )
+  const dropdownItems = $derived.by((): DropdownPopupItem[] => [
+    {
+      id: 'folder-settings',
+      label: 'Open folder settings',
+      icon: Settings,
+      testId: folderSettingsTestId(folder)
+    },
+    ...(isExpanded && folder.promptIds.length > visiblePromptLimit
+      ? [
+          isShowingAllPrompts
+            ? {
+                id: 'show-less-prompts',
+                label: 'Show less prompts',
+                icon: ChevronsUp,
+                testId: folderPromptMenuShowLessTestId(folder)
+              }
+            : {
+                id: 'show-all-prompts',
+                label: 'Show all prompts',
+                icon: ChevronsDown,
+                testId: folderPromptMenuShowAllTestId(folder)
+              }
+        ]
+      : [])
+  ])
 
   const handleFolderOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
     if (item.id === 'folder-settings') {

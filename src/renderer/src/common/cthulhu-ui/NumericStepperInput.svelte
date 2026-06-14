@@ -184,8 +184,7 @@
     pointer-events: none;
   }
 
-  .cthulhuUiNumericStepperInput[data-invalid='true']
-    .cthulhuUiNumericStepperInputButton:disabled {
+  .cthulhuUiNumericStepperInput[data-invalid='true'] .cthulhuUiNumericStepperInputButton:disabled {
     opacity: 1;
   }
 

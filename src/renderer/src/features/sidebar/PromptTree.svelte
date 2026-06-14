@@ -373,10 +373,7 @@
     return draggedPromptRow?.folderId === folderId && draggedPromptRow.promptId === promptId
   }
 
-  const handlePromptTreeEntrySelect = (
-    promptFolderId: string,
-    row: PromptNavigationRow
-  ) => {
+  const handlePromptTreeEntrySelect = (promptFolderId: string, row: PromptNavigationRow) => {
     const isSameFolderActive =
       isPromptFoldersScreenActive && selectedPromptFolderId === promptFolderId
 
@@ -564,10 +561,11 @@
     isExpanded={isFolderExpanded(props.row.folder.id)}
     isShowingAllPrompts={isFolderShowingAllPrompts(props.row.folder.id)}
     visiblePromptLimit={PROMPT_TREE_VISIBLE_PROMPT_LIMIT}
-    getFolderPromptDroppableOptions={() => getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
-      kind: 'folder',
-      folderId: props.row.folder.id
-    }))}
+    getFolderPromptDroppableOptions={() =>
+      getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
+        kind: 'folder',
+        folderId: props.row.folder.id
+      }))}
     onFolderExpandedChange={setFolderExpanded}
     onPromptFolderOpen={handlePromptFolderOpen}
     onFolderSettingsOpen={(folderId) => handlePromptTreeEntrySelect(folderId, 'folder-settings')}
@@ -590,18 +588,19 @@
     {promptTitle}
     {isActive}
     {isDragging}
-    getPromptDroppableOptions={() => getPromptTreeDroppableOptions(
-      props.rowId,
-      'top-and-bottom',
-      (edge) => ({
-        kind: 'prompt',
-        folderId: props.row.folder.id,
-        promptId: props.row.promptId,
-        edge: edge ?? 'bottom'
-      }),
-      (payload, edge) =>
-        canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
-    )}
+    getPromptDroppableOptions={() =>
+      getPromptTreeDroppableOptions(
+        props.rowId,
+        'top-and-bottom',
+        (edge) => ({
+          kind: 'prompt',
+          folderId: props.row.folder.id,
+          promptId: props.row.promptId,
+          edge: edge ?? 'bottom'
+        }),
+        (payload, edge) =>
+          canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
+      )}
     promptDragOptions={getPromptRowDragOptions(
       props.row.folder.id,
       props.row.promptId,
@@ -616,23 +615,24 @@
     folder={props.row.folder}
     isShowingAll={props.row.isShowingAll}
     hiddenPromptCount={props.row.hiddenPromptCount}
-    getVisibilityDroppableOptions={() => getPromptTreeDroppableOptions(
-      props.rowId,
-      'bottom',
-      () => ({
-        kind: 'prompt',
-        folderId: props.row.folder.id,
-        promptId: props.row.lastVisiblePromptId,
-        edge: 'bottom'
-      }),
-      (payload) =>
-        canDropOnPromptTreePromptRow(
-          props.row.folder,
-          props.row.lastVisiblePromptId,
-          payload,
-          'bottom'
-        )
-    )}
+    getVisibilityDroppableOptions={() =>
+      getPromptTreeDroppableOptions(
+        props.rowId,
+        'bottom',
+        () => ({
+          kind: 'prompt',
+          folderId: props.row.folder.id,
+          promptId: props.row.lastVisiblePromptId,
+          edge: 'bottom'
+        }),
+        (payload) =>
+          canDropOnPromptTreePromptRow(
+            props.row.folder,
+            props.row.lastVisiblePromptId,
+            payload,
+            'bottom'
+          )
+      )}
     onPromptVisibilityChange={setFolderShowingAllPrompts}
   />
 {/snippet}
@@ -641,10 +641,10 @@
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
   {@const testId =
     row.kind === 'folder-prompt-visibility-toggle'
-        ? folderPromptVisibilityDropIndicatorTestId(row.folder)
-        : row.kind === 'folder-prompt'
-          ? folderPromptDropIndicatorTestId(row.promptId)
-          : null}
+      ? folderPromptVisibilityDropIndicatorTestId(row.folder)
+      : row.kind === 'folder-prompt'
+        ? folderPromptDropIndicatorTestId(row.promptId)
+        : null}
 
   {#if hoveredEdge && testId}
     <DropIndicator

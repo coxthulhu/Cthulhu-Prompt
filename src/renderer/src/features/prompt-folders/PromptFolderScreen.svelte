@@ -26,9 +26,13 @@
 >
   {#snippet children(findControls)}
     <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-folder-screen">
-      <div class="prompt-folder-header-bar flex h-9 shrink-0 items-center justify-between gap-3 px-6">
+      <div
+        class="prompt-folder-header-bar flex h-9 shrink-0 items-center justify-between gap-3 px-6"
+      >
         {#if controller.isVirtualContentReady}
-          <div class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-medium">
+          <div
+            class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-medium"
+          >
             <button
               type="button"
               data-testid="prompt-folder-header-folder"

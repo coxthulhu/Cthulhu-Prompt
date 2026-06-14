@@ -115,22 +115,18 @@
     icon: Plus,
     testId: 'sidebar-prompt-folder-dropdown-add-item'
   }
-  const promptFolderDropdownItems = $derived.by(
-    (): DropdownPopupDetailedItem[] =>
-      promptFolders.map((promptFolder) => {
-        const promptCount = promptFolder.promptIds.length
+  const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] =>
+    promptFolders.map((promptFolder) => {
+      const promptCount = promptFolder.promptIds.length
 
-        return {
-          id: promptFolder.id,
-          label: promptFolder.displayName,
-          detailParts: [
-            `${promptCount} prompt${promptCount === 1 ? '' : 's'}`,
-            'Updated recently'
-          ],
-          icon: Folder,
-          testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
-        }
-      })
+      return {
+        id: promptFolder.id,
+        label: promptFolder.displayName,
+        detailParts: [`${promptCount} prompt${promptCount === 1 ? '' : 's'}`, 'Updated recently'],
+        icon: Folder,
+        testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
+      }
+    })
   )
   const selectedPromptFolderDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
     if (promptFolderDropdownItems.length === 0) {

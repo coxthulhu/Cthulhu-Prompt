@@ -11,25 +11,11 @@
     size?: IconCellSize
   }
 
-  let {
-    icon: Icon,
-    iconClass,
-    size = 'row',
-    class: className,
-    ...restProps
-  }: Props = $props()
+  let { icon: Icon, iconClass, size = 'row', class: className, ...restProps }: Props = $props()
 </script>
 
-<span
-  class={mergeClasses('cthulhuUiIconCell', className)}
-  data-size={size}
-  {...restProps}
->
-  <Icon
-    class={mergeClasses('cthulhuUiIconCellIcon', iconClass)}
-    size={24}
-    aria-hidden="true"
-  />
+<span class={mergeClasses('cthulhuUiIconCell', className)} data-size={size} {...restProps}>
+  <Icon class={mergeClasses('cthulhuUiIconCellIcon', iconClass)} size={24} aria-hidden="true" />
 </span>
 
 <style>

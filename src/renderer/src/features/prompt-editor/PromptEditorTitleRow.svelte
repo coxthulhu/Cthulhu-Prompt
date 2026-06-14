@@ -116,7 +116,7 @@
 
 <div class="prompt-editor-title-row">
   <div class="prompt-editor-title-main">
-    <IconCell icon={icon} size="title" />
+    <IconCell {icon} size="title" />
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}
