@@ -20,6 +20,9 @@ import {
   finishActiveDrag,
   getRowViewportOffsets,
   moveActiveDragToTarget,
+  promptFolderSelectorDropdownItemSelector,
+  promptFolderSelectorMenuSelector,
+  promptFolderSelectorTriggerSelector,
   promptTreeFolderSelector,
   promptTreePromptDropIndicatorSelector,
   promptTreePromptSelector,
@@ -37,6 +40,16 @@ const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
 const DEVELOPMENT_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${DEVELOPMENT_FOLDER_NAME}/FolderOrder.json`
 const EXAMPLES_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${EXAMPLES_FOLDER_NAME}/FolderOrder.json`
+const createDeterministicId = (seed: string): string => {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000000000000000${suffix}`
+}
+const DEVELOPMENT_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${DEVELOPMENT_FOLDER_NAME}`)
+const EXAMPLES_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${EXAMPLES_FOLDER_NAME}`)
 const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
 const EXAMPLE_1_ID = 'simple-1'
@@ -236,6 +249,22 @@ const scrollPromptTreeUntilRowUnmounts = async (
   }
 
   throw new Error(`Dragged prompt row stayed mounted after wheel scrolling: ${promptId}`)
+}
+
+const moveActiveDragRightOfPromptFolderSelector = async (page: Page): Promise<void> => {
+  const trigger = page.locator(promptFolderSelectorTriggerSelector)
+  const triggerBox = await trigger.boundingBox()
+  if (!triggerBox) {
+    throw new Error('Missing prompt folder selector geometry')
+  }
+
+  await page.mouse.move(
+    triggerBox.x + triggerBox.width + 420,
+    triggerBox.y + triggerBox.height / 2,
+    {
+      steps: 12
+    }
+  )
 }
 
 const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
@@ -697,6 +726,94 @@ describe('Prompt folder prompt drag-drop', () => {
         oldFiles: { markdownExists: false },
         newFiles: { markdownExists: true }
       })
+  })
+
+  test('moves an editor prompt to the start of another folder from the selector dropdown', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+
+    const destinationItem = mainWindow.locator(
+      promptFolderSelectorDropdownItemSelector(EXAMPLES_FOLDER_ID)
+    )
+    await moveActiveDragToTarget(
+      mainWindow,
+      promptFolderSelectorDropdownItemSelector(EXAMPLES_FOLDER_ID)
+    )
+    await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
+    await finishActiveDrag(mainWindow)
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
+      DEV_1_ID,
+      EXAMPLE_1_ID
+    ])
+  })
+
+  test('closes the selector dropdown when an active prompt drag moves off to the right', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+
+    await moveActiveDragRightOfPromptFolderSelector(mainWindow)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toHaveCount(0)
+    await expect(mainWindow.locator('body')).toHaveCSS('cursor', 'grabbing')
+    await finishActiveDrag(mainWindow)
+
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [EXAMPLE_1_ID])
+  })
+
+  test('does not allow dropping a selector prompt drag onto its own folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+
+    const sourceItem = mainWindow.locator(
+      promptFolderSelectorDropdownItemSelector(DEVELOPMENT_FOLDER_ID)
+    )
+    await moveActiveDragToTarget(
+      mainWindow,
+      promptFolderSelectorDropdownItemSelector(DEVELOPMENT_FOLDER_ID)
+    )
+    await expect(sourceItem).toHaveAttribute('data-row-state', 'active')
+    await finishActiveDrag(mainWindow)
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [EXAMPLE_1_ID])
   })
 
   test('moves a prompt between folders after the prompt row it is dropped onto', async ({

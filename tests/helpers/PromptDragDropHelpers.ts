@@ -27,6 +27,15 @@ export const promptTreePromptSelector = (promptId: string): string =>
 export const promptTreeFolderSelector = (folderName: string): string =>
   `[data-testid="prompt-tree-folder-toggle-button-${folderName.replace(/\s+/g, '')}"]`
 
+export const promptFolderSelectorTriggerSelector =
+  '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+
+export const promptFolderSelectorMenuSelector =
+  '[data-testid="sidebar-prompt-folder-selector-menu"]'
+
+export const promptFolderSelectorDropdownItemSelector = (folderId: string): string =>
+  `[data-testid="sidebar-prompt-folder-dropdown-item-${folderId}"]`
+
 export const promptTreePromptDropIndicatorSelector = (promptId: string): string =>
   `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`
 
