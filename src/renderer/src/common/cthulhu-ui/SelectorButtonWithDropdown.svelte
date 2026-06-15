@@ -13,6 +13,7 @@
     state?: 'enabled' | 'disabled'
     testId?: string
     triggerTestId?: string
+    dragOpenTypes?: string[]
     itemDragOptions?: DropdownPopupDetailedItemDragOptions
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
@@ -25,6 +26,7 @@
     state = 'enabled',
     testId,
     triggerTestId,
+    dragOpenTypes,
     itemDragOptions,
     onselect
   }: Props = $props()
@@ -37,6 +39,7 @@
   {footerItem}
   {itemDragOptions}
   {testId}
+  {dragOpenTypes}
   placement="below-trigger"
   {onselect}
 >

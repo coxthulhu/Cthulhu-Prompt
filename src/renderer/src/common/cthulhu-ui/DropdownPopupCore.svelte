@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
+  import { registerDragDropDropdown } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import CardSurface from './CardSurface.svelte'
 
   export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
@@ -37,6 +38,7 @@
     menuClass?: string
     testId?: string
     placement?: DropdownPopupPlacement
+    dragOpenTypes?: string[]
   }
 
   let {
@@ -46,7 +48,8 @@
     menuWidth = '236px',
     menuClass,
     testId,
-    placement = 'cursor'
+    placement = 'cursor',
+    dragOpenTypes = []
   }: Props = $props()
 
   const fallbackMenuWidth = 236
@@ -71,6 +74,7 @@
   let anchorElement = $state<HTMLElement | null>(null)
   let menuAnchor = $state<MenuAnchor | null>(null)
   let open = $state(false)
+  let openedByDrag = $state(false)
   let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
   let triggerWidth = $state(fallbackMenuWidth)
 
@@ -122,7 +126,15 @@
 
   const closeMenu = () => {
     open = false
+    openedByDrag = false
     menuAnchor = null
+  }
+
+  const openMenu = (nextMenuAnchor: MenuAnchor, nextOpenedByDrag: boolean) => {
+    menuAnchor = nextMenuAnchor
+    measuredMenuSize = { width: fallbackMenuWidth, height: fallbackMenuHeight }
+    openedByDrag = nextOpenedByDrag
+    open = true
   }
 
   const triggerAction: DropdownPopupTriggerAction = (node) => {
@@ -150,9 +162,21 @@
       return
     }
 
-    menuAnchor = nextMenuAnchor
-    measuredMenuSize = { width: fallbackMenuWidth, height: fallbackMenuHeight }
-    open = true
+    openMenu(nextMenuAnchor, false)
+  }
+
+  const openMenuForDrag = () => {
+    if (open || !anchorElement) {
+      return
+    }
+
+    openMenu(getTriggerAnchor(anchorElement), true)
+  }
+
+  const closeDragOpenedMenu = () => {
+    if (openedByDrag) {
+      closeMenu()
+    }
   }
 
   const resolvedMenuWidth = $derived(
@@ -186,6 +210,23 @@
       }
     }
   }
+
+  // Side effect: expose this popup to the drag/drop layer while its trigger is mounted.
+  $effect(() => {
+    const triggerNode = anchorElement
+    if (!triggerNode) {
+      return
+    }
+
+    return registerDragDropDropdown({
+      triggerNode,
+      getMenuNode: () => menuLayerRef,
+      getDragOpenTypes: () => dragOpenTypes,
+      isOpen: () => open,
+      openForDrag: openMenuForDrag,
+      closeDragOpened: closeDragOpenedMenu
+    })
+  })
 
   // Side effect: dismiss the open popup from document-level outside clicks and Escape.
   $effect(() => {

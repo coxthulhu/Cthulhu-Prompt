@@ -42,6 +42,7 @@
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
+    dragOpenTypes?: string[]
     itemDragOptions?: DropdownPopupDetailedItemDragOptions
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
@@ -55,6 +56,7 @@
     menuWidth = '320px',
     testId,
     placement = 'cursor',
+    dragOpenTypes,
     itemDragOptions,
     onselect
   }: Props = $props()
@@ -81,6 +83,7 @@
   {menuWidth}
   {testId}
   {placement}
+  {dragOpenTypes}
   menuClass="cthulhuUiDropdownPopupDetailedMenu p-[6px]"
 >
   {#snippet children({ close })}
