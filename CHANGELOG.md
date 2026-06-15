@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.23
+
+### New Features
+
+- Added a prompt folder find button to the prompt folder header.
+- Added drag-and-drop reordering inside the sidebar prompt folder selector.
+- Added support for dragging prompts onto folders in the selector to move prompts across folders.
+- Added persistence for the last opened prompt folder when returning from the activity bar.
+
+### Changes
+
+- Moved prompt folder reordering from prompt tree rows into the prompt folder selector dropdown.
+- Refined prompt editor cards, title areas, Add Prompt dividers, and sidebar prompt tree row states.
+- Consolidated shared renderer UI components and palette tokens around the non-flat component naming.
+
+### Fixed
+
+- Fixed blank workspace creation so disabling examples still creates an empty My Prompts folder.
+- Fixed empty prompt folder workspace handling in the sidebar and prompt folder navigation.
+- Fixed dropdown drag layering, drop indicator alignment, label clipping, and show-all drop targeting.
+
 ## 0.0.22
 
 ### New Features
