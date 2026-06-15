@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     type PromptFolderSettings,
@@ -43,8 +43,10 @@
     PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX
   } from './PromptFolderSectionRow.svelte'
   import {
+    PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX,
     PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
     estimatePromptFolderSettingsFieldRowHeight,
+    PROMPT_COLLAPSED_HEADER_ROW_HEIGHT_PX,
     PROMPT_HEADER_ROW_HEIGHT_PX
   } from './promptFolderSettingsSizing'
   import {
@@ -84,6 +86,8 @@
     visiblePromptIds: string[]
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
+    isFolderSettingsSectionExpanded: boolean
+    isPromptsSectionExpanded: boolean
     initialScrollTopPx: number
     initialCenterRowId: string | null
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
@@ -107,6 +111,8 @@
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
     onInitialCenterRowApplied: () => void
+    onFolderSettingsSectionToggle: () => void
+    onPromptsSectionToggle: () => void
   }
 
   let {
@@ -118,6 +124,8 @@
     visiblePromptIds,
     isCreatingPrompt,
     promptFocusRequest,
+    isFolderSettingsSectionExpanded,
+    isPromptsSectionExpanded,
     initialScrollTopPx,
     initialCenterRowId,
     scrollToWithinWindowBandForRows,
@@ -133,7 +141,9 @@
     onScrollTopChange,
     onCenterRowChange,
     onUserScroll,
-    onInitialCenterRowApplied
+    onInitialCenterRowApplied,
+    onFolderSettingsSectionToggle,
+    onPromptsSectionToggle
   }: PromptFolderVirtualContentProps = $props()
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
@@ -176,7 +186,10 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-settings-header': {
-      estimateHeight: () => PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
+      estimateHeight: () =>
+        isFolderSettingsSectionExpanded
+          ? PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX
+          : PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX,
       centerRowEligible: true,
       snippet: folderSettingsHeaderRow
     },
@@ -200,7 +213,10 @@
       snippet: folderSettingsFieldRow
     },
     'prompt-header': {
-      estimateHeight: () => PROMPT_HEADER_ROW_HEIGHT_PX,
+      estimateHeight: () =>
+        isPromptsSectionExpanded
+          ? PROMPT_HEADER_ROW_HEIGHT_PX
+          : PROMPT_COLLAPSED_HEADER_ROW_HEIGHT_PX,
       snippet: promptHeaderRow
     },
     placeholder: {
@@ -257,16 +273,18 @@
       }
     ]
 
-    PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field, index) => {
-      rows.push({
-        id: promptFolderSettingsRowId(field),
-        row: {
-          kind: 'folder-settings-field',
-          field,
-          includeBottomGap: index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
-        }
+    if (isFolderSettingsSectionExpanded) {
+      PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field, index) => {
+        rows.push({
+          id: promptFolderSettingsRowId(field),
+          row: {
+            kind: 'folder-settings-field',
+            field,
+            includeBottomGap: index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
+          }
+        })
       })
-    })
+    }
 
     rows.push({
       id: 'prompt-header',
@@ -276,28 +294,30 @@
       }
     })
 
-    if (visiblePromptIds.length === 0) {
-      rows.push({
-        id: 'divider-initial',
-        row: { kind: 'prompt-divider', previousPromptId: null }
-      })
-      rows.push({
-        id: 'placeholder-empty',
-        row: { kind: 'placeholder' }
-      })
-    } else {
-      rows.push({
-        id: 'divider-initial',
-        row: { kind: 'prompt-divider', previousPromptId: null }
-      })
-
-      visiblePromptIds.forEach((promptId) => {
-        rows.push({ id: promptEditorRowId(promptId), row: { kind: 'prompt-editor', promptId } })
+    if (isPromptsSectionExpanded) {
+      if (visiblePromptIds.length === 0) {
         rows.push({
-          id: `${promptId}-divider`,
-          row: { kind: 'prompt-divider', previousPromptId: promptId }
+          id: 'divider-initial',
+          row: { kind: 'prompt-divider', previousPromptId: null }
         })
-      })
+        rows.push({
+          id: 'placeholder-empty',
+          row: { kind: 'placeholder' }
+        })
+      } else {
+        rows.push({
+          id: 'divider-initial',
+          row: { kind: 'prompt-divider', previousPromptId: null }
+        })
+
+        visiblePromptIds.forEach((promptId) => {
+          rows.push({ id: promptEditorRowId(promptId), row: { kind: 'prompt-editor', promptId } })
+          rows.push({
+            id: `${promptId}-divider`,
+            row: { kind: 'prompt-divider', previousPromptId: promptId }
+          })
+        })
+      }
     }
 
     rows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
@@ -419,7 +439,21 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <Title title="Folder Settings" />
+    <button
+      type="button"
+      class="prompt-folder-section-header-button"
+      aria-expanded={isFolderSettingsSectionExpanded}
+      data-testid="prompt-folder-settings-section-toggle"
+      onclick={onFolderSettingsSectionToggle}
+    >
+      <RotatingChevron
+        expanded={isFolderSettingsSectionExpanded}
+        size={30}
+        iconSize={24}
+        class="prompt-folder-section-header-chevron"
+      />
+      <span class="prompt-folder-section-header-title">Folder Settings</span>
+    </button>
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -453,7 +487,21 @@
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
-    <Title title="Prompts" />
+    <button
+      type="button"
+      class="prompt-folder-section-header-button"
+      aria-expanded={isPromptsSectionExpanded}
+      data-testid="prompt-folder-prompts-section-toggle"
+      onclick={onPromptsSectionToggle}
+    >
+      <RotatingChevron
+        expanded={isPromptsSectionExpanded}
+        size={30}
+        iconSize={24}
+        class="prompt-folder-section-header-chevron"
+      />
+      <span class="prompt-folder-section-header-title">Prompts</span>
+    </button>
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -520,3 +568,33 @@
 {#snippet bottomSpacerRow({ virtualWindowHeightPx })}
   <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
 {/snippet}
+
+<style>
+  .prompt-folder-section-header-button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--ui-normal-text);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    gap: 8px;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .prompt-folder-section-header-button:hover {
+    color: var(--ui-hoverable-text);
+  }
+
+  .prompt-folder-section-header-button :global(.prompt-folder-section-header-chevron) {
+    color: currentColor;
+  }
+
+  .prompt-folder-section-header-title {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 29px;
+    overflow-wrap: anywhere;
+  }
+</style>

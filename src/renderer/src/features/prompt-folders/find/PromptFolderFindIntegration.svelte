@@ -176,6 +176,9 @@
 
   const revealMatch = async (match: PromptFolderFindMatch) => {
     if (!scrollToWithinWindowBand) return
+    onRevealMatch?.(match)
+    // Side effect: let section expansion render target rows before virtual scrolling asks for them.
+    await tick()
     await revealPromptFolderMatch(match, {
       query: trimmedQuery,
       rowHandlesByEntityId,
@@ -260,7 +263,6 @@
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
     lastNavigatedMatch = match
     lastNavigatedQuery = trimmedQuery
-    onRevealMatch?.(match)
     void revealMatch(match)
   }
 

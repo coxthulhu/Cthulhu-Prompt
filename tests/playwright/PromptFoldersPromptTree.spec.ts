@@ -139,6 +139,12 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
+    const settingsToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-settings-section-toggle"]'
+    )
+    await settingsToggle.click()
+    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false')
+
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, SHORT_SCROLL_TARGET_PX)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
@@ -155,9 +161,37 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(folderSettingsSelector).click()
 
     await expect(mainWindow.locator(SHORT_OPTIONS_SELECTOR)).toHaveAttribute('data-active', 'true')
+    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(
+      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
+    ).not.toHaveCount(0)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeLessThan(100)
+  })
+
+  test('expands collapsed prompts section when selecting a prompt in the prompt tree', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SAMPLE_FOLDER_NAME)
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+
+    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-prompts-section-toggle"]')
+    await promptsToggle.click()
+    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(promptEditorSelector('dev-2'))).toHaveCount(0)
+
+    await mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]').click()
+
+    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(promptEditorSelector('dev-2'))).toBeVisible()
   })
 
   test('updates prompt tree title while typing in title input', async ({ testSetup }) => {

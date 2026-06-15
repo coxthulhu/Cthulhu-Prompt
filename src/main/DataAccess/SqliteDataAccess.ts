@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 11
+const LATEST_SCHEMA_VERSION = 12
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -385,6 +385,22 @@ const migrateSchemaV10ToV11 = (db: Database.Database): void => {
   migrate()
 }
 
+const migrateSchemaV11ToV12 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 1;
+
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN prompts_section_is_expanded INTEGER NOT NULL DEFAULT 1;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(12)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -458,6 +474,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 10) {
       migrateSchemaV10ToV11(db)
       schemaVersion = 11
+      continue
+    }
+
+    if (schemaVersion === 11) {
+      migrateSchemaV11ToV12(db)
+      schemaVersion = 12
       continue
     }
 

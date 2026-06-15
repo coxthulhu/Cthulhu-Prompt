@@ -40,6 +40,8 @@ type PromptFolderUiStateRow = {
   promptTreeEntryId: string
   promptTreeIsExpanded: number
   promptTreeIsShowingAllPrompts: number
+  folderSettingsSectionIsExpanded: number
+  promptsSectionIsExpanded: number
 }
 
 type PromptFolderSettingsEditorViewStateRow = {
@@ -227,7 +229,9 @@ export class UserPersistenceDataAccess {
           prompt_folder_id AS promptFolderId,
           prompt_tree_entry_id AS promptTreeEntryId,
           prompt_tree_is_expanded AS promptTreeIsExpanded,
-          prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts
+          prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
+          folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
+          prompts_section_is_expanded AS promptsSectionIsExpanded
         FROM prompt_folder_ui_state
         WHERE workspace_id = ?
         `
@@ -269,6 +273,8 @@ export class UserPersistenceDataAccess {
       promptTreeEntryId: row.promptTreeEntryId,
       promptTreeIsExpanded: row.promptTreeIsExpanded !== 0,
       promptTreeIsShowingAllPrompts: row.promptTreeIsShowingAllPrompts !== 0,
+      folderSettingsSectionIsExpanded: row.folderSettingsSectionIsExpanded !== 0,
+      promptsSectionIsExpanded: row.promptsSectionIsExpanded !== 0,
       settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
         settingsEditorViewStatesByFolderId.get(row.promptFolderId) ??
           createEmptyPromptFolderSettingsEditorViewStates()
@@ -342,9 +348,11 @@ export class UserPersistenceDataAccess {
           prompt_folder_id,
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
-          prompt_tree_is_showing_all_prompts
+          prompt_tree_is_showing_all_prompts,
+          folder_settings_section_is_expanded,
+          prompts_section_is_expanded
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         `
       )
       const insertSettingsEditorViewState = db.prepare(
@@ -365,7 +373,9 @@ export class UserPersistenceDataAccess {
           entry.promptFolderId,
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded ? 1 : 0,
-          entry.promptTreeIsShowingAllPrompts ? 1 : 0
+          entry.promptTreeIsShowingAllPrompts ? 1 : 0,
+          entry.folderSettingsSectionIsExpanded ? 1 : 0,
+          entry.promptsSectionIsExpanded ? 1 : 0
         )
 
         for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
@@ -404,7 +414,9 @@ export class UserPersistenceDataAccess {
             prompt_folder_id AS promptFolderId,
             prompt_tree_entry_id AS promptTreeEntryId,
             prompt_tree_is_expanded AS promptTreeIsExpanded,
-            prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts
+            prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
+            folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
+            prompts_section_is_expanded AS promptsSectionIsExpanded
           FROM prompt_folder_ui_state
           WHERE workspace_id = ?
           `
@@ -436,9 +448,11 @@ export class UserPersistenceDataAccess {
           prompt_folder_id,
           prompt_tree_entry_id,
           prompt_tree_is_expanded,
-          prompt_tree_is_showing_all_prompts
+          prompt_tree_is_showing_all_prompts,
+          folder_settings_section_is_expanded,
+          prompts_section_is_expanded
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         `
       )
       const insertSettingsEditorViewState = db.prepare(
@@ -463,7 +477,9 @@ export class UserPersistenceDataAccess {
           entry.promptFolderId,
           entry.promptTreeEntryId,
           entry.promptTreeIsExpanded,
-          entry.promptTreeIsShowingAllPrompts
+          entry.promptTreeIsShowingAllPrompts,
+          entry.folderSettingsSectionIsExpanded,
+          entry.promptsSectionIsExpanded
         )
       }
 

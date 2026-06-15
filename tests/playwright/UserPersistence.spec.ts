@@ -137,6 +137,8 @@ const seedWorkspacePersistence = async (
       promptTreeEntryId: string
       promptTreeIsExpanded?: boolean
       promptTreeIsShowingAllPrompts?: boolean
+      folderSettingsSectionIsExpanded?: boolean
+      promptsSectionIsExpanded?: boolean
     }>
   }
 ): Promise<void> => {
@@ -180,14 +182,18 @@ const seedWorkspacePersistence = async (
         prompt_folder_id,
         prompt_tree_entry_id,
         prompt_tree_is_expanded,
-        prompt_tree_is_showing_all_prompts
+        prompt_tree_is_showing_all_prompts,
+        folder_settings_section_is_expanded,
+        prompts_section_is_expanded
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
         ${toSqlText(entry.promptFolderId)},
         ${toSqlText(entry.promptTreeEntryId)},
         ${entry.promptTreeIsExpanded === false ? 0 : 1},
-        ${entry.promptTreeIsShowingAllPrompts === true ? 1 : 0}
+        ${entry.promptTreeIsShowingAllPrompts === true ? 1 : 0},
+        ${entry.folderSettingsSectionIsExpanded === false ? 0 : 1},
+        ${entry.promptsSectionIsExpanded === false ? 0 : 1}
       )
       `
     )
@@ -234,6 +240,8 @@ const readWorkspacePersistence = async (
     promptTreeEntryId: string
     promptTreeIsExpanded: boolean
     promptTreeIsShowingAllPrompts: boolean
+    folderSettingsSectionIsExpanded: boolean
+    promptsSectionIsExpanded: boolean
   }>
 }> => {
   const workspaceStateResult = await runSqlQuery(
@@ -259,7 +267,9 @@ const readWorkspacePersistence = async (
       prompt_folder_id AS promptFolderId,
       prompt_tree_entry_id AS promptTreeEntryId,
       prompt_tree_is_expanded AS promptTreeIsExpanded,
-      prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts
+      prompt_tree_is_showing_all_prompts AS promptTreeIsShowingAllPrompts,
+      folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
+      prompts_section_is_expanded AS promptsSectionIsExpanded
     FROM prompt_folder_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -288,7 +298,9 @@ const readWorkspacePersistence = async (
       promptFolderId: String(entry.promptFolderId),
       promptTreeEntryId: String(entry.promptTreeEntryId),
       promptTreeIsExpanded: entry.promptTreeIsExpanded !== 0,
-      promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts !== 0
+      promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts !== 0,
+      folderSettingsSectionIsExpanded: entry.folderSettingsSectionIsExpanded !== 0,
+      promptsSectionIsExpanded: entry.promptsSectionIsExpanded !== 0
     }))
   }
 }
@@ -847,6 +859,95 @@ describe('User Persistence', () => {
         { timeout: 15000 }
       )
       .toBe(true)
+  })
+
+  test('autosaves prompt folder screen section expanded states', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const settingsToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-settings-section-toggle"]'
+    )
+    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-prompts-section-toggle"]')
+    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
+
+    await settingsToggle.click()
+    await promptsToggle.click()
+    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(
+      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-divider-add-initial"]')).toHaveCount(0)
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const entry = persisted.promptFolderPromptTreeEntries.find(
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === developmentPromptFolderId
+          )
+          const settingsExpanded = entry?.folderSettingsSectionIsExpanded ?? null
+          const promptsExpanded = entry?.promptsSectionIsExpanded ?? null
+          return `${settingsExpanded}:${promptsExpanded}`
+        },
+        { timeout: 15000 }
+      )
+      .toBe('false:false')
+  })
+
+  test('restores prompt folder screen collapsed sections on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-prompt-folder-sections'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const developmentPromptFolderId = createDeterministicId(
+      `${persistedWorkspacePath}:Development`
+    )
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId: developmentPromptFolderId },
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: developmentPromptFolderId,
+          promptTreeEntryId: 'folder-settings',
+          folderSettingsSectionIsExpanded: false,
+          promptsSectionIsExpanded: false
+        }
+      ]
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
+    ).toHaveAttribute('aria-expanded', 'false')
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-prompts-section-toggle"]')
+    ).toHaveAttribute('aria-expanded', 'false')
+    await expect(
+      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
   })
 
   test('persists prompt tree auto-expand state after scroll-follow expansion', async ({

@@ -44,7 +44,11 @@ import {
   type PromptFolderSettingsDraftField
 } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import {
+  lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
+  lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState,
+  setPromptFolderPromptsSectionExpandedStateWithAutosave,
+  setPromptFolderSettingsSectionExpandedStateWithAutosave,
   setPromptFolderPromptTreeEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
@@ -68,6 +72,7 @@ import {
 } from './promptFolderRowIds'
 import { PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX } from './PromptFolderSectionRow.svelte'
 import {
+  PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX,
   PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
   estimatePromptFolderSettingsFieldRowHeight
 } from './promptFolderSettingsSizing'
@@ -181,6 +186,8 @@ export const createPromptFolderScreenController = ({
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
   let latestHandledSelectionVersion = $state(0)
+  let folderSettingsSectionExpandedStates = $state<Record<string, boolean>>({})
+  let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
 
   const visiblePromptIds = $derived.by(() => {
     if (errorMessage) {
@@ -301,6 +308,102 @@ export const createPromptFolderScreenController = ({
       : promptEditorRowId(row.promptId)
   }
 
+  const promptFolderSectionStateKey = $derived(`${workspaceId ?? 'no-workspace'}:${promptFolderId}`)
+
+  const lookupPersistedFolderSettingsSectionExpandedState = (): boolean => {
+    if (!workspaceId) {
+      return true
+    }
+
+    return (
+      lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
+        workspaceId,
+        promptFolderId
+      ) ?? true
+    )
+  }
+
+  const lookupPersistedPromptsSectionExpandedState = (): boolean => {
+    if (!workspaceId) {
+      return true
+    }
+
+    return (
+      lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState(
+        workspaceId,
+        promptFolderId
+      ) ?? true
+    )
+  }
+
+  const isFolderSettingsSectionExpanded = $derived(
+    folderSettingsSectionExpandedStates[promptFolderSectionStateKey] ??
+      lookupPersistedFolderSettingsSectionExpandedState()
+  )
+  const isPromptsSectionExpanded = $derived(
+    promptsSectionExpandedStates[promptFolderSectionStateKey] ??
+      lookupPersistedPromptsSectionExpandedState()
+  )
+
+  const setFolderSettingsSectionExpanded = (isExpanded: boolean) => {
+    if (isFolderSettingsSectionExpanded === isExpanded) {
+      return
+    }
+
+    folderSettingsSectionExpandedStates = {
+      ...folderSettingsSectionExpandedStates,
+      [promptFolderSectionStateKey]: isExpanded
+    }
+
+    if (!workspaceId) {
+      return
+    }
+
+    setPromptFolderSettingsSectionExpandedStateWithAutosave(
+      workspaceId,
+      promptFolderId,
+      isExpanded
+    )
+  }
+
+  const setPromptsSectionExpanded = (isExpanded: boolean) => {
+    if (isPromptsSectionExpanded === isExpanded) {
+      return
+    }
+
+    promptsSectionExpandedStates = {
+      ...promptsSectionExpandedStates,
+      [promptFolderSectionStateKey]: isExpanded
+    }
+
+    if (!workspaceId) {
+      return
+    }
+
+    setPromptFolderPromptsSectionExpandedStateWithAutosave(
+      workspaceId,
+      promptFolderId,
+      isExpanded
+    )
+  }
+
+  const toggleFolderSettingsSectionExpanded = () => {
+    setFolderSettingsSectionExpanded(!isFolderSettingsSectionExpanded)
+  }
+
+  const togglePromptsSectionExpanded = () => {
+    setPromptsSectionExpanded(!isPromptsSectionExpanded)
+  }
+
+  const expandSectionForRow = (row: ActivePromptTreeRow): void => {
+    if (row.kind === 'folder-settings') {
+      setFolderSettingsSectionExpanded(true)
+      return
+    }
+
+    setPromptsSectionExpanded(true)
+  }
+
   const selectedNavigationRow = $derived.by((): PromptNavigationRow | null => {
     if (promptNavigation.selectedFolderId !== promptFolderId) {
       return null
@@ -372,6 +475,12 @@ export const createPromptFolderScreenController = ({
 
   const selectPromptTreeRowAndCenter = (nextRow: ActivePromptTreeRow): boolean => {
     if (!scrollToAndTrackRowCentered) return false
+    if (nextRow.kind === 'prompt' && !isPromptsSectionExpanded) {
+      setPromptsSectionExpanded(true)
+      return false
+    }
+
+    expandSectionForRow(nextRow)
     scrollToAndTrackRowCentered(toPromptFolderRowId(nextRow))
     return true
   }
@@ -665,20 +774,25 @@ export const createPromptFolderScreenController = ({
 
   const folderSettingsHeightPx = $derived.by(() => {
     const getIncludeBottomGap = (index: number) => index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
+    const settingsHeaderHeightPx = isFolderSettingsSectionExpanded
+      ? PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX
+      : PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX
     const baseHeight =
-      PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX +
-      PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
-        return (
-          sum +
-          estimatePromptFolderSettingsFieldRowHeight(
-            folderSettingsTextByField[field],
-            promptEditorSizingConfig.fontSize,
-            getIncludeBottomGap(index)
-          )
-        )
-      }, 0)
+      settingsHeaderHeightPx +
+      (isFolderSettingsSectionExpanded
+        ? PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
+            return (
+              sum +
+              estimatePromptFolderSettingsFieldRowHeight(
+                folderSettingsTextByField[field],
+                promptEditorSizingConfig.fontSize,
+                getIncludeBottomGap(index)
+              )
+            )
+          }, 0)
+        : 0)
 
-    if (!viewportMetrics) {
+    if (!viewportMetrics || !isFolderSettingsSectionExpanded) {
       return baseHeight
     }
 
@@ -686,7 +800,7 @@ export const createPromptFolderScreenController = ({
     const measuredWidthPx = Math.max(0, metrics.widthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
 
     return (
-      PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX +
+      settingsHeaderHeightPx +
       PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
         const estimatedHeight = estimatePromptFolderSettingsFieldRowHeight(
           folderSettingsTextByField[field],
@@ -724,7 +838,9 @@ export const createPromptFolderScreenController = ({
 
   const handleHeaderSegmentClick = (rowId: 'folder-settings' | 'prompt-header') => {
     if (!scrollToWithinWindowBand) return
-    setCurrentFolderSelection(resolveHeaderSelectionRow(rowId), 'header', {
+    const targetRow = resolveHeaderSelectionRow(rowId)
+    expandSectionForRow(targetRow)
+    setCurrentFolderSelection(targetRow, 'header', {
       forceVersionBump: true
     })
     // Header navigation should land directly on the target section.
@@ -738,6 +854,7 @@ export const createPromptFolderScreenController = ({
     )
       ? { kind: 'folder-settings' }
       : { kind: 'prompt', promptId: match.entityId }
+    expandSectionForRow(targetRow)
     setCurrentFolderSelection(targetRow, 'find', { forceVersionBump: true })
   }
 
@@ -807,6 +924,12 @@ export const createPromptFolderScreenController = ({
     get promptFocusRequest(): PromptFocusRequest | null {
       return promptFocusRequest
     },
+    get isFolderSettingsSectionExpanded(): boolean {
+      return isFolderSettingsSectionExpanded
+    },
+    get isPromptsSectionExpanded(): boolean {
+      return isPromptsSectionExpanded
+    },
     get initialPromptFolderScrollTopPx(): number {
       return initialPromptFolderScrollTopPx
     },
@@ -830,6 +953,8 @@ export const createPromptFolderScreenController = ({
     },
     persistActivePromptTreeRow,
     scrollToWithinWindowBandWithManualClear,
+    toggleFolderSettingsSectionExpanded,
+    togglePromptsSectionExpanded,
     handleHeaderSegmentClick,
     handleFindMatchReveal,
     handleAddPrompt,

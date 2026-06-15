@@ -81,6 +81,8 @@
             visiblePromptIds={controller.visiblePromptIds}
             isCreatingPrompt={controller.isCreatingPrompt}
             promptFocusRequest={controller.promptFocusRequest}
+            isFolderSettingsSectionExpanded={controller.isFolderSettingsSectionExpanded}
+            isPromptsSectionExpanded={controller.isPromptsSectionExpanded}
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             initialCenterRowId={controller.initialPromptFolderCenterRowId}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
@@ -97,6 +99,8 @@
             onCenterRowChange={controller.handleVirtualCenterRowChange}
             onUserScroll={controller.handleVirtualUserScroll}
             onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
+            onFolderSettingsSectionToggle={controller.toggleFolderSettingsSectionExpanded}
+            onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
           />
         {/if}
       </div>

@@ -321,6 +321,28 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveCount(0)
   })
 
+  test('expands collapsed prompts section when revealing a prompt match', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(promptEditorSelector('dev-1'), { state: 'attached' })
+
+    const promptsToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-prompts-section-toggle"]'
+    )
+    await promptsToggle.click()
+    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toHaveCount(0)
+
+    await mainWindow.locator(FIND_BUTTON).click()
+    await mainWindow.locator(FIND_INPUT).fill('best practices')
+
+    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toBeVisible()
+  })
+
   test('includes folder prefix and suffix in matches', async ({ testSetup }) => {
     const workspacePath = '/ws/find-prefix-suffix'
     await testSetup.setupFilesystem(

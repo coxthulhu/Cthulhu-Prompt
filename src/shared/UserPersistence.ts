@@ -52,6 +52,8 @@ export type WorkspacePromptFolderPromptTreeEntry = {
   promptTreeEntryId: string
   promptTreeIsExpanded: boolean
   promptTreeIsShowingAllPrompts: boolean
+  folderSettingsSectionIsExpanded: boolean
+  promptsSectionIsExpanded: boolean
   settingsEditorViewStates: Record<PromptFolderSettingsField, string | null>
 }
 
@@ -98,6 +100,8 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
     promptTreeEntryId: entry.promptTreeEntryId,
     promptTreeIsExpanded: entry.promptTreeIsExpanded,
     promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts,
+    folderSettingsSectionIsExpanded: entry.folderSettingsSectionIsExpanded,
+    promptsSectionIsExpanded: entry.promptsSectionIsExpanded,
     settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
       entry.settingsEditorViewStates
     )
@@ -319,11 +323,33 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     return null
   }
 
+  const folderSettingsSectionIsExpanded =
+    value.folderSettingsSectionIsExpanded === undefined
+      ? true
+      : typeof value.folderSettingsSectionIsExpanded === 'boolean'
+        ? value.folderSettingsSectionIsExpanded
+        : null
+  if (folderSettingsSectionIsExpanded === null) {
+    return null
+  }
+
+  const promptsSectionIsExpanded =
+    value.promptsSectionIsExpanded === undefined
+      ? true
+      : typeof value.promptsSectionIsExpanded === 'boolean'
+        ? value.promptsSectionIsExpanded
+        : null
+  if (promptsSectionIsExpanded === null) {
+    return null
+  }
+
   return {
     promptFolderId: value.promptFolderId,
     promptTreeEntryId: value.promptTreeEntryId,
     promptTreeIsExpanded,
     promptTreeIsShowingAllPrompts,
+    folderSettingsSectionIsExpanded,
+    promptsSectionIsExpanded,
     settingsEditorViewStates
   }
 }
