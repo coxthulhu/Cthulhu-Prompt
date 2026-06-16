@@ -24,6 +24,7 @@
   import {
     getPromptNavigationContext,
     promptIdToPromptNavigationRow,
+    promptNavigationRowToPersistedEntryId,
     type PromptNavigationRow
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
@@ -31,7 +32,8 @@
     lookupWorkspacePersistedPromptFolderShowingAllPromptsState,
     lookupWorkspacePersistedPromptFolderExpandedState,
     setPromptFolderExpandedStateWithAutosave,
-    setPromptFolderShowingAllPromptsStateWithAutosave
+    setPromptFolderShowingAllPromptsStateWithAutosave,
+    setPromptFolderPromptTreeEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
@@ -298,6 +300,28 @@
     onPromptFolderSelect(promptFolderId)
   }
 
+  const selectMovedPrompt = (promptFolderId: string, promptId: string): void => {
+    const row = promptIdToPromptNavigationRow(promptId)
+
+    promptNavigation.select({
+      folderId: promptFolderId,
+      row,
+      source: 'prompt-move',
+      forceVersionBump: true
+    })
+
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (workspaceId) {
+      setPromptFolderPromptTreeEntryIdWithAutosave(
+        workspaceId,
+        promptFolderId,
+        promptNavigationRowToPersistedEntryId(row)
+      )
+    }
+
+    onPromptFolderSelect(promptFolderId)
+  }
+
   const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
     if (!isPromptFoldersScreenActive || !selectedPromptFolderId) {
       return null
@@ -311,7 +335,14 @@
   })
 
   const promptTreePromptDrag = createPromptTreePromptDragController({
-    getPromptFolders: () => promptFolders
+    getPromptFolders: () => promptFolders,
+    onPromptMove: (move) => {
+      if (move.sourcePromptFolderId === move.destinationPromptFolderId) {
+        return
+      }
+
+      selectMovedPrompt(move.destinationPromptFolderId, move.promptId)
+    }
   })
 
   const getPromptRowDragOptions = (

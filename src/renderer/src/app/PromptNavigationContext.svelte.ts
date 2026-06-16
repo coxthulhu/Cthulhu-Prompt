@@ -13,6 +13,7 @@ export type PromptNavigationSource =
   | 'scroll-follow'
   | 'find'
   | 'header'
+  | 'prompt-move'
 
 type PromptNavigationState = {
   selectedFolderId: string | null

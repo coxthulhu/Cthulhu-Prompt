@@ -7,10 +7,14 @@
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
 
-  let { promptFolderId } = $props<{ promptFolderId: string }>()
+  let { promptFolderId, onPromptFolderSelect } = $props<{
+    promptFolderId: string
+    onPromptFolderSelect: (promptFolderId: string) => void
+  }>()
 
   const controller = createPromptFolderScreenController({
-    getPromptFolderId: () => promptFolderId
+    getPromptFolderId: () => promptFolderId,
+    onPromptFolderSelect: (nextPromptFolderId) => onPromptFolderSelect(nextPromptFolderId)
   })
 
   // Side effect: persist the last selected row for this folder when the screen unmounts.

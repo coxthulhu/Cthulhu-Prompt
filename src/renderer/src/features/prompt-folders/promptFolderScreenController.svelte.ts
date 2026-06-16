@@ -17,6 +17,7 @@ import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
 import {
   getPromptNavigationContext,
   persistedPromptTreeEntryIdToPromptNavigationRow,
+  promptIdToPromptNavigationRow,
   promptNavigationRowToPersistedEntryId,
   type PromptNavigationRow,
   type PromptNavigationSource
@@ -87,10 +88,12 @@ export type PromptFocusRequest = { promptId: string; requestId: number }
 
 type PromptFolderScreenControllerOptions = {
   getPromptFolderId: () => string
+  onPromptFolderSelect: (promptFolderId: string) => void
 }
 
 export const createPromptFolderScreenController = ({
-  getPromptFolderId
+  getPromptFolderId,
+  onPromptFolderSelect
 }: PromptFolderScreenControllerOptions) => {
   const workspaceSelection = getWorkspaceSelectionContext()
   const systemSettings = getSystemSettingsContext()
@@ -263,6 +266,7 @@ export const createPromptFolderScreenController = ({
 
     return (
       promptNavigation.selectionSource === 'tree-click' ||
+      promptNavigation.selectionSource === 'prompt-move' ||
       promptNavigation.selectionSource === 'header' ||
       promptNavigation.selectionSource === 'restore-hold'
     )
@@ -453,6 +457,28 @@ export const createPromptFolderScreenController = ({
       promptFolderId,
       promptNavigationRowToPersistedEntryId(selectedRow)
     )
+  }
+
+  const selectMovedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
+    const row = promptIdToPromptNavigationRow(promptId)
+
+    promptNavigation.select({
+      folderId: destinationPromptFolderId,
+      row,
+      source: 'prompt-move',
+      forceVersionBump: true
+    })
+
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (workspaceId) {
+      setPromptFolderPromptTreeEntryIdWithAutosave(
+        workspaceId,
+        destinationPromptFolderId,
+        promptNavigationRowToPersistedEntryId(row)
+      )
+    }
+
+    onPromptFolderSelect(destinationPromptFolderId)
   }
 
   const clearInitialPersistedScrollWait = () => {
@@ -762,6 +788,10 @@ export const createPromptFolderScreenController = ({
       nextMove.destinationPromptFolderId,
       nextMove.orderAfterPromptId
     )
+
+    if (nextMove.sourcePromptFolderId !== nextMove.destinationPromptFolderId) {
+      selectMovedPrompt(nextMove.destinationPromptFolderId, draggedPromptId)
+    }
   }
 
   const handleSettingsFieldChange = (

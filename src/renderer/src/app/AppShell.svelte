@@ -595,7 +595,10 @@
           {:else if activeScreen === 'prompt-folders'}
             {#if selectedPromptFolderId && workspacePath}
               {#key selectedPromptFolderId}
-                <PromptFolderScreen promptFolderId={selectedPromptFolderId} />
+                <PromptFolderScreen
+                  promptFolderId={selectedPromptFolderId}
+                  onPromptFolderSelect={navigateToPromptFolder}
+                />
               {/key}
             {/if}
           {:else if activeScreen === 'test-screen'}

@@ -206,6 +206,24 @@ const expectPromptEditorDraggingState = async (
   await expect(editorRow).toHaveCSS('opacity', isDragging ? '0.72' : '1')
 }
 
+const expectPromptEditorNearViewportCenter = async (
+  page: Page,
+  promptId: string
+): Promise<void> => {
+  await expect
+    .poll(async () => {
+      const hostBox = await page.locator(PROMPT_FOLDER_HOST_SELECTOR).boundingBox()
+      const offsets = await getRowViewportOffsets(page, promptEditorSelector(promptId))
+      if (!hostBox || !offsets) {
+        return Number.POSITIVE_INFINITY
+      }
+
+      const rowCenter = (offsets.top + offsets.bottom) / 2
+      return Math.round(Math.abs(rowCenter - hostBox.height / 2))
+    })
+    .toBeLessThanOrEqual(96)
+}
+
 const getPromptTreeFolderRowHighlightStyles = async (
   folderToggle: Locator
 ): Promise<PromptTreeHighlightStyles> => {
@@ -351,8 +369,8 @@ describe('Prompt folder prompt drag-drop', () => {
       promptTreeFolderSelector(FALLBACK_DESTINATION_FOLDER_NAME)
     )
 
-    await testHelpers.navigateToPromptFolders(FALLBACK_DESTINATION_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector('move-fallback-source'))
+    await expectPromptTreeRowActiveState(mainWindow, 'move-fallback-source', true)
     await expect(
       mainWindow.locator(`${promptEditorSelector('move-fallback-source')} ${PROMPT_TITLE_SELECTOR}`)
     ).toHaveAttribute('placeholder', 'New Prompt 1...')
@@ -648,7 +666,8 @@ describe('Prompt folder prompt drag-drop', () => {
       promptTreeFolderSelector(EXAMPLES_FOLDER_NAME)
     )
 
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,
@@ -697,7 +716,8 @@ describe('Prompt folder prompt drag-drop', () => {
       promptTreeFolderSelector(EXAMPLES_FOLDER_NAME)
     )
 
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,
@@ -754,7 +774,9 @@ describe('Prompt folder prompt drag-drop', () => {
     await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
     await finishActiveDrag(mainWindow)
 
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
+    await expectPromptEditorNearViewportCenter(mainWindow, DEV_1_ID)
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,
@@ -836,7 +858,9 @@ describe('Prompt folder prompt drag-drop', () => {
     )
 
     await expect(mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR)).toBeVisible()
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectCurrentFolderPromptEditors(mainWindow, [EXAMPLE_1_ID, DEV_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
+    await expectPromptEditorNearViewportCenter(mainWindow, DEV_1_ID)
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       EXAMPLE_1_ID,
@@ -937,6 +961,38 @@ describe('Prompt folder prompt drag-drop', () => {
     ])
   })
 
+  test('navigates after moving a prompt from a non-selected tree folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_SCROLL_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(DESTINATION_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DESTINATION_1_ID))
+    await mainWindow.locator(promptTreePromptSelector(DESTINATION_1_ID)).click()
+    await expectPromptTreeRowActiveState(mainWindow, DESTINATION_1_ID, true)
+
+    await dragPromptTreeRowToTarget(
+      mainWindow,
+      ANCHOR_1_ID,
+      promptTreeFolderSelector(DESTINATION_FOLDER_NAME)
+    )
+
+    await expectCurrentFolderPromptEditors(mainWindow, [ANCHOR_1_ID, DESTINATION_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, ANCHOR_1_ID, true)
+    await expectPersistedFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH, [
+      ANCHOR_2_ID,
+      ANCHOR_3_ID
+    ])
+    await expectPersistedFolderPromptIds(electronApp, DESTINATION_FOLDER_PATH, [
+      ANCHOR_1_ID,
+      DESTINATION_1_ID
+    ])
+  })
+
   test('moves a prompt before a different prompt when dropped on the top half of that prompt row', async ({
     testSetup,
     electronApp
@@ -975,7 +1031,8 @@ describe('Prompt folder prompt drag-drop', () => {
     )
 
     await expect(mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR)).toBeVisible()
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,
@@ -1187,7 +1244,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
   })
 
-  test('keeps the surviving top row anchored when a drag changes the folder rows', async ({
+  test('navigates when an editor drag removes the source folder top row', async ({
     testSetup,
     electronApp
   }) => {
@@ -1200,48 +1257,16 @@ describe('Prompt folder prompt drag-drop', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector(ANCHOR_1_ID))
 
     await beginPromptHandleDrag(mainWindow, ANCHOR_1_ID)
-    await scrollPromptEditorAcrossViewportTop(mainWindow, testHelpers, ANCHOR_2_ID)
-
-    const promptTwoOffsetsBefore = await getRowViewportOffsets(
-      mainWindow,
-      promptEditorSelector(ANCHOR_2_ID)
-    )
-    if (!promptTwoOffsetsBefore) {
-      throw new Error('Failed to capture prompt two offsets before move')
-    }
-
-    const scrollTopBefore = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
-
     await moveActiveDragToTarget(mainWindow, promptTreeFolderSelector(DESTINATION_FOLDER_NAME))
     await finishActiveDrag(mainWindow)
 
+    await expectCurrentFolderPromptEditors(mainWindow, [ANCHOR_1_ID, DESTINATION_1_ID])
+    await expectPromptTreeRowActiveState(mainWindow, ANCHOR_1_ID, true)
     await expect
       .poll(async () => await readPromptFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH))
       .toEqual([ANCHOR_2_ID, ANCHOR_3_ID])
     await expect
       .poll(async () => await readPromptFolderPromptIds(electronApp, DESTINATION_FOLDER_PATH))
       .toEqual([ANCHOR_1_ID, DESTINATION_1_ID])
-
-    await scrollUntilPromptEditorVisible(mainWindow, testHelpers, ANCHOR_2_ID)
-
-    await expect
-      .poll(async () => {
-        const promptTwoOffsetsAfter = await getRowViewportOffsets(
-          mainWindow,
-          promptEditorSelector(ANCHOR_2_ID)
-        )
-        return promptTwoOffsetsAfter
-          ? Math.abs(promptTwoOffsetsAfter.top - promptTwoOffsetsBefore.top)
-          : Number.POSITIVE_INFINITY
-      })
-      .toBeLessThanOrEqual(2)
-
-    await expect
-      .poll(async () =>
-        Math.abs(
-          (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
-        )
-      )
-      .toBeGreaterThan(100)
   })
 })

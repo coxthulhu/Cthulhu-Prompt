@@ -44,7 +44,12 @@ export const loadPromptFolderInitial = async (
   upsertPromptUiStateDrafts(result.promptUiStates.map((promptUiState) => promptUiState.data))
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
 
-  const nextPromptIds = new Set(result.promptFolder.data.promptIds)
+  // Prune drafts against the reconciled collection state after applying the load result.
+  const nextPromptFolder = promptFolderCollection.get(promptFolderId)
+  if (!nextPromptFolder) {
+    throw new Error('Prompt folder not loaded after initial load')
+  }
+  const nextPromptIds = new Set(nextPromptFolder.promptIds)
   const removedPromptIds: string[] = []
 
   for (const previousPromptId of previousPromptIds) {
