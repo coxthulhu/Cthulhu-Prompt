@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
+  import { flip } from 'svelte/animate'
   import { GripVertical } from 'lucide-svelte'
   import {
     draggable,
     type DraggableOptions,
     type DroppableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import DropIndicator from '@renderer/features/drag-drop/DropIndicator.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import DropdownPopupCore, {
     type DropdownPopupPlacement,
@@ -26,10 +26,8 @@
 
   export type DropdownPopupDetailedItemDragOptions = {
     getDraggableOptions: (item: DropdownPopupDetailedItem) => DraggableOptions<unknown, unknown>
-    getDroppableOptions: (item: DropdownPopupDetailedItem) => DroppableOptions<unknown, unknown>
     getRowDroppableOptions?: (item: DropdownPopupDetailedItem) => DroppableOptions<unknown, unknown>
     getDragHandleTestId: (item: DropdownPopupDetailedItem) => string
-    getDropIndicatorTestId: (item: DropdownPopupDetailedItem) => string
     isDragging: (item: DropdownPopupDetailedItem) => boolean
     isDraggingAny: () => boolean
   }
@@ -83,43 +81,27 @@
 </script>
 
 {#snippet draggableItem(item: DropdownPopupDetailedItem, close: () => void, isRowDropOver: boolean)}
-  <PromptDropTarget
-    getOptions={() => itemDragOptions!.getDroppableOptions(item)}
-    class="cthulhuUiDropdownPopupDetailedDragTarget"
+  <SelectorButton
+    icon={item.icon}
+    text={item.label}
+    detail={item.detail}
+    detailParts={item.detailParts}
+    showChevron={false}
+    selected={selectedItem?.id === item.id}
+    rowState={getItemRowState(item, isRowDropOver)}
+    role="menuitem"
+    ariaSelected={selectedItem?.id === item.id}
+    testId={item.testId}
+    leadingAccessoryTestId={itemDragOptions!.getDragHandleTestId(item)}
+    buttonAction={draggableButtonAction}
+    buttonActionParameter={itemDragOptions!.getDraggableOptions(item)}
+    class="cthulhuUiDropdownPopupDetailedItem cthulhuUiDropdownPopupDetailedDragItem"
+    onclick={(event) => selectItem(item, event, close)}
   >
-    {#snippet children({ edge })}
-      <SelectorButton
-        icon={item.icon}
-        text={item.label}
-        detail={item.detail}
-        detailParts={item.detailParts}
-        showChevron={false}
-        selected={selectedItem?.id === item.id}
-        rowState={getItemRowState(item, isRowDropOver)}
-        role="menuitem"
-        ariaSelected={selectedItem?.id === item.id}
-        testId={item.testId}
-        leadingAccessoryTestId={itemDragOptions!.getDragHandleTestId(item)}
-        buttonAction={draggableButtonAction}
-        buttonActionParameter={itemDragOptions!.getDraggableOptions(item)}
-        class="cthulhuUiDropdownPopupDetailedItem cthulhuUiDropdownPopupDetailedDragItem"
-        onclick={(event) => selectItem(item, event, close)}
-      >
-        {#snippet leadingAccessory()}
-          <GripVertical size={16} aria-hidden="true" />
-        {/snippet}
-      </SelectorButton>
-
-      {#if edge}
-        <DropIndicator
-          testId={itemDragOptions!.getDropIndicatorTestId(item)}
-          {edge}
-          edgeOffset="1px"
-          insetStart="8px"
-        />
-      {/if}
+    {#snippet leadingAccessory()}
+      <GripVertical size={16} aria-hidden="true" />
     {/snippet}
-  </PromptDropTarget>
+  </SelectorButton>
 {/snippet}
 
 <DropdownPopupCore
@@ -135,35 +117,37 @@
     <div class="cthulhuUiDropdownPopupDetailedContent">
       <div class="cthulhuUiDropdownPopupDetailedItems">
         {#each items as item (item.id)}
-          {#if itemDragOptions}
-            {#if itemDragOptions.getRowDroppableOptions}
-              <PromptDropTarget
-                getOptions={() => itemDragOptions.getRowDroppableOptions!(item)}
-                class="cthulhuUiDropdownPopupDetailedRowDropTarget"
-              >
-                {#snippet children({ isOver })}
-                  {@render draggableItem(item, close, isOver)}
-                {/snippet}
-              </PromptDropTarget>
+          <div class="cthulhuUiDropdownPopupDetailedAnimatedItem" animate:flip={{ duration: 100 }}>
+            {#if itemDragOptions}
+              {#if itemDragOptions.getRowDroppableOptions}
+                <PromptDropTarget
+                  getOptions={() => itemDragOptions.getRowDroppableOptions!(item)}
+                  class="cthulhuUiDropdownPopupDetailedRowDropTarget"
+                >
+                  {#snippet children({ isOver })}
+                    {@render draggableItem(item, close, isOver)}
+                  {/snippet}
+                </PromptDropTarget>
+              {:else}
+                {@render draggableItem(item, close, false)}
+              {/if}
             {:else}
-              {@render draggableItem(item, close, false)}
+              <SelectorButton
+                icon={item.icon}
+                text={item.label}
+                detail={item.detail}
+                detailParts={item.detailParts}
+                showChevron={false}
+                selected={selectedItem?.id === item.id}
+                rowState={getItemRowState(item, false)}
+                role="menuitem"
+                ariaSelected={selectedItem?.id === item.id}
+                testId={item.testId}
+                class="cthulhuUiDropdownPopupDetailedItem"
+                onclick={(event) => selectItem(item, event, close)}
+              />
             {/if}
-          {:else}
-            <SelectorButton
-              icon={item.icon}
-              text={item.label}
-              detail={item.detail}
-              detailParts={item.detailParts}
-              showChevron={false}
-              selected={selectedItem?.id === item.id}
-              rowState={getItemRowState(item, false)}
-              role="menuitem"
-              ariaSelected={selectedItem?.id === item.id}
-              testId={item.testId}
-              class="cthulhuUiDropdownPopupDetailedItem"
-              onclick={(event) => selectItem(item, event, close)}
-            />
-          {/if}
+          </div>
         {/each}
       </div>
 
@@ -226,9 +210,8 @@
     height: 58px;
   }
 
-  :global(.cthulhuUiDropdownPopupDetailedDragTarget) {
+  .cthulhuUiDropdownPopupDetailedAnimatedItem {
     flex: 0 0 auto;
-    position: relative;
   }
 
   :global(.cthulhuUiDropdownPopupDetailedRowDropTarget) {

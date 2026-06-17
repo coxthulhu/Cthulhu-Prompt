@@ -1,7 +1,11 @@
 import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
+import {
+  dragGhostSelector,
+  finishActiveDrag,
+  moveActiveDragToTarget
+} from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -13,8 +17,6 @@ const DROPDOWN_NOOP_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-noo
 const PROMPT_FOLDER_SELECTOR_MENU = '[data-testid="sidebar-prompt-folder-selector-menu"]'
 const PROMPT_FOLDER_SELECTOR_TRIGGER = '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const PROMPT_FOLDER_DROPDOWN_ITEM_PREFIX = 'sidebar-prompt-folder-dropdown-item-'
-const PROMPT_FOLDER_DROPDOWN_DROP_INDICATOR_PREFIX =
-  'sidebar-prompt-folder-dropdown-drop-indicator-'
 
 const workspaceFolderOrderPath = (workspacePath: string): string =>
   `${workspacePath}/Prompts/FolderOrder.json`
@@ -64,9 +66,6 @@ const promptFolderDropdownItemSelector = (folderId: string): string =>
 
 const promptFolderDropdownDragHandleSelector = (folderId: string): string =>
   `[data-testid="sidebar-prompt-folder-dropdown-drag-handle-${folderId}"]`
-
-const promptFolderDropdownDropIndicatorSelector = (folderId: string): string =>
-  `[data-testid="${PROMPT_FOLDER_DROPDOWN_DROP_INDICATOR_PREFIX}${folderId}"]`
 
 const beginPromptFolderDropdownDrag = async (page: Page, folderId: string): Promise<void> => {
   const item = page.locator(promptFolderDropdownItemSelector(folderId))
@@ -206,6 +205,7 @@ describe('Prompt Folder Order', () => {
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
     ).toHaveAttribute('data-row-state', 'dragging')
+    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
     await moveActiveDragToTarget(
       mainWindow,
       promptFolderDropdownItemSelector('folder-alpha'),
@@ -214,16 +214,6 @@ describe('Prompt Folder Order', () => {
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-alpha'))
     ).toHaveAttribute('data-row-state', 'drag-idle')
-    await expect(
-      mainWindow.locator(promptFolderDropdownDropIndicatorSelector('folder-alpha'))
-    ).toHaveCount(1)
-    await finishActiveDrag(mainWindow)
-
-    await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()
-    await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Beta')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Beta"]')
-    ).toHaveAttribute('data-active', 'true')
     await expect
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
@@ -231,6 +221,16 @@ describe('Prompt Folder Order', () => {
         'sidebar-prompt-folder-dropdown-item-folder-alpha',
         'sidebar-prompt-folder-dropdown-item-folder-beta'
       ])
+    await expect(
+      await readWorkspacePromptFolderIds(electronApp, DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH)
+    ).toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
+    await finishActiveDrag(mainWindow)
+
+    await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()
+    await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Beta')
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Beta"]')
+    ).toHaveAttribute('data-active', 'true')
     await expect
       .poll(
         async () =>
@@ -266,9 +266,13 @@ describe('Prompt Folder Order', () => {
       mainWindow,
       '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
     )
-    await expect(
-      mainWindow.locator(`[data-testid^="${PROMPT_FOLDER_DROPDOWN_DROP_INDICATOR_PREFIX}"]`)
-    ).toHaveCount(0)
+    await expect
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
+      .toEqual([
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-beta',
+        'sidebar-prompt-folder-dropdown-item-folder-gamma'
+      ])
     await finishActiveDrag(mainWindow)
 
     await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()
@@ -298,9 +302,13 @@ describe('Prompt Folder Order', () => {
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')
     await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-beta'), 'top')
-    await expect(
-      mainWindow.locator(promptFolderDropdownDropIndicatorSelector('folder-beta'))
-    ).toHaveCount(0)
+    await expect
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
+      .toEqual([
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-beta',
+        'sidebar-prompt-folder-dropdown-item-folder-gamma'
+      ])
     await finishActiveDrag(mainWindow)
 
     await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()

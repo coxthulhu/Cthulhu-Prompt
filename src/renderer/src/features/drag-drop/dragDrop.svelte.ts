@@ -31,6 +31,7 @@ export type DraggableOptions<TSourcePayload = unknown, TDropPayload = unknown> =
   payload: TSourcePayload
   createGhost?: DragGhostFactory<TSourcePayload>
   onDragStart?: (payload: TSourcePayload) => void
+  onDragMove?: (payload: TSourcePayload, clientX: number, clientY: number) => void
   onDragFinish?: (result: DragFinishResult<TSourcePayload, TDropPayload>) => void
 }
 
@@ -59,6 +60,7 @@ type ActiveDrag = {
   dragType: string
   payload: unknown
   onDragStart: (() => void) | null
+  onDragMove: ((clientX: number, clientY: number) => void) | null
   onDragFinish: ((dropPayload: unknown | null) => void) | null
   cursorStyleElement: HTMLStyleElement | null
 }
@@ -590,6 +592,7 @@ const updateDragCursor = (nextX: number, nextY: number): void => {
   }
   updateDragOpenDropdowns()
   updateActiveDropTarget()
+  activeDrag?.onDragMove?.(nextX, nextY)
 }
 
 const showDragGhost = <TSourcePayload, TDropPayload>(
@@ -623,6 +626,9 @@ const beginDrag = <TSourcePayload, TDropPayload>(
     dragType: options.dragType,
     payload: sourcePayload,
     onDragStart: options.onDragStart ? () => options.onDragStart?.(sourcePayload) : null,
+    onDragMove: options.onDragMove
+      ? (clientX, clientY) => options.onDragMove?.(sourcePayload, clientX, clientY)
+      : null,
     onDragFinish: options.onDragFinish
       ? (dropPayload) =>
           options.onDragFinish?.({

@@ -2,19 +2,14 @@
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
   import type {
-    DragFinishResult,
     DraggableOptions,
     DroppableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import { createDroppableStateRegistry } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
   import {
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
-    resolvePromptFolderDropMove,
-    type PromptFolderDragPayload,
-    type PromptFolderDropPayload
+    type PromptFolderDragPayload
   } from '@renderer/features/drag-drop/promptFolderDrag'
-  import { createPromptFolderMoveDragController } from '@renderer/features/drag-drop/promptFolderMoveDrag'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
@@ -27,6 +22,7 @@
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
@@ -120,8 +116,27 @@
     icon: Plus,
     testId: 'sidebar-prompt-folder-dropdown-add-item'
   }
+  let draggedPromptFolderSelectorId = $state<string | null>(null)
+  // Local preview order lets the dropdown reorder live without persisting until drop.
+  let promptFolderSelectorDragSourceIds = $state<string[] | null>(null)
+  let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
+  let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
+  const promptFolderDropdownFolders = $derived.by((): PromptFolder[] => {
+    if (!promptFolderSelectorPreviewIds) {
+      return promptFolders
+    }
+
+    const promptFolderById = new SvelteMap<string, PromptFolder>()
+    for (const promptFolder of promptFolders) {
+      promptFolderById.set(promptFolder.id, promptFolder)
+    }
+
+    return promptFolderSelectorPreviewIds
+      .map((promptFolderId) => promptFolderById.get(promptFolderId))
+      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+  })
   const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] =>
-    promptFolders.map((promptFolder) => {
+    promptFolderDropdownFolders.map((promptFolder) => {
       const promptCount = promptFolder.promptIds.length
 
       return {
@@ -150,18 +165,11 @@
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
   let areAllPromptFoldersCollapsed = $state(true)
-  let draggedPromptFolderSelectorId = $state<string | null>(null)
-  let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
-  const promptFolderSelectorDroppableState = createDroppableStateRegistry<string>()
   const promptFolderSelectorPromptDroppableState = createDroppableStateRegistry<string>()
   const promptFolderSelectorDragOpenTypes = [
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE
   ]
-  const promptFolderSelectorMoveDrag = createPromptFolderMoveDragController({
-    getWorkspaceId: () => workspaceSelection.selectedWorkspaceId,
-    getPromptFolderIds: () => promptFolders.map((promptFolder) => promptFolder.id)
-  })
   const shouldShowExpandAllPromptFolders = $derived(
     promptFolders.length === 0 || areAllPromptFoldersCollapsed
   )
@@ -221,13 +229,122 @@
     }
   }
 
-  const getPromptFolderSelectorDropPayload = (
-    item: DropdownPopupDetailedItem,
-    edge: PromptFolderDropPayload['edge'] | null
-  ): PromptFolderDropPayload => ({
-    folderId: item.id,
-    edge: edge ?? 'bottom'
-  })
+  const arePromptFolderIdOrdersEqual = (left: string[], right: string[]): boolean => {
+    return left.length === right.length && left.every((folderId, index) => folderId === right[index])
+  }
+
+  const reorderPromptFolderIds = (
+    folderIds: string[],
+    draggedFolderId: string,
+    targetFolderId: string,
+    position: 'before' | 'after'
+  ): string[] => {
+    if (draggedFolderId === targetFolderId) {
+      return folderIds
+    }
+
+    const nextFolderIds = folderIds.filter((folderId) => folderId !== draggedFolderId)
+    const targetIndex = nextFolderIds.indexOf(targetFolderId)
+    if (targetIndex === -1) {
+      return folderIds
+    }
+
+    nextFolderIds.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, draggedFolderId)
+    return nextFolderIds
+  }
+
+  const getPromptFolderOrderAfterId = (
+    folderIds: string[],
+    folderId: string
+  ): string | null => {
+    const folderIndex = folderIds.indexOf(folderId)
+    return folderIndex <= 0 ? null : folderIds[folderIndex - 1]!
+  }
+
+  const getHoveredPromptFolderSelectorItem = (
+    clientX: number,
+    clientY: number
+  ): HTMLElement | null => {
+    const itemSelector = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
+
+    for (const element of document.elementsFromPoint(clientX, clientY)) {
+      const itemElement =
+        element instanceof Element ? element.closest<HTMLElement>(itemSelector) : null
+      if (itemElement) {
+        return itemElement
+      }
+    }
+
+    return null
+  }
+
+  const isHoveringPromptFolderSelectorFooter = (clientX: number, clientY: number): boolean => {
+    const footerSelector = '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
+
+    return document
+      .elementsFromPoint(clientX, clientY)
+      .some(
+        (element) => element instanceof Element && element.closest(footerSelector) !== null
+      )
+  }
+
+  const resetPromptFolderSelectorPreview = (): void => {
+    const sourceIds = promptFolderSelectorDragSourceIds
+    const previewIds = promptFolderSelectorPreviewIds
+    if (sourceIds && previewIds && !arePromptFolderIdOrdersEqual(sourceIds, previewIds)) {
+      promptFolderSelectorPreviewIds = sourceIds
+    }
+  }
+
+  const previewPromptFolderSelectorReorder = (
+    draggedFolderId: string,
+    clientX: number,
+    clientY: number
+  ): void => {
+    const targetElement = getHoveredPromptFolderSelectorItem(clientX, clientY)
+    const targetTestId = targetElement?.dataset.testid
+    const targetFolderId = targetTestId?.replace('sidebar-prompt-folder-dropdown-item-', '')
+    if (!targetElement || !targetFolderId) {
+      if (isHoveringPromptFolderSelectorFooter(clientX, clientY)) {
+        resetPromptFolderSelectorPreview()
+      }
+      return
+    }
+
+    const targetRect = targetElement.getBoundingClientRect()
+    const position = clientY < targetRect.top + targetRect.height / 2 ? 'before' : 'after'
+    const currentPreviewIds =
+      promptFolderSelectorPreviewIds ?? promptFolders.map((promptFolder) => promptFolder.id)
+    const nextPreviewIds = reorderPromptFolderIds(
+      currentPreviewIds,
+      draggedFolderId,
+      targetFolderId,
+      position
+    )
+
+    if (!arePromptFolderIdOrdersEqual(currentPreviewIds, nextPreviewIds)) {
+      promptFolderSelectorPreviewIds = nextPreviewIds
+    }
+  }
+
+  const persistPromptFolderSelectorReorder = (draggedFolderId: string): void => {
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    const sourceIds = promptFolderSelectorDragSourceIds
+    const previewIds = promptFolderSelectorPreviewIds
+    if (
+      !workspaceId ||
+      !sourceIds ||
+      !previewIds ||
+      arePromptFolderIdOrdersEqual(sourceIds, previewIds)
+    ) {
+      return
+    }
+
+    const orderAfterPromptFolderId = getPromptFolderOrderAfterId(previewIds, draggedFolderId)
+    void runIpcBestEffort(async () => {
+      await movePromptFolder(workspaceId, draggedFolderId, orderAfterPromptFolderId)
+    })
+  }
 
   const getPromptFolderSelectorDraggableOptions = (
     item: DropdownPopupDetailedItem
@@ -236,31 +353,28 @@
     payload: {
       folderId: item.id
     },
-    createGhost: () => createPromptDragGhost(item.label, 'prompt-folder-selector'),
     onDragStart: (payload) => {
-      draggedPromptFolderSelectorId = (payload as PromptFolderDragPayload).folderId
+      const folderIds = promptFolders.map((promptFolder) => promptFolder.id)
+      const draggedFolderId = (payload as PromptFolderDragPayload).folderId
+      draggedPromptFolderSelectorId = draggedFolderId
+      promptFolderSelectorDragSourceIds = folderIds
+      promptFolderSelectorPreviewIds = folderIds
+    },
+    onDragMove: (payload, clientX, clientY) => {
+      previewPromptFolderSelectorReorder(
+        (payload as PromptFolderDragPayload).folderId,
+        clientX,
+        clientY
+      )
     },
     onDragFinish: (result) => {
-      draggedPromptFolderSelectorId = null
-      promptFolderSelectorMoveDrag.handleDragFinish(
-        result as DragFinishResult<PromptFolderDragPayload, PromptFolderDropPayload>
+      persistPromptFolderSelectorReorder(
+        (result.sourcePayload as PromptFolderDragPayload).folderId
       )
+      draggedPromptFolderSelectorId = null
+      promptFolderSelectorDragSourceIds = null
+      promptFolderSelectorPreviewIds = null
     }
-  })
-
-  const getPromptFolderSelectorDroppableOptions = (
-    item: DropdownPopupDetailedItem
-  ): DroppableOptions<unknown, unknown> => ({
-    dragType: PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
-    allowedEdges: 'top-and-bottom',
-    payload: (edge) => getPromptFolderSelectorDropPayload(item, edge),
-    canDrop: (payload, edge) =>
-      resolvePromptFolderDropMove(
-        promptFolders.map((promptFolder) => promptFolder.id),
-        (payload as PromptFolderDragPayload).folderId,
-        getPromptFolderSelectorDropPayload(item, edge)
-      ) !== null,
-    state: promptFolderSelectorDroppableState.getState(item.id)
   })
 
   const getPromptFolderSelectorPromptDroppableOptions = (
@@ -278,12 +392,9 @@
 
   const promptFolderSelectorItemDragOptions = {
     getDraggableOptions: getPromptFolderSelectorDraggableOptions,
-    getDroppableOptions: getPromptFolderSelectorDroppableOptions,
     getRowDroppableOptions: getPromptFolderSelectorPromptDroppableOptions,
     getDragHandleTestId: (item: DropdownPopupDetailedItem) =>
       `sidebar-prompt-folder-dropdown-drag-handle-${item.id}`,
-    getDropIndicatorTestId: (item: DropdownPopupDetailedItem) =>
-      `sidebar-prompt-folder-dropdown-drop-indicator-${item.id}`,
     isDragging: (item: DropdownPopupDetailedItem) => draggedPromptFolderSelectorId === item.id,
     isDraggingAny: () => draggedPromptFolderSelectorId !== null
   }
