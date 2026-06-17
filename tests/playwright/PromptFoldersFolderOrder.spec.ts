@@ -12,9 +12,11 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order'
 const CREATE_FOLDER_WORKSPACE_PATH = '/ws/folder-order-create'
 const DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-drag'
+const DROPDOWN_SCROLL_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-scroll'
 const DROPDOWN_FOOTER_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-footer'
 const DROPDOWN_NOOP_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-noop'
 const PROMPT_FOLDER_SELECTOR_MENU = '[data-testid="sidebar-prompt-folder-selector-menu"]'
+const PROMPT_FOLDER_SELECTOR_ITEMS = '[data-testid="sidebar-prompt-folder-selector-menu-items"]'
 const PROMPT_FOLDER_SELECTOR_TRIGGER = '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const PROMPT_FOLDER_DROPDOWN_ITEM_PREFIX = 'sidebar-prompt-folder-dropdown-item-'
 
@@ -81,6 +83,12 @@ const beginPromptFolderDropdownDrag = async (page: Page, folderId: string): Prom
   await page.mouse.down()
   await page.mouse.move(box.x + box.width / 2 + 8, box.y + box.height / 2 + 8, { steps: 4 })
   await expect(page.locator('body')).toHaveCSS('cursor', 'grabbing')
+}
+
+const scrollPromptFolderDropdownToBottom = async (page: Page): Promise<void> => {
+  await page.locator(PROMPT_FOLDER_SELECTOR_ITEMS).evaluate((element) => {
+    element.scrollTop = element.scrollHeight
+  })
 }
 
 const createEmptyFolderWorkspace = (workspacePath: string, folderNames: string[]) =>
@@ -206,11 +214,7 @@ describe('Prompt Folder Order', () => {
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
     ).toHaveAttribute('data-row-state', 'dragging')
     await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptFolderDropdownItemSelector('folder-alpha'),
-      'top'
-    )
+    await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-alpha'))
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-alpha'))
     ).toHaveAttribute('data-row-state', 'drag-idle')
@@ -237,6 +241,72 @@ describe('Prompt Folder Order', () => {
           await readWorkspacePromptFolderIds(electronApp, DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH)
       )
       .toEqual(['folder-gamma', 'folder-alpha', 'folder-beta'])
+  })
+
+  test('reorders folders from a scrolled folder selector dropdown', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(
+      createEmptyFolderWorkspace(DROPDOWN_SCROLL_FOLDER_ORDER_WORKSPACE_PATH, [
+        'Alpha',
+        'Beta',
+        'Gamma',
+        'Delta',
+        'Epsilon',
+        'Zeta',
+        'Eta',
+        'Theta'
+      ])
+    )
+    await testSetup.setupFileDialog([
+      getWorkspaceInfoPath(DROPDOWN_SCROLL_FOLDER_ORDER_WORKSPACE_PATH)
+    ])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()
+    await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')
+    await scrollPromptFolderDropdownToBottom(mainWindow)
+    await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-theta'))
+
+    await expect
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
+      .toEqual([
+        'sidebar-prompt-folder-dropdown-item-folder-beta',
+        'sidebar-prompt-folder-dropdown-item-folder-gamma',
+        'sidebar-prompt-folder-dropdown-item-folder-delta',
+        'sidebar-prompt-folder-dropdown-item-folder-epsilon',
+        'sidebar-prompt-folder-dropdown-item-folder-zeta',
+        'sidebar-prompt-folder-dropdown-item-folder-eta',
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-theta'
+      ])
+    await finishActiveDrag(mainWindow)
+
+    await expect
+      .poll(
+        async () =>
+          await readWorkspacePromptFolderIds(
+            electronApp,
+            DROPDOWN_SCROLL_FOLDER_ORDER_WORKSPACE_PATH
+          )
+      )
+      .toEqual([
+        'folder-beta',
+        'folder-gamma',
+        'folder-delta',
+        'folder-epsilon',
+        'folder-zeta',
+        'folder-eta',
+        'folder-alpha',
+        'folder-theta'
+      ])
   })
 
   test('ignores folder selector dropdown drops on the add folder footer', async ({
@@ -301,7 +371,7 @@ describe('Prompt Folder Order', () => {
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')
-    await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-beta'), 'top')
+    await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-alpha'))
     await expect
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([

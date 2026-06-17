@@ -120,6 +120,7 @@
   // Local preview order lets the dropdown reorder live without persisting until drop.
   let promptFolderSelectorDragSourceIds = $state<string[] | null>(null)
   let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
+  let promptFolderSelectorItemsElement = $state<HTMLElement | null>(null)
   let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
   const promptFolderDropdownFolders = $derived.by((): PromptFolder[] => {
     if (!promptFolderSelectorPreviewIds) {
@@ -236,20 +237,14 @@
   const reorderPromptFolderIds = (
     folderIds: string[],
     draggedFolderId: string,
-    targetFolderId: string,
-    position: 'before' | 'after'
+    targetIndex: number
   ): string[] => {
-    if (draggedFolderId === targetFolderId) {
-      return folderIds
-    }
-
     const nextFolderIds = folderIds.filter((folderId) => folderId !== draggedFolderId)
-    const targetIndex = nextFolderIds.indexOf(targetFolderId)
-    if (targetIndex === -1) {
+    if (nextFolderIds.length === folderIds.length) {
       return folderIds
     }
 
-    nextFolderIds.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, draggedFolderId)
+    nextFolderIds.splice(Math.min(targetIndex, nextFolderIds.length), 0, draggedFolderId)
     return nextFolderIds
   }
 
@@ -259,23 +254,6 @@
   ): string | null => {
     const folderIndex = folderIds.indexOf(folderId)
     return folderIndex <= 0 ? null : folderIds[folderIndex - 1]!
-  }
-
-  const getHoveredPromptFolderSelectorItem = (
-    clientX: number,
-    clientY: number
-  ): HTMLElement | null => {
-    const itemSelector = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
-
-    for (const element of document.elementsFromPoint(clientX, clientY)) {
-      const itemElement =
-        element instanceof Element ? element.closest<HTMLElement>(itemSelector) : null
-      if (itemElement) {
-        return itemElement
-      }
-    }
-
-    return null
   }
 
   const isHoveringPromptFolderSelectorFooter = (clientX: number, clientY: number): boolean => {
@@ -296,30 +274,44 @@
     }
   }
 
+  const getPromptFolderSelectorTargetIndex = (
+    clientY: number,
+    itemCount: number
+  ): number | null => {
+    const itemsElement = promptFolderSelectorItemsElement
+    if (!itemsElement || itemCount === 0) {
+      return null
+    }
+
+    const rect = itemsElement.getBoundingClientRect()
+    const contentY = clientY - rect.top + itemsElement.scrollTop
+    const rowPitch = itemsElement.scrollHeight / itemCount
+    const rawIndex = Math.round(contentY / rowPitch - 0.5)
+
+    return Math.max(0, Math.min(rawIndex, itemCount - 1))
+  }
+
   const previewPromptFolderSelectorReorder = (
     draggedFolderId: string,
     clientX: number,
     clientY: number
   ): void => {
-    const targetElement = getHoveredPromptFolderSelectorItem(clientX, clientY)
-    const targetTestId = targetElement?.dataset.testid
-    const targetFolderId = targetTestId?.replace('sidebar-prompt-folder-dropdown-item-', '')
-    if (!targetElement || !targetFolderId) {
-      if (isHoveringPromptFolderSelectorFooter(clientX, clientY)) {
-        resetPromptFolderSelectorPreview()
-      }
+    if (isHoveringPromptFolderSelectorFooter(clientX, clientY)) {
+      resetPromptFolderSelectorPreview()
       return
     }
 
-    const targetRect = targetElement.getBoundingClientRect()
-    const position = clientY < targetRect.top + targetRect.height / 2 ? 'before' : 'after'
     const currentPreviewIds =
       promptFolderSelectorPreviewIds ?? promptFolders.map((promptFolder) => promptFolder.id)
+    const targetIndex = getPromptFolderSelectorTargetIndex(clientY, currentPreviewIds.length)
+    if (targetIndex === null) {
+      return
+    }
+
     const nextPreviewIds = reorderPromptFolderIds(
       currentPreviewIds,
       draggedFolderId,
-      targetFolderId,
-      position
+      targetIndex
     )
 
     if (!arePromptFolderIdOrdersEqual(currentPreviewIds, nextPreviewIds)) {
@@ -396,7 +388,10 @@
     getDragHandleTestId: (item: DropdownPopupDetailedItem) =>
       `sidebar-prompt-folder-dropdown-drag-handle-${item.id}`,
     isDragging: (item: DropdownPopupDetailedItem) => draggedPromptFolderSelectorId === item.id,
-    isDraggingAny: () => draggedPromptFolderSelectorId !== null
+    isDraggingAny: () => draggedPromptFolderSelectorId !== null,
+    onItemsElementChange: (element: HTMLElement | null) => {
+      promptFolderSelectorItemsElement = element
+    }
   }
 </script>
 

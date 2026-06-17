@@ -30,6 +30,7 @@
     getDragHandleTestId: (item: DropdownPopupDetailedItem) => string
     isDragging: (item: DropdownPopupDetailedItem) => boolean
     isDraggingAny: () => boolean
+    onItemsElementChange?: (element: HTMLElement | null) => void
   }
 
   type Props = {
@@ -78,6 +79,16 @@
     close()
     onselect?.(item, event)
   }
+
+  const itemsElementAction: Action<HTMLDivElement> = (node) => {
+    itemDragOptions?.onItemsElementChange?.(node)
+
+    return {
+      destroy() {
+        itemDragOptions?.onItemsElementChange?.(null)
+      }
+    }
+  }
 </script>
 
 {#snippet draggableItem(item: DropdownPopupDetailedItem, close: () => void, isRowDropOver: boolean)}
@@ -115,7 +126,11 @@
 >
   {#snippet children({ close })}
     <div class="cthulhuUiDropdownPopupDetailedContent">
-      <div class="cthulhuUiDropdownPopupDetailedItems">
+      <div
+        use:itemsElementAction
+        class="cthulhuUiDropdownPopupDetailedItems"
+        data-testid={testId ? `${testId}-items` : undefined}
+      >
         {#each items as item (item.id)}
           <div class="cthulhuUiDropdownPopupDetailedAnimatedItem" animate:flip={{ duration: 100 }}>
             {#if itemDragOptions}
