@@ -7,7 +7,7 @@ import {
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
-export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '.folderprops'
+export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 

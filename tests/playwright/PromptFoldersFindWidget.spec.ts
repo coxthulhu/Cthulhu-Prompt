@@ -185,9 +185,9 @@ const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, st
     }
   ])
 
-  const folderDescriptionPath = `${workspacePath}/Prompts/Long/.folderprops/Description.md`
+  const folderDescriptionPath = `${workspacePath}/Prompts/Long/_FolderInfo/Description.md`
   if (typeof filesystem[folderDescriptionPath] !== 'string') {
-    throw new Error('Missing Long/.folderprops/Description.md in loop fixture workspace')
+    throw new Error('Missing Long/_FolderInfo/Description.md in loop fixture workspace')
   }
   filesystem[folderDescriptionPath] = `Find marker in folder description: ${LOOP_REGRESSION_QUERY}`
 
@@ -225,9 +225,9 @@ const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, s
     }
   ])
 
-  const folderDescriptionPath = `${workspacePath}/Prompts/Long/.folderprops/Description.md`
+  const folderDescriptionPath = `${workspacePath}/Prompts/Long/_FolderInfo/Description.md`
   if (typeof filesystem[folderDescriptionPath] !== 'string') {
-    throw new Error('Missing Long/.folderprops/Description.md in rapid loop fixture workspace')
+    throw new Error('Missing Long/_FolderInfo/Description.md in rapid loop fixture workspace')
   }
   filesystem[folderDescriptionPath] = `Rapid loop marker in folder description: ${RAPID_LOOP_QUERY}`
 

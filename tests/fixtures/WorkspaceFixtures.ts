@@ -45,7 +45,7 @@ const addPromptFolderSettingsFiles = (
   folder: PromptFolderConfig
 ): void => {
   for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-    structure[`${folderPath}/.folderprops/${PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]}`] =
+    structure[`${folderPath}/_FolderInfo/${PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]}`] =
       folder.folderSettings?.[field] ?? ''
   }
 }
@@ -277,7 +277,7 @@ export function createWorkspaceWithFolders(
 
     // Create folder metadata
     structure[`${folderPath}/FolderOrder.json`] = JSON.stringify({ promptIds }, null, 2)
-    structure[`${folderPath}/.folderprops/FolderInfo.json`] = JSON.stringify(
+    structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
       createPromptFolderInfo(folder.displayName, promptFolderId),
       null,
       2
@@ -453,7 +453,7 @@ export function addFolderToWorkspace(
 
   const structure: Record<string, string | null> = {
     [`${folderPath}/FolderOrder.json`]: JSON.stringify({ promptIds }, null, 2),
-    [`${folderPath}/.folderprops/FolderInfo.json`]: JSON.stringify(
+    [`${folderPath}/_FolderInfo/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,
       2
