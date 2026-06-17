@@ -5,10 +5,12 @@
 
   let {
     activeScreen,
+    isWorkspaceReady = false,
     isDevMode = false,
     onNavigate
   } = $props<{
     activeScreen: ScreenId
+    isWorkspaceReady?: boolean
     isDevMode?: boolean
     onNavigate: (screen: ScreenId) => void
   }>()
@@ -31,7 +33,12 @@
     activityScreenOrder
       .map((screenId) => {
         const config = screens[screenId]
-        if (!config.showInNav || (config.devOnly && !isDevMode) || !config.icon) {
+        if (
+          !config.showInNav ||
+          (config.devOnly && !isDevMode) ||
+          (config.requiresWorkspace && !isWorkspaceReady) ||
+          !config.icon
+        ) {
           return null
         }
 

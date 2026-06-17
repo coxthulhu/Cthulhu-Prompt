@@ -548,7 +548,7 @@
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar {activeScreen} {isDevMode} onNavigate={navigateToScreen} />
+    <AppActivityBar {activeScreen} {isWorkspaceReady} {isDevMode} onNavigate={navigateToScreen} />
 
     <ResizableSidebar
       defaultWidth={appSidebarDefaultWidthPx}

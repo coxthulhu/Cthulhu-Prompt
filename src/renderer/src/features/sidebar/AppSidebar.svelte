@@ -205,7 +205,7 @@
     if (!workspacePath) {
       return {
         title: 'No Workspace Selected',
-        path: 'No Workspace Selected'
+        path: ''
       }
     }
 
@@ -443,33 +443,35 @@
   </div>
   <Separator />
 
-  <div class="sidebarTopLevelInsetWithInnerPadding py-1">
-    {#if folderListState === 'empty'}
-      <SelectorButton
-        icon={promptFolderSelectorFooterItem.icon}
-        text={promptFolderSelectorFooterItem.label}
-        detail={promptFolderSelectorFooterItem.detail}
-        showChevron={false}
-        state={promptFolderSelectorState}
-        testId="sidebar-prompt-folder-add-button"
-        onclick={openCreatePromptFolderDialog}
-      />
-    {:else}
-      <SelectorButtonWithDropdown
-        label="Prompt folder selector"
-        items={promptFolderDropdownItems}
-        selectedItem={selectedPromptFolderDropdownItem}
-        footerItem={promptFolderSelectorFooterItem}
-        state={promptFolderSelectorState}
-        itemDragOptions={promptFolderSelectorItemDragOptions}
-        dragOpenTypes={promptFolderSelectorDragOpenTypes}
-        testId="sidebar-prompt-folder-selector-menu"
-        triggerTestId="sidebar-prompt-folder-selector-trigger"
-        onselect={handlePromptFolderDropdownSelect}
-      />
-    {/if}
-  </div>
-  <Separator />
+  {#if folderListState !== 'no-workspace'}
+    <div class="sidebarTopLevelInsetWithInnerPadding py-1">
+      {#if folderListState === 'empty'}
+        <SelectorButton
+          icon={promptFolderSelectorFooterItem.icon}
+          text={promptFolderSelectorFooterItem.label}
+          detail={promptFolderSelectorFooterItem.detail}
+          showChevron={false}
+          state={promptFolderSelectorState}
+          testId="sidebar-prompt-folder-add-button"
+          onclick={openCreatePromptFolderDialog}
+        />
+      {:else}
+        <SelectorButtonWithDropdown
+          label="Prompt folder selector"
+          items={promptFolderDropdownItems}
+          selectedItem={selectedPromptFolderDropdownItem}
+          footerItem={promptFolderSelectorFooterItem}
+          state={promptFolderSelectorState}
+          itemDragOptions={promptFolderSelectorItemDragOptions}
+          dragOpenTypes={promptFolderSelectorDragOpenTypes}
+          testId="sidebar-prompt-folder-selector-menu"
+          triggerTestId="sidebar-prompt-folder-selector-trigger"
+          onselect={handlePromptFolderDropdownSelect}
+        />
+      {/if}
+    </div>
+    <Separator />
+  {/if}
 
   <div class="cthulhuSidebarPromptSectionHeader">
     <p class="cthulhuSidebarPromptSectionTitle">Prompts</p>
