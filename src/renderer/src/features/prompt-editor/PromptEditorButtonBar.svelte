@@ -47,15 +47,7 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-1.5">
-  <CopyButton
-    text={copyText ?? draftText}
-    label={copyLabel}
-    title={copyTitle}
-    hoverVariant="accent"
-    testId="prompt-copy-button"
-  />
   {#if onDelete}
-    <Separator orientation="vertical" class="h-6" />
     <IconButton
       icon={Trash2}
       label="Delete prompt"
@@ -64,7 +56,15 @@
       testId="prompt-delete-button"
       onclick={handleDeleteClick}
     />
+    <Separator orientation="vertical" class="h-6" />
   {/if}
+  <CopyButton
+    text={copyText ?? draftText}
+    label={copyLabel}
+    title={copyTitle}
+    hoverVariant="accent"
+    testId="prompt-copy-button"
+  />
 </div>
 
 {#if onDelete}
