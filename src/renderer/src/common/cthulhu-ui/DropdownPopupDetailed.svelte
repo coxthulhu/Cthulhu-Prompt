@@ -207,7 +207,7 @@
     flex: 1 1 auto;
     flex-direction: column;
     gap: 2px;
-    max-height: calc((58px * 5) + (2px * 4));
+    max-height: calc((58px * 8) + (2px * 7));
     min-height: 0;
     overflow-y: auto;
   }
