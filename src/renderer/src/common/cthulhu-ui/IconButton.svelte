@@ -147,6 +147,11 @@
     background: var(--ui-neutral-action-hover-fill);
   }
 
+  .cthulhuUiIconButton[data-size='sidebar-rail']:hover,
+  .cthulhuUiIconButton[data-size='sidebar-rail']:focus-visible {
+    background: var(--ui-neutral-subtle-action-hover-fill);
+  }
+
   .cthulhuUiIconButton[data-hover-variant='accent']:hover,
   .cthulhuUiIconButton[data-hover-variant='accent']:focus-visible {
     background: var(--ui-accent-action-hover-fill);

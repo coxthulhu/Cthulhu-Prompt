@@ -44,6 +44,7 @@
   --ui-neutral-selection-surface: oklch(1 0 0 / 22%);
   --ui-neutral-focus-border: oklch(1 0 0 / 28%);
   --ui-neutral-action-fill: oklch(1 0 0 / 11.3%);
+  --ui-neutral-subtle-action-hover-fill: oklch(1 0 0 / 3%);
   --ui-neutral-action-hover-fill: oklch(1 0 0 / 16.3%);
 
   /* Accent */
