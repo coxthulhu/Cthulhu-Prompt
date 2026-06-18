@@ -50,7 +50,8 @@
           : 'idle'
   )
   const promptIndentCount = 0
-  const rowStyle = `--prompt-tree-indent-count:${promptIndentCount};`
+  const promptIndentBasePx = promptIndentCount > 0 ? 20 : 0
+  const rowStyle = `--prompt-tree-indent-count:${promptIndentCount}; --prompt-tree-indent-base:${promptIndentBasePx}px;`
 </script>
 
 <PromptDropTarget

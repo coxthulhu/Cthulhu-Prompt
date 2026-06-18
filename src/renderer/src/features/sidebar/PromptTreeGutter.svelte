@@ -4,7 +4,10 @@
   }>()
 
   const indentIndexes = $derived(Array.from({ length: indentCount }, (_, index) => index))
-  const gutterStyle = $derived(`--prompt-tree-indent-count:${indentCount};`)
+  const indentBasePx = $derived(indentCount > 0 ? 20 : 0)
+  const gutterStyle = $derived(
+    `--prompt-tree-indent-count:${indentCount}; --prompt-tree-indent-base:${indentBasePx}px;`
+  )
 </script>
 
 <div class="sidebarPromptTreeGutter" style={gutterStyle} aria-hidden="true">
