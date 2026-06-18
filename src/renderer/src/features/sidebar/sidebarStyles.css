@@ -67,9 +67,13 @@
     color 50ms ease-out;
 }
 
-.sidebarPromptTreeRow[data-row-state='idle']:hover,
-.sidebarPromptTreeRow[data-row-state='active']:hover {
+.sidebarPromptTreeRow[data-row-state='idle']:hover {
   background-color: var(--ui-neutral-normal-surface);
+  color: var(--ui-normal-text);
+}
+
+.sidebarPromptTreeRow[data-row-state='active']:hover {
+  background-color: var(--ui-neutral-selection-surface);
   color: var(--ui-normal-text);
 }
 
@@ -197,6 +201,10 @@
   color: var(--ui-normal-text);
 }
 
+.sidebarPromptTreeActionButton.cthulhuUiIconButton[data-active='true']:not(:hover):not(:focus-visible) {
+  background: var(--ui-ghost-surface);
+}
+
 .sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeCountInActionSlot,
 .sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeCountInActionSlot,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountInActionSlot {
@@ -256,9 +264,13 @@
     color 50ms ease-out;
 }
 
-.sidebarPromptTreeSettingsButton[data-row-state='idle']:hover,
-.sidebarPromptTreeSettingsButton[data-row-state='active']:hover {
+.sidebarPromptTreeSettingsButton[data-row-state='idle']:hover {
   background-color: var(--ui-neutral-normal-surface);
+  color: var(--ui-normal-text);
+}
+
+.sidebarPromptTreeSettingsButton[data-row-state='active']:hover {
+  background-color: var(--ui-neutral-selection-surface);
   color: var(--ui-normal-text);
 }
 
