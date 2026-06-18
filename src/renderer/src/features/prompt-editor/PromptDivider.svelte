@@ -56,6 +56,7 @@
           iconSize={14}
           iconClass="stroke-[3]"
           state={disabled ? 'disabled' : 'enabled'}
+          hoverVariant="accent"
           class="min-w-24 font-bold"
           data-drop-over="false"
           aria-label={dividerText}

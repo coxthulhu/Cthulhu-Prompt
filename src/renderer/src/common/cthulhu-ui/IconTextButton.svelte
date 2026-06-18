@@ -4,11 +4,13 @@
   import { mergeClasses } from './mergeClasses'
 
   type IconTextButtonState = 'enabled' | 'disabled'
+  type IconTextButtonHoverVariant = 'neutral' | 'accent'
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
     icon: ComponentType
     text: string
     state?: IconTextButtonState
+    hoverVariant?: IconTextButtonHoverVariant
     class?: string
     iconClass?: string
     iconSize?: number
@@ -20,6 +22,7 @@
     icon: Icon,
     text,
     state = 'enabled',
+    hoverVariant = 'neutral',
     class: className,
     iconClass,
     iconSize = 16,
@@ -36,6 +39,7 @@
   type="button"
   class={mergeClasses('cthulhuUiIconTextButton', className)}
   data-state={state}
+  data-hover-variant={hoverVariant}
   data-testid={testId}
   disabled={isDisabled}
   {onclick}
@@ -76,6 +80,11 @@
   .cthulhuUiIconTextButton:hover,
   .cthulhuUiIconTextButton:focus-visible {
     background: var(--ui-neutral-action-fill);
+  }
+
+  .cthulhuUiIconTextButton[data-hover-variant='accent']:hover,
+  .cthulhuUiIconTextButton[data-hover-variant='accent']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
   }
 
   .cthulhuUiIconTextButton:focus-visible {
