@@ -47,7 +47,7 @@
   }
 
   :global(.prompt-editor-card-surface[data-layout='sidebar']) {
-    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-columns: 36px minmax(0, 1fr);
   }
 
   :global(.prompt-editor-card-surface[data-layout='plain']) {

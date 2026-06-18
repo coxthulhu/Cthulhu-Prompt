@@ -96,6 +96,7 @@
     label="Move prompt up"
     size="sidebar-rail"
     baseVariant="dim"
+    class="prompt-editor-sidebar-move-button"
     testId="prompt-move-up"
     disabled={isFirstPrompt}
     onclick={handleMoveUpClick}
@@ -106,6 +107,7 @@
     label="Drag prompt"
     size="sidebar-rail"
     baseVariant="dim"
+    class="prompt-editor-sidebar-drag-button"
     testId="prompt-drag-handle"
     buttonAction={dragHandleAction}
     buttonActionParameter={getDragHandleOptions()}
@@ -117,6 +119,7 @@
     label="Move prompt down"
     size="sidebar-rail"
     baseVariant="dim"
+    class="prompt-editor-sidebar-move-button"
     testId="prompt-move-down"
     disabled={isLastPrompt}
     onclick={handleMoveDownClick}
@@ -126,13 +129,22 @@
 <style>
   .prompt-editor-sidebar {
     background: var(--ui-card-overlay-surface);
-    display: grid;
-    flex: 0 0 38px;
-    grid-template-rows: 44px minmax(44px, 1fr) 44px;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 36px;
     height: 100%;
-    min-height: 156px;
+    min-height: 0;
     min-width: 0;
-    width: 38px;
+    overflow: hidden;
+    width: 36px;
+  }
+
+  .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button) {
+    flex: 0 4 40px;
+  }
+
+  .prompt-editor-sidebar :global(.prompt-editor-sidebar-drag-button) {
+    flex: 1 1 52px;
   }
 
   .prompt-editor-sidebar:focus-within {

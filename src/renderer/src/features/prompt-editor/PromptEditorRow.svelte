@@ -162,7 +162,7 @@
   })
   const findContext = getPromptFolderFindContext()
 
-  const SIDEBAR_WIDTH_PX = 38
+  const SIDEBAR_WIDTH_PX = 36
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
   const OVERFLOW_TOP_PADDING_PX =
