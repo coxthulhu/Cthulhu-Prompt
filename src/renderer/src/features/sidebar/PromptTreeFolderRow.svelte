@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, ChevronsDown, ChevronsUp, MoreHorizontal, Settings } from 'lucide-svelte'
+  import { ArrowRight, MoreHorizontal, Settings } from 'lucide-svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -10,8 +10,6 @@
   import {
     folderOpenTestId,
     folderOptionsTestId,
-    folderPromptMenuShowAllTestId,
-    folderPromptMenuShowLessTestId,
     folderSettingsTestId,
     folderToggleTestId
   } from './promptTreeTestIds'
@@ -23,13 +21,10 @@
     isSettingsActive: boolean
     isPromptDragActive: boolean
     isExpanded: boolean
-    isShowingAllPrompts: boolean
-    visiblePromptLimit: number
     getFolderPromptDroppableOptions: () => PromptRowDropOptions
     onFolderExpandedChange: (folderId: string, isExpanded: boolean) => void
     onPromptFolderOpen: (folderId: string) => void
     onFolderSettingsOpen: (folderId: string) => void
-    onPromptVisibilityChange: (folderId: string, isShowingAllPrompts: boolean) => void
   }
 
   let {
@@ -38,13 +33,10 @@
     isSettingsActive,
     isPromptDragActive,
     isExpanded,
-    isShowingAllPrompts,
-    visiblePromptLimit,
     getFolderPromptDroppableOptions,
     onFolderExpandedChange,
     onPromptFolderOpen,
-    onFolderSettingsOpen,
-    onPromptVisibilityChange
+    onFolderSettingsOpen
   }: Props = $props()
 
   const blurButtonAfterMouseClick = (event: MouseEvent) => {
@@ -65,21 +57,15 @@
     blurButtonAfterMouseClick(event)
   }
 
-  const handlePromptVisibilityMenuSelect = (
-    isNextShowingAllPrompts: boolean,
-    event: MouseEvent
-  ) => {
-    onPromptVisibilityChange(folder.id, isNextShowingAllPrompts)
-    blurButtonAfterMouseClick(event)
-  }
-
   const dropdownItems = $derived.by((): DropdownPopupItem[] => [
     {
       id: 'folder-settings',
       label: 'Open folder settings',
       icon: Settings,
       testId: folderSettingsTestId(folder)
-    },
+    }
+    /*
+    Show more/show less is paused until prompt tree subfolders reuse this folder row.
     ...(isExpanded && folder.promptIds.length > visiblePromptLimit
       ? [
           isShowingAllPrompts
@@ -97,6 +83,7 @@
               }
         ]
       : [])
+    */
   ])
 
   const handleFolderOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
@@ -106,9 +93,12 @@
       return
     }
 
+    /*
     if (item.id === 'show-all-prompts' || item.id === 'show-less-prompts') {
-      handlePromptVisibilityMenuSelect(item.id === 'show-all-prompts', event)
+      onPromptVisibilityChange?.(folder.id, item.id === 'show-all-prompts')
+      blurButtonAfterMouseClick(event)
     }
+    */
   }
 </script>
 

@@ -15,10 +15,7 @@ export async function isButtonVisible(window: any, buttonText: string): Promise<
   const buttonMap: Record<string, string> = {
     'Open Workspace': 'open-workspace-button',
     'Create Workspace': 'create-workspace-button',
-    'Close Workspace': 'close-workspace-button',
-    'Test Folder': 'prompt-tree-folder-open-button-TestFolder',
-    'Example Prompts': 'prompt-tree-folder-open-button-Examples',
-    'Development Tools': 'prompt-tree-folder-open-button-Development'
+    'Close Workspace': 'close-workspace-button'
   }
 
   const testId = buttonMap[buttonText]

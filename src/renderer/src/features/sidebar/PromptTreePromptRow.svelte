@@ -49,10 +49,16 @@
           ? 'drag-idle'
           : 'idle'
   )
+  const promptIndentCount = 0
+  const rowStyle = `--prompt-tree-indent-count:${promptIndentCount};`
 </script>
 
-<PromptDropTarget getOptions={getPromptDroppableOptions} class="sidebarPromptTreeSettingsRow">
-  <PromptTreeGutter />
+<PromptDropTarget
+  getOptions={getPromptDroppableOptions}
+  class="sidebarPromptTreeSettingsRow"
+  style={rowStyle}
+>
+  <PromptTreeGutter indentCount={promptIndentCount} />
   <button
     use:draggable={promptDragOptions}
     type="button"

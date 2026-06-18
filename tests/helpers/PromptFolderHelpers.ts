@@ -224,9 +224,9 @@ export async function clickCollapsibleTrigger(_window: any, _triggerText: string
 }
 
 /**
- * Clicks the prompt tree open action for a specific prompt folder.
+ * Selects a prompt folder from the sidebar folder selector.
  * @param window - The Playwright window instance
- * @param folderName - The name of the folder to click (used in data-testid)
+ * @param folderName - The display name of the folder to select
  * @param timeout - Optional timeout for the click action
  */
 export async function clickPromptFolderItem(
@@ -234,30 +234,20 @@ export async function clickPromptFolderItem(
   folderName: string,
   timeout = 2000
 ): Promise<void> {
-  const safeName = folderName.replace(/\s+/g, '')
-  const testId = `prompt-tree-folder-open-button-${safeName}`
-  const folderSelector = `[data-testid="${testId}"]`
-  const folderToggleSelector = `[data-testid="prompt-tree-folder-toggle-button-${safeName}"]`
-  const promptTreeSelector = '[data-testid="prompt-tree-virtual-window"]'
-
-  // Sidebar tree rows are virtualized, so scroll until the target folder row is mounted.
-  await scrollVirtualWindowTo(window, promptTreeSelector, 0)
-  const treeHeight = await getPromptRowHeight(window, promptTreeSelector)
-  const treeScrollHeight = await getVirtualWindowScrollHeight(window, promptTreeSelector)
-  const maxTreeScrollTop = Math.max(0, treeScrollHeight - treeHeight)
-  const treeStepPx = Math.max(1, Math.round(treeHeight * 0.8))
-
-  for (let scrollTopPx = 0; scrollTopPx <= maxTreeScrollTop; scrollTopPx += treeStepPx) {
-    const rowCount = await window.locator(folderSelector).count()
-    if (rowCount > 0) {
-      break
-    }
-    const nextScrollTopPx = Math.min(maxTreeScrollTop, scrollTopPx + treeStepPx)
-    await scrollVirtualWindowTo(window, promptTreeSelector, nextScrollTopPx)
+  const displayNameByFolderName: Record<string, string> = {
+    Examples: 'Example Prompts',
+    Development: 'Development Tools'
   }
+  const displayName = displayNameByFolderName[folderName] ?? folderName
 
-  await window.locator(folderToggleSelector).hover({ timeout })
-  await window.click(folderSelector, { timeout })
+  await window.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click({
+    timeout
+  })
+  await window
+    .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+    .filter({ hasText: displayName })
+    .first()
+    .click({ timeout })
   await window.waitForSelector('[data-testid="prompt-folder-screen"]', {
     state: 'attached',
     timeout

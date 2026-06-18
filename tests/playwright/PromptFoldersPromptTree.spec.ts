@@ -18,13 +18,8 @@ const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
-const SHORT_OPTIONS_SELECTOR = '[data-testid="prompt-tree-folder-options-button-Short"]'
-const SHORT_SHOW_ALL_SELECTOR = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
-const SHORT_SHOW_LESS_SELECTOR = '[data-testid="prompt-tree-folder-show-less-prompts-Short"]'
-const SHORT_MENU_SHOW_ALL_SELECTOR =
-  '[data-testid="prompt-tree-folder-menu-show-all-prompts-Short"]'
-const SHORT_MENU_SHOW_LESS_SELECTOR =
-  '[data-testid="prompt-tree-folder-menu-show-less-prompts-Short"]'
+const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON =
+  '[data-testid="open-selected-prompt-folder-settings-button"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
 const samplePromptTreeRowSelector = `[data-testid="prompt-tree-prompt-${SAMPLE_PROMPT_ID}"]`
@@ -54,16 +49,6 @@ const scrollPromptTreeRowIntoView = async (
   throw new Error(`Missing prompt tree row: ${rowSelector}`)
 }
 
-const openPromptTreeFolderOptions = async (mainWindow: any, optionsSelector: string) => {
-  await mainWindow.evaluate((selector) => {
-    const button = document.querySelector<HTMLButtonElement>(selector)
-    if (!button) {
-      throw new Error(`Missing prompt tree row: ${selector}`)
-    }
-    button.click()
-  }, optionsSelector)
-}
-
 describe('Prompt folder prompt tree', () => {
   test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({
     testSetup
@@ -78,9 +63,6 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    await mainWindow
-      .locator('[data-testid="prompt-tree-folder-show-all-prompts-LongWrappedSingles"]')
-      .click()
     await scrollPromptTreeRowIntoView(mainWindow, testHelpers, TARGET_PROMPT_TREE_ROW_SELECTOR)
     const promptTreeButton = mainWindow.locator(TARGET_PROMPT_TREE_ROW_SELECTOR)
     await expect(promptTreeButton).toHaveText(TARGET_PROMPT_TITLE)
@@ -150,17 +132,8 @@ describe('Prompt folder prompt tree', () => {
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeGreaterThan(0)
 
-    const folderSettingsSelector = '[data-testid="prompt-tree-folder-settings-menu-item-Short"]'
-    await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
+    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON).click()
 
-    await expect(mainWindow.getByText('Folder Options')).toHaveCount(0)
-    await expect(mainWindow.locator(folderSettingsSelector)).toContainText('Open folder settings')
-    await expect(mainWindow.locator(folderSettingsSelector)).not.toContainText(
-      'Open folder-level settings'
-    )
-    await mainWindow.locator(folderSettingsSelector).click()
-
-    await expect(mainWindow.locator(SHORT_OPTIONS_SELECTOR)).toHaveAttribute('data-active', 'true')
     await expect(settingsToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(
       mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
@@ -223,9 +196,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptTreeRow).toContainText(nextTitle)
   })
 
-  test('caps prompt tree folders and toggles show all and show less rows', async ({
-    testSetup
-  }) => {
+  test('shows every prompt in the selected folder without show more rows', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -236,48 +207,16 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-5"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toHaveCount(0)
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toContainText('Show all (55 more)')
-
-    await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText('Show all prompts')
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
-
-    await mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR).click()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toBeVisible()
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toHaveCount(0)
-
-    await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toContainText(
-      'Show less prompts'
+    await scrollPromptTreeRowIntoView(
+      mainWindow,
+      testHelpers,
+      '[data-testid="prompt-tree-prompt-short-60"]'
     )
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toHaveCount(0)
-    await mainWindow.keyboard.press('Escape')
-
-    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 10000)
-    await expect(mainWindow.locator(SHORT_SHOW_LESS_SELECTOR)).toBeVisible()
-
-    await mainWindow.evaluate((selector) => {
-      const button = document.querySelector<HTMLButtonElement>(selector)
-      if (!button) {
-        throw new Error(`Missing prompt tree row: ${selector}`)
-      }
-      button.click()
-    }, SHORT_SHOW_LESS_SELECTOR)
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-6"]')).toHaveCount(0)
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toContainText('Show all (55 more)')
-
-    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 0)
-    await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toContainText('Show all prompts')
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-60"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid^="prompt-tree-folder-show-"]')).toHaveCount(0)
   })
 
-  test('hides prompt visibility toggle rows while the folder is collapsed', async ({
-    testSetup
-  }) => {
+  test('does not render prompt folder rows in the prompt tree', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -285,17 +224,8 @@ describe('Prompt folder prompt tree', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
-    const shortToggle = mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Short"]')
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toBeVisible()
-
-    await shortToggle.click()
-    await expect(shortToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(SHORT_SHOW_ALL_SELECTOR)).toHaveCount(0)
-    await expect(mainWindow.locator(SHORT_SHOW_LESS_SELECTOR)).toHaveCount(0)
-
-    await openPromptTreeFolderOptions(mainWindow, SHORT_OPTIONS_SELECTOR)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_ALL_SELECTOR)).toHaveCount(0)
-    await expect(mainWindow.locator(SHORT_MENU_SHOW_LESS_SELECTOR)).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-tree-folder-"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toBeVisible()
   })
 
   test('keeps placeholder fallback numbering for unopened folders with blank titles', async ({
@@ -341,7 +271,7 @@ describe('Prompt folder prompt tree', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders(LOADED_FOLDER_NAME)
+    await testHelpers.navigateToPromptFolders('Unopened Untitled')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 

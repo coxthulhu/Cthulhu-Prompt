@@ -226,7 +226,7 @@
 
 .sidebarPromptTreeSettingsRow {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: calc(20px + 28px * var(--prompt-tree-indent-count, 1)) minmax(0, 1fr);
   width: 100%;
   padding-block: 1px;
 }
@@ -242,7 +242,7 @@
   position: absolute;
   top: -1px;
   bottom: -1px;
-  left: 20px;
+  left: calc(20px + 28px * var(--prompt-tree-indent-index, 0));
   width: 1px;
   background-color: var(--ui-neutral-emphasis-border);
 }
@@ -295,7 +295,7 @@
 
 .sidebarPromptTreeVisibilityRow {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: calc(20px + 28px * var(--prompt-tree-indent-count, 1)) minmax(0, 1fr);
   width: 100%;
   align-items: center;
   padding-block: 1px;

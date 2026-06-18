@@ -2,24 +2,17 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const EXAMPLES_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Examples"]'
-const DEVELOPMENT_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Development"]'
-const EXAMPLES_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Examples"]'
-const DEVELOPMENT_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Development"]'
-const EXAMPLES_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Examples"]'
-const DEVELOPMENT_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Development"]'
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-tree-prompt-simple-1"]'
 const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
+const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON =
+  '[data-testid="open-selected-prompt-folder-settings-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM =
   '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
 const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-add-button"]'
-const SHORT_OPTIONS = '[data-testid="prompt-tree-folder-options-button-Short"]'
-const SHORT_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Short"]'
-const SHORT_SHOW_ALL = '[data-testid="prompt-tree-folder-show-all-prompts-Short"]'
 const SHORT_PROMPT_50 = '[data-testid="prompt-tree-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
@@ -34,12 +27,14 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_OPEN_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(EXAMPLES_PROMPT_ROW, { state: 'attached' })
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Example Prompts'
+    )
   })
 
   test('restores prompt content when revisiting folders', async ({ testSetup }) => {
@@ -50,7 +45,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_OPEN_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(EXAMPLES_PROMPT_ROW, { state: 'attached' })
 
     let screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -61,7 +56,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(examplesPrompt.hasPromptEditor).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
-    await mainWindow.waitForSelector(DEVELOPMENT_OPEN_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(DEVELOPMENT_PROMPT_ROW, { state: 'attached' })
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
@@ -76,7 +71,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(examplesPrompt.found).toBe(false)
 
     await testHelpers.navigateToPromptFolders('Examples')
-    await mainWindow.waitForSelector(EXAMPLES_OPEN_BUTTON, { state: 'attached' })
+    await mainWindow.waitForSelector(EXAMPLES_PROMPT_ROW, { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -103,9 +98,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     let screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Examples"]')
-    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Example Prompts'
+    )
 
     const promptResult = await testHelpers.verifyPromptVisible('Simple Greeting')
     expect(promptResult.found).toBe(true)
@@ -118,9 +113,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(2)
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Development"]')
-    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Development Tools'
+    )
 
     const codeReviewResult = await testHelpers.verifyPromptVisible('Code Review')
     expect(codeReviewResult.found).toBe(true)
@@ -161,7 +156,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'data-active',
       'true'
     )
-    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Example Prompts'
+    )
   })
 
   test('restores the last prompt folder scroll when opened from the activity bar', async ({
@@ -212,7 +209,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', {
       state: 'attached'
     })
-    await expect(mainWindow.locator(DEVELOPMENT_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Development Tools'
+    )
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
@@ -244,99 +243,86 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeVisible()
   })
 
-  test('keeps selection stable while folders expand and collapse', async ({ testSetup }) => {
+  test('shows only the selected folder prompt rows in the prompt tree', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toBeVisible()
-    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
-
     await testHelpers.navigateToPromptFolders('Examples')
-    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
-
-    await mainWindow.locator(EXAMPLES_TOGGLE).click()
-
-    await expect(mainWindow.locator(EXAMPLES_OPEN_BUTTON)).toHaveAttribute('data-active', 'true')
-    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
-    await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
-    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
+    await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
+    await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toHaveCount(0)
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
 
-    await mainWindow.locator(EXAMPLES_TOGGLE).click()
-    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
-  })
-
-  test('collapses all prompt folders from the sidebar action', async ({ testSetup }) => {
-    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
-      'aria-label',
-      'Collapse All Prompt Folders'
-    )
-    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
-
-    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
-
-    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
-      'aria-label',
-      'Expand All Prompt Folders'
-    )
-    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
+    await testHelpers.navigateToPromptFolders('Development')
+    await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
-  test('expands all prompt folders from the sidebar action', async ({ testSetup }) => {
+  test('keeps collapse all as a no-op sidebar action', async ({ testSetup }) => {
     const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await mainWindow.locator(EXAMPLES_TOGGLE).click()
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
-      'aria-label',
-      'Collapse All Prompt Folders'
-    )
-
-    await mainWindow.locator(DEVELOPMENT_TOGGLE).click()
-    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
       'aria-label',
-      'Expand All Prompt Folders'
+      'Collapse All Prompt Folders'
     )
+    await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
+
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 
-    await expect(mainWindow.locator(EXAMPLES_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(DEVELOPMENT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
       'aria-label',
       'Collapse All Prompt Folders'
     )
-    await expect(mainWindow.locator(EXAMPLES_OPTIONS)).toHaveCount(1)
-    await expect(mainWindow.locator(DEVELOPMENT_OPTIONS)).toHaveCount(1)
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
-    await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
+  })
+
+  test('opens selected folder settings from the prompt tree header action', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 500)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
+      .toBeGreaterThan(0)
+
+    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON)).toBeEnabled()
+    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON).click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
+    ).toHaveAttribute('aria-expanded', 'true')
+    await expect(
+      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
+    ).not.toHaveCount(0)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
+      .toBeLessThan(100)
+  })
+
+  test('disables selected folder settings when no prompt folder exists', async ({ testSetup }) => {
+    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'minimal' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON)).toBeDisabled()
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeDisabled()
   })
 
   test('creates and navigates to a new folder', async ({ testSetup }) => {
@@ -390,9 +376,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     })
 
     await createButton.click()
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-TestFolder"]')
-    ).toHaveCount(1)
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Test Folder'
+    )
     expect(
       await mainWindow.evaluate(() => {
         const testWindow = window as typeof window & {
@@ -407,9 +393,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.navigateToRegularFolder('Test Folder')
 
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-TestFolder"]')
-    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Test Folder'
+    )
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
   })
 
@@ -420,7 +406,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await mainWindow.locator(SHORT_SHOW_ALL).click()
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 1700)
     await mainWindow.waitForSelector(SHORT_PROMPT_50, { state: 'attached' })
     await mainWindow.evaluate((selector) => {
@@ -436,7 +421,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('tracks centered prompt scroll in tree, including folder settings and auto-expand', async ({
+  test('tracks centered prompt scroll in tree and settings header action', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -448,21 +433,17 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
 
-    await expect(mainWindow.locator(SHORT_OPTIONS)).toHaveAttribute('data-active', 'true')
-
-    await mainWindow.locator(SHORT_TOGGLE).click()
-    await expect(mainWindow.locator(SHORT_OPTIONS)).toHaveAttribute('data-active', 'true')
-
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
-    await expect(mainWindow.locator(SHORT_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-
     await expect(
       mainWindow.locator('[data-testid^="prompt-tree-prompt-short-"][aria-current="true"]')
     ).toBeVisible()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(mainWindow.locator(SHORT_OPTIONS)).toHaveAttribute('data-active', 'true')
+    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON).click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
+    ).toHaveAttribute('aria-expanded', 'true')
   })
 
   test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {

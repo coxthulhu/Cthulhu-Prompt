@@ -18,7 +18,7 @@
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, ChevronsUpDown, ExternalLink, Folder, Plus } from 'lucide-svelte'
+  import { ChevronsDownUp, ExternalLink, Folder, Plus, Settings } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -31,6 +31,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
@@ -55,6 +56,7 @@
   }>()
 
   const workspaceSelection = getWorkspaceSelectionContext()
+  const promptNavigation = getPromptNavigationContext()
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
   }
@@ -159,35 +161,45 @@
       promptFolderDropdownItems[0]!
     )
   })
+  const selectedPromptFolder = $derived.by((): PromptFolder | null => {
+    if (promptFolders.length === 0) {
+      return null
+    }
+
+    return (
+      promptFolders.find((promptFolder) => promptFolder.id === selectedPromptFolderId) ??
+      promptFolders[0]!
+    )
+  })
   const promptFolderSelectorState = $derived(
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
   const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
-  let areAllPromptFoldersCollapsed = $state(true)
   const promptFolderSelectorPromptDroppableState = createDroppableStateRegistry<string>()
   const promptFolderSelectorDragOpenTypes = [
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE
   ]
-  const shouldShowExpandAllPromptFolders = $derived(
-    promptFolders.length === 0 || areAllPromptFoldersCollapsed
-  )
-  const promptFolderExpansionActionIcon = $derived(
-    shouldShowExpandAllPromptFolders ? ChevronsUpDown : ChevronsDownUp
-  )
-  const promptFolderExpansionActionLabel = $derived(
-    shouldShowExpandAllPromptFolders ? 'Expand All Prompt Folders' : 'Collapse All Prompt Folders'
-  )
+  const promptFolderExpansionActionIcon = ChevronsDownUp
+  const promptFolderExpansionActionLabel = 'Collapse All Prompt Folders'
 
   const handlePromptFolderExpansionAction = () => {
-    if (shouldShowExpandAllPromptFolders) {
-      expandAllPromptFoldersVersion += 1
-      return
-    }
+    // Collapse All is paused until subfolders make tree expansion meaningful again.
+  }
 
-    collapseAllPromptFoldersVersion += 1
+  const openSelectedPromptFolderSettings = () => {
+    const promptFolder = selectedPromptFolder
+    if (!promptFolder) return
+
+    promptNavigation.select({
+      folderId: promptFolder.id,
+      row: 'folder-settings',
+      source: 'tree-click',
+      forceVersionBump: true
+    })
+    onPromptFolderSelect(promptFolder.id)
   }
 
   const openWorkspaceFolder = () => {
@@ -478,6 +490,16 @@
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
+          icon={Settings}
+          label="Open Selected Prompt Folder Settings"
+          title="Open Selected Prompt Folder Settings"
+          size="compact"
+          disabled={!selectedPromptFolder}
+          testId="open-selected-prompt-folder-settings-button"
+          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+          onclick={openSelectedPromptFolderSettings}
+        />
+        <IconButton
           icon={promptFolderExpansionActionIcon}
           label={promptFolderExpansionActionLabel}
           title={promptFolderExpansionActionLabel}
@@ -510,9 +532,7 @@
       expandAllRequestVersion={expandAllPromptFoldersVersion}
       collapseAllRequestVersion={collapseAllPromptFoldersVersion}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
-      onAllPromptFoldersCollapsedChange={(isCollapsed) => {
-        areAllPromptFoldersCollapsed = isCollapsed
-      }}
+      onAllPromptFoldersCollapsedChange={() => {}}
       {onPromptFolderSelect}
     />
   </div>

@@ -29,10 +29,6 @@
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import {
-    lookupWorkspacePersistedPromptFolderShowingAllPromptsState,
-    lookupWorkspacePersistedPromptFolderExpandedState,
-    setPromptFolderExpandedStateWithAutosave,
-    setPromptFolderShowingAllPromptsStateWithAutosave,
     setPromptFolderPromptTreeEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
@@ -45,41 +41,22 @@
   } from '../virtualizer/virtualWindowTypes'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import { createPromptTreePromptDragController } from './promptTreeDrag'
-  import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
-  import PromptTreeVisibilityToggleRow from './PromptTreeVisibilityToggleRow.svelte'
-  import {
-    folderPromptDropIndicatorTestId,
-    folderPromptVisibilityDropIndicatorTestId
-  } from './promptTreeTestIds'
+  import { folderPromptDropIndicatorTestId } from './promptTreeTestIds'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
 
   type PromptTreeRow =
-    | {
-        kind: 'prompt-folder'
-        folder: PromptFolder
-      }
     | {
         kind: 'folder-prompt'
         folder: PromptFolder
         promptId: string
       }
     | {
-        kind: 'folder-prompt-visibility-toggle'
-        folder: PromptFolder
-        isShowingAll: boolean
-        hiddenPromptCount: number
-        lastVisiblePromptId: string
-      }
-    | {
         kind: 'bottom-spacer'
       }
 
-  type PromptTreeOverlayRow = Extract<
-    PromptTreeRow,
-    { kind: 'prompt-folder' | 'folder-prompt' | 'folder-prompt-visibility-toggle' }
-  >
+  type PromptTreeOverlayRow = Extract<PromptTreeRow, { kind: 'folder-prompt' }>
   type PromptTreeOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeOverlayRow>
 
   let {
@@ -105,36 +82,18 @@
   const PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX = 1
   const PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX = 36
   const PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX = 30
-  const PROMPT_TREE_PROMPT_VISIBILITY_ROW_CONTENT_HEIGHT_PX = 22
-  const PROMPT_TREE_VISIBLE_PROMPT_LIMIT = 5
   const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX =
     PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
   const PROMPT_TREE_PROMPT_ROW_HEIGHT_PX =
     PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
-  const PROMPT_TREE_PROMPT_VISIBILITY_ROW_HEIGHT_PX =
-    PROMPT_TREE_PROMPT_VISIBILITY_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
-    'prompt-folder': {
-      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
-      overlayRow: {
-        snippet: promptTreeRowOverlay
-      },
-      snippet: promptFolderRow
-    },
     'folder-prompt': {
       estimateHeight: () => PROMPT_TREE_PROMPT_ROW_HEIGHT_PX,
       overlayRow: {
         snippet: promptTreeRowOverlay
       },
       snippet: folderPromptRow
-    },
-    'folder-prompt-visibility-toggle': {
-      estimateHeight: () => PROMPT_TREE_PROMPT_VISIBILITY_ROW_HEIGHT_PX,
-      overlayRow: {
-        snippet: promptTreeRowOverlay
-      },
-      snippet: folderPromptVisibilityToggleRow
     },
     'bottom-spacer': {
       estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
@@ -143,15 +102,12 @@
   })
 
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
-  let expandedFolderStates = $state<Record<string, boolean>>({})
-  let showingAllPromptStates = $state<Record<string, boolean>>({})
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastTrackedTreeRowId = $state<string | null>(null)
   let lastExpandAllRequestVersion = $state(0)
   let lastCollapseAllRequestVersion = $state(0)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
-  let lastWorkspaceId = $state<string | null>(workspaceSelection.selectedWorkspaceId)
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
     data: PromptDraftRecord[]
   }
@@ -170,90 +126,21 @@
     return titlesById
   })
 
-  const lookupPersistedFolderExpandedState = (folderId: string): boolean => {
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (!workspaceId) {
-      return true
-    }
-
-    return lookupWorkspacePersistedPromptFolderExpandedState(workspaceId, folderId) ?? true
-  }
-
-  const lookupPersistedFolderShowingAllPromptsState = (folderId: string): boolean => {
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (!workspaceId) {
-      return false
+  const selectedPromptFolder = $derived.by((): PromptFolder | null => {
+    if (promptFolders.length === 0) {
+      return null
     }
 
     return (
-      lookupWorkspacePersistedPromptFolderShowingAllPromptsState(workspaceId, folderId) ?? false
+      promptFolders.find((promptFolder) => promptFolder.id === selectedPromptFolderId) ??
+      promptFolders[0]!
     )
-  }
+  })
 
-  const isFolderExpanded = (folderId: string): boolean =>
-    expandedFolderStates[folderId] ?? lookupPersistedFolderExpandedState(folderId)
-
-  const isFolderShowingAllPrompts = (folderId: string): boolean =>
-    showingAllPromptStates[folderId] ?? lookupPersistedFolderShowingAllPromptsState(folderId)
-
-  const areAllPromptFoldersCollapsed = $derived.by(() =>
-    promptFolders.every((folder) => !isFolderExpanded(folder.id))
-  )
-
-  const setFolderExpanded = (folderId: string, isExpanded: boolean) => {
-    if (isFolderExpanded(folderId) === isExpanded) {
-      return
-    }
-
-    expandedFolderStates = {
-      ...expandedFolderStates,
-      [folderId]: isExpanded
-    }
-
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (!workspaceId) {
-      return
-    }
-
-    setPromptFolderExpandedStateWithAutosave(workspaceId, folderId, isExpanded)
-  }
-
-  const setFolderShowingAllPrompts = (folderId: string, isShowingAll: boolean) => {
-    if (isFolderShowingAllPrompts(folderId) === isShowingAll) {
-      return
-    }
-
-    showingAllPromptStates = {
-      ...showingAllPromptStates,
-      [folderId]: isShowingAll
-    }
-
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (!workspaceId) {
-      return
-    }
-
-    setPromptFolderShowingAllPromptsStateWithAutosave(workspaceId, folderId, isShowingAll)
-  }
-
-  const expandAllPromptFolders = () => {
-    for (const folder of promptFolders) {
-      setFolderExpanded(folder.id, true)
-    }
-  }
-
-  const collapseAllPromptFolders = () => {
-    for (const folder of promptFolders) {
-      setFolderExpanded(folder.id, false)
-    }
-  }
-
-  const PROMPT_TREE_CHILD_ROW_CONTENT_INSET = '38px'
+  const PROMPT_TREE_ROW_CONTENT_INSET = '10px'
 
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`
-  const folderPromptVisibilityToggleRowId = (folderId: string): string =>
-    `${folderId}:prompt-visibility-toggle`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
 
   const getPromptTreeDroppableOptions = (
@@ -296,10 +183,6 @@
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreePromptDroppableState.edge(rowId)
 
-  const handlePromptFolderOpen = (promptFolderId: string) => {
-    onPromptFolderSelect(promptFolderId)
-  }
-
   const selectMovedPrompt = (promptFolderId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
 
@@ -323,11 +206,11 @@
   }
 
   const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
-    if (!isPromptFoldersScreenActive || !selectedPromptFolderId) {
+    if (!isPromptFoldersScreenActive || !selectedPromptFolder) {
       return null
     }
 
-    if (promptNavigation.selectedFolderId !== selectedPromptFolderId) {
+    if (promptNavigation.selectedFolderId !== selectedPromptFolder.id) {
       return null
     }
 
@@ -361,34 +244,13 @@
   })
 
   const trackedTreeRowId = $derived.by((): string | null => {
-    if (!selectedPromptFolderId || !trackedNavigationRow) {
+    if (!selectedPromptFolder || !trackedNavigationRow) {
       return null
     }
 
     return trackedNavigationRow === 'folder-settings'
-      ? selectedPromptFolderId
-      : folderPromptRowId(selectedPromptFolderId, trackedNavigationRow.slice('prompt:'.length))
-  })
-
-  const isTrackedPromptHiddenByVisibilityLimit = $derived.by((): boolean => {
-    if (!selectedPromptFolderId || !trackedNavigationRow?.startsWith('prompt:')) {
-      return false
-    }
-
-    if (
-      !isFolderExpanded(selectedPromptFolderId) ||
-      isFolderShowingAllPrompts(selectedPromptFolderId)
-    ) {
-      return false
-    }
-
-    const selectedFolder = promptFolders.find((folder) => folder.id === selectedPromptFolderId)
-    if (!selectedFolder) {
-      return false
-    }
-
-    const promptId = trackedNavigationRow.slice('prompt:'.length)
-    return selectedFolder.promptIds.indexOf(promptId) >= PROMPT_TREE_VISIBLE_PROMPT_LIMIT
+      ? null
+      : folderPromptRowId(selectedPromptFolder.id, trackedNavigationRow.slice('prompt:'.length))
   })
 
   const isTreeEntryActive = (folderId: string, row: PromptNavigationRow): boolean => {
@@ -407,7 +269,7 @@
 
   const handlePromptTreeEntrySelect = (promptFolderId: string, row: PromptNavigationRow) => {
     const isSameFolderActive =
-      isPromptFoldersScreenActive && selectedPromptFolderId === promptFolderId
+      isPromptFoldersScreenActive && selectedPromptFolder?.id === promptFolderId
 
     promptNavigation.select({
       folderId: promptFolderId,
@@ -425,47 +287,33 @@
     handlePromptTreeEntrySelect(promptFolderId, promptIdToPromptNavigationRow(promptId))
   }
 
-  // Side effect: clear local folder expand overrides when switching workspaces.
-  $effect(() => {
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (workspaceId === lastWorkspaceId) {
-      return
-    }
-
-    lastWorkspaceId = workspaceId
-    expandedFolderStates = {}
-    showingAllPromptStates = {}
-  })
-
   // Side effect: report the current tree collapse state to the sidebar action button.
   $effect(() => {
-    onAllPromptFoldersCollapsedChange(areAllPromptFoldersCollapsed)
+    onAllPromptFoldersCollapsedChange(false)
   })
 
-  // Side effect: respond to the sidebar header action by expanding every prompt folder.
+  // Side effect: keep request versions consumed while header collapse/expand is paused.
   $effect(() => {
     if (expandAllRequestVersion === lastExpandAllRequestVersion) {
       return
     }
 
     lastExpandAllRequestVersion = expandAllRequestVersion
-    expandAllPromptFolders()
   })
 
-  // Side effect: respond to the sidebar header action by collapsing every prompt folder.
+  // Side effect: keep request versions consumed while header collapse/expand is paused.
   $effect(() => {
     if (collapseAllRequestVersion === lastCollapseAllRequestVersion) {
       return
     }
 
     lastCollapseAllRequestVersion = collapseAllRequestVersion
-    collapseAllPromptFolders()
   })
 
   // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
   $effect(() => {
     const nextTrackedRowId = trackedTreeRowId
-    const currentFolderId = selectedPromptFolderId
+    const currentFolderId = selectedPromptFolder?.id ?? null
 
     if (!scrollToWithinWindowBand) {
       return
@@ -482,16 +330,6 @@
 
     if (!currentFolderId) return
 
-    if (!isFolderExpanded(currentFolderId)) {
-      setFolderExpanded(currentFolderId, true)
-      return
-    }
-
-    if (isTrackedPromptHiddenByVisibilityLimit) {
-      setFolderShowingAllPrompts(currentFolderId, true)
-      return
-    }
-
     lastTrackedTreeRowId = nextTrackedRowId
     scrollToWithinWindowBand(nextTrackedRowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
   })
@@ -499,48 +337,16 @@
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
-    for (const folder of promptFolders) {
-      items.push({
-        id: folder.id,
-        row: {
-          kind: 'prompt-folder',
-          folder
-        }
-      })
-
-      if (isFolderExpanded(folder.id)) {
-        const isShowingAll = isFolderShowingAllPrompts(folder.id)
-        const visiblePromptIds = isShowingAll
-          ? folder.promptIds
-          : folder.promptIds.slice(0, PROMPT_TREE_VISIBLE_PROMPT_LIMIT)
-
-        for (const promptId of visiblePromptIds) {
-          items.push({
-            id: folderPromptRowId(folder.id, promptId),
-            row: {
-              kind: 'folder-prompt',
-              folder,
-              promptId
-            }
-          })
-        }
-
-        if (folder.promptIds.length > PROMPT_TREE_VISIBLE_PROMPT_LIMIT) {
-          const lastVisiblePromptId = visiblePromptIds[visiblePromptIds.length - 1]
-          const hiddenPromptCount = folder.promptIds.length - visiblePromptIds.length
-          if (lastVisiblePromptId) {
-            items.push({
-              id: folderPromptVisibilityToggleRowId(folder.id),
-              row: {
-                kind: 'folder-prompt-visibility-toggle',
-                folder,
-                isShowingAll,
-                hiddenPromptCount,
-                lastVisiblePromptId
-              }
-            })
+    if (selectedPromptFolder) {
+      for (const promptId of selectedPromptFolder.promptIds) {
+        items.push({
+          id: folderPromptRowId(selectedPromptFolder.id, promptId),
+          row: {
+            kind: 'folder-prompt',
+            folder: selectedPromptFolder,
+            promptId
           }
-        }
+        })
       }
     }
 
@@ -582,30 +388,6 @@
   {/if}
 </div>
 
-{#snippet promptFolderRow(props)}
-  {@const isActive = isPromptFoldersScreenActive && selectedPromptFolderId === props.row.folder.id}
-  {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
-
-  <PromptTreeFolderRow
-    folder={props.row.folder}
-    {isActive}
-    {isSettingsActive}
-    {isPromptDragActive}
-    isExpanded={isFolderExpanded(props.row.folder.id)}
-    isShowingAllPrompts={isFolderShowingAllPrompts(props.row.folder.id)}
-    visiblePromptLimit={PROMPT_TREE_VISIBLE_PROMPT_LIMIT}
-    getFolderPromptDroppableOptions={() =>
-      getPromptTreeDroppableOptions(props.rowId, 'none', () => ({
-        kind: 'folder',
-        folderId: props.row.folder.id
-      }))}
-    onFolderExpandedChange={setFolderExpanded}
-    onPromptFolderOpen={handlePromptFolderOpen}
-    onFolderSettingsOpen={(folderId) => handlePromptTreeEntrySelect(folderId, 'folder-settings')}
-    onPromptVisibilityChange={setFolderShowingAllPrompts}
-  />
-{/snippet}
-
 {#snippet folderPromptRow(props)}
   {@const isActive = isTreeEntryActive(
     props.row.folder.id,
@@ -644,49 +426,12 @@
   />
 {/snippet}
 
-{#snippet folderPromptVisibilityToggleRow(props)}
-  <PromptTreeVisibilityToggleRow
-    folder={props.row.folder}
-    isShowingAll={props.row.isShowingAll}
-    {isPromptDragActive}
-    hiddenPromptCount={props.row.hiddenPromptCount}
-    getVisibilityDroppableOptions={() =>
-      getPromptTreeDroppableOptions(
-        props.rowId,
-        'top',
-        () => ({
-          kind: 'prompt',
-          folderId: props.row.folder.id,
-          promptId: props.row.lastVisiblePromptId,
-          edge: 'bottom'
-        }),
-        (payload) =>
-          canDropOnPromptTreePromptRow(
-            props.row.folder,
-            props.row.lastVisiblePromptId,
-            payload,
-            'bottom'
-          )
-      )}
-    onPromptVisibilityChange={setFolderShowingAllPrompts}
-  />
-{/snippet}
-
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
-  {@const testId =
-    row.kind === 'folder-prompt-visibility-toggle'
-      ? folderPromptVisibilityDropIndicatorTestId(row.folder)
-      : row.kind === 'folder-prompt'
-        ? folderPromptDropIndicatorTestId(row.promptId)
-        : null}
+  {@const testId = folderPromptDropIndicatorTestId(row.promptId)}
 
-  {#if hoveredEdge && testId}
-    <DropIndicator
-      {testId}
-      insetStart={row.kind === 'prompt-folder' ? '10px' : PROMPT_TREE_CHILD_ROW_CONTENT_INSET}
-      edge={hoveredEdge}
-    />
+  {#if hoveredEdge}
+    <DropIndicator {testId} insetStart={PROMPT_TREE_ROW_CONTENT_INSET} edge={hoveredEdge} />
   {/if}
 {/snippet}
 

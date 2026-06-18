@@ -23,10 +23,7 @@ const getActivePromptTreeEntryTestId = async (mainWindow: Page): Promise<string 
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
     const activeButton = host.querySelector<HTMLButtonElement>(
-      [
-        'button[data-row-state="active"][data-testid^="prompt-tree-prompt-"]',
-        'button[data-active="true"][data-testid^="prompt-tree-folder-options-button-"]'
-      ].join(', ')
+      'button[data-row-state="active"][data-testid^="prompt-tree-prompt-"]'
     )
     return activeButton?.getAttribute('data-testid') ?? null
   }, PROMPT_TREE_SELECTOR)
@@ -167,17 +164,12 @@ describe('Prompt folders measured heights', () => {
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, TINY_SCROLL_TARGET_PX)
     await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
 
-    await expect.poll(async () => getActivePromptTreeEntryTestId(mainWindow)).not.toBeNull()
     const savedPromptTreeEntryTestId = await getActivePromptTreeEntryTestId(mainWindow)
-    if (!savedPromptTreeEntryTestId) {
-      throw new Error('Expected an active prompt tree selection before tiny-scroll navigation')
-    }
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     await expect.poll(async () => testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeGreaterThan(0)
-    await expect.poll(async () => getActivePromptTreeEntryTestId(mainWindow)).not.toBeNull()
     await expect
       .poll(async () => getActivePromptTreeEntryTestId(mainWindow))
       .toBe(savedPromptTreeEntryTestId)

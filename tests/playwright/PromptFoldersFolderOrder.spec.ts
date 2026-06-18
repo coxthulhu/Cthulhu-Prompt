@@ -51,13 +51,11 @@ const readWorkspacePromptFolderIds = async (
   return (JSON.parse(fileContents) as { promptFolderIds: string[] }).promptFolderIds
 }
 
-const readPromptTreeFolderTestIds = async (page: Page): Promise<string[]> => {
-  return await page
-    .locator('[data-testid^="prompt-tree-folder-open-button-"]')
-    .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid') ?? ''))
-}
-
 const readPromptFolderDropdownItemTestIds = async (page: Page): Promise<string[]> => {
+  if ((await page.locator(PROMPT_FOLDER_SELECTOR_MENU).count()) === 0) {
+    await page.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+  }
+
   return await page
     .locator(`[data-testid^="${PROMPT_FOLDER_DROPDOWN_ITEM_PREFIX}"]`)
     .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid') ?? ''))
@@ -128,12 +126,12 @@ describe('Prompt Folder Order', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await expect
-      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
-        'prompt-tree-folder-open-button-middle',
-        'prompt-tree-folder-open-button-zeta',
-        'prompt-tree-folder-open-button-Alpha',
-        'prompt-tree-folder-open-button-beta'
+        'sidebar-prompt-folder-dropdown-item-folder-middle',
+        'sidebar-prompt-folder-dropdown-item-folder-zeta',
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-beta'
       ])
     await expect(
       await readWorkspacePromptFolderIds(electronApp, FOLDER_ORDER_WORKSPACE_PATH)
@@ -163,15 +161,12 @@ describe('Prompt Folder Order', () => {
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('New Folder')
     await mainWindow.locator('[data-testid="create-prompt-folder-button"]').click()
 
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-NewFolder"]')
-    ).toHaveCount(1)
     await expect
-      .poll(async () => await readPromptTreeFolderTestIds(mainWindow))
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
-        'prompt-tree-folder-open-button-NewFolder',
-        'prompt-tree-folder-open-button-Alpha',
-        'prompt-tree-folder-open-button-Beta'
+        expect.stringMatching(/^sidebar-prompt-folder-dropdown-item-(?!folder-alpha|folder-beta)/),
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-beta'
       ])
     await expect
       .poll(
@@ -232,9 +227,7 @@ describe('Prompt Folder Order', () => {
 
     await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()
     await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Beta')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-open-button-Beta"]')
-    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     await expect
       .poll(
         async () =>
@@ -284,8 +277,8 @@ describe('Prompt Folder Order', () => {
         'sidebar-prompt-folder-dropdown-item-folder-epsilon',
         'sidebar-prompt-folder-dropdown-item-folder-zeta',
         'sidebar-prompt-folder-dropdown-item-folder-eta',
-        'sidebar-prompt-folder-dropdown-item-folder-alpha',
-        'sidebar-prompt-folder-dropdown-item-folder-theta'
+        'sidebar-prompt-folder-dropdown-item-folder-theta',
+        'sidebar-prompt-folder-dropdown-item-folder-alpha'
       ])
     await finishActiveDrag(mainWindow)
 
@@ -304,8 +297,8 @@ describe('Prompt Folder Order', () => {
         'folder-epsilon',
         'folder-zeta',
         'folder-eta',
-        'folder-alpha',
-        'folder-theta'
+        'folder-theta',
+        'folder-alpha'
       ])
   })
 
