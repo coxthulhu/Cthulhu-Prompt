@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 12
+const LATEST_SCHEMA_VERSION = 13
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -401,6 +401,43 @@ const migrateSchemaV11ToV12 = (db: Database.Database): void => {
   migrate()
 }
 
+const migrateSchemaV12ToV13 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE prompt_folder_ui_state_new (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        prompts_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+
+      INSERT INTO prompt_folder_ui_state_new (
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        folder_settings_section_is_expanded,
+        prompts_section_is_expanded
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        folder_settings_section_is_expanded,
+        prompts_section_is_expanded
+      FROM prompt_folder_ui_state;
+
+      DROP TABLE prompt_folder_ui_state;
+      ALTER TABLE prompt_folder_ui_state_new RENAME TO prompt_folder_ui_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(13)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -480,6 +517,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 11) {
       migrateSchemaV11ToV12(db)
       schemaVersion = 12
+      continue
+    }
+
+    if (schemaVersion === 12) {
+      migrateSchemaV12ToV13(db)
+      schemaVersion = 13
       continue
     }
 

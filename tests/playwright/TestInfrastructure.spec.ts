@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 12 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 13 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -110,6 +110,18 @@ describe('Test Infrastructure', () => {
 
       expect(persistenceTablesResult.success).toBe(true)
       expect(persistenceTablesResult.rows).toHaveLength(5)
+
+      const promptFolderUiStateColumnsResult = await runSqlQuery(
+        electronApp,
+        'PRAGMA table_info(prompt_folder_ui_state)'
+      )
+      const promptFolderUiStateColumnNames = (promptFolderUiStateColumnsResult.rows ?? []).map(
+        (row) => row.name
+      )
+
+      expect(promptFolderUiStateColumnsResult.success).toBe(true)
+      expect(promptFolderUiStateColumnNames).not.toContain('prompt_tree_is_expanded')
+      expect(promptFolderUiStateColumnNames).not.toContain('prompt_tree_is_showing_all_prompts')
     })
   })
 

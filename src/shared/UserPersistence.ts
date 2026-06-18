@@ -50,8 +50,6 @@ export type WorkspaceScreenSelection =
 export type WorkspacePromptFolderPromptTreeEntry = {
   promptFolderId: string
   promptTreeEntryId: string
-  promptTreeIsExpanded: boolean
-  promptTreeIsShowingAllPrompts: boolean
   folderSettingsSectionIsExpanded: boolean
   promptsSectionIsExpanded: boolean
   settingsEditorViewStates: Record<PromptFolderSettingsField, string | null>
@@ -98,8 +96,6 @@ export const cloneWorkspacePromptFolderPromptTreeEntries = (
   return entries.map((entry) => ({
     promptFolderId: entry.promptFolderId,
     promptTreeEntryId: entry.promptTreeEntryId,
-    promptTreeIsExpanded: entry.promptTreeIsExpanded,
-    promptTreeIsShowingAllPrompts: entry.promptTreeIsShowingAllPrompts,
     folderSettingsSectionIsExpanded: entry.folderSettingsSectionIsExpanded,
     promptsSectionIsExpanded: entry.promptsSectionIsExpanded,
     settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
@@ -303,26 +299,6 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
     }
   }
 
-  const promptTreeIsExpanded =
-    value.promptTreeIsExpanded === undefined
-      ? true
-      : typeof value.promptTreeIsExpanded === 'boolean'
-        ? value.promptTreeIsExpanded
-        : null
-  if (promptTreeIsExpanded === null) {
-    return null
-  }
-
-  const promptTreeIsShowingAllPrompts =
-    value.promptTreeIsShowingAllPrompts === undefined
-      ? false
-      : typeof value.promptTreeIsShowingAllPrompts === 'boolean'
-        ? value.promptTreeIsShowingAllPrompts
-        : null
-  if (promptTreeIsShowingAllPrompts === null) {
-    return null
-  }
-
   const folderSettingsSectionIsExpanded =
     value.folderSettingsSectionIsExpanded === undefined
       ? true
@@ -346,8 +322,6 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
   return {
     promptFolderId: value.promptFolderId,
     promptTreeEntryId: value.promptTreeEntryId,
-    promptTreeIsExpanded,
-    promptTreeIsShowingAllPrompts,
     folderSettingsSectionIsExpanded,
     promptsSectionIsExpanded,
     settingsEditorViewStates
