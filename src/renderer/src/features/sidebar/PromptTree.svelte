@@ -377,7 +377,7 @@
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Prompt Folder to Get Started</div>
   {:else if selectedPromptFolderHasNoPrompts}
     <div
-      class="sidebarPromptTreeEmptyState px-2 py-2 text-center text-xs"
+      class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
       data-testid="prompt-tree-empty-state"
     >
       <p class="sidebarPromptTreeEmptyTitle">No prompts found in this folder.</p>
