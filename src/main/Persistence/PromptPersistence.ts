@@ -1,9 +1,11 @@
 import type { PromptPersisted } from '@shared/Prompt'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
+  createStagedEnsureDirectory,
   createStagedFileRemove,
   createStagedFileUpsert,
   type FilePersistenceStagedChange,
@@ -11,7 +13,11 @@ import {
   resolveTempPath
 } from './FilePersistenceHelpers'
 import { parsePromptMarkdown, serializePromptMarkdown } from './PromptFrontmatter'
-import { resolvePromptFolderPath, resolvePromptPathsFromStem } from './PromptPersistencePaths'
+import {
+  COMPLETED_PROMPTS_FOLDER_NAME,
+  resolvePromptFolderPath,
+  resolvePromptPathsFromStem
+} from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
 export type PromptPersistenceFields = {
@@ -49,6 +55,39 @@ const resolvePromptStem = (
   return resolveUniquePromptStem(title, promptId, (stem) => {
     return isStemTaken(folderPath, stem, currentStem, currentFolderPath)
   })
+}
+
+const isCompletedPromptFolderName = (folderName: string): boolean => {
+  const folderNameParts = folderName.split(/[\\/]/)
+  return folderNameParts[folderNameParts.length - 1] === COMPLETED_PROMPTS_FOLDER_NAME
+}
+
+const normalizePromptCompletionForFolder = (
+  prompt: PromptPersisted,
+  isCompletedFolder: boolean
+): PromptPersisted => {
+  if (isCompletedFolder) {
+    if (prompt.completed && prompt.completedAt) {
+      return prompt
+    }
+
+    return {
+      ...prompt,
+      completed: true,
+      completedAt: getCurrentIsoSecondTimestamp()
+    }
+  }
+
+  if (!prompt.completed) {
+    return prompt
+  }
+
+  const { completed: _completed, completedAt: _completedAt, ...activePrompt } = prompt
+  return activePrompt
+}
+
+const hasSameCompletionMetadata = (left: PromptPersisted, right: PromptPersisted): boolean => {
+  return left.completed === right.completed && left.completedAt === right.completedAt
 }
 
 export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {
@@ -89,6 +128,9 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
     const targetPaths = resolvePromptPathsFromStem(targetFolderPath, stem)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)
     const fs = getFs()
+    const targetFolderAlreadyExists = fs.existsSync(targetFolderPath)
+    // Side effect: create the target prompt directory before staging its temp file.
+    fs.mkdirSync(targetFolderPath, { recursive: true })
     fs.writeFileSync(markdownTempPath, serializePromptMarkdown(change.data), 'utf8')
 
     const fileChanges: FilePersistenceStagedChange[] = []
@@ -99,6 +141,7 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
     }
 
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
+    fileChanges.push(createStagedEnsureDirectory(targetFolderPath, !targetFolderAlreadyExists))
 
     const { previousFolderName: _previousFolderName, ...nextPersistenceFields } =
       change.persistenceFields
@@ -126,9 +169,24 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
       return null
     }
 
-    return parsePromptMarkdown(
-      fs.readFileSync(filePaths.markdownPath, 'utf8'),
-      readPromptModifiedAt(persistenceFields)
+    const prompt = parsePromptMarkdown(fs.readFileSync(filePaths.markdownPath, 'utf8'))
+
+    if (!prompt) {
+      return null
+    }
+
+    const normalizedPrompt = normalizePromptCompletionForFolder(
+      prompt,
+      isCompletedPromptFolderName(persistenceFields.folderName)
     )
+
+    if (!hasSameCompletionMetadata(prompt, normalizedPrompt)) {
+      fs.writeFileSync(filePaths.markdownPath, serializePromptMarkdown(normalizedPrompt), 'utf8')
+    }
+
+    return {
+      ...normalizedPrompt,
+      modifiedAt: readPromptModifiedAt(persistenceFields)
+    }
   }
 }

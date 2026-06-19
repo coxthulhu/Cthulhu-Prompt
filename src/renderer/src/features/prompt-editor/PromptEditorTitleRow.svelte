@@ -12,6 +12,7 @@
     rowId?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
+    onComplete?: () => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onTitleForwardTab?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
@@ -42,6 +43,7 @@
     rowId,
     scrollToWithinWindowBand,
     onDelete,
+    onComplete,
     onSelectionChange,
     onTitleForwardTab,
     inputRef = $bindable(null),
@@ -159,7 +161,15 @@
     </div>
   </div>
 
-  <PromptEditorButtonBar {title} {draftText} {copyText} {onDelete} {copyLabel} {copyTitle} />
+  <PromptEditorButtonBar
+    {title}
+    {draftText}
+    {copyText}
+    {onDelete}
+    {onComplete}
+    {copyLabel}
+    {copyTitle}
+  />
 </div>
 
 <style>

@@ -81,6 +81,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   displayName: normalizedDisplayName,
                   promptCount: 0,
                   promptIds: [],
+                  completedPromptIds: [],
                   settings: createEmptyPromptFolderSettings()
                 },
                 persistenceFields: {

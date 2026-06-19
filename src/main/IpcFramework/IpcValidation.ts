@@ -1,4 +1,5 @@
 import type {
+  CompletePromptPayload,
   CreatePromptPayload,
   DeletePromptPayload,
   MovePromptPayload,
@@ -209,6 +210,7 @@ const parsePromptFolder = parseObject<PromptFolder>({
   displayName: parseString,
   promptCount: parseNumber,
   promptIds: parseArray(parseString),
+  completedPromptIds: parseArray(parseString),
   settings: parsePromptFolderSettings
 })
 
@@ -249,14 +251,52 @@ const parseWorkspacePersistence: Parser<WorkspacePersistence> = (value) => {
 const parseWorkspacePersistenceRevisionPayloadEntity =
   parseRevisionPayloadEntity<WorkspacePersistence>(parseWorkspacePersistence)
 
-const parsePrompt = parseObject<PromptPersisted>({
-  id: parseString,
-  title: parseString,
-  fallbackTitle: parseString,
-  createdAt: parseString,
-  modifiedAt: parseString,
-  promptText: parseString
-})
+const parsePrompt: Parser<PromptPersisted> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const keys = Object.keys(record)
+  const hasCompleted = keys.includes('completed')
+  const hasCompletedAt = keys.includes('completedAt')
+  const allowedKeys = new Set([
+    'id',
+    'title',
+    'fallbackTitle',
+    'createdAt',
+    'modifiedAt',
+    'promptText',
+    ...(hasCompleted ? ['completed', 'completedAt'] : [])
+  ])
+
+  if (keys.length !== 6 && keys.length !== 8) {
+    return null
+  }
+
+  if (hasCompleted !== hasCompletedAt || keys.some((key) => !allowedKeys.has(key))) {
+    return null
+  }
+
+  const prompt = parseObject<PromptPersisted>({
+    id: parseString,
+    title: parseString,
+    fallbackTitle: parseString,
+    createdAt: parseString,
+    modifiedAt: parseString,
+    promptText: parseString,
+    ...(hasCompleted
+      ? {
+          completed: (nextValue) => (nextValue === true ? true : null),
+          completedAt: parseString
+        }
+      : {})
+  } as {
+    [TKey in keyof PromptPersisted]: Parser<PromptPersisted[TKey]>
+  })(record)
+
+  return prompt
+}
 
 const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
 
@@ -402,6 +442,14 @@ const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
 const parseMovePromptWireRequest: Parser<IpcRequestWithPayload<MovePromptPayload>> =
   parseWireRequestWithPayload<MovePromptPayload>(parseMovePromptPayload)
 
+const parseCompletePromptPayload = parseObject<CompletePromptPayload>({
+  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  prompt: parsePromptRevisionPayloadEntity
+})
+
+const parseCompletePromptWireRequest: Parser<IpcRequestWithPayload<CompletePromptPayload>> =
+  parseWireRequestWithPayload<CompletePromptPayload>(parseCompletePromptPayload)
+
 const parseMovePromptFolderPayload = parseObject<MovePromptFolderPayload>({
   workspace: parseWorkspaceRevisionPayloadEntity,
   promptFolderId: parseString,
@@ -493,6 +541,8 @@ export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
 export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
 
 export const parseMovePromptRequest = createRequestParser(parseMovePromptWireRequest)
+
+export const parseCompletePromptRequest = createRequestParser(parseCompletePromptWireRequest)
 
 export const parseMovePromptFolderRequest = createRequestParser(parseMovePromptFolderWireRequest)
 

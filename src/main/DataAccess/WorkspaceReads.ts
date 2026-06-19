@@ -21,6 +21,7 @@ import {
   resolvePromptFolderPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
+  resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath,
   resolvePromptPathsFromStem,
   resolveWorkspacePromptFolderOrderPath
@@ -72,10 +73,15 @@ export const readPromptStemByPromptId = (
 ): Map<string, string> => {
   const fs = getFs()
   const folderPath = resolvePromptFolderPath(workspacePath, folderName)
-  const entries = fs.readdirSync(folderPath, { withFileTypes: true })
   const promptStemByPromptId = new Map<string, string>()
 
-  for (const entry of entries) {
+  if (!fs.existsSync(folderPath)) {
+    return promptStemByPromptId
+  }
+
+  const entries = fs.readdirSync(folderPath, { withFileTypes: true })
+
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (!entry.isFile() || !entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX)) {
       continue
     }
@@ -100,6 +106,9 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     ])
   ) as PromptFolderSettings
   const promptIds = readPromptIds(workspacePath, folderName)
+  const completedPromptIds = Array.from(
+    readPromptStemByPromptId(workspacePath, resolveCompletedPromptFolderName(folderName)).keys()
+  )
 
   return {
     id: info.promptFolderId,
@@ -107,6 +116,7 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     displayName: info.displayName,
     promptCount: promptIds.length,
     promptIds,
+    completedPromptIds,
     settings: copyPromptFolderSettings(folderSettings)
   }
 }

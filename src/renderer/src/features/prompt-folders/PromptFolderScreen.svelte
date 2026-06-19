@@ -92,6 +92,7 @@
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
             onDeletePrompt={controller.handleDeletePrompt}
+            onCompletePrompt={controller.handleCompletePrompt}
             onMovePromptUp={controller.handleMovePromptUp}
             onMovePromptDown={controller.handleMovePromptDown}
             onPromptTreeDrop={controller.handlePromptTreeDrop}

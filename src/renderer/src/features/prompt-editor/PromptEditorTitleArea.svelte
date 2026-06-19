@@ -19,6 +19,7 @@
     rowId,
     scrollToWithinWindowBand,
     onDelete,
+    onComplete,
     onSelectionChange,
     onTitleForwardTab,
     inputRef = $bindable(null),
@@ -47,6 +48,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onDelete}
+    {onComplete}
     {onSelectionChange}
     {onTitleForwardTab}
     bind:inputRef

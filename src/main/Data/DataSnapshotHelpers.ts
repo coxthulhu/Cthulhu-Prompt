@@ -70,7 +70,8 @@ export const buildPromptFolderSnapshot = (
     revision: promptFolderEntry.revision,
     data: {
       ...promptFolderEntry.committed,
-      promptIds: filterLoadedPromptIds(promptFolderEntry.committed.promptIds)
+      promptIds: filterLoadedPromptIds(promptFolderEntry.committed.promptIds),
+      completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds)
     }
   }
 }

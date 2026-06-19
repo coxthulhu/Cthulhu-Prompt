@@ -10,6 +10,7 @@ export interface PromptFolder {
   displayName: string
   promptCount: number
   promptIds: string[]
+  completedPromptIds: string[]
   settings: PromptFolderSettings
 }
 

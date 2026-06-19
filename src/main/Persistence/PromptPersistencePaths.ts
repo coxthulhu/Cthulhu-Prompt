@@ -10,6 +10,7 @@ export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
+export const COMPLETED_PROMPTS_FOLDER_NAME = '_Completed'
 
 export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES = PROMPT_FOLDER_SETTINGS_DISK_FILENAMES
 
@@ -19,6 +20,10 @@ export type PromptFilePaths = {
 
 export const resolvePromptFolderPath = (workspacePath: string, folderName: string): string => {
   return path.join(workspacePath, PROMPTS_DIRECTORY_NAME, folderName)
+}
+
+export const resolveCompletedPromptFolderName = (folderName: string): string => {
+  return path.join(folderName, COMPLETED_PROMPTS_FOLDER_NAME)
 }
 
 export const resolveWorkspaceInfoPath = (

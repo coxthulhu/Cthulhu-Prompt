@@ -1,5 +1,9 @@
 import { ipcMain } from 'electron'
-import type { MovePromptResponsePayload, PromptPersisted } from '@shared/Prompt'
+import type {
+  CompletePromptResponsePayload,
+  MovePromptResponsePayload,
+  PromptPersisted
+} from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
@@ -9,11 +13,13 @@ import { buildPromptFolderSnapshot, buildPromptSnapshot } from '../Data/DataSnap
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
+  parseCompletePromptRequest,
   parseMovePromptRequest,
   parseUpdatePromptRevisionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
+import { resolveCompletedPromptFolderName } from '../Persistence/PromptPersistencePaths'
 
 const resolvePromptInsertIndex = (
   promptIds: string[],
@@ -60,6 +66,36 @@ const buildMovePromptConflictResponse = (
     payload: {
       sourcePromptFolder: buildPromptFolderSnapshot(latestSourcePromptFolder),
       destinationPromptFolder: buildPromptFolderSnapshot(latestDestinationPromptFolder),
+      prompt: buildPromptSnapshot(latestPrompt)
+    }
+  }
+}
+
+const buildCompletePromptConflictResponse = (
+  promptFolderId: string,
+  promptId: string
+):
+  | {
+      success: false
+      error: string
+    }
+  | {
+      success: false
+      conflict: true
+      payload: CompletePromptResponsePayload
+    } => {
+  const latestPromptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)
+  const latestPrompt = data.prompt.committedStore.getEntry(promptId)
+
+  if (!latestPromptFolder || !latestPrompt) {
+    return { success: false, error: 'Prompt complete conflict data not loaded' }
+  }
+
+  return {
+    success: false,
+    conflict: true,
+    payload: {
+      promptFolder: buildPromptFolderSnapshot(latestPromptFolder),
       prompt: buildPromptSnapshot(latestPrompt)
     }
   }
@@ -472,6 +508,95 @@ export const setupPromptMutationHandlers = (): void => {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           return { success: false, error: message || 'Failed to move prompt' }
+        }
+      }
+    )
+  })
+
+  ipcMain.handle('complete-prompt', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseCompletePromptRequest,
+      async (validatedRequest) => {
+        try {
+          const requestedPromptFolder = validatedRequest.payload.promptFolder
+          const requestedPrompt = validatedRequest.payload.prompt
+          const promptFolder = data.promptFolder.committedStore.getEntry(requestedPromptFolder.id)
+          const prompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
+
+          if (!promptFolder || !prompt) {
+            return { success: false, error: 'Prompt complete data not loaded' }
+          }
+
+          if (!promptFolder.committed.promptIds.includes(requestedPrompt.id)) {
+            return buildCompletePromptConflictResponse(
+              requestedPromptFolder.id,
+              requestedPrompt.id
+            )
+          }
+
+          const now = getCurrentIsoSecondTimestamp()
+          const completedPrompt: PromptPersisted = {
+            ...requestedPrompt.data,
+            completed: true,
+            completedAt: now,
+            modifiedAt: now
+          }
+
+          const transactionOutcome = await runAtomicDataTransaction((tx) => {
+            return {
+              promptFolder: tx.promptFolder.update({
+                id: requestedPromptFolder.id,
+                expectedRevision: requestedPromptFolder.expectedRevision,
+                recipe: (draft) => {
+                  draft.promptIds = draft.promptIds.filter(
+                    (promptId) => promptId !== requestedPrompt.id
+                  )
+                  draft.completedPromptIds = [...draft.completedPromptIds, requestedPrompt.id]
+                  draft.promptCount = draft.promptIds.length
+                }
+              }),
+              prompt: tx.prompt.update({
+                id: requestedPrompt.id,
+                expectedRevision: requestedPrompt.expectedRevision,
+                recipe: (draft) => {
+                  Object.assign(draft, completedPrompt)
+                },
+                persistenceFields: {
+                  ...prompt.persistenceFields,
+                  folderName: resolveCompletedPromptFolderName(
+                    promptFolder.persistenceFields.folderName
+                  ),
+                  previousFolderName: promptFolder.persistenceFields.folderName,
+                  promptFolderId: requestedPromptFolder.id
+                }
+              })
+            }
+          })
+
+          if (transactionOutcome.status === 'conflict') {
+            return buildCompletePromptConflictResponse(requestedPromptFolder.id, requestedPrompt.id)
+          }
+
+          const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
+            requestedPromptFolder.id
+          )
+          const updatedPrompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
+
+          if (!updatedPromptFolder || !updatedPrompt) {
+            return { success: false, error: 'Prompt complete commit did not complete' }
+          }
+
+          return {
+            success: true,
+            payload: {
+              promptFolder: buildPromptFolderSnapshot(updatedPromptFolder),
+              prompt: buildPromptSnapshot(updatedPrompt)
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message || 'Failed to complete prompt' }
         }
       }
     )

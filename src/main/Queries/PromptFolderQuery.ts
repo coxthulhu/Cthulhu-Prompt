@@ -38,12 +38,15 @@ export const setupPromptFolderQueryHandlers = (): void => {
 
           try {
             const promptIds = filterLoadedPromptIds(promptFolderEntry.committed.promptIds)
+            const completedPromptIds = filterLoadedPromptIds(
+              promptFolderEntry.committed.completedPromptIds
+            )
             const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
               payload.workspaceId,
               promptIds
             )
-            const prompts = getLoadedPromptEntries(promptIds).map((promptEntry) =>
-              buildPromptSnapshot(promptEntry)
+            const prompts = getLoadedPromptEntries([...promptIds, ...completedPromptIds]).map(
+              (promptEntry) => buildPromptSnapshot(promptEntry)
             )
 
             return {

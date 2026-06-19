@@ -5,6 +5,8 @@ export type PromptSummary = {
   id: string
   title: string
   fallbackTitle: string
+  completed?: true
+  completedAt?: string
   loadingState: 'summary'
 }
 
@@ -15,6 +17,8 @@ export type PromptFull = {
   modifiedAt: string
   promptText: string
   fallbackTitle: string
+  completed?: true
+  completedAt?: string
   loadingState: 'full'
 }
 
@@ -24,12 +28,18 @@ export type Prompt = PromptSummary | PromptFull
 export type PromptPersisted = Omit<PromptFull, 'loadingState'>
 
 // Prompt data loaded during workspace bootstrap for tree/title hydration.
-export type PromptSummaryData = Pick<PromptPersisted, 'id' | 'title' | 'fallbackTitle'>
+export type PromptSummaryData = Pick<
+  PromptPersisted,
+  'id' | 'title' | 'fallbackTitle' | 'completed' | 'completedAt'
+>
 
 export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary => ({
   id: prompt.id,
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
+  ...(prompt.completed && prompt.completedAt
+    ? { completed: true, completedAt: prompt.completedAt }
+    : {}),
   loadingState: 'summary'
 })
 
@@ -40,6 +50,9 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
   fallbackTitle: prompt.fallbackTitle,
+  ...(prompt.completed && prompt.completedAt
+    ? { completed: true, completedAt: prompt.completedAt }
+    : {}),
   loadingState: 'full'
 })
 
@@ -85,5 +98,15 @@ export type MovePromptPayload = {
 export type MovePromptResponsePayload = {
   sourcePromptFolder: RevisionEnvelope<PromptFolder>
   destinationPromptFolder: RevisionEnvelope<PromptFolder>
+  prompt: RevisionEnvelope<PromptPersisted>
+}
+
+export type CompletePromptPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+  prompt: RevisionPayloadEntity<PromptPersisted>
+}
+
+export type CompletePromptResponsePayload = {
+  promptFolder: RevisionEnvelope<PromptFolder>
   prompt: RevisionEnvelope<PromptPersisted>
 }

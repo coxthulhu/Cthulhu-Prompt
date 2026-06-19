@@ -71,6 +71,7 @@
     isLastPrompt,
     onEditorLifecycle,
     onDelete,
+    onComplete,
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
@@ -95,6 +96,7 @@
     isLastPrompt: boolean
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     onDelete: () => void
+    onComplete: () => void
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
@@ -428,6 +430,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onDelete}
+    {onComplete}
     titleAreaHeightPx={PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}
   />
 

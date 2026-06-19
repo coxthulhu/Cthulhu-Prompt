@@ -19,7 +19,11 @@ export const loadPromptFolderInitial = async (
   workspaceId: string,
   promptFolderId: string
 ): Promise<void> => {
-  const previousPromptIds = new Set(promptFolderCollection.get(promptFolderId)?.promptIds ?? [])
+  const previousPromptFolder = promptFolderCollection.get(promptFolderId)
+  const previousPromptIds = new Set([
+    ...(previousPromptFolder?.promptIds ?? []),
+    ...(previousPromptFolder?.completedPromptIds ?? [])
+  ])
 
   const result = await runLoad(() =>
     ipcInvokeWithPayload<LoadPromptFolderInitialResult, LoadPromptFolderInitialPayload>(
@@ -49,7 +53,10 @@ export const loadPromptFolderInitial = async (
   if (!nextPromptFolder) {
     throw new Error('Prompt folder not loaded after initial load')
   }
-  const nextPromptIds = new Set(nextPromptFolder.promptIds)
+  const nextPromptIds = new Set([
+    ...nextPromptFolder.promptIds,
+    ...nextPromptFolder.completedPromptIds
+  ])
   const removedPromptIds: string[] = []
 
   for (const previousPromptId of previousPromptIds) {

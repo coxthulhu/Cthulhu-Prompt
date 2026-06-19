@@ -102,6 +102,7 @@ export const createPromptFolder = async (
         displayName: normalizedDisplayName,
         promptCount: 0,
         promptIds: [],
+        completedPromptIds: [],
         settings: createEmptyPromptFolderSettings()
       })
       collections.promptFolderDraft.insert({

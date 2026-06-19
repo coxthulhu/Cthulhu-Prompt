@@ -34,7 +34,12 @@ import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-import { createPrompt, deletePrompt, movePrompt } from '@renderer/data/Mutations/PromptMutations'
+import {
+  completePrompt,
+  createPrompt,
+  deletePrompt,
+  movePrompt
+} from '@renderer/data/Mutations/PromptMutations'
 import {
   lookupPromptFolderSettingsRowMeasuredHeight,
   lookupPromptFolderScrollTop,
@@ -738,6 +743,17 @@ export const createPromptFolderScreenController = ({
     })
   }
 
+  const handleCompletePrompt = (nextPromptId: string) => {
+    const currentPromptFolderId = promptFolder?.id
+    if (!currentPromptFolderId) {
+      return
+    }
+
+    void runIpcBestEffort(async () => {
+      await completePrompt(currentPromptFolderId, nextPromptId)
+    })
+  }
+
   const handleMovePromptUp = async (nextPromptId: string): Promise<boolean> => {
     const currentPromptIds = promptFolder?.promptIds ?? []
     const currentIndex = currentPromptIds.indexOf(nextPromptId)
@@ -989,6 +1005,7 @@ export const createPromptFolderScreenController = ({
     handleFindMatchReveal,
     handleAddPrompt,
     handleDeletePrompt,
+    handleCompletePrompt,
     handleMovePromptUp,
     handleMovePromptDown,
     handlePromptTreeDrop,

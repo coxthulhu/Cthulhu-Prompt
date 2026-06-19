@@ -14,14 +14,26 @@ import {
 } from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
+import {
+  checkPersistedPromptFilesExistByTitle,
+  readPersistedPromptTextById,
+  resolvePersistedPromptFilePathsByTitle
+} from '../helpers/PromptPersistenceTestHelpers'
+import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
+import type { PromptPersisted } from '../../src/shared/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
 const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
 const COPY_PREFIX_SUFFIX_WORKSPACE_PATH = '/ws/copy-prefix-suffix'
+const SAMPLE_WORKSPACE_PATH = '/ws/sample'
+const SELF_HEALING_WORKSPACE_PATH = '/ws/completed-self-healing'
 const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
 const FALLBACK_TITLE_FOLDER_NAME = 'Fallback Titles'
+const COMPLETION_FOLDER_NAME = 'Development'
+const COMPLETION_PROMPT_ID = 'dev-1'
+const COMPLETION_PROMPT_TITLE = 'Code Review'
 const BOUNDARY_1_ID = 'boundary-1'
 const BOUNDARY_2_ID = 'boundary-2'
 const MOVE_ANCHOR_1_ID = 'move-anchor-1'
@@ -37,6 +49,8 @@ const moveUpSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
 const moveDownSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
+const completeSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-complete-button"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
@@ -195,6 +209,61 @@ const buildFallbackTitleWorkspace = () =>
       ]
     }
   ])
+
+const buildCompletedSelfHealingWorkspace = () => {
+  const folderName = 'Self Healing'
+  const activePrompt: PromptPersisted = {
+    id: 'active-with-completed-flags',
+    title: 'Active Bad Flags',
+    fallbackTitle: '',
+    createdAt: '2023-01-01T00:00:00.000Z',
+    modifiedAt: '2023-01-01T00:00:00.000Z',
+    promptText: 'This regular prompt should keep rendering.',
+    completed: true,
+    completedAt: '2023-01-02T00:00:00Z'
+  }
+  const completedPrompt: PromptPersisted = {
+    id: 'completed-without-flags',
+    title: 'Completed Missing Flags',
+    fallbackTitle: '',
+    createdAt: '2023-01-03T00:00:00.000Z',
+    modifiedAt: '2023-01-03T00:00:00.000Z',
+    promptText: 'This completed prompt should stay hidden.'
+  }
+  const workspace = createWorkspaceWithFolders(SELF_HEALING_WORKSPACE_PATH, [
+    {
+      folderName,
+      displayName: folderName,
+      prompts: [
+        {
+          id: activePrompt.id,
+          title: activePrompt.title,
+          promptText: activePrompt.promptText,
+          createdAt: activePrompt.createdAt
+        }
+      ]
+    }
+  ])
+  const activePath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: SELF_HEALING_WORKSPACE_PATH,
+    folderName,
+    promptId: activePrompt.id,
+    promptTitle: activePrompt.title
+  }).markdownPath
+  const completedPath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: SELF_HEALING_WORKSPACE_PATH,
+    folderName: `${folderName}/_Completed`,
+    promptId: completedPrompt.id,
+    promptTitle: completedPrompt.title
+  }).markdownPath
+
+  return {
+    ...workspace,
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_Completed`]: null,
+    [activePath]: serializePromptMarkdown(activePrompt),
+    [completedPath]: serializePromptMarkdown(completedPrompt)
+  }
+}
 
 describe('Prompt folder prompt management', () => {
   test('names a new untitled prompt with the first available fallback title', async ({
@@ -497,6 +566,120 @@ describe('Prompt folder prompt management', () => {
         return normalizeNewlines(clipboardText)
       })
       .toBe(`Folder prefix text\n\n${promptText}\n\nFolder suffix text`)
+  })
+
+  test('completes a prompt by moving it into the completed folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(COMPLETION_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(COMPLETION_PROMPT_ID))
+
+    const completedText = 'Completed prompt text saved from the latest draft.'
+    await replacePromptText(mainWindow, COMPLETION_PROMPT_ID, completedText)
+
+    const completeButton = mainWindow.locator(completeSelector(COMPLETION_PROMPT_ID))
+    await completeButton.scrollIntoViewIfNeeded()
+    await completeButton.click()
+
+    await expect(mainWindow.locator(promptEditorSelector(COMPLETION_PROMPT_ID))).toHaveCount(0)
+    await waitForPromptCount(mainWindow, 1)
+    await expect
+      .poll(async () => await getPromptTreePromptRowIds(mainWindow), { timeout: 5000 })
+      .toEqual(['dev-2'])
+
+    await expect
+      .poll(
+        async () => {
+          const [originalFiles, completedFiles] = await Promise.all([
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: SAMPLE_WORKSPACE_PATH,
+              folderName: COMPLETION_FOLDER_NAME,
+              promptId: COMPLETION_PROMPT_ID,
+              promptTitle: COMPLETION_PROMPT_TITLE
+            }),
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: SAMPLE_WORKSPACE_PATH,
+              folderName: `${COMPLETION_FOLDER_NAME}/_Completed`,
+              promptId: COMPLETION_PROMPT_ID,
+              promptTitle: COMPLETION_PROMPT_TITLE
+            })
+          ])
+
+          return { originalFiles, completedFiles }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        originalFiles: { markdownExists: false },
+        completedFiles: { markdownExists: true }
+      })
+
+    const completedMarkdown = await readPersistedPromptTextById(electronApp, {
+      workspacePath: SAMPLE_WORKSPACE_PATH,
+      folderName: `${COMPLETION_FOLDER_NAME}/_Completed`,
+      promptId: COMPLETION_PROMPT_ID,
+      promptTitle: COMPLETION_PROMPT_TITLE
+    })
+    expect(completedMarkdown).toContain('completed: true')
+    expect(completedMarkdown).toContain('completedAt:')
+    expect(completedMarkdown).toContain(completedText)
+
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.navigateToPromptFolders(COMPLETION_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2'])
+  })
+
+  test('self-heals completed frontmatter based on folder location', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const folderName = 'Self Healing'
+    const activePromptId = 'active-with-completed-flags'
+    const activePromptTitle = 'Active Bad Flags'
+    const completedPromptId = 'completed-without-flags'
+    const completedPromptTitle = 'Completed Missing Flags'
+
+    await testSetup.setupFilesystem(buildCompletedSelfHealingWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(SELF_HEALING_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(folderName)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(activePromptId))
+
+    expect(await getPromptEditorIds(mainWindow)).toEqual([activePromptId])
+    await expect(mainWindow.locator(promptEditorSelector(completedPromptId))).toHaveCount(0)
+    expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([activePromptId])
+
+    const activeMarkdown = await readPersistedPromptTextById(electronApp, {
+      workspacePath: SELF_HEALING_WORKSPACE_PATH,
+      folderName,
+      promptId: activePromptId,
+      promptTitle: activePromptTitle
+    })
+    expect(activeMarkdown).not.toContain('completed: true')
+    expect(activeMarkdown).not.toContain('completedAt:')
+    expect(activeMarkdown).toContain('This regular prompt should keep rendering.')
+
+    const completedMarkdown = await readPersistedPromptTextById(electronApp, {
+      workspacePath: SELF_HEALING_WORKSPACE_PATH,
+      folderName: `${folderName}/_Completed`,
+      promptId: completedPromptId,
+      promptTitle: completedPromptTitle
+    })
+    expect(completedMarkdown).toContain('completed: true')
+    expect(completedMarkdown).toContain('completedAt:')
+    expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {

@@ -18,6 +18,7 @@ import {
 import {
   isWorkspaceInfoPath,
   PROMPTS_DIRECTORY_NAME,
+  resolveCompletedPromptFolderName,
   resolveWorkspacePathFromInfoPath
 } from '../Persistence/PromptPersistencePaths'
 
@@ -61,7 +62,10 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     }
 
     const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
-    const promptIds = promptFolderSnapshot.data.promptIds
+    const promptIds = [
+      ...promptFolderSnapshot.data.promptIds,
+      ...promptFolderSnapshot.data.completedPromptIds
+    ]
     const loadedPromptEntries = getLoadedPromptEntries(promptIds)
 
     loadedPromptIds.push(...loadedPromptEntries.map((promptEntry) => promptEntry.committed.id))
@@ -71,13 +75,19 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
       prompts.push({
         id: promptEntry.committed.id,
         revision: promptEntry.revision,
-        data: {
-          id: promptEntry.committed.id,
-          title: promptEntry.committed.title,
-          fallbackTitle: promptEntry.committed.fallbackTitle
-        }
-      })
-    }
+          data: {
+            id: promptEntry.committed.id,
+            title: promptEntry.committed.title,
+            fallbackTitle: promptEntry.committed.fallbackTitle,
+            ...(promptEntry.committed.completed && promptEntry.committed.completedAt
+              ? {
+                  completed: true,
+                  completedAt: promptEntry.committed.completedAt
+                }
+              : {})
+          }
+        })
+      }
   }
 
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
@@ -113,17 +123,34 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 
   const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
     const promptStemByPromptId = readPromptStemByPromptId(workspacePath, promptFolder.folderName)
-
-    return promptFolder.promptIds.map((promptId) =>
-      data.prompt.loadDataFromPersistence(promptId, {
-        workspaceId,
-        workspacePath,
-        folderName: promptFolder.folderName,
-        promptFolderId: promptFolder.id,
-        promptId,
-        promptStem: promptStemByPromptId.get(promptId) ?? promptId
-      })
+    const completedFolderName = resolveCompletedPromptFolderName(promptFolder.folderName)
+    const completedPromptStemByPromptId = readPromptStemByPromptId(
+      workspacePath,
+      completedFolderName
     )
+
+    return [
+      ...promptFolder.promptIds.map((promptId) =>
+        data.prompt.loadDataFromPersistence(promptId, {
+          workspaceId,
+          workspacePath,
+          folderName: promptFolder.folderName,
+          promptFolderId: promptFolder.id,
+          promptId,
+          promptStem: promptStemByPromptId.get(promptId) ?? promptId
+        })
+      ),
+      ...promptFolder.completedPromptIds.map((promptId) =>
+        data.prompt.loadDataFromPersistence(promptId, {
+          workspaceId,
+          workspacePath,
+          folderName: completedFolderName,
+          promptFolderId: promptFolder.id,
+          promptId,
+          promptStem: completedPromptStemByPromptId.get(promptId) ?? promptId
+        })
+      )
+    ]
   })
 
   // Side effect: hydrate all prompts only after prompt folder loads complete.

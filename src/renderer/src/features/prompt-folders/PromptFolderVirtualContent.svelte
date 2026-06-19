@@ -93,6 +93,7 @@
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (previousPromptId: string | null) => void
     onDeletePrompt: (promptId: string) => void
+    onCompletePrompt: (promptId: string) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
     onMovePromptDown: (promptId: string) => Promise<boolean>
     onPromptTreeDrop: (
@@ -131,6 +132,7 @@
     scrollToWithinWindowBandForRows,
     onAddPrompt,
     onDeletePrompt,
+    onCompletePrompt,
     onMovePromptUp,
     onMovePromptDown,
     onPromptTreeDrop,
@@ -562,6 +564,7 @@
       isFirstPrompt={promptIndex === 0}
       isLastPrompt={promptIndex === visiblePromptIds.length - 1}
       onDelete={() => onDeletePrompt(row.promptId)}
+      onComplete={() => onCompletePrompt(row.promptId)}
       onMoveUp={() => handleMovePromptUp(row.promptId)}
       onMoveDown={() => handleMovePromptDown(row.promptId)}
       onPromptTreeDrop={(dropPayload) => onPromptTreeDrop(row.promptId, dropPayload)}

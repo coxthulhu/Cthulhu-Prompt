@@ -1,3 +1,4 @@
+import * as path from 'path'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
@@ -17,12 +18,15 @@ import {
   writeJsonFile
 } from './FilePersistenceHelpers'
 import {
+  PROMPT_MARKDOWN_FILENAME_SUFFIX,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
   resolvePromptFolderPath,
+  resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath
 } from './PromptPersistencePaths'
+import { parsePromptMarkdown } from './PromptFrontmatter'
 import { getFs } from '../fs-provider'
 
 export type PromptFolderPersistenceFields = {
@@ -46,6 +50,7 @@ const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
   promptIds: string[],
+  completedPromptIds: string[],
   settings: PromptFolderSettings
 ): PromptFolder => {
   return {
@@ -54,6 +59,7 @@ const fromPromptFolderInfoFile = (
     displayName: persistedInfo.displayName,
     promptCount: promptIds.length,
     promptIds,
+    completedPromptIds,
     settings
   }
 }
@@ -61,6 +67,29 @@ const fromPromptFolderInfoFile = (
 const readOptionalTextFile = (filePath: string): string => {
   const fs = getFs()
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''
+}
+
+const readCompletedPromptIds = (workspacePath: string, folderName: string): string[] => {
+  const fs = getFs()
+  const completedFolderPath = resolvePromptFolderPath(
+    workspacePath,
+    resolveCompletedPromptFolderName(folderName)
+  )
+
+  if (!fs.existsSync(completedFolderPath)) {
+    return []
+  }
+
+  return fs
+    .readdirSync(completedFolderPath, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const prompt = parsePromptMarkdown(
+        fs.readFileSync(path.join(completedFolderPath, entry.name), 'utf8')
+      )
+      return prompt ? [prompt.id] : []
+    })
 }
 
 export const promptFolderPersistence: PersistenceLayer<
@@ -129,6 +158,7 @@ export const promptFolderPersistence: PersistenceLayer<
 
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
     const promptIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
+    const completedPromptIds = readCompletedPromptIds(workspacePath, folderName)
     const folderSettings = Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
@@ -140,6 +170,7 @@ export const promptFolderPersistence: PersistenceLayer<
       persistedInfo,
       folderName,
       promptIds,
+      completedPromptIds,
       copyPromptFolderSettings(folderSettings)
     )
   }

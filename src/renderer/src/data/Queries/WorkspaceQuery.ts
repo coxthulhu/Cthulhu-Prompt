@@ -33,7 +33,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
         continue
       }
 
-      for (const promptId of promptFolder.promptIds) {
+      for (const promptId of [...promptFolder.promptIds, ...promptFolder.completedPromptIds]) {
         previousPromptIds.add(promptId)
       }
     }
