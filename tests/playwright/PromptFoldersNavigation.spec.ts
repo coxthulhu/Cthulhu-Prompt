@@ -16,6 +16,7 @@ const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-ad
 const SHORT_PROMPT_50 = '[data-testid="prompt-tree-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
@@ -396,6 +397,28 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'Test Folder'
     )
+    await expect(mainWindow.locator(PROMPT_FOLDER_HOST)).toBeVisible()
+    await expect(mainWindow.locator(PROMPT_TREE_EMPTY_STATE)).toBeVisible()
+    await expect(mainWindow.locator(PROMPT_TREE_EMPTY_STATE)).toContainText(
+      'No prompts found in this folder.'
+    )
+    await expect(mainWindow.locator(PROMPT_TREE_HOST)).toHaveCount(0)
+    await expect(
+      mainWindow.locator(PROMPT_FOLDER_HOST).getByText('No prompts found in this folder.')
+    ).toBeVisible()
+
+    const emptyPromptFolderPlaceholderHasGutter = await mainWindow.evaluate((hostSelector) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      if (!host) return null
+
+      const emptyMessage = Array.from(host.querySelectorAll('p')).find(
+        (paragraph) => paragraph.textContent?.trim() === 'No prompts found in this folder.'
+      )
+      const placeholderRow = emptyMessage?.closest('.prompt-folder-section-row')
+      return Boolean(placeholderRow?.querySelector('.promptFolderSectionGutter'))
+    }, PROMPT_FOLDER_HOST)
+
+    expect(emptyPromptFolderPlaceholderHasGutter).toBe(false)
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
   })
 

@@ -506,7 +506,11 @@
 {/snippet}
 
 {#snippet placeholderRow({ rowHeightPx })}
-  <PromptFolderSectionRow {rowHeightPx} contentClass="text-center py-12 text-muted-foreground">
+  <PromptFolderSectionRow
+    {rowHeightPx}
+    contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
+    showGutter={false}
+  >
     <p>No prompts found in this folder.</p>
     <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
   </PromptFolderSectionRow>

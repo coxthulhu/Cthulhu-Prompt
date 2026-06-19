@@ -136,6 +136,9 @@
       promptFolders[0]!
     )
   })
+  const selectedPromptFolderHasNoPrompts = $derived(
+    selectedPromptFolder !== null && selectedPromptFolder.promptIds.length === 0
+  )
 
   const PROMPT_TREE_ROW_CONTENT_INSET = '10px'
 
@@ -372,6 +375,14 @@
     </div>
   {:else if folderListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Prompt Folder to Get Started</div>
+  {:else if selectedPromptFolderHasNoPrompts}
+    <div
+      class="sidebarPromptTreeEmptyState px-2 py-2 text-center text-xs"
+      data-testid="prompt-tree-empty-state"
+    >
+      <p class="sidebarPromptTreeEmptyTitle">No prompts found in this folder.</p>
+      <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
+    </div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
       <SvelteVirtualWindow

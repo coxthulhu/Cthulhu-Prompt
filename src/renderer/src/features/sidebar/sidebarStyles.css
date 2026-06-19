@@ -340,6 +340,15 @@
   color: var(--ui-muted-text);
 }
 
+.sidebarPromptTreeEmptyState {
+  color: var(--ui-secondary-text);
+}
+
+.sidebarPromptTreeEmptyTitle {
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .sidebarPromptTreeStatus svg {
   color: var(--ui-muted-icon-glyph);
 }

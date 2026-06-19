@@ -16,6 +16,7 @@
     rowHeightPx: number
     contentClass?: string
     contentVirtualWindowRow?: boolean
+    showGutter?: boolean
     topInsetPx?: number
   }
 
@@ -24,6 +25,7 @@
     rowHeightPx,
     contentClass,
     contentVirtualWindowRow = false,
+    showGutter = true,
     topInsetPx = 0
   }: Props = $props()
 </script>
@@ -32,7 +34,11 @@
   class="prompt-folder-section-row"
   style={`height:${rowHeightPx}px; --prompt-folder-section-gutter-width:${PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX}px; --prompt-folder-section-gutter-gap:${PROMPT_FOLDER_SECTION_GUTTER_GAP_PX}px; --prompt-folder-section-gutter-top-inset:${topInsetPx}px;`}
 >
-  <PromptFolderSectionGutter />
+  {#if showGutter}
+    <PromptFolderSectionGutter />
+  {:else}
+    <div aria-hidden="true"></div>
+  {/if}
   <div
     class={mergeClasses('prompt-folder-section-row-content', contentClass)}
     data-virtual-window-row={contentVirtualWindowRow ? '' : undefined}
