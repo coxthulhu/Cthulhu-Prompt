@@ -51,9 +51,10 @@ const getPromptDraftModifiedAt = (): string => {
 type PromptDraftOptimisticMutationOptions = {
   mutatePromptDraft: (draft: PromptDraftRecord) => void
   mutatePrompt?: (draft: Prompt) => void
+  promptFolderModifiedAt?: string
 }
 
-const getPromptFolderIdsForPrompt = (promptId: string): string[] => {
+const getPromptIdsForPrompt = (promptId: string): string[] => {
   for (const promptFolder of promptFolderCollection.values()) {
     if (promptFolder.promptIds.includes(promptId)) {
       return promptFolder.promptIds
@@ -63,11 +64,22 @@ const getPromptFolderIdsForPrompt = (promptId: string): string[] => {
   return [promptId]
 }
 
+const getPromptFolderIdForPrompt = (promptId: string): string | null => {
+  for (const promptFolder of promptFolderCollection.values()) {
+    if (promptFolder.promptIds.includes(promptId)) {
+      return promptFolder.id
+    }
+  }
+
+  return null
+}
+
 const mutatePromptDraftOptimistically = (
   promptId: string,
   options: PromptDraftOptimisticMutationOptions
 ): void => {
-  const { mutatePromptDraft, mutatePrompt } = options
+  const { mutatePromptDraft, mutatePrompt, promptFolderModifiedAt } = options
+  const promptFolderId = getPromptFolderIdForPrompt(promptId)
 
   mutatePacedPromptAutosaveUpdate({
     promptId,
@@ -77,6 +89,12 @@ const mutatePromptDraftOptimistically = (
 
       if (mutatePrompt) {
         collections.prompt.update(promptId, mutatePrompt)
+      }
+
+      if (promptFolderId && promptFolderModifiedAt) {
+        collections.promptFolder.update(promptFolderId, (draft) => {
+          draft.modifiedAt = promptFolderModifiedAt
+        })
       }
     }
   })
@@ -195,7 +213,7 @@ export const getPromptDraftState = (promptId: string): PromptDraftState => {
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
   const draftRecord = getPromptDraftState(promptId)
   const nextTitleFields = resolvePromptTitleUpdateForPromptIds({
-    promptIds: getPromptFolderIdsForPrompt(promptId),
+    promptIds: getPromptIdsForPrompt(promptId),
     lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
     promptId,
     currentTitle: draftRecord.title,
@@ -223,7 +241,8 @@ export const setPromptDraftTitle = (promptId: string, title: string): void => {
       if (draft.loadingState === 'full') {
         draft.modifiedAt = modifiedAt
       }
-    }
+    },
+    promptFolderModifiedAt: modifiedAt
   })
 }
 
@@ -252,7 +271,8 @@ export const setPromptDraftText = (
       }
       draft.promptText = promptText
       draft.modifiedAt = modifiedAt
-    }
+    },
+    promptFolderModifiedAt: modifiedAt
   })
 }
 

@@ -66,6 +66,7 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
   id: 'folder-1',
   folderName: 'folder',
   displayName: 'Folder',
+  modifiedAt: '2026-01-01T00:00:00.000Z',
   promptCount: 2,
   promptIds: ['prompt-1', 'prompt-2'],
   completedPromptIds: [],

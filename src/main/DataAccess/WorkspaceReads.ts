@@ -106,6 +106,7 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     ])
   ) as PromptFolderSettings
   const promptIds = readPromptIds(workspacePath, folderName)
+  const modifiedAt = readPromptFolderModifiedAt(workspacePath, folderName, promptIds)
   const completedPromptIds = Array.from(
     readPromptStemByPromptId(workspacePath, resolveCompletedPromptFolderName(folderName)).keys()
   )
@@ -114,11 +115,41 @@ export const readPromptFolder = (workspacePath: string, folderName: string): Pro
     id: info.promptFolderId,
     folderName,
     displayName: info.displayName,
+    modifiedAt,
     promptCount: promptIds.length,
     promptIds,
     completedPromptIds,
     settings: copyPromptFolderSettings(folderSettings)
   }
+}
+
+const readPromptFolderModifiedAt = (
+  workspacePath: string,
+  folderName: string,
+  promptIds: string[]
+): string | null => {
+  const fs = getFs()
+  const folderPath = resolvePromptFolderPath(workspacePath, folderName)
+  const promptStemByPromptId = readPromptStemByPromptId(workspacePath, folderName)
+  let latestModifiedAtMs: number | null = null
+
+  for (const promptId of promptIds) {
+    const promptStem = promptStemByPromptId.get(promptId)
+    if (!promptStem) {
+      continue
+    }
+
+    const promptPaths = resolvePromptPathsFromStem(folderPath, promptStem)
+    if (!fs.existsSync(promptPaths.markdownPath)) {
+      continue
+    }
+
+    const modifiedAtMs = fs.statSync(promptPaths.markdownPath).mtime.getTime()
+    latestModifiedAtMs =
+      latestModifiedAtMs === null ? modifiedAtMs : Math.max(latestModifiedAtMs, modifiedAtMs)
+  }
+
+  return latestModifiedAtMs === null ? null : new Date(latestModifiedAtMs).toISOString()
 }
 
 export const readPrompts = (workspacePath: string, folderName: string): PromptPersisted[] => {

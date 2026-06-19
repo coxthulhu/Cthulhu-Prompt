@@ -66,6 +66,7 @@ export type PromptRevisionPayload = {
 
 export type PromptRevisionResponsePayload = {
   prompt: RevisionEnvelope<PromptPersisted>
+  promptFolder?: RevisionEnvelope<PromptFolder>
 }
 
 export type CreatePromptPayload = {

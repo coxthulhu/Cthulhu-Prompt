@@ -208,6 +208,7 @@ const parsePromptFolder = parseObject<PromptFolder>({
   id: parseString,
   folderName: parseString,
   displayName: parseString,
+  modifiedAt: parseNullableString,
   promptCount: parseNumber,
   promptIds: parseArray(parseString),
   completedPromptIds: parseArray(parseString),

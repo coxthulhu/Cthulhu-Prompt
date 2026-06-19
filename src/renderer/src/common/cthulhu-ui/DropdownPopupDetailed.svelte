@@ -13,13 +13,16 @@
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
   } from './DropdownPopupCore.svelte'
-  import SelectorButton, { type SelectorButtonRowState } from './SelectorButton.svelte'
+  import SelectorButton, {
+    type SelectorButtonDetailPart,
+    type SelectorButtonRowState
+  } from './SelectorButton.svelte'
 
   export type DropdownPopupDetailedItem = {
     id: string
     label: string
     detail?: string
-    detailParts?: string[]
+    detailParts?: SelectorButtonDetailPart[]
     icon: ComponentType
     testId?: string
   }

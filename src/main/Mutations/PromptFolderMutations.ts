@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
@@ -64,6 +65,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'A folder with this name already exists' }
           }
 
+          const now = getCurrentIsoSecondTimestamp()
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               workspace: tx.workspace.update({
@@ -79,6 +81,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   id: payload.promptFolderId,
                   folderName,
                   displayName: normalizedDisplayName,
+                  modifiedAt: now,
                   promptCount: 0,
                   promptIds: [],
                   completedPromptIds: [],
@@ -142,6 +145,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'Prompt folder not loaded' }
           }
 
+          const now = getCurrentIsoSecondTimestamp()
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               promptFolder: tx.promptFolder.update({
@@ -149,6 +153,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
                   draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
+                  draft.modifiedAt = now
                 }
               })
             }

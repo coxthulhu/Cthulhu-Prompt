@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
   import type {
@@ -18,7 +19,7 @@
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, ExternalLink, Folder, Plus, Settings } from 'lucide-svelte'
+  import { ChevronsDownUp, Clock, ExternalLink, Folder, Plus, Settings } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -31,6 +32,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
+  import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
@@ -124,6 +126,25 @@
   let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
   let promptFolderSelectorItemsElement = $state<HTMLElement | null>(null)
   let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
+  let nowMs = $state(Date.now())
+
+  // Side effect: keep folder-selector relative modified labels fresh while the app is open.
+  onMount(() => {
+    const intervalId = window.setInterval(() => {
+      nowMs = Date.now()
+    }, 60_000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  })
+
+  const capitalizeFirst = (value: string): string =>
+    value.length === 0 ? value : `${value[0]!.toUpperCase()}${value.slice(1)}`
+
+  const formatPromptFolderModifiedRelative = (modifiedAt: string): string =>
+    capitalizeFirst(formatPromptModifiedRelative(modifiedAt, nowMs))
+
   const promptFolderDropdownFolders = $derived.by((): PromptFolder[] => {
     if (!promptFolderSelectorPreviewIds) {
       return promptFolders
@@ -141,11 +162,22 @@
   const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] =>
     promptFolderDropdownFolders.map((promptFolder) => {
       const promptCount = promptFolder.promptIds.length
+      const detailParts: DropdownPopupDetailedItem['detailParts'] = [
+        `${promptCount} prompt${promptCount === 1 ? '' : 's'}`
+      ]
+
+      if (promptCount > 0 && promptFolder.modifiedAt) {
+        detailParts.push({
+          text: formatPromptFolderModifiedRelative(promptFolder.modifiedAt),
+          icon: Clock,
+          testId: 'sidebar-prompt-folder-modified-time'
+        })
+      }
 
       return {
         id: promptFolder.id,
         label: promptFolder.displayName,
-        detailParts: [`${promptCount} prompt${promptCount === 1 ? '' : 's'}`, 'Updated recently'],
+        detailParts,
         icon: Folder,
         testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
       }

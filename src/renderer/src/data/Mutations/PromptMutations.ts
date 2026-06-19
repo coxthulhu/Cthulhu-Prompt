@@ -1,4 +1,5 @@
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
   type CompletePromptPayload,
   type CompletePromptResponsePayload,
@@ -148,6 +149,7 @@ export const createPrompt = async (
         nextPromptIds.splice(insertIndex, 0, prompt.id)
         draft.promptIds = nextPromptIds
         draft.promptCount = nextPromptIds.length
+        draft.modifiedAt = prompt.modifiedAt
       })
     },
     persistMutations: async ({ entities, transaction }) => {
@@ -236,6 +238,9 @@ export const mutatePacedPromptAutosaveUpdate = ({
     },
     handleSuccessOrConflictResponse: (payload) => {
       const promptSnapshot = toFullPromptSnapshot(payload.prompt)
+      if (payload.promptFolder) {
+        promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      }
       promptCollection.utils.upsertAuthoritative(promptSnapshot)
       upsertPromptDraftFromPrompt(promptSnapshot.data)
     },
@@ -255,6 +260,7 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
   }
 
   const persistedPrompt = toPersistedPrompt(prompt)
+  const modifiedAt = getCurrentIsoSecondTimestamp()
 
   await runRevisionMutation<DeletePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -263,6 +269,7 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
       collections.promptFolder.update(promptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
         draft.promptCount = draft.promptIds.length
+        draft.modifiedAt = modifiedAt
       })
     },
     persistMutations: async ({ entities, transaction }) => {
@@ -320,6 +327,7 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
     modifiedAt: promptDraft.modifiedAt,
     promptText: promptDraft.promptText
   }
+  const modifiedAt = getCurrentIsoSecondTimestamp()
 
   await runRevisionMutation<CompletePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -327,12 +335,13 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
         draft.completedPromptIds = [...draft.completedPromptIds, promptId]
         draft.promptCount = draft.promptIds.length
+        draft.modifiedAt = modifiedAt
       })
       collections.prompt.update(promptId, (draft) => {
         if (draft.loadingState === 'full') {
           Object.assign(draft, persistedPrompt)
           draft.completed = true
-          draft.completedAt = new Date().toISOString()
+          draft.completedAt = modifiedAt
           draft.modifiedAt = draft.completedAt
         }
       })
@@ -409,6 +418,7 @@ export const movePrompt = async (
   if (insertIndex === null) {
     throw new Error('Order-after prompt not found')
   }
+  const modifiedAt = getCurrentIsoSecondTimestamp()
 
   await runRevisionMutation<MovePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -419,6 +429,7 @@ export const movePrompt = async (
           )
           nextPromptIds.splice(insertIndex, 0, promptId)
           draft.promptIds = nextPromptIds
+          draft.modifiedAt = modifiedAt
         })
         return
       }
@@ -426,12 +437,14 @@ export const movePrompt = async (
       collections.promptFolder.update(sourcePromptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
         draft.promptCount = draft.promptIds.length
+        draft.modifiedAt = modifiedAt
       })
       collections.promptFolder.update(destinationPromptFolderId, (draft) => {
         const nextPromptIds = [...draft.promptIds]
         nextPromptIds.splice(insertIndex, 0, promptId)
         draft.promptIds = nextPromptIds
         draft.promptCount = nextPromptIds.length
+        draft.modifiedAt = modifiedAt
       })
       collections.prompt.update(promptId, (draft) => {
         if (draft.title.trim().length === 0) {

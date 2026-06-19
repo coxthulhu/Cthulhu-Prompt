@@ -8,6 +8,7 @@ export interface PromptFolder {
   id: string
   folderName: string
   displayName: string
+  modifiedAt: string | null
   promptCount: number
   promptIds: string[]
   completedPromptIds: string[]

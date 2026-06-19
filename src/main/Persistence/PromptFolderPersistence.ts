@@ -49,6 +49,7 @@ const toPromptFolderOrderFile = (promptIds: string[]): PromptFolderOrderFile => 
 const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
+  modifiedAt: string | null,
   promptIds: string[],
   completedPromptIds: string[],
   settings: PromptFolderSettings
@@ -57,6 +58,7 @@ const fromPromptFolderInfoFile = (
     id: persistedInfo.promptFolderId,
     folderName,
     displayName: persistedInfo.displayName,
+    modifiedAt,
     promptCount: promptIds.length,
     promptIds,
     completedPromptIds,
@@ -67,6 +69,57 @@ const fromPromptFolderInfoFile = (
 const readOptionalTextFile = (filePath: string): string => {
   const fs = getFs()
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''
+}
+
+const readPromptModifiedAtByPromptId = (
+  workspacePath: string,
+  folderName: string
+): Map<string, string> => {
+  const fs = getFs()
+  const folderPath = resolvePromptFolderPath(workspacePath, folderName)
+  const modifiedAtByPromptId = new Map<string, string>()
+
+  if (!fs.existsSync(folderPath)) {
+    return modifiedAtByPromptId
+  }
+
+  for (const entry of fs.readdirSync(folderPath, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX)) {
+      continue
+    }
+
+    const filePath = path.join(folderPath, entry.name)
+    const prompt = parsePromptMarkdown(fs.readFileSync(filePath, 'utf8'))
+    if (!prompt) {
+      continue
+    }
+
+    modifiedAtByPromptId.set(prompt.id, fs.statSync(filePath).mtime.toISOString())
+  }
+
+  return modifiedAtByPromptId
+}
+
+const readPromptFolderModifiedAt = (
+  workspacePath: string,
+  folderName: string,
+  promptIds: string[]
+): string | null => {
+  const modifiedAtByPromptId = readPromptModifiedAtByPromptId(workspacePath, folderName)
+  let latestModifiedAtMs: number | null = null
+
+  for (const promptId of promptIds) {
+    const modifiedAt = modifiedAtByPromptId.get(promptId)
+    if (!modifiedAt) {
+      continue
+    }
+
+    const modifiedAtMs = new Date(modifiedAt).getTime()
+    latestModifiedAtMs =
+      latestModifiedAtMs === null ? modifiedAtMs : Math.max(latestModifiedAtMs, modifiedAtMs)
+  }
+
+  return latestModifiedAtMs === null ? null : new Date(latestModifiedAtMs).toISOString()
 }
 
 const readCompletedPromptIds = (workspacePath: string, folderName: string): string[] => {
@@ -159,6 +212,7 @@ export const promptFolderPersistence: PersistenceLayer<
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
     const promptIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).promptIds]
     const completedPromptIds = readCompletedPromptIds(workspacePath, folderName)
+    const modifiedAt = readPromptFolderModifiedAt(workspacePath, folderName, promptIds)
     const folderSettings = Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
@@ -169,6 +223,7 @@ export const promptFolderPersistence: PersistenceLayer<
     return fromPromptFolderInfoFile(
       persistedInfo,
       folderName,
+      modifiedAt,
       promptIds,
       completedPromptIds,
       copyPromptFolderSettings(folderSettings)

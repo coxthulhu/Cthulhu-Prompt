@@ -13,13 +13,20 @@
     | 'drag-active'
     | 'dragging'
     | 'over'
+  export type SelectorButtonDetailPart =
+    | string
+    | {
+        text: string
+        icon?: ComponentType
+        testId?: string
+      }
   type SelectorButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
     icon: ComponentType
     text: string
     detail?: string
-    detailParts?: string[]
+    detailParts?: SelectorButtonDetailPart[]
     open?: boolean
     selected?: boolean
     rowState?: SelectorButtonRowState
@@ -67,8 +74,12 @@
 
   const isDisabled = $derived(state === 'disabled')
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
-  const resolvedDetailParts = $derived(detailParts?.length ? detailParts : detail ? [detail] : [])
-  const detailTitle = $derived(resolvedDetailParts.join(' \u00b7 '))
+  const resolvedDetailParts = $derived(
+    (detailParts?.length ? detailParts : detail ? [detail] : []).map((detailPart) =>
+      typeof detailPart === 'string' ? { text: detailPart } : detailPart
+    )
+  )
+  const detailTitle = $derived(resolvedDetailParts.map((detailPart) => detailPart.text).join(' \u00b7 '))
 </script>
 
 <button
@@ -108,7 +119,16 @@
           {#if index > 0}
             <SeparatorDot />
           {/if}
-          <span class="cthulhuUiSelectorButtonDetailText">{detailPart}</span>
+          <span
+            class="cthulhuUiSelectorButtonDetailText"
+            data-testid={detailPart.testId}
+          >
+            {#if detailPart.icon}
+              {@const DetailIcon = detailPart.icon}
+              <DetailIcon class="cthulhuUiSelectorButtonDetailIcon" size={10} aria-hidden="true" />
+            {/if}
+            {detailPart.text}
+          </span>
         {/each}
       </span>
     {/if}
@@ -232,11 +252,17 @@
   }
 
   .cthulhuUiSelectorButtonDetailText {
-    display: block;
+    align-items: center;
+    display: inline-flex;
+    gap: 5px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .cthulhuUiSelectorButtonDetailText :global(.cthulhuUiSelectorButtonDetailIcon) {
+    flex: 0 0 auto;
   }
 
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonChevronWrap) {

@@ -11,6 +11,7 @@ import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { compactGuid } from '@shared/compactGuid'
 import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
@@ -93,6 +94,7 @@ export const createPromptFolder = async (
 
   const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
   const optimisticPromptFolderId = compactGuid(crypto.randomUUID())
+  const modifiedAt = getCurrentIsoSecondTimestamp()
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -100,6 +102,7 @@ export const createPromptFolder = async (
         id: optimisticPromptFolderId,
         folderName,
         displayName: normalizedDisplayName,
+        modifiedAt,
         promptCount: 0,
         promptIds: [],
         completedPromptIds: [],

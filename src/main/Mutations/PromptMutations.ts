@@ -164,6 +164,7 @@ export const setupPromptMutationHandlers = (): void => {
                   nextPromptIds.splice(insertIndex, 0, promptId)
                   draft.promptIds = nextPromptIds
                   draft.promptCount = nextPromptIds.length
+                  draft.modifiedAt = now
                 }
               }),
               prompt: tx.prompt.create({
@@ -244,6 +245,7 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const workspaceId = committedPromptFolder.persistenceFields.workspaceId
+          const now = getCurrentIsoSecondTimestamp()
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               promptFolder: tx.promptFolder.update({
@@ -254,6 +256,7 @@ export const setupPromptMutationHandlers = (): void => {
                     (currentPromptId) => currentPromptId !== promptId
                   )
                   draft.promptCount = draft.promptIds.length
+                  draft.modifiedAt = now
                 }
               }),
               prompt: tx.prompt.delete({
@@ -314,8 +317,14 @@ export const setupPromptMutationHandlers = (): void => {
           const promptFolder = data.promptFolder.committedStore.getEntry(
             committedPrompt.persistenceFields.promptFolderId
           )
+
+          if (!promptFolder) {
+            return { success: false, error: 'Prompt folder not loaded' }
+          }
+
+          const now = getCurrentIsoSecondTimestamp()
           const promptTitleFields = resolvePromptTitleUpdateForPromptIds({
-            promptIds: promptFolder?.committed.promptIds ?? [],
+            promptIds: promptFolder.committed.promptIds,
             lookupPrompt: lookupCommittedPrompt,
             promptId: requestedPrompt.id,
             currentTitle: committedPrompt.committed.title,
@@ -325,6 +334,12 @@ export const setupPromptMutationHandlers = (): void => {
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
+              promptFolder: tx.promptFolder.update({
+                id: promptFolder.committed.id,
+                recipe: (draft) => {
+                  draft.modifiedAt = now
+                }
+              }),
               prompt: tx.prompt.update({
                 id: requestedPrompt.id,
                 expectedRevision: requestedPrompt.expectedRevision,
@@ -350,14 +365,18 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const updatedPrompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
+          const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
+            promptFolder.committed.id
+          )
 
-          if (!updatedPrompt) {
+          if (!updatedPrompt || !updatedPromptFolder) {
             return { success: false, error: 'Prompt update commit did not complete' }
           }
 
           return {
             success: true,
             payload: {
+              promptFolder: buildPromptFolderSnapshot(updatedPromptFolder),
               prompt: buildPromptSnapshot(updatedPrompt)
             }
           }
@@ -414,6 +433,7 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Order-after prompt not found' }
           }
 
+          const now = getCurrentIsoSecondTimestamp()
           const transactionOutcome = isSameFolder
             ? await runAtomicDataTransaction((tx) => {
                 return {
@@ -426,6 +446,7 @@ export const setupPromptMutationHandlers = (): void => {
                       )
                       nextPromptIds.splice(insertIndex, 0, requestedPrompt.id)
                       draft.promptIds = nextPromptIds
+                      draft.modifiedAt = now
                     }
                   })
                 }
@@ -440,6 +461,7 @@ export const setupPromptMutationHandlers = (): void => {
                         (promptId) => promptId !== requestedPrompt.id
                       )
                       draft.promptCount = draft.promptIds.length
+                      draft.modifiedAt = now
                     }
                   }),
                   destinationPromptFolder: tx.promptFolder.update({
@@ -450,6 +472,7 @@ export const setupPromptMutationHandlers = (): void => {
                       nextPromptIds.splice(insertIndex, 0, requestedPrompt.id)
                       draft.promptIds = nextPromptIds
                       draft.promptCount = nextPromptIds.length
+                      draft.modifiedAt = now
                     }
                   }),
                   prompt: tx.prompt.update({
@@ -554,6 +577,7 @@ export const setupPromptMutationHandlers = (): void => {
                   )
                   draft.completedPromptIds = [...draft.completedPromptIds, requestedPrompt.id]
                   draft.promptCount = draft.promptIds.length
+                  draft.modifiedAt = now
                 }
               }),
               prompt: tx.prompt.update({
