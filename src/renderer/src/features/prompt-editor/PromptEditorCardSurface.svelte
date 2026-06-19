@@ -7,18 +7,20 @@
   type Props = HTMLAttributes<HTMLDivElement> & {
     children: Snippet
     sidebar?: Snippet
+    showSidebar?: boolean
     rowElement?: HTMLDivElement | null
   }
 
   let {
     children,
     sidebar,
+    showSidebar = true,
     rowElement = $bindable(null),
     class: className,
     ...restProps
   }: Props = $props()
 
-  const layout = $derived(sidebar ? 'sidebar' : 'plain')
+  const layout = $derived(sidebar && showSidebar ? 'sidebar' : 'plain')
 </script>
 
 <CardSurface
@@ -27,7 +29,7 @@
   data-layout={layout}
   {...restProps}
 >
-  {#if sidebar}
+  {#if sidebar && showSidebar}
     {@render sidebar()}
   {/if}
 

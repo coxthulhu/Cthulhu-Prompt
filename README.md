@@ -10,22 +10,25 @@ Cthulhu Prompt is a lightweight prompt editor and organizer that helps you write
 - Browse all your prompts on a single screen with infinite scrolling.
 - Runs locally and quickly without any cloud or internet requirements.
 - Saves your prompts as simple markdown files. Version control them if you want to!
+- Works with any agentic interface - Just hit the copy button to get your templated prompt.
 
 ## Getting Started
 
-### Launch Cthulhu Prompt
+### Install Cthulhu Prompt
 
-1. Clone this repository.
-2. Install Node.js (which includes `npm`), or use any npm-compatible package manager.
-3. From the repository root, run `npm install`, then `npm run dev`.
+Currently, Cthulhu Prompt is supported in Windows, with support for other operating systems soon. 
+1. Navigate to Github releases to download either an installer or a portable version in a zip file. 
+2. Either run the installer or unzip the file into a folder and run Cthulhu Prompt!
 
-### Using Cthulhu Prompt
+### Setting Up a Workspace
 
-1. Create a prompt workspace folder (best kept separate from your code repo).
-2. Open Cthulhu Prompt, click "Select Workspace Folder", choose the folder, and use the auto-setup prompt dialog.
-3. Click in the sidebar to create a prompt folder (a workspace subfolder that stores JSON prompt files).
-4. Click the plus button to add a prompt, then write and title it in the prompt editor.
+Once you have Cthulhu Prompt running, you'll need to set up a workspace. This is a simple folder on your system that all your prompts will be placed into. 
+1. Click the Create Workspace button, then pick a folder name and a location for the folder. 
+2. I recommend leaving the examples toggled on, so that you can get a sense of how the UI looks. You can delete them later.
+3. Click create, and the workspace folder should be setup! You can now edit your prompts. 
 
-## Useful Commands
+### Optional Steps
 
-- `npm run dev` - Start development mode
+There are a couple other things that will improve your experience with Cthulhu Prompt.
+1. I recommend committing this workspace folder to a private git repository for version control and sharing across machines. If you aren't sure how, just ask your AI!
+2. You can also launch an AI agent within this folder, and ask it to reorganize your prompts, edit them, and more. Cthulhu Prompt's files are very simple, and your agent should have no trouble figuring them out!

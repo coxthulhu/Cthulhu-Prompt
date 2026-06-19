@@ -15,7 +15,9 @@ import {
   type PromptFull,
   type PromptPersisted,
   type PromptRevisionResponsePayload,
-  type PromptRevisionPayload
+  type PromptRevisionPayload,
+  type UncompletePromptPayload,
+  type UncompletePromptResponsePayload
 } from '@shared/Prompt'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import type { Transaction } from '@tanstack/svelte-db'
@@ -268,6 +270,7 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
       collections.promptDraft.delete(promptId)
       collections.promptFolder.update(promptFolderId, (draft) => {
         draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
+        draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
         draft.promptCount = draft.promptIds.length
         draft.modifiedAt = modifiedAt
       })
@@ -372,6 +375,94 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
       upsertPromptDraftFromPrompt(promptSnapshot.data)
     },
     conflictMessage: 'Prompt complete conflict'
+  })
+}
+
+export const uncompletePrompt = async (
+  promptFolderId: string,
+  promptId: string
+): Promise<void> => {
+  const promptFolder = promptFolderCollection.get(promptFolderId)
+  if (!promptFolder) {
+    throw new Error('Prompt folder not loaded')
+  }
+
+  const prompt = promptCollection.get(promptId)
+  const promptDraft = promptDraftCollection.get(promptId)
+  if (!promptDraft) {
+    throw new Error('Prompt draft not loaded')
+  }
+
+  const basePersistedPrompt =
+    prompt && isPromptFull(prompt)
+      ? toPersistedPrompt(prompt)
+      : {
+          id: promptDraft.id,
+          title: promptDraft.title,
+          fallbackTitle: promptDraft.fallbackTitle,
+          createdAt: promptDraft.createdAt,
+          modifiedAt: promptDraft.modifiedAt,
+          promptText: promptDraft.promptText
+        }
+  const { completed: _completed, completedAt: _completedAt, ...activePromptBase } =
+    basePersistedPrompt
+  const modifiedAt = getCurrentIsoSecondTimestamp()
+  const activePrompt: PromptPersisted = {
+    ...activePromptBase,
+    modifiedAt
+  }
+
+  await runRevisionMutation<UncompletePromptResponsePayload>({
+    mutateOptimistically: ({ collections }) => {
+      collections.promptFolder.update(promptFolderId, (draft) => {
+        draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
+        draft.promptIds = [promptId, ...draft.promptIds.filter((id) => id !== promptId)]
+        draft.promptCount = draft.promptIds.length
+        draft.modifiedAt = modifiedAt
+      })
+      collections.prompt.update(promptId, (draft) => {
+        if (draft.loadingState === 'full') {
+          Object.assign(draft, activePrompt)
+          delete draft.completed
+          delete draft.completedAt
+        }
+      })
+      collections.promptDraft.update(promptId, (draft) => {
+        Object.assign(draft, activePrompt)
+      })
+    },
+    persistMutations: async ({ entities, transaction }) => {
+      const promptEntity = entities.prompt({
+        id: promptId,
+        data: createPromptFull(activePrompt)
+      })
+      const mutationResult = await ipcInvokeWithPayload<
+        IpcMutationPayloadResult<UncompletePromptResponsePayload>,
+        UncompletePromptPayload
+      >('uncomplete-prompt', {
+        promptFolder: entities.promptFolder({
+          id: promptFolderId,
+          data: promptFolder
+        }),
+        prompt: {
+          ...promptEntity,
+          data: toPersistedPrompt(promptEntity.data)
+        }
+      })
+
+      if (mutationResult.success) {
+        promptDraftCollection.utils.acceptMutations(transaction)
+      }
+
+      return mutationResult
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      const promptSnapshot = toFullPromptSnapshot(payload.prompt)
+      promptCollection.utils.upsertAuthoritative(promptSnapshot)
+      upsertPromptDraftFromPrompt(promptSnapshot.data)
+    },
+    conflictMessage: 'Prompt uncomplete conflict'
   })
 }
 

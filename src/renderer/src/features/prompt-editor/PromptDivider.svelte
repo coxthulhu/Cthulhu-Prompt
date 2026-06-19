@@ -12,11 +12,13 @@
 
   let {
     onAddPrompt,
+    mode = 'add',
     disabled = false,
     testId,
     getDropOptions
   }: {
     onAddPrompt?: () => void
+    mode?: 'add' | 'separator'
     disabled?: boolean
     testId?: string
     getDropOptions?: () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
@@ -32,14 +34,18 @@
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
   >
     <div
-      class="grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5"
+      class={mode === 'separator'
+        ? 'grid min-h-9 grid-cols-1 items-center'
+        : 'grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5'}
     >
       <Separator
         class={isOver
           ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
           : 'bg-[var(--ui-neutral-muted-border)]'}
       />
-      {#if isOver}
+      {#if mode === 'separator'}
+        <!-- Completed mode uses the divider as a plain section separator. -->
+      {:else if isOver}
         <div
           class="promptDividerMoveIndicator"
           data-drop-over="true"
@@ -66,12 +72,14 @@
           }}
         />
       {/if}
-      <!-- Add subfolder is parked until prompt folders support nested creation. -->
-      <Separator
-        class={isOver
-          ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
-          : 'bg-[var(--ui-neutral-muted-border)]'}
-      />
+      {#if mode !== 'separator'}
+        <!-- Add subfolder is parked until prompt folders support nested creation. -->
+        <Separator
+          class={isOver
+            ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
+            : 'bg-[var(--ui-neutral-muted-border)]'}
+        />
+      {/if}
     </div>
   </div>
 {/snippet}

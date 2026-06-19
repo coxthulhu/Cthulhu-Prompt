@@ -4,7 +4,8 @@ import type {
   DeletePromptPayload,
   MovePromptPayload,
   PromptPersisted,
-  PromptRevisionPayload
+  PromptRevisionPayload,
+  UncompletePromptPayload
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
@@ -451,6 +452,14 @@ const parseCompletePromptPayload = parseObject<CompletePromptPayload>({
 const parseCompletePromptWireRequest: Parser<IpcRequestWithPayload<CompletePromptPayload>> =
   parseWireRequestWithPayload<CompletePromptPayload>(parseCompletePromptPayload)
 
+const parseUncompletePromptPayload = parseObject<UncompletePromptPayload>({
+  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  prompt: parsePromptRevisionPayloadEntity
+})
+
+const parseUncompletePromptWireRequest: Parser<IpcRequestWithPayload<UncompletePromptPayload>> =
+  parseWireRequestWithPayload<UncompletePromptPayload>(parseUncompletePromptPayload)
+
 const parseMovePromptFolderPayload = parseObject<MovePromptFolderPayload>({
   workspace: parseWorkspaceRevisionPayloadEntity,
   promptFolderId: parseString,
@@ -544,6 +553,8 @@ export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWir
 export const parseMovePromptRequest = createRequestParser(parseMovePromptWireRequest)
 
 export const parseCompletePromptRequest = createRequestParser(parseCompletePromptWireRequest)
+
+export const parseUncompletePromptRequest = createRequestParser(parseUncompletePromptWireRequest)
 
 export const parseMovePromptFolderRequest = createRequestParser(parseMovePromptFolderWireRequest)
 

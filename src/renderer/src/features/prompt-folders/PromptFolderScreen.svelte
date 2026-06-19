@@ -6,14 +6,17 @@
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
+  import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
-  let { promptFolderId, onPromptFolderSelect } = $props<{
+  let { promptFolderId, screenMode = PromptFolderScreenMode.Active, onPromptFolderSelect } = $props<{
     promptFolderId: string
+    screenMode?: PromptFolderScreenMode
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
   const controller = createPromptFolderScreenController({
     getPromptFolderId: () => promptFolderId,
+    getScreenMode: () => screenMode,
     onPromptFolderSelect: (nextPromptFolderId) => onPromptFolderSelect(nextPromptFolderId)
   })
 
@@ -82,7 +85,9 @@
             folderSettings={controller.folderSettings}
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
             promptDraftById={controller.promptDraftById}
+            completedAtByPromptId={controller.completedAtByPromptId}
             visiblePromptIds={controller.visiblePromptIds}
+            {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
             promptFocusRequest={controller.promptFocusRequest}
             isFolderSettingsSectionExpanded={controller.isFolderSettingsSectionExpanded}
@@ -93,6 +98,7 @@
             onAddPrompt={controller.handleAddPrompt}
             onDeletePrompt={controller.handleDeletePrompt}
             onCompletePrompt={controller.handleCompletePrompt}
+            onUncompletePrompt={controller.handleUncompletePrompt}
             onMovePromptUp={controller.handleMovePromptUp}
             onMovePromptDown={controller.handleMovePromptDown}
             onPromptTreeDrop={controller.handlePromptTreeDrop}

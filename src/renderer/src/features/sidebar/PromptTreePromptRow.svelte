@@ -12,8 +12,8 @@
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
-    getPromptDroppableOptions: () => PromptRowDropOptions
-    promptDragOptions: PromptRowDragOptions
+    getPromptDroppableOptions?: () => PromptRowDropOptions
+    promptDragOptions?: PromptRowDragOptions
     onPromptSelect: (folderId: string, promptId: string) => void
   }
 
@@ -54,14 +54,8 @@
   const rowStyle = `--prompt-tree-indent-count:${promptIndentCount}; --prompt-tree-indent-base:${promptIndentBasePx}px;`
 </script>
 
-<PromptDropTarget
-  getOptions={getPromptDroppableOptions}
-  class="sidebarPromptTreeSettingsRow"
-  style={rowStyle}
->
-  <PromptTreeGutter indentCount={promptIndentCount} />
+{#snippet promptButton()}
   <button
-    use:draggable={promptDragOptions}
     type="button"
     data-testid={folderPromptTestId(promptId)}
     data-row-state={rowState}
@@ -71,4 +65,30 @@
   >
     <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
   </button>
-</PromptDropTarget>
+{/snippet}
+
+{#if getPromptDroppableOptions && promptDragOptions}
+  <PromptDropTarget
+    getOptions={getPromptDroppableOptions}
+    class="sidebarPromptTreeSettingsRow"
+    style={rowStyle}
+  >
+    <PromptTreeGutter indentCount={promptIndentCount} />
+    <button
+      use:draggable={promptDragOptions}
+      type="button"
+      data-testid={folderPromptTestId(promptId)}
+      data-row-state={rowState}
+      aria-current={isActive ? 'true' : undefined}
+      onclick={handlePromptSelect}
+      class="sidebarPromptTreeSettingsButton"
+    >
+      <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
+    </button>
+  </PromptDropTarget>
+{:else}
+  <div class="sidebarPromptTreeSettingsRow" style={rowStyle}>
+    <PromptTreeGutter indentCount={promptIndentCount} />
+    {@render promptButton()}
+  </div>
+{/if}

@@ -13,6 +13,7 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
     onComplete?: () => void
+    onUncomplete?: () => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onTitleForwardTab?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
@@ -22,6 +23,7 @@
     icon?: ComponentType
     copyLabel?: string
     copyTitle?: string
+    completedAt?: string | null
   }
 </script>
 
@@ -44,6 +46,7 @@
     scrollToWithinWindowBand,
     onDelete,
     onComplete,
+    onUncomplete,
     onSelectionChange,
     onTitleForwardTab,
     inputRef = $bindable(null),
@@ -52,7 +55,8 @@
     tokenCount,
     icon = FileText,
     copyLabel,
-    copyTitle
+    copyTitle,
+    completedAt = null
   }: PromptEditorTitleRowProps = $props()
 
   // Derived placeholder text shows the fallback title when the title is empty.
@@ -69,6 +73,11 @@
     modifiedRelativeLabel ? `Updated ${modifiedRelativeLabel}` : ''
   )
   const modifiedFullLabel = $derived(modifiedAt ? formatPromptModifiedFull(modifiedAt) : '')
+  const completedRelativeLabel = $derived(
+    completedAt ? formatPromptModifiedRelative(completedAt, nowMs) : ''
+  )
+  const completedLabel = $derived(completedRelativeLabel ? `Completed ${completedRelativeLabel}` : '')
+  const completedFullLabel = $derived(completedAt ? formatPromptModifiedFull(completedAt) : '')
 
   // Side effect: keep the relative modified label fresh while the prompt folder stays open.
   onMount(() => {
@@ -157,6 +166,12 @@
             {modifiedUpdatedLabel}
           </span>
         {/if}
+        {#if completedAt}
+          <SeparatorDot />
+          <span data-testid="prompt-completed-time" title={completedFullLabel}>
+            {completedLabel}
+          </span>
+        {/if}
       </div>
     </div>
   </div>
@@ -167,6 +182,7 @@
     {copyText}
     {onDelete}
     {onComplete}
+    {onUncomplete}
     {copyLabel}
     {copyTitle}
   />

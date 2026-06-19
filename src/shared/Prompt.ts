@@ -111,3 +111,13 @@ export type CompletePromptResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
   prompt: RevisionEnvelope<PromptPersisted>
 }
+
+export type UncompletePromptPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+  prompt: RevisionPayloadEntity<PromptPersisted>
+}
+
+export type UncompletePromptResponsePayload = {
+  promptFolder: RevisionEnvelope<PromptFolder>
+  prompt: RevisionEnvelope<PromptPersisted>
+}

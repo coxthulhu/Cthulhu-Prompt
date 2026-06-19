@@ -19,6 +19,7 @@
     type PromptDraftRecord,
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
+  import { promptCollection } from '@renderer/data/Collections/PromptCollection'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
   import {
@@ -32,6 +33,8 @@
     setPromptFolderPromptTreeEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
+  import type { Prompt } from '@shared/Prompt'
+  import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
@@ -66,6 +69,7 @@
     expandAllRequestVersion = 0,
     collapseAllRequestVersion = 0,
     isPromptFoldersScreenActive = false,
+    screenMode = PromptFolderScreenMode.Active,
     onAllPromptFoldersCollapsedChange,
     onPromptFolderSelect
   } = $props<{
@@ -75,6 +79,7 @@
     expandAllRequestVersion?: number
     collapseAllRequestVersion?: number
     isPromptFoldersScreenActive?: boolean
+    screenMode?: PromptFolderScreenMode
     onAllPromptFoldersCollapsedChange: (isCollapsed: boolean) => void
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
@@ -111,6 +116,9 @@
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
     data: PromptDraftRecord[]
   }
+  const promptQuery = useLiveQuery(promptCollection) as {
+    data: Prompt[]
+  }
 
   const promptTreeTitleById = $derived.by(() => {
     const titlesById: Record<string, string> = {}
@@ -125,6 +133,19 @@
 
     return titlesById
   })
+  const promptById = $derived.by(() => {
+    const promptsById: Record<string, Prompt> = {}
+
+    for (const prompt of promptQuery.data) {
+      if (!prompt) {
+        continue
+      }
+
+      promptsById[prompt.id] = prompt
+    }
+
+    return promptsById
+  })
 
   const selectedPromptFolder = $derived.by((): PromptFolder | null => {
     if (promptFolders.length === 0) {
@@ -136,8 +157,24 @@
       promptFolders[0]!
     )
   })
+  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  const selectedPromptIds = $derived.by((): string[] => {
+    if (!selectedPromptFolder) {
+      return []
+    }
+
+    if (!isCompletedMode) {
+      return selectedPromptFolder.promptIds
+    }
+
+    return [...selectedPromptFolder.completedPromptIds].sort((leftPromptId, rightPromptId) => {
+      const leftCompletedAt = promptById[leftPromptId]?.completedAt ?? ''
+      const rightCompletedAt = promptById[rightPromptId]?.completedAt ?? ''
+      return rightCompletedAt.localeCompare(leftCompletedAt)
+    })
+  })
   const selectedPromptFolderHasNoPrompts = $derived(
-    selectedPromptFolder !== null && selectedPromptFolder.promptIds.length === 0
+    selectedPromptFolder !== null && selectedPromptIds.length === 0
   )
 
   const PROMPT_TREE_ROW_CONTENT_INSET = '10px'
@@ -341,7 +378,7 @@
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
     if (selectedPromptFolder) {
-      for (const promptId of selectedPromptFolder.promptIds) {
+      for (const promptId of selectedPromptIds) {
         items.push({
           id: folderPromptRowId(selectedPromptFolder.id, promptId),
           row: {
@@ -380,8 +417,12 @@
       class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
       data-testid="prompt-tree-empty-state"
     >
-      <p class="sidebarPromptTreeEmptyTitle">No prompts found in this folder.</p>
-      <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
+      <p class="sidebarPromptTreeEmptyTitle">
+        {isCompletedMode ? 'No completed prompts found in this folder' : 'No prompts found in this folder.'}
+      </p>
+      {#if !isCompletedMode}
+        <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
+      {/if}
     </div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
@@ -415,24 +456,24 @@
     {isActive}
     {isDragging}
     {isPromptDragActive}
-    getPromptDroppableOptions={() =>
-      getPromptTreeDroppableOptions(
-        props.rowId,
-        'top-and-bottom',
-        (edge) => ({
-          kind: 'prompt',
-          folderId: props.row.folder.id,
-          promptId: props.row.promptId,
-          edge: edge ?? 'bottom'
-        }),
-        (payload, edge) =>
-          canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
-      )}
-    promptDragOptions={getPromptRowDragOptions(
-      props.row.folder.id,
-      props.row.promptId,
-      promptTitle
-    )}
+    getPromptDroppableOptions={isCompletedMode
+      ? undefined
+      : () =>
+          getPromptTreeDroppableOptions(
+            props.rowId,
+            'top-and-bottom',
+            (edge) => ({
+              kind: 'prompt',
+              folderId: props.row.folder.id,
+              promptId: props.row.promptId,
+              edge: edge ?? 'bottom'
+            }),
+            (payload, edge) =>
+              canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
+          )}
+    promptDragOptions={isCompletedMode
+      ? undefined
+      : getPromptRowDragOptions(props.row.folder.id, props.row.promptId, promptTitle)}
     onPromptSelect={handlePromptTreePromptSelect}
   />
 {/snippet}

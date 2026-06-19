@@ -3,7 +3,7 @@
   import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import { Check, Trash2 } from 'lucide-svelte'
+  import { Check, Trash2, Undo2 } from 'lucide-svelte'
 
   type Props = {
     title: string
@@ -11,6 +11,7 @@
     copyText?: string
     onDelete?: () => void
     onComplete?: () => void
+    onUncomplete?: () => void
     copyLabel?: string
     copyTitle?: string
   }
@@ -21,6 +22,7 @@
     copyText,
     onDelete,
     onComplete,
+    onUncomplete,
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt'
   }: Props = $props()
@@ -59,6 +61,16 @@
       onclick={onComplete}
     />
   {/if}
+  {#if onUncomplete}
+    <IconButton
+      icon={Undo2}
+      label="Uncomplete prompt"
+      title="Uncomplete prompt"
+      hoverVariant="accent"
+      testId="prompt-uncomplete-button"
+      onclick={onUncomplete}
+    />
+  {/if}
   {#if onDelete}
     <IconButton
       icon={Trash2}
@@ -69,7 +81,7 @@
       onclick={handleDeleteClick}
     />
   {/if}
-  {#if onComplete || onDelete}
+  {#if onComplete || onUncomplete || onDelete}
     <Separator orientation="vertical" class="h-6" />
   {/if}
   <CopyButton

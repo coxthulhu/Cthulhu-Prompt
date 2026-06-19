@@ -47,6 +47,7 @@
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
   import { getPromptLineCount, getPromptTokenCount } from './promptEditorCounts'
+  import { PromptFolderScreenMode } from '../prompt-folders/promptFolderScreenMode'
 
   type PromptFocusRequest = { promptId: string; requestId: number }
 
@@ -65,6 +66,8 @@
     overlayRowElement,
     onHydrationChange,
     folderSettings,
+    screenMode = PromptFolderScreenMode.Active,
+    completedAt = null,
     scrollToWithinWindowBand,
     focusRequest,
     isFirstPrompt,
@@ -72,6 +75,7 @@
     onEditorLifecycle,
     onDelete,
     onComplete,
+    onUncomplete,
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
@@ -90,13 +94,16 @@
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
     folderSettings: PromptFolderSettings
+    screenMode?: PromptFolderScreenMode
+    completedAt?: string | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     focusRequest?: PromptFocusRequest | null
     isFirstPrompt: boolean
     isLastPrompt: boolean
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     onDelete: () => void
-    onComplete: () => void
+    onComplete?: () => void
+    onUncomplete?: () => void
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
@@ -165,6 +172,8 @@
   const findContext = getPromptFolderFindContext()
 
   const SIDEBAR_WIDTH_PX = 36
+  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  const sidebarWidthPx = $derived(isCompletedMode ? 0 : SIDEBAR_WIDTH_PX)
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
   const OVERFLOW_TOP_PADDING_PX =
@@ -173,7 +182,7 @@
     PROMPT_EDITOR_BODY_PADDING_TOP_PX +
     MONACO_VERTICAL_PADDING_PX
   const OVERFLOW_LEFT_PADDING_PX = $derived(
-    rowContentLeftOffsetPx + SIDEBAR_WIDTH_PX + PROMPT_EDITOR_BODY_PADDING_LEFT_PX
+    rowContentLeftOffsetPx + sidebarWidthPx + PROMPT_EDITOR_BODY_PADDING_LEFT_PX
   )
   const OVERFLOW_RIGHT_PADDING_PX = PROMPT_EDITOR_BODY_PADDING_RIGHT_PX
   const OVERFLOW_BOTTOM_PADDING_PX =
@@ -397,6 +406,7 @@
 
 <PromptEditorCardSurface
   bind:rowElement
+  showSidebar={!isCompletedMode}
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
   data-dragging={isDragging ? 'true' : 'false'}
@@ -420,6 +430,7 @@
     draftText={promptData.draft.text}
     {copyText}
     modifiedAt={promptData.modifiedAt}
+    {completedAt}
     fallbackTitle={promptData.fallbackTitle}
     {lineCount}
     {tokenCount}
@@ -431,6 +442,7 @@
     {scrollToWithinWindowBand}
     {onDelete}
     {onComplete}
+    {onUncomplete}
     titleAreaHeightPx={PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}
   />
 

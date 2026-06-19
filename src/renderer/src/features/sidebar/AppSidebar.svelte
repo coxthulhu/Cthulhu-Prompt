@@ -19,7 +19,7 @@
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { ChevronsDownUp, Clock, ExternalLink, Folder, Plus, Settings } from 'lucide-svelte'
+  import { Check, ChevronsDownUp, Clock, ExternalLink, Folder, Plus, Settings } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -34,6 +34,7 @@
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
+  import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
@@ -47,6 +48,8 @@
     isWorkspaceLoading = false,
     workspacePath = null,
     selectedPromptFolderId = null,
+    promptFolderScreenMode = PromptFolderScreenMode.Active,
+    onPromptFolderModeChange,
     onPromptFolderSelect
   } = $props<{
     activeScreen: ScreenId
@@ -54,6 +57,8 @@
     isWorkspaceLoading?: boolean
     workspacePath?: string | null
     selectedPromptFolderId?: string | null
+    promptFolderScreenMode?: PromptFolderScreenMode
+    onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
     onPromptFolderSelect: (promptFolderId: string) => void
   }>()
 
@@ -216,6 +221,9 @@
   ]
   const promptFolderExpansionActionIcon = ChevronsDownUp
   const promptFolderExpansionActionLabel = 'Collapse All Prompt Folders'
+  const isCompletedPromptMode = $derived(
+    promptFolderScreenMode === PromptFolderScreenMode.Completed
+  )
 
   const handlePromptFolderExpansionAction = () => {
     // Collapse All is paused until subfolders make tree expansion meaningful again.
@@ -225,6 +233,7 @@
     const promptFolder = selectedPromptFolder
     if (!promptFolder) return
 
+    onPromptFolderModeChange(PromptFolderScreenMode.Active)
     promptNavigation.select({
       folderId: promptFolder.id,
       row: 'folder-settings',
@@ -241,6 +250,12 @@
     // Hand off to the main process so Windows opens the folder in Explorer.
     void runIpcBestEffort(() =>
       ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath)
+    )
+  }
+
+  const toggleCompletedPromptMode = () => {
+    onPromptFolderModeChange(
+      isCompletedPromptMode ? PromptFolderScreenMode.Active : PromptFolderScreenMode.Completed
     )
   }
 
@@ -522,6 +537,17 @@
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
+          icon={Check}
+          label="Show Completed Prompts"
+          title="Show Completed Prompts"
+          size="compact"
+          disabled={!selectedPromptFolder}
+          active={isCompletedPromptMode}
+          testId="toggle-completed-prompts-button"
+          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+          onclick={toggleCompletedPromptMode}
+        />
+        <IconButton
           icon={Settings}
           label="Open Selected Prompt Folder Settings"
           title="Open Selected Prompt Folder Settings"
@@ -561,6 +587,7 @@
       {promptFolders}
       {folderListState}
       {selectedPromptFolderId}
+      screenMode={promptFolderScreenMode}
       expandAllRequestVersion={expandAllPromptFoldersVersion}
       collapseAllRequestVersion={collapseAllPromptFoldersVersion}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}

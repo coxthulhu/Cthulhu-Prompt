@@ -20,6 +20,7 @@
     scrollToWithinWindowBand,
     onDelete,
     onComplete,
+    onUncomplete,
     onSelectionChange,
     onTitleForwardTab,
     inputRef = $bindable(null),
@@ -29,6 +30,7 @@
     icon,
     copyLabel,
     copyTitle,
+    completedAt,
     titleAreaHeightPx,
     infoText
   }: Props = $props()
@@ -49,6 +51,7 @@
     {scrollToWithinWindowBand}
     {onDelete}
     {onComplete}
+    {onUncomplete}
     {onSelectionChange}
     {onTitleForwardTab}
     bind:inputRef
@@ -58,6 +61,7 @@
     {icon}
     {copyLabel}
     {copyTitle}
+    {completedAt}
   />
 
   {#if infoText}

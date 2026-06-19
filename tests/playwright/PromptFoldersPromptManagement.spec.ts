@@ -29,6 +29,7 @@ const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
 const COPY_PREFIX_SUFFIX_WORKSPACE_PATH = '/ws/copy-prefix-suffix'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SELF_HEALING_WORKSPACE_PATH = '/ws/completed-self-healing'
+const COMPLETED_MODE_WORKSPACE_PATH = '/ws/completed-mode'
 const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
 const FALLBACK_TITLE_FOLDER_NAME = 'Fallback Titles'
 const COMPLETION_FOLDER_NAME = 'Development'
@@ -51,6 +52,8 @@ const moveDownSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
 const completeSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-complete-button"]`
+const uncompleteSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-uncomplete-button"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
@@ -262,6 +265,82 @@ const buildCompletedSelfHealingWorkspace = () => {
     [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_Completed`]: null,
     [activePath]: serializePromptMarkdown(activePrompt),
     [completedPath]: serializePromptMarkdown(completedPrompt)
+  }
+}
+
+const buildCompletedModeWorkspace = () => {
+  const folderName = 'Completed Mode'
+  const activePrompt: PromptPersisted = {
+    id: 'completed-mode-active',
+    title: 'Active Prompt',
+    fallbackTitle: '',
+    createdAt: '2023-01-01T00:00:00.000Z',
+    modifiedAt: '2023-01-01T00:00:00.000Z',
+    promptText: 'This active prompt should be visible by default.'
+  }
+  const newestCompletedPrompt: PromptPersisted = {
+    id: 'completed-mode-newest',
+    title: 'Newest Completed',
+    fallbackTitle: '',
+    createdAt: '2023-01-02T00:00:00.000Z',
+    modifiedAt: '2023-01-05T00:00:00.000Z',
+    promptText: 'Newest completed body marker.',
+    completed: true,
+    completedAt: '2023-01-05T00:00:00.000Z'
+  }
+  const oldestCompletedPrompt: PromptPersisted = {
+    id: 'completed-mode-oldest',
+    title: 'Oldest Completed',
+    fallbackTitle: '',
+    createdAt: '2023-01-03T00:00:00.000Z',
+    modifiedAt: '2023-01-04T00:00:00.000Z',
+    promptText: 'Oldest completed body marker.',
+    completed: true,
+    completedAt: '2023-01-04T00:00:00.000Z'
+  }
+  const workspace = createWorkspaceWithFolders(COMPLETED_MODE_WORKSPACE_PATH, [
+    {
+      folderName,
+      displayName: folderName,
+      prompts: [
+        {
+          id: activePrompt.id,
+          title: activePrompt.title,
+          promptText: activePrompt.promptText,
+          createdAt: activePrompt.createdAt
+        }
+      ]
+    },
+    {
+      folderName: 'No Completed',
+      displayName: 'No Completed',
+      prompts: [
+        {
+          id: 'no-completed-active',
+          title: 'Only Active',
+          promptText: 'This folder has no completed prompts.'
+        }
+      ]
+    }
+  ])
+  const newestCompletedPath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+    folderName: `${folderName}/_Completed`,
+    promptId: newestCompletedPrompt.id,
+    promptTitle: newestCompletedPrompt.title
+  }).markdownPath
+  const oldestCompletedPath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+    folderName: `${folderName}/_Completed`,
+    promptId: oldestCompletedPrompt.id,
+    promptTitle: oldestCompletedPrompt.title
+  }).markdownPath
+
+  return {
+    ...workspace,
+    [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/_Completed`]: null,
+    [newestCompletedPath]: serializePromptMarkdown(newestCompletedPrompt),
+    [oldestCompletedPath]: serializePromptMarkdown(oldestCompletedPrompt)
   }
 }
 
@@ -680,6 +759,119 @@ describe('Prompt folder prompt management', () => {
     expect(completedMarkdown).toContain('completed: true')
     expect(completedMarkdown).toContain('completedAt:')
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
+  })
+
+  test('shows completed prompts and uncompletes them back to the active folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildCompletedModeWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+
+    await testHelpers.navigateToPromptFolders('Completed Mode')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
+    expect(await getPromptEditorIds(mainWindow)).toEqual(['completed-mode-active'])
+    expect(await getPromptTreePromptRowIds(mainWindow)).toEqual(['completed-mode-active'])
+
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-newest', 'completed-mode-oldest'])
+    expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([
+      'completed-mode-newest',
+      'completed-mode-oldest'
+    ])
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
+      'Completed Prompts'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-divider-add"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(0)
+    await expect(mainWindow.locator(completeSelector('completed-mode-newest'))).toHaveCount(0)
+    await expect(mainWindow.locator(uncompleteSelector('completed-mode-newest'))).toBeVisible()
+    await expect(
+      mainWindow.locator(`${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-delete-button"]`)
+    ).toBeVisible()
+    await expect(
+      mainWindow.locator(`${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-completed-time"]`)
+    ).toContainText('Completed')
+
+    await mainWindow.locator('[data-testid="prompt-folder-find-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-find-input"]').fill('Newest completed body marker')
+    await expect(
+      mainWindow.locator('[data-testid="prompt-find-widget"] .prompt-find-widget__matches')
+    ).toHaveText('1 of 1')
+    await mainWindow.keyboard.press('Escape')
+
+    await mainWindow.locator(uncompleteSelector('completed-mode-newest')).click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-oldest'])
+
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-newest', 'completed-mode-active'])
+    expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([
+      'completed-mode-newest',
+      'completed-mode-active'
+    ])
+
+    await expect
+      .poll(
+        async () => {
+          const [activeFiles, completedFiles] = await Promise.all([
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+              folderName: 'Completed Mode',
+              promptId: 'completed-mode-newest',
+              promptTitle: 'Newest Completed'
+            }),
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+              folderName: 'Completed Mode/_Completed',
+              promptId: 'completed-mode-newest',
+              promptTitle: 'Newest Completed'
+            })
+          ])
+
+          return { activeFiles, completedFiles }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        activeFiles: { markdownExists: true },
+        completedFiles: { markdownExists: false }
+      })
+
+    const activeMarkdown = await readPersistedPromptTextById(electronApp, {
+      workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+      folderName: 'Completed Mode',
+      promptId: 'completed-mode-newest',
+      promptTitle: 'Newest Completed'
+    })
+    expect(activeMarkdown).not.toContain('completed: true')
+    expect(activeMarkdown).not.toContain('completedAt:')
+
+    await testHelpers.navigateToPromptFolders('No Completed')
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toHaveText(
+      'No completed prompts found in this folder'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toContainText(
+      'No completed prompts found in this folder'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).not.toContainText(
+      'Click the Add Prompt button'
+    )
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {

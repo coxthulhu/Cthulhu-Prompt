@@ -63,6 +63,7 @@
     ActivePromptTreeRow,
     PromptFocusRequest
   } from './promptFolderScreenController.svelte.ts'
+  import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
   type PromptFolderRow =
     | { kind: 'folder-settings-header' }
@@ -83,7 +84,9 @@
     folderSettings: PromptFolderSettings
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, PromptDraftRecord>
+    completedAtByPromptId: Record<string, string>
     visiblePromptIds: string[]
+    screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
     isFolderSettingsSectionExpanded: boolean
@@ -94,6 +97,7 @@
     onAddPrompt: (previousPromptId: string | null) => void
     onDeletePrompt: (promptId: string) => void
     onCompletePrompt: (promptId: string) => void
+    onUncompletePrompt: (promptId: string) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
     onMovePromptDown: (promptId: string) => Promise<boolean>
     onPromptTreeDrop: (
@@ -123,7 +127,9 @@
     folderSettings,
     promptEditorSizingConfig,
     promptDraftById,
+    completedAtByPromptId,
     visiblePromptIds,
+    screenMode,
     isCreatingPrompt,
     promptFocusRequest,
     isFolderSettingsSectionExpanded,
@@ -134,6 +140,7 @@
     onAddPrompt,
     onDeletePrompt,
     onCompletePrompt,
+    onUncompletePrompt,
     onMovePromptUp,
     onMovePromptDown,
     onPromptTreeDrop,
@@ -155,6 +162,7 @@
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
+  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
 
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
@@ -273,26 +281,28 @@
   })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
-    const rows: VirtualWindowItem<PromptFolderRow>[] = [
-      {
+    const rows: VirtualWindowItem<PromptFolderRow>[] = []
+
+    if (!isCompletedMode) {
+      rows.push({
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
           kind: 'folder-settings-header'
         }
-      }
-    ]
-
-    if (isFolderSettingsSectionExpanded) {
-      PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field, index) => {
-        rows.push({
-          id: promptFolderSettingsRowId(field),
-          row: {
-            kind: 'folder-settings-field',
-            field,
-            includeBottomGap: index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
-          }
-        })
       })
+
+      if (isFolderSettingsSectionExpanded) {
+        PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field, index) => {
+          rows.push({
+            id: promptFolderSettingsRowId(field),
+            row: {
+              kind: 'folder-settings-field',
+              field,
+              includeBottomGap: index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
+            }
+          })
+        })
+      }
     }
 
     rows.push({
@@ -305,10 +315,12 @@
 
     if (isPromptsSectionExpanded) {
       if (visiblePromptIds.length === 0) {
-        rows.push({
-          id: 'divider-initial',
-          row: { kind: 'prompt-divider', previousPromptId: null }
-        })
+        if (!isCompletedMode) {
+          rows.push({
+            id: 'divider-initial',
+            row: { kind: 'prompt-divider', previousPromptId: null }
+          })
+        }
         rows.push({
           id: 'placeholder-empty',
           row: { kind: 'placeholder' }
@@ -338,7 +350,10 @@
       onCenterRowChange({ kind: 'prompt', promptId: row.promptId })
       return
     }
-    if (row?.kind === 'folder-settings-header' || row?.kind === 'folder-settings-field') {
+    if (
+      !isCompletedMode &&
+      (row?.kind === 'folder-settings-header' || row?.kind === 'folder-settings-field')
+    ) {
       onCenterRowChange({ kind: 'folder-settings' })
       return
     }
@@ -492,7 +507,7 @@
 {#snippet promptHeaderRow({ rowHeightPx })}
   <PromptFolderSectionRow
     {rowHeightPx}
-    contentClass="pt-6 pb-1"
+    contentClass="pt-6"
     contentVirtualWindowRow
     topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
   >
@@ -509,7 +524,9 @@
         iconSize={24}
         class="prompt-folder-section-header-chevron"
       />
-      <span class="prompt-folder-section-header-title">Prompts</span>
+      <span class="prompt-folder-section-header-title">
+        {isCompletedMode ? 'Completed Prompts' : 'Prompts'}
+      </span>
     </button>
   </PromptFolderSectionRow>
 {/snippet}
@@ -520,8 +537,10 @@
     contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
     showGutter={false}
   >
-    <p>No prompts found in this folder.</p>
-    <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
+    <p>{isCompletedMode ? 'No completed prompts found in this folder' : 'No prompts found in this folder.'}</p>
+    {#if !isCompletedMode}
+      <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
+    {/if}
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -529,8 +548,11 @@
   <PromptFolderSectionRow {rowHeightPx}>
     <PromptDivider
       disabled={isCreatingPrompt}
-      onAddPrompt={() => onAddPrompt(row.previousPromptId)}
-      getDropOptions={() => getPromptDividerDropOptions(rowId, row.previousPromptId)}
+      mode={isCompletedMode ? 'separator' : 'add'}
+      onAddPrompt={isCompletedMode ? undefined : () => onAddPrompt(row.previousPromptId)}
+      getDropOptions={isCompletedMode
+        ? undefined
+        : () => getPromptDividerDropOptions(rowId, row.previousPromptId)}
       testId={row.previousPromptId
         ? `prompt-divider-add-after-${row.previousPromptId}`
         : 'prompt-divider-add-initial'}
@@ -566,15 +588,22 @@
       {overlayRowElement}
       {onHydrationChange}
       {folderSettings}
+      screenMode={screenMode}
+      completedAt={completedAtByPromptId[row.promptId] ?? null}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       focusRequest={promptFocusRequest}
       isFirstPrompt={promptIndex === 0}
       isLastPrompt={promptIndex === visiblePromptIds.length - 1}
       onDelete={() => onDeletePrompt(row.promptId)}
-      onComplete={() => onCompletePrompt(row.promptId)}
-      onMoveUp={() => handleMovePromptUp(row.promptId)}
-      onMoveDown={() => handleMovePromptDown(row.promptId)}
-      onPromptTreeDrop={(dropPayload) => onPromptTreeDrop(row.promptId, dropPayload)}
+      onComplete={isCompletedMode ? undefined : () => onCompletePrompt(row.promptId)}
+      onUncomplete={isCompletedMode ? () => onUncompletePrompt(row.promptId) : undefined}
+      onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(row.promptId))}
+      onMoveDown={() =>
+        isCompletedMode ? Promise.resolve(false) : handleMovePromptDown(row.promptId)}
+      onPromptTreeDrop={(dropPayload) => {
+        if (isCompletedMode) return
+        return onPromptTreeDrop(row.promptId, dropPayload)
+      }}
     />
   </PromptFolderSectionRow>
 {/snippet}

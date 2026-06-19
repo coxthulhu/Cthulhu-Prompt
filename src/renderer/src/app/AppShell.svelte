@@ -14,6 +14,7 @@
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
+  import { PromptFolderScreenMode } from '../features/prompt-folders/promptFolderScreenMode'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import type {
     WorkspaceCreationResult,
@@ -149,6 +150,7 @@
   })
   const workspacePromptFolderCount = $derived(selectedWorkspace?.promptFolderIds.length ?? 0)
   let selectedPromptFolderId = $state<string | null>(null)
+  let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -180,6 +182,7 @@
 
   const clearPromptFolderSelection = () => {
     selectedPromptFolderId = null
+    promptFolderScreenMode = PromptFolderScreenMode.Active
   }
 
   const hasWorkspacePromptFolder = (promptFolderId: string | null): promptFolderId is string => {
@@ -527,6 +530,8 @@
       const promptFolderId = resolvePromptFolderNavigationId()
       if (!promptFolderId) return
       selectedPromptFolderId = promptFolderId
+    } else {
+      promptFolderScreenMode = PromptFolderScreenMode.Active
     }
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
@@ -539,6 +544,10 @@
     }
     selectedPromptFolderId = promptFolderId
     navigateToScreen('prompt-folders')
+  }
+
+  const setPromptFolderMode = (nextMode: PromptFolderScreenMode): void => {
+    promptFolderScreenMode = nextMode
   }
 </script>
 
@@ -567,6 +576,8 @@
           {isWorkspaceLoading}
           {workspacePath}
           {selectedPromptFolderId}
+          promptFolderScreenMode={promptFolderScreenMode}
+          onPromptFolderModeChange={setPromptFolderMode}
           onPromptFolderSelect={(promptFolderId) => {
             navigateToPromptFolder(promptFolderId)
           }}
@@ -594,9 +605,10 @@
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
           {:else if activeScreen === 'prompt-folders'}
             {#if selectedPromptFolderId && workspacePath}
-              {#key selectedPromptFolderId}
+              {#key `${selectedPromptFolderId}:${promptFolderScreenMode}`}
                 <PromptFolderScreen
                   promptFolderId={selectedPromptFolderId}
+                  screenMode={promptFolderScreenMode}
                   onPromptFolderSelect={navigateToPromptFolder}
                 />
               {/key}
