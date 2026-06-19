@@ -19,7 +19,7 @@ export const MAX_PROMPT_EDITOR_MAX_LINES = 40
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = Object.freeze({
   promptFontSize: 16,
   promptEditorMinLines: 3,
-  promptEditorMaxLines: 25,
+  promptEditorMaxLines: 30,
   showLineNumbers: true
 })
 
