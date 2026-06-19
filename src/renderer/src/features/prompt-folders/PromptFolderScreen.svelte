@@ -41,7 +41,7 @@
               type="button"
               data-testid="prompt-folder-header-folder"
               class="prompt-folder-header-folder min-w-0 cursor-pointer truncate transition-colors"
-              onclick={() => controller.handleHeaderSegmentClick('folder-settings')}
+              onclick={controller.handleHeaderFolderClick}
             >
               {controller.folderDisplayName}
             </button>
@@ -99,6 +99,7 @@
             onSettingsFieldChange={controller.handleSettingsFieldChange}
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
+            onScrollApiChange={controller.setScrollApi}
             onViewportMetricsChange={controller.setViewportMetrics}
             onScrollTopChange={controller.handleVirtualScrollTopChange}
             onCenterRowChange={controller.handleVirtualCenterRowChange}

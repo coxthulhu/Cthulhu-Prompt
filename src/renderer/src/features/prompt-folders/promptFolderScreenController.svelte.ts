@@ -61,6 +61,7 @@ import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/l
 import type {
   ScrollToAndTrackRowCentered,
   ScrollToWithinWindowBand,
+  VirtualWindowScrollApi,
   VirtualWindowViewportMetrics
 } from '../virtualizer/virtualWindowTypes'
 import {
@@ -181,6 +182,7 @@ export const createPromptFolderScreenController = ({
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
+  let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const getRestoredPromptFolderScrollTop = (): number =>
     lookupPromptFolderScrollTop(promptFolderId) ?? 0
@@ -893,6 +895,14 @@ export const createPromptFolderScreenController = ({
     scrollToWithinWindowBand(rowId, 0, 'minimal', 0)
   }
 
+  const handleHeaderFolderClick = () => {
+    if (!scrollApi) return
+    setCurrentFolderSelection({ kind: 'folder-settings' }, 'header', {
+      forceVersionBump: true
+    })
+    scrollApi.scrollTo(0)
+  }
+
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
     const targetRow: ActivePromptTreeRow = isPromptFolderSettingsFindEntityId(
       match.entityId,
@@ -914,6 +924,10 @@ export const createPromptFolderScreenController = ({
     nextScrollToAndTrackRowCentered: ScrollToAndTrackRowCentered | null
   ) => {
     scrollToAndTrackRowCentered = nextScrollToAndTrackRowCentered
+  }
+
+  const setScrollApi = (nextScrollApi: VirtualWindowScrollApi | null) => {
+    scrollApi = nextScrollApi
   }
 
   const setViewportMetrics = (nextViewportMetrics: VirtualWindowViewportMetrics | null) => {
@@ -1002,6 +1016,7 @@ export const createPromptFolderScreenController = ({
     toggleFolderSettingsSectionExpanded,
     togglePromptsSectionExpanded,
     handleHeaderSegmentClick,
+    handleHeaderFolderClick,
     handleFindMatchReveal,
     handleAddPrompt,
     handleDeletePrompt,
@@ -1012,6 +1027,7 @@ export const createPromptFolderScreenController = ({
     handleSettingsFieldChange,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
+    setScrollApi,
     setViewportMetrics,
     handleVirtualScrollTopChange,
     handleInitialPromptFolderCenterRowApplied,

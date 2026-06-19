@@ -107,6 +107,7 @@
     ) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
+    onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
@@ -139,6 +140,7 @@
     onSettingsFieldChange,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
+    onScrollApiChange,
     onViewportMetricsChange,
     onScrollTopChange,
     onCenterRowChange,
@@ -162,6 +164,11 @@
   // Side effect: expose the center-row tracking API to the controller.
   $effect(() => {
     onScrollToAndTrackRowCenteredChange(scrollToAndTrackRowCentered)
+  })
+
+  // Side effect: expose the virtual window scroll API to the controller.
+  $effect(() => {
+    onScrollApiChange(scrollApi)
   })
 
   // Side effect: expose imperative virtual scroll APIs to the controller.

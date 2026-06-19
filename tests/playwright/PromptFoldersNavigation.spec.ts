@@ -489,4 +489,26 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'active'
     )
   })
+
+  test('folder breadcrumb scrolls to top without expanding folder settings', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Short')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(1200)
+
+    await mainWindow.locator('[data-testid="prompt-folder-header-folder"]').click()
+
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
 })
