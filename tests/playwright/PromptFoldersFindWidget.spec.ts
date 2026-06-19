@@ -373,7 +373,7 @@ describe('Prompt folder find dialog', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Prefix Suffix Find')
-    await mainWindow.waitForSelector(SETTINGS_ROW_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
 
     await mainWindow.keyboard.press('Control+F')
     await expect(mainWindow.locator(FIND_INPUT)).toBeVisible()
@@ -1078,6 +1078,7 @@ describe('Prompt folder find dialog', () => {
     const promptIds = LOOP_MATCH_PROMPT_IDS
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]').click()
     await mainWindow.waitForSelector(SETTINGS_ROW_SELECTOR, { state: 'attached' })
     const settingsRowTestId = await mainWindow.evaluate((selector) => {
       return document.querySelector<HTMLElement>(selector)?.getAttribute('data-testid') ?? null

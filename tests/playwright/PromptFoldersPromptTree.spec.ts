@@ -124,7 +124,6 @@ describe('Prompt folder prompt tree', () => {
     const settingsToggle = mainWindow.locator(
       '[data-testid="prompt-folder-settings-section-toggle"]'
     )
-    await settingsToggle.click()
     await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false')
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, SHORT_SCROLL_TARGET_PX)

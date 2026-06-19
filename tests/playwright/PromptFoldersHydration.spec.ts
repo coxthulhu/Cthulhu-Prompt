@@ -233,6 +233,7 @@ describe('Prompt Folder Hydration', () => {
 
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]').click()
     await mainWindow.waitForSelector(
       `${HOST_SELECTOR} [data-testid^="prompt-folder-settings-"][data-virtual-window-row]`,
       { state: 'attached' }

@@ -316,14 +316,14 @@ export const createPromptFolderScreenController = ({
 
   const lookupPersistedFolderSettingsSectionExpandedState = (): boolean => {
     if (!workspaceId) {
-      return true
+      return false
     }
 
     return (
       lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
         workspaceId,
         promptFolderId
-      ) ?? true
+      ) ?? false
     )
   }
 

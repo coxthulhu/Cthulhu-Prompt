@@ -389,7 +389,7 @@ const migrateSchemaV11ToV12 = (db: Database.Database): void => {
   const migrate = db.transaction(() => {
     db.exec(`
       ALTER TABLE prompt_folder_ui_state
-      ADD COLUMN folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 1;
+      ADD COLUMN folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 0;
 
       ALTER TABLE prompt_folder_ui_state
       ADD COLUMN prompts_section_is_expanded INTEGER NOT NULL DEFAULT 1;
@@ -408,7 +408,7 @@ const migrateSchemaV12ToV13 = (db: Database.Database): void => {
         workspace_id TEXT NOT NULL,
         prompt_folder_id TEXT NOT NULL,
         prompt_tree_entry_id TEXT NOT NULL,
-        folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 0,
         prompts_section_is_expanded INTEGER NOT NULL DEFAULT 1,
         PRIMARY KEY (workspace_id, prompt_folder_id)
       );

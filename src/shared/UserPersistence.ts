@@ -301,7 +301,7 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
 
   const folderSettingsSectionIsExpanded =
     value.folderSettingsSectionIsExpanded === undefined
-      ? true
+      ? false
       : typeof value.folderSettingsSectionIsExpanded === 'boolean'
         ? value.folderSettingsSectionIsExpanded
         : null

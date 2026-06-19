@@ -29,8 +29,13 @@ import {
   scrollPromptEditorAcrossViewportTop,
   scrollUntilPromptEditorVisible
 } from '../helpers/PromptDragDropHelpers'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import {
+  createWorkspaceWithFolders,
+  getWorkspaceInfoPath,
+  setupWorkspaceScenario
+} from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
+import { seedWorkspacePersistence } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -47,6 +52,7 @@ const createDeterministicId = (seed: string): string => {
   const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
   return `00000000000000000000${suffix}`
 }
+const WORKSPACE_ID = createDeterministicId(WORKSPACE_PATH)
 const DEVELOPMENT_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${DEVELOPMENT_FOLDER_NAME}`)
 const EXAMPLES_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${EXAMPLES_FOLDER_NAME}`)
 const DEV_1_ID = 'dev-1'
@@ -211,7 +217,7 @@ const expectPromptEditorNearViewportCenter = async (
       const rowCenter = (offsets.top + offsets.bottom) / 2
       return Math.round(Math.abs(rowCenter - hostBox.height / 2))
     })
-    .toBeLessThanOrEqual(96)
+    .toBeLessThanOrEqual(2)
 }
 
 const scrollPromptTreeUntilRowUnmounts = async (
@@ -686,9 +692,25 @@ describe('Prompt folder prompt drag-drop', () => {
     testSetup,
     electronApp
   }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
+    await testSetup.setupFilesystem(setupWorkspaceScenario(WORKSPACE_PATH, 'sample'))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId: WORKSPACE_ID,
+      selectedScreen: 'home',
+      selectedScreenData: null,
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: EXAMPLES_FOLDER_ID,
+          promptTreeEntryId: 'folder-settings',
+          folderSettingsSectionIsExpanded: true
+        }
+      ]
     })
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
 
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
