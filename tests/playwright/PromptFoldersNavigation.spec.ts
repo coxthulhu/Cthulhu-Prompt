@@ -5,8 +5,10 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-tree-prompt-simple-1"]'
 const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
-const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON =
-  '[data-testid="open-selected-prompt-folder-settings-button"]'
+const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
+  '[data-testid="selected-prompt-folder-actions-button"]'
+const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM =
+  '[data-testid="open-selected-prompt-folder-settings-menu-item"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
@@ -287,7 +289,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
   })
 
-  test('opens selected folder settings from the prompt tree header action', async ({
+  test('opens selected folder settings from the sidebar actions menu', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -302,8 +304,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
       .toBeGreaterThan(0)
 
-    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON)).toBeEnabled()
-    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON).click()
+    await expect(mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON)).toBeEnabled()
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
     ).toHaveAttribute('aria-expanded', 'true')
@@ -322,7 +326,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON)).toBeDisabled()
+    await expect(mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON)).toBeDisabled()
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeDisabled()
   })
 
@@ -444,7 +448,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('tracks centered prompt scroll in tree and settings header action', async ({
+  test('tracks centered prompt scroll in tree and settings menu action', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -463,7 +467,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON).click()
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
     ).toHaveAttribute('aria-expanded', 'true')

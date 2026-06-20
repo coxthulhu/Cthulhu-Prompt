@@ -18,8 +18,10 @@ const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_SCROLL_TARGET_PX = 2000
-const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON =
-  '[data-testid="open-selected-prompt-folder-settings-button"]'
+const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
+  '[data-testid="selected-prompt-folder-actions-button"]'
+const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM =
+  '[data-testid="open-selected-prompt-folder-settings-menu-item"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
 const samplePromptTreeRowSelector = `[data-testid="prompt-tree-prompt-${SAMPLE_PROMPT_ID}"]`
@@ -131,7 +133,9 @@ describe('Prompt folder prompt tree', () => {
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeGreaterThan(0)
 
-    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_BUTTON).click()
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
 
     await expect(settingsToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(

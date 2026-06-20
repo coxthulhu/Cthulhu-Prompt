@@ -19,7 +19,16 @@
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import { Check, ChevronsDownUp, Clock, ExternalLink, Folder, Plus, Settings } from 'lucide-svelte'
+  import {
+    Check,
+    ChevronsDownUp,
+    Clock,
+    ExternalLink,
+    Folder,
+    MoreHorizontal,
+    Plus,
+    Settings
+  } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -27,6 +36,9 @@
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
+  import DropdownPopupSimple, {
+    type DropdownPopupItem
+  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
@@ -231,6 +243,15 @@
   const isCompletedPromptMode = $derived(
     promptFolderScreenMode === PromptFolderScreenMode.Completed
   )
+  // Keep selected-folder overflow actions together as the toolbar gets tighter.
+  const selectedPromptFolderActionsItems: DropdownPopupItem[] = [
+    {
+      id: 'folder-settings',
+      label: 'Open Folder Settings',
+      icon: Settings,
+      testId: 'open-selected-prompt-folder-settings-menu-item'
+    }
+  ]
 
   const handlePromptFolderExpansionAction = () => {
     // Collapse All is paused until subfolders make tree expansion meaningful again.
@@ -248,6 +269,12 @@
       forceVersionBump: true
     })
     onPromptFolderSelect(promptFolder.id)
+  }
+
+  const handleSelectedPromptFolderActionsSelect = (item: DropdownPopupItem) => {
+    if (item.id === 'folder-settings') {
+      openSelectedPromptFolderSettings()
+    }
   }
 
   const openWorkspaceFolder = () => {
@@ -604,16 +631,6 @@
           onclick={toggleCompletedPromptMode}
         />
         <IconButton
-          icon={Settings}
-          label="Open Selected Prompt Folder Settings"
-          title="Open Selected Prompt Folder Settings"
-          size="compact"
-          disabled={!selectedPromptFolder}
-          testId="open-selected-prompt-folder-settings-button"
-          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-          onclick={openSelectedPromptFolderSettings}
-        />
-        <IconButton
           icon={promptFolderExpansionActionIcon}
           label={promptFolderExpansionActionLabel}
           title={promptFolderExpansionActionLabel}
@@ -623,6 +640,30 @@
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={handlePromptFolderExpansionAction}
         />
+        <DropdownPopupSimple
+          label="Selected Prompt Folder Actions"
+          items={selectedPromptFolderActionsItems}
+          menuWidth="204px"
+          testId="selected-prompt-folder-actions-menu"
+          onselect={handleSelectedPromptFolderActionsSelect}
+        >
+          {#snippet trigger(dropdown)}
+            <IconButton
+              icon={MoreHorizontal}
+              label="Selected Prompt Folder Actions"
+              title="Selected Prompt Folder Actions"
+              size="compact"
+              disabled={!selectedPromptFolder}
+              active={dropdown.open}
+              ariaHaspopup={dropdown.ariaHaspopup}
+              ariaExpanded={dropdown.ariaExpanded}
+              buttonAction={dropdown.triggerAction}
+              onclick={dropdown.toggle}
+              testId="selected-prompt-folder-actions-button"
+              class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+            />
+          {/snippet}
+        </DropdownPopupSimple>
         <CreatePromptFolderDialog
           bind:this={createPromptFolderDialog}
           {isWorkspaceReady}
