@@ -54,7 +54,13 @@
 
   const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
   const IconButtonBaseVariants: IconButtonBaseVariant[] = ['normal', 'dim', 'muted']
-  const IconButtonHoverVariants: IconButtonHoverVariant[] = ['neutral', 'accent', 'danger', 'glyph']
+  const IconButtonHoverVariants: IconButtonHoverVariant[] = [
+    'neutral',
+    'accent',
+    'success',
+    'danger',
+    'glyph'
+  ]
   const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'tiny', 'sidebar-rail']
   const folderDropdownItems: DropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },

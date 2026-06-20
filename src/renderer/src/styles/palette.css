@@ -54,6 +54,9 @@
   --ui-accent-action-fill: oklch(0.606 0.219 292.717 / 25.2%);
   --ui-accent-action-hover-fill: oklch(0.606 0.219 292.717 / 36%);
 
+  /* Success */
+  --ui-success-action-hover-fill: oklch(0.606 0.219 145 / 36%);
+
   /* Info */
   --ui-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
   --ui-info-hover-surface: oklch(0.666 0.181 254.617 / 25%);

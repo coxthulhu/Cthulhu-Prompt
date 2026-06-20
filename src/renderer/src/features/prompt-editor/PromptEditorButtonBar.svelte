@@ -56,7 +56,7 @@
       icon={Check}
       label="Complete prompt"
       title="Complete prompt"
-      hoverVariant="accent"
+      hoverVariant="success"
       testId="prompt-complete-button"
       onclick={onComplete}
     />

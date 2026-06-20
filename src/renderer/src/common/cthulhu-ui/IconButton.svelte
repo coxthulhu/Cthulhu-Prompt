@@ -5,7 +5,7 @@
 
   export type IconButtonSize = 'default' | 'compact' | 'tiny' | 'sidebar-rail'
   export type IconButtonBaseVariant = 'normal' | 'dim' | 'muted'
-  export type IconButtonHoverVariant = 'neutral' | 'accent' | 'danger' | 'glyph'
+  export type IconButtonHoverVariant = 'neutral' | 'accent' | 'success' | 'danger' | 'glyph'
   type IconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
@@ -155,6 +155,11 @@
   .cthulhuUiIconButton[data-hover-variant='accent']:hover,
   .cthulhuUiIconButton[data-hover-variant='accent']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
+  }
+
+  .cthulhuUiIconButton[data-hover-variant='success']:hover,
+  .cthulhuUiIconButton[data-hover-variant='success']:focus-visible {
+    background: var(--ui-success-action-hover-fill);
   }
 
   .cthulhuUiIconButton[data-hover-variant='danger']:hover,
