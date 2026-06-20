@@ -403,6 +403,37 @@ describe('Prompt folder prompt management', () => {
       .toBe(true)
   })
 
+  test('adds a prompt at the start from the sidebar and focuses it', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
+    const initialIds = await getPromptEditorIds(mainWindow)
+
+    await testHelpers.navigateToHomeScreen()
+    const addPromptButton = mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')
+    await expect(addPromptButton).toBeEnabled()
+    await addPromptButton.click()
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await waitForPromptCount(mainWindow, initialIds.length + 1)
+
+    const idsAfterAdd = await getPromptEditorIds(mainWindow)
+    const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
+    expect(newPromptId).toBeTruthy()
+    expect(idsAfterAdd).toEqual([newPromptId, ...initialIds])
+
+    const newEditorSelector = promptEditorSelector(newPromptId!)
+    await waitForMonacoEditor(mainWindow, newEditorSelector)
+    await expect(mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`))
+      .toHaveAttribute('aria-current', 'true')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
+      .toBe(true)
+  })
+
   test('reorders prompts with move buttons', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -863,6 +894,7 @@ describe('Prompt folder prompt management', () => {
 
     await testHelpers.navigateToPromptFolders('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toBeDisabled()
     await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toHaveText(
       'No completed prompts found in this folder'
     )

@@ -13,6 +13,7 @@ export type PromptNavigationSource =
   | 'scroll-follow'
   | 'find'
   | 'header'
+  | 'prompt-create'
   | 'prompt-move'
 
 type PromptNavigationState = {

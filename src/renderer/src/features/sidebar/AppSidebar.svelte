@@ -33,8 +33,14 @@
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
-  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
+  import {
+    getPromptNavigationContext,
+    promptIdToPromptNavigationRow,
+    promptNavigationRowToPersistedEntryId
+  } from '@renderer/app/PromptNavigationContext.svelte.ts'
+  import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
+  import { createBlankPromptInFolder } from '@renderer/features/prompt-folders/createBlankPromptInFolder'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
@@ -131,6 +137,7 @@
   let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
   let promptFolderSelectorItemsElement = $state<HTMLElement | null>(null)
   let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
+  let isCreatingPromptFromSidebar = $state(false)
   let nowMs = $state(Date.now())
 
   // Side effect: keep folder-selector relative modified labels fresh while the app is open.
@@ -257,6 +264,44 @@
     onPromptFolderModeChange(
       isCompletedPromptMode ? PromptFolderScreenMode.Active : PromptFolderScreenMode.Completed
     )
+  }
+
+  const selectCreatedPrompt = (promptFolderId: string, promptId: string): void => {
+    const row = promptIdToPromptNavigationRow(promptId)
+
+    promptNavigation.select({
+      folderId: promptFolderId,
+      row,
+      source: 'prompt-create',
+      forceVersionBump: true
+    })
+
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (workspaceId) {
+      setPromptFolderPromptTreeEntryIdWithAutosave(
+        workspaceId,
+        promptFolderId,
+        promptNavigationRowToPersistedEntryId(row)
+      )
+    }
+
+    onPromptFolderSelect(promptFolderId)
+  }
+
+  const addPromptToSelectedFolder = async () => {
+    const promptFolder = selectedPromptFolder
+    if (!promptFolder || isCompletedPromptMode || isCreatingPromptFromSidebar) {
+      return
+    }
+
+    isCreatingPromptFromSidebar = true
+    try {
+      const creation = createBlankPromptInFolder(promptFolder.id, null)
+      selectCreatedPrompt(promptFolder.id, creation.promptId)
+      await runIpcBestEffort(() => creation.persistence)
+    } finally {
+      isCreatingPromptFromSidebar = false
+    }
   }
 
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
@@ -537,6 +582,16 @@
     <p class="cthulhuSidebarPromptSectionTitle">Prompts</p>
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
+        <IconButton
+          icon={Plus}
+          label="Add Prompt"
+          title="Add Prompt"
+          size="compact"
+          disabled={!selectedPromptFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
+          testId="sidebar-add-prompt-button"
+          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+          onclick={() => void addPromptToSelectedFolder()}
+        />
         <IconButton
           icon={Check}
           label="Show Completed Prompts"

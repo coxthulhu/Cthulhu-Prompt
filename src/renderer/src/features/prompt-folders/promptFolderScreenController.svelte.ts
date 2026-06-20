@@ -1,6 +1,6 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { isPromptFull, type Prompt, type PromptFull } from '@shared/Prompt'
+import { isPromptFull, type Prompt } from '@shared/Prompt'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
@@ -9,9 +9,6 @@ import {
   type PromptFolderSettings,
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
-import { compactGuid } from '@shared/compactGuid'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
 import {
@@ -36,7 +33,6 @@ import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuer
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import {
   completePrompt,
-  createPrompt,
   deletePrompt,
   movePrompt,
   uncompletePrompt
@@ -90,6 +86,7 @@ import {
 } from '../drag-drop/promptHandleDrag'
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 import { PromptFolderScreenMode } from './promptFolderScreenMode'
+import { createBlankPromptInFolder } from './createBlankPromptInFolder'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -313,6 +310,7 @@ export const createPromptFolderScreenController = ({
 
     return (
       promptNavigation.selectionSource === 'tree-click' ||
+      promptNavigation.selectionSource === 'prompt-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
       promptNavigation.selectionSource === 'header' ||
       promptNavigation.selectionSource === 'restore-hold'
@@ -331,6 +329,10 @@ export const createPromptFolderScreenController = ({
   }
 
   const clearManualSelectionSource = () => {
+    if (promptNavigation.selectionSource === 'prompt-create') {
+      return
+    }
+
     if (!hasManualSelectionSource()) {
       return
     }
@@ -521,6 +523,33 @@ export const createPromptFolderScreenController = ({
     )
   }
 
+  const requestPromptFocus = (promptId: string): void => {
+    promptFocusRequestId += 1
+    promptFocusRequest = { promptId, requestId: promptFocusRequestId }
+  }
+
+  const selectCreatedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
+    const row = promptIdToPromptNavigationRow(promptId)
+
+    promptNavigation.select({
+      folderId: destinationPromptFolderId,
+      row,
+      source: 'prompt-create',
+      forceVersionBump: true
+    })
+
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (workspaceId) {
+      setPromptFolderPromptTreeEntryIdWithAutosave(
+        workspaceId,
+        destinationPromptFolderId,
+        promptNavigationRowToPersistedEntryId(row)
+      )
+    }
+
+    onPromptFolderSelect(destinationPromptFolderId)
+  }
+
   const selectMovedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
 
@@ -651,6 +680,13 @@ export const createPromptFolderScreenController = ({
     scrollTopPx = restoredScrollTop
     latestCenteredPromptTreeRow = isCompletedMode ? null : initialSelectionRow
 
+    if (
+      promptNavigation.selectionSource === 'prompt-create' &&
+      initialSelectionRow.kind === 'prompt'
+    ) {
+      requestPromptFocus(initialSelectionRow.promptId)
+    }
+
     if (isCompletedMode) {
       latestHandledSelectionVersion = promptNavigation.selectionVersion
     } else if (explicitSelectionRow && currentNavigationRow) {
@@ -705,6 +741,9 @@ export const createPromptFolderScreenController = ({
     }
 
     if (!selectPromptTreeRowAndCenter(target)) return
+    if (source === 'prompt-create' && target.kind === 'prompt') {
+      requestPromptFocus(target.promptId)
+    }
     latestHandledSelectionVersion = promptNavigation.selectionVersion
   })
 
@@ -772,23 +811,10 @@ export const createPromptFolderScreenController = ({
     }
 
     isCreatingPrompt = true
-    const promptId = compactGuid(window.crypto.randomUUID())
-    const now = getCurrentIsoSecondTimestamp()
-    const optimisticPrompt: PromptFull = {
-      id: promptId,
-      title: '',
-      fallbackTitle: DEFAULT_PROMPT_FALLBACK_TITLE,
-      createdAt: now,
-      modifiedAt: now,
-      promptText: '',
-      loadingState: 'full'
-    }
 
-    await runIpcBestEffort(async () => {
-      await createPrompt(currentPromptFolder.id, optimisticPrompt, previousPromptId)
-      promptFocusRequestId += 1
-      promptFocusRequest = { promptId, requestId: promptFocusRequestId }
-    })
+    const creation = createBlankPromptInFolder(currentPromptFolder.id, previousPromptId)
+    selectCreatedPrompt(currentPromptFolder.id, creation.promptId)
+    await runIpcBestEffort(() => creation.persistence)
 
     isCreatingPrompt = false
   }
