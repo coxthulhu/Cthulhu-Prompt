@@ -465,6 +465,7 @@
           class="h-8 w-8 object-contain"
           src={appIcon}
           alt="Cthulhu Prompt icon"
+          title="Made in R'lyeh"
           draggable="false"
           ondragstart={(event) => event.preventDefault()}
         />
