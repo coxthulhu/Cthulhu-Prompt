@@ -18,7 +18,7 @@ Cthulhu Prompt is a lightweight prompt editor and organizer that helps you write
 
 Currently, Cthulhu Prompt is supported in Windows, with support for other operating systems soon. 
 1. Navigate to Github releases to download either an installer or a portable version in a zip file. 
-2. Either run the installer or unzip the file into a folder and run Cthulhu Prompt!
+2. Either run the installer, or unzip the file into a folder and run Cthulhu Prompt!
 
 ### Setting Up a Workspace
 
