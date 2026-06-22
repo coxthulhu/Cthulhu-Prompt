@@ -22,7 +22,6 @@
   import {
     Check,
     ChevronsDownUp,
-    Clock,
     ExternalLink,
     Folder,
     MoreHorizontal,
@@ -193,7 +192,6 @@
       if (promptCount > 0 && promptFolder.modifiedAt) {
         detailParts.push({
           text: formatPromptFolderModifiedRelative(promptFolder.modifiedAt),
-          icon: Clock,
           testId: 'sidebar-prompt-folder-modified-time'
         })
       }

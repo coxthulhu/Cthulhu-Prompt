@@ -153,8 +153,8 @@
     color: var(--ui-normal-text);
     cursor: pointer;
     display: grid;
-    gap: 8px;
-    grid-template-columns: 34px minmax(0, 1fr) 22px;
+    column-gap: 0;
+    grid-template-columns: 34px 8px minmax(0, 1fr) 22px;
     min-width: 0;
     padding: 8px;
     text-align: left;
@@ -165,15 +165,15 @@
   }
 
   .cthulhuUiSelectorButton[data-chevron='false'] {
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 34px 8px minmax(0, 1fr);
   }
 
   .cthulhuUiSelectorButton[data-leading-accessory='true'] {
-    grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
+    grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr) 22px;
   }
 
   .cthulhuUiSelectorButton[data-leading-accessory='true'][data-chevron='false'] {
-    grid-template-columns: 22px 34px minmax(0, 1fr);
+    grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr);
   }
 
   .cthulhuUiSelectorButton:not(:disabled)[data-row-state='idle']:hover,
@@ -206,6 +206,7 @@
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-normal-text);
     display: flex;
+    grid-column: 1;
     height: 34px;
     justify-content: center;
     transition: color 120ms ease;
@@ -216,6 +217,7 @@
     align-items: center;
     color: var(--ui-muted-icon-glyph);
     display: flex;
+    grid-column: 1;
     height: 34px;
     justify-content: center;
     width: 22px;
@@ -225,7 +227,16 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    grid-column: 3;
     min-width: 0;
+  }
+
+  .cthulhuUiSelectorButton[data-leading-accessory='true'] .cthulhuUiSelectorButtonIconCell {
+    grid-column: 3;
+  }
+
+  .cthulhuUiSelectorButton[data-leading-accessory='true'] .cthulhuUiSelectorButtonTextStack {
+    grid-column: 5;
   }
 
   .cthulhuUiSelectorButtonText,
@@ -267,5 +278,11 @@
 
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonChevronWrap) {
     color: var(--ui-normal-text);
+    grid-column: 4;
+  }
+
+  .cthulhuUiSelectorButton[data-leading-accessory='true']
+    :global(.cthulhuUiSelectorButtonChevronWrap) {
+    grid-column: 6;
   }
 </style>
