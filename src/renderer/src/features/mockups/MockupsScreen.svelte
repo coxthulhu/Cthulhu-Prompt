@@ -28,7 +28,7 @@
 </script>
 
 <section
-  class="mockups-screen flex min-h-0 flex-1 justify-center overflow-y-auto px-6 py-6 text-white"
+  class="mockups-screen flex min-h-0 flex-1 justify-center overflow-hidden px-6 text-white"
   data-testid="mockups-screen"
 >
   <div class="mockups-layout">
@@ -78,11 +78,11 @@
   .mockups-layout {
     box-sizing: border-box;
     width: 100%;
-    min-height: 100%;
+    height: 100%;
+    min-height: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
     font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   }
 
@@ -103,9 +103,10 @@
   }
 
   .mockups-tablist-wrap {
-    position: sticky;
+    flex: 0 0 auto;
+    position: relative;
     top: 0;
-    z-index: 1;
+    z-index: 10;
     width: 100%;
     padding: 0;
     background: rgb(11 14 18 / 94%);
@@ -139,8 +140,12 @@
   }
 
   .mockups-preview {
+    flex: 1 1 auto;
     min-width: 0;
+    min-height: 0;
     display: flex;
+    overflow-y: auto;
+    padding-bottom: 24px;
     width: 100%;
   }
 
