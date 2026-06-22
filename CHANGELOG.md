@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.24
+
+### New Features
+
+- Added completed prompts, including complete/uncomplete actions and a completed prompts view.
+- Added sidebar prompt creation for the selected prompt folder.
+- Added prompt folder modified times in the folder selector.
+
+### Changes
+
+- Moved folder settings into the selected folder sidebar actions menu.
+- Simplified the sidebar prompt tree to focus on the selected folder's prompts.
+- Collapsed folder settings by default and refined empty-folder, hover, and prompt editor control states.
+
+### Fixed
+
+- Fixed prompt folder breadcrumb navigation.
+- Fixed folder selector drag reordering previews and drop stability.
+- Fixed prompt navigation after moving prompts.
+
 ## 0.0.23
 
 ### New Features
