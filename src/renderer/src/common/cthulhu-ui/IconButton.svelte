@@ -27,7 +27,9 @@
     buttonAction?: IconButtonAction | null
     buttonActionParameter?: unknown
     grabCursor?: boolean
+    tabindex?: number
     onclick?: (event: MouseEvent) => void
+    onmousedown?: (event: MouseEvent) => void
   }
 
   const noopButtonAction: IconButtonAction = () => undefined
@@ -51,7 +53,9 @@
     buttonAction = null,
     buttonActionParameter,
     grabCursor = false,
-    onclick
+    tabindex,
+    onclick,
+    onmousedown
   }: Props = $props()
 
   const isDisabled = $derived(disabled === true)
@@ -75,8 +79,10 @@
   data-testid={testId}
   data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}
+  {tabindex}
   disabled={isDisabled}
   {onclick}
+  {onmousedown}
 >
   <!-- Icon button for compact icon-only actions. -->
   <Icon class={iconClass} size={iconSize} data-testid={iconTestId} aria-hidden="true" />

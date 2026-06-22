@@ -57,6 +57,12 @@
     void onMoveDown()
   }
 
+  const preventSidebarButtonMouseFocus = (event: MouseEvent) => {
+    if (event.button !== 0) return
+
+    event.preventDefault()
+  }
+
   const getDragHandleOptions = (): DraggableOptions<
     PromptHandleDragPayload,
     PromptHandleDropPayload
@@ -100,6 +106,7 @@
     testId="prompt-move-up"
     disabled={isFirstPrompt}
     onclick={handleMoveUpClick}
+    onmousedown={preventSidebarButtonMouseFocus}
   />
 
   <IconButton
@@ -112,6 +119,8 @@
     buttonAction={dragHandleAction}
     buttonActionParameter={getDragHandleOptions()}
     grabCursor={true}
+    tabindex={-1}
+    onmousedown={preventSidebarButtonMouseFocus}
   />
 
   <IconButton
@@ -123,6 +132,7 @@
     testId="prompt-move-down"
     disabled={isLastPrompt}
     onclick={handleMoveDownClick}
+    onmousedown={preventSidebarButtonMouseFocus}
   />
 </div>
 
