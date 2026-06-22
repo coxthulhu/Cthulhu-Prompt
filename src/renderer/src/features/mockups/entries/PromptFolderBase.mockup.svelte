@@ -32,7 +32,11 @@
       text: [
         'Review the workspace import flow and identify any edge cases around missing folders, duplicate prompt titles, and malformed front matter.',
         '',
-        'Return the findings as concrete bugs with file references and suggested tests.'
+        'Return the findings as concrete bugs with file references and suggested tests.',
+        '',
+        'Include scenarios for partially written workspace files, prompts that reference folders removed during import, and imports where the destination workspace already has similarly named prompts.',
+        '',
+        'Separate confirmed issues from follow-up questions. Do not include general cleanup notes unless they can cause data loss or a visible recovery problem.'
       ].join('\n')
     },
     {
@@ -54,7 +58,11 @@
       text: [
         'Code review the prompt tree drag/drop implementation. Focus on persistence order, optimistic UI state, and recovery when a drop target disappears.',
         '',
-        'List only issues that can produce user-visible regressions.'
+        'List only issues that can produce user-visible regressions.',
+        '',
+        'Pay special attention to cross-folder moves, moving the first or last prompt in a folder, cancelled drags, and drops that happen while the target folder is collapsed.',
+        '',
+        'For each finding, include the smallest user flow that reproduces it and the assertion a Playwright test should make.'
       ].join('\n')
     },
     {
@@ -65,7 +73,22 @@
       text: [
         'Add Playwright coverage for adding a prompt, typing in the Monaco editor, navigating away, and returning to verify content and focus state.',
         '',
-        'Use the existing test helpers and data-testid selectors.'
+        'Use the existing test helpers and data-testid selectors.',
+        '',
+        'Cover the add button above the first prompt and the add button after an existing prompt. Verify the new row appears in the expected position before typing.',
+        '',
+        'After navigation, assert that the prompt order, title text, Monaco body text, and selected folder are still restored.'
+      ].join('\n')
+    },
+    {
+      id: 'mockup-release',
+      title: 'Draft release notes',
+      folder: 'Prompts',
+      modifiedLabel: 'Updated Jun 12',
+      text: [
+        'Summarize the recent prompt folder changes for a release note. Focus on visible user-facing behavior, workflow improvements, and any test coverage added.',
+        '',
+        'Keep the tone concise and avoid implementation details unless they affect users directly.'
       ].join('\n')
     },
     {
