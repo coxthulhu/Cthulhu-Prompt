@@ -113,6 +113,7 @@
     onclick={handleOutsideClick}
   >
     <CardSurface
+      variant="overlay"
       class={mergeClasses('cthulhuUiDialog flex flex-col p-4', className)}
       role="dialog"
       aria-label={title}
@@ -173,16 +174,6 @@
     padding: 16px;
     position: fixed;
     z-index: 50;
-  }
-
-  :global(.cthulhuUiDialog.cthulhuUiCardSurface) {
-    background:
-      linear-gradient(
-        var(--ui-card-normal-surface-gradient-start),
-        var(--ui-card-normal-surface-gradient-end)
-      ),
-      var(--ui-card-solid-surface);
-    border: 1px solid var(--ui-card-normal-border);
   }
 
   :global(.cthulhuUiDialog) {
