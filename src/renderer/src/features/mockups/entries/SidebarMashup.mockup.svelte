@@ -576,6 +576,23 @@
         onkeydown={(event) => handleSubfolderTitleKeydown(event, folder.id)}
       >
         <div class="mockup-subfolder-title-main">
+          <button
+            class="mockup-subfolder-toggle"
+            type="button"
+            aria-label={folder.isExpanded ? 'Collapse folder' : 'Expand folder'}
+            aria-expanded={folder.isExpanded}
+            onclick={(event) => {
+              event.stopPropagation()
+              toggleSubfolder(folder.id)
+            }}
+          >
+            {#if folder.isExpanded}
+              <ChevronDown size={18} aria-hidden="true" />
+            {:else}
+              <ChevronRight size={18} aria-hidden="true" />
+            {/if}
+          </button>
+
           <span class="mockup-title-icon mockup-folder-title-icon">
             <Folder size={25} aria-hidden="true" />
           </span>
@@ -598,23 +615,6 @@
               <span>{getSubfolderLabel(folder.subfolderCount)}</span>
             </div>
           </div>
-
-          <button
-            class="mockup-subfolder-toggle"
-            type="button"
-            aria-label={folder.isExpanded ? 'Collapse folder' : 'Expand folder'}
-            aria-expanded={folder.isExpanded}
-            onclick={(event) => {
-              event.stopPropagation()
-              toggleSubfolder(folder.id)
-            }}
-          >
-            {#if folder.isExpanded}
-              <ChevronDown size={18} aria-hidden="true" />
-            {:else}
-              <ChevronRight size={18} aria-hidden="true" />
-            {/if}
-          </button>
         </div>
       </header>
 
@@ -809,7 +809,7 @@
     align-items: center;
     display: grid;
     gap: 10px;
-    grid-template-columns: 40px minmax(0, 1fr) 32px;
+    grid-template-columns: 32px 40px minmax(0, 1fr);
     min-width: 0;
   }
 
