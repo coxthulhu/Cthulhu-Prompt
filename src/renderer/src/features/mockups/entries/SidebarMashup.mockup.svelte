@@ -28,6 +28,7 @@
 
   type MockFolderField = MockEditorDocument & {
     label: string
+    helperText: string
   }
 
   type MockSubfolder = {
@@ -43,16 +44,19 @@
     {
       id: `${folderId}-description`,
       label: 'Folder Description',
+      helperText: 'shared context for the whole folder',
       text: description
     },
     {
       id: `${folderId}-prefix`,
       label: 'Folder Prefix',
+      helperText: 'added before prompts in this folder',
       text: prefix
     },
     {
       id: `${folderId}-suffix`,
       label: 'Folder Suffix',
+      helperText: 'added after prompts in this folder',
       text: suffix
     }
   ]
@@ -669,7 +673,8 @@
         {#each folder.fields as field (field.id)}
           <section class="mockup-folder-field">
             <label class="mockup-folder-field-label" for={`mockup-folder-field-${field.id}`}>
-              {field.label}
+              <span class="mockup-folder-field-label-text">{field.label}</span>
+              <span class="mockup-folder-field-helper">- {field.helperText}</span>
             </label>
             <div
               class="mockup-monaco-shell mockup-folder-monaco-shell"
@@ -1007,10 +1012,27 @@
     display: flex;
     font-size: 12px;
     font-weight: 700;
+    gap: 5px;
     height: 28px;
     letter-spacing: 0;
     line-height: 16px;
+    min-width: 0;
+    overflow: hidden;
     padding: 0 16px;
+    white-space: nowrap;
+  }
+
+  .mockup-folder-field-label-text {
+    flex: 0 0 auto;
+  }
+
+  .mockup-folder-field-helper {
+    color: var(--ui-muted-text);
+    flex: 1 1 auto;
+    font-weight: 400;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .mockup-monaco-shell {
