@@ -73,7 +73,7 @@ import {
 } from './promptFolderRowIds'
 import {
   estimatePromptFolderSettingsFieldRowHeight,
-  getPromptFolderEditorRowHeightPx
+  getPromptFolderEditorCardRowHeightPx
 } from './promptFolderSettingsSizing'
 import {
   resolvePromptHandleDropMove,
@@ -881,7 +881,7 @@ export const createPromptFolderScreenController = ({
     ) as Record<PromptFolderSettingsField, number>
 
     if (!viewportMetrics) {
-      return getPromptFolderEditorRowHeightPx(estimatedSectionHeights)
+      return getPromptFolderEditorCardRowHeightPx(estimatedSectionHeights)
     }
 
     const metrics = viewportMetrics
@@ -897,7 +897,7 @@ export const createPromptFolderScreenController = ({
       ])
     ) as Record<PromptFolderSettingsField, number>
 
-    return getPromptFolderEditorRowHeightPx(sectionHeights)
+    return getPromptFolderEditorCardRowHeightPx(sectionHeights)
   })
 
   const activeHeaderRowId = $derived(

@@ -32,7 +32,6 @@
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderEditorRow from './PromptFolderEditorRow.svelte'
   import {
-    PROMPT_FOLDER_SETTINGS_GUTTER_TAIL_ROW_ID,
     PROMPT_FOLDER_SETTINGS_ROW_ID,
     promptDividerRowId,
     promptEditorRowId
@@ -42,7 +41,6 @@
   } from './PromptFolderSectionRow.svelte'
   import {
     estimatePromptFolderSettingsFieldRowHeight,
-    PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX,
     getPromptFolderEditorCardRowHeightPx
   } from './promptFolderSettingsSizing'
   import {
@@ -63,7 +61,6 @@
 
   type PromptFolderRow =
     | { kind: 'folder-editor' }
-    | { kind: 'folder-editor-gutter-tail' }
     | { kind: 'placeholder' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
@@ -237,10 +234,6 @@
       dehydrateOnWidthResize: true,
       snippet: folderEditorRow
     },
-    'folder-editor-gutter-tail': {
-      estimateHeight: () => PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX,
-      snippet: folderEditorGutterTailRow
-    },
     placeholder: {
       estimateHeight: () => 120,
       snippet: placeholderRow
@@ -293,12 +286,6 @@
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
           kind: 'folder-editor'
-        }
-      })
-      rows.push({
-        id: PROMPT_FOLDER_SETTINGS_GUTTER_TAIL_ROW_ID,
-        row: {
-          kind: 'folder-editor-gutter-tail'
         }
       })
     }
@@ -470,12 +457,6 @@
     {onPromptsSectionToggle}
     {onSettingsFieldChange}
   />
-{/snippet}
-
-{#snippet folderEditorGutterTailRow({ rowHeightPx })}
-  <PromptFolderSectionRow {rowHeightPx}>
-    <span aria-hidden="true"></span>
-  </PromptFolderSectionRow>
 {/snippet}
 
 {#snippet placeholderRow({ rowHeightPx })}

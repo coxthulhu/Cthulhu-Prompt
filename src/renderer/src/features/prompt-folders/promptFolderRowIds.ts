@@ -5,7 +5,6 @@ import {
 } from '@shared/PromptFolder'
 
 export const PROMPT_FOLDER_SETTINGS_ROW_ID = 'folder-settings'
-export const PROMPT_FOLDER_SETTINGS_GUTTER_TAIL_ROW_ID = 'folder-settings-gutter-tail'
 
 export const promptEditorRowId = (promptId: string): string => `${promptId}-editor`
 
