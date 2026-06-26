@@ -1,5 +1,4 @@
 <script lang="ts">
-  import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     type PromptFolderSettings,
@@ -31,23 +30,18 @@
     type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
-  import PromptFolderSettingsRow from './PromptFolderSettingsRow.svelte'
+  import PromptFolderEditorRow from './PromptFolderEditorRow.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_ROW_ID,
     promptDividerRowId,
-    promptEditorRowId,
-    promptFolderSettingsRowId
+    promptEditorRowId
   } from './promptFolderRowIds'
   import PromptFolderSectionRow, {
-    PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX,
-    PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX
+    PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX
   } from './PromptFolderSectionRow.svelte'
   import {
-    PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX,
-    PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
     estimatePromptFolderSettingsFieldRowHeight,
-    PROMPT_COLLAPSED_HEADER_ROW_HEIGHT_PX,
-    PROMPT_HEADER_ROW_HEIGHT_PX
+    getPromptFolderEditorRowHeightPx
   } from './promptFolderSettingsSizing'
   import {
     createDroppableStateRegistry,
@@ -66,9 +60,7 @@
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
   type PromptFolderRow =
-    | { kind: 'folder-settings-header' }
-    | { kind: 'folder-settings-field'; field: PromptFolderSettingsField; includeBottomGap: boolean }
-    | { kind: 'prompt-header'; promptCount: number }
+    | { kind: 'folder-editor' }
     | { kind: 'placeholder' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
@@ -83,13 +75,13 @@
     promptFolderId: string
     folderSettings: PromptFolderSettings
     promptEditorSizingConfig: PromptEditorSizingConfig
+    folderDisplayName: string
     promptDraftById: Record<string, PromptDraftRecord>
     completedAtByPromptId: Record<string, string>
     visiblePromptIds: string[]
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
-    isFolderSettingsSectionExpanded: boolean
     isPromptsSectionExpanded: boolean
     initialScrollTopPx: number
     initialCenterRowId: string | null
@@ -117,7 +109,6 @@
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
     onInitialCenterRowApplied: () => void
-    onFolderSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
   }
 
@@ -126,13 +117,13 @@
     promptFolderId,
     folderSettings,
     promptEditorSizingConfig,
+    folderDisplayName,
     promptDraftById,
     completedAtByPromptId,
     visiblePromptIds,
     screenMode,
     isCreatingPrompt,
     promptFocusRequest,
-    isFolderSettingsSectionExpanded,
     isPromptsSectionExpanded,
     initialScrollTopPx,
     initialCenterRowId,
@@ -153,7 +144,6 @@
     onCenterRowChange,
     onUserScroll,
     onInitialCenterRowApplied,
-    onFolderSettingsSectionToggle,
     onPromptsSectionToggle
   }: PromptFolderVirtualContentProps = $props()
 
@@ -201,40 +191,48 @@
     return Math.max(0, virtualWindowWidthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
   }
 
-  const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
-    'folder-settings-header': {
-      estimateHeight: () =>
-        isFolderSettingsSectionExpanded
-          ? PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX
-          : PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX,
-      centerRowEligible: true,
-      snippet: folderSettingsHeaderRow
-    },
-    'folder-settings-field': {
-      estimateHeight: (row) =>
+  const getEstimatedPromptFolderSettingsSectionHeights = () => {
+    return Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+        field,
         estimatePromptFolderSettingsFieldRowHeight(
-          folderSettings[row.field],
-          promptEditorSizingConfig.fontSize,
-          row.includeBottomGap
-        ),
-      lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
+          folderSettings[field],
+          promptEditorSizingConfig.fontSize
+        )
+      ])
+    ) as Record<PromptFolderSettingsField, number>
+  }
+
+  const getPromptFolderSettingsSectionHeights = (
+    widthPx: number,
+    devicePixelRatio: number
+  ): Record<PromptFolderSettingsField, number> => {
+    const estimatedHeights = getEstimatedPromptFolderSettingsSectionHeights()
+    return Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+        field,
         lookupPromptFolderSettingsRowMeasuredHeightForScreen(
-          _row.field,
+          field,
           getSectionContentWidthPx(widthPx),
           devicePixelRatio
+        ) ?? estimatedHeights[field]
+      ])
+    ) as Record<PromptFolderSettingsField, number>
+  }
+
+  const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
+    'folder-editor': {
+      estimateHeight: () =>
+        getPromptFolderEditorRowHeightPx(getEstimatedPromptFolderSettingsSectionHeights()),
+      lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
+        getPromptFolderEditorRowHeightPx(
+          getPromptFolderSettingsSectionHeights(widthPx, devicePixelRatio)
         ),
+      centerRowEligible: true,
       hydrationPriorityEligible: true,
       overlayRow: {},
-      centerRowEligible: true,
       dehydrateOnWidthResize: true,
-      snippet: folderSettingsFieldRow
-    },
-    'prompt-header': {
-      estimateHeight: () =>
-        isPromptsSectionExpanded
-          ? PROMPT_HEADER_ROW_HEIGHT_PX
-          : PROMPT_COLLAPSED_HEADER_ROW_HEIGHT_PX,
-      snippet: promptHeaderRow
+      snippet: folderEditorRow
     },
     placeholder: {
       estimateHeight: () => 120,
@@ -287,31 +285,10 @@
       rows.push({
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
-          kind: 'folder-settings-header'
+          kind: 'folder-editor'
         }
       })
-
-      if (isFolderSettingsSectionExpanded) {
-        PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field, index) => {
-          rows.push({
-            id: promptFolderSettingsRowId(field),
-            row: {
-              kind: 'folder-settings-field',
-              field,
-              includeBottomGap: index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
-            }
-          })
-        })
-      }
     }
-
-    rows.push({
-      id: 'prompt-header',
-      row: {
-        kind: 'prompt-header',
-        promptCount: visiblePromptIds.length
-      }
-    })
 
     if (isPromptsSectionExpanded) {
       if (visiblePromptIds.length === 0) {
@@ -352,7 +329,7 @@
     }
     if (
       !isCompletedMode &&
-      (row?.kind === 'folder-settings-header' || row?.kind === 'folder-settings-field')
+      row?.kind === 'folder-editor'
     ) {
       onCenterRowChange({ kind: 'folder-settings' })
       return
@@ -456,78 +433,31 @@
   }}
 />
 
-{#snippet folderSettingsHeaderRow({ rowHeightPx })}
-  <PromptFolderSectionRow
-    {rowHeightPx}
-    contentClass="pt-6"
-    contentVirtualWindowRow
-    topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
-  >
-    <button
-      type="button"
-      class="prompt-folder-section-header-button"
-      aria-expanded={isFolderSettingsSectionExpanded}
-      data-testid="prompt-folder-settings-section-toggle"
-      onclick={onFolderSettingsSectionToggle}
-    >
-      <RotatingChevron
-        expanded={isFolderSettingsSectionExpanded}
-        size={30}
-        iconSize={24}
-        class="prompt-folder-section-header-chevron"
-      />
-      <span class="prompt-folder-section-header-title">Folder Settings</span>
-    </button>
-  </PromptFolderSectionRow>
-{/snippet}
-
-{#snippet folderSettingsFieldRow(props)}
+{#snippet folderEditorRow(props)}
   <PromptFolderSectionRow rowHeightPx={props.rowHeightPx}>
-    <PromptFolderSettingsRow
+    <PromptFolderEditorRow
       {workspaceId}
       {promptFolderId}
-      field={props.row.field}
+      {folderDisplayName}
+      promptCount={visiblePromptIds.length}
       rowId={props.rowId}
       virtualWindowWidthPx={getSectionContentWidthPx(props.virtualWindowWidthPx)}
-      rowContentLeftOffsetPx={PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX}
       devicePixelRatio={props.devicePixelRatio}
       rowHeightPx={props.rowHeightPx}
-      includeBottomGap={props.row.includeBottomGap}
+      sectionHeightsPx={getPromptFolderSettingsSectionHeights(
+        props.virtualWindowWidthPx,
+        props.devicePixelRatio
+      )}
       hydrationPriority={props.hydrationPriority}
       shouldDehydrate={props.shouldDehydrate}
       overlayRowElement={props.overlayRowElement ?? null}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       onHydrationChange={props.onHydrationChange}
       {folderSettings}
+      {isPromptsSectionExpanded}
+      {onPromptsSectionToggle}
       {onSettingsFieldChange}
     />
-  </PromptFolderSectionRow>
-{/snippet}
-
-{#snippet promptHeaderRow({ rowHeightPx })}
-  <PromptFolderSectionRow
-    {rowHeightPx}
-    contentClass="pt-6"
-    contentVirtualWindowRow
-    topInsetPx={PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX}
-  >
-    <button
-      type="button"
-      class="prompt-folder-section-header-button"
-      aria-expanded={isPromptsSectionExpanded}
-      data-testid="prompt-folder-prompts-section-toggle"
-      onclick={onPromptsSectionToggle}
-    >
-      <RotatingChevron
-        expanded={isPromptsSectionExpanded}
-        size={30}
-        iconSize={24}
-        class="prompt-folder-section-header-chevron"
-      />
-      <span class="prompt-folder-section-header-title">
-        {isCompletedMode ? 'Completed Prompts' : 'Prompts'}
-      </span>
-    </button>
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -611,33 +541,3 @@
 {#snippet bottomSpacerRow({ virtualWindowHeightPx })}
   <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
 {/snippet}
-
-<style>
-  .prompt-folder-section-header-button {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: var(--ui-normal-text);
-    cursor: pointer;
-    display: inline-flex;
-    font: inherit;
-    gap: 8px;
-    min-width: 0;
-    padding: 0;
-  }
-
-  .prompt-folder-section-header-button:hover {
-    color: var(--ui-hoverable-text);
-  }
-
-  .prompt-folder-section-header-button :global(.prompt-folder-section-header-chevron) {
-    color: currentColor;
-  }
-
-  .prompt-folder-section-header-title {
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 29px;
-    overflow-wrap: anywhere;
-  }
-</style>

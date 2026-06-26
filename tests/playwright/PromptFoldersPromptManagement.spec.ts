@@ -821,9 +821,7 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Completed Prompts'
     )
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
-    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(0)
     await expect(mainWindow.locator(completeSelector('completed-mode-newest'))).toHaveCount(0)

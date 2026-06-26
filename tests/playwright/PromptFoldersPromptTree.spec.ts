@@ -123,10 +123,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    const settingsToggle = mainWindow.locator(
-      '[data-testid="prompt-folder-settings-section-toggle"]'
-    )
-    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, SHORT_SCROLL_TARGET_PX)
     await expect
@@ -137,10 +134,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
 
-    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'true')
-    await expect(
-      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
-    ).not.toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeLessThan(100)
@@ -159,7 +153,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-prompts-section-toggle"]')
+    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
     await promptsToggle.click()
     await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator(promptEditorSelector('dev-2'))).toHaveCount(0)

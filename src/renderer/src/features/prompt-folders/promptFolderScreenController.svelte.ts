@@ -49,9 +49,7 @@ import {
 import {
   lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
-  lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState,
   setPromptFolderPromptsSectionExpandedStateWithAutosave,
-  setPromptFolderSettingsSectionExpandedStateWithAutosave,
   setPromptFolderPromptTreeEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
@@ -71,14 +69,12 @@ import {
   PROMPT_FOLDER_SETTINGS_ROW_ID,
   isPromptFolderSettingsFindEntityId,
   promptEditorRowId,
-  promptFolderSettingsFindEntityId,
-  promptFolderSettingsRowId
+  promptFolderSettingsFindEntityId
 } from './promptFolderRowIds'
 import { PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX } from './PromptFolderSectionRow.svelte'
 import {
-  PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX,
-  PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX,
-  estimatePromptFolderSettingsFieldRowHeight
+  estimatePromptFolderSettingsFieldRowHeight,
+  getPromptFolderEditorRowHeightPx
 } from './promptFolderSettingsSizing'
 import {
   resolvePromptHandleDropMove,
@@ -233,7 +229,6 @@ export const createPromptFolderScreenController = ({
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
   let latestHandledSelectionVersion = $state(0)
-  let folderSettingsSectionExpandedStates = $state<Record<string, boolean>>({})
   let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
 
   const visiblePromptIds = $derived.by(() => {
@@ -270,7 +265,7 @@ export const createPromptFolderScreenController = ({
       PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field) => {
         nextItems.push({
           entityId: promptFolderSettingsFindEntityId(promptFolderId, field),
-          rowId: promptFolderSettingsRowId(field),
+          rowId: PROMPT_FOLDER_SETTINGS_ROW_ID,
           sections: [
             {
               key: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS[field],
@@ -365,19 +360,6 @@ export const createPromptFolderScreenController = ({
     `${workspaceId ?? 'no-workspace'}:${promptFolderId}:${screenMode}`
   )
 
-  const lookupPersistedFolderSettingsSectionExpandedState = (): boolean => {
-    if (!workspaceId) {
-      return false
-    }
-
-    return (
-      lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
-        workspaceId,
-        promptFolderId
-      ) ?? false
-    )
-  }
-
   const lookupPersistedPromptsSectionExpandedState = (): boolean => {
     if (isCompletedMode) {
       return true
@@ -395,35 +377,10 @@ export const createPromptFolderScreenController = ({
     )
   }
 
-  const isFolderSettingsSectionExpanded = $derived(
-    folderSettingsSectionExpandedStates[promptFolderSectionStateKey] ??
-      lookupPersistedFolderSettingsSectionExpandedState()
-  )
   const isPromptsSectionExpanded = $derived(
     promptsSectionExpandedStates[promptFolderSectionStateKey] ??
       lookupPersistedPromptsSectionExpandedState()
   )
-
-  const setFolderSettingsSectionExpanded = (isExpanded: boolean) => {
-    if (isFolderSettingsSectionExpanded === isExpanded) {
-      return
-    }
-
-    folderSettingsSectionExpandedStates = {
-      ...folderSettingsSectionExpandedStates,
-      [promptFolderSectionStateKey]: isExpanded
-    }
-
-    if (!workspaceId || isCompletedMode) {
-      return
-    }
-
-    setPromptFolderSettingsSectionExpandedStateWithAutosave(
-      workspaceId,
-      promptFolderId,
-      isExpanded
-    )
-  }
 
   const setPromptsSectionExpanded = (isExpanded: boolean) => {
     if (isPromptsSectionExpanded === isExpanded) {
@@ -446,10 +403,6 @@ export const createPromptFolderScreenController = ({
     )
   }
 
-  const toggleFolderSettingsSectionExpanded = () => {
-    setFolderSettingsSectionExpanded(!isFolderSettingsSectionExpanded)
-  }
-
   const togglePromptsSectionExpanded = () => {
     setPromptsSectionExpanded(!isPromptsSectionExpanded)
   }
@@ -460,12 +413,9 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    if (row.kind === 'folder-settings') {
-      setFolderSettingsSectionExpanded(true)
-      return
+    if (row.kind === 'prompt') {
+      setPromptsSectionExpanded(true)
     }
-
-    setPromptsSectionExpanded(true)
   }
 
   const selectedNavigationRow = $derived.by((): PromptNavigationRow | null => {
@@ -917,53 +867,39 @@ export const createPromptFolderScreenController = ({
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
-    const getIncludeBottomGap = (index: number) => index < PROMPT_FOLDER_SETTINGS_FIELDS.length - 1
     if (isCompletedMode) {
       return 0
     }
 
-    const settingsHeaderHeightPx = isFolderSettingsSectionExpanded
-      ? PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX
-      : PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX
-    const baseHeight =
-      settingsHeaderHeightPx +
-      (isFolderSettingsSectionExpanded
-        ? PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
-            return (
-              sum +
-              estimatePromptFolderSettingsFieldRowHeight(
-                folderSettingsTextByField[field],
-                promptEditorSizingConfig.fontSize,
-                getIncludeBottomGap(index)
-              )
-            )
-          }, 0)
-        : 0)
+    const estimatedSectionHeights = Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+        field,
+        estimatePromptFolderSettingsFieldRowHeight(
+          folderSettingsTextByField[field],
+          promptEditorSizingConfig.fontSize
+        )
+      ])
+    ) as Record<PromptFolderSettingsField, number>
 
-    if (!viewportMetrics || !isFolderSettingsSectionExpanded) {
-      return baseHeight
+    if (!viewportMetrics) {
+      return getPromptFolderEditorRowHeightPx(estimatedSectionHeights)
     }
 
     const metrics = viewportMetrics
     const measuredWidthPx = Math.max(0, metrics.widthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
-
-    return (
-      settingsHeaderHeightPx +
-      PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field, index) => {
-        const estimatedHeight = estimatePromptFolderSettingsFieldRowHeight(
-          folderSettingsTextByField[field],
-          promptEditorSizingConfig.fontSize,
-          getIncludeBottomGap(index)
-        )
-        const measuredHeight = lookupPromptFolderSettingsRowMeasuredHeight(
+    const sectionHeights = Object.fromEntries(
+      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
+        field,
+        lookupPromptFolderSettingsRowMeasuredHeight(
           promptFolderId,
           field,
           measuredWidthPx,
           metrics.devicePixelRatio
-        )
-        return sum + (measuredHeight ?? estimatedHeight)
-      }, 0)
-    )
+        ) ?? estimatedSectionHeights[field]
+      ])
+    ) as Record<PromptFolderSettingsField, number>
+
+    return getPromptFolderEditorRowHeightPx(sectionHeights)
   })
 
   const activeHeaderRowId = $derived(
@@ -1008,7 +944,7 @@ export const createPromptFolderScreenController = ({
       })
     }
     // Header navigation should land directly on the target section.
-    scrollToWithinWindowBand(rowId, 0, 'minimal', 0)
+    scrollToWithinWindowBand(targetRow ? toPromptFolderRowId(targetRow) : rowId, 0, 'minimal', 0)
   }
 
   const handleHeaderFolderClick = () => {
@@ -1112,9 +1048,6 @@ export const createPromptFolderScreenController = ({
     get promptFocusRequest(): PromptFocusRequest | null {
       return promptFocusRequest
     },
-    get isFolderSettingsSectionExpanded(): boolean {
-      return isFolderSettingsSectionExpanded
-    },
     get isPromptsSectionExpanded(): boolean {
       return isPromptsSectionExpanded
     },
@@ -1141,7 +1074,6 @@ export const createPromptFolderScreenController = ({
     },
     persistActivePromptTreeRow,
     scrollToWithinWindowBandWithManualClear,
-    toggleFolderSettingsSectionExpanded,
     togglePromptsSectionExpanded,
     handleHeaderSegmentClick,
     handleHeaderFolderClick,

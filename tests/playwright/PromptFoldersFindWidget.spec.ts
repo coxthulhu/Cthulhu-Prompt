@@ -19,7 +19,7 @@ const FIND_BUTTON = '[data-testid="prompt-folder-find-button"]'
 const FIND_CLOSE = '[data-testid="prompt-find-close"]'
 const FIND_MATCHES_LABEL = '[data-testid="prompt-find-widget"] .prompt-find-widget__matches'
 const SETTINGS_ROW_SELECTOR =
-  '[data-testid="prompt-folder-screen"] [data-virtual-window-row][data-testid^="prompt-folder-settings-"]'
+  '[data-testid="prompt-folder-screen"] [data-virtual-window-row][data-testid^="prompt-folder-editor-"]'
 const LOOP_REGRESSION_QUERY = 'cthulhu-loop-regression-marker-9x4k'
 const LOOP_MATCH_PROMPT_IDS = Array.from(
   { length: 19 },
@@ -329,9 +329,7 @@ describe('Prompt folder find dialog', () => {
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(promptEditorSelector('dev-1'), { state: 'attached' })
 
-    const promptsToggle = mainWindow.locator(
-      '[data-testid="prompt-folder-prompts-section-toggle"]'
-    )
+    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
     await promptsToggle.click()
     await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toHaveCount(0)
@@ -1078,7 +1076,6 @@ describe('Prompt folder find dialog', () => {
     const promptIds = LOOP_MATCH_PROMPT_IDS
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
-    await mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]').click()
     await mainWindow.waitForSelector(SETTINGS_ROW_SELECTOR, { state: 'attached' })
     const settingsRowTestId = await mainWindow.evaluate((selector) => {
       return document.querySelector<HTMLElement>(selector)?.getAttribute('data-testid') ?? null

@@ -7,26 +7,21 @@
     type PromptFolderSettings
   } from '@shared/PromptFolder'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import {
     lookupWorkspacePersistedPromptFolderEditorViewStateJson,
     setPromptFolderEditorViewStateWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import EditorCardSection from '../prompt-editor/EditorCardSection.svelte'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'
-  import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
-  import PromptEditorTitleArea from '../prompt-editor/PromptEditorTitleArea.svelte'
-  import { getPromptLineCount, getPromptTokenCount } from '../prompt-editor/promptEditorCounts'
   import { syncMonacoOverflowHost } from '../prompt-editor/monacoOverflowHost'
   import {
     MONACO_PADDING_PX,
     type PromptEditorSizingConfig
   } from '../prompt-editor/promptEditorSizing'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import type { ComponentType } from 'svelte'
-  import { Folder, ListEnd, ListStart } from 'lucide-svelte'
   import { getPromptFolderFindContext } from './find/promptFolderFindContext'
   import type {
     PromptFolderFindRequest,
@@ -34,72 +29,38 @@
   } from './find/promptFolderFindTypes'
   import { promptFolderSettingsFindEntityId } from './promptFolderRowIds'
   import {
-    SETTINGS_EDITOR_LEFT_OFFSET_PX,
-    PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX,
     SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX,
+    SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX,
     SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX,
     SETTINGS_EDITOR_SECTION_PADDING_TOP_PX,
-    SETTINGS_EDITOR_TOP_OFFSET_PX,
-    getPromptFolderSettingsCardHeightFromRowPx,
     getPromptFolderSettingsFieldMonacoHeightFromRowPx,
     getPromptFolderSettingsFieldRowHeightPx,
     getPromptFolderSettingsSizingConfig
   } from './promptFolderSettingsSizing'
 
-  type SettingsSection = {
-    field: PromptFolderSettingsDraftField
-    findSectionKey: string
+  type SettingsSectionConfig = {
     title: string
-    infoText: string
-    copyLabel: string
-    copyTitle: string
-    icon: ComponentType
-    value: string
-    modelUri: monaco.Uri
-    initialViewStateJson: string | null
-    viewStateCaptureKey: string
-    setViewState: (viewStateJson: string | null) => void
-  }
-
-  type SettingsSectionConfig = Omit<
-    SettingsSection,
-    | 'field'
-    | 'findSectionKey'
-    | 'value'
-    | 'modelUri'
-    | 'initialViewStateJson'
-    | 'viewStateCaptureKey'
-    | 'setViewState'
-  > & {
+    description: string
     viewStateCapturePrefix: string
   }
 
   const SETTINGS_SECTION_CONFIG: Record<PromptFolderSettingsDraftField, SettingsSectionConfig> = {
     folderDescription: {
       title: 'Folder Description',
-      infoText:
+      description:
         'A general description of this folder and the types of prompts that are within it. For informational use only.',
-      copyLabel: 'Copy folder description',
-      copyTitle: 'Copy folder description',
-      icon: Folder,
       viewStateCapturePrefix: 'prompt-folder-description'
     },
     folderPrefix: {
       title: 'Prompt Folder Prefix',
-      infoText:
+      description:
         'Text to add before each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
-      copyLabel: 'Copy folder prefix',
-      copyTitle: 'Copy folder prefix',
-      icon: ListStart,
       viewStateCapturePrefix: 'prompt-folder-prefix'
     },
     folderSuffix: {
       title: 'Prompt Folder Suffix',
-      infoText:
+      description:
         'Text to add after each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
-      copyLabel: 'Copy folder suffix',
-      copyTitle: 'Copy folder suffix',
-      icon: ListEnd,
       viewStateCapturePrefix: 'prompt-folder-suffix'
     }
   }
@@ -117,17 +78,15 @@
     field: PromptFolderSettingsDraftField
     rowId: string
     virtualWindowWidthPx: number
-    rowContentLeftOffsetPx?: number
     devicePixelRatio: number
-    rowHeightPx: number
-    includeBottomGap: boolean
+    sectionHeightPx: number
     hydrationPriority: number
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    onHydrationChange?: (isHydrated: boolean) => void
-    onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     folderSettings: PromptFolderSettings
+    showTopBorder?: boolean
+    onHydrationChange?: (field: PromptFolderSettingsDraftField, isHydrated: boolean) => void
     onSettingsFieldChange: (
       field: PromptFolderSettingsDraftField,
       text: string,
@@ -141,17 +100,15 @@
     field,
     rowId,
     virtualWindowWidthPx,
-    rowContentLeftOffsetPx = 0,
     devicePixelRatio,
-    rowHeightPx: virtualRowHeightPx,
-    includeBottomGap,
+    sectionHeightPx,
     hydrationPriority,
     shouldDehydrate,
     overlayRowElement,
     scrollToWithinWindowBand,
-    onHydrationChange,
-    onEditorLifecycle,
     folderSettings,
+    showTopBorder = false,
+    onHydrationChange,
     onSettingsFieldChange
   }: Props = $props()
 
@@ -159,31 +116,13 @@
   const sizingConfig: PromptEditorSizingConfig = $derived(
     getPromptFolderSettingsSizingConfig(systemSettings.promptFontSize)
   )
-  const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId, field))
   const findContext = getPromptFolderFindContext()
-  const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
-  const OVERFLOW_LEFT_PADDING_PX = $derived(SETTINGS_EDITOR_LEFT_OFFSET_PX + rowContentLeftOffsetPx)
-  const OVERFLOW_RIGHT_PADDING_PX = SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX
-  const OVERFLOW_BOTTOM_PADDING_PX =
-    SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX + MONACO_VERTICAL_PADDING_PX
-
-  let rowElement = $state<HTMLDivElement | null>(null)
-  let lastFocusRequestId = $state(0)
-  let overflowHost = $state<HTMLDivElement | null>(null)
-  let overflowPaddingHost = $state<HTMLDivElement | null>(null)
-  let editor = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
-  let isHydrated = $state(false)
-  let requestImmediateHydration = $state<(() => Promise<void>) | null>(null)
-  let revealSectionMatch = $state<((query: string, matchIndex: number) => number | null) | null>(
-    null
-  )
-
-  const section = $derived.by<SettingsSection>(() => {
+  const promptFolderFindEntityId = $derived(promptFolderSettingsFindEntityId(promptFolderId, field))
+  const section = $derived.by(() => {
     const metadata = SETTINGS_FIELD_METADATA_BY_FIELD[field]
     const config = SETTINGS_SECTION_CONFIG[field]
     return {
       ...config,
-      field,
       findSectionKey: metadata.findSectionKey,
       value: folderSettings[field],
       modelUri: createPromptFolderSettingsModelUri(promptFolderId, field),
@@ -194,45 +133,63 @@
             field
           )
         : null,
-      viewStateCaptureKey: `${config.viewStateCapturePrefix}:${promptFolderId}`,
-      setViewState: (viewStateJson) => {
-        if (!workspaceId) return
-        setPromptFolderEditorViewStateWithAutosave(
-          workspaceId,
-          promptFolderId,
-          field,
-          viewStateJson
-        )
-      }
+      viewStateCaptureKey: `${config.viewStateCapturePrefix}:${promptFolderId}`
     }
   })
-  const cardHeightPx = $derived(
-    getPromptFolderSettingsCardHeightFromRowPx(virtualRowHeightPx, includeBottomGap)
-  )
   const placeholderMonacoHeightPx = $derived(
-    Math.max(
-      0,
-      getPromptFolderSettingsFieldMonacoHeightFromRowPx(virtualRowHeightPx, includeBottomGap)
-    )
+    Math.max(0, getPromptFolderSettingsFieldMonacoHeightFromRowPx(sectionHeightPx))
   )
 
-  // Side effect: keep the Monaco overflow widget host aligned with this settings field row.
+  let sectionElement = $state<HTMLElement | null>(null)
+  let editorBodyElement = $state<HTMLDivElement | null>(null)
+  let overflowHost = $state<HTMLDivElement | null>(null)
+  let overflowPaddingHost = $state<HTMLDivElement | null>(null)
+  let editor = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
+  let isHydrated = $state(false)
+  let lastFocusRequestId = $state(0)
+  let requestImmediateHydration = $state<(() => Promise<void>) | null>(null)
+  let revealSectionMatch = $state<((query: string, matchIndex: number) => number | null) | null>(
+    null
+  )
+
+  // Side effect: keep the Monaco overflow host aligned to this section's editor body.
   $effect(() => {
+    let padding = `${SETTINGS_EDITOR_SECTION_PADDING_TOP_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX}px`
+    if (overlayRowElement && editorBodyElement) {
+      const rowRect = overlayRowElement.getBoundingClientRect()
+      const bodyRect = editorBodyElement.getBoundingClientRect()
+      const verticalInsetPx = MONACO_PADDING_PX / 2
+      const topPx = Math.max(
+        0,
+        bodyRect.top - rowRect.top + SETTINGS_EDITOR_SECTION_PADDING_TOP_PX + verticalInsetPx
+      )
+      const rightPx = Math.max(
+        0,
+        rowRect.right - bodyRect.right + SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX
+      )
+      const bottomPx = Math.max(
+        0,
+        rowRect.bottom -
+          bodyRect.bottom +
+          SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX +
+          verticalInsetPx
+      )
+      const leftPx = Math.max(
+        0,
+        bodyRect.left - rowRect.left + SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX
+      )
+      padding = `${topPx}px ${rightPx}px ${bottomPx}px ${leftPx}px`
+    }
+
     const next = syncMonacoOverflowHost({
       overlayRowElement,
       overflowHost,
       overflowPaddingHost,
-      padding: `${SETTINGS_EDITOR_TOP_OFFSET_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
+      padding
     })
     overflowPaddingHost = next.overflowPaddingHost
     overflowHost = next.overflowHost
   })
-
-  const handleHydrationChange = (nextIsHydrated: boolean) => {
-    isHydrated = nextIsHydrated
-    onHydrationChange?.(nextIsHydrated)
-    findContext?.reportHydration(promptFolderFindEntityId, nextIsHydrated)
-  }
 
   const findRequest = $derived.by<PromptFolderFindRequest | null>(() => {
     if (!findContext) return null
@@ -249,6 +206,17 @@
     }
   })
 
+  const setViewState = (viewStateJson: string | null) => {
+    if (!workspaceId) return
+    setPromptFolderEditorViewStateWithAutosave(workspaceId, promptFolderId, field, viewStateJson)
+  }
+
+  const handleHydrationChange = (nextIsHydrated: boolean) => {
+    isHydrated = nextIsHydrated
+    onHydrationChange?.(field, nextIsHydrated)
+    findContext?.reportHydration(promptFolderFindEntityId, nextIsHydrated)
+  }
+
   const handleEditorLifecycle = (
     activeEditor: monaco.editor.IStandaloneCodeEditor,
     isActive: boolean
@@ -258,7 +226,6 @@
     } else if (editor === activeEditor) {
       editor = null
     }
-    onEditorLifecycle?.(activeEditor, isActive)
   }
 
   const ensureHydrated = async (): Promise<boolean> => {
@@ -294,7 +261,7 @@
     }
   }
 
-  // Side effect: register this settings field row with the find integration.
+  // Side effect: register this settings section with find navigation.
   onMount(() => {
     if (!findContext) return
     const handle: PromptFolderFindRowHandle = {
@@ -320,108 +287,82 @@
     lastFocusRequestId = findFocusRequest.requestId
     const focusMatch = findFocusRequest.match
     if (focusMatch.entityId !== promptFolderFindEntityId) return
-    if (!rowElement) return
+    if (!sectionElement) return
     editor?.focus()
   })
 </script>
 
-<div
-  bind:this={rowElement}
-  class="prompt-folder-settings-field-row"
-  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
-  data-testid={`prompt-folder-settings-${promptFolderId}-${field}`}
-  data-virtual-window-row
+<EditorCardSection
+  bind:sectionElement
+  title={section.title}
+  description={section.description}
+  {showTopBorder}
+  testId={`prompt-folder-settings-section-${field}`}
 >
-  <EditorCardSurface
-    style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
+  <div
+    bind:this={editorBodyElement}
+    class="prompt-folder-settings-editor-section"
+    style={`padding:${SETTINGS_EDITOR_SECTION_PADDING_TOP_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX}px;`}
+    use:focusEditorBodyClickAction
   >
-    <PromptEditorTitleArea
-      title={section.title}
-      draftText={section.value}
-      metadataFolderLabel="Folder Settings"
-      lineCount={getPromptLineCount(section.value)}
-      tokenCount={getPromptTokenCount(section.value)}
-      icon={section.icon}
-      copyLabel={section.copyLabel}
-      copyTitle={section.copyTitle}
-      titleAreaHeightPx={PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX}
-      infoText={section.infoText}
-    />
-
-    <Separator />
-
-    <div
-      class="prompt-folder-settings-editor-section"
-      style={`padding:${SETTINGS_EDITOR_SECTION_PADDING_TOP_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX}px ${SETTINGS_EDITOR_LEFT_OFFSET_PX}px;`}
-      use:focusEditorBodyClickAction
-    >
-      {#if overflowHost}
-        {#key `${promptFolderId}:${field}`}
-          <HydratableMonacoEditor
-            initialValue={section.value}
-            initialViewStateJson={section.initialViewStateJson}
-            viewStateCaptureKey={section.viewStateCaptureKey}
-            modelUri={section.modelUri}
-            containerWidthPx={virtualWindowWidthPx}
-            placeholderHeightPx={placeholderMonacoHeightPx}
-            overflowWidgetsDomNode={overflowHost}
-            {sizingConfig}
-            {hydrationPriority}
-            {shouldDehydrate}
-            {rowId}
-            {scrollToWithinWindowBand}
-            onEditorLifecycle={handleEditorLifecycle}
-            findSectionKey={section.findSectionKey}
-            {findRequest}
-            onFindMatches={(query, count) => {
-              findContext?.reportSectionMatchCount(
-                promptFolderFindEntityId,
-                section.findSectionKey,
-                query,
-                count
-              )
-            }}
-            onFindMatchReveal={(handler) => {
-              revealSectionMatch = handler
-            }}
-            onSelectionChange={(startOffset, endOffset) => {
-              findContext?.reportSelection({
-                entityId: promptFolderFindEntityId,
-                sectionKey: section.findSectionKey,
-                startOffset,
-                endOffset
-              })
-            }}
-            onImmediateHydrationRequest={(request) => {
-              requestImmediateHydration = request
-            }}
-            onViewStateCapture={section.setViewState}
-            onHydrationChange={handleHydrationChange}
-            onChange={(text, meta) => {
-              onSettingsFieldChange(field, text, {
-                measuredHeightPx: getPromptFolderSettingsFieldRowHeightPx(
-                  meta.heightPx,
-                  includeBottomGap
-                ),
-                widthPx: virtualWindowWidthPx,
-                devicePixelRatio
-              })
-            }}
-          />
-        {/key}
-      {:else}
-        <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} {sizingConfig} />
-      {/if}
-    </div>
-  </EditorCardSurface>
-</div>
+    {#if overflowHost}
+      {#key `${promptFolderId}:${field}`}
+        <HydratableMonacoEditor
+          initialValue={section.value}
+          initialViewStateJson={section.initialViewStateJson}
+          viewStateCaptureKey={section.viewStateCaptureKey}
+          modelUri={section.modelUri}
+          containerWidthPx={virtualWindowWidthPx}
+          placeholderHeightPx={placeholderMonacoHeightPx}
+          overflowWidgetsDomNode={overflowHost}
+          {sizingConfig}
+          {hydrationPriority}
+          {shouldDehydrate}
+          {rowId}
+          {scrollToWithinWindowBand}
+          onEditorLifecycle={handleEditorLifecycle}
+          findSectionKey={section.findSectionKey}
+          {findRequest}
+          onFindMatches={(query, count) => {
+            findContext?.reportSectionMatchCount(
+              promptFolderFindEntityId,
+              section.findSectionKey,
+              query,
+              count
+            )
+          }}
+          onFindMatchReveal={(handler) => {
+            revealSectionMatch = handler
+          }}
+          onSelectionChange={(startOffset, endOffset) => {
+            findContext?.reportSelection({
+              entityId: promptFolderFindEntityId,
+              sectionKey: section.findSectionKey,
+              startOffset,
+              endOffset
+            })
+          }}
+          onImmediateHydrationRequest={(request) => {
+            requestImmediateHydration = request
+          }}
+          onViewStateCapture={setViewState}
+          onHydrationChange={handleHydrationChange}
+          onChange={(text, meta) => {
+            onSettingsFieldChange(field, text, {
+              measuredHeightPx: getPromptFolderSettingsFieldRowHeightPx(meta.heightPx),
+              widthPx: virtualWindowWidthPx,
+              devicePixelRatio
+            })
+          }}
+        />
+      {/key}
+    {:else}
+      <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} {sizingConfig} />
+    {/if}
+  </div>
+</EditorCardSection>
 
 <style>
-  .prompt-folder-settings-field-row {
-    box-sizing: border-box;
-    min-width: 0;
-  }
-
   .prompt-folder-settings-editor-section {
     box-sizing: border-box;
     min-width: 0;

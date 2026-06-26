@@ -6,9 +6,6 @@ import {
 
 export const PROMPT_FOLDER_SETTINGS_ROW_ID = 'folder-settings'
 
-export const promptFolderSettingsRowId = (field: PromptFolderSettingsField): string =>
-  `folder-settings-${field}`
-
 export const promptEditorRowId = (promptId: string): string => `${promptId}-editor`
 
 export const promptDividerRowId = (promptId: string): string => `${promptId}-divider`

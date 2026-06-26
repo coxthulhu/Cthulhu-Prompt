@@ -84,13 +84,13 @@
             promptFolderId={controller.promptFolderId}
             folderSettings={controller.folderSettings}
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
+            folderDisplayName={controller.folderDisplayName}
             promptDraftById={controller.promptDraftById}
             completedAtByPromptId={controller.completedAtByPromptId}
             visiblePromptIds={controller.visiblePromptIds}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
             promptFocusRequest={controller.promptFocusRequest}
-            isFolderSettingsSectionExpanded={controller.isFolderSettingsSectionExpanded}
             isPromptsSectionExpanded={controller.isPromptsSectionExpanded}
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             initialCenterRowId={controller.initialPromptFolderCenterRowId}
@@ -111,7 +111,6 @@
             onCenterRowChange={controller.handleVirtualCenterRowChange}
             onUserScroll={controller.handleVirtualUserScroll}
             onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
-            onFolderSettingsSectionToggle={controller.toggleFolderSettingsSectionExpanded}
             onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
           />
         {/if}

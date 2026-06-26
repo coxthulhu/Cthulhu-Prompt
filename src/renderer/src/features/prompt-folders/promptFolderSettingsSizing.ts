@@ -1,51 +1,41 @@
 import {
   estimateMonacoHeightPx,
   MONACO_PADDING_PX,
+  PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX,
+  PROMPT_EDITOR_BODY_PADDING_TOP_PX,
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX,
+  PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX,
   type PromptEditorSizingConfig
 } from '../prompt-editor/promptEditorSizing'
+import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
 
-const SETTINGS_TOP_PADDING_PX = 24
-const TITLE_PAGE_LINE_HEIGHT_PX = 29
-const SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX = 16
-const SETTINGS_CARD_GAP_PX = 24
-export const PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX = 87
-export const SETTINGS_EDITOR_SECTION_PADDING_TOP_PX = 8
+export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 24
+export const PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX = 16
+export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX
+export const EDITOR_CARD_SECTION_HEADER_HEIGHT_PX = 28
+export const EDITOR_CARD_SECTION_SEPARATOR_HEIGHT_PX = 1
+export const SETTINGS_EDITOR_SECTION_PADDING_TOP_PX = PROMPT_EDITOR_BODY_PADDING_TOP_PX
 export const SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX = 10
-export const SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX = 10
+export const SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX = PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX
 export const SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX = 10
 
 const SETTINGS_EDITOR_CHROME_PX =
-  PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX +
-  PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
+  EDITOR_CARD_SECTION_HEADER_HEIGHT_PX +
+  EDITOR_CARD_SECTION_SEPARATOR_HEIGHT_PX +
   SETTINGS_EDITOR_SECTION_PADDING_TOP_PX +
   SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX +
   MONACO_PADDING_PX
 const SETTINGS_EDITOR_VERTICAL_INSET_PX = MONACO_PADDING_PX / 2
 export const PROMPT_FOLDER_SETTINGS_EDITOR_MIN_LINES = 1
 export const PROMPT_FOLDER_SETTINGS_EDITOR_MAX_LINES = 30
-const SETTINGS_HEADER_HEIGHT_PX = SETTINGS_TOP_PADDING_PX + TITLE_PAGE_LINE_HEIGHT_PX
-
-export const PROMPT_FOLDER_SETTINGS_HEADER_ROW_HEIGHT_PX =
-  SETTINGS_HEADER_HEIGHT_PX + SETTINGS_DESCRIPTION_CARD_MARGIN_TOP_PX
-export const PROMPT_FOLDER_SETTINGS_COLLAPSED_HEADER_ROW_HEIGHT_PX = SETTINGS_HEADER_HEIGHT_PX
-
-const SETTINGS_FIELD_ROW_FIXED_HEIGHT_PX = SETTINGS_EDITOR_CHROME_PX
-
-const PROMPT_HEADER_PADDING_TOP_PX = 24
-
-export const PROMPT_HEADER_ROW_HEIGHT_PX =
-  PROMPT_HEADER_PADDING_TOP_PX + TITLE_PAGE_LINE_HEIGHT_PX
-export const PROMPT_COLLAPSED_HEADER_ROW_HEIGHT_PX =
-  PROMPT_HEADER_PADDING_TOP_PX + TITLE_PAGE_LINE_HEIGHT_PX
 
 export const SETTINGS_EDITOR_TOP_OFFSET_PX =
-  PROMPT_FOLDER_SETTINGS_TITLE_AREA_HEIGHT_PX +
-  PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
   SETTINGS_EDITOR_SECTION_PADDING_TOP_PX +
   SETTINGS_EDITOR_VERTICAL_INSET_PX
 
 export const SETTINGS_EDITOR_LEFT_OFFSET_PX = SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX
+const FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX =
+  PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX + PROMPT_EDITOR_SEPARATOR_HEIGHT_PX
 
 export const getPromptFolderSettingsSizingConfig = (
   fontSize: number
@@ -63,37 +53,41 @@ export const estimatePromptFolderSettingsMonacoHeight = (
 }
 
 export const getPromptFolderSettingsFieldRowHeightPx = (
-  monacoHeightPx: number,
-  includeBottomGap: boolean
+  monacoHeightPx: number
 ): number => {
-  return Math.ceil(
-    SETTINGS_FIELD_ROW_FIXED_HEIGHT_PX +
-      monacoHeightPx +
-      (includeBottomGap ? SETTINGS_CARD_GAP_PX : 0)
-  )
+  return Math.ceil(SETTINGS_EDITOR_CHROME_PX + monacoHeightPx)
 }
 
 export const getPromptFolderSettingsFieldMonacoHeightFromRowPx = (
-  rowHeightPx: number,
-  includeBottomGap: boolean
+  rowHeightPx: number
 ): number => {
-  return (
-    rowHeightPx - SETTINGS_FIELD_ROW_FIXED_HEIGHT_PX - (includeBottomGap ? SETTINGS_CARD_GAP_PX : 0)
-  )
+  return rowHeightPx - SETTINGS_EDITOR_CHROME_PX
 }
-
-export const getPromptFolderSettingsCardHeightFromRowPx = (
-  rowHeightPx: number,
-  includeBottomGap: boolean
-): number => rowHeightPx - (includeBottomGap ? SETTINGS_CARD_GAP_PX : 0)
 
 export const estimatePromptFolderSettingsFieldRowHeight = (
   text: string,
-  fontSize: number,
-  includeBottomGap: boolean
+  fontSize: number
 ): number => {
   return getPromptFolderSettingsFieldRowHeightPx(
-    estimatePromptFolderSettingsMonacoHeight(text, fontSize),
-    includeBottomGap
+    estimatePromptFolderSettingsMonacoHeight(text, fontSize)
+  )
+}
+
+export const getPromptFolderEditorCardHeightPx = (
+  settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
+): number => {
+  return Math.ceil(
+    FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX +
+      PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field) => sum + settingsFieldHeightsPx[field], 0)
+  )
+}
+
+export const getPromptFolderEditorRowHeightPx = (
+  settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
+): number => {
+  return (
+    PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX +
+    getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx) +
+    PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX
   )
 }

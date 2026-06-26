@@ -308,15 +308,26 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
-    ).toHaveAttribute('aria-expanded', 'true')
-    await expect(
-      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
-    ).not.toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
       .toBeLessThan(100)
+  })
+
+  test('folder editor pencil button does not toggle prompts', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const titleToggle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
+    const pencilButton = mainWindow.locator('[data-testid="prompt-folder-editor-title-edit"]')
+
+    await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
+    await pencilButton.click()
+    await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
   })
 
   test('disables selected folder settings when no prompt folder exists', async ({ testSetup }) => {
@@ -470,9 +481,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
-    ).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
   })
 
   test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {
@@ -496,9 +505,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
   })
 
-  test('folder breadcrumb scrolls to top without expanding folder settings', async ({
-    testSetup
-  }) => {
+  test('folder breadcrumb scrolls to top', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -513,8 +520,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator('[data-testid="prompt-folder-header-folder"]').click()
 
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
-    ).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
   })
 })

@@ -522,7 +522,7 @@ describe('User Persistence', () => {
   })
 
 
-  test('autosaves prompt folder screen section expanded states', async ({
+  test('autosaves prompt folder prompts section expanded state', async ({
     electronApp,
     testSetup
   }) => {
@@ -534,20 +534,14 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const settingsToggle = mainWindow.locator(
-      '[data-testid="prompt-folder-settings-section-toggle"]'
+    const folderEditorToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-title-toggle"]'
     )
-    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-prompts-section-toggle"]')
-    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(folderEditorToggle).toHaveAttribute('aria-expanded', 'true')
 
-    await settingsToggle.click()
-    await promptsToggle.click()
-    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'true')
-    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(
-      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
-    ).not.toHaveCount(0)
+    await folderEditorToggle.click()
+    await expect(folderEditorToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-divider-add-initial"]')).toHaveCount(0)
 
@@ -564,10 +558,10 @@ describe('User Persistence', () => {
         },
         { timeout: 15000 }
       )
-      .toBe('true:false')
+      .toBe('false:false')
   })
 
-  test('restores prompt folder screen collapsed sections on startup', async ({
+  test('restores collapsed prompt rows on startup', async ({
     electronApp,
     testSetup
   }) => {
@@ -600,14 +594,9 @@ describe('User Persistence', () => {
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]')
+      mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
     ).toHaveAttribute('aria-expanded', 'false')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-prompts-section-toggle"]')
-    ).toHaveAttribute('aria-expanded', 'false')
-    await expect(
-      mainWindow.locator('[data-virtual-window-row][data-testid^="prompt-folder-settings-"]')
-    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
   })
 

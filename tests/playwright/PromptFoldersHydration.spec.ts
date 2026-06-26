@@ -224,7 +224,7 @@ const prepareUncappedSidebarBaseline = async (
 }
 
 describe('Prompt Folder Hydration', () => {
-  test('renders folder settings editors as separate virtual rows', async ({ testSetup }) => {
+  test('renders folder settings editors in one folder editor row', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -233,36 +233,40 @@ describe('Prompt Folder Hydration', () => {
 
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.locator('[data-testid="prompt-folder-settings-section-toggle"]').click()
     await mainWindow.waitForSelector(
-      `${HOST_SELECTOR} [data-testid^="prompt-folder-settings-"][data-virtual-window-row]`,
+      `${HOST_SELECTOR} [data-testid^="prompt-folder-editor-"][data-virtual-window-row]`,
       { state: 'attached' }
     )
 
-    const settingsRows = await mainWindow.evaluate((hostSelector) => {
+    const settingsSections = await mainWindow.evaluate((hostSelector) => {
       const host = document.querySelector<HTMLElement>(hostSelector)
       if (!host) return []
 
-      return Array.from(
-        host.querySelectorAll<HTMLElement>(
-          '[data-testid^="prompt-folder-settings-"][data-virtual-window-row]'
-        )
-      ).map((row) => {
-        const rect = row.getBoundingClientRect()
+      const rows = host.querySelectorAll<HTMLElement>(
+        '[data-testid^="prompt-folder-editor-"][data-virtual-window-row]'
+      )
+      const sections = Array.from(
+        host.querySelectorAll<HTMLElement>('[data-testid^="prompt-folder-settings-section-"]')
+      )
+
+      return sections.map((section) => {
+        const rect = section.getBoundingClientRect()
         return {
-          testId: row.getAttribute('data-testid'),
+          rowCount: rows.length,
+          testId: section.getAttribute('data-testid'),
           top: Math.round(rect.top)
         }
       })
     }, HOST_SELECTOR)
 
-    expect(settingsRows).toHaveLength(3)
-    expect(settingsRows.map((row) => row.testId)).toEqual([
+    expect(settingsSections).toHaveLength(3)
+    expect(settingsSections.every((section) => section.rowCount === 1)).toBe(true)
+    expect(settingsSections.map((section) => section.testId)).toEqual([
       expect.stringContaining('folderDescription'),
       expect.stringContaining('folderPrefix'),
       expect.stringContaining('folderSuffix')
     ])
-    expect(new Set(settingsRows.map((row) => row.top)).size).toBe(3)
+    expect(new Set(settingsSections.map((section) => section.top)).size).toBe(3)
   })
 
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {

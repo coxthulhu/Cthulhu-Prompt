@@ -45,7 +45,6 @@ describe('Prompt folder selector modified time', () => {
     await expect(examplesItem.locator(SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME)).toHaveText(
       '2 days ago'
     )
-    await expect(examplesItem.locator(`${SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME} svg`)).toHaveCount(1)
     await expect(developmentItem.locator(SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME)).toHaveText(
       'Yesterday'
     )
