@@ -1,1 +1,1 @@
-export const PROMPT_DIVIDER_ROW_HEIGHT_PX = 56
+export const PROMPT_DIVIDER_ROW_HEIGHT_PX = 48
