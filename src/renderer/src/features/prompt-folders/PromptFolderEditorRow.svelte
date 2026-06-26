@@ -15,10 +15,8 @@
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsEditorSection from './PromptFolderSettingsEditorSection.svelte'
   import {
-    PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX,
     PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX,
-    PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX,
-    getPromptFolderEditorCardHeightPx
+    PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX
   } from './promptFolderSettingsSizing'
 
   type Props = {
@@ -68,7 +66,9 @@
   }: Props = $props()
 
   const promptCountLabel = $derived(`${promptCount} ${promptCount === 1 ? 'prompt' : 'prompts'}`)
-  const cardHeightPx = $derived(getPromptFolderEditorCardHeightPx(sectionHeightsPx))
+  const cardHeightPx = $derived(
+    Math.max(0, virtualRowHeightPx - PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX)
+  )
   const hydratedFields = $state<Record<PromptFolderSettingsField, boolean>>({
     folderDescription: false,
     folderPrefix: false,
@@ -110,7 +110,7 @@
 
 <div
   class="prompt-folder-editor-row"
-  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px; padding-top:${PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX}px; padding-bottom:${PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX}px;`}
+  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px; padding-top:${PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX}px;`}
   data-testid={`prompt-folder-editor-${promptFolderId}`}
   data-virtual-window-row
 >

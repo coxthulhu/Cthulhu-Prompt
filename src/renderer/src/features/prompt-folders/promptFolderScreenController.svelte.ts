@@ -71,7 +71,6 @@ import {
   promptEditorRowId,
   promptFolderSettingsFindEntityId
 } from './promptFolderRowIds'
-import { PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX } from './PromptFolderSectionRow.svelte'
 import {
   estimatePromptFolderSettingsFieldRowHeight,
   getPromptFolderEditorRowHeightPx
@@ -886,14 +885,13 @@ export const createPromptFolderScreenController = ({
     }
 
     const metrics = viewportMetrics
-    const measuredWidthPx = Math.max(0, metrics.widthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
     const sectionHeights = Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
         lookupPromptFolderSettingsRowMeasuredHeight(
           promptFolderId,
           field,
-          measuredWidthPx,
+          metrics.widthPx,
           metrics.devicePixelRatio
         ) ?? estimatedSectionHeights[field]
       ])

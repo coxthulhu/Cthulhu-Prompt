@@ -1,9 +1,11 @@
 <script module lang="ts">
-  export const PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX = 2
+  export const PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX = 2
+  export const PROMPT_FOLDER_SECTION_GUTTER_LEFT_PADDING_PX = 6
+  export const PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX =
+    PROMPT_FOLDER_SECTION_GUTTER_LEFT_PADDING_PX + PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX
   export const PROMPT_FOLDER_SECTION_GUTTER_GAP_PX = 16
   export const PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX =
     PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX + PROMPT_FOLDER_SECTION_GUTTER_GAP_PX
-  export const PROMPT_FOLDER_SECTION_GUTTER_START_INSET_PX = 24
 </script>
 
 <script lang="ts">
@@ -17,7 +19,6 @@
     contentClass?: string
     contentVirtualWindowRow?: boolean
     showGutter?: boolean
-    topInsetPx?: number
   }
 
   let {
@@ -25,14 +26,13 @@
     rowHeightPx,
     contentClass,
     contentVirtualWindowRow = false,
-    showGutter = true,
-    topInsetPx = 0
+    showGutter = true
   }: Props = $props()
 </script>
 
 <div
   class="prompt-folder-section-row"
-  style={`height:${rowHeightPx}px; --prompt-folder-section-gutter-width:${PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX}px; --prompt-folder-section-gutter-gap:${PROMPT_FOLDER_SECTION_GUTTER_GAP_PX}px; --prompt-folder-section-gutter-top-inset:${topInsetPx}px;`}
+  style={`height:${rowHeightPx}px; --prompt-folder-section-gutter-left-padding:${PROMPT_FOLDER_SECTION_GUTTER_LEFT_PADDING_PX}px; --prompt-folder-section-gutter-line-width:${PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX}px; --prompt-folder-section-gutter-width:${PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX}px; --prompt-folder-section-gutter-gap:${PROMPT_FOLDER_SECTION_GUTTER_GAP_PX}px;`}
 >
   {#if showGutter}
     <PromptFolderSectionGutter />

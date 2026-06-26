@@ -32,6 +32,7 @@
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderEditorRow from './PromptFolderEditorRow.svelte'
   import {
+    PROMPT_FOLDER_SETTINGS_GUTTER_TAIL_ROW_ID,
     PROMPT_FOLDER_SETTINGS_ROW_ID,
     promptDividerRowId,
     promptEditorRowId
@@ -41,7 +42,8 @@
   } from './PromptFolderSectionRow.svelte'
   import {
     estimatePromptFolderSettingsFieldRowHeight,
-    getPromptFolderEditorRowHeightPx
+    PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX,
+    getPromptFolderEditorCardRowHeightPx
   } from './promptFolderSettingsSizing'
   import {
     createDroppableStateRegistry,
@@ -61,6 +63,7 @@
 
   type PromptFolderRow =
     | { kind: 'folder-editor' }
+    | { kind: 'folder-editor-gutter-tail' }
     | { kind: 'placeholder' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
@@ -213,7 +216,7 @@
         field,
         lookupPromptFolderSettingsRowMeasuredHeightForScreen(
           field,
-          getSectionContentWidthPx(widthPx),
+          widthPx,
           devicePixelRatio
         ) ?? estimatedHeights[field]
       ])
@@ -223,9 +226,9 @@
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-editor': {
       estimateHeight: () =>
-        getPromptFolderEditorRowHeightPx(getEstimatedPromptFolderSettingsSectionHeights()),
+        getPromptFolderEditorCardRowHeightPx(getEstimatedPromptFolderSettingsSectionHeights()),
       lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
-        getPromptFolderEditorRowHeightPx(
+        getPromptFolderEditorCardRowHeightPx(
           getPromptFolderSettingsSectionHeights(widthPx, devicePixelRatio)
         ),
       centerRowEligible: true,
@@ -233,6 +236,10 @@
       overlayRow: {},
       dehydrateOnWidthResize: true,
       snippet: folderEditorRow
+    },
+    'folder-editor-gutter-tail': {
+      estimateHeight: () => PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX,
+      snippet: folderEditorGutterTailRow
     },
     placeholder: {
       estimateHeight: () => 120,
@@ -286,6 +293,12 @@
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
           kind: 'folder-editor'
+        }
+      })
+      rows.push({
+        id: PROMPT_FOLDER_SETTINGS_GUTTER_TAIL_ROW_ID,
+        row: {
+          kind: 'folder-editor-gutter-tail'
         }
       })
     }
@@ -434,30 +447,34 @@
 />
 
 {#snippet folderEditorRow(props)}
-  <PromptFolderSectionRow rowHeightPx={props.rowHeightPx}>
-    <PromptFolderEditorRow
-      {workspaceId}
-      {promptFolderId}
-      {folderDisplayName}
-      promptCount={visiblePromptIds.length}
-      rowId={props.rowId}
-      virtualWindowWidthPx={getSectionContentWidthPx(props.virtualWindowWidthPx)}
-      devicePixelRatio={props.devicePixelRatio}
-      rowHeightPx={props.rowHeightPx}
-      sectionHeightsPx={getPromptFolderSettingsSectionHeights(
-        props.virtualWindowWidthPx,
-        props.devicePixelRatio
-      )}
-      hydrationPriority={props.hydrationPriority}
-      shouldDehydrate={props.shouldDehydrate}
-      overlayRowElement={props.overlayRowElement ?? null}
-      scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
-      onHydrationChange={props.onHydrationChange}
-      {folderSettings}
-      {isPromptsSectionExpanded}
-      {onPromptsSectionToggle}
-      {onSettingsFieldChange}
-    />
+  <PromptFolderEditorRow
+    {workspaceId}
+    {promptFolderId}
+    {folderDisplayName}
+    promptCount={visiblePromptIds.length}
+    rowId={props.rowId}
+    virtualWindowWidthPx={props.virtualWindowWidthPx}
+    devicePixelRatio={props.devicePixelRatio}
+    rowHeightPx={props.rowHeightPx}
+    sectionHeightsPx={getPromptFolderSettingsSectionHeights(
+      props.virtualWindowWidthPx,
+      props.devicePixelRatio
+    )}
+    hydrationPriority={props.hydrationPriority}
+    shouldDehydrate={props.shouldDehydrate}
+    overlayRowElement={props.overlayRowElement ?? null}
+    scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
+    onHydrationChange={props.onHydrationChange}
+    {folderSettings}
+    {isPromptsSectionExpanded}
+    {onPromptsSectionToggle}
+    {onSettingsFieldChange}
+  />
+{/snippet}
+
+{#snippet folderEditorGutterTailRow({ rowHeightPx })}
+  <PromptFolderSectionRow {rowHeightPx}>
+    <span aria-hidden="true"></span>
   </PromptFolderSectionRow>
 {/snippet}
 

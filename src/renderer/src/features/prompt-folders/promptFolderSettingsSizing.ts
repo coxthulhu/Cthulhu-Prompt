@@ -12,6 +12,7 @@ import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@
 export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 24
 export const PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX = 16
 export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX
+const PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX = 4
 export const EDITOR_CARD_SECTION_HEADER_HEIGHT_PX = 28
 export const EDITOR_CARD_SECTION_SEPARATOR_HEIGHT_PX = 1
 export const SETTINGS_EDITOR_SECTION_PADDING_TOP_PX = PROMPT_EDITOR_BODY_PADDING_TOP_PX
@@ -36,6 +37,14 @@ export const SETTINGS_EDITOR_TOP_OFFSET_PX =
 export const SETTINGS_EDITOR_LEFT_OFFSET_PX = SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX
 const FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX =
   PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX + PROMPT_EDITOR_SEPARATOR_HEIGHT_PX
+
+const normalizePromptFolderVirtualRowHeightPx = (heightPx: number): number => {
+  if (heightPx <= 0) return 0
+  return (
+    Math.ceil(heightPx / PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX) *
+    PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX
+  )
+}
 
 export const getPromptFolderSettingsSizingConfig = (
   fontSize: number
@@ -82,12 +91,20 @@ export const getPromptFolderEditorCardHeightPx = (
   )
 }
 
+export const getPromptFolderEditorCardRowHeightPx = (
+  settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
+): number => {
+  return normalizePromptFolderVirtualRowHeightPx(
+    PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX +
+      getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx)
+  )
+}
+
 export const getPromptFolderEditorRowHeightPx = (
   settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
 ): number => {
   return (
-    PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX +
-    getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx) +
+    getPromptFolderEditorCardRowHeightPx(settingsFieldHeightsPx) +
     PROMPT_FOLDER_EDITOR_ROW_PADDING_BOTTOM_PX
   )
 }

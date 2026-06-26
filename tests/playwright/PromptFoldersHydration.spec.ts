@@ -269,6 +269,53 @@ describe('Prompt Folder Hydration', () => {
     expect(new Set(settingsSections.map((section) => section.top)).size).toBe(3)
   })
 
+  test('starts the prompt gutter at the folder settings card bottom-left corner', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult?.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(
+      `${HOST_SELECTOR} [data-testid^="prompt-folder-editor-"][data-virtual-window-row]`,
+      { state: 'attached' }
+    )
+
+    const geometry = await mainWindow.evaluate((hostSelector) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      const folderEditor = host?.querySelector<HTMLElement>(
+        '[data-testid^="prompt-folder-editor-"][data-virtual-window-row]'
+      )
+      const card = folderEditor?.querySelector<HTMLElement>('.editor-card-surface')
+      if (!host || !card) return null
+
+      const cardRect = card.getBoundingClientRect()
+      const gutter = Array.from(host.querySelectorAll<HTMLElement>('.promptFolderSectionGutter'))
+        .map((candidate) => candidate.getBoundingClientRect())
+        .find((rect) => rect.top >= cardRect.bottom - 1)
+
+      if (!gutter) return null
+
+      return {
+        cardBottom: cardRect.bottom,
+        cardLeft: cardRect.left,
+        gutterLeft: gutter.left,
+        gutterTop: gutter.top
+      }
+    }, HOST_SELECTOR)
+
+    if (!geometry) {
+      throw new Error('Missing folder settings card or gutter geometry')
+    }
+
+    expect(Math.abs(geometry.gutterTop - geometry.cardBottom)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.gutterLeft - (geometry.cardLeft + 6))).toBeLessThanOrEqual(1)
+  })
+
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
