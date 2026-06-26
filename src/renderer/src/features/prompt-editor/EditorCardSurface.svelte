@@ -25,7 +25,7 @@
 
 <CardSurface
   bind:elementRef={rowElement}
-  class={mergeClasses('prompt-editor-card-surface', className)}
+  class={mergeClasses('editor-card-surface', className)}
   data-layout={layout}
   {...restProps}
 >
@@ -33,13 +33,13 @@
     {@render sidebar()}
   {/if}
 
-  <div class="prompt-editor-card-body">
+  <div class="editor-card-body">
     {@render children()}
   </div>
 </CardSurface>
 
 <style>
-  :global(.prompt-editor-card-surface) {
+  :global(.editor-card-surface) {
     align-items: stretch;
     background: var(--ui-card-overlay-surface);
     box-sizing: border-box;
@@ -48,15 +48,15 @@
     overflow: hidden;
   }
 
-  :global(.prompt-editor-card-surface[data-layout='sidebar']) {
+  :global(.editor-card-surface[data-layout='sidebar']) {
     grid-template-columns: 36px minmax(0, 1fr);
   }
 
-  :global(.prompt-editor-card-surface[data-layout='plain']) {
+  :global(.editor-card-surface[data-layout='plain']) {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .prompt-editor-card-body {
+  .editor-card-body {
     align-content: start;
     background: var(--ui-editor-normal-surface);
     border-radius: var(--cthulhu-ui-radius-card);
@@ -66,7 +66,7 @@
     z-index: 1;
   }
 
-  :global(.prompt-editor-card-surface[data-layout='sidebar']) .prompt-editor-card-body {
+  :global(.editor-card-surface[data-layout='sidebar']) .editor-card-body {
     border-radius: var(--cthulhu-ui-radius-card) 0 0 var(--cthulhu-ui-radius-card);
   }
 </style>

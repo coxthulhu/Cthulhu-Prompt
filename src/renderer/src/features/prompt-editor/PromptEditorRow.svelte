@@ -7,7 +7,7 @@
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import PromptEditorCardSurface from './PromptEditorCardSurface.svelte'
+  import EditorCardSurface from './EditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleArea from './PromptEditorTitleArea.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -404,7 +404,7 @@
   }
 </script>
 
-<PromptEditorCardSurface
+<EditorCardSurface
   bind:rowElement
   showSidebar={!isCompletedMode}
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
@@ -503,14 +503,14 @@
       />
     {/if}
   </div>
-</PromptEditorCardSurface>
+</EditorCardSurface>
 
 <style>
-  :global(.prompt-editor-card-surface) {
+  :global(.editor-card-surface) {
     transition: opacity 50ms ease-out;
   }
 
-  :global(.prompt-editor-card-surface[data-dragging='true']) {
+  :global(.editor-card-surface[data-dragging='true']) {
     opacity: 0.72;
   }
 
