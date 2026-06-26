@@ -42,8 +42,10 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const WORKSPACE_PATH = '/ws/sample'
 const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
-const DEVELOPMENT_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${DEVELOPMENT_FOLDER_NAME}/FolderOrder.json`
-const EXAMPLES_FOLDER_PATH = `${WORKSPACE_PATH}/Prompts/${EXAMPLES_FOLDER_NAME}/FolderOrder.json`
+const promptFolderOrderPath = (workspacePath: string, folderName: string): string =>
+  `${workspacePath}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`
+const DEVELOPMENT_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, DEVELOPMENT_FOLDER_NAME)
+const EXAMPLES_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, EXAMPLES_FOLDER_NAME)
 const createDeterministicId = (seed: string): string => {
   let hash = 0
   for (let index = 0; index < seed.length; index += 1) {
@@ -64,7 +66,10 @@ const ANCHORING_FOLDER_NAME = 'Anchoring'
 const DESTINATION_FOLDER_NAME = 'Destination'
 const FALLBACK_SOURCE_FOLDER_NAME = 'FallbackSource'
 const FALLBACK_DESTINATION_FOLDER_NAME = 'FallbackDestination'
-const ANCHORING_FOLDER_PATH = `${DRAG_SCROLL_WORKSPACE_PATH}/Prompts/${ANCHORING_FOLDER_NAME}/FolderOrder.json`
+const ANCHORING_FOLDER_PATH = promptFolderOrderPath(
+  DRAG_SCROLL_WORKSPACE_PATH,
+  ANCHORING_FOLDER_NAME
+)
 const ANCHOR_1_ID = 'anchor-1'
 const ANCHOR_2_ID = 'anchor-2'
 const ANCHOR_3_ID = 'anchor-3'

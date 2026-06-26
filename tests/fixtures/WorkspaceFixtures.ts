@@ -20,6 +20,9 @@ const createPromptFolderInfo = (
   return { displayName, promptFolderId }
 }
 
+const getPromptFolderOrderPath = (folderPath: string): string =>
+  `${folderPath}/_FolderInfo/FolderOrder.json`
+
 /**
  * Configuration for creating a prompt folder
  */
@@ -276,7 +279,7 @@ export function createWorkspaceWithFolders(
     promptFolderIds.push(promptFolderId)
 
     // Create folder metadata
-    structure[`${folderPath}/FolderOrder.json`] = JSON.stringify({ promptIds }, null, 2)
+    structure[getPromptFolderOrderPath(folderPath)] = JSON.stringify({ promptIds }, null, 2)
     structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
       createPromptFolderInfo(folder.displayName, promptFolderId),
       null,
@@ -452,7 +455,7 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   const structure: Record<string, string | null> = {
-    [`${folderPath}/FolderOrder.json`]: JSON.stringify({ promptIds }, null, 2),
+    [getPromptFolderOrderPath(folderPath)]: JSON.stringify({ promptIds }, null, 2),
     [`${folderPath}/_FolderInfo/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,

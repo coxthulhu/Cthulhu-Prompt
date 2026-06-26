@@ -12,10 +12,10 @@ import {
   PROMPTS_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_FILENAME,
-  PROMPT_FOLDER_ORDER_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolvePromptFolderSettingsTextPath,
+  resolvePromptFolderOrderPath,
   resolveWorkspacePromptFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
@@ -60,7 +60,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,
     PROMPT_FOLDER_INFO_FILENAME
   )
-  const orderPath = path.join(exampleFolderPath, PROMPT_FOLDER_ORDER_FILENAME)
+  const orderPath = resolvePromptFolderOrderPath(workspacePath, EXAMPLE_FOLDER_NAME)
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
   const examplePrompts = includeExamplePrompts
