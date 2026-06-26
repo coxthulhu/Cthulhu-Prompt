@@ -1,19 +1,21 @@
 <script lang="ts">
+  import IndentGuideGutter from '@renderer/common/cthulhu-ui/IndentGuideGutter.svelte'
+
   let { indentCount = 1 } = $props<{
     indentCount?: number
   }>()
 
-  const indentIndexes = $derived(Array.from({ length: indentCount }, (_, index) => index))
-  const indentBasePx = $derived(indentCount > 0 ? 20 : 0)
-  const gutterStyle = $derived(
-    `--prompt-tree-indent-count:${indentCount}; --prompt-tree-indent-base:${indentBasePx}px;`
-  )
+  const PROMPT_TREE_FIRST_LINE_OFFSET_PX = 20
+  const PROMPT_TREE_LINE_STEP_PX = 28
+  const PROMPT_TREE_LINE_WIDTH_PX = 1
 </script>
 
-<div class="sidebarPromptTreeGutter" style={gutterStyle} aria-hidden="true">
-  <!-- Prompt-row guide lines stay inside gutter columns so button alignment remains predictable. -->
-  {#each indentIndexes as indentIndex (indentIndex)}
-    <span class="sidebarPromptTreeGutterLine" style={`--prompt-tree-indent-index:${indentIndex};`}
-    ></span>
-  {/each}
-</div>
+<IndentGuideGutter
+  class="sidebarPromptTreeGutter"
+  lineCount={indentCount}
+  firstLineOffsetPx={PROMPT_TREE_FIRST_LINE_OFFSET_PX}
+  lineStepPx={PROMPT_TREE_LINE_STEP_PX}
+  lineWidthPx={PROMPT_TREE_LINE_WIDTH_PX}
+  lineTopInsetPx={-1}
+  lineBottomInsetPx={-1}
+/>

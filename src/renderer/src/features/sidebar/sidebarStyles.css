@@ -235,19 +235,7 @@
 }
 
 .sidebarPromptTreeGutter {
-  position: relative;
   min-height: 30px;
-  align-self: stretch;
-}
-
-.sidebarPromptTreeGutterLine {
-  display: block;
-  position: absolute;
-  top: -1px;
-  bottom: -1px;
-  left: calc(var(--prompt-tree-indent-base, 20px) + 28px * var(--prompt-tree-indent-index, 0));
-  width: 1px;
-  background-color: var(--ui-neutral-emphasis-border);
 }
 
 .sidebarPromptTreeSettingsButton {

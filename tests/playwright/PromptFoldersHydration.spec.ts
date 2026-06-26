@@ -269,7 +269,7 @@ describe('Prompt Folder Hydration', () => {
     expect(new Set(settingsSections.map((section) => section.top)).size).toBe(3)
   })
 
-  test('starts the prompt gutter at the folder settings card bottom-left corner', async ({
+  test('starts the prompt gutter guide at the folder settings card bottom-left corner', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -294,16 +294,23 @@ describe('Prompt Folder Hydration', () => {
       if (!host || !card) return null
 
       const cardRect = card.getBoundingClientRect()
-      const gutter = Array.from(host.querySelectorAll<HTMLElement>('.promptFolderSectionGutter'))
-        .map((candidate) => candidate.getBoundingClientRect())
-        .find((rect) => rect.top >= cardRect.bottom - 1)
+      const gutterElement = Array.from(
+        host.querySelectorAll<HTMLElement>('.promptFolderSectionGutter')
+      ).find((candidate) => candidate.getBoundingClientRect().top >= cardRect.bottom - 1)
 
-      if (!gutter) return null
+      if (!gutterElement) return null
+
+      const gutter = gutterElement.getBoundingClientRect()
+      const guideLines = Array.from(
+        gutterElement.querySelectorAll<HTMLElement>('[data-indent-guide-line]')
+      ).map((line) => line.getBoundingClientRect())
 
       return {
         cardBottom: cardRect.bottom,
         cardLeft: cardRect.left,
-        gutterLeft: gutter.left,
+        guideLineCount: guideLines.length,
+        guideLineLeft: guideLines[0]?.left ?? null,
+        guideLineWidth: guideLines[0]?.width ?? null,
         gutterTop: gutter.top
       }
     }, HOST_SELECTOR)
@@ -313,7 +320,12 @@ describe('Prompt Folder Hydration', () => {
     }
 
     expect(Math.abs(geometry.gutterTop - geometry.cardBottom)).toBeLessThanOrEqual(1)
-    expect(Math.abs(geometry.gutterLeft - (geometry.cardLeft + 6))).toBeLessThanOrEqual(1)
+    expect(geometry.guideLineCount).toBe(1)
+    expect(geometry.guideLineWidth).toBe(2)
+    if (geometry.guideLineLeft === null) {
+      throw new Error('Missing prompt folder gutter guide line geometry')
+    }
+    expect(Math.abs(geometry.guideLineLeft - (geometry.cardLeft + 6))).toBeLessThanOrEqual(1)
   })
 
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {

@@ -1,27 +1,26 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements'
+  import IndentGuideGutter from '@renderer/common/cthulhu-ui/IndentGuideGutter.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
+  import {
+    PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX,
+    PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX,
+    PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX
+  } from './promptFolderSectionGutterMetrics'
 
-  type Props = HTMLAttributes<HTMLDivElement>
+  type Props = HTMLAttributes<HTMLDivElement> & {
+    indentLevel?: number
+  }
 
-  let { class: className, ...restProps }: Props = $props()
+  let { indentLevel = 1, class: className, ...restProps }: Props = $props()
 </script>
 
 <!-- Visual section rail for prompt-folder virtual rows. -->
-<div
+<IndentGuideGutter
   class={mergeClasses('promptFolderSectionGutter', className)}
-  aria-hidden="true"
+  lineCount={indentLevel}
+  firstLineOffsetPx={PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX}
+  lineStepPx={PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX}
+  lineWidthPx={PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX}
   {...restProps}
-></div>
-
-<style>
-  .promptFolderSectionGutter {
-    align-self: stretch;
-    background: var(--ui-neutral-emphasis-border);
-    margin-left: var(--prompt-folder-section-gutter-left-padding, 0);
-    margin-bottom: var(--prompt-folder-section-gutter-bottom-inset, 0);
-    margin-top: var(--prompt-folder-section-gutter-top-inset, 0);
-    min-width: var(--prompt-folder-section-gutter-line-width, 2px);
-    width: var(--prompt-folder-section-gutter-line-width, 2px);
-  }
-</style>
+/>
