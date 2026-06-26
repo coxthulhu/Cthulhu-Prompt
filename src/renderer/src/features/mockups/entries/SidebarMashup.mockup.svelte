@@ -256,6 +256,7 @@
     `${count} ${count === 1 ? 'subfolder' : 'subfolders'}`
 
   let nextPromptSequence = $state(1)
+  let nextSubfolderSequence = $state(1)
 
   const createNewPrompt = (folder: string): MockPrompt => {
     const promptNumber = nextPromptSequence
@@ -268,6 +269,44 @@
       modifiedLabel: 'Just now',
       text: ''
     }
+  }
+
+  const createNewSubfolder = (): MockSubfolder => {
+    const subfolderNumber = nextSubfolderSequence
+    nextSubfolderSequence += 1
+
+    return {
+      id: `mockup-new-subfolder-${subfolderNumber}`,
+      title: `New subfolder ${subfolderNumber}`,
+      isExpanded: true,
+      subfolderCount: 0,
+      fields: createFolderFields(
+        `mockup-new-subfolder-${subfolderNumber}`,
+        'Describe when this subfolder should be used.',
+        'Add shared setup instructions for prompts in this subfolder.',
+        'Add shared closing instructions for prompts in this subfolder.'
+      ),
+      prompts: []
+    }
+  }
+
+  const addSubfolderAfter = (previousPromptId: string | null, targetFolderId: string | null) => {
+    const nextSubfolder = createNewSubfolder()
+
+    if (targetFolderId === null) {
+      mockSubfolders = [nextSubfolder, ...mockSubfolders]
+      return
+    }
+
+    const targetFolderIndex = mockSubfolders.findIndex((folder) => folder.id === targetFolderId)
+    const insertionIndex =
+      targetFolderIndex === -1 ? mockSubfolders.length : targetFolderIndex + 1
+    const nextSubfolders = [...mockSubfolders]
+    nextSubfolders.splice(insertionIndex, 0, {
+      ...nextSubfolder,
+      title: previousPromptId ? `${nextSubfolder.title} after prompt` : nextSubfolder.title
+    })
+    mockSubfolders = nextSubfolders
   }
 
   const addPromptAfter = (previousPromptId: string | null, targetFolderId: string | null) => {
@@ -481,11 +520,17 @@
 {#snippet PromptDividerRow(previousPromptId: string | null, targetFolderId: string | null)}
   <PromptDivider
     onAddPrompt={() => addPromptAfter(previousPromptId, targetFolderId)}
+    onAddSubfolder={() => addSubfolderAfter(previousPromptId, targetFolderId)}
     testId={previousPromptId
       ? `mockup-prompt-divider-add-after-${previousPromptId}`
       : targetFolderId
         ? `mockup-prompt-divider-add-initial-${targetFolderId}`
         : 'mockup-prompt-divider-add-initial'}
+    subfolderTestId={previousPromptId
+      ? `mockup-subfolder-divider-add-after-${previousPromptId}`
+      : targetFolderId
+        ? `mockup-subfolder-divider-add-initial-${targetFolderId}`
+        : 'mockup-subfolder-divider-add-initial'}
   />
 {/snippet}
 
@@ -568,7 +613,7 @@
     <div class="mockup-prompt-editor-body mockup-subfolder-body">
       <header
         class="mockup-prompt-editor-title-bar mockup-subfolder-title-bar"
-        style={`min-height:${PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}px;`}
+        style={`height:${PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}px; min-height:${PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}px; max-height:${PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}px;`}
         role="button"
         tabindex="0"
         aria-expanded={folder.isExpanded}
@@ -618,7 +663,7 @@
         </div>
       </header>
 
-      <span class="mockup-title-body-separator mockup-subfolder-separator" aria-hidden="true"></span>
+      <span class="mockup-title-body-separator" aria-hidden="true"></span>
 
       <div class="mockup-folder-fields">
         {#each folder.fields as field (field.id)}
@@ -682,16 +727,7 @@
 <style>
   .prompt-folder-base-mockup {
     --mockup-monaco-editor-background: #1f1f1f;
-    --mockup-folder-field-surface: color-mix(
-      in srgb,
-      var(--ui-editor-normal-surface) 82%,
-      var(--ui-card-overlay-surface)
-    );
-    --mockup-folder-line: color-mix(
-      in srgb,
-      var(--ui-hoverable-icon-glyph) 42%,
-      var(--ui-neutral-muted-border)
-    );
+    --mockup-folder-line: var(--ui-neutral-muted-border);
 
     box-sizing: border-box;
     min-width: 0;
@@ -766,11 +802,7 @@
   }
 
   .mockup-subfolder-body {
-    background: color-mix(
-      in srgb,
-      var(--ui-editor-normal-surface) 88%,
-      var(--ui-card-overlay-surface)
-    );
+    background: var(--ui-editor-normal-surface);
   }
 
   .mockup-prompt-editor-title-bar {
@@ -790,7 +822,7 @@
     cursor: pointer;
     grid-template-columns: minmax(0, 1fr);
     outline: none;
-    padding: 9px 14px 9px 16px;
+    padding: 8px 16px;
   }
 
   .mockup-subfolder-title-bar:focus-visible {
@@ -809,7 +841,7 @@
     align-items: center;
     display: grid;
     gap: 10px;
-    grid-template-columns: 32px 40px minmax(0, 1fr);
+    grid-template-columns: 24px 40px minmax(0, 1fr);
     min-width: 0;
   }
 
@@ -822,15 +854,6 @@
     height: 40px;
     justify-content: center;
     width: 40px;
-  }
-
-  .mockup-folder-title-icon {
-    background: color-mix(
-      in srgb,
-      var(--ui-card-overlay-surface) 76%,
-      var(--ui-neutral-muted-border)
-    );
-    color: var(--ui-hoverable-icon-glyph);
   }
 
   .mockup-title-copy {
@@ -881,7 +904,7 @@
 
   .mockup-subfolder-toggle {
     height: 32px;
-    width: 32px;
+    width: 24px;
   }
 
   .mockup-subfolder-title-edit:hover,
@@ -961,12 +984,8 @@
     width: 100%;
   }
 
-  .mockup-subfolder-separator {
-    background: var(--mockup-folder-line);
-  }
-
   .mockup-folder-fields {
-    background: var(--mockup-folder-field-surface);
+    background: var(--ui-editor-normal-surface);
     display: grid;
     gap: 0;
     min-width: 0;
