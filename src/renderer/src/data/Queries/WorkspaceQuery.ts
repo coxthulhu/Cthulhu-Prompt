@@ -4,6 +4,7 @@ import { promptCollection } from '../Collections/PromptCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import {
   deletePromptFolderDrafts,
   upsertPromptFolderDrafts
@@ -33,7 +34,10 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
         continue
       }
 
-      for (const promptId of [...promptFolder.promptIds, ...promptFolder.completedPromptIds]) {
+      for (const promptId of [
+        ...getPromptFolderPromptIds(promptFolder),
+        ...promptFolder.completedPromptIds
+      ]) {
         previousPromptIds.add(promptId)
       }
     }

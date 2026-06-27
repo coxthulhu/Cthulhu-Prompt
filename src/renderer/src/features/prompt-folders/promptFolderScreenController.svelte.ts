@@ -166,7 +166,9 @@ export const createPromptFolderScreenController = ({
     return draftsById
   })
   const promptFolderDraft = $derived(promptFolderDraftById[promptFolderId] ?? null)
-  const promptIds = $derived(promptFolder?.promptIds ?? [])
+  const getPromptIdsForFolder = (folder: PromptFolder): string[] =>
+    folder.entryIds.filter((entryId) => promptById[entryId])
+  const promptIds = $derived(promptFolder ? getPromptIdsForFolder(promptFolder) : [])
   const completedPromptIds = $derived(promptFolder?.completedPromptIds ?? [])
   const orderedCompletedPromptIds = $derived.by(() =>
     [...completedPromptIds].sort((leftPromptId, rightPromptId) => {
@@ -562,7 +564,10 @@ export const createPromptFolderScreenController = ({
       return false
     }
 
-    for (const promptId of [...cachedPromptFolder.promptIds, ...cachedPromptFolder.completedPromptIds]) {
+    for (const promptId of [
+      ...getPromptIdsForFolder(cachedPromptFolder),
+      ...cachedPromptFolder.completedPromptIds
+    ]) {
       if (!promptDraftCollection.get(promptId)) {
         return false
       }
@@ -723,7 +728,7 @@ export const createPromptFolderScreenController = ({
 
     const nextMove = resolvePromptHandleDropMove(
       currentPromptFolder.id,
-      currentPromptFolder.promptIds,
+      getPromptIdsForFolder(currentPromptFolder),
       promptId,
       orderAfterPromptId === null
         ? { kind: 'folder', folderId: destinationPromptFolderId }
@@ -733,7 +738,7 @@ export const createPromptFolderScreenController = ({
             promptId: orderAfterPromptId,
             edge: 'bottom'
           },
-      destinationPromptFolder.promptIds
+      getPromptIdsForFolder(destinationPromptFolder)
     )
     if (!nextMove) {
       return false
@@ -802,7 +807,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleMovePromptUp = async (nextPromptId: string): Promise<boolean> => {
-    const currentPromptIds = promptFolder?.promptIds ?? []
+    const currentPromptIds = promptFolder ? getPromptIdsForFolder(promptFolder) : []
     const currentIndex = currentPromptIds.indexOf(nextPromptId)
     if (currentIndex <= 0) {
       return false
@@ -813,7 +818,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleMovePromptDown = async (nextPromptId: string): Promise<boolean> => {
-    const currentPromptIds = promptFolder?.promptIds ?? []
+    const currentPromptIds = promptFolder ? getPromptIdsForFolder(promptFolder) : []
     const currentIndex = currentPromptIds.indexOf(nextPromptId)
     if (currentIndex === -1 || currentIndex >= currentPromptIds.length - 1) {
       return false
@@ -834,13 +839,17 @@ export const createPromptFolderScreenController = ({
 
     const nextMove = resolvePromptHandleDropMove(
       currentPromptFolder.id,
-      currentPromptFolder.promptIds,
+      getPromptIdsForFolder(currentPromptFolder),
       draggedPromptId,
       dropPayload,
       dropPayload?.kind === 'prompt'
-        ? (promptFolderQuery.data.find((folder) => folder?.id === dropPayload.folderId)
-            ?.promptIds ?? null)
-        : currentPromptFolder.promptIds
+        ? (((): string[] | null => {
+            const targetFolder = promptFolderQuery.data.find(
+              (folder) => folder?.id === dropPayload.folderId
+            )
+            return targetFolder ? getPromptIdsForFolder(targetFolder) : null
+          })())
+        : getPromptIdsForFolder(currentPromptFolder)
     )
     if (!nextMove) {
       return

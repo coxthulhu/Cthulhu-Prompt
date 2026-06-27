@@ -102,9 +102,11 @@ export const createPromptFolder = async (
         id: optimisticPromptFolderId,
         folderName,
         displayName: normalizedDisplayName,
+        parentPromptFolderId: null,
+        depth: 0,
         modifiedAt,
         promptCount: 0,
-        promptIds: [],
+        entryIds: [],
         completedPromptIds: [],
         settings: createEmptyPromptFolderSettings()
       })

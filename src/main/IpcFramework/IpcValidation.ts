@@ -9,6 +9,7 @@ import type {
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
+  CreatePromptSubfolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
   PromptFolderSettings,
@@ -209,9 +210,11 @@ const parsePromptFolder = parseObject<PromptFolder>({
   id: parseString,
   folderName: parseString,
   displayName: parseString,
+  parentPromptFolderId: parseNullableString,
+  depth: parseNumber,
   modifiedAt: parseNullableString,
   promptCount: parseNumber,
-  promptIds: parseArray(parseString),
+  entryIds: parseArray(parseString),
   completedPromptIds: parseArray(parseString),
   settings: parsePromptFolderSettings
 })
@@ -333,6 +336,17 @@ const parseCreatePromptFolderPayload = parseObject<CreatePromptFolderPayload>({
 
 const parseCreatePromptFolderWireRequest: Parser<IpcRequestWithPayload<CreatePromptFolderPayload>> =
   parseWireRequestWithPayload<CreatePromptFolderPayload>(parseCreatePromptFolderPayload)
+
+const parseCreatePromptSubfolderPayload = parseObject<CreatePromptSubfolderPayload>({
+  parentPromptFolder: parsePromptFolderRevisionPayloadEntity,
+  promptFolderId: parseString,
+  displayName: parseString,
+  previousEntryId: parseNullableString
+})
+
+const parseCreatePromptSubfolderWireRequest: Parser<
+  IpcRequestWithPayload<CreatePromptSubfolderPayload>
+> = parseWireRequestWithPayload<CreatePromptSubfolderPayload>(parseCreatePromptSubfolderPayload)
 
 const parseCreatePromptPayload: Parser<CreatePromptPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -536,6 +550,10 @@ export const parseCloseWorkspaceRequest = createRequestParser(parseCloseWorkspac
 
 export const parseCreatePromptFolderRequest = createRequestParser(
   parseCreatePromptFolderWireRequest
+)
+
+export const parseCreatePromptSubfolderRequest = createRequestParser(
+  parseCreatePromptSubfolderWireRequest
 )
 
 export const parseCreatePromptRequest = createRequestParser(parseCreatePromptWireRequest)

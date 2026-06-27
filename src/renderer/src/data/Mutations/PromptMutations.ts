@@ -24,6 +24,7 @@ import type { Transaction } from '@tanstack/svelte-db'
 import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import {
@@ -120,7 +121,7 @@ export const createPrompt = async (
   await runRevisionMutation<CreatePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       const promptTitleFields = resolvePromptTitleUpdateForPromptIds({
-        promptIds: promptFolder.promptIds,
+        promptIds: getPromptFolderPromptIds(promptFolder),
         lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
         promptId: prompt.id,
         currentFallbackTitle: prompt.fallbackTitle,
@@ -136,21 +137,21 @@ export const createPrompt = async (
       collections.promptDraft.insert(optimisticPrompt)
 
       collections.promptFolder.update(promptFolderId, (draft) => {
-        let insertIndex = draft.promptIds.length
+        let insertIndex = draft.entryIds.length
 
         if (previousPromptId === null) {
           insertIndex = 0
         } else {
-          const previousIndex = draft.promptIds.indexOf(previousPromptId)
+          const previousIndex = draft.entryIds.indexOf(previousPromptId)
           if (previousIndex !== -1) {
             insertIndex = previousIndex + 1
           }
         }
 
-        const nextPromptIds = [...draft.promptIds]
-        nextPromptIds.splice(insertIndex, 0, prompt.id)
-        draft.promptIds = nextPromptIds
-        draft.promptCount = nextPromptIds.length
+        const nextEntryIds = [...draft.entryIds]
+        nextEntryIds.splice(insertIndex, 0, prompt.id)
+        draft.entryIds = nextEntryIds
+        draft.promptCount += 1
         draft.modifiedAt = prompt.modifiedAt
       })
     },
@@ -269,9 +270,9 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
       collections.prompt.delete(promptId)
       collections.promptDraft.delete(promptId)
       collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
+        draft.entryIds = draft.entryIds.filter((id) => id !== promptId)
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-        draft.promptCount = draft.promptIds.length
+        draft.promptCount = Math.max(0, draft.promptCount - 1)
         draft.modifiedAt = modifiedAt
       })
     },
@@ -335,9 +336,9 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
   await runRevisionMutation<CompletePromptResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.promptIds = draft.promptIds.filter((id) => id !== promptId)
+        draft.entryIds = draft.entryIds.filter((id) => id !== promptId)
         draft.completedPromptIds = [...draft.completedPromptIds, promptId]
-        draft.promptCount = draft.promptIds.length
+        draft.promptCount = Math.max(0, draft.promptCount - 1)
         draft.modifiedAt = modifiedAt
       })
       collections.prompt.update(promptId, (draft) => {
@@ -416,8 +417,8 @@ export const uncompletePrompt = async (
     mutateOptimistically: ({ collections }) => {
       collections.promptFolder.update(promptFolderId, (draft) => {
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-        draft.promptIds = [promptId, ...draft.promptIds.filter((id) => id !== promptId)]
-        draft.promptCount = draft.promptIds.length
+        draft.entryIds = [promptId, ...draft.entryIds.filter((id) => id !== promptId)]
+        draft.promptCount += 1
         draft.modifiedAt = modifiedAt
       })
       collections.prompt.update(promptId, (draft) => {
@@ -502,8 +503,10 @@ export const movePrompt = async (
   }
   const isSameFolder = sourcePromptFolderId === destinationPromptFolderId
   const destinationPromptIds = isSameFolder
-    ? sourcePromptFolder.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
-    : destinationPromptFolder.promptIds
+    ? getPromptFolderPromptIds(sourcePromptFolder).filter(
+        (currentPromptId) => currentPromptId !== promptId
+      )
+    : getPromptFolderPromptIds(destinationPromptFolder)
   const insertIndex = resolvePromptInsertIndex(destinationPromptIds, orderAfterPromptId)
 
   if (insertIndex === null) {
@@ -515,26 +518,28 @@ export const movePrompt = async (
     mutateOptimistically: ({ collections }) => {
       if (isSameFolder) {
         collections.promptFolder.update(sourcePromptFolderId, (draft) => {
-          const nextPromptIds = draft.promptIds.filter(
-            (currentPromptId) => currentPromptId !== promptId
-          )
-          nextPromptIds.splice(insertIndex, 0, promptId)
-          draft.promptIds = nextPromptIds
+          const targetIndex =
+            orderAfterPromptId === null ? 0 : draft.entryIds.indexOf(orderAfterPromptId) + 1
+          const nextEntryIds = draft.entryIds.filter((entryId) => entryId !== promptId)
+          nextEntryIds.splice(targetIndex, 0, promptId)
+          draft.entryIds = nextEntryIds
           draft.modifiedAt = modifiedAt
         })
         return
       }
 
       collections.promptFolder.update(sourcePromptFolderId, (draft) => {
-        draft.promptIds = draft.promptIds.filter((currentPromptId) => currentPromptId !== promptId)
-        draft.promptCount = draft.promptIds.length
+        draft.entryIds = draft.entryIds.filter((entryId) => entryId !== promptId)
+        draft.promptCount = Math.max(0, draft.promptCount - 1)
         draft.modifiedAt = modifiedAt
       })
       collections.promptFolder.update(destinationPromptFolderId, (draft) => {
-        const nextPromptIds = [...draft.promptIds]
-        nextPromptIds.splice(insertIndex, 0, promptId)
-        draft.promptIds = nextPromptIds
-        draft.promptCount = nextPromptIds.length
+        const targetIndex =
+          orderAfterPromptId === null ? 0 : draft.entryIds.indexOf(orderAfterPromptId) + 1
+        const nextEntryIds = [...draft.entryIds]
+        nextEntryIds.splice(targetIndex, 0, promptId)
+        draft.entryIds = nextEntryIds
+        draft.promptCount += 1
         draft.modifiedAt = modifiedAt
       })
       collections.prompt.update(promptId, (draft) => {

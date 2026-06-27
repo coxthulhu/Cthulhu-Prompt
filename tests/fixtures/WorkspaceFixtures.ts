@@ -185,6 +185,7 @@ export type WorkspaceScenario =
   | 'minimal' // Basic workspace structure with settings
   | 'sample' // Workspace with Examples and Development prompt folders
   | 'height' // Workspace with folders for height tests
+  | 'subfolders' // Workspace with a prompt folder containing one nested subfolder
   | 'virtual' // Workspace with folders for virtualization/overscan tests
   | 'long-wrapped-lines' // Workspace with wrapped prompts that overflow default estimations
   | 'virtual-placeholder' // Workspace with prompts tailored for placeholder hydration tests
@@ -197,6 +198,7 @@ export const DEFAULT_WORKSPACES: Record<
   minimal: '/ws/minimal',
   sample: '/ws/sample',
   height: '/ws/height',
+  subfolders: '/ws/subfolders',
   virtual: '/ws/virtual',
   'long-wrapped-lines': '/ws/long-wrapped-lines',
   'virtual-placeholder': '/ws/virtual-placeholder'
@@ -279,7 +281,11 @@ export function createWorkspaceWithFolders(
     promptFolderIds.push(promptFolderId)
 
     // Create folder metadata
-    structure[getPromptFolderOrderPath(folderPath)] = JSON.stringify({ promptIds }, null, 2)
+    structure[getPromptFolderOrderPath(folderPath)] = JSON.stringify(
+      { entryIds: promptIds },
+      null,
+      2
+    )
     structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
       createPromptFolderInfo(folder.displayName, promptFolderId),
       null,
@@ -324,6 +330,60 @@ export function setupWorkspaceScenario(
     case 'height': {
       const heightPromptFolders = createSinglePromptFoldersFromPromptCollection(heightTestPrompts)
       return createWorkspaceWithFolders(workspacePath, heightPromptFolders)
+    }
+
+    case 'subfolders': {
+      const structure = createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Main',
+          displayName: 'Main',
+          prompts: [
+            {
+              id: 'base-before',
+              title: 'Base Before',
+              promptText: 'Visible base prompt before the subfolder.'
+            },
+            {
+              id: 'base-after',
+              title: 'Base After',
+              promptText: 'Visible base prompt after the subfolder.'
+            }
+          ]
+        }
+      ])
+      const subfolderId = createDeterministicId(`${workspacePath}:Main/Nested`)
+      const subfolderPath = `${workspacePath}/Prompts/Main/Nested`
+      const { prompts } = normalizePrompts([
+        {
+          id: 'nested-prompt',
+          title: 'Nested Prompt',
+          promptText: 'Prompt text from a nested prompt folder.'
+        }
+      ])
+      const { promptIds, promptFiles } = createPromptFiles(subfolderPath, prompts)
+
+      structure[`${workspacePath}/Prompts/Main/_FolderInfo/FolderOrder.json`] = JSON.stringify(
+        { entryIds: ['base-before', subfolderId, 'base-after'] },
+        null,
+        2
+      )
+      structure[getPromptFolderOrderPath(subfolderPath)] = JSON.stringify(
+        { entryIds: promptIds },
+        null,
+        2
+      )
+      structure[`${subfolderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
+        createPromptFolderInfo('Nested', subfolderId),
+        null,
+        2
+      )
+      addPromptFolderSettingsFiles(structure, subfolderPath, {
+        folderName: 'Main/Nested',
+        displayName: 'Nested'
+      })
+      Object.assign(structure, promptFiles)
+
+      return structure
     }
 
     case 'virtual': {
@@ -455,7 +515,7 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   const structure: Record<string, string | null> = {
-    [getPromptFolderOrderPath(folderPath)]: JSON.stringify({ promptIds }, null, 2),
+    [getPromptFolderOrderPath(folderPath)]: JSON.stringify({ entryIds: promptIds }, null, 2),
     [`${folderPath}/_FolderInfo/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,

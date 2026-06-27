@@ -9,7 +9,7 @@ export type PromptFolderInfoFile = {
 }
 
 export type PromptFolderOrderFile = {
-  promptIds: string[]
+  entryIds: string[]
 }
 
 export type WorkspacePromptFolderOrderFile = {

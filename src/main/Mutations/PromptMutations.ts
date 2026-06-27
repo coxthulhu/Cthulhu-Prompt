@@ -11,6 +11,7 @@ import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import { buildPromptFolderSnapshot, buildPromptSnapshot } from '../Data/DataSnapshotHelpers'
+import type { PromptFolder } from '@shared/PromptFolder'
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
@@ -37,6 +38,10 @@ const resolvePromptInsertIndex = (
 
 const lookupCommittedPrompt = (promptId: string): PromptPersisted | null => {
   return data.prompt.committedStore.getEntry(promptId)?.committed ?? null
+}
+
+const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] => {
+  return promptFolder.entryIds.filter((entryId) => data.prompt.committedStore.getEntry(entryId))
 }
 
 const buildMovePromptConflictResponse = (
@@ -126,11 +131,11 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt already exists' }
           }
 
-          let insertIndex = committedPromptFolder.committed.promptIds.length
+          let insertIndex = committedPromptFolder.committed.entryIds.length
           if (payload.previousPromptId === null) {
             insertIndex = 0
           } else {
-            const previousIndex = committedPromptFolder.committed.promptIds.indexOf(
+            const previousIndex = committedPromptFolder.committed.entryIds.indexOf(
               payload.previousPromptId
             )
             if (previousIndex === -1) {
@@ -140,8 +145,9 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const now = getCurrentIsoSecondTimestamp()
+          const promptIds = getPromptFolderPromptIds(committedPromptFolder.committed)
           const promptTitleFields = resolvePromptTitleUpdateForPromptIds({
-            promptIds: committedPromptFolder.committed.promptIds,
+            promptIds,
             lookupPrompt: lookupCommittedPrompt,
             promptId,
             currentFallbackTitle: requestedPrompt.data.fallbackTitle,
@@ -162,10 +168,12 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  const nextPromptIds = [...draft.promptIds]
-                  nextPromptIds.splice(insertIndex, 0, promptId)
-                  draft.promptIds = nextPromptIds
-                  draft.promptCount = nextPromptIds.length
+                  const nextEntryIds = [...draft.entryIds]
+                  nextEntryIds.splice(insertIndex, 0, promptId)
+                  draft.entryIds = nextEntryIds
+                  draft.promptCount = nextEntryIds.filter((entryId) =>
+                    data.prompt.committedStore.getEntry(entryId)
+                  ).length + 1
                   draft.modifiedAt = now
                 }
               }),
@@ -238,7 +246,7 @@ export const setupPromptMutationHandlers = (): void => {
           const committedPrompt = data.prompt.committedStore.getEntry(promptId)
           if (
             !committedPrompt ||
-            (!committedPromptFolder.committed.promptIds.includes(promptId) &&
+            (!committedPromptFolder.committed.entryIds.includes(promptId) &&
               !committedPromptFolder.committed.completedPromptIds.includes(promptId))
           ) {
             return buildConflictResponseFromLatest(
@@ -258,13 +266,11 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.promptIds = draft.promptIds.filter(
-                    (currentPromptId) => currentPromptId !== promptId
-                  )
+                  draft.entryIds = draft.entryIds.filter((entryId) => entryId !== promptId)
                   draft.completedPromptIds = draft.completedPromptIds.filter(
                     (currentPromptId) => currentPromptId !== promptId
                   )
-                  draft.promptCount = draft.promptIds.length
+                  draft.promptCount = Math.max(0, draft.promptCount - 1)
                   draft.modifiedAt = now
                 }
               }),
@@ -332,8 +338,9 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const now = getCurrentIsoSecondTimestamp()
+          const promptIds = getPromptFolderPromptIds(promptFolder.committed)
           const promptTitleFields = resolvePromptTitleUpdateForPromptIds({
-            promptIds: promptFolder.committed.promptIds,
+            promptIds,
             lookupPrompt: lookupCommittedPrompt,
             promptId: requestedPrompt.id,
             currentTitle: committedPrompt.committed.title,
@@ -428,7 +435,7 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt move data not loaded' }
           }
 
-          if (!sourcePromptFolder.committed.promptIds.includes(requestedPrompt.id)) {
+          if (!sourcePromptFolder.committed.entryIds.includes(requestedPrompt.id)) {
             return buildMovePromptConflictResponse(
               requestedSourcePromptFolder.id,
               requestedDestinationPromptFolder.id,
@@ -438,12 +445,12 @@ export const setupPromptMutationHandlers = (): void => {
 
           const isSameFolder =
             requestedSourcePromptFolder.id === requestedDestinationPromptFolder.id
-          const destinationPromptIds = isSameFolder
-            ? sourcePromptFolder.committed.promptIds.filter(
-                (promptId) => promptId !== requestedPrompt.id
+          const destinationEntryIds = isSameFolder
+            ? sourcePromptFolder.committed.entryIds.filter(
+                (entryId) => entryId !== requestedPrompt.id
               )
-            : destinationPromptFolder.committed.promptIds
-          const insertIndex = resolvePromptInsertIndex(destinationPromptIds, orderAfterPromptId)
+            : destinationPromptFolder.committed.entryIds
+          const insertIndex = resolvePromptInsertIndex(destinationEntryIds, orderAfterPromptId)
 
           if (insertIndex === null) {
             return { success: false, error: 'Order-after prompt not found' }
@@ -457,11 +464,11 @@ export const setupPromptMutationHandlers = (): void => {
                     id: requestedSourcePromptFolder.id,
                     expectedRevision: requestedSourcePromptFolder.expectedRevision,
                     recipe: (draft) => {
-                      const nextPromptIds = draft.promptIds.filter(
-                        (promptId) => promptId !== requestedPrompt.id
+                      const nextEntryIds = draft.entryIds.filter(
+                        (entryId) => entryId !== requestedPrompt.id
                       )
-                      nextPromptIds.splice(insertIndex, 0, requestedPrompt.id)
-                      draft.promptIds = nextPromptIds
+                      nextEntryIds.splice(insertIndex, 0, requestedPrompt.id)
+                      draft.entryIds = nextEntryIds
                       draft.modifiedAt = now
                     }
                   })
@@ -473,10 +480,10 @@ export const setupPromptMutationHandlers = (): void => {
                     id: requestedSourcePromptFolder.id,
                     expectedRevision: requestedSourcePromptFolder.expectedRevision,
                     recipe: (draft) => {
-                      draft.promptIds = draft.promptIds.filter(
-                        (promptId) => promptId !== requestedPrompt.id
+                      draft.entryIds = draft.entryIds.filter(
+                        (entryId) => entryId !== requestedPrompt.id
                       )
-                      draft.promptCount = draft.promptIds.length
+                      draft.promptCount = Math.max(0, draft.promptCount - 1)
                       draft.modifiedAt = now
                     }
                   }),
@@ -484,10 +491,10 @@ export const setupPromptMutationHandlers = (): void => {
                     id: requestedDestinationPromptFolder.id,
                     expectedRevision: requestedDestinationPromptFolder.expectedRevision,
                     recipe: (draft) => {
-                      const nextPromptIds = [...draft.promptIds]
-                      nextPromptIds.splice(insertIndex, 0, requestedPrompt.id)
-                      draft.promptIds = nextPromptIds
-                      draft.promptCount = nextPromptIds.length
+                      const nextEntryIds = [...draft.entryIds]
+                      nextEntryIds.splice(insertIndex, 0, requestedPrompt.id)
+                      draft.entryIds = nextEntryIds
+                      draft.promptCount += 1
                       draft.modifiedAt = now
                     }
                   }),
@@ -497,7 +504,9 @@ export const setupPromptMutationHandlers = (): void => {
                     recipe: (draft) => {
                       if (draft.title.trim().length === 0) {
                         draft.fallbackTitle = resolvePromptTitleUpdateForPromptIds({
-                          promptIds: destinationPromptIds,
+                          promptIds: destinationEntryIds.filter((entryId) =>
+                            data.prompt.committedStore.getEntry(entryId)
+                          ),
                           lookupPrompt: lookupCommittedPrompt,
                           promptId: requestedPrompt.id,
                           currentTitle: draft.title,
@@ -567,7 +576,7 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt complete data not loaded' }
           }
 
-          if (!promptFolder.committed.promptIds.includes(requestedPrompt.id)) {
+          if (!promptFolder.committed.entryIds.includes(requestedPrompt.id)) {
             return buildCompletePromptConflictResponse(
               requestedPromptFolder.id,
               requestedPrompt.id
@@ -588,11 +597,9 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.promptIds = draft.promptIds.filter(
-                    (promptId) => promptId !== requestedPrompt.id
-                  )
+                  draft.entryIds = draft.entryIds.filter((entryId) => entryId !== requestedPrompt.id)
                   draft.completedPromptIds = [...draft.completedPromptIds, requestedPrompt.id]
-                  draft.promptCount = draft.promptIds.length
+                  draft.promptCount = Math.max(0, draft.promptCount - 1)
                   draft.modifiedAt = now
                 }
               }),
@@ -684,11 +691,11 @@ export const setupPromptMutationHandlers = (): void => {
                   draft.completedPromptIds = draft.completedPromptIds.filter(
                     (promptId) => promptId !== requestedPrompt.id
                   )
-                  draft.promptIds = [
+                  draft.entryIds = [
                     requestedPrompt.id,
-                    ...draft.promptIds.filter((promptId) => promptId !== requestedPrompt.id)
+                    ...draft.entryIds.filter((entryId) => entryId !== requestedPrompt.id)
                   ]
-                  draft.promptCount = draft.promptIds.length
+                  draft.promptCount += 1
                   draft.modifiedAt = now
                 }
               }),

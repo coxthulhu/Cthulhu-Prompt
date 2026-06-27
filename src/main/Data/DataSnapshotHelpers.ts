@@ -49,6 +49,35 @@ export const filterLoadedPromptFolderIds = (promptFolderIds: string[]): string[]
   })
 }
 
+export const filterLoadedPromptFolderEntryIds = (entryIds: string[]): string[] => {
+  return entryIds.filter((entryId) => {
+    return (
+      data.prompt.committedStore.getEntry(entryId) !== null ||
+      data.promptFolder.committedStore.getEntry(entryId) !== null
+    )
+  })
+}
+
+export const collectLoadedPromptFolderDescendantIds = (promptFolderId: string): string[] => {
+  const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
+
+  if (!promptFolderEntry) {
+    return []
+  }
+
+  const descendantIds: string[] = []
+  for (const entryId of promptFolderEntry.committed.entryIds) {
+    if (!data.promptFolder.committedStore.getEntry(entryId)) {
+      continue
+    }
+
+    descendantIds.push(entryId)
+    descendantIds.push(...collectLoadedPromptFolderDescendantIds(entryId))
+  }
+
+  return descendantIds
+}
+
 export const buildWorkspaceSnapshot = (
   workspaceEntry: WorkspaceCommittedEntry
 ): RevisionEnvelope<Workspace> => {
@@ -70,7 +99,7 @@ export const buildPromptFolderSnapshot = (
     revision: promptFolderEntry.revision,
     data: {
       ...promptFolderEntry.committed,
-      promptIds: filterLoadedPromptIds(promptFolderEntry.committed.promptIds),
+      entryIds: filterLoadedPromptFolderEntryIds(promptFolderEntry.committed.entryIds),
       completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds)
     }
   }

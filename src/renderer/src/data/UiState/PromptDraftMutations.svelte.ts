@@ -5,6 +5,7 @@ import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
 import {
@@ -56,8 +57,9 @@ type PromptDraftOptimisticMutationOptions = {
 
 const getPromptIdsForPrompt = (promptId: string): string[] => {
   for (const promptFolder of promptFolderCollection.values()) {
-    if (promptFolder.promptIds.includes(promptId)) {
-      return promptFolder.promptIds
+    const promptIds = getPromptFolderPromptIds(promptFolder)
+    if (promptIds.includes(promptId)) {
+      return promptIds
     }
   }
 
@@ -66,7 +68,7 @@ const getPromptIdsForPrompt = (promptId: string): string[] => {
 
 const getPromptFolderIdForPrompt = (promptId: string): string | null => {
   for (const promptFolder of promptFolderCollection.values()) {
-    if (promptFolder.promptIds.includes(promptId)) {
+    if (getPromptFolderPromptIds(promptFolder).includes(promptId)) {
       return promptFolder.id
     }
   }

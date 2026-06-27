@@ -25,7 +25,7 @@ import {
   promptFolderSelectorTriggerSelector,
   promptTreePromptDropIndicatorSelector,
   promptTreePromptSelector,
-  readPromptFolderPromptIds,
+  readPromptFolderEntryIds,
   scrollPromptEditorAcrossViewportTop,
   scrollUntilPromptEditorVisible
 } from '../helpers/PromptDragDropHelpers'
@@ -824,7 +824,7 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await expect
       .poll(async () =>
-        (await readPromptFolderPromptIds(electronApp, ANCHORING_FOLDER_PATH)).slice(0, 3)
+        (await readPromptFolderEntryIds(electronApp, ANCHORING_FOLDER_PATH)).slice(0, 3)
       )
       .toEqual([ANCHOR_2_ID, ANCHOR_1_ID, ANCHOR_3_ID])
 

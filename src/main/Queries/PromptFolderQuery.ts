@@ -9,7 +9,9 @@ import {
   buildPromptFolderSnapshot,
   getLoadedPromptEntries,
   buildPromptSnapshot,
-  filterLoadedPromptIds
+  collectLoadedPromptFolderDescendantIds,
+  filterLoadedPromptIds,
+  type PromptFolderCommittedEntry
 } from '../Data/DataSnapshotHelpers'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
@@ -37,9 +39,25 @@ export const setupPromptFolderQueryHandlers = (): void => {
           }
 
           try {
-            const promptIds = filterLoadedPromptIds(promptFolderEntry.committed.promptIds)
-            const completedPromptIds = filterLoadedPromptIds(
-              promptFolderEntry.committed.completedPromptIds
+            const promptFolderIds = [
+              payload.promptFolderId,
+              ...collectLoadedPromptFolderDescendantIds(payload.promptFolderId)
+            ]
+            const promptFolderEntries: PromptFolderCommittedEntry[] = []
+            for (const promptFolderId of promptFolderIds) {
+              const entry = data.promptFolder.committedStore.getEntry(promptFolderId)
+              if (entry) {
+                promptFolderEntries.push(entry)
+              }
+            }
+            const promptFolders = promptFolderEntries.map((entry) =>
+              buildPromptFolderSnapshot(entry)
+            )
+            const promptIds = promptFolders.flatMap((folder) =>
+              folder.data.entryIds.filter((entryId) => data.prompt.committedStore.getEntry(entryId))
+            )
+            const completedPromptIds = promptFolders.flatMap((folder) =>
+              filterLoadedPromptIds(folder.data.completedPromptIds)
             )
             const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
               payload.workspaceId,
@@ -51,7 +69,7 @@ export const setupPromptFolderQueryHandlers = (): void => {
 
             return {
               success: true,
-              promptFolder: buildPromptFolderSnapshot(promptFolderEntry),
+              promptFolders,
               prompts,
               promptUiStates: promptUiStates.map((promptUiState) => ({
                 id: promptUiState.promptId,

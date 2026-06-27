@@ -20,6 +20,16 @@ const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
+const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+
+const createDeterministicId = (seed: string): string => {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000000000000000${suffix}`
+}
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -38,6 +48,57 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'Example Prompts'
     )
+  })
+
+  test('loads subfolder disk entries without showing them in the current prompt UI', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Main')
+    await mainWindow.waitForSelector('[data-testid="prompt-editor-base-before"]', {
+      state: 'attached'
+    })
+    await mainWindow.waitForSelector('[data-testid="prompt-editor-base-after"]', {
+      state: 'attached'
+    })
+
+    const screenInfo = await testHelpers.getPromptFolderScreenInfo()
+    expect(screenInfo.promptCount).toBe(2)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(
+      0
+    )
+
+    const nestedFolderLoad = await mainWindow.evaluate(
+      async ({ workspaceId, nestedFolderId }) => {
+        return await window.electron.ipcRenderer.invoke('load-prompt-folder-initial', {
+          requestId: `test-nested-load-${Date.now()}`,
+          clientId: window.ipcClientId,
+          payload: {
+            workspaceId,
+            promptFolderId: nestedFolderId
+          }
+        })
+      },
+      {
+        workspaceId: createDeterministicId(SUBFOLDERS_WORKSPACE_PATH),
+        nestedFolderId: createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
+      }
+    )
+
+    expect(nestedFolderLoad.success).toBe(true)
+    const nestedFolderId = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
+    const loadedNestedFolder = nestedFolderLoad.promptFolders.find(
+      (promptFolder) => promptFolder.id === nestedFolderId
+    )
+    expect(loadedNestedFolder?.data.displayName).toBe('Nested')
+    expect(loadedNestedFolder?.data.depth).toBe(1)
+    expect(nestedFolderLoad.prompts.map((prompt) => prompt.id)).toEqual(['nested-prompt'])
   })
 
   test('restores prompt content when revisiting folders', async ({ testSetup }) => {

@@ -9,6 +9,7 @@ import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { removePromptFolderDraft } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { removePromptDraft } from '../UiState/PromptDraftMutations.svelte.ts'
@@ -33,7 +34,7 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
     const promptFolder = promptFolderCollection.get(promptFolderId)
 
     if (promptFolder) {
-      for (const promptId of promptFolder.promptIds) {
+      for (const promptId of getPromptFolderPromptIds(promptFolder)) {
         promptCollection.utils.deleteAuthoritative(promptId)
         removePromptDraft(promptId)
         removePromptUiState(promptId)

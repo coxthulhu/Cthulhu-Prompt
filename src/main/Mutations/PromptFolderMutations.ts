@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import * as path from 'path'
 import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { preparePromptFolderName } from '@shared/promptFolderName'
@@ -11,6 +12,7 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptFolderRequest,
+  parseCreatePromptSubfolderRequest,
   parseUpdatePromptFolderSettingsRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
@@ -30,6 +32,28 @@ const hasPromptFolderNameConflict = (
     }
 
     return promptFolderEntry.committed.folderName.toLowerCase() === normalizedTargetName
+  })
+}
+
+const MAX_SUBFOLDER_DEPTH = 8
+
+const hasPromptSubfolderNameConflict = (
+  parentPromptFolderId: string,
+  folderName: string
+): boolean => {
+  const parentPromptFolder = data.promptFolder.committedStore.getEntry(parentPromptFolderId)
+
+  if (!parentPromptFolder) {
+    return false
+  }
+
+  const normalizedTargetName = path
+    .join(parentPromptFolder.committed.folderName, folderName)
+    .toLowerCase()
+
+  return parentPromptFolder.committed.entryIds.some((entryId) => {
+    const promptFolderEntry = data.promptFolder.committedStore.getEntry(entryId)
+    return promptFolderEntry?.committed.folderName.toLowerCase() === normalizedTargetName
   })
 }
 
@@ -81,16 +105,20 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   id: payload.promptFolderId,
                   folderName,
                   displayName: normalizedDisplayName,
+                  parentPromptFolderId: null,
+                  depth: 0,
                   modifiedAt: now,
                   promptCount: 0,
-                  promptIds: [],
+                  entryIds: [],
                   completedPromptIds: [],
                   settings: createEmptyPromptFolderSettings()
                 },
                 persistenceFields: {
                   workspaceId: requestedWorkspace.id,
                   workspacePath: committedWorkspace.committed.workspacePath,
-                  folderName
+                  folderName,
+                  parentPromptFolderId: null,
+                  depth: 0
                 }
               })
             }
@@ -119,6 +147,137 @@ export const setupPromptFolderMutationHandlers = (): void => {
             success: true,
             payload: {
               workspace: buildWorkspaceSnapshot(updatedWorkspace),
+              promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message }
+        }
+      }
+    )
+  })
+
+  ipcMain.handle('create-prompt-subfolder', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseCreatePromptSubfolderRequest,
+      async (validatedRequest) => {
+        try {
+          const payload = validatedRequest.payload
+          const requestedParentPromptFolder = payload.parentPromptFolder
+          const committedParentPromptFolder = data.promptFolder.committedStore.getEntry(
+            requestedParentPromptFolder.id
+          )
+
+          if (!committedParentPromptFolder) {
+            return { success: false, error: 'Parent prompt folder not loaded' }
+          }
+
+          if (committedParentPromptFolder.committed.depth >= MAX_SUBFOLDER_DEPTH) {
+            return {
+              success: false,
+              error: 'Prompt folders can contain up to 8 nested subfolder layers'
+            }
+          }
+
+          if (
+            payload.previousEntryId !== null &&
+            !committedParentPromptFolder.committed.entryIds.includes(payload.previousEntryId)
+          ) {
+            return { success: false, error: 'Previous entry not found' }
+          }
+
+          const {
+            validation,
+            displayName: normalizedDisplayName,
+            folderName
+          } = preparePromptFolderName(payload.displayName)
+
+          if (!validation.isValid) {
+            return {
+              success: false,
+              error: validation.errorMessage ?? 'Invalid prompt folder name'
+            }
+          }
+
+          if (hasPromptSubfolderNameConflict(requestedParentPromptFolder.id, folderName)) {
+            return { success: false, error: 'A folder with this name already exists' }
+          }
+
+          const insertIndex =
+            payload.previousEntryId === null
+              ? 0
+              : committedParentPromptFolder.committed.entryIds.indexOf(payload.previousEntryId) + 1
+          const now = getCurrentIsoSecondTimestamp()
+          const subfolderName = path.join(
+            committedParentPromptFolder.committed.folderName,
+            folderName
+          )
+          const subfolderDepth = committedParentPromptFolder.committed.depth + 1
+
+          const transactionOutcome = await runAtomicDataTransaction((tx) => {
+            return {
+              parentPromptFolder: tx.promptFolder.update({
+                id: requestedParentPromptFolder.id,
+                expectedRevision: requestedParentPromptFolder.expectedRevision,
+                recipe: (draft) => {
+                  const nextEntryIds = [...draft.entryIds]
+                  nextEntryIds.splice(insertIndex, 0, payload.promptFolderId)
+                  draft.entryIds = nextEntryIds
+                  draft.modifiedAt = now
+                }
+              }),
+              promptFolder: tx.promptFolder.create({
+                id: payload.promptFolderId,
+                data: {
+                  id: payload.promptFolderId,
+                  folderName: subfolderName,
+                  displayName: normalizedDisplayName,
+                  parentPromptFolderId: requestedParentPromptFolder.id,
+                  depth: subfolderDepth,
+                  modifiedAt: now,
+                  promptCount: 0,
+                  entryIds: [],
+                  completedPromptIds: [],
+                  settings: createEmptyPromptFolderSettings()
+                },
+                persistenceFields: {
+                  workspaceId: committedParentPromptFolder.persistenceFields.workspaceId,
+                  workspacePath: committedParentPromptFolder.persistenceFields.workspacePath,
+                  folderName: subfolderName,
+                  parentPromptFolderId: requestedParentPromptFolder.id,
+                  depth: subfolderDepth
+                }
+              })
+            }
+          })
+
+          if (transactionOutcome.status === 'conflict') {
+            return buildConflictResponseFromLatest(
+              data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id),
+              'Parent prompt folder not loaded',
+              (latestParentPromptFolder) => ({
+                parentPromptFolder: buildPromptFolderSnapshot(latestParentPromptFolder)
+              })
+            )
+          }
+
+          const updatedParentPromptFolder = data.promptFolder.committedStore.getEntry(
+            requestedParentPromptFolder.id
+          )
+          const createdPromptFolder = data.promptFolder.committedStore.getEntry(
+            payload.promptFolderId
+          )
+
+          if (!updatedParentPromptFolder || !createdPromptFolder) {
+            return { success: false, error: 'Prompt subfolder create commit did not complete' }
+          }
+
+          return {
+            success: true,
+            payload: {
+              parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder),
               promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
             }
           }

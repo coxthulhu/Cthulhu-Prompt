@@ -184,7 +184,7 @@
   })
   const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] =>
     promptFolderDropdownFolders.map((promptFolder) => {
-      const promptCount = promptFolder.promptIds.length
+      const promptCount = promptFolder.promptCount
       const detailParts: DropdownPopupDetailedItem['detailParts'] = [
         `${promptCount} prompt${promptCount === 1 ? '' : 's'}`
       ]

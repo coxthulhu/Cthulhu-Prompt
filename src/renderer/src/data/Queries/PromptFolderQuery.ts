@@ -7,11 +7,12 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
 import { deletePromptDrafts, upsertPromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   setPromptFolderDraftHasLoadedInitialData,
-  upsertPromptFolderDraft
+  upsertPromptFolderDrafts
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { upsertPromptUiStateDrafts } from '../UiState/PromptUiStateDraftMutations.svelte.ts'
 
@@ -21,7 +22,7 @@ export const loadPromptFolderInitial = async (
 ): Promise<void> => {
   const previousPromptFolder = promptFolderCollection.get(promptFolderId)
   const previousPromptIds = new Set([
-    ...(previousPromptFolder?.promptIds ?? []),
+    ...(previousPromptFolder ? getPromptFolderPromptIds(previousPromptFolder) : []),
     ...(previousPromptFolder?.completedPromptIds ?? [])
   ])
 
@@ -42,8 +43,8 @@ export const loadPromptFolderInitial = async (
 
   promptCollection.utils.upsertManyAuthoritative(fullPromptSnapshots)
   upsertPromptDrafts(fullPromptSnapshots.map((prompt) => prompt.data))
-  promptFolderCollection.utils.upsertAuthoritative(result.promptFolder)
-  upsertPromptFolderDraft(result.promptFolder.data)
+  promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
+  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
   promptUiStateCollection.utils.upsertManyAuthoritative(result.promptUiStates)
   upsertPromptUiStateDrafts(result.promptUiStates.map((promptUiState) => promptUiState.data))
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
@@ -54,7 +55,7 @@ export const loadPromptFolderInitial = async (
     throw new Error('Prompt folder not loaded after initial load')
   }
   const nextPromptIds = new Set([
-    ...nextPromptFolder.promptIds,
+    ...getPromptFolderPromptIds(nextPromptFolder),
     ...nextPromptFolder.completedPromptIds
   ])
   const removedPromptIds: string[] = []

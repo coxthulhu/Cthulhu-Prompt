@@ -8,9 +8,11 @@ export interface PromptFolder {
   id: string
   folderName: string
   displayName: string
+  parentPromptFolderId: string | null
+  depth: number
   modifiedAt: string | null
   promptCount: number
-  promptIds: string[]
+  entryIds: string[]
   completedPromptIds: string[]
   settings: PromptFolderSettings
 }
@@ -106,13 +108,25 @@ export type CreatePromptFolderResponsePayload = {
   promptFolder?: RevisionEnvelope<PromptFolder>
 }
 
+export type CreatePromptSubfolderPayload = {
+  parentPromptFolder: RevisionPayloadEntity<PromptFolder>
+  promptFolderId: string
+  displayName: string
+  previousEntryId: string | null
+}
+
+export type CreatePromptSubfolderResponsePayload = {
+  parentPromptFolder: RevisionEnvelope<PromptFolder>
+  promptFolder?: RevisionEnvelope<PromptFolder>
+}
+
 export type LoadPromptFolderInitialPayload = {
   workspaceId: string
   promptFolderId: string
 }
 
 export type LoadPromptFolderInitialResult = IpcResult<{
-  promptFolder: RevisionEnvelope<PromptFolder>
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
   prompts: Array<RevisionEnvelope<PromptPersisted>>
   promptUiStates: Array<RevisionEnvelope<PromptUiState>>
 }>

@@ -27,6 +27,7 @@
   } from '@renderer/data/Collections/UserPersistenceDraftCollection'
   import { workspacePersistenceDraftCollection } from '@renderer/data/Collections/WorkspacePersistenceDraftCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+  import { getPromptFolderPromptIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
@@ -141,7 +142,7 @@
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
     for (const promptFolder of selectedWorkspacePromptFolders) {
-      for (const promptId of promptFolder.promptIds) {
+      for (const promptId of getPromptFolderPromptIds(promptFolder)) {
         promptIds.add(promptId)
       }
     }

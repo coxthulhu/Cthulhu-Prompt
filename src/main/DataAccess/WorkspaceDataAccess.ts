@@ -113,7 +113,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     ),
     'utf8'
   )
-  fs.writeFileSync(orderPath, JSON.stringify({ promptIds }, null, 2), 'utf8')
+  fs.writeFileSync(orderPath, JSON.stringify({ entryIds: promptIds }, null, 2), 'utf8')
   for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
     fs.writeFileSync(
       resolvePromptFolderSettingsTextPath(workspacePath, EXAMPLE_FOLDER_NAME, field),

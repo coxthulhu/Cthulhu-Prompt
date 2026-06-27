@@ -66,7 +66,7 @@
     }
     /*
     Show more/show less is paused until prompt tree subfolders reuse this folder row.
-    ...(isExpanded && folder.promptIds.length > visiblePromptLimit
+    ...(isExpanded && folder.promptCount > visiblePromptLimit
       ? [
           isShowingAllPrompts
             ? {
@@ -137,7 +137,7 @@
       <!-- Count and actions share one slot; hover/focus swaps visibility. -->
       <div class="sidebarPromptTreeActionSlot">
         <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
-          {folder.promptIds.length}
+          {folder.promptCount}
         </span>
         <div class="sidebarPromptTreeFolderActions">
           <DropdownPopupSimple

@@ -158,13 +158,15 @@
     )
   })
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  const getPromptIdsForFolder = (folder: PromptFolder): string[] =>
+    folder.entryIds.filter((entryId) => promptById[entryId])
   const selectedPromptIds = $derived.by((): string[] => {
     if (!selectedPromptFolder) {
       return []
     }
 
     if (!isCompletedMode) {
-      return selectedPromptFolder.promptIds
+      return getPromptIdsForFolder(selectedPromptFolder)
     }
 
     return [...selectedPromptFolder.completedPromptIds].sort((leftPromptId, rightPromptId) => {
@@ -210,8 +212,9 @@
       return true
     }
 
-    const draggedIndex = folder.promptIds.indexOf(payload.fromId)
-    const targetIndex = folder.promptIds.indexOf(promptId)
+    const promptIds = getPromptIdsForFolder(folder)
+    const draggedIndex = promptIds.indexOf(payload.fromId)
+    const targetIndex = promptIds.indexOf(promptId)
 
     // Reject same-folder prompt-row edges that would leave the dragged row in place.
     return !(
@@ -259,6 +262,7 @@
 
   const promptTreePromptDrag = createPromptTreePromptDragController({
     getPromptFolders: () => promptFolders,
+    getPromptIdsForFolder,
     onPromptMove: (move) => {
       if (move.sourcePromptFolderId === move.destinationPromptFolderId) {
         return
