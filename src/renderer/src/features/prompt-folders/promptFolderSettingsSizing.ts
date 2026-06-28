@@ -90,6 +90,12 @@ export const getPromptFolderEditorCardHeightPx = (
   )
 }
 
+export const getPromptFolderEditorCollapsedCardRowHeightPx = (): number => {
+  return normalizePromptFolderVirtualRowHeightPx(
+    PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX + FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX
+  )
+}
+
 export const getPromptFolderEditorCardRowHeightPx = (
   settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
 ): number => {

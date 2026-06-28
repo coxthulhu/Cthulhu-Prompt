@@ -372,12 +372,24 @@ describe('Prompt folder find dialog', () => {
 
     await testHelpers.navigateToPromptFolders('Prefix Suffix Find')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
 
     await mainWindow.keyboard.press('Control+F')
     await expect(mainWindow.locator(FIND_INPUT)).toBeVisible()
     await mainWindow.locator(FIND_INPUT).fill(PREFIX_SUFFIX_FIND_QUERY)
 
     await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('1 of 2')
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
   })
 
   test('reopens with previous query and selection', async ({ testSetup }) => {

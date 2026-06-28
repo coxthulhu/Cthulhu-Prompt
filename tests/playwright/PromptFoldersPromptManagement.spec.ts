@@ -478,6 +478,10 @@ describe('Prompt folder prompt management', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptFolders(MOVE_SCROLL_FOLDER_NAME)
+    await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
     await scrollPromptEditorIntoView(mainWindow, testHelpers, BOUNDARY_2_ID)
 
     await mainWindow.locator(moveUpSelector(BOUNDARY_2_ID)).click()

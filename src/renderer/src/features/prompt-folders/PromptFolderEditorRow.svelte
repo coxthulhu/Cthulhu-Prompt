@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Folder, Pencil } from 'lucide-svelte'
+  import { Folder, Pencil, Settings } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
@@ -34,8 +34,10 @@
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
+    isSettingsSectionExpanded: boolean
     isPromptsSectionExpanded: boolean
     onHydrationChange?: (isHydrated: boolean) => void
+    onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
     onSettingsFieldChange: (
       field: PromptFolderSettingsDraftField,
@@ -59,8 +61,10 @@
     shouldDehydrate,
     overlayRowElement,
     scrollToWithinWindowBand,
+    isSettingsSectionExpanded,
     isPromptsSectionExpanded,
     onHydrationChange,
+    onSettingsSectionToggle,
     onPromptsSectionToggle,
     onSettingsFieldChange
   }: Props = $props()
@@ -93,12 +97,29 @@
     event.stopPropagation()
   }
 
+  const handleSettingsClick = (event: MouseEvent) => {
+    event.stopPropagation()
+    onSettingsSectionToggle()
+  }
+
+  const handleSettingsMouseDown = (event: MouseEvent) => {
+    event.stopPropagation()
+  }
+
   const handleSectionHydrationChange = (
     field: PromptFolderSettingsField,
     isHydrated: boolean
   ) => {
     hydratedFields[field] = isHydrated
   }
+
+  // Side effect: hidden settings sections are unmounted and no longer hydrate the virtual row.
+  $effect(() => {
+    if (isSettingsSectionExpanded) return
+    PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field) => {
+      hydratedFields[field] = false
+    })
+  })
 
   // Side effect: report aggregate row hydration to the virtual window.
   $effect(() => {
@@ -148,7 +169,8 @@
               label="Edit folder title"
               title="Edit folder title"
               size="tiny"
-              baseVariant="dim"
+              baseVariant="muted"
+              hoverVariant="glyph"
               testId="prompt-folder-editor-title-edit"
               onclick={handlePencilClick}
               onmousedown={handlePencilMouseDown}
@@ -160,31 +182,49 @@
           </div>
         </div>
       </div>
+
+      <div class="prompt-folder-editor-title-actions">
+        <IconButton
+          icon={Settings}
+          label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
+          title={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
+          size="compact"
+          baseVariant="dim"
+          hoverVariant="accent"
+          active={isSettingsSectionExpanded}
+          ariaPressed={isSettingsSectionExpanded}
+          testId="prompt-folder-editor-settings-toggle"
+          onclick={handleSettingsClick}
+          onmousedown={handleSettingsMouseDown}
+        />
+      </div>
     </header>
 
     <Separator />
 
-    <div class="prompt-folder-editor-sections">
-      {#each PROMPT_FOLDER_SETTINGS_FIELDS as field, index (field)}
-        <PromptFolderSettingsEditorSection
-          {workspaceId}
-          {promptFolderId}
-          {field}
-          {rowId}
-          {virtualWindowWidthPx}
-          {devicePixelRatio}
-          sectionHeightPx={sectionHeightsPx[field]}
-          {hydrationPriority}
-          {shouldDehydrate}
-          {overlayRowElement}
-          {scrollToWithinWindowBand}
-          {folderSettings}
-          onHydrationChange={handleSectionHydrationChange}
-          showTopBorder={index > 0}
-          {onSettingsFieldChange}
-        />
-      {/each}
-    </div>
+    {#if isSettingsSectionExpanded}
+      <div class="prompt-folder-editor-sections">
+        {#each PROMPT_FOLDER_SETTINGS_FIELDS as field, index (field)}
+          <PromptFolderSettingsEditorSection
+            {workspaceId}
+            {promptFolderId}
+            {field}
+            {rowId}
+            {virtualWindowWidthPx}
+            {devicePixelRatio}
+            sectionHeightPx={sectionHeightsPx[field]}
+            {hydrationPriority}
+            {shouldDehydrate}
+            {overlayRowElement}
+            {scrollToWithinWindowBand}
+            {folderSettings}
+            onHydrationChange={handleSectionHydrationChange}
+            showTopBorder={index > 0}
+            {onSettingsFieldChange}
+          />
+        {/each}
+      </div>
+    {/if}
   </EditorCardSurface>
 </div>
 
@@ -202,7 +242,8 @@
     box-sizing: border-box;
     cursor: pointer;
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
     outline: none;
     overflow: hidden;
@@ -236,7 +277,6 @@
 
   .prompt-folder-editor-title {
     color: var(--ui-normal-text);
-    flex: 0 1 auto;
     font-size: 16px;
     font-weight: 700;
     line-height: 21px;
@@ -257,6 +297,13 @@
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
+  }
+
+  .prompt-folder-editor-title-actions {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    min-width: 0;
   }
 
   .prompt-folder-editor-sections {

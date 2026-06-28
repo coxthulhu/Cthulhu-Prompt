@@ -370,12 +370,18 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST))
       .toBeLessThan(100)
   })
 
-  test('folder editor pencil button does not toggle prompts', async ({ testSetup }) => {
+  test('folder editor action buttons do not toggle prompts', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -385,10 +391,22 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.navigateToPromptFolders('Development')
     const titleToggle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
     const pencilButton = mainWindow.locator('[data-testid="prompt-folder-editor-title-edit"]')
+    const settingsToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-settings-toggle"]'
+    )
 
     await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
     await pencilButton.click()
     await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
+    await settingsToggle.click()
+    await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await settingsToggle.click()
+    await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
   })
 
   test('disables selected folder settings when no prompt folder exists', async ({ testSetup }) => {
@@ -543,6 +561,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
   })
 
   test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {

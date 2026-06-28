@@ -24,6 +24,7 @@
     ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
     ariaExpanded?: boolean
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
+    ariaPressed?: boolean | 'mixed'
     buttonAction?: IconButtonAction | null
     buttonActionParameter?: unknown
     grabCursor?: boolean
@@ -50,6 +51,7 @@
     ariaHaspopup,
     ariaExpanded,
     ariaCurrent,
+    ariaPressed,
     buttonAction = null,
     buttonActionParameter,
     grabCursor = false,
@@ -71,6 +73,7 @@
   aria-haspopup={ariaHaspopup}
   aria-expanded={ariaExpanded}
   aria-current={ariaCurrent}
+  aria-pressed={ariaPressed}
   data-disabled={isDisabled ? 'true' : 'false'}
   data-size={size}
   data-base-variant={baseVariant}

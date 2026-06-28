@@ -41,6 +41,7 @@
   } from './PromptFolderSectionRow.svelte'
   import {
     estimatePromptFolderSettingsFieldRowHeight,
+    getPromptFolderEditorCollapsedCardRowHeightPx,
     getPromptFolderEditorCardRowHeightPx
   } from './promptFolderSettingsSizing'
   import {
@@ -60,7 +61,7 @@
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
   type PromptFolderRow =
-    | { kind: 'folder-editor' }
+    | { kind: 'folder-editor'; isSettingsSectionExpanded: boolean }
     | { kind: 'placeholder' }
     | { kind: 'prompt-divider'; previousPromptId: string | null }
     | { kind: 'prompt-editor'; promptId: string }
@@ -82,6 +83,7 @@
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
+    isSettingsSectionExpanded: boolean
     isPromptsSectionExpanded: boolean
     initialScrollTopPx: number
     initialCenterRowId: string | null
@@ -109,6 +111,7 @@
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
     onInitialCenterRowApplied: () => void
+    onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
   }
 
@@ -124,6 +127,7 @@
     screenMode,
     isCreatingPrompt,
     promptFocusRequest,
+    isSettingsSectionExpanded,
     isPromptsSectionExpanded,
     initialScrollTopPx,
     initialCenterRowId,
@@ -144,6 +148,7 @@
     onCenterRowChange,
     onUserScroll,
     onInitialCenterRowApplied,
+    onSettingsSectionToggle,
     onPromptsSectionToggle
   }: PromptFolderVirtualContentProps = $props()
 
@@ -222,12 +227,16 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-editor': {
-      estimateHeight: () =>
-        getPromptFolderEditorCardRowHeightPx(getEstimatedPromptFolderSettingsSectionHeights()),
-      lookupMeasuredHeight: (_row, widthPx, devicePixelRatio) =>
-        getPromptFolderEditorCardRowHeightPx(
-          getPromptFolderSettingsSectionHeights(widthPx, devicePixelRatio)
-        ),
+      estimateHeight: (row) =>
+        row.isSettingsSectionExpanded
+          ? getPromptFolderEditorCardRowHeightPx(getEstimatedPromptFolderSettingsSectionHeights())
+          : getPromptFolderEditorCollapsedCardRowHeightPx(),
+      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
+        row.isSettingsSectionExpanded
+          ? getPromptFolderEditorCardRowHeightPx(
+              getPromptFolderSettingsSectionHeights(widthPx, devicePixelRatio)
+            )
+          : getPromptFolderEditorCollapsedCardRowHeightPx(),
       centerRowEligible: true,
       hydrationPriorityEligible: true,
       overlayRow: {},
@@ -285,7 +294,8 @@
       rows.push({
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
-          kind: 'folder-editor'
+          kind: 'folder-editor',
+          isSettingsSectionExpanded
         }
       })
     }
@@ -453,7 +463,9 @@
     scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
     onHydrationChange={props.onHydrationChange}
     {folderSettings}
+    {isSettingsSectionExpanded}
     {isPromptsSectionExpanded}
+    {onSettingsSectionToggle}
     {onPromptsSectionToggle}
     {onSettingsFieldChange}
   />

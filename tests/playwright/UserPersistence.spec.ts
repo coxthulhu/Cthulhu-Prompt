@@ -561,6 +561,41 @@ describe('User Persistence', () => {
       .toBe('false:false')
   })
 
+  test('autosaves prompt folder settings section expanded state', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+
+    const settingsToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-settings-toggle"]'
+    )
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
+
+    await settingsToggle.click()
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
+
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const entry = persisted.promptFolderPromptTreeEntries.find(
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === developmentPromptFolderId
+          )
+          return entry?.folderSettingsSectionIsExpanded ?? null
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true)
+  })
+
   test('restores collapsed prompt rows on startup', async ({
     electronApp,
     testSetup
@@ -598,6 +633,46 @@ describe('User Persistence', () => {
     ).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
+  })
+
+  test('restores expanded prompt folder settings on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const persistedWorkspacePath = '/ws/persisted-prompt-folder-settings'
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    const developmentPromptFolderId = createDeterministicId(
+      `${persistedWorkspacePath}:Development`
+    )
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId: developmentPromptFolderId },
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: developmentPromptFolderId,
+          promptTreeEntryId: 'folder-settings',
+          folderSettingsSectionIsExpanded: true,
+          promptsSectionIsExpanded: true
+        }
+      ]
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
   })
 
   test('restores persisted prompt tree entry on startup', async ({ electronApp, testSetup }) => {

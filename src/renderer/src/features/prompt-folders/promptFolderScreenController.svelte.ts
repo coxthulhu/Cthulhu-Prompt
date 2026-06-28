@@ -47,8 +47,10 @@ import {
   type PromptFolderSettingsDraftField
 } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import {
+  lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
+  setPromptFolderSettingsSectionExpandedStateWithAutosave,
   setPromptFolderPromptsSectionExpandedStateWithAutosave,
   setPromptFolderPromptTreeEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
@@ -73,6 +75,7 @@ import {
 } from './promptFolderRowIds'
 import {
   estimatePromptFolderSettingsFieldRowHeight,
+  getPromptFolderEditorCollapsedCardRowHeightPx,
   getPromptFolderEditorCardRowHeightPx
 } from './promptFolderSettingsSizing'
 import {
@@ -230,6 +233,7 @@ export const createPromptFolderScreenController = ({
   let promptFocusRequest = $state<PromptFocusRequest | null>(null)
   let promptFocusRequestId = $state(0)
   let latestHandledSelectionVersion = $state(0)
+  let settingsSectionExpandedStates = $state<Record<string, boolean>>({})
   let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
 
   const visiblePromptIds = $derived.by(() => {
@@ -361,6 +365,23 @@ export const createPromptFolderScreenController = ({
     `${workspaceId ?? 'no-workspace'}:${promptFolderId}:${screenMode}`
   )
 
+  const lookupPersistedSettingsSectionExpandedState = (): boolean => {
+    if (isCompletedMode) {
+      return false
+    }
+
+    if (!workspaceId) {
+      return false
+    }
+
+    return (
+      lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
+        workspaceId,
+        promptFolderId
+      ) ?? false
+    )
+  }
+
   const lookupPersistedPromptsSectionExpandedState = (): boolean => {
     if (isCompletedMode) {
       return true
@@ -382,6 +403,36 @@ export const createPromptFolderScreenController = ({
     promptsSectionExpandedStates[promptFolderSectionStateKey] ??
       lookupPersistedPromptsSectionExpandedState()
   )
+
+  const isSettingsSectionExpanded = $derived(
+    settingsSectionExpandedStates[promptFolderSectionStateKey] ??
+      lookupPersistedSettingsSectionExpandedState()
+  )
+
+  const setSettingsSectionExpanded = (isExpanded: boolean) => {
+    if (isSettingsSectionExpanded === isExpanded) {
+      return
+    }
+
+    settingsSectionExpandedStates = {
+      ...settingsSectionExpandedStates,
+      [promptFolderSectionStateKey]: isExpanded
+    }
+
+    if (!workspaceId || isCompletedMode) {
+      return
+    }
+
+    setPromptFolderSettingsSectionExpandedStateWithAutosave(
+      workspaceId,
+      promptFolderId,
+      isExpanded
+    )
+  }
+
+  const toggleSettingsSectionExpanded = () => {
+    setSettingsSectionExpanded(!isSettingsSectionExpanded)
+  }
 
   const setPromptsSectionExpanded = (isExpanded: boolean) => {
     if (isPromptsSectionExpanded === isExpanded) {
@@ -412,6 +463,10 @@ export const createPromptFolderScreenController = ({
     if (isCompletedMode) {
       setPromptsSectionExpanded(true)
       return
+    }
+
+    if (row.kind === 'folder-settings') {
+      setSettingsSectionExpanded(true)
     }
 
     if (row.kind === 'prompt') {
@@ -879,6 +934,10 @@ export const createPromptFolderScreenController = ({
       return 0
     }
 
+    if (!isSettingsSectionExpanded) {
+      return getPromptFolderEditorCollapsedCardRowHeightPx()
+    }
+
     const estimatedSectionHeights = Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
@@ -957,6 +1016,7 @@ export const createPromptFolderScreenController = ({
   const handleHeaderFolderClick = () => {
     if (!scrollApi) return
     if (!isCompletedMode) {
+      setSettingsSectionExpanded(true)
       setCurrentFolderSelection({ kind: 'folder-settings' }, 'header', {
         forceVersionBump: true
       })
@@ -1055,6 +1115,9 @@ export const createPromptFolderScreenController = ({
     get promptFocusRequest(): PromptFocusRequest | null {
       return promptFocusRequest
     },
+    get isSettingsSectionExpanded(): boolean {
+      return isSettingsSectionExpanded
+    },
     get isPromptsSectionExpanded(): boolean {
       return isPromptsSectionExpanded
     },
@@ -1081,6 +1144,7 @@ export const createPromptFolderScreenController = ({
     },
     persistActivePromptTreeRow,
     scrollToWithinWindowBandWithManualClear,
+    toggleSettingsSectionExpanded,
     togglePromptsSectionExpanded,
     handleHeaderSegmentClick,
     handleHeaderFolderClick,

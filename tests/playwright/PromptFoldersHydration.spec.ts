@@ -224,7 +224,9 @@ const prepareUncappedSidebarBaseline = async (
 }
 
 describe('Prompt Folder Hydration', () => {
-  test('renders folder settings editors in one folder editor row', async ({ testSetup }) => {
+  test('shows folder settings editors when the settings gear is toggled on', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -237,6 +239,32 @@ describe('Prompt Folder Hydration', () => {
       `${HOST_SELECTOR} [data-testid^="prompt-folder-editor-"][data-virtual-window-row]`,
       { state: 'attached' }
     )
+
+    const settingsToggle = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-settings-toggle"]'
+    )
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
+
+    await settingsToggle.click()
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
+
+    await settingsToggle.click()
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
+
+    await settingsToggle.click()
+    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(3)
 
     const settingsSections = await mainWindow.evaluate((hostSelector) => {
       const host = document.querySelector<HTMLElement>(hostSelector)
