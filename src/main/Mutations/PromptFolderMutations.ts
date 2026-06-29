@@ -13,18 +13,25 @@ import {
 import {
   parseCreatePromptFolderRequest,
   parseCreatePromptSubfolderRequest,
+  parseRenamePromptFolderRequest,
   parseUpdatePromptFolderSettingsRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
+import { resolveCompletedPromptFolderName } from '../Persistence/PromptPersistencePaths'
 
 const hasPromptFolderNameConflict = (
   workspaceEntry: WorkspaceCommittedEntry,
-  folderName: string
+  folderName: string,
+  excludedPromptFolderId: string | null = null
 ): boolean => {
   const normalizedTargetName = folderName.toLowerCase()
 
   return workspaceEntry.committed.promptFolderIds.some((promptFolderId) => {
+    if (promptFolderId === excludedPromptFolderId) {
+      return false
+    }
+
     const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
 
     if (!promptFolderEntry) {
@@ -33,6 +40,42 @@ const hasPromptFolderNameConflict = (
 
     return promptFolderEntry.committed.folderName.toLowerCase() === normalizedTargetName
   })
+}
+
+const refreshPromptPersistenceFieldsAfterFolderRename = (
+  promptFolderId: string,
+  activeFolderName: string
+): void => {
+  const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
+
+  if (!promptFolderEntry) {
+    return
+  }
+
+  for (const promptId of promptFolderEntry.committed.entryIds) {
+    const promptEntry = data.prompt.committedStore.getEntry(promptId)
+    if (!promptEntry) {
+      continue
+    }
+
+    data.prompt.committedStore.updatePersistenceFields(promptId, {
+      ...promptEntry.persistenceFields,
+      folderName: activeFolderName
+    })
+  }
+
+  const completedFolderName = resolveCompletedPromptFolderName(activeFolderName)
+  for (const promptId of promptFolderEntry.committed.completedPromptIds) {
+    const promptEntry = data.prompt.committedStore.getEntry(promptId)
+    if (!promptEntry) {
+      continue
+    }
+
+    data.prompt.committedStore.updatePersistenceFields(promptId, {
+      ...promptEntry.persistenceFields,
+      folderName: completedFolderName
+    })
+  }
 }
 
 const MAX_SUBFOLDER_DEPTH = 8
@@ -279,6 +322,104 @@ export const setupPromptFolderMutationHandlers = (): void => {
             payload: {
               parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder),
               promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message }
+        }
+      }
+    )
+  })
+
+  ipcMain.handle('rename-prompt-folder', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseRenamePromptFolderRequest,
+      async (validatedRequest) => {
+        try {
+          const payload = validatedRequest.payload
+          const requestedPromptFolder = payload.promptFolder
+          const committedPromptFolder = data.promptFolder.committedStore.getEntry(
+            requestedPromptFolder.id
+          )
+
+          if (!committedPromptFolder) {
+            return { success: false, error: 'Prompt folder not loaded' }
+          }
+
+          const committedWorkspace = data.workspace.committedStore.getEntry(
+            committedPromptFolder.persistenceFields.workspaceId
+          )
+
+          if (!committedWorkspace) {
+            return { success: false, error: 'Workspace not loaded' }
+          }
+
+          const {
+            validation,
+            displayName: normalizedDisplayName,
+            folderName
+          } = preparePromptFolderName(payload.displayName)
+
+          if (!validation.isValid) {
+            return {
+              success: false,
+              error: validation.errorMessage ?? 'Invalid prompt folder name'
+            }
+          }
+
+          if (
+            hasPromptFolderNameConflict(committedWorkspace, folderName, requestedPromptFolder.id)
+          ) {
+            return { success: false, error: 'A folder with this name already exists' }
+          }
+
+          const now = getCurrentIsoSecondTimestamp()
+          const previousFolderName = committedPromptFolder.persistenceFields.folderName
+          const transactionOutcome = await runAtomicDataTransaction((tx) => {
+            return {
+              promptFolder: tx.promptFolder.update({
+                id: requestedPromptFolder.id,
+                expectedRevision: requestedPromptFolder.expectedRevision,
+                recipe: (draft) => {
+                  draft.displayName = normalizedDisplayName
+                  draft.folderName = folderName
+                  draft.modifiedAt = now
+                },
+                persistenceFields: {
+                  ...committedPromptFolder.persistenceFields,
+                  folderName,
+                  previousFolderName
+                }
+              })
+            }
+          })
+
+          if (transactionOutcome.status === 'conflict') {
+            return buildConflictResponseFromLatest(
+              data.promptFolder.committedStore.getEntry(requestedPromptFolder.id),
+              'Prompt folder not loaded',
+              (latestPromptFolder) => ({
+                promptFolder: buildPromptFolderSnapshot(latestPromptFolder)
+              })
+            )
+          }
+
+          refreshPromptPersistenceFieldsAfterFolderRename(requestedPromptFolder.id, folderName)
+
+          const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
+            requestedPromptFolder.id
+          )
+
+          if (!updatedPromptFolder) {
+            return { success: false, error: 'Prompt folder rename commit did not complete' }
+          }
+
+          return {
+            success: true,
+            payload: {
+              promptFolder: buildPromptFolderSnapshot(updatedPromptFolder)
             }
           }
         } catch (error) {

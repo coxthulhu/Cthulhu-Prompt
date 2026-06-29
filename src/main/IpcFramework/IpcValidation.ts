@@ -13,6 +13,7 @@ import type {
   LoadPromptFolderInitialPayload,
   PromptFolder,
   PromptFolderSettings,
+  RenamePromptFolderPayload,
   UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { PromptUiState, PromptUiStateRevisionPayload } from '@shared/PromptUiState'
@@ -405,6 +406,15 @@ const parseUpdatePromptFolderSettingsWireRequest: Parser<
   parseUpdatePromptFolderSettingsPayload
 )
 
+const parseRenamePromptFolderPayload = parseObject<RenamePromptFolderPayload>({
+  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  displayName: parseString
+})
+
+const parseRenamePromptFolderWireRequest: Parser<
+  IpcRequestWithPayload<RenamePromptFolderPayload>
+> = parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
+
 const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
   promptFolder: parsePromptFolderRevisionPayloadEntity,
   prompt: parsePromptRevisionPayloadEntity
@@ -564,6 +574,10 @@ export const parseUpdatePromptRevisionRequest = createRequestParser(
 
 export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
   parseUpdatePromptFolderSettingsWireRequest
+)
+
+export const parseRenamePromptFolderRequest = createRequestParser(
+  parseRenamePromptFolderWireRequest
 )
 
 export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)

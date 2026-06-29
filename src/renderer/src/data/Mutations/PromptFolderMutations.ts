@@ -5,6 +5,7 @@ import {
   type CreatePromptFolderResponsePayload,
   type PromptFolder,
   type PromptFolderRevisionResponsePayload,
+  type RenamePromptFolderPayload,
   type UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
@@ -150,5 +151,46 @@ export const createPromptFolder = async (
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
     },
     conflictMessage: 'Prompt folder create conflict'
+  })
+}
+
+export const renamePromptFolder = async (
+  promptFolderId: string,
+  displayName: string
+): Promise<void> => {
+  const promptFolder = promptFolderCollection.get(promptFolderId)
+
+  if (!promptFolder) {
+    throw new Error('Prompt folder not loaded')
+  }
+
+  const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
+  const modifiedAt = getCurrentIsoSecondTimestamp()
+
+  await runRevisionMutation<PromptFolderRevisionResponsePayload>({
+    mutateOptimistically: ({ collections }) => {
+      collections.promptFolder.update(promptFolderId, (draft) => {
+        draft.displayName = normalizedDisplayName
+        draft.folderName = folderName
+        draft.modifiedAt = modifiedAt
+      })
+    },
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const latestPromptFolder = readLatestPromptFolderFromTransaction(transaction, promptFolderId)
+
+      return await invoke<{ payload: RenamePromptFolderPayload }>('rename-prompt-folder', {
+        payload: {
+          promptFolder: entities.promptFolder({
+            id: promptFolderId,
+            data: latestPromptFolder
+          }),
+          displayName: normalizedDisplayName
+        }
+      })
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+    },
+    conflictMessage: 'Prompt folder rename conflict'
   })
 }

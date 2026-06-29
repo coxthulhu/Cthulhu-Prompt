@@ -15,6 +15,11 @@ export type FilePersistenceStagedChange =
       targetPath: string
       createdDuringStage: boolean
     }
+  | {
+      type: 'renameDirectory'
+      sourcePath: string
+      targetPath: string
+    }
 
 export const createStagedFileUpsert = (
   targetPath: string,
@@ -45,6 +50,17 @@ export const createStagedEnsureDirectory = (
   }
 }
 
+export const createStagedDirectoryRename = (
+  sourcePath: string,
+  targetPath: string
+): FilePersistenceStagedChange => {
+  return {
+    type: 'renameDirectory',
+    sourcePath,
+    targetPath
+  }
+}
+
 export const resolveTempPath = (targetPath: string): string => {
   const uniqueSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
   return `${targetPath}.${uniqueSuffix}.tmp`
@@ -64,6 +80,13 @@ export const commitStagedFileChange = (stagedChange: FilePersistenceStagedChange
   const fs = getFs()
 
   if (stagedChange.type === 'ensureDirectory') {
+    return
+  }
+
+  if (stagedChange.type === 'renameDirectory') {
+    if (fs.existsSync(stagedChange.sourcePath)) {
+      fs.renameSync(stagedChange.sourcePath, stagedChange.targetPath)
+    }
     return
   }
 
@@ -96,6 +119,14 @@ export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange
     }
 
     fs.rmSync(stagedChange.targetPath)
+    return
+  }
+
+  if (stagedChange.type === 'renameDirectory') {
+    const fs = getFs()
+    if (fs.existsSync(stagedChange.targetPath) && !fs.existsSync(stagedChange.sourcePath)) {
+      fs.renameSync(stagedChange.targetPath, stagedChange.sourcePath)
+    }
     return
   }
 

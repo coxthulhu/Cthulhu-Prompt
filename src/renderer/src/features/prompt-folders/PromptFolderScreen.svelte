@@ -3,10 +3,13 @@
   import { Search } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { renamePromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
+  import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
 
   let { promptFolderId, screenMode = PromptFolderScreenMode.Active, onPromptFolderSelect } = $props<{
     promptFolderId: string
@@ -24,6 +27,30 @@
   onDestroy(() => {
     controller.persistActivePromptTreeRow()
   })
+
+  let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(
+    null
+  )
+
+  const openRenamePromptFolderDialog = () => {
+    const currentPromptFolder = controller.promptFolder
+    if (!currentPromptFolder) return
+
+    renamePromptFolderDialog?.openDialog(currentPromptFolder.displayName)
+  }
+
+  const handleRenamePromptFolder = async (displayName: string): Promise<boolean> => {
+    const currentPromptFolder = controller.promptFolder
+    if (!currentPromptFolder) return false
+
+    return await runIpcBestEffort(
+      async () => {
+        await renamePromptFolder(currentPromptFolder.id, displayName)
+        return true
+      },
+      () => false
+    )
+  }
 </script>
 
 <PromptFolderFindIntegration
@@ -114,6 +141,7 @@
             onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
             onSettingsSectionToggle={controller.toggleSettingsSectionExpanded}
             onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
+            onRenamePromptFolder={openRenamePromptFolderDialog}
           />
         {/if}
       </div>
@@ -129,6 +157,26 @@
     </main>
   {/snippet}
 </PromptFolderFindIntegration>
+
+<PromptFolderNameDialog
+  bind:this={renamePromptFolderDialog}
+  isWorkspaceReady={controller.promptFolder !== null}
+  promptFolders={controller.promptFolders}
+  isPromptFolderListLoading={false}
+  title="Rename Prompt Folder"
+  submitText="Rename Folder"
+  submittingText="Renaming..."
+  submitTestId="rename-prompt-folder-button"
+  inputTestId="rename-prompt-folder-name-input"
+  errorTestId="rename-prompt-folder-name-error"
+  rowDetail="Rename this prompt folder."
+  initialDisplayName={controller.promptFolder?.displayName ?? ''}
+  unchangedDisplayName={controller.promptFolder?.displayName ?? null}
+  unchangedFolderName={controller.promptFolder?.folderName ?? null}
+  duplicatePromptFolderId={controller.promptFolder?.id ?? null}
+  failureMessage="Failed to rename folder. Please try again."
+  onsubmit={handleRenamePromptFolder}
+/>
 
 <style>
   .prompt-folder-header-bar {

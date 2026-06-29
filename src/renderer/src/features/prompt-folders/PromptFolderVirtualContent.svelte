@@ -103,6 +103,7 @@
       text: string,
       measurement: TextMeasurement
     ) => void
+    onRenamePromptFolder: () => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
     onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
@@ -140,6 +141,7 @@
     onMovePromptDown,
     onPromptTreeDrop,
     onSettingsFieldChange,
+    onRenamePromptFolder,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
     onScrollApiChange,
@@ -468,6 +470,7 @@
     {onSettingsSectionToggle}
     {onPromptsSectionToggle}
     {onSettingsFieldChange}
+    {onRenamePromptFolder}
   />
 {/snippet}
 

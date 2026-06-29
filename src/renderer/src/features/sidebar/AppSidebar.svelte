@@ -137,7 +137,7 @@
   }
   const promptFolderSelectorFooterItem: DropdownPopupDetailedItem = {
     id: 'add-prompt-folder',
-    label: 'Add Prompt Folder',
+    label: 'Create Prompt Folder',
     detail: 'Create a new prompt folder',
     icon: Plus,
     testId: 'sidebar-prompt-folder-dropdown-add-item'

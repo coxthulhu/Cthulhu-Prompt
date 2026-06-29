@@ -1,4 +1,9 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import {
+  checkFileExists,
+  checkPersistedPromptFilesExistByTitle,
+  readTextFile
+} from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -20,6 +25,7 @@ const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
+const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
 
 const createDeterministicId = (seed: string): string => {
@@ -296,7 +302,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toBeVisible()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
-      'Add Prompt Folder'
+      'Create Prompt Folder'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toHaveCount(0)
     await expect(mainWindow.locator('text=Create a Prompt Folder to Get Started')).toBeVisible()
@@ -398,6 +404,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
     await pencilButton.click()
     await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
+    await mainWindow.keyboard.press('Escape')
     await settingsToggle.click()
     await expect(titleToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
@@ -514,6 +521,108 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(emptyPromptFolderPlaceholderHasGutter).toBe(false)
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
+  })
+
+  test('renames a prompt folder from the folder card without changing its id', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+    const developmentFolderId = createDeterministicId(`${SAMPLE_WORKSPACE_PATH}:Development`)
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const developmentFolderEditor = mainWindow.locator(
+      `[data-testid="prompt-folder-editor-${developmentFolderId}"]`
+    )
+    await expect(developmentFolderEditor).toBeVisible()
+
+    await developmentFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]').click()
+
+    const nameInput = mainWindow.locator('[data-testid="rename-prompt-folder-name-input"]')
+    const renameButton = mainWindow.locator('[data-testid="rename-prompt-folder-button"]')
+    const errorMessage = mainWindow.locator('[data-testid="rename-prompt-folder-name-error"]')
+
+    await expect(nameInput).toBeVisible()
+    await expect(nameInput).toBeFocused()
+    await expect(nameInput).toHaveValue('Development Tools')
+    await expect(renameButton).toBeDisabled()
+    await expect
+      .poll(async () =>
+        await nameInput.evaluate((input) => {
+          if (!(input instanceof HTMLInputElement)) return null
+          return input.selectionStart === 0 && input.selectionEnd === input.value.length
+        })
+      )
+      .toBe(true)
+
+    await nameInput.fill('Development')
+    await expect(renameButton).toBeDisabled()
+
+    await nameInput.fill('Examples')
+    await expect(errorMessage).toContainText('A folder with this name already exists')
+    await expect(renameButton).toBeDisabled()
+
+    await nameInput.fill('Renamed Development')
+    await expect(errorMessage).toHaveCount(0)
+    await expect(renameButton).toBeEnabled()
+    await renameButton.click()
+
+    await expect(nameInput).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toContainText(
+      'Renamed Development'
+    )
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Renamed Development'
+    )
+    await expect(
+      mainWindow.locator(`[data-testid="prompt-folder-editor-${developmentFolderId}"]`)
+    ).toBeVisible()
+
+    const renamedFolderInfoPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/_FolderInfo/FolderInfo.json`
+    const renamedFolderInfo = JSON.parse(
+      await readTextFile(electronApp, renamedFolderInfoPath)
+    ) as {
+      displayName: string
+      promptFolderId: string
+    }
+    expect(renamedFolderInfo).toEqual({
+      displayName: 'Renamed Development',
+      promptFolderId: developmentFolderId
+    })
+    await expect
+      .poll(
+        async () =>
+          await checkFileExists(
+            electronApp,
+            `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_FolderInfo/FolderInfo.json`
+          )
+      )
+      .toBe(false)
+
+    await expect
+      .poll(async () =>
+        await checkPersistedPromptFilesExistByTitle(electronApp, {
+          workspacePath: SAMPLE_WORKSPACE_PATH,
+          folderName: 'RenamedDevelopment',
+          promptId: 'dev-1',
+          promptTitle: 'Code Review'
+        })
+      )
+      .toEqual({ markdownExists: true })
+    await expect
+      .poll(async () =>
+        await checkPersistedPromptFilesExistByTitle(electronApp, {
+          workspacePath: SAMPLE_WORKSPACE_PATH,
+          folderName: 'Development',
+          promptId: 'dev-1',
+          promptTitle: 'Code Review'
+        })
+      )
+      .toEqual({ markdownExists: false })
   })
 
   test('jumps to a prompt when clicking a prompt tree prompt row', async ({ testSetup }) => {

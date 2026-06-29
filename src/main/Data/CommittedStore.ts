@@ -11,6 +11,7 @@ export type CommittedStore<TData, TPersistenceFields> = {
   setFromDisk: (id: string, data: TData, persistenceFields: TPersistenceFields) => void
   // Use this after disk writes succeed.
   commitAfterWrite: (id: string, data: TData, persistenceFields?: TPersistenceFields) => number
+  updatePersistenceFields: (id: string, persistenceFields: TPersistenceFields) => void
   remove: (id: string) => void
 }
 
@@ -50,6 +51,13 @@ export const createCommittedStore = <TData, TPersistenceFields>(): CommittedStor
       })
 
       return nextRevision
+    },
+    updatePersistenceFields: (id, persistenceFields) => {
+      const existingEntry = entriesById[id]!
+      upsertEntry(id, {
+        ...existingEntry,
+        persistenceFields
+      })
     },
     remove: (id) => {
       const { [id]: _removed, ...remainingEntries } = entriesById

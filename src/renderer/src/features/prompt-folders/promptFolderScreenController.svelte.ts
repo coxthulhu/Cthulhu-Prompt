@@ -1091,8 +1091,17 @@ export const createPromptFolderScreenController = ({
     get folderSettings(): PromptFolderSettings {
       return folderSettings
     },
-    get folderDisplayName(): string {
+  get folderDisplayName(): string {
       return folderDisplayName
+    },
+    get promptFolder(): PromptFolder | null {
+      return promptFolder
+    },
+    get promptFolders(): PromptFolder[] {
+      return promptFolderQuery.data.filter(
+        (currentPromptFolder): currentPromptFolder is PromptFolder =>
+          currentPromptFolder !== undefined
+      )
     },
     get visiblePromptIds(): string[] {
       return visiblePromptIds

@@ -39,6 +39,7 @@
     onHydrationChange?: (isHydrated: boolean) => void
     onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
+    onRenamePromptFolder: () => void
     onSettingsFieldChange: (
       field: PromptFolderSettingsDraftField,
       text: string,
@@ -66,6 +67,7 @@
     onHydrationChange,
     onSettingsSectionToggle,
     onPromptsSectionToggle,
+    onRenamePromptFolder,
     onSettingsFieldChange
   }: Props = $props()
 
@@ -91,6 +93,7 @@
 
   const handlePencilClick = (event: MouseEvent) => {
     event.stopPropagation()
+    onRenamePromptFolder()
   }
 
   const handlePencilMouseDown = (event: MouseEvent) => {
@@ -166,8 +169,8 @@
             </span>
             <IconButton
               icon={Pencil}
-              label="Edit folder title"
-              title="Edit folder title"
+              label="Rename prompt folder"
+              title="Rename prompt folder"
               size="tiny"
               baseVariant="muted"
               hoverVariant="glyph"

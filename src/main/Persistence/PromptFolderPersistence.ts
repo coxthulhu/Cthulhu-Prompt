@@ -9,6 +9,7 @@ import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/W
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
+  createStagedDirectoryRename,
   createStagedEnsureDirectory,
   createStagedFileRemove,
   createStagedFileUpsert,
@@ -33,6 +34,7 @@ export type PromptFolderPersistenceFields = {
   workspaceId: string
   workspacePath: string
   folderName: string
+  previousFolderName?: string
   parentPromptFolderId: string | null
   depth: number
 }
@@ -158,14 +160,21 @@ export const promptFolderPersistence: PersistenceLayer<
 > = {
   stageChanges: async (change) => {
     const { workspacePath, folderName } = change.persistenceFields
-    const folderPath = resolvePromptFolderPath(workspacePath, folderName)
-    const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
-    const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(workspacePath, folderName)
-    const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
+    const previousFolderName = change.persistenceFields.previousFolderName
+    const stagingFolderName = previousFolderName ?? folderName
+    const folderPath = resolvePromptFolderPath(workspacePath, stagingFolderName)
+    const orderPath = resolvePromptFolderOrderPath(workspacePath, stagingFolderName)
+    const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(
+      workspacePath,
+      stagingFolderName
+    )
+    const infoPath = resolvePromptFolderInfoPath(workspacePath, stagingFolderName)
     const settingsTextPaths = PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => ({
       field,
-      path: resolvePromptFolderSettingsTextPath(workspacePath, folderName, field)
+      path: resolvePromptFolderSettingsTextPath(workspacePath, stagingFolderName, field)
     }))
+    const isFolderRename = previousFolderName !== undefined && previousFolderName !== folderName
+    const targetFolderPath = resolvePromptFolderPath(workspacePath, folderName)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
@@ -192,13 +201,22 @@ export const promptFolderPersistence: PersistenceLayer<
       return { path, tempPath }
     })
 
-    return createPersistenceStageResult([
+    const stagedChanges = [
       createStagedFileUpsert(orderPath, orderTempPath),
       createStagedFileUpsert(infoPath, infoTempPath),
       ...settingsTextTempPaths.map(({ path, tempPath }) => createStagedFileUpsert(path, tempPath)),
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
       createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
-    ])
+    ]
+
+    if (isFolderRename) {
+      stagedChanges.push(createStagedDirectoryRename(folderPath, targetFolderPath))
+    }
+
+    const { previousFolderName: _previousFolderName, ...nextPersistenceFields } =
+      change.persistenceFields
+
+    return createPersistenceStageResult(stagedChanges, nextPersistenceFields)
   },
   commitChanges: async (stagedChange) => {
     commitStagedFileChanges(stagedChange)

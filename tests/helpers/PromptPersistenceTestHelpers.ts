@@ -12,7 +12,7 @@ type PersistedPromptFilePaths = {
   markdownPath: string
 }
 
-const readTextFile = async (electronApp: any, filePath: string): Promise<string> => {
+export const readTextFile = async (electronApp: any, filePath: string): Promise<string> => {
   const requestId = createTestRequestId('read')
 
   return await electronApp.evaluate(
@@ -29,7 +29,7 @@ const readTextFile = async (electronApp: any, filePath: string): Promise<string>
   )
 }
 
-const checkFileExists = async (electronApp: any, filePath: string): Promise<boolean> => {
+export const checkFileExists = async (electronApp: any, filePath: string): Promise<boolean> => {
   return await electronApp.evaluate(async ({ app }, targetPath) => {
     app.emit('test-check-file-exists', targetPath)
     return Boolean((global as any).testFileExistsResult)
