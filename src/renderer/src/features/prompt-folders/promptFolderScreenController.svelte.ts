@@ -311,6 +311,7 @@ export const createPromptFolderScreenController = ({
     return (
       promptNavigation.selectionSource === 'tree-click' ||
       promptNavigation.selectionSource === 'prompt-create' ||
+      promptNavigation.selectionSource === 'prompt-divider-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
       promptNavigation.selectionSource === 'header' ||
       promptNavigation.selectionSource === 'restore-hold'
@@ -329,7 +330,10 @@ export const createPromptFolderScreenController = ({
   }
 
   const clearManualSelectionSource = () => {
-    if (promptNavigation.selectionSource === 'prompt-create') {
+    if (
+      promptNavigation.selectionSource === 'prompt-create' ||
+      promptNavigation.selectionSource === 'prompt-divider-create'
+    ) {
       return
     }
 
@@ -540,7 +544,7 @@ export const createPromptFolderScreenController = ({
     promptNavigation.select({
       folderId: destinationPromptFolderId,
       row,
-      source: 'prompt-create',
+      source: 'prompt-divider-create',
       forceVersionBump: true
     })
 
@@ -742,6 +746,7 @@ export const createPromptFolderScreenController = ({
       source === 'scroll-follow' ||
       source === 'find' ||
       source === 'header' ||
+      source === 'prompt-divider-create' ||
       source === 'restore' ||
       source === 'restore-hold'
     ) {

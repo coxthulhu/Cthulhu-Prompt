@@ -365,7 +365,7 @@
     editorInstance?.focus()
   })
 
-  // Side effect: scroll newly added prompts into view and focus Monaco once hydrated.
+  // Side effect: scroll sidebar-created prompts into view and focus Monaco once hydrated.
   $effect(() => {
     if (!focusRequest) return
     if (focusRequest.requestId === lastEditorFocusRequestId) return

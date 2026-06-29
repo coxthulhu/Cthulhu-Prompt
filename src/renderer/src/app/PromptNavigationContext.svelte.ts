@@ -14,6 +14,7 @@ export type PromptNavigationSource =
   | 'find'
   | 'header'
   | 'prompt-create'
+  | 'prompt-divider-create'
   | 'prompt-move'
 
 type PromptNavigationState = {

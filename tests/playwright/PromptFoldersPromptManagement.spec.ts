@@ -434,6 +434,38 @@ describe('Prompt folder prompt management', () => {
       .toBe(true)
   })
 
+  test('adds a prompt from a divider without moving folder scroll', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-2')
+
+    const button = mainWindow.locator(dividerAddSelector('dev-2'))
+    await button.scrollIntoViewIfNeeded()
+    await expect(button).toBeEnabled()
+
+    const initialPromptTreeIds = await getPromptTreePromptRowIds(mainWindow)
+    const scrollTopBefore = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+    await button.click()
+
+    await expect
+      .poll(async () => (await getPromptTreePromptRowIds(mainWindow)).length, { timeout: 5000 })
+      .toBe(initialPromptTreeIds.length + 1)
+    await expect(mainWindow.locator('[data-testid^="prompt-tree-prompt-"][aria-current="true"]'))
+      .toHaveCount(1)
+    await expect
+      .poll(
+        async () =>
+          Math.abs(
+            (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
+          ),
+        { timeout: 5000 }
+      )
+      .toBeLessThanOrEqual(1)
+  })
+
   test('reorders prompts with move buttons', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
