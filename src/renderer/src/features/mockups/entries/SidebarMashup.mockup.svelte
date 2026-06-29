@@ -258,6 +258,10 @@
   const getPromptLabel = (count: number) => `${count} ${count === 1 ? 'prompt' : 'prompts'}`
   const getSubfolderLabel = (count: number) =>
     `${count} ${count === 1 ? 'subfolder' : 'subfolders'}`
+  const getLastPromptId = (prompts: MockPrompt[]): string | null =>
+    prompts.length > 0 ? prompts[prompts.length - 1].id : null
+  const getPreviousSubfolder = (folderIndex: number): MockSubfolder | null =>
+    folderIndex > 0 ? (mockSubfolders[folderIndex - 1] ?? null) : null
 
   let nextPromptSequence = $state(1)
   let nextSubfolderSequence = $state(1)
@@ -538,6 +542,18 @@
   />
 {/snippet}
 
+{#snippet SubfolderDividerRow(previousFolder: MockSubfolder)}
+  {@const previousPromptId = getLastPromptId(previousFolder.prompts)}
+  <PromptDivider
+    onAddPrompt={() => addPromptAfter(previousPromptId, previousFolder.id)}
+    onAddSubfolder={() => addSubfolderAfter(null, previousFolder.id)}
+    testId={previousPromptId
+      ? `mockup-prompt-divider-add-after-${previousPromptId}`
+      : `mockup-prompt-divider-add-initial-${previousFolder.id}`}
+    subfolderTestId={`mockup-subfolder-divider-add-after-${previousFolder.id}`}
+  />
+{/snippet}
+
 {#snippet PromptEditor(prompt: MockPrompt, index: number, siblingCount: number)}
   <article class="mockup-prompt-editor-card" data-testid={`mockup-prompt-editor-${prompt.id}`}>
     <PromptEditorSidebar
@@ -706,6 +722,11 @@
     {/each}
 
     {#each mockSubfolders as folder, folderIndex (folder.id)}
+      {@const previousFolder = getPreviousSubfolder(folderIndex)}
+      {#if previousFolder}
+        {@render SubfolderDividerRow(previousFolder)}
+      {/if}
+
       <div class="mockup-subfolder-section">
         {@render SubfolderEditor(folder, folderIndex)}
 
