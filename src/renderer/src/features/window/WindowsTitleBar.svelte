@@ -105,7 +105,7 @@
     display: grid;
     grid-template-columns: var(--titlebar-controls-width) 1fr var(--titlebar-controls-width);
     align-items: center;
-    background-color: var(--ui-neutral-normal-surface);
+    background: var(--app-chrome-surface);
     height: var(--titlebar-height);
     min-height: var(--titlebar-height);
     -webkit-app-region: drag;

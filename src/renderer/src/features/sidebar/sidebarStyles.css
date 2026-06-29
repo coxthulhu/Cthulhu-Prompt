@@ -1,15 +1,5 @@
-/* Shared visual refresh for the sidebar surface and top navigation buttons. */
-:root {
-  --sidebar-gradient-top: var(--ui-card-normal-surface-gradient-start);
-  --sidebar-gradient-bottom: var(--ui-card-normal-surface-gradient-end);
-}
-
 .sidebarSurface {
-  background: linear-gradient(
-    180deg,
-    var(--sidebar-gradient-top) 0%,
-    var(--sidebar-gradient-bottom) 100%
-  );
+  background: var(--app-chrome-surface);
 }
 
 .appActivityBar {

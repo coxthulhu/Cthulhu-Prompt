@@ -14,6 +14,7 @@
   --titlebar-height: 32px;
   --titlebar-button-width: 46px;
   --titlebar-controls-width: calc(var(--titlebar-button-width) * 3);
+  --app-chrome-surface: var(--ui-card-normal-surface-gradient-end);
   /* Shared cthulhu-ui corner scale for non-pill components. */
   --cthulhu-ui-radius-card: 8px;
   --cthulhu-ui-radius-control: 6px;
