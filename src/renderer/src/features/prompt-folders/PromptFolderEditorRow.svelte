@@ -188,8 +188,6 @@
           icon={Settings}
           label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
           title={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
-          size="compact"
-          baseVariant="dim"
           hoverVariant="accent"
           active={isSettingsSectionExpanded}
           ariaPressed={isSettingsSectionExpanded}
@@ -248,6 +246,8 @@
     outline: none;
     overflow: hidden;
     padding: 8px 16px;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .prompt-folder-editor-title-bar:focus-visible {
