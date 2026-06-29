@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.0.25
+
+### New Features
+
+- Added initial prompt subfolder filesystem support for loading nested prompt folders.
+- Added a persistent show/hide toggle for prompt folder settings.
+
+### Changes
+
+- Reworked prompt folder settings into the folder editor card with clearer field descriptions.
+- Updated prompt folder ordering storage to support mixed prompt and folder entries.
+- Refined prompt folder gutters, sidebar alignment, prompt divider height, and dialog surfaces.
+
+### Fixed
+
+- Fixed prompt editor sidebar controls stealing focus from the active editor.
+- Fixed prompt folder find navigation for matches inside collapsed folder settings.
+
 ## 0.0.24
 
 ### New Features
