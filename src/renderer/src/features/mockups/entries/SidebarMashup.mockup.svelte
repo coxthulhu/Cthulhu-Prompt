@@ -711,7 +711,7 @@
 {/snippet}
 
 <section
-  class="prompt-folder-base-mockup"
+  class="prompt-folder-subfolders-mockup"
   data-testid="prompt-folder-subfolders-mockup"
 >
   <div class="mockup-editor-row">
@@ -751,7 +751,7 @@
 </section>
 
 <style>
-  .prompt-folder-base-mockup {
+  .prompt-folder-subfolders-mockup {
     --mockup-monaco-editor-background: #1f1f1f;
     --mockup-folder-line: var(--ui-neutral-muted-border);
 
