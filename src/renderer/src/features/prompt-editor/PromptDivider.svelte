@@ -40,7 +40,7 @@
     <div
       class={mode === 'separator'
         ? 'grid min-h-9 grid-cols-1 items-center'
-        : 'grid min-h-9 grid-cols-[minmax(24px,1fr)_auto_minmax(24px,1fr)] items-center gap-2.5'}
+        : 'grid min-h-9 grid-cols-[80px_auto_minmax(24px,1fr)] items-center gap-2.5'}
     >
       <Separator
         class={isOver
