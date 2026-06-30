@@ -2,7 +2,6 @@
   import { ArrowDownToLine, FolderPlus, Plus } from 'lucide-svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type { DroppableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
@@ -74,16 +73,12 @@
             }}
           />
           {#if onAddSubfolder}
-            <IconTextButton
+            <IconButton
               icon={FolderPlus}
-              text="Add Subfolder"
-              iconSize={14}
-              iconClass="stroke-[3]"
-              state={disabled ? 'disabled' : 'enabled'}
+              label="Add Subfolder"
+              title="Add Subfolder"
+              disabled={disabled}
               hoverVariant="accent"
-              class="min-w-32 font-bold"
-              data-drop-over="false"
-              aria-label="Add Subfolder"
               testId={subfolderTestId}
               onclick={() => {
                 onAddSubfolder()
