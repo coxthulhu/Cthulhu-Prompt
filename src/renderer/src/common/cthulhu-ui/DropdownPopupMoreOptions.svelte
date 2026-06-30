@@ -128,8 +128,8 @@
     display: grid;
     gap: 8px;
     grid-template-columns: 28px minmax(0, 1fr);
-    min-height: 46px;
-    padding: 5px 7px;
+    min-height: 50px;
+    padding: 6px 8px;
     text-align: left;
     transition: background-color 120ms ease;
     width: 100%;
@@ -156,13 +156,13 @@
 
   .cthulhuUiDropdownPopupMoreOptionsTextStack {
     display: grid;
-    gap: 1px;
+    gap: 2px;
     min-width: 0;
   }
 
   .cthulhuUiDropdownPopupMoreOptionsTitle {
-    font-size: 13px;
-    font-weight: 650;
+    font-size: 14px;
+    font-weight: 600;
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -173,7 +173,7 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 11px;
+    font-size: 12px;
     gap: 5px;
     line-height: 1.25;
     min-width: 0;
