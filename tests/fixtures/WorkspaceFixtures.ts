@@ -132,7 +132,7 @@ const createPromptFiles = (
       fallbackTitle: prompt.fallbackTitle ?? '',
       createdAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       modifiedAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
-      status: PromptStatus.ToDo,
+      status: PromptStatus.Todo,
       promptText: prompt.promptText
     }
     const promptStem = resolvePromptStem(getPromptDisplayTitle(promptData), prompt.id, usedStems)

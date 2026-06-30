@@ -6,7 +6,7 @@ type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   (
     | { status: PromptStatus.Completed; completedAt: string }
-    | { status: PromptStatus.ToDo; completedAt?: never }
+    | { status: PromptStatus.Todo; completedAt?: never }
   )
 
 const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData => {
@@ -55,7 +55,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
-    (frontmatter.status === PromptStatus.ToDo ||
+    (frontmatter.status === PromptStatus.Todo ||
       (hasCompletedStatus && typeof frontmatter.completedAt === 'string'))
   )
 }
@@ -113,7 +113,7 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
         }
       : {
           ...baseMetadata,
-          status: PromptStatus.ToDo
+          status: PromptStatus.Todo
         }
   const frontmatterDocument = matter.stringify('', metadata)
   const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)

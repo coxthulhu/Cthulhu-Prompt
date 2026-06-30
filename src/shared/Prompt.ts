@@ -2,7 +2,7 @@ import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export enum PromptStatus {
-  ToDo = 'ToDo',
+  Todo = 'Todo',
   Completed = 'Completed'
 }
 

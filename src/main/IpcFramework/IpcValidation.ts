@@ -299,7 +299,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     modifiedAt: parseString,
     promptText: parseString,
     status: (nextValue) =>
-      nextValue === PromptStatus.ToDo || nextValue === PromptStatus.Completed ? nextValue : null,
+      nextValue === PromptStatus.Todo || nextValue === PromptStatus.Completed ? nextValue : null,
     ...(hasCompletedAt
       ? {
           completedAt: parseString

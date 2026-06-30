@@ -72,7 +72,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
           fallbackTitle: '',
           createdAt: now,
           modifiedAt: now,
-          status: PromptStatus.ToDo,
+          status: PromptStatus.Todo,
           promptText: 'Placeholder prompt text.'
         },
         {
@@ -81,7 +81,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
           fallbackTitle: '',
           createdAt: now,
           modifiedAt: now,
-          status: PromptStatus.ToDo,
+          status: PromptStatus.Todo,
           promptText: 'Placeholder prompt text.'
         }
       ]

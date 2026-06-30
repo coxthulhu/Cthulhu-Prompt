@@ -78,14 +78,14 @@ const normalizePromptCompletionForFolder = (
     }
   }
 
-  if (prompt.status === PromptStatus.ToDo && !prompt.completedAt) {
+  if (prompt.status === PromptStatus.Todo && !prompt.completedAt) {
     return prompt
   }
 
   const { completedAt: _completedAt, ...activePrompt } = prompt
   return {
     ...activePrompt,
-    status: PromptStatus.ToDo
+    status: PromptStatus.Todo
   }
 }
 

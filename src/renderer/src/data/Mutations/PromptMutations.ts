@@ -331,7 +331,7 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
     fallbackTitle: promptDraft.fallbackTitle,
     createdAt: promptDraft.createdAt,
     modifiedAt: promptDraft.modifiedAt,
-    status: PromptStatus.ToDo,
+    status: PromptStatus.Todo,
     promptText: promptDraft.promptText
   }
   const modifiedAt = getCurrentIsoSecondTimestamp()
@@ -406,14 +406,14 @@ export const uncompletePrompt = async (
           fallbackTitle: promptDraft.fallbackTitle,
           createdAt: promptDraft.createdAt,
           modifiedAt: promptDraft.modifiedAt,
-          status: PromptStatus.ToDo,
+          status: PromptStatus.Todo,
           promptText: promptDraft.promptText
         }
   const { completedAt: _completedAt, ...activePromptBase } = basePersistedPrompt
   const modifiedAt = getCurrentIsoSecondTimestamp()
   const activePrompt: PromptPersisted = {
     ...activePromptBase,
-    status: PromptStatus.ToDo,
+    status: PromptStatus.Todo,
     modifiedAt
   }
 
@@ -498,7 +498,7 @@ export const movePrompt = async (
             fallbackTitle: promptDraft.fallbackTitle,
             createdAt: promptDraft.createdAt,
             modifiedAt: promptDraft.modifiedAt,
-            status: PromptStatus.ToDo,
+            status: PromptStatus.Todo,
             promptText: promptDraft.promptText
           }
         : null

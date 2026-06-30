@@ -231,7 +231,7 @@ const buildCompletedSelfHealingWorkspace = () => {
     fallbackTitle: '',
     createdAt: '2023-01-03T00:00:00.000Z',
     modifiedAt: '2023-01-03T00:00:00.000Z',
-    status: PromptStatus.ToDo,
+    status: PromptStatus.Todo,
     promptText: 'This completed prompt should stay hidden.'
   }
   const workspace = createWorkspaceWithFolders(SELF_HEALING_WORKSPACE_PATH, [
@@ -277,7 +277,7 @@ const buildCompletedModeWorkspace = () => {
     fallbackTitle: '',
     createdAt: '2023-01-01T00:00:00.000Z',
     modifiedAt: '2023-01-01T00:00:00.000Z',
-    status: PromptStatus.ToDo,
+    status: PromptStatus.Todo,
     promptText: 'This active prompt should be visible by default.'
   }
   const newestCompletedPrompt: PromptPersisted = {
@@ -815,7 +815,7 @@ describe('Prompt folder prompt management', () => {
       promptId: activePromptId,
       promptTitle: activePromptTitle
     })
-    expect(activeMarkdown).toContain('status: ToDo')
+    expect(activeMarkdown).toContain('status: Todo')
     expect(activeMarkdown).not.toContain('completedAt:')
     expect(activeMarkdown).toContain('This regular prompt should keep rendering.')
 
@@ -925,7 +925,7 @@ describe('Prompt folder prompt management', () => {
       promptId: 'completed-mode-newest',
       promptTitle: 'Newest Completed'
     })
-    expect(activeMarkdown).toContain('status: ToDo')
+    expect(activeMarkdown).toContain('status: Todo')
     expect(activeMarkdown).not.toContain('completedAt:')
 
     await testHelpers.navigateToPromptFolders('No Completed')

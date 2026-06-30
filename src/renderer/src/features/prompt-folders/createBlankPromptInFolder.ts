@@ -21,7 +21,7 @@ export const createBlankPromptInFolder = (
     fallbackTitle: DEFAULT_PROMPT_FALLBACK_TITLE,
     createdAt: now,
     modifiedAt: now,
-    status: PromptStatus.ToDo,
+    status: PromptStatus.Todo,
     promptText: '',
     loadingState: 'full'
   }

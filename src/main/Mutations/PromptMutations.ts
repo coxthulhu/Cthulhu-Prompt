@@ -160,7 +160,7 @@ export const setupPromptMutationHandlers = (): void => {
             fallbackTitle: promptTitleFields.fallbackTitle,
             createdAt: now,
             modifiedAt: now,
-            status: PromptStatus.ToDo,
+            status: PromptStatus.Todo,
             promptText: requestedPrompt.data.promptText
           }
 
@@ -682,7 +682,7 @@ export const setupPromptMutationHandlers = (): void => {
           } = requestedPrompt.data
           const activePrompt: PromptPersisted = {
             ...requestedActivePrompt,
-            status: PromptStatus.ToDo,
+            status: PromptStatus.Todo,
             modifiedAt: now
           }
 

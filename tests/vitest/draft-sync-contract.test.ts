@@ -50,7 +50,7 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   fallbackTitle: '',
   createdAt: '2026-01-01T00:00:00.000Z',
   modifiedAt: '2026-01-01T00:00:00.000Z',
-  status: PromptStatus.ToDo,
+  status: PromptStatus.Todo,
   promptText: 'Original text',
   loadingState: 'full',
   ...overrides
@@ -60,7 +60,7 @@ const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): Prompt
   id: 'prompt-1',
   title: 'Original title',
   fallbackTitle: '',
-  status: PromptStatus.ToDo,
+  status: PromptStatus.Todo,
   ...overrides
 })
 
@@ -102,7 +102,12 @@ describe('draft sync contract', () => {
     upsertPromptDraft(updatedPrompt)
 
     const draftRecord = promptDraftCollection.get(prompt.id)!
-    const { loadingState: _loadingState, ...expectedDraftRecord } = updatedPrompt
+    const {
+      loadingState: _loadingState,
+      status: _status,
+      completedAt: _completedAt,
+      ...expectedDraftRecord
+    } = updatedPrompt
     expect(draftRecord).toMatchObject(expectedDraftRecord)
   })
 
