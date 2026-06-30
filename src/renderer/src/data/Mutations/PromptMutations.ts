@@ -16,6 +16,7 @@ import {
   type PromptPersisted,
   type PromptRevisionResponsePayload,
   type PromptRevisionPayload,
+  PromptStatus,
   type UncompletePromptPayload,
   type UncompletePromptResponsePayload
 } from '@shared/Prompt'
@@ -44,8 +45,9 @@ const toPersistedPrompt = (prompt: Prompt): PromptPersisted => {
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
     promptText: prompt.promptText,
-    ...(prompt.completed && prompt.completedAt
-      ? { completed: true, completedAt: prompt.completedAt }
+    status: prompt.status,
+    ...(prompt.status === PromptStatus.Completed && prompt.completedAt
+      ? { completedAt: prompt.completedAt }
       : {})
   }
 }
@@ -329,6 +331,7 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
     fallbackTitle: promptDraft.fallbackTitle,
     createdAt: promptDraft.createdAt,
     modifiedAt: promptDraft.modifiedAt,
+    status: PromptStatus.ToDo,
     promptText: promptDraft.promptText
   }
   const modifiedAt = getCurrentIsoSecondTimestamp()
@@ -344,7 +347,7 @@ export const completePrompt = async (promptFolderId: string, promptId: string): 
       collections.prompt.update(promptId, (draft) => {
         if (draft.loadingState === 'full') {
           Object.assign(draft, persistedPrompt)
-          draft.completed = true
+          draft.status = PromptStatus.Completed
           draft.completedAt = modifiedAt
           draft.modifiedAt = draft.completedAt
         }
@@ -403,13 +406,14 @@ export const uncompletePrompt = async (
           fallbackTitle: promptDraft.fallbackTitle,
           createdAt: promptDraft.createdAt,
           modifiedAt: promptDraft.modifiedAt,
+          status: PromptStatus.ToDo,
           promptText: promptDraft.promptText
         }
-  const { completed: _completed, completedAt: _completedAt, ...activePromptBase } =
-    basePersistedPrompt
+  const { completedAt: _completedAt, ...activePromptBase } = basePersistedPrompt
   const modifiedAt = getCurrentIsoSecondTimestamp()
   const activePrompt: PromptPersisted = {
     ...activePromptBase,
+    status: PromptStatus.ToDo,
     modifiedAt
   }
 
@@ -424,7 +428,6 @@ export const uncompletePrompt = async (
       collections.prompt.update(promptId, (draft) => {
         if (draft.loadingState === 'full') {
           Object.assign(draft, activePrompt)
-          delete draft.completed
           delete draft.completedAt
         }
       })
@@ -495,6 +498,7 @@ export const movePrompt = async (
             fallbackTitle: promptDraft.fallbackTitle,
             createdAt: promptDraft.createdAt,
             modifiedAt: promptDraft.modifiedAt,
+            status: PromptStatus.ToDo,
             promptText: promptDraft.promptText
           }
         : null

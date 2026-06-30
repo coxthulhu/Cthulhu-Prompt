@@ -1,3 +1,4 @@
+import { PromptStatus } from '@shared/Prompt'
 import type {
   CompletePromptPayload,
   CreatePromptPayload,
@@ -264,7 +265,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
 
   const record = value as Record<string, unknown>
   const keys = Object.keys(record)
-  const hasCompleted = keys.includes('completed')
+  const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
   const allowedKeys = new Set([
     'id',
@@ -273,14 +274,20 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     'createdAt',
     'modifiedAt',
     'promptText',
-    ...(hasCompleted ? ['completed', 'completedAt'] : [])
+    'status',
+    ...(hasCompletedAt ? ['completedAt'] : [])
   ])
 
-  if (keys.length !== 6 && keys.length !== 8) {
+  if (keys.length !== 7 && keys.length !== 8) {
     return null
   }
 
-  if (hasCompleted !== hasCompletedAt || keys.some((key) => !allowedKeys.has(key))) {
+  if (!hasStatus || keys.some((key) => !allowedKeys.has(key))) {
+    return null
+  }
+
+  const hasCompletedStatus = record.status === PromptStatus.Completed
+  if (hasCompletedStatus !== hasCompletedAt) {
     return null
   }
 
@@ -291,9 +298,10 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     createdAt: parseString,
     modifiedAt: parseString,
     promptText: parseString,
-    ...(hasCompleted
+    status: (nextValue) =>
+      nextValue === PromptStatus.ToDo || nextValue === PromptStatus.Completed ? nextValue : null,
+    ...(hasCompletedAt
       ? {
-          completed: (nextValue) => (nextValue === true ? true : null),
           completedAt: parseString
         }
       : {})

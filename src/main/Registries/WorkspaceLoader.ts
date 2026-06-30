@@ -1,4 +1,5 @@
 import * as path from 'path'
+import { PromptStatus } from '@shared/Prompt'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
@@ -83,9 +84,10 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
           id: promptEntry.committed.id,
           title: promptEntry.committed.title,
           fallbackTitle: promptEntry.committed.fallbackTitle,
-          ...(promptEntry.committed.completed && promptEntry.committed.completedAt
+          status: promptEntry.committed.status,
+          ...(promptEntry.committed.status === PromptStatus.Completed &&
+          promptEntry.committed.completedAt
             ? {
-                completed: true,
                 completedAt: promptEntry.committed.completedAt
               }
             : {})

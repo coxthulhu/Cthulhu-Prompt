@@ -1,11 +1,16 @@
 import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
+export enum PromptStatus {
+  ToDo = 'ToDo',
+  Completed = 'Completed'
+}
+
 export type PromptSummary = {
   id: string
   title: string
   fallbackTitle: string
-  completed?: true
+  status: PromptStatus
   completedAt?: string
   loadingState: 'summary'
 }
@@ -17,7 +22,7 @@ export type PromptFull = {
   modifiedAt: string
   promptText: string
   fallbackTitle: string
-  completed?: true
+  status: PromptStatus
   completedAt?: string
   loadingState: 'full'
 }
@@ -30,15 +35,16 @@ export type PromptPersisted = Omit<PromptFull, 'loadingState'>
 // Prompt data loaded during workspace bootstrap for tree/title hydration.
 export type PromptSummaryData = Pick<
   PromptPersisted,
-  'id' | 'title' | 'fallbackTitle' | 'completed' | 'completedAt'
+  'id' | 'title' | 'fallbackTitle' | 'status' | 'completedAt'
 >
 
 export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary => ({
   id: prompt.id,
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
-  ...(prompt.completed && prompt.completedAt
-    ? { completed: true, completedAt: prompt.completedAt }
+  status: prompt.status,
+  ...(prompt.status === PromptStatus.Completed && prompt.completedAt
+    ? { completedAt: prompt.completedAt }
     : {}),
   loadingState: 'summary'
 })
@@ -50,8 +56,9 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
   fallbackTitle: prompt.fallbackTitle,
-  ...(prompt.completed && prompt.completedAt
-    ? { completed: true, completedAt: prompt.completedAt }
+  status: prompt.status,
+  ...(prompt.status === PromptStatus.Completed && prompt.completedAt
+    ? { completedAt: prompt.completedAt }
     : {}),
   loadingState: 'full'
 })

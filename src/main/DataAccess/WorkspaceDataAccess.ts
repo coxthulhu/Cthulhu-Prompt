@@ -3,6 +3,7 @@ import * as path from 'path'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import { PromptStatus } from '@shared/Prompt'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
@@ -71,6 +72,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
           fallbackTitle: '',
           createdAt: now,
           modifiedAt: now,
+          status: PromptStatus.ToDo,
           promptText: 'Placeholder prompt text.'
         },
         {
@@ -79,6 +81,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
           fallbackTitle: '',
           createdAt: now,
           modifiedAt: now,
+          status: PromptStatus.ToDo,
           promptText: 'Placeholder prompt text.'
         }
       ]

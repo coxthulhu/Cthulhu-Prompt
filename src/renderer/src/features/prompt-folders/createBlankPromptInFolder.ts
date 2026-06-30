@@ -2,7 +2,7 @@ import { createPrompt } from '@renderer/data/Mutations/PromptMutations'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
-import type { PromptFull } from '@shared/Prompt'
+import { PromptStatus, type PromptFull } from '@shared/Prompt'
 
 export type BlankPromptCreation = {
   promptId: string
@@ -21,6 +21,7 @@ export const createBlankPromptInFolder = (
     fallbackTitle: DEFAULT_PROMPT_FALLBACK_TITLE,
     createdAt: now,
     modifiedAt: now,
+    status: PromptStatus.ToDo,
     promptText: '',
     loadingState: 'full'
   }

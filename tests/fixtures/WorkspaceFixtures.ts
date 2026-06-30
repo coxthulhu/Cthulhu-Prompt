@@ -2,7 +2,7 @@ import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
-import type { PromptPersisted } from '@shared/Prompt'
+import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
@@ -132,6 +132,7 @@ const createPromptFiles = (
       fallbackTitle: prompt.fallbackTitle ?? '',
       createdAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       modifiedAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
+      status: PromptStatus.ToDo,
       promptText: prompt.promptText
     }
     const promptStem = resolvePromptStem(getPromptDisplayTitle(promptData), prompt.id, usedStems)

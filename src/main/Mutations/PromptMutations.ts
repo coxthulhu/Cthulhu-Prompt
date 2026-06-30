@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { PromptStatus } from '@shared/Prompt'
 import type {
   CompletePromptResponsePayload,
   MovePromptResponsePayload,
@@ -159,6 +160,7 @@ export const setupPromptMutationHandlers = (): void => {
             fallbackTitle: promptTitleFields.fallbackTitle,
             createdAt: now,
             modifiedAt: now,
+            status: PromptStatus.ToDo,
             promptText: requestedPrompt.data.promptText
           }
 
@@ -365,11 +367,13 @@ export const setupPromptMutationHandlers = (): void => {
                   draft.createdAt = requestedPrompt.data.createdAt
                   draft.modifiedAt = requestedPrompt.data.modifiedAt
                   draft.promptText = requestedPrompt.data.promptText
-                  if (requestedPrompt.data.completed && requestedPrompt.data.completedAt) {
-                    draft.completed = true
+                  draft.status = requestedPrompt.data.status
+                  if (
+                    requestedPrompt.data.status === PromptStatus.Completed &&
+                    requestedPrompt.data.completedAt
+                  ) {
                     draft.completedAt = requestedPrompt.data.completedAt
                   } else {
-                    delete draft.completed
                     delete draft.completedAt
                   }
                 }
@@ -586,7 +590,7 @@ export const setupPromptMutationHandlers = (): void => {
           const now = getCurrentIsoSecondTimestamp()
           const completedPrompt: PromptPersisted = {
             ...requestedPrompt.data,
-            completed: true,
+            status: PromptStatus.Completed,
             completedAt: now,
             modifiedAt: now
           }
@@ -673,12 +677,12 @@ export const setupPromptMutationHandlers = (): void => {
 
           const now = getCurrentIsoSecondTimestamp()
           const {
-            completed: _completed,
             completedAt: _completedAt,
             ...requestedActivePrompt
           } = requestedPrompt.data
           const activePrompt: PromptPersisted = {
             ...requestedActivePrompt,
+            status: PromptStatus.ToDo,
             modifiedAt: now
           }
 
@@ -704,7 +708,6 @@ export const setupPromptMutationHandlers = (): void => {
                 expectedRevision: requestedPrompt.expectedRevision,
                 recipe: (draft) => {
                   Object.assign(draft, activePrompt)
-                  delete draft.completed
                   delete draft.completedAt
                 },
                 persistenceFields: {

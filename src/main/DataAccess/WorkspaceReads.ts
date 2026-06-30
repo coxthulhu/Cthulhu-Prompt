@@ -210,7 +210,9 @@ export const readPromptSummaries = (
   return prompts.map((prompt) => ({
     id: prompt.id,
     title: prompt.title,
-    fallbackTitle: prompt.fallbackTitle
+    fallbackTitle: prompt.fallbackTitle,
+    status: prompt.status,
+    ...(prompt.completedAt ? { completedAt: prompt.completedAt } : {})
   }))
 }
 

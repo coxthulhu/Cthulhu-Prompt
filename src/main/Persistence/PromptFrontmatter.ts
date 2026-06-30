@@ -1,12 +1,12 @@
 import matter from 'gray-matter'
-import type { PromptPersisted } from '@shared/Prompt'
+import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import { normalizePromptTitle } from '@shared/promptFallbackTitle'
 
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   (
-    | { completed: true; completedAt: string }
-    | { completed?: never; completedAt?: never }
+    | { status: PromptStatus.Completed; completedAt: string }
+    | { status: PromptStatus.ToDo; completedAt?: never }
   )
 
 const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData => {
@@ -16,25 +16,36 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
 
   const frontmatter = data as Record<string, unknown>
   const keys = Object.keys(frontmatter)
-  if (keys.length !== 3 && keys.length !== 5) {
+  if (keys.length !== 4 && keys.length !== 5) {
     return false
   }
 
   const hasTitle = keys.includes('title')
   const hasFallbackTitle = keys.includes('fallbackTitle')
-  const hasCompleted = keys.includes('completed')
+  const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
   const allowedKeys = new Set([
     'id',
     'createdAt',
     hasTitle ? 'title' : 'fallbackTitle',
-    ...(hasCompleted ? ['completed', 'completedAt'] : [])
+    'status',
+    ...(hasCompletedAt ? ['completedAt'] : [])
   ])
-  if (!keys.includes('id') || !keys.includes('createdAt') || hasTitle === hasFallbackTitle) {
+  if (
+    !keys.includes('id') ||
+    !keys.includes('createdAt') ||
+    !hasStatus ||
+    hasTitle === hasFallbackTitle
+  ) {
     return false
   }
 
-  if (hasCompleted !== hasCompletedAt || keys.some((key) => !allowedKeys.has(key))) {
+  if (keys.some((key) => !allowedKeys.has(key))) {
+    return false
+  }
+
+  const hasCompletedStatus = frontmatter.status === PromptStatus.Completed
+  if (hasCompletedStatus !== hasCompletedAt) {
     return false
   }
 
@@ -44,8 +55,8 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
-    (!hasCompleted ||
-      (frontmatter.completed === true && typeof frontmatter.completedAt === 'string'))
+    (frontmatter.status === PromptStatus.ToDo ||
+      (hasCompletedStatus && typeof frontmatter.completedAt === 'string'))
   )
 }
 
@@ -75,7 +86,10 @@ export const parsePromptMarkdown = (
       createdAt: parsed.data.createdAt,
       modifiedAt,
       promptText: parsed.content,
-      ...(parsed.data.completed ? { completed: true, completedAt: parsed.data.completedAt } : {})
+      status: parsed.data.status,
+      ...(parsed.data.status === PromptStatus.Completed
+        ? { completedAt: parsed.data.completedAt }
+        : {})
     }
   } catch {
     return null
@@ -91,13 +105,16 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
       : { fallbackTitle: prompt.fallbackTitle })
   }
   const metadata: PromptFrontmatterData =
-    prompt.completed && prompt.completedAt
+    prompt.status === PromptStatus.Completed && prompt.completedAt
       ? {
           ...baseMetadata,
-          completed: true,
+          status: PromptStatus.Completed,
           completedAt: prompt.completedAt
         }
-      : baseMetadata
+      : {
+          ...baseMetadata,
+          status: PromptStatus.ToDo
+        }
   const frontmatterDocument = matter.stringify('', metadata)
   const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)
 

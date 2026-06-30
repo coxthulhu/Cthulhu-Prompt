@@ -1,4 +1,4 @@
-import type { PromptPersisted } from '@shared/Prompt'
+import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import { resolveUniquePromptStem } from '@shared/promptFilename'
@@ -67,27 +67,30 @@ const normalizePromptCompletionForFolder = (
   isCompletedFolder: boolean
 ): PromptPersisted => {
   if (isCompletedFolder) {
-    if (prompt.completed && prompt.completedAt) {
+    if (prompt.status === PromptStatus.Completed && prompt.completedAt) {
       return prompt
     }
 
     return {
       ...prompt,
-      completed: true,
+      status: PromptStatus.Completed,
       completedAt: getCurrentIsoSecondTimestamp()
     }
   }
 
-  if (!prompt.completed) {
+  if (prompt.status === PromptStatus.ToDo && !prompt.completedAt) {
     return prompt
   }
 
-  const { completed: _completed, completedAt: _completedAt, ...activePrompt } = prompt
-  return activePrompt
+  const { completedAt: _completedAt, ...activePrompt } = prompt
+  return {
+    ...activePrompt,
+    status: PromptStatus.ToDo
+  }
 }
 
 const hasSameCompletionMetadata = (left: PromptPersisted, right: PromptPersisted): boolean => {
-  return left.completed === right.completed && left.completedAt === right.completedAt
+  return left.status === right.status && left.completedAt === right.completedAt
 }
 
 export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {

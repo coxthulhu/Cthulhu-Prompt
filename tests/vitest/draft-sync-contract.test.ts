@@ -1,4 +1,4 @@
-import type { PromptFull, PromptSummaryData } from '@shared/Prompt'
+import { PromptStatus, type PromptFull, type PromptSummaryData } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { SystemSettings } from '@shared/SystemSettings'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -50,6 +50,7 @@ const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
   fallbackTitle: '',
   createdAt: '2026-01-01T00:00:00.000Z',
   modifiedAt: '2026-01-01T00:00:00.000Z',
+  status: PromptStatus.ToDo,
   promptText: 'Original text',
   loadingState: 'full',
   ...overrides
@@ -59,6 +60,7 @@ const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): Prompt
   id: 'prompt-1',
   title: 'Original title',
   fallbackTitle: '',
+  status: PromptStatus.ToDo,
   ...overrides
 })
 

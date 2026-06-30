@@ -20,7 +20,7 @@ import {
   resolvePersistedPromptFilePathsByTitle
 } from '../helpers/PromptPersistenceTestHelpers'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
-import type { PromptPersisted } from '../../src/shared/Prompt'
+import { PromptStatus, type PromptPersisted } from '../../src/shared/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -222,7 +222,7 @@ const buildCompletedSelfHealingWorkspace = () => {
     createdAt: '2023-01-01T00:00:00.000Z',
     modifiedAt: '2023-01-01T00:00:00.000Z',
     promptText: 'This regular prompt should keep rendering.',
-    completed: true,
+    status: PromptStatus.Completed,
     completedAt: '2023-01-02T00:00:00Z'
   }
   const completedPrompt: PromptPersisted = {
@@ -231,6 +231,7 @@ const buildCompletedSelfHealingWorkspace = () => {
     fallbackTitle: '',
     createdAt: '2023-01-03T00:00:00.000Z',
     modifiedAt: '2023-01-03T00:00:00.000Z',
+    status: PromptStatus.ToDo,
     promptText: 'This completed prompt should stay hidden.'
   }
   const workspace = createWorkspaceWithFolders(SELF_HEALING_WORKSPACE_PATH, [
@@ -276,6 +277,7 @@ const buildCompletedModeWorkspace = () => {
     fallbackTitle: '',
     createdAt: '2023-01-01T00:00:00.000Z',
     modifiedAt: '2023-01-01T00:00:00.000Z',
+    status: PromptStatus.ToDo,
     promptText: 'This active prompt should be visible by default.'
   }
   const newestCompletedPrompt: PromptPersisted = {
@@ -285,7 +287,7 @@ const buildCompletedModeWorkspace = () => {
     createdAt: '2023-01-02T00:00:00.000Z',
     modifiedAt: '2023-01-05T00:00:00.000Z',
     promptText: 'Newest completed body marker.',
-    completed: true,
+    status: PromptStatus.Completed,
     completedAt: '2023-01-05T00:00:00.000Z'
   }
   const oldestCompletedPrompt: PromptPersisted = {
@@ -295,7 +297,7 @@ const buildCompletedModeWorkspace = () => {
     createdAt: '2023-01-03T00:00:00.000Z',
     modifiedAt: '2023-01-04T00:00:00.000Z',
     promptText: 'Oldest completed body marker.',
-    completed: true,
+    status: PromptStatus.Completed,
     completedAt: '2023-01-04T00:00:00.000Z'
   }
   const workspace = createWorkspaceWithFolders(COMPLETED_MODE_WORKSPACE_PATH, [
@@ -771,7 +773,7 @@ describe('Prompt folder prompt management', () => {
       promptId: COMPLETION_PROMPT_ID,
       promptTitle: COMPLETION_PROMPT_TITLE
     })
-    expect(completedMarkdown).toContain('completed: true')
+    expect(completedMarkdown).toContain('status: Completed')
     expect(completedMarkdown).toContain('completedAt:')
     expect(completedMarkdown).toContain(completedText)
 
@@ -813,7 +815,7 @@ describe('Prompt folder prompt management', () => {
       promptId: activePromptId,
       promptTitle: activePromptTitle
     })
-    expect(activeMarkdown).not.toContain('completed: true')
+    expect(activeMarkdown).toContain('status: ToDo')
     expect(activeMarkdown).not.toContain('completedAt:')
     expect(activeMarkdown).toContain('This regular prompt should keep rendering.')
 
@@ -823,7 +825,7 @@ describe('Prompt folder prompt management', () => {
       promptId: completedPromptId,
       promptTitle: completedPromptTitle
     })
-    expect(completedMarkdown).toContain('completed: true')
+    expect(completedMarkdown).toContain('status: Completed')
     expect(completedMarkdown).toContain('completedAt:')
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
   })
@@ -923,7 +925,7 @@ describe('Prompt folder prompt management', () => {
       promptId: 'completed-mode-newest',
       promptTitle: 'Newest Completed'
     })
-    expect(activeMarkdown).not.toContain('completed: true')
+    expect(activeMarkdown).toContain('status: ToDo')
     expect(activeMarkdown).not.toContain('completedAt:')
 
     await testHelpers.navigateToPromptFolders('No Completed')
