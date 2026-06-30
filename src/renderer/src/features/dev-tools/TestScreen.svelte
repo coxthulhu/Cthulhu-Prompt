@@ -38,6 +38,7 @@
     type IconButtonHoverVariant,
     type IconButtonSize
   } from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
@@ -102,6 +103,26 @@
     detail: 'Create a new prompt folder',
     icon: Plus
   }
+  const iconButtonMoreOptionsItems: DropdownPopupDetailedItem[] = [
+    {
+      id: 'copy-markdown',
+      label: 'Copy as Markdown',
+      detail: 'Include title and prompt body',
+      icon: ClipboardList
+    },
+    {
+      id: 'duplicate-prompt',
+      label: 'Duplicate Prompt',
+      detail: 'Create a copy in this folder',
+      icon: Copy
+    },
+    {
+      id: 'archive-prompt',
+      label: 'Archive Prompt',
+      detail: 'Move out of active prompt lists',
+      icon: Archive
+    }
+  ]
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
   const TEST_LOADING_OVERLAY_VISIBLE_MS = 5000
   const TEST_LOADING_OVERLAY_FADE_MS = 125
@@ -223,6 +244,26 @@
                 <div class="variant-controls">
                   <IconTextButton icon={Sparkles} text="Improve" />
                   <IconTextButton icon={Archive} text="Archive" />
+                </div>
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('IconButtonWithMoreOptions')}
+                <div class="variant-controls icon-only-controls">
+                  <IconButtonWithMoreOptions
+                    icon={Copy}
+                    label="Copy prompt"
+                    title="Copy prompt"
+                    hoverVariant="accent"
+                    moreOptions={iconButtonMoreOptionsItems}
+                    menuTestId="icon-button-more-options-menu"
+                    moreOptionsTestId="icon-button-more-options-chevron"
+                    onclick={() => {
+                      lastDropdownAction = 'Copy prompt'
+                    }}
+                    onselect={(item) => {
+                      lastDropdownAction = item.label
+                    }}
+                  />
                 </div>
               </div>
               <div class="component-sample">

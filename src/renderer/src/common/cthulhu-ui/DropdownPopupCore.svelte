@@ -5,6 +5,7 @@
   import CardSurface from './CardSurface.svelte'
 
   export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
+  export type DropdownPopupMenuAlignment = 'left' | 'right'
 
   type MenuPosition = {
     left: number
@@ -38,6 +39,7 @@
     menuClass?: string
     testId?: string
     placement?: DropdownPopupPlacement
+    menuAlignment?: DropdownPopupMenuAlignment
     dragOpenTypes?: string[]
   }
 
@@ -49,6 +51,7 @@
     menuClass,
     testId,
     placement = 'cursor',
+    menuAlignment = 'left',
     dragOpenTypes = []
   }: Props = $props()
 
@@ -83,10 +86,12 @@
     menuWidthPx: number,
     menuHeight: number
   ): MenuPosition => {
+    const anchoredLeft = menuAlignment === 'right' ? anchor.x - menuWidthPx : anchor.x
+
     return {
       left: Math.max(
         viewportMargin,
-        Math.min(anchor.x, window.innerWidth - menuWidthPx - viewportMargin)
+        Math.min(anchoredLeft, window.innerWidth - menuWidthPx - viewportMargin)
       ),
       top: Math.max(
         viewportMargin,
@@ -105,7 +110,7 @@
 
     if (placement === 'below-trigger') {
       return {
-        x: triggerRect.left,
+        x: menuAlignment === 'right' ? triggerRect.right : triggerRect.left,
         y: triggerRect.bottom + belowTriggerGap
       }
     }
