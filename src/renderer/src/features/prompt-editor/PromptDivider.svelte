@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ArrowDownToLine, FolderPlus, Plus } from 'lucide-svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type { DroppableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
@@ -40,15 +41,15 @@
     <div
       class={mode === 'separator'
         ? 'grid min-h-9 grid-cols-1 items-center'
-        : 'grid min-h-9 grid-cols-[28px_auto_minmax(24px,1fr)] items-center gap-2.5'}
+        : 'grid min-h-9 grid-cols-[auto_minmax(24px,1fr)] items-center gap-2.5'}
     >
-      <Separator
-        class={isOver
-          ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
-          : 'bg-[var(--ui-neutral-muted-border)]'}
-      />
       {#if mode === 'separator'}
         <!-- Completed mode uses the divider as a plain section separator. -->
+        <Separator
+          class={isOver
+            ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
+            : 'bg-[var(--ui-neutral-muted-border)]'}
+        />
       {:else if isOver}
         <div
           class="promptDividerMoveIndicator"
@@ -61,16 +62,12 @@
         </div>
       {:else}
         <div class="promptDividerActions">
-          <IconTextButton
+          <IconButton
             icon={DividerIcon}
-            text={dividerText}
-            iconSize={14}
-            iconClass="stroke-[3]"
-            state={disabled ? 'disabled' : 'enabled'}
+            label={dividerText}
+            title={dividerText}
+            disabled={disabled}
             hoverVariant="accent"
-            class="min-w-24 font-bold"
-            data-drop-over="false"
-            aria-label={dividerText}
             {testId}
             onclick={() => {
               onAddPrompt?.()
