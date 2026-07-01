@@ -33,6 +33,6 @@
 
 <style>
   .cthulhuUiSeparator {
-    background-color: var(--ui-neutral-muted-border);
+    background-color: var(--cthulhu-ui-separator-color, var(--ui-neutral-muted-border));
   }
 </style>

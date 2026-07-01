@@ -82,7 +82,11 @@
     />
   {/if}
   {#if onComplete || onUncomplete || onDelete}
-    <Separator orientation="vertical" class="h-6" />
+    <Separator
+      orientation="vertical"
+      class="h-6"
+      style="--cthulhu-ui-separator-color: var(--ui-neutral-normal-border);"
+    />
   {/if}
   <CopyButton
     text={copyText ?? draftText}

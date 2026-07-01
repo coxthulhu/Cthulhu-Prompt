@@ -160,21 +160,6 @@
     background: var(--cthulhu-ui-icon-button-more-options-hover-fill);
   }
 
-  .cthulhuUiIconButtonWithMoreOptions:hover
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton),
-  .cthulhuUiIconButtonWithMoreOptions:has(:global(.cthulhuUiIconButton:focus-visible))
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton),
-  .cthulhuUiIconButtonWithMoreOptions:has(
-      :global(.cthulhuUiIconButtonWithMoreOptionsMain[data-active='true'])
-    )
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton),
-  .cthulhuUiIconButtonWithMoreOptions:has(
-      :global(.cthulhuUiIconButtonWithMoreOptionsChevron[data-active='true'])
-    )
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
-    border-left-color: var(--ui-neutral-muted-border);
-  }
-
   .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton) {
     background: var(--ui-ghost-surface);
     border-radius: 0;
@@ -188,7 +173,19 @@
 
   :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
     border-left: 1px solid transparent;
+    position: relative;
     width: 23px;
+  }
+
+  :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton)::before {
+    background: var(--ui-neutral-normal-border);
+    content: '';
+    height: 24px;
+    left: -1px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
   }
 
   .cthulhuUiIconButtonWithMoreOptions[data-size='compact']
@@ -196,9 +193,19 @@
     width: 21px;
   }
 
+  .cthulhuUiIconButtonWithMoreOptions[data-size='compact']
+    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton)::before {
+    height: 18px;
+  }
+
   .cthulhuUiIconButtonWithMoreOptions[data-size='tiny']
     :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
     width: 17px;
+  }
+
+  .cthulhuUiIconButtonWithMoreOptions[data-size='tiny']
+    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton)::before {
+    height: 12px;
   }
 
   .cthulhuUiIconButtonWithMoreOptions[data-base-variant='dim']:hover
