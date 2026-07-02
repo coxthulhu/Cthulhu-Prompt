@@ -1,7 +1,7 @@
 .cthulhuUiActionButton {
   align-items: center;
   background-color: var(--ui-neutral-action-fill);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--cthulhu-ui-radius-control);
   box-sizing: border-box;
   color: var(--ui-normal-text);
