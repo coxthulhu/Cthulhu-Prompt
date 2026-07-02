@@ -240,6 +240,13 @@
                 />
               </div>
               <div class="component-sample">
+                {@render componentLabel('Button appearances')}
+                <div class="variant-controls">
+                  <Button icon={Plus} text="Filled" variant="accent" />
+                  <Button icon={Archive} text="Outline" appearance="outline" />
+                </div>
+              </div>
+              <div class="component-sample">
                 {@render componentLabel('IconTextButton')}
                 <div class="variant-controls">
                   <IconTextButton icon={Sparkles} text="Improve" />

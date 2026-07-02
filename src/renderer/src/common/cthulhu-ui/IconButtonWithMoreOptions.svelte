@@ -126,11 +126,15 @@
 
     align-items: center;
     background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
     display: inline-flex;
     gap: 0;
     min-width: 0;
-    transition: background-color 120ms ease;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
   }
 
   .cthulhuUiIconButtonWithMoreOptions[data-hover-variant='accent'] {
@@ -158,6 +162,7 @@
       :global(.cthulhuUiIconButtonWithMoreOptionsChevron[data-active='true'])
     ) {
     background: var(--cthulhu-ui-icon-button-more-options-hover-fill);
+    border-color: var(--ui-neutral-hover-border);
   }
 
   .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton) {
