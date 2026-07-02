@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, Copy } from 'lucide-svelte'
+  import { ClipboardCheck, Copy } from 'lucide-svelte'
   import IconButton, { type IconButtonHoverVariant } from './IconButton.svelte'
 
   type Props = {
@@ -61,7 +61,7 @@
 </script>
 
 <IconButton
-  icon={isCopied ? Check : Copy}
+  icon={isCopied ? ClipboardCheck : Copy}
   label={isCopied ? copiedLabel : label}
   title={isCopied ? copiedTitle : title}
   {hoverVariant}
