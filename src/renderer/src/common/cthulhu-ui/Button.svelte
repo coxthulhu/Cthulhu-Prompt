@@ -5,12 +5,14 @@
   import './actionButton.css'
 
   export type ButtonVariant = 'neutral' | 'accent' | 'danger'
+  export type ButtonAppearance = 'filled' | 'outline'
   type ButtonState = 'enabled' | 'disabled'
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
     icon?: ComponentType
     text: string
     variant?: ButtonVariant
+    appearance?: ButtonAppearance
     state?: ButtonState
     class?: string
     iconClass?: string
@@ -22,6 +24,7 @@
     icon: Icon,
     text,
     variant = 'neutral',
+    appearance = 'filled',
     state = 'enabled',
     class: className,
     iconClass,
@@ -37,6 +40,7 @@
   type="button"
   class={mergeClasses('cthulhuUiActionButton cthulhuUiButton', className)}
   data-variant={variant}
+  data-appearance={appearance}
   data-testid={testId}
   {onclick}
   disabled={isDisabled}

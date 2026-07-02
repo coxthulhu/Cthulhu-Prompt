@@ -3,6 +3,7 @@
   background-color: var(--ui-neutral-action-fill);
   border: 0;
   border-radius: var(--cthulhu-ui-radius-control);
+  box-sizing: border-box;
   color: var(--ui-normal-text);
   display: inline-flex;
   flex: 0 0 auto;
@@ -17,6 +18,7 @@
   padding: 0 14px;
   transition:
     background-color 120ms ease,
+    border-color 120ms ease,
     color 120ms ease;
   white-space: nowrap;
 }
@@ -47,6 +49,37 @@
 .cthulhuUiActionButton[data-variant='danger']:focus-visible {
   background-color: var(--ui-danger-action-hover-fill);
   color: var(--ui-normal-text);
+}
+
+.cthulhuUiActionButton[data-appearance='outline'] {
+  background-color: var(--ui-ghost-surface);
+  border: 1px solid var(--ui-neutral-normal-border);
+}
+
+.cthulhuUiActionButton[data-appearance='outline']:hover,
+.cthulhuUiActionButton[data-appearance='outline']:focus-visible {
+  background-color: var(--ui-neutral-action-hover-fill);
+  border-color: var(--ui-neutral-hover-border);
+}
+
+.cthulhuUiActionButton[data-appearance='outline'][data-variant='accent'] {
+  border-color: var(--ui-accent-normal-border);
+}
+
+.cthulhuUiActionButton[data-appearance='outline'][data-variant='accent']:hover,
+.cthulhuUiActionButton[data-appearance='outline'][data-variant='accent']:focus-visible {
+  background-color: var(--ui-accent-action-fill);
+  border-color: var(--ui-accent-strong-border);
+}
+
+.cthulhuUiActionButton[data-appearance='outline'][data-variant='danger'] {
+  border-color: var(--ui-danger-strong-border);
+}
+
+.cthulhuUiActionButton[data-appearance='outline'][data-variant='danger']:hover,
+.cthulhuUiActionButton[data-appearance='outline'][data-variant='danger']:focus-visible {
+  background-color: var(--ui-danger-action-fill);
+  border-color: var(--ui-danger-strong-border);
 }
 
 .cthulhuUiActionButton:focus-visible {

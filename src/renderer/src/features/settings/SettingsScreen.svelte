@@ -196,6 +196,7 @@
             <Button
               icon={RefreshCcw}
               text="Reset"
+              appearance="outline"
               onclick={handleFontSizeReset}
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
@@ -232,6 +233,7 @@
             <Button
               icon={RefreshCcw}
               text="Reset"
+              appearance="outline"
               onclick={handleMinLinesReset}
               state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
             />
@@ -268,6 +270,7 @@
             <Button
               icon={RefreshCcw}
               text="Reset"
+              appearance="outline"
               onclick={handleMaxLinesReset}
               state={isMaxLinesResetDisabled ? 'disabled' : 'enabled'}
             />
@@ -295,6 +298,7 @@
             <Button
               icon={RefreshCcw}
               text="Reset"
+              appearance="outline"
               onclick={handleShowLineNumbersReset}
               state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
             />
