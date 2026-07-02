@@ -433,7 +433,6 @@
       <SvelteVirtualWindow
         items={virtualItems}
         {rowRegistry}
-        rowHeightGridPx={2}
         leftScrollPaddingPx={0}
         rightScrollPaddingPx={1}
         testId="prompt-tree-virtual-window"

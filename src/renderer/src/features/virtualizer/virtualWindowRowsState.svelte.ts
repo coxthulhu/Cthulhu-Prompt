@@ -1,5 +1,5 @@
 import type { VirtualWindowItem, VirtualWindowRowTypeRegistry } from './virtualWindowTypes'
-import { buildRows, type VirtualRowState } from './virtualWindowRows'
+import { buildRows, normalizeDevicePixelRatio, type VirtualRowState } from './virtualWindowRows'
 
 type VirtualWindowRowsStateOptions<TRow extends { kind: string }> = {
   getItems: () => VirtualWindowItem<TRow>[]
@@ -7,7 +7,6 @@ type VirtualWindowRowsStateOptions<TRow extends { kind: string }> = {
   getMeasurementWidth: () => number
   getViewportHeight: () => number
   getDevicePixelRatio: () => number
-  getRowHeightGridPx: () => number
 }
 
 export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
@@ -18,8 +17,7 @@ export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
     getRowRegistry,
     getMeasurementWidth,
     getViewportHeight,
-    getDevicePixelRatio,
-    getRowHeightGridPx
+    getDevicePixelRatio
   } = options
 
   const rowStates = $derived.by(() => {
@@ -30,12 +28,15 @@ export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
       getRowRegistry(),
       measurementWidth,
       getViewportHeight(),
-      getDevicePixelRatio(),
-      getRowHeightGridPx()
+      getDevicePixelRatio()
     )
   })
 
-  const totalHeightPx = $derived.by(() => rowStates.reduce((sum, row) => sum + row.height, 0))
+  const totalHeightPx = $derived.by(() => {
+    const dpr = normalizeDevicePixelRatio(getDevicePixelRatio())
+    const totalHeightDevicePx = rowStates.reduce((sum, row) => sum + row.heightDevicePx, 0)
+    return totalHeightDevicePx / dpr
+  })
 
   return {
     getRowStates: () => rowStates,
