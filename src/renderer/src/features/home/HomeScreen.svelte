@@ -204,17 +204,17 @@
           <Card label="Get Started" class={homeCardClass}>
             <div class="flex flex-col">
               <DisplayRow
-                icon={FileText}
-                label="Markdown Prompt Files"
-                detail="Store and manage prompts as Markdown files in a workspace folder."
+                icon={FolderPlus}
+                label="Choose a Workspace"
+                detail="Create a new workspace folder, or open an existing one to continue."
               />
 
               <Separator />
 
               <DisplayRow
-                icon={FolderPlus}
-                label="Choose a Workspace"
-                detail="Create a new workspace folder, or open an existing one to continue."
+                icon={FileText}
+                label="Markdown Prompt Files"
+                detail="Stores and manages prompts as Markdown files in a workspace folder."
               />
 
               <Separator />
