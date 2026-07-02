@@ -298,7 +298,7 @@
               icon={FolderOpen}
               iconClass="translate-y-px"
               label="Open Workspace"
-              detail="Open an existing workspace folder."
+              detail="Open an existing workspace."
             >
               {#snippet trailing()}
                 <Button
