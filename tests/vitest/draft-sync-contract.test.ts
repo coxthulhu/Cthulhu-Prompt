@@ -84,7 +84,7 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
 
 const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSettings => ({
   promptFontSize: 16,
-  promptEditorMinLines: 3,
+  promptEditorMinLines: 2,
   promptEditorMaxLines: 30,
   showLineNumbers: true,
   ...overrides

@@ -194,7 +194,27 @@ export async function getMonacoEditorText(page: Page, editorSelector: string): P
       return ''
     }
 
-    const raw = lines.innerText || ''
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getValue?: () => string
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+
+    const entry = registry?.find((item) => {
+      if (!item?.container) return false
+      return (
+        item.container === container ||
+        item.container.contains(container) ||
+        container.contains(item.container)
+      )
+    })
+
+    const raw = entry?.editor.getValue?.() ?? lines.innerText ?? ''
     return raw
       .replace(/\u00A0/g, ' ')
       .replace(/\s+/g, ' ')

@@ -118,7 +118,7 @@ describe('atomic data transaction', () => {
       revision: 1,
       committed: {
         promptFontSize: 16,
-        promptEditorMinLines: 3,
+        promptEditorMinLines: 2,
         promptEditorMaxLines: 30,
         showLineNumbers: true
       },
@@ -154,7 +154,7 @@ describe('atomic data transaction', () => {
     expect(outcome.results.systemSettings.revision).toBe(2)
     expect(outcome.results.systemSettings.data).toEqual({
       promptFontSize: 22,
-      promptEditorMinLines: 3,
+      promptEditorMinLines: 2,
       promptEditorMaxLines: 30,
       showLineNumbers: true
     })
