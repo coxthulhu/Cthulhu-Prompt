@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
+    Check,
     CheckCircle2,
     ChevronDown,
     ChevronRight,
@@ -10,6 +11,7 @@
     Folder,
     Pencil
   } from 'lucide-svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
   import PromptEditorButtonBar from '@renderer/features/prompt-editor/PromptEditorButtonBar.svelte'
   import PromptDivider from '@renderer/features/prompt-editor/PromptDivider.svelte'
@@ -436,6 +438,22 @@
     }))
   }
 
+  const togglePromptStatus = (promptId: string) => {
+    const toggleStatus = (prompt: MockPrompt): MockPrompt =>
+      prompt.id === promptId
+        ? {
+            ...prompt,
+            status: prompt.status === 'completed' ? 'todo' : 'completed'
+          }
+        : prompt
+
+    topLevelPrompts = topLevelPrompts.map(toggleStatus)
+    mockSubfolders = mockSubfolders.map((folder) => ({
+      ...folder,
+      prompts: folder.prompts.map(toggleStatus)
+    }))
+  }
+
   const toggleSubfolder = (folderId: string) => {
     mockSubfolders = mockSubfolders.map((folder) =>
       folder.id === folderId
@@ -627,23 +645,36 @@
             style="align-self: stretch; background: var(--ui-neutral-normal-border); flex: 0 0 1px; margin: -8px 0; width: 1px;"
           ></span>
 
-          {#if prompt.status === 'completed'}
-            <span
-              class="mockup-status-pill"
-              data-status="completed"
-            >
-              <CheckCircle2 size={14} aria-hidden="true" />
-              Completed
-            </span>
-          {:else}
-            <span
-              class="mockup-status-pill"
-              data-status="todo"
-            >
-              <CircleDashed size={14} aria-hidden="true" />
-              Todo
-            </span>
-          {/if}
+          <div class="mockup-status-control">
+            <IconButton
+              icon={Check}
+              label={prompt.status === 'completed' ? 'Mark prompt as todo' : 'Mark prompt completed'}
+              title={prompt.status === 'completed' ? 'Mark prompt as todo' : 'Mark prompt completed'}
+              hoverVariant="success"
+              ariaPressed={prompt.status === 'completed'}
+              class={`mockup-status-toggle-button ${prompt.status === 'completed' ? 'mockup-status-toggle-button-completed' : ''}`}
+              testId={`mockup-prompt-status-toggle-${prompt.id}`}
+              onclick={() => togglePromptStatus(prompt.id)}
+            />
+
+            {#if prompt.status === 'completed'}
+              <span
+                class="mockup-status-pill"
+                data-status="completed"
+              >
+                <CheckCircle2 size={14} aria-hidden="true" />
+                Completed
+              </span>
+            {:else}
+              <span
+                class="mockup-status-pill"
+                data-status="todo"
+              >
+                <CircleDashed size={14} aria-hidden="true" />
+                Todo
+              </span>
+            {/if}
+          </div>
         </div>
       </header>
 
@@ -1049,6 +1080,17 @@
     width: 3px;
   }
 
+  .mockup-status-control {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  :global(.mockup-status-toggle-button-completed) {
+    color: oklch(0.871 0.15 154.449);
+  }
+
   .mockup-status-pill {
     align-items: center;
     border-radius: 999px;
@@ -1064,12 +1106,12 @@
   }
 
   .mockup-status-pill[data-status='completed'] {
-    background: oklch(0.448 0.119 151.328 / 22%);
+    border: 1px solid oklch(0.871 0.15 154.449 / 42%);
     color: oklch(0.871 0.15 154.449);
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 16px;
-    padding: 3px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.25;
+    padding: 4px 12px;
   }
 
   .mockup-status-pill[data-status='todo'] {
@@ -1079,6 +1121,11 @@
     font-weight: 500;
     line-height: 1.25;
     padding: 4px 12px;
+  }
+
+  .mockup-status-pill[data-status='completed'] :global(svg) {
+    color: oklch(0.871 0.15 154.449);
+    flex: 0 0 auto;
   }
 
   .mockup-status-pill[data-status='todo'] :global(svg) {
