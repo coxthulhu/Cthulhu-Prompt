@@ -304,8 +304,10 @@
                 <Button
                   testId="open-workspace-button"
                   class="cthulhuHomeWorkspaceActionButton"
+                  icon={FolderOpen}
                   text="Open"
                   variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+                  appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
                   onclick={handleSelectFolder}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                 />
@@ -324,8 +326,10 @@
                 <Button
                   testId="create-workspace-button"
                   class="cthulhuHomeWorkspaceActionButton"
+                  icon={FolderPlus}
                   text="Create"
                   variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+                  appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
                   onclick={handleCreateFolder}
                   state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                 />
@@ -345,8 +349,10 @@
                   <Button
                     testId="close-workspace-button"
                     class="cthulhuHomeWorkspaceActionButton"
+                    icon={X}
                     text="Close"
                     variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+                    appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
                     onclick={onWorkspaceClear}
                     state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
                   />
@@ -413,6 +419,6 @@
 
   :global(.cthulhuHomeWorkspaceActionButton) {
     justify-content: center;
-    width: 82px;
+    width: 108px;
   }
 </style>
