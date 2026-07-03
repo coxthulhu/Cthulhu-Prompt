@@ -80,23 +80,32 @@ const waitForPromptCount = async (page: any, count: number) => {
     .toBe(count)
 }
 
-const clickAddAfter = async (page: any, promptId: string) => {
-  const button = page.locator(dividerAddSelector(promptId))
-  await button.scrollIntoViewIfNeeded()
+const clickAddAfter = async (
+  page: any,
+  testHelpers: {
+    scrollVirtualElementIntoView: (
+      hostSelector: string,
+      elementSelector: string,
+      topOffsetPx?: number
+    ) => Promise<void>
+  },
+  promptId: string
+) => {
+  const buttonSelector = dividerAddSelector(promptId)
+  await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, buttonSelector, 120)
+  const button = page.locator(buttonSelector)
   await expect(button).toBeEnabled()
   await button.click()
 }
 
 const clickMoveUp = async (page: any, promptId: string) => {
   const button = page.locator(moveUpSelector(promptId))
-  await button.scrollIntoViewIfNeeded()
   await expect(button).toBeEnabled()
   await button.evaluate((element: HTMLButtonElement) => element.click())
 }
 
 const clickMoveDown = async (page: any, promptId: string) => {
   const button = page.locator(moveDownSelector(promptId))
-  await button.scrollIntoViewIfNeeded()
   await expect(button).toBeEnabled()
   await button.evaluate((element: HTMLButtonElement) => element.click())
 }
@@ -359,7 +368,7 @@ describe('Prompt folder prompt management', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector('active-new-prompt'))
 
     const initialIds = await getPromptEditorIds(mainWindow)
-    await clickAddAfter(mainWindow, 'active-new-prompt')
+    await clickAddAfter(mainWindow, testHelpers, 'active-new-prompt')
     await waitForPromptCount(mainWindow, 4)
 
     const newPromptId = (await getPromptEditorIds(mainWindow)).find(
@@ -478,7 +487,7 @@ describe('Prompt folder prompt management', () => {
     await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-2')
 
     const initialIds = await getPromptEditorIds(mainWindow)
-    await clickAddAfter(mainWindow, 'dev-2')
+    await clickAddAfter(mainWindow, testHelpers, 'dev-2')
     await waitForPromptCount(mainWindow, 3)
 
     const idsAfterAdd = await getPromptEditorIds(mainWindow)
@@ -578,7 +587,7 @@ describe('Prompt folder prompt management', () => {
     // Step 1: add after first prompt, edit it.
     let expectedCount = 2
     const addPromptAfter = async (promptId: string) => {
-      await clickAddAfter(mainWindow, promptId)
+      await clickAddAfter(mainWindow, testHelpers, promptId)
       expectedCount += 1
       await waitForPromptCount(mainWindow, expectedCount)
     }
@@ -687,7 +696,7 @@ describe('Prompt folder prompt management', () => {
     await stubClipboard(mainWindow)
 
     const initialIds = await getPromptEditorIds(mainWindow)
-    await clickAddAfter(mainWindow, 'copy-prefix-source')
+    await clickAddAfter(mainWindow, testHelpers, 'copy-prefix-source')
     await waitForPromptCount(mainWindow, 2)
 
     const idsAfterAdd = await getPromptEditorIds(mainWindow)
@@ -953,7 +962,7 @@ describe('Prompt folder prompt management', () => {
 
     // Create an empty prompt, then delete it without the confirmation dialog.
     const initialIds = await getPromptEditorIds(mainWindow)
-    await clickAddAfter(mainWindow, 'dev-1')
+    await clickAddAfter(mainWindow, testHelpers, 'dev-1')
     await waitForPromptCount(mainWindow, 3)
 
     const idsAfterAdd = await getPromptEditorIds(mainWindow)

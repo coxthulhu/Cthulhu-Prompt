@@ -44,6 +44,7 @@ const scrollPromptTreeRowIntoView = async (
   for (let scrollTopPx = 0; scrollTopPx <= maxScrollTop; scrollTopPx += stepPx) {
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, scrollTopPx)
     if ((await mainWindow.locator(rowSelector).count()) > 0) {
+      await testHelpers.scrollVirtualElementIntoView(PROMPT_TREE_HOST_SELECTOR, rowSelector, 20)
       return
     }
   }

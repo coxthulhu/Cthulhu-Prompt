@@ -210,16 +210,6 @@
     if (viewportHeight <= 0) return
     applyUserScrollTop(scrollTopPx + event.deltaY * WHEEL_SCROLL_MULTIPLIER)
   }
-
-  const handleNativeScroll = (event: Event) => {
-    const target = event.currentTarget as HTMLElement | null
-    if (!target) return
-    const delta = target.scrollTop
-    if (delta === 0) return
-    // Convert browser-driven scrollTop changes (focus/tab reveal) into virtual scroll updates.
-    target.scrollTop = 0
-    applyUserScrollTop(getScrollTopPx() + delta)
-  }
 </script>
 
 <div
@@ -235,14 +225,13 @@
   <div bind:this={viewportFrame} class="flex h-full w-full">
     <div
       class="h-full flex-1 min-w-0"
-      style="overflow-anchor: none; overflow: hidden; position: relative;"
+      style="overflow-anchor: none; overflow: clip; position: relative;"
       data-testid={testId}
       data-virtual-window-viewport
       onwheel={(event) => {
         event.preventDefault()
         handleWheel(event)
       }}
-      onscroll={handleNativeScroll}
     >
       <div
         aria-hidden="true"

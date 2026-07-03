@@ -46,6 +46,22 @@ async function getVirtualWindowTestId(window: any, selector: string): Promise<st
   return testId
 }
 
+async function waitForVirtualWindowScrollTopControl(window: any, testId: string): Promise<void> {
+  await window.waitForFunction((targetTestId) => {
+    const controls = window.svelteVirtualWindowTestControls
+    if (!controls?.getScrollTop) return false
+    return typeof controls.getScrollTop(targetTestId) === 'number'
+  }, testId)
+}
+
+async function waitForVirtualWindowScrollHeightControl(window: any, testId: string): Promise<void> {
+  await window.waitForFunction((targetTestId) => {
+    const controls = window.svelteVirtualWindowTestControls
+    if (!controls?.getScrollHeight) return false
+    return typeof controls.getScrollHeight(targetTestId) === 'number'
+  }, testId)
+}
+
 export async function getPromptRowHeight(window: any, selector: string): Promise<number> {
   return getBoundingClientRectDimension(window, selector, 'height')
 }
@@ -56,19 +72,16 @@ export async function getPromptRowWidth(window: any, selector: string): Promise<
 
 export async function getElementScrollTop(window: any, selector: string): Promise<number> {
   await waitForVirtualWindowControls(window)
+  const testId = await getVirtualWindowTestId(window, selector)
+  await waitForVirtualWindowScrollTopControl(window, testId)
   const scrollTop = await window.evaluate(
-    ({ targetSelector }) => {
-      const element = document.querySelector<HTMLElement>(targetSelector)
-      if (!element) return null
-      const testId = element.getAttribute('data-testid')
+    ({ targetTestId }) => {
       const controls = window.svelteVirtualWindowTestControls
-      if (testId && controls?.getScrollTop) {
-        const value = controls.getScrollTop(testId)
-        if (typeof value === 'number') return Math.round(value)
-      }
-      return Math.round(element.scrollTop)
+      const value = controls?.getScrollTop?.(targetTestId)
+      if (typeof value === 'number') return Math.round(value)
+      return null
     },
-    { targetSelector: selector }
+    { targetTestId: testId }
   )
 
   if (scrollTop == null) {
@@ -80,19 +93,16 @@ export async function getElementScrollTop(window: any, selector: string): Promis
 
 export async function getVirtualWindowScrollHeight(window: any, selector: string): Promise<number> {
   await waitForVirtualWindowControls(window)
+  const testId = await getVirtualWindowTestId(window, selector)
+  await waitForVirtualWindowScrollHeightControl(window, testId)
   const scrollHeight = await window.evaluate(
-    ({ targetSelector }) => {
-      const element = document.querySelector<HTMLElement>(targetSelector)
-      if (!element) return null
-      const testId = element.getAttribute('data-testid')
+    ({ targetTestId }) => {
       const controls = window.svelteVirtualWindowTestControls
-      if (testId && controls?.getScrollHeight) {
-        const value = controls.getScrollHeight(testId)
-        if (typeof value === 'number') return Math.round(value)
-      }
-      return Math.round(element.scrollHeight)
+      const value = controls?.getScrollHeight?.(targetTestId)
+      if (typeof value === 'number') return Math.round(value)
+      return null
     },
-    { targetSelector: selector }
+    { targetTestId: testId }
   )
 
   if (scrollHeight == null) {
@@ -109,6 +119,7 @@ export async function scrollVirtualWindowTo(
 ): Promise<void> {
   await waitForVirtualWindowControls(window)
   const testId = await getVirtualWindowTestId(window, selector)
+  await waitForVirtualWindowScrollTopControl(window, testId)
 
   const didScroll = await window.evaluate(
     ({ targetTestId, targetScrollTopPx }) => {
@@ -132,6 +143,7 @@ export async function scrollVirtualWindowBy(
 ): Promise<void> {
   await waitForVirtualWindowControls(window)
   const testId = await getVirtualWindowTestId(window, selector)
+  await waitForVirtualWindowScrollTopControl(window, testId)
 
   const didScroll = await window.evaluate(
     ({ targetTestId, targetDeltaPx }) => {
