@@ -9,7 +9,8 @@
     CircleDashed,
     FileText,
     Folder,
-    Pencil
+    Hourglass,
+    Pencil,
   } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
@@ -30,7 +31,7 @@
     text: string
   }
 
-  type MockPromptStatus = 'todo' | 'completed'
+  type MockPromptStatus = 'todo' | 'in-progress' | 'completed'
 
   type MockPrompt = MockEditorDocument & {
     title: string
@@ -80,7 +81,7 @@
       title: 'Triage imported prompts',
       folder: 'Prompts',
       modifiedLabel: 'Updated 2 min ago',
-      status: 'todo',
+      status: 'in-progress',
       text: [
         'Review the imported workspace prompts and group them by project area, risk, and expected follow-up owner.',
         '',
@@ -284,6 +285,24 @@
     prompts.length > 0 ? prompts[prompts.length - 1].id : null
   const getPreviousSubfolder = (folderIndex: number): MockSubfolder | null =>
     folderIndex > 0 ? (mockSubfolders[folderIndex - 1] ?? null) : null
+  const getNextPromptStatus = (status: MockPromptStatus): MockPromptStatus =>
+    status === 'todo' ? 'in-progress' : status === 'in-progress' ? 'completed' : 'todo'
+  const getPromptStatusToggleLabel = (status: MockPromptStatus): string => {
+    if (status === 'completed') return 'Mark prompt as todo'
+    if (status === 'in-progress') return 'Mark prompt completed'
+    return 'Mark prompt in progress'
+  }
+  const getPromptStatusToggleClass = (status: MockPromptStatus): string => {
+    if (status === 'completed') {
+      return 'mockup-status-toggle-button mockup-status-toggle-button-completed'
+    }
+
+    if (status === 'in-progress') {
+      return 'mockup-status-toggle-button mockup-status-toggle-button-in-progress'
+    }
+
+    return 'mockup-status-toggle-button'
+  }
 
   let nextPromptSequence = $state(1)
   let nextSubfolderSequence = $state(1)
@@ -443,7 +462,7 @@
       prompt.id === promptId
         ? {
             ...prompt,
-            status: prompt.status === 'completed' ? 'todo' : 'completed'
+            status: getNextPromptStatus(prompt.status)
           }
         : prompt
 
@@ -648,11 +667,11 @@
           <div class="mockup-status-control">
             <IconButton
               icon={Check}
-              label={prompt.status === 'completed' ? 'Mark prompt as todo' : 'Mark prompt completed'}
-              title={prompt.status === 'completed' ? 'Mark prompt as todo' : 'Mark prompt completed'}
+              label={getPromptStatusToggleLabel(prompt.status)}
+              title={getPromptStatusToggleLabel(prompt.status)}
               hoverVariant="success"
               ariaPressed={prompt.status === 'completed'}
-              class={`mockup-status-toggle-button ${prompt.status === 'completed' ? 'mockup-status-toggle-button-completed' : ''}`}
+              class={getPromptStatusToggleClass(prompt.status)}
               testId={`mockup-prompt-status-toggle-${prompt.id}`}
               onclick={() => togglePromptStatus(prompt.id)}
             />
@@ -664,6 +683,14 @@
               >
                 <CheckCircle2 size={14} aria-hidden="true" />
                 Completed
+              </span>
+            {:else if prompt.status === 'in-progress'}
+              <span
+                class="mockup-status-pill"
+                data-status="in-progress"
+              >
+                <Hourglass size={14} aria-hidden="true" />
+                In Progress
               </span>
             {:else}
               <span
@@ -1091,6 +1118,10 @@
     color: oklch(0.871 0.15 154.449);
   }
 
+  :global(.mockup-status-toggle-button-in-progress) {
+    color: var(--ui-warning-icon-glyph);
+  }
+
   .mockup-status-pill {
     align-items: center;
     border-radius: 999px;
@@ -1111,7 +1142,16 @@
     font-size: 14px;
     font-weight: 500;
     line-height: 1.25;
-    padding: 4px 12px;
+    padding: 4px 8px;
+  }
+
+  .mockup-status-pill[data-status='in-progress'] {
+    border: 1px solid var(--ui-warning-normal-border);
+    color: var(--ui-warning-icon-glyph);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.25;
+    padding: 4px 8px;
   }
 
   .mockup-status-pill[data-status='todo'] {
@@ -1120,7 +1160,12 @@
     font-size: 14px;
     font-weight: 500;
     line-height: 1.25;
-    padding: 4px 12px;
+    padding: 4px 8px;
+  }
+
+  .mockup-status-pill[data-status='in-progress'] :global(svg) {
+    color: var(--ui-warning-icon-glyph);
+    flex: 0 0 auto;
   }
 
   .mockup-status-pill[data-status='completed'] :global(svg) {
