@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { focusMonacoEditor, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   PROMPT_FOLDER_HOST_SELECTOR,
@@ -17,6 +18,11 @@ const EMPTY_FOLDER_NAME = 'Empty'
 const MONACO_CURSOR_LINE_SELECTOR = '.monaco-editor .view-overlays .current-line'
 const MONACO_CURSOR_SELECTOR = '.monaco-editor .cursor'
 const LONG_WRAPPED_FOLDER_NAME = 'Long Wrapped Singles'
+const CENTERED_SCROLL_WORKSPACE_PATH = '/ws/centered-scroll-regression'
+const CENTERED_SCROLL_FOLDER_NAME = 'Centered Scroll Regression'
+const CENTERED_SCROLL_PROMPT_COUNT = 8
+const CENTERED_SCROLL_LAST_PROMPT_ID = `centered-scroll-${CENTERED_SCROLL_PROMPT_COUNT}`
+const CENTERED_SCROLL_LAST_PROMPT_SELECTOR = promptEditorSelector(CENTERED_SCROLL_LAST_PROMPT_ID)
 
 type PromptTarget = {
   promptTestId: string
@@ -25,6 +31,33 @@ type PromptTarget = {
 type PromptTitleTarget = PromptTarget & {
   scrollDelta: number
 }
+
+type MonacoLineMetrics = {
+  centerY: number
+  distanceFromHostBottom: number
+  isVisibleInHost: boolean
+}
+
+const centeredScrollPromptIds = Array.from(
+  { length: CENTERED_SCROLL_PROMPT_COUNT },
+  (_, index) => `centered-scroll-${index + 1}`
+)
+
+const createTenLinePromptText = (promptNumber: number): string =>
+  Array.from({ length: 10 }, (_, index) => `Prompt ${promptNumber} line ${index + 1}`).join('\n')
+
+const createCenteredScrollWorkspace = (): Record<string, string | null> =>
+  createWorkspaceWithFolders(CENTERED_SCROLL_WORKSPACE_PATH, [
+    {
+      folderName: 'CenteredScrollRegression',
+      displayName: CENTERED_SCROLL_FOLDER_NAME,
+      prompts: centeredScrollPromptIds.map((id, index) => ({
+        id,
+        title: `Centered Scroll ${index + 1}`,
+        promptText: createTenLinePromptText(index + 1)
+      }))
+    }
+  ])
 
 async function waitForStoredPromptMaxLines(mainWindow: any, value: number): Promise<void> {
   await mainWindow.waitForFunction((expected) => {
@@ -135,6 +168,156 @@ const findPromptEditorBelowViewport = async (
   }
 
   return null
+}
+
+const getMonacoLineMetrics = async (
+  page: any,
+  rowSelector: string,
+  lineNumber: number
+): Promise<MonacoLineMetrics | null> => {
+  return await page.evaluate(
+    ({ hostSelector, rowSelector, lineNumber }) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      const row = document.querySelector<HTMLElement>(rowSelector)
+      const line = row?.querySelectorAll<HTMLElement>('.monaco-editor .view-lines .view-line')[
+        lineNumber - 1
+      ]
+      if (!host || !line) return null
+
+      const hostRect = host.getBoundingClientRect()
+      const lineRect = line.getBoundingClientRect()
+      const centerY = lineRect.top + lineRect.height / 2
+
+      return {
+        centerY: Math.round(centerY),
+        distanceFromHostBottom: Math.round(hostRect.bottom - centerY),
+        isVisibleInHost: centerY >= hostRect.top && centerY <= hostRect.bottom
+      }
+    },
+    { hostSelector: HOST_SELECTOR, rowSelector, lineNumber }
+  )
+}
+
+const clickMonacoLine = async (page: any, rowSelector: string, lineNumber: number): Promise<void> => {
+  const point = await page.evaluate(
+    ({ hostSelector, rowSelector, lineNumber }) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      const row = document.querySelector<HTMLElement>(rowSelector)
+      const line = row?.querySelectorAll<HTMLElement>('.monaco-editor .view-lines .view-line')[
+        lineNumber - 1
+      ]
+      if (!host || !line) return null
+
+      const hostRect = host.getBoundingClientRect()
+      const lineRect = line.getBoundingClientRect()
+      const x = lineRect.left + Math.min(80, Math.max(8, lineRect.width / 2))
+      const y = lineRect.top + lineRect.height / 2
+      const isVisibleInHost = y >= hostRect.top && y <= hostRect.bottom
+
+      return isVisibleInHost ? { x: Math.round(x), y: Math.round(y) } : null
+    },
+    { hostSelector: HOST_SELECTOR, rowSelector, lineNumber }
+  )
+
+  if (!point) {
+    throw new Error(`Failed to click visible Monaco line ${lineNumber} in ${rowSelector}`)
+  }
+
+  await page.mouse.click(point.x, point.y)
+}
+
+const getMonacoCursorLineNumber = async (
+  page: any,
+  rowSelector: string
+): Promise<number | null> => {
+  return await page.evaluate((rowSelector) => {
+    const row = document.querySelector(rowSelector)
+    const monacoNode = row?.querySelector('.monaco-editor')
+    if (!row || !monacoNode) return null
+
+    const registry = (
+      window as unknown as {
+        __cthulhuMonacoEditors?: Array<{
+          container: HTMLElement | null
+          editor: {
+            getPosition: () => { lineNumber: number } | null
+          }
+        }>
+      }
+    ).__cthulhuMonacoEditors
+
+    const entry = registry?.find((item) => {
+      if (!item?.container) return false
+      return (
+        item.container === monacoNode ||
+        item.container.contains(monacoNode) ||
+        monacoNode.contains(item.container)
+      )
+    })
+
+    return entry?.editor.getPosition()?.lineNumber ?? null
+  }, rowSelector)
+}
+
+const findPromptTreeTargetForPartialLastEditorVisibility = async (
+  page: any,
+  promptIds: string[],
+  lastPromptId: string
+): Promise<string> => {
+  const target = await page.evaluate(
+    ({ hostSelector, promptIds, lastPromptId }) => {
+      const host = document.querySelector<HTMLElement>(hostSelector)
+      const lastRow = document.querySelector<HTMLElement>(`[data-testid="prompt-editor-${lastPromptId}"]`)
+      const firstLine = lastRow?.querySelectorAll<HTMLElement>(
+        '.monaco-editor .view-lines .view-line'
+      )[0]
+      const lastLine = lastRow?.querySelectorAll<HTMLElement>(
+        '.monaco-editor .view-lines .view-line'
+      )[9]
+
+      if (!host || !lastRow || !firstLine || !lastLine) return null
+
+      const hostRect = host.getBoundingClientRect()
+      const currentScrollTop =
+        window.svelteVirtualWindowTestControls?.getScrollTop?.(host.dataset.testid ?? '') ??
+        host.scrollTop
+      const resolveOffset = (element: HTMLElement): number =>
+        element.getBoundingClientRect().top - hostRect.top + currentScrollTop
+      const firstLineCenterOffset =
+        resolveOffset(firstLine) + firstLine.getBoundingClientRect().height / 2
+      const lastLineCenterOffset =
+        resolveOffset(lastLine) + lastLine.getBoundingClientRect().height / 2
+      const candidates = promptIds.filter((promptId) => promptId !== lastPromptId).reverse()
+
+      for (const promptId of candidates) {
+        const row = document.querySelector<HTMLElement>(`[data-testid="prompt-editor-${promptId}"]`)
+        if (!row) continue
+
+        const rowRect = row.getBoundingClientRect()
+        const rowOffset = rowRect.top - hostRect.top + currentScrollTop
+        const centeredScrollTop = rowOffset + rowRect.height / 2 - hostRect.height / 2
+        const firstLineCenterAfterTreeClick = firstLineCenterOffset - centeredScrollTop
+        const lastLineCenterAfterTreeClick = lastLineCenterOffset - centeredScrollTop
+
+        if (
+          firstLineCenterAfterTreeClick >= 0 &&
+          firstLineCenterAfterTreeClick <= hostRect.height &&
+          lastLineCenterAfterTreeClick > hostRect.height
+        ) {
+          return promptId
+        }
+      }
+
+      return null
+    },
+    { hostSelector: HOST_SELECTOR, promptIds, lastPromptId }
+  )
+
+  if (!target) {
+    throw new Error('Failed to find a prompt tree target that leaves only the last editor top visible.')
+  }
+
+  return target
 }
 
 describe('Prompt Folders Autoscroll', () => {
@@ -515,5 +698,117 @@ describe('Prompt Folders Autoscroll', () => {
     }
 
     expect(Math.abs(finalDistance - 100)).toBeLessThanOrEqual(2)
+  })
+
+  test('minimally reveals the previous Monaco cursor after prompt tree centered navigation', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createCenteredScrollWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(CENTERED_SCROLL_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(CENTERED_SCROLL_FOLDER_NAME)
+    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
+
+    const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)
+    await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, scrollHeight)
+    await mainWindow.waitForSelector(CENTERED_SCROLL_LAST_PROMPT_SELECTOR, {
+      state: 'attached',
+      timeout: 6000
+    })
+    await waitForMonacoEditor(mainWindow, CENTERED_SCROLL_LAST_PROMPT_SELECTOR)
+
+    await mainWindow.waitForFunction(
+      ({ rowSelector, expectedLineCount }) => {
+        const lines = document.querySelectorAll(
+          `${rowSelector} .monaco-editor .view-lines .view-line`
+        )
+        return lines.length === expectedLineCount
+      },
+      { rowSelector: CENTERED_SCROLL_LAST_PROMPT_SELECTOR, expectedLineCount: 10 }
+    )
+
+    await clickMonacoLine(mainWindow, CENTERED_SCROLL_LAST_PROMPT_SELECTOR, 10)
+    await expect
+      .poll(() => getMonacoCursorLineNumber(mainWindow, CENTERED_SCROLL_LAST_PROMPT_SELECTOR))
+      .toBe(10)
+
+    const treeTargetPromptId = await findPromptTreeTargetForPartialLastEditorVisibility(
+      mainWindow,
+      centeredScrollPromptIds,
+      CENTERED_SCROLL_LAST_PROMPT_ID
+    )
+    const treeTargetSelector = `[data-testid="prompt-tree-prompt-${treeTargetPromptId}"]`
+    await expect(mainWindow.locator(treeTargetSelector)).toBeVisible()
+
+    await mainWindow.locator(treeTargetSelector).click()
+
+    await mainWindow.waitForFunction(
+      ({ rowSelector, hostSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        const row = document.querySelector<HTMLElement>(rowSelector)
+        const lines = row?.querySelectorAll<HTMLElement>('.monaco-editor .view-lines .view-line')
+        const firstLine = lines?.[0]
+        const lastLine = lines?.[9]
+        if (!host || !firstLine || !lastLine) return false
+
+        const hostRect = host.getBoundingClientRect()
+        const firstLineRect = firstLine.getBoundingClientRect()
+        const lastLineRect = lastLine.getBoundingClientRect()
+        const firstLineCenter = firstLineRect.top + firstLineRect.height / 2
+        const lastLineCenter = lastLineRect.top + lastLineRect.height / 2
+
+        return (
+          firstLineCenter >= hostRect.top &&
+          firstLineCenter <= hostRect.bottom &&
+          lastLineCenter > hostRect.bottom
+        )
+      },
+      {
+        rowSelector: CENTERED_SCROLL_LAST_PROMPT_SELECTOR,
+        hostSelector: HOST_SELECTOR
+      }
+    )
+
+    await clickMonacoLine(mainWindow, CENTERED_SCROLL_LAST_PROMPT_SELECTOR, 1)
+
+    await mainWindow.waitForFunction(
+      ({ rowSelector, hostSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        const row = document.querySelector<HTMLElement>(rowSelector)
+        const lastLine = row?.querySelectorAll<HTMLElement>(
+          '.monaco-editor .view-lines .view-line'
+        )[9]
+        if (!host || !lastLine) return false
+
+        const hostRect = host.getBoundingClientRect()
+        const lastLineRect = lastLine.getBoundingClientRect()
+        const lastLineCenter = lastLineRect.top + lastLineRect.height / 2
+        return lastLineCenter >= hostRect.top && lastLineCenter <= hostRect.bottom
+      },
+      {
+        rowSelector: CENTERED_SCROLL_LAST_PROMPT_SELECTOR,
+        hostSelector: HOST_SELECTOR
+      }
+    )
+
+    const finalLastLineMetrics = await getMonacoLineMetrics(
+      mainWindow,
+      CENTERED_SCROLL_LAST_PROMPT_SELECTOR,
+      10
+    )
+
+    if (!finalLastLineMetrics) {
+      throw new Error('Failed to measure final last-line position.')
+    }
+
+    expect(finalLastLineMetrics.isVisibleInHost).toBe(true)
+    expect(Math.abs(finalLastLineMetrics.distanceFromHostBottom - 100)).toBeLessThanOrEqual(2)
   })
 })
