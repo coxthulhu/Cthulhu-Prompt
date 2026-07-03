@@ -27,6 +27,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - In `cthulhu-ui`, use `aria-*` when the state has accessibility meaning, such as `aria-invalid`, `aria-pressed`, `aria-disabled`, or `aria-orientation`. Styling semantic accessibility state with scoped component selectors is acceptable.
 - We are only developing support for Windows. Never develop support for other operating systems.
 - Do not run prettier or a format command unless explicitly asked.
+- When building playwright tests and validating positions, use either 1px or 2px tolerances, not more.
 
 ## Project Structure & Module Organization
 
