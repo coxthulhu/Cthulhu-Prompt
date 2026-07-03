@@ -652,7 +652,7 @@
           </div>
         </div>
 
-        <div style="align-items: center; align-self: stretch; display: flex; gap: 12px; min-width: 0;">
+        <div class="mockup-title-actions">
           <PromptEditorButtonBar
             title={prompt.title}
             draftText={prompt.text}
@@ -660,8 +660,8 @@
           />
 
           <span
+            class="mockup-title-actions-separator"
             aria-hidden="true"
-            style="align-self: stretch; background: var(--ui-neutral-normal-border); flex: 0 0 1px; margin: -8px 0; width: 1px;"
           ></span>
 
           <div class="mockup-status-control">
@@ -945,7 +945,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
     overflow: hidden;
-    padding: 8px 16px;
+    padding: 8px 8px 8px 16px;
   }
 
   .mockup-subfolder-title-bar {
@@ -1107,11 +1107,27 @@
     width: 3px;
   }
 
+  .mockup-title-actions {
+    align-items: center;
+    align-self: stretch;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .mockup-title-actions-separator {
+    align-self: stretch;
+    background: var(--ui-neutral-normal-border);
+    flex: 0 0 1px;
+    margin: -8px 0;
+    width: 1px;
+  }
+
   .mockup-status-control {
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
-    gap: 8px;
+    gap: 4px;
   }
 
   :global(.mockup-status-toggle-button-completed) {
@@ -1142,7 +1158,7 @@
     font-size: 14px;
     font-weight: 500;
     line-height: 1.25;
-    padding: 4px 8px;
+    padding: 4px 4px;
   }
 
   .mockup-status-pill[data-status='in-progress'] {
@@ -1151,7 +1167,7 @@
     font-size: 14px;
     font-weight: 500;
     line-height: 1.25;
-    padding: 4px 8px;
+    padding: 4px 4px;
   }
 
   .mockup-status-pill[data-status='todo'] {
@@ -1160,7 +1176,7 @@
     font-size: 14px;
     font-weight: 500;
     line-height: 1.25;
-    padding: 4px 8px;
+    padding: 4px 4px;
   }
 
   .mockup-status-pill[data-status='in-progress'] :global(svg) {
