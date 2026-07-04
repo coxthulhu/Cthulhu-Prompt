@@ -40,7 +40,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint + typecheck** (run together) and Vitest via the shared template below. For Codex Playwright runs, prefer `./scripts/codex-playwright.sh`; it runs from WSL but calls Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that `<WINDOWS_PROJECT_PATH>` and `<WSL_PROJECT_PATH>` point to the same repository location.
+Use Windows `cmd.exe` for **lint + typecheck** (run together) and Vitest via the shared template below. For Codex Playwright runs, prefer `./scripts/wsl-playwright.sh`; it runs from WSL but calls Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that `<WINDOWS_PROJECT_PATH>` and `<WSL_PROJECT_PATH>` point to the same repository location.
 Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
@@ -79,15 +79,15 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 
 ### Running Playwright (Windows)
 
-For Codex `functions.exec_command` Playwright runs, use `./scripts/codex-playwright.sh`. The wrapper changes to the repository root in WSL, then calls Windows `cmd.exe` so Playwright still runs in the required Windows environment. Keep the 300000 ms timeout.
+For Codex `functions.exec_command` Playwright runs, use `./scripts/wsl-playwright.sh`. The wrapper changes to the repository root in WSL, then calls Windows `cmd.exe` so Playwright still runs in the required Windows environment. Keep the 300000 ms timeout.
 
 Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
 Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
 
-- Codex wrapper, all tests: `./scripts/codex-playwright.sh`
-- Codex wrapper, single file: `./scripts/codex-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
-- Codex wrapper, multiple files: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
-- Codex wrapper, single test with spaces: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
+- WSL wrapper, all tests: `./scripts/wsl-playwright.sh`
+- WSL wrapper, single file: `./scripts/wsl-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
+- WSL wrapper, multiple files: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
+- WSL wrapper, single test with spaces: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
 
 ## Coding Style & Naming Conventions
 

@@ -57,10 +57,10 @@ Lint, typecheck, and Vitest must run in the Windows environment. From the Bash t
 
 Playwright must run in the Windows environment. Use the wrapper, which changes to the repo root in WSL and then calls Windows `cmd.exe`:
 
-- All tests: `./scripts/codex-playwright.sh`
-- Single file: `./scripts/codex-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
-- Multiple files: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
-- Single test by name: `./scripts/codex-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
+- All tests: `./scripts/wsl-playwright.sh`
+- Single file: `./scripts/wsl-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
+- Multiple files: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
+- Single test by name: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
 
 Keep the 300000 ms timeout. Don't override the reporter unless you include the custom one — the default config uses the dot reporter plus the console/page error reporter. Console/page errors are written to `test-results/renderer-errors.txt`. If you do override, include it explicitly (e.g. `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`). If you hit a Svelte hydration/runtime error, search for the exact message online.
 
