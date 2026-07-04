@@ -522,9 +522,11 @@ export const movePrompt = async (
     mutateOptimistically: ({ collections }) => {
       if (isSameFolder) {
         collections.promptFolder.update(sourcePromptFolderId, (draft) => {
-          const targetIndex =
-            orderAfterPromptId === null ? 0 : draft.entryIds.indexOf(orderAfterPromptId) + 1
+          // Resolve the insert index after removing the moved prompt so a downward
+          // move is not offset by the prompt's own vacated slot.
           const nextEntryIds = draft.entryIds.filter((entryId) => entryId !== promptId)
+          const targetIndex =
+            orderAfterPromptId === null ? 0 : nextEntryIds.indexOf(orderAfterPromptId) + 1
           nextEntryIds.splice(targetIndex, 0, promptId)
           draft.entryIds = nextEntryIds
           draft.modifiedAt = modifiedAt
