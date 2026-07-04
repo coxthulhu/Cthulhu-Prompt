@@ -292,15 +292,13 @@
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
     const rows: VirtualWindowItem<PromptFolderRow>[] = []
 
-    if (!isCompletedMode) {
-      rows.push({
-        id: PROMPT_FOLDER_SETTINGS_ROW_ID,
-        row: {
-          kind: 'folder-editor',
-          isSettingsSectionExpanded
-        }
-      })
-    }
+    rows.push({
+      id: PROMPT_FOLDER_SETTINGS_ROW_ID,
+      row: {
+        kind: 'folder-editor',
+        isSettingsSectionExpanded: !isCompletedMode && isSettingsSectionExpanded
+      }
+    })
 
     if (isPromptsSectionExpanded) {
       if (visiblePromptIds.length === 0) {
@@ -467,6 +465,7 @@
     {folderSettings}
     {isSettingsSectionExpanded}
     {isPromptsSectionExpanded}
+    isReadOnly={isCompletedMode}
     {onSettingsSectionToggle}
     {onPromptsSectionToggle}
     {onSettingsFieldChange}

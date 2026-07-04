@@ -36,6 +36,7 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     isSettingsSectionExpanded: boolean
     isPromptsSectionExpanded: boolean
+    isReadOnly?: boolean
     onHydrationChange?: (isHydrated: boolean) => void
     onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
@@ -64,6 +65,7 @@
     scrollToWithinWindowBand,
     isSettingsSectionExpanded,
     isPromptsSectionExpanded,
+    isReadOnly = false,
     onHydrationChange,
     onSettingsSectionToggle,
     onPromptsSectionToggle,
@@ -118,7 +120,7 @@
 
   // Side effect: hidden settings sections are unmounted and no longer hydrate the virtual row.
   $effect(() => {
-    if (isSettingsSectionExpanded) return
+    if (isSettingsSectionExpanded && !isReadOnly) return
     PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field) => {
       hydratedFields[field] = false
     })
@@ -167,17 +169,19 @@
             <span class="prompt-folder-editor-title" title={folderDisplayName}>
               {folderDisplayName}
             </span>
-            <IconButton
-              icon={Pencil}
-              label="Rename prompt folder"
-              title="Rename prompt folder"
-              size="tiny"
-              baseVariant="muted"
-              hoverVariant="glyph"
-              testId="prompt-folder-editor-title-edit"
-              onclick={handlePencilClick}
-              onmousedown={handlePencilMouseDown}
-            />
+            {#if !isReadOnly}
+              <IconButton
+                icon={Pencil}
+                label="Rename prompt folder"
+                title="Rename prompt folder"
+                size="tiny"
+                baseVariant="muted"
+                hoverVariant="glyph"
+                testId="prompt-folder-editor-title-edit"
+                onclick={handlePencilClick}
+                onmousedown={handlePencilMouseDown}
+              />
+            {/if}
           </div>
 
           <div class="prompt-folder-editor-metadata-row">
@@ -186,24 +190,26 @@
         </div>
       </div>
 
-      <div class="prompt-folder-editor-title-actions">
-        <IconButton
-          icon={Settings}
-          label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
-          title={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
-          hoverVariant="accent"
-          active={isSettingsSectionExpanded}
-          ariaPressed={isSettingsSectionExpanded}
-          testId="prompt-folder-editor-settings-toggle"
-          onclick={handleSettingsClick}
-          onmousedown={handleSettingsMouseDown}
-        />
-      </div>
+      {#if !isReadOnly}
+        <div class="prompt-folder-editor-title-actions">
+          <IconButton
+            icon={Settings}
+            label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
+            title={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
+            hoverVariant="accent"
+            active={isSettingsSectionExpanded}
+            ariaPressed={isSettingsSectionExpanded}
+            testId="prompt-folder-editor-settings-toggle"
+            onclick={handleSettingsClick}
+            onmousedown={handleSettingsMouseDown}
+          />
+        </div>
+      {/if}
     </header>
 
     <Separator />
 
-    {#if isSettingsSectionExpanded}
+    {#if isSettingsSectionExpanded && !isReadOnly}
       <div class="prompt-folder-editor-sections">
         {#each PROMPT_FOLDER_SETTINGS_FIELDS as field, index (field)}
           <PromptFolderSettingsEditorSection

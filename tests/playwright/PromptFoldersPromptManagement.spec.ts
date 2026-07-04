@@ -868,7 +868,31 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Completed Prompts'
     )
-    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).toHaveCount(0)
+    const completedFolderTitle = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-title-toggle"]'
+    )
+    await expect(completedFolderTitle).toBeVisible()
+    await expect(completedFolderTitle).toHaveAttribute('aria-expanded', 'true')
+    await expect(completedFolderTitle).toContainText('Completed Mode')
+    await expect(completedFolderTitle).toContainText('2 prompts')
+    const completedFolderTitleBox = await completedFolderTitle.boundingBox()
+    const newestCompletedPromptBox = await mainWindow
+      .locator(promptEditorSelector('completed-mode-newest'))
+      .boundingBox()
+    expect(completedFolderTitleBox).not.toBeNull()
+    expect(newestCompletedPromptBox).not.toBeNull()
+    expect(completedFolderTitleBox!.y + completedFolderTitleBox!.height).toBeLessThanOrEqual(
+      newestCompletedPromptBox!.y + MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-editor-title-edit"]')).toHaveCount(
+      0
+    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(0)
     await expect(mainWindow.locator(completeSelector('completed-mode-newest'))).toHaveCount(0)
@@ -946,6 +970,18 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toContainText(
       'No completed prompts found in this folder'
     )
+    const emptyCompletedFolderTitle = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-title-toggle"]'
+    )
+    await expect(emptyCompletedFolderTitle).toBeVisible()
+    await expect(emptyCompletedFolderTitle).toContainText('No Completed')
+    await expect(emptyCompletedFolderTitle).toContainText('0 prompts')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-editor-title-edit"]')).toHaveCount(
+      0
+    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+    ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).not.toContainText(
       'Click the Add Prompt button'
     )
