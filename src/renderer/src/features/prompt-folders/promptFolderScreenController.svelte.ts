@@ -620,6 +620,18 @@ export const createPromptFolderScreenController = ({
     return true
   }
 
+  const selectPromptTreeRowMinimally = (nextRow: ActivePromptTreeRow): boolean => {
+    if (!scrollToWithinWindowBand) return false
+    if (nextRow.kind === 'prompt' && !isPromptsSectionExpanded) {
+      setPromptsSectionExpanded(true)
+      return false
+    }
+
+    expandSectionForRow(nextRow)
+    scrollToWithinWindowBand(toPromptFolderRowId(nextRow), 0, 'minimal')
+    return true
+  }
+
   const hasCachedPromptFolderData = (nextPromptFolderId: string): boolean => {
     const promptFolderDraft = promptFolderDraftCollection.get(nextPromptFolderId)
     if (!promptFolderDraft?.hasLoadedInitialData) {
@@ -754,10 +766,18 @@ export const createPromptFolderScreenController = ({
       source === 'scroll-follow' ||
       source === 'find' ||
       source === 'header' ||
-      source === 'prompt-divider-create' ||
       source === 'restore' ||
       source === 'restore-hold'
     ) {
+      latestHandledSelectionVersion = promptNavigation.selectionVersion
+      return
+    }
+
+    if (source === 'prompt-divider-create') {
+      if (!selectPromptTreeRowMinimally(target)) return
+      if (target.kind === 'prompt') {
+        requestPromptFocus(target.promptId)
+      }
       latestHandledSelectionVersion = promptNavigation.selectionVersion
       return
     }

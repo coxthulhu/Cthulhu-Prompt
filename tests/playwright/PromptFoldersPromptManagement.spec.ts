@@ -41,6 +41,7 @@ const MOVE_ANCHOR_1_ID = 'move-anchor-1'
 const MOVE_ANCHOR_2_ID = 'move-anchor-2'
 const MOVE_ANCHOR_3_ID = 'move-anchor-3'
 const MOVE_BUTTON_POSITION_TOLERANCE_PX = 1
+const MINIMAL_SCROLL_POSITION_TOLERANCE_PX = 2
 
 const promptTitleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} ${PROMPT_TITLE_SELECTOR}`
@@ -145,6 +146,38 @@ const getElementTop = async (page: any, selector: string): Promise<number> => {
   return await page.locator(selector).evaluate((element: HTMLElement) => {
     return element.getBoundingClientRect().top
   })
+}
+
+type ElementRectSnapshot = {
+  top: number
+  bottom: number
+  height: number
+}
+
+const getElementRect = async (page: any, selector: string): Promise<ElementRectSnapshot> => {
+  return await page.locator(selector).evaluate((element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      top: rect.top,
+      bottom: rect.bottom,
+      height: rect.height
+    }
+  })
+}
+
+const alignElementBottomInPromptFolder = async (
+  page: any,
+  testHelpers: { scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void> },
+  targetSelector: string,
+  bottomPaddingPx: number
+) => {
+  const targetRect = await getElementRect(page, targetSelector)
+  const hostRect = await getElementRect(page, PROMPT_FOLDER_HOST_SELECTOR)
+  const deltaPx = Math.round(targetRect.bottom - (hostRect.bottom - bottomPaddingPx))
+
+  if (Math.abs(deltaPx) <= MINIMAL_SCROLL_POSITION_TOLERANCE_PX) return
+
+  await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, deltaPx)
 }
 
 const scrollUntilMounted = async (
@@ -447,7 +480,9 @@ describe('Prompt folder prompt management', () => {
       .toBe(true)
   })
 
-  test('adds a prompt from a divider without moving folder scroll', async ({ testSetup }) => {
+  test('adds a prompt from a divider with minimal scroll and focuses it', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -457,26 +492,40 @@ describe('Prompt folder prompt management', () => {
 
     const button = mainWindow.locator(dividerAddSelector('dev-2'))
     await button.scrollIntoViewIfNeeded()
+    await alignElementBottomInPromptFolder(mainWindow, testHelpers, dividerAddSelector('dev-2'), 8)
     await expect(button).toBeEnabled()
 
     const initialPromptTreeIds = await getPromptTreePromptRowIds(mainWindow)
-    const scrollTopBefore = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
     await button.click()
 
     await expect
       .poll(async () => (await getPromptTreePromptRowIds(mainWindow)).length, { timeout: 5000 })
       .toBe(initialPromptTreeIds.length + 1)
-    await expect(mainWindow.locator('[data-testid^="prompt-tree-prompt-"][aria-current="true"]'))
-      .toHaveCount(1)
+
+    const promptTreeIdsAfterAdd = await getPromptTreePromptRowIds(mainWindow)
+    const newPromptId = promptTreeIdsAfterAdd.find((id) => !initialPromptTreeIds.includes(id))
+    expect(newPromptId).toBeTruthy()
+
+    const newEditorSelector = promptEditorSelector(newPromptId!)
+    await waitForMonacoEditor(mainWindow, newEditorSelector)
+    await expect(mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`))
+      .toHaveAttribute('aria-current', 'true')
     await expect
-      .poll(
-        async () =>
-          Math.abs(
-            (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
-          ),
-        { timeout: 5000 }
-      )
-      .toBeLessThanOrEqual(1)
+      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
+      .toBe(true)
+
+    const hostRect = await getElementRect(mainWindow, PROMPT_FOLDER_HOST_SELECTOR)
+    const editorRect = await getElementRect(mainWindow, newEditorSelector)
+    const hostCenter = hostRect.top + hostRect.height / 2
+    const editorCenter = editorRect.top + editorRect.height / 2
+
+    expect(editorRect.top).toBeGreaterThanOrEqual(
+      hostRect.top - MINIMAL_SCROLL_POSITION_TOLERANCE_PX
+    )
+    expect(editorRect.bottom).toBeLessThanOrEqual(
+      hostRect.bottom + MINIMAL_SCROLL_POSITION_TOLERANCE_PX
+    )
+    expect(editorCenter).toBeGreaterThan(hostCenter + MINIMAL_SCROLL_POSITION_TOLERANCE_PX)
   })
 
   test('reorders prompts with move buttons', async ({ testSetup }) => {
