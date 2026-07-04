@@ -24,15 +24,19 @@
     copyLabel?: string
     copyTitle?: string
     completedAt?: string | null
+    status?: import('@shared/Prompt').PromptStatus
   }
 </script>
 
 <script lang="ts">
   import { onMount } from 'svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
+  import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
-  import { FileText, Folder } from 'lucide-svelte'
+  import { Check, CheckCircle2, CircleDashed, FileText, Folder, Undo2 } from 'lucide-svelte'
+  import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
   let {
@@ -56,7 +60,8 @@
     icon = FileText,
     copyLabel,
     copyTitle,
-    completedAt = null
+    completedAt = null,
+    status = PromptStatus.Todo
   }: PromptEditorTitleRowProps = $props()
 
   // Derived placeholder text shows the fallback title when the title is empty.
@@ -78,6 +83,10 @@
   )
   const completedLabel = $derived(completedRelativeLabel ? `Completed ${completedRelativeLabel}` : '')
   const completedFullLabel = $derived(completedAt ? formatPromptModifiedFull(completedAt) : '')
+  const isCompleted = $derived(status === PromptStatus.Completed)
+  const statusLabel = $derived(isCompleted ? 'Completed' : 'Todo')
+  const statusIcon = $derived(isCompleted ? CheckCircle2 : CircleDashed)
+  const statusVariant = $derived(isCompleted ? 'completed' : 'todo')
 
   // Side effect: keep the relative modified label fresh while the prompt folder stays open.
   onMount(() => {
@@ -176,16 +185,49 @@
     </div>
   </div>
 
-  <PromptEditorButtonBar
-    {title}
-    {draftText}
-    {copyText}
-    {onDelete}
-    {onComplete}
-    {onUncomplete}
-    {copyLabel}
-    {copyTitle}
-  />
+  <div class="prompt-editor-title-actions">
+    <div class="prompt-editor-title-button-bar">
+      <PromptEditorButtonBar
+        {title}
+        {draftText}
+        {copyText}
+        {onDelete}
+        {copyLabel}
+        {copyTitle}
+      />
+    </div>
+
+    <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
+
+    <div class="prompt-editor-status-control">
+      {#if onComplete}
+        <IconButton
+          icon={Check}
+          label="Complete prompt"
+          title="Complete prompt"
+          hoverVariant="success"
+          testId="prompt-complete-button"
+          onclick={onComplete}
+        />
+      {:else if onUncomplete}
+        <IconButton
+          icon={Undo2}
+          label="Uncomplete prompt"
+          title="Uncomplete prompt"
+          hoverVariant="accent"
+          testId="prompt-uncomplete-button"
+          onclick={onUncomplete}
+        />
+      {/if}
+
+      <ValuePill
+        text={statusLabel}
+        variant={statusVariant}
+        icon={statusIcon}
+        testId="prompt-status-pill"
+      />
+    </div>
+  </div>
 </div>
 
 <style>
@@ -195,8 +237,9 @@
     border: 0;
     border-radius: 0;
     display: grid;
-    gap: 8px;
+    gap: 0;
     grid-template-columns: minmax(0, 1fr) auto;
+    height: 100%;
     min-width: 0;
   }
 
@@ -206,6 +249,36 @@
     gap: 8px;
     grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
+    padding: 8px 8px 8px 16px;
+  }
+
+  .prompt-editor-title-actions {
+    align-items: center;
+    align-self: stretch;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .prompt-editor-title-button-bar {
+    align-items: center;
+    display: flex;
+    min-width: 0;
+  }
+
+  .prompt-editor-title-actions-separator {
+    align-self: stretch;
+    background: var(--ui-neutral-normal-border);
+    flex: 0 0 1px;
+    width: 1px;
+  }
+
+  .prompt-editor-status-control {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 4px;
+    padding-right: 16px;
   }
 
   .prompt-editor-title-copy {

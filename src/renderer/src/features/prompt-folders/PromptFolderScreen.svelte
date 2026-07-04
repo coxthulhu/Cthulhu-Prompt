@@ -113,7 +113,7 @@
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
             folderDisplayName={controller.folderDisplayName}
             promptDraftById={controller.promptDraftById}
-            completedAtByPromptId={controller.completedAtByPromptId}
+            promptMetadataByPromptId={controller.promptMetadataByPromptId}
             visiblePromptIds={controller.visiblePromptIds}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}

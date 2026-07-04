@@ -1,5 +1,6 @@
 <script lang="ts">
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
+  import { PromptStatus } from '@shared/Prompt'
   import PromptEditorTitleRow, {
     type PromptEditorTitleRowProps
   } from './PromptEditorTitleRow.svelte'
@@ -31,6 +32,7 @@
     copyLabel,
     copyTitle,
     completedAt,
+    status = PromptStatus.Todo,
     titleAreaHeightPx,
     infoText
   }: Props = $props()
@@ -62,6 +64,7 @@
     {copyLabel}
     {copyTitle}
     {completedAt}
+    {status}
   />
 
   {#if infoText}
@@ -76,6 +79,5 @@
     gap: 8px;
     min-width: 0;
     overflow: hidden;
-    padding: 8px 16px;
   }
 </style>

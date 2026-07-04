@@ -3,6 +3,7 @@
   import type { Action } from 'svelte/action'
   import { createPromptEditorModelUri, type monaco } from '@renderer/common/Monaco'
   import type { PromptFolderSettings } from '@shared/PromptFolder'
+  import { PromptStatus } from '@shared/Prompt'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
@@ -67,6 +68,7 @@
     onHydrationChange,
     folderSettings,
     screenMode = PromptFolderScreenMode.Active,
+    status = PromptStatus.Todo,
     completedAt = null,
     scrollToWithinWindowBand,
     focusRequest,
@@ -95,6 +97,7 @@
     onHydrationChange?: (isHydrated: boolean) => void
     folderSettings: PromptFolderSettings
     screenMode?: PromptFolderScreenMode
+    status?: PromptStatus
     completedAt?: string | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     focusRequest?: PromptFocusRequest | null
@@ -443,6 +446,7 @@
     {onDelete}
     {onComplete}
     {onUncomplete}
+    {status}
     titleAreaHeightPx={PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}
   />
 

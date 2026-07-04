@@ -8,6 +8,7 @@
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
   import { lookupPromptFolderSettingsRowMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
+  import { PromptStatus } from '@shared/Prompt'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import {
@@ -71,6 +72,11 @@
     Extract<PromptFolderRow, { kind: 'prompt-editor' }>
   >
 
+  type PromptMetadata = {
+    status: PromptStatus
+    completedAt: string | null
+  }
+
   type PromptFolderVirtualContentProps = {
     workspaceId: string | null
     promptFolderId: string
@@ -78,7 +84,7 @@
     promptEditorSizingConfig: PromptEditorSizingConfig
     folderDisplayName: string
     promptDraftById: Record<string, PromptDraftRecord>
-    completedAtByPromptId: Record<string, string>
+    promptMetadataByPromptId: Record<string, PromptMetadata>
     visiblePromptIds: string[]
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
@@ -123,7 +129,7 @@
     promptEditorSizingConfig,
     folderDisplayName,
     promptDraftById,
-    completedAtByPromptId,
+    promptMetadataByPromptId,
     visiblePromptIds,
     screenMode,
     isCreatingPrompt,
@@ -160,6 +166,10 @@
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  const todoPromptMetadata: PromptMetadata = {
+    status: PromptStatus.Todo,
+    completedAt: null
+  }
 
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
@@ -514,6 +524,7 @@
   onHydrationChange
 }: PromptEditorRowProps)}
   {@const promptIndex = visiblePromptIds.indexOf(row.promptId)}
+  {@const promptMetadata = promptMetadataByPromptId[row.promptId] ?? todoPromptMetadata}
   <PromptFolderSectionRow {rowHeightPx}>
     <PromptEditorRow
       {workspaceId}
@@ -531,7 +542,8 @@
       {onHydrationChange}
       {folderSettings}
       screenMode={screenMode}
-      completedAt={completedAtByPromptId[row.promptId] ?? null}
+      status={promptMetadata.status}
+      completedAt={promptMetadata.completedAt}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       focusRequest={promptFocusRequest}
       isFirstPrompt={promptIndex === 0}

@@ -55,6 +55,8 @@
   --ui-accent-action-hover-fill: oklch(0.606 0.219 292.717 / 36%);
 
   /* Success */
+  --ui-success-normal-text: oklch(0.871 0.15 154.449);
+  --ui-success-normal-border: oklch(0.871 0.15 154.449 / 42%);
   --ui-success-action-hover-fill: oklch(0.606 0.219 145 / 36%);
 
   /* Info */

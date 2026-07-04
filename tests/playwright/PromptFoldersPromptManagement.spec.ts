@@ -54,6 +54,8 @@ const completeSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-complete-button"]`
 const uncompleteSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-uncomplete-button"]`
+const statusPillSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-status-pill"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
@@ -855,6 +857,9 @@ describe('Prompt folder prompt management', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
     expect(await getPromptEditorIds(mainWindow)).toEqual(['completed-mode-active'])
     expect(await getPromptTreePromptRowIds(mainWindow)).toEqual(['completed-mode-active'])
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
+      'Todo'
+    )
 
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await expect
@@ -897,6 +902,13 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(0)
     await expect(mainWindow.locator(completeSelector('completed-mode-newest'))).toHaveCount(0)
     await expect(mainWindow.locator(uncompleteSelector('completed-mode-newest'))).toBeVisible()
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveText(
+      'Completed'
+    )
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveAttribute(
+      'data-variant',
+      'completed'
+    )
     await expect(
       mainWindow.locator(`${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-delete-button"]`)
     ).toBeVisible()
@@ -920,6 +932,9 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-newest', 'completed-mode-active'])
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveText(
+      'Todo'
+    )
     expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([
       'completed-mode-newest',
       'completed-mode-active'

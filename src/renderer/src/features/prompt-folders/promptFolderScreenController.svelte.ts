@@ -1,6 +1,6 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { isPromptFull, type Prompt } from '@shared/Prompt'
+import { isPromptFull, type Prompt, type PromptStatus } from '@shared/Prompt'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
@@ -88,6 +88,11 @@ import { createBlankPromptInFolder } from './createBlankPromptInFolder'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
+
+type PromptMetadata = {
+  status: PromptStatus
+  completedAt: string | null
+}
 
 type PromptFolderScreenControllerOptions = {
   getPromptFolderId: () => string
@@ -181,16 +186,19 @@ export const createPromptFolderScreenController = ({
     })
   )
   const screenPromptIds = $derived(isCompletedMode ? orderedCompletedPromptIds : promptIds)
-  const completedAtByPromptId = $derived.by(() => {
-    const completedAtById: Record<string, string> = {}
-    for (const promptId of completedPromptIds) {
-      const completedAt = promptById[promptId]?.completedAt
-      if (completedAt) {
-        completedAtById[promptId] = completedAt
+  const promptMetadataByPromptId = $derived.by(() => {
+    const metadataById: Record<string, PromptMetadata> = {}
+    for (const promptId of screenPromptIds) {
+      const prompt = promptById[promptId]
+      if (prompt) {
+        metadataById[promptId] = {
+          status: prompt.status,
+          completedAt: prompt.completedAt ?? null
+        }
       }
     }
 
-    return completedAtById
+    return metadataById
   })
   const emptyFolderSettings = createEmptyPromptFolderSettings()
   const folderSettings = $derived.by<PromptFolderSettings>(() =>
@@ -1117,8 +1125,8 @@ export const createPromptFolderScreenController = ({
     get promptDraftById(): Record<string, PromptDraftRecord> {
       return promptDraftById
     },
-    get completedAtByPromptId(): Record<string, string> {
-      return completedAtByPromptId
+    get promptMetadataByPromptId(): Record<string, PromptMetadata> {
+      return promptMetadataByPromptId
     },
     get errorMessage(): string | null {
       return errorMessage
