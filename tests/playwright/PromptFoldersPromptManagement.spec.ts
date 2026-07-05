@@ -1082,6 +1082,9 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
       'Todo'
     )
+    const activeFolderTitle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
+    await expect(activeFolderTitle).toContainText('1 prompt')
+    await expect(activeFolderTitle).toContainText('2 completed prompts')
 
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await expect
@@ -1102,6 +1105,7 @@ describe('Prompt folder prompt management', () => {
     await expect(completedFolderTitle).toHaveAttribute('aria-expanded', 'true')
     await expect(completedFolderTitle).toContainText('Completed Mode')
     await expect(completedFolderTitle).toContainText('2 prompts')
+    await expect(completedFolderTitle).toContainText('2 completed prompts')
     const completedFolderTitleBox = await completedFolderTitle.boundingBox()
     const newestCompletedPromptBox = await mainWindow
       .locator(promptEditorSelector('completed-mode-newest'))

@@ -86,6 +86,7 @@
     promptDraftById: Record<string, PromptDraftRecord>
     promptMetadataByPromptId: Record<string, PromptMetadata>
     visiblePromptIds: string[]
+    completedPromptCount: number
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
@@ -130,6 +131,7 @@
     promptDraftById,
     promptMetadataByPromptId,
     visiblePromptIds,
+    completedPromptCount,
     screenMode,
     isCreatingPrompt,
     promptFocusRequest,
@@ -457,6 +459,7 @@
     {promptFolderId}
     {folderDisplayName}
     promptCount={visiblePromptIds.length}
+    {completedPromptCount}
     rowId={props.rowId}
     virtualWindowWidthPx={props.virtualWindowWidthPx}
     devicePixelRatio={props.devicePixelRatio}

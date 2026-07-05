@@ -3,6 +3,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
+  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
@@ -24,6 +25,7 @@
     promptFolderId: string
     folderDisplayName: string
     promptCount: number
+    completedPromptCount: number
     folderSettings: PromptFolderSettings
     rowId: string
     virtualWindowWidthPx: number
@@ -53,6 +55,7 @@
     promptFolderId,
     folderDisplayName,
     promptCount,
+    completedPromptCount,
     folderSettings,
     rowId,
     virtualWindowWidthPx,
@@ -74,6 +77,9 @@
   }: Props = $props()
 
   const promptCountLabel = $derived(`${promptCount} ${promptCount === 1 ? 'prompt' : 'prompts'}`)
+  const completedPromptCountLabel = $derived(
+    `${completedPromptCount} completed prompt${completedPromptCount === 1 ? '' : 's'}`
+  )
   const cardHeightPx = $derived(
     Math.max(0, virtualRowHeightPx - PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX)
   )
@@ -186,6 +192,8 @@
 
           <div class="prompt-folder-editor-metadata-row">
             <span>{promptCountLabel}</span>
+            <SeparatorDot />
+            <span>{completedPromptCountLabel}</span>
           </div>
         </div>
       </div>

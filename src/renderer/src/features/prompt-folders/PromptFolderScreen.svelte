@@ -115,6 +115,7 @@
             promptDraftById={controller.promptDraftById}
             promptMetadataByPromptId={controller.promptMetadataByPromptId}
             visiblePromptIds={controller.visiblePromptIds}
+            completedPromptCount={controller.completedPromptCount}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
             promptFocusRequest={controller.promptFocusRequest}

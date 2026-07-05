@@ -177,6 +177,7 @@ export const createPromptFolderScreenController = ({
     folder.entryIds.filter((entryId) => promptById[entryId])
   const promptIds = $derived(promptFolder ? getPromptIdsForFolder(promptFolder) : [])
   const completedPromptIds = $derived(promptFolder?.completedPromptIds ?? [])
+  const completedPromptCount = $derived(completedPromptIds.length)
   const orderedCompletedPromptIds = $derived.by(() =>
     [...completedPromptIds].sort((leftPromptId, rightPromptId) => {
       const leftCompletedAt = promptById[leftPromptId]?.completedAt ?? ''
@@ -1126,6 +1127,9 @@ export const createPromptFolderScreenController = ({
     },
     get visiblePromptIds(): string[] {
       return visiblePromptIds
+    },
+    get completedPromptCount(): number {
+      return completedPromptCount
     },
     get isVirtualContentReady(): boolean {
       return isVirtualContentReady
