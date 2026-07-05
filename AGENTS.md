@@ -40,42 +40,19 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-Use Windows `cmd.exe` for **lint + typecheck** (run together) and Vitest via the shared template below. For Codex Playwright runs, prefer `./scripts/wsl-playwright.sh`; it runs from WSL but calls Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds). Verify that `<WINDOWS_PROJECT_PATH>` and `<WSL_PROJECT_PATH>` point to the same repository location.
+For Codex lint + typecheck, Vitest, and Playwright runs, use the WSL wrapper scripts. They run from WSL, change to the repository root, and call Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds).
 Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
 
-- Required for Windows-side runs (lint + typecheck together, Vitest, and direct Playwright commands). Always invoke `cmd.exe` through the `shell` tool with `with_escalated_permissions: true`. Set it every time—even on retries—to avoid sandbox `execvp` errors.
 - When asked to open a file, folder, or workspace in VS Code, do it from Windows so it opens in the user's Windows VS Code instance.
-- Include a short justification string explaining why elevation is needed.
-- Reusable template (swap the trailing command as needed):
-  ```ts
-  await shell({
-    command: ['cmd.exe', '/C', 'cd /d <WINDOWS_PROJECT_PATH> && <command>'],
-    workdir: '<WSL_PROJECT_PATH>',
-    with_escalated_permissions: true,
-    justification: 'Windows cmd.exe run needs sandbox access to project artifacts',
-    timeout_ms: 300000
-  })
-  ```
-- When using Codex `functions.exec_command`, the `cmd` field is a shell string, not an argv array. Quote the entire command passed to `cmd.exe /C`:
-  ```json
-  {
-    "cmd": "cmd.exe /C \"cd /d C:\\Source\\PromptApps\\CthulhuPromptPublic && npm run lint && npm run typecheck\"",
-    "workdir": "/mnt/c/Source/PromptApps/CthulhuPromptPublic",
-    "sandbox_permissions": "require_escalated",
-    "justification": "Windows cmd.exe run needs sandbox access to project artifacts",
-    "yield_time_ms": 300000
-  }
-  ```
-  Correct shell form: `cmd.exe /C "cd /d C:\Source\PromptApps\CthulhuPromptPublic && npm run lint && npm run typecheck"`
-  Incorrect shell form: `cmd.exe /C cd /d C:\Source\PromptApps\CthulhuPromptPublic && npm run lint && npm run typecheck`
+- Direct Windows commands that do not have a wrapper must use `cmd.exe` with escalated permissions and a short justification.
 
 ### Common npm Scripts
 
-- Lint + Typecheck (Windows interop): use the template above with `<command>` set to `npm run lint && npm run typecheck`; keep `timeout_ms` at 300000.
+- Lint + Typecheck (Windows interop): use `./scripts/wsl-linttypecheck.sh`; keep `timeout_ms` at 300000.
 - Format: `npm run format` — can run in WSL; applies Prettier styling.
-- Unit/integration tests: `npm run test:vitest` — run via Windows `cmd.exe`.
+- Unit/integration tests: use `./scripts/wsl-vitest.sh`; keep `timeout_ms` at 300000.
 
 ### Running Playwright (Windows)
 
