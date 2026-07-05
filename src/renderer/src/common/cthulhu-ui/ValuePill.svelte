@@ -2,7 +2,7 @@
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from './mergeClasses'
 
-  type ValuePillVariant = 'default' | 'todo' | 'completed'
+  type ValuePillVariant = 'default' | 'todo' | 'in-progress' | 'completed'
 
   type Props = {
     text: string
@@ -49,6 +49,7 @@
   }
 
   .cthulhuUiValuePill[data-variant='todo'],
+  .cthulhuUiValuePill[data-variant='in-progress'],
   .cthulhuUiValuePill[data-variant='completed'] {
     box-sizing: border-box;
     justify-content: center;
@@ -66,8 +67,18 @@
     color: var(--ui-success-normal-text);
   }
 
+  .cthulhuUiValuePill[data-variant='in-progress'] {
+    border-color: var(--ui-warning-normal-border);
+    color: var(--ui-warning-icon-glyph);
+  }
+
   .cthulhuUiValuePill[data-variant='todo'] :global(svg) {
     color: var(--ui-secondary-icon-glyph);
+    flex: 0 0 auto;
+  }
+
+  .cthulhuUiValuePill[data-variant='in-progress'] :global(svg) {
+    color: var(--ui-warning-icon-glyph);
     flex: 0 0 auto;
   }
 

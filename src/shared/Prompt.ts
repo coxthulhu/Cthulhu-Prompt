@@ -3,6 +3,7 @@ import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export enum PromptStatus {
   Todo = 'Todo',
+  InProgress = 'InProgress',
   Completed = 'Completed'
 }
 
@@ -109,22 +110,13 @@ export type MovePromptResponsePayload = {
   prompt: RevisionEnvelope<PromptPersisted>
 }
 
-export type CompletePromptPayload = {
+export type SetPromptStatusPayload = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
   prompt: RevisionPayloadEntity<PromptPersisted>
+  status: PromptStatus
 }
 
-export type CompletePromptResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
-  prompt: RevisionEnvelope<PromptPersisted>
-}
-
-export type UncompletePromptPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  prompt: RevisionPayloadEntity<PromptPersisted>
-}
-
-export type UncompletePromptResponsePayload = {
+export type SetPromptStatusResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
   prompt: RevisionEnvelope<PromptPersisted>
 }

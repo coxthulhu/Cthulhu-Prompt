@@ -1,10 +1,9 @@
 import { ipcMain } from 'electron'
 import { PromptStatus } from '@shared/Prompt'
 import type {
-  CompletePromptResponsePayload,
   MovePromptResponsePayload,
   PromptPersisted,
-  UncompletePromptResponsePayload
+  SetPromptStatusResponsePayload
 } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
@@ -16,9 +15,8 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
-  parseCompletePromptRequest,
   parseMovePromptRequest,
-  parseUncompletePromptRequest,
+  parseSetPromptStatusRequest,
   parseUpdatePromptRevisionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
@@ -79,7 +77,7 @@ const buildMovePromptConflictResponse = (
   }
 }
 
-const buildCompletePromptConflictResponse = (
+const buildSetPromptStatusConflictResponse = (
   promptFolderId: string,
   promptId: string
 ):
@@ -90,13 +88,13 @@ const buildCompletePromptConflictResponse = (
   | {
       success: false
       conflict: true
-      payload: CompletePromptResponsePayload | UncompletePromptResponsePayload
+      payload: SetPromptStatusResponsePayload
     } => {
   const latestPromptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)
   const latestPrompt = data.prompt.committedStore.getEntry(promptId)
 
   if (!latestPromptFolder || !latestPrompt) {
-    return { success: false, error: 'Prompt complete conflict data not loaded' }
+    return { success: false, error: 'Prompt status conflict data not loaded' }
   }
 
   return {
@@ -565,35 +563,67 @@ export const setupPromptMutationHandlers = (): void => {
     )
   })
 
-  ipcMain.handle('complete-prompt', async (_, request: unknown) => {
+  ipcMain.handle('set-prompt-status', async (_, request: unknown) => {
     return await runMutationIpcRequest(
       request,
-      parseCompletePromptRequest,
+      parseSetPromptStatusRequest,
       async (validatedRequest) => {
         try {
           const requestedPromptFolder = validatedRequest.payload.promptFolder
           const requestedPrompt = validatedRequest.payload.prompt
+          const targetStatus = validatedRequest.payload.status
           const promptFolder = data.promptFolder.committedStore.getEntry(requestedPromptFolder.id)
           const prompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
 
           if (!promptFolder || !prompt) {
-            return { success: false, error: 'Prompt complete data not loaded' }
+            return { success: false, error: 'Prompt status data not loaded' }
           }
 
-          if (!promptFolder.committed.entryIds.includes(requestedPrompt.id)) {
-            return buildCompletePromptConflictResponse(
+          const isCompletedPrompt = promptFolder.committed.completedPromptIds.includes(
+            requestedPrompt.id
+          )
+          const isActivePrompt = promptFolder.committed.entryIds.includes(requestedPrompt.id)
+
+          if (!isActivePrompt && !isCompletedPrompt) {
+            return buildSetPromptStatusConflictResponse(
               requestedPromptFolder.id,
               requestedPrompt.id
             )
           }
 
           const now = getCurrentIsoSecondTimestamp()
-          const completedPrompt: PromptPersisted = {
-            ...requestedPrompt.data,
-            status: PromptStatus.Completed,
-            completedAt: now,
-            modifiedAt: now
-          }
+          const { completedAt: _completedAt, ...activePromptBase } = requestedPrompt.data
+          const targetPrompt: PromptPersisted =
+            targetStatus === PromptStatus.Completed
+              ? {
+                  ...activePromptBase,
+                  status: PromptStatus.Completed,
+                  completedAt: now,
+                  modifiedAt: now
+                }
+              : {
+                  ...activePromptBase,
+                  status: targetStatus,
+                  modifiedAt: now
+                }
+          const activeFolderName = promptFolder.persistenceFields.folderName
+          const completedFolderName = resolveCompletedPromptFolderName(activeFolderName)
+          const persistenceFields =
+            targetStatus === PromptStatus.Completed
+              ? {
+                  ...prompt.persistenceFields,
+                  folderName: completedFolderName,
+                  previousFolderName: activeFolderName,
+                  promptFolderId: requestedPromptFolder.id
+                }
+              : isCompletedPrompt
+                ? {
+                    ...prompt.persistenceFields,
+                    folderName: activeFolderName,
+                    previousFolderName: completedFolderName,
+                    promptFolderId: requestedPromptFolder.id
+                  }
+                : prompt.persistenceFields
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
@@ -601,9 +631,22 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.entryIds = draft.entryIds.filter((entryId) => entryId !== requestedPrompt.id)
-                  draft.completedPromptIds = [...draft.completedPromptIds, requestedPrompt.id]
-                  draft.promptCount = Math.max(0, draft.promptCount - 1)
+                  if (targetStatus === PromptStatus.Completed) {
+                    draft.entryIds = draft.entryIds.filter(
+                      (entryId) => entryId !== requestedPrompt.id
+                    )
+                    draft.completedPromptIds = [...draft.completedPromptIds, requestedPrompt.id]
+                    draft.promptCount = Math.max(0, draft.promptCount - 1)
+                  } else if (isCompletedPrompt) {
+                    draft.completedPromptIds = draft.completedPromptIds.filter(
+                      (promptId) => promptId !== requestedPrompt.id
+                    )
+                    draft.entryIds = [
+                      requestedPrompt.id,
+                      ...draft.entryIds.filter((entryId) => entryId !== requestedPrompt.id)
+                    ]
+                    draft.promptCount += 1
+                  }
                   draft.modifiedAt = now
                 }
               }),
@@ -611,22 +654,21 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPrompt.id,
                 expectedRevision: requestedPrompt.expectedRevision,
                 recipe: (draft) => {
-                  Object.assign(draft, completedPrompt)
+                  Object.assign(draft, targetPrompt)
+                  if (targetStatus !== PromptStatus.Completed) {
+                    delete draft.completedAt
+                  }
                 },
-                persistenceFields: {
-                  ...prompt.persistenceFields,
-                  folderName: resolveCompletedPromptFolderName(
-                    promptFolder.persistenceFields.folderName
-                  ),
-                  previousFolderName: promptFolder.persistenceFields.folderName,
-                  promptFolderId: requestedPromptFolder.id
-                }
+                persistenceFields
               })
             }
           })
 
           if (transactionOutcome.status === 'conflict') {
-            return buildCompletePromptConflictResponse(requestedPromptFolder.id, requestedPrompt.id)
+            return buildSetPromptStatusConflictResponse(
+              requestedPromptFolder.id,
+              requestedPrompt.id
+            )
           }
 
           const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
@@ -635,7 +677,7 @@ export const setupPromptMutationHandlers = (): void => {
           const updatedPrompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
 
           if (!updatedPromptFolder || !updatedPrompt) {
-            return { success: false, error: 'Prompt complete commit did not complete' }
+            return { success: false, error: 'Prompt status commit did not complete' }
           }
 
           return {
@@ -647,104 +689,7 @@ export const setupPromptMutationHandlers = (): void => {
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message || 'Failed to complete prompt' }
-        }
-      }
-    )
-  })
-
-  ipcMain.handle('uncomplete-prompt', async (_, request: unknown) => {
-    return await runMutationIpcRequest(
-      request,
-      parseUncompletePromptRequest,
-      async (validatedRequest) => {
-        try {
-          const requestedPromptFolder = validatedRequest.payload.promptFolder
-          const requestedPrompt = validatedRequest.payload.prompt
-          const promptFolder = data.promptFolder.committedStore.getEntry(requestedPromptFolder.id)
-          const prompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
-
-          if (!promptFolder || !prompt) {
-            return { success: false, error: 'Prompt uncomplete data not loaded' }
-          }
-
-          if (!promptFolder.committed.completedPromptIds.includes(requestedPrompt.id)) {
-            return buildCompletePromptConflictResponse(
-              requestedPromptFolder.id,
-              requestedPrompt.id
-            )
-          }
-
-          const now = getCurrentIsoSecondTimestamp()
-          const {
-            completedAt: _completedAt,
-            ...requestedActivePrompt
-          } = requestedPrompt.data
-          const activePrompt: PromptPersisted = {
-            ...requestedActivePrompt,
-            status: PromptStatus.Todo,
-            modifiedAt: now
-          }
-
-          const transactionOutcome = await runAtomicDataTransaction((tx) => {
-            return {
-              promptFolder: tx.promptFolder.update({
-                id: requestedPromptFolder.id,
-                expectedRevision: requestedPromptFolder.expectedRevision,
-                recipe: (draft) => {
-                  draft.completedPromptIds = draft.completedPromptIds.filter(
-                    (promptId) => promptId !== requestedPrompt.id
-                  )
-                  draft.entryIds = [
-                    requestedPrompt.id,
-                    ...draft.entryIds.filter((entryId) => entryId !== requestedPrompt.id)
-                  ]
-                  draft.promptCount += 1
-                  draft.modifiedAt = now
-                }
-              }),
-              prompt: tx.prompt.update({
-                id: requestedPrompt.id,
-                expectedRevision: requestedPrompt.expectedRevision,
-                recipe: (draft) => {
-                  Object.assign(draft, activePrompt)
-                  delete draft.completedAt
-                },
-                persistenceFields: {
-                  ...prompt.persistenceFields,
-                  folderName: promptFolder.persistenceFields.folderName,
-                  previousFolderName: resolveCompletedPromptFolderName(
-                    promptFolder.persistenceFields.folderName
-                  ),
-                  promptFolderId: requestedPromptFolder.id
-                }
-              })
-            }
-          })
-
-          if (transactionOutcome.status === 'conflict') {
-            return buildCompletePromptConflictResponse(requestedPromptFolder.id, requestedPrompt.id)
-          }
-
-          const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedPromptFolder.id
-          )
-          const updatedPrompt = data.prompt.committedStore.getEntry(requestedPrompt.id)
-
-          if (!updatedPromptFolder || !updatedPrompt) {
-            return { success: false, error: 'Prompt uncomplete commit did not complete' }
-          }
-
-          return {
-            success: true,
-            payload: {
-              promptFolder: buildPromptFolderSnapshot(updatedPromptFolder),
-              prompt: buildPromptSnapshot(updatedPrompt)
-            }
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message || 'Failed to uncomplete prompt' }
+          return { success: false, error: message || 'Failed to set prompt status' }
         }
       }
     )

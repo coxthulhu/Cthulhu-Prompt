@@ -13,6 +13,7 @@
     class?: string
     iconClass?: string
     testId?: string
+    onCopied?: () => void | Promise<void>
   }
 
   let {
@@ -25,7 +26,8 @@
     hoverVariant = 'neutral',
     class: className,
     iconClass,
-    testId
+    testId,
+    onCopied
   }: Props = $props()
 
   let isCopied = $state(false)
@@ -50,6 +52,8 @@
       isCopied = false
       resetTimeoutId = null
     }, resetDelayMs)
+
+    await onCopied?.()
   }
 
   // Side effect cleanup: clear the copied-state timer if the button unmounts.

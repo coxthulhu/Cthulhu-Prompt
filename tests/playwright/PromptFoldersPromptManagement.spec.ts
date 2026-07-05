@@ -55,6 +55,8 @@ const completeSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-complete-button"]`
 const uncompleteSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-uncomplete-button"]`
+const statusMoreOptionsSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-status-more-options-button"]`
 const statusPillSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-status-pill"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
@@ -713,7 +715,7 @@ describe('Prompt folder prompt management', () => {
     }
   })
 
-  test('copies prompt text to clipboard', async ({ testSetup }) => {
+  test('copies prompt text to clipboard', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(
       createWorkspaceWithFolders(COPY_PREFIX_SUFFIX_WORKSPACE_PATH, [
         {
@@ -774,6 +776,21 @@ describe('Prompt folder prompt management', () => {
         return normalizeNewlines(clipboardText)
       })
       .toBe(`Folder prefix text\n\n${promptText}\n\nFolder suffix text`)
+    await expect(mainWindow.locator(statusPillSelector(newPromptId!))).toHaveText('In Progress')
+    await expect(mainWindow.locator(statusPillSelector(newPromptId!))).toHaveAttribute(
+      'data-variant',
+      'in-progress'
+    )
+    await expect
+      .poll(async () => {
+        return await readPersistedPromptTextById(electronApp, {
+          workspacePath: COPY_PREFIX_SUFFIX_WORKSPACE_PATH,
+          folderName: 'Copy Prefix Suffix',
+          promptId: newPromptId!,
+          promptTitle: 'New Prompt'
+        })
+      })
+      .toContain('status: InProgress')
   })
 
   test('completes a prompt by moving it into the completed folder', async ({
@@ -888,6 +905,162 @@ describe('Prompt folder prompt management', () => {
     expect(completedMarkdown).toContain('status: Completed')
     expect(completedMarkdown).toContain('completedAt:')
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
+  })
+
+  test('sets prompt statuses from the more options menu', async ({ testSetup, electronApp }) => {
+    await testSetup.setupFilesystem(buildCompletedModeWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+
+    await testHelpers.navigateToPromptFolders('Completed Mode')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')
+    ).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-status-option-completed"]')
+    ).toBeVisible()
+    await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
+
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
+      'In Progress'
+    )
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveAttribute(
+      'data-variant',
+      'in-progress'
+    )
+    expect(await getPromptEditorIds(mainWindow)).toEqual(['completed-mode-active'])
+
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
+    await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
+      'Todo'
+    )
+
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toHaveCount(0)
+    await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
+      'In Progress'
+    )
+
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    await mainWindow.locator('[data-testid="prompt-status-option-completed"]').click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual([])
+
+    await expect
+      .poll(
+        async () => {
+          const [activeFiles, completedFiles] = await Promise.all([
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+              folderName: 'Completed Mode',
+              promptId: 'completed-mode-active',
+              promptTitle: 'Active Prompt'
+            }),
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+              folderName: 'Completed Mode/_Completed',
+              promptId: 'completed-mode-active',
+              promptTitle: 'Active Prompt'
+            })
+          ])
+
+          return { activeFiles, completedFiles }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        activeFiles: { markdownExists: false },
+        completedFiles: { markdownExists: true }
+      })
+    const completedFromMenuMarkdown = await readPersistedPromptTextById(electronApp, {
+      workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+      folderName: 'Completed Mode/_Completed',
+      promptId: 'completed-mode-active',
+      promptTitle: 'Active Prompt'
+    })
+    expect(completedFromMenuMarkdown).toContain('status: Completed')
+    expect(completedFromMenuMarkdown).toContain('completedAt:')
+
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-active', 'completed-mode-newest', 'completed-mode-oldest'])
+
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-status-option-completed"]')
+    ).toHaveCount(0)
+    await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-newest', 'completed-mode-oldest'])
+
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-active'])
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
+      'In Progress'
+    )
+
+    await expect
+      .poll(
+        async () => {
+          const [activeFiles, completedFiles] = await Promise.all([
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+              folderName: 'Completed Mode',
+              promptId: 'completed-mode-active',
+              promptTitle: 'Active Prompt'
+            }),
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+              folderName: 'Completed Mode/_Completed',
+              promptId: 'completed-mode-active',
+              promptTitle: 'Active Prompt'
+            })
+          ])
+
+          return { activeFiles, completedFiles }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        activeFiles: { markdownExists: true },
+        completedFiles: { markdownExists: false }
+      })
+
+    await expect
+      .poll(async () => {
+        return await readPersistedPromptTextById(electronApp, {
+          workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+          folderName: 'Completed Mode',
+          promptId: 'completed-mode-active',
+          promptTitle: 'Active Prompt'
+        })
+      })
+      .toContain('status: InProgress')
+    const inProgressMarkdown = await readPersistedPromptTextById(electronApp, {
+      workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+      folderName: 'Completed Mode',
+      promptId: 'completed-mode-active',
+      promptTitle: 'Active Prompt'
+    })
+    expect(inProgressMarkdown).not.toContain('completedAt:')
   })
 
   test('shows completed prompts and uncompletes them back to the active folder', async ({

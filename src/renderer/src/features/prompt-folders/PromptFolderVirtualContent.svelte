@@ -96,8 +96,7 @@
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (previousPromptId: string | null) => void
     onDeletePrompt: (promptId: string) => void
-    onCompletePrompt: (promptId: string) => void
-    onUncompletePrompt: (promptId: string) => void
+    onSetPromptStatus: (promptId: string, status: PromptStatus) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
     onMovePromptDown: (promptId: string) => Promise<boolean>
     onPromptTreeDrop: (
@@ -141,8 +140,7 @@
     scrollToWithinWindowBandForRows,
     onAddPrompt,
     onDeletePrompt,
-    onCompletePrompt,
-    onUncompletePrompt,
+    onSetPromptStatus,
     onMovePromptUp,
     onMovePromptDown,
     onPromptTreeDrop,
@@ -549,8 +547,7 @@
       isFirstPrompt={promptIndex === 0}
       isLastPrompt={promptIndex === visiblePromptIds.length - 1}
       onDelete={() => onDeletePrompt(row.promptId)}
-      onComplete={isCompletedMode ? undefined : () => onCompletePrompt(row.promptId)}
-      onUncomplete={isCompletedMode ? () => onUncompletePrompt(row.promptId) : undefined}
+      onStatusChange={(status) => onSetPromptStatus(row.promptId, status)}
       onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(row.promptId))}
       onMoveDown={() =>
         isCompletedMode ? Promise.resolve(false) : handleMovePromptDown(row.promptId)}

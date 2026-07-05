@@ -1,8 +1,6 @@
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
-  type CompletePromptPayload,
-  type CompletePromptResponsePayload,
   createPromptFull,
   isPromptFull,
   type CreatePromptPayload,
@@ -17,8 +15,8 @@ import {
   type PromptRevisionResponsePayload,
   type PromptRevisionPayload,
   PromptStatus,
-  type UncompletePromptPayload,
-  type UncompletePromptResponsePayload
+  type SetPromptStatusPayload,
+  type SetPromptStatusResponsePayload
 } from '@shared/Prompt'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import type { Transaction } from '@tanstack/svelte-db'
@@ -314,77 +312,10 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
   })
 }
 
-export const completePrompt = async (promptFolderId: string, promptId: string): Promise<void> => {
-  const promptFolder = promptFolderCollection.get(promptFolderId)
-  if (!promptFolder) {
-    throw new Error('Prompt folder not loaded')
-  }
-
-  const promptDraft = promptDraftCollection.get(promptId)
-  if (!promptDraft) {
-    throw new Error('Prompt draft not loaded')
-  }
-
-  const persistedPrompt: PromptPersisted = {
-    id: promptDraft.id,
-    title: promptDraft.title,
-    fallbackTitle: promptDraft.fallbackTitle,
-    createdAt: promptDraft.createdAt,
-    modifiedAt: promptDraft.modifiedAt,
-    status: PromptStatus.Todo,
-    promptText: promptDraft.promptText
-  }
-  const modifiedAt = getCurrentIsoSecondTimestamp()
-
-  await runRevisionMutation<CompletePromptResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.entryIds = draft.entryIds.filter((id) => id !== promptId)
-        draft.completedPromptIds = [...draft.completedPromptIds, promptId]
-        draft.promptCount = Math.max(0, draft.promptCount - 1)
-        draft.modifiedAt = modifiedAt
-      })
-      collections.prompt.update(promptId, (draft) => {
-        if (draft.loadingState === 'full') {
-          Object.assign(draft, persistedPrompt)
-          draft.status = PromptStatus.Completed
-          draft.completedAt = modifiedAt
-          draft.modifiedAt = draft.completedAt
-        }
-      })
-    },
-    persistMutations: async ({ entities }) => {
-      const promptEntity = entities.prompt({
-        id: promptId,
-        data: createPromptFull(persistedPrompt)
-      })
-      return await ipcInvokeWithPayload<
-        IpcMutationPayloadResult<CompletePromptResponsePayload>,
-        CompletePromptPayload
-      >('complete-prompt', {
-        promptFolder: entities.promptFolder({
-          id: promptFolderId,
-          data: promptFolder
-        }),
-        prompt: {
-          ...promptEntity,
-          data: toPersistedPrompt(promptEntity.data)
-        }
-      })
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      const promptSnapshot = toFullPromptSnapshot(payload.prompt)
-      promptCollection.utils.upsertAuthoritative(promptSnapshot)
-      upsertPromptDraftFromPrompt(promptSnapshot.data)
-    },
-    conflictMessage: 'Prompt complete conflict'
-  })
-}
-
-export const uncompletePrompt = async (
+export const setPromptStatus = async (
   promptFolderId: string,
-  promptId: string
+  promptId: string,
+  targetStatus: PromptStatus
 ): Promise<void> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) {
@@ -397,7 +328,7 @@ export const uncompletePrompt = async (
     throw new Error('Prompt draft not loaded')
   }
 
-  const basePersistedPrompt =
+  const currentPrompt =
     prompt && isPromptFull(prompt)
       ? toPersistedPrompt(prompt)
       : {
@@ -409,41 +340,68 @@ export const uncompletePrompt = async (
           status: PromptStatus.Todo,
           promptText: promptDraft.promptText
         }
-  const { completedAt: _completedAt, ...activePromptBase } = basePersistedPrompt
   const modifiedAt = getCurrentIsoSecondTimestamp()
-  const activePrompt: PromptPersisted = {
-    ...activePromptBase,
-    status: PromptStatus.Todo,
-    modifiedAt
-  }
+  const { completedAt: _completedAt, ...activePromptBase } = currentPrompt
+  const nextPrompt: PromptPersisted =
+    targetStatus === PromptStatus.Completed
+      ? {
+          ...activePromptBase,
+          title: promptDraft.title,
+          fallbackTitle: promptDraft.fallbackTitle,
+          promptText: promptDraft.promptText,
+          status: PromptStatus.Completed,
+          completedAt: modifiedAt,
+          modifiedAt
+        }
+      : {
+          ...activePromptBase,
+          title: promptDraft.title,
+          fallbackTitle: promptDraft.fallbackTitle,
+          promptText: promptDraft.promptText,
+          status: targetStatus,
+          modifiedAt
+        }
+  const isCompletedPrompt = promptFolder.completedPromptIds.includes(promptId)
 
-  await runRevisionMutation<UncompletePromptResponsePayload>({
+  await runRevisionMutation<SetPromptStatusResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-        draft.entryIds = [promptId, ...draft.entryIds.filter((id) => id !== promptId)]
-        draft.promptCount += 1
+        if (targetStatus === PromptStatus.Completed) {
+          draft.entryIds = draft.entryIds.filter((id) => id !== promptId)
+          draft.completedPromptIds = [...draft.completedPromptIds, promptId]
+          draft.promptCount = Math.max(0, draft.promptCount - 1)
+        } else if (isCompletedPrompt) {
+          draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
+          draft.entryIds = [promptId, ...draft.entryIds.filter((id) => id !== promptId)]
+          draft.promptCount += 1
+        }
         draft.modifiedAt = modifiedAt
       })
       collections.prompt.update(promptId, (draft) => {
         if (draft.loadingState === 'full') {
-          Object.assign(draft, activePrompt)
-          delete draft.completedAt
+          Object.assign(draft, nextPrompt)
+          if (targetStatus !== PromptStatus.Completed) {
+            delete draft.completedAt
+          }
         }
       })
       collections.promptDraft.update(promptId, (draft) => {
-        Object.assign(draft, activePrompt)
+        draft.title = nextPrompt.title
+        draft.fallbackTitle = nextPrompt.fallbackTitle
+        draft.createdAt = nextPrompt.createdAt
+        draft.modifiedAt = nextPrompt.modifiedAt
+        draft.promptText = nextPrompt.promptText
       })
     },
     persistMutations: async ({ entities, transaction }) => {
       const promptEntity = entities.prompt({
         id: promptId,
-        data: createPromptFull(activePrompt)
+        data: createPromptFull(nextPrompt)
       })
       const mutationResult = await ipcInvokeWithPayload<
-        IpcMutationPayloadResult<UncompletePromptResponsePayload>,
-        UncompletePromptPayload
-      >('uncomplete-prompt', {
+        IpcMutationPayloadResult<SetPromptStatusResponsePayload>,
+        SetPromptStatusPayload
+      >('set-prompt-status', {
         promptFolder: entities.promptFolder({
           id: promptFolderId,
           data: promptFolder
@@ -451,7 +409,8 @@ export const uncompletePrompt = async (
         prompt: {
           ...promptEntity,
           data: toPersistedPrompt(promptEntity.data)
-        }
+        },
+        status: targetStatus
       })
 
       if (mutationResult.success) {
@@ -466,7 +425,7 @@ export const uncompletePrompt = async (
       promptCollection.utils.upsertAuthoritative(promptSnapshot)
       upsertPromptDraftFromPrompt(promptSnapshot.data)
     },
-    conflictMessage: 'Prompt uncomplete conflict'
+    conflictMessage: 'Prompt status conflict'
   })
 }
 

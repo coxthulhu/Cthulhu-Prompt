@@ -1,12 +1,11 @@
 import { PromptStatus } from '@shared/Prompt'
 import type {
-  CompletePromptPayload,
   CreatePromptPayload,
   DeletePromptPayload,
   MovePromptPayload,
   PromptPersisted,
   PromptRevisionPayload,
-  UncompletePromptPayload
+  SetPromptStatusPayload
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
@@ -57,6 +56,14 @@ const parseBoolean: Parser<boolean> = (value) => {
 
 const parseNumber: Parser<number> = (value) => {
   return typeof value === 'number' ? value : null
+}
+
+const parsePromptStatus: Parser<PromptStatus> = (value) => {
+  return value === PromptStatus.Todo ||
+    value === PromptStatus.InProgress ||
+    value === PromptStatus.Completed
+    ? value
+    : null
 }
 
 const parseNullableString: Parser<string | null> = (value) => {
@@ -298,8 +305,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     createdAt: parseString,
     modifiedAt: parseString,
     promptText: parseString,
-    status: (nextValue) =>
-      nextValue === PromptStatus.Todo || nextValue === PromptStatus.Completed ? nextValue : null,
+    status: parsePromptStatus,
     ...(hasCompletedAt
       ? {
           completedAt: parseString
@@ -476,21 +482,14 @@ const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
 const parseMovePromptWireRequest: Parser<IpcRequestWithPayload<MovePromptPayload>> =
   parseWireRequestWithPayload<MovePromptPayload>(parseMovePromptPayload)
 
-const parseCompletePromptPayload = parseObject<CompletePromptPayload>({
+const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
   promptFolder: parsePromptFolderRevisionPayloadEntity,
-  prompt: parsePromptRevisionPayloadEntity
+  prompt: parsePromptRevisionPayloadEntity,
+  status: parsePromptStatus
 })
 
-const parseCompletePromptWireRequest: Parser<IpcRequestWithPayload<CompletePromptPayload>> =
-  parseWireRequestWithPayload<CompletePromptPayload>(parseCompletePromptPayload)
-
-const parseUncompletePromptPayload = parseObject<UncompletePromptPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity,
-  prompt: parsePromptRevisionPayloadEntity
-})
-
-const parseUncompletePromptWireRequest: Parser<IpcRequestWithPayload<UncompletePromptPayload>> =
-  parseWireRequestWithPayload<UncompletePromptPayload>(parseUncompletePromptPayload)
+const parseSetPromptStatusWireRequest: Parser<IpcRequestWithPayload<SetPromptStatusPayload>> =
+  parseWireRequestWithPayload<SetPromptStatusPayload>(parseSetPromptStatusPayload)
 
 const parseMovePromptFolderPayload = parseObject<MovePromptFolderPayload>({
   workspace: parseWorkspaceRevisionPayloadEntity,
@@ -592,9 +591,7 @@ export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWir
 
 export const parseMovePromptRequest = createRequestParser(parseMovePromptWireRequest)
 
-export const parseCompletePromptRequest = createRequestParser(parseCompletePromptWireRequest)
-
-export const parseUncompletePromptRequest = createRequestParser(parseUncompletePromptWireRequest)
+export const parseSetPromptStatusRequest = createRequestParser(parseSetPromptStatusWireRequest)
 
 export const parseMovePromptFolderRequest = createRequestParser(parseMovePromptFolderWireRequest)
 

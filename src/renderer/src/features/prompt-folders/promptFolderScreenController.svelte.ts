@@ -1,6 +1,6 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { isPromptFull, type Prompt, type PromptStatus } from '@shared/Prompt'
+import { isPromptFull, type Prompt, PromptStatus } from '@shared/Prompt'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
@@ -32,10 +32,9 @@ import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderC
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import {
-  completePrompt,
   deletePrompt,
   movePrompt,
-  uncompletePrompt
+  setPromptStatus
 } from '@renderer/data/Mutations/PromptMutations'
 import {
   lookupPromptFolderSettingsRowMeasuredHeight,
@@ -872,25 +871,14 @@ export const createPromptFolderScreenController = ({
     })
   }
 
-  const handleCompletePrompt = (nextPromptId: string) => {
+  const handleSetPromptStatus = (nextPromptId: string, status: PromptStatus) => {
     const currentPromptFolderId = promptFolder?.id
     if (!currentPromptFolderId) {
       return
     }
 
     void runIpcBestEffort(async () => {
-      await completePrompt(currentPromptFolderId, nextPromptId)
-    })
-  }
-
-  const handleUncompletePrompt = (nextPromptId: string) => {
-    const currentPromptFolderId = promptFolder?.id
-    if (!currentPromptFolderId) {
-      return
-    }
-
-    void runIpcBestEffort(async () => {
-      await uncompletePrompt(currentPromptFolderId, nextPromptId)
+      await setPromptStatus(currentPromptFolderId, nextPromptId, status)
     })
   }
 
@@ -1193,8 +1181,7 @@ export const createPromptFolderScreenController = ({
     handleFindMatchReveal,
     handleAddPrompt,
     handleDeletePrompt,
-    handleCompletePrompt,
-    handleUncompletePrompt,
+    handleSetPromptStatus,
     handleMovePromptUp,
     handleMovePromptDown,
     handlePromptTreeDrop,

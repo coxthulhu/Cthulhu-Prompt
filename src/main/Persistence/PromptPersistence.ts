@@ -78,7 +78,10 @@ const normalizePromptCompletionForFolder = (
     }
   }
 
-  if (prompt.status === PromptStatus.Todo && !prompt.completedAt) {
+  if (
+    (prompt.status === PromptStatus.Todo || prompt.status === PromptStatus.InProgress) &&
+    !prompt.completedAt
+  ) {
     return prompt
   }
 
