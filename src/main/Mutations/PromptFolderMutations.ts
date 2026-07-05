@@ -5,29 +5,27 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
-import {
-  buildPromptFolderSnapshot,
-  buildWorkspaceSnapshot,
-  type WorkspaceCommittedEntry
-} from '../Data/DataSnapshotHelpers'
+import { buildPromptFolderSnapshot, buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptFolderRequest,
-  parseCreatePromptSubfolderRequest,
   parseRenamePromptFolderRequest,
   parseUpdatePromptFolderSettingsRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
-import { resolveCompletedPromptFolderName } from '../Persistence/PromptPersistencePaths'
+import {
+  refreshPromptFolderTreePersistencePaths,
+  resolvePromptFolderPathFromData
+} from './PromptFolderPathHelpers'
 
 const hasPromptFolderNameConflict = (
-  workspaceEntry: WorkspaceCommittedEntry,
+  siblingEntryIds: string[],
   folderName: string,
   excludedPromptFolderId: string | null = null
 ): boolean => {
   const normalizedTargetName = folderName.toLowerCase()
 
-  return workspaceEntry.committed.promptFolderIds.some((promptFolderId) => {
+  return siblingEntryIds.some((promptFolderId) => {
     if (promptFolderId === excludedPromptFolderId) {
       return false
     }
@@ -42,63 +40,7 @@ const hasPromptFolderNameConflict = (
   })
 }
 
-const refreshPromptPersistenceFieldsAfterFolderRename = (
-  promptFolderId: string,
-  activeFolderName: string
-): void => {
-  const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
-
-  if (!promptFolderEntry) {
-    return
-  }
-
-  for (const promptId of promptFolderEntry.committed.entryIds) {
-    const promptEntry = data.prompt.committedStore.getEntry(promptId)
-    if (!promptEntry) {
-      continue
-    }
-
-    data.prompt.committedStore.updatePersistenceFields(promptId, {
-      ...promptEntry.persistenceFields,
-      folderName: activeFolderName
-    })
-  }
-
-  const completedFolderName = resolveCompletedPromptFolderName(activeFolderName)
-  for (const promptId of promptFolderEntry.committed.completedPromptIds) {
-    const promptEntry = data.prompt.committedStore.getEntry(promptId)
-    if (!promptEntry) {
-      continue
-    }
-
-    data.prompt.committedStore.updatePersistenceFields(promptId, {
-      ...promptEntry.persistenceFields,
-      folderName: completedFolderName
-    })
-  }
-}
-
 const MAX_SUBFOLDER_DEPTH = 8
-
-const hasPromptSubfolderNameConflict = (
-  parentPromptFolderId: string,
-  folderName: string
-): boolean => {
-  const parentPromptFolder = data.promptFolder.committedStore.getEntry(parentPromptFolderId)
-
-  if (!parentPromptFolder) {
-    return false
-  }
-
-  const normalizedTargetName = path
-    .join(parentPromptFolder.committed.folderName, folderName)
-    .toLowerCase()
-
-  return parentPromptFolder.committed.entryIds.some((entryId) => {
-    const promptFolderEntry = data.promptFolder.committedStore.getEntry(entryId)
-    return promptFolderEntry?.committed.folderName.toLowerCase() === normalizedTargetName
-  })
-}
 
 export const setupPromptFolderMutationHandlers = (): void => {
   ipcMain.handle('create-prompt-folder', async (_, request: unknown) => {
@@ -109,124 +51,38 @@ export const setupPromptFolderMutationHandlers = (): void => {
         try {
           const payload = validatedRequest.payload
           const requestedWorkspace = payload.workspace
+          const requestedParentPromptFolder = payload.parentPromptFolder
           const committedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
 
           if (!committedWorkspace) {
             return { success: false, error: 'Workspace not loaded' }
           }
 
-          const {
-            validation,
-            displayName: normalizedDisplayName,
-            folderName
-          } = preparePromptFolderName(payload.displayName)
+          const committedParentPromptFolder = requestedParentPromptFolder
+            ? data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id)
+            : null
 
-          if (!validation.isValid) {
-            return {
-              success: false,
-              error: validation.errorMessage ?? 'Invalid prompt folder name'
-            }
-          }
-
-          if (hasPromptFolderNameConflict(committedWorkspace, folderName)) {
-            return { success: false, error: 'A folder with this name already exists' }
-          }
-
-          const now = getCurrentIsoSecondTimestamp()
-          const transactionOutcome = await runAtomicDataTransaction((tx) => {
-            return {
-              workspace: tx.workspace.update({
-                id: requestedWorkspace.id,
-                expectedRevision: requestedWorkspace.expectedRevision,
-                recipe: (draft) => {
-                  draft.promptFolderIds = [payload.promptFolderId, ...draft.promptFolderIds]
-                }
-              }),
-              promptFolder: tx.promptFolder.create({
-                id: payload.promptFolderId,
-                data: {
-                  id: payload.promptFolderId,
-                  folderName,
-                  displayName: normalizedDisplayName,
-                  parentPromptFolderId: null,
-                  depth: 0,
-                  modifiedAt: now,
-                  promptCount: 0,
-                  entryIds: [],
-                  completedPromptIds: [],
-                  settings: createEmptyPromptFolderSettings()
-                },
-                persistenceFields: {
-                  workspaceId: requestedWorkspace.id,
-                  workspacePath: committedWorkspace.committed.workspacePath,
-                  folderName,
-                  parentPromptFolderId: null,
-                  depth: 0
-                }
-              })
-            }
-          })
-
-          if (transactionOutcome.status === 'conflict') {
-            return buildConflictResponseFromLatest(
-              data.workspace.committedStore.getEntry(requestedWorkspace.id),
-              'Workspace not loaded',
-              (latestWorkspace) => ({
-                workspace: buildWorkspaceSnapshot(latestWorkspace)
-              })
-            )
-          }
-
-          const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-          const createdPromptFolder = data.promptFolder.committedStore.getEntry(
-            payload.promptFolderId
-          )
-
-          if (!updatedWorkspace || !createdPromptFolder) {
-            return { success: false, error: 'Prompt folder create commit did not complete' }
-          }
-
-          return {
-            success: true,
-            payload: {
-              workspace: buildWorkspaceSnapshot(updatedWorkspace),
-              promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
-            }
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message }
-        }
-      }
-    )
-  })
-
-  ipcMain.handle('create-prompt-subfolder', async (_, request: unknown) => {
-    return await runMutationIpcRequest(
-      request,
-      parseCreatePromptSubfolderRequest,
-      async (validatedRequest) => {
-        try {
-          const payload = validatedRequest.payload
-          const requestedParentPromptFolder = payload.parentPromptFolder
-          const committedParentPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedParentPromptFolder.id
-          )
-
-          if (!committedParentPromptFolder) {
+          if (requestedParentPromptFolder && !committedParentPromptFolder) {
             return { success: false, error: 'Parent prompt folder not loaded' }
           }
 
-          if (committedParentPromptFolder.committed.depth >= MAX_SUBFOLDER_DEPTH) {
+          if (
+            committedParentPromptFolder &&
+            committedParentPromptFolder.committed.depth >= MAX_SUBFOLDER_DEPTH
+          ) {
             return {
               success: false,
               error: 'Prompt folders can contain up to 8 nested subfolder layers'
             }
           }
 
+          const siblingEntryIds =
+            committedParentPromptFolder?.committed.entryIds ??
+            committedWorkspace.committed.promptFolderIds
+
           if (
             payload.previousEntryId !== null &&
-            !committedParentPromptFolder.committed.entryIds.includes(payload.previousEntryId)
+            !siblingEntryIds.includes(payload.previousEntryId)
           ) {
             return { success: false, error: 'Previous entry not found' }
           }
@@ -244,41 +100,53 @@ export const setupPromptFolderMutationHandlers = (): void => {
             }
           }
 
-          if (hasPromptSubfolderNameConflict(requestedParentPromptFolder.id, folderName)) {
+          if (hasPromptFolderNameConflict(siblingEntryIds, folderName)) {
             return { success: false, error: 'A folder with this name already exists' }
           }
 
           const insertIndex =
             payload.previousEntryId === null
               ? 0
-              : committedParentPromptFolder.committed.entryIds.indexOf(payload.previousEntryId) + 1
+              : siblingEntryIds.indexOf(payload.previousEntryId) + 1
           const now = getCurrentIsoSecondTimestamp()
-          const subfolderName = path.join(
-            committedParentPromptFolder.committed.folderName,
-            folderName
-          )
-          const subfolderDepth = committedParentPromptFolder.committed.depth + 1
+          const parentPromptFolderId = requestedParentPromptFolder?.id ?? null
+          const depth = committedParentPromptFolder
+            ? committedParentPromptFolder.committed.depth + 1
+            : 0
+          const folderPath = committedParentPromptFolder
+            ? path.join(committedParentPromptFolder.persistenceFields.folderPath, folderName)
+            : folderName
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
-              parentPromptFolder: tx.promptFolder.update({
-                id: requestedParentPromptFolder.id,
-                expectedRevision: requestedParentPromptFolder.expectedRevision,
-                recipe: (draft) => {
-                  const nextEntryIds = [...draft.entryIds]
-                  nextEntryIds.splice(insertIndex, 0, payload.promptFolderId)
-                  draft.entryIds = nextEntryIds
-                  draft.modifiedAt = now
-                }
-              }),
+              orderContainer: committedParentPromptFolder
+                ? tx.promptFolder.update({
+                    id: committedParentPromptFolder.committed.id,
+                    expectedRevision: requestedParentPromptFolder?.expectedRevision,
+                    recipe: (draft) => {
+                      const nextEntryIds = [...draft.entryIds]
+                      nextEntryIds.splice(insertIndex, 0, payload.promptFolderId)
+                      draft.entryIds = nextEntryIds
+                      draft.modifiedAt = now
+                    }
+                  })
+                : tx.workspace.update({
+                    id: requestedWorkspace.id,
+                    expectedRevision: requestedWorkspace.expectedRevision,
+                    recipe: (draft) => {
+                      const nextPromptFolderIds = [...draft.promptFolderIds]
+                      nextPromptFolderIds.splice(insertIndex, 0, payload.promptFolderId)
+                      draft.promptFolderIds = nextPromptFolderIds
+                    }
+                  }),
               promptFolder: tx.promptFolder.create({
                 id: payload.promptFolderId,
                 data: {
                   id: payload.promptFolderId,
-                  folderName: subfolderName,
+                  folderName,
                   displayName: normalizedDisplayName,
-                  parentPromptFolderId: requestedParentPromptFolder.id,
-                  depth: subfolderDepth,
+                  parentPromptFolderId,
+                  depth,
                   modifiedAt: now,
                   promptCount: 0,
                   entryIds: [],
@@ -286,41 +154,63 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   settings: createEmptyPromptFolderSettings()
                 },
                 persistenceFields: {
-                  workspaceId: committedParentPromptFolder.persistenceFields.workspaceId,
-                  workspacePath: committedParentPromptFolder.persistenceFields.workspacePath,
-                  folderName: subfolderName,
-                  parentPromptFolderId: requestedParentPromptFolder.id,
-                  depth: subfolderDepth
+                  workspaceId: requestedWorkspace.id,
+                  workspacePath: committedWorkspace.committed.workspacePath,
+                  folderName,
+                  folderPath,
+                  parentPromptFolderId,
+                  depth
                 }
               })
             }
           })
 
           if (transactionOutcome.status === 'conflict') {
+            if (requestedParentPromptFolder) {
+              return buildConflictResponseFromLatest(
+                data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id),
+                'Parent prompt folder not loaded',
+                (latestParentPromptFolder) => ({
+                  parentPromptFolder: buildPromptFolderSnapshot(latestParentPromptFolder)
+                })
+              )
+            }
+
             return buildConflictResponseFromLatest(
-              data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id),
-              'Parent prompt folder not loaded',
-              (latestParentPromptFolder) => ({
-                parentPromptFolder: buildPromptFolderSnapshot(latestParentPromptFolder)
+              data.workspace.committedStore.getEntry(requestedWorkspace.id),
+              'Workspace not loaded',
+              (latestWorkspace) => ({
+                workspace: buildWorkspaceSnapshot(latestWorkspace)
               })
             )
           }
 
-          const updatedParentPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedParentPromptFolder.id
-          )
+          const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
+          const updatedParentPromptFolder = requestedParentPromptFolder
+            ? data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id)
+            : null
           const createdPromptFolder = data.promptFolder.committedStore.getEntry(
             payload.promptFolderId
           )
 
-          if (!updatedParentPromptFolder || !createdPromptFolder) {
-            return { success: false, error: 'Prompt subfolder create commit did not complete' }
+          if (
+            !updatedWorkspace ||
+            (requestedParentPromptFolder && !updatedParentPromptFolder) ||
+            !createdPromptFolder
+          ) {
+            return { success: false, error: 'Prompt folder create commit did not complete' }
           }
 
           return {
             success: true,
             payload: {
-              parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder),
+              ...(requestedParentPromptFolder
+                ? {
+                    parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder!)
+                  }
+                : {
+                    workspace: buildWorkspaceSnapshot(updatedWorkspace)
+                  }),
               promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
             }
           }
@@ -369,14 +259,31 @@ export const setupPromptFolderMutationHandlers = (): void => {
             }
           }
 
-          if (
-            hasPromptFolderNameConflict(committedWorkspace, folderName, requestedPromptFolder.id)
-          ) {
+          const siblingEntryIds =
+            committedPromptFolder.committed.parentPromptFolderId === null
+              ? committedWorkspace.committed.promptFolderIds
+              : (data.promptFolder.committedStore.getEntry(
+                  committedPromptFolder.committed.parentPromptFolderId
+                )?.committed.entryIds ?? [])
+
+          if (hasPromptFolderNameConflict(siblingEntryIds, folderName, requestedPromptFolder.id)) {
             return { success: false, error: 'A folder with this name already exists' }
           }
 
           const now = getCurrentIsoSecondTimestamp()
-          const previousFolderName = committedPromptFolder.persistenceFields.folderName
+          const previousFolderPath = committedPromptFolder.persistenceFields.folderPath
+          const folderPath = resolvePromptFolderPathFromData(
+            requestedPromptFolder.id,
+            new Map([
+              [
+                requestedPromptFolder.id,
+                {
+                  folderName,
+                  parentPromptFolderId: committedPromptFolder.committed.parentPromptFolderId
+                }
+              ]
+            ])
+          )
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               promptFolder: tx.promptFolder.update({
@@ -390,7 +297,8 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 persistenceFields: {
                   ...committedPromptFolder.persistenceFields,
                   folderName,
-                  previousFolderName
+                  folderPath,
+                  previousFolderPath
                 }
               })
             }
@@ -406,7 +314,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             )
           }
 
-          refreshPromptPersistenceFieldsAfterFolderRename(requestedPromptFolder.id, folderName)
+          refreshPromptFolderTreePersistencePaths(requestedPromptFolder.id)
 
           const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
             requestedPromptFolder.id

@@ -81,20 +81,21 @@ export const closeWorkspace = async (): Promise<void> => {
 
 const resolvePromptFolderInsertIndex = (
   promptFolderIds: string[],
-  orderAfterPromptFolderId: string | null
+  previousEntryId: string | null
 ): number | null => {
-  if (orderAfterPromptFolderId === null) {
+  if (previousEntryId === null) {
     return 0
   }
 
-  const previousIndex = promptFolderIds.indexOf(orderAfterPromptFolderId)
+  const previousIndex = promptFolderIds.indexOf(previousEntryId)
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
 export const movePromptFolder = async (
   workspaceId: string,
   promptFolderId: string,
-  orderAfterPromptFolderId: string | null
+  previousEntryId: string | null,
+  destinationParentPromptFolderId: string | null = null
 ): Promise<void> => {
   const workspace = workspaceCollection.get(workspaceId)
 
@@ -102,24 +103,82 @@ export const movePromptFolder = async (
     throw new Error('Workspace not loaded')
   }
 
-  const destinationPromptFolderIds = workspace.promptFolderIds.filter(
-    (currentPromptFolderId) => currentPromptFolderId !== promptFolderId
-  )
-  const insertIndex = resolvePromptFolderInsertIndex(
-    destinationPromptFolderIds,
-    orderAfterPromptFolderId
-  )
+  const promptFolder = promptFolderCollection.get(promptFolderId)
 
-  if (insertIndex === null) {
-    throw new Error('Order-after prompt folder not found')
+  if (!promptFolder) {
+    throw new Error('Prompt folder not loaded')
   }
 
-  const nextPromptFolderIds = [...destinationPromptFolderIds]
-  nextPromptFolderIds.splice(insertIndex, 0, promptFolderId)
+  const sourceParentPromptFolderId = promptFolder.parentPromptFolderId
+  const sourceParentPromptFolder = sourceParentPromptFolderId
+    ? promptFolderCollection.get(sourceParentPromptFolderId)
+    : null
+  const destinationParentPromptFolder = destinationParentPromptFolderId
+    ? promptFolderCollection.get(destinationParentPromptFolderId)
+    : null
+
+  if (sourceParentPromptFolderId && !sourceParentPromptFolder) {
+    throw new Error('Source parent prompt folder not loaded')
+  }
+
+  if (destinationParentPromptFolderId && !destinationParentPromptFolder) {
+    throw new Error('Destination parent prompt folder not loaded')
+  }
+
+  const isSameParent = sourceParentPromptFolderId === destinationParentPromptFolderId
+  const sourceEntryIds = sourceParentPromptFolder?.entryIds ?? workspace.promptFolderIds
+  const destinationEntryIds = isSameParent
+    ? sourceEntryIds.filter((currentPromptFolderId) => currentPromptFolderId !== promptFolderId)
+    : (destinationParentPromptFolder?.entryIds ?? workspace.promptFolderIds)
+  const insertIndex = resolvePromptFolderInsertIndex(destinationEntryIds, previousEntryId)
+
+  if (insertIndex === null) {
+    throw new Error('Previous entry not found')
+  }
+
+  const nextDestinationEntryIds = [...destinationEntryIds]
+  nextDestinationEntryIds.splice(insertIndex, 0, promptFolderId)
   await runRevisionMutation<MovePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
-      collections.workspace.update(workspaceId, (draft) => {
-        draft.promptFolderIds = [...nextPromptFolderIds]
+      if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
+        collections.workspace.update(workspaceId, (draft) => {
+          draft.promptFolderIds = [...nextDestinationEntryIds]
+        })
+        return
+      }
+
+      if (isSameParent && sourceParentPromptFolderId) {
+        collections.promptFolder.update(sourceParentPromptFolderId, (draft) => {
+          draft.entryIds = [...nextDestinationEntryIds]
+        })
+        return
+      }
+
+      if (sourceParentPromptFolderId) {
+        collections.promptFolder.update(sourceParentPromptFolderId, (draft) => {
+          draft.entryIds = draft.entryIds.filter((entryId) => entryId !== promptFolderId)
+        })
+      } else {
+        collections.workspace.update(workspaceId, (draft) => {
+          draft.promptFolderIds = draft.promptFolderIds.filter(
+            (currentPromptFolderId) => currentPromptFolderId !== promptFolderId
+          )
+        })
+      }
+
+      if (destinationParentPromptFolderId) {
+        collections.promptFolder.update(destinationParentPromptFolderId, (draft) => {
+          draft.entryIds = [...nextDestinationEntryIds]
+        })
+      } else {
+        collections.workspace.update(workspaceId, (draft) => {
+          draft.promptFolderIds = [...nextDestinationEntryIds]
+        })
+      }
+
+      collections.promptFolder.update(promptFolderId, (draft) => {
+        draft.parentPromptFolderId = destinationParentPromptFolderId
+        draft.depth = destinationParentPromptFolder ? destinationParentPromptFolder.depth + 1 : 0
       })
     },
     persistMutations: async ({ entities, invoke }) => {
@@ -129,13 +188,26 @@ export const movePromptFolder = async (
             id: workspaceId,
             data: workspace
           }),
+          sourceParentPromptFolder: sourceParentPromptFolderId
+            ? entities.promptFolder({
+                id: sourceParentPromptFolderId,
+                data: sourceParentPromptFolder!
+              })
+            : null,
+          destinationParentPromptFolder: destinationParentPromptFolderId
+            ? entities.promptFolder({
+                id: destinationParentPromptFolderId,
+                data: destinationParentPromptFolder!
+              })
+            : null,
           promptFolderId,
-          orderAfterPromptFolderId
+          previousEntryId
         }
       })
     },
     handleSuccessOrConflictResponse: (payload) => {
       workspaceCollection.utils.upsertAuthoritative(payload.workspace)
+      promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
     },
     conflictMessage: 'Prompt folder move conflict'
   })

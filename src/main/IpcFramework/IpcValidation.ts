@@ -9,7 +9,6 @@ import type {
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
-  CreatePromptSubfolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
   PromptFolderSettings,
@@ -343,25 +342,63 @@ const parseCloseWorkspacePayload = parseObject<CloseWorkspacePayload>({})
 const parseCloseWorkspaceWireRequest: Parser<IpcRequestWithPayload<CloseWorkspacePayload>> =
   parseWireRequestWithPayload<CloseWorkspacePayload>(parseCloseWorkspacePayload)
 
-const parseCreatePromptFolderPayload = parseObject<CreatePromptFolderPayload>({
-  workspace: parseWorkspaceRevisionPayloadEntity,
-  promptFolderId: parseString,
-  displayName: parseString
-})
+const parseNullablePromptFolderRevisionPayloadEntity = (
+  value: unknown
+): RevisionPayloadEntity<PromptFolder> | null | undefined => {
+  if (value === null) {
+    return null
+  }
+
+  return parsePromptFolderRevisionPayloadEntity(value) ?? undefined
+}
+
+const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const valueKeys = Object.keys(record)
+
+  if (
+    valueKeys.length !== 5 ||
+    !('workspace' in record) ||
+    !('parentPromptFolder' in record) ||
+    !('promptFolderId' in record) ||
+    !('displayName' in record) ||
+    !('previousEntryId' in record)
+  ) {
+    return null
+  }
+
+  const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
+  const parentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
+    record.parentPromptFolder
+  )
+  const promptFolderId = parseString(record.promptFolderId)
+  const displayName = parseString(record.displayName)
+
+  if (
+    !workspace ||
+    parentPromptFolder === undefined ||
+    promptFolderId === null ||
+    displayName === null ||
+    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
+  ) {
+    return null
+  }
+
+  return {
+    workspace,
+    parentPromptFolder,
+    promptFolderId,
+    displayName,
+    previousEntryId: record.previousEntryId
+  }
+}
 
 const parseCreatePromptFolderWireRequest: Parser<IpcRequestWithPayload<CreatePromptFolderPayload>> =
   parseWireRequestWithPayload<CreatePromptFolderPayload>(parseCreatePromptFolderPayload)
-
-const parseCreatePromptSubfolderPayload = parseObject<CreatePromptSubfolderPayload>({
-  parentPromptFolder: parsePromptFolderRevisionPayloadEntity,
-  promptFolderId: parseString,
-  displayName: parseString,
-  previousEntryId: parseNullableString
-})
-
-const parseCreatePromptSubfolderWireRequest: Parser<
-  IpcRequestWithPayload<CreatePromptSubfolderPayload>
-> = parseWireRequestWithPayload<CreatePromptSubfolderPayload>(parseCreatePromptSubfolderPayload)
 
 const parseCreatePromptPayload: Parser<CreatePromptPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -375,7 +412,7 @@ const parseCreatePromptPayload: Parser<CreatePromptPayload> = (value) => {
     valueKeys.length !== 3 ||
     !('promptFolder' in record) ||
     !('prompt' in record) ||
-    !('previousPromptId' in record)
+    !('previousEntryId' in record)
   ) {
     return null
   }
@@ -387,16 +424,16 @@ const parseCreatePromptPayload: Parser<CreatePromptPayload> = (value) => {
     return null
   }
 
-  const previousPromptId = record.previousPromptId
+  const previousEntryId = record.previousEntryId
 
-  if (previousPromptId !== null && typeof previousPromptId !== 'string') {
+  if (previousEntryId !== null && typeof previousEntryId !== 'string') {
     return null
   }
 
   return {
     promptFolder,
     prompt,
-    previousPromptId
+    previousEntryId
   }
 }
 
@@ -450,7 +487,7 @@ const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
     !('sourcePromptFolder' in record) ||
     !('destinationPromptFolder' in record) ||
     !('prompt' in record) ||
-    !('orderAfterPromptId' in record)
+    !('previousEntryId' in record)
   ) {
     return null
   }
@@ -465,9 +502,9 @@ const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
     return null
   }
 
-  const orderAfterPromptId = record.orderAfterPromptId
+  const previousEntryId = record.previousEntryId
 
-  if (orderAfterPromptId !== null && typeof orderAfterPromptId !== 'string') {
+  if (previousEntryId !== null && typeof previousEntryId !== 'string') {
     return null
   }
 
@@ -475,7 +512,7 @@ const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
     sourcePromptFolder,
     destinationPromptFolder,
     prompt,
-    orderAfterPromptId
+    previousEntryId
   }
 }
 
@@ -491,11 +528,52 @@ const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
 const parseSetPromptStatusWireRequest: Parser<IpcRequestWithPayload<SetPromptStatusPayload>> =
   parseWireRequestWithPayload<SetPromptStatusPayload>(parseSetPromptStatusPayload)
 
-const parseMovePromptFolderPayload = parseObject<MovePromptFolderPayload>({
-  workspace: parseWorkspaceRevisionPayloadEntity,
-  promptFolderId: parseString,
-  orderAfterPromptFolderId: parseNullableString
-})
+const parseMovePromptFolderPayload: Parser<MovePromptFolderPayload> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const valueKeys = Object.keys(record)
+
+  if (
+    valueKeys.length !== 5 ||
+    !('workspace' in record) ||
+    !('sourceParentPromptFolder' in record) ||
+    !('destinationParentPromptFolder' in record) ||
+    !('promptFolderId' in record) ||
+    !('previousEntryId' in record)
+  ) {
+    return null
+  }
+
+  const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
+  const sourceParentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
+    record.sourceParentPromptFolder
+  )
+  const destinationParentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
+    record.destinationParentPromptFolder
+  )
+  const promptFolderId = parseString(record.promptFolderId)
+
+  if (
+    !workspace ||
+    sourceParentPromptFolder === undefined ||
+    destinationParentPromptFolder === undefined ||
+    promptFolderId === null ||
+    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
+  ) {
+    return null
+  }
+
+  return {
+    workspace,
+    sourceParentPromptFolder,
+    destinationParentPromptFolder,
+    promptFolderId,
+    previousEntryId: record.previousEntryId
+  }
+}
 
 const parseMovePromptFolderWireRequest: Parser<IpcRequestWithPayload<MovePromptFolderPayload>> =
   parseWireRequestWithPayload<MovePromptFolderPayload>(parseMovePromptFolderPayload)
@@ -567,10 +645,6 @@ export const parseCloseWorkspaceRequest = createRequestParser(parseCloseWorkspac
 
 export const parseCreatePromptFolderRequest = createRequestParser(
   parseCreatePromptFolderWireRequest
-)
-
-export const parseCreatePromptSubfolderRequest = createRequestParser(
-  parseCreatePromptSubfolderWireRequest
 )
 
 export const parseCreatePromptRequest = createRequestParser(parseCreatePromptWireRequest)

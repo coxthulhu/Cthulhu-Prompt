@@ -377,7 +377,7 @@
     return nextFolderIds
   }
 
-  const getPromptFolderOrderAfterId = (
+  const getPromptFolderPreviousEntryId = (
     folderIds: string[],
     folderId: string
   ): string | null => {
@@ -461,9 +461,9 @@
       return
     }
 
-    const orderAfterPromptFolderId = getPromptFolderOrderAfterId(previewIds, draggedFolderId)
+    const previousEntryId = getPromptFolderPreviousEntryId(previewIds, draggedFolderId)
     void runIpcBestEffort(async () => {
-      await movePromptFolder(workspaceId, draggedFolderId, orderAfterPromptFolderId)
+      await movePromptFolder(workspaceId, draggedFolderId, previousEntryId)
     })
   }
 

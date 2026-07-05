@@ -97,20 +97,20 @@ const readLatestPromptFromTransaction = (
 
 const resolvePromptInsertIndex = (
   promptIds: string[],
-  orderAfterPromptId: string | null
+  previousEntryId: string | null
 ): number | null => {
-  if (orderAfterPromptId === null) {
+  if (previousEntryId === null) {
     return 0
   }
 
-  const previousIndex = promptIds.indexOf(orderAfterPromptId)
+  const previousIndex = promptIds.indexOf(previousEntryId)
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
 export const createPrompt = async (
   promptFolderId: string,
   prompt: PromptFull,
-  previousPromptId: string | null
+  previousEntryId: string | null
 ): Promise<void> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
 
@@ -139,10 +139,10 @@ export const createPrompt = async (
       collections.promptFolder.update(promptFolderId, (draft) => {
         let insertIndex = draft.entryIds.length
 
-        if (previousPromptId === null) {
+        if (previousEntryId === null) {
           insertIndex = 0
         } else {
-          const previousIndex = draft.entryIds.indexOf(previousPromptId)
+          const previousIndex = draft.entryIds.indexOf(previousEntryId)
           if (previousIndex !== -1) {
             insertIndex = previousIndex + 1
           }
@@ -172,7 +172,7 @@ export const createPrompt = async (
           ...promptEntity,
           data: toPersistedPrompt(promptEntity.data)
         },
-        previousPromptId
+        previousEntryId
       })
 
       if (mutationResult.success) {
@@ -433,7 +433,7 @@ export const movePrompt = async (
   sourcePromptFolderId: string,
   destinationPromptFolderId: string,
   promptId: string,
-  orderAfterPromptId: string | null
+  previousEntryId: string | null
 ): Promise<void> => {
   const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
   if (!sourcePromptFolder) {
@@ -470,7 +470,7 @@ export const movePrompt = async (
         (currentPromptId) => currentPromptId !== promptId
       )
     : getPromptFolderPromptIds(destinationPromptFolder)
-  const insertIndex = resolvePromptInsertIndex(destinationPromptIds, orderAfterPromptId)
+  const insertIndex = resolvePromptInsertIndex(destinationPromptIds, previousEntryId)
 
   if (insertIndex === null) {
     throw new Error('Order-after prompt not found')
@@ -485,7 +485,7 @@ export const movePrompt = async (
           // move is not offset by the prompt's own vacated slot.
           const nextEntryIds = draft.entryIds.filter((entryId) => entryId !== promptId)
           const targetIndex =
-            orderAfterPromptId === null ? 0 : nextEntryIds.indexOf(orderAfterPromptId) + 1
+            previousEntryId === null ? 0 : nextEntryIds.indexOf(previousEntryId) + 1
           nextEntryIds.splice(targetIndex, 0, promptId)
           draft.entryIds = nextEntryIds
           draft.modifiedAt = modifiedAt
@@ -500,7 +500,7 @@ export const movePrompt = async (
       })
       collections.promptFolder.update(destinationPromptFolderId, (draft) => {
         const targetIndex =
-          orderAfterPromptId === null ? 0 : draft.entryIds.indexOf(orderAfterPromptId) + 1
+          previousEntryId === null ? 0 : draft.entryIds.indexOf(previousEntryId) + 1
         const nextEntryIds = [...draft.entryIds]
         nextEntryIds.splice(targetIndex, 0, promptId)
         draft.entryIds = nextEntryIds
@@ -553,7 +553,7 @@ export const movePrompt = async (
           ...promptEntity,
           data: toPersistedPrompt(promptEntity.data)
         },
-        orderAfterPromptId
+        previousEntryId
       })
 
       if (mutationResult.success) {

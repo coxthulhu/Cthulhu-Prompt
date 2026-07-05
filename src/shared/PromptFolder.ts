@@ -104,24 +104,15 @@ export type RenamePromptFolderPayload = {
 
 export type CreatePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
-  promptFolderId: string
-  displayName: string
-}
-
-export type CreatePromptFolderResponsePayload = {
-  workspace: RevisionEnvelope<Workspace>
-  promptFolder?: RevisionEnvelope<PromptFolder>
-}
-
-export type CreatePromptSubfolderPayload = {
-  parentPromptFolder: RevisionPayloadEntity<PromptFolder>
+  parentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
   promptFolderId: string
   displayName: string
   previousEntryId: string | null
 }
 
-export type CreatePromptSubfolderResponsePayload = {
-  parentPromptFolder: RevisionEnvelope<PromptFolder>
+export type CreatePromptFolderResponsePayload = {
+  workspace?: RevisionEnvelope<Workspace>
+  parentPromptFolder?: RevisionEnvelope<PromptFolder>
   promptFolder?: RevisionEnvelope<PromptFolder>
 }
 

@@ -34,7 +34,8 @@ export type PromptFolderPersistenceFields = {
   workspaceId: string
   workspacePath: string
   folderName: string
-  previousFolderName?: string
+  folderPath: string
+  previousFolderPath?: string
   parentPromptFolderId: string | null
   depth: number
 }
@@ -159,22 +160,23 @@ export const promptFolderPersistence: PersistenceLayer<
   PromptFolderPersistenceFields
 > = {
   stageChanges: async (change) => {
-    const { workspacePath, folderName } = change.persistenceFields
-    const previousFolderName = change.persistenceFields.previousFolderName
-    const stagingFolderName = previousFolderName ?? folderName
-    const folderPath = resolvePromptFolderPath(workspacePath, stagingFolderName)
-    const orderPath = resolvePromptFolderOrderPath(workspacePath, stagingFolderName)
+    const { workspacePath, folderPath: targetRelativePath } = change.persistenceFields
+    const previousFolderPath = change.persistenceFields.previousFolderPath
+    const stagingRelativePath = previousFolderPath ?? targetRelativePath
+    const folderPath = resolvePromptFolderPath(workspacePath, stagingRelativePath)
+    const orderPath = resolvePromptFolderOrderPath(workspacePath, stagingRelativePath)
     const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(
       workspacePath,
-      stagingFolderName
+      stagingRelativePath
     )
-    const infoPath = resolvePromptFolderInfoPath(workspacePath, stagingFolderName)
+    const infoPath = resolvePromptFolderInfoPath(workspacePath, stagingRelativePath)
     const settingsTextPaths = PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => ({
       field,
-      path: resolvePromptFolderSettingsTextPath(workspacePath, stagingFolderName, field)
+      path: resolvePromptFolderSettingsTextPath(workspacePath, stagingRelativePath, field)
     }))
-    const isFolderRename = previousFolderName !== undefined && previousFolderName !== folderName
-    const targetFolderPath = resolvePromptFolderPath(workspacePath, folderName)
+    const isFolderRename =
+      previousFolderPath !== undefined && previousFolderPath !== targetRelativePath
+    const targetFolderPath = resolvePromptFolderPath(workspacePath, targetRelativePath)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
@@ -213,7 +215,7 @@ export const promptFolderPersistence: PersistenceLayer<
       stagedChanges.push(createStagedDirectoryRename(folderPath, targetFolderPath))
     }
 
-    const { previousFolderName: _previousFolderName, ...nextPersistenceFields } =
+    const { previousFolderPath: _previousFolderPath, ...nextPersistenceFields } =
       change.persistenceFields
 
     return createPersistenceStageResult(stagedChanges, nextPersistenceFields)
@@ -225,9 +227,10 @@ export const promptFolderPersistence: PersistenceLayer<
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
-    const { workspacePath, folderName, parentPromptFolderId, depth } = persistenceFields
-    const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
-    const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName)
+    const { workspacePath, folderName, folderPath, parentPromptFolderId, depth } =
+      persistenceFields
+    const orderPath = resolvePromptFolderOrderPath(workspacePath, folderPath)
+    const infoPath = resolvePromptFolderInfoPath(workspacePath, folderPath)
     const fs = getFs()
 
     if (!fs.existsSync(orderPath) || !fs.existsSync(infoPath)) {
@@ -236,14 +239,14 @@ export const promptFolderPersistence: PersistenceLayer<
 
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
     const entryIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).entryIds]
-    const modifiedAtByPromptId = readPromptModifiedAtByPromptId(workspacePath, folderName)
+    const modifiedAtByPromptId = readPromptModifiedAtByPromptId(workspacePath, folderPath)
     const promptIds = entryIds.filter((entryId) => modifiedAtByPromptId.has(entryId))
-    const completedPromptIds = readCompletedPromptIds(workspacePath, folderName)
-    const modifiedAt = readPromptFolderModifiedAt(workspacePath, folderName, promptIds)
+    const completedPromptIds = readCompletedPromptIds(workspacePath, folderPath)
+    const modifiedAt = readPromptFolderModifiedAt(workspacePath, folderPath, promptIds)
     const folderSettings = Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        readOptionalTextFile(resolvePromptFolderSettingsTextPath(workspacePath, folderName, field))
+        readOptionalTextFile(resolvePromptFolderSettingsTextPath(workspacePath, folderPath, field))
       ])
     ) as PromptFolderSettings
 

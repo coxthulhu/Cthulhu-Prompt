@@ -23,8 +23,8 @@ import { getFs } from '../fs-provider'
 export type PromptPersistenceFields = {
   workspaceId: string
   workspacePath: string
-  folderName: string
-  previousFolderName?: string
+  folderPath: string
+  previousFolderPath?: string
   promptFolderId: string
   promptId: string
   promptStem: string
@@ -73,7 +73,7 @@ const hasSameCompletionMetadata = (left: PromptPersisted, right: PromptPersisted
 export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {
   const folderPath = resolvePromptFolderPath(
     persistenceFields.workspacePath,
-    persistenceFields.folderName
+    persistenceFields.folderPath
   )
   const filePaths = resolvePromptPathsFromStem(folderPath, persistenceFields.promptStem)
   const fs = getFs()
@@ -84,11 +84,11 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
   stageChanges: async (change) => {
     const currentFolderPath = resolvePromptFolderPath(
       change.persistenceFields.workspacePath,
-      change.persistenceFields.previousFolderName ?? change.persistenceFields.folderName
+      change.persistenceFields.previousFolderPath ?? change.persistenceFields.folderPath
     )
     const targetFolderPath = resolvePromptFolderPath(
       change.persistenceFields.workspacePath,
-      change.persistenceFields.folderName
+      change.persistenceFields.folderPath
     )
     const currentStem = change.persistenceFields.promptStem
     const currentPaths = resolvePromptPathsFromStem(currentFolderPath, currentStem)
@@ -121,7 +121,7 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
     fileChanges.push(createStagedEnsureDirectory(targetFolderPath, !targetFolderAlreadyExists))
 
-    const { previousFolderName: _previousFolderName, ...nextPersistenceFields } =
+    const { previousFolderPath: _previousFolderPath, ...nextPersistenceFields } =
       change.persistenceFields
 
     return createPersistenceStageResult(fileChanges, {
@@ -138,7 +138,7 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
   loadData: async (persistenceFields) => {
     const folderPath = resolvePromptFolderPath(
       persistenceFields.workspacePath,
-      persistenceFields.folderName
+      persistenceFields.folderPath
     )
     const filePaths = resolvePromptPathsFromStem(folderPath, persistenceFields.promptStem)
     const fs = getFs()
@@ -155,7 +155,7 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
 
     const normalizedPrompt = normalizePromptCompletionForFolder(
       prompt,
-      isCompletedPromptFolderName(persistenceFields.folderName)
+      isCompletedPromptFolderName(persistenceFields.folderPath)
     )
 
     if (!hasSameCompletionMetadata(prompt, normalizedPrompt)) {

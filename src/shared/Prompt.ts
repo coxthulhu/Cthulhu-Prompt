@@ -80,7 +80,7 @@ export type PromptRevisionResponsePayload = {
 export type CreatePromptPayload = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
   prompt: RevisionPayloadEntity<PromptPersisted>
-  previousPromptId: string | null
+  previousEntryId: string | null
 }
 
 export type CreatePromptResponsePayload = {
@@ -101,7 +101,7 @@ export type MovePromptPayload = {
   sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
   destinationPromptFolder: RevisionPayloadEntity<PromptFolder>
   prompt: RevisionPayloadEntity<PromptPersisted>
-  orderAfterPromptId: string | null
+  previousEntryId: string | null
 }
 
 export type MovePromptResponsePayload = {

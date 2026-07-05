@@ -26,6 +26,26 @@ import {
 
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
+const resolveLoadedPromptFolderPath = (
+  promptFolderId: string,
+  promptFolderById: Map<string, { folderName: string; parentPromptFolderId: string | null }>
+): string => {
+  const promptFolder = promptFolderById.get(promptFolderId)
+
+  if (!promptFolder) {
+    throw new Error('Prompt folder not loaded')
+  }
+
+  if (promptFolder.parentPromptFolderId === null) {
+    return promptFolder.folderName
+  }
+
+  return path.join(
+    resolveLoadedPromptFolderPath(promptFolder.parentPromptFolderId, promptFolderById),
+    promptFolder.folderName
+  )
+}
+
 const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
   if (!isWorkspaceInfoPath(workspaceInfoPath)) {
     return false
@@ -112,6 +132,15 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
   const workspaceId = readWorkspaceInfo(workspaceInfoPath).workspaceId
   const promptFolders = readAllPromptFolders(workspacePath)
+  const promptFolderById = new Map(
+    promptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
+  )
+  const promptFolderPathById = new Map(
+    promptFolders.map((promptFolder) => [
+      promptFolder.id,
+      resolveLoadedPromptFolderPath(promptFolder.id, promptFolderById)
+    ])
+  )
 
   // Side effect: hydrate workspace into the new committed data store.
   await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath, workspaceInfoPath })
@@ -123,6 +152,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         workspaceId,
         workspacePath,
         folderName: promptFolder.folderName,
+        folderPath: promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName,
         parentPromptFolderId: promptFolder.parentPromptFolderId,
         depth: promptFolder.depth
       })
@@ -130,12 +160,13 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   )
 
   const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
-    const promptStemByPromptId = readPromptStemByPromptId(workspacePath, promptFolder.folderName)
+    const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
+    const promptStemByPromptId = readPromptStemByPromptId(workspacePath, folderPath)
     const promptIds = promptFolder.entryIds.filter((entryId) => promptStemByPromptId.has(entryId))
-    const completedFolderName = resolveCompletedPromptFolderName(promptFolder.folderName)
+    const completedFolderPath = resolveCompletedPromptFolderName(folderPath)
     const completedPromptStemByPromptId = readPromptStemByPromptId(
       workspacePath,
-      completedFolderName
+      completedFolderPath
     )
 
     return [
@@ -144,7 +175,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         return data.prompt.loadDataFromPersistence(promptId, {
           workspaceId,
           workspacePath,
-          folderName: promptFolder.folderName,
+          folderPath,
           promptFolderId: promptFolder.id,
           promptId,
           promptStem,
@@ -156,7 +187,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         return data.prompt.loadDataFromPersistence(promptId, {
           workspaceId,
           workspacePath,
-          folderName: completedFolderName,
+          folderPath: completedFolderPath,
           promptFolderId: promptFolder.id,
           promptId,
           promptStem,

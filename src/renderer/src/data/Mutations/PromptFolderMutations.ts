@@ -85,7 +85,9 @@ export const mutatePacedPromptFolderSettingsAutosaveUpdate = ({
 
 export const createPromptFolder = async (
   workspaceId: string,
-  displayName: string
+  displayName: string,
+  parentPromptFolderId: string | null = null,
+  previousEntryId: string | null = null
 ): Promise<void> => {
   const workspace = workspaceCollection.get(workspaceId)
 
@@ -93,9 +95,18 @@ export const createPromptFolder = async (
     throw new Error('Workspace not loaded')
   }
 
+  const parentPromptFolder = parentPromptFolderId
+    ? promptFolderCollection.get(parentPromptFolderId)
+    : null
+
+  if (parentPromptFolderId && !parentPromptFolder) {
+    throw new Error('Parent prompt folder not loaded')
+  }
+
   const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
   const optimisticPromptFolderId = compactGuid(crypto.randomUUID())
   const modifiedAt = getCurrentIsoSecondTimestamp()
+  const depth = parentPromptFolder ? parentPromptFolder.depth + 1 : 0
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -103,8 +114,8 @@ export const createPromptFolder = async (
         id: optimisticPromptFolderId,
         folderName,
         displayName: normalizedDisplayName,
-        parentPromptFolderId: null,
-        depth: 0,
+        parentPromptFolderId,
+        depth,
         modifiedAt,
         promptCount: 0,
         entryIds: [],
@@ -116,9 +127,24 @@ export const createPromptFolder = async (
         settings: createEmptyPromptFolderSettings(),
         hasLoadedInitialData: false
       })
-      collections.workspace.update(workspaceId, (draft) => {
-        draft.promptFolderIds = [optimisticPromptFolderId, ...draft.promptFolderIds]
-      })
+      if (parentPromptFolderId) {
+        collections.promptFolder.update(parentPromptFolderId, (draft) => {
+          const insertIndex =
+            previousEntryId === null ? 0 : draft.entryIds.indexOf(previousEntryId) + 1
+          const nextEntryIds = [...draft.entryIds]
+          nextEntryIds.splice(insertIndex, 0, optimisticPromptFolderId)
+          draft.entryIds = nextEntryIds
+          draft.modifiedAt = modifiedAt
+        })
+      } else {
+        collections.workspace.update(workspaceId, (draft) => {
+          const insertIndex =
+            previousEntryId === null ? 0 : draft.promptFolderIds.indexOf(previousEntryId) + 1
+          const nextPromptFolderIds = [...draft.promptFolderIds]
+          nextPromptFolderIds.splice(insertIndex, 0, optimisticPromptFolderId)
+          draft.promptFolderIds = nextPromptFolderIds
+        })
+      }
     },
     persistMutations: async ({ entities, invoke, transaction }) => {
       const mutationResult = await invoke<{ payload: CreatePromptFolderPayload }>(
@@ -129,8 +155,15 @@ export const createPromptFolder = async (
               id: workspaceId,
               data: workspace
             }),
+            parentPromptFolder: parentPromptFolderId
+              ? entities.promptFolder({
+                  id: parentPromptFolderId,
+                  data: parentPromptFolder!
+                })
+              : null,
             promptFolderId: optimisticPromptFolderId,
-            displayName: normalizedDisplayName
+            displayName: normalizedDisplayName,
+            previousEntryId
           }
         }
       )
@@ -142,7 +175,13 @@ export const createPromptFolder = async (
       return mutationResult
     },
     handleSuccessOrConflictResponse: (payload) => {
-      workspaceCollection.utils.upsertAuthoritative(payload.workspace)
+      if (payload.workspace) {
+        workspaceCollection.utils.upsertAuthoritative(payload.workspace)
+      }
+
+      if (payload.parentPromptFolder) {
+        promptFolderCollection.utils.upsertAuthoritative(payload.parentPromptFolder)
+      }
 
       if (!payload.promptFolder) {
         return

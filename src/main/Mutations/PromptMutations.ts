@@ -44,13 +44,13 @@ type PromptFilenameTargetOverride = {
 
 const resolvePromptInsertIndex = (
   promptIds: string[],
-  orderAfterPromptId: string | null
+  previousEntryId: string | null
 ): number | null => {
-  if (orderAfterPromptId === null) {
+  if (previousEntryId === null) {
     return 0
   }
 
-  const previousIndex = promptIds.indexOf(orderAfterPromptId)
+  const previousIndex = promptIds.indexOf(previousEntryId)
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
@@ -245,11 +245,11 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           let insertIndex = committedPromptFolder.committed.entryIds.length
-          if (payload.previousPromptId === null) {
+          if (payload.previousEntryId === null) {
             insertIndex = 0
           } else {
             const previousIndex = committedPromptFolder.committed.entryIds.indexOf(
-              payload.previousPromptId
+              payload.previousEntryId
             )
             if (previousIndex === -1) {
               return { success: false, error: 'Previous prompt not found' }
@@ -280,7 +280,7 @@ export const setupPromptMutationHandlers = (): void => {
           const basePromptPersistenceFields: PromptPersistenceFields = {
             workspaceId: committedPromptFolder.persistenceFields.workspaceId,
             workspacePath: committedPromptFolder.persistenceFields.workspacePath,
-            folderName: committedPromptFolder.persistenceFields.folderName,
+            folderPath: committedPromptFolder.persistenceFields.folderPath,
             promptFolderId: requestedPromptFolder.id,
             promptId,
             promptStem: promptId,
@@ -579,7 +579,7 @@ export const setupPromptMutationHandlers = (): void => {
             sourcePromptFolder: requestedSourcePromptFolder,
             destinationPromptFolder: requestedDestinationPromptFolder,
             prompt: requestedPrompt,
-            orderAfterPromptId
+            previousEntryId
           } = validatedRequest.payload
           const sourcePromptFolder = data.promptFolder.committedStore.getEntry(
             requestedSourcePromptFolder.id
@@ -608,7 +608,7 @@ export const setupPromptMutationHandlers = (): void => {
                 (entryId) => entryId !== requestedPrompt.id
               )
             : destinationPromptFolder.committed.entryIds
-          const insertIndex = resolvePromptInsertIndex(destinationEntryIds, orderAfterPromptId)
+          const insertIndex = resolvePromptInsertIndex(destinationEntryIds, previousEntryId)
 
           if (insertIndex === null) {
             return { success: false, error: 'Order-after prompt not found' }
@@ -640,8 +640,8 @@ export const setupPromptMutationHandlers = (): void => {
             ? prompt.persistenceFields
             : {
                 ...prompt.persistenceFields,
-                folderName: destinationPromptFolder.persistenceFields.folderName,
-                previousFolderName: sourcePromptFolder.persistenceFields.folderName,
+                folderPath: destinationPromptFolder.persistenceFields.folderPath,
+                previousFolderPath: sourcePromptFolder.persistenceFields.folderPath,
                 promptFolderId: requestedDestinationPromptFolder.id
               }
           const filenamePlans = isSameFolder
@@ -793,21 +793,21 @@ export const setupPromptMutationHandlers = (): void => {
                   status: targetStatus,
                   modifiedAt: now
                 }
-          const activeFolderName = promptFolder.persistenceFields.folderName
-          const completedFolderName = resolveCompletedPromptFolderName(activeFolderName)
+          const activeFolderPath = promptFolder.persistenceFields.folderPath
+          const completedFolderPath = resolveCompletedPromptFolderName(activeFolderPath)
           const persistenceFields =
             targetStatus === PromptStatus.Completed
               ? {
                   ...prompt.persistenceFields,
-                  folderName: completedFolderName,
-                  previousFolderName: activeFolderName,
+                  folderPath: completedFolderPath,
+                  previousFolderPath: activeFolderPath,
                   promptFolderId: requestedPromptFolder.id
                 }
               : isCompletedPrompt
                 ? {
                     ...prompt.persistenceFields,
-                    folderName: activeFolderName,
-                    previousFolderName: completedFolderName,
+                    folderPath: activeFolderPath,
+                    previousFolderPath: completedFolderPath,
                     promptFolderId: requestedPromptFolder.id
                   }
                 : prompt.persistenceFields

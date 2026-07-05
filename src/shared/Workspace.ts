@@ -12,12 +12,15 @@ export interface Workspace {
 
 export type MovePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
+  sourceParentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
+  destinationParentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
   promptFolderId: string
-  orderAfterPromptFolderId: string | null
+  previousEntryId: string | null
 }
 
 export type MovePromptFolderResponsePayload = {
   workspace: RevisionEnvelope<Workspace>
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
 }
 
 // Special-case create payload. This is command data for workspace setup,
