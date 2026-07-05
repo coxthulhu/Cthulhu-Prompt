@@ -331,7 +331,8 @@
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
-    gap: 8px;
+    gap: 12px;
+    padding-left: 4px;
     padding-right: 16px;
   }
 

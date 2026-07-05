@@ -130,6 +130,7 @@
     display: inline-flex;
     gap: 0;
     min-width: 0;
+    outline: 1px solid var(--ui-neutral-normal-border);
     transition: background-color 120ms ease;
   }
 
@@ -172,20 +173,8 @@
   }
 
   :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
-    border-left: 1px solid transparent;
-    position: relative;
+    border-left: 1px solid var(--ui-neutral-normal-border);
     width: 23px;
-  }
-
-  :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton)::before {
-    background: var(--ui-neutral-normal-border);
-    content: '';
-    height: 24px;
-    left: -1px;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1px;
   }
 
   .cthulhuUiIconButtonWithMoreOptions[data-size='compact']
@@ -193,19 +182,9 @@
     width: 21px;
   }
 
-  .cthulhuUiIconButtonWithMoreOptions[data-size='compact']
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton)::before {
-    height: 18px;
-  }
-
   .cthulhuUiIconButtonWithMoreOptions[data-size='tiny']
     :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
     width: 17px;
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions[data-size='tiny']
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton)::before {
-    height: 12px;
   }
 
   .cthulhuUiIconButtonWithMoreOptions[data-base-variant='dim']:hover
