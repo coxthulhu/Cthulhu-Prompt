@@ -122,8 +122,6 @@
 
 <style>
   .cthulhuUiIconButtonWithMoreOptions {
-    --cthulhu-ui-icon-button-more-options-hover-fill: var(--ui-neutral-action-hover-fill);
-
     align-items: center;
     background: var(--ui-ghost-surface);
     border-radius: var(--cthulhu-ui-radius-control);
@@ -131,34 +129,7 @@
     gap: 0;
     min-width: 0;
     outline: 1px solid var(--ui-neutral-normal-border);
-    transition: background-color 120ms ease;
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions[data-hover-variant='accent'] {
-    --cthulhu-ui-icon-button-more-options-hover-fill: var(--ui-accent-action-hover-fill);
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions[data-hover-variant='success'] {
-    --cthulhu-ui-icon-button-more-options-hover-fill: var(--ui-success-action-hover-fill);
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions[data-hover-variant='danger'] {
-    --cthulhu-ui-icon-button-more-options-hover-fill: var(--ui-danger-action-hover-fill);
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions[data-hover-variant='glyph'] {
-    --cthulhu-ui-icon-button-more-options-hover-fill: var(--ui-ghost-surface);
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions:hover,
-  .cthulhuUiIconButtonWithMoreOptions:has(:global(.cthulhuUiIconButton:focus-visible)),
-  .cthulhuUiIconButtonWithMoreOptions:has(
-      :global(.cthulhuUiIconButtonWithMoreOptionsMain[data-active='true'])
-    ),
-  .cthulhuUiIconButtonWithMoreOptions:has(
-      :global(.cthulhuUiIconButtonWithMoreOptionsChevron[data-active='true'])
-    ) {
-    background: var(--cthulhu-ui-icon-button-more-options-hover-fill);
+    overflow: hidden;
   }
 
   .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton) {
@@ -166,14 +137,15 @@
     border-radius: 0;
   }
 
-  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton:hover),
-  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton:focus-visible),
-  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton[data-active='true']) {
-    background: var(--ui-ghost-surface);
+  :global(.cthulhuUiIconButtonWithMoreOptionsMain.cthulhuUiIconButton) {
+    border-bottom-left-radius: var(--cthulhu-ui-radius-control);
+    border-top-left-radius: var(--cthulhu-ui-radius-control);
   }
 
   :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
     border-left: 1px solid var(--ui-neutral-normal-border);
+    border-bottom-right-radius: var(--cthulhu-ui-radius-control);
+    border-top-right-radius: var(--cthulhu-ui-radius-control);
     width: 23px;
   }
 
@@ -185,14 +157,5 @@
   .cthulhuUiIconButtonWithMoreOptions[data-size='tiny']
     :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
     width: 17px;
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions[data-base-variant='dim']:hover
-    :global(.cthulhuUiIconButton:not([data-disabled='true'])),
-  .cthulhuUiIconButtonWithMoreOptions[data-base-variant='dim']:has(
-      :global(.cthulhuUiIconButton:focus-visible)
-    )
-    :global(.cthulhuUiIconButton:not([data-disabled='true'])) {
-    color: var(--ui-hoverable-icon-glyph);
   }
 </style>
