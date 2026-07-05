@@ -4,7 +4,7 @@ import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/work
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptStatus } from '@shared/Prompt'
-import { resolveUniquePromptStem } from '@shared/promptFilename'
+import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
 import { getFs } from '../fs-provider'
@@ -47,10 +47,19 @@ const writeWorkspacePromptFolderOrderFile = (
   fs.writeFileSync(orderPath, JSON.stringify({ promptFolderIds }, null, 2), 'utf8')
 }
 
-const resolvePromptStem = (title: string, promptId: string, usedStems: Set<string>): string => {
-  const promptStem = resolveUniquePromptStem(title, promptId, (stem) => usedStems.has(stem))
-  usedStems.add(promptStem)
-  return promptStem
+const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> => {
+  const titleStemCounts = new Map<string, number>()
+
+  for (const prompt of prompts) {
+    const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
+    titleStemCounts.set(titleStem, (titleStemCounts.get(titleStem) ?? 0) + 1)
+  }
+
+  return new Set(
+    [...titleStemCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([titleStem]) => titleStem)
+  )
 }
 
 const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: boolean): string => {
@@ -86,15 +95,16 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
         }
       ]
     : []
-  const usedStems = new Set<string>()
   const promptIds: string[] = []
+  const duplicateTitleStems = getDuplicateTitleStems(examplePrompts)
 
   fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), {
     recursive: true
   })
 
   for (const prompt of examplePrompts) {
-    const promptStem = resolvePromptStem(prompt.title, prompt.id, usedStems)
+    const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
+    const promptStem = buildPromptStem(prompt.title, prompt.id, duplicateTitleStems.has(titleStem))
     const markdownPath = path.join(
       exampleFolderPath,
       `${promptStem}${PROMPT_MARKDOWN_FILENAME_SUFFIX}`

@@ -1,6 +1,6 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
-import { resolveUniquePromptStem } from '@shared/promptFilename'
+import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
 import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
@@ -87,10 +87,19 @@ const createDeterministicId = (seed: string): string => {
 
 const DEFAULT_PROMPT_TIMESTAMP = '2023-01-01T00:00:00.000Z'
 
-const resolvePromptStem = (title: string, promptId: string, usedStems: Set<string>): string => {
-  const promptStem = resolveUniquePromptStem(title, promptId, (stem) => usedStems.has(stem))
-  usedStems.add(promptStem)
-  return promptStem
+const getDuplicateTitleStems = (prompts: Array<{ title: string; fallbackTitle: string }>) => {
+  const titleStemCounts = new Map<string, number>()
+
+  for (const prompt of prompts) {
+    const titleStem = sanitizePromptTitleForFilename(getPromptDisplayTitle(prompt)).toLowerCase()
+    titleStemCounts.set(titleStem, (titleStemCounts.get(titleStem) ?? 0) + 1)
+  }
+
+  return new Set(
+    [...titleStemCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([titleStem]) => titleStem)
+  )
 }
 
 const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
@@ -117,13 +126,13 @@ const normalizePrompts = (prompts: PromptTemplate[] | undefined) => {
 
 const createPromptFiles = (
   folderPath: string,
-  prompts: PromptTemplate[]
+  prompts: Array<PromptTemplate & { title: string; fallbackTitle: string }>
 ): {
   promptIds: string[]
   promptFiles: Record<string, string>
 } => {
-  const usedStems = new Set<string>()
   const promptFiles: Record<string, string> = {}
+  const duplicateTitleStems = getDuplicateTitleStems(prompts)
 
   for (const prompt of prompts) {
     const promptData: PromptPersisted = {
@@ -135,7 +144,9 @@ const createPromptFiles = (
       status: PromptStatus.Todo,
       promptText: prompt.promptText
     }
-    const promptStem = resolvePromptStem(getPromptDisplayTitle(promptData), prompt.id, usedStems)
+    const displayTitle = getPromptDisplayTitle(promptData)
+    const titleStem = sanitizePromptTitleForFilename(displayTitle).toLowerCase()
+    const promptStem = buildPromptStem(displayTitle, prompt.id, duplicateTitleStems.has(titleStem))
 
     promptFiles[`${folderPath}/${promptStem}.prompt.md`] = serializePromptMarkdown(promptData)
   }

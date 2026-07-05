@@ -63,8 +63,8 @@ describe('Prompt editor metadata', () => {
       workspace: {
         scenario: 'sample',
         fileModifiedTimes: {
-          '/ws/sample/Prompts/Examples/Simple Greeting-simple-1.prompt.md': OLD_PROMPT_MODIFIED_AT,
-          '/ws/sample/Prompts/Development/Code Review-dev-1.prompt.md': OLD_PROMPT_MODIFIED_AT
+          '/ws/sample/Prompts/Examples/Simple Greeting.prompt.md': OLD_PROMPT_MODIFIED_AT,
+          '/ws/sample/Prompts/Development/Code Review.prompt.md': OLD_PROMPT_MODIFIED_AT
         }
       }
     })

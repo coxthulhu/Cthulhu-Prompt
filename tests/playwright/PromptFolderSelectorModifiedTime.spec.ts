@@ -25,9 +25,9 @@ describe('Prompt folder selector modified time', () => {
       workspace: {
         scenario: 'sample',
         fileModifiedTimes: {
-          '/ws/sample/Prompts/Examples/Simple Greeting-simple-1.prompt.md': daysAgo(2),
-          '/ws/sample/Prompts/Development/Code Review-dev-1.prompt.md': daysAgo(4),
-          '/ws/sample/Prompts/Development/Bug Analysis-dev-2.prompt.md': daysAgo(1)
+          '/ws/sample/Prompts/Examples/Simple Greeting.prompt.md': daysAgo(2),
+          '/ws/sample/Prompts/Development/Code Review.prompt.md': daysAgo(4),
+          '/ws/sample/Prompts/Development/Bug Analysis.prompt.md': daysAgo(1)
         }
       }
     })

@@ -6,6 +6,7 @@ type PersistedPromptLookup = {
   folderName: string
   promptId: string
   promptTitle: string
+  needsFilenameIdSuffix?: boolean
 }
 
 type PersistedPromptFilePaths = {
@@ -40,7 +41,11 @@ export const resolvePersistedPromptFilePathsByTitle = (
   lookup: PersistedPromptLookup
 ): PersistedPromptFilePaths => {
   const folderPath = `${lookup.workspacePath}/Prompts/${lookup.folderName}`
-  const promptStem = buildPromptStem(lookup.promptTitle, lookup.promptId)
+  const promptStem = buildPromptStem(
+    lookup.promptTitle,
+    lookup.promptId,
+    lookup.needsFilenameIdSuffix ?? false
+  )
   return {
     markdownPath: `${folderPath}/${promptStem}.prompt.md`
   }

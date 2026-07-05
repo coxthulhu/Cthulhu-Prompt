@@ -1,7 +1,7 @@
 import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
-import { resolveUniquePromptStem } from '@shared/promptFilename'
+import { buildPromptStem } from '@shared/promptFilename'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -28,33 +28,7 @@ export type PromptPersistenceFields = {
   promptFolderId: string
   promptId: string
   promptStem: string
-}
-
-const isStemTaken = (
-  folderPath: string,
-  stem: string,
-  currentStem: string,
-  currentFolderPath: string
-): boolean => {
-  if (stem === currentStem && folderPath === currentFolderPath) {
-    return false
-  }
-
-  const stemPaths = resolvePromptPathsFromStem(folderPath, stem)
-  const fs = getFs()
-  return fs.existsSync(stemPaths.markdownPath)
-}
-
-const resolvePromptStem = (
-  title: string,
-  promptId: string,
-  folderPath: string,
-  currentStem: string,
-  currentFolderPath: string
-): string => {
-  return resolveUniquePromptStem(title, promptId, (stem) => {
-    return isStemTaken(folderPath, stem, currentStem, currentFolderPath)
-  })
+  needsFilenameIdSuffix: boolean
 }
 
 const isCompletedPromptFolderName = (folderName: string): boolean => {
@@ -124,12 +98,10 @@ export const promptPersistence: PersistenceLayer<PromptPersisted, PromptPersiste
     }
 
     const stemTitle = getPromptDisplayTitle(change.data)
-    const stem = resolvePromptStem(
+    const stem = buildPromptStem(
       stemTitle,
       change.data.id,
-      targetFolderPath,
-      currentStem,
-      currentFolderPath
+      change.persistenceFields.needsFilenameIdSuffix
     )
     const targetPaths = resolvePromptPathsFromStem(targetFolderPath, stem)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)

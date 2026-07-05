@@ -139,26 +139,30 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
     )
 
     return [
-      ...promptIds.map((promptId) =>
-        data.prompt.loadDataFromPersistence(promptId, {
+      ...promptIds.map((promptId) => {
+        const promptStem = promptStemByPromptId.get(promptId) ?? promptId
+        return data.prompt.loadDataFromPersistence(promptId, {
           workspaceId,
           workspacePath,
           folderName: promptFolder.folderName,
           promptFolderId: promptFolder.id,
           promptId,
-          promptStem: promptStemByPromptId.get(promptId) ?? promptId
+          promptStem,
+          needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
         })
-      ),
-      ...promptFolder.completedPromptIds.map((promptId) =>
-        data.prompt.loadDataFromPersistence(promptId, {
+      }),
+      ...promptFolder.completedPromptIds.map((promptId) => {
+        const promptStem = completedPromptStemByPromptId.get(promptId) ?? promptId
+        return data.prompt.loadDataFromPersistence(promptId, {
           workspaceId,
           workspacePath,
           folderName: completedFolderName,
           promptFolderId: promptFolder.id,
           promptId,
-          promptStem: completedPromptStemByPromptId.get(promptId) ?? promptId
+          promptStem,
+          needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
         })
-      )
+      })
     ]
   })
 

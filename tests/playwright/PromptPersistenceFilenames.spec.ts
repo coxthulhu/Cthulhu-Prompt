@@ -1,7 +1,11 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
-import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  checkFileExists,
+  checkPersistedPromptFilesExistByTitle
+} from '../helpers/PromptPersistenceTestHelpers'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -9,6 +13,10 @@ const WORKSPACE_PATH = '/ws/sample'
 const FOLDER_NAME = 'Development'
 const PROMPT_ID = 'dev-1'
 const ORIGINAL_TITLE = 'Code Review'
+const COLLISION_WORKSPACE_PATH = '/ws/filename-collisions'
+const COLLISION_FOLDER_NAME = 'FilenameCollisions'
+const COLLISION_FIRST_PROMPT_ID = 'abcdef1234567890-first'
+const COLLISION_SECOND_PROMPT_ID = '1234567890abcdef-second'
 
 const promptTitleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} ${PROMPT_TITLE_SELECTOR}`
@@ -108,6 +116,74 @@ describe('Prompt persistence filenames', () => {
       .toEqual({
         originalFiles: { markdownExists: false },
         fallbackFiles: { markdownExists: true }
+      })
+  })
+
+  test('adds id suffixes to prompts with duplicate sanitized filename stems', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(COLLISION_WORKSPACE_PATH, [
+        {
+          folderName: COLLISION_FOLDER_NAME,
+          displayName: COLLISION_FOLDER_NAME,
+          prompts: [
+            {
+              id: COLLISION_FIRST_PROMPT_ID,
+              title: 'Starter One',
+              promptText: 'First collision prompt'
+            },
+            {
+              id: COLLISION_SECOND_PROMPT_ID,
+              title: 'Starter Two',
+              promptText: 'Second collision prompt'
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COLLISION_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(COLLISION_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(COLLISION_FIRST_PROMPT_ID))
+
+    const firstCollisionTitle = 'Case/Name'
+    const secondCollisionTitle = 'casename'
+    const folderPath = `${COLLISION_WORKSPACE_PATH}/Prompts/${COLLISION_FOLDER_NAME}`
+
+    await setPromptTitle(mainWindow, COLLISION_FIRST_PROMPT_ID, firstCollisionTitle)
+    await setPromptTitle(mainWindow, COLLISION_SECOND_PROMPT_ID, secondCollisionTitle)
+
+    await expect
+      .poll(
+        async () => {
+          const [firstUnsuffixed, firstSuffixed, secondUnsuffixed, secondSuffixed, oldSecond] =
+            await Promise.all([
+              checkFileExists(electronApp, `${folderPath}/CaseName.prompt.md`),
+              checkFileExists(electronApp, `${folderPath}/CaseName-abcdef12.prompt.md`),
+              checkFileExists(electronApp, `${folderPath}/casename.prompt.md`),
+              checkFileExists(electronApp, `${folderPath}/casename-12345678.prompt.md`),
+              checkFileExists(electronApp, `${folderPath}/Starter Two.prompt.md`)
+            ])
+
+          return { firstUnsuffixed, firstSuffixed, secondUnsuffixed, secondSuffixed, oldSecond }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        firstUnsuffixed: false,
+        firstSuffixed: true,
+        secondUnsuffixed: false,
+        secondSuffixed: true,
+        oldSecond: false
       })
   })
 })

@@ -11,26 +11,16 @@ export const sanitizePromptTitleForFilename = (title: string): string => {
   return normalizedTitle.slice(0, MAX_PROMPT_FILENAME_TITLE_LENGTH)
 }
 
-export const buildPromptStem = (title: string, promptId: string): string => {
-  const idPrefix = promptId.slice(0, 8)
-  return `${sanitizePromptTitleForFilename(title)}-${idPrefix}`
-}
-
-export const resolveUniquePromptStem = (
+export const buildPromptStem = (
   title: string,
   promptId: string,
-  isStemTaken: (stem: string) => boolean
+  needsFilenameIdSuffix: boolean
 ): string => {
-  const baseStem = buildPromptStem(title, promptId)
+  const titleStem = sanitizePromptTitleForFilename(title)
 
-  if (!isStemTaken(baseStem)) {
-    return baseStem
+  if (!needsFilenameIdSuffix) {
+    return titleStem
   }
 
-  let suffix = 2
-  while (isStemTaken(`${baseStem}-${suffix}`)) {
-    suffix += 1
-  }
-
-  return `${baseStem}-${suffix}`
+  return `${titleStem}-${promptId.slice(0, 8)}`
 }
