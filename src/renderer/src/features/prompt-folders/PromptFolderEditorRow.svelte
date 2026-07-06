@@ -163,8 +163,8 @@
       <div class="prompt-folder-editor-title-main">
         <RotatingChevron
           expanded={isPromptsSectionExpanded}
-          size={24}
-          iconSize={18}
+          size={30}
+          iconSize={24}
           class="prompt-folder-editor-chevron"
         />
 
@@ -275,7 +275,7 @@
     align-items: center;
     display: grid;
     gap: 10px;
-    grid-template-columns: 24px 40px minmax(0, 1fr);
+    grid-template-columns: 30px 40px minmax(0, 1fr);
     min-width: 0;
   }
 
