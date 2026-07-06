@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.0.26
+
+### New Features
+
+- Added prompt folder subfolder support for creating, moving, loading, and persisting nested folders.
+- Added prompt folder renaming from the folder editor.
+- Added prompt statuses for Todo, In Progress, and Completed, with editor title status controls.
+
+### Changes
+
+- Updated completed prompt storage to use prompt status frontmatter and show completed prompt counts in folder headers.
+- Mark prompts as In Progress after copying and show status pills in the editor.
+- Refined home workspace actions, prompt divider controls, more-options menus, button states, and virtual row spacing.
+- Reduced the default prompt editor minimum height to two lines.
+
+### Fixed
+
+- Fixed prompt movement so downward reorders no longer briefly shift or unmount the moved row.
+- Fixed divider-created prompts so they receive focus without forcing extra auto-scroll.
+- Fixed prompt filename collision handling so duplicate sanitized titles get stable ID suffixes.
+- Fixed virtualized editor scrolling and row positioning around Monaco clicks and device-pixel rounding.
+- Fixed prompt folder title edit clicks so they do not toggle the folder section.
+
 ## 0.0.25
 
 ### New Features
