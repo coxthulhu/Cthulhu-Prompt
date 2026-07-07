@@ -6,6 +6,7 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import { PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -353,7 +354,12 @@ describe('Prompt Folder Hydration', () => {
     if (geometry.guideLineLeft === null) {
       throw new Error('Missing prompt folder gutter guide line geometry')
     }
-    expect(Math.abs(geometry.guideLineLeft - (geometry.cardLeft + 6))).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(
+        geometry.guideLineLeft -
+          (geometry.cardLeft + PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX)
+      )
+    ).toBeLessThanOrEqual(1)
   })
 
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {

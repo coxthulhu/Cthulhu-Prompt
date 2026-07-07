@@ -495,8 +495,9 @@
       <SvelteVirtualWindow
         items={virtualItems}
         {rowRegistry}
+        overlayScrollbar
         leftScrollPaddingPx={0}
-        rightScrollPaddingPx={1}
+        rightScrollPaddingPx={0}
         testId="prompt-tree-virtual-window"
         spacerTestId="prompt-tree-virtual-window-spacer"
         bind:scrollToWithinWindowBand
@@ -548,6 +549,7 @@
     {isDragging}
     {isPromptDragActive}
     indentCount={1}
+    isLastRow={props.row.promptId === selectedPromptIds[selectedPromptIds.length - 1]}
     getPromptDroppableOptions={isCompletedMode
       ? undefined
       : () =>

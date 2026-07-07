@@ -228,30 +228,111 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toBeVisible()
 
     const rootAndPromptGeometry = await mainWindow.evaluate(
-      ({ rootToggleSelector, promptSelector }) => {
+      ({ hostSelector, rootToggleSelector, promptSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
         const rootToggle = document.querySelector<HTMLElement>(rootToggleSelector)
         const promptButton = document.querySelector<HTMLElement>(promptSelector)
         const rootRow = rootToggle?.closest<HTMLElement>('.sidebarPromptTreeFolderRow') ?? null
-        if (!rootToggle || !promptButton || !rootRow) return null
+        const visibleRootRow = rootToggle?.closest<HTMLElement>('.sidebarPromptTreeRow') ?? null
+        const promptLabel = promptButton?.querySelector<HTMLElement>(
+          '.sidebarPromptTreeSettingsLabel'
+        )
+        const promptGuideLine = promptButton?.querySelector<HTMLElement>(
+          '.sidebarPromptTreeGutter [data-indent-guide-line]'
+        )
+        const folderChevron = rootToggle?.querySelector<HTMLElement>(
+          '.sidebarPromptTreeChevronWrap'
+        )
+        if (
+          !host ||
+          !rootToggle ||
+          !promptButton ||
+          !rootRow ||
+          !visibleRootRow ||
+          !promptLabel ||
+          !folderChevron
+        ) {
+          return null
+        }
 
+        const hostRect = host.getBoundingClientRect()
         const rootRowRect = rootRow.getBoundingClientRect()
+        const rootToggleRect = rootToggle.getBoundingClientRect()
+        const visibleRootRowRect = visibleRootRow.getBoundingClientRect()
         const promptRect = promptButton.getBoundingClientRect()
+        const promptLabelRect = promptLabel.getBoundingClientRect()
+        const promptGuideLineRect = promptGuideLine?.getBoundingClientRect() ?? null
+        const folderChevronRect = folderChevron.getBoundingClientRect()
         return {
           hasRootGutter: Boolean(rootRow.querySelector('.sidebarPromptTreeGutter')),
-          promptIndentPx: Math.round(promptRect.left - rootRowRect.left),
+          folderChevronInsetPx: Math.round(folderChevronRect.left - hostRect.left),
+          promptGuideLineInsetPx: promptGuideLineRect
+            ? Math.round(promptGuideLineRect.left - hostRect.left)
+            : null,
+          promptLabelInsetPx: Math.round(promptLabelRect.left - hostRect.left),
+          promptRowLeftPx: Math.round(promptRect.left - hostRect.left),
+          promptRowRightPx: Math.round(hostRect.right - promptRect.right),
+          rootRowLeftPx: Math.round(rootRowRect.left - hostRect.left),
+          rootRowRightPx: Math.round(hostRect.right - rootRowRect.right),
+          rootToggleLeftPx: Math.round(rootToggleRect.left - hostRect.left),
+          rootToggleRightPx: Math.round(hostRect.right - rootToggleRect.right),
+          visibleRootRowLeftPx: Math.round(visibleRootRowRect.left - hostRect.left),
+          visibleRootRowRightPx: Math.round(hostRect.right - visibleRootRowRect.right),
           promptTopPx: Math.round(promptRect.top),
           rootTopPx: Math.round(rootRowRect.top)
         }
       },
       {
+        hostSelector: PROMPT_TREE_HOST_SELECTOR,
         rootToggleSelector: SHORT_FOLDER_TOGGLE,
         promptSelector: '[data-testid="prompt-tree-prompt-short-1"]'
       }
     )
     expect(rootAndPromptGeometry).not.toBeNull()
     expect(rootAndPromptGeometry!.hasRootGutter).toBe(false)
-    expect(rootAndPromptGeometry!.promptIndentPx).toBe(12)
+    expect(Math.abs(rootAndPromptGeometry!.rootRowLeftPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.rootRowRightPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.rootToggleLeftPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.rootToggleRightPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.visibleRootRowLeftPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.visibleRootRowRightPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.promptRowLeftPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.promptRowRightPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.folderChevronInsetPx - 9)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.promptGuideLineInsetPx! - 13)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootAndPromptGeometry!.promptLabelInsetPx - 25)).toBeLessThanOrEqual(1)
     expect(rootAndPromptGeometry!.promptTopPx).toBeGreaterThan(rootAndPromptGeometry!.rootTopPx)
+  })
+
+  test('selects prompt rows and toggles folder rows from the left gutter', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    const promptRow = mainWindow.locator('[data-testid="prompt-tree-prompt-short-2"]')
+    const folderToggle = mainWindow.locator(SHORT_FOLDER_TOGGLE)
+    await expect(promptRow).toBeVisible()
+    await expect(folderToggle).toHaveAttribute('aria-expanded', 'true')
+
+    const promptBox = await promptRow.boundingBox()
+    if (!promptBox) {
+      throw new Error('Missing prompt tree gutter click geometry')
+    }
+    await mainWindow.mouse.click(promptBox.x + 8, promptBox.y + promptBox.height / 2)
+    await expect(promptRow).toHaveAttribute('data-row-state', 'active')
+
+    const folderBox = await folderToggle.boundingBox()
+    if (!folderBox) {
+      throw new Error('Missing prompt tree folder edge click geometry')
+    }
+    await mainWindow.mouse.click(folderBox.x + 2, folderBox.y + folderBox.height / 2)
+    await expect(folderToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid^="prompt-tree-prompt-short-"]')).toHaveCount(0)
   })
 
   test('collapses the root folder row without changing the prompt folder screen section', async ({

@@ -10,6 +10,7 @@ import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersiste
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
+  beginPromptTreeRowGutterDrag,
   dragGhostSelector,
   dragPromptHandleToTarget,
   dragPromptTreeRowToTarget,
@@ -919,6 +920,22 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, true)
     await finishActiveDrag(mainWindow)
     await expectPromptEditorDraggingState(mainWindow, DEV_1_ID, false)
+  })
+
+  test('starts prompt-tree dragging from the prompt row gutter', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+
+    await beginPromptTreeRowGutterDrag(mainWindow, DEV_1_ID)
+    await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, true)
+    await expect(mainWindow.locator(dragGhostSelector)).toBeVisible()
+
+    await finishActiveDrag(mainWindow)
+    await expectPromptTreeRowDraggingState(mainWindow, DEV_1_ID, false)
   })
 
   test('shows the same prompt row ghost from both prompt drag handles', async ({ testSetup }) => {

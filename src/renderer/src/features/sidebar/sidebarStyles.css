@@ -48,7 +48,7 @@
   width: 100%;
   align-items: center;
   gap: 0;
-  border-radius: var(--cthulhu-ui-radius-control);
+  position: relative;
   background-color: var(--ui-ghost-surface);
   color: var(--ui-hoverable-text);
   transition:
@@ -79,14 +79,17 @@
 
 .sidebarPromptTreeToggleButton {
   display: flex;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   height: 100%;
+  width: 100%;
   min-width: 0;
-  flex: 1;
   align-items: center;
   gap: 8px;
   border: 0;
   background: var(--ui-ghost-surface);
-  padding-inline: 4px 6px;
+  padding: 0 92px 0 9px;
   color: inherit;
   text-align: left;
 }
@@ -124,10 +127,13 @@
 
 .sidebarPromptTreeActionSlot {
   display: flex;
+  position: relative;
+  z-index: 1;
   align-items: center;
   justify-content: flex-end;
   flex-shrink: 0;
-  margin-right: 6px;
+  margin-left: auto;
+  margin-right: 20px;
   pointer-events: none;
 }
 
@@ -214,28 +220,28 @@
 }
 
 .sidebarPromptTreeSettingsRow {
-  display: grid;
-  grid-template-columns: calc(
-      var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1)
-    ) minmax(0, 1fr);
   width: 100%;
   padding-block: 1px;
 }
 
 .sidebarPromptTreeGutter {
   min-height: 30px;
+  margin-left: 5px;
 }
 
 .sidebarPromptTreeSettingsButton {
-  display: flex;
+  display: grid;
+  grid-template-columns: calc(
+      5px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1)
+    ) minmax(0, 1fr);
   height: 30px;
   width: 100%;
   min-width: 0;
   align-items: center;
   gap: 8px;
-  border-radius: var(--cthulhu-ui-radius-control);
+  border-radius: 0;
   background-color: var(--ui-ghost-surface);
-  padding: 1px 8px;
+  padding: 0 22px 0 0;
   color: var(--ui-hoverable-text);
   text-align: left;
   transition:

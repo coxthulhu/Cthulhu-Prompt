@@ -140,6 +140,23 @@ export const beginPromptTreeRowDrag = async (page: Page, promptId: string): Prom
   )
 }
 
+export const beginPromptTreeRowGutterDrag = async (
+  page: Page,
+  promptId: string
+): Promise<void> => {
+  const row = page.locator(promptTreePromptSelector(promptId))
+  await row.scrollIntoViewIfNeeded()
+  await expect(row).toBeVisible()
+
+  const box = await getRequiredBox(row, `Missing prompt tree gutter drag geometry for ${promptId}`)
+  const startX = box.x + 8
+  const startY = box.y + box.height / 2
+  await page.mouse.move(startX, startY)
+  await page.mouse.down()
+  await page.mouse.move(startX + 8, startY + 8, { steps: 4 })
+  await expect(page.locator('body')).toHaveCSS('cursor', 'grabbing')
+}
+
 export const expectPromptTreeRowActiveState = async (
   page: Page,
   promptId: string,

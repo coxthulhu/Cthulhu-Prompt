@@ -13,6 +13,7 @@
     isDragging: boolean
     isPromptDragActive: boolean
     indentCount?: number
+    isLastRow?: boolean
     getPromptDroppableOptions?: () => PromptRowDropOptions
     promptDragOptions?: PromptRowDragOptions
     onPromptSelect: (folderId: string, promptId: string) => void
@@ -26,6 +27,7 @@
     isDragging,
     isPromptDragActive,
     indentCount = 0,
+    isLastRow = false,
     getPromptDroppableOptions,
     promptDragOptions,
     onPromptSelect
@@ -67,6 +69,7 @@
     onclick={handlePromptSelect}
     class="sidebarPromptTreeSettingsButton"
   >
+    <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
     <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
   </button>
 {/snippet}
@@ -77,7 +80,6 @@
     class="sidebarPromptTreeSettingsRow"
     style={rowStyle}
   >
-    <PromptTreeGutter indentCount={promptIndentCount} />
     <button
       use:draggable={promptDragOptions}
       type="button"
@@ -87,12 +89,12 @@
       onclick={handlePromptSelect}
       class="sidebarPromptTreeSettingsButton"
     >
+      <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
       <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
     </button>
   </PromptDropTarget>
 {:else}
   <div class="sidebarPromptTreeSettingsRow" style={rowStyle}>
-    <PromptTreeGutter indentCount={promptIndentCount} />
     {@render promptButton()}
   </div>
 {/if}
