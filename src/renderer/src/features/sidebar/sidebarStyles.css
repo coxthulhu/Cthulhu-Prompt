@@ -44,13 +44,12 @@
 
 .sidebarPromptTreeRow {
   display: flex;
-  height: 36px;
+  height: 30px;
   width: 100%;
   align-items: center;
   gap: 0;
   border-radius: var(--cthulhu-ui-radius-control);
   background-color: var(--ui-ghost-surface);
-  padding: 1px;
   color: var(--ui-hoverable-text);
   transition:
     background-color 50ms ease-out,
@@ -87,7 +86,7 @@
   gap: 8px;
   border: 0;
   background: var(--ui-ghost-surface);
-  padding-inline: 10px 6px;
+  padding-inline: 4px 6px;
   color: inherit;
   text-align: left;
 }

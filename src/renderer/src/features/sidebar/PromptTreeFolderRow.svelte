@@ -127,8 +127,8 @@
       >
         <RotatingChevron
           expanded={isExpanded}
-          size={20}
-          iconSize={16}
+          size={24}
+          iconSize={20}
           class="sidebarPromptTreeChevronWrap"
         />
         <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
