@@ -217,9 +217,8 @@
 .sidebarPromptTreeSettingsRow {
   display: grid;
   grid-template-columns: calc(
-      var(--prompt-tree-indent-base, 20px) + 28px * var(--prompt-tree-indent-count, 1)
-    )
-    minmax(0, 1fr);
+      var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1)
+    ) minmax(0, 1fr);
   width: 100%;
   padding-block: 1px;
 }
@@ -235,9 +234,9 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
-  border-radius: 8px;
+  border-radius: var(--cthulhu-ui-radius-control);
   background-color: var(--ui-ghost-surface);
-  padding: 1px 8px 1px 16px;
+  padding: 1px 8px;
   color: var(--ui-hoverable-text);
   text-align: left;
   transition:
@@ -277,9 +276,8 @@
 .sidebarPromptTreeVisibilityRow {
   display: grid;
   grid-template-columns: calc(
-      var(--prompt-tree-indent-base, 20px) + 28px * var(--prompt-tree-indent-count, 1)
-    )
-    minmax(0, 1fr);
+      var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1)
+    ) minmax(0, 1fr);
   width: 100%;
   align-items: center;
   padding-block: 1px;

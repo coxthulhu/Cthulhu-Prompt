@@ -12,6 +12,7 @@
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
+    indentCount?: number
     getPromptDroppableOptions?: () => PromptRowDropOptions
     promptDragOptions?: PromptRowDragOptions
     onPromptSelect: (folderId: string, promptId: string) => void
@@ -24,6 +25,7 @@
     isActive,
     isDragging,
     isPromptDragActive,
+    indentCount = 0,
     getPromptDroppableOptions,
     promptDragOptions,
     onPromptSelect
@@ -49,9 +51,11 @@
           ? 'drag-idle'
           : 'idle'
   )
-  const promptIndentCount = 0
-  const promptIndentBasePx = promptIndentCount > 0 ? 20 : 0
-  const rowStyle = `--prompt-tree-indent-count:${promptIndentCount}; --prompt-tree-indent-base:${promptIndentBasePx}px;`
+  const promptIndentCount = $derived(indentCount)
+  const PROMPT_TREE_INDENT_WIDTH_PX = 12
+  const rowStyle = $derived(
+    `--prompt-tree-indent-count:${promptIndentCount}; --prompt-tree-indent-width:${PROMPT_TREE_INDENT_WIDTH_PX}px;`
+  )
 </script>
 
 {#snippet promptButton()}

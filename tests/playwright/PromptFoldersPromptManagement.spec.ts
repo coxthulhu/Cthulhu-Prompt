@@ -1087,6 +1087,9 @@ describe('Prompt folder prompt management', () => {
     await expect(activeFolderTitle).toContainText('2 completed prompts')
 
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-CompletedMode"]')
+    ).toBeVisible()
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-newest', 'completed-mode-oldest'])
@@ -1205,6 +1208,9 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toBeDisabled()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-NoCompleted"]')
+    ).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toHaveText(
       'No completed prompts found in this folder'
     )

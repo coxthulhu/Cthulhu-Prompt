@@ -134,11 +134,7 @@
         <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
       </button>
 
-      <!-- Count and actions share one slot; hover/focus swaps visibility. -->
       <div class="sidebarPromptTreeActionSlot">
-        <span class="sidebarPromptTreeCountBadge sidebarPromptTreeCountInActionSlot">
-          {folder.promptCount}
-        </span>
         <div class="sidebarPromptTreeFolderActions">
           <DropdownPopupSimple
             label={`Folder options for ${folder.displayName}`}

@@ -17,6 +17,7 @@ const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
+const SHORT_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Short"]'
 const SHORT_SCROLL_TARGET_PX = 2000
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
@@ -136,6 +137,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
 
     await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_FOLDER_TOGGLE)).toBeVisible()
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeLessThan(100)
@@ -214,7 +216,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator('[data-testid^="prompt-tree-folder-show-"]')).toHaveCount(0)
   })
 
-  test('does not render prompt folder rows in the prompt tree', async ({ testSetup }) => {
+  test('renders the selected root folder row above indented prompt rows', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -222,8 +224,57 @@ describe('Prompt folder prompt tree', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
-    await expect(mainWindow.locator('[data-testid^="prompt-tree-folder-"]')).toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_FOLDER_TOGGLE)).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toBeVisible()
+
+    const rootAndPromptGeometry = await mainWindow.evaluate(
+      ({ rootToggleSelector, promptSelector }) => {
+        const rootToggle = document.querySelector<HTMLElement>(rootToggleSelector)
+        const promptButton = document.querySelector<HTMLElement>(promptSelector)
+        const rootRow = rootToggle?.closest<HTMLElement>('.sidebarPromptTreeFolderRow') ?? null
+        if (!rootToggle || !promptButton || !rootRow) return null
+
+        const rootRowRect = rootRow.getBoundingClientRect()
+        const promptRect = promptButton.getBoundingClientRect()
+        return {
+          hasRootGutter: Boolean(rootRow.querySelector('.sidebarPromptTreeGutter')),
+          promptIndentPx: Math.round(promptRect.left - rootRowRect.left),
+          promptTopPx: Math.round(promptRect.top),
+          rootTopPx: Math.round(rootRowRect.top)
+        }
+      },
+      {
+        rootToggleSelector: SHORT_FOLDER_TOGGLE,
+        promptSelector: '[data-testid="prompt-tree-prompt-short-1"]'
+      }
+    )
+    expect(rootAndPromptGeometry).not.toBeNull()
+    expect(rootAndPromptGeometry!.hasRootGutter).toBe(false)
+    expect(rootAndPromptGeometry!.promptIndentPx).toBe(12)
+    expect(rootAndPromptGeometry!.promptTopPx).toBeGreaterThan(rootAndPromptGeometry!.rootTopPx)
+  })
+
+  test('collapses the root folder row without changing the prompt folder screen section', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await expect(mainWindow.locator(SHORT_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toBeVisible()
+
+    await mainWindow.locator(SHORT_FOLDER_TOGGLE).click()
+
+    await expect(mainWindow.locator(SHORT_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid^="prompt-tree-prompt-short-"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
   })
 
   test('keeps placeholder fallback numbering for unopened folders with blank titles', async ({

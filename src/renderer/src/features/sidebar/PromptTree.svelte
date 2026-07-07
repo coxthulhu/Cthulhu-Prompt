@@ -44,6 +44,7 @@
   } from '../virtualizer/virtualWindowTypes'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import { createPromptTreePromptDragController } from './promptTreeDrag'
+  import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import { folderPromptDropIndicatorTestId } from './promptTreeTestIds'
 
@@ -51,9 +52,16 @@
 
   type PromptTreeRow =
     | {
+        kind: 'folder'
+        folder: PromptFolder
+      }
+    | {
         kind: 'folder-prompt'
         folder: PromptFolder
         promptId: string
+      }
+    | {
+        kind: 'empty-state'
       }
     | {
         kind: 'bottom-spacer'
@@ -93,12 +101,21 @@
     PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
+    folder: {
+      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
+      centerRowEligible: true,
+      snippet: folderRow
+    },
     'folder-prompt': {
       estimateHeight: () => PROMPT_TREE_PROMPT_ROW_HEIGHT_PX,
       overlayRow: {
         snippet: promptTreeRowOverlay
       },
       snippet: folderPromptRow
+    },
+    'empty-state': {
+      estimateHeight: () => 86,
+      snippet: emptyStateRow
     },
     'bottom-spacer': {
       estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
@@ -109,8 +126,11 @@
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let lastTrackedTreeRowId = $state<string | null>(null)
+  let lastTrackedTreeSelectionVersion = $state(0)
   let lastExpandAllRequestVersion = $state(0)
   let lastCollapseAllRequestVersion = $state(0)
+  let lastSelectedRootPromptFolderId = $state<string | null>(null)
+  let isSelectedRootPromptFolderExpanded = $state(true)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
@@ -175,12 +195,9 @@
       return rightCompletedAt.localeCompare(leftCompletedAt)
     })
   })
-  const selectedPromptFolderHasNoPrompts = $derived(
-    selectedPromptFolder !== null && selectedPromptIds.length === 0
-  )
+  const PROMPT_TREE_ROW_CONTENT_INSET = '58px'
 
-  const PROMPT_TREE_ROW_CONTENT_INSET = '10px'
-
+  const folderRootRowId = (folderId: string): string => `${folderId}:folder`
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
@@ -221,6 +238,17 @@
       (edge === 'bottom' && targetIndex === draggedIndex - 1) ||
       (edge === 'top' && targetIndex === draggedIndex + 1)
     )
+  }
+
+  const canDropOnPromptTreeFolderRow = (
+    folder: PromptFolder,
+    payload: PromptHandleDragPayload
+  ): boolean => {
+    if (payload.sourceFolderId !== folder.id) {
+      return true
+    }
+
+    return getPromptIdsForFolder(folder)[0] !== payload.fromId
   }
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
@@ -293,7 +321,7 @@
     }
 
     return trackedNavigationRow === 'folder-settings'
-      ? null
+      ? folderRootRowId(selectedPromptFolder.id)
       : folderPromptRowId(selectedPromptFolder.id, trackedNavigationRow.slice('prompt:'.length))
   })
 
@@ -330,6 +358,29 @@
   const handlePromptTreePromptSelect = (promptFolderId: string, promptId: string) => {
     handlePromptTreeEntrySelect(promptFolderId, promptIdToPromptNavigationRow(promptId))
   }
+
+  const handlePromptTreeFolderExpandedChange = (_promptFolderId: string, isExpanded: boolean) => {
+    isSelectedRootPromptFolderExpanded = isExpanded
+  }
+
+  const handlePromptTreeFolderOpen = (promptFolderId: string) => {
+    onPromptFolderSelect(promptFolderId)
+  }
+
+  const handlePromptTreeFolderSettingsOpen = (promptFolderId: string) => {
+    handlePromptTreeEntrySelect(promptFolderId, 'folder-settings')
+  }
+
+  // Side effect: default each newly selected root folder to expanded in the sidebar tree.
+  $effect(() => {
+    const nextSelectedRootPromptFolderId = selectedPromptFolder?.id ?? null
+    if (nextSelectedRootPromptFolderId === lastSelectedRootPromptFolderId) {
+      return
+    }
+
+    lastSelectedRootPromptFolderId = nextSelectedRootPromptFolderId
+    isSelectedRootPromptFolderExpanded = true
+  })
 
   // Side effect: report the current tree collapse state to the sidebar action button.
   $effect(() => {
@@ -368,13 +419,17 @@
       return
     }
 
-    if (nextTrackedRowId === lastTrackedTreeRowId) {
+    if (
+      nextTrackedRowId === lastTrackedTreeRowId &&
+      promptNavigation.selectionVersion === lastTrackedTreeSelectionVersion
+    ) {
       return
     }
 
     if (!currentFolderId) return
 
     lastTrackedTreeRowId = nextTrackedRowId
+    lastTrackedTreeSelectionVersion = promptNavigation.selectionVersion
     scrollToWithinWindowBand(nextTrackedRowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
   })
 
@@ -382,15 +437,34 @@
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
     if (selectedPromptFolder) {
-      for (const promptId of selectedPromptIds) {
-        items.push({
-          id: folderPromptRowId(selectedPromptFolder.id, promptId),
-          row: {
-            kind: 'folder-prompt',
-            folder: selectedPromptFolder,
-            promptId
+      items.push({
+        id: folderRootRowId(selectedPromptFolder.id),
+        row: {
+          kind: 'folder',
+          folder: selectedPromptFolder
+        }
+      })
+
+      if (isSelectedRootPromptFolderExpanded) {
+        if (selectedPromptIds.length === 0) {
+          items.push({
+            id: `${selectedPromptFolder.id}:empty-state`,
+            row: {
+              kind: 'empty-state'
+            }
+          })
+        } else {
+          for (const promptId of selectedPromptIds) {
+            items.push({
+              id: folderPromptRowId(selectedPromptFolder.id, promptId),
+              row: {
+                kind: 'folder-prompt',
+                folder: selectedPromptFolder,
+                promptId
+              }
+            })
           }
-        })
+        }
       }
     }
 
@@ -416,18 +490,6 @@
     </div>
   {:else if folderListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Prompt Folder to Get Started</div>
-  {:else if selectedPromptFolderHasNoPrompts}
-    <div
-      class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
-      data-testid="prompt-tree-empty-state"
-    >
-      <p class="sidebarPromptTreeEmptyTitle">
-        {isCompletedMode ? 'No completed prompts found in this folder' : 'No prompts found in this folder.'}
-      </p>
-      {#if !isCompletedMode}
-        <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
-      {/if}
-    </div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
       <SvelteVirtualWindow
@@ -442,6 +504,32 @@
     </div>
   {/if}
 </div>
+
+{#snippet folderRow(props)}
+  {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
+
+  <PromptTreeFolderRow
+    folder={props.row.folder}
+    isActive={isSettingsActive}
+    {isSettingsActive}
+    {isPromptDragActive}
+    isExpanded={isSelectedRootPromptFolderExpanded}
+    getFolderPromptDroppableOptions={() =>
+      getPromptTreeDroppableOptions(
+        props.rowId,
+        'none',
+        () => ({
+          kind: 'folder',
+          folderId: props.row.folder.id
+        }),
+        (payload) =>
+          isCompletedMode ? false : canDropOnPromptTreeFolderRow(props.row.folder, payload)
+      )}
+    onFolderExpandedChange={handlePromptTreeFolderExpandedChange}
+    onPromptFolderOpen={handlePromptTreeFolderOpen}
+    onFolderSettingsOpen={handlePromptTreeFolderSettingsOpen}
+  />
+{/snippet}
 
 {#snippet folderPromptRow(props)}
   {@const isActive = isTreeEntryActive(
@@ -459,6 +547,7 @@
     {isActive}
     {isDragging}
     {isPromptDragActive}
+    indentCount={1}
     getPromptDroppableOptions={isCompletedMode
       ? undefined
       : () =>
@@ -479,6 +568,20 @@
       : getPromptRowDragOptions(props.row.folder.id, props.row.promptId, promptTitle)}
     onPromptSelect={handlePromptTreePromptSelect}
   />
+{/snippet}
+
+{#snippet emptyStateRow()}
+  <div
+    class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
+    data-testid="prompt-tree-empty-state"
+  >
+    <p class="sidebarPromptTreeEmptyTitle">
+      {isCompletedMode ? 'No completed prompts found in this folder' : 'No prompts found in this folder.'}
+    </p>
+    {#if !isCompletedMode}
+      <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
+    {/if}
+  </div>
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}

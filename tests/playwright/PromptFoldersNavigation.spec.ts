@@ -499,11 +499,14 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Test Folder'
     )
     await expect(mainWindow.locator(PROMPT_FOLDER_HOST)).toBeVisible()
+    await expect(mainWindow.locator(PROMPT_TREE_HOST)).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-TestFolder"]')
+    ).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(PROMPT_TREE_EMPTY_STATE)).toBeVisible()
     await expect(mainWindow.locator(PROMPT_TREE_EMPTY_STATE)).toContainText(
       'No prompts found in this folder.'
     )
-    await expect(mainWindow.locator(PROMPT_TREE_HOST)).toHaveCount(0)
     await expect(
       mainWindow.locator(PROMPT_FOLDER_HOST).getByText('No prompts found in this folder.')
     ).toBeVisible()

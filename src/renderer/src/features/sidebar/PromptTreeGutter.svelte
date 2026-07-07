@@ -5,8 +5,8 @@
     indentCount?: number
   }>()
 
-  const PROMPT_TREE_FIRST_LINE_OFFSET_PX = 20
-  const PROMPT_TREE_LINE_STEP_PX = 28
+  const PROMPT_TREE_FIRST_LINE_OFFSET_PX = 8
+  const PROMPT_TREE_LINE_STEP_PX = 12
   const PROMPT_TREE_LINE_WIDTH_PX = 1
 </script>
 
