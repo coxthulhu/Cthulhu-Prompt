@@ -37,9 +37,11 @@
     promptDividerRowId,
     promptEditorRowId
   } from './promptFolderRowIds'
-  import PromptFolderSectionRow, {
-    PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX
-  } from './PromptFolderSectionRow.svelte'
+  import PromptFolderSectionRow from './PromptFolderSectionRow.svelte'
+  import {
+    getPromptFolderSectionContentOffsetPx,
+    getPromptFolderSectionContentWidthPx
+  } from './promptFolderSectionGutterMetrics'
   import {
     estimatePromptFolderSettingsFieldRowHeight,
     getPromptFolderEditorCollapsedCardRowHeightPx,
@@ -64,8 +66,8 @@
   type PromptFolderRow =
     | { kind: 'folder-editor'; isSettingsSectionExpanded: boolean }
     | { kind: 'placeholder' }
-    | { kind: 'prompt-divider'; previousPromptId: string | null }
-    | { kind: 'prompt-editor'; promptId: string }
+    | { kind: 'prompt-divider'; previousPromptId: string | null; indentLevel: number }
+    | { kind: 'prompt-editor'; promptId: string; indentLevel: number }
     | { kind: 'bottom-spacer' }
 
   type PromptEditorRowProps = VirtualWindowRowComponentProps<
@@ -204,10 +206,6 @@
     )
   }
 
-  const getSectionContentWidthPx = (virtualWindowWidthPx: number): number => {
-    return Math.max(0, virtualWindowWidthPx - PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX)
-  }
-
   const getEstimatedPromptFolderSettingsSectionHeights = () => {
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
@@ -268,14 +266,14 @@
       estimateHeight: (row, widthPx, heightPx) =>
         estimatePromptEditorHeight(
           promptDraftById[row.promptId]!.promptText,
-          getSectionContentWidthPx(widthPx),
+          getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel),
           heightPx,
           promptEditorSizingConfig
         ),
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
         const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
           row.promptId,
-          getSectionContentWidthPx(widthPx),
+          getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel),
           devicePixelRatio
         )
         if (measuredRowHeightPx == null) return null
@@ -315,7 +313,7 @@
         if (!isCompletedMode) {
           rows.push({
             id: 'divider-initial',
-            row: { kind: 'prompt-divider', previousPromptId: null }
+            row: { kind: 'prompt-divider', previousPromptId: null, indentLevel: 1 }
           })
         }
         rows.push({
@@ -325,14 +323,17 @@
       } else {
         rows.push({
           id: 'divider-initial',
-          row: { kind: 'prompt-divider', previousPromptId: null }
+          row: { kind: 'prompt-divider', previousPromptId: null, indentLevel: 1 }
         })
 
         visiblePromptIds.forEach((promptId) => {
-          rows.push({ id: promptEditorRowId(promptId), row: { kind: 'prompt-editor', promptId } })
+          rows.push({
+            id: promptEditorRowId(promptId),
+            row: { kind: 'prompt-editor', promptId, indentLevel: 1 }
+          })
           rows.push({
             id: `${promptId}-divider`,
-            row: { kind: 'prompt-divider', previousPromptId: promptId }
+            row: { kind: 'prompt-divider', previousPromptId: promptId, indentLevel: 1 }
           })
         })
       }
@@ -498,7 +499,7 @@
 {/snippet}
 
 {#snippet dividerRow({ row, rowId, rowHeightPx })}
-  <PromptFolderSectionRow {rowHeightPx}>
+  <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <PromptDivider
       disabled={isCreatingPrompt}
       mode={isCompletedMode ? 'separator' : 'add'}
@@ -526,15 +527,20 @@
 }: PromptEditorRowProps)}
   {@const promptIndex = visiblePromptIds.indexOf(row.promptId)}
   {@const promptMetadata = promptMetadataByPromptId[row.promptId] ?? todoPromptMetadata}
-  <PromptFolderSectionRow {rowHeightPx}>
+  {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
+    virtualWindowWidthPx,
+    row.indentLevel
+  )}
+  {@const contentOffsetPx = getPromptFolderSectionContentOffsetPx(row.indentLevel)}
+  <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <PromptEditorRow
       {workspaceId}
       {promptFolderId}
       promptId={row.promptId}
       promptDraftRecord={promptDraftById[row.promptId]!}
       {rowId}
-      virtualWindowWidthPx={getSectionContentWidthPx(virtualWindowWidthPx)}
-      rowContentLeftOffsetPx={PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX}
+      virtualWindowWidthPx={contentWidthPx}
+      rowContentLeftOffsetPx={contentOffsetPx}
       {devicePixelRatio}
       {rowHeightPx}
       {hydrationPriority}

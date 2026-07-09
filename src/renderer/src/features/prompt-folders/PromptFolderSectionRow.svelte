@@ -1,26 +1,19 @@
 <script module lang="ts">
-  import {
-    getPromptFolderSectionContentOffsetPx,
-    getPromptFolderSectionGutterGapPx,
-    getPromptFolderSectionGutterWidthPx
-  } from './promptFolderSectionGutterMetrics'
-
   export {
     PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX,
     PROMPT_FOLDER_SECTION_GUTTER_GAP_PX,
     PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX
   } from './promptFolderSectionGutterMetrics'
-
-  export const PROMPT_FOLDER_SECTION_GUTTER_WIDTH_PX =
-    getPromptFolderSectionGutterWidthPx(1)
-  export const PROMPT_FOLDER_SECTION_GUTTER_OFFSET_PX =
-    getPromptFolderSectionContentOffsetPx(1)
 </script>
 
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import PromptFolderSectionGutter from './PromptFolderSectionGutter.svelte'
+  import {
+    getPromptFolderSectionGutterGapPx,
+    getPromptFolderSectionGutterWidthPx
+  } from './promptFolderSectionGutterMetrics'
 
   type Props = {
     children: Snippet
