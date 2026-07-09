@@ -40,7 +40,8 @@
     <div
       class={mode === 'separator'
         ? 'grid min-h-9 grid-cols-1 items-center'
-        : 'grid min-h-9 grid-cols-[auto_minmax(24px,1fr)] items-center gap-2.5'}
+        : 'promptDividerContent grid min-h-9 items-center'}
+      data-has-subfolder={onAddSubfolder ? 'true' : undefined}
     >
       {#if mode === 'separator'}
         <!-- Completed mode uses the divider as a plain section separator. -->
@@ -126,6 +127,30 @@
     min-width: 96px;
     padding: 0 10px;
     white-space: nowrap;
+    width: var(--prompt-divider-side-width);
+  }
+
+  .promptDividerContent {
+    /* Mirror the action track and gap so the separator has equal side insets. */
+    --prompt-divider-side-width: 36px;
+
+    column-gap: 10px;
+    grid-template-columns:
+      var(--prompt-divider-side-width)
+      minmax(24px, 1fr)
+      var(--prompt-divider-side-width);
+  }
+
+  .promptDividerContent[data-has-subfolder='true'] {
+    --prompt-divider-side-width: 76px;
+  }
+
+  .promptDividerRow[data-drop-over='true'] .promptDividerContent {
+    --prompt-divider-side-width: 96px;
+  }
+
+  .promptDividerContent::after {
+    content: '';
   }
 
   .promptDividerActions {

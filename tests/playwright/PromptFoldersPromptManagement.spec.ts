@@ -600,12 +600,23 @@ describe('Prompt folder prompt management', () => {
     const dividerRow = dividerButton.locator(
       'xpath=ancestor::div[contains(@class, "promptDividerRow")]'
     )
+    const dividerSeparator = dividerRow.locator('.cthulhuUiSeparator')
     const dividerButtonBoxBefore = await dividerButton.boundingBox()
+    const dividerRowBox = await dividerRow.boundingBox()
+    const dividerSeparatorBox = await dividerSeparator.boundingBox()
 
     await expect(dividerActions).toHaveCSS('opacity', '0')
     await expect(dividerActions).toHaveCSS('transition-property', 'opacity')
     await expect(dividerActions).toHaveCSS('transition-duration', '0.05s')
     await expect(dividerActions).toHaveCSS('transition-timing-function', 'ease-out')
+    expect(dividerRowBox).not.toBeNull()
+    expect(dividerSeparatorBox).not.toBeNull()
+    const dividerLeftInset = dividerSeparatorBox!.x - dividerRowBox!.x
+    const dividerRightInset =
+      dividerRowBox!.x + dividerRowBox!.width - dividerSeparatorBox!.x - dividerSeparatorBox!.width
+    expect(Math.abs(dividerLeftInset - dividerRightInset)).toBeLessThanOrEqual(
+      MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
     await dividerRow.hover()
     await expect(dividerActions).toHaveCSS('opacity', '1')
 
