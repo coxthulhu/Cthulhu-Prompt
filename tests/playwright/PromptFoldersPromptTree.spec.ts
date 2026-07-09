@@ -509,6 +509,39 @@ describe('Prompt folder prompt tree', () => {
     expect(rootAndPromptGeometry!.promptTopPx).toBeGreaterThan(rootAndPromptGeometry!.rootTopPx)
   })
 
+  test('uses the folder action space only while folder actions are visible', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    const folderToggle = mainWindow.locator(SHORT_FOLDER_TOGGLE)
+    const folderLabel = folderToggle.locator('.sidebarPromptTreeFolderLabel')
+    const folderActions = mainWindow.locator(
+      '[data-testid="prompt-tree-folder-open-button-Short"]'
+    )
+    const readRoundedLabelWidth = async (): Promise<number> =>
+      folderLabel.evaluate((label) => Math.round(label.getBoundingClientRect().width))
+
+    await mainWindow.mouse.move(0, 0)
+    await expect(folderActions).toBeHidden()
+    const restingLabelWidth = await readRoundedLabelWidth()
+
+    await folderToggle.hover()
+    await expect(folderActions).toBeVisible()
+    const hoveredLabelWidth = await readRoundedLabelWidth()
+
+    expect(Math.abs(restingLabelWidth - hoveredLabelWidth - 80)).toBeLessThanOrEqual(1)
+
+    await mainWindow.mouse.move(0, 0)
+    await expect(folderActions).toBeHidden()
+    await expect.poll(readRoundedLabelWidth).toBe(restingLabelWidth)
+  })
+
   test('selects prompt rows and toggles folder rows from the left gutter', async ({
     testSetup
   }) => {

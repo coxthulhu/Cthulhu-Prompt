@@ -89,7 +89,7 @@
   gap: 8px;
   border: 0;
   background: var(--ui-ghost-surface);
-  padding: 0 92px 0 9px;
+  padding: 0 12px 0 9px;
   color: inherit;
   text-align: left;
 }
@@ -153,6 +153,12 @@
   display: none;
   gap: 2px;
   pointer-events: auto;
+}
+
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeToggleButton,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeToggleButton,
+.sidebarPromptTreeRow:focus-within .sidebarPromptTreeToggleButton {
+  padding-right: 92px;
 }
 
 .sidebarPromptTreeActionButton {
