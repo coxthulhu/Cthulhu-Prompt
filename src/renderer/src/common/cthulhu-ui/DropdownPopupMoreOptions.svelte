@@ -70,7 +70,7 @@
           }}
         >
           <span class="cthulhuUiDropdownPopupMoreOptionsIcon">
-            <ItemIcon size={18} aria-hidden="true" />
+            <ItemIcon class={item.iconClass} size={18} aria-hidden="true" />
           </span>
 
           <span class="cthulhuUiDropdownPopupMoreOptionsTextStack">

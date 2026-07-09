@@ -24,6 +24,7 @@
     detail?: string
     detailParts?: SelectorButtonDetailPart[]
     icon: ComponentType
+    iconClass?: string
     testId?: string
   }
 
@@ -97,6 +98,7 @@
 {#snippet draggableItem(item: DropdownPopupDetailedItem, close: () => void, isRowDropOver: boolean)}
   <SelectorButton
     icon={item.icon}
+    iconClass={item.iconClass}
     text={item.label}
     detail={item.detail}
     detailParts={item.detailParts}
@@ -152,6 +154,7 @@
             {:else}
               <SelectorButton
                 icon={item.icon}
+                iconClass={item.iconClass}
                 text={item.label}
                 detail={item.detail}
                 detailParts={item.detailParts}
@@ -173,6 +176,7 @@
         <div class="cthulhuUiDropdownPopupDetailedFooter">
           <SelectorButton
             icon={footerItem.icon}
+            iconClass={footerItem.iconClass}
             text={footerItem.label}
             detail={footerItem.detail}
             detailParts={footerItem.detailParts}

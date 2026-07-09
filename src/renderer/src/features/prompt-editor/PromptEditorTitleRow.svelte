@@ -99,6 +99,7 @@
         label: 'Set to Todo',
         detail: 'Move back to active todo status',
         icon: CircleDashed,
+        iconClass: 'prompt-editor-status-option-icon-todo',
         testId: 'prompt-status-option-todo'
       },
       {
@@ -106,6 +107,7 @@
         label: 'Set to In Progress',
         detail: 'Mark this prompt as underway',
         icon: Hourglass,
+        iconClass: 'prompt-editor-status-option-icon-in-progress',
         testId: 'prompt-status-option-in-progress'
       },
       {
@@ -113,6 +115,7 @@
         label: 'Set to Completed',
         detail: 'Move this prompt to completed',
         icon: CheckCircle2,
+        iconClass: 'prompt-editor-status-option-icon-completed',
         testId: 'prompt-status-option-completed'
       }
     ].filter((item) => item.id !== status)
@@ -394,5 +397,17 @@
 
   :global(.prompt-editor-metadata-folder-icon) {
     color: var(--ui-secondary-icon-glyph);
+  }
+
+  :global(.prompt-editor-status-option-icon-todo) {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  :global(.prompt-editor-status-option-icon-in-progress) {
+    color: var(--ui-warning-icon-glyph);
+  }
+
+  :global(.prompt-editor-status-option-icon-completed) {
+    color: var(--ui-success-normal-text);
   }
 </style>
