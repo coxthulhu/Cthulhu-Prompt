@@ -94,6 +94,14 @@
   text-align: left;
 }
 
+.sidebarPromptTreeFolderRow[data-indented='true'] .sidebarPromptTreeToggleButton {
+  display: grid;
+  grid-template-columns:
+    calc(5px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
+    auto minmax(0, 1fr);
+  padding-left: 0;
+}
+
 .sidebarPromptTreeChevronWrap {
   border-radius: var(--cthulhu-ui-radius-control);
   color: var(--ui-hoverable-icon-glyph);

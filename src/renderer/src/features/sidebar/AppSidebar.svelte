@@ -118,6 +118,41 @@
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
+  const promptTreePromptFolders = $derived.by((): PromptFolder[] => {
+    if (!selectedWorkspace) {
+      return []
+    }
+
+    const promptFolderById = new SvelteMap<string, PromptFolder>()
+    for (const promptFolder of promptFolderQuery.data) {
+      if (!promptFolder) {
+        continue
+      }
+
+      promptFolderById.set(promptFolder.id, promptFolder)
+    }
+
+    const orderedPromptFolders: PromptFolder[] = []
+    const addPromptFolderWithDescendants = (promptFolderId: string): void => {
+      const promptFolder = promptFolderById.get(promptFolderId)
+      if (!promptFolder) {
+        return
+      }
+
+      orderedPromptFolders.push(promptFolder)
+      for (const entryId of promptFolder.entryIds) {
+        if (promptFolderById.has(entryId)) {
+          addPromptFolderWithDescendants(entryId)
+        }
+      }
+    }
+
+    for (const promptFolderId of selectedWorkspace.promptFolderIds) {
+      addPromptFolderWithDescendants(promptFolderId)
+    }
+
+    return orderedPromptFolders
+  })
 
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     isWorkspaceLoading
@@ -231,13 +266,16 @@
   const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
   let expandAllPromptFoldersVersion = $state(0)
   let collapseAllPromptFoldersVersion = $state(0)
+  let areAllPromptFoldersCollapsed = $state(false)
   const promptFolderSelectorPromptDroppableState = createDroppableStateRegistry<string>()
   const promptFolderSelectorDragOpenTypes = [
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE
   ]
   const promptFolderExpansionActionIcon = ChevronsDownUp
-  const promptFolderExpansionActionLabel = 'Collapse All Prompt Folders'
+  const promptFolderExpansionActionLabel = $derived(
+    areAllPromptFoldersCollapsed ? 'Expand All Prompt Folders' : 'Collapse All Prompt Folders'
+  )
   const isCompletedPromptMode = $derived(
     promptFolderScreenMode === PromptFolderScreenMode.Completed
   )
@@ -252,7 +290,12 @@
   ]
 
   const handlePromptFolderExpansionAction = () => {
-    // Collapse All is paused until subfolders make tree expansion meaningful again.
+    if (areAllPromptFoldersCollapsed) {
+      expandAllPromptFoldersVersion += 1
+      return
+    }
+
+    collapseAllPromptFoldersVersion += 1
   }
 
   const openSelectedPromptFolderSettings = () => {
@@ -677,14 +720,16 @@
 
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden">
     <PromptTree
-      {promptFolders}
+      promptFolders={promptTreePromptFolders}
       {folderListState}
       {selectedPromptFolderId}
       screenMode={promptFolderScreenMode}
       expandAllRequestVersion={expandAllPromptFoldersVersion}
       collapseAllRequestVersion={collapseAllPromptFoldersVersion}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
-      onAllPromptFoldersCollapsedChange={() => {}}
+      onAllPromptFoldersCollapsedChange={(isCollapsed) => {
+        areAllPromptFoldersCollapsed = isCollapsed
+      }}
       {onPromptFolderSelect}
     />
   </div>

@@ -56,7 +56,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
   })
 
-  test('loads subfolder disk entries without showing them in the current prompt UI', async ({
+  test('loads subfolder disk entries without showing them in the prompt folder screen', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -76,9 +76,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.promptCount).toBe(2)
     await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(
-      0
-    )
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
 
     const nestedFolderLoad = await mainWindow.evaluate(
       async ({ workspaceId, nestedFolderId }) => {
@@ -333,7 +331,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
-  test('keeps collapse all as a no-op sidebar action', async ({ testSetup }) => {
+  test('collapses and expands all prompt folders from the sidebar action', async ({ testSetup }) => {
     const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -346,6 +344,14 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Collapse All Prompt Folders'
     )
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
+
+    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
+
+    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Expand All Prompt Folders'
+    )
+    await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
 
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
 

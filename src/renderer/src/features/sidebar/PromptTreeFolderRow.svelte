@@ -7,6 +7,7 @@
   } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
+  import PromptTreeGutter from './PromptTreeGutter.svelte'
   import {
     folderOpenTestId,
     folderOptionsTestId,
@@ -21,7 +22,9 @@
     isSettingsActive: boolean
     isPromptDragActive: boolean
     isExpanded: boolean
-    getFolderPromptDroppableOptions: () => PromptRowDropOptions
+    indentCount?: number
+    isLastRow?: boolean
+    getFolderPromptDroppableOptions?: () => PromptRowDropOptions
     onFolderExpandedChange: (folderId: string, isExpanded: boolean) => void
     onPromptFolderOpen: (folderId: string) => void
     onFolderSettingsOpen: (folderId: string) => void
@@ -33,11 +36,18 @@
     isSettingsActive,
     isPromptDragActive,
     isExpanded,
+    indentCount = 0,
+    isLastRow = false,
     getFolderPromptDroppableOptions,
     onFolderExpandedChange,
     onPromptFolderOpen,
     onFolderSettingsOpen
   }: Props = $props()
+
+  const PROMPT_TREE_INDENT_WIDTH_PX = 12
+  const rowStyle = $derived(
+    `--prompt-tree-indent-count:${indentCount}; --prompt-tree-indent-width:${PROMPT_TREE_INDENT_WIDTH_PX}px;`
+  )
 
   const blurButtonAfterMouseClick = (event: MouseEvent) => {
     // Side effect: keep action-slot visibility stable by defocusing only real mouse clicks.
@@ -102,17 +112,16 @@
   }
 </script>
 
-<PromptDropTarget getOptions={getFolderPromptDroppableOptions} class="sidebarPromptTreeFolderRow">
-  {#snippet children({ isOver })}
-    {@const rowState = isOver
-      ? 'over'
-      : isActive
-        ? isPromptDragActive
-          ? 'drag-active'
-          : 'active'
-        : isPromptDragActive
-          ? 'drag-idle'
-          : 'idle'}
+{#snippet folderRowContent(isOver: boolean)}
+  {@const rowState = isOver
+    ? 'over'
+    : isActive
+      ? isPromptDragActive
+        ? 'drag-active'
+        : 'active'
+      : isPromptDragActive
+        ? 'drag-idle'
+        : 'idle'}
     <div
       class="sidebarPromptTreeRow group"
       data-row-state={rowState}
@@ -125,6 +134,9 @@
         data-testid={folderToggleTestId(folder)}
         class="sidebarPromptTreeToggleButton"
       >
+        {#if indentCount > 0}
+          <PromptTreeGutter {indentCount} {isLastRow} />
+        {/if}
         <RotatingChevron
           expanded={isExpanded}
           size={24}
@@ -171,5 +183,25 @@
         </div>
       </div>
     </div>
-  {/snippet}
-</PromptDropTarget>
+{/snippet}
+
+{#if getFolderPromptDroppableOptions}
+  <PromptDropTarget
+    getOptions={getFolderPromptDroppableOptions}
+    class="sidebarPromptTreeFolderRow"
+    style={rowStyle}
+    data-indented={indentCount > 0 ? 'true' : undefined}
+  >
+    {#snippet children({ isOver })}
+      {@render folderRowContent(isOver)}
+    {/snippet}
+  </PromptDropTarget>
+{:else}
+  <div
+    class="sidebarPromptTreeFolderRow"
+    style={rowStyle}
+    data-indented={indentCount > 0 ? 'true' : undefined}
+  >
+    {@render folderRowContent(false)}
+  </div>
+{/if}

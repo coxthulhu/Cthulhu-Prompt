@@ -1,5 +1,9 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import {
+  createWorkspaceWithFolders,
+  getWorkspaceInfoPath,
+  setupWorkspaceScenario
+} from '../fixtures/WorkspaceFixtures'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
@@ -7,6 +11,11 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
+import {
+  readWorkspacePersistence,
+  seedUserPersistence,
+  seedWorkspacePersistence
+} from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -31,6 +40,29 @@ const UNOPENED_UNTITLED_WORKSPACE_PATH = '/ws/tree-untitled-summaries'
 const LOADED_FOLDER_NAME = 'Loaded'
 const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-1"]'
 const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-2"]'
+const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+const SUBFOLDERS_MAIN_FOLDER_ID = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main`)
+const SUBFOLDERS_NESTED_FOLDER_ID = createDeterministicId(
+  `${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`
+)
+const MAIN_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Main"]'
+const NESTED_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Nested"]'
+const NESTED_FOLDER_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Nested"]'
+const NESTED_FOLDER_OPTIONS_BUTTON = '[data-testid="prompt-tree-folder-options-button-Nested"]'
+const NESTED_FOLDER_SETTINGS_MENU_ITEM =
+  '[data-testid="prompt-tree-folder-settings-menu-item-Nested"]'
+const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
+const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
+  '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+
+function createDeterministicId(seed: string): string {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000000000000000${suffix}`
+}
 
 const scrollPromptTreeRowIntoView = async (
   mainWindow: any,
@@ -54,6 +86,179 @@ const scrollPromptTreeRowIntoView = async (
 }
 
 describe('Prompt folder prompt tree', () => {
+  test('renders subfolders and persists prompt tree expansion state', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspaceId = createDeterministicId(SUBFOLDERS_WORKSPACE_PATH)
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Main')
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-after"]')).toBeVisible()
+
+    const treeOrder = await mainWindow.locator(
+      [
+        '[data-testid="prompt-tree-folder-toggle-button-Main"]',
+        '[data-testid="prompt-tree-prompt-base-before"]',
+        '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
+        '[data-testid="prompt-tree-prompt-nested-prompt"]',
+        '[data-testid="prompt-tree-prompt-base-after"]'
+      ].join(', ')
+    ).evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
+    expect(treeOrder).toEqual([
+      'prompt-tree-folder-toggle-button-Main',
+      'prompt-tree-prompt-base-before',
+      'prompt-tree-folder-toggle-button-Nested',
+      'prompt-tree-prompt-nested-prompt',
+      'prompt-tree-prompt-base-after'
+    ])
+
+    const indentation = await mainWindow.evaluate(
+      ({ rootSelector, nestedSelector, nestedPromptSelector }) => {
+        const rootLabel = document
+          .querySelector<HTMLElement>(rootSelector)
+          ?.querySelector<HTMLElement>('.sidebarPromptTreeFolderLabel')
+        const basePromptLabel = document
+          .querySelector<HTMLElement>('[data-testid="prompt-tree-prompt-base-before"]')
+          ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
+        const nestedLabel = document
+          .querySelector<HTMLElement>(nestedSelector)
+          ?.querySelector<HTMLElement>('.sidebarPromptTreeFolderLabel')
+        const nestedPromptLabel = document
+          .querySelector<HTMLElement>(nestedPromptSelector)
+          ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
+
+        if (!rootLabel || !basePromptLabel || !nestedLabel || !nestedPromptLabel) {
+          return null
+        }
+
+        return {
+          rootLabelLeft: Math.round(rootLabel.getBoundingClientRect().left),
+          basePromptLabelLeft: Math.round(basePromptLabel.getBoundingClientRect().left),
+          nestedLabelLeft: Math.round(nestedLabel.getBoundingClientRect().left),
+          nestedPromptLabelLeft: Math.round(nestedPromptLabel.getBoundingClientRect().left)
+        }
+      },
+      {
+        rootSelector: MAIN_FOLDER_TOGGLE,
+        nestedSelector: NESTED_FOLDER_TOGGLE,
+        nestedPromptSelector: '[data-testid="prompt-tree-prompt-nested-prompt"]'
+      }
+    )
+    expect(indentation).not.toBeNull()
+    expect(indentation!.nestedLabelLeft).toBeGreaterThan(indentation!.rootLabelLeft + 2)
+    expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(
+      indentation!.basePromptLabelLeft + 2
+    )
+
+    await mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveAttribute(
+      'data-row-state',
+      'idle'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+
+    await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
+    await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
+    await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+
+    await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
+    await expect(mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON)).toBeVisible()
+    await mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON).click()
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+
+    await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          return persisted.promptFolderPromptTreeEntries.find(
+            (entry) => entry.promptFolderId === SUBFOLDERS_NESTED_FOLDER_ID
+          )?.promptTreeIsExpanded
+        },
+        { timeout: 15000 }
+      )
+      .toBe(false)
+
+    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
+    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveCount(0)
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const rootEntry = persisted.promptFolderPromptTreeEntries.find(
+            (entry) => entry.promptFolderId === SUBFOLDERS_MAIN_FOLDER_ID
+          )
+          const nestedEntry = persisted.promptFolderPromptTreeEntries.find(
+            (entry) => entry.promptFolderId === SUBFOLDERS_NESTED_FOLDER_ID
+          )
+          return `${rootEntry?.promptTreeIsExpanded}:${nestedEntry?.promptTreeIsExpanded}`
+        },
+        { timeout: 15000 }
+      )
+      .toBe('false:false')
+
+    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
+    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+  })
+
+  test('restores persisted subfolder collapsed state on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const workspaceId = createDeterministicId(SUBFOLDERS_WORKSPACE_PATH)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(SUBFOLDERS_WORKSPACE_PATH, 'subfolders'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(SUBFOLDERS_WORKSPACE_PATH)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId: SUBFOLDERS_MAIN_FOLDER_ID },
+      promptFolderPromptTreeEntries: [
+        {
+          promptFolderId: SUBFOLDERS_MAIN_FOLDER_ID,
+          promptTreeEntryId: 'folder-settings',
+          promptTreeIsExpanded: true
+        },
+        {
+          promptFolderId: SUBFOLDERS_NESTED_FOLDER_ID,
+          promptTreeEntryId: 'folder-settings',
+          promptTreeIsExpanded: false
+        }
+      ]
+    })
+
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+  })
+
   test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({
     testSetup
   }) => {

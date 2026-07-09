@@ -3,6 +3,7 @@ import { createTestRequestId } from './PlaywrightTestFramework'
 export type WorkspacePersistenceSeedEntry = {
   promptFolderId: string
   promptTreeEntryId: string
+  promptTreeIsExpanded?: boolean
   folderSettingsSectionIsExpanded?: boolean
   promptsSectionIsExpanded?: boolean
 }
@@ -15,6 +16,7 @@ export type WorkspacePersistenceSnapshot = {
   promptFolderPromptTreeEntries: Array<{
     promptFolderId: string
     promptTreeEntryId: string
+    promptTreeIsExpanded: boolean
     folderSettingsSectionIsExpanded: boolean
     promptsSectionIsExpanded: boolean
   }>
@@ -181,6 +183,7 @@ export const seedWorkspacePersistence = async (
         workspace_id,
         prompt_folder_id,
         prompt_tree_entry_id,
+        prompt_tree_is_expanded,
         folder_settings_section_is_expanded,
         prompts_section_is_expanded
       )
@@ -188,6 +191,7 @@ export const seedWorkspacePersistence = async (
         ${toSqlText(data.workspaceId)},
         ${toSqlText(entry.promptFolderId)},
         ${toSqlText(entry.promptTreeEntryId)},
+        ${entry.promptTreeIsExpanded === false ? 0 : 1},
         ${entry.folderSettingsSectionIsExpanded === true ? 1 : 0},
         ${entry.promptsSectionIsExpanded === false ? 0 : 1}
       )
@@ -249,6 +253,7 @@ export const readWorkspacePersistence = async (
     SELECT
       prompt_folder_id AS promptFolderId,
       prompt_tree_entry_id AS promptTreeEntryId,
+      prompt_tree_is_expanded AS promptTreeIsExpanded,
       folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
       prompts_section_is_expanded AS promptsSectionIsExpanded
     FROM prompt_folder_ui_state
@@ -278,6 +283,7 @@ export const readWorkspacePersistence = async (
     promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []).map((entry) => ({
       promptFolderId: String(entry.promptFolderId),
       promptTreeEntryId: String(entry.promptTreeEntryId),
+      promptTreeIsExpanded: entry.promptTreeIsExpanded !== 0,
       folderSettingsSectionIsExpanded: entry.folderSettingsSectionIsExpanded !== 0,
       promptsSectionIsExpanded: entry.promptsSectionIsExpanded !== 0
     }))

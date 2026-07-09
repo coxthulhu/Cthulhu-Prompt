@@ -11,6 +11,7 @@ import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCol
 import { mutatePacedWorkspacePersistenceAutosaveUpdate } from '../Mutations/WorkspacePersistenceMutations'
 
 const DEFAULT_PROMPT_TREE_ENTRY_ID = 'folder-settings'
+const DEFAULT_PROMPT_TREE_IS_EXPANDED = true
 // New prompt-folder screens start with settings collapsed until the user expands them.
 const DEFAULT_FOLDER_SETTINGS_SECTION_IS_EXPANDED = false
 const DEFAULT_PROMPTS_SECTION_IS_EXPANDED = true
@@ -21,6 +22,7 @@ const createPromptFolderPromptTreeEntry = (
 ): WorkspacePromptFolderPromptTreeEntry => ({
   promptFolderId,
   promptTreeEntryId: DEFAULT_PROMPT_TREE_ENTRY_ID,
+  promptTreeIsExpanded: DEFAULT_PROMPT_TREE_IS_EXPANDED,
   folderSettingsSectionIsExpanded: DEFAULT_FOLDER_SETTINGS_SECTION_IS_EXPANDED,
   promptsSectionIsExpanded: DEFAULT_PROMPTS_SECTION_IS_EXPANDED,
   settingsEditorViewStates: createEmptyPromptFolderSettingsEditorViewStates(),
@@ -65,6 +67,47 @@ const applyPromptFolderPromptTreeEntry = (
     record.promptFolderPromptTreeEntries,
     promptFolderId,
     promptTreeEntryId
+  )
+}
+
+const upsertPromptFolderPromptTreeExpandedState = (
+  entries: WorkspacePromptFolderPromptTreeEntry[],
+  promptFolderId: string,
+  isExpanded: boolean
+): WorkspacePromptFolderPromptTreeEntry[] => {
+  const existingIndex = entries.findIndex((entry) => entry.promptFolderId === promptFolderId)
+
+  if (existingIndex === -1) {
+    return [
+      ...entries,
+      createPromptFolderPromptTreeEntry(promptFolderId, {
+        promptTreeIsExpanded: isExpanded
+      })
+    ]
+  }
+
+  if (entries[existingIndex]?.promptTreeIsExpanded === isExpanded) {
+    return entries
+  }
+
+  const nextEntries = [...entries]
+  nextEntries[existingIndex] = {
+    ...nextEntries[existingIndex],
+    promptFolderId,
+    promptTreeIsExpanded: isExpanded
+  }
+  return nextEntries
+}
+
+const applyPromptFolderPromptTreeExpandedState = (
+  record: { promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[] },
+  promptFolderId: string,
+  isExpanded: boolean
+): void => {
+  record.promptFolderPromptTreeEntries = upsertPromptFolderPromptTreeExpandedState(
+    record.promptFolderPromptTreeEntries,
+    promptFolderId,
+    isExpanded
   )
 }
 
@@ -182,6 +225,21 @@ export const lookupWorkspacePersistedPromptFolderPromptTreeEntryId = (
   return persistedEntry?.promptTreeEntryId ?? null
 }
 
+export const lookupWorkspacePersistedPromptFolderPromptTreeExpandedState = (
+  workspaceId: string,
+  promptFolderId: string
+): boolean | null => {
+  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+  if (!draftRecord) {
+    return null
+  }
+
+  const persistedEntry = draftRecord.promptFolderPromptTreeEntries.find(
+    (entry) => entry.promptFolderId === promptFolderId
+  )
+  return persistedEntry?.promptTreeIsExpanded ?? null
+}
+
 export const lookupWorkspacePersistedPromptFolderEditorViewStateJson = (
   workspaceId: string,
   promptFolderId: string,
@@ -256,6 +314,39 @@ export const setPromptFolderPromptTreeEntryIdWithAutosave = (
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         applyPromptFolderPromptTreeEntry(draft, promptFolderId, promptTreeEntryId)
+      })
+    }
+  })
+}
+
+export const setPromptFolderPromptTreeExpandedStateWithAutosave = (
+  workspaceId: string,
+  promptFolderId: string,
+  isExpanded: boolean
+): void => {
+  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+  if (!draftRecord) {
+    return
+  }
+
+  const nextEntries = upsertPromptFolderPromptTreeExpandedState(
+    draftRecord.promptFolderPromptTreeEntries,
+    promptFolderId,
+    isExpanded
+  )
+  if (nextEntries === draftRecord.promptFolderPromptTreeEntries) {
+    return
+  }
+
+  mutatePacedWorkspacePersistenceAutosaveUpdate({
+    workspaceId,
+    debounceMs: AUTOSAVE_MS,
+    mutateOptimistically: ({ collections }) => {
+      collections.workspacePersistence.update(workspaceId, (draft) => {
+        applyPromptFolderPromptTreeExpandedState(draft, promptFolderId, isExpanded)
+      })
+      collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
+        applyPromptFolderPromptTreeExpandedState(draft, promptFolderId, isExpanded)
       })
     }
   })
