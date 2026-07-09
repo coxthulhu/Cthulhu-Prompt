@@ -149,12 +149,38 @@
     width: 36px;
   }
 
+  .prompt-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
+    /* Transparent borders preserve both separator space and rail sizing. */
+    border-bottom-color: transparent;
+    transition:
+      background-color 120ms ease,
+      border-color 50ms ease-out,
+      color 120ms ease;
+  }
+
   .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button) {
+    /* Keep each move slot reserved while its arrow fades out. */
     flex: 0 4 40px;
   }
 
   .prompt-editor-sidebar :global(.prompt-editor-sidebar-drag-button) {
     flex: 1 1 52px;
+  }
+
+  .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button svg) {
+    opacity: 0;
+    transition: opacity 50ms ease-out;
+  }
+
+  .prompt-editor-sidebar:hover :global(.cthulhuUiIconButton[data-size='sidebar-rail']),
+  .prompt-editor-sidebar:focus-within
+    :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
+    border-bottom-color: var(--ui-neutral-normal-border);
+  }
+
+  .prompt-editor-sidebar:hover :global(.prompt-editor-sidebar-move-button svg),
+  .prompt-editor-sidebar:focus-within :global(.prompt-editor-sidebar-move-button svg) {
+    opacity: 1;
   }
 
   .prompt-editor-sidebar:focus-within {

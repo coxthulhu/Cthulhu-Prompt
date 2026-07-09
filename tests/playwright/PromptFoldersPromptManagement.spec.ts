@@ -530,6 +530,99 @@ describe('Prompt folder prompt management', () => {
     expect(editorCenter).toBeGreaterThan(hostCenter + MINIMAL_SCROLL_POSITION_TOLERANCE_PX)
   })
 
+  test('reveals prompt row controls without shifting their reserved space', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await scrollPromptEditorIntoView(mainWindow, testHelpers, 'dev-2')
+
+    const editor = mainWindow.locator(promptEditorSelector('dev-2'))
+    const rail = editor.locator('.prompt-editor-sidebar')
+    const moveUpButton = editor.locator('[data-testid="prompt-move-up"]')
+    const moveDownButton = editor.locator('[data-testid="prompt-move-down"]')
+    const dragHandle = editor.locator('[data-testid="prompt-drag-handle"]')
+    const moveUpIcon = moveUpButton.locator('svg')
+    const moveDownIcon = moveDownButton.locator('svg')
+    const dragIcon = dragHandle.locator('svg')
+    const moveUpBoxBefore = await moveUpButton.boundingBox()
+
+    await expect(moveUpIcon).toHaveCSS('opacity', '0')
+    await expect(moveDownIcon).toHaveCSS('opacity', '0')
+    await expect(dragIcon).toHaveCSS('opacity', '1')
+    await expect(moveUpButton).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)')
+    await expect(dragHandle).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)')
+    await expect(moveUpIcon).toHaveCSS('transition-property', 'opacity')
+    await expect(moveUpIcon).toHaveCSS('transition-duration', '0.05s')
+    await expect(moveUpIcon).toHaveCSS('transition-timing-function', 'ease-out')
+
+    await rail.hover()
+    await expect(moveUpIcon).toHaveCSS('opacity', '1')
+    await expect(moveDownIcon).toHaveCSS('opacity', '1')
+    await expect(moveDownButton).toHaveCSS('opacity', '0.5')
+    await expect
+      .poll(async () =>
+        await moveUpButton.evaluate((button) => getComputedStyle(button).borderBottomColor)
+      )
+      .not.toBe('rgba(0, 0, 0, 0)')
+    await expect
+      .poll(async () =>
+        await dragHandle.evaluate((button) => getComputedStyle(button).borderBottomColor)
+      )
+      .not.toBe('rgba(0, 0, 0, 0)')
+
+    const moveUpBoxAfter = await moveUpButton.boundingBox()
+    expect(moveUpBoxBefore).not.toBeNull()
+    expect(moveUpBoxAfter).not.toBeNull()
+    expect(Math.abs(moveUpBoxAfter!.x - moveUpBoxBefore!.x)).toBeLessThanOrEqual(
+      MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
+    expect(Math.abs(moveUpBoxAfter!.y - moveUpBoxBefore!.y)).toBeLessThanOrEqual(
+      MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
+    await mainWindow.locator(promptTitleSelector('dev-2')).hover()
+    await moveUpButton.focus()
+    await expect(moveUpIcon).toHaveCSS('opacity', '1')
+    await mainWindow.locator(promptTitleSelector('dev-2')).focus()
+    await expect(moveUpIcon).toHaveCSS('opacity', '0')
+
+    const dividerButton = mainWindow.locator(dividerAddSelector('dev-2'))
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      dividerAddSelector('dev-2'),
+      120
+    )
+    await mainWindow.mouse.move(0, 0)
+    const dividerActions = dividerButton.locator('..')
+    const dividerRow = dividerButton.locator(
+      'xpath=ancestor::div[contains(@class, "promptDividerRow")]'
+    )
+    const dividerButtonBoxBefore = await dividerButton.boundingBox()
+
+    await expect(dividerActions).toHaveCSS('opacity', '0')
+    await expect(dividerActions).toHaveCSS('transition-property', 'opacity')
+    await expect(dividerActions).toHaveCSS('transition-duration', '0.05s')
+    await expect(dividerActions).toHaveCSS('transition-timing-function', 'ease-out')
+    await dividerRow.hover()
+    await expect(dividerActions).toHaveCSS('opacity', '1')
+
+    const dividerButtonBoxAfter = await dividerButton.boundingBox()
+    expect(dividerButtonBoxBefore).not.toBeNull()
+    expect(dividerButtonBoxAfter).not.toBeNull()
+    expect(Math.abs(dividerButtonBoxAfter!.x - dividerButtonBoxBefore!.x)).toBeLessThanOrEqual(
+      MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
+    expect(Math.abs(dividerButtonBoxAfter!.y - dividerButtonBoxBefore!.y)).toBeLessThanOrEqual(
+      MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
+    await mainWindow.mouse.move(0, 0)
+    await dividerButton.focus()
+    await expect(dividerActions).toHaveCSS('opacity', '1')
+  })
+
   test('reorders prompts with move buttons', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }

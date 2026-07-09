@@ -129,9 +129,17 @@
   }
 
   .promptDividerActions {
+    /* Keep the action column reserved while its buttons fade out. */
     align-items: center;
     display: inline-flex;
     gap: 4px;
     min-width: 0;
+    opacity: 0;
+    transition: opacity 50ms ease-out;
+  }
+
+  .promptDividerRow:hover .promptDividerActions,
+  .promptDividerRow:focus-within .promptDividerActions {
+    opacity: 1;
   }
 </style>

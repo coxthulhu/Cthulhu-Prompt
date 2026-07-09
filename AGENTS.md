@@ -58,6 +58,8 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 
 For Codex `functions.exec_command` Playwright runs, use `./scripts/wsl-playwright.sh`. The wrapper changes to the repository root in WSL, then calls Windows `cmd.exe` so Playwright still runs in the required Windows environment. Keep the 300000 ms timeout.
 
+Never run multiple Playwright commands concurrently, including from subagents. Wait for the active run to finish before starting another because overlapping Electron workers can exhaust the Windows test environment and cause false startup or teardown timeouts.
+
 Avoid overriding the reporter unless you include the custom reporter, because the default config already uses the dot reporter plus the console/page error reporter. If you hit a Svelte hydration/runtime error, search for the exact message online. Typical variants:
 Console/page errors captured during Playwright runs are written to `test-results/renderer-errors.txt` (plain text). If you override the reporter, include it explicitly (e.g., `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`).
 
