@@ -81,23 +81,23 @@
   let {
     promptFolders,
     folderListState,
-    selectedPromptFolderId = null,
+    screenRootFolderId = null,
     expandAllRequestVersion = 0,
     collapseAllRequestVersion = 0,
     isPromptFoldersScreenActive = false,
     screenMode = PromptFolderScreenMode.Active,
     onAllPromptFoldersCollapsedChange,
-    onPromptFolderSelect
+    onScreenRootFolderSelect
   } = $props<{
     promptFolders: PromptFolder[]
     folderListState: FolderListState
-    selectedPromptFolderId?: string | null
+    screenRootFolderId?: string | null
     expandAllRequestVersion?: number
     collapseAllRequestVersion?: number
     isPromptFoldersScreenActive?: boolean
     screenMode?: PromptFolderScreenMode
     onAllPromptFoldersCollapsedChange: (isCollapsed: boolean) => void
-    onPromptFolderSelect: (promptFolderId: string) => void
+    onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
   const PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX = 1
@@ -183,13 +183,13 @@
     return promptFoldersById
   })
 
-  const selectedPromptFolder = $derived.by((): PromptFolder | null => {
+  const screenRootFolder = $derived.by((): PromptFolder | null => {
     if (promptFolders.length === 0) {
       return null
     }
 
     return (
-      promptFolders.find((promptFolder) => promptFolder.id === selectedPromptFolderId) ??
+      promptFolders.find((promptFolder) => promptFolder.id === screenRootFolderId) ??
       promptFolders[0]!
     )
   })
@@ -197,7 +197,7 @@
   const getPromptIdsForFolder = (folder: PromptFolder): string[] =>
     folder.entryIds.filter((entryId) => promptById[entryId])
   const selectedCompletedPromptIds = $derived.by((): string[] => {
-    if (!selectedPromptFolder) {
+    if (!screenRootFolder) {
       return []
     }
 
@@ -205,7 +205,7 @@
       return []
     }
 
-    return [...selectedPromptFolder.completedPromptIds].sort((leftPromptId, rightPromptId) => {
+    return [...screenRootFolder.completedPromptIds].sort((leftPromptId, rightPromptId) => {
       const leftCompletedAt = promptById[leftPromptId]?.completedAt ?? ''
       const rightCompletedAt = promptById[rightPromptId]?.completedAt ?? ''
       return rightCompletedAt.localeCompare(leftCompletedAt)
@@ -217,9 +217,6 @@
   const folderPromptRowId = (folderId: string, promptId: string): string =>
     `${folderId}:prompt:${promptId}`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
-  // Remove this flag when the prompt folder screen can render and navigate nested folders.
-  const DISABLE_SUBFOLDER_NAVIGATION = true
-
   const getPromptTreeExpandedStateKey = (promptFolderId: string): string =>
     `${workspaceSelection.selectedWorkspaceId ?? 'no-workspace'}:${promptFolderId}`
 
@@ -281,11 +278,11 @@
   }
 
   const promptFolderTreeIds = $derived.by((): string[] => {
-    if (!selectedPromptFolder) {
+    if (!screenRootFolder) {
       return []
     }
 
-    return collectPromptFolderTreeIds(selectedPromptFolder)
+    return collectPromptFolderTreeIds(screenRootFolder)
   })
 
   const getPromptTreeDroppableOptions = (
@@ -340,11 +337,12 @@
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreePromptDroppableState.edge(rowId)
 
-  const selectMovedPrompt = (promptFolderId: string, promptId: string): void => {
+  const selectMovedPrompt = (destinationRootFolderId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
 
     promptNavigation.select({
-      folderId: promptFolderId,
+      screenRootFolderId: destinationRootFolderId,
+      rowOwnerFolderId: destinationRootFolderId,
       row,
       source: 'prompt-move',
       forceVersionBump: true
@@ -354,20 +352,20 @@
     if (workspaceId) {
       setPromptFolderPromptTreeEntryIdWithAutosave(
         workspaceId,
-        promptFolderId,
+        destinationRootFolderId,
         promptNavigationRowToPersistedEntryId(row)
       )
     }
 
-    onPromptFolderSelect(promptFolderId)
+    onScreenRootFolderSelect(destinationRootFolderId)
   }
 
   const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
-    if (!isPromptFoldersScreenActive || !selectedPromptFolder) {
+    if (!isPromptFoldersScreenActive || !screenRootFolder) {
       return null
     }
 
-    if (promptNavigation.selectedFolderId !== selectedPromptFolder.id) {
+    if (promptNavigation.screenRootFolderId !== screenRootFolder.id) {
       return null
     }
 
@@ -402,21 +400,28 @@
   })
 
   const trackedTreeRowId = $derived.by((): string | null => {
-    if (!selectedPromptFolder || !trackedNavigationRow) {
+    if (!screenRootFolder || !trackedNavigationRow || !promptNavigation.rowOwnerFolderId) {
       return null
     }
 
     return trackedNavigationRow === 'folder-settings'
-      ? folderRootRowId(selectedPromptFolder.id)
-      : folderPromptRowId(selectedPromptFolder.id, trackedNavigationRow.slice('prompt:'.length))
+      ? folderRootRowId(promptNavigation.rowOwnerFolderId)
+      : folderPromptRowId(
+          promptNavigation.rowOwnerFolderId,
+          trackedNavigationRow.slice('prompt:'.length)
+        )
   })
 
-  const isTreeEntryActive = (folderId: string, row: PromptNavigationRow): boolean => {
+  const isTreeEntryActive = (rowOwnerFolderId: string, row: PromptNavigationRow): boolean => {
     if (!isPromptFoldersScreenActive || !promptNavigation.selectedRow) {
       return false
     }
 
-    return promptNavigation.selectedFolderId === folderId && promptNavigation.selectedRow === row
+    return (
+      promptNavigation.screenRootFolderId === screenRootFolder?.id &&
+      promptNavigation.rowOwnerFolderId === rowOwnerFolderId &&
+      promptNavigation.selectedRow === row
+    )
   }
 
   const isPromptRowDragging = (folderId: string, promptId: string): boolean => {
@@ -425,30 +430,29 @@
   }
   const isPromptDragActive = $derived(promptDragState.draggedPromptRow !== null)
 
-  const handlePromptTreeEntrySelect = (promptFolderId: string, row: PromptNavigationRow) => {
-    const isSameFolderActive =
-      isPromptFoldersScreenActive && selectedPromptFolder?.id === promptFolderId
+  const handlePromptTreeEntrySelect = (
+    rowOwnerFolderId: string,
+    row: PromptNavigationRow,
+    source: 'tree-click' | 'folder-open' = 'tree-click'
+  ) => {
+    const rootFolderId = screenRootFolder?.id
+    if (!rootFolderId) return
+    const isSameRootActive = isPromptFoldersScreenActive
 
     promptNavigation.select({
-      folderId: promptFolderId,
+      screenRootFolderId: rootFolderId,
+      rowOwnerFolderId,
       row,
-      source: 'tree-click',
+      source,
       forceVersionBump: true
     })
 
-    if (!isSameFolderActive) {
-      onPromptFolderSelect(promptFolderId)
+    if (!isSameRootActive) {
+      onScreenRootFolderSelect(rootFolderId)
     }
   }
 
   const handlePromptTreePromptSelect = (promptFolderId: string, promptId: string) => {
-    if (
-      DISABLE_SUBFOLDER_NAVIGATION &&
-      promptFolderId !== selectedPromptFolder?.id
-    ) {
-      return
-    }
-
     handlePromptTreeEntrySelect(promptFolderId, promptIdToPromptNavigationRow(promptId))
   }
 
@@ -457,24 +461,10 @@
   }
 
   const handlePromptTreeFolderOpen = (promptFolderId: string) => {
-    if (
-      DISABLE_SUBFOLDER_NAVIGATION &&
-      promptFolderId !== selectedPromptFolder?.id
-    ) {
-      return
-    }
-
-    onPromptFolderSelect(promptFolderId)
+    handlePromptTreeEntrySelect(promptFolderId, 'folder-settings', 'folder-open')
   }
 
   const handlePromptTreeFolderSettingsOpen = (promptFolderId: string) => {
-    if (
-      DISABLE_SUBFOLDER_NAVIGATION &&
-      promptFolderId !== selectedPromptFolder?.id
-    ) {
-      return
-    }
-
     handlePromptTreeEntrySelect(promptFolderId, 'folder-settings')
   }
 
@@ -518,7 +508,7 @@
   // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
   $effect(() => {
     const nextTrackedRowId = trackedTreeRowId
-    const currentFolderId = selectedPromptFolder?.id ?? null
+    const currentFolderId = screenRootFolder?.id ?? null
 
     if (!scrollToWithinWindowBand) {
       return
@@ -546,7 +536,7 @@
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
-    if (selectedPromptFolder) {
+    if (screenRootFolder) {
       const addPromptFolderRows = (
         promptFolder: PromptFolder,
         indentCount: number,
@@ -559,7 +549,7 @@
             folder: promptFolder,
             indentCount,
             isLastRow,
-            isSubfolder: promptFolder.id !== selectedPromptFolder.id
+            isSubfolder: promptFolder.id !== screenRootFolder.id
           }
         })
 
@@ -588,7 +578,7 @@
               promptId: entryId,
               indentCount: indentCount + 1,
               isLastRow: isLastChild,
-              isNestedPrompt: promptFolder.id !== selectedPromptFolder.id
+              isNestedPrompt: promptFolder.id !== screenRootFolder.id
             }
           })
         }
@@ -596,20 +586,20 @@
 
       if (isCompletedMode) {
         items.push({
-          id: folderRootRowId(selectedPromptFolder.id),
+          id: folderRootRowId(screenRootFolder.id),
           row: {
             kind: 'folder',
-            folder: selectedPromptFolder,
+            folder: screenRootFolder,
             indentCount: 0,
             isLastRow: true,
             isSubfolder: false
           }
         })
 
-        if (getPromptTreeFolderExpandedState(selectedPromptFolder.id)) {
+        if (getPromptTreeFolderExpandedState(screenRootFolder.id)) {
           if (selectedCompletedPromptIds.length === 0) {
             items.push({
-              id: `${selectedPromptFolder.id}:empty-state`,
+              id: `${screenRootFolder.id}:empty-state`,
               row: {
                 kind: 'empty-state'
               }
@@ -617,10 +607,10 @@
           } else {
             for (const [promptIndex, promptId] of selectedCompletedPromptIds.entries()) {
               items.push({
-                id: folderPromptRowId(selectedPromptFolder.id, promptId),
+                id: folderPromptRowId(screenRootFolder.id, promptId),
                 row: {
                   kind: 'folder-prompt',
-                  folder: selectedPromptFolder,
+                  folder: screenRootFolder,
                   promptId,
                   indentCount: 1,
                   isLastRow: promptIndex === selectedCompletedPromptIds.length - 1,
@@ -631,11 +621,11 @@
           }
         }
       } else {
-        addPromptFolderRows(selectedPromptFolder, 0, true)
+        addPromptFolderRows(screenRootFolder, 0, true)
 
-        if (getPromptTreeFolderExpandedState(selectedPromptFolder.id) && items.length === 1) {
+        if (getPromptTreeFolderExpandedState(screenRootFolder.id) && items.length === 1) {
           items.push({
-            id: `${selectedPromptFolder.id}:empty-state`,
+            id: `${screenRootFolder.id}:empty-state`,
             row: {
               kind: 'empty-state'
             }

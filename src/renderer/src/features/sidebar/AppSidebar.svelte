@@ -64,19 +64,19 @@
     isWorkspaceReady = false,
     isWorkspaceLoading = false,
     workspacePath = null,
-    selectedPromptFolderId = null,
+    screenRootFolderId = null,
     promptFolderScreenMode = PromptFolderScreenMode.Active,
     onPromptFolderModeChange,
-    onPromptFolderSelect
+    onScreenRootFolderSelect
   } = $props<{
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
     isWorkspaceLoading?: boolean
     workspacePath?: string | null
-    selectedPromptFolderId?: string | null
+    screenRootFolderId?: string | null
     promptFolderScreenMode?: PromptFolderScreenMode
     onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
-    onPromptFolderSelect: (promptFolderId: string) => void
+    onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
   const workspaceSelection = getWorkspaceSelectionContext()
@@ -240,23 +240,23 @@
       }
     })
   )
-  const selectedPromptFolderDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
+  const screenRootFolderDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
     if (promptFolderDropdownItems.length === 0) {
       return promptFolderSelectorPlaceholder
     }
 
     return (
-      promptFolderDropdownItems.find((item) => item.id === selectedPromptFolderId) ??
+      promptFolderDropdownItems.find((item) => item.id === screenRootFolderId) ??
       promptFolderDropdownItems[0]!
     )
   })
-  const selectedPromptFolder = $derived.by((): PromptFolder | null => {
+  const screenRootFolder = $derived.by((): PromptFolder | null => {
     if (promptFolders.length === 0) {
       return null
     }
 
     return (
-      promptFolders.find((promptFolder) => promptFolder.id === selectedPromptFolderId) ??
+      promptFolders.find((promptFolder) => promptFolder.id === screenRootFolderId) ??
       promptFolders[0]!
     )
   })
@@ -299,17 +299,18 @@
   }
 
   const openSelectedPromptFolderSettings = () => {
-    const promptFolder = selectedPromptFolder
+    const promptFolder = screenRootFolder
     if (!promptFolder) return
 
     onPromptFolderModeChange(PromptFolderScreenMode.Active)
     promptNavigation.select({
-      folderId: promptFolder.id,
+      screenRootFolderId: promptFolder.id,
+      rowOwnerFolderId: promptFolder.id,
       row: 'folder-settings',
       source: 'tree-click',
       forceVersionBump: true
     })
-    onPromptFolderSelect(promptFolder.id)
+    onScreenRootFolderSelect(promptFolder.id)
   }
 
   const handleSelectedPromptFolderActionsSelect = (item: DropdownPopupItem) => {
@@ -338,7 +339,8 @@
     const row = promptIdToPromptNavigationRow(promptId)
 
     promptNavigation.select({
-      folderId: promptFolderId,
+      screenRootFolderId: promptFolderId,
+      rowOwnerFolderId: promptFolderId,
       row,
       source: 'prompt-create',
       forceVersionBump: true
@@ -353,11 +355,11 @@
       )
     }
 
-    onPromptFolderSelect(promptFolderId)
+    onScreenRootFolderSelect(promptFolderId)
   }
 
   const addPromptToSelectedFolder = async () => {
-    const promptFolder = selectedPromptFolder
+    const promptFolder = screenRootFolder
     if (!promptFolder || isCompletedPromptMode || isCreatingPromptFromSidebar) {
       return
     }
@@ -398,7 +400,7 @@
     }
 
     if (promptFolders.some((promptFolder) => promptFolder.id === item.id)) {
-      onPromptFolderSelect(item.id)
+      onScreenRootFolderSelect(item.id)
     }
   }
 
@@ -632,7 +634,7 @@
         <SelectorButtonWithDropdown
           label="Prompt folder selector"
           items={promptFolderDropdownItems}
-          selectedItem={selectedPromptFolderDropdownItem}
+          selectedItem={screenRootFolderDropdownItem}
           footerItem={promptFolderSelectorFooterItem}
           state={promptFolderSelectorState}
           itemDragOptions={promptFolderSelectorItemDragOptions}
@@ -655,7 +657,7 @@
           label="Add Prompt"
           title="Add Prompt"
           size="compact"
-          disabled={!selectedPromptFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
+          disabled={!screenRootFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
           testId="sidebar-add-prompt-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={() => void addPromptToSelectedFolder()}
@@ -665,7 +667,7 @@
           label="Show Completed Prompts"
           title="Show Completed Prompts"
           size="compact"
-          disabled={!selectedPromptFolder}
+          disabled={!screenRootFolder}
           active={isCompletedPromptMode}
           testId="toggle-completed-prompts-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
@@ -694,7 +696,7 @@
               label="Selected Prompt Folder Actions"
               title="Selected Prompt Folder Actions"
               size="compact"
-              disabled={!selectedPromptFolder}
+              disabled={!screenRootFolder}
               active={dropdown.open}
               ariaHaspopup={dropdown.ariaHaspopup}
               ariaExpanded={dropdown.ariaExpanded}
@@ -711,7 +713,7 @@
           {promptFolders}
           isPromptFolderListLoading={isWorkspaceLoading}
           onCreated={(promptFolderId) => {
-            onPromptFolderSelect(promptFolderId)
+            onScreenRootFolderSelect(promptFolderId)
           }}
         />
       </div>
@@ -722,7 +724,7 @@
     <PromptTree
       promptFolders={promptTreePromptFolders}
       {folderListState}
-      {selectedPromptFolderId}
+      {screenRootFolderId}
       screenMode={promptFolderScreenMode}
       expandAllRequestVersion={expandAllPromptFoldersVersion}
       collapseAllRequestVersion={collapseAllPromptFoldersVersion}
@@ -730,7 +732,7 @@
       onAllPromptFoldersCollapsedChange={(isCollapsed) => {
         areAllPromptFoldersCollapsed = isCollapsed
       }}
-      {onPromptFolderSelect}
+      {onScreenRootFolderSelect}
     />
   </div>
 </aside>

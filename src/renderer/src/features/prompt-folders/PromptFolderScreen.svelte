@@ -11,16 +11,21 @@
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
 
-  let { promptFolderId, screenMode = PromptFolderScreenMode.Active, onPromptFolderSelect } = $props<{
-    promptFolderId: string
+  let {
+    screenRootFolderId,
+    screenMode = PromptFolderScreenMode.Active,
+    onScreenRootFolderSelect
+  } = $props<{
+    screenRootFolderId: string
     screenMode?: PromptFolderScreenMode
-    onPromptFolderSelect: (promptFolderId: string) => void
+    onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
   const controller = createPromptFolderScreenController({
-    getPromptFolderId: () => promptFolderId,
+    getScreenRootFolderId: () => screenRootFolderId,
     getScreenMode: () => screenMode,
-    onPromptFolderSelect: (nextPromptFolderId) => onPromptFolderSelect(nextPromptFolderId)
+    onScreenRootFolderSelect: (nextScreenRootFolderId) =>
+      onScreenRootFolderSelect(nextScreenRootFolderId)
   })
 
   // Side effect: persist the last selected row for this folder when the screen unmounts.
@@ -33,14 +38,14 @@
   )
 
   const openRenamePromptFolderDialog = () => {
-    const currentPromptFolder = controller.promptFolder
+    const currentPromptFolder = controller.screenRootFolder
     if (!currentPromptFolder) return
 
     renamePromptFolderDialog?.openDialog(currentPromptFolder.displayName)
   }
 
   const handleRenamePromptFolder = async (displayName: string): Promise<boolean> => {
-    const currentPromptFolder = controller.promptFolder
+    const currentPromptFolder = controller.screenRootFolder
     if (!currentPromptFolder) return false
 
     return await runIpcBestEffort(
@@ -108,7 +113,7 @@
         {:else if controller.isVirtualContentReady}
           <PromptFolderVirtualContent
             workspaceId={controller.workspaceId}
-            promptFolderId={controller.promptFolderId}
+            screenRootFolderId={controller.screenRootFolderId}
             folderSettingsByFolderId={controller.folderSettingsByFolderId}
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
             promptDraftById={controller.promptDraftById}
@@ -161,7 +166,7 @@
 
 <PromptFolderNameDialog
   bind:this={renamePromptFolderDialog}
-  isWorkspaceReady={controller.promptFolder !== null}
+  isWorkspaceReady={controller.screenRootFolder !== null}
   promptFolders={controller.promptFolders}
   isPromptFolderListLoading={false}
   title="Rename Prompt Folder"
@@ -171,10 +176,10 @@
   inputTestId="rename-prompt-folder-name-input"
   errorTestId="rename-prompt-folder-name-error"
   rowDetail="Rename this prompt folder."
-  initialDisplayName={controller.promptFolder?.displayName ?? ''}
-  unchangedDisplayName={controller.promptFolder?.displayName ?? null}
-  unchangedFolderName={controller.promptFolder?.folderName ?? null}
-  duplicatePromptFolderId={controller.promptFolder?.id ?? null}
+  initialDisplayName={controller.screenRootFolder?.displayName ?? ''}
+  unchangedDisplayName={controller.screenRootFolder?.displayName ?? null}
+  unchangedFolderName={controller.screenRootFolder?.folderName ?? null}
+  duplicatePromptFolderId={controller.screenRootFolder?.id ?? null}
   failureMessage="Failed to rename folder. Please try again."
   onsubmit={handleRenamePromptFolder}
 />

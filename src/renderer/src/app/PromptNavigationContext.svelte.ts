@@ -8,6 +8,7 @@ export const promptIdToPromptNavigationRow = (promptId: string): PromptNavigatio
 
 export type PromptNavigationSource =
   | 'tree-click'
+  | 'folder-open'
   | 'restore'
   | 'restore-hold'
   | 'scroll-follow'
@@ -18,21 +19,24 @@ export type PromptNavigationSource =
   | 'prompt-move'
 
 type PromptNavigationState = {
-  selectedFolderId: string | null
+  screenRootFolderId: string | null
+  rowOwnerFolderId: string | null
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
 }
 
 type SelectPromptNavigationOptions = {
-  folderId: string
+  screenRootFolderId: string
+  rowOwnerFolderId: string
   row: PromptNavigationRow
   source: PromptNavigationSource
   forceVersionBump?: boolean
 }
 
 export type PromptNavigationContext = {
-  selectedFolderId: string | null
+  screenRootFolderId: string | null
+  rowOwnerFolderId: string | null
   selectedRow: PromptNavigationRow | null
   selectionVersion: number
   selectionSource: PromptNavigationSource | null
@@ -55,20 +59,23 @@ export const persistedPromptTreeEntryIdToPromptNavigationRow = (
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {
   const state = $state<PromptNavigationState>({
-    selectedFolderId: null,
+    screenRootFolderId: null,
+    rowOwnerFolderId: null,
     selectedRow: null,
     selectionVersion: 0,
     selectionSource: null
   })
 
   const select = ({
-    folderId,
+    screenRootFolderId,
+    rowOwnerFolderId,
     row,
     source,
     forceVersionBump = false
   }: SelectPromptNavigationOptions): void => {
     const hasChanged =
-      state.selectedFolderId !== folderId ||
+      state.screenRootFolderId !== screenRootFolderId ||
+      state.rowOwnerFolderId !== rowOwnerFolderId ||
       state.selectedRow !== row ||
       state.selectionSource !== source
 
@@ -76,15 +83,19 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
       return
     }
 
-    state.selectedFolderId = folderId
+    state.screenRootFolderId = screenRootFolderId
+    state.rowOwnerFolderId = rowOwnerFolderId
     state.selectedRow = row
     state.selectionSource = source
     state.selectionVersion += 1
   }
 
   return {
-    get selectedFolderId() {
-      return state.selectedFolderId
+    get screenRootFolderId() {
+      return state.screenRootFolderId
+    },
+    get rowOwnerFolderId() {
+      return state.rowOwnerFolderId
     },
     get selectedRow() {
       return state.selectedRow

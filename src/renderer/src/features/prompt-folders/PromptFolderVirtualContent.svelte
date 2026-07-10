@@ -37,7 +37,8 @@
   import {
     PROMPT_FOLDER_SETTINGS_ROW_ID,
     promptDividerRowId,
-    promptEditorRowId
+    promptEditorRowId,
+    promptFolderEditorRowId
   } from './promptFolderRowIds'
   import PromptFolderSectionRow from './PromptFolderSectionRow.svelte'
   import {
@@ -94,7 +95,7 @@
 
   type PromptFolderVirtualContentProps = {
     workspaceId: string | null
-    promptFolderId: string
+    screenRootFolderId: string
     folderSettingsByFolderId: Record<string, PromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, PromptDraftRecord>
@@ -141,7 +142,7 @@
 
   let {
     workspaceId,
-    promptFolderId,
+    screenRootFolderId,
     folderSettingsByFolderId,
     promptEditorSizingConfig,
     promptDraftById,
@@ -350,7 +351,7 @@
       const activeRows = activeScreenRows.map((row): VirtualWindowItem<PromptFolderRow> => {
         if (row.kind === 'folder-editor') {
           return {
-            id: row.isRoot ? PROMPT_FOLDER_SETTINGS_ROW_ID : `folder-settings:${row.ownerFolderId}`,
+            id: promptFolderEditorRowId(screenRootFolderId, row.ownerFolderId),
             row: {
               ...row,
               isSettingsSectionExpanded:
@@ -390,7 +391,7 @@
         id: PROMPT_FOLDER_SETTINGS_ROW_ID,
         row: {
           kind: 'folder-editor',
-          ownerFolderId: promptFolderId,
+          ownerFolderId: screenRootFolderId,
           indentLevel: 0,
           isOwnerRoot: true,
           isRoot: true,
@@ -402,13 +403,13 @@
       }
     ]
 
-    if (promptsSectionExpandedByFolderId[promptFolderId] ?? true) {
+    if (promptsSectionExpandedByFolderId[screenRootFolderId] ?? true) {
       if (visiblePromptIds.length === 0) {
         completedRows.push({
           id: 'placeholder-empty',
           row: {
             kind: 'placeholder',
-            ownerFolderId: promptFolderId,
+            ownerFolderId: screenRootFolderId,
             indentLevel: 1,
             isOwnerRoot: true
           }
@@ -418,7 +419,7 @@
           id: 'divider-initial',
           row: {
             kind: 'prompt-divider',
-            ownerFolderId: promptFolderId,
+            ownerFolderId: screenRootFolderId,
             previousEntryId: null,
             indentLevel: 1,
             isOwnerRoot: true
@@ -430,7 +431,7 @@
             id: promptEditorRowId(promptId),
             row: {
               kind: 'prompt-editor',
-              ownerFolderId: promptFolderId,
+              ownerFolderId: screenRootFolderId,
               promptId,
               indentLevel: 1,
               isOwnerRoot: true,
@@ -442,7 +443,7 @@
             id: promptDividerRowId(promptId),
             row: {
               kind: 'prompt-divider',
-              ownerFolderId: promptFolderId,
+              ownerFolderId: screenRootFolderId,
               previousEntryId: promptId,
               indentLevel: 1,
               isOwnerRoot: true
@@ -457,16 +458,22 @@
   })
 
   const handleCenterRowChange = (row: PromptFolderRow | null) => {
-    if (row?.kind === 'prompt-editor' && row.isOwnerRoot) {
-      onCenterRowChange({ kind: 'prompt', promptId: row.promptId })
+    if (row?.kind === 'prompt-editor') {
+      onCenterRowChange({
+        kind: 'prompt',
+        rowOwnerFolderId: row.ownerFolderId,
+        promptId: row.promptId
+      })
       return
     }
     if (
       !isCompletedMode &&
-      row?.kind === 'folder-editor' &&
-      row.isRoot
+      row?.kind === 'folder-editor'
     ) {
-      onCenterRowChange({ kind: 'folder-settings' })
+      onCenterRowChange({
+        kind: 'folder-settings',
+        rowOwnerFolderId: row.ownerFolderId
+      })
       return
     }
     onCenterRowChange(null)
@@ -503,13 +510,13 @@
     if (previousPromptId === null) {
       return {
         kind: 'folder',
-        folderId: promptFolderId
+        folderId: screenRootFolderId
       }
     }
 
     return {
       kind: 'prompt',
-      folderId: promptFolderId,
+      folderId: screenRootFolderId,
       promptId: previousPromptId,
       edge: 'bottom'
     }
@@ -519,13 +526,13 @@
     previousPromptId: string | null,
     payload: PromptHandleDragPayload
   ): boolean => {
-    if (payload.sourceFolderId !== promptFolderId) {
+    if (payload.sourceFolderId !== screenRootFolderId) {
       return true
     }
 
     return (
       resolvePromptHandleDropMove(
-        promptFolderId,
+        screenRootFolderId,
         visiblePromptIds,
         payload.fromId,
         getPromptDividerDropPayload(previousPromptId),

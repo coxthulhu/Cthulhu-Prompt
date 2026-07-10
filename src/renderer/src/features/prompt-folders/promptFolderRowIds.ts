@@ -6,6 +6,14 @@ import {
 
 export const PROMPT_FOLDER_SETTINGS_ROW_ID = 'folder-settings'
 
+export const promptFolderEditorRowId = (
+  screenRootFolderId: string,
+  rowOwnerFolderId: string
+): string =>
+  screenRootFolderId === rowOwnerFolderId
+    ? PROMPT_FOLDER_SETTINGS_ROW_ID
+    : `folder-settings:${rowOwnerFolderId}`
+
 export const promptEditorRowId = (promptId: string): string => `${promptId}-editor`
 
 export const promptDividerRowId = (promptId: string): string => `${promptId}-divider`

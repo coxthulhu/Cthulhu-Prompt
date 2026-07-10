@@ -150,7 +150,7 @@
     return promptIds.size
   })
   const workspacePromptFolderCount = $derived(selectedWorkspace?.promptFolderIds.length ?? 0)
-  let selectedPromptFolderId = $state<string | null>(null)
+  let screenRootFolderId = $state<string | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
@@ -182,7 +182,7 @@
   }
 
   const clearPromptFolderSelection = () => {
-    selectedPromptFolderId = null
+    screenRootFolderId = null
     promptFolderScreenMode = PromptFolderScreenMode.Active
   }
 
@@ -202,8 +202,8 @@
     const firstPromptFolderId = selectedWorkspace?.promptFolderIds[0] ?? null
     const persistedLastPromptFolderId = workspacePersistence?.lastPromptFolderId ?? null
 
-    return hasWorkspacePromptFolder(selectedPromptFolderId)
-      ? selectedPromptFolderId
+    return hasWorkspacePromptFolder(screenRootFolderId)
+      ? screenRootFolderId
       : hasWorkspacePromptFolder(persistedLastPromptFolderId)
         ? persistedLastPromptFolderId
         : firstPromptFolderId
@@ -214,7 +214,7 @@
       return {
         selectedScreen: screen,
         selectedScreenData: {
-          promptFolderId: selectedPromptFolderId
+          promptFolderId: screenRootFolderId
         }
       }
     }
@@ -305,7 +305,7 @@
         Boolean(workspaceRecord?.promptFolderIds.includes(persistedPromptFolderId))
 
       if (hasPromptFolder && persistedPromptFolderId) {
-        selectedPromptFolderId = persistedPromptFolderId
+        screenRootFolderId = persistedPromptFolderId
         activeScreen = 'prompt-folders'
         if (workspacePersistence.lastPromptFolderId !== persistedPromptFolderId) {
           await syncWorkspaceScreenSelection(workspaceId, {
@@ -345,15 +345,15 @@
 
   const persistPromptNavigationSelection = () => {
     const workspaceId = getSelectedWorkspaceId()
-    const selectedFolderId = promptNavigation.selectedFolderId
+    const rowOwnerFolderId = promptNavigation.rowOwnerFolderId
     const selectedRow = promptNavigation.selectedRow
-    if (!workspaceId || !selectedFolderId || !selectedRow) {
+    if (!workspaceId || !rowOwnerFolderId || !selectedRow) {
       return
     }
 
     setPromptFolderPromptTreeEntryIdWithAutosave(
       workspaceId,
-      selectedFolderId,
+      rowOwnerFolderId,
       promptNavigationRowToPersistedEntryId(selectedRow)
     )
   }
@@ -530,7 +530,7 @@
     if (screen === 'prompt-folders') {
       const promptFolderId = resolvePromptFolderNavigationId()
       if (!promptFolderId) return
-      selectedPromptFolderId = promptFolderId
+      screenRootFolderId = promptFolderId
     } else {
       promptFolderScreenMode = PromptFolderScreenMode.Active
     }
@@ -538,12 +538,12 @@
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
 
-  const navigateToPromptFolder = (promptFolderId: string): void => {
+  const navigateToScreenRootFolder = (promptFolderId: string): void => {
     if (!isWorkspaceReady) return
-    if (activeScreen === 'prompt-folders' && selectedPromptFolderId === promptFolderId) {
+    if (activeScreen === 'prompt-folders' && screenRootFolderId === promptFolderId) {
       return
     }
-    selectedPromptFolderId = promptFolderId
+    screenRootFolderId = promptFolderId
     navigateToScreen('prompt-folders')
   }
 
@@ -576,11 +576,11 @@
           {isWorkspaceReady}
           {isWorkspaceLoading}
           {workspacePath}
-          {selectedPromptFolderId}
+          {screenRootFolderId}
           promptFolderScreenMode={promptFolderScreenMode}
           onPromptFolderModeChange={setPromptFolderMode}
-          onPromptFolderSelect={(promptFolderId) => {
-            navigateToPromptFolder(promptFolderId)
+          onScreenRootFolderSelect={(promptFolderId) => {
+            navigateToScreenRootFolder(promptFolderId)
           }}
         />
       {/snippet}
@@ -605,12 +605,12 @@
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
           {:else if activeScreen === 'prompt-folders'}
-            {#if selectedPromptFolderId && workspacePath}
-              {#key `${selectedPromptFolderId}:${promptFolderScreenMode}`}
+            {#if screenRootFolderId && workspacePath}
+              {#key `${screenRootFolderId}:${promptFolderScreenMode}`}
                 <PromptFolderScreen
-                  promptFolderId={selectedPromptFolderId}
+                  {screenRootFolderId}
                   screenMode={promptFolderScreenMode}
-                  onPromptFolderSelect={navigateToPromptFolder}
+                  onScreenRootFolderSelect={navigateToScreenRootFolder}
                 />
               {/key}
             {/if}

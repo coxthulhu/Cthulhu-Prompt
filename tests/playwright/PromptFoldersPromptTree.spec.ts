@@ -54,6 +54,12 @@ const NESTED_FOLDER_SETTINGS_MENU_ITEM =
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+const NESTED_FOLDER_EDITOR =
+  `[data-testid="prompt-folder-editor-${SUBFOLDERS_NESTED_FOLDER_ID}"]`
+const NESTED_FOLDER_SETTINGS_TOGGLE =
+  `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-settings-toggle"]`
+const NESTED_FOLDER_TITLE_TOGGLE =
+  `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
 
 function createDeterministicId(seed: string): string {
   let hash = 0
@@ -83,6 +89,59 @@ const scrollPromptTreeRowIntoView = async (
   }
 
   throw new Error(`Missing prompt tree row: ${rowSelector}`)
+}
+
+const expectRowToCrossPromptFolderViewportCenter = async (
+  mainWindow: any,
+  rowSelector: string
+) => {
+  await expect
+    .poll(async () =>
+      mainWindow.evaluate(
+        ({ hostSelector, targetSelector }) => {
+          const host = document.querySelector<HTMLElement>(hostSelector)
+          const target = document.querySelector<HTMLElement>(targetSelector)
+          if (!host || !target) return false
+
+          const hostRect = host.getBoundingClientRect()
+          const targetRect = target.getBoundingClientRect()
+          const centerLine = hostRect.top + hostRect.height / 2
+          return targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1
+        },
+        { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
+      )
+    )
+    .toBe(true)
+}
+
+const scrollPromptFolderRowAwayFromViewportCenter = async (
+  mainWindow: any,
+  testHelpers: any,
+  rowSelector: string
+) => {
+  const hostHeight = await testHelpers.getPromptRowHeight(PROMPT_FOLDER_HOST_SELECTOR)
+  const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST_SELECTOR)
+  const maxScrollTop = Math.max(0, scrollHeight - hostHeight)
+
+  for (const scrollTopPx of [0, maxScrollTop]) {
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, scrollTopPx)
+    const crossesCenter = await mainWindow.evaluate(
+      ({ hostSelector, targetSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        const target = document.querySelector<HTMLElement>(targetSelector)
+        if (!host || !target) return false
+
+        const hostRect = host.getBoundingClientRect()
+        const targetRect = target.getBoundingClientRect()
+        const centerLine = hostRect.top + hostRect.height / 2
+        return targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1
+      },
+      { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
+    )
+    if (!crossesCenter) return
+  }
+
+  throw new Error(`Could not scroll prompt-folder row away from viewport center: ${rowSelector}`)
 }
 
 describe('Prompt folder prompt tree', () => {
@@ -160,26 +219,94 @@ describe('Prompt folder prompt tree', () => {
       indentation!.basePromptLabelLeft + 2
     )
 
-    await mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]').click()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveAttribute(
-      'data-row-state',
-      'idle'
+    await scrollPromptFolderRowAwayFromViewportCenter(
+      mainWindow,
+      testHelpers,
+      '[data-testid="prompt-editor-nested-prompt"]'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
+    await mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toHaveAttribute('data-row-state', 'active')
+    await expectRowToCrossPromptFolderViewportCenter(
+      mainWindow,
+      '[data-testid="prompt-editor-nested-prompt"]'
+    )
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
+    await expect
+      .poll(async () => {
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        return persisted.selectedScreen === 'prompt-folders'
+          ? persisted.selectedScreenData.promptFolderId
+          : null
+      })
+      .toBe(SUBFOLDERS_MAIN_FOLDER_ID)
 
+    await testHelpers.navigateToHomeScreen()
+    await expect
+      .poll(
+        async () => {
+          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          return persisted.promptFolderPromptTreeEntries.find(
+            (entry) => entry.promptFolderId === SUBFOLDERS_NESTED_FOLDER_ID
+          )?.promptTreeEntryId
+        },
+        { timeout: 15000 }
+      )
+      .toBe('nested-prompt')
+    await testHelpers.navigateToPromptFolders('Main')
+    await expectRowToCrossPromptFolderViewportCenter(
+      mainWindow,
+      '[data-testid="prompt-editor-nested-prompt"]'
+    )
+
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    await expect(mainWindow.locator(NESTED_FOLDER_TITLE_TOGGLE)).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    await scrollPromptFolderRowAwayFromViewportCenter(
+      mainWindow,
+      testHelpers,
+      NESTED_FOLDER_EDITOR
+    )
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
     await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
+    await expectRowToCrossPromptFolderViewportCenter(mainWindow, NESTED_FOLDER_EDITOR)
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    await expect(mainWindow.locator(NESTED_FOLDER_TITLE_TOGGLE)).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
 
+    await scrollPromptFolderRowAwayFromViewportCenter(
+      mainWindow,
+      testHelpers,
+      NESTED_FOLDER_EDITOR
+    )
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
     await expect(mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON).click()
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
+    await expectRowToCrossPromptFolderViewportCenter(mainWindow, NESTED_FOLDER_EDITOR)
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
 
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
