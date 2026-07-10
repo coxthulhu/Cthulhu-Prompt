@@ -165,13 +165,13 @@ describe('Prompt folder prompt tree', () => {
       'data-row-state',
       'idle'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
 
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
     await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
 
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
     await expect(mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON)).toBeVisible()
@@ -179,7 +179,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
 
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
@@ -256,7 +256,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
   })
 
   test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({

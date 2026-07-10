@@ -114,6 +114,8 @@
             folderDisplayName={controller.folderDisplayName}
             promptDraftById={controller.promptDraftById}
             promptMetadataByPromptId={controller.promptMetadataByPromptId}
+            promptFolders={controller.promptFolders}
+            activeScreenRows={controller.activePromptFolderScreenRows}
             visiblePromptIds={controller.visiblePromptIds}
             completedPromptCount={controller.completedPromptCount}
             {screenMode}

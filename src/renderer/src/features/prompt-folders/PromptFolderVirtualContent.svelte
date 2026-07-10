@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
+    type PromptFolder,
     type PromptFolderSettings,
     type PromptFolderSettingsField
   } from '@shared/PromptFolder'
@@ -62,12 +63,19 @@
     PromptFocusRequest
   } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
+  import type {
+    PromptFolderScreenDividerRow,
+    PromptFolderScreenFolderEditorRow,
+    PromptFolderScreenPlaceholderRow,
+    PromptFolderScreenPromptEditorRow,
+    PromptFolderScreenRow
+  } from './promptFolderScreenRows'
 
   type PromptFolderRow =
-    | { kind: 'folder-editor'; isSettingsSectionExpanded: boolean }
-    | { kind: 'placeholder' }
-    | { kind: 'prompt-divider'; previousPromptId: string | null; indentLevel: number }
-    | { kind: 'prompt-editor'; promptId: string; indentLevel: number }
+    | (PromptFolderScreenFolderEditorRow & { isSettingsSectionExpanded: boolean })
+    | PromptFolderScreenPlaceholderRow
+    | PromptFolderScreenDividerRow
+    | PromptFolderScreenPromptEditorRow
     | { kind: 'bottom-spacer' }
 
   type PromptEditorRowProps = VirtualWindowRowComponentProps<
@@ -87,6 +95,8 @@
     folderDisplayName: string
     promptDraftById: Record<string, PromptDraftRecord>
     promptMetadataByPromptId: Record<string, PromptMetadata>
+    promptFolders: PromptFolder[]
+    activeScreenRows: PromptFolderScreenRow[]
     visiblePromptIds: string[]
     completedPromptCount: number
     screenMode: PromptFolderScreenMode
@@ -132,6 +142,8 @@
     folderDisplayName,
     promptDraftById,
     promptMetadataByPromptId,
+    promptFolders,
+    activeScreenRows,
     visiblePromptIds,
     completedPromptCount,
     screenMode,
@@ -172,6 +184,12 @@
     status: PromptStatus.Todo,
     completedAt: null
   }
+  const promptFolderById = $derived.by(() =>
+    Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
+      string,
+      PromptFolder
+    >
+  )
 
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
@@ -298,59 +316,121 @@
   })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
-    const rows: VirtualWindowItem<PromptFolderRow>[] = []
+    if (!isCompletedMode) {
+      const activeRows = activeScreenRows.map((row): VirtualWindowItem<PromptFolderRow> => {
+        if (row.kind === 'folder-editor') {
+          return {
+            id: row.isRoot ? PROMPT_FOLDER_SETTINGS_ROW_ID : `folder-settings:${row.ownerFolderId}`,
+            row: {
+              ...row,
+              isSettingsSectionExpanded: row.isRoot && isSettingsSectionExpanded
+            }
+          }
+        }
 
-    rows.push({
-      id: PROMPT_FOLDER_SETTINGS_ROW_ID,
-      row: {
-        kind: 'folder-editor',
-        isSettingsSectionExpanded: !isCompletedMode && isSettingsSectionExpanded
+        if (row.kind === 'prompt-editor') {
+          return {
+            id: promptEditorRowId(row.promptId),
+            row
+          }
+        }
+
+        if (row.kind === 'prompt-divider') {
+          const previousEntryId = row.previousEntryId
+          const id = row.isOwnerRoot
+            ? previousEntryId === null
+              ? 'divider-initial'
+              : promptDividerRowId(previousEntryId)
+            : `divider:${row.ownerFolderId}:${previousEntryId ?? 'initial'}`
+          return { id, row }
+        }
+
+        return { id: 'placeholder-empty', row }
+      })
+
+      activeRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+      return activeRows
+    }
+
+    const completedRows: VirtualWindowItem<PromptFolderRow>[] = [
+      {
+        id: PROMPT_FOLDER_SETTINGS_ROW_ID,
+        row: {
+          kind: 'folder-editor',
+          ownerFolderId: promptFolderId,
+          indentLevel: 0,
+          isOwnerRoot: true,
+          isRoot: true,
+          isFirstSibling: true,
+          isLastSibling: true,
+          isSettingsSectionExpanded: false
+        }
       }
-    })
+    ]
 
     if (isPromptsSectionExpanded) {
       if (visiblePromptIds.length === 0) {
-        if (!isCompletedMode) {
-          rows.push({
-            id: 'divider-initial',
-            row: { kind: 'prompt-divider', previousPromptId: null, indentLevel: 1 }
-          })
-        }
-        rows.push({
+        completedRows.push({
           id: 'placeholder-empty',
-          row: { kind: 'placeholder' }
+          row: {
+            kind: 'placeholder',
+            ownerFolderId: promptFolderId,
+            indentLevel: 1,
+            isOwnerRoot: true
+          }
         })
       } else {
-        rows.push({
+        completedRows.push({
           id: 'divider-initial',
-          row: { kind: 'prompt-divider', previousPromptId: null, indentLevel: 1 }
+          row: {
+            kind: 'prompt-divider',
+            ownerFolderId: promptFolderId,
+            previousEntryId: null,
+            indentLevel: 1,
+            isOwnerRoot: true
+          }
         })
 
-        visiblePromptIds.forEach((promptId) => {
-          rows.push({
+        visiblePromptIds.forEach((promptId, promptIndex) => {
+          completedRows.push({
             id: promptEditorRowId(promptId),
-            row: { kind: 'prompt-editor', promptId, indentLevel: 1 }
+            row: {
+              kind: 'prompt-editor',
+              ownerFolderId: promptFolderId,
+              promptId,
+              indentLevel: 1,
+              isOwnerRoot: true,
+              isFirstPrompt: promptIndex === 0,
+              isLastPrompt: promptIndex === visiblePromptIds.length - 1
+            }
           })
-          rows.push({
-            id: `${promptId}-divider`,
-            row: { kind: 'prompt-divider', previousPromptId: promptId, indentLevel: 1 }
+          completedRows.push({
+            id: promptDividerRowId(promptId),
+            row: {
+              kind: 'prompt-divider',
+              ownerFolderId: promptFolderId,
+              previousEntryId: promptId,
+              indentLevel: 1,
+              isOwnerRoot: true
+            }
           })
         })
       }
     }
 
-    rows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
-    return rows
+    completedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+    return completedRows
   })
 
   const handleCenterRowChange = (row: PromptFolderRow | null) => {
-    if (row?.kind === 'prompt-editor') {
+    if (row?.kind === 'prompt-editor' && row.isOwnerRoot) {
       onCenterRowChange({ kind: 'prompt', promptId: row.promptId })
       return
     }
     if (
       !isCompletedMode &&
-      row?.kind === 'folder-editor'
+      row?.kind === 'folder-editor' &&
+      row.isRoot
     ) {
       onCenterRowChange({ kind: 'folder-settings' })
       return
@@ -430,6 +510,23 @@
     canDrop: (payload) => canDropOnPromptDivider(previousPromptId, payload),
     state: promptDividerDroppableState.getState(rowId)
   })
+
+  const getFolderPromptCount = (row: PromptFolderScreenFolderEditorRow): number => {
+    if (row.isRoot) return visiblePromptIds.length
+
+    const folder = promptFolderById[row.ownerFolderId]
+    if (!folder) return 0
+    return folder.entryIds.filter(
+      (entryId) => promptDraftById[entryId] && !promptFolderById[entryId]
+    ).length
+  }
+
+  const getFolderCompletedPromptCount = (
+    row: PromptFolderScreenFolderEditorRow
+  ): number => {
+    if (row.isRoot) return completedPromptCount
+    return promptFolderById[row.ownerFolderId]?.completedPromptIds.length ?? 0
+  }
 </script>
 
 <SvelteVirtualWindow
@@ -455,34 +552,42 @@
 />
 
 {#snippet folderEditorRow(props)}
-  <PromptFolderEditorRow
-    {workspaceId}
-    {promptFolderId}
-    {folderDisplayName}
-    promptCount={visiblePromptIds.length}
-    {completedPromptCount}
-    rowId={props.rowId}
-    virtualWindowWidthPx={props.virtualWindowWidthPx}
-    devicePixelRatio={props.devicePixelRatio}
-    rowHeightPx={props.rowHeightPx}
-    sectionHeightsPx={getPromptFolderSettingsSectionHeights(
-      props.virtualWindowWidthPx,
-      props.devicePixelRatio
-    )}
-    hydrationPriority={props.hydrationPriority}
-    shouldDehydrate={props.shouldDehydrate}
-    overlayRowElement={props.overlayRowElement ?? null}
-    scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
-    onHydrationChange={props.onHydrationChange}
-    {folderSettings}
-    {isSettingsSectionExpanded}
-    {isPromptsSectionExpanded}
-    isReadOnly={isCompletedMode}
-    {onSettingsSectionToggle}
-    {onPromptsSectionToggle}
-    {onSettingsFieldChange}
-    {onRenamePromptFolder}
-  />
+  {@const rowFolder = promptFolderById[props.row.ownerFolderId]}
+  {#if rowFolder}
+    <PromptFolderSectionRow
+      rowHeightPx={props.rowHeightPx}
+      indentLevel={props.row.indentLevel}
+    >
+      <PromptFolderEditorRow
+        {workspaceId}
+        promptFolderId={rowFolder.id}
+        folderDisplayName={props.row.isRoot ? folderDisplayName : rowFolder.displayName}
+        promptCount={getFolderPromptCount(props.row)}
+        completedPromptCount={getFolderCompletedPromptCount(props.row)}
+        rowId={props.rowId}
+        virtualWindowWidthPx={props.virtualWindowWidthPx}
+        devicePixelRatio={props.devicePixelRatio}
+        rowHeightPx={props.rowHeightPx}
+        sectionHeightsPx={getPromptFolderSettingsSectionHeights(
+          props.virtualWindowWidthPx,
+          props.devicePixelRatio
+        )}
+        hydrationPriority={props.hydrationPriority}
+        shouldDehydrate={props.shouldDehydrate}
+        overlayRowElement={props.overlayRowElement ?? null}
+        scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
+        onHydrationChange={props.onHydrationChange}
+        folderSettings={props.row.isRoot ? folderSettings : rowFolder.settings}
+        isSettingsSectionExpanded={props.row.isRoot && isSettingsSectionExpanded}
+        isPromptsSectionExpanded={props.row.isRoot ? isPromptsSectionExpanded : true}
+        isReadOnly={isCompletedMode || !props.row.isRoot}
+        onSettingsSectionToggle={props.row.isRoot ? onSettingsSectionToggle : () => {}}
+        onPromptsSectionToggle={props.row.isRoot ? onPromptsSectionToggle : () => {}}
+        onSettingsFieldChange={props.row.isRoot ? onSettingsFieldChange : () => {}}
+        onRenamePromptFolder={props.row.isRoot ? onRenamePromptFolder : () => {}}
+      />
+    </PromptFolderSectionRow>
+  {/if}
 {/snippet}
 
 {#snippet placeholderRow({ rowHeightPx })}
@@ -499,17 +604,27 @@
 {/snippet}
 
 {#snippet dividerRow({ row, rowId, rowHeightPx })}
-  <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
+  {@const isExistingRootDivider =
+    row.isOwnerRoot &&
+    (row.previousEntryId === null || visiblePromptIds.includes(row.previousEntryId))}
+  {@const showsAddPrompt = !isCompletedMode && isExistingRootDivider}
+  <PromptFolderSectionRow
+    {rowHeightPx}
+    indentLevel={row.indentLevel}
+    testId={`prompt-folder-divider-${row.ownerFolderId}-${row.previousEntryId ?? 'initial'}`}
+  >
     <PromptDivider
       disabled={isCreatingPrompt}
-      mode={isCompletedMode ? 'separator' : 'add'}
-      onAddPrompt={isCompletedMode ? undefined : () => onAddPrompt(row.previousPromptId)}
-      getDropOptions={isCompletedMode
+      mode={showsAddPrompt ? 'add' : 'separator'}
+      onAddPrompt={showsAddPrompt ? () => onAddPrompt(row.previousEntryId) : undefined}
+      getDropOptions={!showsAddPrompt
         ? undefined
-        : () => getPromptDividerDropOptions(rowId, row.previousPromptId)}
-      testId={row.previousPromptId
-        ? `prompt-divider-add-after-${row.previousPromptId}`
-        : 'prompt-divider-add-initial'}
+        : () => getPromptDividerDropOptions(rowId, row.previousEntryId)}
+      testId={showsAddPrompt
+        ? row.previousEntryId
+          ? `prompt-divider-add-after-${row.previousEntryId}`
+          : 'prompt-divider-add-initial'
+        : undefined}
     />
   </PromptFolderSectionRow>
 {/snippet}
@@ -525,7 +640,6 @@
   overlayRowElement,
   onHydrationChange
 }: PromptEditorRowProps)}
-  {@const promptIndex = visiblePromptIds.indexOf(row.promptId)}
   {@const promptMetadata = promptMetadataByPromptId[row.promptId] ?? todoPromptMetadata}
   {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
     virtualWindowWidthPx,
@@ -535,7 +649,7 @@
   <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <PromptEditorRow
       {workspaceId}
-      {promptFolderId}
+      promptFolderId={row.ownerFolderId}
       promptId={row.promptId}
       promptDraftRecord={promptDraftById[row.promptId]!}
       {rowId}
@@ -553,15 +667,24 @@
       completedAt={promptMetadata.completedAt}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       focusRequest={promptFocusRequest}
-      isFirstPrompt={promptIndex === 0}
-      isLastPrompt={promptIndex === visiblePromptIds.length - 1}
-      onDelete={() => onDeletePrompt(row.promptId)}
-      onStatusChange={(status) => onSetPromptStatus(row.promptId, status)}
-      onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(row.promptId))}
+      isFirstPrompt={row.isFirstPrompt}
+      isLastPrompt={row.isLastPrompt}
+      onDelete={() => {
+        if (row.isOwnerRoot) onDeletePrompt(row.promptId)
+      }}
+      onStatusChange={(status) => {
+        if (row.isOwnerRoot) onSetPromptStatus(row.promptId, status)
+      }}
+      onMoveUp={() =>
+        isCompletedMode || !row.isOwnerRoot
+          ? Promise.resolve(false)
+          : handleMovePromptUp(row.promptId)}
       onMoveDown={() =>
-        isCompletedMode ? Promise.resolve(false) : handleMovePromptDown(row.promptId)}
+        isCompletedMode || !row.isOwnerRoot
+          ? Promise.resolve(false)
+          : handleMovePromptDown(row.promptId)}
       onPromptTreeDrop={(dropPayload) => {
-        if (isCompletedMode) return
+        if (isCompletedMode || !row.isOwnerRoot) return
         return onPromptTreeDrop(row.promptId, dropPayload)
       }}
     />

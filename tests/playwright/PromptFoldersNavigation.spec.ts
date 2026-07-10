@@ -56,7 +56,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
   })
 
-  test('loads subfolder disk entries without showing them in the prompt folder screen', async ({
+  test('loads and renders subfolder disk entries in the root prompt folder screen', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -74,8 +74,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     })
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
-    expect(screenInfo.promptCount).toBe(2)
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    expect(screenInfo.promptCount).toBe(3)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
 
     const nestedFolderLoad = await mainWindow.evaluate(

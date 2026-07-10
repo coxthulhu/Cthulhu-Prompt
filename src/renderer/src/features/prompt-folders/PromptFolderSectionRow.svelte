@@ -22,6 +22,7 @@
     contentVirtualWindowRow?: boolean
     indentLevel?: number
     showGutter?: boolean
+    testId?: string
   }
 
   let {
@@ -30,7 +31,8 @@
     contentClass,
     contentVirtualWindowRow = false,
     indentLevel = 1,
-    showGutter = true
+    showGutter = true,
+    testId
   }: Props = $props()
 
   const effectiveIndentLevel = $derived(showGutter ? indentLevel : 0)
@@ -41,6 +43,7 @@
 <div
   class="prompt-folder-section-row"
   style={`height:${rowHeightPx}px; --prompt-folder-section-gutter-width:${gutterWidthPx}px; --prompt-folder-section-gutter-gap:${gutterGapPx}px;`}
+  data-testid={testId}
 >
   {#if showGutter && indentLevel > 0}
     <PromptFolderSectionGutter {indentLevel} />

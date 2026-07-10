@@ -84,6 +84,10 @@ import {
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 import { PromptFolderScreenMode } from './promptFolderScreenMode'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
+import {
+  buildPromptFolderScreenRows,
+  type PromptFolderScreenRow
+} from './promptFolderScreenRows'
 
 export type ActivePromptTreeRow = { kind: 'folder-settings' } | { kind: 'prompt'; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -186,20 +190,6 @@ export const createPromptFolderScreenController = ({
     })
   )
   const screenPromptIds = $derived(isCompletedMode ? orderedCompletedPromptIds : promptIds)
-  const promptMetadataByPromptId = $derived.by(() => {
-    const metadataById: Record<string, PromptMetadata> = {}
-    for (const promptId of screenPromptIds) {
-      const prompt = promptById[promptId]
-      if (prompt) {
-        metadataById[promptId] = {
-          status: prompt.status,
-          completedAt: prompt.completedAt ?? null
-        }
-      }
-    }
-
-    return metadataById
-  })
   const emptyFolderSettings = createEmptyPromptFolderSettings()
   const folderSettings = $derived.by<PromptFolderSettings>(() =>
     copyPromptFolderSettings(
@@ -244,6 +234,91 @@ export const createPromptFolderScreenController = ({
   let settingsSectionExpandedStates = $state<Record<string, boolean>>({})
   let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
 
+  const promptFolderSectionStateKey = $derived(
+    `${workspaceId ?? 'no-workspace'}:${promptFolderId}:${screenMode}`
+  )
+
+  const lookupPersistedSettingsSectionExpandedState = (): boolean => {
+    if (isCompletedMode) {
+      return false
+    }
+
+    if (!workspaceId) {
+      return false
+    }
+
+    return (
+      lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
+        workspaceId,
+        promptFolderId
+      ) ?? false
+    )
+  }
+
+  const lookupPersistedPromptsSectionExpandedState = (): boolean => {
+    if (isCompletedMode) {
+      return true
+    }
+
+    if (!workspaceId) {
+      return true
+    }
+
+    return (
+      lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState(
+        workspaceId,
+        promptFolderId
+      ) ?? true
+    )
+  }
+
+  const isPromptsSectionExpanded = $derived(
+    promptsSectionExpandedStates[promptFolderSectionStateKey] ??
+      lookupPersistedPromptsSectionExpandedState()
+  )
+
+  const isSettingsSectionExpanded = $derived(
+    settingsSectionExpandedStates[promptFolderSectionStateKey] ??
+      lookupPersistedSettingsSectionExpandedState()
+  )
+
+  const activePromptFolderScreenRows = $derived.by((): PromptFolderScreenRow[] => {
+    if (!promptFolder) return []
+
+    return buildPromptFolderScreenRows({
+      rootFolder: promptFolder,
+      descendantFolders: promptFolderQuery.data.filter(
+        (candidate): candidate is PromptFolder =>
+          candidate !== undefined && candidate.id !== promptFolder.id
+      ),
+      promptIds: promptQuery.data.flatMap((prompt) => (prompt ? [prompt.id] : [])),
+      isFolderExpanded: (folderId) =>
+        folderId === promptFolder.id ? isPromptsSectionExpanded : true
+    })
+  })
+  const activeScreenPromptIds = $derived.by(() =>
+    activePromptFolderScreenRows.flatMap((row) =>
+      row.kind === 'prompt-editor' ? [row.promptId] : []
+    )
+  )
+  const renderedPromptIds = $derived(
+    isCompletedMode ? orderedCompletedPromptIds : activeScreenPromptIds
+  )
+  const promptMetadataByPromptId = $derived.by(() => {
+    const metadataById: Record<string, PromptMetadata> = {}
+    for (const promptId of renderedPromptIds) {
+      const prompt = promptById[promptId]
+      if (prompt) {
+        metadataById[promptId] = {
+          status: prompt.status,
+          completedAt: prompt.completedAt ?? null
+        }
+      }
+    }
+
+    return metadataById
+  })
+
   const visiblePromptIds = $derived.by(() => {
     if (errorMessage) {
       return []
@@ -269,7 +344,10 @@ export const createPromptFolderScreenController = ({
     if (isLoading) return false
     if (!promptFolder) return false
     if (!promptFolderDraft?.hasLoadedInitialData) return false
-    return visiblePromptIds.length === screenPromptIds.length
+    return renderedPromptIds.every((promptId) => {
+      const prompt = promptById[promptId]
+      return Boolean(promptDraftById[promptId] && prompt && isPromptFull(prompt))
+    })
   })
 
   const findItems = $derived.by((): PromptFolderFindItem[] => {
@@ -372,54 +450,6 @@ export const createPromptFolderScreenController = ({
       ? PROMPT_FOLDER_SETTINGS_ROW_ID
       : promptEditorRowId(row.promptId)
   }
-
-  const promptFolderSectionStateKey = $derived(
-    `${workspaceId ?? 'no-workspace'}:${promptFolderId}:${screenMode}`
-  )
-
-  const lookupPersistedSettingsSectionExpandedState = (): boolean => {
-    if (isCompletedMode) {
-      return false
-    }
-
-    if (!workspaceId) {
-      return false
-    }
-
-    return (
-      lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
-        workspaceId,
-        promptFolderId
-      ) ?? false
-    )
-  }
-
-  const lookupPersistedPromptsSectionExpandedState = (): boolean => {
-    if (isCompletedMode) {
-      return true
-    }
-
-    if (!workspaceId) {
-      return true
-    }
-
-    return (
-      lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState(
-        workspaceId,
-        promptFolderId
-      ) ?? true
-    )
-  }
-
-  const isPromptsSectionExpanded = $derived(
-    promptsSectionExpandedStates[promptFolderSectionStateKey] ??
-      lookupPersistedPromptsSectionExpandedState()
-  )
-
-  const isSettingsSectionExpanded = $derived(
-    settingsSectionExpandedStates[promptFolderSectionStateKey] ??
-      lookupPersistedSettingsSectionExpandedState()
-  )
 
   const setSettingsSectionExpanded = (isExpanded: boolean) => {
     if (isSettingsSectionExpanded === isExpanded) {
@@ -1124,6 +1154,9 @@ export const createPromptFolderScreenController = ({
         (currentPromptFolder): currentPromptFolder is PromptFolder =>
           currentPromptFolder !== undefined
       )
+    },
+    get activePromptFolderScreenRows(): PromptFolderScreenRow[] {
+      return activePromptFolderScreenRows
     },
     get visiblePromptIds(): string[] {
       return visiblePromptIds
