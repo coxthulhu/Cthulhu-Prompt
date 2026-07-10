@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowDownToLine, FolderPlus, Plus } from 'lucide-svelte'
+  import { FolderPlus, Plus } from 'lucide-svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
@@ -30,8 +30,7 @@
 </script>
 
 {#snippet dividerContent({ isOver = false } = {})}
-  {@const DividerIcon = isOver ? ArrowDownToLine : Plus}
-  {@const dividerText = isOver ? 'Move here' : 'Add Prompt'}
+  {@const dividerText = isOver ? 'Move Here' : 'Add Prompt'}
   <div
     class="promptDividerRow grid items-center"
     data-drop-over={isOver ? 'true' : 'false'}
@@ -51,19 +50,20 @@
             : 'bg-[var(--ui-neutral-muted-border)]'}
         />
       {:else if isOver}
+        <Separator class="!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]" />
         <div
           class="promptDividerMoveIndicator"
           data-drop-over="true"
           data-testid={testId}
           aria-label={dividerText}
         >
-          <DividerIcon class="h-3.5 w-3.5 stroke-[3]" aria-hidden="true" />
           <span>{dividerText}</span>
         </div>
+        <Separator class="!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]" />
       {:else}
         <div class="promptDividerActions">
           <IconButton
-            icon={DividerIcon}
+            icon={Plus}
             label={dividerText}
             title={dividerText}
             disabled={disabled}
@@ -87,13 +87,7 @@
             />
           {/if}
         </div>
-      {/if}
-      {#if mode !== 'separator'}
-        <Separator
-          class={isOver
-            ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
-            : 'bg-[var(--ui-neutral-muted-border)]'}
-        />
+        <Separator class="bg-[var(--ui-neutral-muted-border)]" />
       {/if}
     </div>
   </div>
@@ -120,14 +114,12 @@
     flex: 0 0 auto;
     font-size: 13px;
     font-weight: 600;
-    gap: 7px;
     height: 30px;
     justify-content: center;
     line-height: 16px;
     min-width: 96px;
     padding: 0 10px;
     white-space: nowrap;
-    width: var(--prompt-divider-side-width);
   }
 
   .promptDividerContent {
@@ -146,10 +138,10 @@
   }
 
   .promptDividerRow[data-drop-over='true'] .promptDividerContent {
-    --prompt-divider-side-width: 96px;
+    grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
   }
 
-  .promptDividerContent::after {
+  .promptDividerRow[data-drop-over='false'] .promptDividerContent::after {
     content: '';
   }
 

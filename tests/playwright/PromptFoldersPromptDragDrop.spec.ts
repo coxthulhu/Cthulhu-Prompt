@@ -123,10 +123,12 @@ const dragPromptHandleToFolderSelectorItem = async (
 const getPromptDividerHighlightStyles = async (
   locator: Locator
 ): Promise<PromptDividerHighlightStyles> => {
-  return await locator.evaluate((button) => {
-    const buttonStyle = getComputedStyle(button)
+  return await locator.evaluate((element) => {
+    const buttonStyle = getComputedStyle(element)
     const separators = Array.from(
-      button.parentElement?.querySelectorAll<HTMLElement>('.cthulhuUiSeparator') ?? []
+      element
+        .closest('.promptDividerContent')
+        ?.querySelectorAll<HTMLElement>('.cthulhuUiSeparator') ?? []
     )
 
     return {
@@ -581,17 +583,32 @@ describe('Prompt folder prompt drag-drop', () => {
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
     await moveActiveDragToTarget(mainWindow, promptDividerSelector(DEV_2_ID))
 
-    await expect(getPromptDividerRow(mainWindow, DEV_2_ID)).toHaveAttribute(
-      'data-drop-over',
-      'true'
-    )
+    const dividerRow = getPromptDividerRow(mainWindow, DEV_2_ID)
+    await expect(dividerRow).toHaveAttribute('data-drop-over', 'true')
+    await expect(dividerButton).toHaveText('Move Here')
+    await expect(dividerButton.locator('svg')).toHaveCount(0)
+    await expect(dividerRow.locator('.cthulhuUiSeparator')).toHaveCount(2)
+
+    const dividerRowBox = await dividerRow.boundingBox()
+    const moveIndicatorBox = await dividerButton.boundingBox()
+    expect(dividerRowBox).not.toBeNull()
+    expect(moveIndicatorBox).not.toBeNull()
+    const dividerCenter = dividerRowBox!.x + dividerRowBox!.width / 2
+    const moveIndicatorCenter = moveIndicatorBox!.x + moveIndicatorBox!.width / 2
+    expect(Math.abs(dividerCenter - moveIndicatorCenter)).toBeLessThanOrEqual(1)
+
     const dropStyles = await getPromptDividerHighlightStyles(dividerButton)
 
     expect(dropStyles.indicatorBackgroundColor).not.toBe(defaultStyles.indicatorBackgroundColor)
     expect(dropStyles.buttonBorderWidth).toBe(defaultStyles.buttonBorderWidth)
     expect(dropStyles.buttonBorderWidth).toBe('0px')
-    expect(dropStyles.separatorBackgroundColors).not.toEqual(
-      defaultStyles.separatorBackgroundColors
+    expect(defaultStyles.separatorBackgroundColors).toHaveLength(1)
+    expect(dropStyles.separatorBackgroundColors).toHaveLength(2)
+    expect(dropStyles.separatorBackgroundColors[1]).toBe(
+      dropStyles.separatorBackgroundColors[0]
+    )
+    expect(dropStyles.separatorBackgroundColors[0]).not.toBe(
+      defaultStyles.separatorBackgroundColors[0]
     )
 
     await finishActiveDrag(mainWindow)
