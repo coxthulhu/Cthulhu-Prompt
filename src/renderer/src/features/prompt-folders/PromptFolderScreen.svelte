@@ -109,9 +109,8 @@
           <PromptFolderVirtualContent
             workspaceId={controller.workspaceId}
             promptFolderId={controller.promptFolderId}
-            folderSettings={controller.folderSettings}
+            folderSettingsByFolderId={controller.folderSettingsByFolderId}
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
-            folderDisplayName={controller.folderDisplayName}
             promptDraftById={controller.promptDraftById}
             promptMetadataByPromptId={controller.promptMetadataByPromptId}
             promptFolders={controller.promptFolders}
@@ -121,8 +120,8 @@
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
             promptFocusRequest={controller.promptFocusRequest}
-            isSettingsSectionExpanded={controller.isSettingsSectionExpanded}
-            isPromptsSectionExpanded={controller.isPromptsSectionExpanded}
+            settingsSectionExpandedByFolderId={controller.settingsSectionExpandedByFolderId}
+            promptsSectionExpandedByFolderId={controller.promptsSectionExpandedByFolderId}
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             initialCenterRowId={controller.initialPromptFolderCenterRowId}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}

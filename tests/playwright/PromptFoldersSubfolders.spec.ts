@@ -1,11 +1,18 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { PROMPT_FOLDER_HOST_SELECTOR } from '../helpers/PromptFolderSelectors'
 import { PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
+import {
+  getMonacoEditorText,
+  typeInMonacoEditor,
+  waitForMonacoEditor
+} from '../helpers/MonacoHelpers'
+import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/subfolders-ui'
 const EMPTY_PLACEHOLDER_TEXT = 'No prompts found in this folder.'
+const ROOT_FOLDER_EDITOR_TOP_PADDING_PX = 24
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -39,6 +46,12 @@ const rootBeforeSelector = '[data-testid="prompt-editor-subfolders-ui-root-befor
 const nestedPromptSelector = '[data-testid="prompt-editor-subfolders-ui-nested-prompt"]'
 const grandchildPromptSelector =
   '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
+const folderTitleToggleSelector = '[data-testid="prompt-folder-editor-title-toggle"]'
+const folderSettingsToggleSelector = '[data-testid="prompt-folder-editor-settings-toggle"]'
+const folderDescriptionSectionSelector =
+  '[data-testid="prompt-folder-settings-section-folderDescription"]'
+const nestedDescriptionPath =
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
 const readOnlyDividerTestIds = [
   dividerTestId(nestedFolderId, null),
   dividerTestId(nestedFolderId, 'subfolders-ui-nested-prompt'),
@@ -63,6 +76,19 @@ const orderedRowTestIds = [
   'prompt-editor-subfolders-ui-grandchild-prompt',
   dividerTestId(grandchildFolderId, 'subfolders-ui-grandchild-prompt'),
   dividerTestId(nestedFolderId, grandchildFolderId),
+  dividerTestId(hierarchyFolderId, nestedFolderId),
+  `prompt-folder-editor-${emptyNestedFolderId}`,
+  dividerTestId(emptyNestedFolderId, null),
+  dividerTestId(hierarchyFolderId, emptyNestedFolderId),
+  'prompt-editor-subfolders-ui-root-after',
+  dividerTestId(hierarchyFolderId, 'subfolders-ui-root-after')
+]
+const collapsedNestedRowTestIds = [
+  `prompt-folder-editor-${hierarchyFolderId}`,
+  dividerTestId(hierarchyFolderId, null),
+  'prompt-editor-subfolders-ui-root-before',
+  dividerTestId(hierarchyFolderId, 'subfolders-ui-root-before'),
+  `prompt-folder-editor-${nestedFolderId}`,
   dividerTestId(hierarchyFolderId, nestedFolderId),
   `prompt-folder-editor-${emptyNestedFolderId}`,
   dividerTestId(emptyNestedFolderId, null),
@@ -153,20 +179,47 @@ describe('Prompt folder subfolder rendering', () => {
 
     const orderedRowSelector = orderedRowTestIds.map(testIdSelector).join(', ')
     await expect(mainWindow.locator(hierarchyFolderSelector)).toBeAttached()
+    await expect(
+      mainWindow.locator(hierarchyFolderSelector).locator(folderTitleToggleSelector)
+    ).toContainText('2 prompts')
+    await expect(
+      mainWindow.locator(hierarchyFolderSelector).locator(folderTitleToggleSelector)
+    ).toContainText('1 completed prompt')
 
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
     await expect(
       mainWindow
         .locator(nestedFolderSelector)
         .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+    ).toContainText('1 prompt')
+    await expect(
+      mainWindow
+        .locator(nestedFolderSelector)
+        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
     ).toContainText('Nested')
+    await expect(
+      mainWindow.locator(nestedFolderSelector).locator(folderTitleToggleSelector)
+    ).toContainText('2 completed prompts')
     await revealVirtualRow(mainWindow, testHelpers, grandchildFolderSelector)
     await expect(
       mainWindow
         .locator(grandchildFolderSelector)
         .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+    ).toContainText('1 prompt')
+    await expect(
+      mainWindow
+        .locator(grandchildFolderSelector)
+        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
     ).toContainText('Grandchild')
+    await expect(
+      mainWindow.locator(grandchildFolderSelector).locator(folderTitleToggleSelector)
+    ).toContainText('0 completed prompts')
     await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
+    await expect(
+      mainWindow
+        .locator(emptyNestedFolderSelector)
+        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+    ).toContainText('0 prompts')
     await expect(
       mainWindow
         .locator(emptyNestedFolderSelector)
@@ -249,6 +302,201 @@ describe('Prompt folder subfolder rendering', () => {
     ).toHaveCount(1)
 
     expect(await hasVirtualPlaceholder(mainWindow, testHelpers)).toBe(false)
+  })
+
+  test('collapsing one subfolder hides only that folder descendants', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+
+    const nestedFolderToggle = mainWindow
+      .locator(nestedFolderSelector)
+      .locator(folderTitleToggleSelector)
+    await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
+    await nestedFolderToggle.click()
+    await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'false')
+
+    const rowOrderAfterCollapse = await collectVirtualRowTestIds(
+      mainWindow,
+      testHelpers,
+      orderedRowTestIds.map(testIdSelector).join(', ')
+    )
+    expect(rowOrderAfterCollapse).toEqual(collapsedNestedRowTestIds)
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await nestedFolderToggle.click()
+    await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
+
+    const rowOrderAfterExpand = await collectVirtualRowTestIds(
+      mainWindow,
+      testHelpers,
+      orderedRowTestIds.map(testIdSelector).join(', ')
+    )
+    expect(rowOrderAfterExpand).toEqual(orderedRowTestIds)
+  })
+
+  test('keeps subfolder settings expansion and edits scoped to that folder', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    const rootSettingsToggle = mainWindow
+      .locator(hierarchyFolderSelector)
+      .locator(folderSettingsToggleSelector)
+    await expect(rootSettingsToggle).toHaveAttribute('aria-pressed', 'false')
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    const nestedFolder = mainWindow.locator(nestedFolderSelector)
+    const nestedSettingsToggle = nestedFolder.locator(folderSettingsToggleSelector)
+    await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await nestedSettingsToggle.click()
+    await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(nestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(1)
+
+    const nestedDescriptionSelector =
+      `${nestedFolderSelector} ${folderDescriptionSectionSelector}`
+    await waitForMonacoEditor(mainWindow, nestedDescriptionSelector)
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, nestedDescriptionSelector))
+      .toContain('Nested folder description.')
+
+    await revealVirtualRow(mainWindow, testHelpers, hierarchyFolderSelector)
+    await expect(rootSettingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      mainWindow.locator(hierarchyFolderSelector).locator(folderDescriptionSectionSelector)
+    ).toHaveCount(0)
+
+    await revealVirtualRow(mainWindow, testHelpers, grandchildFolderSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      grandchildFolderSelector,
+      80
+    )
+    const grandchildFolder = mainWindow.locator(grandchildFolderSelector)
+    const grandchildSettingsToggle = grandchildFolder.locator(folderSettingsToggleSelector)
+    await expect(grandchildSettingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await grandchildSettingsToggle.click()
+    await expect(grandchildSettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    const grandchildDescriptionSelector =
+      `${grandchildFolderSelector} ${folderDescriptionSectionSelector}`
+    await waitForMonacoEditor(mainWindow, grandchildDescriptionSelector)
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, grandchildDescriptionSelector))
+      .toContain('Grandchild folder description.')
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await waitForMonacoEditor(mainWindow, nestedDescriptionSelector)
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, nestedDescriptionSelector))
+      .toContain('Nested folder description.')
+    const marker = '[nested-folder-settings-persisted]'
+    await typeInMonacoEditor(mainWindow, nestedDescriptionSelector, marker)
+    await expect
+      .poll(async () => readTextFile(electronApp, nestedDescriptionPath), { timeout: 15000 })
+      .toContain(marker)
+
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await waitForMonacoEditor(mainWindow, nestedDescriptionSelector)
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, nestedDescriptionSelector), {
+        timeout: 5000
+      })
+      .toContain(marker)
+  })
+
+  test('keeps top padding only on the root folder editor row', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    const readEditorGeometry = async (selector: string) =>
+      await mainWindow.locator(selector).evaluate((row) => {
+        const rowRect = row.getBoundingClientRect()
+        const cardRect = row.querySelector('.editor-card-surface')?.getBoundingClientRect()
+        if (!cardRect) return null
+        return {
+          cardTopOffsetPx: cardRect.top - rowRect.top,
+          heightDifferencePx: rowRect.height - cardRect.height
+        }
+      })
+
+    const rootGeometry = await readEditorGeometry(hierarchyFolderSelector)
+    if (!rootGeometry) throw new Error('Missing root folder editor geometry')
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    const nestedGeometry = await readEditorGeometry(nestedFolderSelector)
+    if (!nestedGeometry) throw new Error('Missing nested folder editor geometry')
+
+    expect(
+      Math.abs(
+        rootGeometry.cardTopOffsetPx - ROOT_FOLDER_EDITOR_TOP_PADDING_PX
+      )
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(rootGeometry.heightDifferencePx - ROOT_FOLDER_EDITOR_TOP_PADDING_PX)
+    ).toBeLessThanOrEqual(1)
+    expect(Math.abs(nestedGeometry.cardTopOffsetPx)).toBeLessThanOrEqual(1)
+    expect(Math.abs(nestedGeometry.heightDifferencePx)).toBeLessThanOrEqual(1)
+  })
+
+  test('keeps root prompt expansion behavior unchanged', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    const rootFolderToggle = mainWindow
+      .locator(hierarchyFolderSelector)
+      .locator(folderTitleToggleSelector)
+    await expect(rootFolderToggle).toHaveAttribute('aria-expanded', 'true')
+    await rootFolderToggle.click()
+    await expect(rootFolderToggle).toHaveAttribute('aria-expanded', 'false')
+
+    const rowOrderAfterCollapse = await collectVirtualRowTestIds(
+      mainWindow,
+      testHelpers,
+      orderedRowTestIds.map(testIdSelector).join(', ')
+    )
+    expect(rowOrderAfterCollapse).toEqual([`prompt-folder-editor-${hierarchyFolderId}`])
+
+    await rootFolderToggle.click()
+    await expect(rootFolderToggle).toHaveAttribute('aria-expanded', 'true')
+    const rowOrderAfterExpand = await collectVirtualRowTestIds(
+      mainWindow,
+      testHelpers,
+      orderedRowTestIds.map(testIdSelector).join(', ')
+    )
+    expect(rowOrderAfterExpand).toEqual(orderedRowTestIds)
   })
 
   test('shows the empty placeholder only for an empty root folder', async ({ testSetup }) => {

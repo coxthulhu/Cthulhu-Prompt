@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
+    createEmptyPromptFolderSettings,
     type PromptFolder,
     type PromptFolderSettings,
     type PromptFolderSettingsField
@@ -46,7 +47,8 @@
   import {
     estimatePromptFolderSettingsFieldRowHeight,
     getPromptFolderEditorCollapsedCardRowHeightPx,
-    getPromptFolderEditorCardRowHeightPx
+    getPromptFolderEditorCardRowHeightPx,
+    getPromptFolderEditorRowPaddingTopPx
   } from './promptFolderSettingsSizing'
   import {
     createDroppableStateRegistry,
@@ -72,7 +74,10 @@
   } from './promptFolderScreenRows'
 
   type PromptFolderRow =
-    | (PromptFolderScreenFolderEditorRow & { isSettingsSectionExpanded: boolean })
+    | (PromptFolderScreenFolderEditorRow & {
+        isSettingsSectionExpanded: boolean
+        isPromptsSectionExpanded: boolean
+      })
     | PromptFolderScreenPlaceholderRow
     | PromptFolderScreenDividerRow
     | PromptFolderScreenPromptEditorRow
@@ -90,9 +95,8 @@
   type PromptFolderVirtualContentProps = {
     workspaceId: string | null
     promptFolderId: string
-    folderSettings: PromptFolderSettings
+    folderSettingsByFolderId: Record<string, PromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
-    folderDisplayName: string
     promptDraftById: Record<string, PromptDraftRecord>
     promptMetadataByPromptId: Record<string, PromptMetadata>
     promptFolders: PromptFolder[]
@@ -102,8 +106,8 @@
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
-    isSettingsSectionExpanded: boolean
-    isPromptsSectionExpanded: boolean
+    settingsSectionExpandedByFolderId: Record<string, boolean>
+    promptsSectionExpandedByFolderId: Record<string, boolean>
     initialScrollTopPx: number
     initialCenterRowId: string | null
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
@@ -117,6 +121,7 @@
       dropPayload: PromptHandleDropPayload | null
     ) => void | Promise<void>
     onSettingsFieldChange: (
+      ownerFolderId: string,
       field: PromptFolderSettingsDraftField,
       text: string,
       measurement: TextMeasurement
@@ -130,16 +135,15 @@
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
     onInitialCenterRowApplied: () => void
-    onSettingsSectionToggle: () => void
-    onPromptsSectionToggle: () => void
+    onSettingsSectionToggle: (ownerFolderId: string) => void
+    onPromptsSectionToggle: (ownerFolderId: string) => void
   }
 
   let {
     workspaceId,
     promptFolderId,
-    folderSettings,
+    folderSettingsByFolderId,
     promptEditorSizingConfig,
-    folderDisplayName,
     promptDraftById,
     promptMetadataByPromptId,
     promptFolders,
@@ -149,8 +153,8 @@
     screenMode,
     isCreatingPrompt,
     promptFocusRequest,
-    isSettingsSectionExpanded,
-    isPromptsSectionExpanded,
+    settingsSectionExpandedByFolderId,
+    promptsSectionExpandedByFolderId,
     initialScrollTopPx,
     initialCenterRowId,
     scrollToWithinWindowBandForRows,
@@ -184,6 +188,7 @@
     status: PromptStatus.Todo,
     completedAt: null
   }
+  const emptyFolderSettings = createEmptyPromptFolderSettings()
   const promptFolderById = $derived.by(() =>
     Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
       string,
@@ -211,20 +216,27 @@
     onViewportMetricsChange(viewportMetrics)
   })
 
-  const lookupPromptFolderSettingsRowMeasuredHeightForScreen = (
+  const getFolderSettings = (ownerFolderId: string): PromptFolderSettings =>
+    folderSettingsByFolderId[ownerFolderId] ??
+    promptFolderById[ownerFolderId]?.settings ??
+    emptyFolderSettings
+
+  const lookupFolderSettingsRowMeasuredHeight = (
+    ownerFolderId: string,
     field: PromptFolderSettingsField,
     widthPx: number,
     devicePixelRatio: number
   ): number | null => {
     return lookupPromptFolderSettingsRowMeasuredHeight(
-      promptFolderId,
+      ownerFolderId,
       field,
       widthPx,
       devicePixelRatio
     )
   }
 
-  const getEstimatedPromptFolderSettingsSectionHeights = () => {
+  const getEstimatedFolderSettingsSectionHeights = (ownerFolderId: string) => {
+    const folderSettings = getFolderSettings(ownerFolderId)
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
@@ -236,15 +248,17 @@
     ) as Record<PromptFolderSettingsField, number>
   }
 
-  const getPromptFolderSettingsSectionHeights = (
+  const getFolderSettingsSectionHeights = (
+    ownerFolderId: string,
     widthPx: number,
     devicePixelRatio: number
   ): Record<PromptFolderSettingsField, number> => {
-    const estimatedHeights = getEstimatedPromptFolderSettingsSectionHeights()
+    const estimatedHeights = getEstimatedFolderSettingsSectionHeights(ownerFolderId)
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        lookupPromptFolderSettingsRowMeasuredHeightForScreen(
+        lookupFolderSettingsRowMeasuredHeight(
+          ownerFolderId,
           field,
           widthPx,
           devicePixelRatio
@@ -255,16 +269,32 @@
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'folder-editor': {
-      estimateHeight: (row) =>
-        row.isSettingsSectionExpanded
-          ? getPromptFolderEditorCardRowHeightPx(getEstimatedPromptFolderSettingsSectionHeights())
-          : getPromptFolderEditorCollapsedCardRowHeightPx(),
-      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) =>
-        row.isSettingsSectionExpanded
+      estimateHeight: (row) => {
+        const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(row.isRoot)
+        return row.isSettingsSectionExpanded
           ? getPromptFolderEditorCardRowHeightPx(
-              getPromptFolderSettingsSectionHeights(widthPx, devicePixelRatio)
+              getEstimatedFolderSettingsSectionHeights(row.ownerFolderId),
+              rowPaddingTopPx
             )
-          : getPromptFolderEditorCollapsedCardRowHeightPx(),
+          : getPromptFolderEditorCollapsedCardRowHeightPx(rowPaddingTopPx)
+      },
+      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
+        const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(row.isRoot)
+        const settingsWidthPx = getPromptFolderSectionContentWidthPx(
+          widthPx,
+          row.indentLevel
+        )
+        return row.isSettingsSectionExpanded
+          ? getPromptFolderEditorCardRowHeightPx(
+              getFolderSettingsSectionHeights(
+                row.ownerFolderId,
+                settingsWidthPx,
+                devicePixelRatio
+              ),
+              rowPaddingTopPx
+            )
+          : getPromptFolderEditorCollapsedCardRowHeightPx(rowPaddingTopPx)
+      },
       centerRowEligible: true,
       hydrationPriorityEligible: true,
       overlayRow: {},
@@ -323,7 +353,10 @@
             id: row.isRoot ? PROMPT_FOLDER_SETTINGS_ROW_ID : `folder-settings:${row.ownerFolderId}`,
             row: {
               ...row,
-              isSettingsSectionExpanded: row.isRoot && isSettingsSectionExpanded
+              isSettingsSectionExpanded:
+                settingsSectionExpandedByFolderId[row.ownerFolderId] ?? false,
+              isPromptsSectionExpanded:
+                promptsSectionExpandedByFolderId[row.ownerFolderId] ?? true
             }
           }
         }
@@ -363,12 +396,13 @@
           isRoot: true,
           isFirstSibling: true,
           isLastSibling: true,
-          isSettingsSectionExpanded: false
+          isSettingsSectionExpanded: false,
+          isPromptsSectionExpanded: true
         }
       }
     ]
 
-    if (isPromptsSectionExpanded) {
+    if (promptsSectionExpandedByFolderId[promptFolderId] ?? true) {
       if (visiblePromptIds.length === 0) {
         completedRows.push({
           id: 'placeholder-empty',
@@ -512,7 +546,7 @@
   })
 
   const getFolderPromptCount = (row: PromptFolderScreenFolderEditorRow): number => {
-    if (row.isRoot) return visiblePromptIds.length
+    if (row.isRoot && isCompletedMode) return visiblePromptIds.length
 
     const folder = promptFolderById[row.ownerFolderId]
     if (!folder) return 0
@@ -553,6 +587,11 @@
 
 {#snippet folderEditorRow(props)}
   {@const rowFolder = promptFolderById[props.row.ownerFolderId]}
+  {@const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(props.row.isRoot)}
+  {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
+    props.virtualWindowWidthPx,
+    props.row.indentLevel
+  )}
   {#if rowFolder}
     <PromptFolderSectionRow
       rowHeightPx={props.rowHeightPx}
@@ -561,15 +600,16 @@
       <PromptFolderEditorRow
         {workspaceId}
         promptFolderId={rowFolder.id}
-        folderDisplayName={props.row.isRoot ? folderDisplayName : rowFolder.displayName}
+        folderDisplayName={rowFolder.displayName}
         promptCount={getFolderPromptCount(props.row)}
         completedPromptCount={getFolderCompletedPromptCount(props.row)}
         rowId={props.rowId}
-        virtualWindowWidthPx={props.virtualWindowWidthPx}
+        virtualWindowWidthPx={contentWidthPx}
         devicePixelRatio={props.devicePixelRatio}
         rowHeightPx={props.rowHeightPx}
-        sectionHeightsPx={getPromptFolderSettingsSectionHeights(
-          props.virtualWindowWidthPx,
+        sectionHeightsPx={getFolderSettingsSectionHeights(
+          rowFolder.id,
+          contentWidthPx,
           props.devicePixelRatio
         )}
         hydrationPriority={props.hydrationPriority}
@@ -577,13 +617,16 @@
         overlayRowElement={props.overlayRowElement ?? null}
         scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
         onHydrationChange={props.onHydrationChange}
-        folderSettings={props.row.isRoot ? folderSettings : rowFolder.settings}
-        isSettingsSectionExpanded={props.row.isRoot && isSettingsSectionExpanded}
-        isPromptsSectionExpanded={props.row.isRoot ? isPromptsSectionExpanded : true}
-        isReadOnly={isCompletedMode || !props.row.isRoot}
-        onSettingsSectionToggle={props.row.isRoot ? onSettingsSectionToggle : () => {}}
-        onPromptsSectionToggle={props.row.isRoot ? onPromptsSectionToggle : () => {}}
-        onSettingsFieldChange={props.row.isRoot ? onSettingsFieldChange : () => {}}
+        folderSettings={getFolderSettings(rowFolder.id)}
+        {rowPaddingTopPx}
+        isSettingsSectionExpanded={props.row.isSettingsSectionExpanded}
+        isPromptsSectionExpanded={props.row.isPromptsSectionExpanded}
+        isReadOnly={isCompletedMode}
+        canRename={props.row.isRoot && !isCompletedMode}
+        onSettingsSectionToggle={() => onSettingsSectionToggle(rowFolder.id)}
+        onPromptsSectionToggle={() => onPromptsSectionToggle(rowFolder.id)}
+        onSettingsFieldChange={(field, text, measurement) =>
+          onSettingsFieldChange(rowFolder.id, field, text, measurement)}
         onRenamePromptFolder={props.row.isRoot ? onRenamePromptFolder : () => {}}
       />
     </PromptFolderSectionRow>
@@ -661,7 +704,7 @@
       {shouldDehydrate}
       {overlayRowElement}
       {onHydrationChange}
-      {folderSettings}
+      folderSettings={getFolderSettings(row.ownerFolderId)}
       screenMode={screenMode}
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}

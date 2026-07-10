@@ -10,6 +10,8 @@ import {
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
 
 export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 24
+export const getPromptFolderEditorRowPaddingTopPx = (isRoot: boolean): number =>
+  isRoot ? PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX : 0
 export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX
 const PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX = 4
 export const EDITOR_CARD_SECTION_HEADER_HEIGHT_PX = 28
@@ -90,17 +92,19 @@ export const getPromptFolderEditorCardHeightPx = (
   )
 }
 
-export const getPromptFolderEditorCollapsedCardRowHeightPx = (): number => {
+export const getPromptFolderEditorCollapsedCardRowHeightPx = (
+  rowPaddingTopPx = PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX
+): number => {
   return normalizePromptFolderVirtualRowHeightPx(
-    PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX + FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX
+    rowPaddingTopPx + FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX
   )
 }
 
 export const getPromptFolderEditorCardRowHeightPx = (
-  settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
+  settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>,
+  rowPaddingTopPx = PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX
 ): number => {
   return normalizePromptFolderVirtualRowHeightPx(
-    PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX +
-      getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx)
+    rowPaddingTopPx + getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx)
   )
 }

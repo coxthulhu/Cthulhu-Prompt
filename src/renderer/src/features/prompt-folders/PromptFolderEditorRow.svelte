@@ -36,9 +36,11 @@
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
+    rowPaddingTopPx?: number
     isSettingsSectionExpanded: boolean
     isPromptsSectionExpanded: boolean
     isReadOnly?: boolean
+    canRename?: boolean
     onHydrationChange?: (isHydrated: boolean) => void
     onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
@@ -66,9 +68,11 @@
     shouldDehydrate,
     overlayRowElement,
     scrollToWithinWindowBand,
+    rowPaddingTopPx = PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX,
     isSettingsSectionExpanded,
     isPromptsSectionExpanded,
     isReadOnly = false,
+    canRename = !isReadOnly,
     onHydrationChange,
     onSettingsSectionToggle,
     onPromptsSectionToggle,
@@ -80,9 +84,7 @@
   const completedPromptCountLabel = $derived(
     `${completedPromptCount} completed prompt${completedPromptCount === 1 ? '' : 's'}`
   )
-  const cardHeightPx = $derived(
-    Math.max(0, virtualRowHeightPx - PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX)
-  )
+  const cardHeightPx = $derived(Math.max(0, virtualRowHeightPx - rowPaddingTopPx))
   const hydratedFields = $state<Record<PromptFolderSettingsField, boolean>>({
     folderDescription: false,
     folderPrefix: false,
@@ -142,7 +144,7 @@
 
 <div
   class="prompt-folder-editor-row"
-  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px; padding-top:${PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX}px;`}
+  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px; padding-top:${rowPaddingTopPx}px;`}
   data-testid={`prompt-folder-editor-${promptFolderId}`}
   data-virtual-window-row
 >
@@ -175,7 +177,7 @@
             <span class="prompt-folder-editor-title" title={folderDisplayName}>
               {folderDisplayName}
             </span>
-            {#if !isReadOnly}
+            {#if canRename && !isReadOnly}
               <IconButton
                 icon={Pencil}
                 label="Rename prompt folder"

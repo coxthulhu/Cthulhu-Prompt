@@ -191,10 +191,18 @@ export const createPromptFolderScreenController = ({
   )
   const screenPromptIds = $derived(isCompletedMode ? orderedCompletedPromptIds : promptIds)
   const emptyFolderSettings = createEmptyPromptFolderSettings()
-  const folderSettings = $derived.by<PromptFolderSettings>(() =>
-    copyPromptFolderSettings(
-      promptFolderDraft?.settings ?? promptFolder?.settings ?? emptyFolderSettings
-    )
+  const folderSettingsByFolderId = $derived.by<Record<string, PromptFolderSettings>>(() => {
+    const settingsByFolderId: Record<string, PromptFolderSettings> = {}
+    for (const folder of promptFolderQuery.data) {
+      if (!folder) continue
+      settingsByFolderId[folder.id] = copyPromptFolderSettings(
+        promptFolderDraftById[folder.id]?.settings ?? folder.settings
+      )
+    }
+    return settingsByFolderId
+  })
+  const folderSettings = $derived(
+    folderSettingsByFolderId[promptFolderId] ?? emptyFolderSettings
   )
   const folderSettingsTextByField = $derived.by<Record<PromptFolderSettingsField, string>>(
     () => folderSettings
@@ -234,11 +242,10 @@ export const createPromptFolderScreenController = ({
   let settingsSectionExpandedStates = $state<Record<string, boolean>>({})
   let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
 
-  const promptFolderSectionStateKey = $derived(
-    `${workspaceId ?? 'no-workspace'}:${promptFolderId}:${screenMode}`
-  )
+  const getPromptFolderSectionStateKey = (ownerFolderId: string): string =>
+    `${workspaceId ?? 'no-workspace'}:${ownerFolderId}:${screenMode}`
 
-  const lookupPersistedSettingsSectionExpandedState = (): boolean => {
+  const lookupPersistedSettingsSectionExpandedState = (ownerFolderId: string): boolean => {
     if (isCompletedMode) {
       return false
     }
@@ -250,12 +257,12 @@ export const createPromptFolderScreenController = ({
     return (
       lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
         workspaceId,
-        promptFolderId
+        ownerFolderId
       ) ?? false
     )
   }
 
-  const lookupPersistedPromptsSectionExpandedState = (): boolean => {
+  const lookupPersistedPromptsSectionExpandedState = (ownerFolderId: string): boolean => {
     if (isCompletedMode) {
       return true
     }
@@ -267,19 +274,42 @@ export const createPromptFolderScreenController = ({
     return (
       lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState(
         workspaceId,
-        promptFolderId
+        ownerFolderId
       ) ?? true
     )
   }
 
-  const isPromptsSectionExpanded = $derived(
-    promptsSectionExpandedStates[promptFolderSectionStateKey] ??
-      lookupPersistedPromptsSectionExpandedState()
-  )
+  const getIsPromptsSectionExpanded = (ownerFolderId: string): boolean =>
+    promptsSectionExpandedStates[getPromptFolderSectionStateKey(ownerFolderId)] ??
+    lookupPersistedPromptsSectionExpandedState(ownerFolderId)
 
+  const getIsSettingsSectionExpanded = (ownerFolderId: string): boolean =>
+    settingsSectionExpandedStates[getPromptFolderSectionStateKey(ownerFolderId)] ??
+    lookupPersistedSettingsSectionExpandedState(ownerFolderId)
+
+  const promptsSectionExpandedByFolderId = $derived.by<Record<string, boolean>>(() => {
+    const expandedByFolderId: Record<string, boolean> = {}
+    for (const folder of promptFolderQuery.data) {
+      if (!folder) continue
+      expandedByFolderId[folder.id] = getIsPromptsSectionExpanded(folder.id)
+    }
+    return expandedByFolderId
+  })
+  const settingsSectionExpandedByFolderId = $derived.by<Record<string, boolean>>(() => {
+    const expandedByFolderId: Record<string, boolean> = {}
+    for (const folder of promptFolderQuery.data) {
+      if (!folder) continue
+      expandedByFolderId[folder.id] = getIsSettingsSectionExpanded(folder.id)
+    }
+    return expandedByFolderId
+  })
+  const isPromptsSectionExpanded = $derived(
+    promptsSectionExpandedByFolderId[promptFolderId] ??
+      lookupPersistedPromptsSectionExpandedState(promptFolderId)
+  )
   const isSettingsSectionExpanded = $derived(
-    settingsSectionExpandedStates[promptFolderSectionStateKey] ??
-      lookupPersistedSettingsSectionExpandedState()
+    settingsSectionExpandedByFolderId[promptFolderId] ??
+      lookupPersistedSettingsSectionExpandedState(promptFolderId)
   )
 
   const activePromptFolderScreenRows = $derived.by((): PromptFolderScreenRow[] => {
@@ -293,7 +323,7 @@ export const createPromptFolderScreenController = ({
       ),
       promptIds: promptQuery.data.flatMap((prompt) => (prompt ? [prompt.id] : [])),
       isFolderExpanded: (folderId) =>
-        folderId === promptFolder.id ? isPromptsSectionExpanded : true
+        promptsSectionExpandedByFolderId[folderId] ?? true
     })
   })
   const activeScreenPromptIds = $derived.by(() =>
@@ -451,14 +481,15 @@ export const createPromptFolderScreenController = ({
       : promptEditorRowId(row.promptId)
   }
 
-  const setSettingsSectionExpanded = (isExpanded: boolean) => {
-    if (isSettingsSectionExpanded === isExpanded) {
+  const setSettingsSectionExpanded = (ownerFolderId: string, isExpanded: boolean) => {
+    if (getIsSettingsSectionExpanded(ownerFolderId) === isExpanded) {
       return
     }
 
+    const stateKey = getPromptFolderSectionStateKey(ownerFolderId)
     settingsSectionExpandedStates = {
       ...settingsSectionExpandedStates,
-      [promptFolderSectionStateKey]: isExpanded
+      [stateKey]: isExpanded
     }
 
     if (!workspaceId || isCompletedMode) {
@@ -467,23 +498,27 @@ export const createPromptFolderScreenController = ({
 
     setPromptFolderSettingsSectionExpandedStateWithAutosave(
       workspaceId,
-      promptFolderId,
+      ownerFolderId,
       isExpanded
     )
   }
 
-  const toggleSettingsSectionExpanded = () => {
-    setSettingsSectionExpanded(!isSettingsSectionExpanded)
+  const toggleSettingsSectionExpanded = (ownerFolderId: string) => {
+    setSettingsSectionExpanded(
+      ownerFolderId,
+      !getIsSettingsSectionExpanded(ownerFolderId)
+    )
   }
 
-  const setPromptsSectionExpanded = (isExpanded: boolean) => {
-    if (isPromptsSectionExpanded === isExpanded) {
+  const setPromptsSectionExpanded = (ownerFolderId: string, isExpanded: boolean) => {
+    if (getIsPromptsSectionExpanded(ownerFolderId) === isExpanded) {
       return
     }
 
+    const stateKey = getPromptFolderSectionStateKey(ownerFolderId)
     promptsSectionExpandedStates = {
       ...promptsSectionExpandedStates,
-      [promptFolderSectionStateKey]: isExpanded
+      [stateKey]: isExpanded
     }
 
     if (!workspaceId || isCompletedMode) {
@@ -492,27 +527,27 @@ export const createPromptFolderScreenController = ({
 
     setPromptFolderPromptsSectionExpandedStateWithAutosave(
       workspaceId,
-      promptFolderId,
+      ownerFolderId,
       isExpanded
     )
   }
 
-  const togglePromptsSectionExpanded = () => {
-    setPromptsSectionExpanded(!isPromptsSectionExpanded)
+  const togglePromptsSectionExpanded = (ownerFolderId: string) => {
+    setPromptsSectionExpanded(ownerFolderId, !getIsPromptsSectionExpanded(ownerFolderId))
   }
 
   const expandSectionForRow = (row: ActivePromptTreeRow): void => {
     if (isCompletedMode) {
-      setPromptsSectionExpanded(true)
+      setPromptsSectionExpanded(promptFolderId, true)
       return
     }
 
     if (row.kind === 'folder-settings') {
-      setSettingsSectionExpanded(true)
+      setSettingsSectionExpanded(promptFolderId, true)
     }
 
     if (row.kind === 'prompt') {
-      setPromptsSectionExpanded(true)
+      setPromptsSectionExpanded(promptFolderId, true)
     }
   }
 
@@ -641,7 +676,7 @@ export const createPromptFolderScreenController = ({
   const selectPromptTreeRowAndCenter = (nextRow: ActivePromptTreeRow): boolean => {
     if (!scrollToAndTrackRowCentered) return false
     if (nextRow.kind === 'prompt' && !isPromptsSectionExpanded) {
-      setPromptsSectionExpanded(true)
+      setPromptsSectionExpanded(promptFolderId, true)
       return false
     }
 
@@ -653,7 +688,7 @@ export const createPromptFolderScreenController = ({
   const selectPromptTreeRowMinimally = (nextRow: ActivePromptTreeRow): boolean => {
     if (!scrollToWithinWindowBand) return false
     if (nextRow.kind === 'prompt' && !isPromptsSectionExpanded) {
-      setPromptsSectionExpanded(true)
+      setPromptsSectionExpanded(promptFolderId, true)
       return false
     }
 
@@ -974,11 +1009,12 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleSettingsFieldChange = (
+    ownerFolderId: string,
     field: PromptFolderSettingsDraftField,
     text: string,
     measurement: TextMeasurement
   ) => {
-    setPromptFolderDraftSettingsField(promptFolderId, field, text, measurement)
+    setPromptFolderDraftSettingsField(ownerFolderId, field, text, measurement)
   }
 
   const folderSettingsHeightPx = $derived.by(() => {
@@ -1068,7 +1104,7 @@ export const createPromptFolderScreenController = ({
   const handleHeaderFolderClick = () => {
     if (!scrollApi) return
     if (!isCompletedMode) {
-      setSettingsSectionExpanded(true)
+      setSettingsSectionExpanded(promptFolderId, true)
       setCurrentFolderSelection({ kind: 'folder-settings' }, 'header', {
         forceVersionBump: true
       })
@@ -1143,7 +1179,10 @@ export const createPromptFolderScreenController = ({
     get folderSettings(): PromptFolderSettings {
       return folderSettings
     },
-  get folderDisplayName(): string {
+    get folderSettingsByFolderId(): Record<string, PromptFolderSettings> {
+      return folderSettingsByFolderId
+    },
+    get folderDisplayName(): string {
       return folderDisplayName
     },
     get promptFolder(): PromptFolder | null {
@@ -1187,6 +1226,12 @@ export const createPromptFolderScreenController = ({
     },
     get isPromptsSectionExpanded(): boolean {
       return isPromptsSectionExpanded
+    },
+    get settingsSectionExpandedByFolderId(): Record<string, boolean> {
+      return settingsSectionExpandedByFolderId
+    },
+    get promptsSectionExpandedByFolderId(): Record<string, boolean> {
+      return promptsSectionExpandedByFolderId
     },
     get initialPromptFolderScrollTopPx(): number {
       return initialPromptFolderScrollTopPx

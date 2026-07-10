@@ -37,6 +37,8 @@ export interface PromptFolderConfig {
     fallbackTitle?: string
     promptText: string
     createdAt?: string
+    status?: PromptStatus
+    completedAt?: string
   }>
 }
 
@@ -141,8 +143,11 @@ const createPromptFiles = (
       fallbackTitle: prompt.fallbackTitle ?? '',
       createdAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       modifiedAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
-      status: PromptStatus.Todo,
-      promptText: prompt.promptText
+      status: prompt.status ?? PromptStatus.Todo,
+      promptText: prompt.promptText,
+      ...(prompt.status === PromptStatus.Completed && prompt.completedAt
+        ? { completedAt: prompt.completedAt }
+        : {})
     }
     const displayTitle = getPromptDisplayTitle(promptData)
     const titleStem = sanitizePromptTitleForFilename(displayTitle).toLowerCase()
@@ -405,6 +410,9 @@ export function setupWorkspaceScenario(
         {
           folderName: 'Hierarchy',
           displayName: 'Hierarchy',
+          folderSettings: {
+            folderDescription: 'Root hierarchy folder description.'
+          },
           prompts: [
             {
               id: 'subfolders-ui-root-before',
@@ -430,6 +438,7 @@ export function setupWorkspaceScenario(
       const grandchildFolderId = createDeterministicId(
         `${workspacePath}:Hierarchy/Nested/Grandchild`
       )
+      const rootFolderPath = `${workspacePath}/Prompts/Hierarchy`
       const nestedFolderPath = `${workspacePath}/Prompts/Hierarchy/Nested`
       const emptyNestedFolderPath = `${workspacePath}/Prompts/Hierarchy/EmptyNested`
       const grandchildFolderPath = `${nestedFolderPath}/Grandchild`
@@ -450,6 +459,39 @@ export function setupWorkspaceScenario(
       ])
       const { promptIds: grandchildPromptIds, promptFiles: grandchildPromptFiles } =
         createPromptFiles(grandchildFolderPath, grandchildPrompts)
+      const { prompts: rootCompletedPrompts } = normalizePrompts([
+        {
+          id: 'subfolders-ui-root-completed',
+          title: 'Root Completed',
+          promptText: 'Completed prompt directly inside the root folder.',
+          status: PromptStatus.Completed,
+          completedAt: '2026-07-09T10:00:00.000Z'
+        }
+      ])
+      const { promptFiles: rootCompletedPromptFiles } = createPromptFiles(
+        `${rootFolderPath}/_Completed`,
+        rootCompletedPrompts
+      )
+      const { prompts: nestedCompletedPrompts } = normalizePrompts([
+        {
+          id: 'subfolders-ui-nested-completed-1',
+          title: 'Nested Completed One',
+          promptText: 'First completed prompt directly inside the nested folder.',
+          status: PromptStatus.Completed,
+          completedAt: '2026-07-09T11:00:00.000Z'
+        },
+        {
+          id: 'subfolders-ui-nested-completed-2',
+          title: 'Nested Completed Two',
+          promptText: 'Second completed prompt directly inside the nested folder.',
+          status: PromptStatus.Completed,
+          completedAt: '2026-07-09T12:00:00.000Z'
+        }
+      ])
+      const { promptFiles: nestedCompletedPromptFiles } = createPromptFiles(
+        `${nestedFolderPath}/_Completed`,
+        nestedCompletedPrompts
+      )
 
       structure[`${workspacePath}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`] =
         JSON.stringify(
@@ -476,7 +518,10 @@ export function setupWorkspaceScenario(
       )
       addPromptFolderSettingsFiles(structure, nestedFolderPath, {
         folderName: 'Hierarchy/Nested',
-        displayName: 'Nested'
+        displayName: 'Nested',
+        folderSettings: {
+          folderDescription: 'Nested folder description.'
+        }
       })
       structure[getPromptFolderOrderPath(grandchildFolderPath)] = JSON.stringify(
         { entryIds: grandchildPromptIds },
@@ -490,7 +535,10 @@ export function setupWorkspaceScenario(
       )
       addPromptFolderSettingsFiles(structure, grandchildFolderPath, {
         folderName: 'Hierarchy/Nested/Grandchild',
-        displayName: 'Grandchild'
+        displayName: 'Grandchild',
+        folderSettings: {
+          folderDescription: 'Grandchild folder description.'
+        }
       })
       structure[getPromptFolderOrderPath(emptyNestedFolderPath)] = JSON.stringify(
         { entryIds: [] },
@@ -508,6 +556,8 @@ export function setupWorkspaceScenario(
       })
       Object.assign(structure, promptFiles)
       Object.assign(structure, grandchildPromptFiles)
+      Object.assign(structure, rootCompletedPromptFiles)
+      Object.assign(structure, nestedCompletedPromptFiles)
 
       return structure
     }
