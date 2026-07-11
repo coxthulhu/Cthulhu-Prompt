@@ -9,7 +9,7 @@ import {
 } from '../prompt-editor/promptEditorSizing'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
 
-export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 24
+export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 12
 export const getPromptFolderEditorRowPaddingTopPx = (isRoot: boolean): number =>
   isRoot ? PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX : 0
 export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX
