@@ -69,6 +69,7 @@
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import type {
     PromptFolderDividerTarget,
+    PromptFolderPromptTarget,
     PromptFolderScreenDividerRow,
     PromptFolderScreenFolderEditorRow,
     PromptFolderScreenPlaceholderRow,
@@ -117,12 +118,8 @@
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
     onAddSubfolder: (target: PromptFolderDividerTarget) => void
-    onDeletePrompt: (promptId: string) => void
-    onSetPromptStatus: (
-      ownerFolderId: string,
-      promptId: string,
-      status: PromptStatus
-    ) => void
+    onDeletePrompt: (target: PromptFolderPromptTarget) => void
+    onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
     onMovePromptDown: (promptId: string) => Promise<boolean>
     onPromptTreeDrop: (
@@ -749,13 +746,13 @@
       isFirstPrompt={row.isFirstPrompt}
       isLastPrompt={row.isLastPrompt}
       isDragEnabled={!isCompletedMode && row.isOwnerRoot}
-      onDelete={() => {
-        if (row.isOwnerRoot) onDeletePrompt(row.promptId)
-      }}
+      onDelete={() =>
+        onDeletePrompt({ ownerFolderId: row.ownerFolderId, promptId: row.promptId })}
       onStatusChange={(status) => {
-        if (isCompletedMode || row.isOwnerRoot) {
-          onSetPromptStatus(row.ownerFolderId, row.promptId, status)
-        }
+        onSetPromptStatus(
+          { ownerFolderId: row.ownerFolderId, promptId: row.promptId },
+          status
+        )
       }}
       onMoveUp={() =>
         isCompletedMode || !row.isOwnerRoot

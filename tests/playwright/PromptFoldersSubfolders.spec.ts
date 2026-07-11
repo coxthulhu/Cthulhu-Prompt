@@ -1,12 +1,20 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { PROMPT_FOLDER_HOST_SELECTOR } from '../helpers/PromptFolderSelectors'
+import { stubClipboard } from '../helpers/ClipboardHelpers'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_TITLE_SELECTOR
+} from '../helpers/PromptFolderSelectors'
 import { PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
 import {
   getMonacoEditorText,
   typeInMonacoEditor,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
-import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  checkPersistedPromptFilesExistByTitle,
+  readPersistedPromptTextById,
+  readTextFile
+} from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -56,6 +64,8 @@ const rootFolderOrderPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`
 const nestedFolderOrderPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
+const grandchildFolderOrderPath =
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
 const emptyNestedFolderOrderPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
 const activeDividerTestIds = [
@@ -68,6 +78,13 @@ const activeDividerTestIds = [
   dividerTestId(emptyNestedFolderId, null),
   dividerTestId(hierarchyFolderId, emptyNestedFolderId)
 ]
+
+const promptTitleSelector = (promptId: string): string =>
+  `[data-testid="prompt-editor-${promptId}"] ${PROMPT_TITLE_SELECTOR}`
+const statusPillSelector = (promptId: string): string =>
+  `[data-testid="prompt-editor-${promptId}"] [data-testid="prompt-status-pill"]`
+const statusMoreOptionsSelector = (promptId: string): string =>
+  `[data-testid="prompt-editor-${promptId}"] [data-testid="prompt-status-more-options-button"]`
 const orderedRowTestIds = [
   `prompt-folder-editor-${hierarchyFolderId}`,
   dividerTestId(hierarchyFolderId, null),
@@ -905,6 +922,222 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(
       deepestDivider.locator('[data-testid="prompt-divider-add-subfolder-initial"]')
     ).toHaveCount(0)
+  })
+
+  test('persists nested prompt edits and copies with direct-owner settings', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, nestedPromptSelector)
+    await waitForMonacoEditor(mainWindow, nestedPromptSelector)
+
+    const updatedTitle = 'Nested Prompt Updated'
+    const bodyMarker = '[nested-prompt-body-persisted]'
+    await mainWindow
+      .locator(promptTitleSelector('subfolders-ui-nested-prompt'))
+      .fill(updatedTitle)
+    await typeInMonacoEditor(mainWindow, nestedPromptSelector, bodyMarker)
+    const updatedPromptLookup = {
+      workspacePath: WORKSPACE_PATH,
+      folderName: 'Hierarchy/Nested',
+      promptId: 'subfolders-ui-nested-prompt',
+      promptTitle: updatedTitle
+    }
+    await expect
+      .poll(
+        async () =>
+          await checkPersistedPromptFilesExistByTitle(electronApp, updatedPromptLookup),
+        { timeout: 15000 }
+      )
+      .toEqual({ markdownExists: true })
+    expect(await readPersistedPromptTextById(electronApp, updatedPromptLookup)).toContain(
+      bodyMarker
+    )
+
+    await testHelpers.navigateToPromptFolders('Empty Root')
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, nestedPromptSelector)
+    await waitForMonacoEditor(mainWindow, nestedPromptSelector)
+    await expect(
+      mainWindow.locator(promptTitleSelector('subfolders-ui-nested-prompt'))
+    ).toHaveValue(updatedTitle)
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, nestedPromptSelector))
+      .toContain(bodyMarker)
+
+    await stubClipboard(mainWindow)
+    await mainWindow
+      .locator(`${nestedPromptSelector} [data-testid="prompt-copy-button"]`)
+      .click()
+    const normalizeNewlines = (value: string): string => value.replace(/\r\n?/g, '\n')
+    await expect
+      .poll(async () =>
+        normalizeNewlines(
+          await mainWindow.evaluate(() => (window as any).__testClipboardText ?? '')
+        )
+      )
+      .toContain(bodyMarker)
+    const clipboardText = normalizeNewlines(
+      await mainWindow.evaluate(() => (window as any).__testClipboardText ?? '')
+    )
+    expect(clipboardText).toMatch(/^Nested folder prefix\n\n/)
+    expect(clipboardText).toMatch(/\n\nNested folder suffix$/)
+    await expect(
+      mainWindow.locator(statusPillSelector('subfolders-ui-nested-prompt'))
+    ).toHaveText('In Progress')
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
+    await expect
+      .poll(
+        async () => await readPersistedPromptTextById(electronApp, updatedPromptLookup)
+      )
+      .toContain('status: InProgress')
+  })
+
+  test('uses the direct owner for every nested prompt status transition', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    const promptId = 'subfolders-ui-grandchild-prompt'
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
+    await waitForMonacoEditor(mainWindow, grandchildPromptSelector)
+    await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Todo')
+
+    await mainWindow.locator(statusMoreOptionsSelector(promptId)).click()
+    await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
+    await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('In Progress')
+    await mainWindow.locator(statusMoreOptionsSelector(promptId)).click()
+    await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
+    await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Todo')
+
+    await mainWindow
+      .locator(`${grandchildPromptSelector} [data-testid="prompt-complete-button"]`)
+      .click()
+    await expect(mainWindow.locator(grandchildPromptSelector)).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
+
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
+    await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Completed')
+    await mainWindow.locator(statusMoreOptionsSelector(promptId)).click()
+    await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
+    await expect(mainWindow.locator(grandchildPromptSelector)).toHaveCount(0)
+
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
+    await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('In Progress')
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, grandchildFolderOrderPath))
+      .toEqual([promptId])
+    await expect
+      .poll(
+        async () =>
+          await readPersistedPromptTextById(electronApp, {
+            workspacePath: WORKSPACE_PATH,
+            folderName: 'Hierarchy/Nested/Grandchild',
+            promptId,
+            promptTitle: 'Grandchild Prompt'
+          })
+      )
+      .toContain('status: InProgress')
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
+  })
+
+  test('deletes a nested active prompt from its direct owner and persists it', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, nestedPromptSelector)
+    await mainWindow
+      .locator(`${nestedPromptSelector} [data-testid="prompt-delete-button"]`)
+      .click()
+    const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
+    await expect(dialog).toBeVisible()
+    await dialog.locator('button:has-text("Delete")').click()
+
+    await expect(mainWindow.locator(nestedPromptSelector)).toHaveCount(0)
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, nestedFolderOrderPath))
+      .toEqual([grandchildFolderId])
+    await expect
+      .poll(
+        async () =>
+          await checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: WORKSPACE_PATH,
+            folderName: 'Hierarchy/Nested',
+            promptId: 'subfolders-ui-nested-prompt',
+            promptTitle: 'Nested Prompt'
+          })
+      )
+      .toEqual({ markdownExists: false })
+
+    await testHelpers.navigateToPromptFolders('Empty Root')
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await expect(mainWindow.locator(nestedPromptSelector)).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
+  })
+
+  test('deletes a nested completed prompt from its direct owner', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    const promptId = 'subfolders-ui-nested-completed-1'
+    const promptSelector = `[data-testid="prompt-editor-${promptId}"]`
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await revealVirtualRow(mainWindow, testHelpers, promptSelector)
+    await mainWindow
+      .locator(`${promptSelector} [data-testid="prompt-delete-button"]`)
+      .click()
+    const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
+    await expect(dialog).toBeVisible()
+    await dialog.locator('button:has-text("Delete")').click()
+
+    await expect(mainWindow.locator(promptSelector)).toHaveCount(0)
+    await expect
+      .poll(
+        async () =>
+          await checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: WORKSPACE_PATH,
+            folderName: 'Hierarchy/Nested/_Completed',
+            promptId,
+            promptTitle: 'Nested Completed One'
+          })
+      )
+      .toEqual({ markdownExists: false })
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
   })
 
   test('aggregates completed prompts across descendants and restores to the direct owner', async ({

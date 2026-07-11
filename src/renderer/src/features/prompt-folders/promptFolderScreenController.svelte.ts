@@ -89,6 +89,7 @@ import { createBlankPromptInFolder } from './createBlankPromptInFolder'
 import {
   buildPromptFolderScreenRows,
   type PromptFolderDividerTarget,
+  type PromptFolderPromptTarget,
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
 import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
@@ -1043,29 +1044,26 @@ export const createPromptFolderScreenController = ({
     isCreatingPrompt = false
   }
 
-  const handleDeletePrompt = (nextPromptId: string) => {
-    const currentPromptFolderId = screenRootFolder?.id
-    if (!currentPromptFolderId) {
+  const handleDeletePrompt = (target: PromptFolderPromptTarget) => {
+    if (!promptFolderCollection.get(target.ownerFolderId)) {
       return
     }
 
     void runIpcBestEffort(async () => {
-      await deletePrompt(currentPromptFolderId, nextPromptId)
+      await deletePrompt(target.ownerFolderId, target.promptId)
     })
   }
 
   const handleSetPromptStatus = (
-    ownerFolderId: string,
-    nextPromptId: string,
+    target: PromptFolderPromptTarget,
     status: PromptStatus
   ) => {
-    const currentPromptFolderId = isCompletedMode ? ownerFolderId : screenRootFolder?.id
-    if (!currentPromptFolderId) {
+    if (!promptFolderCollection.get(target.ownerFolderId)) {
       return
     }
 
     void runIpcBestEffort(async () => {
-      await setPromptStatus(currentPromptFolderId, nextPromptId, status)
+      await setPromptStatus(target.ownerFolderId, target.promptId, status)
     })
   }
 

@@ -524,7 +524,9 @@ export function setupWorkspaceScenario(
         folderName: 'Hierarchy/Nested',
         displayName: 'Nested',
         folderSettings: {
-          folderDescription: 'Nested folder description.'
+          folderDescription: 'Nested folder description.',
+          folderPrefix: 'Nested folder prefix',
+          folderSuffix: 'Nested folder suffix'
         }
       })
       structure[getPromptFolderOrderPath(grandchildFolderPath)] = JSON.stringify(
