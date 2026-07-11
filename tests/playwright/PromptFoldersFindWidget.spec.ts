@@ -565,7 +565,7 @@ describe('Prompt folder find dialog', () => {
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
     await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
-    await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, editorSelector, 120)
+    await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, editorSelector)
 
     await focusMonacoEditor(mainWindow, editorSelector, {
       clickPosition: { x: 28, y: 12 }

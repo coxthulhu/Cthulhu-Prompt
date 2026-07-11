@@ -91,26 +91,48 @@ const scrollPromptTreeRowIntoView = async (
   throw new Error(`Missing prompt tree row: ${rowSelector}`)
 }
 
-const expectRowToCrossPromptFolderViewportCenter = async (
+const expectRowToReachClosestPromptFolderViewportCenter = async (
   mainWindow: any,
+  testHelpers: any,
   rowSelector: string
 ) => {
   await expect
-    .poll(async () =>
-      mainWindow.evaluate(
-        ({ hostSelector, targetSelector }) => {
-          const host = document.querySelector<HTMLElement>(hostSelector)
-          const target = document.querySelector<HTMLElement>(targetSelector)
-          if (!host || !target) return false
+    .poll(async () => {
+      const [geometry, scrollTop, scrollHeight, hostHeight] = await Promise.all([
+        mainWindow.evaluate(
+          ({ hostSelector, targetSelector }) => {
+            const host = document.querySelector<HTMLElement>(hostSelector)
+            const target = document.querySelector<HTMLElement>(targetSelector)
+            if (!host || !target) return null
 
-          const hostRect = host.getBoundingClientRect()
-          const targetRect = target.getBoundingClientRect()
-          const centerLine = hostRect.top + hostRect.height / 2
-          return targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1
-        },
-        { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
-      )
-    )
+            const hostRect = host.getBoundingClientRect()
+            const targetRect = target.getBoundingClientRect()
+            const centerLine = hostRect.top + hostRect.height / 2
+            return {
+              crossesCenter:
+                targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1,
+              isFullyVisible:
+                targetRect.top >= hostRect.top - 1 && targetRect.bottom <= hostRect.bottom + 1,
+              targetCenter: targetRect.top + targetRect.height / 2,
+              centerLine
+            }
+          },
+          { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
+        ),
+        testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR),
+        testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST_SELECTOR),
+        testHelpers.getPromptRowHeight(PROMPT_FOLDER_HOST_SELECTOR)
+      ])
+      if (!geometry) return false
+      if (geometry.crossesCenter) return true
+
+      const maxScrollTop = Math.max(0, scrollHeight - hostHeight)
+      const isAtTopBoundary =
+        scrollTop <= 1 && geometry.targetCenter <= geometry.centerLine + 1
+      const isAtBottomBoundary =
+        scrollTop >= maxScrollTop - 1 && geometry.targetCenter >= geometry.centerLine - 1
+      return geometry.isFullyVisible && (isAtTopBoundary || isAtBottomBoundary)
+    })
     .toBe(true)
 }
 
@@ -228,8 +250,9 @@ describe('Prompt folder prompt tree', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
     ).toHaveAttribute('data-row-state', 'active')
-    await expectRowToCrossPromptFolderViewportCenter(
+    await expectRowToReachClosestPromptFolderViewportCenter(
       mainWindow,
+      testHelpers,
       '[data-testid="prompt-editor-nested-prompt"]'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
@@ -255,8 +278,9 @@ describe('Prompt folder prompt tree', () => {
       )
       .toBe('nested-prompt')
     await testHelpers.navigateToPromptFolders('Main')
-    await expectRowToCrossPromptFolderViewportCenter(
+    await expectRowToReachClosestPromptFolderViewportCenter(
       mainWindow,
+      testHelpers,
       '[data-testid="prompt-editor-nested-prompt"]'
     )
 
@@ -277,7 +301,11 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToCrossPromptFolderViewportCenter(mainWindow, NESTED_FOLDER_EDITOR)
+    await expectRowToReachClosestPromptFolderViewportCenter(
+      mainWindow,
+      testHelpers,
+      NESTED_FOLDER_EDITOR
+    )
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -302,7 +330,11 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToCrossPromptFolderViewportCenter(mainWindow, NESTED_FOLDER_EDITOR)
+    await expectRowToReachClosestPromptFolderViewportCenter(
+      mainWindow,
+      testHelpers,
+      NESTED_FOLDER_EDITOR
+    )
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'true'

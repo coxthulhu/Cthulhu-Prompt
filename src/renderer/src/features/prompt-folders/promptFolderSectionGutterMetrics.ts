@@ -5,6 +5,7 @@ export const PROMPT_FOLDER_SECTION_GUTTER_GAP_PX =
   PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX -
   PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX -
   PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX
+export const PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX = 36
 
 export const getPromptFolderSectionGutterWidthPx = (indentLevel: number): number => {
   if (indentLevel === 0) return 0
@@ -25,5 +26,10 @@ export const getPromptFolderSectionContentOffsetPx = (indentLevel: number): numb
 
 export const getPromptFolderSectionContentWidthPx = (
   containerWidthPx: number,
-  indentLevel: number
-): number => Math.max(0, containerWidthPx - getPromptFolderSectionContentOffsetPx(indentLevel))
+  indentLevel: number,
+  reservedWidthPx = 0
+): number =>
+  Math.max(
+    0,
+    containerWidthPx - getPromptFolderSectionContentOffsetPx(indentLevel) - reservedWidthPx
+  )

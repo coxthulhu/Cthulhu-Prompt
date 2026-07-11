@@ -42,6 +42,7 @@
   } from './promptFolderRowIds'
   import PromptFolderSectionRow from './PromptFolderSectionRow.svelte'
   import {
+    PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX,
     getPromptFolderSectionContentOffsetPx,
     getPromptFolderSectionContentWidthPx
   } from './promptFolderSectionGutterMetrics'
@@ -105,6 +106,7 @@
     activeScreenRows: PromptFolderScreenRow[]
     visiblePromptIds: string[]
     completedPromptCount: number
+    completedPromptOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     promptFocusRequest: PromptFocusRequest | null
@@ -116,7 +118,11 @@
     onAddPrompt: (target: PromptFolderDividerTarget) => void
     onAddSubfolder: (target: PromptFolderDividerTarget) => void
     onDeletePrompt: (promptId: string) => void
-    onSetPromptStatus: (promptId: string, status: PromptStatus) => void
+    onSetPromptStatus: (
+      ownerFolderId: string,
+      promptId: string,
+      status: PromptStatus
+    ) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
     onMovePromptDown: (promptId: string) => Promise<boolean>
     onPromptTreeDrop: (
@@ -153,6 +159,7 @@
     activeScreenRows,
     visiblePromptIds,
     completedPromptCount,
+    completedPromptOwnerByPromptId,
     screenMode,
     isCreatingPrompt,
     promptFocusRequest,
@@ -286,7 +293,8 @@
         const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(row.isRoot)
         const settingsWidthPx = getPromptFolderSectionContentWidthPx(
           widthPx,
-          row.indentLevel
+          row.indentLevel,
+          row.isRoot ? 0 : PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX
         )
         return row.isSettingsSectionExpanded
           ? getPromptFolderEditorCardRowHeightPx(
@@ -430,14 +438,16 @@
         })
 
         visiblePromptIds.forEach((promptId, promptIndex) => {
+          const ownerFolderId =
+            completedPromptOwnerByPromptId[promptId] ?? screenRootFolderId
           completedRows.push({
             id: promptEditorRowId(promptId),
             row: {
               kind: 'prompt-editor',
-              ownerFolderId: screenRootFolderId,
+              ownerFolderId,
               promptId,
               indentLevel: 1,
-              isOwnerRoot: true,
+              isOwnerRoot: ownerFolderId === screenRootFolderId,
               isFirstPrompt: promptIndex === 0,
               isLastPrompt: promptIndex === visiblePromptIds.length - 1
             }
@@ -600,7 +610,8 @@
   {@const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(props.row.isRoot)}
   {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
     props.virtualWindowWidthPx,
-    props.row.indentLevel
+    props.row.indentLevel,
+    props.row.isRoot ? 0 : PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX
   )}
   {#if rowFolder}
     <PromptFolderSectionRow
@@ -633,6 +644,9 @@
         isPromptsSectionExpanded={props.row.isPromptsSectionExpanded}
         isReadOnly={isCompletedMode}
         canRename={props.row.isRoot && !isCompletedMode}
+        showSidebar={!props.row.isRoot}
+        isFirstSibling={props.row.isFirstSibling}
+        isLastSibling={props.row.isLastSibling}
         onSettingsSectionToggle={() => onSettingsSectionToggle(rowFolder.id)}
         onPromptsSectionToggle={() => onPromptsSectionToggle(rowFolder.id)}
         onSettingsFieldChange={(field, text, measurement) =>
@@ -674,7 +688,9 @@
       disabled={isCreatingPrompt}
       mode={showsActions ? 'add' : 'separator'}
       onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
-      onAddSubfolder={showsActions ? () => onAddSubfolder(target) : undefined}
+      onAddSubfolder={showsActions && (promptFolderById[row.ownerFolderId]?.depth ?? 8) < 8
+        ? () => onAddSubfolder(target)
+        : undefined}
       getDropOptions={!showsActions || !isExistingRootPromptDivider
         ? undefined
         : () => getPromptDividerDropOptions(rowId, row.previousEntryId)}
@@ -732,11 +748,14 @@
       focusRequest={promptFocusRequest}
       isFirstPrompt={row.isFirstPrompt}
       isLastPrompt={row.isLastPrompt}
+      isDragEnabled={!isCompletedMode && row.isOwnerRoot}
       onDelete={() => {
         if (row.isOwnerRoot) onDeletePrompt(row.promptId)
       }}
       onStatusChange={(status) => {
-        if (row.isOwnerRoot) onSetPromptStatus(row.promptId, status)
+        if (isCompletedMode || row.isOwnerRoot) {
+          onSetPromptStatus(row.ownerFolderId, row.promptId, status)
+        }
       }}
       onMoveUp={() =>
         isCompletedMode || !row.isOwnerRoot

@@ -91,6 +91,7 @@ import {
   type PromptFolderDividerTarget,
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
+import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
 
 export type ActivePromptTreeRow =
   | { kind: 'folder-settings'; rowOwnerFolderId: string }
@@ -187,14 +188,30 @@ export const createPromptFolderScreenController = ({
   const rootPromptIds = $derived(
     screenRootFolder ? getPromptIdsForFolder(screenRootFolder) : []
   )
-  const completedPromptIds = $derived(screenRootFolder?.completedPromptIds ?? [])
-  const completedPromptCount = $derived(completedPromptIds.length)
-  const orderedCompletedPromptIds = $derived.by(() =>
-    [...completedPromptIds].sort((leftPromptId, rightPromptId) => {
-      const leftCompletedAt = promptById[leftPromptId]?.completedAt ?? ''
-      const rightCompletedAt = promptById[rightPromptId]?.completedAt ?? ''
-      return rightCompletedAt.localeCompare(leftCompletedAt)
+  const completedPrompts = $derived.by(() => {
+    if (!screenRootFolder) return []
+
+    return collectCompletedPrompts({
+      rootFolder: screenRootFolder,
+      descendantFolders: promptFolderQuery.data.filter(
+        (candidate): candidate is PromptFolder =>
+          candidate !== undefined && candidate.id !== screenRootFolder.id
+      ),
+      completedAtByPromptId: Object.fromEntries(
+        promptQuery.data.flatMap((prompt) =>
+          prompt ? [[prompt.id, prompt.completedAt ?? null] as const] : []
+        )
+      )
     })
+  })
+  const completedPromptCount = $derived(completedPrompts.length)
+  const orderedCompletedPromptIds = $derived(
+    completedPrompts.map(({ promptId }) => promptId)
+  )
+  const completedPromptOwnerByPromptId = $derived.by<Record<string, string>>(() =>
+    Object.fromEntries(
+      completedPrompts.map(({ ownerFolderId, promptId }) => [promptId, ownerFolderId])
+    )
   )
   const emptyFolderSettings = createEmptyPromptFolderSettings()
   const folderSettingsByFolderId = $derived.by<Record<string, PromptFolderSettings>>(() => {
@@ -842,7 +859,8 @@ export const createPromptFolderScreenController = ({
       !isCompletedMode && Boolean(explicitSelectionTarget || persistedSelectionTarget)
     const restoredScrollTop = explicitSelectionTarget ? 0 : getRestoredPromptFolderScrollTop()
     const restoreSelectionSource: PromptNavigationSource =
-      !explicitSelectionTarget && !persistedSelectionTarget && restoredScrollTop <= 0
+      persistedSelectionTarget ||
+      (!explicitSelectionTarget && restoredScrollTop <= 0)
         ? 'restore-hold'
         : 'restore'
 
@@ -1036,8 +1054,12 @@ export const createPromptFolderScreenController = ({
     })
   }
 
-  const handleSetPromptStatus = (nextPromptId: string, status: PromptStatus) => {
-    const currentPromptFolderId = screenRootFolder?.id
+  const handleSetPromptStatus = (
+    ownerFolderId: string,
+    nextPromptId: string,
+    status: PromptStatus
+  ) => {
+    const currentPromptFolderId = isCompletedMode ? ownerFolderId : screenRootFolder?.id
     if (!currentPromptFolderId) {
       return
     }
@@ -1321,6 +1343,9 @@ export const createPromptFolderScreenController = ({
     },
     get completedPromptCount(): number {
       return completedPromptCount
+    },
+    get completedPromptOwnerByPromptId(): Record<string, string> {
+      return completedPromptOwnerByPromptId
     },
     get isVirtualContentReady(): boolean {
       return isVirtualContentReady

@@ -74,6 +74,7 @@
     focusRequest,
     isFirstPrompt,
     isLastPrompt,
+    isDragEnabled = true,
     onEditorLifecycle,
     onDelete,
     onStatusChange,
@@ -102,6 +103,7 @@
     focusRequest?: PromptFocusRequest | null
     isFirstPrompt: boolean
     isLastPrompt: boolean
+    isDragEnabled?: boolean
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     onDelete: () => void
     onStatusChange?: (status: PromptStatus) => void
@@ -420,6 +422,7 @@
       title={promptTreeTitle}
       {isFirstPrompt}
       {isLastPrompt}
+      {isDragEnabled}
       onMoveUp={handleMoveUp}
       onMoveDown={handleMoveDown}
       {onPromptTreeDrop}

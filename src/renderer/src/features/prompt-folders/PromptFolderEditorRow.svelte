@@ -15,6 +15,7 @@
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsEditorSection from './PromptFolderSettingsEditorSection.svelte'
+  import PromptFolderEditorSidebar from './PromptFolderEditorSidebar.svelte'
   import {
     PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX,
     PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX
@@ -41,6 +42,9 @@
     isPromptsSectionExpanded: boolean
     isReadOnly?: boolean
     canRename?: boolean
+    showSidebar?: boolean
+    isFirstSibling?: boolean
+    isLastSibling?: boolean
     onHydrationChange?: (isHydrated: boolean) => void
     onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
@@ -73,6 +77,9 @@
     isPromptsSectionExpanded,
     isReadOnly = false,
     canRename = !isReadOnly,
+    showSidebar = false,
+    isFirstSibling = true,
+    isLastSibling = true,
     onHydrationChange,
     onSettingsSectionToggle,
     onPromptsSectionToggle,
@@ -149,9 +156,13 @@
   data-virtual-window-row
 >
   <EditorCardSurface
-    showSidebar={false}
+    {showSidebar}
     style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
   >
+    {#snippet sidebar()}
+      <PromptFolderEditorSidebar {isFirstSibling} {isLastSibling} />
+    {/snippet}
+
     <header
       class="prompt-folder-editor-title-bar"
       style={`height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px; min-height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px; max-height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px;`}

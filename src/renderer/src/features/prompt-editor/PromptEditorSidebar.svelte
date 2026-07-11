@@ -24,6 +24,7 @@
     title,
     isFirstPrompt,
     isLastPrompt,
+    isDragEnabled = true,
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
@@ -33,6 +34,7 @@
     title: string
     isFirstPrompt: boolean
     isLastPrompt: boolean
+    isDragEnabled?: boolean
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
@@ -116,9 +118,10 @@
     baseVariant="dim"
     class="prompt-editor-sidebar-drag-button"
     testId="prompt-drag-handle"
-    buttonAction={dragHandleAction}
-    buttonActionParameter={getDragHandleOptions()}
-    grabCursor={true}
+    disabled={!isDragEnabled}
+    buttonAction={isDragEnabled ? dragHandleAction : undefined}
+    buttonActionParameter={isDragEnabled ? getDragHandleOptions() : undefined}
+    grabCursor={isDragEnabled}
     tabindex={-1}
     onmousedown={preventSidebarButtonMouseFocus}
   />

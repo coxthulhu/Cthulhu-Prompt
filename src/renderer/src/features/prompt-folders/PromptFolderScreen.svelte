@@ -131,6 +131,7 @@
             activeScreenRows={controller.activePromptFolderScreenRows}
             visiblePromptIds={controller.visiblePromptIds}
             completedPromptCount={controller.completedPromptCount}
+            completedPromptOwnerByPromptId={controller.completedPromptOwnerByPromptId}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
             promptFocusRequest={controller.promptFocusRequest}

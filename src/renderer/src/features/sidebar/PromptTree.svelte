@@ -49,6 +49,7 @@
   import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import { folderPromptDropIndicatorTestId } from './promptTreeTestIds'
+  import { collectCompletedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
 
@@ -196,7 +197,7 @@
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const getPromptIdsForFolder = (folder: PromptFolder): string[] =>
     folder.entryIds.filter((entryId) => promptById[entryId])
-  const selectedCompletedPromptIds = $derived.by((): string[] => {
+  const selectedCompletedPrompts = $derived.by(() => {
     if (!screenRootFolder) {
       return []
     }
@@ -205,10 +206,12 @@
       return []
     }
 
-    return [...screenRootFolder.completedPromptIds].sort((leftPromptId, rightPromptId) => {
-      const leftCompletedAt = promptById[leftPromptId]?.completedAt ?? ''
-      const rightCompletedAt = promptById[rightPromptId]?.completedAt ?? ''
-      return rightCompletedAt.localeCompare(leftCompletedAt)
+    return collectCompletedPrompts({
+      rootFolder: screenRootFolder,
+      descendantFolders: promptFolders.filter((folder) => folder.id !== screenRootFolder.id),
+      completedAtByPromptId: Object.fromEntries(
+        Object.values(promptById).map((prompt) => [prompt.id, prompt.completedAt ?? null])
+      )
     })
   })
   const PROMPT_TREE_ROW_CONTENT_INSET = '58px'
@@ -597,7 +600,7 @@
         })
 
         if (getPromptTreeFolderExpandedState(screenRootFolder.id)) {
-          if (selectedCompletedPromptIds.length === 0) {
+          if (selectedCompletedPrompts.length === 0) {
             items.push({
               id: `${screenRootFolder.id}:empty-state`,
               row: {
@@ -605,16 +608,18 @@
               }
             })
           } else {
-            for (const [promptIndex, promptId] of selectedCompletedPromptIds.entries()) {
+            for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
+              const ownerFolder = promptFolderById[completedPrompt.ownerFolderId]
+              if (!ownerFolder) continue
               items.push({
-                id: folderPromptRowId(screenRootFolder.id, promptId),
+                id: folderPromptRowId(ownerFolder.id, completedPrompt.promptId),
                 row: {
                   kind: 'folder-prompt',
-                  folder: screenRootFolder,
-                  promptId,
+                  folder: ownerFolder,
+                  promptId: completedPrompt.promptId,
                   indentCount: 1,
-                  isLastRow: promptIndex === selectedCompletedPromptIds.length - 1,
-                  isNestedPrompt: false
+                  isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
+                  isNestedPrompt: ownerFolder.id !== screenRootFolder.id
                 }
               })
             }

@@ -204,6 +204,8 @@ export type WorkspaceScenario =
   | 'height' // Workspace with folders for height tests
   | 'subfolders' // Workspace with a prompt folder containing one nested subfolder
   | 'subfolders-ui' // Dedicated recursive prompt-folder screen rendering fixture
+  | 'subfolders-controls' // Dedicated nested two-prompt movement-control fixture
+  | 'subfolders-depth-limit' // Dedicated eight-level subfolder depth fixture
   | 'virtual' // Workspace with folders for virtualization/overscan tests
   | 'long-wrapped-lines' // Workspace with wrapped prompts that overflow default estimations
   | 'virtual-placeholder' // Workspace with prompts tailored for placeholder hydration tests
@@ -218,6 +220,8 @@ export const DEFAULT_WORKSPACES: Record<
   height: '/ws/height',
   subfolders: '/ws/subfolders',
   'subfolders-ui': '/ws/subfolders-ui',
+  'subfolders-controls': '/ws/subfolders-controls',
+  'subfolders-depth-limit': '/ws/subfolders-depth-limit',
   virtual: '/ws/virtual',
   'long-wrapped-lines': '/ws/long-wrapped-lines',
   'virtual-placeholder': '/ws/virtual-placeholder'
@@ -558,6 +562,104 @@ export function setupWorkspaceScenario(
       Object.assign(structure, grandchildPromptFiles)
       Object.assign(structure, rootCompletedPromptFiles)
       Object.assign(structure, nestedCompletedPromptFiles)
+
+      return structure
+    }
+
+    case 'subfolders-depth-limit': {
+      const rootName = 'DepthRoot'
+      const structure = createWorkspaceWithFolders(workspacePath, [
+        { folderName: rootName, displayName: 'Depth Root' }
+      ])
+      let parentPath = `${workspacePath}/Prompts/${rootName}`
+
+      for (let depth = 1; depth <= 8; depth += 1) {
+        const childName = `Level${depth}`
+        const childFolderName = `${rootName}/${Array.from(
+          { length: depth },
+          (_, index) => `Level${index + 1}`
+        ).join('/')}`
+        const childId = createDeterministicId(`${workspacePath}:${childFolderName}`)
+        const childPath = `${parentPath}/${childName}`
+
+        structure[getPromptFolderOrderPath(parentPath)] = JSON.stringify(
+          { entryIds: [childId] },
+          null,
+          2
+        )
+        structure[getPromptFolderOrderPath(childPath)] = JSON.stringify(
+          { entryIds: [] },
+          null,
+          2
+        )
+        structure[`${childPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
+          createPromptFolderInfo(`Level ${depth}`, childId),
+          null,
+          2
+        )
+        addPromptFolderSettingsFiles(structure, childPath, {
+          folderName: childFolderName,
+          displayName: `Level ${depth}`
+        })
+        parentPath = childPath
+      }
+
+      return structure
+    }
+
+    case 'subfolders-controls': {
+      const structure = createWorkspaceWithFolders(workspacePath, [
+        { folderName: 'Controls', displayName: 'Controls' }
+      ])
+      const nestedFolderId = createDeterministicId(`${workspacePath}:Controls/Nested`)
+      const siblingFolderId = createDeterministicId(`${workspacePath}:Controls/Sibling`)
+      const nestedFolderPath = `${workspacePath}/Prompts/Controls/Nested`
+      const siblingFolderPath = `${workspacePath}/Prompts/Controls/Sibling`
+      const { prompts } = normalizePrompts([
+        {
+          id: 'subfolders-controls-first',
+          title: 'First Nested Prompt',
+          promptText: 'First nested prompt for disabled movement controls.'
+        },
+        {
+          id: 'subfolders-controls-second',
+          title: 'Second Nested Prompt',
+          promptText: 'Second nested prompt for disabled movement controls.'
+        }
+      ])
+      const { promptIds, promptFiles } = createPromptFiles(nestedFolderPath, prompts)
+
+      structure[getPromptFolderOrderPath(`${workspacePath}/Prompts/Controls`)] =
+        JSON.stringify({ entryIds: [nestedFolderId, siblingFolderId] }, null, 2)
+      structure[getPromptFolderOrderPath(nestedFolderPath)] = JSON.stringify(
+        { entryIds: promptIds },
+        null,
+        2
+      )
+      structure[`${nestedFolderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
+        createPromptFolderInfo('Nested', nestedFolderId),
+        null,
+        2
+      )
+      addPromptFolderSettingsFiles(structure, nestedFolderPath, {
+        folderName: 'Controls/Nested',
+        displayName: 'Nested'
+      })
+      structure[getPromptFolderOrderPath(siblingFolderPath)] = JSON.stringify(
+        { entryIds: [] },
+        null,
+        2
+      )
+      structure[`${siblingFolderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
+        createPromptFolderInfo('Sibling', siblingFolderId),
+        null,
+        2
+      )
+      addPromptFolderSettingsFiles(structure, siblingFolderPath, {
+        folderName: 'Controls/Sibling',
+        displayName: 'Sibling'
+      })
+      Object.assign(structure, promptFiles)
 
       return structure
     }
