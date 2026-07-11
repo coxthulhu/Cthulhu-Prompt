@@ -10,6 +10,8 @@
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
+  import CreatePromptSubfolderDialog from './CreatePromptSubfolderDialog.svelte'
+  import type { PromptFolderDividerTarget } from './promptFolderScreenRows'
 
   let {
     screenRootFolderId,
@@ -36,6 +38,9 @@
   let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(
     null
   )
+  let createPromptSubfolderDialog = $state<{
+    openDialog: (target: PromptFolderDividerTarget) => void
+  } | null>(null)
 
   const openRenamePromptFolderDialog = () => {
     const currentPromptFolder = controller.screenRootFolder
@@ -55,6 +60,10 @@
       },
       () => false
     )
+  }
+
+  const openCreatePromptSubfolderDialog = (target: PromptFolderDividerTarget) => {
+    createPromptSubfolderDialog?.openDialog(target)
   }
 </script>
 
@@ -131,6 +140,7 @@
             initialCenterRowId={controller.initialPromptFolderCenterRowId}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
+            onAddSubfolder={openCreatePromptSubfolderDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onSetPromptStatus={controller.handleSetPromptStatus}
             onMovePromptUp={controller.handleMovePromptUp}
@@ -163,6 +173,15 @@
     </main>
   {/snippet}
 </PromptFolderFindIntegration>
+
+<CreatePromptSubfolderDialog
+  bind:this={createPromptSubfolderDialog}
+  workspaceId={controller.workspaceId}
+  isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
+  promptFolders={controller.promptFolders}
+  isPromptFolderListLoading={false}
+  onCreated={controller.handleCreatedSubfolder}
+/>
 
 <PromptFolderNameDialog
   bind:this={renamePromptFolderDialog}

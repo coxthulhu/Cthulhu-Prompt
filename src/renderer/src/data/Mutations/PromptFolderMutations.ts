@@ -88,7 +88,7 @@ export const createPromptFolder = async (
   displayName: string,
   parentPromptFolderId: string | null = null,
   previousEntryId: string | null = null
-): Promise<void> => {
+): Promise<string> => {
   const workspace = workspaceCollection.get(workspaceId)
 
   if (!workspace) {
@@ -191,6 +191,8 @@ export const createPromptFolder = async (
     },
     conflictMessage: 'Prompt folder create conflict'
   })
+
+  return optimisticPromptFolderId
 }
 
 export const renamePromptFolder = async (

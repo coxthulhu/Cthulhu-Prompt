@@ -67,6 +67,7 @@
   } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import type {
+    PromptFolderDividerTarget,
     PromptFolderScreenDividerRow,
     PromptFolderScreenFolderEditorRow,
     PromptFolderScreenPlaceholderRow,
@@ -112,7 +113,8 @@
     initialScrollTopPx: number
     initialCenterRowId: string | null
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
-    onAddPrompt: (previousPromptId: string | null) => void
+    onAddPrompt: (target: PromptFolderDividerTarget) => void
+    onAddSubfolder: (target: PromptFolderDividerTarget) => void
     onDeletePrompt: (promptId: string) => void
     onSetPromptStatus: (promptId: string, status: PromptStatus) => void
     onMovePromptUp: (promptId: string) => Promise<boolean>
@@ -160,6 +162,7 @@
     initialCenterRowId,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
+    onAddSubfolder,
     onDeletePrompt,
     onSetPromptStatus,
     onMovePromptUp,
@@ -654,10 +657,14 @@
 {/snippet}
 
 {#snippet dividerRow({ row, rowId, rowHeightPx })}
-  {@const isExistingRootDivider =
+  {@const target = {
+    ownerFolderId: row.ownerFolderId,
+    previousEntryId: row.previousEntryId
+  }}
+  {@const isExistingRootPromptDivider =
     row.isOwnerRoot &&
     (row.previousEntryId === null || visiblePromptIds.includes(row.previousEntryId))}
-  {@const showsAddPrompt = !isCompletedMode && isExistingRootDivider}
+  {@const showsActions = !isCompletedMode}
   <PromptFolderSectionRow
     {rowHeightPx}
     indentLevel={row.indentLevel}
@@ -665,15 +672,21 @@
   >
     <PromptDivider
       disabled={isCreatingPrompt}
-      mode={showsAddPrompt ? 'add' : 'separator'}
-      onAddPrompt={showsAddPrompt ? () => onAddPrompt(row.previousEntryId) : undefined}
-      getDropOptions={!showsAddPrompt
+      mode={showsActions ? 'add' : 'separator'}
+      onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
+      onAddSubfolder={showsActions ? () => onAddSubfolder(target) : undefined}
+      getDropOptions={!showsActions || !isExistingRootPromptDivider
         ? undefined
         : () => getPromptDividerDropOptions(rowId, row.previousEntryId)}
-      testId={showsAddPrompt
+      testId={showsActions
         ? row.previousEntryId
           ? `prompt-divider-add-after-${row.previousEntryId}`
           : 'prompt-divider-add-initial'
+        : undefined}
+      subfolderTestId={showsActions
+        ? row.previousEntryId
+          ? `prompt-divider-add-subfolder-after-${row.previousEntryId}`
+          : 'prompt-divider-add-subfolder-initial'
         : undefined}
     />
   </PromptFolderSectionRow>

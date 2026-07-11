@@ -52,7 +52,13 @@ const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
 const nestedDescriptionPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
-const readOnlyDividerTestIds = [
+const rootFolderOrderPath =
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`
+const nestedFolderOrderPath =
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
+const emptyNestedFolderOrderPath =
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
+const activeDividerTestIds = [
   dividerTestId(nestedFolderId, null),
   dividerTestId(nestedFolderId, 'subfolders-ui-nested-prompt'),
   dividerTestId(grandchildFolderId, null),
@@ -151,6 +157,76 @@ const revealVirtualRow = async (
   }
 
   throw new Error(`Missing recursive prompt-folder row: ${selector}`)
+}
+
+const scrollDividerIntoView = async (
+  mainWindow: any,
+  testHelpers: any,
+  ownerFolderId: string,
+  previousEntryId: string | null
+): Promise<string> => {
+  const selector = testIdSelector(dividerTestId(ownerFolderId, previousEntryId))
+  await revealVirtualRow(mainWindow, testHelpers, selector)
+  await testHelpers.scrollVirtualElementIntoView(
+    PROMPT_FOLDER_HOST_SELECTOR,
+    selector,
+    80
+  )
+  return selector
+}
+
+const addSubfolderTestId = (previousEntryId: string | null): string =>
+  previousEntryId
+    ? `prompt-divider-add-subfolder-after-${previousEntryId}`
+    : 'prompt-divider-add-subfolder-initial'
+
+const createSubfolderAtDivider = async (
+  mainWindow: any,
+  testHelpers: any,
+  ownerFolderId: string,
+  previousEntryId: string | null,
+  displayName: string
+): Promise<void> => {
+  const dividerSelector = await scrollDividerIntoView(
+    mainWindow,
+    testHelpers,
+    ownerFolderId,
+    previousEntryId
+  )
+  await mainWindow
+    .locator(dividerSelector)
+    .locator(testIdSelector(addSubfolderTestId(previousEntryId)))
+    .click()
+  await mainWindow
+    .locator('[data-testid="create-prompt-subfolder-name-input"]')
+    .fill(displayName)
+  await mainWindow.locator('[data-testid="create-prompt-subfolder-button"]').click()
+  await expect(
+    mainWindow.locator('[data-testid="create-prompt-subfolder-name-input"]')
+  ).toHaveCount(0)
+}
+
+const readFolderEntryIds = async (electronApp: any, orderPath: string): Promise<string[]> => {
+  const orderFile = JSON.parse(await readTextFile(electronApp, orderPath)) as {
+    entryIds: string[]
+  }
+  return orderFile.entryIds
+}
+
+const expectCreatedFolderVisible = async (
+  mainWindow: any,
+  promptFolderId: string,
+  displayName: string
+): Promise<void> => {
+  const editor = mainWindow.locator(
+    `[data-testid="prompt-folder-editor-${promptFolderId}"]`
+  )
+  await expect(editor).toBeVisible()
+  await expect(editor.getByText(displayName, { exact: true })).toBeVisible()
+  await expect(editor.locator(folderSettingsToggleSelector)).toHaveAttribute(
+    'aria-pressed',
+    'false'
+  )
 }
 
 const hasVirtualPlaceholder = async (mainWindow: any, testHelpers: any): Promise<boolean> => {
@@ -274,14 +350,15 @@ describe('Prompt folder subfolder rendering', () => {
     )
     expect(rowOrder).toEqual(orderedRowTestIds)
 
-    for (const readOnlyDividerTestId of readOnlyDividerTestIds) {
-      const dividerSelector = testIdSelector(readOnlyDividerTestId)
+    for (const activeDividerTestId of activeDividerTestIds) {
+      const dividerSelector = testIdSelector(activeDividerTestId)
       await revealVirtualRow(mainWindow, testHelpers, dividerSelector)
       await expect(
-        mainWindow
-          .locator(dividerSelector)
-          .locator('[data-testid^="prompt-divider-add-"]')
-      ).toHaveCount(0)
+        mainWindow.locator(dividerSelector).getByRole('button', { name: 'Add Prompt' })
+      ).toHaveCount(1)
+      await expect(
+        mainWindow.locator(dividerSelector).getByRole('button', { name: 'Add Subfolder' })
+      ).toHaveCount(1)
     }
 
     const rootInitialDividerSelector = testIdSelector(dividerTestId(hierarchyFolderId, null))
@@ -497,6 +574,211 @@ describe('Prompt folder subfolder rendering', () => {
       orderedRowTestIds.map(testIdSelector).join(', ')
     )
     expect(rowOrderAfterExpand).toEqual(orderedRowTestIds)
+  })
+
+  test('creates normalized subfolders at mixed entry divider positions', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    await createSubfolderAtDivider(
+      mainWindow,
+      testHelpers,
+      hierarchyFolderId,
+      null,
+      '  Initial Child  '
+    )
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, rootFolderOrderPath)).length)
+      .toBe(5)
+    const initialOrder = await readFolderEntryIds(electronApp, rootFolderOrderPath)
+    const initialChildId = initialOrder[0]
+    expect(initialOrder.slice(1)).toEqual([
+      'subfolders-ui-root-before',
+      nestedFolderId,
+      emptyNestedFolderId,
+      'subfolders-ui-root-after'
+    ])
+    await expectCreatedFolderVisible(mainWindow, initialChildId, 'Initial Child')
+    const persistedInitialFolderInfo = JSON.parse(
+      await readTextFile(
+        electronApp,
+        `${WORKSPACE_PATH}/Prompts/Hierarchy/InitialChild/_FolderInfo/FolderInfo.json`
+      )
+    ) as { displayName: string; promptFolderId: string }
+    expect(persistedInitialFolderInfo).toEqual({
+      displayName: 'Initial Child',
+      promptFolderId: initialChildId
+    })
+
+    await createSubfolderAtDivider(
+      mainWindow,
+      testHelpers,
+      nestedFolderId,
+      'subfolders-ui-nested-prompt',
+      'After Prompt'
+    )
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
+      .toBe(3)
+    const nestedOrder = await readFolderEntryIds(electronApp, nestedFolderOrderPath)
+    expect(nestedOrder[0]).toBe('subfolders-ui-nested-prompt')
+    expect(nestedOrder[2]).toBe(grandchildFolderId)
+    await expectCreatedFolderVisible(mainWindow, nestedOrder[1], 'After Prompt')
+
+    await createSubfolderAtDivider(
+      mainWindow,
+      testHelpers,
+      hierarchyFolderId,
+      nestedFolderId,
+      'After Nested'
+    )
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, rootFolderOrderPath)).length)
+      .toBe(6)
+    const finalRootOrder = await readFolderEntryIds(electronApp, rootFolderOrderPath)
+    const afterNestedFolderId = finalRootOrder[3]
+    expect(finalRootOrder).toEqual([
+      initialChildId,
+      'subfolders-ui-root-before',
+      nestedFolderId,
+      afterNestedFolderId,
+      emptyNestedFolderId,
+      'subfolders-ui-root-after'
+    ])
+    expect(afterNestedFolderId).not.toBe(initialChildId)
+    await expectCreatedFolderVisible(mainWindow, afterNestedFolderId, 'After Nested')
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
+  })
+
+  test('rejects duplicate siblings while allowing the same name under another parent', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    await createSubfolderAtDivider(
+      mainWindow,
+      testHelpers,
+      nestedFolderId,
+      'subfolders-ui-nested-prompt',
+      'Shared Child'
+    )
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
+      .toBe(3)
+    const nestedSharedChildId = (
+      await readFolderEntryIds(electronApp, nestedFolderOrderPath)
+    )[1]
+    await expectCreatedFolderVisible(mainWindow, nestedSharedChildId, 'Shared Child')
+
+    const nestedInitialDivider = await scrollDividerIntoView(
+      mainWindow,
+      testHelpers,
+      nestedFolderId,
+      null
+    )
+    await mainWindow
+      .locator(nestedInitialDivider)
+      .locator('[data-testid="prompt-divider-add-subfolder-initial"]')
+      .click()
+    await mainWindow
+      .locator('[data-testid="create-prompt-subfolder-name-input"]')
+      .fill('  Shared Child  ')
+    await expect(
+      mainWindow.locator('[data-testid="create-prompt-subfolder-name-error"]')
+    ).toContainText('A folder with this name already exists')
+    await expect(
+      mainWindow.locator('[data-testid="create-prompt-subfolder-button"]')
+    ).toBeDisabled()
+    await mainWindow.keyboard.press('Escape')
+
+    await createSubfolderAtDivider(
+      mainWindow,
+      testHelpers,
+      emptyNestedFolderId,
+      null,
+      'Shared Child'
+    )
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, emptyNestedFolderOrderPath)).length)
+      .toBe(1)
+    const emptyNestedSharedChildId = (
+      await readFolderEntryIds(electronApp, emptyNestedFolderOrderPath)
+    )[0]
+    expect(emptyNestedSharedChildId).not.toBe(nestedSharedChildId)
+    await expectCreatedFolderVisible(
+      mainWindow,
+      emptyNestedSharedChildId,
+      'Shared Child'
+    )
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
+      .toBe(3)
+  })
+
+  test('adds a prompt to the divider owning subfolder without changing the screen root', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    const nestedChildFolderDivider = await scrollDividerIntoView(
+      mainWindow,
+      testHelpers,
+      nestedFolderId,
+      grandchildFolderId
+    )
+    await mainWindow
+      .locator(nestedChildFolderDivider)
+      .locator(`[data-testid="prompt-divider-add-after-${grandchildFolderId}"]`)
+      .click()
+
+    await expect
+      .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
+      .toBe(3)
+    const nestedOrder = await readFolderEntryIds(electronApp, nestedFolderOrderPath)
+    const createdPromptId = nestedOrder[2]
+    expect(nestedOrder.slice(0, 2)).toEqual([
+      'subfolders-ui-nested-prompt',
+      grandchildFolderId
+    ])
+    expect(await readFolderEntryIds(electronApp, rootFolderOrderPath)).toEqual([
+      'subfolders-ui-root-before',
+      nestedFolderId,
+      emptyNestedFolderId,
+      'subfolders-ui-root-after'
+    ])
+    await expect(
+      mainWindow.locator(`[data-testid="prompt-editor-${createdPromptId}"]`)
+    ).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
+    ).toContainText('Hierarchy')
   })
 
   test('shows the empty placeholder only for an empty root folder', async ({ testSetup }) => {

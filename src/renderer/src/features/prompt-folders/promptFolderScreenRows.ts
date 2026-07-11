@@ -25,6 +25,11 @@ export type PromptFolderScreenDividerRow = PromptFolderScreenOwnedRow & {
   previousEntryId: string | null
 }
 
+export type PromptFolderDividerTarget = {
+  ownerFolderId: string
+  previousEntryId: string | null
+}
+
 export type PromptFolderScreenPlaceholderRow = PromptFolderScreenOwnedRow & {
   kind: 'placeholder'
 }

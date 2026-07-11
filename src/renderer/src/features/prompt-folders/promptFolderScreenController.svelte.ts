@@ -88,6 +88,7 @@ import { PromptFolderScreenMode } from './promptFolderScreenMode'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
 import {
   buildPromptFolderScreenRows,
+  type PromptFolderDividerTarget,
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
 
@@ -457,6 +458,7 @@ export const createPromptFolderScreenController = ({
       promptNavigation.selectionSource === 'folder-open' ||
       promptNavigation.selectionSource === 'prompt-create' ||
       promptNavigation.selectionSource === 'prompt-divider-create' ||
+      promptNavigation.selectionSource === 'subfolder-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
       promptNavigation.selectionSource === 'header' ||
       promptNavigation.selectionSource === 'restore-hold'
@@ -687,12 +689,12 @@ export const createPromptFolderScreenController = ({
     promptFocusRequest = { promptId, requestId: promptFocusRequestId }
   }
 
-  const selectCreatedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
+  const selectCreatedPrompt = (rowOwnerFolderId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
 
     promptNavigation.select({
-      screenRootFolderId: destinationPromptFolderId,
-      rowOwnerFolderId: destinationPromptFolderId,
+      screenRootFolderId,
+      rowOwnerFolderId,
       row,
       source: 'prompt-divider-create',
       forceVersionBump: true
@@ -702,12 +704,20 @@ export const createPromptFolderScreenController = ({
     if (workspaceId) {
       setPromptFolderPromptTreeEntryIdWithAutosave(
         workspaceId,
-        destinationPromptFolderId,
+        rowOwnerFolderId,
         promptNavigationRowToPersistedEntryId(row)
       )
     }
+  }
 
-    onScreenRootFolderSelect(destinationPromptFolderId)
+  const handleCreatedSubfolder = (promptFolderId: string): void => {
+    promptNavigation.select({
+      screenRootFolderId,
+      rowOwnerFolderId: promptFolderId,
+      row: 'folder-settings',
+      source: 'subfolder-create',
+      forceVersionBump: true
+    })
   }
 
   const selectMovedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
@@ -922,7 +932,14 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    if (!selectPromptTreeRowAndCenter(target, source !== 'folder-open')) return
+    if (
+      !selectPromptTreeRowAndCenter(
+        target,
+        source !== 'folder-open' && source !== 'subfolder-create'
+      )
+    ) {
+      return
+    }
     if (source === 'prompt-create' && target.kind === 'prompt') {
       requestPromptFocus(target.promptId)
     }
@@ -990,16 +1007,19 @@ export const createPromptFolderScreenController = ({
     )
   }
 
-  const handleAddPrompt = async (previousPromptId: string | null) => {
-    const currentPromptFolder = screenRootFolder
-    if (!currentPromptFolder || isCreatingPrompt) {
+  const handleAddPrompt = async (target: PromptFolderDividerTarget) => {
+    const rowOwnerFolder = promptFolderCollection.get(target.ownerFolderId)
+    if (!rowOwnerFolder || isCreatingPrompt) {
       return
     }
 
     isCreatingPrompt = true
 
-    const creation = createBlankPromptInFolder(currentPromptFolder.id, previousPromptId)
-    selectCreatedPrompt(currentPromptFolder.id, creation.promptId)
+    const creation = createBlankPromptInFolder(
+      rowOwnerFolder.id,
+      target.previousEntryId
+    )
+    selectCreatedPrompt(rowOwnerFolder.id, creation.promptId)
     await runIpcBestEffort(() => creation.persistence)
 
     isCreatingPrompt = false
@@ -1361,6 +1381,7 @@ export const createPromptFolderScreenController = ({
     handleHeaderFolderClick,
     handleFindMatchReveal,
     handleAddPrompt,
+    handleCreatedSubfolder,
     handleDeletePrompt,
     handleSetPromptStatus,
     handleMovePromptUp,
