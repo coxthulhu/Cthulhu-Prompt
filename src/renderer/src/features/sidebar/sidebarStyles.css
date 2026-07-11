@@ -243,6 +243,16 @@
   margin-left: 5px;
 }
 
+.sidebarPromptTree .sidebarPromptTreeGutter [data-indent-guide-line] {
+  opacity: 0;
+  transition: opacity 100ms ease-out;
+}
+
+.sidebarPromptTree:hover .sidebarPromptTreeGutter [data-indent-guide-line],
+.sidebarPromptTree:focus-within .sidebarPromptTreeGutter [data-indent-guide-line] {
+  opacity: 1;
+}
+
 .sidebarPromptTreeSettingsButton {
   display: grid;
   grid-template-columns: calc(

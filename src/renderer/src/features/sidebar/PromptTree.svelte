@@ -651,7 +651,7 @@
   })
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="sidebarPromptTree flex min-h-0 flex-1 flex-col">
   {#if folderListState === 'no-workspace'}
     <div class="sidebarPromptTreeStatus px-2 text-xs">Select a Workspace to Get Started</div>
   {:else if folderListState === 'loading'}
