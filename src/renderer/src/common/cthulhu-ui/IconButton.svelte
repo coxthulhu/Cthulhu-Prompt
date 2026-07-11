@@ -3,7 +3,12 @@
   import type { Action } from 'svelte/action'
   import { mergeClasses } from './mergeClasses'
 
-  export type IconButtonSize = 'default' | 'compact' | 'tiny' | 'sidebar-rail'
+  export type IconButtonSize =
+    | 'default'
+    | 'compact'
+    | 'compact-large-icon'
+    | 'tiny'
+    | 'sidebar-rail'
   export type IconButtonBaseVariant = 'normal' | 'dim' | 'muted'
   export type IconButtonHoverVariant = 'neutral' | 'accent' | 'success' | 'danger' | 'glyph'
   type IconButtonAction = Action<HTMLButtonElement, unknown>
@@ -61,7 +66,9 @@
   }: Props = $props()
 
   const isDisabled = $derived(disabled === true)
-  const iconSize = $derived(size === 'default' ? 20 : size === 'tiny' ? 14 : 16)
+  const iconSize = $derived(
+    size === 'default' || size === 'compact-large-icon' ? 20 : size === 'tiny' ? 14 : 16
+  )
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
 
@@ -114,6 +121,11 @@
   .cthulhuUiIconButton[data-size='compact'] {
     height: 28px;
     width: 28px;
+  }
+
+  .cthulhuUiIconButton[data-size='compact-large-icon'] {
+    height: 28px;
+    width: 36px;
   }
 
   .cthulhuUiIconButton[data-size='tiny'] {

@@ -211,7 +211,7 @@ const scrollPromptEditorIntoView = async (
   const editorSelector = promptEditorSelector(promptId)
   await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
   await scrollUntilMounted(page, testHelpers, editorSelector)
-  await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, editorSelector, 120)
+  await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, editorSelector)
   await waitForMonacoEditor(page, editorSelector)
 }
 
@@ -600,28 +600,32 @@ describe('Prompt folder prompt management', () => {
     const dividerRow = dividerButton.locator(
       'xpath=ancestor::div[contains(@class, "promptDividerRow")]'
     )
-    const dividerSeparator = dividerRow.locator('.cthulhuUiSeparator')
     const dividerButtonBoxBefore = await dividerButton.boundingBox()
+    const dividerButtonIconBox = await dividerButton.locator('svg').boundingBox()
     const dividerRowBox = await dividerRow.boundingBox()
-    const dividerSeparatorBox = await dividerSeparator.boundingBox()
 
     await expect(dividerActions).toHaveCSS('opacity', '0')
     await expect(dividerActions).toHaveCSS('transition-property', 'opacity')
     await expect(dividerActions).toHaveCSS('transition-duration', '0.05s')
     await expect(dividerActions).toHaveCSS('transition-timing-function', 'ease-out')
+    await expect(dividerRow.locator('.cthulhuUiSeparator')).toHaveCount(1)
+    await expect(dividerButton).toHaveAttribute('data-size', 'compact-large-icon')
+    expect(dividerButtonBoxBefore).not.toBeNull()
+    expect(dividerButtonIconBox).not.toBeNull()
     expect(dividerRowBox).not.toBeNull()
-    expect(dividerSeparatorBox).not.toBeNull()
-    const dividerLeftInset = dividerSeparatorBox!.x - dividerRowBox!.x
-    const dividerRightInset =
-      dividerRowBox!.x + dividerRowBox!.width - dividerSeparatorBox!.x - dividerSeparatorBox!.width
-    expect(Math.abs(dividerLeftInset - dividerRightInset)).toBeLessThanOrEqual(
+    expect(dividerButtonBoxBefore!.height).toBe(28)
+    expect(dividerButtonBoxBefore!.width).toBe(36)
+    expect(dividerButtonIconBox!.height).toBe(20)
+    expect(dividerRowBox!.height).toBe(32)
+    const dividerButtonCenter = dividerButtonBoxBefore!.y + dividerButtonBoxBefore!.height / 2
+    const dividerRowCenter = dividerRowBox!.y + dividerRowBox!.height / 2
+    expect(Math.abs(dividerButtonCenter - dividerRowCenter)).toBeLessThanOrEqual(
       MOVE_BUTTON_POSITION_TOLERANCE_PX
     )
     await dividerRow.hover()
     await expect(dividerActions).toHaveCSS('opacity', '1')
 
     const dividerButtonBoxAfter = await dividerButton.boundingBox()
-    expect(dividerButtonBoxBefore).not.toBeNull()
     expect(dividerButtonBoxAfter).not.toBeNull()
     expect(Math.abs(dividerButtonBoxAfter!.x - dividerButtonBoxBefore!.x)).toBeLessThanOrEqual(
       MOVE_BUTTON_POSITION_TOLERANCE_PX

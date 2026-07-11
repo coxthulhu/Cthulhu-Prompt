@@ -38,8 +38,8 @@
   >
     <div
       class={mode === 'separator'
-        ? 'grid min-h-9 grid-cols-1 items-center'
-        : 'promptDividerContent grid min-h-9 items-center'}
+        ? 'grid h-full grid-cols-1 items-center'
+        : 'promptDividerContent grid h-full items-center'}
       data-has-subfolder={onAddSubfolder ? 'true' : undefined}
     >
       {#if mode === 'separator'}
@@ -66,6 +66,7 @@
             icon={Plus}
             label={dividerText}
             title={dividerText}
+            size="compact-large-icon"
             disabled={disabled}
             hoverVariant="accent"
             {testId}
@@ -78,6 +79,7 @@
               icon={FolderPlus}
               label="Add Subfolder"
               title="Add Subfolder"
+              size="compact-large-icon"
               disabled={disabled}
               hoverVariant="accent"
               testId={subfolderTestId}
