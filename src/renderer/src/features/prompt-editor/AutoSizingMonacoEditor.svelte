@@ -122,7 +122,7 @@
   const layoutEditor = (nextHeightPx?: number): number => {
     if (isLayingOut || !editor || !container) return monacoHeightPx
 
-    const measuredWidthPx = Math.round(container.getBoundingClientRect().width)
+    const measuredWidthPx = container.getBoundingClientRect().width
     if (measuredWidthPx <= 0) return monacoHeightPx
 
     isLayingOut = true
@@ -380,7 +380,7 @@
     if (!container) return
     const targetContainer = container
 
-    const measuredWidthPx = Math.round(targetContainer.getBoundingClientRect().width)
+    const measuredWidthPx = targetContainer.getBoundingClientRect().width
     if (measuredWidthPx <= 0) return
 
     let disposed = false

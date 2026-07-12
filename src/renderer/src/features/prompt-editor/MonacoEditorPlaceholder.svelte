@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { cn } from '@renderer/common/Cn'
   import { clampMonacoHeightPx, type PromptEditorSizingConfig } from './promptEditorSizing'
 
   type Props = {
@@ -15,7 +14,7 @@
 </script>
 
 <div
-  class={cn('bg-[var(--ui-editor-normal-surface)]', className)}
+  class={className}
   style={`height:${clampedHeightPx}px; position: relative;`}
   data-testid="monaco-placeholder"
 ></div>

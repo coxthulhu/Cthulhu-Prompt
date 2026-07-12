@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { monaco } from '@renderer/common/Monaco'
-  import { cn } from '@renderer/common/Cn'
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
@@ -172,7 +171,7 @@
 
 {#if isHydrated}
   <AutoSizingMonacoEditor
-    class={cn('bg-[var(--ui-editor-normal-surface)]', className)}
+    class={className}
     {initialValue}
     {initialViewStateJson}
     {viewStateCaptureKey}
@@ -194,7 +193,7 @@
   />
 {:else}
   <MonacoEditorPlaceholder
-    class={cn('bg-[var(--ui-editor-normal-surface)]', className)}
+    class={className}
     heightPx={placeholderHeightPx}
     {sizingConfig}
   />
