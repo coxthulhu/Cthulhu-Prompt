@@ -297,7 +297,7 @@
       <header class="prompt-header">
         <div class="title-status-bar" data-status={prompt.status} aria-hidden="true"></div>
         <div class="prompt-heading">
-          <span class="document-icon"><FileText size={18} aria-hidden="true" /></span>
+          <span class="document-icon"><FileText size={22} aria-hidden="true" /></span>
           <div class="prompt-title-block">
             <input value={prompt.title} aria-label="Prompt title" />
             <div class="prompt-meta">
@@ -564,6 +564,11 @@
     height: 30px;
     justify-content: center;
     width: 30px;
+  }
+
+  .document-icon {
+    background: transparent;
+    border: 0;
   }
 
   .prompt-title-block {
