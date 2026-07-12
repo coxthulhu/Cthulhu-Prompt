@@ -295,6 +295,7 @@
 
     <div class="prompt-content">
       <header class="prompt-header">
+        <div class="title-status-bar" data-status={prompt.status} aria-hidden="true"></div>
         <div class="prompt-heading">
           <span class="document-icon"><FileText size={18} aria-hidden="true" /></span>
           <div class="prompt-title-block">
@@ -461,11 +462,17 @@
   .add-row-action {
     align-items: center;
     display: flex;
-    font-size: 11px;
+    font-size: 12px;
     gap: 4px;
+    line-height: 16px;
     opacity: 0;
     padding: 0 9px;
     transition: opacity 120ms ease, color 120ms ease;
+  }
+
+  .add-row-action :global(svg) {
+    display: block;
+    flex: 0 0 auto;
   }
 
   .add-row:hover > span:not(.add-row-action) {
@@ -516,9 +523,26 @@
     border-bottom: 1px solid var(--ui-neutral-muted-border);
     display: grid;
     gap: 12px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 2px minmax(0, 1fr) auto;
     min-height: 58px;
-    padding: 7px 9px 7px 13px;
+    padding: 7px 9px 7px 0;
+  }
+
+  .title-status-bar {
+    align-self: stretch;
+    margin-block: -7px;
+  }
+
+  .title-status-bar[data-status='todo'] {
+    visibility: hidden;
+  }
+
+  .title-status-bar[data-status='completed'] {
+    background: var(--ui-success-normal-text);
+  }
+
+  .title-status-bar[data-status='in-progress'] {
+    background: var(--ui-warning-icon-glyph);
   }
 
   .prompt-heading {
@@ -553,7 +577,7 @@
     border: 0;
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 650;
+    font-weight: 600;
     line-height: 20px;
     min-width: 0;
     outline: none;
@@ -565,7 +589,7 @@
     align-items: center;
     color: var(--ui-muted-text);
     display: flex;
-    font-size: 11px;
+    font-size: 12px;
     gap: 7px;
     min-width: 0;
     overflow: hidden;
@@ -780,11 +804,16 @@
   @media (max-width: 900px) {
     .prompt-header {
       align-items: stretch;
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: 2px minmax(0, 1fr);
     }
 
     .prompt-actions {
+      grid-column: 2;
       justify-content: flex-end;
+    }
+
+    .title-status-bar {
+      grid-row: 1 / span 2;
     }
 
     .folder-context {
