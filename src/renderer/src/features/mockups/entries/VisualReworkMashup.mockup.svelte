@@ -576,7 +576,7 @@
     background: transparent;
     border: 0;
     color: var(--ui-normal-text);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     line-height: 20px;
     min-width: 0;
