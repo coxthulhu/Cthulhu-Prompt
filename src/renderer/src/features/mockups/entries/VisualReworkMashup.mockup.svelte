@@ -488,7 +488,7 @@
   .prompt-card {
     align-items: stretch;
     background: linear-gradient(115deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end));
-    border: 1px solid var(--ui-card-normal-border);
+    border: 1px solid var(--ui-neutral-muted-border);
     border-radius: 9px;
     box-shadow: 0 8px 20px var(--ui-card-normal-shadow);
     display: grid;
