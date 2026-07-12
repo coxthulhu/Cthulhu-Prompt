@@ -4,7 +4,7 @@ import {
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
 
-export const PROMPT_EDITOR_THEME = 'Dark Modern'
+export const PROMPT_EDITOR_THEME = 'Dark 2026'
 export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
 
 // Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
@@ -28,7 +28,7 @@ const DISABLED_FIND_COMMANDS = [
   'editor.action.selectAllMatches'
 ] as const
 
-// Side effect: apply the VS Code Dark Modern theme to all Monaco editors globally.
+// Side effect: apply the VS Code Dark 2026 theme to all Monaco editors globally.
 monaco.editor.setTheme(PROMPT_EDITOR_THEME)
 
 // Disable Monaco's built-in find/replace widget so we can use our external dialog.

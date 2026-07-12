@@ -460,6 +460,7 @@
     {#if overflowHost}
       {#key promptId}
         <HydratableMonacoEditor
+          class="bg-[var(--ui-editor-content-surface)]"
           initialValue={promptData.draft.text}
           initialViewStateJson={initialEditorViewStateJson}
           viewStateCaptureKey={`prompt:${promptId}`}
@@ -502,6 +503,7 @@
       {/key}
     {:else}
       <MonacoEditorPlaceholder
+        class="bg-[var(--ui-editor-content-surface)]"
         heightPx={placeholderMonacoHeightPx}
         sizingConfig={promptEditorSizingConfig}
       />
@@ -519,6 +521,7 @@
   }
 
   .prompt-editor-body-editor-section {
+    background: var(--ui-editor-content-surface);
     box-sizing: border-box;
     min-width: 0;
   }

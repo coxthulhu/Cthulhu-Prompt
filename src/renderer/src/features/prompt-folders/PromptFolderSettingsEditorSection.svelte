@@ -308,6 +308,7 @@
     {#if overflowHost}
       {#key `${promptFolderId}:${field}`}
         <HydratableMonacoEditor
+          class="bg-[var(--ui-editor-content-surface)]"
           initialValue={section.value}
           initialViewStateJson={section.initialViewStateJson}
           viewStateCaptureKey={section.viewStateCaptureKey}
@@ -357,13 +358,18 @@
         />
       {/key}
     {:else}
-      <MonacoEditorPlaceholder heightPx={placeholderMonacoHeightPx} {sizingConfig} />
+      <MonacoEditorPlaceholder
+        class="bg-[var(--ui-editor-content-surface)]"
+        heightPx={placeholderMonacoHeightPx}
+        {sizingConfig}
+      />
     {/if}
   </div>
 </EditorCardSection>
 
 <style>
   .prompt-folder-settings-editor-section {
+    background: var(--ui-editor-content-surface);
     box-sizing: border-box;
     min-width: 0;
   }

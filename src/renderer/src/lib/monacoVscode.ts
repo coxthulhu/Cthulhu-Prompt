@@ -16,7 +16,7 @@ import getConfigurationServiceOverride from '@codingame/monaco-vscode-configurat
 import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
-const PROMPT_EDITOR_THEME = 'Dark Modern'
+const PROMPT_EDITOR_THEME = 'Dark 2026'
 
 let initializationPromise: Promise<void> | null = null
 

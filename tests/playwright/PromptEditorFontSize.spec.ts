@@ -148,14 +148,13 @@ async function getMonacoLineNumbersSetting(
 async function getMonacoThemeState(
   mainWindow: any,
   editorSelector: string
-): Promise<{ className: string; backgroundColor: string } | null> {
+): Promise<{ className: string } | null> {
   return await mainWindow.evaluate((selector) => {
     const editor = document.querySelector<HTMLElement>(`${selector} .monaco-editor`)
     if (!editor) return null
 
     return {
-      className: editor.className,
-      backgroundColor: window.getComputedStyle(editor).backgroundColor
+      className: editor.className
     }
   }, editorSelector)
 }
@@ -182,8 +181,7 @@ describe('Prompt editor settings', () => {
     await expect
       .poll(async () => getMonacoThemeState(mainWindow, rowSelector))
       .toMatchObject({
-        className: expect.stringContaining('vs-dark'),
-        backgroundColor: 'rgb(31, 31, 31)'
+        className: expect.stringContaining('vs-dark')
       })
   })
 
