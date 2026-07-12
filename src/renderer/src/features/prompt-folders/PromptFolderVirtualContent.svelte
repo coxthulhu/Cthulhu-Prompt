@@ -489,51 +489,71 @@
     onCenterRowChange(null)
   }
 
-  const scrollByPromptBlockHeight = (direction: 'up' | 'down', promptId: string) => {
+  const getRootEntryBlockRowIds = (entryId: string): string[] => {
+    const endIndex = virtualItems.findIndex(
+      ({ row }) =>
+        row.kind === 'prompt-divider' &&
+        row.isOwnerRoot &&
+        row.previousEntryId === entryId
+    )
+    if (endIndex === -1) return []
+
+    let previousRootDividerIndex = endIndex - 1
+    while (previousRootDividerIndex >= 0) {
+      const row = virtualItems[previousRootDividerIndex].row
+      if (row.kind === 'prompt-divider' && row.isOwnerRoot) break
+      previousRootDividerIndex -= 1
+    }
+
+    // A root subfolder block includes its editor, expanded descendants, and trailing divider.
+    return virtualItems
+      .slice(previousRootDividerIndex + 1, endIndex + 1)
+      .map(({ id }) => id)
+  }
+
+  const scrollByAdjacentEntryBlockHeight = (direction: 'up' | 'down', promptId: string) => {
     if (!scrollApi) return
 
-    const promptIndex = visiblePromptIds.indexOf(promptId)
-    const adjacentPromptId =
-      direction === 'up' ? visiblePromptIds[promptIndex - 1] : visiblePromptIds[promptIndex + 1]
-    if (!adjacentPromptId) return
+    const rootEntryIds = promptFolderById[screenRootFolderId]?.entryIds ?? []
+    const promptIndex = rootEntryIds.indexOf(promptId)
+    const adjacentEntryId =
+      direction === 'up' ? rootEntryIds[promptIndex - 1] : rootEntryIds[promptIndex + 1]
+    if (!adjacentEntryId) return
 
-    // Keep the clicked move button anchored while the adjacent prompt block crosses it.
-    scrollApi.scrollByRowHeights(
-      [promptEditorRowId(adjacentPromptId), promptDividerRowId(adjacentPromptId)],
-      direction
-    )
+    // Keep the clicked move button anchored while the adjacent root entry crosses it.
+    scrollApi.scrollByRowHeights(getRootEntryBlockRowIds(adjacentEntryId), direction)
   }
 
   const handleMovePromptUp = (promptId: string): Promise<boolean> => {
-    scrollByPromptBlockHeight('up', promptId)
+    scrollByAdjacentEntryBlockHeight('up', promptId)
     return onMovePromptUp(promptId)
   }
 
   const handleMovePromptDown = (promptId: string): Promise<boolean> => {
-    scrollByPromptBlockHeight('down', promptId)
+    scrollByAdjacentEntryBlockHeight('down', promptId)
     return onMovePromptDown(promptId)
   }
 
   const getPromptDividerDropPayload = (
-    previousPromptId: string | null
+    previousEntryId: string | null
   ): PromptHandleDropPayload => {
-    if (previousPromptId === null) {
+    if (previousEntryId === null) {
       return {
-        kind: 'folder',
-        folderId: screenRootFolderId
+        folderId: screenRootFolderId,
+        targetEntryId: null,
+        position: 'after'
       }
     }
 
     return {
-      kind: 'prompt',
       folderId: screenRootFolderId,
-      promptId: previousPromptId,
-      edge: 'bottom'
+      targetEntryId: previousEntryId,
+      position: 'after'
     }
   }
 
   const canDropOnPromptDivider = (
-    previousPromptId: string | null,
+    previousEntryId: string | null,
     payload: PromptHandleDragPayload
   ): boolean => {
     if (payload.sourceFolderId !== screenRootFolderId) {
@@ -543,10 +563,10 @@
     return (
       resolvePromptHandleDropMove(
         screenRootFolderId,
-        visiblePromptIds,
+        promptFolderById[screenRootFolderId]?.entryIds ?? [],
         payload.fromId,
-        getPromptDividerDropPayload(previousPromptId),
-        visiblePromptIds
+        getPromptDividerDropPayload(previousEntryId),
+        promptFolderById[screenRootFolderId]?.entryIds ?? []
       ) !== null
     )
   }
@@ -672,9 +692,6 @@
     ownerFolderId: row.ownerFolderId,
     previousEntryId: row.previousEntryId
   }}
-  {@const isExistingRootPromptDivider =
-    row.isOwnerRoot &&
-    (row.previousEntryId === null || visiblePromptIds.includes(row.previousEntryId))}
   {@const showsActions = !isCompletedMode}
   <PromptFolderSectionRow
     {rowHeightPx}
@@ -688,7 +705,7 @@
       onAddSubfolder={showsActions && (promptFolderById[row.ownerFolderId]?.depth ?? 8) < 8
         ? () => onAddSubfolder(target)
         : undefined}
-      getDropOptions={!showsActions || !isExistingRootPromptDivider
+      getDropOptions={!showsActions || !row.isOwnerRoot
         ? undefined
         : () => getPromptDividerDropOptions(rowId, row.previousEntryId)}
       testId={showsActions

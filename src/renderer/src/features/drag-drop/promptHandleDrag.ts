@@ -5,71 +5,65 @@ export type PromptHandleDragPayload = {
   sourceFolderId: string
 }
 
-export type PromptHandleDropPayload =
-  | {
-      kind: 'folder'
-      folderId: string
-    }
-  | {
-      kind: 'prompt'
-      folderId: string
-      promptId: string
-      edge: 'top' | 'bottom'
-    }
+export type PromptHandleDropPayload = {
+  folderId: string
+  targetEntryId: string | null
+  position: 'before' | 'after'
+}
 
 export type PromptHandleMove = {
   sourcePromptFolderId: string
   destinationPromptFolderId: string
   promptId: string
-  orderAfterPromptId: string | null
+  previousEntryId: string | null
 }
 
-const arePromptIdOrdersEqual = (left: string[], right: string[]): boolean => {
-  return left.length === right.length && left.every((promptId, index) => promptId === right[index])
+const areEntryIdOrdersEqual = (left: string[], right: string[]): boolean => {
+  return left.length === right.length && left.every((entryId, index) => entryId === right[index])
 }
 
-const reorderPromptIds = (
-  currentPromptIds: string[],
+const reorderEntryIds = (
+  currentEntryIds: string[],
   promptId: string,
-  orderAfterPromptId: string | null
+  previousEntryId: string | null
 ): string[] | null => {
-  const currentIndex = currentPromptIds.indexOf(promptId)
+  const currentIndex = currentEntryIds.indexOf(promptId)
   if (currentIndex === -1) {
     return null
   }
 
-  const nextPromptIds = [...currentPromptIds]
-  nextPromptIds.splice(currentIndex, 1)
+  const nextEntryIds = [...currentEntryIds]
+  nextEntryIds.splice(currentIndex, 1)
 
-  if (orderAfterPromptId == null) {
-    nextPromptIds.unshift(promptId)
-    return nextPromptIds
+  if (previousEntryId == null) {
+    nextEntryIds.unshift(promptId)
+    return nextEntryIds
   }
 
-  const previousIndex = nextPromptIds.indexOf(orderAfterPromptId)
+  const previousIndex = nextEntryIds.indexOf(previousEntryId)
   if (previousIndex === -1) {
     return null
   }
 
-  nextPromptIds.splice(previousIndex + 1, 0, promptId)
-  return nextPromptIds
+  nextEntryIds.splice(previousIndex + 1, 0, promptId)
+  return nextEntryIds
 }
 
-const resolveTopEdgeOrderAfterPromptId = (
-  destinationPromptIds: string[],
+const resolvePreviousEntryIdForBeforeDrop = (
+  destinationEntryIds: string[],
   draggedPromptId: string,
-  targetPromptId: string
+  targetEntryId: string
 ): string | null => {
-  const targetIndex = destinationPromptIds.indexOf(targetPromptId)
+  const targetIndex = destinationEntryIds.indexOf(targetEntryId)
   if (targetIndex === -1) {
     return null
   }
 
   // Skip the dragged prompt so same-folder "drop above" keeps the final ordering stable.
   for (let index = targetIndex - 1; index >= 0; index -= 1) {
-    const previousPromptId = destinationPromptIds[index]
-    if (previousPromptId !== draggedPromptId) {
-      return previousPromptId
+    const previousEntryId = destinationEntryIds[index]
+    if (previousEntryId !== draggedPromptId) {
+      return previousEntryId
     }
   }
 
@@ -78,54 +72,49 @@ const resolveTopEdgeOrderAfterPromptId = (
 
 export const resolvePromptHandleDropMove = (
   sourcePromptFolderId: string,
-  sourcePromptIds: string[],
+  sourceEntryIds: string[],
   promptId: string,
   dropPayload: PromptHandleDropPayload | null,
-  destinationPromptIds: string[] | null
+  destinationEntryIds: string[] | null
 ): PromptHandleMove | null => {
   if (!dropPayload) {
     return null
   }
 
-  if (dropPayload.kind === 'prompt' && dropPayload.promptId === promptId) {
+  if (dropPayload.targetEntryId === promptId) {
     return null
   }
 
-  const nextMove =
-    dropPayload.kind === 'prompt'
-      ? {
-          destinationPromptFolderId: dropPayload.folderId,
-          orderAfterPromptId:
-            dropPayload.edge === 'top'
-              ? destinationPromptIds
-                ? resolveTopEdgeOrderAfterPromptId(
-                    destinationPromptIds,
-                    promptId,
-                    dropPayload.promptId
-                  )
-                : null
-              : dropPayload.promptId
-        }
-      : {
-          destinationPromptFolderId: dropPayload.folderId,
-          orderAfterPromptId: null
-        }
-
-  if (dropPayload.kind === 'prompt' && dropPayload.edge === 'top' && !destinationPromptIds) {
+  if (
+    dropPayload.targetEntryId !== null &&
+    dropPayload.position === 'before' &&
+    !destinationEntryIds
+  ) {
     return null
   }
 
-  if (sourcePromptFolderId === nextMove.destinationPromptFolderId) {
-    const nextPromptIds = reorderPromptIds(sourcePromptIds, promptId, nextMove.orderAfterPromptId)
-    if (!nextPromptIds || arePromptIdOrdersEqual(sourcePromptIds, nextPromptIds)) {
+  const previousEntryId =
+    dropPayload.targetEntryId === null
+      ? null
+      : dropPayload.position === 'before'
+        ? resolvePreviousEntryIdForBeforeDrop(
+            destinationEntryIds!,
+            promptId,
+            dropPayload.targetEntryId
+          )
+        : dropPayload.targetEntryId
+
+  if (sourcePromptFolderId === dropPayload.folderId) {
+    const nextEntryIds = reorderEntryIds(sourceEntryIds, promptId, previousEntryId)
+    if (!nextEntryIds || areEntryIdOrdersEqual(sourceEntryIds, nextEntryIds)) {
       return null
     }
   }
 
   return {
     sourcePromptFolderId,
-    destinationPromptFolderId: nextMove.destinationPromptFolderId,
+    destinationPromptFolderId: dropPayload.folderId,
     promptId,
-    orderAfterPromptId: nextMove.orderAfterPromptId
+    previousEntryId
   }
 }

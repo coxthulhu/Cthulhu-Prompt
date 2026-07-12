@@ -15,7 +15,6 @@ import type { PromptFolder } from '@shared/PromptFolder'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
-  getPromptIdsForFolder: (promptFolder: PromptFolder) => string[]
   onPromptMove: (move: PromptHandleMove) => void
 }
 
@@ -25,7 +24,6 @@ const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): Prom
 
 export const createPromptTreePromptDragController = ({
   getPromptFolders,
-  getPromptIdsForFolder,
   onPromptMove
 }: PromptTreePromptDragControllerOptions) => {
   const handleDragStart = (sourcePayload: PromptHandleDragPayload): void => {
@@ -46,15 +44,15 @@ export const createPromptTreePromptDragController = ({
 
     const nextMove = resolvePromptHandleDropMove(
       sourcePromptFolder.id,
-      getPromptIdsForFolder(sourcePromptFolder),
+      sourcePromptFolder.entryIds,
       sourcePayload.fromId,
       dropPayload,
-      dropPayload?.kind === 'prompt'
+      dropPayload && dropPayload.targetEntryId !== null
         ? (((): string[] | null => {
             const promptFolder = findPromptFolder(promptFolders, dropPayload.folderId)
-            return promptFolder ? getPromptIdsForFolder(promptFolder) : null
+            return promptFolder?.entryIds ?? null
           })())
-        : getPromptIdsForFolder(sourcePromptFolder)
+        : sourcePromptFolder.entryIds
     )
     if (!nextMove) {
       return
@@ -65,7 +63,7 @@ export const createPromptTreePromptDragController = ({
         nextMove.sourcePromptFolderId,
         nextMove.destinationPromptFolderId,
         nextMove.promptId,
-        nextMove.orderAfterPromptId
+        nextMove.previousEntryId
       )
     })
 

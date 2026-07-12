@@ -195,8 +195,6 @@
     )
   })
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
-  const getPromptIdsForFolder = (folder: PromptFolder): string[] =>
-    folder.entryIds.filter((entryId) => promptById[entryId])
   const selectedCompletedPrompts = $derived.by(() => {
     if (!screenRootFolder) {
       return []
@@ -315,9 +313,8 @@
       return true
     }
 
-    const promptIds = getPromptIdsForFolder(folder)
-    const draggedIndex = promptIds.indexOf(payload.fromId)
-    const targetIndex = promptIds.indexOf(promptId)
+    const draggedIndex = folder.entryIds.indexOf(payload.fromId)
+    const targetIndex = folder.entryIds.indexOf(promptId)
 
     // Reject same-folder prompt-row edges that would leave the dragged row in place.
     return !(
@@ -334,7 +331,7 @@
       return true
     }
 
-    return getPromptIdsForFolder(folder)[0] !== payload.fromId
+    return folder.entryIds[0] !== payload.fromId
   }
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
@@ -377,7 +374,6 @@
 
   const promptTreePromptDrag = createPromptTreePromptDragController({
     getPromptFolders: () => promptFolders,
-    getPromptIdsForFolder,
     onPromptMove: (move) => {
       if (move.sourcePromptFolderId === move.destinationPromptFolderId) {
         return
@@ -695,8 +691,9 @@
             props.rowId,
             'none',
             () => ({
-              kind: 'folder',
-              folderId: props.row.folder.id
+              folderId: props.row.folder.id,
+              targetEntryId: null,
+              position: 'after'
             }),
             (payload) => canDropOnPromptTreeFolderRow(props.row.folder, payload)
           )}
@@ -731,10 +728,9 @@
             props.rowId,
             'top-and-bottom',
             (edge) => ({
-              kind: 'prompt',
               folderId: props.row.folder.id,
-              promptId: props.row.promptId,
-              edge: edge ?? 'bottom'
+              targetEntryId: props.row.promptId,
+              position: edge === 'top' ? 'before' : 'after'
             }),
             (payload, edge) =>
               canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)

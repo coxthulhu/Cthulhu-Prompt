@@ -982,7 +982,7 @@ export const createPromptFolderScreenController = ({
   const movePromptFromCurrentFolder = async (
     promptId: string,
     destinationPromptFolderId: string,
-    orderAfterPromptId: string | null
+    previousEntryId: string | null
   ): Promise<boolean> => {
     const currentPromptFolder = screenRootFolder
     if (!currentPromptFolder) {
@@ -996,17 +996,14 @@ export const createPromptFolderScreenController = ({
 
     const nextMove = resolvePromptHandleDropMove(
       currentPromptFolder.id,
-      getPromptIdsForFolder(currentPromptFolder),
+      currentPromptFolder.entryIds,
       promptId,
-      orderAfterPromptId === null
-        ? { kind: 'folder', folderId: destinationPromptFolderId }
-        : {
-            kind: 'prompt',
-            folderId: destinationPromptFolderId,
-            promptId: orderAfterPromptId,
-            edge: 'bottom'
-          },
-      getPromptIdsForFolder(destinationPromptFolder)
+      {
+        folderId: destinationPromptFolderId,
+        targetEntryId: previousEntryId,
+        position: 'after'
+      },
+      destinationPromptFolder.entryIds
     )
     if (!nextMove) {
       return false
@@ -1018,7 +1015,7 @@ export const createPromptFolderScreenController = ({
           currentPromptFolder.id,
           destinationPromptFolderId,
           promptId,
-          orderAfterPromptId
+          previousEntryId
         )
         return true
       },
@@ -1068,25 +1065,25 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleMovePromptUp = async (nextPromptId: string): Promise<boolean> => {
-    const currentPromptIds = screenRootFolder ? getPromptIdsForFolder(screenRootFolder) : []
-    const currentIndex = currentPromptIds.indexOf(nextPromptId)
+    const currentEntryIds = screenRootFolder?.entryIds ?? []
+    const currentIndex = currentEntryIds.indexOf(nextPromptId)
     if (currentIndex <= 0) {
       return false
     }
 
-    const previousPromptId = currentIndex <= 1 ? null : currentPromptIds[currentIndex - 2]
-    return await movePromptFromCurrentFolder(nextPromptId, screenRootFolderId, previousPromptId)
+    const previousEntryId = currentIndex <= 1 ? null : currentEntryIds[currentIndex - 2]
+    return await movePromptFromCurrentFolder(nextPromptId, screenRootFolderId, previousEntryId)
   }
 
   const handleMovePromptDown = async (nextPromptId: string): Promise<boolean> => {
-    const currentPromptIds = screenRootFolder ? getPromptIdsForFolder(screenRootFolder) : []
-    const currentIndex = currentPromptIds.indexOf(nextPromptId)
-    if (currentIndex === -1 || currentIndex >= currentPromptIds.length - 1) {
+    const currentEntryIds = screenRootFolder?.entryIds ?? []
+    const currentIndex = currentEntryIds.indexOf(nextPromptId)
+    if (currentIndex === -1 || currentIndex >= currentEntryIds.length - 1) {
       return false
     }
 
-    const previousPromptId = currentPromptIds[currentIndex + 1]
-    return await movePromptFromCurrentFolder(nextPromptId, screenRootFolderId, previousPromptId)
+    const previousEntryId = currentEntryIds[currentIndex + 1]
+    return await movePromptFromCurrentFolder(nextPromptId, screenRootFolderId, previousEntryId)
   }
 
   const handlePromptTreeDrop = (
@@ -1100,17 +1097,17 @@ export const createPromptFolderScreenController = ({
 
     const nextMove = resolvePromptHandleDropMove(
       currentPromptFolder.id,
-      getPromptIdsForFolder(currentPromptFolder),
+      currentPromptFolder.entryIds,
       draggedPromptId,
       dropPayload,
-      dropPayload?.kind === 'prompt'
+      dropPayload && dropPayload.targetEntryId !== null
         ? (((): string[] | null => {
             const targetFolder = promptFolderQuery.data.find(
               (folder) => folder?.id === dropPayload.folderId
             )
-            return targetFolder ? getPromptIdsForFolder(targetFolder) : null
+            return targetFolder?.entryIds ?? null
           })())
-        : getPromptIdsForFolder(currentPromptFolder)
+        : currentPromptFolder.entryIds
     )
     if (!nextMove) {
       return
@@ -1119,7 +1116,7 @@ export const createPromptFolderScreenController = ({
     void movePromptFromCurrentFolder(
       draggedPromptId,
       nextMove.destinationPromptFolderId,
-      nextMove.orderAfterPromptId
+      nextMove.previousEntryId
     )
 
     if (nextMove.sourcePromptFolderId !== nextMove.destinationPromptFolderId) {

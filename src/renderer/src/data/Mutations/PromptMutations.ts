@@ -465,15 +465,18 @@ export const movePrompt = async (
     throw new Error('Prompt data not loaded')
   }
   const isSameFolder = sourcePromptFolderId === destinationPromptFolderId
+  const destinationEntryIds = isSameFolder
+    ? sourcePromptFolder.entryIds.filter((entryId) => entryId !== promptId)
+    : destinationPromptFolder.entryIds
   const destinationPromptIds = isSameFolder
     ? getPromptFolderPromptIds(sourcePromptFolder).filter(
         (currentPromptId) => currentPromptId !== promptId
       )
     : getPromptFolderPromptIds(destinationPromptFolder)
-  const insertIndex = resolvePromptInsertIndex(destinationPromptIds, previousEntryId)
+  const insertIndex = resolvePromptInsertIndex(destinationEntryIds, previousEntryId)
 
   if (insertIndex === null) {
-    throw new Error('Order-after prompt not found')
+    throw new Error('Order-after entry not found')
   }
   const modifiedAt = getCurrentIsoSecondTimestamp()
 

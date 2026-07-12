@@ -121,8 +121,10 @@ export const buildPromptFolderScreenRows = ({
           promptId: entryId,
           indentLevel: childIndentLevel,
           isOwnerRoot: isRoot,
-          isFirstPrompt: promptIndex === 0,
-          isLastPrompt: promptIndex === directPromptIds.length - 1
+          isFirstPrompt: isRoot ? entryIndex === 0 : promptIndex === 0,
+          isLastPrompt: isRoot
+            ? entryIndex === entries.length - 1
+            : promptIndex === directPromptIds.length - 1
         })
       }
 

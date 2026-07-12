@@ -1,5 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import type { Locator, Page } from 'playwright'
+import type { ElectronApplication, Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   PROMPT_FOLDER_HOST_SELECTOR,
@@ -41,6 +41,7 @@ import { seedWorkspacePersistence } from '../helpers/UserPersistenceHelpers'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/sample'
+const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
 const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
 const promptFolderOrderPath = (workspacePath: string, folderName: string): string =>
@@ -61,6 +62,10 @@ const EXAMPLES_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${EXAMPLES_F
 const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
 const EXAMPLE_1_ID = 'simple-1'
+const BASE_BEFORE_ID = 'base-before'
+const BASE_AFTER_ID = 'base-after'
+const NESTED_FOLDER_ID = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
+const SUBFOLDERS_MAIN_FOLDER_PATH = promptFolderOrderPath(SUBFOLDERS_WORKSPACE_PATH, 'Main')
 const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
 const MOVE_FALLBACK_WORKSPACE_PATH = '/ws/drag-fallback-title'
 const ANCHORING_FOLDER_NAME = 'Anchoring'
@@ -78,6 +83,7 @@ const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
+const MOVE_BUTTON_POSITION_TOLERANCE_PX = 1
 const FALLBACK_DESTINATION_FOLDER_ID = createDeterministicId(
   `${MOVE_FALLBACK_WORKSPACE_PATH}:${FALLBACK_DESTINATION_FOLDER_NAME}`
 )
@@ -102,6 +108,47 @@ const promptDividerSelector = (previousPromptId: string | null): string =>
   previousPromptId
     ? `[data-testid="prompt-divider-add-after-${previousPromptId}"]`
     : '[data-testid="prompt-divider-add-initial"]'
+
+const getRootEntryTreeOrder = async (page: Page): Promise<string[]> => {
+  return await page
+    .locator(
+      [
+        `[data-testid="prompt-tree-prompt-${BASE_BEFORE_ID}"]`,
+        '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
+        `[data-testid="prompt-tree-prompt-${BASE_AFTER_ID}"]`
+      ].join(', ')
+    )
+    .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid') ?? ''))
+}
+
+const getRootEntryScreenOrder = async (page: Page): Promise<string[]> => {
+  return await page
+    .locator(
+      [
+        `[data-testid="prompt-editor-${BASE_BEFORE_ID}"]`,
+        `[data-testid="prompt-folder-editor-${NESTED_FOLDER_ID}"]`,
+        `[data-testid="prompt-editor-${BASE_AFTER_ID}"]`
+      ].join(', ')
+    )
+    .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid') ?? ''))
+}
+
+const expectRootEntryOrder = async (
+  page: Page,
+  electronApp: ElectronApplication,
+  expectedEntryIds: string[]
+): Promise<void> => {
+  await expect
+    .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
+    .toEqual(expectedEntryIds)
+  await expect.poll(async () => await getRootEntryScreenOrder(page)).toEqual(
+    expectedEntryIds.map((entryId) =>
+      entryId === NESTED_FOLDER_ID
+        ? `prompt-folder-editor-${entryId}`
+        : `prompt-editor-${entryId}`
+    )
+  )
+}
 
 const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locator =>
   page
@@ -157,6 +204,33 @@ const scrollUntilPromptDividerVisible = async (
   }
 
   throw new Error(`Prompt divider did not become visible: ${previousPromptId}`)
+}
+
+const alignElementTopInPromptFolder = async (
+  page: Page,
+  testHelpers: { scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void> },
+  selector: string,
+  topOffsetPx: number
+): Promise<void> => {
+  const getTopOffset = async (): Promise<number> => {
+    const hostTop = await page
+      .locator(PROMPT_FOLDER_HOST_SELECTOR)
+      .evaluate((element) => element.getBoundingClientRect().top)
+    const elementTop = await page
+      .locator(selector)
+      .evaluate((element) => element.getBoundingClientRect().top)
+    return elementTop - hostTop
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const deltaPx = Math.round((await getTopOffset()) - topOffsetPx)
+    if (Math.abs(deltaPx) <= MOVE_BUTTON_POSITION_TOLERANCE_PX) return
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, deltaPx)
+  }
+
+  await expect
+    .poll(async () => Math.abs((await getTopOffset()) - topOffsetPx))
+    .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
 }
 
 const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragGhostSnapshot> => {
@@ -522,6 +596,88 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
+  })
+
+  test('reorders root prompts before and after a subfolder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Main')
+    await scrollUntilPromptEditorVisible(mainWindow, testHelpers, BASE_BEFORE_ID)
+    await scrollUntilPromptEditorVisible(mainWindow, testHelpers, BASE_AFTER_ID)
+
+    await dragPromptHandleToTarget(
+      mainWindow,
+      BASE_AFTER_ID,
+      promptDividerSelector(BASE_BEFORE_ID)
+    )
+    await expectRootEntryOrder(mainWindow, electronApp, [
+      BASE_BEFORE_ID,
+      BASE_AFTER_ID,
+      NESTED_FOLDER_ID
+    ])
+
+    await dragPromptHandleToTarget(
+      mainWindow,
+      BASE_BEFORE_ID,
+      promptDividerSelector(NESTED_FOLDER_ID)
+    )
+    await expectRootEntryOrder(mainWindow, electronApp, [
+      BASE_AFTER_ID,
+      NESTED_FOLDER_ID,
+      BASE_BEFORE_ID
+    ])
+
+    const moveUp = `${promptEditorSelector(BASE_BEFORE_ID)} [data-testid="prompt-move-up"]`
+    const moveDown = `${promptEditorSelector(BASE_BEFORE_ID)} [data-testid="prompt-move-down"]`
+
+    await alignElementTopInPromptFolder(mainWindow, testHelpers, moveUp, 120)
+    const moveUpTopBefore = await mainWindow
+      .locator(moveUp)
+      .evaluate((element) => element.getBoundingClientRect().top)
+    await mainWindow.locator(moveUp).click()
+    await expectRootEntryOrder(mainWindow, electronApp, [
+      BASE_AFTER_ID,
+      BASE_BEFORE_ID,
+      NESTED_FOLDER_ID
+    ])
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await mainWindow
+            .locator(moveUp)
+            .evaluate((element) => element.getBoundingClientRect().top)) - moveUpTopBefore
+        )
+      )
+      .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+
+    const moveDownTopBefore = await mainWindow
+      .locator(moveDown)
+      .evaluate((element) => element.getBoundingClientRect().top)
+    await mainWindow.locator(moveDown).click()
+    await expectRootEntryOrder(mainWindow, electronApp, [
+      BASE_AFTER_ID,
+      NESTED_FOLDER_ID,
+      BASE_BEFORE_ID
+    ])
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await mainWindow
+            .locator(moveDown)
+            .evaluate((element) => element.getBoundingClientRect().top)) - moveDownTopBefore
+        )
+      )
+      .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    await expect.poll(async () => await getRootEntryTreeOrder(mainWindow)).toEqual([
+      `prompt-tree-prompt-${BASE_AFTER_ID}`,
+      'prompt-tree-folder-toggle-button-Nested',
+      `prompt-tree-prompt-${BASE_BEFORE_ID}`
+    ])
   })
 
   test('moves a prompt from the prompt tree after a different prompt in the same folder', async ({

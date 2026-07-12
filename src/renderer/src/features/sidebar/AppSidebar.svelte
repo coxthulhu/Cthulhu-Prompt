@@ -549,8 +549,9 @@
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
     payload: (): PromptHandleDropPayload => ({
-      kind: 'folder',
-      folderId: item.id
+      folderId: item.id,
+      targetEntryId: null,
+      position: 'after'
     }),
     canDrop: (payload) => (payload as PromptHandleDragPayload).sourceFolderId !== item.id,
     state: promptFolderSelectorPromptDroppableState.getState(item.id)
