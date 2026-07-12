@@ -1168,10 +1168,17 @@ describe('Prompt folder prompt drag-drop', () => {
 
     const promptRowBox = await promptRow.boundingBox()
     const topIndicatorBox = await indicator.boundingBox()
-    if (!promptRowBox || !topIndicatorBox) {
+    const promptLabelBox = await promptRow
+      .locator('.sidebarPromptTreeSettingsLabel')
+      .boundingBox()
+    const indicatorArrowBox = await indicator.locator('path').boundingBox()
+    if (!promptRowBox || !topIndicatorBox || !promptLabelBox || !indicatorArrowBox) {
       throw new Error('Missing geometry for top-edge indicator assertion')
     }
 
+    expect(
+      Math.abs(indicatorArrowBox.x + indicatorArrowBox.width - promptLabelBox.x)
+    ).toBeLessThanOrEqual(2)
     expect(
       Math.abs(topIndicatorBox.y + topIndicatorBox.height / 2 - promptRowBox.y)
     ).toBeLessThanOrEqual(2)

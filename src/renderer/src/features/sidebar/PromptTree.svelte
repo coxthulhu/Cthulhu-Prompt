@@ -212,7 +212,10 @@
       )
     })
   })
-  const PROMPT_TREE_ROW_CONTENT_INSET = '58px'
+  const PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX = 15
+  const PROMPT_TREE_INDENT_WIDTH_PX = 12
+  const getPromptTreeDropIndicatorInset = (indentCount: number): string =>
+    `${PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX + indentCount * PROMPT_TREE_INDENT_WIDTH_PX}px`
 
   const folderRootRowId = (folderId: string): string => `${folderId}:folder`
   const folderPromptRowId = (folderId: string, promptId: string): string =>
@@ -761,7 +764,11 @@
   {@const testId = folderPromptDropIndicatorTestId(row.promptId)}
 
   {#if hoveredEdge}
-    <DropIndicator {testId} insetStart={PROMPT_TREE_ROW_CONTENT_INSET} edge={hoveredEdge} />
+    <DropIndicator
+      {testId}
+      insetStart={getPromptTreeDropIndicatorInset(row.indentCount)}
+      edge={hoveredEdge}
+    />
   {/if}
 {/snippet}
 
