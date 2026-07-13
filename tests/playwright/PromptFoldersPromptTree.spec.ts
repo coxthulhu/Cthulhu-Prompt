@@ -650,6 +650,42 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptRow).toBeVisible()
   })
 
+  test('does not select prompt tree text when dragging from between rows', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Main')
+    const firstPrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
+    const nestedFolder = mainWindow.locator(NESTED_FOLDER_TOGGLE)
+    await expect(firstPrompt).toBeVisible()
+    await expect(nestedFolder).toBeVisible()
+
+    const firstPromptBox = await firstPrompt.boundingBox()
+    const nestedFolderBox = await nestedFolder.boundingBox()
+    if (!firstPromptBox || !nestedFolderBox) {
+      throw new Error('Missing prompt tree row-gap drag geometry')
+    }
+
+    const gapY = (firstPromptBox.y + firstPromptBox.height + nestedFolderBox.y) / 2
+    await mainWindow.mouse.move(firstPromptBox.x + firstPromptBox.width / 2, gapY)
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(
+      nestedFolderBox.x + nestedFolderBox.width - 24,
+      nestedFolderBox.y + nestedFolderBox.height / 2,
+      { steps: 4 }
+    )
+    await mainWindow.mouse.up()
+
+    await expect
+      .poll(() => mainWindow.evaluate(() => window.getSelection()?.toString() ?? ''))
+      .toBe('')
+  })
+
   test('keeps root prompt rows visible when a descendant folder is collapsed', async ({
     testSetup
   }) => {

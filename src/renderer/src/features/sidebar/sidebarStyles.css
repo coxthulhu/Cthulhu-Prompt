@@ -16,6 +16,8 @@
 
 .appSidebar {
   border-top: 1px solid var(--ui-neutral-hover-border);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .sidebarTopLevelInset {
