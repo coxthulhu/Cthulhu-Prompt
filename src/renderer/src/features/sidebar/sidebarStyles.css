@@ -337,11 +337,20 @@
 .promptDragGhost {
   box-sizing: border-box;
   min-width: 120px;
-  width: 100%;
+  max-width: 400px;
+  width: max-content;
 }
 
+/* Keep the drag ghost independent from the prompt tree row layout. */
 .promptDragGhostButton {
+  display: flex;
+  width: max-content;
+  min-width: 120px;
+  max-width: 400px;
+  border: 1px solid var(--ui-neutral-muted-border);
+  border-radius: var(--cthulhu-ui-radius-control);
   background-color: var(--ui-neutral-field-surface);
+  padding: 0 8px;
   color: var(--ui-normal-text);
   cursor: grabbing;
 }

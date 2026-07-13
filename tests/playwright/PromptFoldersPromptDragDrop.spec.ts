@@ -105,9 +105,19 @@ type PromptDividerHighlightStyles = {
 
 type PromptDragGhostSnapshot = {
   backgroundColor: string
+  borderColor: string
+  borderRadius: string
+  borderStyle: string
+  borderWidth: string
   color: string
+  ghostMaxWidth: string
+  ghostMinWidth: string
   height: number
+  isTextClipped: boolean
   kind: string | null
+  maxWidth: string
+  minWidth: string
+  mutedBorderColor: string
   opacity: string
   text: string
   width: number
@@ -220,6 +230,10 @@ const scrollUntilPromptDividerVisible = async (
 
 const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragGhostSnapshot> => {
   return await locator.evaluate((element) => {
+    const ghost = element.querySelector<HTMLElement>('.promptDragGhost')
+    if (!ghost) {
+      throw new Error('Missing prompt drag ghost')
+    }
     const row = element.querySelector<HTMLElement>('.promptDragGhostButton')
     if (!row) {
       throw new Error('Missing prompt drag ghost row')
@@ -227,15 +241,35 @@ const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragG
 
     const ghostRect = element.getBoundingClientRect()
     const rowRect = row.getBoundingClientRect()
-    const ghostStyle = getComputedStyle(element)
+    const label = row.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
+    if (!label) {
+      throw new Error('Missing prompt drag ghost label')
+    }
+    const overlayStyle = getComputedStyle(element)
+    const ghostStyle = getComputedStyle(ghost)
     const rowStyle = getComputedStyle(row)
+    const mutedBorderProbe = document.createElement('div')
+    mutedBorderProbe.style.borderColor = 'var(--ui-neutral-muted-border)'
+    document.body.append(mutedBorderProbe)
+    const mutedBorderColor = getComputedStyle(mutedBorderProbe).borderColor
+    mutedBorderProbe.remove()
 
     return {
       backgroundColor: rowStyle.backgroundColor,
+      borderColor: rowStyle.borderColor,
+      borderRadius: rowStyle.borderRadius,
+      borderStyle: rowStyle.borderStyle,
+      borderWidth: rowStyle.borderWidth,
       color: rowStyle.color,
+      ghostMaxWidth: ghostStyle.maxWidth,
+      ghostMinWidth: ghostStyle.minWidth,
       height: Math.round(rowRect.height),
+      isTextClipped: label.scrollWidth > label.clientWidth,
       kind: element.getAttribute('data-drag-ghost-kind'),
-      opacity: ghostStyle.opacity,
+      maxWidth: rowStyle.maxWidth,
+      minWidth: rowStyle.minWidth,
+      mutedBorderColor,
+      opacity: overlayStyle.opacity,
       text: row.textContent?.trim() ?? '',
       width: Math.round(ghostRect.width)
     }
@@ -1309,12 +1343,22 @@ describe('Prompt folder prompt drag-drop', () => {
     await expect(dragGhost).toHaveCount(0)
 
     expect(treeGhost).toMatchObject({
+      borderRadius: '6px',
+      borderStyle: 'solid',
+      borderWidth: '1px',
+      ghostMaxWidth: '400px',
+      ghostMinWidth: '120px',
       height: 30,
+      isTextClipped: false,
       kind: 'prompt',
+      maxWidth: '400px',
+      minWidth: '120px',
       opacity: '1',
       text: 'Code Review'
     })
     expect(treeGhost.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(treeGhost.borderColor).toBe(treeGhost.mutedBorderColor)
+    expect(treeGhost.width).toBeLessThanOrEqual(400)
     expect(handleGhost).toEqual(treeGhost)
   })
 
