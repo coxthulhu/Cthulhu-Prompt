@@ -23,6 +23,14 @@ const createPromptFolderInfo = (
 const getPromptFolderOrderPath = (folderPath: string): string =>
   `${folderPath}/_FolderInfo/FolderOrder.json`
 
+const promptOrderFile = (promptIds: string[]) => ({
+  entries: promptIds.map((id) => ({ kind: 'prompt' as const, id }))
+})
+
+const folderOrderFile = (promptFolderIds: string[]) => ({
+  entries: promptFolderIds.map((id) => ({ kind: 'folder' as const, id }))
+})
+
 /**
  * Configuration for creating a prompt folder
  */
@@ -264,7 +272,7 @@ export function createBasicWorkspace(
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
-    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify({ promptFolderIds: [] }, null, 2),
+    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,
@@ -305,7 +313,7 @@ export function createWorkspaceWithFolders(
 
     // Create folder metadata
     structure[getPromptFolderOrderPath(folderPath)] = JSON.stringify(
-      { entryIds: promptIds },
+      promptOrderFile(promptIds),
       null,
       2
     )
@@ -318,7 +326,7 @@ export function createWorkspaceWithFolders(
     Object.assign(structure, promptFiles)
   }
   structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
-    { promptFolderIds },
+    folderOrderFile(promptFolderIds),
     null,
     2
   )
@@ -386,12 +394,18 @@ export function setupWorkspaceScenario(
       const { promptIds, promptFiles } = createPromptFiles(subfolderPath, prompts)
 
       structure[`${workspacePath}/Prompts/Main/_FolderInfo/FolderOrder.json`] = JSON.stringify(
-        { entryIds: ['base-before', subfolderId, 'base-after'] },
+        {
+          entries: [
+            { kind: 'prompt', id: 'base-before' },
+            { kind: 'folder', id: subfolderId },
+            { kind: 'prompt', id: 'base-after' }
+          ]
+        },
         null,
         2
       )
       structure[getPromptFolderOrderPath(subfolderPath)] = JSON.stringify(
-        { entryIds: promptIds },
+        promptOrderFile(promptIds),
         null,
         2
       )
@@ -500,18 +514,26 @@ export function setupWorkspaceScenario(
       structure[`${workspacePath}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`] =
         JSON.stringify(
           {
-            entryIds: [
-              'subfolders-ui-root-before',
-              nestedFolderId,
-              emptyNestedFolderId,
-              'subfolders-ui-root-after'
+            entries: [
+              { kind: 'prompt', id: 'subfolders-ui-root-completed' },
+              { kind: 'prompt', id: 'subfolders-ui-root-before' },
+              { kind: 'folder', id: nestedFolderId },
+              { kind: 'folder', id: emptyNestedFolderId },
+              { kind: 'prompt', id: 'subfolders-ui-root-after' }
             ]
           },
           null,
           2
         )
       structure[getPromptFolderOrderPath(nestedFolderPath)] = JSON.stringify(
-        { entryIds: [...promptIds, grandchildFolderId] },
+        {
+          entries: [
+            { kind: 'prompt', id: 'subfolders-ui-nested-completed-1' },
+            { kind: 'prompt', id: 'subfolders-ui-nested-completed-2' },
+            ...promptIds.map((id) => ({ kind: 'prompt', id })),
+            { kind: 'folder', id: grandchildFolderId }
+          ]
+        },
         null,
         2
       )
@@ -530,7 +552,7 @@ export function setupWorkspaceScenario(
         }
       })
       structure[getPromptFolderOrderPath(grandchildFolderPath)] = JSON.stringify(
-        { entryIds: grandchildPromptIds },
+        promptOrderFile(grandchildPromptIds),
         null,
         2
       )
@@ -547,7 +569,7 @@ export function setupWorkspaceScenario(
         }
       })
       structure[getPromptFolderOrderPath(emptyNestedFolderPath)] = JSON.stringify(
-        { entryIds: [] },
+        promptOrderFile([]),
         null,
         2
       )
@@ -585,12 +607,12 @@ export function setupWorkspaceScenario(
         const childPath = `${parentPath}/${childName}`
 
         structure[getPromptFolderOrderPath(parentPath)] = JSON.stringify(
-          { entryIds: [childId] },
+          folderOrderFile([childId]),
           null,
           2
         )
         structure[getPromptFolderOrderPath(childPath)] = JSON.stringify(
-          { entryIds: [] },
+          promptOrderFile([]),
           null,
           2
         )
@@ -632,9 +654,9 @@ export function setupWorkspaceScenario(
       const { promptIds, promptFiles } = createPromptFiles(nestedFolderPath, prompts)
 
       structure[getPromptFolderOrderPath(`${workspacePath}/Prompts/Controls`)] =
-        JSON.stringify({ entryIds: [nestedFolderId, siblingFolderId] }, null, 2)
+        JSON.stringify(folderOrderFile([nestedFolderId, siblingFolderId]), null, 2)
       structure[getPromptFolderOrderPath(nestedFolderPath)] = JSON.stringify(
-        { entryIds: promptIds },
+        promptOrderFile(promptIds),
         null,
         2
       )
@@ -648,7 +670,7 @@ export function setupWorkspaceScenario(
         displayName: 'Nested'
       })
       structure[getPromptFolderOrderPath(siblingFolderPath)] = JSON.stringify(
-        { entryIds: [] },
+        promptOrderFile([]),
         null,
         2
       )
@@ -795,7 +817,7 @@ export function addFolderToWorkspace(
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   const structure: Record<string, string | null> = {
-    [getPromptFolderOrderPath(folderPath)]: JSON.stringify({ entryIds: promptIds }, null, 2),
+    [getPromptFolderOrderPath(folderPath)]: JSON.stringify(promptOrderFile(promptIds), null, 2),
     [`${folderPath}/_FolderInfo/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,

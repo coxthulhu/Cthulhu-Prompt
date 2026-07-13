@@ -33,8 +33,8 @@
       return null
     }
 
-    for (const promptFolderId of workspace.promptFolderIds) {
-      const promptFolder = promptFolderCollection.get(promptFolderId)
+    for (const entry of workspace.entries) {
+      const promptFolder = promptFolderCollection.get(entry.id)
 
       if (promptFolder?.folderName === folderName) {
         return promptFolder.id

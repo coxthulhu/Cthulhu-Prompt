@@ -4,7 +4,7 @@ import { promptCollection } from '../Collections/PromptCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
+import { getPromptFolderAllPromptIds } from '../Collections/PromptFolderEntries'
 import {
   deletePromptFolderDrafts,
   upsertPromptFolderDrafts
@@ -28,16 +28,13 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   const previousWorkspace = workspaceCollection.get(result.workspace.id)
   const previousPromptIds = new Set<string>()
   if (previousWorkspace) {
-    for (const promptFolderId of previousWorkspace.promptFolderIds) {
+    for (const { id: promptFolderId } of previousWorkspace.entries) {
       const promptFolder = promptFolderCollection.get(promptFolderId)
       if (!promptFolder) {
         continue
       }
 
-      for (const promptId of [
-        ...getPromptFolderPromptIds(promptFolder),
-        ...promptFolder.completedPromptIds
-      ]) {
+      for (const promptId of getPromptFolderAllPromptIds(promptFolder)) {
         previousPromptIds.add(promptId)
       }
     }
@@ -61,10 +58,10 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
     return result.workspace.id
   }
 
-  const nextPromptFolderIds = new Set(result.workspace.data.promptFolderIds)
+  const nextPromptFolderIds = new Set(result.promptFolders.map((folder) => folder.id))
   const removedPromptFolderIds: string[] = []
 
-  for (const promptFolderId of previousWorkspace.promptFolderIds) {
+  for (const { id: promptFolderId } of previousWorkspace.entries) {
     if (!nextPromptFolderIds.has(promptFolderId)) {
       promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
       removedPromptFolderIds.push(promptFolderId)

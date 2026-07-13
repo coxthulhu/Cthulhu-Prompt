@@ -1,10 +1,10 @@
-import * as path from 'path'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
   type PromptFolder,
   type PromptFolderSettings
 } from '@shared/PromptFolder'
+import type { EntryRef } from '@shared/OrderContainer'
 import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
@@ -19,15 +19,12 @@ import {
   writeJsonFile
 } from './FilePersistenceHelpers'
 import {
-  PROMPT_MARKDOWN_FILENAME_SUFFIX,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
   resolvePromptFolderPath,
-  resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath
 } from './PromptPersistencePaths'
-import { parsePromptMarkdown } from './PromptFrontmatter'
 import { getFs } from '../fs-provider'
 
 export type PromptFolderPersistenceFields = {
@@ -36,8 +33,6 @@ export type PromptFolderPersistenceFields = {
   folderName: string
   folderPath: string
   previousFolderPath?: string
-  parentPromptFolderId: string | null
-  depth: number
 }
 
 const toPromptFolderInfoFile = (promptFolder: PromptFolder): PromptFolderInfoFile => {
@@ -47,31 +42,21 @@ const toPromptFolderInfoFile = (promptFolder: PromptFolder): PromptFolderInfoFil
   }
 }
 
-const toPromptFolderOrderFile = (entryIds: string[]): PromptFolderOrderFile => {
-  return { entryIds }
+const toPromptFolderOrderFile = (entries: EntryRef[]): PromptFolderOrderFile => {
+  return { entries }
 }
 
 const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
-  parentPromptFolderId: string | null,
-  depth: number,
-  modifiedAt: string | null,
-  entryIds: string[],
-  promptCount: number,
-  completedPromptIds: string[],
+  entries: EntryRef[],
   settings: PromptFolderSettings
 ): PromptFolder => {
   return {
     id: persistedInfo.promptFolderId,
     folderName,
     displayName: persistedInfo.displayName,
-    parentPromptFolderId,
-    depth,
-    modifiedAt,
-    promptCount,
-    entryIds,
-    completedPromptIds,
+    entries,
     settings
   }
 }
@@ -79,80 +64,6 @@ const fromPromptFolderInfoFile = (
 const readOptionalTextFile = (filePath: string): string => {
   const fs = getFs()
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''
-}
-
-const readPromptModifiedAtByPromptId = (
-  workspacePath: string,
-  folderName: string
-): Map<string, string> => {
-  const fs = getFs()
-  const folderPath = resolvePromptFolderPath(workspacePath, folderName)
-  const modifiedAtByPromptId = new Map<string, string>()
-
-  if (!fs.existsSync(folderPath)) {
-    return modifiedAtByPromptId
-  }
-
-  for (const entry of fs.readdirSync(folderPath, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX)) {
-      continue
-    }
-
-    const filePath = path.join(folderPath, entry.name)
-    const prompt = parsePromptMarkdown(fs.readFileSync(filePath, 'utf8'))
-    if (!prompt) {
-      continue
-    }
-
-    modifiedAtByPromptId.set(prompt.id, fs.statSync(filePath).mtime.toISOString())
-  }
-
-  return modifiedAtByPromptId
-}
-
-const readPromptFolderModifiedAt = (
-  workspacePath: string,
-  folderName: string,
-  promptIds: string[]
-): string | null => {
-  const modifiedAtByPromptId = readPromptModifiedAtByPromptId(workspacePath, folderName)
-  let latestModifiedAtMs: number | null = null
-
-  for (const promptId of promptIds) {
-    const modifiedAt = modifiedAtByPromptId.get(promptId)
-    if (!modifiedAt) {
-      continue
-    }
-
-    const modifiedAtMs = new Date(modifiedAt).getTime()
-    latestModifiedAtMs =
-      latestModifiedAtMs === null ? modifiedAtMs : Math.max(latestModifiedAtMs, modifiedAtMs)
-  }
-
-  return latestModifiedAtMs === null ? null : new Date(latestModifiedAtMs).toISOString()
-}
-
-const readCompletedPromptIds = (workspacePath: string, folderName: string): string[] => {
-  const fs = getFs()
-  const completedFolderPath = resolvePromptFolderPath(
-    workspacePath,
-    resolveCompletedPromptFolderName(folderName)
-  )
-
-  if (!fs.existsSync(completedFolderPath)) {
-    return []
-  }
-
-  return fs
-    .readdirSync(completedFolderPath, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(PROMPT_MARKDOWN_FILENAME_SUFFIX))
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .flatMap((entry) => {
-      const prompt = parsePromptMarkdown(
-        fs.readFileSync(path.join(completedFolderPath, entry.name), 'utf8')
-      )
-      return prompt ? [prompt.id] : []
-    })
 }
 
 export const promptFolderPersistence: PersistenceLayer<
@@ -194,7 +105,7 @@ export const promptFolderPersistence: PersistenceLayer<
     fs.mkdirSync(infoDirectoryPath, { recursive: true })
 
     const orderTempPath = resolveTempPath(orderPath)
-    writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.entryIds))
+    writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.entries))
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const settingsTextTempPaths = settingsTextPaths.map(({ field, path }) => {
@@ -227,8 +138,7 @@ export const promptFolderPersistence: PersistenceLayer<
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
-    const { workspacePath, folderName, folderPath, parentPromptFolderId, depth } =
-      persistenceFields
+    const { workspacePath, folderName, folderPath } = persistenceFields
     const orderPath = resolvePromptFolderOrderPath(workspacePath, folderPath)
     const infoPath = resolvePromptFolderInfoPath(workspacePath, folderPath)
     const fs = getFs()
@@ -238,11 +148,7 @@ export const promptFolderPersistence: PersistenceLayer<
     }
 
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
-    const entryIds = [...readJsonFile<PromptFolderOrderFile>(orderPath).entryIds]
-    const modifiedAtByPromptId = readPromptModifiedAtByPromptId(workspacePath, folderPath)
-    const promptIds = entryIds.filter((entryId) => modifiedAtByPromptId.has(entryId))
-    const completedPromptIds = readCompletedPromptIds(workspacePath, folderPath)
-    const modifiedAt = readPromptFolderModifiedAt(workspacePath, folderPath, promptIds)
+    const entries = [...readJsonFile<PromptFolderOrderFile>(orderPath).entries]
     const folderSettings = Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
@@ -253,12 +159,7 @@ export const promptFolderPersistence: PersistenceLayer<
     return fromPromptFolderInfoFile(
       persistedInfo,
       folderName,
-      parentPromptFolderId,
-      depth,
-      modifiedAt,
-      entryIds,
-      promptIds.length,
-      completedPromptIds,
+      entries,
       copyPromptFolderSettings(folderSettings)
     )
   }

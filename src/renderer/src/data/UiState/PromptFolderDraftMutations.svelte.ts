@@ -4,7 +4,6 @@ import {
   type PromptFolder,
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
@@ -151,14 +150,12 @@ export const setPromptFolderDraftSettingsField = (
     return
   }
 
-  const modifiedAt = getCurrentIsoSecondTimestamp()
   mutatePromptFolderDraftOptimistically(promptFolderId, {
     mutatePromptFolderDraft: (draft) => {
       draft.settings[field] = value
     },
     mutatePromptFolder: (draft) => {
       draft.settings[field] = value
-      draft.modifiedAt = modifiedAt
     }
   })
 }

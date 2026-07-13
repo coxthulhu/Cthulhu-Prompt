@@ -1,6 +1,7 @@
 import * as path from 'path'
 import { PromptStatus } from '@shared/Prompt'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
+import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import {
@@ -28,7 +29,8 @@ type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: t
 
 const resolveLoadedPromptFolderPath = (
   promptFolderId: string,
-  promptFolderById: Map<string, { folderName: string; parentPromptFolderId: string | null }>
+  promptFolderById: Map<string, { folderName: string }>,
+  parentPromptFolderIdById: ReadonlyMap<string, string | null>
 ): string => {
   const promptFolder = promptFolderById.get(promptFolderId)
 
@@ -36,12 +38,17 @@ const resolveLoadedPromptFolderPath = (
     throw new Error('Prompt folder not loaded')
   }
 
-  if (promptFolder.parentPromptFolderId === null) {
+  const parentPromptFolderId = parentPromptFolderIdById.get(promptFolderId) ?? null
+  if (parentPromptFolderId === null) {
     return promptFolder.folderName
   }
 
   return path.join(
-    resolveLoadedPromptFolderPath(promptFolder.parentPromptFolderId, promptFolderById),
+    resolveLoadedPromptFolderPath(
+      parentPromptFolderId,
+      promptFolderById,
+      parentPromptFolderIdById
+    ),
     promptFolder.folderName
   )
 }
@@ -73,9 +80,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   const promptFolders: WorkspaceLoadPayload['promptFolders'] = []
   const prompts: WorkspaceLoadPayload['prompts'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
-  const loadedPromptFolderIds = workspaceSnapshot.data.promptFolderIds.flatMap((promptFolderId) => [
-    promptFolderId,
-    ...collectLoadedPromptFolderDescendantIds(promptFolderId)
+  const loadedPromptFolderIds = workspaceSnapshot.data.entries.flatMap((entry) => [
+    entry.id,
+    ...collectLoadedPromptFolderDescendantIds(entry.id)
   ])
   const loadedPromptIds: string[] = []
 
@@ -87,10 +94,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     }
 
     const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
-    const promptIds = promptFolderSnapshot.data.entryIds.filter((entryId) => {
-      return data.prompt.committedStore.getEntry(entryId)
-    })
-    promptIds.push(...promptFolderSnapshot.data.completedPromptIds)
+    const promptIds = promptFolderSnapshot.data.entries
+      .filter((entry) => entry.kind === 'prompt')
+      .map((entry) => entry.id)
     const loadedPromptEntries = getLoadedPromptEntries(promptIds)
 
     loadedPromptIds.push(...loadedPromptEntries.map((promptEntry) => promptEntry.committed.id))
@@ -135,15 +141,30 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const promptFolderById = new Map(
     promptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
   )
-  const promptFolderPathById = new Map(
-    promptFolders.map((promptFolder) => [
-      promptFolder.id,
-      resolveLoadedPromptFolderPath(promptFolder.id, promptFolderById)
-    ])
-  )
 
   // Side effect: hydrate workspace into the new committed data store.
   await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath, workspaceInfoPath })
+
+  const workspace = data.workspace.committedStore.getEntry(workspaceId)?.committed
+  if (!workspace) throw new Error('Workspace data not loaded')
+
+  const treeIndex = buildPromptFolderTreeIndex(workspace, promptFolders)
+  const parentPromptFolderIdById = new Map(
+    [...treeIndex].map(([promptFolderId, location]) => [
+      promptFolderId,
+      location.parentPromptFolderId
+    ])
+  )
+  const promptFolderPathById = new Map(
+    promptFolders.map((promptFolder) => [
+      promptFolder.id,
+      resolveLoadedPromptFolderPath(
+        promptFolder.id,
+        promptFolderById,
+        parentPromptFolderIdById
+      )
+    ])
+  )
 
   // Side effect: hydrate all prompt folders before loading prompt records.
   await Promise.all(
@@ -153,8 +174,6 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         workspacePath,
         folderName: promptFolder.folderName,
         folderPath: promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName,
-        parentPromptFolderId: promptFolder.parentPromptFolderId,
-        depth: promptFolder.depth
       })
     )
   )
@@ -162,7 +181,6 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
     const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
     const promptStemByPromptId = readPromptStemByPromptId(workspacePath, folderPath)
-    const promptIds = promptFolder.entryIds.filter((entryId) => promptStemByPromptId.has(entryId))
     const completedFolderPath = resolveCompletedPromptFolderName(folderPath)
     const completedPromptStemByPromptId = readPromptStemByPromptId(
       workspacePath,
@@ -170,29 +188,23 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
     )
 
     return [
-      ...promptIds.map((promptId) => {
-        const promptStem = promptStemByPromptId.get(promptId) ?? promptId
-        return data.prompt.loadDataFromPersistence(promptId, {
+      ...promptFolder.entries.flatMap((entry) => {
+        if (entry.kind !== 'prompt') return []
+        const promptId = entry.id
+        const isCompleted = completedPromptStemByPromptId.has(promptId)
+        const persistedFolderPath = isCompleted ? completedFolderPath : folderPath
+        const stems = isCompleted ? completedPromptStemByPromptId : promptStemByPromptId
+        if (!stems.has(promptId)) return []
+        const promptStem = stems.get(promptId) ?? promptId
+        return [data.prompt.loadDataFromPersistence(promptId, {
           workspaceId,
           workspacePath,
-          folderPath,
+          folderPath: persistedFolderPath,
           promptFolderId: promptFolder.id,
           promptId,
           promptStem,
           needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
-        })
-      }),
-      ...promptFolder.completedPromptIds.map((promptId) => {
-        const promptStem = completedPromptStemByPromptId.get(promptId) ?? promptId
-        return data.prompt.loadDataFromPersistence(promptId, {
-          workspaceId,
-          workspacePath,
-          folderPath: completedFolderPath,
-          promptFolderId: promptFolder.id,
-          promptId,
-          promptStem,
-          needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
-        })
+        })]
       })
     ]
   })

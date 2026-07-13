@@ -9,7 +9,9 @@ import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import * as path from 'path'
+import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
+import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import {
   buildPromptFolderSnapshot,
   buildWorkspaceSnapshot,
@@ -17,18 +19,18 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import {
   refreshPromptFolderTreePersistencePaths,
-  resolvePromptFolderPathFromData
+  collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
 
 const resolvePromptFolderInsertIndex = (
-  entryIds: string[],
+  entries: readonly EntryRef[],
   previousEntryId: string | null
 ): number | null => {
   if (previousEntryId === null) {
     return 0
   }
 
-  const previousIndex = entryIds.indexOf(previousEntryId)
+  const previousIndex = entries.findIndex((entry) => entry.id === previousEntryId)
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
@@ -92,8 +94,12 @@ export const setupWorkspaceMutationHandlers = (): void => {
           const destinationParentPromptFolder = payload.destinationParentPromptFolder
             ? data.promptFolder.committedStore.getEntry(payload.destinationParentPromptFolder.id)
             : null
-          const sourceParentPromptFolderId =
-            movedPromptFolder.committed.parentPromptFolderId
+          const promptFolders = collectWorkspacePromptFolders(committedWorkspace.committed)
+          const treeIndex = buildPromptFolderTreeIndex(committedWorkspace.committed, promptFolders)
+          const movedLocation = treeIndex.get(payload.promptFolderId)
+          if (!movedLocation) return { success: false, error: 'Prompt folder not in workspace' }
+
+          const sourceParentPromptFolderId = movedLocation.parentPromptFolderId
           const destinationParentPromptFolderId =
             payload.destinationParentPromptFolder?.id ?? null
 
@@ -118,21 +124,24 @@ export const setupWorkspaceMutationHandlers = (): void => {
             return { success: false, error: 'Cannot move a prompt folder into itself' }
           }
 
-          const sourceEntryIds =
-            sourceParentPromptFolder?.committed.entryIds ??
-            committedWorkspace.committed.promptFolderIds
+          const sourceEntries =
+            sourceParentPromptFolder?.committed.entries ?? committedWorkspace.committed.entries
 
-          if (!sourceEntryIds.includes(payload.promptFolderId)) {
+          if (
+            !sourceEntries.some(
+              (entry) => entry.kind === 'folder' && entry.id === payload.promptFolderId
+            )
+          ) {
             return { success: false, error: 'Prompt folder not found in source parent' }
           }
 
           const isSameParent = sourceParentPromptFolderId === destinationParentPromptFolderId
-          const destinationEntryIds = isSameParent
-            ? sourceEntryIds.filter((entryId) => entryId !== payload.promptFolderId)
-            : (destinationParentPromptFolder?.committed.entryIds ??
-              committedWorkspace.committed.promptFolderIds)
+          const destinationEntries = isSameParent
+            ? removeEntry(sourceEntries, 'folder', payload.promptFolderId)
+            : (destinationParentPromptFolder?.committed.entries ??
+              committedWorkspace.committed.entries)
           const insertIndex = resolvePromptFolderInsertIndex(
-            destinationEntryIds,
+            destinationEntries,
             payload.previousEntryId
           )
 
@@ -140,16 +149,14 @@ export const setupWorkspaceMutationHandlers = (): void => {
             return { success: false, error: 'Previous entry not found' }
           }
 
-          const nextDepth = destinationParentPromptFolder
-            ? destinationParentPromptFolder.committed.depth + 1
+          const nextDepth = destinationParentPromptFolderId
+            ? (treeIndex.get(destinationParentPromptFolderId)?.depth ?? 0) + 1
             : 0
-          const depthDelta = nextDepth - movedPromptFolder.committed.depth
+          const depthDelta = nextDepth - movedLocation.depth
           const deepestMovedDepth = Math.max(
-            movedPromptFolder.committed.depth,
+            movedLocation.depth,
             ...descendantIds.map(
-              (promptFolderId) =>
-                data.promptFolder.committedStore.getEntry(promptFolderId)?.committed.depth ??
-                movedPromptFolder.committed.depth
+              (promptFolderId) => treeIndex.get(promptFolderId)?.depth ?? movedLocation.depth
             )
           )
 
@@ -160,19 +167,12 @@ export const setupWorkspaceMutationHandlers = (): void => {
             }
           }
 
-          const now = getCurrentIsoSecondTimestamp()
-          const movedFolderPath = resolvePromptFolderPathFromData(
-            payload.promptFolderId,
-            new Map([
-              [
-                payload.promptFolderId,
-                {
-                  folderName: movedPromptFolder.committed.folderName,
-                  parentPromptFolderId: destinationParentPromptFolderId
-                }
-              ]
-            ])
-          )
+          const movedFolderPath = destinationParentPromptFolder
+            ? path.join(
+                destinationParentPromptFolder.persistenceFields.folderPath,
+                movedPromptFolder.committed.folderName
+              )
+            : movedPromptFolder.committed.folderName
           const modifiedPromptFolderIds = new Set<string>()
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
@@ -181,15 +181,17 @@ export const setupWorkspaceMutationHandlers = (): void => {
               ReturnType<typeof tx.workspace.update> | ReturnType<typeof tx.promptFolder.update>
             > = {}
 
-            const nextDestinationEntryIds = [...destinationEntryIds]
-            nextDestinationEntryIds.splice(insertIndex, 0, payload.promptFolderId)
+            const nextDestinationEntries = [...destinationEntries]
+            nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
 
             if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
               handles.workspace = tx.workspace.update({
                 id: requestedWorkspace.id,
                 expectedRevision: requestedWorkspace.expectedRevision,
                 recipe: (draft) => {
-                  draft.promptFolderIds = nextDestinationEntryIds
+                  draft.entries = nextDestinationEntries.filter(
+                    (entry) => entry.kind === 'folder'
+                  )
                 }
               })
             } else if (isSameParent && sourceParentPromptFolder) {
@@ -198,8 +200,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
                 id: sourceParentPromptFolder.committed.id,
                 expectedRevision: payload.sourceParentPromptFolder?.expectedRevision,
                 recipe: (draft) => {
-                  draft.entryIds = nextDestinationEntryIds
-                  draft.modifiedAt = now
+                  draft.entries = nextDestinationEntries
                 }
               })
             } else {
@@ -209,10 +210,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
                   id: sourceParentPromptFolder.committed.id,
                   expectedRevision: payload.sourceParentPromptFolder?.expectedRevision,
                   recipe: (draft) => {
-                    draft.entryIds = draft.entryIds.filter(
-                      (entryId) => entryId !== payload.promptFolderId
-                    )
-                    draft.modifiedAt = now
+                    draft.entries = removeEntry(draft.entries, 'folder', payload.promptFolderId)
                   }
                 })
               } else {
@@ -220,9 +218,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
                   id: requestedWorkspace.id,
                   expectedRevision: requestedWorkspace.expectedRevision,
                   recipe: (draft) => {
-                    draft.promptFolderIds = draft.promptFolderIds.filter(
-                      (promptFolderId) => promptFolderId !== payload.promptFolderId
-                    )
+                    draft.entries = removeEntry(draft.entries, 'folder', payload.promptFolderId)
                   }
                 })
               }
@@ -233,8 +229,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
                   id: destinationParentPromptFolder.committed.id,
                   expectedRevision: payload.destinationParentPromptFolder?.expectedRevision,
                   recipe: (draft) => {
-                    draft.entryIds = nextDestinationEntryIds
-                    draft.modifiedAt = now
+                    draft.entries = nextDestinationEntries
                   }
                 })
               } else {
@@ -242,39 +237,21 @@ export const setupWorkspaceMutationHandlers = (): void => {
                   id: requestedWorkspace.id,
                   expectedRevision: requestedWorkspace.expectedRevision,
                   recipe: (draft) => {
-                    draft.promptFolderIds = nextDestinationEntryIds
+                    draft.entries = nextDestinationEntries.filter(
+                      (entry) => entry.kind === 'folder'
+                    )
                   }
                 })
               }
             }
 
-            if (!isSameParent || depthDelta !== 0) {
-              for (const [index, descendantId] of descendantIds.entries()) {
-                if (depthDelta === 0) {
-                  continue
-                }
-
-                modifiedPromptFolderIds.add(descendantId)
-                handles[`descendantPromptFolder${index}`] = tx.promptFolder.update({
-                  id: descendantId,
-                  recipe: (draft) => {
-                    draft.depth += depthDelta
-                  }
-                })
-              }
-
+            if (!isSameParent) {
               modifiedPromptFolderIds.add(payload.promptFolderId)
               handles.movedPromptFolder = tx.promptFolder.update({
                 id: payload.promptFolderId,
-                recipe: (draft) => {
-                  draft.parentPromptFolderId = destinationParentPromptFolderId
-                  draft.depth = nextDepth
-                  draft.modifiedAt = now
-                },
+                recipe: () => {},
                 persistenceFields: {
                   ...movedPromptFolder.persistenceFields,
-                  parentPromptFolderId: destinationParentPromptFolderId,
-                  depth: nextDepth,
                   folderPath: movedFolderPath,
                   previousFolderPath: movedPromptFolder.persistenceFields.folderPath
                 }

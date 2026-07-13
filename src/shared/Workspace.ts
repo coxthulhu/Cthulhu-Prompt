@@ -2,12 +2,15 @@ import type { PromptFolder } from './PromptFolder'
 import type { PromptSummaryData } from './Prompt'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
+import type { FolderEntryRef, OrderContainer } from './OrderContainer'
 
-export interface Workspace {
+export interface WorkspaceRoot extends OrderContainer<FolderEntryRef> {
   id: string
+}
+
+export interface Workspace extends WorkspaceRoot {
   workspacePath: string
   workspaceName: string
-  promptFolderIds: string[]
 }
 
 export type MovePromptFolderPayload = {

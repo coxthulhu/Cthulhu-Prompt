@@ -1,4 +1,5 @@
 import type { Workspace } from '@shared/Workspace'
+import type { FolderEntryRef } from '@shared/OrderContainer'
 import type { WorkspacePromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { readPromptFolders, readWorkspaceInfo } from '../DataAccess/WorkspaceReads'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
@@ -18,9 +19,9 @@ export type WorkspacePersistenceFields = {
 }
 
 const toWorkspacePromptFolderOrderFile = (
-  promptFolderIds: string[]
+  entries: FolderEntryRef[]
 ): WorkspacePromptFolderOrderFile => {
-  return { promptFolderIds }
+  return { entries }
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
@@ -45,7 +46,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     const folderOrderTempPath = resolveTempPath(folderOrderPath)
     writeJsonFile(
       folderOrderTempPath,
-      toWorkspacePromptFolderOrderFile(change.data.promptFolderIds)
+      toWorkspacePromptFolderOrderFile(change.data.entries)
     )
 
     return createPersistenceStageResult([
@@ -68,7 +69,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
       id: workspaceInfo.workspaceId,
       workspacePath,
       workspaceName: workspaceInfo.workspaceName,
-      promptFolderIds: promptFolders.map((promptFolder) => promptFolder.id)
+      entries: promptFolders.map((promptFolder) => ({ kind: 'folder', id: promptFolder.id }))
     }
   }
 }

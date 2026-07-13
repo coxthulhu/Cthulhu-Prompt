@@ -13,12 +13,10 @@ const createFolder = (
   id,
   folderName: id,
   displayName: id,
-  parentPromptFolderId: null,
-  depth: 0,
-  modifiedAt: null,
-  promptCount: entryIds.filter((entryId) => entryId.startsWith('prompt-')).length,
-  entryIds,
-  completedPromptIds: [],
+  entries: entryIds.map((entryId) => ({
+    kind: entryId.startsWith('folder-') ? 'folder' : 'prompt',
+    id: entryId
+  })),
   settings: {
     folderDescription: '',
     folderPrefix: '',
@@ -49,10 +47,7 @@ const buildRows = ({
 
 describe('buildPromptFolderScreenRows', () => {
   it('preserves mixed prompt and subfolder entry order', () => {
-    const childFolder = createFolder('folder-child', ['prompt-child'], {
-      parentPromptFolderId: 'folder-root',
-      depth: 1
-    })
+    const childFolder = createFolder('folder-child', ['prompt-child'])
     const rows = buildRows({
       rootFolder: createFolder('folder-root', [
         'prompt-first',
@@ -171,10 +166,7 @@ describe('buildPromptFolderScreenRows', () => {
   })
 
   it('does not emit a placeholder inside an empty subfolder', () => {
-    const childFolder = createFolder('folder-child', [], {
-      parentPromptFolderId: 'folder-root',
-      depth: 1
-    })
+    const childFolder = createFolder('folder-child')
     const rows = buildRows({
       rootFolder: createFolder('folder-root', [childFolder.id]),
       descendantFolders: [childFolder]
@@ -191,14 +183,8 @@ describe('buildPromptFolderScreenRows', () => {
   })
 
   it('emits the parent-owned divider after the complete child subtree', () => {
-    const grandchildFolder = createFolder('folder-grandchild', ['prompt-grandchild'], {
-      parentPromptFolderId: 'folder-child',
-      depth: 2
-    })
-    const childFolder = createFolder('folder-child', [grandchildFolder.id], {
-      parentPromptFolderId: 'folder-root',
-      depth: 1
-    })
+    const grandchildFolder = createFolder('folder-grandchild', ['prompt-grandchild'])
+    const childFolder = createFolder('folder-child', [grandchildFolder.id])
     const rows = buildRows({
       rootFolder: createFolder('folder-root', [childFolder.id]),
       descendantFolders: [childFolder, grandchildFolder],
@@ -225,10 +211,7 @@ describe('buildPromptFolderScreenRows', () => {
 
   it('emits all eight nested subfolder levels at their relative indents', () => {
     const folders = Array.from({ length: 9 }, (_, depth) =>
-      createFolder(`folder-${depth}`, depth < 8 ? [`folder-${depth + 1}`] : ['prompt-deepest'], {
-        parentPromptFolderId: depth === 0 ? null : `folder-${depth - 1}`,
-        depth
-      })
+      createFolder(`folder-${depth}`, depth < 8 ? [`folder-${depth + 1}`] : ['prompt-deepest'])
     )
     const rows = buildRows({
       rootFolder: folders[0],
@@ -251,10 +234,7 @@ describe('buildPromptFolderScreenRows', () => {
   })
 
   it("omits a collapsed folder's descendants while retaining its parent divider", () => {
-    const childFolder = createFolder('folder-child', ['prompt-child'], {
-      parentPromptFolderId: 'folder-root',
-      depth: 1
-    })
+    const childFolder = createFolder('folder-child', ['prompt-child'])
     const rows = buildRows({
       rootFolder: createFolder('folder-root', [childFolder.id]),
       descendantFolders: [childFolder],

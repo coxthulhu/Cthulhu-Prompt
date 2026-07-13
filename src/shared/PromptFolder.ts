@@ -1,19 +1,14 @@
 import type { PromptPersisted } from './Prompt'
+import type { EntryRef, OrderContainer } from './OrderContainer'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
 import type { PromptUiState } from './PromptUiState'
 
-export interface PromptFolder {
+export interface PromptFolder extends OrderContainer<EntryRef> {
   id: string
   folderName: string
   displayName: string
-  parentPromptFolderId: string | null
-  depth: number
-  modifiedAt: string | null
-  promptCount: number
-  entryIds: string[]
-  completedPromptIds: string[]
   settings: PromptFolderSettings
 }
 

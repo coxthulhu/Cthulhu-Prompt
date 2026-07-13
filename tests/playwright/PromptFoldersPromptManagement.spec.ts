@@ -21,6 +21,7 @@ import {
 } from '../helpers/PromptPersistenceTestHelpers'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PromptStatus, type PromptPersisted } from '../../src/shared/Prompt'
+import { readPromptFolderEntries } from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -30,6 +31,9 @@ const COPY_PREFIX_SUFFIX_WORKSPACE_PATH = '/ws/copy-prefix-suffix'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SELF_HEALING_WORKSPACE_PATH = '/ws/completed-self-healing'
 const COMPLETED_MODE_WORKSPACE_PATH = '/ws/completed-mode'
+const COMPLETED_MODE_WORKSPACE_ID = 'completed-mode-workspace'
+const COMPLETED_MODE_FOLDER_ID = 'completed-mode-folder'
+const NO_COMPLETED_FOLDER_ID = 'no-completed-folder'
 const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
 const FALLBACK_TITLE_FOLDER_NAME = 'Fallback Titles'
 const COMPLETION_FOLDER_NAME = 'Development'
@@ -309,6 +313,17 @@ const buildCompletedSelfHealingWorkspace = () => {
 
   return {
     ...workspace,
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`]:
+      JSON.stringify(
+        {
+          entries: [completedPrompt.id, activePrompt.id].map((id) => ({
+            kind: 'prompt',
+            id
+          }))
+        },
+        null,
+        2
+      ),
     [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_Completed`]: null,
     [activePath]: serializePromptMarkdown(activePrompt),
     [completedPath]: serializePromptMarkdown(completedPrompt)
@@ -350,6 +365,7 @@ const buildCompletedModeWorkspace = () => {
     {
       folderName,
       displayName: folderName,
+      promptFolderId: COMPLETED_MODE_FOLDER_ID,
       prompts: [
         {
           id: activePrompt.id,
@@ -362,6 +378,7 @@ const buildCompletedModeWorkspace = () => {
     {
       folderName: 'No Completed',
       displayName: 'No Completed',
+      promptFolderId: NO_COMPLETED_FOLDER_ID,
       prompts: [
         {
           id: 'no-completed-active',
@@ -370,7 +387,9 @@ const buildCompletedModeWorkspace = () => {
         }
       ]
     }
-  ])
+  ], {
+    settings: { workspaceId: COMPLETED_MODE_WORKSPACE_ID }
+  })
   const newestCompletedPath = resolvePersistedPromptFilePathsByTitle({
     workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
     folderName: `${folderName}/_Completed`,
@@ -383,6 +402,18 @@ const buildCompletedModeWorkspace = () => {
     promptId: oldestCompletedPrompt.id,
     promptTitle: oldestCompletedPrompt.title
   }).markdownPath
+
+  workspace[
+    `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`
+  ] = JSON.stringify(
+    {
+      entries: [newestCompletedPrompt.id, oldestCompletedPrompt.id, activePrompt.id].map(
+        (id) => ({ kind: 'prompt', id })
+      )
+    },
+    null,
+    2
+  )
 
   return {
     ...workspace,
@@ -961,6 +992,15 @@ describe('Prompt folder prompt management', () => {
     expect(completedMarkdown).toContain('status: Completed')
     expect(completedMarkdown).toContain('completedAt:')
     expect(completedMarkdown).toContain(completedText)
+    expect(
+      await readPromptFolderEntries(
+        electronApp,
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/_FolderInfo/FolderOrder.json`
+      )
+    ).toEqual([
+      { kind: 'prompt', id: 'dev-1' },
+      { kind: 'prompt', id: 'dev-2' }
+    ])
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.navigateToPromptFolders(COMPLETION_FOLDER_NAME)
@@ -1013,6 +1053,80 @@ describe('Prompt folder prompt management', () => {
     expect(completedMarkdown).toContain('status: Completed')
     expect(completedMarkdown).toContain('completedAt:')
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
+  })
+
+  test('rejects moving a completed prompt through IPC', async ({ testSetup, electronApp }) => {
+    await testSetup.setupFilesystem(buildCompletedModeWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+
+    const moveResult = await mainWindow.evaluate(
+      async ({ workspaceId, sourceFolderId, destinationFolderId, promptId }) => {
+        const loadFolder = async (promptFolderId: string) => {
+          return await window.electron.ipcRenderer.invoke('load-prompt-folder-initial', {
+            requestId: `test-load-${promptFolderId}-${Date.now()}`,
+            clientId: window.ipcClientId,
+            payload: { workspaceId, promptFolderId }
+          })
+        }
+        const sourceLoad = await loadFolder(sourceFolderId)
+        const destinationLoad = await loadFolder(destinationFolderId)
+        const sourcePromptFolder = sourceLoad.promptFolders.find(
+          (folder: { id: string }) => folder.id === sourceFolderId
+        )
+        const destinationPromptFolder = destinationLoad.promptFolders.find(
+          (folder: { id: string }) => folder.id === destinationFolderId
+        )
+        const prompt = sourceLoad.prompts.find(
+          (candidate: { id: string }) => candidate.id === promptId
+        )
+        const toPayloadEntity = (snapshot: { id: string; revision: number; data: unknown }) => ({
+          id: snapshot.id,
+          expectedRevision: snapshot.revision,
+          data: snapshot.data
+        })
+
+        return await window.electron.ipcRenderer.invoke('move-prompt', {
+          requestId: `test-move-completed-${Date.now()}`,
+          clientId: window.ipcClientId,
+          payload: {
+            sourcePromptFolder: toPayloadEntity(sourcePromptFolder),
+            destinationPromptFolder: toPayloadEntity(destinationPromptFolder),
+            prompt: toPayloadEntity(prompt),
+            previousEntryId: null
+          }
+        })
+      },
+      {
+        workspaceId: COMPLETED_MODE_WORKSPACE_ID,
+        sourceFolderId: COMPLETED_MODE_FOLDER_ID,
+        destinationFolderId: NO_COMPLETED_FOLDER_ID,
+        promptId: 'completed-mode-newest'
+      }
+    )
+
+    expect(moveResult.success).toBe(false)
+    expect(moveResult.conflict).toBe(true)
+    expect(
+      await checkPersistedPromptFilesExistByTitle(electronApp, {
+        workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+        folderName: 'Completed Mode/_Completed',
+        promptId: 'completed-mode-newest',
+        promptTitle: 'Newest Completed'
+      })
+    ).toEqual({ markdownExists: true })
+    expect(
+      await checkPersistedPromptFilesExistByTitle(electronApp, {
+        workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+        folderName: 'No Completed',
+        promptId: 'completed-mode-newest',
+        promptTitle: 'Newest Completed'
+      })
+    ).toEqual({ markdownExists: false })
   })
 
   test('sets prompt statuses from the more options menu', async ({ testSetup, electronApp }) => {

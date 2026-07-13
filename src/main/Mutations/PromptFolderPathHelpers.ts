@@ -1,10 +1,33 @@
 import * as path from 'path'
+import { PromptStatus } from '@shared/Prompt'
+import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
+import type { PromptFolder } from '@shared/PromptFolder'
+import type { Workspace } from '@shared/Workspace'
 import { resolveCompletedPromptFolderName } from '../Persistence/PromptPersistencePaths'
 import { data } from '../Data/Data'
 
 export type PromptFolderPathOverride = {
   folderName: string
-  parentPromptFolderId: string | null
+}
+
+export const collectWorkspacePromptFolders = (workspace: Workspace): PromptFolder[] => {
+  const promptFolders: PromptFolder[] = []
+  const visitedIds = new Set<string>()
+
+  const visit = (promptFolderId: string) => {
+    if (visitedIds.has(promptFolderId)) return
+    const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
+    if (!promptFolder) return
+
+    visitedIds.add(promptFolderId)
+    promptFolders.push(promptFolder)
+    for (const entry of promptFolder.entries) {
+      if (entry.kind === 'folder') visit(entry.id)
+    }
+  }
+
+  for (const entry of workspace.entries) visit(entry.id)
+  return promptFolders
 }
 
 export const resolvePromptFolderPathFromData = (
@@ -12,19 +35,26 @@ export const resolvePromptFolderPathFromData = (
   overrides: Map<string, PromptFolderPathOverride> = new Map()
 ): string => {
   const override = overrides.get(promptFolderId)
-  const promptFolder = override ?? data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
+  const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
+  const promptFolder = promptFolderEntry?.committed
 
   if (!promptFolder) {
     throw new Error('Prompt folder not loaded')
   }
 
-  if (promptFolder.parentPromptFolderId === null) {
-    return promptFolder.folderName
-  }
+  const workspace = data.workspace.committedStore.getEntry(
+    promptFolderEntry.persistenceFields.workspaceId
+  )?.committed
+  if (!workspace) throw new Error('Workspace not loaded')
+
+  const treeIndex = buildPromptFolderTreeIndex(workspace, collectWorkspacePromptFolders(workspace))
+  const parentPromptFolderId = treeIndex.get(promptFolderId)?.parentPromptFolderId ?? null
+  const folderName = override?.folderName ?? promptFolder.folderName
+  if (parentPromptFolderId === null) return folderName
 
   return path.join(
-    resolvePromptFolderPathFromData(promptFolder.parentPromptFolderId, overrides),
-    promptFolder.folderName
+    resolvePromptFolderPathFromData(parentPromptFolderId, overrides),
+    folderName
   )
 }
 
@@ -40,37 +70,25 @@ export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string):
   data.promptFolder.committedStore.updatePersistenceFields(promptFolderId, {
     ...promptFolderEntry.persistenceFields,
     folderName: promptFolderEntry.committed.folderName,
-    folderPath,
-    parentPromptFolderId: promptFolderEntry.committed.parentPromptFolderId,
-    depth: promptFolderEntry.committed.depth
+    folderPath
   })
 
-  for (const promptId of promptFolderEntry.committed.entryIds) {
-    const childPromptFolder = data.promptFolder.committedStore.getEntry(promptId)
-    if (childPromptFolder) {
-      refreshPromptFolderTreePersistencePaths(promptId)
+  for (const entry of promptFolderEntry.committed.entries) {
+    if (entry.kind === 'folder') {
+      refreshPromptFolderTreePersistencePaths(entry.id)
       continue
     }
 
-    const promptEntry = data.prompt.committedStore.getEntry(promptId)
+    const promptEntry = data.prompt.committedStore.getEntry(entry.id)
     if (promptEntry) {
-      data.prompt.committedStore.updatePersistenceFields(promptId, {
+      const targetFolderPath =
+        promptEntry.committed.status === PromptStatus.Completed
+          ? resolveCompletedPromptFolderName(folderPath)
+          : folderPath
+      data.prompt.committedStore.updatePersistenceFields(entry.id, {
         ...promptEntry.persistenceFields,
-        folderPath
+        folderPath: targetFolderPath
       })
     }
-  }
-
-  const completedFolderPath = resolveCompletedPromptFolderName(folderPath)
-  for (const promptId of promptFolderEntry.committed.completedPromptIds) {
-    const promptEntry = data.prompt.committedStore.getEntry(promptId)
-    if (!promptEntry) {
-      continue
-    }
-
-    data.prompt.committedStore.updatePersistenceFields(promptId, {
-      ...promptEntry.persistenceFields,
-      folderPath: completedFolderPath
-    })
   }
 }

@@ -101,7 +101,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       (promptFolder) => promptFolder.id === nestedFolderId
     )
     expect(loadedNestedFolder?.data.displayName).toBe('Nested')
-    expect(loadedNestedFolder?.data.depth).toBe(1)
+    expect(loadedNestedFolder?.data.entries).toEqual([
+      { kind: 'prompt', id: 'nested-prompt' }
+    ])
     expect(nestedFolderLoad.prompts.map((prompt) => prompt.id)).toEqual(['nested-prompt'])
   })
 

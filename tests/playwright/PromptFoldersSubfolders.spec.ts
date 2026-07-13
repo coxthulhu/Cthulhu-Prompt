@@ -225,9 +225,9 @@ const createSubfolderAtDivider = async (
 
 const readFolderEntryIds = async (electronApp: any, orderPath: string): Promise<string[]> => {
   const orderFile = JSON.parse(await readTextFile(electronApp, orderPath)) as {
-    entryIds: string[]
+    entries: Array<{ id: string }>
   }
-  return orderFile.entryIds
+  return orderFile.entries.map((entry) => entry.id)
 }
 
 const expectCreatedFolderVisible = async (
@@ -615,10 +615,11 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, rootFolderOrderPath)).length)
-      .toBe(5)
+      .toBe(6)
     const initialOrder = await readFolderEntryIds(electronApp, rootFolderOrderPath)
     const initialChildId = initialOrder[0]
     expect(initialOrder.slice(1)).toEqual([
+      'subfolders-ui-root-completed',
       'subfolders-ui-root-before',
       nestedFolderId,
       emptyNestedFolderId,
@@ -645,11 +646,15 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
-      .toBe(3)
+      .toBe(5)
     const nestedOrder = await readFolderEntryIds(electronApp, nestedFolderOrderPath)
-    expect(nestedOrder[0]).toBe('subfolders-ui-nested-prompt')
-    expect(nestedOrder[2]).toBe(grandchildFolderId)
-    await expectCreatedFolderVisible(mainWindow, nestedOrder[1], 'After Prompt')
+    expect(nestedOrder.slice(0, 3)).toEqual([
+      'subfolders-ui-nested-completed-1',
+      'subfolders-ui-nested-completed-2',
+      'subfolders-ui-nested-prompt'
+    ])
+    expect(nestedOrder[4]).toBe(grandchildFolderId)
+    await expectCreatedFolderVisible(mainWindow, nestedOrder[3], 'After Prompt')
 
     await createSubfolderAtDivider(
       mainWindow,
@@ -660,11 +665,12 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, rootFolderOrderPath)).length)
-      .toBe(6)
+      .toBe(7)
     const finalRootOrder = await readFolderEntryIds(electronApp, rootFolderOrderPath)
-    const afterNestedFolderId = finalRootOrder[3]
+    const afterNestedFolderId = finalRootOrder[4]
     expect(finalRootOrder).toEqual([
       initialChildId,
+      'subfolders-ui-root-completed',
       'subfolders-ui-root-before',
       nestedFolderId,
       afterNestedFolderId,
@@ -700,10 +706,10 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
-      .toBe(3)
+      .toBe(5)
     const nestedSharedChildId = (
       await readFolderEntryIds(electronApp, nestedFolderOrderPath)
-    )[1]
+    )[3]
     await expectCreatedFolderVisible(mainWindow, nestedSharedChildId, 'Shared Child')
 
     const nestedInitialDivider = await scrollDividerIntoView(
@@ -748,7 +754,7 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
-      .toBe(3)
+      .toBe(5)
   })
 
   test('adds a prompt to the divider owning subfolder without changing the screen root', async ({
@@ -777,14 +783,17 @@ describe('Prompt folder subfolder rendering', () => {
 
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
-      .toBe(3)
+      .toBe(5)
     const nestedOrder = await readFolderEntryIds(electronApp, nestedFolderOrderPath)
-    const createdPromptId = nestedOrder[2]
-    expect(nestedOrder.slice(0, 2)).toEqual([
+    const createdPromptId = nestedOrder[4]
+    expect(nestedOrder.slice(0, 4)).toEqual([
+      'subfolders-ui-nested-completed-1',
+      'subfolders-ui-nested-completed-2',
       'subfolders-ui-nested-prompt',
       grandchildFolderId
     ])
     expect(await readFolderEntryIds(electronApp, rootFolderOrderPath)).toEqual([
+      'subfolders-ui-root-completed',
       'subfolders-ui-root-before',
       nestedFolderId,
       emptyNestedFolderId,
@@ -1081,7 +1090,11 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(nestedPromptSelector)).toHaveCount(0)
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, nestedFolderOrderPath))
-      .toEqual([grandchildFolderId])
+      .toEqual([
+        'subfolders-ui-nested-completed-1',
+        'subfolders-ui-nested-completed-2',
+        grandchildFolderId
+      ])
     await expect
       .poll(
         async () =>
@@ -1203,6 +1216,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, nestedFolderOrderPath))
       .toEqual([
+        'subfolders-ui-nested-completed-1',
         'subfolders-ui-nested-completed-2',
         'subfolders-ui-nested-prompt',
         grandchildFolderId

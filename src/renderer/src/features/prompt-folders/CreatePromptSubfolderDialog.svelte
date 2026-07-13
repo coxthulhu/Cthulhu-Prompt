@@ -21,13 +21,15 @@
 
   let target = $state<PromptFolderDividerTarget | null>(null)
   let promptFolderNameDialog = $state<{ openDialog: () => void } | null>(null)
-  const siblingPromptFolders = $derived(
-    target
-      ? promptFolders.filter(
-          (folder) => folder.parentPromptFolderId === target?.ownerFolderId
-        )
-      : []
-  )
+  const siblingPromptFolders = $derived.by(() => {
+    if (!target) return []
+    const owner = promptFolders.find((folder) => folder.id === target?.ownerFolderId)
+    if (!owner) return []
+    const childIds = new Set(
+      owner.entries.filter((entry) => entry.kind === 'folder').map((entry) => entry.id)
+    )
+    return promptFolders.filter((folder) => childIds.has(folder.id))
+  })
 
   export const openDialog = (nextTarget: PromptFolderDividerTarget) => {
     if (!isWorkspaceReady || !workspaceId) return

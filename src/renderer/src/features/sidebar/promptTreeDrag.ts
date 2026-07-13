@@ -12,6 +12,7 @@ import {
 import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/PromptFolder'
+import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
@@ -44,15 +45,15 @@ export const createPromptTreePromptDragController = ({
 
     const nextMove = resolvePromptHandleDropMove(
       sourcePromptFolder.id,
-      sourcePromptFolder.entryIds,
+      getPromptFolderActiveEntryIds(sourcePromptFolder),
       sourcePayload.fromId,
       dropPayload,
       dropPayload && dropPayload.targetEntryId !== null
         ? (((): string[] | null => {
             const promptFolder = findPromptFolder(promptFolders, dropPayload.folderId)
-            return promptFolder?.entryIds ?? null
+            return promptFolder ? getPromptFolderActiveEntryIds(promptFolder) : null
           })())
-        : sourcePromptFolder.entryIds
+        : getPromptFolderActiveEntryIds(sourcePromptFolder)
     )
     if (!nextMove) {
       return

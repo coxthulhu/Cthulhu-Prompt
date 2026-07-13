@@ -1,6 +1,7 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -44,17 +45,23 @@ describe('Home Screen', () => {
   })
 
   describe('Workspace Management', () => {
-    test('detects existing workspace without setup dialog and can close it', async ({
+    test('closes a workspace while hydrated folder settings are mounted', async ({
       testSetup
     }) => {
-      const { testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-        workspace: { scenario: 'minimal' }
+      const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+        workspace: { scenario: 'sample' }
       })
 
       expect(workspaceSetupResult.setupDialogAppeared).toBe(false)
       expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-      await testHelpers.assertWorkspaceReadyPath('/ws/minimal')
+      await testHelpers.assertWorkspaceReadyPath('/ws/sample')
+      await testHelpers.navigateToPromptFolders('Development')
+      await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+      await expect(
+        mainWindow.locator('[data-testid^="prompt-folder-settings-section-"] .monaco-editor')
+      ).not.toHaveCount(0)
+      await testHelpers.navigateToHomeScreen()
 
       await testHelpers.clearWorkspaceViaUI()
       expect(await testHelpers.isWorkspaceGetStarted()).toBe(true)
@@ -115,7 +122,10 @@ describe('Home Screen', () => {
       await expect(errorDialog).toContainText('Invalid workspace path')
     })
 
-    test('shows an error dialog when workspace folder order is missing', async ({ testSetup }) => {
+    test('repairs a missing workspace folder order during load', async ({
+      electronApp,
+      testSetup
+    }) => {
       const workspacePath = '/ws/missing-folder-order'
       const filesystem = createWorkspaceWithFolders(workspacePath, [
         {
@@ -134,13 +144,36 @@ describe('Home Screen', () => {
 
       await mainWindow.click('[data-testid="open-workspace-button"]')
 
-      const errorDialog = mainWindow.locator(
-        '[role="dialog"][aria-label="Failed to Open Workspace"]'
-      )
-      await expect(errorDialog).toBeVisible()
-      await expect(errorDialog).toContainText('The workspace could not be opened.')
-      await expect(errorDialog).toContainText('FolderOrder.json')
-      await expect(errorDialog).toContainText('ENOENT')
+      await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
+      ).toHaveCount(0)
+      expect(await testHelpers.isWorkspaceReady()).toBe(true)
+      expect(await checkFileExists(electronApp, workspaceFolderOrderPath(workspacePath))).toBe(true)
+    })
+
+    test('rejects malformed workspace folder order JSON', async ({ testSetup }) => {
+      const workspacePath = '/ws/malformed-folder-order'
+      const filesystem = createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Examples',
+          displayName: 'Examples',
+          promptFolderId: 'folder-examples'
+        }
+      ])
+      filesystem[workspaceFolderOrderPath(workspacePath)] = '{ malformed'
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="open-workspace-button"]')
+
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
+      ).toBeVisible()
       expect(await testHelpers.isWorkspaceReady()).toBe(false)
     })
 

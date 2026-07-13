@@ -1,6 +1,10 @@
 import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import {
+  createWorkspaceWithFolders,
+  getWorkspaceInfoPath,
+  setupWorkspaceScenario
+} from '../fixtures/WorkspaceFixtures'
 import {
   dragGhostSelector,
   finishActiveDrag,
@@ -15,6 +19,7 @@ const DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-dra
 const DROPDOWN_SCROLL_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-scroll'
 const DROPDOWN_FOOTER_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-footer'
 const DROPDOWN_NOOP_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-noop'
+const NESTED_REPAIR_WORKSPACE_PATH = '/ws/folder-order-nested-repair'
 const PROMPT_FOLDER_SELECTOR_MENU = '[data-testid="sidebar-prompt-folder-selector-menu"]'
 const PROMPT_FOLDER_SELECTOR_ITEMS = '[data-testid="sidebar-prompt-folder-selector-menu-items"]'
 const PROMPT_FOLDER_SELECTOR_TRIGGER = '[data-testid="sidebar-prompt-folder-selector-trigger"]'
@@ -48,7 +53,17 @@ const readWorkspacePromptFolderIds = async (
   workspacePath: string
 ): Promise<string[]> => {
   const fileContents = await readTextFile(electronApp, workspaceFolderOrderPath(workspacePath))
-  return (JSON.parse(fileContents) as { promptFolderIds: string[] }).promptFolderIds
+  return (JSON.parse(fileContents) as { entries: Array<{ id: string }> }).entries.map(
+    (entry) => entry.id
+  )
+}
+
+const readWorkspacePromptFolderEntries = async (
+  electronApp: ElectronApplication,
+  workspacePath: string
+): Promise<Array<{ kind: 'folder'; id: string }>> => {
+  const fileContents = await readTextFile(electronApp, workspaceFolderOrderPath(workspacePath))
+  return (JSON.parse(fileContents) as { entries: Array<{ kind: 'folder'; id: string }> }).entries
 }
 
 const readPromptFolderDropdownItemTestIds = async (page: Page): Promise<string[]> => {
@@ -100,6 +115,43 @@ const createEmptyFolderWorkspace = (workspacePath: string, folderNames: string[]
   )
 
 describe('Prompt Folder Order', () => {
+  test('repairs mixed nested entries with exact discriminated kinds', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const filesystem = setupWorkspaceScenario(NESTED_REPAIR_WORKSPACE_PATH, 'subfolders')
+    const nestedInfoPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/Nested/_FolderInfo/FolderInfo.json`
+    const nestedFolderId = (
+      JSON.parse(filesystem[nestedInfoPath] as string) as { promptFolderId: string }
+    ).promptFolderId
+    const orderPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/_FolderInfo/FolderOrder.json`
+    filesystem[orderPath] = JSON.stringify(
+      {
+        entries: [
+          { kind: 'prompt', id: 'base-before' },
+          { kind: 'prompt', id: nestedFolderId },
+          { kind: 'folder', id: nestedFolderId },
+          { kind: 'prompt', id: 'missing-prompt' }
+        ]
+      },
+      null,
+      2
+    )
+
+    await testSetup.setupFilesystem(filesystem)
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(NESTED_REPAIR_WORKSPACE_PATH)])
+    const { testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+
+    expect(JSON.parse(await readTextFile(electronApp, orderPath))).toEqual({
+      entries: [
+        { kind: 'prompt', id: 'base-before' },
+        { kind: 'folder', id: nestedFolderId },
+        { kind: 'prompt', id: 'base-after' }
+      ]
+    })
+  })
+
   test('loads explicitly ordered folders before unordered folders sorted by disk name', async ({
     electronApp,
     testSetup
@@ -111,7 +163,12 @@ describe('Prompt Folder Order', () => {
       { folderName: 'beta', displayName: 'Beta', promptFolderId: 'folder-beta' }
     ])
     filesystem[workspaceFolderOrderPath(FOLDER_ORDER_WORKSPACE_PATH)] = JSON.stringify(
-      { promptFolderIds: ['missing-folder', 'folder-middle', 'folder-zeta'] },
+      {
+        entries: ['missing-folder', 'folder-middle', 'folder-zeta'].map((id) => ({
+          kind: 'folder',
+          id
+        }))
+      },
       null,
       2
     )
@@ -135,7 +192,18 @@ describe('Prompt Folder Order', () => {
       ])
     await expect(
       await readWorkspacePromptFolderIds(electronApp, FOLDER_ORDER_WORKSPACE_PATH)
-    ).toEqual(['missing-folder', 'folder-middle', 'folder-zeta'])
+    ).toEqual(['folder-middle', 'folder-zeta', 'folder-alpha', 'folder-beta'])
+    await expect(
+      await readWorkspacePromptFolderEntries(electronApp, FOLDER_ORDER_WORKSPACE_PATH)
+    ).toEqual(
+      ['folder-middle', 'folder-zeta', 'folder-alpha', 'folder-beta'].map((id) => ({
+        kind: 'folder',
+        id
+      }))
+    )
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-folder-modified-time"]')
+    ).toHaveCount(0)
   })
 
   test('adds new folders to the top of the persisted folder order', async ({

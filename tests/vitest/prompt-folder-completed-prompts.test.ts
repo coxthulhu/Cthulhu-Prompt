@@ -1,23 +1,17 @@
 import type { PromptFolder } from '@shared/PromptFolder'
+import type { EntryRef } from '@shared/OrderContainer'
+import { PromptStatus } from '@shared/Prompt'
 import { collectCompletedPrompts } from '@renderer/features/prompt-folders/promptFolderCompletedPrompts'
 import { describe, expect, it } from 'vitest'
 
 const createFolder = (
   id: string,
-  entryIds: string[],
-  completedPromptIds: string[],
-  parentPromptFolderId: string | null,
-  depth: number
+  entries: EntryRef[]
 ): PromptFolder => ({
   id,
   folderName: id,
   displayName: id,
-  parentPromptFolderId,
-  depth,
-  modifiedAt: null,
-  promptCount: 0,
-  entryIds,
-  completedPromptIds,
+  entries,
   settings: {
     folderDescription: '',
     folderPrefix: '',
@@ -27,27 +21,31 @@ const createFolder = (
 
 describe('collectCompletedPrompts', () => {
   it('collects every descendant owner and sorts globally by completion time', () => {
-    const grandchild = createFolder(
-      'grandchild',
-      [],
-      ['grandchild-completed'],
-      'child',
-      2
-    )
-    const child = createFolder(
-      'child',
-      [grandchild.id],
-      ['child-completed'],
-      'root',
-      1
-    )
-    const unrelated = createFolder('unrelated', [], ['unrelated-completed'], null, 0)
-    const root = createFolder('root', [child.id], ['root-completed'], null, 0)
+    const grandchild = createFolder('grandchild', [
+      { kind: 'prompt', id: 'grandchild-completed' }
+    ])
+    const child = createFolder('child', [
+      { kind: 'prompt', id: 'child-completed' },
+      { kind: 'folder', id: grandchild.id }
+    ])
+    const unrelated = createFolder('unrelated', [
+      { kind: 'prompt', id: 'unrelated-completed' }
+    ])
+    const root = createFolder('root', [
+      { kind: 'prompt', id: 'root-completed' },
+      { kind: 'folder', id: child.id }
+    ])
 
     expect(
       collectCompletedPrompts({
         rootFolder: root,
         descendantFolders: [unrelated, grandchild, child],
+        statusByPromptId: {
+          'root-completed': PromptStatus.Completed,
+          'child-completed': PromptStatus.Completed,
+          'grandchild-completed': PromptStatus.Completed,
+          'unrelated-completed': PromptStatus.Completed
+        },
         completedAtByPromptId: {
           'root-completed': '2026-07-09T10:00:00.000Z',
           'child-completed': '2026-07-09T12:00:00.000Z',
@@ -63,14 +61,27 @@ describe('collectCompletedPrompts', () => {
   })
 
   it('visits a malformed folder graph only once', () => {
-    const child = createFolder('child', ['root'], ['child-completed'], 'root', 1)
-    const root = createFolder('root', ['child'], ['root-completed'], null, 0)
+    const child = createFolder('child', [
+      { kind: 'prompt', id: 'child-completed' },
+      { kind: 'folder', id: 'root' }
+    ])
+    const root = createFolder('root', [
+      { kind: 'prompt', id: 'root-completed' },
+      { kind: 'folder', id: 'child' }
+    ])
 
     expect(
       collectCompletedPrompts({
         rootFolder: root,
         descendantFolders: [child],
-        completedAtByPromptId: {}
+        statusByPromptId: {
+          'root-completed': PromptStatus.Completed,
+          'child-completed': PromptStatus.Completed
+        },
+        completedAtByPromptId: {
+          'root-completed': '2026-07-09T10:00:00.000Z',
+          'child-completed': '2026-07-09T11:00:00.000Z'
+        }
       })
     ).toHaveLength(2)
   })

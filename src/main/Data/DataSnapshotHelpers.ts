@@ -1,5 +1,6 @@
 import type { PromptPersisted } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
+import type { EntryRef, FolderEntryRef } from '@shared/OrderContainer'
 import type { RevisionEnvelope } from '@shared/Revision'
 import type { Workspace } from '@shared/Workspace'
 import type { PromptFolderPersistenceFields } from '../Persistence/PromptFolderPersistence'
@@ -43,18 +44,17 @@ export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntr
   return getLoadedEntries(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
 }
 
-export const filterLoadedPromptFolderIds = (promptFolderIds: string[]): string[] => {
-  return filterLoadedEntityIds(promptFolderIds, (promptFolderId) => {
-    return data.promptFolder.committedStore.getEntry(promptFolderId)
-  })
+export const filterLoadedPromptFolderEntries = (
+  entries: FolderEntryRef[]
+): FolderEntryRef[] => {
+  return entries.filter((entry) => data.promptFolder.committedStore.getEntry(entry.id) !== null)
 }
 
-export const filterLoadedPromptFolderEntryIds = (entryIds: string[]): string[] => {
-  return entryIds.filter((entryId) => {
-    return (
-      data.prompt.committedStore.getEntry(entryId) !== null ||
-      data.promptFolder.committedStore.getEntry(entryId) !== null
-    )
+export const filterLoadedPromptFolderEntriesByKind = (entries: EntryRef[]): EntryRef[] => {
+  return entries.filter((entry) => {
+    return entry.kind === 'prompt'
+      ? data.prompt.committedStore.getEntry(entry.id) !== null
+      : data.promptFolder.committedStore.getEntry(entry.id) !== null
   })
 }
 
@@ -66,13 +66,11 @@ export const collectLoadedPromptFolderDescendantIds = (promptFolderId: string): 
   }
 
   const descendantIds: string[] = []
-  for (const entryId of promptFolderEntry.committed.entryIds) {
-    if (!data.promptFolder.committedStore.getEntry(entryId)) {
-      continue
-    }
+  for (const entry of promptFolderEntry.committed.entries) {
+    if (entry.kind !== 'folder' || !data.promptFolder.committedStore.getEntry(entry.id)) continue
 
-    descendantIds.push(entryId)
-    descendantIds.push(...collectLoadedPromptFolderDescendantIds(entryId))
+    descendantIds.push(entry.id)
+    descendantIds.push(...collectLoadedPromptFolderDescendantIds(entry.id))
   }
 
   return descendantIds
@@ -86,7 +84,7 @@ export const buildWorkspaceSnapshot = (
     revision: workspaceEntry.revision,
     data: {
       ...workspaceEntry.committed,
-      promptFolderIds: filterLoadedPromptFolderIds(workspaceEntry.committed.promptFolderIds)
+      entries: filterLoadedPromptFolderEntries(workspaceEntry.committed.entries)
     }
   }
 }
@@ -99,8 +97,7 @@ export const buildPromptFolderSnapshot = (
     revision: promptFolderEntry.revision,
     data: {
       ...promptFolderEntry.committed,
-      entryIds: filterLoadedPromptFolderEntryIds(promptFolderEntry.committed.entryIds),
-      completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds)
+      entries: filterLoadedPromptFolderEntriesByKind(promptFolderEntry.committed.entries)
     }
   }
 }

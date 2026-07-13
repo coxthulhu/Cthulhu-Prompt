@@ -770,7 +770,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
   })
 
-  test('moves a dragged editor prompt to the start of another folder when dropped onto that folder row', async ({
+  test('moves a dragged editor prompt while source folder settings are hydrated', async ({
     testSetup,
     electronApp
   }) => {
@@ -781,6 +781,11 @@ describe('Prompt folder prompt drag-drop', () => {
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+    await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+    await waitForMonacoEditor(
+      mainWindow,
+      '[data-testid="prompt-folder-settings-section-folderDescription"]'
+    )
     await mainWindow.locator(promptTreePromptSelector(DEV_1_ID)).click()
     await expect(mainWindow.locator(promptTreePromptSelector(DEV_1_ID))).toHaveAttribute(
       'aria-current',

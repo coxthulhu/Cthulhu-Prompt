@@ -16,6 +16,7 @@ import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import { buildPromptFolderSnapshot, buildPromptSnapshot } from '../Data/DataSnapshotHelpers'
 import type { PromptFolder } from '@shared/PromptFolder'
+import { promptEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
@@ -43,14 +44,14 @@ type PromptFilenameTargetOverride = {
 }
 
 const resolvePromptInsertIndex = (
-  promptIds: string[],
+  entries: readonly EntryRef[],
   previousEntryId: string | null
 ): number | null => {
   if (previousEntryId === null) {
     return 0
   }
 
-  const previousIndex = promptIds.indexOf(previousEntryId)
+  const previousIndex = entries.findIndex((entry) => entry.id === previousEntryId)
   return previousIndex === -1 ? null : previousIndex + 1
 }
 
@@ -59,8 +60,19 @@ const lookupCommittedPrompt = (promptId: string): PromptPersisted | null => {
 }
 
 const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] => {
-  return promptFolder.entryIds.filter((entryId) => data.prompt.committedStore.getEntry(entryId))
+  return promptFolder.entries
+    .filter((entry) => entry.kind === 'prompt')
+    .map((entry) => entry.id)
 }
+
+const getPromptFolderPromptIdsByStatus = (
+  promptFolder: PromptFolder,
+  completed: boolean
+): string[] =>
+  getPromptFolderPromptIds(promptFolder).filter((promptId) => {
+    const prompt = data.prompt.committedStore.getEntry(promptId)?.committed
+    return prompt ? (prompt.status === PromptStatus.Completed) === completed : false
+  })
 
 const getPromptFilenameBoundary = (prompt: PromptPersisted): string => {
   return sanitizePromptTitleForFilename(getPromptDisplayTitle(prompt)).toLowerCase()
@@ -244,12 +256,12 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt already exists' }
           }
 
-          let insertIndex = committedPromptFolder.committed.entryIds.length
+          let insertIndex = committedPromptFolder.committed.entries.length
           if (payload.previousEntryId === null) {
             insertIndex = 0
           } else {
-            const previousIndex = committedPromptFolder.committed.entryIds.indexOf(
-              payload.previousEntryId
+            const previousIndex = committedPromptFolder.committed.entries.findIndex(
+              (entry) => entry.id === payload.previousEntryId
             )
             if (previousIndex === -1) {
               return { success: false, error: 'Previous prompt not found' }
@@ -275,8 +287,8 @@ export const setupPromptMutationHandlers = (): void => {
             status: PromptStatus.Todo,
             promptText: requestedPrompt.data.promptText
           }
-          const nextEntryIds = [...committedPromptFolder.committed.entryIds]
-          nextEntryIds.splice(insertIndex, 0, promptId)
+          const nextEntries = [...committedPromptFolder.committed.entries]
+          nextEntries.splice(insertIndex, 0, promptEntryRef(promptId))
           const basePromptPersistenceFields: PromptPersistenceFields = {
             workspaceId: committedPromptFolder.persistenceFields.workspaceId,
             workspacePath: committedPromptFolder.persistenceFields.workspacePath,
@@ -287,7 +299,7 @@ export const setupPromptMutationHandlers = (): void => {
             needsFilenameIdSuffix: false
           }
           const filenamePlans = planPromptFilenamePersistenceFields(
-            nextEntryIds,
+            [...getPromptFolderPromptIdsByStatus(committedPromptFolder.committed, false), promptId],
             new Map([[promptId, { prompt, persistenceFields: basePromptPersistenceFields }]])
           )
 
@@ -297,11 +309,7 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.entryIds = nextEntryIds
-                  draft.promptCount = nextEntryIds.filter((entryId) =>
-                    data.prompt.committedStore.getEntry(entryId)
-                  ).length + 1
-                  draft.modifiedAt = now
+                  draft.entries = nextEntries
                 }
               }),
               prompt: tx.prompt.create({
@@ -367,8 +375,9 @@ export const setupPromptMutationHandlers = (): void => {
           const committedPrompt = data.prompt.committedStore.getEntry(promptId)
           if (
             !committedPrompt ||
-            (!committedPromptFolder.committed.entryIds.includes(promptId) &&
-              !committedPromptFolder.committed.completedPromptIds.includes(promptId))
+            !committedPromptFolder.committed.entries.some(
+              (entry) => entry.kind === 'prompt' && entry.id === promptId
+            )
           ) {
             return buildConflictResponseFromLatest(
               data.promptFolder.committedStore.getEntry(requestedPromptFolder.id),
@@ -380,16 +389,18 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const workspaceId = committedPromptFolder.persistenceFields.workspaceId
-          const now = getCurrentIsoSecondTimestamp()
-          const nextEntryIds = committedPromptFolder.committed.entryIds.filter(
-            (entryId) => entryId !== promptId
-          )
-          const nextCompletedPromptIds = committedPromptFolder.committed.completedPromptIds.filter(
-            (currentPromptId) => currentPromptId !== promptId
-          )
+          const nextEntries = removeEntry(committedPromptFolder.committed.entries, 'prompt', promptId)
           const filenamePlans = [
-            ...planPromptFilenamePersistenceFields(nextEntryIds),
-            ...planPromptFilenamePersistenceFields(nextCompletedPromptIds)
+            ...planPromptFilenamePersistenceFields(
+              getPromptFolderPromptIdsByStatus(committedPromptFolder.committed, false).filter(
+                (currentPromptId) => currentPromptId !== promptId
+              )
+            ),
+            ...planPromptFilenamePersistenceFields(
+              getPromptFolderPromptIdsByStatus(committedPromptFolder.committed, true).filter(
+                (currentPromptId) => currentPromptId !== promptId
+              )
+            )
           ]
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
@@ -397,10 +408,7 @@ export const setupPromptMutationHandlers = (): void => {
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.entryIds = nextEntryIds
-                  draft.completedPromptIds = nextCompletedPromptIds
-                  draft.promptCount = Math.max(0, draft.promptCount - 1)
-                  draft.modifiedAt = now
+                  draft.entries = nextEntries
                 }
               }),
               prompt: tx.prompt.delete({
@@ -467,7 +475,6 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt folder not loaded' }
           }
 
-          const now = getCurrentIsoSecondTimestamp()
           const promptIds = getPromptFolderPromptIds(promptFolder.committed)
           const promptTitleFields = resolvePromptTitleUpdateForPromptIds({
             promptIds,
@@ -490,11 +497,10 @@ export const setupPromptMutationHandlers = (): void => {
               ? { completedAt: requestedPrompt.data.completedAt }
               : {})
           }
-          const filenamePromptIds = promptFolder.committed.completedPromptIds.includes(
-            requestedPrompt.id
+          const filenamePromptIds = getPromptFolderPromptIdsByStatus(
+            promptFolder.committed,
+            committedPrompt.committed.status === PromptStatus.Completed
           )
-            ? promptFolder.committed.completedPromptIds
-            : promptIds
           const filenamePlans = planPromptFilenamePersistenceFields(
             filenamePromptIds,
             new Map([
@@ -507,12 +513,6 @@ export const setupPromptMutationHandlers = (): void => {
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
-              promptFolder: tx.promptFolder.update({
-                id: promptFolder.committed.id,
-                recipe: (draft) => {
-                  draft.modifiedAt = now
-                }
-              }),
               prompt: tx.prompt.update({
                 id: requestedPrompt.id,
                 expectedRevision: requestedPrompt.expectedRevision,
@@ -593,7 +593,12 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt move data not loaded' }
           }
 
-          if (!sourcePromptFolder.committed.entryIds.includes(requestedPrompt.id)) {
+          if (
+            prompt.committed.status === PromptStatus.Completed ||
+            !sourcePromptFolder.committed.entries.some(
+              (entry) => entry.kind === 'prompt' && entry.id === requestedPrompt.id
+            )
+          ) {
             return buildMovePromptConflictResponse(
               requestedSourcePromptFolder.id,
               requestedDestinationPromptFolder.id,
@@ -604,30 +609,29 @@ export const setupPromptMutationHandlers = (): void => {
           const isSameFolder =
             requestedSourcePromptFolder.id === requestedDestinationPromptFolder.id
           const destinationEntryIds = isSameFolder
-            ? sourcePromptFolder.committed.entryIds.filter(
-                (entryId) => entryId !== requestedPrompt.id
-              )
-            : destinationPromptFolder.committed.entryIds
+            ? removeEntry(sourcePromptFolder.committed.entries, 'prompt', requestedPrompt.id)
+            : destinationPromptFolder.committed.entries
           const insertIndex = resolvePromptInsertIndex(destinationEntryIds, previousEntryId)
 
           if (insertIndex === null) {
             return { success: false, error: 'Order-after prompt not found' }
           }
 
-          const now = getCurrentIsoSecondTimestamp()
-          const nextSourceEntryIds = sourcePromptFolder.committed.entryIds.filter(
-            (entryId) => entryId !== requestedPrompt.id
+          const nextSourceEntries = removeEntry(
+            sourcePromptFolder.committed.entries,
+            'prompt',
+            requestedPrompt.id
           )
-          const nextDestinationEntryIds = [...destinationEntryIds]
-          nextDestinationEntryIds.splice(insertIndex, 0, requestedPrompt.id)
+          const nextDestinationEntries = [...destinationEntryIds]
+          nextDestinationEntries.splice(insertIndex, 0, promptEntryRef(requestedPrompt.id))
           const movedPrompt =
             !isSameFolder && prompt.committed.title.trim().length === 0
               ? {
                   ...prompt.committed,
                   fallbackTitle: resolvePromptTitleUpdateForPromptIds({
-                    promptIds: destinationEntryIds.filter((entryId) =>
-                      data.prompt.committedStore.getEntry(entryId)
-                    ),
+                    promptIds: destinationEntryIds
+                      .filter((entry) => entry.kind === 'prompt')
+                      .map((entry) => entry.id),
                     lookupPrompt: lookupCommittedPrompt,
                     promptId: requestedPrompt.id,
                     currentTitle: prompt.committed.title,
@@ -645,11 +649,23 @@ export const setupPromptMutationHandlers = (): void => {
                 promptFolderId: requestedDestinationPromptFolder.id
               }
           const filenamePlans = isSameFolder
-            ? planPromptFilenamePersistenceFields(nextDestinationEntryIds)
+            ? planPromptFilenamePersistenceFields(
+                getPromptFolderPromptIdsByStatus(sourcePromptFolder.committed, false)
+              )
             : [
-                ...planPromptFilenamePersistenceFields(nextSourceEntryIds),
                 ...planPromptFilenamePersistenceFields(
-                  nextDestinationEntryIds,
+                  getPromptFolderPromptIdsByStatus(sourcePromptFolder.committed, false).filter(
+                    (promptId) => promptId !== requestedPrompt.id
+                  )
+                ),
+                ...planPromptFilenamePersistenceFields(
+                  [
+                    ...getPromptFolderPromptIdsByStatus(
+                      destinationPromptFolder.committed,
+                      false
+                    ),
+                    requestedPrompt.id
+                  ],
                   new Map([
                     [
                       requestedPrompt.id,
@@ -668,8 +684,7 @@ export const setupPromptMutationHandlers = (): void => {
                     id: requestedSourcePromptFolder.id,
                     expectedRevision: requestedSourcePromptFolder.expectedRevision,
                     recipe: (draft) => {
-                      draft.entryIds = nextDestinationEntryIds
-                      draft.modifiedAt = now
+                      draft.entries = nextDestinationEntries
                     }
                   }),
                   ...createPromptFilenameUpdateHandles(tx, filenamePlans, new Set())
@@ -681,18 +696,14 @@ export const setupPromptMutationHandlers = (): void => {
                     id: requestedSourcePromptFolder.id,
                     expectedRevision: requestedSourcePromptFolder.expectedRevision,
                     recipe: (draft) => {
-                      draft.entryIds = nextSourceEntryIds
-                      draft.promptCount = Math.max(0, draft.promptCount - 1)
-                      draft.modifiedAt = now
+                      draft.entries = nextSourceEntries
                     }
                   }),
                   destinationPromptFolder: tx.promptFolder.update({
                     id: requestedDestinationPromptFolder.id,
                     expectedRevision: requestedDestinationPromptFolder.expectedRevision,
                     recipe: (draft) => {
-                      draft.entryIds = nextDestinationEntryIds
-                      draft.promptCount += 1
-                      draft.modifiedAt = now
+                      draft.entries = nextDestinationEntries
                     }
                   }),
                   prompt: tx.prompt.update({
@@ -766,12 +777,12 @@ export const setupPromptMutationHandlers = (): void => {
             return { success: false, error: 'Prompt status data not loaded' }
           }
 
-          const isCompletedPrompt = promptFolder.committed.completedPromptIds.includes(
-            requestedPrompt.id
+          const hasPromptEntry = promptFolder.committed.entries.some(
+            (entry) => entry.kind === 'prompt' && entry.id === requestedPrompt.id
           )
-          const isActivePrompt = promptFolder.committed.entryIds.includes(requestedPrompt.id)
+          const isCompletedPrompt = prompt.committed.status === PromptStatus.Completed
 
-          if (!isActivePrompt && !isCompletedPrompt) {
+          if (!hasPromptEntry) {
             return buildSetPromptStatusConflictResponse(
               requestedPromptFolder.id,
               requestedPrompt.id
@@ -796,14 +807,14 @@ export const setupPromptMutationHandlers = (): void => {
           const activeFolderPath = promptFolder.persistenceFields.folderPath
           const completedFolderPath = resolveCompletedPromptFolderName(activeFolderPath)
           const persistenceFields =
-            targetStatus === PromptStatus.Completed
+            targetStatus === PromptStatus.Completed && !isCompletedPrompt
               ? {
                   ...prompt.persistenceFields,
                   folderPath: completedFolderPath,
                   previousFolderPath: activeFolderPath,
                   promptFolderId: requestedPromptFolder.id
                 }
-              : isCompletedPrompt
+              : targetStatus !== PromptStatus.Completed && isCompletedPrompt
                 ? {
                     ...prompt.persistenceFields,
                     folderPath: activeFolderPath,
@@ -811,28 +822,16 @@ export const setupPromptMutationHandlers = (): void => {
                     promptFolderId: requestedPromptFolder.id
                   }
                 : prompt.persistenceFields
-          const nextEntryIds =
-            targetStatus === PromptStatus.Completed
-              ? promptFolder.committed.entryIds.filter((entryId) => entryId !== requestedPrompt.id)
-              : isCompletedPrompt
-                ? [
-                    requestedPrompt.id,
-                    ...promptFolder.committed.entryIds.filter(
-                      (entryId) => entryId !== requestedPrompt.id
-                    )
-                  ]
-                : promptFolder.committed.entryIds
-          const nextCompletedPromptIds =
-            targetStatus === PromptStatus.Completed
-              ? [
-                  ...promptFolder.committed.completedPromptIds.filter(
-                    (promptId) => promptId !== requestedPrompt.id
-                  ),
-                  requestedPrompt.id
-                ]
-              : promptFolder.committed.completedPromptIds.filter(
-                  (promptId) => promptId !== requestedPrompt.id
-                )
+          const activePromptIds = getPromptFolderPromptIdsByStatus(
+            promptFolder.committed,
+            false
+          ).filter((promptId) => promptId !== requestedPrompt.id)
+          const completedPromptIds = getPromptFolderPromptIdsByStatus(
+            promptFolder.committed,
+            true
+          ).filter((promptId) => promptId !== requestedPrompt.id)
+          if (targetStatus === PromptStatus.Completed) completedPromptIds.push(requestedPrompt.id)
+          else activePromptIds.push(requestedPrompt.id)
           const targetPromptOverride = new Map([
             [
               requestedPrompt.id,
@@ -844,33 +843,17 @@ export const setupPromptMutationHandlers = (): void => {
           ])
           const filenamePlans = [
             ...planPromptFilenamePersistenceFields(
-              nextEntryIds,
+              activePromptIds,
               targetStatus === PromptStatus.Completed ? undefined : targetPromptOverride
             ),
             ...planPromptFilenamePersistenceFields(
-              nextCompletedPromptIds,
+              completedPromptIds,
               targetStatus === PromptStatus.Completed ? targetPromptOverride : undefined
             )
           ]
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
-              promptFolder: tx.promptFolder.update({
-                id: requestedPromptFolder.id,
-                expectedRevision: requestedPromptFolder.expectedRevision,
-                recipe: (draft) => {
-                  if (targetStatus === PromptStatus.Completed && isActivePrompt) {
-                    draft.entryIds = nextEntryIds
-                    draft.completedPromptIds = nextCompletedPromptIds
-                    draft.promptCount = Math.max(0, draft.promptCount - 1)
-                  } else if (targetStatus !== PromptStatus.Completed && isCompletedPrompt) {
-                    draft.completedPromptIds = nextCompletedPromptIds
-                    draft.entryIds = nextEntryIds
-                    draft.promptCount += 1
-                  }
-                  draft.modifiedAt = now
-                }
-              }),
               prompt: tx.prompt.update({
                 id: requestedPrompt.id,
                 expectedRevision: requestedPrompt.expectedRevision,

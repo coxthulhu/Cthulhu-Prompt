@@ -203,7 +203,12 @@ const parseWorkspace = parseObject<Workspace>({
   id: parseString,
   workspacePath: parseString,
   workspaceName: parseString,
-  promptFolderIds: parseArray(parseString)
+  entries: parseArray(
+    parseObject({
+      kind: (value) => (value === 'folder' ? 'folder' : null),
+      id: parseString
+    })
+  )
 })
 
 const parseWorkspaceRevisionPayloadEntity = parseRevisionPayloadEntity<Workspace>(parseWorkspace)
@@ -218,12 +223,12 @@ const parsePromptFolder = parseObject<PromptFolder>({
   id: parseString,
   folderName: parseString,
   displayName: parseString,
-  parentPromptFolderId: parseNullableString,
-  depth: parseNumber,
-  modifiedAt: parseNullableString,
-  promptCount: parseNumber,
-  entryIds: parseArray(parseString),
-  completedPromptIds: parseArray(parseString),
+  entries: parseArray(
+    parseObject({
+      kind: (value) => (value === 'prompt' || value === 'folder' ? value : null),
+      id: parseString
+    })
+  ),
   settings: parsePromptFolderSettings
 })
 

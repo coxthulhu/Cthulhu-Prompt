@@ -7,7 +7,7 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
+import { getPromptFolderAllPromptIds } from '../Collections/PromptFolderEntries'
 import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
 import { deletePromptDrafts, upsertPromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
@@ -21,10 +21,9 @@ export const loadPromptFolderInitial = async (
   promptFolderId: string
 ): Promise<void> => {
   const previousPromptFolder = promptFolderCollection.get(promptFolderId)
-  const previousPromptIds = new Set([
-    ...(previousPromptFolder ? getPromptFolderPromptIds(previousPromptFolder) : []),
-    ...(previousPromptFolder?.completedPromptIds ?? [])
-  ])
+  const previousPromptIds = new Set(
+    previousPromptFolder ? getPromptFolderAllPromptIds(previousPromptFolder) : []
+  )
 
   const result = await runLoad(() =>
     ipcInvokeWithPayload<LoadPromptFolderInitialResult, LoadPromptFolderInitialPayload>(
@@ -54,10 +53,7 @@ export const loadPromptFolderInitial = async (
   if (!nextPromptFolder) {
     throw new Error('Prompt folder not loaded after initial load')
   }
-  const nextPromptIds = new Set([
-    ...getPromptFolderPromptIds(nextPromptFolder),
-    ...nextPromptFolder.completedPromptIds
-  ])
+  const nextPromptIds = new Set(getPromptFolderAllPromptIds(nextPromptFolder))
   const removedPromptIds: string[] = []
 
   for (const previousPromptId of previousPromptIds) {

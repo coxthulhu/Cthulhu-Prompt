@@ -52,7 +52,6 @@ const getPromptDraftModifiedAt = (): string => {
 type PromptDraftOptimisticMutationOptions = {
   mutatePromptDraft: (draft: PromptDraftRecord) => void
   mutatePrompt?: (draft: Prompt) => void
-  promptFolderModifiedAt?: string
 }
 
 const getPromptIdsForPrompt = (promptId: string): string[] => {
@@ -66,22 +65,11 @@ const getPromptIdsForPrompt = (promptId: string): string[] => {
   return [promptId]
 }
 
-const getPromptFolderIdForPrompt = (promptId: string): string | null => {
-  for (const promptFolder of promptFolderCollection.values()) {
-    if (getPromptFolderPromptIds(promptFolder).includes(promptId)) {
-      return promptFolder.id
-    }
-  }
-
-  return null
-}
-
 const mutatePromptDraftOptimistically = (
   promptId: string,
   options: PromptDraftOptimisticMutationOptions
 ): void => {
-  const { mutatePromptDraft, mutatePrompt, promptFolderModifiedAt } = options
-  const promptFolderId = getPromptFolderIdForPrompt(promptId)
+  const { mutatePromptDraft, mutatePrompt } = options
 
   mutatePacedPromptAutosaveUpdate({
     promptId,
@@ -91,12 +79,6 @@ const mutatePromptDraftOptimistically = (
 
       if (mutatePrompt) {
         collections.prompt.update(promptId, mutatePrompt)
-      }
-
-      if (promptFolderId && promptFolderModifiedAt) {
-        collections.promptFolder.update(promptFolderId, (draft) => {
-          draft.modifiedAt = promptFolderModifiedAt
-        })
       }
     }
   })
@@ -243,8 +225,7 @@ export const setPromptDraftTitle = (promptId: string, title: string): void => {
       if (draft.loadingState === 'full') {
         draft.modifiedAt = modifiedAt
       }
-    },
-    promptFolderModifiedAt: modifiedAt
+    }
   })
 }
 
@@ -273,8 +254,7 @@ export const setPromptDraftText = (
       }
       draft.promptText = promptText
       draft.modifiedAt = modifiedAt
-    },
-    promptFolderModifiedAt: modifiedAt
+    }
   })
 }
 

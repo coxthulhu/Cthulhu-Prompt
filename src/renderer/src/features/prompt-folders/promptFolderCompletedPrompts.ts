@@ -1,4 +1,5 @@
 import type { PromptFolder } from '@shared/PromptFolder'
+import { PromptStatus } from '@shared/Prompt'
 
 export type CompletedPromptWithOwner = {
   ownerFolderId: string
@@ -8,12 +9,14 @@ export type CompletedPromptWithOwner = {
 type CollectCompletedPromptIdsOptions = {
   rootFolder: PromptFolder
   descendantFolders: readonly PromptFolder[]
+  statusByPromptId: Readonly<Record<string, PromptStatus | undefined>>
   completedAtByPromptId: Readonly<Record<string, string | null | undefined>>
 }
 
 export const collectCompletedPrompts = ({
   rootFolder,
   descendantFolders,
+  statusByPromptId,
   completedAtByPromptId
 }: CollectCompletedPromptIdsOptions): CompletedPromptWithOwner[] => {
   const folderById = new Map(
@@ -26,13 +29,13 @@ export const collectCompletedPrompts = ({
     if (visitedFolderIds.has(folder.id)) return
     visitedFolderIds.add(folder.id)
 
-    for (const promptId of folder.completedPromptIds) {
-      completedPrompts.push({ ownerFolderId: folder.id, promptId })
-    }
-
-    for (const entryId of folder.entryIds) {
-      const childFolder = folderById.get(entryId)
-      if (childFolder) visitFolder(childFolder)
+    for (const entry of folder.entries) {
+      if (entry.kind === 'prompt' && statusByPromptId[entry.id] === PromptStatus.Completed) {
+        completedPrompts.push({ ownerFolderId: folder.id, promptId: entry.id })
+      } else if (entry.kind === 'folder') {
+        const childFolder = folderById.get(entry.id)
+        if (childFolder) visitFolder(childFolder)
+      }
     }
   }
 

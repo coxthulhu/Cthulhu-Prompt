@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
+import { PromptStatus } from '@shared/Prompt'
 import {
   createPromptUiStateRevisionKey,
   PromptUiStateDataAccess
@@ -10,7 +11,6 @@ import {
   getLoadedPromptEntries,
   buildPromptSnapshot,
   collectLoadedPromptFolderDescendantIds,
-  filterLoadedPromptIds,
   type PromptFolderCommittedEntry
 } from '../Data/DataSnapshotHelpers'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
@@ -54,16 +54,20 @@ export const setupPromptFolderQueryHandlers = (): void => {
               buildPromptFolderSnapshot(entry)
             )
             const promptIds = promptFolders.flatMap((folder) =>
-              folder.data.entryIds.filter((entryId) => data.prompt.committedStore.getEntry(entryId))
-            )
-            const completedPromptIds = promptFolders.flatMap((folder) =>
-              filterLoadedPromptIds(folder.data.completedPromptIds)
+              folder.data.entries
+                .filter((entry) => entry.kind === 'prompt')
+                .map((entry) => entry.id)
+                .filter((promptId) => data.prompt.committedStore.getEntry(promptId))
             )
             const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
               payload.workspaceId,
-              promptIds
+              promptIds.filter(
+                (promptId) =>
+                  data.prompt.committedStore.getEntry(promptId)?.committed.status !==
+                  PromptStatus.Completed
+              )
             )
-            const prompts = getLoadedPromptEntries([...promptIds, ...completedPromptIds]).map(
+            const prompts = getLoadedPromptEntries(promptIds).map(
               (promptEntry) => buildPromptSnapshot(promptEntry)
             )
 

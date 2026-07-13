@@ -7,6 +7,7 @@ import { PromptStatus } from '@shared/Prompt'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
+import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
@@ -44,7 +45,11 @@ const writeWorkspacePromptFolderOrderFile = (
 ): void => {
   const fs = getFs()
   const orderPath = resolveWorkspacePromptFolderOrderPath(workspacePath)
-  fs.writeFileSync(orderPath, JSON.stringify({ promptFolderIds }, null, 2), 'utf8')
+  fs.writeFileSync(
+    orderPath,
+    JSON.stringify({ entries: promptFolderIds.map(folderEntryRef) }, null, 2),
+    'utf8'
+  )
 }
 
 const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> => {
@@ -126,7 +131,11 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     ),
     'utf8'
   )
-  fs.writeFileSync(orderPath, JSON.stringify({ entryIds: promptIds }, null, 2), 'utf8')
+  fs.writeFileSync(
+    orderPath,
+    JSON.stringify({ entries: promptIds.map(promptEntryRef) }, null, 2),
+    'utf8'
+  )
   for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
     fs.writeFileSync(
       resolvePromptFolderSettingsTextPath(workspacePath, EXAMPLE_FOLDER_NAME, field),

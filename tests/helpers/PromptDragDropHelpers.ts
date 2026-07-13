@@ -215,13 +215,21 @@ const readTextFile = async (
   )
 }
 
+export const readPromptFolderEntries = async (
+  electronApp: ElectronApplication,
+  folderOrderPath: string
+): Promise<Array<{ kind: 'prompt' | 'folder'; id: string }>> => {
+  const fileContents = await readTextFile(electronApp, folderOrderPath)
+  return (JSON.parse(fileContents) as {
+    entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
+  }).entries
+}
+
 export const readPromptFolderEntryIds = async (
   electronApp: ElectronApplication,
   folderOrderPath: string
-): Promise<string[]> => {
-  const fileContents = await readTextFile(electronApp, folderOrderPath)
-  return (JSON.parse(fileContents) as { entryIds: string[] }).entryIds
-}
+): Promise<string[]> =>
+  (await readPromptFolderEntries(electronApp, folderOrderPath)).map((entry) => entry.id)
 
 export const expectCurrentFolderPromptEditors = async (
   page: Page,

@@ -8,10 +8,7 @@ export type PromptFolderInfoFile = {
   promptFolderId: string
 }
 
-export type PromptFolderOrderFile = {
-  entryIds: string[]
-}
+export type PromptFolderOrderFile = OrderContainer<EntryRef>
 
-export type WorkspacePromptFolderOrderFile = {
-  promptFolderIds: string[]
-}
+export type WorkspacePromptFolderOrderFile = OrderContainer<FolderEntryRef>
+import type { EntryRef, FolderEntryRef, OrderContainer } from '@shared/OrderContainer'

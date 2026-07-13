@@ -514,7 +514,8 @@
   const scrollByAdjacentEntryBlockHeight = (direction: 'up' | 'down', promptId: string) => {
     if (!scrollApi) return
 
-    const rootEntryIds = promptFolderById[screenRootFolderId]?.entryIds ?? []
+    const rootEntryIds =
+      promptFolderById[screenRootFolderId]?.entries.map((entry) => entry.id) ?? []
     const promptIndex = rootEntryIds.indexOf(promptId)
     const adjacentEntryId =
       direction === 'up' ? rootEntryIds[promptIndex - 1] : rootEntryIds[promptIndex + 1]
@@ -560,13 +561,20 @@
       return true
     }
 
+    const activeEntryIds = (promptFolderById[screenRootFolderId]?.entries ?? []).flatMap(
+      (entry) => {
+        if (entry.kind === 'folder') return [entry.id]
+        return completedPromptOwnerByPromptId[entry.id] ? [] : [entry.id]
+      }
+    )
+
     return (
       resolvePromptHandleDropMove(
         screenRootFolderId,
-        promptFolderById[screenRootFolderId]?.entryIds ?? [],
+        activeEntryIds,
         payload.fromId,
         getPromptDividerDropPayload(previousEntryId),
-        promptFolderById[screenRootFolderId]?.entryIds ?? []
+        activeEntryIds
       ) !== null
     )
   }
@@ -587,8 +595,11 @@
 
     const folder = promptFolderById[row.ownerFolderId]
     if (!folder) return 0
-    return folder.entryIds.filter(
-      (entryId) => promptDraftById[entryId] && !promptFolderById[entryId]
+    return folder.entries.filter(
+      (entry) =>
+        entry.kind === 'prompt' &&
+        promptMetadataByPromptId[entry.id] !== undefined &&
+        promptMetadataByPromptId[entry.id]?.status !== PromptStatus.Completed
     ).length
   }
 
@@ -596,7 +607,25 @@
     row: PromptFolderScreenFolderEditorRow
   ): number => {
     if (row.isRoot) return completedPromptCount
-    return promptFolderById[row.ownerFolderId]?.completedPromptIds.length ?? 0
+    return Object.values(completedPromptOwnerByPromptId).filter(
+      (ownerFolderId) => ownerFolderId === row.ownerFolderId
+    ).length
+  }
+
+  const getFolderDepth = (targetFolderId: string): number => {
+    const visit = (folderId: string, depth: number): number | null => {
+      if (folderId === targetFolderId) return depth
+      const folder = promptFolderById[folderId]
+      if (!folder) return null
+      for (const entry of folder.entries) {
+        if (entry.kind !== 'folder') continue
+        const foundDepth = visit(entry.id, depth + 1)
+        if (foundDepth !== null) return foundDepth
+      }
+      return null
+    }
+
+    return visit(screenRootFolderId, 0) ?? 8
   }
 </script>
 
@@ -623,7 +652,8 @@
 />
 
 {#snippet folderEditorRow(props)}
-  {@const rowFolder = promptFolderById[props.row.ownerFolderId]}
+  {@const ownerFolderId = props.row.ownerFolderId}
+  {@const rowFolder = promptFolderById[ownerFolderId]}
   {@const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(props.row.isRoot)}
   {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
     props.virtualWindowWidthPx,
@@ -637,7 +667,7 @@
     >
       <PromptFolderEditorRow
         {workspaceId}
-        promptFolderId={rowFolder.id}
+        promptFolderId={ownerFolderId}
         folderDisplayName={rowFolder.displayName}
         promptCount={getFolderPromptCount(props.row)}
         completedPromptCount={getFolderCompletedPromptCount(props.row)}
@@ -646,7 +676,7 @@
         devicePixelRatio={props.devicePixelRatio}
         rowHeightPx={props.rowHeightPx}
         sectionHeightsPx={getFolderSettingsSectionHeights(
-          rowFolder.id,
+          ownerFolderId,
           contentWidthPx,
           props.devicePixelRatio
         )}
@@ -655,7 +685,7 @@
         overlayRowElement={props.overlayRowElement ?? null}
         scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
         onHydrationChange={props.onHydrationChange}
-        folderSettings={getFolderSettings(rowFolder.id)}
+        folderSettings={getFolderSettings(ownerFolderId)}
         {rowPaddingTopPx}
         isSettingsSectionExpanded={props.row.isSettingsSectionExpanded}
         isPromptsSectionExpanded={props.row.isPromptsSectionExpanded}
@@ -664,10 +694,10 @@
         showSidebar={!props.row.isRoot}
         isFirstSibling={props.row.isFirstSibling}
         isLastSibling={props.row.isLastSibling}
-        onSettingsSectionToggle={() => onSettingsSectionToggle(rowFolder.id)}
-        onPromptsSectionToggle={() => onPromptsSectionToggle(rowFolder.id)}
+        onSettingsSectionToggle={() => onSettingsSectionToggle(ownerFolderId)}
+        onPromptsSectionToggle={() => onPromptsSectionToggle(ownerFolderId)}
         onSettingsFieldChange={(field, text, measurement) =>
-          onSettingsFieldChange(rowFolder.id, field, text, measurement)}
+          onSettingsFieldChange(ownerFolderId, field, text, measurement)}
         onRenamePromptFolder={props.row.isRoot ? onRenamePromptFolder : () => {}}
       />
     </PromptFolderSectionRow>
@@ -702,7 +732,7 @@
       disabled={isCreatingPrompt}
       mode={showsActions ? 'add' : 'separator'}
       onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
-      onAddSubfolder={showsActions && (promptFolderById[row.ownerFolderId]?.depth ?? 8) < 8
+      onAddSubfolder={showsActions && getFolderDepth(row.ownerFolderId) < 8
         ? () => onAddSubfolder(target)
         : undefined}
       getDropOptions={!showsActions || !row.isOwnerRoot

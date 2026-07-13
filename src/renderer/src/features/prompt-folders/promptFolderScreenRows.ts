@@ -88,10 +88,12 @@ export const buildPromptFolderScreenRows = ({
     if (!isFolderExpanded(folder.id)) return
 
     const childIndentLevel = indentLevel + 1
-    const entries = folder.entryIds.filter(
-      (entryId) => folderById.has(entryId) || promptIdSet.has(entryId)
+    const entries = folder.entries.filter((entry) =>
+      entry.kind === 'folder' ? folderById.has(entry.id) : promptIdSet.has(entry.id)
     )
-    const directPromptIds = entries.filter((entryId) => promptIdSet.has(entryId))
+    const directPromptIds = entries
+      .filter((entry) => entry.kind === 'prompt')
+      .map((entry) => entry.id)
     const directPromptIndexById = new Map(
       directPromptIds.map((promptId, promptIndex) => [promptId, promptIndex])
     )
@@ -104,8 +106,8 @@ export const buildPromptFolderScreenRows = ({
       isOwnerRoot: isRoot
     })
 
-    for (const [entryIndex, entryId] of entries.entries()) {
-      const childFolder = folderById.get(entryId)
+    for (const [entryIndex, entry] of entries.entries()) {
+      const childFolder = entry.kind === 'folder' ? folderById.get(entry.id) : undefined
       if (childFolder) {
         addFolder(
           childFolder,
@@ -114,11 +116,11 @@ export const buildPromptFolderScreenRows = ({
           entryIndex === entries.length - 1
         )
       } else {
-        const promptIndex = directPromptIndexById.get(entryId)!
+        const promptIndex = directPromptIndexById.get(entry.id)!
         rows.push({
           kind: 'prompt-editor',
           ownerFolderId: folder.id,
-          promptId: entryId,
+          promptId: entry.id,
           indentLevel: childIndentLevel,
           isOwnerRoot: isRoot,
           isFirstPrompt: isRoot ? entryIndex === 0 : promptIndex === 0,
@@ -131,7 +133,7 @@ export const buildPromptFolderScreenRows = ({
       rows.push({
         kind: 'prompt-divider',
         ownerFolderId: folder.id,
-        previousEntryId: entryId,
+        previousEntryId: entry.id,
         indentLevel: childIndentLevel,
         isOwnerRoot: isRoot
       })

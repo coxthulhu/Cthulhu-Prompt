@@ -20,6 +20,7 @@
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+  import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
   import {
@@ -35,7 +36,7 @@
     setPromptFolderPromptTreeEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
-  import type { Prompt } from '@shared/Prompt'
+  import { PromptStatus, type Prompt } from '@shared/Prompt'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -207,6 +208,9 @@
     return collectCompletedPrompts({
       rootFolder: screenRootFolder,
       descendantFolders: promptFolders.filter((folder) => folder.id !== screenRootFolder.id),
+      statusByPromptId: Object.fromEntries(
+        Object.values(promptById).map((prompt) => [prompt.id, prompt.status])
+      ),
       completedAtByPromptId: Object.fromEntries(
         Object.values(promptById).map((prompt) => [prompt.id, prompt.completedAt ?? null])
       )
@@ -271,8 +275,9 @@
   const collectPromptFolderTreeIds = (promptFolder: PromptFolder): string[] => {
     const folderIds = [promptFolder.id]
 
-    for (const entryId of promptFolder.entryIds) {
-      const childFolder = promptFolderById[entryId]
+    for (const entry of promptFolder.entries) {
+      if (entry.kind !== 'folder') continue
+      const childFolder = promptFolderById[entry.id]
       if (childFolder) {
         folderIds.push(...collectPromptFolderTreeIds(childFolder))
       }
@@ -316,8 +321,9 @@
       return true
     }
 
-    const draggedIndex = folder.entryIds.indexOf(payload.fromId)
-    const targetIndex = folder.entryIds.indexOf(promptId)
+    const activeEntryIds = getPromptFolderActiveEntryIds(folder)
+    const draggedIndex = activeEntryIds.indexOf(payload.fromId)
+    const targetIndex = activeEntryIds.indexOf(promptId)
 
     // Reject same-folder prompt-row edges that would leave the dragged row in place.
     return !(
@@ -334,7 +340,7 @@
       return true
     }
 
-    return folder.entryIds[0] !== payload.fromId
+    return getPromptFolderActiveEntryIds(folder)[0] !== payload.fromId
   }
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
@@ -559,13 +565,17 @@
           return
         }
 
-        const childEntryIds = promptFolder.entryIds.filter(
-          (entryId) => promptById[entryId] || promptFolderById[entryId]
+        const childEntries = promptFolder.entries.filter(
+          (entry) =>
+            entry.kind === 'folder'
+              ? Boolean(promptFolderById[entry.id])
+              : Boolean(promptById[entry.id]) &&
+                promptById[entry.id]?.status !== PromptStatus.Completed
         )
 
-        for (const [entryIndex, entryId] of childEntryIds.entries()) {
-          const isLastChild = entryIndex === childEntryIds.length - 1
-          const childFolder = promptFolderById[entryId]
+        for (const [entryIndex, entry] of childEntries.entries()) {
+          const isLastChild = entryIndex === childEntries.length - 1
+          const childFolder = entry.kind === 'folder' ? promptFolderById[entry.id] : null
 
           if (childFolder) {
             addPromptFolderRows(childFolder, indentCount + 1, isLastChild)
@@ -573,11 +583,11 @@
           }
 
           items.push({
-            id: folderPromptRowId(promptFolder.id, entryId),
+            id: folderPromptRowId(promptFolder.id, entry.id),
             row: {
               kind: 'folder-prompt',
               folder: promptFolder,
-              promptId: entryId,
+              promptId: entry.id,
               indentCount: indentCount + 1,
               isLastRow: isLastChild,
               isNestedPrompt: promptFolder.id !== screenRootFolder.id
