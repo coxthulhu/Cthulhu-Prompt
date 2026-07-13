@@ -47,6 +47,8 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 
 - When asked to open a file, folder, or workspace in VS Code, do it from Windows so it opens in the user's Windows VS Code instance.
 - Direct Windows commands that do not have a wrapper must use `cmd.exe` with escalated permissions and a short justification.
+- The WSL wrapper scripts cross into Windows through WSL interoperability and must also run with `sandbox_permissions="require_escalated"`.
+- Invoke each WSL wrapper directly as the first command, for example `./scripts/wsl-playwright.sh ...`. Do not invoke it through `bash`, `sh`, `timeout`, or a compound shell command because those forms can bypass its approved command prefix and leave Windows interoperability blocked by the Linux sandbox.
 
 ### Common npm Scripts
 
@@ -109,6 +111,7 @@ describe('My Feature', () => {
 ## Commit & Pull Request Guidelines
 
 - Commits: short, imperative present tense (e.g., “Fix tests”, “Add virtualization test”); group related changes; reference issues.
+- Do not run `gh auth status` as a preflight for `git push` or other Git commands. Git uses the remote's configured authentication independently of GitHub CLI. Run `gh auth status` only when the user explicitly requests a GitHub CLI operation and its authentication state is material.
 - Never run `git commit` and `git push` in parallel; finish the commit first, then push in a separate step.
 - Git commands that write to `.git` must use escalated permissions in the tool call, even when they do not contact a remote. This includes `git commit`, `git merge`, `git rebase`, `git cherry-pick`, `git stash`, `git tag`, and any retry after a `.git/index.lock` or read-only filesystem error.
 - For `git commit`, request escalation with a scoped persistent prefix rule for `["git", "commit"]` when available.
