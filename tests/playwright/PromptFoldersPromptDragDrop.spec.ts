@@ -21,7 +21,6 @@ import {
   expectPromptTreeRowDraggingState,
   expectPromptTreeRowActiveState,
   finishActiveDrag,
-  getRowViewportOffsets,
   moveActiveDragToTarget,
   promptFolderSelectorDropdownItemSelector,
   promptFolderSelectorMenuSelector,
@@ -301,24 +300,6 @@ const expectPromptEditorDraggingState = async (
   const editorRow = page.locator(promptEditorSelector(promptId))
   await expect(editorRow).toHaveAttribute('data-dragging', isDragging ? 'true' : 'false')
   await expect(editorRow).toHaveCSS('opacity', isDragging ? '0.72' : '1')
-}
-
-const expectPromptEditorNearViewportCenter = async (
-  page: Page,
-  promptId: string
-): Promise<void> => {
-  await expect
-    .poll(async () => {
-      const hostBox = await page.locator(PROMPT_FOLDER_HOST_SELECTOR).boundingBox()
-      const offsets = await getRowViewportOffsets(page, promptEditorSelector(promptId))
-      if (!hostBox || !offsets) {
-        return Number.POSITIVE_INFINITY
-      }
-
-      const rowCenter = (offsets.top + offsets.bottom) / 2
-      return Math.round(Math.abs(rowCenter - hostBox.height / 2))
-    })
-    .toBeLessThanOrEqual(2)
 }
 
 const scrollPromptTreeUntilRowUnmounts = async (
@@ -640,11 +621,18 @@ describe('Prompt folder prompt drag-drop', () => {
       NESTED_FOLDER_ID
     ])
 
-    await dragPromptHandleToTarget(
-      mainWindow,
-      BASE_BEFORE_ID,
-      promptDividerSelector(NESTED_FOLDER_ID)
+    await beginPromptHandleDrag(mainWindow, BASE_BEFORE_ID)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      promptDividerSelector(NESTED_FOLDER_ID),
+      20
     )
+    await moveActiveDragToTarget(mainWindow, promptDividerSelector(NESTED_FOLDER_ID))
+    await expect(mainWindow.locator(promptDividerSelector(NESTED_FOLDER_ID))).toHaveAttribute(
+      'data-drop-over',
+      'true'
+    )
+    await finishActiveDrag(mainWindow)
     await expectRootEntryOrder(mainWindow, electronApp, [
       BASE_AFTER_ID,
       NESTED_FOLDER_ID,
@@ -700,11 +688,18 @@ describe('Prompt folder prompt drag-drop', () => {
       'nested-prompt'
     ])
 
-    await dragPromptHandleToTarget(
-      mainWindow,
-      'nested-prompt',
-      promptDividerSelector(BASE_AFTER_ID)
+    await beginPromptHandleDrag(mainWindow, 'nested-prompt')
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      promptDividerSelector(BASE_AFTER_ID),
+      20
     )
+    await moveActiveDragToTarget(mainWindow, promptDividerSelector(BASE_AFTER_ID))
+    await expect(mainWindow.locator(promptDividerSelector(BASE_AFTER_ID))).toHaveAttribute(
+      'data-drop-over',
+      'true'
+    )
+    await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
       .toEqual([NESTED_FOLDER_ID, BASE_AFTER_ID, 'nested-prompt'])
@@ -753,25 +748,11 @@ describe('Prompt folder prompt drag-drop', () => {
     const folderIndicator = mainWindow.locator(
       promptTreeFolderDropIndicatorSelector('Nested')
     )
-    const rootFolderIndicator = mainWindow.locator(
-      promptTreeFolderDropIndicatorSelector('Main')
-    )
-    const rootFolderRow = mainWindow
-      .locator('[data-testid="prompt-tree-folder-toggle-button-Main"]')
-      .locator('xpath=..')
     const subfolderRow = mainWindow
       .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
       .locator('xpath=..')
 
     await beginPromptTreeRowDrag(mainWindow, BASE_AFTER_ID)
-    await moveActiveDragToTarget(
-      mainWindow,
-      '[data-testid="prompt-tree-folder-toggle-button-Main"]',
-      'top'
-    )
-    await expect(rootFolderIndicator).toHaveCount(0)
-    await expect(rootFolderRow).toHaveAttribute('data-row-state', 'over')
-
     await moveActiveDragToTarget(
       mainWindow,
       '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
@@ -868,7 +849,16 @@ describe('Prompt folder prompt drag-drop', () => {
       'data-drag-ghost-kind',
       'folder'
     )
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      promptDividerSelector(BASE_AFTER_ID),
+      20
+    )
     await moveActiveDragToTarget(mainWindow, promptDividerSelector(BASE_AFTER_ID))
+    await expect(mainWindow.locator(promptDividerSelector(BASE_AFTER_ID))).toHaveAttribute(
+      'data-drop-over',
+      'true'
+    )
     await finishActiveDrag(mainWindow)
 
     await expect
@@ -969,7 +959,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
   })
 
-  test('moves a dragged editor prompt while source folder settings are hydrated', async ({
+  test('moves a dragged editor prompt while the root page header is mounted', async ({
     testSetup,
     electronApp
   }) => {
@@ -980,11 +970,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
-    await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
-    await waitForMonacoEditor(
-      mainWindow,
-      '[data-testid="prompt-folder-settings-section-folderDescription"]'
-    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
     await mainWindow.locator(promptTreePromptSelector(DEV_1_ID)).click()
     await expect(mainWindow.locator(promptTreePromptSelector(DEV_1_ID))).toHaveAttribute(
       'aria-current',
@@ -1115,7 +1101,9 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
     await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
-    await expectPromptEditorNearViewportCenter(mainWindow, DEV_1_ID)
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)).toBe(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
+    await expect(mainWindow.locator(promptEditorSelector(DEV_1_ID))).toBeVisible()
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,

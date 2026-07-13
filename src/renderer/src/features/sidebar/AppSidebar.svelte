@@ -276,18 +276,7 @@
   }
 
   const openSelectedPromptFolderSettings = () => {
-    const promptFolder = screenRootFolder
-    if (!promptFolder) return
-
-    onPromptFolderModeChange(PromptFolderScreenMode.Active)
-    promptNavigation.select({
-      screenRootFolderId: promptFolder.id,
-      rowOwnerFolderId: promptFolder.id,
-      row: 'folder-settings',
-      source: 'tree-click',
-      forceVersionBump: true
-    })
-    onScreenRootFolderSelect(promptFolder.id)
+    // Root prompt folders no longer expose a settings destination.
   }
 
   const handleSelectedPromptFolderActionsSelect = (item: DropdownPopupItem) => {

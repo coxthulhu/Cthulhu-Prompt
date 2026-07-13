@@ -30,12 +30,14 @@
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps,
-    type VirtualWindowScrollApi,
-    type VirtualWindowViewportMetrics
+    type VirtualWindowScrollApi
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderEditorRow from './PromptFolderEditorRow.svelte'
+  import PromptFolderRootHeaderRow, {
+    PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX
+  } from './PromptFolderRootHeaderRow.svelte'
   import {
-    PROMPT_FOLDER_SETTINGS_ROW_ID,
+    PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
     promptDividerRowId,
     promptEditorRowId,
     promptFolderEditorRowId
@@ -84,10 +86,12 @@
     PromptFolderScreenFolderEditorRow,
     PromptFolderScreenPlaceholderRow,
     PromptFolderScreenPromptEditorRow,
+    PromptFolderScreenRootHeaderRow,
     PromptFolderScreenRow
   } from './promptFolderScreenRows'
 
   type PromptFolderRow =
+    | PromptFolderScreenRootHeaderRow
     | (PromptFolderScreenFolderEditorRow & {
         isSettingsSectionExpanded: boolean
         isPromptsSectionExpanded: boolean
@@ -116,6 +120,7 @@
     promptFolders: PromptFolder[]
     activeScreenRows: PromptFolderScreenRow[]
     visiblePromptIds: string[]
+    activePromptCount: number
     completedPromptCount: number
     completedPromptOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
@@ -148,10 +153,10 @@
       measurement: TextMeasurement
     ) => void
     onRenamePromptFolder: () => void
+    onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
     onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
-    onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
@@ -170,6 +175,7 @@
     promptFolders,
     activeScreenRows,
     visiblePromptIds,
+    activePromptCount,
     completedPromptCount,
     completedPromptOwnerByPromptId,
     screenMode,
@@ -191,10 +197,10 @@
     onPromptFolderTreeDrop,
     onSettingsFieldChange,
     onRenamePromptFolder,
+    onScreenModeChange,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
     onScrollApiChange,
-    onViewportMetricsChange,
     onScrollTopChange,
     onCenterRowChange,
     onUserScroll,
@@ -206,7 +212,6 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
-  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
@@ -234,11 +239,6 @@
   // Side effect: expose the virtual window scroll API to the controller.
   $effect(() => {
     onScrollApiChange(scrollApi)
-  })
-
-  // Side effect: expose imperative virtual scroll APIs to the controller.
-  $effect(() => {
-    onViewportMetricsChange(viewportMetrics)
   })
 
   const getFolderSettings = (ownerFolderId: string): PromptFolderSettings =>
@@ -293,6 +293,11 @@
   }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
+    'root-header': {
+      estimateHeight: () => PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX,
+      centerRowEligible: true,
+      snippet: rootHeaderRow
+    },
     'folder-editor': {
       estimateHeight: (row) => {
         const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(row.isRoot)
@@ -374,6 +379,10 @@
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
     if (!isCompletedMode) {
       const activeRows = activeScreenRows.map((row): VirtualWindowItem<PromptFolderRow> => {
+        if (row.kind === 'root-header') {
+          return { id: PROMPT_FOLDER_ROOT_HEADER_ROW_ID, row }
+        }
+
         if (row.kind === 'folder-editor') {
           return {
             id: promptFolderEditorRowId(screenRootFolderId, row.ownerFolderId),
@@ -413,71 +422,59 @@
 
     const completedRows: VirtualWindowItem<PromptFolderRow>[] = [
       {
-        id: PROMPT_FOLDER_SETTINGS_ROW_ID,
-        row: {
-          kind: 'folder-editor',
-          ownerFolderId: screenRootFolderId,
-          indentLevel: 0,
-          isOwnerRoot: true,
-          isRoot: true,
-          isFirstSibling: true,
-          isLastSibling: true,
-          isSettingsSectionExpanded: false,
-          isPromptsSectionExpanded: true
-        }
+        id: PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
+        row: { kind: 'root-header' }
       }
     ]
 
-    if (promptsSectionExpandedByFolderId[screenRootFolderId] ?? true) {
-      if (visiblePromptIds.length === 0) {
+    if (visiblePromptIds.length === 0) {
+      completedRows.push({
+        id: 'placeholder-empty',
+        row: {
+          kind: 'placeholder',
+          ownerFolderId: screenRootFolderId,
+          indentLevel: 0,
+          isOwnerRoot: true
+        }
+      })
+    } else {
+      completedRows.push({
+        id: 'divider-initial',
+        row: {
+          kind: 'prompt-divider',
+          ownerFolderId: screenRootFolderId,
+          previousEntryId: null,
+          indentLevel: 0,
+          isOwnerRoot: true
+        }
+      })
+
+      visiblePromptIds.forEach((promptId, promptIndex) => {
+        const ownerFolderId =
+          completedPromptOwnerByPromptId[promptId] ?? screenRootFolderId
         completedRows.push({
-          id: 'placeholder-empty',
+          id: promptEditorRowId(promptId),
           row: {
-            kind: 'placeholder',
-            ownerFolderId: screenRootFolderId,
-            indentLevel: 1,
-            isOwnerRoot: true
+            kind: 'prompt-editor',
+            ownerFolderId,
+            promptId,
+            indentLevel: 0,
+            isOwnerRoot: ownerFolderId === screenRootFolderId,
+            isFirstPrompt: promptIndex === 0,
+            isLastPrompt: promptIndex === visiblePromptIds.length - 1
           }
         })
-      } else {
         completedRows.push({
-          id: 'divider-initial',
+          id: promptDividerRowId(promptId),
           row: {
             kind: 'prompt-divider',
             ownerFolderId: screenRootFolderId,
-            previousEntryId: null,
-            indentLevel: 1,
+            previousEntryId: promptId,
+            indentLevel: 0,
             isOwnerRoot: true
           }
         })
-
-        visiblePromptIds.forEach((promptId, promptIndex) => {
-          const ownerFolderId =
-            completedPromptOwnerByPromptId[promptId] ?? screenRootFolderId
-          completedRows.push({
-            id: promptEditorRowId(promptId),
-            row: {
-              kind: 'prompt-editor',
-              ownerFolderId,
-              promptId,
-              indentLevel: 1,
-              isOwnerRoot: ownerFolderId === screenRootFolderId,
-              isFirstPrompt: promptIndex === 0,
-              isLastPrompt: promptIndex === visiblePromptIds.length - 1
-            }
-          })
-          completedRows.push({
-            id: promptDividerRowId(promptId),
-            row: {
-              kind: 'prompt-divider',
-              ownerFolderId: screenRootFolderId,
-              previousEntryId: promptId,
-              indentLevel: 1,
-              isOwnerRoot: true
-            }
-          })
-        })
-      }
+      })
     }
 
     completedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
@@ -485,6 +482,10 @@
   })
 
   const handleCenterRowChange = (row: PromptFolderRow | null) => {
+    if (row?.kind === 'root-header') {
+      onCenterRowChange({ kind: 'root-header', rowOwnerFolderId: screenRootFolderId })
+      return
+    }
     if (row?.kind === 'prompt-editor') {
       onCenterRowChange({
         kind: 'prompt',
@@ -702,7 +703,6 @@
   bind:scrollToWithinWindowBand
   bind:scrollToAndTrackRowCentered
   bind:scrollApi
-  bind:viewportMetrics
   {onScrollTopChange}
   onCenterRowChange={(row) => {
     handleCenterRowChange(row)
@@ -711,6 +711,20 @@
     onUserScroll()
   }}
 />
+
+{#snippet rootHeaderRow()}
+  <PromptFolderRootHeaderRow
+    folderDisplayName={promptFolderById[screenRootFolderId]?.displayName ?? 'Prompt Folder'}
+    {activePromptCount}
+    {completedPromptCount}
+    {screenMode}
+    {isCreatingPrompt}
+    onAddPrompt={() =>
+      onAddPrompt({ ownerFolderId: screenRootFolderId, previousEntryId: null })}
+    {onRenamePromptFolder}
+    {onScreenModeChange}
+  />
+{/snippet}
 
 {#snippet folderEditorRow(props)}
   {@const ownerFolderId = props.row.ownerFolderId}

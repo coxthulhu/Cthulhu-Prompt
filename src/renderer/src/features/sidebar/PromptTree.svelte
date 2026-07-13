@@ -321,7 +321,11 @@
       return []
     }
 
-    return collectPromptFolderTreeIds(screenRootFolder)
+    return screenRootFolder.entries.flatMap((entry) => {
+      if (entry.kind !== 'folder') return []
+      const childFolder = promptFolderById[entry.id]
+      return childFolder ? collectPromptFolderTreeIds(childFolder) : []
+    })
   })
 
   const findPromptFolderPath = (
@@ -555,7 +559,9 @@
     }
 
     return trackedNavigationRow === 'folder-settings'
-      ? folderRootRowId(promptNavigation.rowOwnerFolderId)
+      ? promptNavigation.rowOwnerFolderId === screenRootFolder.id
+        ? null
+        : folderRootRowId(promptNavigation.rowOwnerFolderId)
       : folderPromptRowId(
           promptNavigation.rowOwnerFolderId,
           trackedNavigationRow.slice('prompt:'.length)
@@ -749,48 +755,62 @@
       }
 
       if (isCompletedMode) {
-        items.push({
-          id: folderRootRowId(screenRootFolder.id),
-          row: {
-            kind: 'folder',
-            folder: screenRootFolder,
-            parentFolder: null,
-            indentCount: 0,
-            isLastRow: true,
-            isSubfolder: false
-          }
-        })
-
-        if (getPromptTreeFolderExpandedState(screenRootFolder.id)) {
-          if (selectedCompletedPrompts.length === 0) {
+        if (selectedCompletedPrompts.length === 0) {
+          items.push({
+            id: `${screenRootFolder.id}:empty-state`,
+            row: {
+              kind: 'empty-state'
+            }
+          })
+        } else {
+          for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
+            const ownerFolder = promptFolderById[completedPrompt.ownerFolderId]
+            if (!ownerFolder) continue
             items.push({
-              id: `${screenRootFolder.id}:empty-state`,
+              id: folderPromptRowId(ownerFolder.id, completedPrompt.promptId),
               row: {
-                kind: 'empty-state'
+                kind: 'folder-prompt',
+                folder: ownerFolder,
+                promptId: completedPrompt.promptId,
+                indentCount: 0,
+                isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
+                isNestedPrompt: ownerFolder.id !== screenRootFolder.id
               }
             })
-          } else {
-            for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
-              const ownerFolder = promptFolderById[completedPrompt.ownerFolderId]
-              if (!ownerFolder) continue
-              items.push({
-                id: folderPromptRowId(ownerFolder.id, completedPrompt.promptId),
-                row: {
-                  kind: 'folder-prompt',
-                  folder: ownerFolder,
-                  promptId: completedPrompt.promptId,
-                  indentCount: 1,
-                  isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
-                  isNestedPrompt: ownerFolder.id !== screenRootFolder.id
-                }
-              })
-            }
           }
         }
       } else {
-        addPromptFolderRows(screenRootFolder, null, 0, true)
+        const rootEntries = screenRootFolder.entries.filter(
+          (entry) =>
+            entry.kind === 'folder'
+              ? Boolean(promptFolderById[entry.id])
+              : Boolean(promptById[entry.id]) &&
+                promptById[entry.id]?.status !== PromptStatus.Completed
+        )
 
-        if (getPromptTreeFolderExpandedState(screenRootFolder.id) && items.length === 1) {
+        for (const [entryIndex, entry] of rootEntries.entries()) {
+          const isLastChild = entryIndex === rootEntries.length - 1
+          const childFolder = entry.kind === 'folder' ? promptFolderById[entry.id] : null
+
+          if (childFolder) {
+            addPromptFolderRows(childFolder, screenRootFolder, 0, isLastChild)
+            continue
+          }
+
+          items.push({
+            id: folderPromptRowId(screenRootFolder.id, entry.id),
+            row: {
+              kind: 'folder-prompt',
+              folder: screenRootFolder,
+              promptId: entry.id,
+              indentCount: 0,
+              isLastRow: isLastChild,
+              isNestedPrompt: false
+            }
+          })
+        }
+
+        if (items.length === 0) {
           items.push({
             id: `${screenRootFolder.id}:empty-state`,
             row: {
@@ -976,7 +996,7 @@
   {#if getPromptTreeDropTargetEdge(rowId)}
     <DropIndicator
       testId={promptTreeBottomSpacerDropIndicatorTestId}
-      insetStart={getPromptTreeDropIndicatorInset(1)}
+      insetStart={getPromptTreeDropIndicatorInset(0)}
       edge="top"
     />
   {/if}

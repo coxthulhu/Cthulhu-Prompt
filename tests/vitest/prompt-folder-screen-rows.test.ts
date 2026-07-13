@@ -60,26 +60,20 @@ describe('buildPromptFolderScreenRows', () => {
 
     expect(rows).toEqual([
       {
-        kind: 'folder-editor',
-        ownerFolderId: 'folder-root',
-        indentLevel: 0,
-        isOwnerRoot: true,
-        isRoot: true,
-        isFirstSibling: true,
-        isLastSibling: true
+        kind: 'root-header'
       },
       {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-root',
         previousEntryId: null,
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: true
       },
       {
         kind: 'prompt-editor',
         ownerFolderId: 'folder-root',
         promptId: 'prompt-first',
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: true,
         isFirstPrompt: true,
         isLastPrompt: false
@@ -88,13 +82,13 @@ describe('buildPromptFolderScreenRows', () => {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-root',
         previousEntryId: 'prompt-first',
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: true
       },
       {
         kind: 'folder-editor',
         ownerFolderId: 'folder-child',
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: false,
         isRoot: false,
         isFirstSibling: false,
@@ -104,14 +98,14 @@ describe('buildPromptFolderScreenRows', () => {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-child',
         previousEntryId: null,
-        indentLevel: 2,
+        indentLevel: 1,
         isOwnerRoot: false
       },
       {
         kind: 'prompt-editor',
         ownerFolderId: 'folder-child',
         promptId: 'prompt-child',
-        indentLevel: 2,
+        indentLevel: 1,
         isOwnerRoot: false,
         isFirstPrompt: true,
         isLastPrompt: true
@@ -120,21 +114,21 @@ describe('buildPromptFolderScreenRows', () => {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-child',
         previousEntryId: 'prompt-child',
-        indentLevel: 2,
+        indentLevel: 1,
         isOwnerRoot: false
       },
       {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-root',
         previousEntryId: 'folder-child',
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: true
       },
       {
         kind: 'prompt-editor',
         ownerFolderId: 'folder-root',
         promptId: 'prompt-last',
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: true,
         isFirstPrompt: false,
         isLastPrompt: true
@@ -143,7 +137,7 @@ describe('buildPromptFolderScreenRows', () => {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-root',
         previousEntryId: 'prompt-last',
-        indentLevel: 1,
+        indentLevel: 0,
         isOwnerRoot: true
       }
     ])
@@ -153,14 +147,14 @@ describe('buildPromptFolderScreenRows', () => {
     const rows = buildRows({ rootFolder: createFolder('folder-root') })
 
     expect(rows.map((row) => row.kind)).toEqual([
-      'folder-editor',
+      'root-header',
       'prompt-divider',
       'placeholder'
     ])
     expect(rows[1]).toMatchObject({
       ownerFolderId: 'folder-root',
       previousEntryId: null,
-      indentLevel: 1,
+      indentLevel: 0,
       isOwnerRoot: true
     })
   })
@@ -177,7 +171,7 @@ describe('buildPromptFolderScreenRows', () => {
       kind: 'prompt-divider',
       ownerFolderId: 'folder-child',
       previousEntryId: null,
-      indentLevel: 2,
+      indentLevel: 1,
       isOwnerRoot: false
     })
   })
@@ -220,13 +214,13 @@ describe('buildPromptFolderScreenRows', () => {
     })
 
     const folderRows = rows.filter((row) => row.kind === 'folder-editor')
-    expect(folderRows).toHaveLength(9)
-    expect(folderRows.map((row) => row.indentLevel)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    expect(folderRows).toHaveLength(8)
+    expect(folderRows.map((row) => row.indentLevel)).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
     expect(rows).toContainEqual({
       kind: 'prompt-editor',
       ownerFolderId: 'folder-8',
       promptId: 'prompt-deepest',
-      indentLevel: 9,
+      indentLevel: 8,
       isOwnerRoot: false,
       isFirstPrompt: true,
       isLastPrompt: true
@@ -243,7 +237,7 @@ describe('buildPromptFolderScreenRows', () => {
     })
 
     expect(rows.map((row) => row.kind)).toEqual([
-      'folder-editor',
+      'root-header',
       'prompt-divider',
       'folder-editor',
       'prompt-divider'
@@ -258,8 +252,25 @@ describe('buildPromptFolderScreenRows', () => {
       kind: 'prompt-divider',
       ownerFolderId: 'folder-root',
       previousEntryId: 'folder-child',
-      indentLevel: 1,
+      indentLevel: 0,
       isOwnerRoot: true
     })
+  })
+
+  it('always emits root contents when the persisted root state is collapsed', () => {
+    const rows = buildRows({
+      rootFolder: createFolder('folder-root', ['prompt-root']),
+      promptIds: ['prompt-root'],
+      collapsedFolderIds: ['folder-root']
+    })
+
+    expect(rows).toContainEqual(
+      expect.objectContaining({
+        kind: 'prompt-editor',
+        ownerFolderId: 'folder-root',
+        promptId: 'prompt-root',
+        indentLevel: 0
+      })
+    )
   })
 })

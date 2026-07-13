@@ -228,7 +228,7 @@ const buildMoveScrollWorkspace = () => {
       folderName: MOVE_SCROLL_FOLDER_NAME,
       displayName: MOVE_SCROLL_FOLDER_NAME,
       prompts: [
-        { ...shortPrompt, id: BOUNDARY_1_ID, title: 'Boundary One' },
+        { ...tallPrompt, id: BOUNDARY_1_ID, title: 'Boundary One' },
         { ...shortPrompt, id: BOUNDARY_2_ID, title: 'Boundary Two' },
         { ...tallPrompt, id: MOVE_ANCHOR_1_ID, title: 'Move Anchor One' },
         { ...tallPrompt, id: MOVE_ANCHOR_2_ID, title: 'Move Anchor Two' },
@@ -513,6 +513,35 @@ describe('Prompt folder prompt management', () => {
       .toBe(true)
   })
 
+  test('adds a prompt from the root page title button', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
+    const initialIds = await getPromptEditorIds(mainWindow)
+    const activeFilter = mainWindow.locator('[data-testid="prompt-folder-active-filter"]')
+    await expect(activeFilter.locator('span')).toHaveText(String(initialIds.length))
+
+    await mainWindow.locator('[data-testid="prompt-folder-new-prompt-button"]').click()
+    await waitForPromptCount(mainWindow, initialIds.length + 1)
+
+    const idsAfterAdd = await getPromptEditorIds(mainWindow)
+    const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
+    expect(newPromptId).toBeTruthy()
+    expect(idsAfterAdd).toEqual([newPromptId, ...initialIds])
+    await expect(activeFilter.locator('span')).toHaveText(String(initialIds.length + 1))
+
+    const newEditorSelector = promptEditorSelector(newPromptId!)
+    await waitForMonacoEditor(mainWindow, newEditorSelector)
+    await expect(mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`))
+      .toHaveAttribute('aria-current', 'true')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
+      .toBe(true)
+  })
+
   test('adds a prompt from a divider with minimal scroll and focuses it', async ({
     testSetup
   }) => {
@@ -713,10 +742,6 @@ describe('Prompt folder prompt management', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptFolders(MOVE_SCROLL_FOLDER_NAME)
-    await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
-    await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
-    ).toHaveCount(3)
     await scrollPromptEditorIntoView(mainWindow, testHelpers, BOUNDARY_2_ID)
 
     await mainWindow.locator(moveUpSelector(BOUNDARY_2_ID)).click()
@@ -732,7 +757,6 @@ describe('Prompt folder prompt management', () => {
       moveAnchorUpSelector,
       120
     )
-
     const moveUpTopBefore = await getElementTop(mainWindow, moveAnchorUpSelector)
     await mainWindow.locator(moveAnchorUpSelector).click()
 
@@ -1304,14 +1328,23 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
       'Todo'
     )
-    const activeFolderTitle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
-    await expect(activeFolderTitle).toContainText('1 prompt')
-    await expect(activeFolderTitle).toContainText('2 completed prompts')
+    const rootHeader = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
+    await expect(rootHeader).toContainText('Completed Mode')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] span')).toHaveText('1')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')).toHaveText('2')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
 
-    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+    await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-CompletedMode"]')
-    ).toBeVisible()
+    ).toHaveCount(0)
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-newest', 'completed-mode-oldest'])
@@ -1323,14 +1356,14 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Completed Prompts'
     )
-    const completedFolderTitle = mainWindow.locator(
-      '[data-testid="prompt-folder-editor-title-toggle"]'
-    )
+    const completedFolderTitle = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
     await expect(completedFolderTitle).toBeVisible()
-    await expect(completedFolderTitle).toHaveAttribute('aria-expanded', 'true')
     await expect(completedFolderTitle).toContainText('Completed Mode')
-    await expect(completedFolderTitle).toContainText('2 prompts')
-    await expect(completedFolderTitle).toContainText('2 completed prompts')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')).toHaveText('2')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
     const completedFolderTitleBox = await completedFolderTitle.boundingBox()
     const newestCompletedPromptBox = await mainWindow
       .locator(promptEditorSelector('completed-mode-newest'))
@@ -1340,9 +1373,8 @@ describe('Prompt folder prompt management', () => {
     expect(completedFolderTitleBox!.y + completedFolderTitleBox!.height).toBeLessThanOrEqual(
       newestCompletedPromptBox!.y + MOVE_BUTTON_POSITION_TOLERANCE_PX
     )
-    await expect(mainWindow.locator('[data-testid="prompt-folder-editor-title-edit"]')).toHaveCount(
-      0
-    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-new-prompt-button"]')).toBeDisabled()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
     ).toHaveCount(0)
@@ -1378,8 +1410,14 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-oldest'])
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] span')).toHaveText('2')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')).toHaveText('1')
 
-    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
+    await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveAttribute(
+      'data-active',
+      'false'
+    )
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-newest', 'completed-mode-active'])
@@ -1432,22 +1470,22 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toBeDisabled()
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-NoCompleted"]')
-    ).toBeVisible()
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
     await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toHaveText(
       'No completed prompts found in this folder'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toContainText(
       'No completed prompts found in this folder'
     )
-    const emptyCompletedFolderTitle = mainWindow.locator(
-      '[data-testid="prompt-folder-editor-title-toggle"]'
-    )
+    const emptyCompletedFolderTitle = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
     await expect(emptyCompletedFolderTitle).toBeVisible()
     await expect(emptyCompletedFolderTitle).toContainText('No Completed')
-    await expect(emptyCompletedFolderTitle).toContainText('0 prompts')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-editor-title-edit"]')).toHaveCount(
-      0
-    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')).toHaveText('0')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
     ).toHaveCount(0)

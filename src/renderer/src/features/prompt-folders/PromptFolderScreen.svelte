@@ -16,10 +16,12 @@
   let {
     screenRootFolderId,
     screenMode = PromptFolderScreenMode.Active,
+    onScreenModeChange,
     onScreenRootFolderSelect
   } = $props<{
     screenRootFolderId: string
     screenMode?: PromptFolderScreenMode
+    onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
@@ -94,7 +96,7 @@
               type="button"
               data-testid="prompt-folder-header-section"
               class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors"
-              onclick={() => controller.handleHeaderSegmentClick(controller.activeHeaderRowId)}
+              onclick={controller.handleHeaderSegmentClick}
             >
               {controller.activeHeaderSection}
             </button>
@@ -130,6 +132,7 @@
             promptFolders={controller.promptFolders}
             activeScreenRows={controller.activePromptFolderScreenRows}
             visiblePromptIds={controller.visiblePromptIds}
+            activePromptCount={controller.activePromptCount}
             completedPromptCount={controller.completedPromptCount}
             completedPromptOwnerByPromptId={controller.completedPromptOwnerByPromptId}
             {screenMode}
@@ -153,7 +156,6 @@
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
             onScrollApiChange={controller.setScrollApi}
-            onViewportMetricsChange={controller.setViewportMetrics}
             onScrollTopChange={controller.handleVirtualScrollTopChange}
             onCenterRowChange={controller.handleVirtualCenterRowChange}
             onUserScroll={controller.handleVirtualUserScroll}
@@ -161,6 +163,7 @@
             onSettingsSectionToggle={controller.toggleSettingsSectionExpanded}
             onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}
+            {onScreenModeChange}
           />
         {/if}
       </div>

@@ -18,8 +18,6 @@ const FIND_INPUT = '[data-testid="prompt-find-input"]'
 const FIND_BUTTON = '[data-testid="prompt-folder-find-button"]'
 const FIND_CLOSE = '[data-testid="prompt-find-close"]'
 const FIND_MATCHES_LABEL = '[data-testid="prompt-find-widget"] .prompt-find-widget__matches'
-const SETTINGS_ROW_SELECTOR =
-  '[data-testid="prompt-folder-screen"] [data-virtual-window-row][data-testid^="prompt-folder-editor-"]'
 const LOOP_REGRESSION_QUERY = 'cthulhu-loop-regression-marker-9x4k'
 const LOOP_MATCH_PROMPT_IDS = Array.from(
   { length: 19 },
@@ -321,27 +319,22 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveCount(0)
   })
 
-  test('expands collapsed prompts section when revealing a prompt match', async ({ testSetup }) => {
+  test('reveals a root prompt match without a root settings row', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(promptEditorSelector('dev-1'), { state: 'attached' })
-
-    const promptsToggle = mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
-    await promptsToggle.click()
-    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).toHaveCount(0)
 
     await mainWindow.locator(FIND_BUTTON).click()
     await mainWindow.locator(FIND_INPUT).fill('best practices')
 
-    await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toBeVisible()
   })
 
-  test('includes folder prefix and suffix in matches', async ({ testSetup }) => {
+  test('excludes root folder prefix and suffix from matches', async ({ testSetup }) => {
     const workspacePath = '/ws/find-prefix-suffix'
     await testSetup.setupFilesystem(
       createWorkspaceWithFolders(workspacePath, [
@@ -372,24 +365,14 @@ describe('Prompt folder find dialog', () => {
 
     await testHelpers.navigateToPromptFolders('Prefix Suffix Find')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
-    ).toHaveAttribute('aria-pressed', 'false')
-    await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
-    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
 
     await mainWindow.keyboard.press('Control+F')
     await expect(mainWindow.locator(FIND_INPUT)).toBeVisible()
     await mainWindow.locator(FIND_INPUT).fill(PREFIX_SUFFIX_FIND_QUERY)
 
-    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('1 of 2')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
-    ).toHaveAttribute('aria-pressed', 'true')
-    await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
-    ).toHaveCount(3)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('No results')
+    await expect(mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')).toHaveCount(0)
   })
 
   test('reopens with previous query and selection', async ({ testSetup }) => {
@@ -1068,7 +1051,7 @@ describe('Prompt folder find dialog', () => {
       .toBe(true)
   })
 
-  test('cycles correctly across 20 matches including two-digit counters', async ({ testSetup }) => {
+  test('cycles correctly across prompt matches including two-digit counters', async ({ testSetup }) => {
     test.setTimeout(180000)
     const workspacePath = '/ws/virtual-find-loop'
     await testSetup.setupFilesystem(buildVirtualFindLoopWorkspace(workspacePath))
@@ -1087,24 +1070,14 @@ describe('Prompt folder find dialog', () => {
     })
     const promptIds = LOOP_MATCH_PROMPT_IDS
 
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
-    await mainWindow.waitForSelector(SETTINGS_ROW_SELECTOR, { state: 'attached' })
-    const settingsRowTestId = await mainWindow.evaluate((selector) => {
-      return document.querySelector<HTMLElement>(selector)?.getAttribute('data-testid') ?? null
-    }, SETTINGS_ROW_SELECTOR)
-    expect(settingsRowTestId).not.toBeNull()
-
     const findInput = mainWindow.locator(FIND_INPUT)
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
     await findInput.fill(LOOP_REGRESSION_QUERY)
 
-    const expectedRowIdsByStep = [
-      settingsRowTestId!,
-      ...promptIds.map((promptId) => `prompt-editor-${promptId}`)
-    ]
+    const expectedRowIdsByStep = promptIds.map((promptId) => `prompt-editor-${promptId}`)
     const totalMatches = expectedRowIdsByStep.length
-    expect(totalMatches).toBe(20)
+    expect(totalMatches).toBe(19)
     await expect
       .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
       .toBe(`1 of ${totalMatches}`)
@@ -1153,7 +1126,7 @@ describe('Prompt folder find dialog', () => {
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
     await findInput.fill(RAPID_LOOP_QUERY)
-    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('1 of 12')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('1 of 11')
 
     await mainWindow.evaluate((selector) => {
       const label = document.querySelector<HTMLElement>(selector)
@@ -1238,7 +1211,7 @@ describe('Prompt folder find dialog', () => {
       captureWindow.__promptFindLabelObserver?.disconnect()
     })
 
-    expect(labelEvents[0]).toEqual({ current: 1, total: 12 })
+    expect(labelEvents[0]).toEqual({ current: 1, total: 11 })
     for (let index = 1; index < labelEvents.length; index += 1) {
       const previous = labelEvents[index - 1]
       const next = labelEvents[index]

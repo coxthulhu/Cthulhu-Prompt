@@ -5,6 +5,7 @@ import {
 } from '@shared/PromptFolder'
 
 export const PROMPT_FOLDER_SETTINGS_ROW_ID = 'folder-settings'
+export const PROMPT_FOLDER_ROOT_HEADER_ROW_ID = 'root-header'
 
 export const promptFolderEditorRowId = (
   screenRootFolderId: string,

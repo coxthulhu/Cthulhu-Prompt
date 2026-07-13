@@ -36,7 +36,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/subfolders-ui'
 const EMPTY_PLACEHOLDER_TEXT = 'No prompts found in this folder.'
-const ROOT_FOLDER_EDITOR_TOP_PADDING_PX = 12
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -102,7 +101,6 @@ const statusPillSelector = (promptId: string): string =>
 const statusMoreOptionsSelector = (promptId: string): string =>
   `[data-testid="prompt-editor-${promptId}"] [data-testid="prompt-status-more-options-button"]`
 const orderedRowTestIds = [
-  `prompt-folder-editor-${hierarchyFolderId}`,
   dividerTestId(hierarchyFolderId, null),
   'prompt-editor-subfolders-ui-root-before',
   dividerTestId(hierarchyFolderId, 'subfolders-ui-root-before'),
@@ -123,7 +121,6 @@ const orderedRowTestIds = [
   dividerTestId(hierarchyFolderId, 'subfolders-ui-root-after')
 ]
 const collapsedNestedRowTestIds = [
-  `prompt-folder-editor-${hierarchyFolderId}`,
   dividerTestId(hierarchyFolderId, null),
   'prompt-editor-subfolders-ui-root-before',
   dividerTestId(hierarchyFolderId, 'subfolders-ui-root-before'),
@@ -287,13 +284,15 @@ describe('Prompt folder subfolder rendering', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
 
     const orderedRowSelector = orderedRowTestIds.map(testIdSelector).join(', ')
-    await expect(mainWindow.locator(hierarchyFolderSelector)).toBeAttached()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toContainText(
+      'Hierarchy'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] span')).toHaveText(
+      '4'
+    )
     await expect(
-      mainWindow.locator(hierarchyFolderSelector).locator(folderTitleToggleSelector)
-    ).toContainText('2 prompts')
-    await expect(
-      mainWindow.locator(hierarchyFolderSelector).locator(folderTitleToggleSelector)
-    ).toContainText('3 completed prompts')
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
+    ).toHaveText('3')
 
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
     await expect(
@@ -336,7 +335,6 @@ describe('Prompt folder subfolder rendering', () => {
     ).toContainText('Empty Nested')
 
     await revealVirtualRow(mainWindow, testHelpers, rootBeforeSelector)
-    const hierarchyFolderBox = await mainWindow.locator(hierarchyFolderSelector).boundingBox()
     const rootBeforeBox = await mainWindow.locator(rootBeforeSelector).boundingBox()
     const nestedFolderBox = await mainWindow.locator(nestedFolderSelector).boundingBox()
 
@@ -346,7 +344,6 @@ describe('Prompt folder subfolder rendering', () => {
     const grandchildPromptBox = await mainWindow.locator(grandchildPromptSelector).boundingBox()
 
     if (
-      !hierarchyFolderBox ||
       !rootBeforeBox ||
       !nestedFolderBox ||
       !nestedPromptBox ||
@@ -356,11 +353,6 @@ describe('Prompt folder subfolder rendering', () => {
       throw new Error('Missing prompt folder hierarchy row geometry')
     }
 
-    expect(
-      Math.abs(
-        rootBeforeBox.x - hierarchyFolderBox.x - PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX
-      )
-    ).toBeLessThanOrEqual(1)
     expect(Math.abs(nestedFolderBox.x - rootBeforeBox.x)).toBeLessThanOrEqual(1)
     expect(
       Math.abs(
@@ -466,11 +458,6 @@ describe('Prompt folder subfolder rendering', () => {
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
 
-    const rootSettingsToggle = mainWindow
-      .locator(hierarchyFolderSelector)
-      .locator(folderSettingsToggleSelector)
-    await expect(rootSettingsToggle).toHaveAttribute('aria-pressed', 'false')
-
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
     const nestedFolder = mainWindow.locator(nestedFolderSelector)
     const nestedSettingsToggle = nestedFolder.locator(folderSettingsToggleSelector)
@@ -485,12 +472,6 @@ describe('Prompt folder subfolder rendering', () => {
     await expect
       .poll(async () => getMonacoEditorText(mainWindow, nestedDescriptionSelector))
       .toContain('Nested folder description.')
-
-    await revealVirtualRow(mainWindow, testHelpers, hierarchyFolderSelector)
-    await expect(rootSettingsToggle).toHaveAttribute('aria-pressed', 'false')
-    await expect(
-      mainWindow.locator(hierarchyFolderSelector).locator(folderDescriptionSectionSelector)
-    ).toHaveCount(0)
 
     await revealVirtualRow(mainWindow, testHelpers, grandchildFolderSelector)
     await testHelpers.scrollVirtualElementIntoView(
@@ -535,7 +516,7 @@ describe('Prompt folder subfolder rendering', () => {
       .toContain(marker)
   })
 
-  test('keeps top padding only on the root folder editor row', async ({ testSetup }) => {
+  test('keeps subfolder editor cards flush with their virtual rows', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-ui' }
     })
@@ -556,26 +537,15 @@ describe('Prompt folder subfolder rendering', () => {
         }
       })
 
-    const rootGeometry = await readEditorGeometry(hierarchyFolderSelector)
-    if (!rootGeometry) throw new Error('Missing root folder editor geometry')
-
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
     const nestedGeometry = await readEditorGeometry(nestedFolderSelector)
     if (!nestedGeometry) throw new Error('Missing nested folder editor geometry')
 
-    expect(
-      Math.abs(
-        rootGeometry.cardTopOffsetPx - ROOT_FOLDER_EDITOR_TOP_PADDING_PX
-      )
-    ).toBeLessThanOrEqual(1)
-    expect(
-      Math.abs(rootGeometry.heightDifferencePx - ROOT_FOLDER_EDITOR_TOP_PADDING_PX)
-    ).toBeLessThanOrEqual(1)
     expect(Math.abs(nestedGeometry.cardTopOffsetPx)).toBeLessThanOrEqual(1)
     expect(Math.abs(nestedGeometry.heightDifferencePx)).toBeLessThanOrEqual(1)
   })
 
-  test('keeps root prompt expansion behavior unchanged', async ({ testSetup }) => {
+  test('always renders root contents without a root editor row', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-ui' }
     })
@@ -585,28 +555,13 @@ describe('Prompt folder subfolder rendering', () => {
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
 
-    const rootFolderToggle = mainWindow
-      .locator(hierarchyFolderSelector)
-      .locator(folderTitleToggleSelector)
-    await expect(rootFolderToggle).toHaveAttribute('aria-expanded', 'true')
-    await rootFolderToggle.click()
-    await expect(rootFolderToggle).toHaveAttribute('aria-expanded', 'false')
-
-    const rowOrderAfterCollapse = await collectVirtualRowTestIds(
+    await expect(mainWindow.locator(hierarchyFolderSelector)).toHaveCount(0)
+    const rowOrder = await collectVirtualRowTestIds(
       mainWindow,
       testHelpers,
       orderedRowTestIds.map(testIdSelector).join(', ')
     )
-    expect(rowOrderAfterCollapse).toEqual([`prompt-folder-editor-${hierarchyFolderId}`])
-
-    await rootFolderToggle.click()
-    await expect(rootFolderToggle).toHaveAttribute('aria-expanded', 'true')
-    const rowOrderAfterExpand = await collectVirtualRowTestIds(
-      mainWindow,
-      testHelpers,
-      orderedRowTestIds.map(testIdSelector).join(', ')
-    )
-    expect(rowOrderAfterExpand).toEqual(orderedRowTestIds)
+    expect(rowOrder).toEqual(orderedRowTestIds)
   })
 
   test('creates normalized subfolders at mixed entry divider positions', async ({
@@ -1341,9 +1296,9 @@ describe('Prompt folder subfolder rendering', () => {
       )
       .toEqual(completedPromptIds)
 
-    await expect(mainWindow.locator(hierarchyFolderSelector)).toContainText(
-      '3 completed prompts'
-    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
+    ).toHaveText('3')
     await expect(mainWindow.locator(nestedFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(grandchildFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)

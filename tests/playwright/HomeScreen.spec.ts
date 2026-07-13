@@ -49,14 +49,14 @@ describe('Home Screen', () => {
       testSetup
     }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-        workspace: { scenario: 'sample' }
+        workspace: { scenario: 'subfolders' }
       })
 
       expect(workspaceSetupResult.setupDialogAppeared).toBe(false)
       expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-      await testHelpers.assertWorkspaceReadyPath('/ws/sample')
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.assertWorkspaceReadyPath('/ws/subfolders')
+      await testHelpers.navigateToPromptFolders('Main')
       await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
       await expect(
         mainWindow.locator('[data-testid^="prompt-folder-settings-section-"] .monaco-editor')

@@ -526,31 +526,30 @@ describe('User Persistence', () => {
     electronApp,
     testSetup
   }) => {
-    const workspacePath = '/ws/sample'
+    const workspacePath = '/ws/subfolders'
     const workspaceId = createDeterministicId(workspacePath)
-    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const nestedPromptFolderId = createDeterministicId(`${workspacePath}:Main/Nested`)
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
+      workspace: { scenario: 'subfolders' }
     })
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptFolders('Main')
     const folderEditorToggle = mainWindow.locator(
-      '[data-testid="prompt-folder-editor-title-toggle"]'
+      `[data-testid="prompt-folder-editor-${nestedPromptFolderId}"] [data-testid="prompt-folder-editor-title-toggle"]`
     )
     await expect(folderEditorToggle).toHaveAttribute('aria-expanded', 'true')
 
     await folderEditorToggle.click()
     await expect(folderEditorToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-divider-add-initial"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-base-before"]')).toBeVisible()
 
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
           const entry = persisted.promptFolderPromptTreeEntries.find(
-            (promptTreeEntry) => promptTreeEntry.promptFolderId === developmentPromptFolderId
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === nestedPromptFolderId
           )
           const settingsExpanded = entry?.folderSettingsSectionIsExpanded ?? null
           const promptsExpanded = entry?.promptsSectionIsExpanded ?? null
@@ -565,17 +564,17 @@ describe('User Persistence', () => {
     electronApp,
     testSetup
   }) => {
-    const workspacePath = '/ws/sample'
+    const workspacePath = '/ws/subfolders'
     const workspaceId = createDeterministicId(workspacePath)
-    const developmentPromptFolderId = createDeterministicId(`${workspacePath}:Development`)
+    const nestedPromptFolderId = createDeterministicId(`${workspacePath}:Main/Nested`)
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
+      workspace: { scenario: 'subfolders' }
     })
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptFolders('Main')
 
     const settingsToggle = mainWindow.locator(
-      '[data-testid="prompt-folder-editor-settings-toggle"]'
+      `[data-testid="prompt-folder-editor-${nestedPromptFolderId}"] [data-testid="prompt-folder-editor-settings-toggle"]`
     )
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
 
@@ -587,7 +586,7 @@ describe('User Persistence', () => {
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
           const entry = persisted.promptFolderPromptTreeEntries.find(
-            (promptTreeEntry) => promptTreeEntry.promptFolderId === developmentPromptFolderId
+            (promptTreeEntry) => promptTreeEntry.promptFolderId === nestedPromptFolderId
           )
           return entry?.folderSettingsSectionIsExpanded ?? null
         },
@@ -602,20 +601,19 @@ describe('User Persistence', () => {
   }) => {
     const persistedWorkspacePath = '/ws/persisted-prompt-folder-sections'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
-    const developmentPromptFolderId = createDeterministicId(
-      `${persistedWorkspacePath}:Development`
-    )
-    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    const mainPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main`)
+    const nestedPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main/Nested`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'subfolders'))
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedScreenData: { promptFolderId: developmentPromptFolderId },
+      selectedScreenData: { promptFolderId: mainPromptFolderId },
       promptFolderPromptTreeEntries: [
         {
-          promptFolderId: developmentPromptFolderId,
+          promptFolderId: nestedPromptFolderId,
           promptTreeEntryId: 'folder-settings',
           folderSettingsSectionIsExpanded: false,
           promptsSectionIsExpanded: false
@@ -632,7 +630,8 @@ describe('User Persistence', () => {
       mainWindow.locator('[data-testid="prompt-folder-editor-title-toggle"]')
     ).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).not.toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid^="prompt-editor-"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-editor-base-before"]')).toBeVisible()
   })
 
   test('restores expanded prompt folder settings on startup', async ({
@@ -641,20 +640,19 @@ describe('User Persistence', () => {
   }) => {
     const persistedWorkspacePath = '/ws/persisted-prompt-folder-settings'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
-    const developmentPromptFolderId = createDeterministicId(
-      `${persistedWorkspacePath}:Development`
-    )
-    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    const mainPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main`)
+    const nestedPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main/Nested`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'subfolders'))
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspacePersistence(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
-      selectedScreenData: { promptFolderId: developmentPromptFolderId },
+      selectedScreenData: { promptFolderId: mainPromptFolderId },
       promptFolderPromptTreeEntries: [
         {
-          promptFolderId: developmentPromptFolderId,
+          promptFolderId: nestedPromptFolderId,
           promptTreeEntryId: 'folder-settings',
           folderSettingsSectionIsExpanded: true,
           promptsSectionIsExpanded: true

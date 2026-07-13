@@ -6,6 +6,10 @@ type PromptFolderScreenOwnedRow = {
   isOwnerRoot: boolean
 }
 
+export type PromptFolderScreenRootHeaderRow = {
+  kind: 'root-header'
+}
+
 export type PromptFolderScreenFolderEditorRow = PromptFolderScreenOwnedRow & {
   kind: 'folder-editor'
   isRoot: boolean
@@ -40,6 +44,7 @@ export type PromptFolderScreenPlaceholderRow = PromptFolderScreenOwnedRow & {
 }
 
 export type PromptFolderScreenRow =
+  | PromptFolderScreenRootHeaderRow
   | PromptFolderScreenFolderEditorRow
   | PromptFolderScreenPromptEditorRow
   | PromptFolderScreenDividerRow
@@ -58,7 +63,7 @@ export const buildPromptFolderScreenRows = ({
   promptIds,
   isFolderExpanded
 }: BuildPromptFolderScreenRowsOptions): PromptFolderScreenRow[] => {
-  const rows: PromptFolderScreenRow[] = []
+  const rows: PromptFolderScreenRow[] = [{ kind: 'root-header' }]
   const promptIdSet = new Set(promptIds)
   const folderById = new Map(
     [...descendantFolders, rootFolder].map((folder) => [folder.id, folder])
@@ -75,19 +80,21 @@ export const buildPromptFolderScreenRows = ({
     visitedFolderIds.add(folder.id)
 
     const isRoot = folder.id === rootFolder.id
-    rows.push({
-      kind: 'folder-editor',
-      ownerFolderId: folder.id,
-      indentLevel,
-      isOwnerRoot: isRoot,
-      isRoot,
-      isFirstSibling,
-      isLastSibling
-    })
+    if (!isRoot) {
+      rows.push({
+        kind: 'folder-editor',
+        ownerFolderId: folder.id,
+        indentLevel,
+        isOwnerRoot: false,
+        isRoot: false,
+        isFirstSibling,
+        isLastSibling
+      })
 
-    if (!isFolderExpanded(folder.id)) return
+      if (!isFolderExpanded(folder.id)) return
+    }
 
-    const childIndentLevel = indentLevel + 1
+    const childIndentLevel = isRoot ? 0 : indentLevel + 1
     const entries = folder.entries.filter((entry) =>
       entry.kind === 'folder' ? folderById.has(entry.id) : promptIdSet.has(entry.id)
     )

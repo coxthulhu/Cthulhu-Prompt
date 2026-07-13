@@ -610,6 +610,7 @@
                 <PromptFolderScreen
                   {screenRootFolderId}
                   screenMode={promptFolderScreenMode}
+                  onScreenModeChange={setPromptFolderMode}
                   onScreenRootFolderSelect={navigateToScreenRootFolder}
                 />
               {/key}

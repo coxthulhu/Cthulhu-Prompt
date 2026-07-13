@@ -24,6 +24,19 @@ const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 const LONG_FOLDER_NAME = 'Long'
 const BASELINE_EXPAND_DRAG_DISTANCE = -200
 const MIN_EXPECTED_WIDTH_DELTA_PX = 8
+const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+
+const createDeterministicId = (seed: string): string => {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000000000000000${suffix}`
+}
+
+const NESTED_FOLDER_EDITOR_SELECTOR =
+  `[data-testid="prompt-folder-editor-${createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)}"]`
 
 type PromptAnchorData = {
   rowId: string
@@ -225,23 +238,24 @@ const prepareUncappedSidebarBaseline = async (
 }
 
 describe('Prompt Folder Hydration', () => {
-  test('shows folder settings editors when the settings gear is toggled on', async ({
+  test('shows subfolder settings editors when the settings gear is toggled on', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
+      workspace: { scenario: 'subfolders' }
     })
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(
-      `${HOST_SELECTOR} [data-testid^="prompt-folder-editor-"][data-virtual-window-row]`,
+      `${HOST_SELECTOR} ${NESTED_FOLDER_EDITOR_SELECTOR}[data-virtual-window-row]`,
       { state: 'attached' }
     )
 
-    const settingsToggle = mainWindow.locator(
+    const nestedFolderEditor = mainWindow.locator(NESTED_FOLDER_EDITOR_SELECTOR)
+    const settingsToggle = nestedFolderEditor.locator(
       '[data-testid="prompt-folder-editor-settings-toggle"]'
     )
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
@@ -302,15 +316,15 @@ describe('Prompt Folder Hydration', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
+      workspace: { scenario: 'subfolders' }
     })
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(
-      `${HOST_SELECTOR} [data-testid^="prompt-folder-editor-"][data-virtual-window-row]`,
+      `${HOST_SELECTOR} ${NESTED_FOLDER_EDITOR_SELECTOR}[data-virtual-window-row]`,
       { state: 'attached' }
     )
 

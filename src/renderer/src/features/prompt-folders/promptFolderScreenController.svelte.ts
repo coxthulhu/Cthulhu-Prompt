@@ -3,12 +3,10 @@ import { SvelteSet } from 'svelte/reactivity'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type Prompt, PromptStatus } from '@shared/Prompt'
 import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
   type PromptFolder,
-  type PromptFolderSettings,
-  type PromptFolderSettingsField
+  type PromptFolderSettings
 } from '@shared/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
@@ -39,7 +37,6 @@ import {
 } from '@renderer/data/Mutations/PromptMutations'
 import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
 import {
-  lookupPromptFolderSettingsRowMeasuredHeight,
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
@@ -59,27 +56,18 @@ import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/l
 import type {
   ScrollToAndTrackRowCentered,
   ScrollToWithinWindowBand,
-  VirtualWindowScrollApi,
-  VirtualWindowViewportMetrics
+  VirtualWindowScrollApi
 } from '../virtualizer/virtualWindowTypes'
 import {
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-  PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS,
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
 } from './find/promptFolderFindSectionKeys'
 import type { PromptFolderFindItem, PromptFolderFindMatch } from './find/promptFolderFindTypes'
 import {
-  PROMPT_FOLDER_SETTINGS_ROW_ID,
-  isPromptFolderSettingsFindEntityId,
+  PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
   promptEditorRowId,
-  promptFolderEditorRowId,
-  promptFolderSettingsFindEntityId
+  promptFolderEditorRowId
 } from './promptFolderRowIds'
-import {
-  estimatePromptFolderSettingsFieldRowHeight,
-  getPromptFolderEditorCollapsedCardRowHeightPx,
-  getPromptFolderEditorCardRowHeightPx
-} from './promptFolderSettingsSizing'
 import {
   resolvePromptHandleDropMove,
   type PromptFolderEntryDragPayload,
@@ -93,11 +81,13 @@ import {
   buildPromptFolderScreenRows,
   type PromptFolderDividerTarget,
   type PromptFolderPromptTarget,
+  type PromptFolderScreenPromptEditorRow,
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
 import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
 
 export type ActivePromptTreeRow =
+  | { kind: 'root-header'; rowOwnerFolderId: string }
   | { kind: 'folder-settings'; rowOwnerFolderId: string }
   | { kind: 'prompt'; rowOwnerFolderId: string; promptId: string }
 export type PromptFocusRequest = { promptId: string; requestId: number }
@@ -255,9 +245,6 @@ export const createPromptFolderScreenController = ({
   const folderSettings = $derived(
     folderSettingsByFolderId[screenRootFolderId] ?? emptyFolderSettings
   )
-  const folderSettingsTextByField = $derived.by<Record<PromptFolderSettingsField, string>>(
-    () => folderSettings
-  )
   const folderDisplayName = $derived(screenRootFolder?.displayName ?? 'Prompt Folder')
 
   let previousPromptFolderLoadKey = $state<string | null>(null)
@@ -277,7 +264,6 @@ export const createPromptFolderScreenController = ({
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
-  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const getRestoredPromptFolderScrollTop = (): number =>
     isCompletedMode ? 0 : (lookupPromptFolderScrollTop(screenRootFolderId) ?? 0)
 
@@ -376,7 +362,8 @@ export const createPromptFolderScreenController = ({
         prompt && prompt.status !== PromptStatus.Completed ? [prompt.id] : []
       ),
       isFolderExpanded: (folderId) =>
-        promptsSectionExpandedByFolderId[folderId] ?? true
+        folderId === screenRootFolderId ||
+        (promptsSectionExpandedByFolderId[folderId] ?? true)
     })
   })
   const activeScreenPromptIds = $derived.by(() =>
@@ -399,6 +386,7 @@ export const createPromptFolderScreenController = ({
       isFolderExpanded: () => true
     }).flatMap((row) => (row.kind === 'prompt-editor' ? [row.promptId] : []))
   })
+  const activePromptCount = $derived(allActiveScreenPromptIds.length)
   const screenPromptIds = $derived(
     isCompletedMode ? orderedCompletedPromptIds : rootPromptIds
   )
@@ -460,20 +448,6 @@ export const createPromptFolderScreenController = ({
 
   const findItems = $derived.by((): PromptFolderFindItem[] => {
     const nextItems: PromptFolderFindItem[] = []
-    if (!errorMessage && !isCompletedMode) {
-      PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field) => {
-        nextItems.push({
-          entityId: promptFolderSettingsFindEntityId(screenRootFolderId, field),
-          rowId: PROMPT_FOLDER_SETTINGS_ROW_ID,
-          sections: [
-            {
-              key: PROMPT_FOLDER_FIND_FOLDER_SETTINGS_SECTION_KEYS[field],
-              text: folderSettingsTextByField[field]
-            }
-          ]
-        })
-      })
-    }
 
     for (const currentPromptId of visiblePromptIds) {
       const promptDraft = promptDraftById[currentPromptId]
@@ -518,9 +492,9 @@ export const createPromptFolderScreenController = ({
   const resolveScrollFollowRow = (
     nextCenteredRow: ActivePromptTreeRow | null
   ): ActivePromptTreeRow | null => {
-    // Treat near-zero virtual scroll values as "top of folder" and keep tree selection on settings.
+    // Treat near-zero virtual scroll values as the root page header.
     if (scrollTopPx < TOP_SCROLL_EPSILON_PX) {
-      return { kind: 'folder-settings', rowOwnerFolderId: screenRootFolderId }
+      return { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
     }
 
     return nextCenteredRow
@@ -547,7 +521,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const toPromptNavigationRow = (row: ActivePromptTreeRow): PromptNavigationRow => {
-    return row.kind === 'folder-settings' ? 'folder-settings' : `prompt:${row.promptId}`
+    return row.kind === 'prompt' ? `prompt:${row.promptId}` : 'folder-settings'
   }
 
   const toActivePromptTreeRow = (
@@ -555,12 +529,16 @@ export const createPromptFolderScreenController = ({
     row: PromptNavigationRow
   ): ActivePromptTreeRow => {
     return row === 'folder-settings'
-      ? { kind: 'folder-settings', rowOwnerFolderId }
+      ? rowOwnerFolderId === screenRootFolderId
+        ? { kind: 'root-header', rowOwnerFolderId }
+        : { kind: 'folder-settings', rowOwnerFolderId }
       : { kind: 'prompt', rowOwnerFolderId, promptId: row.slice('prompt:'.length) }
   }
 
   const toPromptFolderRowId = (row: ActivePromptTreeRow): string => {
-    return row.kind === 'folder-settings'
+    return row.kind === 'root-header'
+      ? PROMPT_FOLDER_ROOT_HEADER_ROW_ID
+      : row.kind === 'folder-settings'
       ? promptFolderEditorRowId(screenRootFolderId, row.rowOwnerFolderId)
       : promptEditorRowId(row.promptId)
   }
@@ -645,13 +623,7 @@ export const createPromptFolderScreenController = ({
     expandFolderSettings = true
   ): boolean => {
     let changed = false
-    if (isCompletedMode) {
-      if (!getIsPromptsSectionExpanded(screenRootFolderId)) {
-        setPromptsSectionExpanded(screenRootFolderId, true)
-        changed = true
-      }
-      return changed
-    }
+    if (isCompletedMode || row.kind === 'root-header') return false
 
     const ownerPath = findFolderPath(screenRootFolderId, row.rowOwnerFolderId) ?? []
     for (const ancestorFolderId of ownerPath.slice(0, -1)) {
@@ -898,7 +870,7 @@ export const createPromptFolderScreenController = ({
     const initialSelectionTarget = explicitSelectionTarget ??
       currentNavigationTarget ??
       persistedSelectionTarget ?? {
-        kind: 'folder-settings',
+        kind: 'root-header',
         rowOwnerFolderId: screenRootFolderId
       }
     const shouldApplyInitialCenterRow =
@@ -1011,7 +983,7 @@ export const createPromptFolderScreenController = ({
     latestHandledSelectionVersion = promptNavigation.selectionVersion
   })
 
-  // Side effect: normalize stale prompt selections to folder settings once rows are loaded.
+  // Side effect: normalize stale prompt selections once rows are loaded.
   $effect(() => {
     if (!isVirtualContentReady) return
     if (isCompletedMode) return
@@ -1019,7 +991,12 @@ export const createPromptFolderScreenController = ({
     if (navigablePromptIds.includes(activePromptTreeRow.promptId)) return
 
     setCurrentFolderSelection(
-      { kind: 'folder-settings', rowOwnerFolderId: activePromptTreeRow.rowOwnerFolderId },
+      activePromptTreeRow.rowOwnerFolderId === screenRootFolderId
+        ? { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
+        : {
+            kind: 'folder-settings',
+            rowOwnerFolderId: activePromptTreeRow.rowOwnerFolderId
+          },
       'restore',
       { forceVersionBump: true }
     )
@@ -1267,74 +1244,23 @@ export const createPromptFolderScreenController = ({
     setPromptFolderDraftSettingsField(ownerFolderId, field, text, measurement)
   }
 
-  const folderSettingsHeightPx = $derived.by(() => {
-    if (isCompletedMode) {
-      return 0
-    }
-
-    if (!isSettingsSectionExpanded) {
-      return getPromptFolderEditorCollapsedCardRowHeightPx()
-    }
-
-    const estimatedSectionHeights = Object.fromEntries(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
-        field,
-        estimatePromptFolderSettingsFieldRowHeight(
-          folderSettingsTextByField[field],
-          promptEditorSizingConfig.fontSize
-        )
-      ])
-    ) as Record<PromptFolderSettingsField, number>
-
-    if (!viewportMetrics) {
-      return getPromptFolderEditorCardRowHeightPx(estimatedSectionHeights)
-    }
-
-    const metrics = viewportMetrics
-    const sectionHeights = Object.fromEntries(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
-        field,
-        lookupPromptFolderSettingsRowMeasuredHeight(
-          screenRootFolderId,
-          field,
-          metrics.widthPx,
-          metrics.devicePixelRatio
-        ) ?? estimatedSectionHeights[field]
-      ])
-    ) as Record<PromptFolderSettingsField, number>
-
-    return getPromptFolderEditorCardRowHeightPx(sectionHeights)
-  })
-
-  const activeHeaderRowId = $derived(
-    isCompletedMode || scrollTopPx >= folderSettingsHeightPx
-      ? 'prompt-header'
-      : PROMPT_FOLDER_SETTINGS_ROW_ID
-  )
+  const activeHeaderRowId = 'prompt-header' as const
   const activeHeaderSection = $derived(
-    isCompletedMode
-      ? 'Completed Prompts'
-      : activeHeaderRowId === 'prompt-header'
-        ? 'Prompts'
-        : 'Folder Settings'
+    isCompletedMode ? 'Completed Prompts' : 'Prompts'
   )
 
-  const resolveHeaderSelectionRow = (
-    rowId: 'folder-settings' | 'prompt-header'
-  ): ActivePromptTreeRow | null => {
-    if (rowId === 'folder-settings') {
-      if (isCompletedMode) {
-        return null
-      }
+  const findRenderedPromptRow = (
+    promptId: string
+  ): PromptFolderScreenPromptEditorRow | undefined =>
+    activePromptFolderScreenRows.find(
+      (row): row is PromptFolderScreenPromptEditorRow =>
+        row.kind === 'prompt-editor' && row.promptId === promptId
+    )
 
-      return { kind: 'folder-settings', rowOwnerFolderId: screenRootFolderId }
-    }
-
+  const resolveHeaderSelectionRow = (): ActivePromptTreeRow => {
     const firstPromptId = visiblePromptIds[0]
     if (firstPromptId) {
-      const promptRow = activePromptFolderScreenRows.find(
-        (row) => row.kind === 'prompt-editor' && row.promptId === firstPromptId
-      )
+      const promptRow = findRenderedPromptRow(firstPromptId)
       return {
         kind: 'prompt',
         rowOwnerFolderId: promptRow?.ownerFolderId ?? screenRootFolderId,
@@ -1342,56 +1268,37 @@ export const createPromptFolderScreenController = ({
       }
     }
 
-    return isCompletedMode
-      ? null
-      : { kind: 'folder-settings', rowOwnerFolderId: screenRootFolderId }
+    return { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
   }
 
-  const handleHeaderSegmentClick = (rowId: 'folder-settings' | 'prompt-header') => {
+  const handleHeaderSegmentClick = () => {
     if (!scrollToWithinWindowBand) return
-    const targetRow = resolveHeaderSelectionRow(rowId)
-    if (targetRow) {
-      expandSectionForRow(targetRow)
-      setCurrentFolderSelection(targetRow, 'header', {
-        forceVersionBump: true
-      })
-    }
+    const targetRow = resolveHeaderSelectionRow()
+    expandSectionForRow(targetRow)
+    setCurrentFolderSelection(targetRow, 'header', {
+      forceVersionBump: true
+    })
     // Header navigation should land directly on the target section.
-    scrollToWithinWindowBand(targetRow ? toPromptFolderRowId(targetRow) : rowId, 0, 'minimal', 0)
+    scrollToWithinWindowBand(toPromptFolderRowId(targetRow), 0, 'minimal', 0)
   }
 
   const handleHeaderFolderClick = () => {
     if (!scrollApi) return
-    if (!isCompletedMode) {
-      setSettingsSectionExpanded(screenRootFolderId, true)
-      setCurrentFolderSelection(
-        { kind: 'folder-settings', rowOwnerFolderId: screenRootFolderId },
-        'header',
-        {
-          forceVersionBump: true
-        }
-      )
-    }
+    setCurrentFolderSelection(
+      { kind: 'root-header', rowOwnerFolderId: screenRootFolderId },
+      'header',
+      { forceVersionBump: true }
+    )
     scrollApi.scrollTo(0)
   }
 
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
-    const targetRow: ActivePromptTreeRow | null = isPromptFolderSettingsFindEntityId(
-      match.entityId,
-      screenRootFolderId
-    )
-      ? isCompletedMode
-        ? null
-        : { kind: 'folder-settings', rowOwnerFolderId: screenRootFolderId }
-      : {
-          kind: 'prompt',
-          rowOwnerFolderId:
-            activePromptFolderScreenRows.find(
-              (row) => row.kind === 'prompt-editor' && row.promptId === match.entityId
-            )?.ownerFolderId ?? screenRootFolderId,
-          promptId: match.entityId
-        }
-    if (!targetRow) return
+    const targetRow: ActivePromptTreeRow = {
+      kind: 'prompt',
+      rowOwnerFolderId:
+        findRenderedPromptRow(match.entityId)?.ownerFolderId ?? screenRootFolderId,
+      promptId: match.entityId
+    }
     expandSectionForRow(targetRow)
     setCurrentFolderSelection(targetRow, 'find', { forceVersionBump: true })
   }
@@ -1410,10 +1317,6 @@ export const createPromptFolderScreenController = ({
 
   const setScrollApi = (nextScrollApi: VirtualWindowScrollApi | null) => {
     scrollApi = nextScrollApi
-  }
-
-  const setViewportMetrics = (nextViewportMetrics: VirtualWindowViewportMetrics | null) => {
-    viewportMetrics = nextViewportMetrics
   }
 
   const handleVirtualScrollTopChange = (nextScrollTop: number) => {
@@ -1470,6 +1373,9 @@ export const createPromptFolderScreenController = ({
     get visiblePromptIds(): string[] {
       return visiblePromptIds
     },
+    get activePromptCount(): number {
+      return activePromptCount
+    },
     get completedPromptCount(): number {
       return completedPromptCount
     },
@@ -1515,10 +1421,10 @@ export const createPromptFolderScreenController = ({
     get findItems(): PromptFolderFindItem[] {
       return findItems
     },
-    get activeHeaderRowId(): 'folder-settings' | 'prompt-header' {
+    get activeHeaderRowId(): 'prompt-header' {
       return activeHeaderRowId
     },
-    get activeHeaderSection(): 'Folder Settings' | 'Prompts' | 'Completed Prompts' {
+    get activeHeaderSection(): 'Prompts' | 'Completed Prompts' {
       return activeHeaderSection
     },
     get loadingOverlay() {
@@ -1547,7 +1453,6 @@ export const createPromptFolderScreenController = ({
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
     setScrollApi,
-    setViewportMetrics,
     handleVirtualScrollTopChange,
     handleInitialPromptFolderCenterRowApplied,
     handleVirtualCenterRowChange,
