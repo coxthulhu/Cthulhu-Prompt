@@ -60,6 +60,7 @@ const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): Prompt
   id: 'prompt-1',
   title: 'Original title',
   fallbackTitle: '',
+  modifiedAt: '2026-01-01T00:00:00.000Z',
   status: PromptStatus.Todo,
   ...overrides
 })
@@ -140,7 +141,7 @@ describe('draft sync contract', () => {
       title: summaryPrompt.title,
       fallbackTitle: summaryPrompt.fallbackTitle,
       createdAt: '',
-      modifiedAt: '',
+      modifiedAt: summaryPrompt.modifiedAt,
       promptText: ''
     })
   })

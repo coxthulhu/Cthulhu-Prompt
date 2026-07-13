@@ -274,6 +274,7 @@ export const readPromptSummaries = (
     id: prompt.id,
     title: prompt.title,
     fallbackTitle: prompt.fallbackTitle,
+    modifiedAt: prompt.modifiedAt,
     status: prompt.status,
     ...(prompt.completedAt ? { completedAt: prompt.completedAt } : {})
   }))

@@ -30,7 +30,7 @@ const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRec
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
   createdAt: '',
-  modifiedAt: '',
+  modifiedAt: prompt.modifiedAt,
   promptText: ''
 })
 

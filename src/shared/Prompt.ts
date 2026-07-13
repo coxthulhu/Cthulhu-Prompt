@@ -11,6 +11,7 @@ export type PromptSummary = {
   id: string
   title: string
   fallbackTitle: string
+  modifiedAt: string
   status: PromptStatus
   completedAt?: string
   loadingState: 'summary'
@@ -36,13 +37,14 @@ export type PromptPersisted = Omit<PromptFull, 'loadingState'>
 // Prompt data loaded during workspace bootstrap for tree/title hydration.
 export type PromptSummaryData = Pick<
   PromptPersisted,
-  'id' | 'title' | 'fallbackTitle' | 'status' | 'completedAt'
+  'id' | 'title' | 'fallbackTitle' | 'modifiedAt' | 'status' | 'completedAt'
 >
 
 export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary => ({
   id: prompt.id,
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
+  modifiedAt: prompt.modifiedAt,
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }
