@@ -179,6 +179,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
       }
 
       const setupUtils = {
+        getRendererErrors: () => [...rendererErrors],
         setupFilesystem: async (
           filesystem: Record<string, string | null>,
           options: FilesystemSetupOptions = {}

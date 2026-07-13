@@ -696,6 +696,43 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
   })
 
+  test('recycles virtualized Monaco editors without stale tokenization errors', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Short')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+
+    const scrollPositions = [0, 1200, 2400, 0, 1800, 600, 2400, 0]
+    for (const scrollTopPx of scrollPositions) {
+      await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, scrollTopPx)
+      await expect
+        .poll(async () => {
+          return await mainWindow.evaluate((hostSelector) => {
+            const host = document.querySelector<HTMLElement>(hostSelector)
+            if (!host) return false
+            const hostRect = host.getBoundingClientRect()
+            return Array.from(host.querySelectorAll<HTMLElement>('.monaco-editor')).some(
+              (editor) => {
+                const editorRect = editor.getBoundingClientRect()
+                return editorRect.bottom > hostRect.top && editorRect.top < hostRect.bottom
+              }
+            )
+          }, PROMPT_FOLDER_HOST)
+        })
+        .toBe(true)
+    }
+
+    // Let already-posted TextMate worker results reach the renderer before asserting the capture.
+    await mainWindow.waitForTimeout(100)
+    expect(testSetup.getRendererErrors()).toEqual([])
+  })
+
   test('folder breadcrumb scrolls to top', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
