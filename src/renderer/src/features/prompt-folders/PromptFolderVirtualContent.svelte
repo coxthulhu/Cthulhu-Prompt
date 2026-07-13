@@ -67,6 +67,11 @@
     type PromptTreeEntryDragPayload
   } from '../drag-drop/promptHandleDrag'
   import { resolvePromptFolderEntryDropMove } from '../drag-drop/promptFolderEntryDrag'
+  import { createPromptDragGhost } from '../drag-drop/promptDragGhost'
+  import {
+    clearPromptEntryDrag,
+    startPromptFolderDrag
+  } from '../drag-drop/promptEntryDragState.svelte.ts'
   import type {
     ActivePromptTreeRow,
     PromptFocusRequest
@@ -629,14 +634,19 @@
   })
 
   const getPromptFolderDragOptions = (
-    promptFolderId: string
+    promptFolder: PromptFolder
   ): DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
-    payload: { folderId: promptFolderId },
+    payload: { folderId: promptFolder.id },
+    createGhost: () => createPromptDragGhost(promptFolder.displayName, 'folder'),
+    onDragStart: () => {
+      startPromptFolderDrag(promptFolder.id)
+    },
     onDragFinish: ({
       sourcePayload,
       dropPayload
     }: DragFinishResult<PromptFolderEntryDragPayload, PromptHandleDropPayload>) => {
+      clearPromptEntryDrag()
       onPromptFolderTreeDrop(sourcePayload, dropPayload)
     }
   })
@@ -744,7 +754,7 @@
         canRename={props.row.isRoot && !isCompletedMode}
         showSidebar={!props.row.isRoot}
         dragOptions={!props.row.isRoot && !isCompletedMode
-          ? getPromptFolderDragOptions(ownerFolderId)
+          ? getPromptFolderDragOptions(rowFolder)
           : undefined}
         dropOptions={!props.row.isRoot && !isCompletedMode
           ? getPromptFolderDropOptions(ownerFolderId)

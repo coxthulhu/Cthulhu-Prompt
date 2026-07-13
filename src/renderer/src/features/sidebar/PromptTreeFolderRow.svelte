@@ -29,7 +29,9 @@
     folder: PromptFolder
     isActive: boolean
     isSettingsActive: boolean
+    isDragging: boolean
     isPromptDragActive: boolean
+    showDropOverHighlight?: boolean
     isExpanded: boolean
     indentCount?: number
     isLastRow?: boolean
@@ -44,7 +46,9 @@
     folder,
     isActive,
     isSettingsActive,
+    isDragging,
     isPromptDragActive,
+    showDropOverHighlight = true,
     isExpanded,
     indentCount = 0,
     isLastRow = false,
@@ -146,9 +150,11 @@
 </script>
 
 {#snippet folderRowContent(isOver: boolean)}
-  {@const rowState = isOver
-    ? 'over'
-    : isActive
+  {@const rowState = isDragging
+    ? 'dragging'
+    : isOver && showDropOverHighlight
+      ? 'over'
+      : isActive
       ? isPromptDragActive
         ? 'drag-active'
         : 'active'

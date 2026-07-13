@@ -6,7 +6,7 @@
   import { PromptStatus } from '@shared/Prompt'
   import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
-  import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
+  import { promptEntryDragState } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import EditorCardSurface from './EditorCardSurface.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
@@ -149,11 +149,15 @@
     }
     return parts.join('\n\n')
   })
-  // Track shared prompt drag state so both editor-handle and prompt-tree drags dim this row.
-  const isDragging = $derived(
-    promptDragState.draggedPromptRow?.folderId === promptFolderId &&
-      promptDragState.draggedPromptRow.promptId === promptId
-  )
+  // Track shared tree-entry drag state so both prompt drag entry points dim this row.
+  const isDragging = $derived.by(() => {
+    const draggedEntry = promptEntryDragState.draggedEntry
+    return (
+      draggedEntry?.kind === 'prompt' &&
+      draggedEntry.folderId === promptFolderId &&
+      draggedEntry.promptId === promptId
+    )
+  })
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
   let rowElement = $state<HTMLDivElement | null>(null)

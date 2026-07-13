@@ -8,9 +8,9 @@
     type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
-    clearDraggedPromptRow,
-    setDraggedPromptRow
-  } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
+    clearPromptEntryDrag,
+    startPromptDrag
+  } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
@@ -41,13 +41,13 @@
   } = $props()
 
   const handleDragStart = (sourcePayload: PromptHandleDragPayload): void => {
-    setDraggedPromptRow(sourcePayload)
+    startPromptDrag(sourcePayload)
   }
 
   const handleDragFinish = ({
     dropPayload
   }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
-    clearDraggedPromptRow()
+    clearPromptEntryDrag()
     void onPromptTreeDrop(dropPayload)
   }
 

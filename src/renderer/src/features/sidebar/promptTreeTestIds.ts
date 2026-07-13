@@ -31,5 +31,13 @@ export const folderPromptMenuShowLessTestId = (folder: PromptFolder): string =>
 export const folderPromptDropIndicatorTestId = (promptId: string): string =>
   `prompt-tree-drop-indicator-prompt-${promptId}`
 
+export const folderDropIndicatorTestId = (folder: PromptFolder): string =>
+  `prompt-tree-drop-indicator-folder-${getFolderTestKey(folder)}`
+
+export const promptTreeBottomSpacerDropTargetTestId = 'prompt-tree-bottom-spacer-drop-target'
+
+export const promptTreeBottomSpacerDropIndicatorTestId =
+  'prompt-tree-bottom-spacer-drop-indicator'
+
 export const folderPromptVisibilityDropIndicatorTestId = (folder: PromptFolder): string =>
   `prompt-tree-drop-indicator-prompt-visibility-${getFolderTestKey(folder)}`

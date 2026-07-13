@@ -88,6 +88,10 @@ const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_BOTTOM_SPACER_SELECTOR =
+  '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
+const PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR =
+  '[data-testid="prompt-tree-bottom-spacer-drop-indicator"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
 const FALLBACK_DESTINATION_FOLDER_ID = createDeterministicId(
   `${MOVE_FALLBACK_WORKSPACE_PATH}:${FALLBACK_DESTINATION_FOLDER_NAME}`
@@ -113,6 +117,9 @@ const promptDividerSelector = (previousPromptId: string | null): string =>
   previousPromptId
     ? `[data-testid="prompt-divider-add-after-${previousPromptId}"]`
     : '[data-testid="prompt-divider-add-initial"]'
+
+const promptTreeFolderDropIndicatorSelector = (folderName: string): string =>
+  `[data-testid="prompt-tree-drop-indicator-folder-${folderName.replace(/\s+/g, '')}"]`
 
 const getRootEntryTreeOrder = async (page: Page): Promise<string[]> => {
   return await page
@@ -700,6 +707,114 @@ describe('Prompt folder prompt drag-drop', () => {
       .toEqual([BASE_BEFORE_ID, BASE_AFTER_ID, NESTED_FOLDER_ID, 'nested-prompt'])
   })
 
+  test('snaps above a subfolder as a sibling and below it as its first entry', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Main')
+    const folderIndicator = mainWindow.locator(
+      promptTreeFolderDropIndicatorSelector('Nested')
+    )
+    const rootFolderIndicator = mainWindow.locator(
+      promptTreeFolderDropIndicatorSelector('Main')
+    )
+    const rootFolderRow = mainWindow
+      .locator('[data-testid="prompt-tree-folder-toggle-button-Main"]')
+      .locator('xpath=..')
+    const subfolderRow = mainWindow
+      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .locator('xpath=..')
+
+    await beginPromptTreeRowDrag(mainWindow, BASE_AFTER_ID)
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-folder-toggle-button-Main"]',
+      'top'
+    )
+    await expect(rootFolderIndicator).toHaveCount(0)
+    await expect(rootFolderRow).toHaveAttribute('data-row-state', 'over')
+
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
+      'top'
+    )
+    await expect(folderIndicator).toHaveAttribute('data-edge', 'top')
+    await expect(subfolderRow).toHaveAttribute('data-row-state', 'drag-idle')
+    const topArrowBox = await folderIndicator.locator('path').boundingBox()
+    if (!topArrowBox) throw new Error('Missing top subfolder drop indicator geometry')
+    await finishActiveDrag(mainWindow)
+
+    await expectRootEntryOrder(mainWindow, electronApp, [
+      BASE_BEFORE_ID,
+      BASE_AFTER_ID,
+      NESTED_FOLDER_ID
+    ])
+
+    await beginPromptTreeRowDrag(mainWindow, BASE_AFTER_ID)
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
+      'bottom'
+    )
+    await expect(folderIndicator).toHaveAttribute('data-edge', 'bottom')
+    const bottomArrowBox = await folderIndicator.locator('path').boundingBox()
+    if (!bottomArrowBox) throw new Error('Missing bottom subfolder drop indicator geometry')
+    expect(Math.abs(bottomArrowBox.x - topArrowBox.x - 12)).toBeLessThanOrEqual(1)
+    await finishActiveDrag(mainWindow)
+
+    await expect
+      .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
+      .toEqual([BASE_BEFORE_ID, NESTED_FOLDER_ID])
+    await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [
+      BASE_AFTER_ID,
+      'nested-prompt'
+    ])
+  })
+
+  test('shows a subfolder drag ghost and snaps the ending spacer to the root end', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Main')
+    await beginPromptTreeFolderRowDrag(mainWindow, 'Nested')
+
+    const draggedFolderRow = mainWindow
+      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .locator('xpath=..')
+    await expect(draggedFolderRow).toHaveAttribute('data-row-state', 'dragging')
+
+    const dragGhost = mainWindow.locator(dragGhostSelector)
+    await expect(dragGhost).toBeVisible()
+    expect(await getPromptDragGhostSnapshot(dragGhost)).toMatchObject({
+      height: 30,
+      kind: 'folder',
+      opacity: '1',
+      text: 'Nested'
+    })
+
+    await moveActiveDragToTarget(mainWindow, PROMPT_TREE_BOTTOM_SPACER_SELECTOR)
+    await expect(
+      mainWindow.locator(PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR)
+    ).toHaveAttribute('data-edge', 'top')
+    await finishActiveDrag(mainWindow)
+
+    await expect
+      .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
+      .toEqual([BASE_BEFORE_ID, BASE_AFTER_ID, NESTED_FOLDER_ID])
+    await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [
+      'nested-prompt'
+    ])
+  })
+
   test('moves a subfolder from its editor grip to a mixed-entry divider', async ({
     testSetup,
     electronApp
@@ -710,6 +825,15 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await testHelpers.navigateToPromptFolders('Main')
     await beginPromptFolderHandleDrag(mainWindow, NESTED_FOLDER_ID)
+    await expect(
+      mainWindow
+        .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+        .locator('xpath=..')
+    ).toHaveAttribute('data-row-state', 'dragging')
+    await expect(mainWindow.locator(dragGhostSelector)).toHaveAttribute(
+      'data-drag-ghost-kind',
+      'folder'
+    )
     await moveActiveDragToTarget(mainWindow, promptDividerSelector(BASE_AFTER_ID))
     await finishActiveDrag(mainWindow)
 

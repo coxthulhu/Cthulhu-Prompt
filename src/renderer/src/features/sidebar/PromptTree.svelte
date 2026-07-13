@@ -12,6 +12,7 @@
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     isPromptHandleDragPayload,
+    resolvePromptHandleDropMove,
     type PromptFolderEntryDragPayload,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload,
@@ -19,7 +20,11 @@
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import { resolvePromptFolderEntryDropMove } from '@renderer/features/drag-drop/promptFolderEntryDrag'
   import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
-  import { promptDragState } from '@renderer/features/drag-drop/promptDragState.svelte.ts'
+  import {
+    clearPromptEntryDrag,
+    promptEntryDragState,
+    startPromptFolderDrag
+  } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import {
     type PromptDraftRecord,
     promptDraftCollection
@@ -51,10 +56,16 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
+  import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import { createPromptTreePromptDragController } from './promptTreeDrag'
   import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
-  import { folderPromptDropIndicatorTestId } from './promptTreeTestIds'
+  import {
+    folderDropIndicatorTestId,
+    folderPromptDropIndicatorTestId,
+    promptTreeBottomSpacerDropIndicatorTestId,
+    promptTreeBottomSpacerDropTargetTestId
+  } from './promptTreeTestIds'
   import { collectCompletedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -65,6 +76,7 @@
     | {
         kind: 'folder'
         folder: PromptFolder
+        parentFolder: PromptFolder | null
         indentCount: number
         isLastRow: boolean
         isSubfolder: boolean
@@ -84,8 +96,13 @@
         kind: 'bottom-spacer'
       }
 
-  type PromptTreeOverlayRow = Extract<PromptTreeRow, { kind: 'folder-prompt' }>
-  type PromptTreeOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeOverlayRow>
+  type PromptTreeFolderOverlayRow = Extract<PromptTreeRow, { kind: 'folder' }>
+  type PromptTreeFolderOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeFolderOverlayRow>
+  type PromptTreePromptOverlayRow = Extract<PromptTreeRow, { kind: 'folder-prompt' }>
+  type PromptTreePromptOverlayRowProps = VirtualWindowRowComponentProps<PromptTreePromptOverlayRow>
+  type PromptTreeBottomSpacerOverlayRow = Extract<PromptTreeRow, { kind: 'bottom-spacer' }>
+  type PromptTreeBottomSpacerOverlayRowProps =
+    VirtualWindowRowComponentProps<PromptTreeBottomSpacerOverlayRow>
 
   let {
     promptFolders,
@@ -121,6 +138,9 @@
     folder: {
       estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
       centerRowEligible: true,
+      overlayRow: {
+        snippet: promptTreeFolderRowOverlay
+      },
       snippet: folderRow
     },
     'folder-prompt': {
@@ -136,6 +156,9 @@
     },
     'bottom-spacer': {
       estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
+      overlayRow: {
+        snippet: promptTreeBottomSpacerRowOverlay
+      },
       snippet: bottomSpacerRow
     }
   })
@@ -348,27 +371,19 @@
   const getPromptTreeDroppableOptions = (
     rowId: string,
     allowedEdges: DroppableAllowedEdges,
-    getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload,
-    canDrop?: (payload: PromptTreeEntryDragPayload, edge: DroppableEdge | null) => boolean
+    getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload
   ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges,
-    canDrop: canDrop ?? (() => true),
+    canDrop: (payload, edge) => canDropOnPromptTree(payload, getDropPayload(edge)),
     payload: getDropPayload,
     state: promptTreePromptDroppableState.getState(rowId)
   })
 
-  const canDropOnPromptTreePromptRow = (
-    folder: PromptFolder,
-    promptId: string,
+  const canDropOnPromptTree = (
     payload: PromptTreeEntryDragPayload,
-    edge: DroppableEdge | null
+    dropPayload: PromptHandleDropPayload
   ): boolean => {
-    const dropPayload: PromptHandleDropPayload = {
-      folderId: folder.id,
-      targetEntryId: promptId,
-      position: edge === 'top' ? 'before' : 'after'
-    }
     if (!isPromptHandleDragPayload(payload)) {
       return (
         resolvePromptFolderEntryDropMove(
@@ -380,44 +395,37 @@
       )
     }
 
-    if (payload.fromId === promptId) {
-      return false
-    }
+    const sourceFolder = promptFolderById[payload.sourceFolderId]
+    const destinationFolder = promptFolderById[dropPayload.folderId]
+    if (!sourceFolder || !destinationFolder) return false
 
-    if (payload.sourceFolderId !== folder.id) {
-      return true
-    }
-
-    const activeEntryIds = getPromptFolderActiveEntryIds(folder)
-    const draggedIndex = activeEntryIds.indexOf(payload.fromId)
-    const targetIndex = activeEntryIds.indexOf(promptId)
-
-    // Reject same-folder prompt-row edges that would leave the dragged row in place.
-    return !(
-      (edge === 'bottom' && targetIndex === draggedIndex - 1) ||
-      (edge === 'top' && targetIndex === draggedIndex + 1)
+    return (
+      resolvePromptHandleDropMove(
+        sourceFolder.id,
+        getPromptFolderActiveEntryIds(sourceFolder),
+        payload.fromId,
+        dropPayload,
+        getPromptFolderActiveEntryIds(destinationFolder)
+      ) !== null
     )
   }
 
-  const canDropOnPromptTreeFolderRow = (
+  const getPromptTreeFolderDropPayload = (
     folder: PromptFolder,
-    payload: PromptTreeEntryDragPayload
-  ): boolean => {
-    if (!isPromptHandleDragPayload(payload)) {
-      return (
-        resolvePromptFolderEntryDropMove(
-          promptFolders,
-          getPromptFolderActiveEntryIds,
-          payload.folderId,
-          { folderId: folder.id, targetEntryId: null, position: 'after' }
-        ) !== null
-      )
-    }
-    if (payload.sourceFolderId !== folder.id) {
-      return true
-    }
+    parentFolder: PromptFolder | null,
+    edge: DroppableEdge | null
+  ): PromptHandleDropPayload =>
+    parentFolder && edge === 'top'
+      ? { folderId: parentFolder.id, targetEntryId: folder.id, position: 'before' }
+      : { folderId: folder.id, targetEntryId: null, position: 'after' }
 
-    return getPromptFolderActiveEntryIds(folder)[0] !== payload.fromId
+  const getPromptTreeBottomSpacerDropPayload = (): PromptHandleDropPayload => {
+    const rootEntryIds = getPromptFolderActiveEntryIds(screenRootFolder!)
+    return {
+      folderId: screenRootFolder!.id,
+      targetEntryId: rootEntryIds[rootEntryIds.length - 1] ?? null,
+      position: 'after'
+    }
   }
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
@@ -509,11 +517,16 @@
   })
 
   const getPromptFolderRowDragOptions = (
-    folderId: string
+    folder: PromptFolder
   ): DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
-    payload: { folderId },
+    payload: { folderId: folder.id },
+    createGhost: () => createPromptDragGhost(folder.displayName, 'folder'),
+    onDragStart: (payload) => {
+      startPromptFolderDrag(payload.folderId)
+    },
     onDragFinish: ({ sourcePayload, dropPayload }) => {
+      clearPromptEntryDrag()
       const workspaceId = workspaceSelection.selectedWorkspaceId
       if (!workspaceId) return
       const move = resolvePromptFolderEntryDropMove(
@@ -562,10 +575,18 @@
   }
 
   const isPromptRowDragging = (folderId: string, promptId: string): boolean => {
-    const draggedPromptRow = promptDragState.draggedPromptRow
-    return draggedPromptRow?.folderId === folderId && draggedPromptRow.promptId === promptId
+    const draggedEntry = promptEntryDragState.draggedEntry
+    return (
+      draggedEntry?.kind === 'prompt' &&
+      draggedEntry.folderId === folderId &&
+      draggedEntry.promptId === promptId
+    )
   }
-  const isPromptDragActive = $derived(promptDragState.draggedPromptRow !== null)
+  const isPromptFolderRowDragging = (folderId: string): boolean => {
+    const draggedEntry = promptEntryDragState.draggedEntry
+    return draggedEntry?.kind === 'folder' && draggedEntry.folderId === folderId
+  }
+  const isPromptDragActive = $derived(promptEntryDragState.draggedEntry !== null)
 
   const handlePromptTreeEntrySelect = (
     rowOwnerFolderId: string,
@@ -676,6 +697,7 @@
     if (screenRootFolder) {
       const addPromptFolderRows = (
         promptFolder: PromptFolder,
+        parentFolder: PromptFolder | null,
         indentCount: number,
         isLastRow: boolean
       ): void => {
@@ -684,6 +706,7 @@
           row: {
             kind: 'folder',
             folder: promptFolder,
+            parentFolder,
             indentCount,
             isLastRow,
             isSubfolder: promptFolder.id !== screenRootFolder.id
@@ -707,7 +730,7 @@
           const childFolder = entry.kind === 'folder' ? promptFolderById[entry.id] : null
 
           if (childFolder) {
-            addPromptFolderRows(childFolder, indentCount + 1, isLastChild)
+            addPromptFolderRows(childFolder, promptFolder, indentCount + 1, isLastChild)
             continue
           }
 
@@ -731,6 +754,7 @@
           row: {
             kind: 'folder',
             folder: screenRootFolder,
+            parentFolder: null,
             indentCount: 0,
             isLastRow: true,
             isSubfolder: false
@@ -764,7 +788,7 @@
           }
         }
       } else {
-        addPromptFolderRows(screenRootFolder, 0, true)
+        addPromptFolderRows(screenRootFolder, null, 0, true)
 
         if (getPromptTreeFolderExpandedState(screenRootFolder.id) && items.length === 1) {
           items.push({
@@ -822,7 +846,9 @@
     folder={props.row.folder}
     isActive={isSettingsActive}
     {isSettingsActive}
+    isDragging={isPromptFolderRowDragging(props.row.folder.id)}
     {isPromptDragActive}
+    showDropOverHighlight={!props.row.isSubfolder}
     isExpanded={getPromptTreeFolderExpandedState(props.row.folder.id)}
     indentCount={props.row.indentCount}
     isLastRow={props.row.isLastRow}
@@ -831,16 +857,16 @@
       : () =>
           getPromptTreeDroppableOptions(
             props.rowId,
-            'none',
-            () => ({
-              folderId: props.row.folder.id,
-              targetEntryId: null,
-              position: 'after'
-            }),
-            (payload) => canDropOnPromptTreeFolderRow(props.row.folder, payload)
+            props.row.parentFolder ? 'top-and-bottom' : 'none',
+            (edge) =>
+              getPromptTreeFolderDropPayload(
+                props.row.folder,
+                props.row.parentFolder,
+                edge
+              )
           )}
     folderDragOptions={!isCompletedMode && props.row.isSubfolder
-      ? getPromptFolderRowDragOptions(props.row.folder.id)
+      ? getPromptFolderRowDragOptions(props.row.folder)
       : undefined}
     onFolderExpandedChange={handlePromptTreeFolderExpandedChange}
     onPromptFolderOpen={handlePromptTreeFolderOpen}
@@ -876,9 +902,7 @@
               folderId: props.row.folder.id,
               targetEntryId: props.row.promptId,
               position: edge === 'top' ? 'before' : 'after'
-            }),
-            (payload, edge) =>
-              canDropOnPromptTreePromptRow(props.row.folder, props.row.promptId, payload, edge)
+            })
           )}
     promptDragOptions={isCompletedMode
       ? undefined
@@ -901,7 +925,21 @@
   </div>
 {/snippet}
 
-{#snippet promptTreeRowOverlay({ row, rowId }: PromptTreeOverlayRowProps)}
+{#snippet promptTreeFolderRowOverlay({ row, rowId }: PromptTreeFolderOverlayRowProps)}
+  {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
+
+  {#if hoveredEdge}
+    <DropIndicator
+      testId={folderDropIndicatorTestId(row.folder)}
+      insetStart={getPromptTreeDropIndicatorInset(
+        row.indentCount + (hoveredEdge === 'bottom' ? 1 : 0)
+      )}
+      edge={hoveredEdge}
+    />
+  {/if}
+{/snippet}
+
+{#snippet promptTreeRowOverlay({ row, rowId }: PromptTreePromptOverlayRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
   {@const testId = folderPromptDropIndicatorTestId(row.promptId)}
 
@@ -914,6 +952,32 @@
   {/if}
 {/snippet}
 
-{#snippet bottomSpacerRow()}
-  <div aria-hidden="true"></div>
+{#snippet bottomSpacerRow(props)}
+  {#if screenRootFolder && !isCompletedMode}
+    <PromptDropTarget
+      getOptions={() =>
+        getPromptTreeDroppableOptions(
+          props.rowId,
+          'top',
+          getPromptTreeBottomSpacerDropPayload
+        )}
+      class="h-full"
+      style={`height:${props.rowHeightPx}px;`}
+      data-testid={promptTreeBottomSpacerDropTargetTestId}
+    >
+      <div class="h-full" aria-hidden="true"></div>
+    </PromptDropTarget>
+  {:else}
+    <div class="h-full" aria-hidden="true"></div>
+  {/if}
+{/snippet}
+
+{#snippet promptTreeBottomSpacerRowOverlay({ rowId }: PromptTreeBottomSpacerOverlayRowProps)}
+  {#if getPromptTreeDropTargetEdge(rowId)}
+    <DropIndicator
+      testId={promptTreeBottomSpacerDropIndicatorTestId}
+      insetStart={getPromptTreeDropIndicatorInset(1)}
+      edge="top"
+    />
+  {/if}
 {/snippet}

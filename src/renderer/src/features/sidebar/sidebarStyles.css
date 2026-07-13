@@ -77,6 +77,11 @@
   color: var(--ui-normal-text);
 }
 
+.sidebarPromptTreeRow[data-row-state='dragging'] {
+  background-color: var(--ui-info-normal-surface);
+  color: var(--ui-normal-text);
+}
+
 .sidebarPromptTreeToggleButton {
   display: flex;
   position: absolute;
