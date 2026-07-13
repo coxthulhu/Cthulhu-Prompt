@@ -47,6 +47,8 @@
     prompts: Prompt[]
   }
 
+  let filter = $state<'all' | PromptStatus>('all')
+
   let loosePrompts = $state<Prompt[]>([
     {
       id: 'triage-imports',
@@ -155,6 +157,24 @@
 
   const lineCount = (body: string) => body.split('\n').length
   const wordCount = (body: string) => body.trim().split(/\s+/).filter(Boolean).length
+  const allPrompts = () => [...loosePrompts, ...folders.flatMap((folder) => folder.prompts)]
+  const matchesFilter = (prompt: Prompt) => filter === 'all' || prompt.status === filter
+  const countStatus = (status: PromptStatus) =>
+    allPrompts().filter((prompt) => prompt.status === status).length
+
+  const addPrompt = () => {
+    loosePrompts = [
+      ...loosePrompts,
+      {
+        id: `new-${Date.now()}`,
+        title: 'Untitled prompt',
+        folder: 'Prompts',
+        updated: 'Just now',
+        status: 'todo',
+        body: ''
+      }
+    ]
+  }
 
   const sizingConfig = {
     fontSize: 15,
@@ -368,9 +388,42 @@
 {/snippet}
 
 <section class="visual-rework" data-testid="visual-rework-110510351">
+  <header class="screen-header">
+    <div>
+      <div class="eyebrow"><Folder size={14} aria-hidden="true" /> Prompt folder</div>
+      <h1>Prompts</h1>
+    </div>
+    <button class="primary-action" type="button" onclick={addPrompt}>
+      <Plus size={17} aria-hidden="true" /> New prompt
+    </button>
+  </header>
+
+  <nav class="filter-bar" aria-label="Filter prompts">
+    <button class:active={filter === 'all'} type="button" onclick={() => (filter = 'all')}>
+      All <span>{allPrompts().length}</span>
+    </button>
+    <button class:active={filter === 'todo'} type="button" onclick={() => (filter = 'todo')}>
+      Todo <span>{countStatus('todo')}</span>
+    </button>
+    <button
+      class:active={filter === 'in-progress'}
+      type="button"
+      onclick={() => (filter = 'in-progress')}
+    >
+      In progress <span>{countStatus('in-progress')}</span>
+    </button>
+    <button
+      class:active={filter === 'completed'}
+      type="button"
+      onclick={() => (filter = 'completed')}
+    >
+      Completed <span>{countStatus('completed')}</span>
+    </button>
+  </nav>
+
   <div class="prompt-stream">
     {@render AddRow('Add prompt')}
-    {#each loosePrompts as prompt (prompt.id)}
+    {#each loosePrompts.filter(matchesFilter) as prompt (prompt.id)}
       {@render PromptCard(prompt)}
       {@render AddRow('Add prompt')}
     {/each}
@@ -408,7 +461,7 @@
           {@render FolderContext(folder)}
           <div class="folder-prompts">
             {@render AddRow('Add prompt')}
-            {#each folder.prompts as prompt (prompt.id)}
+            {#each folder.prompts.filter(matchesFilter) as prompt (prompt.id)}
               {@render PromptCard(prompt)}
               {@render AddRow('Add prompt')}
             {/each}
@@ -425,13 +478,83 @@
     box-sizing: border-box;
     color: var(--ui-normal-text);
     min-width: 0;
-    padding: 2px 0 12px;
+    padding: 24px 26px 48px;
     width: 100%;
   }
 
   .visual-rework button,
   .visual-rework input {
     font-family: inherit;
+  }
+
+  .screen-header {
+    align-items: end;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .screen-header h1 {
+    font-size: 27px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 7px 0 0;
+  }
+
+  .eyebrow {
+    align-items: center;
+    color: var(--ui-secondary-text);
+    display: flex;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .primary-action {
+    align-items: center;
+    background: var(--ui-accent-action-fill);
+    border: 1px solid var(--ui-accent-normal-border);
+    border-radius: 8px;
+    color: var(--ui-normal-text);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 650;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .primary-action:hover {
+    background: var(--ui-accent-action-hover-fill);
+  }
+
+  .filter-bar {
+    border-bottom: 1px solid var(--ui-neutral-normal-border);
+    display: flex;
+    gap: 6px;
+    margin-bottom: 22px;
+  }
+
+  .filter-bar button {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--ui-muted-text);
+    cursor: pointer;
+    margin-bottom: -1px;
+    padding: 8px 10px 10px;
+  }
+
+  .filter-bar button span {
+    background: var(--ui-neutral-normal-surface);
+    border-radius: 999px;
+    font-size: 11px;
+    margin-left: 4px;
+    padding: 2px 6px;
+  }
+
+  .filter-bar button.active {
+    border-bottom-color: var(--ui-accent-normal-border);
+    color: var(--ui-normal-text);
   }
 
   .prompt-stream,
