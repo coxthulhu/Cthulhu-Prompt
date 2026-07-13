@@ -12,9 +12,25 @@ import {
 } from '../helpers/MonacoHelpers'
 import {
   checkPersistedPromptFilesExistByTitle,
+  checkFileExists,
   readPersistedPromptTextById,
   readTextFile
 } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  beginPromptFolderHandleDrag,
+  beginPromptTreeFolderRowDrag,
+  finishActiveDrag,
+  moveActiveDragToTarget,
+  promptFolderSelectorDropdownItemSelector,
+  promptFolderSelectorMenuSelector,
+  promptFolderSelectorTriggerSelector,
+  promptTreeFolderSelector
+} from '../helpers/PromptDragDropHelpers'
+import {
+  createWorkspaceWithFolders,
+  getWorkspaceInfoPath,
+  setupWorkspaceScenario
+} from '../fixtures/WorkspaceFixtures'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -826,7 +842,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
   })
 
-  test('shows disabled subfolder controls and keeps nested prompt movement inactive', async ({
+  test('enables nested prompt movement and removes subfolder arrows', async ({
     testSetup,
     electronApp
   }) => {
@@ -860,42 +876,188 @@ describe('Prompt folder subfolder rendering', () => {
       mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-editor-sidebar"]`)
     ).toBeVisible()
     await expect(
-      mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-drag-handle"]`)
-    ).toBeDisabled()
-    await expect(
       mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-editor-title-edit"]`)
     ).toHaveCount(0)
 
-    const folderOrderBeforeMove = await readFolderEntryIds(
-      electronApp,
-      controlledRootOrderPath
-    )
-    const folderMoveDownButton = mainWindow.locator(
-      `${controlledNestedSelector} [data-testid="prompt-folder-move-down"]`
-    )
-    await expect(folderMoveDownButton).toBeEnabled()
-    await folderMoveDownButton.click()
-    await expect
-      .poll(async () => await readFolderEntryIds(electronApp, controlledRootOrderPath))
-      .toEqual(folderOrderBeforeMove)
+    await expect(
+      mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-drag-handle"]`)
+    ).toBeEnabled()
+    await expect(
+      mainWindow.locator(
+        `${controlledNestedSelector} [data-testid="prompt-folder-move-up"], ${controlledNestedSelector} [data-testid="prompt-folder-move-down"]`
+      )
+    ).toHaveCount(0)
 
     await revealVirtualRow(mainWindow, testHelpers, controlledPromptSelector)
     await expect(
       mainWindow.locator(`${controlledPromptSelector} [data-testid="prompt-drag-handle"]`)
-    ).toBeDisabled()
+    ).toBeEnabled()
 
-    const promptOrderBeforeMove = await readFolderEntryIds(
-      electronApp,
-      controlledNestedOrderPath
+    const moveUpButton = mainWindow.locator(
+      `${controlledPromptSelector} [data-testid="prompt-move-up"]`
     )
+    await expect(moveUpButton).toBeEnabled()
+    await moveUpButton.click()
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, controlledRootOrderPath))
+      .toEqual([
+        'subfolders-controls-first',
+        controlledNestedFolderId,
+        createDeterministicId(`${workspacePath}:Controls/Sibling`)
+      ])
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, controlledNestedOrderPath))
+      .toEqual(['subfolders-controls-second'])
+
+    await revealVirtualRow(mainWindow, testHelpers, controlledPromptSelector)
     const moveDownButton = mainWindow.locator(
       `${controlledPromptSelector} [data-testid="prompt-move-down"]`
     )
     await expect(moveDownButton).toBeEnabled()
     await moveDownButton.click()
     await expect
+      .poll(async () => await readFolderEntryIds(electronApp, controlledRootOrderPath))
+      .toEqual([
+        controlledNestedFolderId,
+        createDeterministicId(`${workspacePath}:Controls/Sibling`)
+      ])
+    await expect
       .poll(async () => await readFolderEntryIds(electronApp, controlledNestedOrderPath))
-      .toEqual(promptOrderBeforeMove)
+      .toEqual(['subfolders-controls-first', 'subfolders-controls-second'])
+  })
+
+  test('moves a complete subfolder to the first position of another root dropdown folder', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const destinationFolderName = 'Destination'
+    const destinationFolderId = createDeterministicId(
+      `${WORKSPACE_PATH}:${destinationFolderName}`
+    )
+    const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [
+      { folderName: 'Hierarchy', displayName: 'Hierarchy' },
+      {
+        folderName: destinationFolderName,
+        displayName: destinationFolderName,
+        prompts: [
+          {
+            id: 'destination-existing',
+            title: 'Existing Destination Prompt',
+            promptText: 'Existing destination prompt.'
+          }
+        ]
+      }
+    ])
+    const hierarchyFilesystem = setupWorkspaceScenario(WORKSPACE_PATH, 'subfolders-ui')
+    for (const [filePath, contents] of Object.entries(hierarchyFilesystem)) {
+      if (filePath.includes(`${WORKSPACE_PATH}/Prompts/Hierarchy/`)) {
+        filesystem[filePath] = contents
+      }
+    }
+    await testSetup.setupFilesystem(filesystem)
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await beginPromptFolderHandleDrag(mainWindow, nestedFolderId)
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+    await moveActiveDragToTarget(
+      mainWindow,
+      promptFolderSelectorDropdownItemSelector(destinationFolderId)
+    )
+    await finishActiveDrag(mainWindow)
+
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      destinationFolderName
+    )
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
+      .toEqual([
+        'subfolders-ui-root-completed',
+        'subfolders-ui-root-before',
+        emptyNestedFolderId,
+        'subfolders-ui-root-after'
+      ])
+    await expect
+      .poll(async () =>
+        readFolderEntryIds(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/_FolderInfo/FolderOrder.json`
+        )
+      )
+      .toEqual([nestedFolderId, 'destination-existing'])
+    await expect
+      .poll(async () => ({
+        oldCompletedOne: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_Completed/Nested Completed One.prompt.md`
+        ),
+        oldCompletedTwo: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_Completed/Nested Completed Two.prompt.md`
+        ),
+        newCompletedOne: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/_Completed/Nested Completed One.prompt.md`
+        ),
+        newCompletedTwo: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/_Completed/Nested Completed Two.prompt.md`
+        ),
+        activePrompt: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/Nested Prompt.prompt.md`
+        ),
+        grandchildPrompt: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/Grandchild/Grandchild Prompt.prompt.md`
+        )
+      }))
+      .toEqual({
+        oldCompletedOne: false,
+        oldCompletedTwo: false,
+        newCompletedOne: true,
+        newCompletedTwo: true,
+        activePrompt: true,
+        grandchildPrompt: true
+      })
+
+    await expect(mainWindow.locator(nestedFolderSelector)).toBeVisible()
+    await expect(
+      mainWindow.locator(`${nestedFolderSelector} ${folderSettingsToggleSelector}`)
+    ).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      mainWindow.locator(promptTreeFolderSelector('Nested')).locator('xpath=..')
+    ).toHaveAttribute('data-row-state', 'active')
+
+    await beginPromptTreeFolderRowDrag(mainWindow, 'Nested')
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+    await moveActiveDragToTarget(
+      mainWindow,
+      promptFolderSelectorDropdownItemSelector(hierarchyFolderId)
+    )
+    await finishActiveDrag(mainWindow)
+
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      'Hierarchy'
+    )
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
+      .toEqual([
+        nestedFolderId,
+        'subfolders-ui-root-completed',
+        'subfolders-ui-root-before',
+        emptyNestedFolderId,
+        'subfolders-ui-root-after'
+      ])
+    await expect(mainWindow.locator(nestedFolderSelector)).toBeVisible()
+    await expect(
+      mainWindow.locator(promptTreeFolderSelector('Nested')).locator('xpath=..')
+    ).toHaveAttribute('data-row-state', 'active')
   })
 
   test('hides Add Subfolder at depth eight', async ({ testSetup }) => {
@@ -1187,6 +1349,11 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
     await expect(
       mainWindow.locator('[data-testid^="prompt-divider-add-subfolder"]')
+    ).toHaveCount(0)
+    await expect(
+      mainWindow.locator(
+        '[data-testid^="prompt-editor-"] [data-testid="prompt-drag-handle"], [data-testid^="prompt-editor-"] [data-testid="prompt-move-up"], [data-testid^="prompt-editor-"] [data-testid="prompt-move-down"]'
+      )
     ).toHaveCount(0)
 
     const completedPromptXs = await Promise.all(

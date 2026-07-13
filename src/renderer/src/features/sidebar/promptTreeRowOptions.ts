@@ -4,11 +4,12 @@ import type {
 } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
 import type {
   PromptHandleDragPayload,
-  PromptHandleDropPayload
+  PromptHandleDropPayload,
+  PromptTreeEntryDragPayload
 } from '@renderer/features/drag-drop/promptHandleDrag'
 
 export type PromptRowDropOptions = DroppableOptions<
-  PromptHandleDragPayload,
+  PromptTreeEntryDragPayload,
   PromptHandleDropPayload
 >
 export type PromptRowDragOptions = DraggableOptions<

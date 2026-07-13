@@ -54,14 +54,19 @@
   } from './promptFolderSettingsSizing'
   import {
     createDroppableStateRegistry,
+    type DragFinishResult,
+    type DraggableOptions,
     type DroppableOptions
   } from '../drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
+    isPromptHandleDragPayload,
     resolvePromptHandleDropMove,
-    type PromptHandleDragPayload,
-    type PromptHandleDropPayload
+    type PromptFolderEntryDragPayload,
+    type PromptHandleDropPayload,
+    type PromptTreeEntryDragPayload
   } from '../drag-drop/promptHandleDrag'
+  import { resolvePromptFolderEntryDropMove } from '../drag-drop/promptFolderEntryDrag'
   import type {
     ActivePromptTreeRow,
     PromptFocusRequest
@@ -120,12 +125,17 @@
     onAddSubfolder: (target: PromptFolderDividerTarget) => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
     onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
-    onMovePromptUp: (promptId: string) => Promise<boolean>
-    onMovePromptDown: (promptId: string) => Promise<boolean>
+    canMovePrompt: (target: PromptFolderPromptTarget, direction: 'up' | 'down') => boolean
+    onMovePromptUp: (target: PromptFolderPromptTarget) => Promise<boolean>
+    onMovePromptDown: (target: PromptFolderPromptTarget) => Promise<boolean>
     onPromptTreeDrop: (
-      promptId: string,
+      target: PromptFolderPromptTarget,
       dropPayload: PromptHandleDropPayload | null
     ) => void | Promise<void>
+    onPromptFolderTreeDrop: (
+      source: PromptFolderEntryDragPayload,
+      dropPayload: PromptHandleDropPayload | null
+    ) => void
     onSettingsFieldChange: (
       ownerFolderId: string,
       field: PromptFolderSettingsDraftField,
@@ -171,7 +181,9 @@
     onSetPromptStatus,
     onMovePromptUp,
     onMovePromptDown,
+    canMovePrompt,
     onPromptTreeDrop,
+    onPromptFolderTreeDrop,
     onSettingsFieldChange,
     onRenamePromptFolder,
     onScrollToWithinWindowBandChange,
@@ -525,69 +537,108 @@
     scrollApi.scrollByRowHeights(getRootEntryBlockRowIds(adjacentEntryId), direction)
   }
 
-  const handleMovePromptUp = (promptId: string): Promise<boolean> => {
-    scrollByAdjacentEntryBlockHeight('up', promptId)
-    return onMovePromptUp(promptId)
+  const handleMovePromptUp = (target: PromptFolderPromptTarget): Promise<boolean> => {
+    if (target.ownerFolderId === screenRootFolderId) {
+      scrollByAdjacentEntryBlockHeight('up', target.promptId)
+    }
+    return onMovePromptUp(target)
   }
 
-  const handleMovePromptDown = (promptId: string): Promise<boolean> => {
-    scrollByAdjacentEntryBlockHeight('down', promptId)
-    return onMovePromptDown(promptId)
+  const handleMovePromptDown = (target: PromptFolderPromptTarget): Promise<boolean> => {
+    if (target.ownerFolderId === screenRootFolderId) {
+      scrollByAdjacentEntryBlockHeight('down', target.promptId)
+    }
+    return onMovePromptDown(target)
   }
 
   const getPromptDividerDropPayload = (
+    ownerFolderId: string,
     previousEntryId: string | null
   ): PromptHandleDropPayload => {
-    if (previousEntryId === null) {
-      return {
-        folderId: screenRootFolderId,
-        targetEntryId: null,
-        position: 'after'
-      }
-    }
-
     return {
-      folderId: screenRootFolderId,
+      folderId: ownerFolderId,
       targetEntryId: previousEntryId,
       position: 'after'
     }
   }
 
   const canDropOnPromptDivider = (
+    ownerFolderId: string,
     previousEntryId: string | null,
-    payload: PromptHandleDragPayload
+    payload: PromptTreeEntryDragPayload
   ): boolean => {
-    if (payload.sourceFolderId !== screenRootFolderId) {
-      return true
+    const destinationFolder = promptFolderById[ownerFolderId]
+    if (!destinationFolder) return false
+    const dropPayload = getPromptDividerDropPayload(ownerFolderId, previousEntryId)
+
+    if (!isPromptHandleDragPayload(payload)) {
+      return (
+        resolvePromptFolderEntryDropMove(
+          promptFolders,
+          getActiveEntryIds,
+          payload.folderId,
+          dropPayload
+        ) !== null
+      )
     }
 
-    const activeEntryIds = (promptFolderById[screenRootFolderId]?.entries ?? []).flatMap(
-      (entry) => {
-        if (entry.kind === 'folder') return [entry.id]
-        return completedPromptOwnerByPromptId[entry.id] ? [] : [entry.id]
-      }
-    )
-
+    const sourceFolder = promptFolderById[payload.sourceFolderId]
+    if (!sourceFolder) return false
     return (
       resolvePromptHandleDropMove(
-        screenRootFolderId,
-        activeEntryIds,
+        sourceFolder.id,
+        getActiveEntryIds(sourceFolder),
         payload.fromId,
-        getPromptDividerDropPayload(previousEntryId),
-        activeEntryIds
+        dropPayload,
+        getActiveEntryIds(destinationFolder)
       ) !== null
     )
   }
 
   const getPromptDividerDropOptions = (
     rowId: string,
+    ownerFolderId: string,
     previousPromptId: string | null
-  ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
+  ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
-    payload: () => getPromptDividerDropPayload(previousPromptId),
-    canDrop: (payload) => canDropOnPromptDivider(previousPromptId, payload),
+    payload: () => getPromptDividerDropPayload(ownerFolderId, previousPromptId),
+    canDrop: (payload) => canDropOnPromptDivider(ownerFolderId, previousPromptId, payload),
     state: promptDividerDroppableState.getState(rowId)
+  })
+
+  const getActiveEntryIds = (folder: PromptFolder): string[] =>
+    folder.entries.flatMap((entry) => {
+      if (entry.kind === 'folder') return [entry.id]
+      return promptMetadataByPromptId[entry.id]?.status === PromptStatus.Completed
+        ? []
+        : [entry.id]
+    })
+
+  const getPromptFolderDropOptions = (
+    promptFolderId: string
+  ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    allowedEdges: 'none',
+    payload: {
+      folderId: promptFolderId,
+      targetEntryId: null,
+      position: 'after'
+    },
+    canDrop: (payload) => canDropOnPromptDivider(promptFolderId, null, payload)
+  })
+
+  const getPromptFolderDragOptions = (
+    promptFolderId: string
+  ): DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    payload: { folderId: promptFolderId },
+    onDragFinish: ({
+      sourcePayload,
+      dropPayload
+    }: DragFinishResult<PromptFolderEntryDragPayload, PromptHandleDropPayload>) => {
+      onPromptFolderTreeDrop(sourcePayload, dropPayload)
+    }
   })
 
   const getFolderPromptCount = (row: PromptFolderScreenFolderEditorRow): number => {
@@ -692,8 +743,12 @@
         isReadOnly={isCompletedMode}
         canRename={props.row.isRoot && !isCompletedMode}
         showSidebar={!props.row.isRoot}
-        isFirstSibling={props.row.isFirstSibling}
-        isLastSibling={props.row.isLastSibling}
+        dragOptions={!props.row.isRoot && !isCompletedMode
+          ? getPromptFolderDragOptions(ownerFolderId)
+          : undefined}
+        dropOptions={!props.row.isRoot && !isCompletedMode
+          ? getPromptFolderDropOptions(ownerFolderId)
+          : undefined}
         onSettingsSectionToggle={() => onSettingsSectionToggle(ownerFolderId)}
         onPromptsSectionToggle={() => onPromptsSectionToggle(ownerFolderId)}
         onSettingsFieldChange={(field, text, measurement) =>
@@ -735,9 +790,9 @@
       onAddSubfolder={showsActions && getFolderDepth(row.ownerFolderId) < 8
         ? () => onAddSubfolder(target)
         : undefined}
-      getDropOptions={!showsActions || !row.isOwnerRoot
+      getDropOptions={!showsActions
         ? undefined
-        : () => getPromptDividerDropOptions(rowId, row.previousEntryId)}
+        : () => getPromptDividerDropOptions(rowId, row.ownerFolderId, row.previousEntryId)}
       testId={showsActions
         ? row.previousEntryId
           ? `prompt-divider-add-after-${row.previousEntryId}`
@@ -769,6 +824,7 @@
     row.indentLevel
   )}
   {@const contentOffsetPx = getPromptFolderSectionContentOffsetPx(row.indentLevel)}
+  {@const promptTarget = { ownerFolderId: row.ownerFolderId, promptId: row.promptId }}
   <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <PromptEditorRow
       {workspaceId}
@@ -790,9 +846,9 @@
       completedAt={promptMetadata.completedAt}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       focusRequest={promptFocusRequest}
-      isFirstPrompt={row.isFirstPrompt}
-      isLastPrompt={row.isLastPrompt}
-      isDragEnabled={!isCompletedMode && row.isOwnerRoot}
+      isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
+      isLastPrompt={!canMovePrompt(promptTarget, 'down')}
+      isDragEnabled={!isCompletedMode}
       onDelete={() =>
         onDeletePrompt({ ownerFolderId: row.ownerFolderId, promptId: row.promptId })}
       onStatusChange={(status) => {
@@ -802,16 +858,12 @@
         )
       }}
       onMoveUp={() =>
-        isCompletedMode || !row.isOwnerRoot
-          ? Promise.resolve(false)
-          : handleMovePromptUp(row.promptId)}
+        isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(promptTarget)}
       onMoveDown={() =>
-        isCompletedMode || !row.isOwnerRoot
-          ? Promise.resolve(false)
-          : handleMovePromptDown(row.promptId)}
+        isCompletedMode ? Promise.resolve(false) : handleMovePromptDown(promptTarget)}
       onPromptTreeDrop={(dropPayload) => {
-        if (isCompletedMode || !row.isOwnerRoot) return
-        return onPromptTreeDrop(row.promptId, dropPayload)
+        if (isCompletedMode) return
+        return onPromptTreeDrop(promptTarget, dropPayload)
       }}
     />
   </PromptFolderSectionRow>

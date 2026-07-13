@@ -37,6 +37,7 @@ import {
   movePrompt,
   setPromptStatus
 } from '@renderer/data/Mutations/PromptMutations'
+import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
 import {
   lookupPromptFolderSettingsRowMeasuredHeight,
   lookupPromptFolderScrollTop,
@@ -81,8 +82,10 @@ import {
 } from './promptFolderSettingsSizing'
 import {
   resolvePromptHandleDropMove,
+  type PromptFolderEntryDragPayload,
   type PromptHandleDropPayload
 } from '../drag-drop/promptHandleDrag'
+import { resolvePromptFolderEntryDropMove } from '../drag-drop/promptFolderEntryDrag'
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 import { PromptFolderScreenMode } from './promptFolderScreenMode'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
@@ -197,6 +200,16 @@ export const createPromptFolderScreenController = ({
       if (entry.kind === 'folder') return [entry.id]
       return promptById[entry.id]?.status === PromptStatus.Completed ? [] : [entry.id]
     })
+  const findContainingRootFolderId = (folderId: string): string => {
+    let containingRootId = folderId
+    while (true) {
+      const parent = promptFolderQuery.data.find((folder) =>
+        folder?.entries.some((entry) => entry.kind === 'folder' && entry.id === containingRootId)
+      )
+      if (!parent) return containingRootId
+      containingRootId = parent.id
+    }
+  }
   const rootPromptIds = $derived(
     screenRootFolder ? getPromptIdsForFolder(screenRootFolder) : []
   )
@@ -496,6 +509,7 @@ export const createPromptFolderScreenController = ({
       promptNavigation.selectionSource === 'prompt-divider-create' ||
       promptNavigation.selectionSource === 'subfolder-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
+      promptNavigation.selectionSource === 'folder-move' ||
       promptNavigation.selectionSource === 'header' ||
       promptNavigation.selectionSource === 'restore-hold'
     )
@@ -759,9 +773,10 @@ export const createPromptFolderScreenController = ({
 
   const selectMovedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
+    const destinationRootFolderId = findContainingRootFolderId(destinationPromptFolderId)
 
     promptNavigation.select({
-      screenRootFolderId: destinationPromptFolderId,
+      screenRootFolderId: destinationRootFolderId,
       rowOwnerFolderId: destinationPromptFolderId,
       row,
       source: 'prompt-move',
@@ -777,7 +792,19 @@ export const createPromptFolderScreenController = ({
       )
     }
 
-    onScreenRootFolderSelect(destinationPromptFolderId)
+    onScreenRootFolderSelect(destinationRootFolderId)
+  }
+
+  const selectMovedPromptFolder = (promptFolderId: string): void => {
+    const destinationRootFolderId = findContainingRootFolderId(promptFolderId)
+    promptNavigation.select({
+      screenRootFolderId: destinationRootFolderId,
+      rowOwnerFolderId: promptFolderId,
+      row: 'folder-settings',
+      source: 'folder-move',
+      forceVersionBump: true
+    })
+    onScreenRootFolderSelect(destinationRootFolderId)
   }
 
   const clearInitialPersistedScrollWait = () => {
@@ -886,7 +913,8 @@ export const createPromptFolderScreenController = ({
     if (explicitSelectionTarget) {
       expandSectionForRow(
         explicitSelectionTarget,
-        promptNavigation.selectionSource !== 'folder-open'
+        promptNavigation.selectionSource !== 'folder-open' &&
+          promptNavigation.selectionSource !== 'folder-move'
       )
     }
 
@@ -972,7 +1000,7 @@ export const createPromptFolderScreenController = ({
     if (
       !selectPromptTreeRowAndCenter(
         target,
-        source !== 'folder-open' && source !== 'subfolder-create'
+        source !== 'folder-open' && source !== 'subfolder-create' && source !== 'folder-move'
       )
     ) {
       return
@@ -997,13 +1025,14 @@ export const createPromptFolderScreenController = ({
     )
   })
 
-  const movePromptFromCurrentFolder = async (
+  const movePromptFromFolder = async (
+    sourcePromptFolderId: string,
     promptId: string,
     destinationPromptFolderId: string,
     previousEntryId: string | null
   ): Promise<boolean> => {
-    const currentPromptFolder = screenRootFolder
-    if (!currentPromptFolder) {
+    const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
+    if (!sourcePromptFolder) {
       return false
     }
 
@@ -1013,8 +1042,8 @@ export const createPromptFolderScreenController = ({
     }
 
     const nextMove = resolvePromptHandleDropMove(
-      currentPromptFolder.id,
-      getActiveEntryIdsForFolder(currentPromptFolder),
+      sourcePromptFolder.id,
+      getActiveEntryIdsForFolder(sourcePromptFolder),
       promptId,
       {
         folderId: destinationPromptFolderId,
@@ -1030,7 +1059,7 @@ export const createPromptFolderScreenController = ({
     return await runIpcBestEffort(
       async () => {
         await movePrompt(
-          currentPromptFolder.id,
+          sourcePromptFolder.id,
           destinationPromptFolderId,
           promptId,
           previousEntryId
@@ -1082,68 +1111,151 @@ export const createPromptFolderScreenController = ({
     })
   }
 
-  const handleMovePromptUp = async (nextPromptId: string): Promise<boolean> => {
-    const currentEntryIds = screenRootFolder
-      ? getActiveEntryIdsForFolder(screenRootFolder)
-      : []
-    const currentIndex = currentEntryIds.indexOf(nextPromptId)
-    if (currentIndex <= 0) {
-      return false
+  const logicalPromptDropTargets = $derived.by<PromptHandleDropPayload[]>(() => {
+    if (!screenRootFolder) return []
+    const targets: PromptHandleDropPayload[] = []
+    const visitedFolderIds = new SvelteSet<string>()
+
+    const addFolderTargets = (folder: PromptFolder): void => {
+      if (visitedFolderIds.has(folder.id)) return
+      visitedFolderIds.add(folder.id)
+      targets.push({ folderId: folder.id, targetEntryId: null, position: 'after' })
+
+      for (const entryId of getActiveEntryIdsForFolder(folder)) {
+        const childFolder = promptFolderCollection.get(entryId)
+        if (childFolder) addFolderTargets(childFolder)
+        targets.push({ folderId: folder.id, targetEntryId: entryId, position: 'after' })
+      }
     }
 
-    const previousEntryId = currentIndex <= 1 ? null : currentEntryIds[currentIndex - 2]
-    return await movePromptFromCurrentFolder(nextPromptId, screenRootFolderId, previousEntryId)
-  }
+    addFolderTargets(screenRootFolder)
+    return targets
+  })
 
-  const handleMovePromptDown = async (nextPromptId: string): Promise<boolean> => {
-    const currentEntryIds = screenRootFolder
-      ? getActiveEntryIdsForFolder(screenRootFolder)
-      : []
-    const currentIndex = currentEntryIds.indexOf(nextPromptId)
-    if (currentIndex === -1 || currentIndex >= currentEntryIds.length - 1) {
-      return false
+  const resolveAdjacentPromptMove = (
+    target: PromptFolderPromptTarget,
+    direction: 'up' | 'down'
+  ) => {
+    const sourceFolder = promptFolderCollection.get(target.ownerFolderId)
+    if (!sourceFolder) return null
+    const currentTargetIndex = logicalPromptDropTargets.findIndex(
+      (candidate) =>
+        candidate.folderId === target.ownerFolderId &&
+        candidate.targetEntryId === target.promptId &&
+        candidate.position === 'after'
+    )
+    if (currentTargetIndex === -1) return null
+
+    const step = direction === 'up' ? -1 : 1
+    for (
+      let targetIndex = currentTargetIndex + step;
+      targetIndex >= 0 && targetIndex < logicalPromptDropTargets.length;
+      targetIndex += step
+    ) {
+      const dropTarget = logicalPromptDropTargets[targetIndex]
+      const destinationFolder = promptFolderCollection.get(dropTarget.folderId)
+      if (!destinationFolder) continue
+      const move = resolvePromptHandleDropMove(
+        sourceFolder.id,
+        getActiveEntryIdsForFolder(sourceFolder),
+        target.promptId,
+        dropTarget,
+        getActiveEntryIdsForFolder(destinationFolder)
+      )
+      if (move) return move
     }
-
-    const previousEntryId = currentEntryIds[currentIndex + 1]
-    return await movePromptFromCurrentFolder(nextPromptId, screenRootFolderId, previousEntryId)
+    return null
   }
+
+  const canMovePrompt = (
+    target: PromptFolderPromptTarget,
+    direction: 'up' | 'down'
+  ): boolean => resolveAdjacentPromptMove(target, direction) !== null
+
+  const movePromptToAdjacentTarget = async (
+    target: PromptFolderPromptTarget,
+    direction: 'up' | 'down'
+  ): Promise<boolean> => {
+    const move = resolveAdjacentPromptMove(target, direction)
+    if (!move) return false
+    const didMove = await movePromptFromFolder(
+      move.sourcePromptFolderId,
+      move.promptId,
+      move.destinationPromptFolderId,
+      move.previousEntryId
+    )
+    if (didMove && move.sourcePromptFolderId !== move.destinationPromptFolderId) {
+      selectMovedPrompt(move.destinationPromptFolderId, move.promptId)
+    }
+    return didMove
+  }
+
+  const handleMovePromptUp = (target: PromptFolderPromptTarget): Promise<boolean> =>
+    movePromptToAdjacentTarget(target, 'up')
+
+  const handleMovePromptDown = (target: PromptFolderPromptTarget): Promise<boolean> =>
+    movePromptToAdjacentTarget(target, 'down')
 
   const handlePromptTreeDrop = (
-    draggedPromptId: string,
+    source: PromptFolderPromptTarget,
     dropPayload: PromptHandleDropPayload | null
   ) => {
-    const currentPromptFolder = screenRootFolder
-    if (!currentPromptFolder) {
+    const sourcePromptFolder = promptFolderCollection.get(source.ownerFolderId)
+    if (!sourcePromptFolder) {
       return
     }
 
     const nextMove = resolvePromptHandleDropMove(
-      currentPromptFolder.id,
-      getActiveEntryIdsForFolder(currentPromptFolder),
-      draggedPromptId,
+      sourcePromptFolder.id,
+      getActiveEntryIdsForFolder(sourcePromptFolder),
+      source.promptId,
       dropPayload,
-      dropPayload && dropPayload.targetEntryId !== null
+      dropPayload
         ? (((): string[] | null => {
-            const targetFolder = promptFolderQuery.data.find(
-              (folder) => folder?.id === dropPayload.folderId
-            )
+            const targetFolder = promptFolderCollection.get(dropPayload.folderId)
             return targetFolder ? getActiveEntryIdsForFolder(targetFolder) : null
           })())
-        : getActiveEntryIdsForFolder(currentPromptFolder)
+        : null
     )
     if (!nextMove) {
       return
     }
 
-    void movePromptFromCurrentFolder(
-      draggedPromptId,
+    void movePromptFromFolder(
+      source.ownerFolderId,
+      source.promptId,
       nextMove.destinationPromptFolderId,
       nextMove.previousEntryId
     )
 
     if (nextMove.sourcePromptFolderId !== nextMove.destinationPromptFolderId) {
-      selectMovedPrompt(nextMove.destinationPromptFolderId, draggedPromptId)
+      selectMovedPrompt(nextMove.destinationPromptFolderId, source.promptId)
     }
+  }
+
+  const handlePromptFolderTreeDrop = (
+    source: PromptFolderEntryDragPayload,
+    dropPayload: PromptHandleDropPayload | null
+  ): void => {
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (!workspaceId) return
+    const move = resolvePromptFolderEntryDropMove(
+      promptFolderQuery.data.filter((folder): folder is PromptFolder => Boolean(folder)),
+      getActiveEntryIdsForFolder,
+      source.folderId,
+      dropPayload
+    )
+    if (!move) return
+
+    void runIpcBestEffort(async () => {
+      await movePromptFolder(
+        workspaceId,
+        move.promptFolderId,
+        move.previousEntryId,
+        move.destinationParentPromptFolderId
+      )
+      selectMovedPromptFolder(move.promptFolderId)
+    })
   }
 
   const handleSettingsFieldChange = (
@@ -1428,7 +1540,9 @@ export const createPromptFolderScreenController = ({
     handleSetPromptStatus,
     handleMovePromptUp,
     handleMovePromptDown,
+    canMovePrompt,
     handlePromptTreeDrop,
+    handlePromptFolderTreeDrop,
     handleSettingsFieldChange,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,

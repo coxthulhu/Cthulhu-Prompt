@@ -12,9 +12,12 @@
   } from '@renderer/features/drag-drop/promptFolderDrag'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
-    type PromptHandleDragPayload,
-    type PromptHandleDropPayload
+    isPromptHandleDragPayload,
+    type PromptHandleDropPayload,
+    type PromptTreeEntryDragPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { resolvePromptHandleDropMove } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { resolvePromptFolderEntryDropMove } from '@renderer/features/drag-drop/promptFolderEntryDrag'
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
@@ -42,7 +45,10 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
-  import { getPromptFolderPromptIds } from '@renderer/data/Collections/PromptFolderEntries'
+  import {
+    getPromptFolderActiveEntryIds,
+    getPromptFolderPromptIds
+  } from '@renderer/data/Collections/PromptFolderEntries'
   import {
     getPromptNavigationContext,
     promptIdToPromptNavigationRow,
@@ -524,7 +530,39 @@
       targetEntryId: null,
       position: 'after'
     }),
-    canDrop: (payload) => (payload as PromptHandleDragPayload).sourceFolderId !== item.id,
+    canDrop: (payload) => {
+      const entryPayload = payload as PromptTreeEntryDragPayload
+      const destinationFolder = promptTreePromptFolders.find((folder) => folder.id === item.id)
+      if (!destinationFolder) return false
+      const dropPayload: PromptHandleDropPayload = {
+        folderId: item.id,
+        targetEntryId: null,
+        position: 'after'
+      }
+      if (!isPromptHandleDragPayload(entryPayload)) {
+        return (
+          resolvePromptFolderEntryDropMove(
+            promptTreePromptFolders,
+            getPromptFolderActiveEntryIds,
+            entryPayload.folderId,
+            dropPayload
+          ) !== null
+        )
+      }
+      const sourceFolder = promptTreePromptFolders.find(
+        (folder) => folder.id === entryPayload.sourceFolderId
+      )
+      if (!sourceFolder) return false
+      return (
+        resolvePromptHandleDropMove(
+          sourceFolder.id,
+          getPromptFolderActiveEntryIds(sourceFolder),
+          entryPayload.fromId,
+          dropPayload,
+          getPromptFolderActiveEntryIds(destinationFolder)
+        ) !== null
+      )
+    },
     state: promptFolderSelectorPromptDroppableState.getState(item.id)
   })
 

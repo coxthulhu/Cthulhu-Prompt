@@ -140,6 +140,30 @@ export const beginPromptTreeRowDrag = async (page: Page, promptId: string): Prom
   )
 }
 
+export const beginPromptFolderHandleDrag = async (
+  page: Page,
+  promptFolderId: string
+): Promise<void> => {
+  await beginDragFromLocator(
+    page,
+    page.locator(
+      `[data-testid="prompt-folder-editor-${promptFolderId}"] [data-testid="prompt-folder-drag-handle"]`
+    ),
+    `Missing prompt folder drag geometry for ${promptFolderId}`
+  )
+}
+
+export const beginPromptTreeFolderRowDrag = async (
+  page: Page,
+  folderName: string
+): Promise<void> => {
+  await beginDragFromLocator(
+    page,
+    page.locator(promptTreeFolderSelector(folderName)),
+    `Missing prompt tree folder drag geometry for ${folderName}`
+  )
+}
+
 export const beginPromptTreeRowGutterDrag = async (
   page: Page,
   promptId: string

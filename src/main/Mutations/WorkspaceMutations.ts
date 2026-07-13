@@ -10,7 +10,10 @@ import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import * as path from 'path'
-import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
+import {
+  buildPromptFolderTreeIndex,
+  MAX_PROMPT_SUBFOLDER_DEPTH
+} from '@shared/PromptFolderTree'
 import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import {
   buildPromptFolderSnapshot,
@@ -33,8 +36,6 @@ const resolvePromptFolderInsertIndex = (
   const previousIndex = entries.findIndex((entry) => entry.id === previousEntryId)
   return previousIndex === -1 ? null : previousIndex + 1
 }
-
-const MAX_SUBFOLDER_DEPTH = 8
 
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
@@ -160,7 +161,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
             )
           )
 
-          if (deepestMovedDepth + depthDelta > MAX_SUBFOLDER_DEPTH) {
+          if (deepestMovedDepth + depthDelta > MAX_PROMPT_SUBFOLDER_DEPTH) {
             return {
               success: false,
               error: 'Prompt folders can contain up to 8 nested subfolder layers'

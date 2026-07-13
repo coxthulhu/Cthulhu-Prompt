@@ -1,6 +1,8 @@
 import type { PromptFolder } from './PromptFolder'
 import type { WorkspaceRoot } from './Workspace'
 
+export const MAX_PROMPT_SUBFOLDER_DEPTH = 8
+
 export type PromptFolderTreeLocation = {
   parentPromptFolderId: string | null
   depth: number

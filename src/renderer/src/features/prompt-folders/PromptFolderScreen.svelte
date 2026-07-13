@@ -146,7 +146,9 @@
             onSetPromptStatus={controller.handleSetPromptStatus}
             onMovePromptUp={controller.handleMovePromptUp}
             onMovePromptDown={controller.handleMovePromptDown}
+            canMovePrompt={controller.canMovePrompt}
             onPromptTreeDrop={controller.handlePromptTreeDrop}
+            onPromptFolderTreeDrop={controller.handlePromptFolderTreeDrop}
             onSettingsFieldChange={controller.handleSettingsFieldChange}
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}

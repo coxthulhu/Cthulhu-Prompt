@@ -5,6 +5,18 @@ export type PromptHandleDragPayload = {
   sourceFolderId: string
 }
 
+export type PromptFolderEntryDragPayload = {
+  folderId: string
+}
+
+export type PromptTreeEntryDragPayload =
+  | PromptHandleDragPayload
+  | PromptFolderEntryDragPayload
+
+export const isPromptHandleDragPayload = (
+  payload: PromptTreeEntryDragPayload
+): payload is PromptHandleDragPayload => 'sourceFolderId' in payload
+
 export type PromptHandleDropPayload = {
   folderId: string
   targetEntryId: string | null
@@ -20,6 +32,38 @@ export type PromptHandleMove = {
 
 const areEntryIdOrdersEqual = (left: string[], right: string[]): boolean => {
   return left.length === right.length && left.every((entryId, index) => entryId === right[index])
+}
+
+export const resolveEntryDropPreviousEntryId = (
+  draggedEntryId: string,
+  dropPayload: PromptHandleDropPayload,
+  destinationEntryIds: string[]
+): string | null | undefined => {
+  if (dropPayload.targetEntryId === draggedEntryId) return undefined
+  if (dropPayload.targetEntryId === null) return null
+  if (dropPayload.position === 'after') return dropPayload.targetEntryId
+
+  const targetIndex = destinationEntryIds.indexOf(dropPayload.targetEntryId)
+  if (targetIndex === -1) return undefined
+
+  for (let index = targetIndex - 1; index >= 0; index -= 1) {
+    const previousEntryId = destinationEntryIds[index]
+    if (previousEntryId !== draggedEntryId) return previousEntryId
+  }
+
+  return null
+}
+
+export const doesEntryDropChangeOrder = (
+  sourceFolderId: string,
+  destinationFolderId: string,
+  sourceEntryIds: string[],
+  draggedEntryId: string,
+  previousEntryId: string | null
+): boolean => {
+  if (sourceFolderId !== destinationFolderId) return true
+  const nextEntryIds = reorderEntryIds(sourceEntryIds, draggedEntryId, previousEntryId)
+  return Boolean(nextEntryIds && !areEntryIdOrdersEqual(sourceEntryIds, nextEntryIds))
 }
 
 const reorderEntryIds = (
@@ -49,27 +93,6 @@ const reorderEntryIds = (
   return nextEntryIds
 }
 
-const resolvePreviousEntryIdForBeforeDrop = (
-  destinationEntryIds: string[],
-  draggedPromptId: string,
-  targetEntryId: string
-): string | null => {
-  const targetIndex = destinationEntryIds.indexOf(targetEntryId)
-  if (targetIndex === -1) {
-    return null
-  }
-
-  // Skip the dragged prompt so same-folder "drop above" keeps the final ordering stable.
-  for (let index = targetIndex - 1; index >= 0; index -= 1) {
-    const previousEntryId = destinationEntryIds[index]
-    if (previousEntryId !== draggedPromptId) {
-      return previousEntryId
-    }
-  }
-
-  return null
-}
-
 export const resolvePromptHandleDropMove = (
   sourcePromptFolderId: string,
   sourceEntryIds: string[],
@@ -94,21 +117,20 @@ export const resolvePromptHandleDropMove = (
   }
 
   const previousEntryId =
-    dropPayload.targetEntryId === null
-      ? null
-      : dropPayload.position === 'before'
-        ? resolvePreviousEntryIdForBeforeDrop(
-            destinationEntryIds!,
-            promptId,
-            dropPayload.targetEntryId
-          )
-        : dropPayload.targetEntryId
+    resolveEntryDropPreviousEntryId(promptId, dropPayload, destinationEntryIds ?? [])
 
-  if (sourcePromptFolderId === dropPayload.folderId) {
-    const nextEntryIds = reorderEntryIds(sourceEntryIds, promptId, previousEntryId)
-    if (!nextEntryIds || areEntryIdOrdersEqual(sourceEntryIds, nextEntryIds)) {
-      return null
-    }
+  if (previousEntryId === undefined) return null
+
+  if (
+    !doesEntryDropChangeOrder(
+      sourcePromptFolderId,
+      dropPayload.folderId,
+      sourceEntryIds,
+      promptId,
+      previousEntryId
+    )
+  ) {
+    return null
   }
 
   return {

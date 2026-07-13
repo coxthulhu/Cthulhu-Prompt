@@ -18,6 +18,7 @@ export type PromptNavigationSource =
   | 'prompt-divider-create'
   | 'subfolder-create'
   | 'prompt-move'
+  | 'folder-move'
 
 type PromptNavigationState = {
   screenRootFolderId: string | null

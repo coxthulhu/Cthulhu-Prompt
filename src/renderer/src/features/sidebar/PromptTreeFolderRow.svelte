@@ -7,6 +7,15 @@
   } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
+  import type { Action } from 'svelte/action'
+  import {
+    draggable,
+    type DraggableOptions
+  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import type {
+    PromptFolderEntryDragPayload,
+    PromptHandleDropPayload
+  } from '@renderer/features/drag-drop/promptHandleDrag'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import {
     folderOpenTestId,
@@ -25,6 +34,7 @@
     indentCount?: number
     isLastRow?: boolean
     getFolderPromptDroppableOptions?: () => PromptRowDropOptions
+    folderDragOptions?: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
     onFolderExpandedChange: (folderId: string, isExpanded: boolean) => void
     onPromptFolderOpen: (folderId: string) => void
     onFolderSettingsOpen: (folderId: string) => void
@@ -39,6 +49,7 @@
     indentCount = 0,
     isLastRow = false,
     getFolderPromptDroppableOptions,
+    folderDragOptions,
     onFolderExpandedChange,
     onPromptFolderOpen,
     onFolderSettingsOpen
@@ -110,6 +121,28 @@
     }
     */
   }
+
+  const optionalFolderDraggable: Action<
+    HTMLButtonElement,
+    DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> | undefined
+  > = (node, initialOptions) => {
+    let action = initialOptions ? draggable(node, initialOptions) : null
+    return {
+      update(nextOptions) {
+        if (!nextOptions) {
+          action?.destroy()
+          action = null
+        } else if (action) {
+          action.update(nextOptions)
+        } else {
+          action = draggable(node, nextOptions)
+        }
+      },
+      destroy() {
+        action?.destroy()
+      }
+    }
+  }
 </script>
 
 {#snippet folderRowContent(isOver: boolean)}
@@ -127,6 +160,7 @@
       data-row-state={rowState}
     >
       <button
+        use:optionalFolderDraggable={folderDragOptions}
         type="button"
         aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.displayName}`}
         aria-expanded={isExpanded}

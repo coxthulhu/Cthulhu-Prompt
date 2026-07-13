@@ -17,6 +17,16 @@
   import PromptFolderSettingsEditorSection from './PromptFolderSettingsEditorSection.svelte'
   import PromptFolderEditorSidebar from './PromptFolderEditorSidebar.svelte'
   import {
+    droppable,
+    type DraggableOptions,
+    type DroppableOptions
+  } from '../drag-drop/dragDrop.svelte.ts'
+  import type {
+    PromptFolderEntryDragPayload,
+    PromptHandleDropPayload,
+    PromptTreeEntryDragPayload
+  } from '../drag-drop/promptHandleDrag'
+  import {
     PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX,
     PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX
   } from './promptFolderSettingsSizing'
@@ -43,8 +53,8 @@
     isReadOnly?: boolean
     canRename?: boolean
     showSidebar?: boolean
-    isFirstSibling?: boolean
-    isLastSibling?: boolean
+    dragOptions?: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
+    dropOptions?: DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
     onHydrationChange?: (isHydrated: boolean) => void
     onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
@@ -78,8 +88,8 @@
     isReadOnly = false,
     canRename = !isReadOnly,
     showSidebar = false,
-    isFirstSibling = true,
-    isLastSibling = true,
+    dragOptions,
+    dropOptions,
     onHydrationChange,
     onSettingsSectionToggle,
     onPromptsSectionToggle,
@@ -99,6 +109,14 @@
   })
   const isAnySectionHydrated = $derived(
     PROMPT_FOLDER_SETTINGS_FIELDS.some((field) => hydratedFields[field])
+  )
+  const effectiveDropOptions = $derived<
+    DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
+  >(
+    dropOptions ?? {
+      dragType: 'disabled-prompt-folder-row',
+      canDrop: () => false
+    }
   )
   let lastReportedHydration = $state<boolean | null>(null)
 
@@ -153,6 +171,7 @@
   class="prompt-folder-editor-row"
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px; padding-top:${rowPaddingTopPx}px;`}
   data-testid={`prompt-folder-editor-${promptFolderId}`}
+  data-prompt-folder-id={promptFolderId}
   data-virtual-window-row
 >
   <EditorCardSurface
@@ -160,10 +179,13 @@
     style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
   >
     {#snippet sidebar()}
-      <PromptFolderEditorSidebar {isFirstSibling} {isLastSibling} />
+      {#if dragOptions}
+        <PromptFolderEditorSidebar {dragOptions} />
+      {/if}
     {/snippet}
 
     <header
+      use:droppable={effectiveDropOptions}
       class="prompt-folder-editor-title-bar"
       style={`height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px; min-height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px; max-height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px;`}
       role="button"
