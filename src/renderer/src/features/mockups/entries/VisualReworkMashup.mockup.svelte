@@ -48,6 +48,8 @@
   }
 
   let filter = $state<'all' | PromptStatus>('all')
+  let nextPromptNumber = $state(1)
+  let nextFolderNumber = $state(1)
 
   let loosePrompts = $state<Prompt[]>([
     {
@@ -162,18 +164,72 @@
   const countStatus = (status: PromptStatus) =>
     allPrompts().filter((prompt) => prompt.status === status).length
 
-  const addPrompt = () => {
-    loosePrompts = [
-      ...loosePrompts,
-      {
-        id: `new-${Date.now()}`,
-        title: 'Untitled prompt',
-        folder: 'Prompts',
-        updated: 'Just now',
-        status: 'todo',
-        body: ''
+  const createPrompt = (folder: string): Prompt => {
+    const number = nextPromptNumber++
+    return {
+      id: `new-prompt-${number}`,
+      title: `Untitled prompt ${number}`,
+      folder,
+      updated: 'Just now',
+      status: 'todo',
+      body: ''
+    }
+  }
+
+  const insertionIndexAfter = (prompts: Prompt[], promptId: string | null) => {
+    if (promptId === null) return 0
+    const promptIndex = prompts.findIndex((prompt) => prompt.id === promptId)
+    return promptIndex === -1 ? prompts.length : promptIndex + 1
+  }
+
+  const insertPromptAfter = (folderId: string | null, promptId: string | null) => {
+    // A newly added todo prompt stays visible even when another status filter was active.
+    filter = 'all'
+
+    if (folderId === null) {
+      const index = insertionIndexAfter(loosePrompts, promptId)
+      loosePrompts = [
+        ...loosePrompts.slice(0, index),
+        createPrompt('Prompts'),
+        ...loosePrompts.slice(index)
+      ]
+      return
+    }
+
+    folders = folders.map((folder) => {
+      if (folder.id !== folderId) return folder
+      const index = insertionIndexAfter(folder.prompts, promptId)
+      return {
+        ...folder,
+        expanded: true,
+        prompts: [
+          ...folder.prompts.slice(0, index),
+          createPrompt(folder.title),
+          ...folder.prompts.slice(index)
+        ]
       }
-    ]
+    })
+  }
+
+  const appendPrompt = () => {
+    const lastPrompt = loosePrompts.at(-1)
+    insertPromptAfter(null, lastPrompt?.id ?? null)
+  }
+
+  const insertFolderAfter = (folderId: string) => {
+    const number = nextFolderNumber++
+    const folderIndex = folders.findIndex((folder) => folder.id === folderId)
+    const insertionIndex = folderIndex === -1 ? folders.length : folderIndex + 1
+    const folder: FolderGroup = {
+      id: `new-folder-${number}`,
+      title: `New folder ${number}`,
+      description: 'Add a description for this prompt collection.',
+      prefix: 'Add shared prefix instructions here.',
+      suffix: 'Add shared suffix instructions here.',
+      expanded: true,
+      prompts: [createPrompt(`New folder ${number}`)]
+    }
+    folders = [...folders.slice(0, insertionIndex), folder, ...folders.slice(insertionIndex)]
   }
 
   const sizingConfig = {
@@ -299,8 +355,8 @@
   {/if}
 {/snippet}
 
-{#snippet AddRow(label: string)}
-  <button class="add-row" type="button">
+{#snippet AddRow(label: string, onclick: () => void)}
+  <button class="add-row" type="button" {onclick}>
     <span></span>
     <span class="add-row-action"><Plus size={13} aria-hidden="true" />{label}</span>
     <span></span>
@@ -393,7 +449,7 @@
       <div class="eyebrow"><Folder size={14} aria-hidden="true" /> Prompt folder</div>
       <h1>Prompts</h1>
     </div>
-    <button class="primary-action" type="button" onclick={addPrompt}>
+    <button class="primary-action" type="button" onclick={appendPrompt}>
       <Plus size={17} aria-hidden="true" /> New prompt
     </button>
   </header>
@@ -422,10 +478,10 @@
   </nav>
 
   <div class="prompt-stream">
-    {@render AddRow('Add prompt')}
+    {@render AddRow('Add prompt', () => insertPromptAfter(null, null))}
     {#each loosePrompts.filter(matchesFilter) as prompt (prompt.id)}
       {@render PromptCard(prompt)}
-      {@render AddRow('Add prompt')}
+      {@render AddRow('Add prompt', () => insertPromptAfter(null, prompt.id))}
     {/each}
 
     {#each folders as folder (folder.id)}
@@ -460,15 +516,15 @@
         {#if folder.expanded}
           {@render FolderContext(folder)}
           <div class="folder-prompts">
-            {@render AddRow('Add prompt')}
+            {@render AddRow('Add prompt', () => insertPromptAfter(folder.id, null))}
             {#each folder.prompts.filter(matchesFilter) as prompt (prompt.id)}
               {@render PromptCard(prompt)}
-              {@render AddRow('Add prompt')}
+              {@render AddRow('Add prompt', () => insertPromptAfter(folder.id, prompt.id))}
             {/each}
           </div>
         {/if}
       </article>
-      {@render AddRow('Add folder')}
+      {@render AddRow('Add folder', () => insertFolderAfter(folder.id))}
     {/each}
   </div>
 </section>
