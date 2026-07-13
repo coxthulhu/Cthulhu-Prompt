@@ -13,7 +13,9 @@ import getLanguagesServiceOverride from '@codingame/monaco-vscode-languages-serv
 import getTextMateServiceOverride from '@codingame/monaco-vscode-textmate-service-override'
 import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-override'
 import getConfigurationServiceOverride from '@codingame/monaco-vscode-configuration-service-override'
+import getExtensionsServiceOverride from '@codingame/monaco-vscode-extensions-service-override'
 import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override'
+import ExtensionHostWorkerUrl from '@codingame/monaco-vscode-api/workers/extensionHost.worker?worker&url'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
 const PROMPT_EDITOR_THEME = 'Dark 2026'
@@ -31,6 +33,20 @@ const configureWorkers = (): void => {
       }
 
       return new EditorWorker()
+    },
+    getWorkerUrl(_moduleId: string, label: string) {
+      if (label === 'extensionHostWorkerMain') {
+        return ExtensionHostWorkerUrl
+      }
+
+      return undefined
+    },
+    getWorkerOptions(_moduleId: string, label: string) {
+      if (label === 'extensionHostWorkerMain') {
+        return { type: 'module' }
+      }
+
+      return undefined
     }
   } as monaco.Environment
 }
@@ -49,9 +65,9 @@ export const initMonacoVscode = async (): Promise<void> => {
       ...getLanguagesServiceOverride(),
       ...getThemeServiceOverride(),
       ...getTextMateServiceOverride(),
-      ...getModelServiceOverride()
+      ...getModelServiceOverride(),
+      ...getExtensionsServiceOverride({ enableWorkerExtensionHost: true })
     })
-    await import('vscode/localExtensionHost')
     await whenThemeDefaultsReady()
     monaco.editor.setTheme(PROMPT_EDITOR_THEME)
   })()

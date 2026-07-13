@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import type { ConsoleMessage, Page } from 'playwright'
 import {
   checkFileExists,
   checkPersistedPromptFilesExistByTitle,
@@ -730,6 +731,52 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     // Let already-posted TextMate worker results reach the renderer before asserting the capture.
     await mainWindow.waitForTimeout(100)
+    expect(testSetup.getRendererErrors()).toEqual([])
+  })
+
+  test('runs VS Code extensions in a worker under the restrictive renderer CSP', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const securityWarnings: string[] = []
+    const captureSecurityWarning = (message: ConsoleMessage) => {
+      if (message.text().includes('Electron Security Warning')) {
+        securityWarnings.push(message.text())
+      }
+    }
+    const captureWindowWarnings = (page: Page) => {
+      page.on('console', captureSecurityWarning)
+    }
+    electronApp.on('window', captureWindowWarnings)
+
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate(() => {
+          return document.querySelector('iframe.web-worker-ext-host-iframe') !== null
+        })
+      })
+      .toBe(true)
+
+    const allowsUnsafeEval = await mainWindow.evaluate(() => {
+      const policy = document
+        .querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]')
+        ?.content.split(';')
+        .find((directive) => directive.trim().startsWith('script-src'))
+
+      return policy?.trim().split(/\s+/).includes("'unsafe-eval'") ?? false
+    })
+
+    expect(allowsUnsafeEval).toBe(false)
+    expect(securityWarnings).toEqual([])
     expect(testSetup.getRendererErrors()).toEqual([])
   })
 
