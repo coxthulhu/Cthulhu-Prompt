@@ -9,6 +9,7 @@ export interface PromptFolder extends OrderContainer<EntryRef> {
   id: string
   folderName: string
   displayName: string
+  completedPromptIds: string[]
   settings: PromptFolderSettings
 }
 

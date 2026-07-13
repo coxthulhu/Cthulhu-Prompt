@@ -229,6 +229,7 @@ const parsePromptFolder = parseObject<PromptFolder>({
       id: parseString
     })
   ),
+  completedPromptIds: parseArray(parseString),
   settings: parsePromptFolderSettings
 })
 

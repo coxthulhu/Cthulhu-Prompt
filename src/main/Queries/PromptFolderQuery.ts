@@ -54,10 +54,12 @@ export const setupPromptFolderQueryHandlers = (): void => {
               buildPromptFolderSnapshot(entry)
             )
             const promptIds = promptFolders.flatMap((folder) =>
-              folder.data.entries
-                .filter((entry) => entry.kind === 'prompt')
-                .map((entry) => entry.id)
-                .filter((promptId) => data.prompt.committedStore.getEntry(promptId))
+              [
+                ...folder.data.entries
+                  .filter((entry) => entry.kind === 'prompt')
+                  .map((entry) => entry.id),
+                ...folder.data.completedPromptIds
+              ].filter((promptId) => data.prompt.committedStore.getEntry(promptId))
             )
             const promptUiStates = PromptUiStateDataAccess.readPromptUiStates(
               payload.workspaceId,

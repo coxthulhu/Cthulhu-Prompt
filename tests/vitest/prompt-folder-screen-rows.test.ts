@@ -17,6 +17,7 @@ const createFolder = (
     kind: entryId.startsWith('folder-') ? 'folder' : 'prompt',
     id: entryId
   })),
+  completedPromptIds: [],
   settings: {
     folderDescription: '',
     folderPrefix: '',

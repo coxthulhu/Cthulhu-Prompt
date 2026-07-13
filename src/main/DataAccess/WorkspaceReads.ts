@@ -150,12 +150,8 @@ export const readPromptFolderEntries = (
   const activePromptEntries = [...readPromptStemByPromptId(workspacePath, folderName).keys()].map(
     promptEntryRef
   )
-  const completedPromptEntries = [
-    ...readPromptStemByPromptId(workspacePath, resolveCompletedPromptFolderName(folderName)).keys()
-  ].map(promptEntryRef)
   const discoveredEntries = [
     ...activePromptEntries,
-    ...completedPromptEntries,
     ...readDirectPromptFolderRefs(workspacePath, folderName)
   ]
   return writeRepairedOrder(orderPath, persistedEntries, discoveredEntries)
@@ -219,12 +215,19 @@ export const readPromptFolder = (
     ])
   ) as PromptFolderSettings
   const entries = readPromptFolderEntries(workspacePath, folderPath)
+  const completedPromptIds = [
+    ...readPromptStemByPromptId(
+      workspacePath,
+      resolveCompletedPromptFolderName(folderPath)
+    ).keys()
+  ]
 
   return {
     id: info.promptFolderId,
     folderName,
     displayName: info.displayName,
     entries,
+    completedPromptIds,
     settings: copyPromptFolderSettings(folderSettings)
   }
 }

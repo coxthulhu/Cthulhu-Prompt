@@ -1022,7 +1022,6 @@ describe('Prompt folder prompt management', () => {
         `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/_FolderInfo/FolderOrder.json`
       )
     ).toEqual([
-      { kind: 'prompt', id: 'dev-1' },
       { kind: 'prompt', id: 'dev-2' }
     ])
 
@@ -1066,6 +1065,14 @@ describe('Prompt folder prompt management', () => {
     })
     expect(activeMarkdown).toContain('status: Todo')
     expect(activeMarkdown).not.toContain('completedAt:')
+    await expect
+      .poll(async () =>
+        await readPromptFolderEntries(
+          electronApp,
+          `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`
+        )
+      )
+      .toEqual([{ kind: 'prompt', id: activePromptId }])
     expect(activeMarkdown).toContain('This regular prompt should keep rendering.')
 
     const completedMarkdown = await readPersistedPromptTextById(electronApp, {
@@ -1464,6 +1471,17 @@ describe('Prompt folder prompt management', () => {
     })
     expect(activeMarkdown).toContain('status: Todo')
     expect(activeMarkdown).not.toContain('completedAt:')
+    await expect
+      .poll(async () =>
+        await readPromptFolderEntries(
+          electronApp,
+          `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/_FolderInfo/FolderOrder.json`
+        )
+      )
+      .toEqual([
+        { kind: 'prompt', id: 'completed-mode-newest' },
+        { kind: 'prompt', id: 'completed-mode-active' }
+      ])
 
     await testHelpers.navigateToPromptFolders('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()

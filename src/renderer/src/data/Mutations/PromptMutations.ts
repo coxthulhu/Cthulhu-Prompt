@@ -270,6 +270,9 @@ export const deletePrompt = async (promptFolderId: string, promptId: string): Pr
       collections.promptDraft.delete(promptId)
       collections.promptFolder.update(promptFolderId, (draft) => {
         draft.entries = removeEntry(draft.entries, 'prompt', promptId)
+        draft.completedPromptIds = draft.completedPromptIds.filter(
+          (currentPromptId) => currentPromptId !== promptId
+        )
       })
     },
     persistMutations: async ({ entities, transaction }) => {
@@ -319,6 +322,7 @@ export const setPromptStatus = async (
   }
 
   const prompt = promptCollection.get(promptId)
+  const isCompletedPrompt = prompt?.status === PromptStatus.Completed
   const promptDraft = promptDraftCollection.get(promptId)
   if (!promptDraft) {
     throw new Error('Prompt draft not loaded')
@@ -373,6 +377,22 @@ export const setPromptStatus = async (
         draft.createdAt = nextPrompt.createdAt
         draft.modifiedAt = nextPrompt.modifiedAt
         draft.promptText = nextPrompt.promptText
+      })
+      collections.promptFolder.update(promptFolderId, (draft) => {
+        if (targetStatus === PromptStatus.Completed) {
+          draft.entries = removeEntry(draft.entries, 'prompt', promptId)
+          if (!draft.completedPromptIds.includes(promptId)) {
+            draft.completedPromptIds = [...draft.completedPromptIds, promptId]
+          }
+          return
+        }
+
+        draft.completedPromptIds = draft.completedPromptIds.filter(
+          (currentPromptId) => currentPromptId !== promptId
+        )
+        if (isCompletedPrompt) {
+          draft.entries = [promptEntryRef(promptId), ...draft.entries]
+        }
       })
     },
     persistMutations: async ({ entities, transaction }) => {

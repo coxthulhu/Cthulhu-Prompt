@@ -3,7 +3,10 @@ import { PromptStatus } from '@shared/Prompt'
 import { promptCollection } from './PromptCollection'
 
 export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] =>
-  promptFolder.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id)
+  [
+    ...promptFolder.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id),
+    ...promptFolder.completedPromptIds
+  ]
 
 export const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] => {
   return getPromptFolderAllPromptIds(promptFolder).filter(
@@ -12,9 +15,7 @@ export const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] =
 }
 
 export const getPromptFolderCompletedPromptIds = (promptFolder: PromptFolder): string[] =>
-  getPromptFolderAllPromptIds(promptFolder).filter(
-    (promptId) => promptCollection.get(promptId)?.status === PromptStatus.Completed
-  )
+  [...promptFolder.completedPromptIds]
 
 export const getPromptFolderActiveEntryIds = (promptFolder: PromptFolder): string[] =>
   promptFolder.entries.flatMap((entry) => {

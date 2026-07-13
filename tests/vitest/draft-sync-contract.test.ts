@@ -72,6 +72,7 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
     { kind: 'prompt', id: 'prompt-1' },
     { kind: 'prompt', id: 'prompt-2' }
   ],
+  completedPromptIds: [],
   settings: {
     folderDescription: 'Original folder description',
     folderPrefix: 'Original folder prefix',

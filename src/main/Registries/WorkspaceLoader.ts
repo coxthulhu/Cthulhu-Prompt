@@ -94,9 +94,12 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     }
 
     const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
-    const promptIds = promptFolderSnapshot.data.entries
-      .filter((entry) => entry.kind === 'prompt')
-      .map((entry) => entry.id)
+    const promptIds = [
+      ...promptFolderSnapshot.data.entries
+        .filter((entry) => entry.kind === 'prompt')
+        .map((entry) => entry.id),
+      ...promptFolderSnapshot.data.completedPromptIds
+    ]
     const loadedPromptEntries = getLoadedPromptEntries(promptIds)
 
     loadedPromptIds.push(...loadedPromptEntries.map((promptEntry) => promptEntry.committed.id))
@@ -188,10 +191,12 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
     )
 
     return [
-      ...promptFolder.entries.flatMap((entry) => {
-        if (entry.kind !== 'prompt') return []
-        const promptId = entry.id
-        const isCompleted = completedPromptStemByPromptId.has(promptId)
+      ...[
+        ...promptFolder.entries.flatMap((entry) =>
+          entry.kind === 'prompt' ? [{ promptId: entry.id, isCompleted: false }] : []
+        ),
+        ...promptFolder.completedPromptIds.map((promptId) => ({ promptId, isCompleted: true }))
+      ].flatMap(({ promptId, isCompleted }) => {
         const persistedFolderPath = isCompleted ? completedFolderPath : folderPath
         const stems = isCompleted ? completedPromptStemByPromptId : promptStemByPromptId
         if (!stems.has(promptId)) return []

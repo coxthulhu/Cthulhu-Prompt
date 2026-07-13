@@ -29,10 +29,14 @@ export const collectCompletedPrompts = ({
     if (visitedFolderIds.has(folder.id)) return
     visitedFolderIds.add(folder.id)
 
+    for (const promptId of folder.completedPromptIds) {
+      if (statusByPromptId[promptId] === PromptStatus.Completed) {
+        completedPrompts.push({ ownerFolderId: folder.id, promptId })
+      }
+    }
+
     for (const entry of folder.entries) {
-      if (entry.kind === 'prompt' && statusByPromptId[entry.id] === PromptStatus.Completed) {
-        completedPrompts.push({ ownerFolderId: folder.id, promptId: entry.id })
-      } else if (entry.kind === 'folder') {
+      if (entry.kind === 'folder') {
         const childFolder = folderById.get(entry.id)
         if (childFolder) visitFolder(childFolder)
       }

@@ -91,4 +91,14 @@ export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string):
       })
     }
   }
+
+  for (const promptId of promptFolderEntry.committed.completedPromptIds) {
+    const promptEntry = data.prompt.committedStore.getEntry(promptId)
+    if (promptEntry) {
+      data.prompt.committedStore.updatePersistenceFields(promptId, {
+        ...promptEntry.persistenceFields,
+        folderPath: resolveCompletedPromptFolderName(folderPath)
+      })
+    }
+  }
 }

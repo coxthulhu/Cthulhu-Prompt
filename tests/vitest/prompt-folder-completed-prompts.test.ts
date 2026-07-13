@@ -6,12 +6,14 @@ import { describe, expect, it } from 'vitest'
 
 const createFolder = (
   id: string,
-  entries: EntryRef[]
+  entries: EntryRef[],
+  completedPromptIds: string[] = []
 ): PromptFolder => ({
   id,
   folderName: id,
   displayName: id,
   entries,
+  completedPromptIds,
   settings: {
     folderDescription: '',
     folderPrefix: '',
@@ -21,20 +23,14 @@ const createFolder = (
 
 describe('collectCompletedPrompts', () => {
   it('collects every descendant owner and sorts globally by completion time', () => {
-    const grandchild = createFolder('grandchild', [
-      { kind: 'prompt', id: 'grandchild-completed' }
-    ])
+    const grandchild = createFolder('grandchild', [], ['grandchild-completed'])
     const child = createFolder('child', [
-      { kind: 'prompt', id: 'child-completed' },
       { kind: 'folder', id: grandchild.id }
-    ])
-    const unrelated = createFolder('unrelated', [
-      { kind: 'prompt', id: 'unrelated-completed' }
-    ])
+    ], ['child-completed'])
+    const unrelated = createFolder('unrelated', [], ['unrelated-completed'])
     const root = createFolder('root', [
-      { kind: 'prompt', id: 'root-completed' },
       { kind: 'folder', id: child.id }
-    ])
+    ], ['root-completed'])
 
     expect(
       collectCompletedPrompts({
@@ -62,13 +58,11 @@ describe('collectCompletedPrompts', () => {
 
   it('visits a malformed folder graph only once', () => {
     const child = createFolder('child', [
-      { kind: 'prompt', id: 'child-completed' },
       { kind: 'folder', id: 'root' }
-    ])
+    ], ['child-completed'])
     const root = createFolder('root', [
-      { kind: 'prompt', id: 'root-completed' },
       { kind: 'folder', id: 'child' }
-    ])
+    ], ['root-completed'])
 
     expect(
       collectCompletedPrompts({
