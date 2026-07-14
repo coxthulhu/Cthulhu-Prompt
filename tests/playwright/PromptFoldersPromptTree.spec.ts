@@ -20,6 +20,7 @@ import {
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_ROOT_FOLDER_SELECTOR = '[data-testid="prompt-tree-root-folder"]'
 const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
 const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
@@ -180,6 +181,28 @@ describe('Prompt folder prompt tree', () => {
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+    const rootFolderRow = mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_SELECTOR)
+    await expect(rootFolderRow).toHaveText('Main')
+    await expect(rootFolderRow).toHaveAttribute('data-row-state', 'active')
+    await expect(rootFolderRow.locator('svg')).toHaveCount(0)
+    await expect(rootFolderRow.locator('xpath=..').locator('button')).toHaveCount(1)
+    const rootFolderRowBox = await rootFolderRow.locator('xpath=..').boundingBox()
+    expect(rootFolderRowBox?.height).toBe(32)
+    await expect(rootFolderRow).toHaveCSS('font-weight', '600')
+    const rootFolderBackground = await rootFolderRow.evaluate(
+      (element) => getComputedStyle(element).backgroundColor
+    )
+    await rootFolderRow.hover()
+    await expect
+      .poll(async () =>
+        rootFolderRow.evaluate((element) => getComputedStyle(element).backgroundColor)
+      )
+      .not.toBe(rootFolderBackground)
+    await mainWindow.mouse.move(0, 0)
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+    await expect(rootFolderRow).toBeVisible()
+    await expect(rootFolderRow).toHaveText('Main')
+    await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
     await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
@@ -206,17 +229,21 @@ describe('Prompt folder prompt tree', () => {
         const basePromptLabel = document
           .querySelector<HTMLElement>('[data-testid="prompt-tree-prompt-base-before"]')
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
+        const rootFolderLabel = document
+          .querySelector<HTMLElement>('[data-testid="prompt-tree-root-folder"]')
+          ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
         const nestedRow = document.querySelector<HTMLElement>(nestedSelector)
         const nestedPromptLabel = document
           .querySelector<HTMLElement>(nestedPromptSelector)
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
 
-        if (!basePromptLabel || !nestedRow || !nestedPromptLabel) {
+        if (!basePromptLabel || !rootFolderLabel || !nestedRow || !nestedPromptLabel) {
           return null
         }
 
         return {
           basePromptLabelLeft: Math.round(basePromptLabel.getBoundingClientRect().left),
+          rootFolderLabelLeft: Math.round(rootFolderLabel.getBoundingClientRect().left),
           nestedHasGutter: Boolean(nestedRow.querySelector('.sidebarPromptTreeGutter')),
           nestedPromptLabelLeft: Math.round(nestedPromptLabel.getBoundingClientRect().left)
         }
@@ -227,6 +254,9 @@ describe('Prompt folder prompt tree', () => {
       }
     )
     expect(indentation).not.toBeNull()
+    expect(
+      Math.abs(indentation!.rootFolderLabelLeft - indentation!.basePromptLabelLeft)
+    ).toBeLessThanOrEqual(1)
     expect(indentation!.nestedHasGutter).toBe(false)
     expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(
       indentation!.basePromptLabelLeft + 2
@@ -383,7 +413,7 @@ describe('Prompt folder prompt tree', () => {
       promptFolderPromptTreeEntries: [
         {
           promptFolderId: SUBFOLDERS_MAIN_FOLDER_ID,
-          promptTreeEntryId: 'folder-settings',
+          promptTreeEntryId: 'folder-root',
           promptTreeIsExpanded: true
         },
         {

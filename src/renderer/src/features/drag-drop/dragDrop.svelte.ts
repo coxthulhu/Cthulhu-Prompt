@@ -39,6 +39,7 @@ export type DroppableOptions<TDraggedPayload = unknown, TDropPayload = unknown> 
   dragType: string
   payload?: TDropPayload | DroppablePayloadResolver<TDropPayload>
   allowedEdges?: DroppableAllowedEdges
+  snap?: boolean
   canDrop?: (payload: TDraggedPayload, edge: DroppableEdge | null) => boolean
   onDrop?: (payload: TDraggedPayload) => void
   state?: DroppableState
@@ -74,6 +75,7 @@ export type ActiveDragGhost = DragGhostOptions & {
 type NormalizedDroppableOptions = {
   dragType: string
   allowedEdges: DroppableAllowedEdges
+  snap: boolean
   canDrop: (payload: unknown, edge: DroppableEdge | null) => boolean
   resolvePayload: (edge: DroppableEdge | null) => unknown | null
   onDrop: ((payload: unknown) => void) | null
@@ -215,6 +217,7 @@ const normalizeDroppableOptions = <TDraggedPayload, TDropPayload>(
   return {
     dragType: options.dragType,
     allowedEdges: options.allowedEdges ?? 'none',
+    snap: options.snap ?? true,
     canDrop: canDrop
       ? (draggedPayload, edge) => canDrop(draggedPayload as TDraggedPayload, edge)
       : () => true,
@@ -531,6 +534,10 @@ const getSnappedDropTarget = (
   for (const registration of droppableRegistrations) {
     const options = registration.getOptions()
     if (options.dragType !== dragType) {
+      continue
+    }
+
+    if (!options.snap) {
       continue
     }
 

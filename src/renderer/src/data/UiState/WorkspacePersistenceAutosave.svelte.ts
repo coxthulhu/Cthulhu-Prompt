@@ -10,7 +10,7 @@ import { workspacePersistenceCollection } from '../Collections/WorkspacePersiste
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedWorkspacePersistenceAutosaveUpdate } from '../Mutations/WorkspacePersistenceMutations'
 
-const DEFAULT_PROMPT_TREE_ENTRY_ID = 'folder-settings'
+const DEFAULT_PROMPT_TREE_ENTRY_ID = 'folder-root'
 const DEFAULT_PROMPT_TREE_IS_EXPANDED = true
 // New prompt-folder screens start with settings collapsed until the user expands them.
 const DEFAULT_FOLDER_SETTINGS_SECTION_IS_EXPANDED = false

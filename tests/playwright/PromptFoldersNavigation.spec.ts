@@ -24,6 +24,7 @@ const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-ad
 const SHORT_PROMPT_50 = '[data-testid="prompt-tree-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_ROOT_FOLDER = '[data-testid="prompt-tree-root-folder"]'
 const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
@@ -569,12 +570,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       }
     })
     expect(rootHeaderGeometry).not.toBeNull()
-    expect(rootHeaderGeometry!.height).toBe(164)
+    expect(rootHeaderGeometry!.height).toBe(140)
     expect(rootHeaderGeometry!.titleRowHeight).toBe(60)
     expect(rootHeaderGeometry!.eyebrowHeight).toBe(17)
     expect(rootHeaderGeometry!.titleLineHeight).toBe(36)
     expect(rootHeaderGeometry!.filterRowHeight).toBe(44)
-    expect(Math.abs(rootHeaderGeometry!.bottomInset - 18)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootHeaderGeometry!.bottomInset - 6)).toBeLessThanOrEqual(1)
     await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
 
     const nameInput = mainWindow.locator('[data-testid="rename-prompt-folder-name-input"]')
@@ -680,7 +681,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('tracks centered prompt scroll and keeps root settings action inert', async ({
+  test('selects the root folder row at the top and keeps root settings action inert', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -699,6 +700,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
+    await expect(mainWindow.locator(PROMPT_TREE_ROOT_FOLDER)).toHaveAttribute(
+      'data-row-state',
+      'active'
+    )
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
@@ -827,5 +832,27 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
+  })
+
+  test('root prompt tree row scrolls to top', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Short')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(1200)
+    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 0)
+
+    await mainWindow.locator(PROMPT_TREE_ROOT_FOLDER).click()
+
+    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
+    await expect(mainWindow.locator(PROMPT_TREE_ROOT_FOLDER)).toHaveAttribute(
+      'data-row-state',
+      'active'
+    )
   })
 })

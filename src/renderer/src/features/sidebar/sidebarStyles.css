@@ -301,6 +301,12 @@
   color: var(--ui-normal-text);
 }
 
+.sidebarPromptTreeRootButton {
+  display: flex;
+  padding-left: 13px;
+  font-weight: 600;
+}
+
 .sidebarPromptTreeSettingsLabel {
   min-width: 0;
   overflow: hidden;

@@ -2,7 +2,7 @@ import { getContext, setContext } from 'svelte'
 
 const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
 
-export type PromptNavigationRow = 'folder-settings' | `prompt:${string}`
+export type PromptNavigationRow = 'folder-root' | 'folder-settings' | `prompt:${string}`
 export const promptIdToPromptNavigationRow = (promptId: string): PromptNavigationRow =>
   `prompt:${promptId}`
 
@@ -46,8 +46,8 @@ export type PromptNavigationContext = {
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
-  if (row === 'folder-settings') {
-    return 'folder-settings'
+  if (row === 'folder-root' || row === 'folder-settings') {
+    return row
   }
 
   return row.slice('prompt:'.length)
@@ -56,7 +56,9 @@ export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow):
 export const persistedPromptTreeEntryIdToPromptNavigationRow = (
   entryId: string
 ): PromptNavigationRow => {
-  return entryId === 'folder-settings' ? 'folder-settings' : `prompt:${entryId}`
+  return entryId === 'folder-root' || entryId === 'folder-settings'
+    ? entryId
+    : `prompt:${entryId}`
 }
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {

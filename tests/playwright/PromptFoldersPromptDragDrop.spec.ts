@@ -87,6 +87,9 @@ const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_ROOT_FOLDER_SELECTOR = '[data-testid="prompt-tree-root-folder"]'
+const PROMPT_TREE_ROOT_FOLDER_DROP_INDICATOR_SELECTOR =
+  '[data-testid="prompt-tree-root-folder-drop-indicator"]'
 const PROMPT_TREE_BOTTOM_SPACER_SELECTOR =
   '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
 const PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR =
@@ -708,7 +711,7 @@ describe('Prompt folder prompt drag-drop', () => {
     ])
   })
 
-  test('moves nested prompts and subfolders from the prompt tree', async ({
+  test('moves nested prompts and subfolders to the root start from the root row', async ({
     testSetup,
     electronApp
   }) => {
@@ -717,23 +720,34 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Main')
-    await dragPromptTreeRowToTarget(
-      mainWindow,
-      'nested-prompt',
-      promptTreePromptSelector(BASE_AFTER_ID),
-      'bottom'
+    await beginPromptTreeRowDrag(mainWindow, 'nested-prompt')
+    await moveActiveDragToTarget(mainWindow, PROMPT_TREE_ROOT_FOLDER_SELECTOR)
+    await expect(
+      mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_DROP_INDICATOR_SELECTOR)
+    ).toHaveAttribute('data-edge', 'bottom')
+    await expect(mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_SELECTOR)).not.toHaveAttribute(
+      'data-row-state',
+      'over'
     )
-    await expect
-      .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
-      .toEqual([BASE_BEFORE_ID, NESTED_FOLDER_ID, BASE_AFTER_ID, 'nested-prompt'])
-    await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [])
-
-    await beginPromptTreeFolderRowDrag(mainWindow, 'Nested')
-    await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(BASE_AFTER_ID), 'bottom')
     await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
-      .toEqual([BASE_BEFORE_ID, BASE_AFTER_ID, NESTED_FOLDER_ID, 'nested-prompt'])
+      .toEqual(['nested-prompt', BASE_BEFORE_ID, NESTED_FOLDER_ID, BASE_AFTER_ID])
+    await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [])
+
+    await beginPromptTreeFolderRowDrag(mainWindow, 'Nested')
+    await moveActiveDragToTarget(mainWindow, PROMPT_TREE_ROOT_FOLDER_SELECTOR)
+    await expect(
+      mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_DROP_INDICATOR_SELECTOR)
+    ).toHaveAttribute('data-edge', 'bottom')
+    await expect(mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_SELECTOR)).not.toHaveAttribute(
+      'data-row-state',
+      'over'
+    )
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
+      .toEqual([NESTED_FOLDER_ID, 'nested-prompt', BASE_BEFORE_ID, BASE_AFTER_ID])
   })
 
   test('snaps above a subfolder as a sibling and below it as its first entry', async ({
@@ -1073,7 +1087,7 @@ describe('Prompt folder prompt drag-drop', () => {
       promptFolderPromptTreeEntries: [
         {
           promptFolderId: EXAMPLES_FOLDER_ID,
-          promptTreeEntryId: 'folder-settings',
+          promptTreeEntryId: 'folder-root',
           folderSettingsSectionIsExpanded: true
         }
       ]

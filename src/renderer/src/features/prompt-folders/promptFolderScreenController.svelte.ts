@@ -519,18 +519,22 @@ export const createPromptFolderScreenController = ({
   }
 
   const toPromptNavigationRow = (row: ActivePromptTreeRow): PromptNavigationRow => {
-    return row.kind === 'prompt' ? `prompt:${row.promptId}` : 'folder-settings'
+    return row.kind === 'prompt'
+      ? `prompt:${row.promptId}`
+      : row.kind === 'root-header'
+        ? 'folder-root'
+        : 'folder-settings'
   }
 
   const toActivePromptTreeRow = (
     rowOwnerFolderId: string,
     row: PromptNavigationRow
   ): ActivePromptTreeRow => {
-    return row === 'folder-settings'
-      ? rowOwnerFolderId === screenRootFolderId
-        ? { kind: 'root-header', rowOwnerFolderId }
-        : { kind: 'folder-settings', rowOwnerFolderId }
-      : { kind: 'prompt', rowOwnerFolderId, promptId: row.slice('prompt:'.length) }
+    return row === 'folder-root'
+      ? { kind: 'root-header', rowOwnerFolderId }
+      : row === 'folder-settings'
+        ? { kind: 'folder-settings', rowOwnerFolderId }
+        : { kind: 'prompt', rowOwnerFolderId, promptId: row.slice('prompt:'.length) }
   }
 
   const toPromptFolderRowId = (row: ActivePromptTreeRow): string => {
