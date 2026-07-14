@@ -51,6 +51,8 @@ const promptTitleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} ${PROMPT_TITLE_SELECTOR}`
 const dividerAddSelector = (promptId: string) =>
   `[data-testid="prompt-divider-add-after-${promptId}"]`
+const dividerSeparatorSelector = (promptId: string, side: 'left' | 'right') =>
+  `[data-testid="prompt-divider-add-after-${promptId}-separator-${side}"]`
 const moveUpSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
 const moveDownSelector = (promptId: string) =>
@@ -590,6 +592,33 @@ describe('Prompt folder prompt management', () => {
     expect(editorCenter).toBeGreaterThan(hostCenter + MINIMAL_SCROLL_POSITION_TOLERANCE_PX)
   })
 
+  test('adds prompts from either full-height divider separator', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
+    let expectedPromptCount = (await getPromptTreePromptRowIds(mainWindow)).length
+
+    for (const [promptId, side] of [
+      ['dev-1', 'left'],
+      ['dev-2', 'right']
+    ] as const) {
+      const separatorSelector = dividerSeparatorSelector(promptId, side)
+      await testHelpers.scrollVirtualElementIntoView(
+        PROMPT_FOLDER_HOST_SELECTOR,
+        separatorSelector,
+        120
+      )
+      await mainWindow.locator(separatorSelector).click()
+      expectedPromptCount += 1
+      await expect
+        .poll(async () => (await getPromptTreePromptRowIds(mainWindow)).length)
+        .toBe(expectedPromptCount)
+    }
+  })
+
   test('reveals prompt row controls without shifting their reserved space', async ({
     testSetup
   }) => {
@@ -663,27 +692,60 @@ describe('Prompt folder prompt management', () => {
     const dividerButtonBoxBefore = await dividerButton.boundingBox()
     const dividerButtonIconBox = await dividerButton.locator('svg').boundingBox()
     const dividerRowBox = await dividerRow.boundingBox()
+    const dividerActionsBox = await dividerActions.boundingBox()
+    const dividerSeparators = dividerRow.locator('.promptDividerSeparatorButton')
+    const separatorHeights = await dividerSeparators.evaluateAll((separators) =>
+      separators.map((separator) => separator.getBoundingClientRect().height)
+    )
+    const separatorColorsBefore = await dividerRow
+      .locator('.cthulhuUiSeparator')
+      .evaluateAll((separators) =>
+        separators.map((separator) => getComputedStyle(separator).backgroundColor)
+      )
 
     await expect(dividerActions).toHaveCSS('opacity', '0')
     await expect(dividerActions).toHaveCSS('transition-property', 'opacity')
-    await expect(dividerActions).toHaveCSS('transition-duration', '0.05s')
-    await expect(dividerActions).toHaveCSS('transition-timing-function', 'ease-out')
-    await expect(dividerRow.locator('.cthulhuUiSeparator')).toHaveCount(1)
-    await expect(dividerButton).toHaveAttribute('data-size', 'compact-large-icon')
+    await expect(dividerActions).toHaveCSS('transition-duration', '0.12s')
+    await expect(dividerActions).toHaveCSS('transition-timing-function', 'ease')
+    await expect(dividerRow.locator('.cthulhuUiSeparator')).toHaveCount(2)
+    await expect(dividerButton).toHaveText('Add Prompt')
+    await expect(dividerActions.getByRole('button')).toHaveCount(2)
     expect(dividerButtonBoxBefore).not.toBeNull()
     expect(dividerButtonIconBox).not.toBeNull()
     expect(dividerRowBox).not.toBeNull()
+    expect(dividerActionsBox).not.toBeNull()
     expect(dividerButtonBoxBefore!.height).toBe(28)
-    expect(dividerButtonBoxBefore!.width).toBe(36)
-    expect(dividerButtonIconBox!.height).toBe(20)
-    expect(dividerRowBox!.height).toBe(32)
+    expect(dividerButtonIconBox!.height).toBe(13)
+    expect(dividerRowBox!.height).toBe(28)
+    expect(separatorHeights).toEqual([28, 28])
     const dividerButtonCenter = dividerButtonBoxBefore!.y + dividerButtonBoxBefore!.height / 2
     const dividerRowCenter = dividerRowBox!.y + dividerRowBox!.height / 2
     expect(Math.abs(dividerButtonCenter - dividerRowCenter)).toBeLessThanOrEqual(
       MOVE_BUTTON_POSITION_TOLERANCE_PX
     )
+    const dividerActionsCenter = dividerActionsBox!.x + dividerActionsBox!.width / 2
+    const dividerRowHorizontalCenter = dividerRowBox!.x + dividerRowBox!.width / 2
+    expect(Math.abs(dividerActionsCenter - dividerRowHorizontalCenter)).toBeLessThanOrEqual(
+      MOVE_BUTTON_POSITION_TOLERANCE_PX
+    )
     await dividerRow.hover()
     await expect(dividerActions).toHaveCSS('opacity', '1')
+    const separatorColorsAfter = await dividerRow
+      .locator('.cthulhuUiSeparator')
+      .evaluateAll((separators) =>
+        separators.map((separator) => getComputedStyle(separator).backgroundColor)
+      )
+    const accentSeparatorColor = await dividerRow.evaluate(() => {
+      const reference = document.createElement('span')
+      reference.style.backgroundColor = 'var(--ui-accent-normal-border)'
+      document.body.append(reference)
+      const color = getComputedStyle(reference).backgroundColor
+      reference.remove()
+      return color
+    })
+    expect(separatorColorsAfter[0]).toBe(separatorColorsAfter[1])
+    expect(separatorColorsAfter[0]).toBe(accentSeparatorColor)
+    expect(accentSeparatorColor).not.toBe(separatorColorsBefore[0])
 
     const dividerButtonBoxAfter = await dividerButton.boundingBox()
     expect(dividerButtonBoxAfter).not.toBeNull()

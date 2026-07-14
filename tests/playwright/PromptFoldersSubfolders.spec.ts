@@ -389,7 +389,9 @@ describe('Prompt folder subfolder rendering', () => {
       const dividerSelector = testIdSelector(activeDividerTestId)
       await revealVirtualRow(mainWindow, testHelpers, dividerSelector)
       await expect(
-        mainWindow.locator(dividerSelector).getByRole('button', { name: 'Add Prompt' })
+        mainWindow
+          .locator(dividerSelector)
+          .getByRole('button', { name: 'Add Prompt', exact: true })
       ).toHaveCount(1)
       await expect(
         mainWindow.locator(dividerSelector).getByRole('button', { name: 'Add Subfolder' })

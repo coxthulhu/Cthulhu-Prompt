@@ -947,7 +947,10 @@ describe('Prompt folder prompt drag-drop', () => {
     expect(dropStyles.indicatorBackgroundColor).not.toBe(defaultStyles.indicatorBackgroundColor)
     expect(dropStyles.buttonBorderWidth).toBe(defaultStyles.buttonBorderWidth)
     expect(dropStyles.buttonBorderWidth).toBe('0px')
-    expect(defaultStyles.separatorBackgroundColors).toHaveLength(1)
+    expect(defaultStyles.separatorBackgroundColors).toHaveLength(2)
+    expect(defaultStyles.separatorBackgroundColors[1]).toBe(
+      defaultStyles.separatorBackgroundColors[0]
+    )
     expect(dropStyles.separatorBackgroundColors).toHaveLength(2)
     expect(dropStyles.separatorBackgroundColors[1]).toBe(
       dropStyles.separatorBackgroundColors[0]
