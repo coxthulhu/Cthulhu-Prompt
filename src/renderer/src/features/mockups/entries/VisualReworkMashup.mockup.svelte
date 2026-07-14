@@ -488,6 +488,14 @@
       <article class="folder-group" data-expanded={folder.expanded}>
         <header class="folder-header">
           <button
+            class="folder-drag-handle"
+            type="button"
+            aria-label={`Move ${folder.title}`}
+            title="Drag folder"
+          >
+            <GripVertical size={16} aria-hidden="true" />
+          </button>
+          <button
             class="folder-toggle"
             type="button"
             aria-label={folder.expanded ? 'Collapse folder' : 'Expand folder'}
@@ -882,13 +890,30 @@
     border-bottom: 1px solid oklch(0.7 0.12 294 / 14%);
     display: grid;
     gap: 8px;
-    grid-template-columns: 28px 32px minmax(0, auto) 1fr 30px 30px;
+    grid-template-columns: 30px 28px 32px minmax(0, auto) 1fr 30px 30px;
     min-height: 54px;
-    padding: 0 10px 0 11px;
+    padding: 0 10px 0 0;
   }
 
   .folder-group[data-expanded='false'] .folder-header {
     border-bottom: 0;
+  }
+
+  .folder-drag-handle {
+    align-items: center;
+    align-self: stretch;
+    background: var(--ui-card-overlay-surface);
+    border: 0;
+    border-right: 1px solid var(--ui-neutral-muted-border);
+    color: var(--ui-muted-icon-glyph);
+    cursor: grab;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .folder-drag-handle:hover {
+    color: var(--ui-hoverable-icon-glyph);
   }
 
   .folder-toggle {
