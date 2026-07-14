@@ -1157,6 +1157,11 @@ describe('Prompt folder subfolder rendering', () => {
     const promptId = 'subfolders-ui-grandchild-prompt'
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      grandchildPromptSelector,
+      12
+    )
     await waitForMonacoEditor(mainWindow, grandchildPromptSelector)
     await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Todo')
 
