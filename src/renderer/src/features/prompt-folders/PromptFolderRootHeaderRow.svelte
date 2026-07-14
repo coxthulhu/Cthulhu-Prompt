@@ -1,5 +1,5 @@
 <script module lang="ts">
-  export const PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX = 164
+  export const PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX = 140
 </script>
 
 <script lang="ts">
@@ -103,7 +103,7 @@
     gap: 18px;
     grid-template-rows: 60px 44px;
     min-width: 0;
-    padding: 24px 24px 18px;
+    padding: 12px 24px 6px;
   }
 
   .prompt-folder-root-screen-header {
