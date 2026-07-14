@@ -131,7 +131,7 @@
   }
 
   .prompt-folder-root-title-line {
-    align-items: center;
+    align-items: baseline;
     display: flex;
     gap: 7px;
     height: 36px;
