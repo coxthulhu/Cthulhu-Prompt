@@ -1,5 +1,5 @@
 <script module lang="ts">
-  export const PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX = 158
+  export const PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX = 164
 </script>
 
 <script lang="ts">
@@ -37,14 +37,20 @@
   data-testid="prompt-folder-root-header"
   data-virtual-window-row
 >
-  <header class="prompt-folder-root-screen-header">
+  <div class="prompt-folder-root-screen-header">
     <div class="prompt-folder-root-title-block">
       <div class="prompt-folder-root-eyebrow">
         <Folder size={14} aria-hidden="true" />
         <span>Prompt folder</span>
       </div>
       <div class="prompt-folder-root-title-line">
-        <h1 title={folderDisplayName}>{folderDisplayName}</h1>
+        <div
+          class="prompt-folder-root-title"
+          data-testid="prompt-folder-root-title"
+          title={folderDisplayName}
+        >
+          {folderDisplayName}
+        </div>
         <IconButton
           icon={Pencil}
           label="Rename prompt folder"
@@ -66,9 +72,9 @@
       testId="prompt-folder-new-prompt-button"
       onclick={onAddPrompt}
     />
-  </header>
+  </div>
 
-  <nav class="prompt-folder-root-filter-bar" aria-label="Filter prompts">
+  <div class="prompt-folder-root-filter-bar" role="group" aria-label="Filter prompts">
     <button
       class:active={!isCompletedMode}
       type="button"
@@ -87,12 +93,15 @@
     >
       Completed <span>{completedPromptCount}</span>
     </button>
-  </nav>
+  </div>
 </div>
 
 <style>
   .prompt-folder-root-header-row {
     box-sizing: border-box;
+    display: grid;
+    gap: 18px;
+    grid-template-rows: 60px 44px;
     min-width: 0;
     padding: 24px 24px 18px;
   }
@@ -101,12 +110,13 @@
     align-items: end;
     display: flex;
     gap: 16px;
+    height: 60px;
     justify-content: space-between;
-    margin-bottom: 18px;
     min-width: 0;
   }
 
   .prompt-folder-root-title-block {
+    height: 60px;
     min-width: 0;
   }
 
@@ -116,6 +126,7 @@
     display: flex;
     font-size: 12px;
     gap: 6px;
+    height: 17px;
     line-height: 17px;
   }
 
@@ -123,25 +134,31 @@
     align-items: center;
     display: flex;
     gap: 7px;
+    height: 36px;
     margin-top: 7px;
     min-width: 0;
   }
 
-  .prompt-folder-root-title-line h1 {
+  .prompt-folder-root-title {
+    color: var(--ui-normal-text);
     font-size: 27px;
     font-weight: 700;
+    height: 36px;
     letter-spacing: -0.03em;
     line-height: 32px;
-    margin: 0;
+    min-width: 0;
     overflow: hidden;
+    padding-block: 2px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .prompt-folder-root-filter-bar {
     border-bottom: 1px solid var(--ui-neutral-normal-border);
+    box-sizing: border-box;
     display: flex;
     gap: 6px;
+    height: 44px;
   }
 
   .prompt-folder-root-filter-bar button {
@@ -151,6 +168,7 @@
     color: var(--ui-muted-text);
     cursor: pointer;
     font-family: inherit;
+    height: 44px;
     margin-bottom: -1px;
     padding: 8px 10px 10px;
   }

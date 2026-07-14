@@ -543,7 +543,38 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.navigateToPromptFolders('Development')
     const rootHeader = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
+    const rootTitle = rootHeader.locator('[data-testid="prompt-folder-root-title"]')
     await expect(rootHeader).toBeVisible()
+    await expect(rootTitle).toHaveText('Development Tools')
+    await expect(rootHeader.locator('h1')).toHaveCount(0)
+    expect(
+      await rootTitle.evaluate((element) => element.scrollHeight - element.clientHeight)
+    ).toBeLessThanOrEqual(0)
+    const rootHeaderGeometry = await rootHeader.evaluate((element) => {
+      const filterBar = element.querySelector<HTMLElement>('.prompt-folder-root-filter-bar')
+      const titleRow = element.querySelector<HTMLElement>('.prompt-folder-root-screen-header')
+      const eyebrow = element.querySelector<HTMLElement>('.prompt-folder-root-eyebrow')
+      const titleLine = element.querySelector<HTMLElement>('.prompt-folder-root-title-line')
+      if (!filterBar || !titleRow || !eyebrow || !titleLine) return null
+
+      const rowRect = element.getBoundingClientRect()
+      const filterRect = filterBar.getBoundingClientRect()
+      return {
+        height: rowRect.height,
+        titleRowHeight: titleRow.getBoundingClientRect().height,
+        eyebrowHeight: eyebrow.getBoundingClientRect().height,
+        titleLineHeight: titleLine.getBoundingClientRect().height,
+        filterRowHeight: filterRect.height,
+        bottomInset: rowRect.bottom - filterRect.bottom
+      }
+    })
+    expect(rootHeaderGeometry).not.toBeNull()
+    expect(rootHeaderGeometry!.height).toBe(164)
+    expect(rootHeaderGeometry!.titleRowHeight).toBe(60)
+    expect(rootHeaderGeometry!.eyebrowHeight).toBe(17)
+    expect(rootHeaderGeometry!.titleLineHeight).toBe(36)
+    expect(rootHeaderGeometry!.filterRowHeight).toBe(44)
+    expect(Math.abs(rootHeaderGeometry!.bottomInset - 18)).toBeLessThanOrEqual(1)
     await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
 
     const nameInput = mainWindow.locator('[data-testid="rename-prompt-folder-name-input"]')
