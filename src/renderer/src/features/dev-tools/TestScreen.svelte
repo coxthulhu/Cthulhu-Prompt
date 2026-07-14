@@ -52,6 +52,13 @@
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
+  import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
+  import {
+    draggable,
+    type DraggableOptions,
+    type DroppableOptions,
+    type DroppableState
+  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
 
   const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
   const IconButtonBaseVariants: IconButtonBaseVariant[] = ['normal', 'dim', 'muted']
@@ -126,6 +133,7 @@
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
   const TEST_LOADING_OVERLAY_VISIBLE_MS = 5000
   const TEST_LOADING_OVERLAY_FADE_MS = 125
+  const DRAG_DROP_REGRESSION_TYPE = 'test-dropdown-unregister-drag'
 
   let fontSizeStepperValue = $state('14')
   let minLinesStepperValue = $state('8')
@@ -139,6 +147,22 @@
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
   let testLoadingOverlayActive = $state(false)
   let testLoadingOverlayTimeoutId: number | null = null
+  // Reactive harness state reproduces dropdown teardown while the completed target stays mounted.
+  let showDragDropRegressionDropdown = $state(true)
+  let dragDropRegressionDropState = $state<DroppableState>({ isOver: false, edge: null })
+
+  const dragDropRegressionDraggableOptions: DraggableOptions<string, string> = {
+    dragType: DRAG_DROP_REGRESSION_TYPE,
+    payload: 'source',
+    onDragFinish: () => {
+      showDragDropRegressionDropdown = false
+    }
+  }
+  const getDragDropRegressionDroppableOptions = (): DroppableOptions<string, string> => ({
+    dragType: DRAG_DROP_REGRESSION_TYPE,
+    payload: 'target',
+    state: dragDropRegressionDropState
+  })
 
   const testLoadingOverlay = createLoadingOverlayState({
     fadeMs: TEST_LOADING_OVERLAY_FADE_MS,
@@ -198,6 +222,45 @@
         onclick={showTestLoadingOverlay}
       />
     </header>
+
+    <section class="drag-drop-regression-harness" data-testid="drag-drop-regression-harness">
+      <button
+        use:draggable={dragDropRegressionDraggableOptions}
+        type="button"
+        class="drag-drop-regression-source"
+        data-testid="drag-drop-regression-source"
+      >
+        Drag source
+      </button>
+
+      {#if showDragDropRegressionDropdown}
+        <DropdownPopupSimple label="Drag regression dropdown" items={promptDropdownItems}>
+          {#snippet trigger(dropdown)}
+            <IconButton
+              icon={MoreHorizontal}
+              label="Drag regression dropdown"
+              ariaHaspopup={dropdown.ariaHaspopup}
+              ariaExpanded={dropdown.ariaExpanded}
+              buttonAction={dropdown.triggerAction}
+              onclick={dropdown.toggle}
+              testId="drag-drop-regression-dropdown"
+            />
+          {/snippet}
+        </DropdownPopupSimple>
+      {/if}
+
+      <PromptDropTarget getOptions={getDragDropRegressionDroppableOptions}>
+        {#snippet children({ isOver })}
+          <div
+            class="drag-drop-regression-target"
+            data-testid="drag-drop-regression-target"
+            data-drop-over={isOver ? 'true' : 'false'}
+          >
+            Drop target
+          </div>
+        {/snippet}
+      </PromptDropTarget>
+    </section>
 
     <section class="component-grid">
       <div class="component-section">
@@ -748,6 +811,24 @@
     display: grid;
     gap: 12px;
     min-width: 0;
+  }
+
+  .drag-drop-regression-harness {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+  }
+
+  .drag-drop-regression-source,
+  .drag-drop-regression-target {
+    align-items: center;
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    display: flex;
+    height: 40px;
+    justify-content: center;
+    min-width: 140px;
+    padding: 0 12px;
   }
 
   .variant-row {

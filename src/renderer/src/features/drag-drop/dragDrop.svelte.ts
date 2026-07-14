@@ -103,7 +103,8 @@ type DragDropDropdownRegistration = {
   closeDragOpened: () => void
 }
 
-let activeDrag = $state<ActiveDrag | null>(null)
+// Imperative session state must not inherit stale values from outgoing Svelte effect branches.
+let activeDrag: ActiveDrag | null = null
 let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDragGhost = $state<ActiveDragGhost | null>(null)
@@ -183,12 +184,13 @@ const areSameActiveDropTarget = (
 }
 
 const setActiveDropTarget = (nextDropTarget: ActiveDropTarget | null): void => {
-  if (areSameActiveDropTarget(activeDropTarget, nextDropTarget)) {
+  const resolvedDropTarget = activeDrag ? nextDropTarget : null
+  if (areSameActiveDropTarget(activeDropTarget, resolvedDropTarget)) {
     return
   }
 
   setDroppableState(activeDropTarget, false)
-  activeDropTarget = nextDropTarget
+  activeDropTarget = resolvedDropTarget
   setDroppableState(activeDropTarget, true)
 }
 
