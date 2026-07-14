@@ -508,7 +508,7 @@
               <ChevronRight size={17} aria-hidden="true" />
             {/if}
           </button>
-          <span class="folder-icon"><Folder size={19} aria-hidden="true" /></span>
+          <span class="folder-icon"><Folder size={24} aria-hidden="true" /></span>
           <button class="folder-name" type="button" onclick={() => toggleFolder(folder.id)}>
             {folder.title}
           </button>
@@ -936,8 +936,9 @@
   }
 
   .folder-icon {
-    background: oklch(0.57 0.16 295 / 16%);
-    border-color: oklch(0.76 0.12 295 / 22%);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     color: oklch(0.83 0.11 295);
   }
 
