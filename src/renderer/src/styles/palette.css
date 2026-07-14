@@ -49,6 +49,8 @@
   --ui-neutral-action-hover-fill: oklch(1 0 0 / 16.3%);
 
   /* Accent */
+  --ui-accent-muted-border: oklch(0.827 0.108 306.383 / 18%);
+  --ui-accent-muted-hover-border: oklch(0.827 0.108 306.383 / 19.1%);
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
   --ui-accent-strong-border: oklch(0.827 0.108 306.383 / 68%);
