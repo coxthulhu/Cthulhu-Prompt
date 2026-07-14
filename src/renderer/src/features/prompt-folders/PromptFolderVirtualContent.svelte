@@ -674,6 +674,10 @@
     ).length
   }
 
+  const getFolderSubfolderCount = (row: PromptFolderScreenFolderEditorRow): number =>
+    promptFolderById[row.ownerFolderId]?.entries.filter((entry) => entry.kind === 'folder')
+      .length ?? 0
+
   const getFolderDepth = (targetFolderId: string): number => {
     const visit = (folderId: string, depth: number): number | null => {
       if (folderId === targetFolderId) return depth
@@ -746,6 +750,7 @@
         folderDisplayName={rowFolder.displayName}
         promptCount={getFolderPromptCount(props.row)}
         completedPromptCount={getFolderCompletedPromptCount(props.row)}
+        subfolderCount={getFolderSubfolderCount(props.row)}
         rowId={props.rowId}
         virtualWindowWidthPx={contentWidthPx}
         devicePixelRatio={props.devicePixelRatio}

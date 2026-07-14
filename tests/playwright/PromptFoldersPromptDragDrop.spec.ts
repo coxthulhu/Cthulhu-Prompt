@@ -678,7 +678,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await dragPromptHandleToTarget(
       mainWindow,
       BASE_BEFORE_ID,
-      `[data-testid="prompt-folder-editor-${NESTED_FOLDER_ID}"] [data-testid="prompt-folder-editor-title-toggle"]`
+      `[data-testid="prompt-folder-editor-${NESTED_FOLDER_ID}"] [data-testid="prompt-folder-editor-title-bar"]`
     )
     await expect
       .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))

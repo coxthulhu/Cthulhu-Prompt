@@ -70,6 +70,7 @@ const nestedPromptSelector = '[data-testid="prompt-editor-subfolders-ui-nested-p
 const grandchildPromptSelector =
   '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
 const folderTitleToggleSelector = '[data-testid="prompt-folder-editor-title-toggle"]'
+const folderTitleBarSelector = '[data-testid="prompt-folder-editor-title-bar"]'
 const folderSettingsToggleSelector = '[data-testid="prompt-folder-editor-settings-toggle"]'
 const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
@@ -298,41 +299,50 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(
       mainWindow
         .locator(nestedFolderSelector)
-        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+        .locator(folderTitleBarSelector)
     ).toContainText('1 prompt')
     await expect(
       mainWindow
         .locator(nestedFolderSelector)
-        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+        .locator(folderTitleBarSelector)
     ).toContainText('Nested')
     await expect(
-      mainWindow.locator(nestedFolderSelector).locator(folderTitleToggleSelector)
+      mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('2 completed prompts')
+    await expect(
+      mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
+    ).toContainText('1 subfolder')
     await revealVirtualRow(mainWindow, testHelpers, grandchildFolderSelector)
     await expect(
       mainWindow
         .locator(grandchildFolderSelector)
-        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+        .locator(folderTitleBarSelector)
     ).toContainText('1 prompt')
     await expect(
       mainWindow
         .locator(grandchildFolderSelector)
-        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+        .locator(folderTitleBarSelector)
     ).toContainText('Grandchild')
     await expect(
-      mainWindow.locator(grandchildFolderSelector).locator(folderTitleToggleSelector)
+      mainWindow.locator(grandchildFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('0 completed prompts')
+    await expect(
+      mainWindow.locator(grandchildFolderSelector).locator(folderTitleBarSelector)
+    ).toContainText('0 subfolders')
     await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
     await expect(
       mainWindow
         .locator(emptyNestedFolderSelector)
-        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+        .locator(folderTitleBarSelector)
     ).toContainText('0 prompts')
     await expect(
       mainWindow
         .locator(emptyNestedFolderSelector)
-        .locator('[data-testid="prompt-folder-editor-title-toggle"]')
+        .locator(folderTitleBarSelector)
     ).toContainText('Empty Nested')
+    await expect(
+      mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleBarSelector)
+    ).toContainText('0 subfolders')
 
     await revealVirtualRow(mainWindow, testHelpers, rootBeforeSelector)
     const rootBeforeBox = await mainWindow.locator(rootBeforeSelector).boundingBox()
@@ -422,9 +432,28 @@ describe('Prompt folder subfolder rendering', () => {
     const nestedFolderToggle = mainWindow
       .locator(nestedFolderSelector)
       .locator(folderTitleToggleSelector)
+    const nestedFolderTitleBar = mainWindow
+      .locator(nestedFolderSelector)
+      .locator(folderTitleBarSelector)
+    const nestedFolderChevron = nestedFolderToggle.locator('.prompt-folder-editor-chevron')
+    const readChevronRotationDegrees = async (): Promise<number> =>
+      await nestedFolderChevron.evaluate((element) => {
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform)
+        return Math.round((Math.atan2(matrix.b, matrix.a) * 180) / Math.PI)
+      })
+    await expect(nestedFolderToggle).toHaveClass(/cthulhuUiIconButton/)
+    await expect(nestedFolderToggle).toHaveAttribute('data-hover-variant', 'neutral')
+    await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(nestedFolderTitleBar).toContainText('1 prompt')
+    await expect(nestedFolderTitleBar).toContainText('1 subfolder')
+    await expect.poll(readChevronRotationDegrees).toBe(90)
+    await nestedFolderTitleBar.click({ position: { x: 100, y: 20 } })
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
     await nestedFolderToggle.click()
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(nestedFolderTitleBar).toContainText('1 prompt')
+    await expect(nestedFolderTitleBar).toContainText('1 subfolder')
+    await expect.poll(readChevronRotationDegrees).toBe(0)
 
     const rowOrderAfterCollapse = await collectVirtualRowTestIds(
       mainWindow,

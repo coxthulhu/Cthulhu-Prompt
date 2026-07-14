@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { Folder, Pencil, Settings } from 'lucide-svelte'
+  import { ChevronRight, Folder, Pencil, Settings } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import {
@@ -37,6 +36,7 @@
     folderDisplayName: string
     promptCount: number
     completedPromptCount: number
+    subfolderCount: number
     folderSettings: PromptFolderSettings
     rowId: string
     virtualWindowWidthPx: number
@@ -72,6 +72,7 @@
     folderDisplayName,
     promptCount,
     completedPromptCount,
+    subfolderCount,
     folderSettings,
     rowId,
     virtualWindowWidthPx,
@@ -101,6 +102,9 @@
   const completedPromptCountLabel = $derived(
     `${completedPromptCount} completed prompt${completedPromptCount === 1 ? '' : 's'}`
   )
+  const subfolderCountLabel = $derived(
+    `${subfolderCount} ${subfolderCount === 1 ? 'subfolder' : 'subfolders'}`
+  )
   const cardHeightPx = $derived(Math.max(0, virtualRowHeightPx - rowPaddingTopPx))
   const hydratedFields = $state<Record<PromptFolderSettingsField, boolean>>({
     folderDescription: false,
@@ -119,12 +123,6 @@
     }
   )
   let lastReportedHydration = $state<boolean | null>(null)
-
-  const handleTitleKeydown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    onPromptsSectionToggle()
-  }
 
   const handlePencilClick = (event: MouseEvent) => {
     event.stopPropagation()
@@ -188,19 +186,19 @@
       use:droppable={effectiveDropOptions}
       class="prompt-folder-editor-title-bar"
       style={`height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px; min-height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px; max-height:${PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX}px;`}
-      role="button"
-      tabindex="0"
-      aria-expanded={isPromptsSectionExpanded}
-      data-testid="prompt-folder-editor-title-toggle"
-      onclick={onPromptsSectionToggle}
-      onkeydown={handleTitleKeydown}
+      data-testid="prompt-folder-editor-title-bar"
     >
       <div class="prompt-folder-editor-title-main">
-        <RotatingChevron
-          expanded={isPromptsSectionExpanded}
-          size={30}
+        <IconButton
+          icon={ChevronRight}
+          label={isPromptsSectionExpanded ? 'Collapse folder prompts' : 'Expand folder prompts'}
+          title={isPromptsSectionExpanded ? 'Collapse folder prompts' : 'Expand folder prompts'}
+          ariaExpanded={isPromptsSectionExpanded}
           iconSize={24}
-          class="prompt-folder-editor-chevron"
+          class="prompt-folder-editor-chevron-toggle"
+          iconClass="prompt-folder-editor-chevron"
+          testId="prompt-folder-editor-title-toggle"
+          onclick={onPromptsSectionToggle}
         />
 
         <IconCell icon={Folder} size="title" />
@@ -229,6 +227,8 @@
             <span>{promptCountLabel}</span>
             <SeparatorDot />
             <span>{completedPromptCountLabel}</span>
+            <SeparatorDot />
+            <span>{subfolderCountLabel}</span>
           </div>
         </div>
       </div>
@@ -290,20 +290,14 @@
     border: 0;
     border-radius: 0;
     box-sizing: border-box;
-    cursor: pointer;
     display: grid;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
-    outline: none;
     overflow: hidden;
     padding: 8px 16px;
     user-select: none;
     -webkit-user-select: none;
-  }
-
-  .prompt-folder-editor-title-bar:focus-visible {
-    box-shadow: inset 0 0 0 2px var(--ui-neutral-focus-border);
   }
 
   .prompt-folder-editor-title-main {
@@ -356,6 +350,24 @@
     display: flex;
     gap: 4px;
     min-width: 0;
+  }
+
+  :global(.prompt-folder-editor-chevron-toggle.cthulhuUiIconButton) {
+    height: 30px;
+    width: 30px;
+  }
+
+  :global(.prompt-folder-editor-chevron) {
+    transform: rotate(0deg);
+    transform-origin: center;
+    transition: transform 50ms ease-out;
+  }
+
+  :global(
+    .prompt-folder-editor-chevron-toggle[aria-expanded='true']
+      .prompt-folder-editor-chevron
+  ) {
+    transform: rotate(90deg);
   }
 
   .prompt-folder-editor-sections {

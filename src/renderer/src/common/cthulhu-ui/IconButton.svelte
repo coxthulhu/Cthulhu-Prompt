@@ -17,6 +17,7 @@
     icon: ComponentType
     label: string
     size?: IconButtonSize
+    iconSize?: number
     baseVariant?: IconButtonBaseVariant
     hoverVariant?: IconButtonHoverVariant
     class?: string
@@ -44,6 +45,7 @@
     icon: Icon,
     label,
     size = 'default',
+    iconSize: requestedIconSize,
     baseVariant = 'normal',
     hoverVariant = 'neutral',
     class: className,
@@ -67,7 +69,8 @@
 
   const isDisabled = $derived(disabled === true)
   const iconSize = $derived(
-    size === 'default' || size === 'compact-large-icon' ? 20 : size === 'tiny' ? 14 : 16
+    requestedIconSize ??
+      (size === 'default' || size === 'compact-large-icon' ? 20 : size === 'tiny' ? 14 : 16)
   )
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>

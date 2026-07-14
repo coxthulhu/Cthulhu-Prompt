@@ -395,13 +395,11 @@ export const createPromptFolderScreenController = ({
   )
   const promptMetadataByPromptId = $derived.by(() => {
     const metadataById: Record<string, PromptMetadata> = {}
-    for (const promptId of renderedPromptIds) {
-      const prompt = promptById[promptId]
-      if (prompt) {
-        metadataById[promptId] = {
-          status: prompt.status,
-          completedAt: prompt.completedAt ?? null
-        }
+    for (const prompt of promptQuery.data) {
+      if (!prompt) continue
+      metadataById[prompt.id] = {
+        status: prompt.status,
+        completedAt: prompt.completedAt ?? null
       }
     }
 
