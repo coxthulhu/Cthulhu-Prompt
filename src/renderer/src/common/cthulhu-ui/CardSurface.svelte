@@ -37,6 +37,7 @@
   .cthulhuUiCardSurface {
     background: var(--ui-card-normal-surface-gradient-start);
     background-repeat: no-repeat;
+    border: 1px solid var(--ui-neutral-muted-border);
     box-shadow: none;
   }
 
