@@ -104,7 +104,7 @@
       },
       {
         id: PromptStatus.InProgress,
-        label: 'Set to In Progress',
+        label: 'In Progress',
         detail: 'Mark this prompt as underway',
         icon: Hourglass,
         iconClass: 'prompt-editor-status-option-icon-in-progress',
@@ -112,7 +112,7 @@
       },
       {
         id: PromptStatus.Completed,
-        label: 'Set to Completed',
+        label: 'Complete',
         detail: 'Move this prompt to completed',
         icon: CheckCircle2,
         iconClass: 'prompt-editor-status-option-icon-completed',
