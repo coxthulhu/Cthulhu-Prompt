@@ -22,6 +22,7 @@ import {
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PromptStatus, type PromptPersisted } from '../../src/shared/Prompt'
 import { readPromptFolderEntries } from '../helpers/PromptDragDropHelpers'
+import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -795,6 +796,21 @@ describe('Prompt folder prompt management', () => {
     expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2', newPromptId, 'dev-1'])
   })
 
+  // The pixel-exact anchor polls below fail with an opaque offset when a card
+  // clips content inside its own overflow:hidden box (the browser then scrolls
+  // the card internally on click). Diagnose that directly after each click.
+  const expectNoCardInternalScroll = async (mainWindow: any, promptId: string): Promise<void> => {
+    const geometry = await measureEditorCardGeometry(mainWindow, promptEditorSelector(promptId))
+    expect(
+      geometry?.internalScrollTopPx,
+      `${promptId} card scrolled internally after a move click — its content likely overflows the card (height constants out of sync with CSS)`
+    ).toBe(0)
+    expect(
+      geometry?.hiddenOverflowPx,
+      `${promptId} card content is taller than the card (height constants out of sync with CSS)`
+    ).toBe(0)
+  }
+
   test('keeps moved prompt buttons under the cursor when move buttons reorder prompts', async ({
     testSetup
   }) => {
@@ -807,6 +823,7 @@ describe('Prompt folder prompt management', () => {
     await scrollPromptEditorIntoView(mainWindow, testHelpers, BOUNDARY_2_ID)
 
     await mainWindow.locator(moveUpSelector(BOUNDARY_2_ID)).click()
+    await expectNoCardInternalScroll(mainWindow, BOUNDARY_2_ID)
 
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
@@ -821,6 +838,7 @@ describe('Prompt folder prompt management', () => {
     )
     const moveUpTopBefore = await getElementTop(mainWindow, moveAnchorUpSelector)
     await mainWindow.locator(moveAnchorUpSelector).click()
+    await expectNoCardInternalScroll(mainWindow, MOVE_ANCHOR_2_ID)
 
     await expect
       .poll(async () =>
@@ -842,6 +860,7 @@ describe('Prompt folder prompt management', () => {
 
     const moveDownTopBefore = await getElementTop(mainWindow, moveAnchorDownSelector)
     await mainWindow.locator(moveAnchorDownSelector).click()
+    await expectNoCardInternalScroll(mainWindow, MOVE_ANCHOR_2_ID)
 
     await expect
       .poll(async () =>

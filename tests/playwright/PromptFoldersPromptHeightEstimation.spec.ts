@@ -9,10 +9,12 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { heightTestPrompts } from '../fixtures/TestData'
+import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
+const CARD_FILL_TOLERANCE_PX = 1
 
 type PromptData = (typeof heightTestPrompts)[keyof typeof heightTestPrompts]
 
@@ -47,6 +49,30 @@ function expectPromptFoldersHeights(
     expect(placeholderHeight).toBeGreaterThan(0)
     expect(hydratedHeight).toBeGreaterThan(0)
   }
+}
+
+// The card pins its height to the virtual row height, so comparing rects can
+// never catch constants drifting from the CSS. Assert against real geometry:
+// the content must exactly fill the card with no hidden internal overflow.
+async function expectCardContentFillsRow(mainWindow: Page, rowSelector: string): Promise<void> {
+  await expect
+    .poll(async () => {
+      const geometry = await measureEditorCardGeometry(mainWindow, rowSelector)
+      if (!geometry) return Number.POSITIVE_INFINITY
+      return Math.max(
+        geometry.hiddenOverflowPx,
+        geometry.internalScrollTopPx,
+        Math.abs(geometry.promptBodyFillGapPx ?? Number.POSITIVE_INFINITY),
+        Math.abs(geometry.promptSidebarFillGapPx ?? Number.POSITIVE_INFINITY)
+      )
+    })
+    .toBeLessThanOrEqual(CARD_FILL_TOLERANCE_PX)
+
+  const geometry = (await measureEditorCardGeometry(mainWindow, rowSelector))!
+  expect(
+    geometry.hiddenOverflowPx,
+    `card ${rowSelector} clips content inside overflow:hidden`
+  ).toBe(0)
 }
 
 async function scrollPromptFoldersListToIndex(
@@ -139,6 +165,8 @@ async function measurePromptFolders(
     const titleInput = mainWindow.locator(`${rowSelector} ${PROMPT_TITLE_SELECTOR}`)
     await titleInput.waitFor()
     await expect(titleInput).toHaveValue(prompt.title)
+
+    await expectCardContentFillsRow(mainWindow, rowSelector)
 
     return {
       placeholderHeight,
