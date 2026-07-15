@@ -134,6 +134,7 @@
     onAddPrompt: (target: PromptFolderDividerTarget) => void
     onAddSubfolder: (target: PromptFolderDividerTarget) => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
+    onDeletePromptFolder: (promptFolderId: string) => void
     onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
     canMovePrompt: (target: PromptFolderPromptTarget, direction: 'up' | 'down') => boolean
     onMovePromptUp: (target: PromptFolderPromptTarget) => Promise<boolean>
@@ -189,6 +190,7 @@
     onAddPrompt,
     onAddSubfolder,
     onDeletePrompt,
+    onDeletePromptFolder,
     onSetPromptStatus,
     onMovePromptUp,
     onMovePromptDown,
@@ -726,6 +728,7 @@
     onAddPrompt={() =>
       onAddPrompt({ ownerFolderId: screenRootFolderId, previousEntryId: null })}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
+    onDeletePromptFolder={() => onDeletePromptFolder(screenRootFolderId)}
     {onScreenModeChange}
   />
 {/snippet}
@@ -783,6 +786,7 @@
         onSettingsFieldChange={(field, text, measurement) =>
           onSettingsFieldChange(ownerFolderId, field, text, measurement)}
         onRenamePromptFolder={() => onRenamePromptFolder(ownerFolderId)}
+        onDeletePromptFolder={() => onDeletePromptFolder(ownerFolderId)}
       />
     </PromptFolderSectionRow>
   {/if}

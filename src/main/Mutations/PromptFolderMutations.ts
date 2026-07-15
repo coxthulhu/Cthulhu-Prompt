@@ -1,7 +1,10 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
-import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
-import { folderEntryRef, type EntryRef } from '@shared/OrderContainer'
+import {
+  copyPromptFolderSettings,
+  createEmptyPromptFolderSettings
+} from '@shared/PromptFolder'
+import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import {
   hasPromptFolderNameConflict,
@@ -11,9 +14,14 @@ import {
 } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
-import { buildPromptFolderSnapshot, buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
+import {
+  buildPromptFolderSnapshot,
+  buildWorkspaceSnapshot,
+  collectLoadedPromptFolderDescendantIds
+} from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptFolderRequest,
+  parseDeletePromptFolderRequest,
   parseRenamePromptFolderRequest,
   parseUpdatePromptFolderSettingsRequest
 } from '../IpcFramework/IpcValidation'
@@ -24,6 +32,8 @@ import {
   resolvePromptFolderPathFromData,
   collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
+import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
+import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
 const getPromptFolderNameCandidates = (
   entries: readonly EntryRef[]
@@ -204,6 +214,180 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   }),
               promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
             }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          return { success: false, error: message }
+        }
+      }
+    )
+  })
+
+  ipcMain.handle('delete-prompt-folder', async (_, request: unknown) => {
+    return await runMutationIpcRequest(
+      request,
+      parseDeletePromptFolderRequest,
+      async (validatedRequest) => {
+        try {
+          const payload = validatedRequest.payload
+          const requestedWorkspace = payload.workspace
+          const requestedPromptFolder = payload.promptFolder
+          const requestedParentPromptFolder = payload.parentPromptFolder
+          const committedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
+          const committedPromptFolder = data.promptFolder.committedStore.getEntry(
+            requestedPromptFolder.id
+          )
+
+          if (!committedWorkspace) {
+            return { success: false, error: 'Workspace not loaded' }
+          }
+
+          if (!committedPromptFolder) {
+            return { success: false, error: 'Prompt folder not loaded' }
+          }
+
+          const promptFolders = collectWorkspacePromptFolders(committedWorkspace.committed)
+          const treeIndex = buildPromptFolderTreeIndex(
+            committedWorkspace.committed,
+            promptFolders
+          )
+          if (!treeIndex.has(requestedPromptFolder.id)) {
+            return { success: false, error: 'Prompt folder does not belong to the workspace' }
+          }
+          const parentPromptFolderId =
+            treeIndex.get(requestedPromptFolder.id)?.parentPromptFolderId ?? null
+
+          if ((requestedParentPromptFolder?.id ?? null) !== parentPromptFolderId) {
+            return { success: false, error: 'Parent prompt folder did not match' }
+          }
+
+          const committedParentPromptFolder = parentPromptFolderId
+            ? data.promptFolder.committedStore.getEntry(parentPromptFolderId)
+            : null
+
+          if (parentPromptFolderId && !committedParentPromptFolder) {
+            return { success: false, error: 'Parent prompt folder not loaded' }
+          }
+
+          const deletedPromptFolderIds = [
+            requestedPromptFolder.id,
+            ...collectLoadedPromptFolderDescendantIds(requestedPromptFolder.id)
+          ]
+          const deletedPromptIds = deletedPromptFolderIds.flatMap((promptFolderId) => {
+            const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
+            if (!promptFolder) return []
+            return [
+              ...promptFolder.entries.flatMap((entry) =>
+                entry.kind === 'prompt' ? [entry.id] : []
+              ),
+              ...promptFolder.completedPromptIds
+            ]
+          })
+
+          const transactionOutcome = await runAtomicDataTransaction((tx) => ({
+            orderContainer: committedParentPromptFolder
+              ? tx.promptFolder.update({
+                  id: committedParentPromptFolder.committed.id,
+                  expectedRevision: requestedParentPromptFolder?.expectedRevision,
+                  recipe: (draft) => {
+                    draft.entries = removeEntry(
+                      draft.entries,
+                      'folder',
+                      requestedPromptFolder.id
+                    )
+                  }
+                })
+              : tx.workspace.update({
+                  id: committedWorkspace.committed.id,
+                  expectedRevision: requestedWorkspace.expectedRevision,
+                  recipe: (draft) => {
+                    draft.entries = removeEntry(
+                      draft.entries,
+                      'folder',
+                      requestedPromptFolder.id
+                    )
+                  }
+                }),
+            ...Object.fromEntries(
+              deletedPromptIds.map((promptId) => [
+                `prompt:${promptId}`,
+                tx.prompt.delete({ id: promptId })
+              ])
+            ),
+            ...Object.fromEntries(
+              deletedPromptFolderIds.toReversed().map((promptFolderId) => [
+                `promptFolder:${promptFolderId}`,
+                tx.promptFolder.delete({
+                  id: promptFolderId,
+                  expectedRevision:
+                    promptFolderId === requestedPromptFolder.id
+                      ? requestedPromptFolder.expectedRevision
+                      : undefined
+                })
+              ])
+            )
+          }))
+
+          if (transactionOutcome.status === 'conflict') {
+            if (transactionOutcome.conflictLabel === 'orderContainer') {
+              return committedParentPromptFolder
+                ? buildConflictResponseFromLatest(
+                    data.promptFolder.committedStore.getEntry(parentPromptFolderId!),
+                    'Parent prompt folder not loaded',
+                    (latestParentPromptFolder) => ({
+                      parentPromptFolder: buildPromptFolderSnapshot(latestParentPromptFolder)
+                    })
+                  )
+                : buildConflictResponseFromLatest(
+                    data.workspace.committedStore.getEntry(requestedWorkspace.id),
+                    'Workspace not loaded',
+                    (latestWorkspace) => ({
+                      workspace: buildWorkspaceSnapshot(latestWorkspace)
+                    })
+                  )
+            }
+
+            return buildConflictResponseFromLatest(
+              data.promptFolder.committedStore.getEntry(requestedPromptFolder.id),
+              'Prompt folder not loaded',
+              (latestPromptFolder) => ({
+                promptFolder: buildPromptFolderSnapshot(latestPromptFolder)
+              })
+            )
+          }
+
+          for (const promptId of deletedPromptIds) {
+            // Side effect: remove persisted Monaco view state for deleted prompts.
+            PromptUiStateDataAccess.deletePromptUiState(requestedWorkspace.id, promptId)
+          }
+
+          const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
+          const updatedParentPromptFolder = parentPromptFolderId
+            ? data.promptFolder.committedStore.getEntry(parentPromptFolderId)
+            : null
+
+          if (!updatedWorkspace || (parentPromptFolderId && !updatedParentPromptFolder)) {
+            return { success: false, error: 'Prompt folder delete commit did not complete' }
+          }
+
+          const remainingPromptFolderIds = collectWorkspacePromptFolders(
+            updatedWorkspace.committed
+          ).map((promptFolder) => promptFolder.id)
+          // Side effect: remove persisted UI state for the deleted folder subtree.
+          UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
+            requestedWorkspace.id,
+            remainingPromptFolderIds
+          )
+
+          return {
+            success: true,
+            payload: committedParentPromptFolder
+              ? {
+                  parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder!)
+                }
+              : {
+                  workspace: buildWorkspaceSnapshot(updatedWorkspace)
+                }
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)

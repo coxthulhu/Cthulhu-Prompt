@@ -1,10 +1,13 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import { Search } from 'lucide-svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { isPromptFolderEmpty } from '@renderer/data/Collections/PromptFolderEntries'
   import { renamePromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
+  import { deletePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import PromptFolderVirtualContent from './PromptFolderVirtualContent.svelte'
   import PromptFolderFindIntegration from './find/PromptFolderFindIntegration.svelte'
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
@@ -17,12 +20,14 @@
     screenRootFolderId,
     screenMode = PromptFolderScreenMode.Active,
     onScreenModeChange,
-    onScreenRootFolderSelect
+    onScreenRootFolderSelect,
+    onRootPromptFolderDeleted
   } = $props<{
     screenRootFolderId: string
     screenMode?: PromptFolderScreenMode
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
+    onRootPromptFolderDeleted: () => void
   }>()
 
   const controller = createPromptFolderScreenController({
@@ -32,8 +37,11 @@
       onScreenRootFolderSelect(nextScreenRootFolderId)
   })
 
+  let didDeleteScreenRootFolder = $state(false)
+
   // Side effect: persist the last selected row for this folder when the screen unmounts.
   onDestroy(() => {
+    if (didDeleteScreenRootFolder) return
     controller.persistActivePromptTreeRow()
   })
 
@@ -42,6 +50,7 @@
   let createPromptSubfolderDialog = $state<{
     openDialog: (target: PromptFolderDividerTarget) => void
   } | null>(null)
+  let deletePromptFolderId = $state<string | null>(null)
 
   const renamePromptFolderTarget = $derived(
     controller.promptFolders.find((folder) => folder.id === renamePromptFolderId) ?? null
@@ -98,6 +107,50 @@
   const openCreatePromptSubfolderDialog = (target: PromptFolderDividerTarget) => {
     createPromptSubfolderDialog?.openDialog(target)
   }
+
+  const isEmptyPromptFolder = (promptFolderId: string): boolean => {
+    const promptFolder = controller.promptFolders.find((folder) => folder.id === promptFolderId)
+    if (!promptFolder) return false
+    return isPromptFolderEmpty(promptFolder)
+  }
+
+  const performPromptFolderDelete = async (promptFolderId: string): Promise<void> => {
+    const workspaceId = controller.workspaceId
+    if (!workspaceId) return
+
+    const isRootPromptFolder = promptFolderId === controller.screenRootFolderId
+    const parentPromptFolderId = controller.promptFolders.find((folder) =>
+      folder.entries.some((entry) => entry.kind === 'folder' && entry.id === promptFolderId)
+    )?.id
+    deletePromptFolderId = null
+    const didDelete = await runIpcBestEffort(
+      async () => {
+        await deletePromptFolder(workspaceId, promptFolderId)
+        return true
+      },
+      () => false
+    )
+
+    if (didDelete && isRootPromptFolder) {
+      didDeleteScreenRootFolder = true
+      onRootPromptFolderDeleted()
+    } else if (didDelete && parentPromptFolderId) {
+      controller.handleDeletedPromptFolder(parentPromptFolderId)
+    }
+  }
+
+  const handleDeletePromptFolder = (promptFolderId: string): void => {
+    if (isEmptyPromptFolder(promptFolderId)) {
+      void performPromptFolderDelete(promptFolderId)
+      return
+    }
+
+    deletePromptFolderId = promptFolderId
+  }
+
+  const deletePromptFolderTarget = $derived(
+    controller.promptFolders.find((folder) => folder.id === deletePromptFolderId) ?? null
+  )
 </script>
 
 <PromptFolderFindIntegration
@@ -177,6 +230,7 @@
             onAddPrompt={controller.handleAddPrompt}
             onAddSubfolder={openCreatePromptSubfolderDialog}
             onDeletePrompt={controller.handleDeletePrompt}
+            onDeletePromptFolder={handleDeletePromptFolder}
             onSetPromptStatus={controller.handleSetPromptStatus}
             onMovePromptUp={controller.handleMovePromptUp}
             onMovePromptDown={controller.handleMovePromptDown}
@@ -238,6 +292,22 @@
   duplicatePromptFolderId={renamePromptFolderTarget?.id ?? null}
   failureMessage="Failed to rename folder. Please try again."
   onsubmit={handleRenamePromptFolder}
+/>
+
+<ConfirmationDialog
+  open={deletePromptFolderTarget !== null}
+  title="Delete Prompt Folder"
+  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents and subfolders?`}
+  confirmText="Delete Folder"
+  confirmTestId="prompt-folder-confirm-delete-button"
+  oncancel={() => {
+    deletePromptFolderId = null
+  }}
+  onconfirm={() => {
+    if (deletePromptFolderTarget) {
+      void performPromptFolderDelete(deletePromptFolderTarget.id)
+    }
+  }}
 />
 
 <style>

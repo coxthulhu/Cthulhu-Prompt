@@ -1341,6 +1341,16 @@ export const createPromptFolderScreenController = ({
     setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptTreeRow), 'scroll-follow')
   }
 
+  const handleDeletedPromptFolder = (parentPromptFolderId: string): void => {
+    setCurrentFolderSelection(
+      parentPromptFolderId === screenRootFolderId
+        ? { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
+        : { kind: 'folder-settings', rowOwnerFolderId: parentPromptFolderId },
+      'restore',
+      { forceVersionBump: true }
+    )
+  }
+
   return {
     get workspaceId(): string | null {
       return workspaceId
@@ -1444,6 +1454,7 @@ export const createPromptFolderScreenController = ({
     handleFindMatchReveal,
     handleAddPrompt,
     handleCreatedSubfolder,
+    handleDeletedPromptFolder,
     handleDeletePrompt,
     handleSetPromptStatus,
     handleMovePromptUp,

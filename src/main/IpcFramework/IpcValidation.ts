@@ -9,6 +9,7 @@ import type {
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
+  DeletePromptFolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
   PromptFolderSettings,
@@ -472,6 +473,38 @@ const parseRenamePromptFolderWireRequest: Parser<
   IpcRequestWithPayload<RenamePromptFolderPayload>
 > = parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
 
+const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 3 ||
+    !('workspace' in record) ||
+    !('parentPromptFolder' in record) ||
+    !('promptFolder' in record)
+  ) {
+    return null
+  }
+
+  const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
+  const parentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
+    record.parentPromptFolder
+  )
+  const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
+
+  if (!workspace || parentPromptFolder === undefined || !promptFolder) {
+    return null
+  }
+
+  return { workspace, parentPromptFolder, promptFolder }
+}
+
+const parseDeletePromptFolderWireRequest: Parser<
+  IpcRequestWithPayload<DeletePromptFolderPayload>
+> = parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
+
 const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
   promptFolder: parsePromptFolderRevisionPayloadEntity,
   prompt: parsePromptRevisionPayloadEntity
@@ -665,6 +698,10 @@ export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
 
 export const parseRenamePromptFolderRequest = createRequestParser(
   parseRenamePromptFolderWireRequest
+)
+
+export const parseDeletePromptFolderRequest = createRequestParser(
+  parseDeletePromptFolderWireRequest
 )
 
 export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)

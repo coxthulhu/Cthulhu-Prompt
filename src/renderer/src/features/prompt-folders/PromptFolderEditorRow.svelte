@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronRight, Folder, Pencil, Settings } from 'lucide-svelte'
+  import { ChevronRight, Folder, Pencil, Settings, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
@@ -58,6 +58,7 @@
     onHydrationChange?: (isHydrated: boolean) => void
     onSettingsSectionToggle: () => void
     onPromptsSectionToggle: () => void
+    onDeletePromptFolder: () => void
     onRenamePromptFolder: () => void
     onSettingsFieldChange: (
       field: PromptFolderSettingsDraftField,
@@ -94,6 +95,7 @@
     onHydrationChange,
     onSettingsSectionToggle,
     onPromptsSectionToggle,
+    onDeletePromptFolder,
     onRenamePromptFolder,
     onSettingsFieldChange
   }: Props = $props()
@@ -139,6 +141,15 @@
   }
 
   const handleSettingsMouseDown = (event: MouseEvent) => {
+    event.stopPropagation()
+  }
+
+  const handleDeleteClick = (event: MouseEvent) => {
+    event.stopPropagation()
+    onDeletePromptFolder()
+  }
+
+  const handleDeleteMouseDown = (event: MouseEvent) => {
     event.stopPropagation()
   }
 
@@ -236,6 +247,15 @@
 
       {#if !isReadOnly}
         <div class="prompt-folder-editor-title-actions">
+          <IconButton
+            icon={Trash2}
+            label="Delete prompt folder"
+            title="Delete prompt folder"
+            hoverVariant="danger"
+            testId="prompt-folder-editor-delete-button"
+            onclick={handleDeleteClick}
+            onmousedown={handleDeleteMouseDown}
+          />
           <IconButton
             icon={Settings}
             label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}

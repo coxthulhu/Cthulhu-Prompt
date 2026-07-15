@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { Folder, Pencil, Plus } from 'lucide-svelte'
+  import { Folder, Pencil, Plus, Trash2 } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
@@ -15,6 +15,7 @@
     screenMode,
     isCreatingPrompt,
     onAddPrompt,
+    onDeletePromptFolder,
     onRenamePromptFolder,
     onScreenModeChange
   } = $props<{
@@ -24,6 +25,7 @@
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     onAddPrompt: () => void
+    onDeletePromptFolder: () => void
     onRenamePromptFolder: () => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
   }>()
@@ -64,14 +66,23 @@
       </div>
     </div>
 
-    <Button
-      icon={Plus}
-      text="New Prompt"
-      variant="accent"
-      state={isCompletedMode || isCreatingPrompt ? 'disabled' : 'enabled'}
-      testId="prompt-folder-new-prompt-button"
-      onclick={onAddPrompt}
-    />
+    <div class="prompt-folder-root-actions">
+      <Button
+        icon={Trash2}
+        text="Delete Folder"
+        variant="danger"
+        testId="prompt-folder-delete-button"
+        onclick={onDeletePromptFolder}
+      />
+      <Button
+        icon={Plus}
+        text="Add Prompt"
+        variant="accent"
+        state={isCompletedMode || isCreatingPrompt ? 'disabled' : 'enabled'}
+        testId="prompt-folder-new-prompt-button"
+        onclick={onAddPrompt}
+      />
+    </div>
   </div>
 
   <div class="prompt-folder-root-filter-bar" role="group" aria-label="Filter prompts">
@@ -151,6 +162,12 @@
     padding-block: 2px;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .prompt-folder-root-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
   }
 
   .prompt-folder-root-filter-bar {

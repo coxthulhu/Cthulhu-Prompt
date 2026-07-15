@@ -550,6 +550,12 @@
   const setPromptFolderMode = (nextMode: PromptFolderScreenMode): void => {
     promptFolderScreenMode = nextMode
   }
+
+  const navigateHomeAfterRootPromptFolderDelete = (): void => {
+    clearPromptFolderSelection()
+    activeScreen = 'home'
+    void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('home'))
+  }
 </script>
 
 <div class="flex h-screen w-full flex-col">
@@ -612,6 +618,7 @@
                   screenMode={promptFolderScreenMode}
                   onScreenModeChange={setPromptFolderMode}
                   onScreenRootFolderSelect={navigateToScreenRootFolder}
+                  onRootPromptFolderDeleted={navigateHomeAfterRootPromptFolderDelete}
                 />
               {/key}
             {/if}

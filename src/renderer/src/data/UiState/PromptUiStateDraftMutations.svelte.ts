@@ -119,7 +119,12 @@ export const deletePromptUiStates = (promptIds: string[]): void => {
   }
 
   promptUiStateCollection.utils.deleteManyAuthoritative(promptIds)
-  promptUiStateDraftCollection.delete(promptIds)
+  const draftPromptIds = promptIds.filter((promptId) =>
+    promptUiStateDraftCollection.has(promptId)
+  )
+  if (draftPromptIds.length > 0) {
+    promptUiStateDraftCollection.delete(draftPromptIds)
+  }
 }
 
 export const removePromptUiState = (promptId: string): void => {

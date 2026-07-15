@@ -47,6 +47,7 @@ const createDeterministicId = (seed: string): string => {
 }
 
 const hierarchyFolderId = createDeterministicId(`${WORKSPACE_PATH}:Hierarchy`)
+const emptyRootFolderId = createDeterministicId(`${WORKSPACE_PATH}:EmptyRoot`)
 const nestedFolderId = createDeterministicId(`${WORKSPACE_PATH}:Hierarchy/Nested`)
 const emptyNestedFolderId = createDeterministicId(
   `${WORKSPACE_PATH}:Hierarchy/EmptyNested`
@@ -85,6 +86,7 @@ const grandchildFolderOrderPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
 const emptyNestedFolderOrderPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
+const workspaceFolderOrderPath = `${WORKSPACE_PATH}/Prompts/FolderOrder.json`
 const activeDividerTestIds = [
   dividerTestId(nestedFolderId, null),
   dividerTestId(nestedFolderId, 'subfolders-ui-nested-prompt'),
@@ -964,6 +966,98 @@ describe('Prompt folder subfolder rendering', () => {
     ).toHaveCount(1)
     await expect(mainWindow.locator(nestedFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
+  })
+
+  test('deletes empty and populated prompt folders and returns home after root deletion', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const filesystem = setupWorkspaceScenario(WORKSPACE_PATH, 'subfolders-ui')
+    filesystem[`${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Unmanaged.txt`] =
+      'Delete this unmanaged file with its prompt folder.'
+    await testSetup.setupFilesystem(filesystem)
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+
+    await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      emptyNestedFolderSelector,
+      12
+    )
+    await mainWindow
+      .locator(emptyNestedFolderSelector)
+      .locator('[data-testid="prompt-folder-editor-delete-button"]')
+      .click()
+    await expect(
+      mainWindow.locator('[role="dialog"][aria-label="Delete Prompt Folder"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
+      .toEqual([
+        'subfolders-ui-root-before',
+        nestedFolderId,
+        'subfolders-ui-root-after'
+      ])
+    await expect
+      .poll(async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested`))
+      .toBe(false)
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      nestedFolderSelector,
+      12
+    )
+    await mainWindow
+      .locator(nestedFolderSelector)
+      .locator('[data-testid="prompt-folder-editor-delete-button"]')
+      .click()
+    const subfolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+    )
+    await expect(subfolderDialog).toBeVisible()
+    await expect(subfolderDialog).toContainText('Nested')
+    await subfolderDialog.locator('[data-testid="prompt-folder-confirm-delete-button"]').click()
+    await expect(mainWindow.locator(nestedFolderSelector)).toHaveCount(0)
+    await expect(mainWindow.locator(grandchildFolderSelector)).toHaveCount(0)
+    await expect
+      .poll(async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested`))
+      .toBe(false)
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
+      .toEqual(['subfolders-ui-root-before', 'subfolders-ui-root-after'])
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await mainWindow.locator('[data-testid="prompt-folder-delete-button"]').click()
+    const rootFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+    )
+    await expect(rootFolderDialog).toBeVisible()
+    await expect(rootFolderDialog).toContainText('Hierarchy')
+    await rootFolderDialog.locator('[data-testid="prompt-folder-confirm-delete-button"]').click()
+
+    await expect.poll(async () => await testHelpers.getActiveScreen()).toBe('home')
+    await expect
+      .poll(async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy`))
+      .toBe(false)
+    await expect
+      .poll(async () => await readFolderEntryIds(electronApp, workspaceFolderOrderPath))
+      .toEqual([emptyRootFolderId])
+
+    await testHelpers.clearWorkspaceViaUI()
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    await testHelpers.setupWorkspaceViaUI()
+    await expect.poll(async () => await testHelpers.getActiveScreen()).toBe('home')
+    await testHelpers.navigateToPromptFolders('Empty Root')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
+      'Empty Root'
+    )
   })
 
   test('enables nested prompt movement and removes subfolder arrows', async ({

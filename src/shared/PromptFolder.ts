@@ -112,6 +112,18 @@ export type CreatePromptFolderResponsePayload = {
   promptFolder?: RevisionEnvelope<PromptFolder>
 }
 
+export type DeletePromptFolderPayload = {
+  workspace: RevisionPayloadEntity<Workspace>
+  parentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+}
+
+export type DeletePromptFolderResponsePayload = {
+  workspace?: RevisionEnvelope<Workspace>
+  parentPromptFolder?: RevisionEnvelope<PromptFolder>
+  promptFolder?: RevisionEnvelope<PromptFolder>
+}
+
 export type LoadPromptFolderInitialPayload = {
   workspaceId: string
   promptFolderId: string

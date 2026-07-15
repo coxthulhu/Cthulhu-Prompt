@@ -11,6 +11,10 @@ export type FilePersistenceStagedChange =
       targetPath: string
     }
   | {
+      type: 'removeDirectory'
+      targetPath: string
+    }
+  | {
       type: 'ensureDirectory'
       targetPath: string
       createdDuringStage: boolean
@@ -35,6 +39,15 @@ export const createStagedFileUpsert = (
 export const createStagedFileRemove = (targetPath: string): FilePersistenceStagedChange => {
   return {
     type: 'remove',
+    targetPath
+  }
+}
+
+export const createStagedDirectoryRemove = (
+  targetPath: string
+): FilePersistenceStagedChange => {
+  return {
+    type: 'removeDirectory',
     targetPath
   }
 }
@@ -93,6 +106,13 @@ export const commitStagedFileChange = (stagedChange: FilePersistenceStagedChange
   if (stagedChange.type === 'remove') {
     if (fs.existsSync(stagedChange.targetPath)) {
       fs.rmSync(stagedChange.targetPath)
+    }
+    return
+  }
+
+  if (stagedChange.type === 'removeDirectory') {
+    if (fs.existsSync(stagedChange.targetPath)) {
+      fs.rmSync(stagedChange.targetPath, { recursive: true })
     }
     return
   }

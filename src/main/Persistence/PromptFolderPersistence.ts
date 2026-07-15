@@ -9,9 +9,9 @@ import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/W
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
+  createStagedDirectoryRemove,
   createStagedDirectoryRename,
   createStagedEnsureDirectory,
-  createStagedFileRemove,
   createStagedFileUpsert,
   readJsonFile,
   revertStagedFileChanges,
@@ -94,11 +94,7 @@ export const promptFolderPersistence: PersistenceLayer<
     const targetFolderPath = resolvePromptFolderPath(workspacePath, targetRelativePath)
 
     if (change.type === 'remove') {
-      return createPersistenceStageResult([
-        createStagedFileRemove(orderPath),
-        createStagedFileRemove(infoPath),
-        ...settingsTextPaths.map(({ path }) => createStagedFileRemove(path))
-      ])
+      return createPersistenceStageResult([createStagedDirectoryRemove(folderPath)])
     }
 
     const fs = getFs()
