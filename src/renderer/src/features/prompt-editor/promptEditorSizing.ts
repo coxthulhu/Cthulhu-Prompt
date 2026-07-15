@@ -7,7 +7,11 @@ export const PROMPT_EDITOR_BODY_PADDING_RIGHT_PX = 10
 export const PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX = 10
 export const PROMPT_EDITOR_BODY_PADDING_LEFT_PX = 10
 export const MONACO_PADDING_PX = 0
+// CardSurface draws a 1px border on a border-box card whose outer height is
+// pinned to the virtual row height, so row chrome must include both borders.
+export const PROMPT_EDITOR_CARD_BORDER_WIDTH_PX = 1
 const ROW_CHROME_HEIGHT_PX =
+  PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2 +
   PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX +
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
   PROMPT_EDITOR_BODY_PADDING_TOP_PX +
