@@ -27,6 +27,7 @@
     title?: string
     disabled?: boolean
     active?: boolean
+    borderless?: boolean
     ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
     ariaExpanded?: boolean
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
@@ -55,6 +56,7 @@
     title,
     disabled,
     active,
+    borderless = false,
     ariaHaspopup,
     ariaExpanded,
     ariaCurrent,
@@ -89,6 +91,7 @@
   data-base-variant={baseVariant}
   data-hover-variant={hoverVariant}
   data-active={active === undefined ? undefined : active ? 'true' : 'false'}
+  data-borderless={borderless ? 'true' : 'false'}
   data-testid={testId}
   data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}
@@ -105,8 +108,9 @@
   .cthulhuUiIconButton {
     align-items: center;
     background: var(--ui-ghost-surface);
-    border: 0;
+    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
     color: var(--ui-hoverable-icon-glyph);
     cursor: pointer;
     display: inline-flex;
@@ -117,6 +121,7 @@
     padding: 0;
     transition:
       background-color 120ms ease,
+      border-color 120ms ease,
       color 120ms ease;
     width: 36px;
   }
@@ -138,8 +143,11 @@
   }
 
   .cthulhuUiIconButton[data-size='sidebar-rail'] {
+    /* Rail controls keep their existing separator-only treatment. */
+    border: 0;
     border-bottom: 1px solid var(--ui-neutral-normal-border);
     border-radius: 0;
+    box-sizing: content-box;
     height: 100%;
     min-height: 0;
     width: 100%;
@@ -166,29 +174,43 @@
     color: var(--ui-muted-icon-glyph);
   }
 
+  .cthulhuUiIconButton[data-hover-variant='glyph'] {
+    /* Glyph-only actions intentionally remain visually borderless. */
+    border: 0;
+  }
+
+  .cthulhuUiIconButton[data-borderless='true'] {
+    border: 0;
+  }
+
   .cthulhuUiIconButton:hover,
   .cthulhuUiIconButton:focus-visible {
     background: var(--ui-neutral-action-hover-fill);
+    border-color: var(--ui-neutral-hover-border);
   }
 
   .cthulhuUiIconButton[data-size='sidebar-rail']:hover,
   .cthulhuUiIconButton[data-size='sidebar-rail']:focus-visible {
     background: var(--ui-neutral-subtle-action-hover-fill);
+    border-bottom-color: var(--ui-neutral-normal-border);
   }
 
   .cthulhuUiIconButton[data-hover-variant='accent']:hover,
   .cthulhuUiIconButton[data-hover-variant='accent']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
   }
 
   .cthulhuUiIconButton[data-hover-variant='success']:hover,
   .cthulhuUiIconButton[data-hover-variant='success']:focus-visible {
     background: var(--ui-success-action-hover-fill);
+    border-color: var(--ui-success-muted-hover-border);
   }
 
   .cthulhuUiIconButton[data-hover-variant='danger']:hover,
   .cthulhuUiIconButton[data-hover-variant='danger']:focus-visible {
     background: var(--ui-danger-action-hover-fill);
+    border-color: var(--ui-danger-muted-hover-border);
   }
 
   .cthulhuUiIconButton[data-hover-variant='glyph']:hover,
@@ -199,6 +221,7 @@
 
   .cthulhuUiIconButton[data-active='true'] {
     background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-normal-border);
     color: var(--ui-hoverable-icon-glyph);
   }
 

@@ -25,7 +25,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'flex h-10 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] px-3.5 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiToggleTextButton flex h-10 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] px-3.5 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
     buttonStateClasses[stateClassKey],
     className
   )}
@@ -48,3 +48,21 @@
     {pressed ? 'Enabled' : 'Disabled'}
   </span>
 </button>
+
+<style>
+  .cthulhuUiToggleTextButton {
+    border: 1px solid var(--ui-neutral-normal-border);
+  }
+
+  .cthulhuUiToggleTextButton:hover {
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .cthulhuUiToggleTextButton[aria-pressed='true'] {
+    border-color: var(--ui-accent-muted-border);
+  }
+
+  .cthulhuUiToggleTextButton[aria-pressed='true']:hover {
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+</style>

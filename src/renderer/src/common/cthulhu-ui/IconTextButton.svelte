@@ -57,8 +57,9 @@
   .cthulhuUiIconTextButton {
     align-items: center;
     background: var(--ui-ghost-surface);
-    border: 0;
+    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
     color: var(--ui-hoverable-text);
     cursor: pointer;
     display: inline-flex;
@@ -73,6 +74,7 @@
     padding: 0 10px;
     transition:
       background-color 50ms ease-out,
+      border-color 50ms ease-out,
       color 50ms ease-out;
     white-space: nowrap;
   }
@@ -80,11 +82,13 @@
   .cthulhuUiIconTextButton:hover,
   .cthulhuUiIconTextButton:focus-visible {
     background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
   }
 
   .cthulhuUiIconTextButton[data-hover-variant='accent']:hover,
   .cthulhuUiIconTextButton[data-hover-variant='accent']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
   }
 
   .cthulhuUiIconTextButton:focus-visible {

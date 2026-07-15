@@ -200,6 +200,7 @@
                 label={`Folder options for ${folder.displayName}`}
                 title="Folder Options"
                 size="compact"
+                borderless
                 active={dropdown.open || isSettingsActive}
                 ariaHaspopup={dropdown.ariaHaspopup}
                 ariaExpanded={dropdown.ariaExpanded}
@@ -215,6 +216,7 @@
             icon={ArrowRight}
             label={`Open ${folder.displayName}`}
             size="compact"
+            borderless
             onclick={handlePromptFolderOpen}
             testId={folderOpenTestId(folder)}
             active={isActive}

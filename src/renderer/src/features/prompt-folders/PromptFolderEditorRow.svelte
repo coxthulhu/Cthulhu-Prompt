@@ -195,6 +195,7 @@
           title={isPromptsSectionExpanded ? 'Collapse folder prompts' : 'Expand folder prompts'}
           ariaExpanded={isPromptsSectionExpanded}
           iconSize={24}
+          borderless
           class="prompt-folder-editor-chevron-toggle"
           iconClass="prompt-folder-editor-chevron"
           testId="prompt-folder-editor-title-toggle"

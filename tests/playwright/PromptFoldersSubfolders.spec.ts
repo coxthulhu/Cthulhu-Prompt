@@ -460,6 +460,7 @@ describe('Prompt folder subfolder rendering', () => {
       })
     await expect(nestedFolderToggle).toHaveClass(/cthulhuUiIconButton/)
     await expect(nestedFolderToggle).toHaveAttribute('data-hover-variant', 'neutral')
+    await expect(nestedFolderToggle).toHaveCSS('border-top-style', 'none')
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(nestedFolderTitleBar).toContainText('1 prompt')
     await expect(nestedFolderTitleBar).toContainText('1 subfolder')

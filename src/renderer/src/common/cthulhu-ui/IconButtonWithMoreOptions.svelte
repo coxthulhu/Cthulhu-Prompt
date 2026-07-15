@@ -133,8 +133,16 @@
   }
 
   .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton) {
+    /* The compound control owns the outer border and internal divider. */
     background: var(--ui-ghost-surface);
+    border: 0;
     border-radius: 0;
+    box-sizing: content-box;
+  }
+
+  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton:hover),
+  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton:focus-visible) {
+    border-color: var(--ui-neutral-normal-border);
   }
 
   :global(.cthulhuUiIconButtonWithMoreOptionsMain.cthulhuUiIconButton) {
@@ -142,7 +150,8 @@
     border-top-left-radius: var(--cthulhu-ui-radius-control);
   }
 
-  :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
+  .cthulhuUiIconButtonWithMoreOptions
+    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
     border-left: 1px solid var(--ui-neutral-normal-border);
     border-bottom-right-radius: var(--cthulhu-ui-radius-control);
     border-top-right-radius: var(--cthulhu-ui-radius-control);

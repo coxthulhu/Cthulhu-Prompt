@@ -305,15 +305,40 @@
               <div class="component-sample">
                 {@render componentLabel('Button appearances')}
                 <div class="variant-controls">
-                  <Button icon={Plus} text="Filled" variant="accent" />
+                  <Button
+                    icon={Plus}
+                    text="Filled"
+                    variant="accent"
+                    testId="test-screen-accent-button"
+                  />
+                  <Button
+                    icon={Archive}
+                    text="Neutral"
+                    testId="test-screen-neutral-button"
+                  />
+                  <Button
+                    icon={AlertCircle}
+                    text="Danger"
+                    variant="danger"
+                    testId="test-screen-danger-button"
+                  />
                   <Button icon={Archive} text="Outline" appearance="outline" />
                 </div>
               </div>
               <div class="component-sample">
                 {@render componentLabel('IconTextButton')}
                 <div class="variant-controls">
-                  <IconTextButton icon={Sparkles} text="Improve" />
-                  <IconTextButton icon={Archive} text="Archive" />
+                  <IconTextButton
+                    icon={Sparkles}
+                    text="Improve"
+                    testId="test-screen-neutral-icon-text-button"
+                  />
+                  <IconTextButton
+                    icon={Archive}
+                    text="Archive"
+                    hoverVariant="accent"
+                    testId="test-screen-accent-icon-text-button"
+                  />
                 </div>
               </div>
               <div class="component-sample">
@@ -565,6 +590,7 @@
                 {@render componentLabel('ToggleTextButton')}
                 <ToggleTextButton
                   pressed={togglePressed}
+                  testId="test-screen-toggle-text-button"
                   onclick={() => {
                     togglePressed = !togglePressed
                   }}
@@ -572,7 +598,11 @@
               </div>
               <div class="component-sample">
                 {@render componentLabel('ToggleTextButton: disabled')}
-                <ToggleTextButton pressed={false} disabled />
+                <ToggleTextButton
+                  pressed={false}
+                  disabled
+                  testId="test-screen-disabled-toggle-text-button"
+                />
               </div>
             </div>
           </div>

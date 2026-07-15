@@ -1,7 +1,7 @@
 .cthulhuUiActionButton {
   align-items: center;
   background-color: var(--ui-neutral-action-fill);
-  border: 1px solid transparent;
+  border: 1px solid var(--ui-neutral-normal-border);
   border-radius: var(--cthulhu-ui-radius-control);
   box-sizing: border-box;
   color: var(--ui-normal-text);
@@ -26,28 +26,33 @@
 .cthulhuUiActionButton:hover,
 .cthulhuUiActionButton:focus-visible {
   background-color: var(--ui-neutral-action-hover-fill);
+  border-color: var(--ui-neutral-hover-border);
   color: var(--ui-normal-text);
 }
 
 .cthulhuUiActionButton[data-variant='accent'] {
   background-color: var(--ui-accent-action-fill);
+  border-color: var(--ui-accent-muted-border);
   color: var(--ui-normal-text);
 }
 
 .cthulhuUiActionButton[data-variant='accent']:hover,
 .cthulhuUiActionButton[data-variant='accent']:focus-visible {
   background-color: var(--ui-accent-action-hover-fill);
+  border-color: var(--ui-accent-muted-hover-border);
   color: var(--ui-normal-text);
 }
 
 .cthulhuUiActionButton[data-variant='danger'] {
   background-color: var(--ui-danger-action-fill);
+  border-color: var(--ui-danger-muted-border);
   color: var(--ui-normal-text);
 }
 
 .cthulhuUiActionButton[data-variant='danger']:hover,
 .cthulhuUiActionButton[data-variant='danger']:focus-visible {
   background-color: var(--ui-danger-action-hover-fill);
+  border-color: var(--ui-danger-muted-hover-border);
   color: var(--ui-normal-text);
 }
 

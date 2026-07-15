@@ -656,6 +656,7 @@
               label="Open Workspace Folder"
               title="Open Workspace Folder"
               size="tiny"
+              borderless
               baseVariant="muted"
               hoverVariant="glyph"
               testId="sidebar-open-workspace-folder-button"
@@ -714,6 +715,7 @@
           label="Add Prompt"
           title="Add Prompt"
           size="compact"
+          borderless
           disabled={!screenRootFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
           testId="sidebar-add-prompt-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
@@ -724,6 +726,7 @@
           label="Show Completed Prompts"
           title="Show Completed Prompts"
           size="compact"
+          borderless
           disabled={!screenRootFolder}
           active={isCompletedPromptMode}
           testId="toggle-completed-prompts-button"
@@ -735,6 +738,7 @@
           label={promptFolderExpansionActionLabel}
           title={promptFolderExpansionActionLabel}
           size="compact"
+          borderless
           disabled={!canTogglePromptFolders}
           testId="toggle-all-prompt-folders-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
@@ -753,6 +757,7 @@
               label="Selected Prompt Folder Actions"
               title="Selected Prompt Folder Actions"
               size="compact"
+              borderless
               disabled={!screenRootFolder}
               active={dropdown.open}
               ariaHaspopup={dropdown.ariaHaspopup}

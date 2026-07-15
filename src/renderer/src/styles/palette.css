@@ -59,6 +59,8 @@
 
   /* Success */
   --ui-success-normal-text: oklch(0.871 0.15 154.449);
+  --ui-success-muted-border: oklch(0.871 0.15 154.449 / 18%);
+  --ui-success-muted-hover-border: oklch(0.871 0.15 154.449 / 19.1%);
   --ui-success-normal-border: oklch(0.871 0.15 154.449 / 42%);
   --ui-success-action-hover-fill: oklch(0.606 0.219 145 / 36%);
 
@@ -75,6 +77,8 @@
   /* Danger */
   --ui-danger-normal-surface: oklch(0.396 0.133 25.723 / 22%);
   --ui-danger-normal-ring: oklch(0.696 0.196 32.321 / 40%);
+  --ui-danger-muted-border: oklch(0.704 0.191 22.216 / 18%);
+  --ui-danger-muted-hover-border: oklch(0.704 0.191 22.216 / 19.1%);
   --ui-danger-strong-border: oklch(0.704 0.191 22.216);
   --ui-danger-icon-glyph: oklch(1 0.07 17.717);
   --ui-danger-action-fill: oklch(0.396 0.133 25.723 / 52.4%);
