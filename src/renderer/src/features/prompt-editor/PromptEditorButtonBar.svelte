@@ -2,7 +2,6 @@
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { Trash2 } from 'lucide-svelte'
 
   type Props = {
@@ -57,13 +56,6 @@
       hoverVariant="danger"
       testId="prompt-delete-button"
       onclick={handleDeleteClick}
-    />
-  {/if}
-  {#if onDelete}
-    <Separator
-      orientation="vertical"
-      class="h-6"
-      style="--cthulhu-ui-separator-color: var(--ui-neutral-normal-border);"
     />
   {/if}
   <CopyButton
