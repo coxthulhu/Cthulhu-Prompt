@@ -30,20 +30,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
-  import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
-  import {
-    Check,
-    CheckCircle2,
-    CircleDashed,
-    FileText,
-    Folder,
-    Hourglass,
-    Undo2
-  } from 'lucide-svelte'
+  import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
+  import { FileText, Folder } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
@@ -92,64 +82,6 @@
     completedRelativeLabel ? `Completed ${completedRelativeLabel}` : ''
   )
   const completedFullLabel = $derived(completedAt ? formatPromptModifiedFull(completedAt) : '')
-  const isCompleted = $derived(status === PromptStatus.Completed)
-  const statusDetails = $derived.by(() => {
-    if (status === PromptStatus.Completed) {
-      return { label: 'Completed', icon: CheckCircle2, variant: 'completed' as const }
-    }
-    if (status === PromptStatus.InProgress) {
-      return { label: 'In Progress', icon: Hourglass, variant: 'in-progress' as const }
-    }
-    return { label: 'Todo', icon: CircleDashed, variant: 'todo' as const }
-  })
-  const statusOptions = $derived.by<DropdownPopupDetailedItem[]>(() =>
-    [
-      {
-        id: PromptStatus.Todo,
-        label: 'Set to Todo',
-        detail: 'Move back to active todo status',
-        icon: CircleDashed,
-        iconClass: 'prompt-editor-status-option-icon-todo',
-        testId: 'prompt-status-option-todo'
-      },
-      {
-        id: PromptStatus.InProgress,
-        label: 'In Progress',
-        detail: 'Mark this prompt as underway',
-        icon: Hourglass,
-        iconClass: 'prompt-editor-status-option-icon-in-progress',
-        testId: 'prompt-status-option-in-progress'
-      },
-      {
-        id: PromptStatus.Completed,
-        label: 'Complete',
-        detail: 'Move this prompt to completed',
-        icon: CheckCircle2,
-        iconClass: 'prompt-editor-status-option-icon-completed',
-        testId: 'prompt-status-option-completed'
-      }
-    ].filter((item) => item.id !== status)
-  )
-  const defaultStatusAction = $derived.by(() =>
-    isCompleted
-      ? {
-          icon: Undo2,
-          label: 'Uncomplete prompt',
-          title: 'Uncomplete prompt',
-          hoverVariant: 'accent' as const,
-          testId: 'prompt-uncomplete-button',
-          status: PromptStatus.Todo
-        }
-      : {
-          icon: Check,
-          label: 'Complete prompt',
-          title: 'Complete prompt',
-          hoverVariant: 'success' as const,
-          testId: 'prompt-complete-button',
-          status: PromptStatus.Completed
-        }
-  )
-
   // Side effect: keep the relative modified label fresh while the prompt folder stays open.
   onMount(() => {
     const intervalId = window.setInterval(() => {
@@ -193,10 +125,6 @@
     if (!onTitleForwardTab) return
     event.preventDefault()
     void onTitleForwardTab()
-  }
-
-  const handleStatusSelect = (item: DropdownPopupDetailedItem) => {
-    onStatusChange?.(item.id as PromptStatus)
   }
 
   const handleCopySuccess = async () => {
@@ -271,30 +199,9 @@
 
     <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
 
-    <div class="prompt-editor-status-control">
-      {#if onStatusChange}
-        <IconButtonWithMoreOptions
-          icon={defaultStatusAction.icon}
-          label={defaultStatusAction.label}
-          title={defaultStatusAction.title}
-          mainHoverVariant={defaultStatusAction.hoverVariant}
-          moreOptionsHoverVariant="neutral"
-          testId={defaultStatusAction.testId}
-          moreOptionsTestId="prompt-status-more-options-button"
-          menuTestId="prompt-status-more-options-menu"
-          moreOptions={statusOptions}
-          onclick={() => onStatusChange?.(defaultStatusAction.status)}
-          onselect={handleStatusSelect}
-        />
-      {/if}
-
-      <ValuePill
-        text={statusDetails.label}
-        variant={statusDetails.variant}
-        icon={statusDetails.icon}
-        testId="prompt-status-pill"
-      />
-    </div>
+    {#if onStatusChange}
+      <PromptEditorStatusControl {status} {onStatusChange} />
+    {/if}
   </div>
 </div>
 
@@ -339,15 +246,6 @@
     background: var(--ui-neutral-normal-border);
     flex: 0 0 1px;
     width: 1px;
-  }
-
-  .prompt-editor-status-control {
-    align-items: center;
-    display: inline-flex;
-    flex: 0 0 auto;
-    gap: 12px;
-    padding-left: 4px;
-    padding-right: 16px;
   }
 
   .prompt-editor-title-copy {
@@ -410,15 +308,4 @@
     color: var(--ui-secondary-icon-glyph);
   }
 
-  :global(.prompt-editor-status-option-icon-todo) {
-    color: var(--ui-secondary-icon-glyph);
-  }
-
-  :global(.prompt-editor-status-option-icon-in-progress) {
-    color: var(--ui-warning-icon-glyph);
-  }
-
-  :global(.prompt-editor-status-option-icon-completed) {
-    color: var(--ui-success-normal-text);
-  }
 </style>

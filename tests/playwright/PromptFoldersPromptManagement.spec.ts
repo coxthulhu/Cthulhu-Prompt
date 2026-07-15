@@ -1257,7 +1257,14 @@ describe('Prompt folder prompt management', () => {
 
     await testHelpers.navigateToPromptFolders('Completed Mode')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
-    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    const activePromptStatus = mainWindow.locator(statusPillSelector('completed-mode-active'))
+    await activePromptStatus.click()
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')).toBeVisible()
+    await activePromptStatus.click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-status-more-options-menu"]')
+    ).toHaveCount(0)
+    await activePromptStatus.click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toHaveCount(0)
     await expect(
       mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')
