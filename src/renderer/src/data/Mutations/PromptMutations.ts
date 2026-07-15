@@ -143,9 +143,7 @@ export const createPrompt = async (
         if (previousEntryId === null) {
           insertIndex = 0
         } else {
-          const previousIndex = draft.entries.findIndex(
-            (entry) => entry.id === previousEntryId
-          )
+          const previousIndex = draft.entries.findIndex((entry) => entry.id === previousEntryId)
           if (previousIndex !== -1) {
             insertIndex = previousIndex + 1
           }

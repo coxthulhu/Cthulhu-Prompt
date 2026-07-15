@@ -15,10 +15,7 @@ import {
   deletePromptFolderDrafts,
   removePromptFolderDraft
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
-import {
-  deletePromptDrafts,
-  removePromptDraft
-} from '../UiState/PromptDraftMutations.svelte.ts'
+import { deletePromptDrafts, removePromptDraft } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   deletePromptUiStates,
   removePromptUiState
@@ -233,9 +230,11 @@ export const movePromptFolder = async (
     throw new Error('Prompt folder not loaded')
   }
 
-  const treeIndex = buildPromptFolderTreeIndex(workspace, collectWorkspacePromptFolders(workspaceId))
-  const sourceParentPromptFolderId =
-    treeIndex.get(promptFolderId)?.parentPromptFolderId ?? null
+  const treeIndex = buildPromptFolderTreeIndex(
+    workspace,
+    collectWorkspacePromptFolders(workspaceId)
+  )
+  const sourceParentPromptFolderId = treeIndex.get(promptFolderId)?.parentPromptFolderId ?? null
   const sourceParentPromptFolder = sourceParentPromptFolderId
     ? promptFolderCollection.get(sourceParentPromptFolderId)
     : null
@@ -299,7 +298,6 @@ export const movePromptFolder = async (
           draft.entries = [...nextDestinationEntries]
         })
       }
-
     },
     persistMutations: async ({ entities, invoke }) => {
       return await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {

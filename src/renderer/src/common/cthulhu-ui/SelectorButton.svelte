@@ -79,7 +79,9 @@
       typeof detailPart === 'string' ? { text: detailPart } : detailPart
     )
   )
-  const detailTitle = $derived(resolvedDetailParts.map((detailPart) => detailPart.text).join(' \u00b7 '))
+  const detailTitle = $derived(
+    resolvedDetailParts.map((detailPart) => detailPart.text).join(' \u00b7 ')
+  )
 </script>
 
 <button
@@ -119,10 +121,7 @@
           {#if index > 0}
             <SeparatorDot />
           {/if}
-          <span
-            class="cthulhuUiSelectorButtonDetailText"
-            data-testid={detailPart.testId}
-          >
+          <span class="cthulhuUiSelectorButtonDetailText" data-testid={detailPart.testId}>
             {#if detailPart.icon}
               {@const DetailIcon = detailPart.icon}
               <DetailIcon class="cthulhuUiSelectorButtonDetailIcon" size={10} aria-hidden="true" />

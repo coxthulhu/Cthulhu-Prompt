@@ -288,17 +288,12 @@
     }
 
     return (
-      lookupWorkspacePersistedPromptFolderPromptTreeExpandedState(
-        workspaceId,
-        promptFolderId
-      ) ?? true
+      lookupWorkspacePersistedPromptFolderPromptTreeExpandedState(workspaceId, promptFolderId) ??
+      true
     )
   }
 
-  const setPromptTreeFolderExpandedState = (
-    promptFolderId: string,
-    isExpanded: boolean
-  ): void => {
+  const setPromptTreeFolderExpandedState = (promptFolderId: string, isExpanded: boolean): void => {
     const stateKey = getPromptTreeExpandedStateKey(promptFolderId)
     if (promptTreeExpandedStates[stateKey] === isExpanded) {
       return
@@ -311,11 +306,7 @@
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderPromptTreeExpandedStateWithAutosave(
-        workspaceId,
-        promptFolderId,
-        isExpanded
-      )
+      setPromptFolderPromptTreeExpandedStateWithAutosave(workspaceId, promptFolderId, isExpanded)
     }
   }
 
@@ -375,10 +366,7 @@
       return
     }
 
-    const path = findPromptFolderPath(
-      screenRootFolder,
-      promptNavigation.rowOwnerFolderId
-    )
+    const path = findPromptFolderPath(screenRootFolder, promptNavigation.rowOwnerFolderId)
     if (!path) return
     const foldersToExpand =
       promptNavigation.selectionSource === 'prompt-move' ? path : path.slice(0, -1)
@@ -672,9 +660,7 @@
         (promptFolderId) => !getPromptTreeFolderExpandedState(promptFolderId)
       )
 
-    onAllPromptFoldersCollapsedChange(
-      areAllPromptFoldersCollapsed
-    )
+    onAllPromptFoldersCollapsedChange(areAllPromptFoldersCollapsed)
   })
 
   // Side effect: expand the selected root folder and every loaded subfolder on header request.
@@ -763,12 +749,11 @@
           return
         }
 
-        const childEntries = promptFolder.entries.filter(
-          (entry) =>
-            entry.kind === 'folder'
-              ? Boolean(promptFolderById[entry.id])
-              : Boolean(promptById[entry.id]) &&
-                promptById[entry.id]?.status !== PromptStatus.Completed
+        const childEntries = promptFolder.entries.filter((entry) =>
+          entry.kind === 'folder'
+            ? Boolean(promptFolderById[entry.id])
+            : Boolean(promptById[entry.id]) &&
+              promptById[entry.id]?.status !== PromptStatus.Completed
         )
 
         for (const [entryIndex, entry] of childEntries.entries()) {
@@ -820,12 +805,11 @@
           }
         }
       } else {
-        const rootEntries = screenRootFolder.entries.filter(
-          (entry) =>
-            entry.kind === 'folder'
-              ? Boolean(promptFolderById[entry.id])
-              : Boolean(promptById[entry.id]) &&
-                promptById[entry.id]?.status !== PromptStatus.Completed
+        const rootEntries = screenRootFolder.entries.filter((entry) =>
+          entry.kind === 'folder'
+            ? Boolean(promptFolderById[entry.id])
+            : Boolean(promptById[entry.id]) &&
+              promptById[entry.id]?.status !== PromptStatus.Completed
         )
 
         for (const [entryIndex, entry] of rootEntries.entries()) {
@@ -904,11 +888,7 @@
 
   <PromptDropTarget
     getOptions={() => ({
-      ...getPromptTreeDroppableOptions(
-        props.rowId,
-        'bottom',
-        getPromptTreeRootStartDropPayload
-      ),
+      ...getPromptTreeDroppableOptions(props.rowId, 'bottom', getPromptTreeRootStartDropPayload),
       snap: false
     })}
     class="sidebarPromptTreeSettingsRow sidebarPromptTreeRootRow"
@@ -955,12 +935,7 @@
           getPromptTreeDroppableOptions(
             props.rowId,
             props.row.parentFolder ? 'top-and-bottom' : 'none',
-            (edge) =>
-              getPromptTreeFolderDropPayload(
-                props.row.folder,
-                props.row.parentFolder,
-                edge
-              )
+            (edge) => getPromptTreeFolderDropPayload(props.row.folder, props.row.parentFolder, edge)
           )}
     folderDragOptions={!isCompletedMode && props.row.isSubfolder
       ? getPromptFolderRowDragOptions(props.row.folder)
@@ -992,15 +967,11 @@
     getPromptDroppableOptions={isCompletedMode
       ? undefined
       : () =>
-          getPromptTreeDroppableOptions(
-            props.rowId,
-            'top-and-bottom',
-            (edge) => ({
-              folderId: props.row.folder.id,
-              targetEntryId: props.row.promptId,
-              position: edge === 'top' ? 'before' : 'after'
-            })
-          )}
+          getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
+            folderId: props.row.folder.id,
+            targetEntryId: props.row.promptId,
+            position: edge === 'top' ? 'before' : 'after'
+          }))}
     promptDragOptions={isCompletedMode
       ? undefined
       : getPromptRowDragOptions(props.row.folder.id, props.row.promptId, promptTitle)}
@@ -1014,7 +985,9 @@
     data-testid="prompt-tree-empty-state"
   >
     <p class="sidebarPromptTreeEmptyTitle">
-      {isCompletedMode ? 'No completed prompts found in this folder' : 'No prompts found in this folder.'}
+      {isCompletedMode
+        ? 'No completed prompts found in this folder'
+        : 'No prompts found in this folder.'}
     </p>
     {#if !isCompletedMode}
       <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
@@ -1053,11 +1026,7 @@
   {#if screenRootFolder && !isCompletedMode}
     <PromptDropTarget
       getOptions={() =>
-        getPromptTreeDroppableOptions(
-          props.rowId,
-          'top',
-          getPromptTreeBottomSpacerDropPayload
-        )}
+        getPromptTreeDroppableOptions(props.rowId, 'top', getPromptTreeBottomSpacerDropPayload)}
       class="h-full"
       style={`height:${props.rowHeightPx}px;`}
       data-testid={promptTreeBottomSpacerDropTargetTestId}

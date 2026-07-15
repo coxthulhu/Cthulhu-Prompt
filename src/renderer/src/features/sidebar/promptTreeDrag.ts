@@ -49,10 +49,10 @@ export const createPromptTreePromptDragController = ({
       sourcePayload.fromId,
       dropPayload,
       dropPayload
-        ? (((): string[] | null => {
+        ? ((): string[] | null => {
             const promptFolder = findPromptFolder(promptFolders, dropPayload.folderId)
             return promptFolder ? getPromptFolderActiveEntryIds(promptFolder) : null
-          })())
+          })()
         : null
     )
     if (!nextMove) {

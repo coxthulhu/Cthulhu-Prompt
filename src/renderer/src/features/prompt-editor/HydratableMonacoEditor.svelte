@@ -192,9 +192,5 @@
     {onViewStateCapture}
   />
 {:else}
-  <MonacoEditorPlaceholder
-    class={className}
-    heightPx={placeholderHeightPx}
-    {sizingConfig}
-  />
+  <MonacoEditorPlaceholder class={className} heightPx={placeholderHeightPx} {sizingConfig} />
 {/if}

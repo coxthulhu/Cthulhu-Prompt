@@ -10,7 +10,7 @@
     FileText,
     Folder,
     Hourglass,
-    Pencil,
+    Pencil
   } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { monaco } from '@renderer/common/Monaco'
@@ -54,7 +54,12 @@
     prompts: MockPrompt[]
   }
 
-  const createFolderFields = (folderId: string, description: string, prefix: string, suffix: string) => [
+  const createFolderFields = (
+    folderId: string,
+    description: string,
+    prefix: string,
+    suffix: string
+  ) => [
     {
       id: `${folderId}-description`,
       label: 'Folder Description',
@@ -349,8 +354,7 @@
     }
 
     const targetFolderIndex = mockSubfolders.findIndex((folder) => folder.id === targetFolderId)
-    const insertionIndex =
-      targetFolderIndex === -1 ? mockSubfolders.length : targetFolderIndex + 1
+    const insertionIndex = targetFolderIndex === -1 ? mockSubfolders.length : targetFolderIndex + 1
     const nextSubfolders = [...mockSubfolders]
     nextSubfolders.splice(insertionIndex, 0, {
       ...nextSubfolder,
@@ -367,7 +371,9 @@
         return
       }
 
-      const previousPromptIndex = topLevelPrompts.findIndex((prompt) => prompt.id === previousPromptId)
+      const previousPromptIndex = topLevelPrompts.findIndex(
+        (prompt) => prompt.id === previousPromptId
+      )
       if (previousPromptIndex === -1) {
         topLevelPrompts = [...topLevelPrompts, nextPrompt]
         return
@@ -390,7 +396,9 @@
         }
       }
 
-      const previousPromptIndex = folder.prompts.findIndex((prompt) => prompt.id === previousPromptId)
+      const previousPromptIndex = folder.prompts.findIndex(
+        (prompt) => prompt.id === previousPromptId
+      )
       const nextPrompts = [...folder.prompts]
       nextPrompts.splice(
         previousPromptIndex === -1 ? nextPrompts.length : previousPromptIndex + 1,
@@ -498,7 +506,8 @@
   const createEditor = (host: HTMLElement, document: MockEditorDocument) => {
     const existingModel = monaco.editor.getModel(getEditorUri(document.id))
     const model =
-      existingModel ?? monaco.editor.createModel(document.text, 'markdown', getEditorUri(document.id))
+      existingModel ??
+      monaco.editor.createModel(document.text, 'markdown', getEditorUri(document.id))
     model.setValue(document.text)
 
     const editor = monaco.editor.create(host, {
@@ -658,10 +667,7 @@
             onDelete={() => deletePrompt(prompt.id)}
           />
 
-          <span
-            class="mockup-title-actions-separator"
-            aria-hidden="true"
-          ></span>
+          <span class="mockup-title-actions-separator" aria-hidden="true"></span>
 
           <div class="mockup-status-control">
             <IconButton
@@ -676,26 +682,17 @@
             />
 
             {#if prompt.status === 'completed'}
-              <span
-                class="mockup-status-pill"
-                data-status="completed"
-              >
+              <span class="mockup-status-pill" data-status="completed">
                 <CheckCircle2 size={14} aria-hidden="true" />
                 Completed
               </span>
             {:else if prompt.status === 'in-progress'}
-              <span
-                class="mockup-status-pill"
-                data-status="in-progress"
-              >
+              <span class="mockup-status-pill" data-status="in-progress">
                 <Hourglass size={14} aria-hidden="true" />
                 In Progress
               </span>
             {:else}
-              <span
-                class="mockup-status-pill"
-                data-status="todo"
-              >
+              <span class="mockup-status-pill" data-status="todo">
                 <CircleDashed size={14} aria-hidden="true" />
                 Todo
               </span>
@@ -721,7 +718,10 @@
 {/snippet}
 
 {#snippet SubfolderEditor(folder: MockSubfolder, index: number)}
-  <article class="mockup-prompt-editor-card mockup-subfolder-card" data-testid={`mockup-subfolder-${folder.id}`}>
+  <article
+    class="mockup-prompt-editor-card mockup-subfolder-card"
+    data-testid={`mockup-subfolder-${folder.id}`}
+  >
     <PromptEditorSidebar
       promptId={folder.id}
       promptFolderId="mockup-prompts"
@@ -813,10 +813,7 @@
   </article>
 {/snippet}
 
-<section
-  class="prompt-folder-subfolders-mockup"
-  data-testid="prompt-folder-subfolders-mockup"
->
+<section class="prompt-folder-subfolders-mockup" data-testid="prompt-folder-subfolders-mockup">
   <div class="mockup-editor-row">
     {@render PromptDividerRow(null, null)}
     {#each topLevelPrompts as prompt, index (prompt.id)}

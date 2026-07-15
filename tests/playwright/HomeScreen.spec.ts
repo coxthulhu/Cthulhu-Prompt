@@ -45,9 +45,7 @@ describe('Home Screen', () => {
   })
 
   describe('Workspace Management', () => {
-    test('closes a workspace while hydrated folder settings are mounted', async ({
-      testSetup
-    }) => {
+    test('closes a workspace while hydrated folder settings are mounted', async ({ testSetup }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
         workspace: { scenario: 'subfolders' }
       })

@@ -56,9 +56,7 @@ export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow):
 export const persistedPromptTreeEntryIdToPromptNavigationRow = (
   entryId: string
 ): PromptNavigationRow => {
-  return entryId === 'folder-root' || entryId === 'folder-settings'
-    ? entryId
-    : `prompt:${entryId}`
+  return entryId === 'folder-root' || entryId === 'folder-settings' ? entryId : `prompt:${entryId}`
 }
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {

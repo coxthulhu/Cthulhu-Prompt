@@ -1,9 +1,6 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
-import {
-  copyPromptFolderSettings,
-  createEmptyPromptFolderSettings
-} from '@shared/PromptFolder'
+import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
 import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import {
@@ -35,9 +32,7 @@ import {
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
-const getPromptFolderNameCandidates = (
-  entries: readonly EntryRef[]
-): PromptFolderNameCandidate[] =>
+const getPromptFolderNameCandidates = (entries: readonly EntryRef[]): PromptFolderNameCandidate[] =>
   entries.flatMap((entry) => {
     if (entry.kind !== 'folder') return []
     const promptFolder = data.promptFolder.committedStore.getEntry(entry.id)?.committed
@@ -109,10 +104,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           }
 
           if (
-            hasPromptFolderNameConflict(
-              getPromptFolderNameCandidates(siblingEntries),
-              folderName
-            )
+            hasPromptFolderNameConflict(getPromptFolderNameCandidates(siblingEntries), folderName)
           ) {
             return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
@@ -247,10 +239,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           }
 
           const promptFolders = collectWorkspacePromptFolders(committedWorkspace.committed)
-          const treeIndex = buildPromptFolderTreeIndex(
-            committedWorkspace.committed,
-            promptFolders
-          )
+          const treeIndex = buildPromptFolderTreeIndex(committedWorkspace.committed, promptFolders)
           if (!treeIndex.has(requestedPromptFolder.id)) {
             return { success: false, error: 'Prompt folder does not belong to the workspace' }
           }
@@ -274,7 +263,8 @@ export const setupPromptFolderMutationHandlers = (): void => {
             ...collectLoadedPromptFolderDescendantIds(requestedPromptFolder.id)
           ]
           const deletedPromptIds = deletedPromptFolderIds.flatMap((promptFolderId) => {
-            const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
+            const promptFolder =
+              data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
             if (!promptFolder) return []
             return [
               ...promptFolder.entries.flatMap((entry) =>
@@ -290,22 +280,14 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   id: committedParentPromptFolder.committed.id,
                   expectedRevision: requestedParentPromptFolder?.expectedRevision,
                   recipe: (draft) => {
-                    draft.entries = removeEntry(
-                      draft.entries,
-                      'folder',
-                      requestedPromptFolder.id
-                    )
+                    draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
                   }
                 })
               : tx.workspace.update({
                   id: committedWorkspace.committed.id,
                   expectedRevision: requestedWorkspace.expectedRevision,
                   recipe: (draft) => {
-                    draft.entries = removeEntry(
-                      draft.entries,
-                      'folder',
-                      requestedPromptFolder.id
-                    )
+                    draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
                   }
                 }),
             ...Object.fromEntries(

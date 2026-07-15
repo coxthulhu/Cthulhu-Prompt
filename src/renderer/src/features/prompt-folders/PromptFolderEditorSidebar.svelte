@@ -2,16 +2,15 @@
   import { GripVertical } from 'lucide-svelte'
   import type { Action } from 'svelte/action'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import {
-    draggable,
-    type DraggableOptions
-  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
     PromptFolderEntryDragPayload,
     PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
-  let { dragOptions }: {
+  let {
+    dragOptions
+  }: {
     dragOptions: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
   } = $props()
 
@@ -50,7 +49,6 @@
     tabindex={-1}
     onmousedown={preventSidebarButtonMouseFocus}
   />
-
 </div>
 
 <style>

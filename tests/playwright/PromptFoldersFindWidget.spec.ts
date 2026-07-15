@@ -371,8 +371,12 @@ describe('Prompt folder find dialog', () => {
     await expect(mainWindow.locator(FIND_INPUT)).toBeVisible()
     await mainWindow.locator(FIND_INPUT).fill(PREFIX_SUFFIX_FIND_QUERY)
 
-    await expect.poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 }).toBe('No results')
-    await expect(mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')).toHaveCount(0)
+    await expect
+      .poll(() => getFindMatchesLabelText(mainWindow), { timeout: 5000 })
+      .toBe('No results')
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
   })
 
   test('reopens with previous query and selection', async ({ testSetup }) => {
@@ -1051,7 +1055,9 @@ describe('Prompt folder find dialog', () => {
       .toBe(true)
   })
 
-  test('cycles correctly across prompt matches including two-digit counters', async ({ testSetup }) => {
+  test('cycles correctly across prompt matches including two-digit counters', async ({
+    testSetup
+  }) => {
     test.setTimeout(180000)
     const workspacePath = '/ws/virtual-find-loop'
     await testSetup.setupFilesystem(buildVirtualFindLoopWorkspace(workspacePath))

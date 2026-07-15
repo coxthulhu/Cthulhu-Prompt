@@ -244,10 +244,7 @@ describe('Monaco editor clicks', () => {
     if (!otherTitleBox) {
       throw new Error('Failed to measure the penultimate prompt title input.')
     }
-    await mainWindow.mouse.click(
-      otherTitleBox.x + 12,
-      otherTitleBox.y + otherTitleBox.height / 2
-    )
+    await mainWindow.mouse.click(otherTitleBox.x + 12, otherTitleBox.y + otherTitleBox.height / 2)
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, LAST_TWENTY_LINE_EDITOR))
       .toBe(false)

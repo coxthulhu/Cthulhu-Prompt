@@ -66,9 +66,7 @@
     )
     const siblingIds = new Set(
       parentFolder
-        ? parentFolder.entries
-            .filter((entry) => entry.kind === 'folder')
-            .map((entry) => entry.id)
+        ? parentFolder.entries.filter((entry) => entry.kind === 'folder').map((entry) => entry.id)
         : controller.promptFolders
             .filter(
               (folder) =>

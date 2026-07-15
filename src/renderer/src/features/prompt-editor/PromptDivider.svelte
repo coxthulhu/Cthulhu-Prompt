@@ -65,7 +65,7 @@
           type="button"
           aria-label="Add Prompt from left separator"
           title={dividerText}
-          disabled={disabled}
+          {disabled}
           data-testid={testId ? `${testId}-separator-left` : undefined}
           onclick={() => {
             onAddPrompt?.()
@@ -79,7 +79,7 @@
             type="button"
             aria-label={dividerText}
             title={dividerText}
-            disabled={disabled}
+            {disabled}
             data-testid={testId}
             onclick={() => {
               onAddPrompt?.()
@@ -94,7 +94,7 @@
               type="button"
               aria-label="Add Subfolder"
               title="Add Subfolder"
-              disabled={disabled}
+              {disabled}
               data-testid={subfolderTestId}
               onclick={() => {
                 onAddSubfolder()
@@ -110,7 +110,7 @@
           type="button"
           aria-label="Add Prompt from right separator"
           title={dividerText}
-          disabled={disabled}
+          {disabled}
           data-testid={testId ? `${testId}-separator-right` : undefined}
           onclick={() => {
             onAddPrompt?.()
@@ -227,12 +227,8 @@
     color: var(--ui-accent-normal-text);
   }
 
-  .promptDividerRow:hover
-    .promptDividerSeparatorButton
-    :global(.cthulhuUiSeparator),
-  .promptDividerRow:focus-within
-    .promptDividerSeparatorButton
-    :global(.cthulhuUiSeparator) {
+  .promptDividerRow:hover .promptDividerSeparatorButton :global(.cthulhuUiSeparator),
+  .promptDividerRow:focus-within .promptDividerSeparatorButton :global(.cthulhuUiSeparator) {
     background-color: var(--ui-accent-normal-border);
   }
 

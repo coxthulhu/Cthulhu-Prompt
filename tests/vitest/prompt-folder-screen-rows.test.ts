@@ -50,11 +50,7 @@ describe('buildPromptFolderScreenRows', () => {
   it('preserves mixed prompt and subfolder entry order', () => {
     const childFolder = createFolder('folder-child', ['prompt-child'])
     const rows = buildRows({
-      rootFolder: createFolder('folder-root', [
-        'prompt-first',
-        childFolder.id,
-        'prompt-last'
-      ]),
+      rootFolder: createFolder('folder-root', ['prompt-first', childFolder.id, 'prompt-last']),
       descendantFolders: [childFolder],
       promptIds: ['prompt-first', 'prompt-child', 'prompt-last']
     })
@@ -147,11 +143,7 @@ describe('buildPromptFolderScreenRows', () => {
   it('emits an initial divider and placeholder for an empty root folder', () => {
     const rows = buildRows({ rootFolder: createFolder('folder-root') })
 
-    expect(rows.map((row) => row.kind)).toEqual([
-      'root-header',
-      'prompt-divider',
-      'placeholder'
-    ])
+    expect(rows.map((row) => row.kind)).toEqual(['root-header', 'prompt-divider', 'placeholder'])
     expect(rows[1]).toMatchObject({
       ownerFolderId: 'folder-root',
       previousEntryId: null,

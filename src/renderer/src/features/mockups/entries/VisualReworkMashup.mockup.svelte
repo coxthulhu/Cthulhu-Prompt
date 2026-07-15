@@ -75,8 +75,10 @@
       id: 'architecture',
       title: 'Architecture Reviews',
       description: 'Reusable review prompts for large renderer and main-process changes.',
-      prefix: 'You are reviewing Cthulhu Prompt architecture changes. Prioritize data flow, IPC boundaries, persistence behavior, and renderer state ownership.',
-      suffix: 'Group findings by severity. Include file references and the smallest verification path for each issue.',
+      prefix:
+        'You are reviewing Cthulhu Prompt architecture changes. Prioritize data flow, IPC boundaries, persistence behavior, and renderer state ownership.',
+      suffix:
+        'Group findings by severity. Include file references and the smallest verification path for each issue.',
       expanded: true,
       prompts: [
         {
@@ -109,8 +111,10 @@
       id: 'testing',
       title: 'Testing Workflows',
       description: 'Prompts for Vitest and Playwright coverage work.',
-      prefix: 'Use the existing test helpers. Prefer stable selectors and assert the visible user flow before checking implementation details.',
-      suffix: 'End with the exact commands that should be run. Mention any coverage gap that remains.',
+      prefix:
+        'Use the existing test helpers. Prefer stable selectors and assert the visible user flow before checking implementation details.',
+      suffix:
+        'End with the exact commands that should be run. Mention any coverage gap that remains.',
       expanded: true,
       prompts: [
         {
@@ -135,7 +139,8 @@
       id: 'release',
       title: 'Release Notes',
       description: 'Prompts for converting recent changes into concise user-facing release notes.',
-      prefix: 'Focus on visible behavior, workflow improvements, and settings that users need to revisit.',
+      prefix:
+        'Focus on visible behavior, workflow improvements, and settings that users need to revisit.',
       suffix: 'Keep implementation details out unless they affect upgrade behavior.',
       expanded: false,
       prompts: [
@@ -388,13 +393,23 @@
         </div>
 
         <div class="prompt-actions">
-          <button class="icon-button" type="button" aria-label="Improve prompt" title="Improve prompt">
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Improve prompt"
+            title="Improve prompt"
+          >
             <Sparkles size={15} aria-hidden="true" />
           </button>
           <button class="icon-button" type="button" aria-label="Copy prompt" title="Copy prompt">
             <Copy size={15} aria-hidden="true" />
           </button>
-          <button class="icon-button danger" type="button" aria-label="Delete prompt" title="Delete prompt">
+          <button
+            class="icon-button danger"
+            type="button"
+            aria-label="Delete prompt"
+            title="Delete prompt"
+          >
             <Trash2 size={15} aria-hidden="true" />
           </button>
           <span class="action-divider"></span>
@@ -512,10 +527,20 @@
             {folder.title}
           </button>
           <span class="folder-count">{folder.prompts.length} prompts</span>
-          <button class="icon-button" type="button" aria-label="Rename folder" title="Rename folder">
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Rename folder"
+            title="Rename folder"
+          >
             <Pencil size={14} aria-hidden="true" />
           </button>
-          <button class="icon-button" type="button" aria-label="Folder options" title="Folder options">
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Folder options"
+            title="Folder options"
+          >
             <Ellipsis size={17} aria-hidden="true" />
           </button>
         </header>
@@ -653,7 +678,9 @@
     line-height: 16px;
     opacity: 0;
     padding: 0 9px;
-    transition: opacity 120ms ease, color 120ms ease;
+    transition:
+      opacity 120ms ease,
+      color 120ms ease;
   }
 
   .add-row-action :global(svg) {
@@ -673,7 +700,11 @@
 
   .prompt-card {
     align-items: stretch;
-    background: linear-gradient(115deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end));
+    background: linear-gradient(
+      115deg,
+      var(--ui-card-normal-surface-gradient-start),
+      var(--ui-card-normal-surface-gradient-end)
+    );
     border: 1px solid var(--ui-neutral-muted-border);
     border-radius: 9px;
     box-shadow: 0 8px 20px var(--ui-card-normal-shadow);

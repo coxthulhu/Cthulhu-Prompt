@@ -85,9 +85,7 @@ const writeRepairedOrder = <TEntry extends EntryRef>(
   persistedEntries: readonly TEntry[],
   discoveredEntries: readonly TEntry[]
 ): TEntry[] => {
-  const discoveredKeys = new Set(
-    discoveredEntries.map((entry) => `${entry.kind}:${entry.id}`)
-  )
+  const discoveredKeys = new Set(discoveredEntries.map((entry) => `${entry.kind}:${entry.id}`))
   const seenKeys = new Set<string>()
   const entries = persistedEntries.filter((entry) => {
     const key = `${entry.kind}:${entry.id}`
@@ -141,10 +139,7 @@ const readDirectPromptFolderRefs = (
     })
 }
 
-export const readPromptFolderEntries = (
-  workspacePath: string,
-  folderName: string
-): EntryRef[] => {
+export const readPromptFolderEntries = (workspacePath: string, folderName: string): EntryRef[] => {
   const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName)
   const persistedEntries = readOrderEntries<EntryRef>(orderPath)
   const activePromptEntries = [...readPromptStemByPromptId(workspacePath, folderName).keys()].map(
@@ -216,10 +211,7 @@ export const readPromptFolder = (
   ) as PromptFolderSettings
   const entries = readPromptFolderEntries(workspacePath, folderPath)
   const completedPromptIds = [
-    ...readPromptStemByPromptId(
-      workspacePath,
-      resolveCompletedPromptFolderName(folderPath)
-    ).keys()
+    ...readPromptStemByPromptId(workspacePath, resolveCompletedPromptFolderName(folderPath)).keys()
   ]
 
   return {
@@ -311,10 +303,7 @@ const isPromptFolderDirectory = (workspacePath: string, folderName: string): boo
   return fs.existsSync(resolvePromptFolderInfoPath(workspacePath, folderName))
 }
 
-const readPromptSubfolders = (
-  workspacePath: string,
-  parentFolderPath: string
-): PromptFolder[] => {
+const readPromptSubfolders = (workspacePath: string, parentFolderPath: string): PromptFolder[] => {
   const fs = getFs()
   const parentDiskFolderPath = resolvePromptFolderPath(workspacePath, parentFolderPath)
   const promptFolders: PromptFolder[] = []
@@ -353,9 +342,7 @@ export const readAllPromptFolders = (workspacePath: string): PromptFolder[] => {
 
   for (const promptFolder of readPromptFolders(workspacePath)) {
     promptFolders.push(promptFolder)
-    promptFolders.push(
-      ...readPromptSubfolders(workspacePath, promptFolder.folderName)
-    )
+    promptFolders.push(...readPromptSubfolders(workspacePath, promptFolder.folderName))
   }
 
   return promptFolders

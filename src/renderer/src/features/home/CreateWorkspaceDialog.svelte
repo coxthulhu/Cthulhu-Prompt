@@ -232,7 +232,7 @@
       testId="create-workspace-examples-row"
       icon={Sparkles}
       label="Add Examples"
-      detail='Include example prompts in a "My Prompts" folder.'
+      detail="Include example prompts in a &quot;My Prompts&quot; folder."
     >
       {#snippet control()}
         <ToggleTextButton

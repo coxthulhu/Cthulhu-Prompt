@@ -69,8 +69,8 @@ export const setupPromptFolderQueryHandlers = (): void => {
                   PromptStatus.Completed
               )
             )
-            const prompts = getLoadedPromptEntries(promptIds).map(
-              (promptEntry) => buildPromptSnapshot(promptEntry)
+            const prompts = getLoadedPromptEntries(promptIds).map((promptEntry) =>
+              buildPromptSnapshot(promptEntry)
             )
 
             return {

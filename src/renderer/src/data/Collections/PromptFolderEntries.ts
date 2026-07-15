@@ -2,11 +2,10 @@ import type { PromptFolder } from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
 import { promptCollection } from './PromptCollection'
 
-export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] =>
-  [
-    ...promptFolder.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id),
-    ...promptFolder.completedPromptIds
-  ]
+export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] => [
+  ...promptFolder.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id),
+  ...promptFolder.completedPromptIds
+]
 
 export const isPromptFolderEmpty = (promptFolder: PromptFolder): boolean =>
   promptFolder.entries.length === 0 &&
@@ -19,8 +18,9 @@ export const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] =
   )
 }
 
-export const getPromptFolderCompletedPromptIds = (promptFolder: PromptFolder): string[] =>
-  [...promptFolder.completedPromptIds]
+export const getPromptFolderCompletedPromptIds = (promptFolder: PromptFolder): string[] => [
+  ...promptFolder.completedPromptIds
+]
 
 export const getPromptFolderActiveEntryIds = (promptFolder: PromptFolder): string[] =>
   promptFolder.entries.flatMap((entry) => {

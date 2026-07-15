@@ -8,8 +8,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
-const SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME =
-  '[data-testid="sidebar-prompt-folder-modified-time"]'
+const SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME = '[data-testid="sidebar-prompt-folder-modified-time"]'
 const NESTED_PROMPT_EDITOR = promptEditorSelector('subfolders-ui-nested-prompt')
 const NESTED_PROMPT_TITLE = `${NESTED_PROMPT_EDITOR} ${PROMPT_TITLE_SELECTOR}`
 

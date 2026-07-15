@@ -54,10 +54,7 @@
     const wasCreated = await runIpcBestEffort(
       async () => {
         await createPromptFolder(selectedWorkspaceId, normalizedDisplayName)
-        const createdPromptFolderId = getCreatedPromptFolderId(
-          selectedWorkspaceId,
-          folderName
-        )
+        const createdPromptFolderId = getCreatedPromptFolderId(selectedWorkspaceId, folderName)
 
         if (createdPromptFolderId) {
           onCreated?.(createdPromptFolderId)

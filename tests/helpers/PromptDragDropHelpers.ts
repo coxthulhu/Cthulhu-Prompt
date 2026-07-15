@@ -164,10 +164,7 @@ export const beginPromptTreeFolderRowDrag = async (
   )
 }
 
-export const beginPromptTreeRowGutterDrag = async (
-  page: Page,
-  promptId: string
-): Promise<void> => {
+export const beginPromptTreeRowGutterDrag = async (page: Page, promptId: string): Promise<void> => {
   const row = page.locator(promptTreePromptSelector(promptId))
   await row.scrollIntoViewIfNeeded()
   await expect(row).toBeVisible()
@@ -244,9 +241,11 @@ export const readPromptFolderEntries = async (
   folderOrderPath: string
 ): Promise<Array<{ kind: 'prompt' | 'folder'; id: string }>> => {
   const fileContents = await readTextFile(electronApp, folderOrderPath)
-  return (JSON.parse(fileContents) as {
-    entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
-  }).entries
+  return (
+    JSON.parse(fileContents) as {
+      entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
+    }
+  ).entries
 }
 
 export const readPromptFolderEntryIds = async (

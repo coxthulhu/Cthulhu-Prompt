@@ -44,10 +44,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
       workspaceName: change.data.workspaceName
     })
     const folderOrderTempPath = resolveTempPath(folderOrderPath)
-    writeJsonFile(
-      folderOrderTempPath,
-      toWorkspacePromptFolderOrderFile(change.data.entries)
-    )
+    writeJsonFile(folderOrderTempPath, toWorkspacePromptFolderOrderFile(change.data.entries))
 
     return createPersistenceStageResult([
       createStagedFileUpsert(infoPath, infoTempPath),

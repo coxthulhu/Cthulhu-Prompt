@@ -11,10 +11,7 @@
 </script>
 
 <div
-  class={mergeClasses(
-    'cthulhuUiIconButtonBar flex min-w-0 shrink-0 items-center gap-2',
-    className
-  )}
+  class={mergeClasses('cthulhuUiIconButtonBar flex min-w-0 shrink-0 items-center gap-2', className)}
   {...restProps}
 >
   {@render children()}

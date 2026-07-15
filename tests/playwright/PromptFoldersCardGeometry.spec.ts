@@ -56,9 +56,7 @@ const expectPromptCardExactFill = async (mainWindow: Page, promptId: string): Pr
     .toBeLessThanOrEqual(FILL_TOLERANCE_PX)
 
   const geometry = (await measureEditorCardGeometry(mainWindow, selector))!
-  expect(geometry.hiddenOverflowPx, `${promptId} card clips content inside overflow:hidden`).toBe(
-    0
-  )
+  expect(geometry.hiddenOverflowPx, `${promptId} card clips content inside overflow:hidden`).toBe(0)
   expect(geometry.internalScrollTopPx, `${promptId} card scrolled internally`).toBe(0)
 }
 
@@ -81,13 +79,19 @@ const expectNoRowClipsItsContent = async (
   windowTestId: string
 ): Promise<void> => {
   await expect
-    .poll(async () => {
-      const rows = await measureVirtualRowOverflows(mainWindow, windowTestId)
-      if (!rows || rows.length === 0) return 'no rows mounted'
-      return rows
-        .filter((row) => row.contentSpillPx > FILL_TOLERANCE_PX)
-        .map((row) => `${row.rowTestId} spills ${row.contentSpillPx}px (row ${row.wrapperHeightPx}px)`)
-    }, { message: `virtual rows in ${windowTestId} must not clip their content` })
+    .poll(
+      async () => {
+        const rows = await measureVirtualRowOverflows(mainWindow, windowTestId)
+        if (!rows || rows.length === 0) return 'no rows mounted'
+        return rows
+          .filter((row) => row.contentSpillPx > FILL_TOLERANCE_PX)
+          .map(
+            (row) =>
+              `${row.rowTestId} spills ${row.contentSpillPx}px (row ${row.wrapperHeightPx}px)`
+          )
+      },
+      { message: `virtual rows in ${windowTestId} must not clip their content` }
+    )
     .toEqual([])
 }
 
@@ -118,9 +122,7 @@ describe('Prompt folder card geometry', () => {
     await expectPromptCardExactFill(mainWindow, 'geometry-tall')
   })
 
-  test('folder editor cards fit their content within the row grid slack', async ({
-    testSetup
-  }) => {
+  test('folder editor cards fit their content within the row grid slack', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders' }
     })

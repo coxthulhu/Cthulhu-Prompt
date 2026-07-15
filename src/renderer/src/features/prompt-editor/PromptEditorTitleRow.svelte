@@ -35,7 +35,15 @@
   import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
-  import { Check, CheckCircle2, CircleDashed, FileText, Folder, Hourglass, Undo2 } from 'lucide-svelte'
+  import {
+    Check,
+    CheckCircle2,
+    CircleDashed,
+    FileText,
+    Folder,
+    Hourglass,
+    Undo2
+  } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
@@ -80,7 +88,9 @@
   const completedRelativeLabel = $derived(
     completedAt ? formatPromptModifiedRelative(completedAt, nowMs) : ''
   )
-  const completedLabel = $derived(completedRelativeLabel ? `Completed ${completedRelativeLabel}` : '')
+  const completedLabel = $derived(
+    completedRelativeLabel ? `Completed ${completedRelativeLabel}` : ''
+  )
   const completedFullLabel = $derived(completedAt ? formatPromptModifiedFull(completedAt) : '')
   const isCompleted = $derived(status === PromptStatus.Completed)
   const statusDetails = $derived.by(() => {

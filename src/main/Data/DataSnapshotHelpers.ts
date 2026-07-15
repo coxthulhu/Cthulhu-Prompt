@@ -44,9 +44,7 @@ export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntr
   return getLoadedEntries(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
 }
 
-export const filterLoadedPromptFolderEntries = (
-  entries: FolderEntryRef[]
-): FolderEntryRef[] => {
+export const filterLoadedPromptFolderEntries = (entries: FolderEntryRef[]): FolderEntryRef[] => {
   return entries.filter((entry) => data.promptFolder.committedStore.getEntry(entry.id) !== null)
 }
 

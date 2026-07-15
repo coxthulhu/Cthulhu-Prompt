@@ -21,8 +21,7 @@ export const getPromptFolderSectionGutterGapPx = (indentLevel: number): number =
   indentLevel === 0 ? 0 : PROMPT_FOLDER_SECTION_GUTTER_GAP_PX
 
 export const getPromptFolderSectionContentOffsetPx = (indentLevel: number): number =>
-  getPromptFolderSectionGutterWidthPx(indentLevel) +
-  getPromptFolderSectionGutterGapPx(indentLevel)
+  getPromptFolderSectionGutterWidthPx(indentLevel) + getPromptFolderSectionGutterGapPx(indentLevel)
 
 export const getPromptFolderSectionContentWidthPx = (
   containerWidthPx: number,

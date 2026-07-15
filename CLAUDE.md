@@ -38,6 +38,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Build, Test, and Development Commands
 
 This repo lives on a Windows filesystem accessed from WSL:
+
 - WSL path: `/mnt/c/Source/PromptApps/CthulhuPromptPublic`
 - Windows path: `C:\Source\PromptApps\CthulhuPromptPublic`
 

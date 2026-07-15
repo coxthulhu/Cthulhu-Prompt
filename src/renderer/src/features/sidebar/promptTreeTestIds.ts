@@ -18,8 +18,7 @@ export const folderPromptTestId = (promptId: string): string => `prompt-tree-pro
 
 export const promptTreeRootFolderTestId = 'prompt-tree-root-folder'
 
-export const promptTreeRootFolderDropIndicatorTestId =
-  'prompt-tree-root-folder-drop-indicator'
+export const promptTreeRootFolderDropIndicatorTestId = 'prompt-tree-root-folder-drop-indicator'
 
 export const folderPromptShowAllTestId = (folder: PromptFolder): string =>
   `prompt-tree-folder-show-all-prompts-${getFolderTestKey(folder)}`
@@ -41,8 +40,7 @@ export const folderDropIndicatorTestId = (folder: PromptFolder): string =>
 
 export const promptTreeBottomSpacerDropTargetTestId = 'prompt-tree-bottom-spacer-drop-target'
 
-export const promptTreeBottomSpacerDropIndicatorTestId =
-  'prompt-tree-bottom-spacer-drop-indicator'
+export const promptTreeBottomSpacerDropIndicatorTestId = 'prompt-tree-bottom-spacer-drop-indicator'
 
 export const folderPromptVisibilityDropIndicatorTestId = (folder: PromptFolder): string =>
   `prompt-tree-drop-indicator-prompt-visibility-${getFolderTestKey(folder)}`

@@ -63,7 +63,8 @@
       id: 'architecture',
       title: 'Architecture Reviews',
       description: 'Reusable review prompts for large renderer and main-process changes.',
-      prefix: 'Review data flow, IPC boundaries, persistence behavior, and renderer state ownership.',
+      prefix:
+        'Review data flow, IPC boundaries, persistence behavior, and renderer state ownership.',
       suffix: 'Group findings by severity and include the smallest verification path.',
       expanded: true,
       tone: 'violet',
@@ -252,17 +253,35 @@
   </header>
 
   <nav class="filter-bar" aria-label="Filter prompts">
-    <button class:active={filter === 'all'} type="button" onclick={() => (filter = 'all')}>All <span>9</span></button>
-    <button class:active={filter === 'todo'} type="button" onclick={() => (filter = 'todo')}>Todo <span>{countStatus('todo')}</span></button>
-    <button class:active={filter === 'in-progress'} type="button" onclick={() => (filter = 'in-progress')}>In progress <span>{countStatus('in-progress')}</span></button>
-    <button class:active={filter === 'completed'} type="button" onclick={() => (filter = 'completed')}>Completed <span>{countStatus('completed')}</span></button>
+    <button class:active={filter === 'all'} type="button" onclick={() => (filter = 'all')}
+      >All <span>9</span></button
+    >
+    <button class:active={filter === 'todo'} type="button" onclick={() => (filter = 'todo')}
+      >Todo <span>{countStatus('todo')}</span></button
+    >
+    <button
+      class:active={filter === 'in-progress'}
+      type="button"
+      onclick={() => (filter = 'in-progress')}
+      >In progress <span>{countStatus('in-progress')}</span></button
+    >
+    <button
+      class:active={filter === 'completed'}
+      type="button"
+      onclick={() => (filter = 'completed')}
+      >Completed <span>{countStatus('completed')}</span></button
+    >
   </nav>
 
   <div class="content-flow">
     <section class="loose-section">
       <div class="section-heading">
-        <div class="heading-label"><FileText size={16} aria-hidden="true" /><span>Unfiled</span><b>{loosePrompts.length}</b></div>
-        <button class="text-action" type="button" onclick={() => addPrompt(null)}><Plus size={15} aria-hidden="true" /> Add prompt</button>
+        <div class="heading-label">
+          <FileText size={16} aria-hidden="true" /><span>Unfiled</span><b>{loosePrompts.length}</b>
+        </div>
+        <button class="text-action" type="button" onclick={() => addPrompt(null)}
+          ><Plus size={15} aria-hidden="true" /> Add prompt</button
+        >
       </div>
       <div class="prompt-list">
         {#each loosePrompts.filter(matchesFilter) as prompt (prompt.id)}
@@ -274,20 +293,32 @@
     {#each folders as folder (folder.id)}
       <section class="folder-group" data-tone={folder.tone}>
         <header class="folder-header">
-          <button class="folder-toggle" type="button" aria-expanded={folder.expanded} onclick={() => (folder.expanded = !folder.expanded)}>
+          <button
+            class="folder-toggle"
+            type="button"
+            aria-expanded={folder.expanded}
+            onclick={() => (folder.expanded = !folder.expanded)}
+          >
             <span class="folder-chevron">
-              {#if folder.expanded}<ChevronDown size={18} aria-hidden="true" />{:else}<ChevronRight size={18} aria-hidden="true" />{/if}
+              {#if folder.expanded}<ChevronDown size={18} aria-hidden="true" />{:else}<ChevronRight
+                  size={18}
+                  aria-hidden="true"
+                />{/if}
             </span>
             <span class="folder-icon"><Folder size={19} aria-hidden="true" /></span>
             <span class="folder-title-copy">
-              <span class="folder-title-row"><strong>{folder.title}</strong><span>{folder.prompts.length} prompts</span></span>
+              <span class="folder-title-row"
+                ><strong>{folder.title}</strong><span>{folder.prompts.length} prompts</span></span
+              >
               <span>{folder.description}</span>
             </span>
           </button>
           <div class="folder-actions">
             {@render IconAction('Rename folder', Pencil)}
             {@render IconAction('More folder actions', MoreHorizontal)}
-            <button class="folder-add" type="button" onclick={() => addPrompt(folder)}><Plus size={15} aria-hidden="true" /> Prompt</button>
+            <button class="folder-add" type="button" onclick={() => addPrompt(folder)}
+              ><Plus size={15} aria-hidden="true" /> Prompt</button
+            >
           </div>
         </header>
 
@@ -301,13 +332,17 @@
             {#each folder.prompts.filter(matchesFilter) as prompt (prompt.id)}
               {@render PromptCard(prompt)}
             {/each}
-            <button class="add-row" type="button" onclick={() => addPrompt(folder)}><Plus size={15} aria-hidden="true" /> Add prompt to {folder.title}</button>
+            <button class="add-row" type="button" onclick={() => addPrompt(folder)}
+              ><Plus size={15} aria-hidden="true" /> Add prompt to {folder.title}</button
+            >
           </div>
         {/if}
       </section>
     {/each}
 
-    <button class="new-folder" type="button"><Plus size={16} aria-hidden="true" /> New subfolder</button>
+    <button class="new-folder" type="button"
+      ><Plus size={16} aria-hidden="true" /> New subfolder</button
+    >
   </div>
 </section>
 
@@ -321,83 +356,446 @@
     padding: 24px 26px 48px;
     width: 100%;
   }
-  button, input, textarea { font: inherit; }
-  button { color: inherit; }
-  .screen-header { align-items: end; display: flex; justify-content: space-between; margin-bottom: 18px; }
-  .screen-header h1 { font-size: 27px; letter-spacing: -0.03em; line-height: 1; margin: 7px 0 0; }
-  .eyebrow { align-items: center; color: var(--ui-secondary-text); display: flex; font-size: 12px; gap: 6px; }
-  .primary-action, .folder-add {
-    align-items: center; background: var(--ui-accent-action-fill); border: 1px solid var(--ui-accent-normal-border);
-    border-radius: 8px; cursor: pointer; display: inline-flex; font-size: 13px; font-weight: 650; gap: 6px; padding: 8px 12px;
+  button,
+  input,
+  textarea {
+    font: inherit;
   }
-  .primary-action:hover, .folder-add:hover { background: var(--ui-accent-action-hover-fill); }
-  .filter-bar { border-bottom: 1px solid var(--ui-neutral-normal-border); display: flex; gap: 6px; margin-bottom: 22px; }
-  .filter-bar button { background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--ui-muted-text); cursor: pointer; margin-bottom: -1px; padding: 8px 10px 10px; }
-  .filter-bar button span { background: var(--ui-neutral-normal-surface); border-radius: 999px; font-size: 11px; margin-left: 4px; padding: 2px 6px; }
-  .filter-bar button.active { border-bottom-color: var(--violet); color: var(--ui-normal-text); }
-  .content-flow { display: grid; gap: 18px; }
-  .loose-section { display: grid; gap: 9px; }
-  .section-heading { align-items: center; display: flex; justify-content: space-between; padding: 0 5px; }
-  .heading-label { align-items: center; color: var(--ui-secondary-text); display: flex; font-size: 13px; font-weight: 650; gap: 7px; }
-  .heading-label b { background: var(--ui-neutral-normal-surface); border-radius: 999px; font-size: 11px; padding: 2px 7px; }
-  .text-action { align-items: center; background: transparent; border: 0; color: var(--ui-secondary-text); cursor: pointer; display: flex; font-size: 12px; gap: 5px; }
-  .text-action:hover { color: var(--ui-normal-text); }
-  .prompt-list, .folder-prompts { display: grid; gap: 9px; }
+  button {
+    color: inherit;
+  }
+  .screen-header {
+    align-items: end;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .screen-header h1 {
+    font-size: 27px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 7px 0 0;
+  }
+  .eyebrow {
+    align-items: center;
+    color: var(--ui-secondary-text);
+    display: flex;
+    font-size: 12px;
+    gap: 6px;
+  }
+  .primary-action,
+  .folder-add {
+    align-items: center;
+    background: var(--ui-accent-action-fill);
+    border: 1px solid var(--ui-accent-normal-border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 650;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .primary-action:hover,
+  .folder-add:hover {
+    background: var(--ui-accent-action-hover-fill);
+  }
+  .filter-bar {
+    border-bottom: 1px solid var(--ui-neutral-normal-border);
+    display: flex;
+    gap: 6px;
+    margin-bottom: 22px;
+  }
+  .filter-bar button {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--ui-muted-text);
+    cursor: pointer;
+    margin-bottom: -1px;
+    padding: 8px 10px 10px;
+  }
+  .filter-bar button span {
+    background: var(--ui-neutral-normal-surface);
+    border-radius: 999px;
+    font-size: 11px;
+    margin-left: 4px;
+    padding: 2px 6px;
+  }
+  .filter-bar button.active {
+    border-bottom-color: var(--violet);
+    color: var(--ui-normal-text);
+  }
+  .content-flow {
+    display: grid;
+    gap: 18px;
+  }
+  .loose-section {
+    display: grid;
+    gap: 9px;
+  }
+  .section-heading {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 5px;
+  }
+  .heading-label {
+    align-items: center;
+    color: var(--ui-secondary-text);
+    display: flex;
+    font-size: 13px;
+    font-weight: 650;
+    gap: 7px;
+  }
+  .heading-label b {
+    background: var(--ui-neutral-normal-surface);
+    border-radius: 999px;
+    font-size: 11px;
+    padding: 2px 7px;
+  }
+  .text-action {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--ui-secondary-text);
+    cursor: pointer;
+    display: flex;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .text-action:hover {
+    color: var(--ui-normal-text);
+  }
+  .prompt-list,
+  .folder-prompts {
+    display: grid;
+    gap: 9px;
+  }
   .prompt-card {
-    background: linear-gradient(105deg, var(--ui-card-normal-surface-gradient-start), var(--ui-card-normal-surface-gradient-end));
-    border: 1px solid var(--ui-card-normal-border); border-left: 3px solid var(--ui-neutral-focus-border); border-radius: 10px;
-    box-shadow: 0 5px 18px var(--ui-card-normal-shadow); display: grid; grid-template-columns: 26px minmax(0, 1fr); min-width: 0; overflow: hidden;
+    background: linear-gradient(
+      105deg,
+      var(--ui-card-normal-surface-gradient-start),
+      var(--ui-card-normal-surface-gradient-end)
+    );
+    border: 1px solid var(--ui-card-normal-border);
+    border-left: 3px solid var(--ui-neutral-focus-border);
+    border-radius: 10px;
+    box-shadow: 0 5px 18px var(--ui-card-normal-shadow);
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    min-width: 0;
+    overflow: hidden;
   }
-  .prompt-card[data-status='in-progress'] { border-left-color: var(--amber); }
-  .prompt-card[data-status='completed'] { border-left-color: var(--ui-success-normal-text); }
-  .drag-handle { align-items: center; border-right: 1px solid var(--ui-neutral-muted-border); color: var(--ui-muted-icon-glyph); cursor: grab; display: flex; justify-content: center; }
-  .prompt-main { min-width: 0; }
-  .prompt-header { align-items: center; display: grid; gap: 10px; grid-template-columns: 34px minmax(180px, 1fr) auto; min-width: 0; padding: 9px 10px 9px 12px; }
-  .document-mark { align-items: center; background: var(--ui-neutral-normal-surface); border: 1px solid var(--ui-neutral-muted-border); border-radius: 8px; color: var(--ui-secondary-icon-glyph); display: flex; height: 32px; justify-content: center; width: 32px; }
-  .title-stack { display: grid; gap: 3px; min-width: 0; }
-  .prompt-title { background: transparent; border: 0; color: var(--ui-normal-text); font-size: 14px; font-weight: 650; min-width: 0; outline: none; padding: 0; width: 100%; }
-  .prompt-meta { align-items: center; color: var(--ui-muted-text); display: flex; font-size: 11px; gap: 7px; overflow: hidden; white-space: nowrap; }
-  .meta-line { background: var(--ui-neutral-normal-border); height: 10px; width: 1px; }
-  .prompt-actions { align-items: center; display: flex; gap: 4px; }
-  .icon-action { align-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--ui-secondary-icon-glyph); cursor: pointer; display: inline-flex; height: 30px; justify-content: center; padding: 0; width: 30px; }
-  .icon-action:hover { background: var(--ui-neutral-action-hover-fill); color: var(--ui-hoverable-icon-glyph); }
-  .status-chip { align-items: center; background: transparent; border: 1px solid var(--ui-neutral-normal-border); border-radius: 999px; color: var(--ui-secondary-text); cursor: pointer; display: flex; font-size: 12px; gap: 6px; justify-content: center; margin-left: 4px; min-width: 104px; padding: 5px 10px; }
-  .status-chip[data-status='in-progress'] { border-color: var(--ui-warning-normal-border); color: var(--ui-warning-icon-glyph); }
-  .status-chip[data-status='completed'] { border-color: var(--ui-success-normal-border); color: var(--ui-success-normal-text); }
-  .prompt-content { background: var(--ui-editor-normal-surface); border: 0; border-top: 1px solid var(--ui-neutral-muted-border); box-sizing: border-box; color: var(--ui-normal-text); display: block; font-family: 'Cascadia Code', Consolas, monospace; font-size: 13px; line-height: 1.55; min-height: 88px; outline: none; padding: 13px 16px 15px; resize: vertical; width: 100%; }
+  .prompt-card[data-status='in-progress'] {
+    border-left-color: var(--amber);
+  }
+  .prompt-card[data-status='completed'] {
+    border-left-color: var(--ui-success-normal-text);
+  }
+  .drag-handle {
+    align-items: center;
+    border-right: 1px solid var(--ui-neutral-muted-border);
+    color: var(--ui-muted-icon-glyph);
+    cursor: grab;
+    display: flex;
+    justify-content: center;
+  }
+  .prompt-main {
+    min-width: 0;
+  }
+  .prompt-header {
+    align-items: center;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 34px minmax(180px, 1fr) auto;
+    min-width: 0;
+    padding: 9px 10px 9px 12px;
+  }
+  .document-mark {
+    align-items: center;
+    background: var(--ui-neutral-normal-surface);
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: 8px;
+    color: var(--ui-secondary-icon-glyph);
+    display: flex;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+  }
+  .title-stack {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+  .prompt-title {
+    background: transparent;
+    border: 0;
+    color: var(--ui-normal-text);
+    font-size: 14px;
+    font-weight: 650;
+    min-width: 0;
+    outline: none;
+    padding: 0;
+    width: 100%;
+  }
+  .prompt-meta {
+    align-items: center;
+    color: var(--ui-muted-text);
+    display: flex;
+    font-size: 11px;
+    gap: 7px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .meta-line {
+    background: var(--ui-neutral-normal-border);
+    height: 10px;
+    width: 1px;
+  }
+  .prompt-actions {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+  }
+  .icon-action {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: var(--ui-secondary-icon-glyph);
+    cursor: pointer;
+    display: inline-flex;
+    height: 30px;
+    justify-content: center;
+    padding: 0;
+    width: 30px;
+  }
+  .icon-action:hover {
+    background: var(--ui-neutral-action-hover-fill);
+    color: var(--ui-hoverable-icon-glyph);
+  }
+  .status-chip {
+    align-items: center;
+    background: transparent;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 999px;
+    color: var(--ui-secondary-text);
+    cursor: pointer;
+    display: flex;
+    font-size: 12px;
+    gap: 6px;
+    justify-content: center;
+    margin-left: 4px;
+    min-width: 104px;
+    padding: 5px 10px;
+  }
+  .status-chip[data-status='in-progress'] {
+    border-color: var(--ui-warning-normal-border);
+    color: var(--ui-warning-icon-glyph);
+  }
+  .status-chip[data-status='completed'] {
+    border-color: var(--ui-success-normal-border);
+    color: var(--ui-success-normal-text);
+  }
+  .prompt-content {
+    background: var(--ui-editor-normal-surface);
+    border: 0;
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    box-sizing: border-box;
+    color: var(--ui-normal-text);
+    display: block;
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    min-height: 88px;
+    outline: none;
+    padding: 13px 16px 15px;
+    resize: vertical;
+    width: 100%;
+  }
   .folder-group {
-    --folder-accent: var(--violet); --folder-wash: oklch(0.62 0.16 300 / 9%);
-    background: linear-gradient(145deg, var(--folder-wash), transparent 60%); border: 1px solid color-mix(in oklch, var(--folder-accent) 25%, transparent);
-    border-radius: 13px; overflow: hidden;
+    --folder-accent: var(--violet);
+    --folder-wash: oklch(0.62 0.16 300 / 9%);
+    background: linear-gradient(145deg, var(--folder-wash), transparent 60%);
+    border: 1px solid color-mix(in oklch, var(--folder-accent) 25%, transparent);
+    border-radius: 13px;
+    overflow: hidden;
   }
-  .folder-group[data-tone='blue'] { --folder-accent: var(--blue); --folder-wash: oklch(0.62 0.14 245 / 9%); }
-  .folder-group[data-tone='amber'] { --folder-accent: var(--amber); --folder-wash: oklch(0.7 0.13 78 / 8%); }
-  .folder-header { align-items: center; border-bottom: 1px solid var(--ui-neutral-muted-border); display: flex; min-width: 0; padding: 9px 11px 9px 9px; }
-  .folder-toggle { align-items: center; background: transparent; border: 0; cursor: pointer; display: grid; flex: 1; gap: 9px; grid-template-columns: 24px 34px minmax(0, 1fr); min-width: 0; padding: 0; text-align: left; }
-  .folder-chevron { color: var(--ui-secondary-icon-glyph); display: flex; }
-  .folder-icon { align-items: center; background: color-mix(in oklch, var(--folder-accent) 14%, transparent); border: 1px solid color-mix(in oklch, var(--folder-accent) 30%, transparent); border-radius: 8px; color: var(--folder-accent); display: flex; height: 32px; justify-content: center; width: 32px; }
-  .folder-title-copy { color: var(--ui-muted-text); display: grid; font-size: 11px; gap: 3px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .folder-title-row { align-items: baseline; display: flex; gap: 9px; }
-  .folder-title-row strong { color: var(--ui-normal-text); font-size: 14px; }
-  .folder-title-row span { color: var(--folder-accent); font-size: 11px; font-weight: 650; }
-  .folder-actions { align-items: center; display: flex; gap: 4px; margin-left: 10px; }
-  .folder-add { background: color-mix(in oklch, var(--folder-accent) 12%, transparent); border-color: color-mix(in oklch, var(--folder-accent) 28%, transparent); font-size: 12px; margin-left: 3px; padding: 6px 9px; }
-  .folder-context { border-bottom: 1px solid var(--ui-neutral-muted-border); display: grid; grid-template-columns: 1.15fr 1fr 1fr; }
-  .folder-context label { display: grid; gap: 5px; min-width: 0; padding: 9px 12px 11px; }
-  .folder-context label + label { border-left: 1px solid var(--ui-neutral-muted-border); }
-  .folder-context label span { color: var(--folder-accent); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-  .folder-context input { background: transparent; border: 0; color: var(--ui-secondary-text); font-size: 11px; min-width: 0; outline: none; overflow: hidden; padding: 0; text-overflow: ellipsis; width: 100%; }
-  .folder-prompts { padding: 11px 11px 10px 34px; position: relative; }
-  .folder-prompts::before { background: color-mix(in oklch, var(--folder-accent) 38%, transparent); bottom: 23px; content: ''; left: 18px; position: absolute; top: 0; width: 1px; }
-  .folder-prompts .prompt-card { box-shadow: 0 4px 14px var(--ui-card-normal-shadow); }
-  .add-row { align-items: center; background: transparent; border: 0; color: var(--ui-muted-text); cursor: pointer; display: flex; font-size: 11px; gap: 6px; justify-content: center; padding: 2px 8px; }
-  .add-row:hover { color: var(--ui-normal-text); }
-  .new-folder { align-items: center; align-self: start; background: transparent; border: 1px dashed var(--ui-neutral-focus-border); border-radius: 9px; color: var(--ui-secondary-text); cursor: pointer; display: flex; font-size: 12px; gap: 6px; padding: 8px 12px; }
-  .new-folder:hover { background: var(--ui-neutral-subtle-action-hover-fill); color: var(--ui-normal-text); }
+  .folder-group[data-tone='blue'] {
+    --folder-accent: var(--blue);
+    --folder-wash: oklch(0.62 0.14 245 / 9%);
+  }
+  .folder-group[data-tone='amber'] {
+    --folder-accent: var(--amber);
+    --folder-wash: oklch(0.7 0.13 78 / 8%);
+  }
+  .folder-header {
+    align-items: center;
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    display: flex;
+    min-width: 0;
+    padding: 9px 11px 9px 9px;
+  }
+  .folder-toggle {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: grid;
+    flex: 1;
+    gap: 9px;
+    grid-template-columns: 24px 34px minmax(0, 1fr);
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+  }
+  .folder-chevron {
+    color: var(--ui-secondary-icon-glyph);
+    display: flex;
+  }
+  .folder-icon {
+    align-items: center;
+    background: color-mix(in oklch, var(--folder-accent) 14%, transparent);
+    border: 1px solid color-mix(in oklch, var(--folder-accent) 30%, transparent);
+    border-radius: 8px;
+    color: var(--folder-accent);
+    display: flex;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+  }
+  .folder-title-copy {
+    color: var(--ui-muted-text);
+    display: grid;
+    font-size: 11px;
+    gap: 3px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .folder-title-row {
+    align-items: baseline;
+    display: flex;
+    gap: 9px;
+  }
+  .folder-title-row strong {
+    color: var(--ui-normal-text);
+    font-size: 14px;
+  }
+  .folder-title-row span {
+    color: var(--folder-accent);
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .folder-actions {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    margin-left: 10px;
+  }
+  .folder-add {
+    background: color-mix(in oklch, var(--folder-accent) 12%, transparent);
+    border-color: color-mix(in oklch, var(--folder-accent) 28%, transparent);
+    font-size: 12px;
+    margin-left: 3px;
+    padding: 6px 9px;
+  }
+  .folder-context {
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    display: grid;
+    grid-template-columns: 1.15fr 1fr 1fr;
+  }
+  .folder-context label {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    padding: 9px 12px 11px;
+  }
+  .folder-context label + label {
+    border-left: 1px solid var(--ui-neutral-muted-border);
+  }
+  .folder-context label span {
+    color: var(--folder-accent);
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .folder-context input {
+    background: transparent;
+    border: 0;
+    color: var(--ui-secondary-text);
+    font-size: 11px;
+    min-width: 0;
+    outline: none;
+    overflow: hidden;
+    padding: 0;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+  .folder-prompts {
+    padding: 11px 11px 10px 34px;
+    position: relative;
+  }
+  .folder-prompts::before {
+    background: color-mix(in oklch, var(--folder-accent) 38%, transparent);
+    bottom: 23px;
+    content: '';
+    left: 18px;
+    position: absolute;
+    top: 0;
+    width: 1px;
+  }
+  .folder-prompts .prompt-card {
+    box-shadow: 0 4px 14px var(--ui-card-normal-shadow);
+  }
+  .add-row {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--ui-muted-text);
+    cursor: pointer;
+    display: flex;
+    font-size: 11px;
+    gap: 6px;
+    justify-content: center;
+    padding: 2px 8px;
+  }
+  .add-row:hover {
+    color: var(--ui-normal-text);
+  }
+  .new-folder {
+    align-items: center;
+    align-self: start;
+    background: transparent;
+    border: 1px dashed var(--ui-neutral-focus-border);
+    border-radius: 9px;
+    color: var(--ui-secondary-text);
+    cursor: pointer;
+    display: flex;
+    font-size: 12px;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .new-folder:hover {
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    color: var(--ui-normal-text);
+  }
   @media (max-width: 900px) {
-    .prompt-header { grid-template-columns: 32px minmax(0, 1fr); }
-    .prompt-actions { grid-column: 2; }
-    .folder-context { grid-template-columns: 1fr; }
-    .folder-context label + label { border-left: 0; border-top: 1px solid var(--ui-neutral-muted-border); }
+    .prompt-header {
+      grid-template-columns: 32px minmax(0, 1fr);
+    }
+    .prompt-actions {
+      grid-column: 2;
+    }
+    .folder-context {
+      grid-template-columns: 1fr;
+    }
+    .folder-context label + label {
+      border-left: 0;
+      border-top: 1px solid var(--ui-neutral-muted-border);
+    }
   }
 </style>

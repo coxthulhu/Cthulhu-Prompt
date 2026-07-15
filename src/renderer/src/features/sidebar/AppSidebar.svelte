@@ -429,7 +429,9 @@
   }
 
   const arePromptFolderIdOrdersEqual = (left: string[], right: string[]): boolean => {
-    return left.length === right.length && left.every((folderId, index) => folderId === right[index])
+    return (
+      left.length === right.length && left.every((folderId, index) => folderId === right[index])
+    )
   }
 
   const reorderPromptFolderIds = (
@@ -446,10 +448,7 @@
     return nextFolderIds
   }
 
-  const getPromptFolderPreviousEntryId = (
-    folderIds: string[],
-    folderId: string
-  ): string | null => {
+  const getPromptFolderPreviousEntryId = (folderIds: string[], folderId: string): string | null => {
     const folderIndex = folderIds.indexOf(folderId)
     return folderIndex <= 0 ? null : folderIds[folderIndex - 1]!
   }
@@ -459,9 +458,7 @@
 
     return document
       .elementsFromPoint(clientX, clientY)
-      .some(
-        (element) => element instanceof Element && element.closest(footerSelector) !== null
-      )
+      .some((element) => element instanceof Element && element.closest(footerSelector) !== null)
   }
 
   const resetPromptFolderSelectorPreview = (): void => {
@@ -506,11 +503,7 @@
       return
     }
 
-    const nextPreviewIds = reorderPromptFolderIds(
-      currentPreviewIds,
-      draggedFolderId,
-      targetIndex
-    )
+    const nextPreviewIds = reorderPromptFolderIds(currentPreviewIds, draggedFolderId, targetIndex)
 
     if (!arePromptFolderIdOrdersEqual(currentPreviewIds, nextPreviewIds)) {
       promptFolderSelectorPreviewIds = nextPreviewIds
@@ -558,9 +551,7 @@
       )
     },
     onDragFinish: (result) => {
-      persistPromptFolderSelectorReorder(
-        (result.sourcePayload as PromptFolderDragPayload).folderId
-      )
+      persistPromptFolderSelectorReorder((result.sourcePayload as PromptFolderDragPayload).folderId)
       draggedPromptFolderSelectorId = null
       promptFolderSelectorDragSourceIds = null
       promptFolderSelectorPreviewIds = null
@@ -782,7 +773,9 @@
     {/if}
   </div>
 
-  <div class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden">
+  <div
+    class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
+  >
     <PromptTree
       promptFolders={promptTreePromptFolders}
       {folderListState}

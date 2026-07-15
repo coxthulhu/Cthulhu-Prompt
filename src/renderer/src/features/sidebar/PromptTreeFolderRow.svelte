@@ -8,10 +8,7 @@
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Action } from 'svelte/action'
-  import {
-    draggable,
-    type DraggableOptions
-  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
     PromptFolderEntryDragPayload,
     PromptHandleDropPayload
@@ -155,76 +152,73 @@
     : isOver && showDropOverHighlight
       ? 'over'
       : isActive
-      ? isPromptDragActive
-        ? 'drag-active'
-        : 'active'
-      : isPromptDragActive
-        ? 'drag-idle'
-        : 'idle'}
-    <div
-      class="sidebarPromptTreeRow group"
-      data-row-state={rowState}
+        ? isPromptDragActive
+          ? 'drag-active'
+          : 'active'
+        : isPromptDragActive
+          ? 'drag-idle'
+          : 'idle'}
+  <div class="sidebarPromptTreeRow group" data-row-state={rowState}>
+    <button
+      use:optionalFolderDraggable={folderDragOptions}
+      type="button"
+      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.displayName}`}
+      aria-expanded={isExpanded}
+      onclick={handleFolderToggleClick}
+      data-testid={folderToggleTestId(folder)}
+      class="sidebarPromptTreeToggleButton"
     >
-      <button
-        use:optionalFolderDraggable={folderDragOptions}
-        type="button"
-        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.displayName}`}
-        aria-expanded={isExpanded}
-        onclick={handleFolderToggleClick}
-        data-testid={folderToggleTestId(folder)}
-        class="sidebarPromptTreeToggleButton"
-      >
-        {#if indentCount > 0}
-          <PromptTreeGutter {indentCount} {isLastRow} />
-        {/if}
-        <RotatingChevron
-          expanded={isExpanded}
-          size={24}
-          iconSize={20}
-          class="sidebarPromptTreeChevronWrap"
-        />
-        <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
-      </button>
+      {#if indentCount > 0}
+        <PromptTreeGutter {indentCount} {isLastRow} />
+      {/if}
+      <RotatingChevron
+        expanded={isExpanded}
+        size={24}
+        iconSize={20}
+        class="sidebarPromptTreeChevronWrap"
+      />
+      <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
+    </button>
 
-      <div class="sidebarPromptTreeActionSlot">
-        <div class="sidebarPromptTreeFolderActions">
-          <DropdownPopupSimple
-            label={`Folder options for ${folder.displayName}`}
-            items={dropdownItems}
-            menuWidth="196px"
-            onselect={handleFolderOptionsSelect}
-          >
-            {#snippet trigger(dropdown)}
-              <IconButton
-                icon={MoreHorizontal}
-                label={`Folder options for ${folder.displayName}`}
-                title="Folder Options"
-                size="compact"
-                borderless
-                active={dropdown.open || isSettingsActive}
-                ariaHaspopup={dropdown.ariaHaspopup}
-                ariaExpanded={dropdown.ariaExpanded}
-                ariaCurrent={isSettingsActive ? 'true' : undefined}
-                buttonAction={dropdown.triggerAction}
-                onclick={dropdown.toggle}
-                testId={folderOptionsTestId(folder)}
-                class="sidebarPromptTreeActionButton"
-              />
-            {/snippet}
-          </DropdownPopupSimple>
-          <IconButton
-            icon={ArrowRight}
-            label={`Open ${folder.displayName}`}
-            size="compact"
-            borderless
-            onclick={handlePromptFolderOpen}
-            testId={folderOpenTestId(folder)}
-            active={isActive}
-            class="sidebarPromptTreeActionButton"
-          />
-        </div>
+    <div class="sidebarPromptTreeActionSlot">
+      <div class="sidebarPromptTreeFolderActions">
+        <DropdownPopupSimple
+          label={`Folder options for ${folder.displayName}`}
+          items={dropdownItems}
+          menuWidth="196px"
+          onselect={handleFolderOptionsSelect}
+        >
+          {#snippet trigger(dropdown)}
+            <IconButton
+              icon={MoreHorizontal}
+              label={`Folder options for ${folder.displayName}`}
+              title="Folder Options"
+              size="compact"
+              borderless
+              active={dropdown.open || isSettingsActive}
+              ariaHaspopup={dropdown.ariaHaspopup}
+              ariaExpanded={dropdown.ariaExpanded}
+              ariaCurrent={isSettingsActive ? 'true' : undefined}
+              buttonAction={dropdown.triggerAction}
+              onclick={dropdown.toggle}
+              testId={folderOptionsTestId(folder)}
+              class="sidebarPromptTreeActionButton"
+            />
+          {/snippet}
+        </DropdownPopupSimple>
+        <IconButton
+          icon={ArrowRight}
+          label={`Open ${folder.displayName}`}
+          size="compact"
+          borderless
+          onclick={handlePromptFolderOpen}
+          testId={folderOpenTestId(folder)}
+          active={isActive}
+          class="sidebarPromptTreeActionButton"
+        />
       </div>
     </div>
+  </div>
 {/snippet}
 
 {#if getFolderPromptDroppableOptions}

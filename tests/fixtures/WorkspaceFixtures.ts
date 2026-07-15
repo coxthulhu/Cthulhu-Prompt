@@ -106,9 +106,7 @@ const getDuplicateTitleStems = (prompts: Array<{ title: string; fallbackTitle: s
   }
 
   return new Set(
-    [...titleStemCounts.entries()]
-      .filter(([, count]) => count > 1)
-      .map(([titleStem]) => titleStem)
+    [...titleStemCounts.entries()].filter(([, count]) => count > 1).map(([titleStem]) => titleStem)
   )
 }
 
@@ -450,9 +448,7 @@ export function setupWorkspaceScenario(
         }
       ])
       const nestedFolderId = createDeterministicId(`${workspacePath}:Hierarchy/Nested`)
-      const emptyNestedFolderId = createDeterministicId(
-        `${workspacePath}:Hierarchy/EmptyNested`
-      )
+      const emptyNestedFolderId = createDeterministicId(`${workspacePath}:Hierarchy/EmptyNested`)
       const grandchildFolderId = createDeterministicId(
         `${workspacePath}:Hierarchy/Nested/Grandchild`
       )
@@ -511,20 +507,19 @@ export function setupWorkspaceScenario(
         nestedCompletedPrompts
       )
 
-      structure[`${workspacePath}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`] =
-        JSON.stringify(
-          {
-            entries: [
-              { kind: 'prompt', id: 'subfolders-ui-root-completed' },
-              { kind: 'prompt', id: 'subfolders-ui-root-before' },
-              { kind: 'folder', id: nestedFolderId },
-              { kind: 'folder', id: emptyNestedFolderId },
-              { kind: 'prompt', id: 'subfolders-ui-root-after' }
-            ]
-          },
-          null,
-          2
-        )
+      structure[`${workspacePath}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`] = JSON.stringify(
+        {
+          entries: [
+            { kind: 'prompt', id: 'subfolders-ui-root-completed' },
+            { kind: 'prompt', id: 'subfolders-ui-root-before' },
+            { kind: 'folder', id: nestedFolderId },
+            { kind: 'folder', id: emptyNestedFolderId },
+            { kind: 'prompt', id: 'subfolders-ui-root-after' }
+          ]
+        },
+        null,
+        2
+      )
       structure[getPromptFolderOrderPath(nestedFolderPath)] = JSON.stringify(
         {
           entries: [
@@ -653,8 +648,11 @@ export function setupWorkspaceScenario(
       ])
       const { promptIds, promptFiles } = createPromptFiles(nestedFolderPath, prompts)
 
-      structure[getPromptFolderOrderPath(`${workspacePath}/Prompts/Controls`)] =
-        JSON.stringify(folderOrderFile([nestedFolderId, siblingFolderId]), null, 2)
+      structure[getPromptFolderOrderPath(`${workspacePath}/Prompts/Controls`)] = JSON.stringify(
+        folderOrderFile([nestedFolderId, siblingFolderId]),
+        null,
+        2
+      )
       structure[getPromptFolderOrderPath(nestedFolderPath)] = JSON.stringify(
         promptOrderFile(promptIds),
         null,

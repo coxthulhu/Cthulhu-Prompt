@@ -290,12 +290,7 @@ const isPointInRect = (x: number, y: number, rect: DOMRect): boolean => {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 }
 
-const isPointInInflatedRect = (
-  x: number,
-  y: number,
-  rect: DOMRect,
-  insetPx: number
-): boolean => {
+const isPointInInflatedRect = (x: number, y: number, rect: DOMRect, insetPx: number): boolean => {
   return (
     x >= rect.left - insetPx &&
     x <= rect.right + insetPx &&

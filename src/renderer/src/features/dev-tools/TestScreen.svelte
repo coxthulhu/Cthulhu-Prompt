@@ -311,11 +311,7 @@
                     variant="accent"
                     testId="test-screen-accent-button"
                   />
-                  <Button
-                    icon={Archive}
-                    text="Neutral"
-                    testId="test-screen-neutral-button"
-                  />
+                  <Button icon={Archive} text="Neutral" testId="test-screen-neutral-button" />
                   <Button
                     icon={AlertCircle}
                     text="Danger"

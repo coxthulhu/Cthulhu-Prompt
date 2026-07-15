@@ -135,7 +135,8 @@
       }
     }
 
-    return selectedWorkspace.entries.map((entry) => entry.id)
+    return selectedWorkspace.entries
+      .map((entry) => entry.id)
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
@@ -583,7 +584,7 @@
           {isWorkspaceLoading}
           {workspacePath}
           {screenRootFolderId}
-          promptFolderScreenMode={promptFolderScreenMode}
+          {promptFolderScreenMode}
           onPromptFolderModeChange={setPromptFolderMode}
           onScreenRootFolderSelect={(promptFolderId) => {
             navigateToScreenRootFolder(promptFolderId)

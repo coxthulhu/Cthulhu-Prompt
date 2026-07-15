@@ -221,11 +221,12 @@
     completedAt: null
   }
   const emptyFolderSettings = createEmptyPromptFolderSettings()
-  const promptFolderById = $derived.by(() =>
-    Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
-      string,
-      PromptFolder
-    >
+  const promptFolderById = $derived.by(
+    () =>
+      Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
+        string,
+        PromptFolder
+      >
   )
 
   // Side effect: expose the virtual window band-scroll API to the controller.
@@ -284,12 +285,8 @@
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        lookupFolderSettingsRowMeasuredHeight(
-          ownerFolderId,
-          field,
-          widthPx,
-          devicePixelRatio
-        ) ?? estimatedHeights[field]
+        lookupFolderSettingsRowMeasuredHeight(ownerFolderId, field, widthPx, devicePixelRatio) ??
+          estimatedHeights[field]
       ])
     ) as Record<PromptFolderSettingsField, number>
   }
@@ -319,11 +316,7 @@
         )
         return row.isSettingsSectionExpanded
           ? getPromptFolderEditorCardRowHeightPx(
-              getFolderSettingsSectionHeights(
-                row.ownerFolderId,
-                settingsWidthPx,
-                devicePixelRatio
-              ),
+              getFolderSettingsSectionHeights(row.ownerFolderId, settingsWidthPx, devicePixelRatio),
               rowPaddingTopPx
             )
           : getPromptFolderEditorCollapsedCardRowHeightPx(rowPaddingTopPx)
@@ -392,8 +385,7 @@
               ...row,
               isSettingsSectionExpanded:
                 settingsSectionExpandedByFolderId[row.ownerFolderId] ?? false,
-              isPromptsSectionExpanded:
-                promptsSectionExpandedByFolderId[row.ownerFolderId] ?? true
+              isPromptsSectionExpanded: promptsSectionExpandedByFolderId[row.ownerFolderId] ?? true
             }
           }
         }
@@ -452,8 +444,7 @@
       })
 
       visiblePromptIds.forEach((promptId, promptIndex) => {
-        const ownerFolderId =
-          completedPromptOwnerByPromptId[promptId] ?? screenRootFolderId
+        const ownerFolderId = completedPromptOwnerByPromptId[promptId] ?? screenRootFolderId
         completedRows.push({
           id: promptEditorRowId(promptId),
           row: {
@@ -496,10 +487,7 @@
       })
       return
     }
-    if (
-      !isCompletedMode &&
-      row?.kind === 'folder-editor'
-    ) {
+    if (!isCompletedMode && row?.kind === 'folder-editor') {
       onCenterRowChange({
         kind: 'folder-settings',
         rowOwnerFolderId: row.ownerFolderId
@@ -512,9 +500,7 @@
   const getRootEntryBlockRowIds = (entryId: string): string[] => {
     const endIndex = virtualItems.findIndex(
       ({ row }) =>
-        row.kind === 'prompt-divider' &&
-        row.isOwnerRoot &&
-        row.previousEntryId === entryId
+        row.kind === 'prompt-divider' && row.isOwnerRoot && row.previousEntryId === entryId
     )
     if (endIndex === -1) return []
 
@@ -526,9 +512,7 @@
     }
 
     // A root subfolder block includes its editor, expanded descendants, and trailing divider.
-    return virtualItems
-      .slice(previousRootDividerIndex + 1, endIndex + 1)
-      .map(({ id }) => id)
+    return virtualItems.slice(previousRootDividerIndex + 1, endIndex + 1).map(({ id }) => id)
   }
 
   const scrollByAdjacentEntryBlockHeight = (direction: 'up' | 'down', promptId: string) => {
@@ -618,9 +602,7 @@
   const getActiveEntryIds = (folder: PromptFolder): string[] =>
     folder.entries.flatMap((entry) => {
       if (entry.kind === 'folder') return [entry.id]
-      return promptMetadataByPromptId[entry.id]?.status === PromptStatus.Completed
-        ? []
-        : [entry.id]
+      return promptMetadataByPromptId[entry.id]?.status === PromptStatus.Completed ? [] : [entry.id]
     })
 
   const getPromptFolderDropOptions = (
@@ -667,9 +649,7 @@
     ).length
   }
 
-  const getFolderCompletedPromptCount = (
-    row: PromptFolderScreenFolderEditorRow
-  ): number => {
+  const getFolderCompletedPromptCount = (row: PromptFolderScreenFolderEditorRow): number => {
     if (row.isRoot) return completedPromptCount
     return Object.values(completedPromptOwnerByPromptId).filter(
       (ownerFolderId) => ownerFolderId === row.ownerFolderId
@@ -725,8 +705,7 @@
     {completedPromptCount}
     {screenMode}
     {isCreatingPrompt}
-    onAddPrompt={() =>
-      onAddPrompt({ ownerFolderId: screenRootFolderId, previousEntryId: null })}
+    onAddPrompt={() => onAddPrompt({ ownerFolderId: screenRootFolderId, previousEntryId: null })}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
     onDeletePromptFolder={() => onDeletePromptFolder(screenRootFolderId)}
     {onScreenModeChange}
@@ -743,10 +722,7 @@
     props.row.isRoot ? 0 : PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX
   )}
   {#if rowFolder}
-    <PromptFolderSectionRow
-      rowHeightPx={props.rowHeightPx}
-      indentLevel={props.row.indentLevel}
-    >
+    <PromptFolderSectionRow rowHeightPx={props.rowHeightPx} indentLevel={props.row.indentLevel}>
       <PromptFolderEditorRow
         {workspaceId}
         promptFolderId={ownerFolderId}
@@ -798,7 +774,11 @@
     contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
     showGutter={false}
   >
-    <p>{isCompletedMode ? 'No completed prompts found in this folder' : 'No prompts found in this folder.'}</p>
+    <p>
+      {isCompletedMode
+        ? 'No completed prompts found in this folder'
+        : 'No prompts found in this folder.'}
+    </p>
     {#if !isCompletedMode}
       <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
     {/if}
@@ -874,7 +854,7 @@
       {overlayRowElement}
       {onHydrationChange}
       folderSettings={getFolderSettings(row.ownerFolderId)}
-      screenMode={screenMode}
+      {screenMode}
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
@@ -882,16 +862,11 @@
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       isDragEnabled={!isCompletedMode}
-      onDelete={() =>
-        onDeletePrompt({ ownerFolderId: row.ownerFolderId, promptId: row.promptId })}
+      onDelete={() => onDeletePrompt({ ownerFolderId: row.ownerFolderId, promptId: row.promptId })}
       onStatusChange={(status) => {
-        onSetPromptStatus(
-          { ownerFolderId: row.ownerFolderId, promptId: row.promptId },
-          status
-        )
+        onSetPromptStatus({ ownerFolderId: row.ownerFolderId, promptId: row.promptId }, status)
       }}
-      onMoveUp={() =>
-        isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(promptTarget)}
+      onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(promptTarget))}
       onMoveDown={() =>
         isCompletedMode ? Promise.resolve(false) : handleMovePromptDown(promptTarget)}
       onPromptTreeDrop={(dropPayload) => {

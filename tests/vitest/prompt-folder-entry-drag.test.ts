@@ -75,9 +75,9 @@ describe('resolvePromptFolderEntryDropMove', () => {
         activeEntryIds,
         shallow.id,
         {
-        folderId: 'folder-8',
-        targetEntryId: null,
-        position: 'after'
+          folderId: 'folder-8',
+          targetEntryId: null,
+          position: 'after'
         }
       )
     ).toBeNull()

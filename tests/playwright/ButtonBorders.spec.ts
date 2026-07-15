@@ -105,12 +105,8 @@ describe('Button borders', () => {
     await expect(neutralIconTextButton).toHaveCSS('background-color', neutralFill)
     await expect(neutralIconTextButton).toHaveCSS('border-top-color', neutralHoverBorder)
 
-    const stepperDecreaseButton = mainWindow
-      .getByRole('button', { name: 'Decrease value' })
-      .first()
-    const stepperIncreaseButton = mainWindow
-      .getByRole('button', { name: 'Increase value' })
-      .first()
+    const stepperDecreaseButton = mainWindow.getByRole('button', { name: 'Decrease value' }).first()
+    const stepperIncreaseButton = mainWindow.getByRole('button', { name: 'Increase value' }).first()
     await stepperDecreaseButton.hover()
     await expect(stepperDecreaseButton).toHaveCSS('background-color', neutralFill)
     await stepperIncreaseButton.hover()
@@ -163,9 +159,7 @@ describe('Button borders', () => {
       )
     ).toBe(0)
 
-    const sidebarAddPromptButton = mainWindow.locator(
-      '[data-testid="sidebar-add-prompt-button"]'
-    )
+    const sidebarAddPromptButton = mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')
     await expect(sidebarAddPromptButton).toBeEnabled()
     await sidebarAddPromptButton.hover()
     await expect(sidebarAddPromptButton).toHaveCSS('border-top-style', 'none')
@@ -179,9 +173,7 @@ describe('Button borders', () => {
       name: 'Copy prompt More Options',
       exact: true
     })
-    const compoundSeparator = compoundButton.locator(
-      '.cthulhuUiIconButtonWithMoreOptionsSeparator'
-    )
+    const compoundSeparator = compoundButton.locator('.cthulhuUiIconButtonWithMoreOptionsSeparator')
     await expect(compoundButton).toHaveCSS('outline-color', neutralBorder)
     await expect(compoundMainButton).toHaveAttribute('data-hover-variant', 'accent')
     await expect(compoundChevronButton).toHaveAttribute('data-hover-variant', 'neutral')

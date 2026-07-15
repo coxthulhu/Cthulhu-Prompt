@@ -90,8 +90,7 @@ const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_TREE_ROOT_FOLDER_SELECTOR = '[data-testid="prompt-tree-root-folder"]'
 const PROMPT_TREE_ROOT_FOLDER_DROP_INDICATOR_SELECTOR =
   '[data-testid="prompt-tree-root-folder-drop-indicator"]'
-const PROMPT_TREE_BOTTOM_SPACER_SELECTOR =
-  '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
+const PROMPT_TREE_BOTTOM_SPACER_SELECTOR = '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
 const PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR =
   '[data-testid="prompt-tree-bottom-spacer-drop-indicator"]'
 const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
@@ -165,13 +164,15 @@ const expectRootEntryOrder = async (
   await expect
     .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
     .toEqual(expectedEntryIds)
-  await expect.poll(async () => await getRootEntryScreenOrder(page)).toEqual(
-    expectedEntryIds.map((entryId) =>
-      entryId === NESTED_FOLDER_ID
-        ? `prompt-folder-editor-${entryId}`
-        : `prompt-editor-${entryId}`
+  await expect
+    .poll(async () => await getRootEntryScreenOrder(page))
+    .toEqual(
+      expectedEntryIds.map((entryId) =>
+        entryId === NESTED_FOLDER_ID
+          ? `prompt-folder-editor-${entryId}`
+          : `prompt-editor-${entryId}`
+      )
     )
-  )
 }
 
 const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locator =>
@@ -601,10 +602,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
   })
 
-  test('reorders root prompts before and after a subfolder', async ({
-    testSetup,
-    electronApp
-  }) => {
+  test('reorders root prompts before and after a subfolder', async ({ testSetup, electronApp }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders' }
     })
@@ -613,11 +611,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await scrollUntilPromptEditorVisible(mainWindow, testHelpers, BASE_BEFORE_ID)
     await scrollUntilPromptEditorVisible(mainWindow, testHelpers, BASE_AFTER_ID)
 
-    await dragPromptHandleToTarget(
-      mainWindow,
-      BASE_AFTER_ID,
-      promptDividerSelector(BASE_BEFORE_ID)
-    )
+    await dragPromptHandleToTarget(mainWindow, BASE_AFTER_ID, promptDividerSelector(BASE_BEFORE_ID))
     await expectRootEntryOrder(mainWindow, electronApp, [
       BASE_BEFORE_ID,
       BASE_AFTER_ID,
@@ -661,17 +655,16 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [
       'nested-prompt'
     ])
-    await expect.poll(async () => await getRootEntryTreeOrder(mainWindow)).toEqual([
-      `prompt-tree-prompt-${BASE_AFTER_ID}`,
-      'prompt-tree-folder-toggle-button-Nested',
-      `prompt-tree-prompt-${BASE_BEFORE_ID}`
-    ])
+    await expect
+      .poll(async () => await getRootEntryTreeOrder(mainWindow))
+      .toEqual([
+        `prompt-tree-prompt-${BASE_AFTER_ID}`,
+        'prompt-tree-folder-toggle-button-Nested',
+        `prompt-tree-prompt-${BASE_BEFORE_ID}`
+      ])
   })
 
-  test('drags prompts into and out of a nested subfolder', async ({
-    testSetup,
-    electronApp
-  }) => {
+  test('drags prompts into and out of a nested subfolder', async ({ testSetup, electronApp }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders' }
     })
@@ -759,9 +752,7 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Main')
-    const folderIndicator = mainWindow.locator(
-      promptTreeFolderDropIndicatorSelector('Nested')
-    )
+    const folderIndicator = mainWindow.locator(promptTreeFolderDropIndicatorSelector('Nested'))
     const subfolderRow = mainWindow
       .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
       .locator('xpath=..')
@@ -831,9 +822,10 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     await moveActiveDragToTarget(mainWindow, PROMPT_TREE_BOTTOM_SPACER_SELECTOR)
-    await expect(
-      mainWindow.locator(PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR)
-    ).toHaveAttribute('data-edge', 'top')
+    await expect(mainWindow.locator(PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR)).toHaveAttribute(
+      'data-edge',
+      'top'
+    )
     await finishActiveDrag(mainWindow)
 
     await expect
@@ -966,9 +958,7 @@ describe('Prompt folder prompt drag-drop', () => {
       defaultStyles.separatorBackgroundColors[0]
     )
     expect(dropStyles.separatorBackgroundColors).toHaveLength(2)
-    expect(dropStyles.separatorBackgroundColors[1]).toBe(
-      dropStyles.separatorBackgroundColors[0]
-    )
+    expect(dropStyles.separatorBackgroundColors[1]).toBe(dropStyles.separatorBackgroundColors[0])
     expect(dropStyles.separatorBackgroundColors[0]).not.toBe(
       defaultStyles.separatorBackgroundColors[0]
     )
@@ -1118,7 +1108,9 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
     await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
-    await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)).toBe(0)
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBe(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
     await expect(mainWindow.locator(promptEditorSelector(DEV_1_ID))).toBeVisible()
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
@@ -1387,9 +1379,7 @@ describe('Prompt folder prompt drag-drop', () => {
 
     const promptRowBox = await promptRow.boundingBox()
     const topIndicatorBox = await indicator.boundingBox()
-    const promptLabelBox = await promptRow
-      .locator('.sidebarPromptTreeSettingsLabel')
-      .boundingBox()
+    const promptLabelBox = await promptRow.locator('.sidebarPromptTreeSettingsLabel').boundingBox()
     const indicatorArrowBox = await indicator.locator('path').boundingBox()
     if (!promptRowBox || !topIndicatorBox || !promptLabelBox || !indicatorArrowBox) {
       throw new Error('Missing geometry for top-edge indicator assertion')
@@ -1420,5 +1410,4 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await finishActiveDrag(mainWindow)
   })
-
 })

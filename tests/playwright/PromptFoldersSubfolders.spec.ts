@@ -49,12 +49,8 @@ const createDeterministicId = (seed: string): string => {
 const hierarchyFolderId = createDeterministicId(`${WORKSPACE_PATH}:Hierarchy`)
 const emptyRootFolderId = createDeterministicId(`${WORKSPACE_PATH}:EmptyRoot`)
 const nestedFolderId = createDeterministicId(`${WORKSPACE_PATH}:Hierarchy/Nested`)
-const emptyNestedFolderId = createDeterministicId(
-  `${WORKSPACE_PATH}:Hierarchy/EmptyNested`
-)
-const grandchildFolderId = createDeterministicId(
-  `${WORKSPACE_PATH}:Hierarchy/Nested/Grandchild`
-)
+const emptyNestedFolderId = createDeterministicId(`${WORKSPACE_PATH}:Hierarchy/EmptyNested`)
+const grandchildFolderId = createDeterministicId(`${WORKSPACE_PATH}:Hierarchy/Nested/Grandchild`)
 
 const testIdSelector = (testId: string): string => `[data-testid="${testId}"]`
 const dividerTestId = (ownerFolderId: string, previousEntryId: string | null): string =>
@@ -62,30 +58,22 @@ const dividerTestId = (ownerFolderId: string, previousEntryId: string | null): s
 
 const hierarchyFolderSelector = `[data-testid="prompt-folder-editor-${hierarchyFolderId}"]`
 const nestedFolderSelector = `[data-testid="prompt-folder-editor-${nestedFolderId}"]`
-const emptyNestedFolderSelector =
-  `[data-testid="prompt-folder-editor-${emptyNestedFolderId}"]`
-const grandchildFolderSelector =
-  `[data-testid="prompt-folder-editor-${grandchildFolderId}"]`
+const emptyNestedFolderSelector = `[data-testid="prompt-folder-editor-${emptyNestedFolderId}"]`
+const grandchildFolderSelector = `[data-testid="prompt-folder-editor-${grandchildFolderId}"]`
 const rootBeforeSelector = '[data-testid="prompt-editor-subfolders-ui-root-before"]'
 const nestedPromptSelector = '[data-testid="prompt-editor-subfolders-ui-nested-prompt"]'
-const grandchildPromptSelector =
-  '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
+const grandchildPromptSelector = '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
 const folderTitleToggleSelector = '[data-testid="prompt-folder-editor-title-toggle"]'
 const folderTitleBarSelector = '[data-testid="prompt-folder-editor-title-bar"]'
 const folderTitleEditSelector = '[data-testid="prompt-folder-editor-title-edit"]'
 const folderSettingsToggleSelector = '[data-testid="prompt-folder-editor-settings-toggle"]'
 const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
-const nestedDescriptionPath =
-  `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
-const rootFolderOrderPath =
-  `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`
-const nestedFolderOrderPath =
-  `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
-const grandchildFolderOrderPath =
-  `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
-const emptyNestedFolderOrderPath =
-  `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
+const nestedDescriptionPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
+const rootFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`
+const nestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
+const grandchildFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
+const emptyNestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
 const workspaceFolderOrderPath = `${WORKSPACE_PATH}/Prompts/FolderOrder.json`
 const activeDividerTestIds = [
   dividerTestId(nestedFolderId, null),
@@ -161,14 +149,12 @@ const collectVirtualRowTestIds = async (
 
   for (const scrollTopPx of await getVirtualScrollStops(testHelpers)) {
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, scrollTopPx)
-    const visibleTestIds = await mainWindow
-      .locator(selector)
-      .evaluateAll((rows: Element[]) =>
-        rows.flatMap((row) => {
-          const testId = row.getAttribute('data-testid')
-          return testId ? [testId] : []
-        })
-      )
+    const visibleTestIds = await mainWindow.locator(selector).evaluateAll((rows: Element[]) =>
+      rows.flatMap((row) => {
+        const testId = row.getAttribute('data-testid')
+        return testId ? [testId] : []
+      })
+    )
 
     for (const testId of visibleTestIds) {
       if (seenTestIds.has(testId)) continue
@@ -201,11 +187,7 @@ const scrollDividerIntoView = async (
 ): Promise<string> => {
   const selector = testIdSelector(dividerTestId(ownerFolderId, previousEntryId))
   await revealVirtualRow(mainWindow, testHelpers, selector)
-  await testHelpers.scrollVirtualElementIntoView(
-    PROMPT_FOLDER_HOST_SELECTOR,
-    selector,
-    12
-  )
+  await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, selector, 12)
   return selector
 }
 
@@ -231,9 +213,7 @@ const createSubfolderAtDivider = async (
     .locator(dividerSelector)
     .locator(testIdSelector(addSubfolderTestId(previousEntryId)))
     .click()
-  await mainWindow
-    .locator('[data-testid="create-prompt-subfolder-name-input"]')
-    .fill(displayName)
+  await mainWindow.locator('[data-testid="create-prompt-subfolder-name-input"]').fill(displayName)
   await mainWindow.locator('[data-testid="create-prompt-subfolder-button"]').click()
   await expect(
     mainWindow.locator('[data-testid="create-prompt-subfolder-name-input"]')
@@ -252,9 +232,7 @@ const expectCreatedFolderVisible = async (
   promptFolderId: string,
   displayName: string
 ): Promise<void> => {
-  const editor = mainWindow.locator(
-    `[data-testid="prompt-folder-editor-${promptFolderId}"]`
-  )
+  const editor = mainWindow.locator(`[data-testid="prompt-folder-editor-${promptFolderId}"]`)
   await expect(editor).toBeVisible()
   await expect(editor.getByText(displayName, { exact: true })).toBeVisible()
   await expect(editor.locator(folderSettingsToggleSelector)).toHaveAttribute(
@@ -303,14 +281,10 @@ describe('Prompt folder subfolder rendering', () => {
       mainWindow.locator(nestedFolderSelector).locator('.cthulhuUiIconButtonBar')
     ).toHaveCSS('gap', '8px')
     await expect(
-      mainWindow
-        .locator(nestedFolderSelector)
-        .locator(folderTitleBarSelector)
+      mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('1 prompt')
     await expect(
-      mainWindow
-        .locator(nestedFolderSelector)
-        .locator(folderTitleBarSelector)
+      mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('Nested')
     await expect(
       mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
@@ -322,20 +296,14 @@ describe('Prompt folder subfolder rendering', () => {
       mainWindow.locator(nestedFolderSelector).locator(folderTitleEditSelector)
     ).toHaveAttribute('aria-label', 'Rename prompt folder')
     await expect(
-      mainWindow
-        .locator(nestedFolderSelector)
-        .locator('.prompt-folder-editor-title-line')
+      mainWindow.locator(nestedFolderSelector).locator('.prompt-folder-editor-title-line')
     ).toHaveCSS('align-items', 'baseline')
     await revealVirtualRow(mainWindow, testHelpers, grandchildFolderSelector)
     await expect(
-      mainWindow
-        .locator(grandchildFolderSelector)
-        .locator(folderTitleBarSelector)
+      mainWindow.locator(grandchildFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('1 prompt')
     await expect(
-      mainWindow
-        .locator(grandchildFolderSelector)
-        .locator(folderTitleBarSelector)
+      mainWindow.locator(grandchildFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('Grandchild')
     await expect(
       mainWindow.locator(grandchildFolderSelector).locator(folderTitleBarSelector)
@@ -348,14 +316,10 @@ describe('Prompt folder subfolder rendering', () => {
     ).toHaveAttribute('aria-label', 'Rename prompt folder')
     await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
     await expect(
-      mainWindow
-        .locator(emptyNestedFolderSelector)
-        .locator(folderTitleBarSelector)
+      mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('0 prompts')
     await expect(
-      mainWindow
-        .locator(emptyNestedFolderSelector)
-        .locator(folderTitleBarSelector)
+      mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('Empty Nested')
     await expect(
       mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleBarSelector)
@@ -388,33 +352,23 @@ describe('Prompt folder subfolder rendering', () => {
 
     expect(Math.abs(nestedFolderBox.x - rootBeforeBox.x)).toBeLessThanOrEqual(1)
     expect(
-      Math.abs(
-        nestedPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX
-      )
+      Math.abs(nestedPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX)
     ).toBeLessThanOrEqual(1)
     expect(Math.abs(grandchildFolderBox.x - nestedPromptBox.x)).toBeLessThanOrEqual(1)
     expect(
       Math.abs(
-        grandchildPromptBox.x -
-          rootBeforeBox.x -
-          PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX * 2
+        grandchildPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX * 2
       )
     ).toBeLessThanOrEqual(1)
 
-    const rowOrder = await collectVirtualRowTestIds(
-      mainWindow,
-      testHelpers,
-      orderedRowSelector
-    )
+    const rowOrder = await collectVirtualRowTestIds(mainWindow, testHelpers, orderedRowSelector)
     expect(rowOrder).toEqual(orderedRowTestIds)
 
     for (const activeDividerTestId of activeDividerTestIds) {
       const dividerSelector = testIdSelector(activeDividerTestId)
       await revealVirtualRow(mainWindow, testHelpers, dividerSelector)
       await expect(
-        mainWindow
-          .locator(dividerSelector)
-          .getByRole('button', { name: 'Add Prompt', exact: true })
+        mainWindow.locator(dividerSelector).getByRole('button', { name: 'Add Prompt', exact: true })
       ).toHaveCount(1)
       await expect(
         mainWindow.locator(dividerSelector).getByRole('button', { name: 'Add Subfolder' })
@@ -441,9 +395,7 @@ describe('Prompt folder subfolder rendering', () => {
     expect(await hasVirtualPlaceholder(mainWindow, testHelpers)).toBe(false)
   })
 
-  test('collapsing one subfolder hides only that folder descendants', async ({
-    testSetup
-  }) => {
+  test('collapsing one subfolder hides only that folder descendants', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-ui' }
     })
@@ -652,8 +604,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(nestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(1)
 
-    const nestedDescriptionSelector =
-      `${nestedFolderSelector} ${folderDescriptionSectionSelector}`
+    const nestedDescriptionSelector = `${nestedFolderSelector} ${folderDescriptionSectionSelector}`
     await waitForMonacoEditor(mainWindow, nestedDescriptionSelector)
     await expect
       .poll(async () => getMonacoEditorText(mainWindow, nestedDescriptionSelector))
@@ -670,8 +621,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(grandchildSettingsToggle).toHaveAttribute('aria-pressed', 'false')
     await grandchildSettingsToggle.click()
     await expect(grandchildSettingsToggle).toHaveAttribute('aria-pressed', 'true')
-    const grandchildDescriptionSelector =
-      `${grandchildFolderSelector} ${folderDescriptionSectionSelector}`
+    const grandchildDescriptionSelector = `${grandchildFolderSelector} ${folderDescriptionSectionSelector}`
     await waitForMonacoEditor(mainWindow, grandchildDescriptionSelector)
     await expect
       .poll(async () => getMonacoEditorText(mainWindow, grandchildDescriptionSelector))
@@ -858,9 +808,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
       .toBe(3)
-    const nestedSharedChildId = (
-      await readFolderEntryIds(electronApp, nestedFolderOrderPath)
-    )[1]
+    const nestedSharedChildId = (await readFolderEntryIds(electronApp, nestedFolderOrderPath))[1]
     await expectCreatedFolderVisible(mainWindow, nestedSharedChildId, 'Shared Child')
 
     const nestedInitialDivider = await scrollDividerIntoView(
@@ -898,11 +846,7 @@ describe('Prompt folder subfolder rendering', () => {
       await readFolderEntryIds(electronApp, emptyNestedFolderOrderPath)
     )[0]
     expect(emptyNestedSharedChildId).not.toBe(nestedSharedChildId)
-    await expectCreatedFolderVisible(
-      mainWindow,
-      emptyNestedSharedChildId,
-      'Shared Child'
-    )
+    await expectCreatedFolderVisible(mainWindow, emptyNestedSharedChildId, 'Shared Child')
     await expect
       .poll(async () => (await readFolderEntryIds(electronApp, nestedFolderOrderPath)).length)
       .toBe(3)
@@ -937,10 +881,7 @@ describe('Prompt folder subfolder rendering', () => {
       .toBe(3)
     const nestedOrder = await readFolderEntryIds(electronApp, nestedFolderOrderPath)
     const createdPromptId = nestedOrder[2]
-    expect(nestedOrder.slice(0, 2)).toEqual([
-      'subfolders-ui-nested-prompt',
-      grandchildFolderId
-    ])
+    expect(nestedOrder.slice(0, 2)).toEqual(['subfolders-ui-nested-prompt', grandchildFolderId])
     expect(await readFolderEntryIds(electronApp, rootFolderOrderPath)).toEqual([
       'subfolders-ui-root-before',
       nestedFolderId,
@@ -1005,13 +946,12 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
-      .toEqual([
-        'subfolders-ui-root-before',
-        nestedFolderId,
-        'subfolders-ui-root-after'
-      ])
+      .toEqual(['subfolders-ui-root-before', nestedFolderId, 'subfolders-ui-root-after'])
     await expect
-      .poll(async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested`))
+      .poll(
+        async () =>
+          await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested`)
+      )
       .toBe(false)
 
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
@@ -1024,16 +964,16 @@ describe('Prompt folder subfolder rendering', () => {
       .locator(nestedFolderSelector)
       .locator('[data-testid="prompt-folder-editor-delete-button"]')
       .click()
-    const subfolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Folder"]'
-    )
+    const subfolderDialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt Folder"]')
     await expect(subfolderDialog).toBeVisible()
     await expect(subfolderDialog).toContainText('Nested')
     await subfolderDialog.locator('[data-testid="prompt-folder-confirm-delete-button"]').click()
     await expect(mainWindow.locator(nestedFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(grandchildFolderSelector)).toHaveCount(0)
     await expect
-      .poll(async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested`))
+      .poll(
+        async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested`)
+      )
       .toBe(false)
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
@@ -1072,19 +1012,12 @@ describe('Prompt folder subfolder rendering', () => {
   }) => {
     const workspacePath = '/ws/subfolders-controls'
     const rootFolderId = createDeterministicId(`${workspacePath}:Controls`)
-    const controlledNestedFolderId = createDeterministicId(
-      `${workspacePath}:Controls/Nested`
-    )
-    const controlledRootSelector =
-      `[data-testid="prompt-folder-editor-${rootFolderId}"]`
-    const controlledNestedSelector =
-      `[data-testid="prompt-folder-editor-${controlledNestedFolderId}"]`
-    const controlledPromptSelector =
-      '[data-testid="prompt-editor-subfolders-controls-first"]'
-    const controlledRootOrderPath =
-      `${workspacePath}/Prompts/Controls/_FolderInfo/FolderOrder.json`
-    const controlledNestedOrderPath =
-      `${workspacePath}/Prompts/Controls/Nested/_FolderInfo/FolderOrder.json`
+    const controlledNestedFolderId = createDeterministicId(`${workspacePath}:Controls/Nested`)
+    const controlledRootSelector = `[data-testid="prompt-folder-editor-${rootFolderId}"]`
+    const controlledNestedSelector = `[data-testid="prompt-folder-editor-${controlledNestedFolderId}"]`
+    const controlledPromptSelector = '[data-testid="prompt-editor-subfolders-controls-first"]'
+    const controlledRootOrderPath = `${workspacePath}/Prompts/Controls/_FolderInfo/FolderOrder.json`
+    const controlledNestedOrderPath = `${workspacePath}/Prompts/Controls/Nested/_FolderInfo/FolderOrder.json`
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-controls' }
     })
@@ -1155,9 +1088,7 @@ describe('Prompt folder subfolder rendering', () => {
     electronApp
   }) => {
     const destinationFolderName = 'Destination'
-    const destinationFolderId = createDeterministicId(
-      `${WORKSPACE_PATH}:${destinationFolderName}`
-    )
+    const destinationFolderId = createDeterministicId(`${WORKSPACE_PATH}:${destinationFolderName}`)
     const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [
       { folderName: 'Hierarchy', displayName: 'Hierarchy' },
       {
@@ -1199,11 +1130,7 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
-      .toEqual([
-        'subfolders-ui-root-before',
-        emptyNestedFolderId,
-        'subfolders-ui-root-after'
-      ])
+      .toEqual(['subfolders-ui-root-before', emptyNestedFolderId, 'subfolders-ui-root-after'])
     await expect
       .poll(async () =>
         readFolderEntryIds(
@@ -1265,9 +1192,7 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await finishActiveDrag(mainWindow)
 
-    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
-      'Hierarchy'
-    )
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText('Hierarchy')
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
       .toEqual([
@@ -1308,9 +1233,7 @@ describe('Prompt folder subfolder rendering', () => {
     ).toBeVisible()
     await scrollDividerIntoView(mainWindow, testHelpers, levelEightId, null)
 
-    const deepestDivider = mainWindow.locator(
-      testIdSelector(dividerTestId(levelEightId, null))
-    )
+    const deepestDivider = mainWindow.locator(testIdSelector(dividerTestId(levelEightId, null)))
     await expect(deepestDivider.locator('[data-testid="prompt-divider-add-initial"]')).toBeVisible()
     await expect(
       deepestDivider.locator('[data-testid="prompt-divider-add-subfolder-initial"]')
@@ -1332,9 +1255,7 @@ describe('Prompt folder subfolder rendering', () => {
 
     const updatedTitle = 'Nested Prompt Updated'
     const bodyMarker = '[nested-prompt-body-persisted]'
-    await mainWindow
-      .locator(promptTitleSelector('subfolders-ui-nested-prompt'))
-      .fill(updatedTitle)
+    await mainWindow.locator(promptTitleSelector('subfolders-ui-nested-prompt')).fill(updatedTitle)
     await typeInMonacoEditor(mainWindow, nestedPromptSelector, bodyMarker)
     const updatedPromptLookup = {
       workspacePath: WORKSPACE_PATH,
@@ -1344,8 +1265,7 @@ describe('Prompt folder subfolder rendering', () => {
     }
     await expect
       .poll(
-        async () =>
-          await checkPersistedPromptFilesExistByTitle(electronApp, updatedPromptLookup),
+        async () => await checkPersistedPromptFilesExistByTitle(electronApp, updatedPromptLookup),
         { timeout: 15000 }
       )
       .toEqual({ markdownExists: true })
@@ -1365,9 +1285,7 @@ describe('Prompt folder subfolder rendering', () => {
       .toContain(bodyMarker)
 
     await stubClipboard(mainWindow)
-    await mainWindow
-      .locator(`${nestedPromptSelector} [data-testid="prompt-copy-button"]`)
-      .click()
+    await mainWindow.locator(`${nestedPromptSelector} [data-testid="prompt-copy-button"]`).click()
     const normalizeNewlines = (value: string): string => value.replace(/\r\n?/g, '\n')
     await expect
       .poll(async () =>
@@ -1381,16 +1299,14 @@ describe('Prompt folder subfolder rendering', () => {
     )
     expect(clipboardText).toMatch(/^Nested folder prefix\n\n/)
     expect(clipboardText).toMatch(/\n\nNested folder suffix$/)
-    await expect(
-      mainWindow.locator(statusPillSelector('subfolders-ui-nested-prompt'))
-    ).toHaveText('In Progress')
+    await expect(mainWindow.locator(statusPillSelector('subfolders-ui-nested-prompt'))).toHaveText(
+      'In Progress'
+    )
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
     ).toContainText('Hierarchy')
     await expect
-      .poll(
-        async () => await readPersistedPromptTextById(electronApp, updatedPromptLookup)
-      )
+      .poll(async () => await readPersistedPromptTextById(electronApp, updatedPromptLookup))
       .toContain('status: InProgress')
   })
 
@@ -1469,9 +1385,7 @@ describe('Prompt folder subfolder rendering', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await revealVirtualRow(mainWindow, testHelpers, nestedPromptSelector)
-    await mainWindow
-      .locator(`${nestedPromptSelector} [data-testid="prompt-delete-button"]`)
-      .click()
+    await mainWindow.locator(`${nestedPromptSelector} [data-testid="prompt-delete-button"]`).click()
     const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
     await expect(dialog).toBeVisible()
     await dialog.locator('button:has-text("Delete")').click()
@@ -1514,9 +1428,7 @@ describe('Prompt folder subfolder rendering', () => {
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await revealVirtualRow(mainWindow, testHelpers, promptSelector)
-    await mainWindow
-      .locator(`${promptSelector} [data-testid="prompt-delete-button"]`)
-      .click()
+    await mainWindow.locator(`${promptSelector} [data-testid="prompt-delete-button"]`).click()
     const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
     await expect(dialog).toBeVisible()
     await dialog.locator('button:has-text("Delete")').click()
@@ -1557,10 +1469,13 @@ describe('Prompt folder subfolder rendering', () => {
       'subfolders-ui-root-completed'
     ]
     await expect
-      .poll(async () =>
-        await mainWindow.locator('[data-testid^="prompt-editor-"]').evaluateAll((rows) =>
-          rows.map((row) => row.getAttribute('data-testid')?.replace('prompt-editor-', ''))
-        )
+      .poll(
+        async () =>
+          await mainWindow
+            .locator('[data-testid^="prompt-editor-"]')
+            .evaluateAll((rows) =>
+              rows.map((row) => row.getAttribute('data-testid')?.replace('prompt-editor-', ''))
+            )
       )
       .toEqual(completedPromptIds)
 
@@ -1571,9 +1486,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(grandchildFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(folderTitleEditSelector)).toHaveCount(0)
-    await expect(
-      mainWindow.locator('[data-testid^="prompt-divider-add-subfolder"]')
-    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-subfolder"]')).toHaveCount(0)
     await expect(
       mainWindow.locator(
         '[data-testid^="prompt-editor-"] [data-testid="prompt-drag-handle"], [data-testid^="prompt-editor-"] [data-testid="prompt-move-up"], [data-testid^="prompt-editor-"] [data-testid="prompt-move-down"]'
@@ -1581,8 +1494,9 @@ describe('Prompt folder subfolder rendering', () => {
     ).toHaveCount(0)
 
     const completedPromptXs = await Promise.all(
-      completedPromptIds.map(async (promptId) =>
-        (await mainWindow.locator(`[data-testid="prompt-editor-${promptId}"]`).boundingBox())?.x
+      completedPromptIds.map(
+        async (promptId) =>
+          (await mainWindow.locator(`[data-testid="prompt-editor-${promptId}"]`).boundingBox())?.x
       )
     )
     completedPromptXs.forEach((x) => expect(typeof x).toBe('number'))

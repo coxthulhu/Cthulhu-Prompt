@@ -9,9 +9,7 @@ export type PromptFolderEntryDragPayload = {
   folderId: string
 }
 
-export type PromptTreeEntryDragPayload =
-  | PromptHandleDragPayload
-  | PromptFolderEntryDragPayload
+export type PromptTreeEntryDragPayload = PromptHandleDragPayload | PromptFolderEntryDragPayload
 
 export const isPromptHandleDragPayload = (
   payload: PromptTreeEntryDragPayload
@@ -116,8 +114,11 @@ export const resolvePromptHandleDropMove = (
     return null
   }
 
-  const previousEntryId =
-    resolveEntryDropPreviousEntryId(promptId, dropPayload, destinationEntryIds ?? [])
+  const previousEntryId = resolveEntryDropPreviousEntryId(
+    promptId,
+    dropPayload,
+    destinationEntryIds ?? []
+  )
 
   if (previousEntryId === undefined) return null
 

@@ -24,13 +24,13 @@ const createFolder = (
 describe('collectCompletedPrompts', () => {
   it('collects every descendant owner and sorts globally by completion time', () => {
     const grandchild = createFolder('grandchild', [], ['grandchild-completed'])
-    const child = createFolder('child', [
-      { kind: 'folder', id: grandchild.id }
-    ], ['child-completed'])
+    const child = createFolder(
+      'child',
+      [{ kind: 'folder', id: grandchild.id }],
+      ['child-completed']
+    )
     const unrelated = createFolder('unrelated', [], ['unrelated-completed'])
-    const root = createFolder('root', [
-      { kind: 'folder', id: child.id }
-    ], ['root-completed'])
+    const root = createFolder('root', [{ kind: 'folder', id: child.id }], ['root-completed'])
 
     expect(
       collectCompletedPrompts({
@@ -57,12 +57,8 @@ describe('collectCompletedPrompts', () => {
   })
 
   it('visits a malformed folder graph only once', () => {
-    const child = createFolder('child', [
-      { kind: 'folder', id: 'root' }
-    ], ['child-completed'])
-    const root = createFolder('root', [
-      { kind: 'folder', id: 'child' }
-    ], ['root-completed'])
+    const child = createFolder('child', [{ kind: 'folder', id: 'root' }], ['child-completed'])
+    const root = createFolder('root', [{ kind: 'folder', id: 'child' }], ['root-completed'])
 
     expect(
       collectCompletedPrompts({

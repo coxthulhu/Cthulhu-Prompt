@@ -521,7 +521,6 @@ describe('User Persistence', () => {
       .toBe('simple-1:dev-2:2')
   })
 
-
   test('autosaves prompt folder prompts section expanded state', async ({
     electronApp,
     testSetup
@@ -595,10 +594,7 @@ describe('User Persistence', () => {
       .toBe(true)
   })
 
-  test('restores collapsed prompt rows on startup', async ({
-    electronApp,
-    testSetup
-  }) => {
+  test('restores collapsed prompt rows on startup', async ({ electronApp, testSetup }) => {
     const persistedWorkspacePath = '/ws/persisted-prompt-folder-sections'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
     const mainPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main`)

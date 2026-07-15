@@ -44,11 +44,7 @@ const resolveLoadedPromptFolderPath = (
   }
 
   return path.join(
-    resolveLoadedPromptFolderPath(
-      parentPromptFolderId,
-      promptFolderById,
-      parentPromptFolderIdById
-    ),
+    resolveLoadedPromptFolderPath(parentPromptFolderId, promptFolderById, parentPromptFolderIdById),
     promptFolder.folderName
   )
 }
@@ -162,11 +158,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const promptFolderPathById = new Map(
     promptFolders.map((promptFolder) => [
       promptFolder.id,
-      resolveLoadedPromptFolderPath(
-        promptFolder.id,
-        promptFolderById,
-        parentPromptFolderIdById
-      )
+      resolveLoadedPromptFolderPath(promptFolder.id, promptFolderById, parentPromptFolderIdById)
     ])
   )
 
@@ -177,7 +169,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         workspaceId,
         workspacePath,
         folderName: promptFolder.folderName,
-        folderPath: promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName,
+        folderPath: promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
       })
     )
   )
@@ -202,15 +194,17 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         const stems = isCompleted ? completedPromptStemByPromptId : promptStemByPromptId
         if (!stems.has(promptId)) return []
         const promptStem = stems.get(promptId) ?? promptId
-        return [data.prompt.loadDataFromPersistence(promptId, {
-          workspaceId,
-          workspacePath,
-          folderPath: persistedFolderPath,
-          promptFolderId: promptFolder.id,
-          promptId,
-          promptStem,
-          needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
-        })]
+        return [
+          data.prompt.loadDataFromPersistence(promptId, {
+            workspaceId,
+            workspacePath,
+            folderPath: persistedFolderPath,
+            promptFolderId: promptFolder.id,
+            promptId,
+            promptStem,
+            needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
+          })
+        ]
       })
     ]
   })

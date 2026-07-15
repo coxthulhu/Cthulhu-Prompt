@@ -33,8 +33,7 @@ export const PROMPT_FOLDER_SETTINGS_EDITOR_MIN_LINES = 1
 export const PROMPT_FOLDER_SETTINGS_EDITOR_MAX_LINES = 30
 
 export const SETTINGS_EDITOR_TOP_OFFSET_PX =
-  SETTINGS_EDITOR_SECTION_PADDING_TOP_PX +
-  SETTINGS_EDITOR_VERTICAL_INSET_PX
+  SETTINGS_EDITOR_SECTION_PADDING_TOP_PX + SETTINGS_EDITOR_VERTICAL_INSET_PX
 
 export const SETTINGS_EDITOR_LEFT_OFFSET_PX = SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX
 // The folder editor card is also a bordered border-box CardSurface, so its
@@ -67,15 +66,11 @@ export const estimatePromptFolderSettingsMonacoHeight = (
   return estimateMonacoHeightPx(text, getPromptFolderSettingsSizingConfig(fontSize))
 }
 
-export const getPromptFolderSettingsFieldRowHeightPx = (
-  monacoHeightPx: number
-): number => {
+export const getPromptFolderSettingsFieldRowHeightPx = (monacoHeightPx: number): number => {
   return Math.ceil(SETTINGS_EDITOR_CHROME_PX + monacoHeightPx)
 }
 
-export const getPromptFolderSettingsFieldMonacoHeightFromRowPx = (
-  rowHeightPx: number
-): number => {
+export const getPromptFolderSettingsFieldMonacoHeightFromRowPx = (rowHeightPx: number): number => {
   return rowHeightPx - SETTINGS_EDITOR_CHROME_PX
 }
 

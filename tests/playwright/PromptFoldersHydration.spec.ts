@@ -35,8 +35,7 @@ const createDeterministicId = (seed: string): string => {
   return `00000000000000000000${suffix}`
 }
 
-const NESTED_FOLDER_EDITOR_SELECTOR =
-  `[data-testid="prompt-folder-editor-${createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)}"]`
+const NESTED_FOLDER_EDITOR_SELECTOR = `[data-testid="prompt-folder-editor-${createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)}"]`
 
 type PromptAnchorData = {
   rowId: string

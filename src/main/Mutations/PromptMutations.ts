@@ -60,9 +60,7 @@ const lookupCommittedPrompt = (promptId: string): PromptPersisted | null => {
 }
 
 const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] => {
-  return promptFolder.entries
-    .filter((entry) => entry.kind === 'prompt')
-    .map((entry) => entry.id)
+  return promptFolder.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id)
 }
 
 const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] => {
@@ -121,8 +119,7 @@ const planPromptFilenamePersistenceFields = (
     ...target,
     persistenceFields: {
       ...target.persistenceFields,
-      needsFilenameIdSuffix:
-        (boundaryCounts.get(getPromptFilenameBoundary(target.prompt)) ?? 0) > 1
+      needsFilenameIdSuffix: (boundaryCounts.get(getPromptFilenameBoundary(target.prompt)) ?? 0) > 1
     }
   }))
 }
@@ -388,7 +385,11 @@ export const setupPromptMutationHandlers = (): void => {
           }
 
           const workspaceId = committedPromptFolder.persistenceFields.workspaceId
-          const nextEntries = removeEntry(committedPromptFolder.committed.entries, 'prompt', promptId)
+          const nextEntries = removeEntry(
+            committedPromptFolder.committed.entries,
+            'prompt',
+            promptId
+          )
           const nextCompletedPromptIds = committedPromptFolder.committed.completedPromptIds.filter(
             (currentPromptId) => currentPromptId !== promptId
           )
@@ -530,11 +531,7 @@ export const setupPromptMutationHandlers = (): void => {
                   requestedPrompt.id
                 )
               }),
-              ...createPromptFilenameUpdateHandles(
-                tx,
-                filenamePlans,
-                new Set([requestedPrompt.id])
-              )
+              ...createPromptFilenameUpdateHandles(tx, filenamePlans, new Set([requestedPrompt.id]))
             }
           })
 
@@ -663,10 +660,7 @@ export const setupPromptMutationHandlers = (): void => {
                 ),
                 ...planPromptFilenamePersistenceFields(
                   [
-                    ...getPromptFolderPromptIdsByStatus(
-                      destinationPromptFolder.committed,
-                      false
-                    ),
+                    ...getPromptFolderPromptIdsByStatus(destinationPromptFolder.committed, false),
                     requestedPrompt.id
                   ],
                   new Map([
@@ -889,11 +883,7 @@ export const setupPromptMutationHandlers = (): void => {
                   requestedPrompt.id
                 )
               }),
-              ...createPromptFilenameUpdateHandles(
-                tx,
-                filenamePlans,
-                new Set([requestedPrompt.id])
-              )
+              ...createPromptFilenameUpdateHandles(tx, filenamePlans, new Set([requestedPrompt.id]))
             }
           })
 

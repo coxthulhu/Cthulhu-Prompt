@@ -52,10 +52,7 @@ export const resolvePromptFolderPathFromData = (
   const folderName = override?.folderName ?? promptFolder.folderName
   if (parentPromptFolderId === null) return folderName
 
-  return path.join(
-    resolvePromptFolderPathFromData(parentPromptFolderId, overrides),
-    folderName
-  )
+  return path.join(resolvePromptFolderPathFromData(parentPromptFolderId, overrides), folderName)
 }
 
 export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string): void => {

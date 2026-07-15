@@ -43,9 +43,7 @@ export const createStagedFileRemove = (targetPath: string): FilePersistenceStage
   }
 }
 
-export const createStagedDirectoryRemove = (
-  targetPath: string
-): FilePersistenceStagedChange => {
+export const createStagedDirectoryRemove = (targetPath: string): FilePersistenceStagedChange => {
   return {
     type: 'removeDirectory',
     targetPath

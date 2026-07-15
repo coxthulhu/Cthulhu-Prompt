@@ -85,11 +85,7 @@
       validation.isValid &&
       !isPromptFolderListLoading &&
       Boolean(preparedFolderName) &&
-      hasPromptFolderNameConflict(
-        promptFolders,
-        preparedFolderName,
-        duplicatePromptFolderId
-      )
+      hasPromptFolderNameConflict(promptFolders, preparedFolderName, duplicatePromptFolderId)
   )
   const validationMessage = $derived(
     !validation.isValid
@@ -104,10 +100,10 @@
   const isValid = $derived(
     Boolean(
       !validationMessage &&
-        validation.isValid &&
-        isWorkspaceReady &&
-        !isPromptFolderListLoading &&
-        !isUnchangedFolderName
+      validation.isValid &&
+      isWorkspaceReady &&
+      !isPromptFolderListLoading &&
+      !isUnchangedFolderName
     )
   )
 

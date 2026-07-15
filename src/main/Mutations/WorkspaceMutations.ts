@@ -10,10 +10,7 @@ import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import * as path from 'path'
-import {
-  buildPromptFolderTreeIndex,
-  MAX_PROMPT_SUBFOLDER_DEPTH
-} from '@shared/PromptFolderTree'
+import { buildPromptFolderTreeIndex, MAX_PROMPT_SUBFOLDER_DEPTH } from '@shared/PromptFolderTree'
 import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import {
   buildPromptFolderSnapshot,
@@ -101,8 +98,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
           if (!movedLocation) return { success: false, error: 'Prompt folder not in workspace' }
 
           const sourceParentPromptFolderId = movedLocation.parentPromptFolderId
-          const destinationParentPromptFolderId =
-            payload.destinationParentPromptFolder?.id ?? null
+          const destinationParentPromptFolderId = payload.destinationParentPromptFolder?.id ?? null
 
           if ((payload.sourceParentPromptFolder?.id ?? null) !== sourceParentPromptFolderId) {
             return { success: false, error: 'Source parent prompt folder did not match' }
@@ -190,9 +186,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
                 id: requestedWorkspace.id,
                 expectedRevision: requestedWorkspace.expectedRevision,
                 recipe: (draft) => {
-                  draft.entries = nextDestinationEntries.filter(
-                    (entry) => entry.kind === 'folder'
-                  )
+                  draft.entries = nextDestinationEntries.filter((entry) => entry.kind === 'folder')
                 }
               })
             } else if (isSameParent && sourceParentPromptFolder) {

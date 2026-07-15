@@ -61,9 +61,7 @@ const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> 
   }
 
   return new Set(
-    [...titleStemCounts.entries()]
-      .filter(([, count]) => count > 1)
-      .map(([titleStem]) => titleStem)
+    [...titleStemCounts.entries()].filter(([, count]) => count > 1).map(([titleStem]) => titleStem)
   )
 }
 

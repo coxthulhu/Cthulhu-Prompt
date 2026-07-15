@@ -178,8 +178,7 @@
   }
 
   .prompt-editor-sidebar:hover :global(.cthulhuUiIconButton[data-size='sidebar-rail']),
-  .prompt-editor-sidebar:focus-within
-    :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
+  .prompt-editor-sidebar:focus-within :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
     border-bottom-color: var(--ui-neutral-normal-border);
   }
 

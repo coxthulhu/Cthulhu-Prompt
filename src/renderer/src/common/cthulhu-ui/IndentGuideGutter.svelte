@@ -56,8 +56,8 @@
     bottom: var(--indent-guide-line-bottom-inset);
     display: block;
     left: calc(
-      var(--indent-guide-first-line-offset) +
-        var(--indent-guide-line-step) * var(--indent-guide-line-index)
+      var(--indent-guide-first-line-offset) + var(--indent-guide-line-step) *
+        var(--indent-guide-line-index)
     );
     position: absolute;
     top: var(--indent-guide-line-top-inset);

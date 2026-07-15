@@ -55,12 +55,9 @@ const NESTED_FOLDER_SETTINGS_MENU_ITEM =
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
-const NESTED_FOLDER_EDITOR =
-  `[data-testid="prompt-folder-editor-${SUBFOLDERS_NESTED_FOLDER_ID}"]`
-const NESTED_FOLDER_SETTINGS_TOGGLE =
-  `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-settings-toggle"]`
-const NESTED_FOLDER_TITLE_TOGGLE =
-  `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
+const NESTED_FOLDER_EDITOR = `[data-testid="prompt-folder-editor-${SUBFOLDERS_NESTED_FOLDER_ID}"]`
+const NESTED_FOLDER_SETTINGS_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-settings-toggle"]`
+const NESTED_FOLDER_TITLE_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
 
 function createDeterministicId(seed: string): string {
   let hash = 0
@@ -128,8 +125,7 @@ const expectRowToReachClosestPromptFolderViewportCenter = async (
       if (geometry.crossesCenter) return true
 
       const maxScrollTop = Math.max(0, scrollHeight - hostHeight)
-      const isAtTopBoundary =
-        scrollTop <= 1 && geometry.targetCenter <= geometry.centerLine + 1
+      const isAtTopBoundary = scrollTop <= 1 && geometry.targetCenter <= geometry.centerLine + 1
       const isAtBottomBoundary =
         scrollTop >= maxScrollTop - 1 && geometry.targetCenter >= geometry.centerLine - 1
       return geometry.isFullyVisible && (isAtTopBoundary || isAtBottomBoundary)
@@ -206,17 +202,21 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-after"]')).toBeVisible()
 
-    const treeOrder = await mainWindow.locator(
-      [
-        '[data-testid="prompt-tree-prompt-base-before"]',
-        '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
-        '[data-testid="prompt-tree-prompt-nested-prompt"]',
-        '[data-testid="prompt-tree-prompt-base-after"]'
-      ].join(', ')
-    ).evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
+    const treeOrder = await mainWindow
+      .locator(
+        [
+          '[data-testid="prompt-tree-prompt-base-before"]',
+          '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
+          '[data-testid="prompt-tree-prompt-nested-prompt"]',
+          '[data-testid="prompt-tree-prompt-base-after"]'
+        ].join(', ')
+      )
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
     expect(treeOrder).toEqual([
       'prompt-tree-prompt-base-before',
       'prompt-tree-folder-toggle-button-Nested',
@@ -258,9 +258,7 @@ describe('Prompt folder prompt tree', () => {
       Math.abs(indentation!.rootFolderLabelLeft - indentation!.basePromptLabelLeft)
     ).toBeLessThanOrEqual(1)
     expect(indentation!.nestedHasGutter).toBe(false)
-    expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(
-      indentation!.basePromptLabelLeft + 2
-    )
+    expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(indentation!.basePromptLabelLeft + 2)
 
     await scrollPromptFolderRowAwayFromViewportCenter(
       mainWindow,
@@ -313,11 +311,7 @@ describe('Prompt folder prompt tree', () => {
       'aria-expanded',
       'true'
     )
-    await scrollPromptFolderRowAwayFromViewportCenter(
-      mainWindow,
-      testHelpers,
-      NESTED_FOLDER_EDITOR
-    )
+    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, NESTED_FOLDER_EDITOR)
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
     await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
@@ -335,16 +329,9 @@ describe('Prompt folder prompt tree', () => {
       'aria-expanded',
       'true'
     )
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    )
+    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
 
-    await scrollPromptFolderRowAwayFromViewportCenter(
-      mainWindow,
-      testHelpers,
-      NESTED_FOLDER_EDITOR
-    )
+    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, NESTED_FOLDER_EDITOR)
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
     await expect(mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON).click()
@@ -363,7 +350,9 @@ describe('Prompt folder prompt tree', () => {
 
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toHaveCount(0)
     await expect
       .poll(
         async () => {
@@ -382,7 +371,9 @@ describe('Prompt folder prompt tree', () => {
     )
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toBeVisible()
     await expect
       .poll(
         async () => {
@@ -431,7 +422,9 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
   })
 
@@ -493,9 +486,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptTreeButton).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('keeps selected root folder settings action inert', async ({
-    testSetup
-  }) => {
+  test('keeps selected root folder settings action inert', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -574,7 +565,9 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptTreeRow).toContainText(nextTitle)
   })
 
-  test('shows every prompt in the selected folder without show more rows', async ({ testSetup }) => {
+  test('shows every prompt in the selected folder without show more rows', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -676,7 +669,9 @@ describe('Prompt folder prompt tree', () => {
     }
     await mainWindow.mouse.click(folderBox.x + 2, folderBox.y + folderBox.height / 2)
     await expect(folderToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toHaveCount(0)
     await expect(promptRow).toBeVisible()
   })
 
@@ -732,7 +727,9 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
 
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-editor-base-before"]')).toBeAttached()
   })

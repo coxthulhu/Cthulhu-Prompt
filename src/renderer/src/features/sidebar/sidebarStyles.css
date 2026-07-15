@@ -217,7 +217,9 @@
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeActionButton.cthulhuUiIconButton[data-active='true']:not(:hover):not(:focus-visible) {
+.sidebarPromptTreeActionButton.cthulhuUiIconButton[data-active='true']:not(:hover):not(
+    :focus-visible
+  ) {
   background: var(--ui-ghost-surface);
 }
 
@@ -262,9 +264,9 @@
 
 .sidebarPromptTreeSettingsButton {
   display: grid;
-  grid-template-columns: calc(
-      5px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1)
-    ) minmax(0, 1fr);
+  grid-template-columns:
+    calc(5px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
+    minmax(0, 1fr);
   height: 30px;
   width: 100%;
   min-width: 0;
@@ -317,9 +319,9 @@
 
 .sidebarPromptTreeVisibilityRow {
   display: grid;
-  grid-template-columns: calc(
-      var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1)
-    ) minmax(0, 1fr);
+  grid-template-columns:
+    calc(var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
+    minmax(0, 1fr);
   width: 100%;
   align-items: center;
   padding-block: 1px;

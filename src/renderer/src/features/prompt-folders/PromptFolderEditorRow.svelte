@@ -154,10 +154,7 @@
     event.stopPropagation()
   }
 
-  const handleSectionHydrationChange = (
-    field: PromptFolderSettingsField,
-    isHydrated: boolean
-  ) => {
+  const handleSectionHydrationChange = (field: PromptFolderSettingsField, isHydrated: boolean) => {
     hydratedFields[field] = isHydrated
   }
 
@@ -379,8 +376,7 @@
   }
 
   :global(
-    .prompt-folder-editor-chevron-toggle[aria-expanded='true']
-      .prompt-folder-editor-chevron
+    .prompt-folder-editor-chevron-toggle[aria-expanded='true'] .prompt-folder-editor-chevron
   ) {
     transform: rotate(90deg);
   }

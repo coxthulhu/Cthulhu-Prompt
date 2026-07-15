@@ -78,7 +78,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.promptCount).toBe(3)
     await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toBeVisible()
 
     const nestedFolderLoad = await mainWindow.evaluate(
       async ({ workspaceId, nestedFolderId }) => {
@@ -103,9 +105,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       (promptFolder) => promptFolder.id === nestedFolderId
     )
     expect(loadedNestedFolder?.data.displayName).toBe('Nested')
-    expect(loadedNestedFolder?.data.entries).toEqual([
-      { kind: 'prompt', id: 'nested-prompt' }
-    ])
+    expect(loadedNestedFolder?.data.entries).toEqual([{ kind: 'prompt', id: 'nested-prompt' }])
     expect(nestedFolderLoad.prompts.map((prompt) => prompt.id)).toEqual(['nested-prompt'])
   })
 
@@ -335,7 +335,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
-  test('collapses and expands all prompt folders from the sidebar action', async ({ testSetup }) => {
+  test('collapses and expands all prompt folders from the sidebar action', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders' }
     })
@@ -351,7 +353,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
     ).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
 
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
@@ -360,7 +364,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-label',
       'Expand All Prompt Folders'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
 
     await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
@@ -369,12 +375,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-label',
       'Collapse All Prompt Folders'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')).toBeVisible()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    ).toBeVisible()
   })
 
-  test('leaves selected root folder settings as a no-op', async ({
-    testSetup
-  }) => {
+  test('leaves selected root folder settings as a no-op', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -394,12 +400,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect
       .poll(async () =>
-        Math.abs(
-          (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)) - scrollTopBefore
-        )
+        Math.abs((await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)) - scrollTopBefore)
       )
       .toBeLessThanOrEqual(1)
-    await expect(mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
   })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {
@@ -587,11 +593,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(nameInput).toHaveValue('Development Tools')
     await expect(renameButton).toBeDisabled()
     await expect
-      .poll(async () =>
-        await nameInput.evaluate((input) => {
-          if (!(input instanceof HTMLInputElement)) return null
-          return input.selectionStart === 0 && input.selectionEnd === input.value.length
-        })
+      .poll(
+        async () =>
+          await nameInput.evaluate((input) => {
+            if (!(input instanceof HTMLInputElement)) return null
+            return input.selectionStart === 0 && input.selectionEnd === input.value.length
+          })
       )
       .toBe(true)
 
@@ -638,23 +645,25 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       .toBe(false)
 
     await expect
-      .poll(async () =>
-        await checkPersistedPromptFilesExistByTitle(electronApp, {
-          workspacePath: SAMPLE_WORKSPACE_PATH,
-          folderName: 'RenamedDevelopment',
-          promptId: 'dev-1',
-          promptTitle: 'Code Review'
-        })
+      .poll(
+        async () =>
+          await checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: SAMPLE_WORKSPACE_PATH,
+            folderName: 'RenamedDevelopment',
+            promptId: 'dev-1',
+            promptTitle: 'Code Review'
+          })
       )
       .toEqual({ markdownExists: true })
     await expect
-      .poll(async () =>
-        await checkPersistedPromptFilesExistByTitle(electronApp, {
-          workspacePath: SAMPLE_WORKSPACE_PATH,
-          folderName: 'Development',
-          promptId: 'dev-1',
-          promptTitle: 'Code Review'
-        })
+      .poll(
+        async () =>
+          await checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: SAMPLE_WORKSPACE_PATH,
+            folderName: 'Development',
+            promptId: 'dev-1',
+            promptTitle: 'Code Review'
+          })
       )
       .toEqual({ markdownExists: false })
   })
@@ -709,7 +718,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')).toHaveCount(0)
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
   })
 
   test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {

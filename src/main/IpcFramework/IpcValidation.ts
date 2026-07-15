@@ -469,9 +469,8 @@ const parseRenamePromptFolderPayload = parseObject<RenamePromptFolderPayload>({
   displayName: parseString
 })
 
-const parseRenamePromptFolderWireRequest: Parser<
-  IpcRequestWithPayload<RenamePromptFolderPayload>
-> = parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
+const parseRenamePromptFolderWireRequest: Parser<IpcRequestWithPayload<RenamePromptFolderPayload>> =
+  parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
 
 const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -501,9 +500,8 @@ const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value
   return { workspace, parentPromptFolder, promptFolder }
 }
 
-const parseDeletePromptFolderWireRequest: Parser<
-  IpcRequestWithPayload<DeletePromptFolderPayload>
-> = parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
+const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePromptFolderPayload>> =
+  parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
 
 const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
   promptFolder: parsePromptFolderRevisionPayloadEntity,
