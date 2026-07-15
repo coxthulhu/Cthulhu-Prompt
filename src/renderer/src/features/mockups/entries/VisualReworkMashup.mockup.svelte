@@ -17,7 +17,7 @@
     Sparkles,
     Trash2
   } from 'lucide-svelte'
-  import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
+  import { monaco } from '@renderer/common/Monaco'
   import {
     getLineHeightPx,
     PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX,
@@ -271,7 +271,6 @@
 
     const editor = monaco.editor.create(host, {
       model,
-      theme: PROMPT_EDITOR_THEME,
       automaticLayout: true,
       fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
       fontSize: sizingConfig.fontSize,

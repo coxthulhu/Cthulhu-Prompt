@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
+  import { monaco } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { FindController } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
   import { FindModelBoundToEditorModel } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel'
@@ -396,7 +396,6 @@
       const nextEditor = monaco.editor.create(targetContainer, {
         model: modelReference.object.textEditorModel,
         automaticLayout: false,
-        theme: PROMPT_EDITOR_THEME,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         wordWrap: 'on',

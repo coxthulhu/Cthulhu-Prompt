@@ -13,7 +13,7 @@
     Pencil,
   } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import { monaco, PROMPT_EDITOR_THEME } from '@renderer/common/Monaco'
+  import { monaco } from '@renderer/common/Monaco'
   import PromptEditorButtonBar from '@renderer/features/prompt-editor/PromptEditorButtonBar.svelte'
   import PromptDivider from '@renderer/features/prompt-editor/PromptDivider.svelte'
   import PromptEditorSidebar from '@renderer/features/prompt-editor/PromptEditorSidebar.svelte'
@@ -503,7 +503,6 @@
 
     const editor = monaco.editor.create(host, {
       model,
-      theme: PROMPT_EDITOR_THEME,
       automaticLayout: true,
       fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
       fontSize: sizingConfig.fontSize,

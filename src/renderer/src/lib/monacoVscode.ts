@@ -7,7 +7,13 @@ import '@codingame/monaco-vscode-markdown-language-features-default-extension'
 import '@codingame/monaco-vscode-typescript-language-features-default-extension'
 
 import * as monaco from 'monaco-editor'
-import { initialize } from '@codingame/monaco-vscode-api'
+import {
+  ConfigurationTarget,
+  getService,
+  IExtensionService,
+  initialize,
+  IWorkbenchThemeService
+} from '@codingame/monaco-vscode-api'
 import getBaseServiceOverride from '@codingame/monaco-vscode-base-service-override'
 import getLanguagesServiceOverride from '@codingame/monaco-vscode-languages-service-override'
 import getTextMateServiceOverride from '@codingame/monaco-vscode-textmate-service-override'
@@ -69,7 +75,19 @@ export const initMonacoVscode = async (): Promise<void> => {
       ...getExtensionsServiceOverride({ enableWorkerExtensionHost: true })
     })
     await whenThemeDefaultsReady()
-    monaco.editor.setTheme(PROMPT_EDITOR_THEME)
+
+    const extensionService = await getService(IExtensionService)
+    await extensionService.whenInstalledExtensionsRegistered()
+
+    const themeService = await getService(IWorkbenchThemeService)
+    const themes = await themeService.getColorThemes()
+    const promptEditorTheme = themes.find((theme) => theme.settingsId === PROMPT_EDITOR_THEME)
+    if (!promptEditorTheme) {
+      throw new Error(`Monaco theme "${PROMPT_EDITOR_THEME}" was not registered.`)
+    }
+
+    // Side effect: finish applying Monaco's dark theme before warmup or visible editors are created.
+    await themeService.setColorTheme(promptEditorTheme, ConfigurationTarget.MEMORY)
   })()
 
   await initializationPromise

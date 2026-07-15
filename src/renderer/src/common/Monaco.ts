@@ -4,7 +4,6 @@ import {
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
 
-export const PROMPT_EDITOR_THEME = 'Dark 2026'
 export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
 
 // Note: closeFindWidget stays enabled so Esc can still dismiss any stray widget.
@@ -27,9 +26,6 @@ const DISABLED_FIND_COMMANDS = [
   'editor.action.replaceAll',
   'editor.action.selectAllMatches'
 ] as const
-
-// Side effect: apply the VS Code Dark 2026 theme to all Monaco editors globally.
-monaco.editor.setTheme(PROMPT_EDITOR_THEME)
 
 // Disable Monaco's built-in find/replace widget so we can use our external dialog.
 DISABLED_FIND_COMMANDS.forEach((id) => {
@@ -84,7 +80,6 @@ export const warmupMonacoEditor = async (): Promise<void> => {
   )
   const warmupEditor = monaco.editor.create(warmupHost, {
     model: warmupModelReference.object.textEditorModel,
-    theme: PROMPT_EDITOR_THEME,
     minimap: { enabled: false },
     dimension: { width: 1, height: 1 }
   })
