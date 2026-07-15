@@ -3,7 +3,12 @@ import * as path from 'path'
 import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
 import { folderEntryRef, type EntryRef } from '@shared/OrderContainer'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
-import { preparePromptFolderName } from '@shared/promptFolderName'
+import {
+  hasPromptFolderNameConflict,
+  preparePromptFolderName,
+  PROMPT_FOLDER_NAME_CONFLICT_ERROR,
+  type PromptFolderNameCandidate
+} from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import { buildPromptFolderSnapshot, buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
@@ -20,29 +25,14 @@ import {
   collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
 
-const hasPromptFolderNameConflict = (
-  siblingEntries: readonly EntryRef[],
-  folderName: string,
-  excludedPromptFolderId: string | null = null
-): boolean => {
-  const normalizedTargetName = folderName.toLowerCase()
-
-  return siblingEntries.some((entry) => {
-    if (entry.kind !== 'folder') return false
-    const promptFolderId = entry.id
-    if (promptFolderId === excludedPromptFolderId) {
-      return false
-    }
-
-    const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
-
-    if (!promptFolderEntry) {
-      return false
-    }
-
-    return promptFolderEntry.committed.folderName.toLowerCase() === normalizedTargetName
+const getPromptFolderNameCandidates = (
+  entries: readonly EntryRef[]
+): PromptFolderNameCandidate[] =>
+  entries.flatMap((entry) => {
+    if (entry.kind !== 'folder') return []
+    const promptFolder = data.promptFolder.committedStore.getEntry(entry.id)?.committed
+    return promptFolder ? [promptFolder] : []
   })
-}
 
 const MAX_SUBFOLDER_DEPTH = 8
 
@@ -108,8 +98,13 @@ export const setupPromptFolderMutationHandlers = (): void => {
             }
           }
 
-          if (hasPromptFolderNameConflict(siblingEntries, folderName)) {
-            return { success: false, error: 'A folder with this name already exists' }
+          if (
+            hasPromptFolderNameConflict(
+              getPromptFolderNameCandidates(siblingEntries),
+              folderName
+            )
+          ) {
+            return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
 
           const insertIndex =
@@ -266,8 +261,14 @@ export const setupPromptFolderMutationHandlers = (): void => {
               [])
             : committedWorkspace.committed.entries
 
-          if (hasPromptFolderNameConflict(siblingEntries, folderName, requestedPromptFolder.id)) {
-            return { success: false, error: 'A folder with this name already exists' }
+          if (
+            hasPromptFolderNameConflict(
+              getPromptFolderNameCandidates(siblingEntries),
+              folderName,
+              requestedPromptFolder.id
+            )
+          ) {
+            return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
 
           const previousFolderPath = committedPromptFolder.persistenceFields.folderPath

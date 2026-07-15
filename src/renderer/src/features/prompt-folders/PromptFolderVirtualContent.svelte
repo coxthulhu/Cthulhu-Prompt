@@ -152,7 +152,7 @@
       text: string,
       measurement: TextMeasurement
     ) => void
-    onRenamePromptFolder: () => void
+    onRenamePromptFolder: (promptFolderId: string) => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
@@ -725,7 +725,7 @@
     {isCreatingPrompt}
     onAddPrompt={() =>
       onAddPrompt({ ownerFolderId: screenRootFolderId, previousEntryId: null })}
-    {onRenamePromptFolder}
+    onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
     {onScreenModeChange}
   />
 {/snippet}
@@ -770,7 +770,7 @@
         isSettingsSectionExpanded={props.row.isSettingsSectionExpanded}
         isPromptsSectionExpanded={props.row.isPromptsSectionExpanded}
         isReadOnly={isCompletedMode}
-        canRename={props.row.isRoot && !isCompletedMode}
+        canRename={!isCompletedMode}
         showSidebar={!props.row.isRoot}
         dragOptions={!props.row.isRoot && !isCompletedMode
           ? getPromptFolderDragOptions(rowFolder)
@@ -782,7 +782,7 @@
         onPromptsSectionToggle={() => onPromptsSectionToggle(ownerFolderId)}
         onSettingsFieldChange={(field, text, measurement) =>
           onSettingsFieldChange(ownerFolderId, field, text, measurement)}
-        onRenamePromptFolder={props.row.isRoot ? onRenamePromptFolder : () => {}}
+        onRenamePromptFolder={() => onRenamePromptFolder(ownerFolderId)}
       />
     </PromptFolderSectionRow>
   {/if}

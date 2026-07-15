@@ -37,27 +37,58 @@
     controller.persistActivePromptTreeRow()
   })
 
-  let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(
-    null
-  )
+  let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
+  let renamePromptFolderId = $state<string | null>(null)
   let createPromptSubfolderDialog = $state<{
     openDialog: (target: PromptFolderDividerTarget) => void
   } | null>(null)
 
-  const openRenamePromptFolderDialog = () => {
-    const currentPromptFolder = controller.screenRootFolder
-    if (!currentPromptFolder) return
+  const renamePromptFolderTarget = $derived(
+    controller.promptFolders.find((folder) => folder.id === renamePromptFolderId) ?? null
+  )
+  // Duplicate folder names only conflict within the same on-disk parent folder.
+  const renamePromptFolderSiblings = $derived.by(() => {
+    if (!renamePromptFolderTarget) return []
 
-    renamePromptFolderDialog?.openDialog(currentPromptFolder.displayName)
+    const parentFolder = controller.promptFolders.find((folder) =>
+      folder.entries.some(
+        (entry) => entry.kind === 'folder' && entry.id === renamePromptFolderTarget.id
+      )
+    )
+    const siblingIds = new Set(
+      parentFolder
+        ? parentFolder.entries
+            .filter((entry) => entry.kind === 'folder')
+            .map((entry) => entry.id)
+        : controller.promptFolders
+            .filter(
+              (folder) =>
+                !controller.promptFolders.some((candidate) =>
+                  candidate.entries.some(
+                    (entry) => entry.kind === 'folder' && entry.id === folder.id
+                  )
+                )
+            )
+            .map((folder) => folder.id)
+    )
+
+    return controller.promptFolders.filter((folder) => siblingIds.has(folder.id))
+  })
+
+  const openRenamePromptFolderDialog = (promptFolderId: string) => {
+    const promptFolder = controller.promptFolders.find((folder) => folder.id === promptFolderId)
+    if (!promptFolder) return
+
+    renamePromptFolderId = promptFolderId
+    renamePromptFolderDialog?.openDialog(promptFolder.displayName)
   }
 
   const handleRenamePromptFolder = async (displayName: string): Promise<boolean> => {
-    const currentPromptFolder = controller.screenRootFolder
-    if (!currentPromptFolder) return false
+    if (!renamePromptFolderTarget) return false
 
     return await runIpcBestEffort(
       async () => {
-        await renamePromptFolder(currentPromptFolder.id, displayName)
+        await renamePromptFolder(renamePromptFolderTarget.id, displayName)
         return true
       },
       () => false
@@ -192,7 +223,7 @@
 <PromptFolderNameDialog
   bind:this={renamePromptFolderDialog}
   isWorkspaceReady={controller.screenRootFolder !== null}
-  promptFolders={controller.promptFolders}
+  promptFolders={renamePromptFolderSiblings}
   isPromptFolderListLoading={false}
   title="Rename Prompt Folder"
   submitText="Rename Folder"
@@ -201,10 +232,10 @@
   inputTestId="rename-prompt-folder-name-input"
   errorTestId="rename-prompt-folder-name-error"
   rowDetail="Rename this prompt folder."
-  initialDisplayName={controller.screenRootFolder?.displayName ?? ''}
-  unchangedDisplayName={controller.screenRootFolder?.displayName ?? null}
-  unchangedFolderName={controller.screenRootFolder?.folderName ?? null}
-  duplicatePromptFolderId={controller.screenRootFolder?.id ?? null}
+  initialDisplayName={renamePromptFolderTarget?.displayName ?? ''}
+  unchangedDisplayName={renamePromptFolderTarget?.displayName ?? null}
+  unchangedFolderName={renamePromptFolderTarget?.folderName ?? null}
+  duplicatePromptFolderId={renamePromptFolderTarget?.id ?? null}
   failureMessage="Failed to rename folder. Please try again."
   onsubmit={handleRenamePromptFolder}
 />

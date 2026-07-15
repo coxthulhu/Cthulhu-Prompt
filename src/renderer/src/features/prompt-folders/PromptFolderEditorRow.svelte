@@ -315,7 +315,7 @@
   }
 
   .prompt-folder-editor-title-line {
-    align-items: center;
+    align-items: baseline;
     display: flex;
     gap: 7px;
     min-width: 0;

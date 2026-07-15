@@ -28,6 +28,13 @@ const RESERVED_NAMES = new Set([
 
 const MAX_FOLDER_NAME_LENGTH = 100
 
+export const PROMPT_FOLDER_NAME_CONFLICT_ERROR = 'A folder with this name already exists'
+
+export type PromptFolderNameCandidate = {
+  id: string
+  folderName: string
+}
+
 type FolderNameValidation = { isValid: boolean; errorMessage?: string }
 
 export const sanitizePromptFolderName = (name: string): string => name.replace(/\s+/g, '')
@@ -95,4 +102,18 @@ export const preparePromptFolderName = (displayName: string): PreparedPromptFold
     ...normalized,
     validation
   }
+}
+
+export const hasPromptFolderNameConflict = (
+  promptFolders: readonly PromptFolderNameCandidate[],
+  folderName: string,
+  excludedPromptFolderId: string | null = null
+): boolean => {
+  const normalizedTargetName = folderName.toLowerCase()
+
+  return promptFolders.some(
+    (folder) =>
+      folder.id !== excludedPromptFolderId &&
+      folder.folderName.toLowerCase() === normalizedTargetName
+  )
 }

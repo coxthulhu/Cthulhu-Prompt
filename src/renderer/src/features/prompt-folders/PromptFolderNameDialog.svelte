@@ -7,7 +7,11 @@
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import { FolderPlus } from 'lucide-svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
-  import { preparePromptFolderName } from '@shared/promptFolderName'
+  import {
+    hasPromptFolderNameConflict,
+    preparePromptFolderName,
+    PROMPT_FOLDER_NAME_CONFLICT_ERROR
+  } from '@shared/promptFolderName'
 
   type SubmitPromptFolderName = (displayName: string, folderName: string) => Promise<boolean>
 
@@ -70,28 +74,28 @@
   const preparedName = $derived(preparePromptFolderName(displayName))
   const validation = $derived(preparedName.validation)
   const normalizedDisplayName = $derived(preparedName.displayName)
-  // Derive a sanitized name to detect duplicate prompt folders by on-disk folder name.
-  const sanitizedFolderName = $derived(preparedName.folderName.toLowerCase())
+  const preparedFolderName = $derived(preparedName.folderName)
   const isUnchangedFolderName = $derived(
     (unchangedDisplayName !== null && normalizedDisplayName === unchangedDisplayName) ||
-      (unchangedFolderName !== null && sanitizedFolderName === unchangedFolderName.toLowerCase())
+      (unchangedFolderName !== null &&
+        preparedFolderName.toLowerCase() === unchangedFolderName.toLowerCase())
   )
   const hasDuplicateFolderName = $derived.by(
     () =>
       validation.isValid &&
       !isPromptFolderListLoading &&
-      Boolean(sanitizedFolderName) &&
-      promptFolders.some(
-        (folder) =>
-          folder.id !== duplicatePromptFolderId &&
-          folder.folderName.toLowerCase() === sanitizedFolderName
+      Boolean(preparedFolderName) &&
+      hasPromptFolderNameConflict(
+        promptFolders,
+        preparedFolderName,
+        duplicatePromptFolderId
       )
   )
   const validationMessage = $derived(
     !validation.isValid
       ? (validation.errorMessage ?? null)
       : hasDuplicateFolderName
-        ? 'A folder with this name already exists'
+        ? PROMPT_FOLDER_NAME_CONFLICT_ERROR
         : null
   )
   const errorMessage = $derived(

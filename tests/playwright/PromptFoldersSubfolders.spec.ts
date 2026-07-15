@@ -71,6 +71,7 @@ const grandchildPromptSelector =
   '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
 const folderTitleToggleSelector = '[data-testid="prompt-folder-editor-title-toggle"]'
 const folderTitleBarSelector = '[data-testid="prompt-folder-editor-title-bar"]'
+const folderTitleEditSelector = '[data-testid="prompt-folder-editor-title-edit"]'
 const folderSettingsToggleSelector = '[data-testid="prompt-folder-editor-settings-toggle"]'
 const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
@@ -312,6 +313,14 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(
       mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('1 subfolder')
+    await expect(
+      mainWindow.locator(nestedFolderSelector).locator(folderTitleEditSelector)
+    ).toHaveAttribute('aria-label', 'Rename prompt folder')
+    await expect(
+      mainWindow
+        .locator(nestedFolderSelector)
+        .locator('.prompt-folder-editor-title-line')
+    ).toHaveCSS('align-items', 'baseline')
     await revealVirtualRow(mainWindow, testHelpers, grandchildFolderSelector)
     await expect(
       mainWindow
@@ -329,6 +338,9 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(
       mainWindow.locator(grandchildFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('0 subfolders')
+    await expect(
+      mainWindow.locator(grandchildFolderSelector).locator(folderTitleEditSelector)
+    ).toHaveAttribute('aria-label', 'Rename prompt folder')
     await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
     await expect(
       mainWindow
@@ -343,6 +355,9 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(
       mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('0 subfolders')
+    await expect(
+      mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleEditSelector)
+    ).toHaveAttribute('aria-label', 'Rename prompt folder')
 
     await revealVirtualRow(mainWindow, testHelpers, rootBeforeSelector)
     const rootBeforeBox = await mainWindow.locator(rootBeforeSelector).boundingBox()
@@ -474,6 +489,137 @@ describe('Prompt folder subfolder rendering', () => {
       orderedRowTestIds.map(testIdSelector).join(', ')
     )
     expect(rowOrderAfterExpand).toEqual(orderedRowTestIds)
+  })
+
+  test('renames a subfolder with sibling-scoped validation and preserves its id', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+
+    const nameInput = mainWindow.locator('[data-testid="rename-prompt-folder-name-input"]')
+    const renameButton = mainWindow.locator('[data-testid="rename-prompt-folder-button"]')
+    const errorMessage = mainWindow.locator('[data-testid="rename-prompt-folder-name-error"]')
+
+    const siblingRenameResult = await mainWindow.evaluate(
+      async ({ workspaceId, rootFolderId, targetFolderId }) => {
+        const loadResult = await window.electron.ipcRenderer.invoke('load-prompt-folder-initial', {
+          requestId: `test-load-${rootFolderId}-${Date.now()}`,
+          clientId: window.ipcClientId,
+          payload: { workspaceId, promptFolderId: rootFolderId }
+        })
+        const targetFolder = loadResult.promptFolders.find(
+          (folder: { id: string }) => folder.id === targetFolderId
+        )
+
+        return await window.electron.ipcRenderer.invoke('rename-prompt-folder', {
+          requestId: `test-rename-${targetFolderId}-${Date.now()}`,
+          clientId: window.ipcClientId,
+          payload: {
+            promptFolder: {
+              id: targetFolder.id,
+              expectedRevision: targetFolder.revision,
+              data: targetFolder.data
+            },
+            displayName: 'Empty Nested'
+          }
+        })
+      },
+      {
+        workspaceId: createDeterministicId(WORKSPACE_PATH),
+        rootFolderId: hierarchyFolderId,
+        targetFolderId: nestedFolderId
+      }
+    )
+    expect(siblingRenameResult).toMatchObject({
+      success: false,
+      error: 'A folder with this name already exists'
+    })
+
+    await mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]').click()
+    await nameInput.fill('Grandchild')
+    await expect(errorMessage).toHaveCount(0)
+    await expect(renameButton).toBeEnabled()
+    await mainWindow.keyboard.press('Escape')
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await mainWindow.locator(nestedFolderSelector).locator(folderTitleEditSelector).click()
+
+    await expect(nameInput).toBeVisible()
+    await expect(nameInput).toBeFocused()
+    await expect(nameInput).toHaveValue('Nested')
+    await expect(renameButton).toBeDisabled()
+
+    await nameInput.fill('Empty Nested')
+    await expect(errorMessage).toContainText('A folder with this name already exists')
+    await expect(renameButton).toBeDisabled()
+
+    await nameInput.fill('Grandchild')
+    await expect(errorMessage).toHaveCount(0)
+    await expect(renameButton).toBeEnabled()
+    await renameButton.click()
+
+    await expect(nameInput).toHaveCount(0)
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await expect(
+      mainWindow.locator(nestedFolderSelector).getByText('Grandchild', { exact: true })
+    ).toBeVisible()
+
+    await mainWindow.locator(nestedFolderSelector).locator(folderTitleEditSelector).click()
+    await expect(nameInput).toHaveValue('Grandchild')
+
+    await nameInput.fill('Renamed Nested')
+    await renameButton.click()
+
+    await expect(nameInput).toHaveCount(0)
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    await expect(
+      mainWindow.locator(nestedFolderSelector).getByText('Renamed Nested', { exact: true })
+    ).toBeVisible()
+
+    const renamedFolderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/RenamedNested`
+    const renamedFolderInfo = JSON.parse(
+      await readTextFile(electronApp, `${renamedFolderPath}/_FolderInfo/FolderInfo.json`)
+    ) as {
+      displayName: string
+      promptFolderId: string
+    }
+    expect(renamedFolderInfo).toEqual({
+      displayName: 'Renamed Nested',
+      promptFolderId: nestedFolderId
+    })
+    await expect
+      .poll(async () => ({
+        oldFolderInfo: await checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderInfo.json`
+        ),
+        nestedPrompt: await checkFileExists(
+          electronApp,
+          `${renamedFolderPath}/Nested Prompt.prompt.md`
+        ),
+        completedPrompt: await checkFileExists(
+          electronApp,
+          `${renamedFolderPath}/_Completed/Nested Completed One.prompt.md`
+        ),
+        grandchildPrompt: await checkFileExists(
+          electronApp,
+          `${renamedFolderPath}/Grandchild/Grandchild Prompt.prompt.md`
+        )
+      }))
+      .toEqual({
+        oldFolderInfo: false,
+        nestedPrompt: true,
+        completedPrompt: true,
+        grandchildPrompt: true
+      })
   })
 
   test('keeps subfolder settings expansion and edits scoped to that folder', async ({
@@ -853,8 +999,8 @@ describe('Prompt folder subfolder rendering', () => {
       mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-editor-sidebar"]`)
     ).toBeVisible()
     await expect(
-      mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-editor-title-edit"]`)
-    ).toHaveCount(0)
+      mainWindow.locator(`${controlledNestedSelector} ${folderTitleEditSelector}`)
+    ).toBeVisible()
 
     await expect(
       mainWindow.locator(`${controlledNestedSelector} [data-testid="prompt-folder-drag-handle"]`)
@@ -1323,6 +1469,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(nestedFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(grandchildFolderSelector)).toHaveCount(0)
     await expect(mainWindow.locator(emptyNestedFolderSelector)).toHaveCount(0)
+    await expect(mainWindow.locator(folderTitleEditSelector)).toHaveCount(0)
     await expect(
       mainWindow.locator('[data-testid^="prompt-divider-add-subfolder"]')
     ).toHaveCount(0)

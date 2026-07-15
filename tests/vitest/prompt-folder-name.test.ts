@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizePromptFolderName, validatePromptFolderName } from '@shared/promptFolderName'
+import {
+  hasPromptFolderNameConflict,
+  sanitizePromptFolderName,
+  validatePromptFolderName
+} from '@shared/promptFolderName'
 
 describe('prompt folder name helpers', () => {
   describe('validatePromptFolderName', () => {
@@ -44,6 +48,29 @@ describe('prompt folder name helpers', () => {
     it('returns empty string for whitespace-only input', () => {
       expect(sanitizePromptFolderName('   ')).toBe('')
       expect(sanitizePromptFolderName('\t\n ')).toBe('')
+    })
+  })
+
+  describe('hasPromptFolderNameConflict', () => {
+    const promptFolders = [
+      { id: 'first', folderName: 'FirstFolder' },
+      { id: 'second', folderName: 'SecondFolder' }
+    ]
+
+    it('matches folder names case-insensitively', () => {
+      expect(hasPromptFolderNameConflict(promptFolders, 'firstfolder')).toBe(true)
+      expect(hasPromptFolderNameConflict(promptFolders, 'AvailableFolder')).toBe(false)
+    })
+
+    it('excludes the folder being renamed', () => {
+      expect(hasPromptFolderNameConflict(promptFolders, 'FirstFolder', 'first')).toBe(false)
+      expect(
+        hasPromptFolderNameConflict(
+          [...promptFolders, { id: 'third', folderName: 'FIRSTFOLDER' }],
+          'FirstFolder',
+          'first'
+        )
+      ).toBe(true)
     })
   })
 })
