@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ChevronRight, Folder, Pencil, Settings, Trash2 } from 'lucide-svelte'
+  import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
@@ -246,7 +247,7 @@
       </div>
 
       {#if !isReadOnly}
-        <div class="prompt-folder-editor-title-actions">
+        <IconButtonBar>
           <IconButton
             icon={Trash2}
             label="Delete prompt folder"
@@ -267,7 +268,7 @@
             onclick={handleSettingsClick}
             onmousedown={handleSettingsMouseDown}
           />
-        </div>
+        </IconButtonBar>
       {/if}
     </header>
 
@@ -364,13 +365,6 @@
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
-  }
-
-  .prompt-folder-editor-title-actions {
-    align-items: center;
-    display: flex;
-    gap: 4px;
-    min-width: 0;
   }
 
   :global(.prompt-folder-editor-chevron-toggle.cthulhuUiIconButton) {

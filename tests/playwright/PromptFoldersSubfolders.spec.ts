@@ -300,6 +300,9 @@ describe('Prompt folder subfolder rendering', () => {
 
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
     await expect(
+      mainWindow.locator(nestedFolderSelector).locator('.cthulhuUiIconButtonBar')
+    ).toHaveCSS('gap', '8px')
+    await expect(
       mainWindow
         .locator(nestedFolderSelector)
         .locator(folderTitleBarSelector)
@@ -362,6 +365,9 @@ describe('Prompt folder subfolder rendering', () => {
     ).toHaveAttribute('aria-label', 'Rename prompt folder')
 
     await revealVirtualRow(mainWindow, testHelpers, rootBeforeSelector)
+    await expect(
+      mainWindow.locator(rootBeforeSelector).locator('.cthulhuUiIconButtonBar')
+    ).toHaveCSS('gap', '8px')
     const rootBeforeBox = await mainWindow.locator(rootBeforeSelector).boundingBox()
     const nestedFolderBox = await mainWindow.locator(nestedFolderSelector).boundingBox()
 

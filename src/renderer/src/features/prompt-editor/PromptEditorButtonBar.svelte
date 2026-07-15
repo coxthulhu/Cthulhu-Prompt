@@ -1,6 +1,7 @@
 <script lang="ts">
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
+  import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { Trash2 } from 'lucide-svelte'
 
@@ -47,7 +48,7 @@
   }
 </script>
 
-<div class="flex shrink-0 items-center gap-2">
+<IconButtonBar>
   {#if onDelete}
     <IconButton
       icon={Trash2}
@@ -66,7 +67,7 @@
     testId="prompt-copy-button"
     onCopied={onCopySuccess}
   />
-</div>
+</IconButtonBar>
 
 {#if onDelete}
   <ConfirmationDialog
