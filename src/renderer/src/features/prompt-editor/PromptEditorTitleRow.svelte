@@ -313,7 +313,7 @@
     align-items: center;
     align-self: stretch;
     display: flex;
-    gap: 8px;
+    gap: 12px;
     min-width: 0;
   }
 

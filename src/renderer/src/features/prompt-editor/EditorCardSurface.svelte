@@ -41,7 +41,7 @@
 <style>
   :global(.editor-card-surface) {
     align-items: stretch;
-    background: var(--ui-card-overlay-surface);
+    background: var(--ui-editor-normal-surface);
     box-sizing: border-box;
     display: grid;
     min-width: 0;
@@ -49,7 +49,7 @@
   }
 
   :global(.editor-card-surface[data-layout='sidebar']) {
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: 32px minmax(0, 1fr);
   }
 
   :global(.editor-card-surface[data-layout='plain']) {
@@ -57,16 +57,12 @@
   }
 
   .editor-card-body {
+    /* The outer CardSurface clips the rail and body into one card silhouette. */
     align-content: start;
     background: var(--ui-editor-normal-surface);
-    border-radius: var(--cthulhu-ui-radius-card);
     display: grid;
     min-width: 0;
     position: relative;
     z-index: 1;
-  }
-
-  :global(.editor-card-surface[data-layout='sidebar']) .editor-card-body {
-    border-radius: var(--cthulhu-ui-radius-card) 0 0 var(--cthulhu-ui-radius-card);
   }
 </style>

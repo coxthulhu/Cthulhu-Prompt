@@ -178,7 +178,7 @@
   })
   const findContext = getPromptFolderFindContext()
 
-  const SIDEBAR_WIDTH_PX = 36
+  const SIDEBAR_WIDTH_PX = 32
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const sidebarWidthPx = $derived(isCompletedMode ? 0 : SIDEBAR_WIDTH_PX)
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2

@@ -30,7 +30,7 @@
   --ui-shadow-raised: oklch(0 0 0 / 20%);
 
   /* Editor */
-  --ui-editor-normal-surface: oklch(0.24 0 0);
+  --ui-editor-normal-surface: oklch(0.22 0.008 275);
   --ui-editor-content-surface: oklch(0.186042 0.002588 247.966);
 
   /* Neutral */

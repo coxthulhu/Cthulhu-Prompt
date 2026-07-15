@@ -55,14 +55,16 @@
 
 <style>
   .prompt-folder-editor-sidebar {
-    background: var(--ui-card-overlay-surface);
+    background: var(--ui-editor-normal-surface);
+    border-right: 1px solid var(--ui-neutral-muted-border);
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
     min-width: 0;
     overflow: hidden;
-    width: 36px;
+    width: 32px;
   }
 
   .prompt-folder-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
