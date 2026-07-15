@@ -137,7 +137,7 @@
 
   .cthulhuUiDropdownPopupMoreOptionsItem:hover,
   .cthulhuUiDropdownPopupMoreOptionsItem:focus-visible {
-    background: var(--ui-neutral-action-hover-fill);
+    background: var(--ui-neutral-action-fill);
   }
 
   .cthulhuUiDropdownPopupMoreOptionsItem:focus-visible {

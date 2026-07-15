@@ -176,9 +176,12 @@
     grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr);
   }
 
-  .cthulhuUiSelectorButton:not(:disabled)[data-row-state='idle']:hover,
-  .cthulhuUiSelectorButton:not(:disabled)[data-row-state='active']:hover,
-  .cthulhuUiSelectorButton:not(:disabled):focus-visible,
+  .cthulhuUiSelectorButton:where(:not(:disabled)[data-row-state='idle']:hover),
+  .cthulhuUiSelectorButton:where(:not(:disabled)[data-row-state='active']:hover),
+  .cthulhuUiSelectorButton:where(:not(:disabled):focus-visible) {
+    background-color: var(--ui-neutral-action-fill);
+  }
+
   .cthulhuUiSelectorButton[data-open='true'],
   .cthulhuUiSelectorButton[data-selected='true'] {
     background-color: var(--ui-neutral-action-hover-fill);

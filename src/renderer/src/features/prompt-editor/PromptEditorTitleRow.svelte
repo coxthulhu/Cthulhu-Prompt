@@ -267,7 +267,8 @@
           icon={defaultStatusAction.icon}
           label={defaultStatusAction.label}
           title={defaultStatusAction.title}
-          hoverVariant={defaultStatusAction.hoverVariant}
+          mainHoverVariant={defaultStatusAction.hoverVariant}
+          moreOptionsHoverVariant="neutral"
           testId={defaultStatusAction.testId}
           moreOptionsTestId="prompt-status-more-options-button"
           menuTestId="prompt-status-more-options-menu"

@@ -348,7 +348,8 @@
                     icon={Copy}
                     label="Copy prompt"
                     title="Copy prompt"
-                    hoverVariant="accent"
+                    mainHoverVariant="accent"
+                    moreOptionsHoverVariant="neutral"
                     moreOptions={iconButtonMoreOptionsItems}
                     menuTestId="icon-button-more-options-menu"
                     moreOptionsTestId="icon-button-more-options-chevron"

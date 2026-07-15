@@ -175,7 +175,7 @@
   }
 
   .cthulhuUiNumericStepperInputButton:hover {
-    background-color: var(--ui-neutral-subtle-action-hover-fill);
+    background-color: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
   }
 

@@ -111,7 +111,7 @@
   .cthulhuUiDropdownPopupSimpleItem:hover {
     --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-normal-text);
 
-    background: var(--ui-neutral-action-hover-fill);
+    background: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
   }
 

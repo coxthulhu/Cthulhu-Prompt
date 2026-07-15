@@ -185,7 +185,7 @@
 
   .cthulhuUiIconButton:hover,
   .cthulhuUiIconButton:focus-visible {
-    background: var(--ui-neutral-action-hover-fill);
+    background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
   }
 

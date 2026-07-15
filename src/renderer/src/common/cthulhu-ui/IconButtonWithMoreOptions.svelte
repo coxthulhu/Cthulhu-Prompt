@@ -20,7 +20,8 @@
     moreOptions: DropdownPopupDetailedItem[]
     size?: IconButtonSize
     baseVariant?: IconButtonBaseVariant
-    hoverVariant?: IconButtonHoverVariant
+    mainHoverVariant?: IconButtonHoverVariant
+    moreOptionsHoverVariant?: IconButtonHoverVariant
     class?: string
     iconClass?: string
     iconTestId?: string
@@ -44,7 +45,8 @@
     moreOptions,
     size = 'default',
     baseVariant = 'normal',
-    hoverVariant = 'neutral',
+    mainHoverVariant = 'neutral',
+    moreOptionsHoverVariant = 'neutral',
     class: className,
     iconClass,
     iconTestId,
@@ -70,7 +72,6 @@
   class={mergeClasses('cthulhuUiIconButtonWithMoreOptions', className)}
   data-size={size}
   data-base-variant={baseVariant}
-  data-hover-variant={hoverVariant}
   data-disabled={isDisabled ? 'true' : 'false'}
 >
   <IconButton
@@ -78,7 +79,7 @@
     {label}
     {size}
     {baseVariant}
-    {hoverVariant}
+    hoverVariant={mainHoverVariant}
     {iconClass}
     {iconTestId}
     {testId}
@@ -90,6 +91,8 @@
     {onclick}
     class="cthulhuUiIconButtonWithMoreOptionsMain"
   />
+
+  <span class="cthulhuUiIconButtonWithMoreOptionsSeparator" aria-hidden="true"></span>
 
   <DropdownPopupMoreOptions
     label={moreOptionsLabel}
@@ -106,7 +109,7 @@
         title="More Options"
         {size}
         {baseVariant}
-        {hoverVariant}
+        hoverVariant={moreOptionsHoverVariant}
         disabled={isDisabled}
         active={dropdown.open}
         ariaHaspopup={dropdown.ariaHaspopup}
@@ -133,16 +136,10 @@
   }
 
   .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton) {
-    /* The compound control owns the outer border and internal divider. */
-    background: var(--ui-ghost-surface);
+    /* The compound control owns the outer border. */
     border: 0;
     border-radius: 0;
     box-sizing: content-box;
-  }
-
-  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton:hover),
-  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton:focus-visible) {
-    border-color: var(--ui-neutral-normal-border);
   }
 
   :global(.cthulhuUiIconButtonWithMoreOptionsMain.cthulhuUiIconButton) {
@@ -150,9 +147,15 @@
     border-top-left-radius: var(--cthulhu-ui-radius-control);
   }
 
+  .cthulhuUiIconButtonWithMoreOptionsSeparator {
+    align-self: stretch;
+    background: var(--ui-neutral-normal-border);
+    flex: 0 0 1px;
+    width: 1px;
+  }
+
   .cthulhuUiIconButtonWithMoreOptions
     :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
-    border-left: 1px solid var(--ui-neutral-normal-border);
     border-bottom-right-radius: var(--cthulhu-ui-radius-control);
     border-top-right-radius: var(--cthulhu-ui-radius-control);
     width: 23px;
