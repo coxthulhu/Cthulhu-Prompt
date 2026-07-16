@@ -156,11 +156,12 @@
 
   .prompt-editor-status-selector {
     /* Status is communicated by the middle segment's text and icon only. */
+    --prompt-editor-status-border: var(--ui-neutral-normal-border);
     --prompt-editor-status-text: var(--ui-secondary-text);
 
     align-items: stretch;
     background: transparent;
-    border: 1px solid var(--ui-neutral-normal-border);
+    border: 1px solid var(--prompt-editor-status-border);
     border-bottom-right-radius: var(--cthulhu-ui-radius-control);
     border-top-right-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
@@ -180,18 +181,19 @@
   }
 
   .prompt-editor-status-selector:hover {
+    --prompt-editor-status-border: var(--ui-neutral-hover-border);
+
     background: var(--ui-neutral-action-fill);
-    border-left-color: var(--ui-neutral-hover-border);
   }
 
   .prompt-editor-status-selector[data-active='true'] {
     background: var(--ui-neutral-action-hover-fill);
-    border-left-color: var(--ui-neutral-hover-border);
   }
 
   .prompt-editor-status-selector:has(:focus-visible) {
+    --prompt-editor-status-border: var(--ui-neutral-hover-border);
+
     background: var(--ui-neutral-action-fill);
-    border-left-color: var(--ui-neutral-hover-border);
     outline: 2px solid var(--ui-neutral-focus-border);
     outline-offset: 2px;
   }
@@ -229,7 +231,7 @@
     align-items: center;
     background: transparent;
     border: 0;
-    border-right: 1px solid var(--ui-neutral-normal-border);
+    border-right: 1px solid var(--prompt-editor-status-border);
     border-radius: 0;
     box-sizing: border-box;
     color: var(--prompt-editor-status-text);
