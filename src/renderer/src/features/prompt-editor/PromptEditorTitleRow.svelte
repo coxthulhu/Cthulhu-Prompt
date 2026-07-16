@@ -134,6 +134,14 @@
 </script>
 
 <div class="prompt-editor-title-row">
+  <!-- Reserve the indicator column so Todo titles stay aligned with other statuses. -->
+  <span
+    class="prompt-editor-title-status-indicator"
+    data-status={status}
+    data-testid="prompt-title-status-indicator"
+    aria-hidden="true"
+  ></span>
+
   <div class="prompt-editor-title-main">
     <IconCell {icon} size="title" />
 
@@ -213,9 +221,24 @@
     border-radius: 0;
     display: grid;
     gap: 0;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 2px minmax(0, 1fr) auto;
     height: 100%;
     min-width: 0;
+  }
+
+  .prompt-editor-title-status-indicator {
+    align-self: stretch;
+    visibility: hidden;
+  }
+
+  .prompt-editor-title-status-indicator[data-status='InProgress'] {
+    background: var(--ui-warning-icon-glyph);
+    visibility: visible;
+  }
+
+  .prompt-editor-title-status-indicator[data-status='Completed'] {
+    background: var(--ui-success-normal-text);
+    visibility: visible;
   }
 
   .prompt-editor-title-main {
