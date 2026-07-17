@@ -24,6 +24,7 @@
     setPromptEditorViewStateJson
   } from '@renderer/data/UiState/PromptUiStateDraftMutations.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
   import { findMatchRange } from '../prompt-folders/find/promptFolderFindText'
   import type {
@@ -50,11 +51,10 @@
   import { getPromptTokenCount } from './promptEditorCounts'
   import { PromptFolderScreenMode } from '../prompt-folders/promptFolderScreenMode'
 
-  type PromptFocusRequest = { promptId: string; requestId: number }
-
   let {
     promptId,
     promptFolderId,
+    screenRootFolderId,
     workspaceId,
     promptDraftRecord,
     rowId,
@@ -71,7 +71,6 @@
     status = PromptStatus.Todo,
     completedAt = null,
     scrollToWithinWindowBand,
-    focusRequest,
     isFirstPrompt,
     isLastPrompt,
     isDragEnabled = true,
@@ -84,6 +83,7 @@
   }: {
     promptId: string
     promptFolderId: string
+    screenRootFolderId: string
     workspaceId: string | null
     promptDraftRecord: PromptDraftRecord
     rowId: string
@@ -100,7 +100,6 @@
     status?: PromptStatus
     completedAt?: string | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    focusRequest?: PromptFocusRequest | null
     isFirstPrompt: boolean
     isLastPrompt: boolean
     isDragEnabled?: boolean
@@ -112,6 +111,7 @@
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
   const systemSettings = getSystemSettingsContext()
+  const promptNavigation = getPromptNavigationContext()
   const promptEditorSizingConfig: PromptEditorSizingConfig = $derived({
     fontSize: systemSettings.promptFontSize,
     minLines: systemSettings.promptEditorMinLines,
@@ -164,8 +164,6 @@
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
   let titleInputRef = $state<HTMLInputElement | null>(null)
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
-  let lastFocusRequestId = $state(0)
-  let lastEditorFocusRequestId = $state(0)
   let isHydrated = $state(false)
   type FindRowHandlers = {
     requestImmediateHydration: (() => Promise<void>) | null
@@ -330,9 +328,17 @@
       entityId: promptId,
       rowId,
       isHydrated: () => isHydrated,
-      ensureHydrated,
+      requestHydration: () => {
+        void ensureHydrated()
+      },
       shouldEnsureHydratedForSection: (sectionKey) =>
         sectionKey === PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+      isSectionReady: (sectionKey) =>
+        sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
+          ? titleInputRef !== null
+          : sectionKey === PROMPT_FOLDER_FIND_BODY_SECTION_KEY &&
+            editorInstance !== null &&
+            findRowHandlers.revealSectionMatch !== null,
       revealSectionMatch: (sectionKey, query, matchIndex) => {
         if (sectionKey !== PROMPT_FOLDER_FIND_BODY_SECTION_KEY) return null
         return findRowHandlers.revealSectionMatch?.(query, matchIndex) ?? null
@@ -346,60 +352,68 @@
   // Side effect: focus the match target after the find widget closes.
   $effect(() => {
     if (!findContext) return
-    const findFocusRequest = findContext.focusRequest
-    if (!findFocusRequest || findFocusRequest.requestId === lastFocusRequestId) return
-    lastFocusRequestId = findFocusRequest.requestId
-    const focusMatch = findFocusRequest.match
+    const request = findContext.focusRequests.pending
+    if (!request) return
+    const focusMatch = request.payload.match
     if (focusMatch.entityId !== promptId) return
 
     if (focusMatch.sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY) {
       const input = titleInputRef
       if (!input) return
-      input.focus({ preventScroll: true })
-      const focusQuery = findFocusRequest.query
-      if (focusQuery.length === 0) return
-      const matchRange = findMatchRange(
-        promptData.draft.title,
-        focusQuery,
-        focusMatch.sectionMatchIndex
-      )
-      if (!matchRange) return
-      input.setSelectionRange(matchRange.start, matchRange.end)
+      findContext.focusRequests.consume(request, ({ query }) => {
+        input.focus({ preventScroll: true })
+        if (query.length === 0) return
+        const matchRange = findMatchRange(
+          promptData.draft.title,
+          query,
+          focusMatch.sectionMatchIndex
+        )
+        if (!matchRange) return
+        input.setSelectionRange(matchRange.start, matchRange.end)
+      })
       return
     }
 
-    editorInstance?.focus()
+    if (!editorInstance) return
+    findContext.focusRequests.consume(request, () => {
+      editorInstance!.focus()
+    })
   })
 
   // Side effect: scroll newly created prompts into view and focus Monaco once hydrated.
   $effect(() => {
-    if (!focusRequest) return
-    if (focusRequest.requestId === lastEditorFocusRequestId) return
-    if (focusRequest.promptId !== promptId) return
+    const request = promptNavigation.promptFocusRequests.pending
+    if (
+      !request ||
+      request.payload.screenRootFolderId !== screenRootFolderId ||
+      request.payload.promptId !== promptId
+    ) {
+      return
+    }
     if (!isHydrated || !editorInstance) return
 
-    lastEditorFocusRequestId = focusRequest.requestId
-
-    if (scrollToWithinWindowBand && rowElement) {
-      const viewport = rowElement.closest(
-        '[data-testid="prompt-folder-virtual-window"]'
-      ) as HTMLElement | null
-      if (viewport) {
-        const rowRect = rowElement.getBoundingClientRect()
-        const viewportRect = viewport.getBoundingClientRect()
-        const distanceFromViewport = (edgePx: number) => {
-          if (edgePx < viewportRect.top) return viewportRect.top - edgePx
-          if (edgePx > viewportRect.bottom) return edgePx - viewportRect.bottom
-          return 0
+    promptNavigation.promptFocusRequests.consume(request, () => {
+      if (scrollToWithinWindowBand && rowElement) {
+        const viewport = rowElement.closest(
+          '[data-testid="prompt-folder-virtual-window"]'
+        ) as HTMLElement | null
+        if (viewport) {
+          const rowRect = rowElement.getBoundingClientRect()
+          const viewportRect = viewport.getBoundingClientRect()
+          const distanceFromViewport = (edgePx: number) => {
+            if (edgePx < viewportRect.top) return viewportRect.top - edgePx
+            if (edgePx > viewportRect.bottom) return edgePx - viewportRect.bottom
+            return 0
+          }
+          const topDistance = distanceFromViewport(rowRect.top)
+          const bottomDistance = distanceFromViewport(rowRect.bottom)
+          const offsetPx = topDistance >= bottomDistance ? 0 : rowRect.height
+          scrollToWithinWindowBand(rowId, offsetPx, 'minimal')
         }
-        const topDistance = distanceFromViewport(rowRect.top)
-        const bottomDistance = distanceFromViewport(rowRect.bottom)
-        const offsetPx = topDistance >= bottomDistance ? 0 : rowRect.height
-        scrollToWithinWindowBand(rowId, offsetPx, 'minimal')
       }
-    }
 
-    editorInstance.focus()
+      editorInstance!.focus()
+    })
   })
 
   const handleMoveUp = async () => {

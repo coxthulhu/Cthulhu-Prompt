@@ -46,6 +46,7 @@
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
@@ -63,6 +64,11 @@
 
   type CreatePromptFolderDialogHandle = {
     openDialog: () => void
+  }
+
+  type PromptTreeBulkExpansionRequest = {
+    screenRootFolderId: string
+    isExpanded: boolean
   }
 
   let {
@@ -299,8 +305,8 @@
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
   const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
-  let expandAllPromptFoldersVersion = $state(0)
-  let collapseAllPromptFoldersVersion = $state(0)
+  const promptTreeExpansionRequests =
+    createConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>()
   let areAllPromptFoldersCollapsed = $state(false)
   const promptFolderSelectorPromptDroppableState = createDroppableStateRegistry<string>()
   const promptFolderSelectorDragOpenTypes = [
@@ -325,12 +331,21 @@
   ]
 
   const handlePromptFolderExpansionAction = () => {
+    const selectedRootFolderId = screenRootFolder?.id
+    if (!selectedRootFolderId) return
+
     if (areAllPromptFoldersCollapsed) {
-      expandAllPromptFoldersVersion += 1
+      promptTreeExpansionRequests.request({
+        screenRootFolderId: selectedRootFolderId,
+        isExpanded: true
+      })
       return
     }
 
-    collapseAllPromptFoldersVersion += 1
+    promptTreeExpansionRequests.request({
+      screenRootFolderId: selectedRootFolderId,
+      isExpanded: false
+    })
   }
 
   const openSelectedPromptFolderSettings = () => {
@@ -367,7 +382,9 @@
       rowOwnerFolderId: promptFolderId,
       row,
       source: 'prompt-create',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'center' },
+      focusPromptId: promptId
     })
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -781,8 +798,7 @@
       {folderListState}
       {screenRootFolderId}
       screenMode={promptFolderScreenMode}
-      expandAllRequestVersion={expandAllPromptFoldersVersion}
-      collapseAllRequestVersion={collapseAllPromptFoldersVersion}
+      expansionRequests={promptTreeExpansionRequests}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
       onAllPromptFoldersCollapsedChange={(isCollapsed) => {
         areAllPromptFoldersCollapsed = isCollapsed

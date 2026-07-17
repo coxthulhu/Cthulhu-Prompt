@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick, type Snippet } from 'svelte'
+  import { onMount, type Snippet } from 'svelte'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
@@ -14,7 +14,7 @@
   import { createPromptFolderFindSearchModel } from './promptFolderFindSearchModel'
   import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
   import type { ScrollToWithinWindowBand } from '../../virtualizer/virtualWindowTypes'
-  import { revealPromptFolderMatch } from './promptFolderFindReveal'
+  import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import {
     findMatchIndexAtOrAfter,
     findMatchIndexBefore,
@@ -25,6 +25,7 @@
     PromptFolderFindFocusRequest,
     PromptFolderFindItem,
     PromptFolderFindMatch,
+    PromptFolderFindRevealRequest,
     PromptFolderFindRowHandle,
     PromptFolderFindState
   } from './promptFolderFindTypes'
@@ -52,8 +53,9 @@
   let totalMatches = $state(0)
   let currentMatchIndex = $state(0)
   let matchCountsByEntity = $state<PromptFolderFindCounts[]>([])
-  let focusFindRequestId = $state(0)
-  let focusRequest = $state<PromptFolderFindFocusRequest | null>(null)
+  const findInputFocusRequests = createConsumableRequestCoordinator<void>()
+  const focusRequests = createConsumableRequestCoordinator<PromptFolderFindFocusRequest>()
+  const revealRequests = createConsumableRequestCoordinator<PromptFolderFindRevealRequest>()
   let lastNavigatedMatch = $state<PromptFolderFindMatch | null>(null)
   let lastNavigatedQuery = $state('')
   let searchRevision = $state(0)
@@ -87,30 +89,34 @@
 
   // Show the widget and request a fresh scan for the current query.
   const openFindDialog = () => {
+    focusRequests.clear()
+    revealRequests.clear()
     if (!isFindOpen) {
       isFindOpen = true
       searchRevision += 1
     }
-    focusFindRequestId += 1
+    findInputFocusRequests.request(undefined)
   }
 
   // Close the widget and return focus to the current match.
   const closeFindDialog = () => {
     isFindOpen = false
+    findInputFocusRequests.clear()
+    revealRequests.clear()
     const matchToFocus = currentMatch ?? lastNavigatedMatch
     if (matchToFocus) {
       const focusQuery = currentMatch ? trimmedQuery : lastNavigatedQuery
-      focusRequest = {
-        requestId: (focusRequest?.requestId ?? 0) + 1,
+      focusRequests.request({
         match: matchToFocus,
         query: focusQuery
-      }
+      })
     }
   }
 
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (resetSelection: boolean) => {
     if (trimmedQuery.length === 0) {
+      revealRequests.clear()
       matchCountsByEntity = []
       totalMatches = 0
       currentMatchIndex = 0
@@ -130,6 +136,7 @@
         sum + entry.sectionCounts.reduce((sectionSum, section) => sectionSum + section.count, 0),
       0
     )
+    if (totalMatches === 0) revealRequests.clear()
     if (resetSelection) {
       if (totalMatches <= 0) {
         currentMatchIndex = 0
@@ -174,18 +181,9 @@
     return item.sections.find((section) => section.key === sectionKey)?.text ?? ''
   }
 
-  const revealMatch = async (match: PromptFolderFindMatch) => {
-    if (!scrollToWithinWindowBand) return
+  const requestMatchReveal = (match: PromptFolderFindMatch) => {
     onRevealMatch?.(match)
-    // Side effect: let section expansion render target rows before virtual scrolling asks for them.
-    await tick()
-    await revealPromptFolderMatch(match, {
-      query: trimmedQuery,
-      rowHandlesByEntityId,
-      getRowIdForEntity: (entityId) => getItem(entityId)?.rowId ?? null,
-      scrollToWithinWindowBand,
-      waitForRows: () => tick()
-    })
+    revealRequests.request({ match, query: trimmedQuery })
   }
 
   const recordSelectionAnchor = (anchor: PromptFolderFindAnchor) => {
@@ -263,7 +261,7 @@
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
     lastNavigatedMatch = match
     lastNavigatedQuery = trimmedQuery
-    void revealMatch(match)
+    requestMatchReveal(match)
   }
 
   type PromptFolderFindSectionRange = {
@@ -478,6 +476,31 @@
     lastSearchInputs = nextInputs
   })
 
+  // Side effect: reveal and acknowledge the requested match once its row section is ready.
+  $effect(() => {
+    const request = revealRequests.pending
+    if (!request || !scrollToWithinWindowBand) return
+
+    const { match, query } = request.payload
+    const rowHandle = rowHandlesByEntityId.get(match.entityId)
+    if (!rowHandle) return
+
+    if (rowHandle.shouldEnsureHydratedForSection(match.sectionKey) && !rowHandle.isHydrated()) {
+      rowHandle.requestHydration()
+      return
+    }
+    if (!rowHandle.isSectionReady(match.sectionKey)) return
+
+    revealRequests.consume(request, () => {
+      const sectionCenterOffsetPx = rowHandle.getSectionCenterOffset(match.sectionKey)
+      const revealOffsetPx =
+        sectionCenterOffsetPx ??
+        rowHandle.revealSectionMatch(match.sectionKey, query, match.sectionMatchIndex)
+      if (revealOffsetPx == null) return
+      scrollToWithinWindowBand(rowHandle.rowId, revealOffsetPx, 'center')
+    })
+  })
+
   // Track which entities are hydrated so we can prefer editor-reported counts.
   const reportHydration = (entityId: string, isHydrated: boolean) => {
     if (isHydrated) {
@@ -542,7 +565,7 @@
     isFindOpen: false,
     query: '',
     currentMatch: null,
-    focusRequest: null,
+    focusRequests,
     reportSelection: recordSelectionAnchor,
     reportHydration,
     reportSectionMatchCount,
@@ -554,7 +577,6 @@
     findState.isFindOpen = isFindOpen
     findState.query = matchText
     findState.currentMatch = currentMatch
-    findState.focusRequest = focusRequest
   })
 
   setPromptFolderFindContext(findState)
@@ -581,7 +603,7 @@
   {#if isFindOpen}
     <PromptFolderFindWidget
       bind:matchText
-      focusRequestId={focusFindRequestId}
+      focusRequests={findInputFocusRequests}
       {totalMatches}
       {currentMatchIndex}
       onClose={closeFindDialog}

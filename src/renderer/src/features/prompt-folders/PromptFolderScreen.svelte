@@ -219,11 +219,9 @@
             completedPromptOwnerByPromptId={controller.completedPromptOwnerByPromptId}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
-            promptFocusRequest={controller.promptFocusRequest}
             settingsSectionExpandedByFolderId={controller.settingsSectionExpandedByFolderId}
             promptsSectionExpandedByFolderId={controller.promptsSectionExpandedByFolderId}
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
-            initialCenterRowId={controller.initialPromptFolderCenterRowId}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
             onAddSubfolder={openCreatePromptSubfolderDialog}
@@ -239,10 +237,10 @@
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
             onScrollApiChange={controller.setScrollApi}
+            onViewportMetricsChange={controller.setViewportMetrics}
             onScrollTopChange={controller.handleVirtualScrollTopChange}
             onCenterRowChange={controller.handleVirtualCenterRowChange}
             onUserScroll={controller.handleVirtualUserScroll}
-            onInitialCenterRowApplied={controller.handleInitialPromptFolderCenterRowApplied}
             onSettingsSectionToggle={controller.toggleSettingsSectionExpanded}
             onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}

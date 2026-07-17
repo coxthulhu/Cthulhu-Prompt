@@ -37,8 +37,10 @@
     getPromptNavigationContext,
     promptIdToPromptNavigationRow,
     promptNavigationRowToPersistedEntryId,
-    type PromptNavigationRow
+    type PromptNavigationRow,
+    type PromptNavigationTarget
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
+  import type { ConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import {
     lookupWorkspacePersistedPromptFolderPromptTreeExpandedState,
@@ -53,7 +55,8 @@
     defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
-    type VirtualWindowRowComponentProps
+    type VirtualWindowRowComponentProps,
+    type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
@@ -73,6 +76,10 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
+  type PromptTreeBulkExpansionRequest = {
+    screenRootFolderId: string
+    isExpanded: boolean
+  }
 
   type PromptTreeRow =
     | {
@@ -117,8 +124,7 @@
     promptFolders,
     folderListState,
     screenRootFolderId = null,
-    expandAllRequestVersion = 0,
-    collapseAllRequestVersion = 0,
+    expansionRequests,
     isPromptFoldersScreenActive = false,
     screenMode = PromptFolderScreenMode.Active,
     onAllPromptFoldersCollapsedChange,
@@ -127,8 +133,7 @@
     promptFolders: PromptFolder[]
     folderListState: FolderListState
     screenRootFolderId?: string | null
-    expandAllRequestVersion?: number
-    collapseAllRequestVersion?: number
+    expansionRequests: ConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>
     isPromptFoldersScreenActive?: boolean
     screenMode?: PromptFolderScreenMode
     onAllPromptFoldersCollapsedChange: (isCollapsed: boolean) => void
@@ -182,10 +187,7 @@
 
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
-  let lastTrackedTreeRowId = $state<string | null>(null)
-  let lastTrackedTreeSelectionVersion = $state(0)
-  let lastExpandAllRequestVersion = $state(0)
-  let lastCollapseAllRequestVersion = $state(0)
+  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let promptTreeExpandedStates = $state<Record<string, boolean>>({})
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
@@ -354,28 +356,26 @@
     return null
   }
 
-  // Side effect: reveal moved prompt/folder rows in the compact tree before scrolling to them.
-  $effect(() => {
-    if (
-      !screenRootFolder ||
-      promptNavigation.screenRootFolderId !== screenRootFolder.id ||
-      !promptNavigation.rowOwnerFolderId ||
-      (promptNavigation.selectionSource !== 'prompt-move' &&
-        promptNavigation.selectionSource !== 'folder-move')
-    ) {
-      return
-    }
+  const isSameNavigationTarget = (
+    left: PromptNavigationTarget,
+    right: PromptNavigationTarget
+  ): boolean =>
+    left.screenRootFolderId === right.screenRootFolderId &&
+    left.rowOwnerFolderId === right.rowOwnerFolderId &&
+    left.row === right.row
 
-    const path = findPromptFolderPath(screenRootFolder, promptNavigation.rowOwnerFolderId)
-    if (!path) return
-    const foldersToExpand =
-      promptNavigation.selectionSource === 'prompt-move' ? path : path.slice(0, -1)
-    for (const folderId of foldersToExpand) {
-      if (!getPromptTreeFolderExpandedState(folderId)) {
-        setPromptTreeFolderExpandedState(folderId, true)
-      }
+  const getPromptTreeRowId = (target: PromptNavigationTarget): string => {
+    if (target.row === 'folder-root') {
+      return folderRootRowId(target.screenRootFolderId)
     }
-  })
+    if (target.row === 'folder-settings') {
+      return folderRootRowId(target.rowOwnerFolderId)
+    }
+    return folderPromptRowId(
+      target.rowOwnerFolderId,
+      promptNavigationRowToPersistedEntryId(target.row)
+    )
+  }
 
   const getPromptTreeDroppableOptions = (
     rowId: string,
@@ -459,7 +459,9 @@
       rowOwnerFolderId: destinationRootFolderId,
       row,
       source: 'prompt-move',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'center' },
+      treeExpansion: 'owner'
     })
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -492,22 +494,12 @@
       rowOwnerFolderId: promptFolderId,
       row: 'folder-settings',
       source: 'folder-move',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'center', expandFolderSettings: false },
+      treeExpansion: 'ancestors'
     })
     onScreenRootFolderSelect(destinationRootFolderId)
   }
-
-  const trackedNavigationRow = $derived.by((): PromptNavigationRow | null => {
-    if (!isPromptFoldersScreenActive || !screenRootFolder) {
-      return null
-    }
-
-    if (promptNavigation.screenRootFolderId !== screenRootFolder.id) {
-      return null
-    }
-
-    return promptNavigation.selectedRow
-  })
 
   const promptTreePromptDrag = createPromptTreePromptDragController({
     getPromptFolders: () => promptFolders,
@@ -568,21 +560,6 @@
     }
   })
 
-  const trackedTreeRowId = $derived.by((): string | null => {
-    if (!screenRootFolder || !trackedNavigationRow || !promptNavigation.rowOwnerFolderId) {
-      return null
-    }
-
-    return trackedNavigationRow === 'folder-root'
-      ? folderRootRowId(screenRootFolder.id)
-      : trackedNavigationRow === 'folder-settings'
-        ? folderRootRowId(promptNavigation.rowOwnerFolderId)
-        : folderPromptRowId(
-            promptNavigation.rowOwnerFolderId,
-            trackedNavigationRow.slice('prompt:'.length)
-          )
-  })
-
   const isTreeEntryActive = (rowOwnerFolderId: string, row: PromptNavigationRow): boolean => {
     if (!isPromptFoldersScreenActive || !promptNavigation.selectedRow) {
       return false
@@ -623,7 +600,14 @@
       rowOwnerFolderId,
       row,
       source,
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal:
+        screenMode === PromptFolderScreenMode.Active
+          ? {
+              scrollType: 'center',
+              expandFolderSettings: source !== 'folder-open'
+            }
+          : undefined
     })
 
     if (!isSameRootActive) {
@@ -663,56 +647,48 @@
     onAllPromptFoldersCollapsedChange(areAllPromptFoldersCollapsed)
   })
 
-  // Side effect: expand the selected root folder and every loaded subfolder on header request.
+  // Side effect: apply a header expansion request once the selected tree is loaded.
   $effect(() => {
-    if (expandAllRequestVersion === lastExpandAllRequestVersion) {
-      return
-    }
-
-    lastExpandAllRequestVersion = expandAllRequestVersion
-    for (const promptFolderId of promptFolderTreeIds) {
-      setPromptTreeFolderExpandedState(promptFolderId, true)
-    }
-  })
-
-  // Side effect: collapse the selected root folder and every loaded subfolder on header request.
-  $effect(() => {
-    if (collapseAllRequestVersion === lastCollapseAllRequestVersion) {
-      return
-    }
-
-    lastCollapseAllRequestVersion = collapseAllRequestVersion
-    for (const promptFolderId of promptFolderTreeIds) {
-      setPromptTreeFolderExpandedState(promptFolderId, false)
-    }
-  })
-
-  // Side effect: keep the tracked prompt tree row visible while following prompt-folder scroll.
-  $effect(() => {
-    const nextTrackedRowId = trackedTreeRowId
-    const currentFolderId = screenRootFolder?.id ?? null
-
-    if (!scrollToWithinWindowBand) {
-      return
-    }
-
-    if (!nextTrackedRowId) {
-      lastTrackedTreeRowId = null
-      return
-    }
-
+    const request = expansionRequests.pending
     if (
-      nextTrackedRowId === lastTrackedTreeRowId &&
-      promptNavigation.selectionVersion === lastTrackedTreeSelectionVersion
+      !request ||
+      folderListState !== 'ready' ||
+      request.payload.screenRootFolderId !== screenRootFolder?.id
     ) {
       return
     }
 
-    if (!currentFolderId) return
+    expansionRequests.consume(request, ({ isExpanded }) => {
+      for (const promptFolderId of promptFolderTreeIds) {
+        setPromptTreeFolderExpandedState(promptFolderId, isExpanded)
+      }
+    })
+  })
 
-    lastTrackedTreeRowId = nextTrackedRowId
-    lastTrackedTreeSelectionVersion = promptNavigation.selectionVersion
-    scrollToWithinWindowBand(nextTrackedRowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
+  // Side effect: expose a requested tree row once its folder path is available.
+  $effect(() => {
+    const request = promptNavigation.treeExpansionRequests.pending
+    const rootFolder = screenRootFolder
+    if (
+      !request ||
+      !rootFolder ||
+      !isPromptFoldersScreenActive ||
+      folderListState !== 'ready' ||
+      request.payload.screenRootFolderId !== rootFolder.id
+    ) {
+      return
+    }
+
+    const folderPath = findPromptFolderPath(rootFolder, request.payload.rowOwnerFolderId)
+    if (!folderPath) return
+
+    promptNavigation.treeExpansionRequests.consume(request, ({ expandPath }) => {
+      const folderIds =
+        expandPath === 'owner' ? folderPath.slice(1) : folderPath.slice(1, -1)
+      for (const promptFolderId of folderIds) {
+        setPromptTreeFolderExpandedState(promptFolderId, true)
+      }
+    })
   })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
@@ -855,6 +831,33 @@
 
     return items
   })
+
+  // Side effect: reveal a requested tree row after any matching path expansion is consumed.
+  $effect(() => {
+    const request = promptNavigation.treeRevealRequests.pending
+    const rootFolderId = screenRootFolder?.id
+    const expansionRequest = promptNavigation.treeExpansionRequests.pending
+    if (
+      !request ||
+      !rootFolderId ||
+      !isPromptFoldersScreenActive ||
+      folderListState !== 'ready' ||
+      request.payload.screenRootFolderId !== rootFolderId ||
+      !scrollToWithinWindowBand ||
+      !viewportMetrics?.heightPx ||
+      (expansionRequest &&
+        isSameNavigationTarget(expansionRequest.payload, request.payload))
+    ) {
+      return
+    }
+
+    const rowId = getPromptTreeRowId(request.payload)
+    if (!virtualItems.some((item) => item.id === rowId)) return
+
+    promptNavigation.treeRevealRequests.consume(request, () => {
+      scrollToWithinWindowBand!(rowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
+    })
+  })
 </script>
 
 <div class="sidebarPromptTree flex min-h-0 flex-1 flex-col">
@@ -878,6 +881,7 @@
         testId="prompt-tree-virtual-window"
         spacerTestId="prompt-tree-virtual-window-spacer"
         bind:scrollToWithinWindowBand
+        bind:viewportMetrics
       />
     </div>
   {/if}

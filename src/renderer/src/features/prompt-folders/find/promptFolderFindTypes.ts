@@ -1,3 +1,5 @@
+import type { ConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
+
 export type PromptFolderFindItemSection = {
   key: string
   text: string
@@ -23,17 +25,19 @@ export type PromptFolderFindAnchor = {
 }
 
 export type PromptFolderFindFocusRequest = {
-  requestId: number
   match: PromptFolderFindMatch
   query: string
 }
+
+export type PromptFolderFindRevealRequest = PromptFolderFindFocusRequest
 
 export type PromptFolderFindRowHandle = {
   entityId: string
   rowId: string
   isHydrated: () => boolean
-  ensureHydrated: () => Promise<boolean>
+  requestHydration: () => void
   shouldEnsureHydratedForSection: (sectionKey: string) => boolean
+  isSectionReady: (sectionKey: string) => boolean
   revealSectionMatch: (sectionKey: string, query: string, matchIndex: number) => number | null
   getSectionCenterOffset: (sectionKey: string) => number | null
 }
@@ -42,7 +46,7 @@ export type PromptFolderFindState = {
   isFindOpen: boolean
   query: string
   currentMatch: PromptFolderFindMatch | null
-  focusRequest: PromptFolderFindFocusRequest | null
+  focusRequests: ConsumableRequestCoordinator<PromptFolderFindFocusRequest>
   reportSelection: (anchor: PromptFolderFindAnchor) => void
   reportHydration: (entityId: string, isHydrated: boolean) => void
   reportSectionMatchCount: (

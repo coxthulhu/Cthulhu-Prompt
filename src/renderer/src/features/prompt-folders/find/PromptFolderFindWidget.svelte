@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import type { ConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
 
   type FindWidgetProps = {
     onClose: () => void
@@ -8,7 +8,7 @@
     currentMatchIndex: number
     onNext: () => void
     onPrevious: () => void
-    focusRequestId: number
+    focusRequests: ConsumableRequestCoordinator<void>
   }
 
   let {
@@ -18,12 +18,11 @@
     currentMatchIndex,
     onNext,
     onPrevious,
-    focusRequestId
+    focusRequests
   }: FindWidgetProps = $props()
 
   let isInputFocused = $state(false)
   let inputRef = $state<HTMLTextAreaElement | null>(null)
-  let lastFocusRequestId = $state(0)
   // Derived state: keep empty styling in sync with the local input value.
   const isInputEmpty = $derived(matchText.length === 0)
   const hasNoResults = $derived(matchText.length > 0 && totalMatches === 0)
@@ -49,18 +48,14 @@
     }
   }
 
-  // Side effect: focus and select the find input when the widget mounts.
-  onMount(() => {
-    inputRef?.focus()
-    inputRef?.select()
-  })
-
-  // Side effect: refocus and select the find input on demand.
+  // Side effect: consume find-input focus once its mounted target is ready.
   $effect(() => {
-    if (focusRequestId === lastFocusRequestId) return
-    lastFocusRequestId = focusRequestId
-    inputRef?.focus()
-    inputRef?.select()
+    const request = focusRequests.pending
+    if (!request || !inputRef) return
+    focusRequests.consume(request, () => {
+      inputRef!.focus()
+      inputRef!.select()
+    })
   })
 </script>
 

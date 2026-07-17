@@ -146,7 +146,6 @@
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
   let editor = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
   let isHydrated = $state(false)
-  let lastFocusRequestId = $state(0)
   let requestImmediateHydration = $state<(() => Promise<void>) | null>(null)
   let revealSectionMatch = $state<((query: string, matchIndex: number) => number | null) | null>(
     null
@@ -268,8 +267,12 @@
       entityId: promptFolderFindEntityId,
       rowId,
       isHydrated: () => isHydrated,
-      ensureHydrated,
+      requestHydration: () => {
+        void ensureHydrated()
+      },
       shouldEnsureHydratedForSection: (sectionKey) => sectionKey === section.findSectionKey,
+      isSectionReady: (sectionKey) =>
+        sectionKey === section.findSectionKey && editor !== null && revealSectionMatch !== null,
       revealSectionMatch: (sectionKey, query, matchIndex) => {
         if (sectionKey !== section.findSectionKey) return null
         return revealSectionMatch?.(query, matchIndex) ?? null
@@ -282,13 +285,14 @@
   // Side effect: focus the matched settings editor after the find widget closes.
   $effect(() => {
     if (!findContext) return
-    const findFocusRequest = findContext.focusRequest
-    if (!findFocusRequest || findFocusRequest.requestId === lastFocusRequestId) return
-    lastFocusRequestId = findFocusRequest.requestId
-    const focusMatch = findFocusRequest.match
+    const request = findContext.focusRequests.pending
+    if (!request) return
+    const focusMatch = request.payload.match
     if (focusMatch.entityId !== promptFolderFindEntityId) return
-    if (!sectionElement) return
-    editor?.focus()
+    if (!sectionElement || !editor) return
+    findContext.focusRequests.consume(request, () => {
+      editor!.focus()
+    })
   })
 </script>
 

@@ -30,7 +30,8 @@
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps,
-    type VirtualWindowScrollApi
+    type VirtualWindowScrollApi,
+    type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import PromptFolderEditorRow from './PromptFolderEditorRow.svelte'
   import PromptFolderRootHeaderRow, {
@@ -74,10 +75,7 @@
     clearPromptEntryDrag,
     startPromptFolderDrag
   } from '../drag-drop/promptEntryDragState.svelte.ts'
-  import type {
-    ActivePromptTreeRow,
-    PromptFocusRequest
-  } from './promptFolderScreenController.svelte.ts'
+  import type { ActivePromptTreeRow } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import type {
     PromptFolderDividerTarget,
@@ -127,11 +125,9 @@
     completedPromptOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
-    promptFocusRequest: PromptFocusRequest | null
     settingsSectionExpandedByFolderId: Record<string, boolean>
     promptsSectionExpandedByFolderId: Record<string, boolean>
     initialScrollTopPx: number
-    initialCenterRowId: string | null
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
     onAddSubfolder: (target: PromptFolderDividerTarget) => void
@@ -160,10 +156,10 @@
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
     onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
+    onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
     onCenterRowChange: (row: ActivePromptTreeRow | null) => void
     onUserScroll: () => void
-    onInitialCenterRowApplied: () => void
     onSettingsSectionToggle: (ownerFolderId: string) => void
     onPromptsSectionToggle: (ownerFolderId: string) => void
   }
@@ -183,11 +179,9 @@
     completedPromptOwnerByPromptId,
     screenMode,
     isCreatingPrompt,
-    promptFocusRequest,
     settingsSectionExpandedByFolderId,
     promptsSectionExpandedByFolderId,
     initialScrollTopPx,
-    initialCenterRowId,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
     onAddSubfolder,
@@ -205,10 +199,10 @@
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowCenteredChange,
     onScrollApiChange,
+    onViewportMetricsChange,
     onScrollTopChange,
     onCenterRowChange,
     onUserScroll,
-    onInitialCenterRowApplied,
     onSettingsSectionToggle,
     onPromptsSectionToggle
   }: PromptFolderVirtualContentProps = $props()
@@ -216,6 +210,7 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
+  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
@@ -244,6 +239,11 @@
   // Side effect: expose the virtual window scroll API to the controller.
   $effect(() => {
     onScrollApiChange(scrollApi)
+  })
+
+  // Side effect: expose viewport readiness to deferred content requests.
+  $effect(() => {
+    onViewportMetricsChange(viewportMetrics)
   })
 
   const getFolderSettings = (ownerFolderId: string): PromptFolderSettings =>
@@ -691,14 +691,13 @@
   items={virtualItems}
   {rowRegistry}
   {initialScrollTopPx}
-  initialScrollToRowCenteredId={initialCenterRowId}
   rightScrollPaddingPx={12}
   testId="prompt-folder-virtual-window"
   spacerTestId="prompt-folder-virtual-window-spacer"
-  onInitialScrollToRowCenteredApplied={onInitialCenterRowApplied}
   bind:scrollToWithinWindowBand
   bind:scrollToAndTrackRowCentered
   bind:scrollApi
+  bind:viewportMetrics
   {onScrollTopChange}
   onCenterRowChange={(row) => {
     handleCenterRowChange(row)
@@ -859,6 +858,7 @@
   <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <PromptEditorRow
       {workspaceId}
+      {screenRootFolderId}
       promptFolderId={row.ownerFolderId}
       promptId={row.promptId}
       promptDraftRecord={promptDraftById[row.promptId]!}
@@ -876,7 +876,6 @@
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
-      focusRequest={promptFocusRequest}
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       isDragEnabled={!isCompletedMode}

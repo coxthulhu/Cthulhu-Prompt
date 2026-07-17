@@ -16,7 +16,8 @@ import {
   promptIdToPromptNavigationRow,
   promptNavigationRowToPersistedEntryId,
   type PromptNavigationRow,
-  type PromptNavigationSource
+  type PromptNavigationSource,
+  type PromptNavigationTarget
 } from '@renderer/app/PromptNavigationContext.svelte.ts'
 import {
   type PromptDraftRecord,
@@ -52,7 +53,8 @@ import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/l
 import type {
   ScrollToAndTrackRowCentered,
   ScrollToWithinWindowBand,
-  VirtualWindowScrollApi
+  VirtualWindowScrollApi,
+  VirtualWindowViewportMetrics
 } from '../virtualizer/virtualWindowTypes'
 import {
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
@@ -86,7 +88,6 @@ export type ActivePromptTreeRow =
   | { kind: 'root-header'; rowOwnerFolderId: string }
   | { kind: 'folder-settings'; rowOwnerFolderId: string }
   | { kind: 'prompt'; rowOwnerFolderId: string; promptId: string }
-export type PromptFocusRequest = { promptId: string; requestId: number }
 
 type PromptMetadata = {
   status: PromptStatus
@@ -241,13 +242,15 @@ export const createPromptFolderScreenController = ({
   let previousPromptFolderLoadKey = $state<string | null>(null)
   let promptFolderLoadRequestId = $state(0)
   let isLoading = $state(true)
-  let pendingInitialCenterRowApplyCount = $state(0)
+  let initialContentRevealRequestId = $state<number | null>(null)
   const LOADING_OVERLAY_FADE_MS = 125
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
     fadeMs: LOADING_OVERLAY_FADE_MS,
     isLoading: () =>
-      shouldShowLoadingOverlay && (isLoading || pendingInitialCenterRowApplyCount > 0)
+      shouldShowLoadingOverlay &&
+      (isLoading ||
+        promptNavigation.contentRevealRequests.pending?.id === initialContentRevealRequestId)
   })
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
@@ -255,18 +258,15 @@ export const createPromptFolderScreenController = ({
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
+  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const getRestoredPromptFolderScrollTop = (): number =>
     isCompletedMode ? 0 : (lookupPromptFolderScrollTop(screenRootFolderId) ?? 0)
 
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
-  let initialPromptFolderCenterRowId = $state<string | null>(null)
   let latestCenteredPromptTreeRow = $state<ActivePromptTreeRow | null>(null)
   let scrollTopPx = $state(getRestoredPromptFolderScrollTop())
   const TOP_SCROLL_EPSILON_PX = 1
 
-  let promptFocusRequest = $state<PromptFocusRequest | null>(null)
-  let promptFocusRequestId = $state(0)
-  let latestHandledSelectionVersion = $state(0)
   let settingsSectionExpandedStates = $state<Record<string, boolean>>({})
   let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
 
@@ -485,9 +485,10 @@ export const createPromptFolderScreenController = ({
   }
 
   const clearManualSelectionSource = () => {
+    const pendingFocus = promptNavigation.promptFocusRequests.pending
     if (
-      promptNavigation.selectionSource === 'prompt-create' ||
-      promptNavigation.selectionSource === 'prompt-divider-create'
+      pendingFocus?.payload.screenRootFolderId === screenRootFolderId &&
+      promptNavigation.selectedRow === promptIdToPromptNavigationRow(pendingFocus.payload.promptId)
     ) {
       return
     }
@@ -522,6 +523,9 @@ export const createPromptFolderScreenController = ({
         ? { kind: 'folder-settings', rowOwnerFolderId }
         : { kind: 'prompt', rowOwnerFolderId, promptId: row.slice('prompt:'.length) }
   }
+
+  const toActivePromptTreeTarget = (target: PromptNavigationTarget): ActivePromptTreeRow =>
+    toActivePromptTreeRow(target.rowOwnerFolderId, target.row)
 
   const toPromptFolderRowId = (row: ActivePromptTreeRow): string => {
     return row.kind === 'root-header'
@@ -641,7 +645,15 @@ export const createPromptFolderScreenController = ({
   const setCurrentFolderSelection = (
     nextRow: ActivePromptTreeRow | null,
     source: PromptNavigationSource,
-    options: { forceVersionBump?: boolean } = {}
+    options: {
+      forceRequest?: boolean
+      contentReveal?: {
+        scrollType: 'center' | 'minimal'
+        expandFolderSettings?: boolean
+      }
+      focusPromptId?: string
+      treeExpansion?: 'owner' | 'ancestors'
+    } = {}
   ) => {
     if (!nextRow) {
       return
@@ -652,7 +664,10 @@ export const createPromptFolderScreenController = ({
       rowOwnerFolderId: nextRow.rowOwnerFolderId,
       row: toPromptNavigationRow(nextRow),
       source,
-      forceVersionBump: options.forceVersionBump ?? false
+      forceRequest: options.forceRequest ?? false,
+      contentReveal: options.contentReveal,
+      focusPromptId: options.focusPromptId,
+      treeExpansion: options.treeExpansion
     })
   }
 
@@ -678,11 +693,6 @@ export const createPromptFolderScreenController = ({
     )
   }
 
-  const requestPromptFocus = (promptId: string): void => {
-    promptFocusRequestId += 1
-    promptFocusRequest = { promptId, requestId: promptFocusRequestId }
-  }
-
   const selectCreatedPrompt = (rowOwnerFolderId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
 
@@ -691,7 +701,9 @@ export const createPromptFolderScreenController = ({
       rowOwnerFolderId,
       row,
       source: 'prompt-divider-create',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'minimal' },
+      focusPromptId: promptId
     })
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -710,7 +722,8 @@ export const createPromptFolderScreenController = ({
       rowOwnerFolderId: promptFolderId,
       row: 'folder-settings',
       source: 'subfolder-create',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'center', expandFolderSettings: false }
     })
   }
 
@@ -723,7 +736,9 @@ export const createPromptFolderScreenController = ({
       rowOwnerFolderId: destinationPromptFolderId,
       row,
       source: 'prompt-move',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'center' },
+      treeExpansion: 'owner'
     })
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
@@ -745,18 +760,11 @@ export const createPromptFolderScreenController = ({
       rowOwnerFolderId: promptFolderId,
       row: 'folder-settings',
       source: 'folder-move',
-      forceVersionBump: true
+      forceRequest: true,
+      contentReveal: { scrollType: 'center', expandFolderSettings: false },
+      treeExpansion: 'ancestors'
     })
     onScreenRootFolderSelect(destinationRootFolderId)
-  }
-
-  const clearInitialPersistedScrollWait = () => {
-    pendingInitialCenterRowApplyCount = 0
-  }
-
-  const handleInitialPromptFolderCenterRowApplied = () => {
-    if (pendingInitialCenterRowApplyCount === 0) return
-    pendingInitialCenterRowApplyCount -= 1
   }
 
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
@@ -768,21 +776,32 @@ export const createPromptFolderScreenController = ({
     scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
   }
 
-  const selectPromptTreeRowAndCenter = (
-    nextRow: ActivePromptTreeRow,
-    expandFolderSettings = true
-  ): boolean => {
-    if (!scrollToAndTrackRowCentered) return false
-    if (expandSectionForRow(nextRow, expandFolderSettings)) return false
-    scrollToAndTrackRowCentered(toPromptFolderRowId(nextRow))
-    return true
-  }
+  const isSameNavigationTarget = (
+    left: PromptNavigationTarget,
+    right: PromptNavigationTarget
+  ): boolean =>
+    left.screenRootFolderId === right.screenRootFolderId &&
+    left.rowOwnerFolderId === right.rowOwnerFolderId &&
+    left.row === right.row
 
-  const selectPromptTreeRowMinimally = (nextRow: ActivePromptTreeRow): boolean => {
-    if (!scrollToWithinWindowBand) return false
-    if (expandSectionForRow(nextRow)) return false
-    scrollToWithinWindowBand(toPromptFolderRowId(nextRow), 0, 'minimal')
-    return true
+  const cancelNavigationTargetRequests = (target: PromptNavigationTarget): void => {
+    const expansionRequest = promptNavigation.contentExpansionRequests.pending
+    if (expansionRequest && isSameNavigationTarget(expansionRequest.payload, target)) {
+      promptNavigation.contentExpansionRequests.cancel(expansionRequest)
+    }
+
+    const revealRequest = promptNavigation.contentRevealRequests.pending
+    if (revealRequest && isSameNavigationTarget(revealRequest.payload, target)) {
+      promptNavigation.contentRevealRequests.cancel(revealRequest)
+    }
+
+    const focusRequest = promptNavigation.promptFocusRequests.pending
+    if (
+      focusRequest?.payload.screenRootFolderId === target.screenRootFolderId &&
+      target.row === promptIdToPromptNavigationRow(focusRequest.payload.promptId)
+    ) {
+      promptNavigation.promptFocusRequests.cancel(focusRequest)
+    }
   }
 
   const hasCachedPromptFolderData = (nextPromptFolderId: string): boolean => {
@@ -852,44 +871,42 @@ export const createPromptFolderScreenController = ({
         ? 'restore-hold'
         : 'restore'
 
-    if (explicitSelectionTarget) {
-      expandSectionForRow(
-        explicitSelectionTarget,
-        promptNavigation.selectionSource !== 'folder-open' &&
-          promptNavigation.selectionSource !== 'folder-move'
-      )
-    }
-
     isLoading = !canUseCachedData
     shouldShowLoadingOverlay = !canUseCachedData
-    pendingInitialCenterRowApplyCount = shouldApplyInitialCenterRow ? 1 : 0
+    initialContentRevealRequestId = null
     isCreatingPrompt = false
     errorMessage = null
-    initialPromptFolderCenterRowId = shouldApplyInitialCenterRow
-      ? toPromptFolderRowId(initialSelectionTarget)
-      : null
     initialPromptFolderScrollTopPx = restoredScrollTop
     scrollTopPx = restoredScrollTop
     latestCenteredPromptTreeRow = isCompletedMode ? null : initialSelectionTarget
 
-    if (
-      promptNavigation.selectionSource === 'prompt-create' &&
-      initialSelectionTarget.kind === 'prompt'
-    ) {
-      requestPromptFocus(initialSelectionTarget.promptId)
-    }
-
-    if (isCompletedMode) {
-      latestHandledSelectionVersion = promptNavigation.selectionVersion
-    } else if (explicitSelectionTarget && currentNavigationTarget) {
-      latestHandledSelectionVersion = promptNavigation.selectionVersion
-    } else {
-      if (!currentNavigationTarget) {
-        setCurrentFolderSelection(initialSelectionTarget, restoreSelectionSource)
-      }
-      latestHandledSelectionVersion = shouldApplyInitialCenterRow
-        ? promptNavigation.selectionVersion
-        : 0
+    if (shouldApplyInitialCenterRow) {
+      const source = explicitSelectionTarget
+        ? promptNavigation.selectionSource!
+        : restoreSelectionSource
+      const result = promptNavigation.select({
+        screenRootFolderId,
+        rowOwnerFolderId: initialSelectionTarget.rowOwnerFolderId,
+        row: toPromptNavigationRow(initialSelectionTarget),
+        source,
+        forceRequest: true,
+        contentReveal: {
+          scrollType: 'center',
+          expandFolderSettings:
+            source !== 'folder-open' && source !== 'subfolder-create' && source !== 'folder-move'
+        },
+        focusPromptId:
+          source === 'prompt-create' && initialSelectionTarget.kind === 'prompt'
+            ? initialSelectionTarget.promptId
+            : undefined,
+        treeExpansion:
+          source === 'prompt-move' ? 'owner' : source === 'folder-move' ? 'ancestors' : undefined
+      })
+      initialContentRevealRequestId = result.contentRevealRequest?.id ?? null
+    } else if (!currentNavigationTarget) {
+      setCurrentFolderSelection(initialSelectionTarget, restoreSelectionSource, {
+        forceRequest: true
+      })
     }
 
     void (async () => {
@@ -901,56 +918,86 @@ export const createPromptFolderScreenController = ({
         if (requestId !== promptFolderLoadRequestId) return
         errorMessage = error instanceof Error ? error.message : String(error)
         isLoading = false
-        clearInitialPersistedScrollWait()
+        const pendingReveal = promptNavigation.contentRevealRequests.pending
+        if (pendingReveal?.id === initialContentRevealRequestId) {
+          cancelNavigationTargetRequests(pendingReveal.payload)
+        }
       }
     })()
   })
 
-  // Side effect: center the selected owner row within this root folder screen.
-  $effect(() => {
-    const target = selectedNavigationTarget
-    if (!target) return
-    if (target.kind === 'prompt' && !navigablePromptIds.includes(target.promptId)) {
-      return
-    }
-
-    if (promptNavigation.selectionVersion === latestHandledSelectionVersion) {
-      return
-    }
-
-    const source = promptNavigation.selectionSource
-    if (
-      source === 'scroll-follow' ||
-      source === 'find' ||
-      source === 'header' ||
-      source === 'restore' ||
-      source === 'restore-hold'
-    ) {
-      latestHandledSelectionVersion = promptNavigation.selectionVersion
-      return
-    }
-
-    if (source === 'prompt-divider-create') {
-      if (!selectPromptTreeRowMinimally(target)) return
-      if (target.kind === 'prompt') {
-        requestPromptFocus(target.promptId)
-      }
-      latestHandledSelectionVersion = promptNavigation.selectionVersion
-      return
-    }
-
-    if (
-      !selectPromptTreeRowAndCenter(
-        target,
-        source !== 'folder-open' && source !== 'subfolder-create' && source !== 'folder-move'
+  const hasPromptFolderRow = (target: ActivePromptTreeRow): boolean => {
+    if (target.kind === 'root-header') return true
+    if (target.kind === 'folder-settings') {
+      return activePromptFolderScreenRows.some(
+        (row) => row.kind === 'folder-editor' && row.ownerFolderId === target.rowOwnerFolderId
       )
-    ) {
+    }
+    return activePromptFolderScreenRows.some(
+      (row) => row.kind === 'prompt-editor' && row.promptId === target.promptId
+    )
+  }
+
+  // Side effect: active-content commands cannot be fulfilled while completed mode is shown.
+  $effect(() => {
+    if (!isCompletedMode) return
+
+    const revealRequest = promptNavigation.contentRevealRequests.pending
+    if (revealRequest?.payload.screenRootFolderId === screenRootFolderId) {
+      cancelNavigationTargetRequests(revealRequest.payload)
+    }
+
+    const expansionRequest = promptNavigation.contentExpansionRequests.pending
+    if (expansionRequest?.payload.screenRootFolderId === screenRootFolderId) {
+      promptNavigation.contentExpansionRequests.cancel(expansionRequest)
+    }
+
+    const focusRequest = promptNavigation.promptFocusRequests.pending
+    if (focusRequest?.payload.screenRootFolderId === screenRootFolderId) {
+      promptNavigation.promptFocusRequests.cancel(focusRequest)
+    }
+  })
+
+  // Side effect: expand the requested content path once folder rows are ready.
+  $effect(() => {
+    const request = promptNavigation.contentExpansionRequests.pending
+    if (!request || request.payload.screenRootFolderId !== screenRootFolderId) return
+    if (isCompletedMode || !isVirtualContentReady) return
+
+    promptNavigation.contentExpansionRequests.consume(request, (payload) => {
+      expandSectionForRow(toActivePromptTreeTarget(payload), payload.expandFolderSettings)
+    })
+  })
+
+  // Side effect: reveal and acknowledge a requested content row once the virtual window is ready.
+  $effect(() => {
+    const request = promptNavigation.contentRevealRequests.pending
+    if (!request || request.payload.screenRootFolderId !== screenRootFolderId) return
+    if (isCompletedMode || !isVirtualContentReady) return
+    if (!viewportMetrics || viewportMetrics.heightPx <= 0) return
+
+    const pendingExpansion = promptNavigation.contentExpansionRequests.pending
+    if (pendingExpansion && isSameNavigationTarget(pendingExpansion.payload, request.payload)) {
       return
     }
-    if (source === 'prompt-create' && target.kind === 'prompt') {
-      requestPromptFocus(target.promptId)
+
+    const target = toActivePromptTreeTarget(request.payload)
+    if (!hasPromptFolderRow(target)) {
+      promptNavigation.contentRevealRequests.cancel(request)
+      return
     }
-    latestHandledSelectionVersion = promptNavigation.selectionVersion
+
+    if (request.payload.scrollType === 'center' && !scrollToAndTrackRowCentered) return
+    if (request.payload.scrollType === 'minimal' && !scrollToWithinWindowBand) return
+
+    promptNavigation.contentRevealRequests.consume(request, (payload) => {
+      const rowId = toPromptFolderRowId(toActivePromptTreeTarget(payload))
+      if (payload.scrollType === 'center') {
+        scrollToAndTrackRowCentered!(rowId)
+      } else {
+        scrollToWithinWindowBand!(rowId, 0, 'minimal')
+      }
+    })
   })
 
   // Side effect: normalize stale prompt selections once rows are loaded.
@@ -966,9 +1013,9 @@ export const createPromptFolderScreenController = ({
         : {
             kind: 'folder-settings',
             rowOwnerFolderId: activePromptTreeRow.rowOwnerFolderId
-          },
+      },
       'restore',
-      { forceVersionBump: true }
+      { forceRequest: true }
     )
   })
 
@@ -1234,7 +1281,7 @@ export const createPromptFolderScreenController = ({
     const targetRow = resolveHeaderSelectionRow()
     expandSectionForRow(targetRow)
     setCurrentFolderSelection(targetRow, 'header', {
-      forceVersionBump: true
+      forceRequest: true
     })
     // Header navigation should land directly on the target section.
     scrollToWithinWindowBand(toPromptFolderRowId(targetRow), 0, 'minimal', 0)
@@ -1245,7 +1292,7 @@ export const createPromptFolderScreenController = ({
     setCurrentFolderSelection(
       { kind: 'root-header', rowOwnerFolderId: screenRootFolderId },
       'header',
-      { forceVersionBump: true }
+      { forceRequest: true }
     )
     scrollApi.scrollTo(0)
   }
@@ -1256,8 +1303,10 @@ export const createPromptFolderScreenController = ({
       rowOwnerFolderId: findRenderedPromptRow(match.entityId)?.ownerFolderId ?? screenRootFolderId,
       promptId: match.entityId
     }
-    expandSectionForRow(targetRow)
-    setCurrentFolderSelection(targetRow, 'find', { forceVersionBump: true })
+    setCurrentFolderSelection(targetRow, 'find', {
+      forceRequest: true,
+      contentReveal: isCompletedMode ? undefined : { scrollType: 'center' }
+    })
   }
 
   const setScrollToWithinWindowBand = (
@@ -1274,6 +1323,10 @@ export const createPromptFolderScreenController = ({
 
   const setScrollApi = (nextScrollApi: VirtualWindowScrollApi | null) => {
     scrollApi = nextScrollApi
+  }
+
+  const setViewportMetrics = (nextViewportMetrics: VirtualWindowViewportMetrics | null) => {
+    viewportMetrics = nextViewportMetrics
   }
 
   const handleVirtualScrollTopChange = (nextScrollTop: number) => {
@@ -1302,7 +1355,7 @@ export const createPromptFolderScreenController = ({
         ? { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
         : { kind: 'folder-settings', rowOwnerFolderId: parentPromptFolderId },
       'restore',
-      { forceVersionBump: true }
+      { forceRequest: true }
     )
   }
 
@@ -1364,9 +1417,6 @@ export const createPromptFolderScreenController = ({
     get isCreatingPrompt(): boolean {
       return isCreatingPrompt
     },
-    get promptFocusRequest(): PromptFocusRequest | null {
-      return promptFocusRequest
-    },
     get isSettingsSectionExpanded(): boolean {
       return isSettingsSectionExpanded
     },
@@ -1381,9 +1431,6 @@ export const createPromptFolderScreenController = ({
     },
     get initialPromptFolderScrollTopPx(): number {
       return initialPromptFolderScrollTopPx
-    },
-    get initialPromptFolderCenterRowId(): string | null {
-      return initialPromptFolderCenterRowId
     },
     get findItems(): PromptFolderFindItem[] {
       return findItems
@@ -1421,8 +1468,8 @@ export const createPromptFolderScreenController = ({
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
     setScrollApi,
+    setViewportMetrics,
     handleVirtualScrollTopChange,
-    handleInitialPromptFolderCenterRowApplied,
     handleVirtualCenterRowChange,
     handleVirtualUserScroll
   }
