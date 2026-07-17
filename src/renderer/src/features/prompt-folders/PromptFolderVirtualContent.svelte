@@ -82,6 +82,7 @@
   import type {
     PromptFolderDividerTarget,
     PromptFolderPromptTarget,
+    PromptFolderScreenBottomCapRow,
     PromptFolderScreenDividerRow,
     PromptFolderScreenFolderEditorRow,
     PromptFolderScreenPlaceholderRow,
@@ -97,6 +98,7 @@
         isPromptsSectionExpanded: boolean
       })
     | PromptFolderScreenPlaceholderRow
+    | PromptFolderScreenBottomCapRow
     | PromptFolderScreenDividerRow
     | PromptFolderScreenPromptEditorRow
     | { kind: 'bottom-spacer' }
@@ -331,6 +333,10 @@
       estimateHeight: () => 120,
       snippet: placeholderRow
     },
+    'folder-bottom-cap': {
+      estimateHeight: () => 8,
+      snippet: folderBottomCapRow
+    },
     'prompt-divider': {
       // Match the rendered add prompt divider height used by the virtual row.
       estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
@@ -405,6 +411,10 @@
               : promptDividerRowId(previousEntryId)
             : `divider:${row.ownerFolderId}:${previousEntryId ?? 'initial'}`
           return { id, row }
+        }
+
+        if (row.kind === 'folder-bottom-cap') {
+          return { id: `folder-bottom-cap:${row.ownerFolderId}`, row }
         }
 
         return { id: 'placeholder-empty', row }
@@ -772,7 +782,6 @@
   <PromptFolderSectionRow
     {rowHeightPx}
     contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
-    showGutter={false}
   >
     <p>
       {isCompletedMode
@@ -782,6 +791,15 @@
     {#if !isCompletedMode}
       <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
     {/if}
+  </PromptFolderSectionRow>
+{/snippet}
+
+{#snippet folderBottomCapRow({ row, rowHeightPx })}
+  <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
+    <div
+      class="prompt-folder-bottom-cap"
+      data-testid={`prompt-folder-bottom-cap-${row.ownerFolderId}`}
+    ></div>
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -880,3 +898,15 @@
 {#snippet bottomSpacerRow({ virtualWindowHeightPx })}
   <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
 {/snippet}
+
+<style>
+  .prompt-folder-bottom-cap {
+    background: var(--ui-card-nested-surface);
+    border: 1px solid var(--ui-card-nested-border);
+    border-radius: 0 0 8px 8px;
+    border-top: 0;
+    box-sizing: border-box;
+    height: 8px;
+    width: 100%;
+  }
+</style>

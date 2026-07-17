@@ -6,7 +6,6 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -309,70 +308,6 @@ describe('Prompt Folder Hydration', () => {
       expect.stringContaining('folderSuffix')
     ])
     expect(new Set(settingsSections.map((section) => section.top)).size).toBe(3)
-  })
-
-  test('starts the prompt gutter guide at the folder settings card bottom-left corner', async ({
-    testSetup
-  }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
-    })
-
-    expect(workspaceSetupResult?.workspaceReady).toBe(true)
-
-    await testHelpers.navigateToPromptFolders('Main')
-    await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
-    await mainWindow.waitForSelector(
-      `${HOST_SELECTOR} ${NESTED_FOLDER_EDITOR_SELECTOR}[data-virtual-window-row]`,
-      { state: 'attached' }
-    )
-
-    const geometry = await mainWindow.evaluate((hostSelector) => {
-      const host = document.querySelector<HTMLElement>(hostSelector)
-      const folderEditor = host?.querySelector<HTMLElement>(
-        '[data-testid^="prompt-folder-editor-"][data-virtual-window-row]'
-      )
-      const card = folderEditor?.querySelector<HTMLElement>('.editor-card-surface')
-      if (!host || !card) return null
-
-      const cardRect = card.getBoundingClientRect()
-      const gutterElement = Array.from(
-        host.querySelectorAll<HTMLElement>('.promptFolderSectionGutter')
-      ).find((candidate) => candidate.getBoundingClientRect().top >= cardRect.bottom - 1)
-
-      if (!gutterElement) return null
-
-      const gutter = gutterElement.getBoundingClientRect()
-      const guideLines = Array.from(
-        gutterElement.querySelectorAll<HTMLElement>('[data-indent-guide-line]')
-      ).map((line) => line.getBoundingClientRect())
-
-      return {
-        cardBottom: cardRect.bottom,
-        cardLeft: cardRect.left,
-        guideLineCount: guideLines.length,
-        guideLineLeft: guideLines[0]?.left ?? null,
-        guideLineWidth: guideLines[0]?.width ?? null,
-        gutterTop: gutter.top
-      }
-    }, HOST_SELECTOR)
-
-    if (!geometry) {
-      throw new Error('Missing folder settings card or gutter geometry')
-    }
-
-    expect(Math.abs(geometry.gutterTop - geometry.cardBottom)).toBeLessThanOrEqual(1)
-    expect(geometry.guideLineCount).toBe(1)
-    expect(geometry.guideLineWidth).toBe(2)
-    if (geometry.guideLineLeft === null) {
-      throw new Error('Missing prompt folder gutter guide line geometry')
-    }
-    expect(
-      Math.abs(
-        geometry.guideLineLeft -
-          (geometry.cardLeft + PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX)
-      )
-    ).toBeLessThanOrEqual(1)
   })
 
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {

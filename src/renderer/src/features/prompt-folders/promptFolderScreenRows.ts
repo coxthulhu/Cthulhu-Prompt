@@ -43,11 +43,16 @@ export type PromptFolderScreenPlaceholderRow = PromptFolderScreenOwnedRow & {
   kind: 'placeholder'
 }
 
+export type PromptFolderScreenBottomCapRow = PromptFolderScreenOwnedRow & {
+  kind: 'folder-bottom-cap'
+}
+
 export type PromptFolderScreenRow =
   | PromptFolderScreenRootHeaderRow
   | PromptFolderScreenFolderEditorRow
   | PromptFolderScreenPromptEditorRow
   | PromptFolderScreenDividerRow
+  | PromptFolderScreenBottomCapRow
   | PromptFolderScreenPlaceholderRow
 
 type BuildPromptFolderScreenRowsOptions = {
@@ -143,6 +148,16 @@ export const buildPromptFolderScreenRows = ({
         previousEntryId: entry.id,
         indentLevel: childIndentLevel,
         isOwnerRoot: isRoot
+      })
+    }
+
+    if (!isRoot) {
+      // The explicit cap keeps the rounded folder end independent from neighboring virtual rows.
+      rows.push({
+        kind: 'folder-bottom-cap',
+        ownerFolderId: folder.id,
+        indentLevel,
+        isOwnerRoot: false
       })
     }
 

@@ -1,18 +1,9 @@
-<script module lang="ts">
-  export {
-    PROMPT_FOLDER_SECTION_GUTTER_FIRST_LINE_OFFSET_PX,
-    PROMPT_FOLDER_SECTION_GUTTER_GAP_PX,
-    PROMPT_FOLDER_SECTION_GUTTER_LINE_WIDTH_PX
-  } from './promptFolderSectionGutterMetrics'
-</script>
-
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
-  import PromptFolderSectionGutter from './PromptFolderSectionGutter.svelte'
   import {
-    getPromptFolderSectionGutterGapPx,
-    getPromptFolderSectionGutterWidthPx
+    PROMPT_FOLDER_SECTION_INSET_PX,
+    getPromptFolderSectionContentOffsetPx
   } from './promptFolderSectionGutterMetrics'
 
   type Props = {
@@ -21,7 +12,6 @@
     contentClass?: string
     contentVirtualWindowRow?: boolean
     indentLevel?: number
-    showGutter?: boolean
     testId?: string
   }
 
@@ -30,26 +20,25 @@
     rowHeightPx,
     contentClass,
     contentVirtualWindowRow = false,
-    indentLevel = 1,
-    showGutter = true,
+    indentLevel = 0,
     testId
   }: Props = $props()
 
-  const effectiveIndentLevel = $derived(showGutter ? indentLevel : 0)
-  const gutterWidthPx = $derived(getPromptFolderSectionGutterWidthPx(effectiveIndentLevel))
-  const gutterGapPx = $derived(getPromptFolderSectionGutterGapPx(effectiveIndentLevel))
+  const contentOffsetPx = $derived(getPromptFolderSectionContentOffsetPx(indentLevel))
 </script>
 
 <div
   class="prompt-folder-section-row"
-  style={`height:${rowHeightPx}px; --prompt-folder-section-gutter-width:${gutterWidthPx}px; --prompt-folder-section-gutter-gap:${gutterGapPx}px;`}
+  style={`height:${rowHeightPx}px; --prompt-folder-section-content-offset:${contentOffsetPx}px;`}
   data-testid={testId}
 >
-  {#if showGutter && indentLevel > 0}
-    <PromptFolderSectionGutter {indentLevel} />
-  {:else}
-    <div aria-hidden="true"></div>
-  {/if}
+  {#each Array.from({ length: indentLevel }, (_value, level) => level) as level (level)}
+    <div
+      class="prompt-folder-section-middle-layer"
+      style={`inset:0 ${level * PROMPT_FOLDER_SECTION_INSET_PX}px;`}
+      aria-hidden="true"
+    ></div>
+  {/each}
   <div
     class={mergeClasses('prompt-folder-section-row-content', contentClass)}
     data-virtual-window-row={contentVirtualWindowRow ? '' : undefined}
@@ -61,13 +50,24 @@
 <style>
   .prompt-folder-section-row {
     box-sizing: border-box;
-    column-gap: var(--prompt-folder-section-gutter-gap);
-    display: grid;
-    grid-template-columns: var(--prompt-folder-section-gutter-width) minmax(0, 1fr);
     min-width: 0;
+    position: relative;
+  }
+
+  .prompt-folder-section-middle-layer {
+    background: var(--ui-card-nested-surface);
+    border-left: 1px solid var(--ui-card-nested-border);
+    border-right: 1px solid var(--ui-card-nested-border);
+    box-sizing: border-box;
+    position: absolute;
   }
 
   .prompt-folder-section-row-content {
+    box-sizing: border-box;
+    height: 100%;
+    margin-left: var(--prompt-folder-section-content-offset);
+    margin-right: var(--prompt-folder-section-content-offset);
     min-width: 0;
+    position: relative;
   }
 </style>

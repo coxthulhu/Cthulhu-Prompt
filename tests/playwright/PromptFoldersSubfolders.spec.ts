@@ -4,7 +4,7 @@ import {
   PROMPT_FOLDER_HOST_SELECTOR,
   PROMPT_TITLE_SELECTOR
 } from '../helpers/PromptFolderSelectors'
-import { PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
+import { PROMPT_FOLDER_SECTION_INSET_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
 import {
   getMonacoEditorText,
   typeInMonacoEditor,
@@ -60,6 +60,7 @@ const hierarchyFolderSelector = `[data-testid="prompt-folder-editor-${hierarchyF
 const nestedFolderSelector = `[data-testid="prompt-folder-editor-${nestedFolderId}"]`
 const emptyNestedFolderSelector = `[data-testid="prompt-folder-editor-${emptyNestedFolderId}"]`
 const grandchildFolderSelector = `[data-testid="prompt-folder-editor-${grandchildFolderId}"]`
+const nestedBottomCapSelector = `[data-testid="prompt-folder-bottom-cap-${nestedFolderId}"]`
 const rootBeforeSelector = '[data-testid="prompt-editor-subfolders-ui-root-before"]'
 const nestedPromptSelector = '[data-testid="prompt-editor-subfolders-ui-nested-prompt"]'
 const grandchildPromptSelector = '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
@@ -393,6 +394,26 @@ describe('Prompt folder subfolder rendering', () => {
     const nestedPromptBox = await mainWindow.locator(nestedPromptSelector).boundingBox()
     const grandchildFolderBox = await mainWindow.locator(grandchildFolderSelector).boundingBox()
     const grandchildPromptBox = await mainWindow.locator(grandchildPromptSelector).boundingBox()
+    const nestedPromptSection = mainWindow.locator(
+      `.prompt-folder-section-row:has(${nestedPromptSelector})`
+    )
+    const grandchildPromptSection = mainWindow.locator(
+      `.prompt-folder-section-row:has(${grandchildPromptSelector})`
+    )
+    const nestedMiddleLayer = nestedPromptSection.locator(
+      '.prompt-folder-section-middle-layer'
+    )
+
+    await expect(nestedMiddleLayer).toHaveCount(1)
+    await expect(
+      grandchildPromptSection.locator('.prompt-folder-section-middle-layer')
+    ).toHaveCount(2)
+    await expect(nestedMiddleLayer).toHaveCSS('border-left-width', '1px')
+    await expect(
+      mainWindow
+        .locator(PROMPT_FOLDER_HOST_SELECTOR)
+        .locator('.promptFolderSectionGutter, [data-indent-guide-line]')
+    ).toHaveCount(0)
 
     if (
       !rootBeforeBox ||
@@ -404,16 +425,116 @@ describe('Prompt folder subfolder rendering', () => {
       throw new Error('Missing prompt folder hierarchy row geometry')
     }
 
+    const nestedMiddleLayerBox = await nestedMiddleLayer.boundingBox()
+    if (!nestedMiddleLayerBox) throw new Error('Missing nested folder middle layer geometry')
+
     expect(Math.abs(nestedFolderBox.x - rootBeforeBox.x)).toBeLessThanOrEqual(1)
     expect(
-      Math.abs(nestedPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX)
+      Math.abs(nestedPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_INSET_PX)
     ).toBeLessThanOrEqual(1)
     expect(Math.abs(grandchildFolderBox.x - nestedPromptBox.x)).toBeLessThanOrEqual(1)
     expect(
       Math.abs(
-        grandchildPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_GUTTER_LINE_STEP_PX * 2
+        grandchildPromptBox.x - rootBeforeBox.x - PROMPT_FOLDER_SECTION_INSET_PX * 2
       )
     ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(nestedPromptBox.x - nestedMiddleLayerBox.x - PROMPT_FOLDER_SECTION_INSET_PX)
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(
+        nestedMiddleLayerBox.x +
+          nestedMiddleLayerBox.width -
+          (nestedPromptBox.x + nestedPromptBox.width) -
+          PROMPT_FOLDER_SECTION_INSET_PX
+      )
+    ).toBeLessThanOrEqual(1)
+
+    const nestedSegmentColors = await nestedMiddleLayer.evaluate((element) => {
+      const reference = document.createElement('div')
+      reference.style.backgroundColor = 'var(--ui-card-nested-surface)'
+      reference.style.borderColor = 'var(--ui-card-nested-border)'
+      reference.style.borderStyle = 'solid'
+      document.body.append(reference)
+      const referenceStyles = getComputedStyle(reference)
+      const colors = {
+        expectedBackground: referenceStyles.backgroundColor,
+        expectedBorder: referenceStyles.borderColor
+      }
+      reference.remove()
+      const elementStyles = getComputedStyle(element)
+      return {
+        background: elementStyles.backgroundColor,
+        border: elementStyles.borderLeftColor,
+        ...colors
+      }
+    })
+    expect(nestedSegmentColors.background).toBe(nestedSegmentColors.expectedBackground)
+    expect(nestedSegmentColors.border).toBe(nestedSegmentColors.expectedBorder)
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
+    const nestedTopCapBorder = await mainWindow
+      .locator(nestedFolderSelector)
+      .locator('.editor-card-surface')
+      .evaluate((element) => {
+        const reference = document.createElement('div')
+        reference.style.borderColor = 'var(--ui-card-nested-border)'
+        reference.style.borderStyle = 'solid'
+        document.body.append(reference)
+        const expected = getComputedStyle(reference).borderColor
+        reference.remove()
+        return { actual: getComputedStyle(element).borderTopColor, expected }
+      })
+    expect(nestedTopCapBorder.actual).toBe(nestedTopCapBorder.expected)
+    expect(
+      Math.abs(
+        nestedPromptBox.x +
+          nestedPromptBox.width -
+          (rootBeforeBox.x + rootBeforeBox.width - PROMPT_FOLDER_SECTION_INSET_PX)
+      )
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(
+        grandchildPromptBox.x +
+          grandchildPromptBox.width -
+          (rootBeforeBox.x + rootBeforeBox.width - PROMPT_FOLDER_SECTION_INSET_PX * 2)
+      )
+    ).toBeLessThanOrEqual(1)
+
+    await revealVirtualRow(mainWindow, testHelpers, nestedBottomCapSelector)
+    const nestedBottomCap = mainWindow.locator(nestedBottomCapSelector)
+    await expect(nestedBottomCap).toHaveCSS('height', '8px')
+    await expect(nestedBottomCap).toHaveCSS('border-top-width', '0px')
+    await expect(nestedBottomCap).toHaveCSS('border-bottom-left-radius', '8px')
+    await expect(nestedBottomCap).toHaveCSS('border-bottom-right-radius', '8px')
+    const nestedSurfaceColors = await nestedBottomCap.evaluate((element) => {
+      const probe = document.createElement('div')
+      probe.style.backgroundColor = 'var(--ui-card-nested-surface)'
+      probe.style.borderColor = 'var(--ui-card-nested-border)'
+      probe.style.borderStyle = 'solid'
+      document.body.append(probe)
+      const probeStyles = getComputedStyle(probe)
+      const colors = {
+        expectedBackground: probeStyles.backgroundColor,
+        expectedBorder: probeStyles.borderColor
+      }
+      probe.remove()
+      return {
+        background: getComputedStyle(element).backgroundColor,
+        border: getComputedStyle(element).borderBottomColor,
+        ...colors
+      }
+    })
+    expect(nestedSurfaceColors.background).toBe(nestedSurfaceColors.expectedBackground)
+    expect(nestedSurfaceColors.border).toBe(nestedSurfaceColors.expectedBorder)
+
+    const nestedInitialDividerSelector = testIdSelector(dividerTestId(nestedFolderId, null))
+    await revealVirtualRow(mainWindow, testHelpers, nestedInitialDividerSelector)
+    await expect(
+      mainWindow
+        .locator(nestedInitialDividerSelector)
+        .locator('.prompt-folder-section-middle-layer')
+    ).toHaveCount(1)
 
     const rowOrder = await collectVirtualRowTestIds(mainWindow, testHelpers, orderedRowSelector)
     expect(rowOrder).toEqual(orderedRowTestIds)
@@ -467,6 +588,9 @@ describe('Prompt folder subfolder rendering', () => {
       .locator(nestedFolderSelector)
       .locator(folderTitleBarSelector)
     const nestedFolderChevron = nestedFolderToggle.locator('.prompt-folder-editor-chevron')
+    const nestedFolderCard = mainWindow
+      .locator(nestedFolderSelector)
+      .locator('.editor-card-surface')
     const readChevronRotationDegrees = async (): Promise<number> =>
       await nestedFolderChevron.evaluate((element) => {
         const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform)
@@ -476,6 +600,9 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(nestedFolderToggle).toHaveAttribute('data-hover-variant', 'neutral')
     await expect(nestedFolderToggle).toHaveCSS('border-top-style', 'none')
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(nestedFolderCard).toHaveCSS('border-top-left-radius', '8px')
+    await expect(nestedFolderCard).toHaveCSS('border-bottom-left-radius', '0px')
+    await expect(nestedFolderCard).toHaveCSS('border-bottom-right-radius', '0px')
     await expect(nestedFolderTitleBar).toContainText('1 prompt')
     await expect(nestedFolderTitleBar).toContainText('1 subfolder')
     await expect.poll(readChevronRotationDegrees).toBe(90)
@@ -483,6 +610,8 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
     await nestedFolderToggle.click()
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(nestedFolderCard).toHaveCSS('border-bottom-left-radius', '8px')
+    await expect(nestedFolderCard).toHaveCSS('border-bottom-right-radius', '8px')
     await expect(nestedFolderTitleBar).toContainText('1 prompt')
     await expect(nestedFolderTitleBar).toContainText('1 subfolder')
     await expect.poll(readChevronRotationDegrees).toBe(0)

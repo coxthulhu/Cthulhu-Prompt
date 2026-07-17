@@ -24,7 +24,8 @@
   --ui-card-overlay-surface: oklch(0.2 0 0);
   --ui-card-normal-border: oklch(1 0 0 / 12%);
   --ui-card-normal-shadow: oklch(0 0 0 / 28%);
-  --ui-card-nested-border: oklch(1 0 0 / 6%);
+  --ui-card-nested-border: oklch(0.322 0.045 290.45);
+  --ui-card-nested-surface: oklch(0.17 0.014 275);
 
   /* Shadows */
   --ui-shadow-raised: oklch(0 0 0 / 20%);

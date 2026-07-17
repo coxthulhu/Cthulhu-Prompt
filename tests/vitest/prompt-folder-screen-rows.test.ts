@@ -115,6 +115,12 @@ describe('buildPromptFolderScreenRows', () => {
         isOwnerRoot: false
       },
       {
+        kind: 'folder-bottom-cap',
+        ownerFolderId: 'folder-child',
+        indentLevel: 0,
+        isOwnerRoot: false
+      },
+      {
         kind: 'prompt-divider',
         ownerFolderId: 'folder-root',
         previousEntryId: 'folder-child',
@@ -167,6 +173,12 @@ describe('buildPromptFolderScreenRows', () => {
       indentLevel: 1,
       isOwnerRoot: false
     })
+    expect(rows).toContainEqual({
+      kind: 'folder-bottom-cap',
+      ownerFolderId: 'folder-child',
+      indentLevel: 0,
+      isOwnerRoot: false
+    })
   })
 
   it('emits the parent-owned divider after the complete child subtree', () => {
@@ -190,9 +202,8 @@ describe('buildPromptFolderScreenRows', () => {
 
     expect(childDividerIndex).toBeGreaterThan(grandchildPromptIndex)
     expect(rows[childDividerIndex - 1]).toMatchObject({
-      kind: 'prompt-divider',
-      ownerFolderId: 'folder-child',
-      previousEntryId: 'folder-grandchild'
+      kind: 'folder-bottom-cap',
+      ownerFolderId: 'folder-child'
     })
   })
 
@@ -240,6 +251,9 @@ describe('buildPromptFolderScreenRows', () => {
     )
     expect(rows).not.toContainEqual(
       expect.objectContaining({ kind: 'prompt-divider', ownerFolderId: 'folder-child' })
+    )
+    expect(rows).not.toContainEqual(
+      expect.objectContaining({ kind: 'folder-bottom-cap', ownerFolderId: 'folder-child' })
     )
     expect(rows.at(-1)).toEqual({
       kind: 'prompt-divider',
