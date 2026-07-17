@@ -68,6 +68,8 @@ const folderTitleToggleSelector = '[data-testid="prompt-folder-editor-title-togg
 const folderTitleBarSelector = '[data-testid="prompt-folder-editor-title-bar"]'
 const folderTitleEditSelector = '[data-testid="prompt-folder-editor-title-edit"]'
 const folderSettingsToggleSelector = '[data-testid="prompt-folder-editor-settings-toggle"]'
+const folderSettingsSeparatorSelector =
+  '[data-testid="prompt-folder-editor-settings-separator"]'
 const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
 const nestedDescriptionPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
@@ -783,8 +785,10 @@ describe('Prompt folder subfolder rendering', () => {
     const nestedFolder = mainWindow.locator(nestedFolderSelector)
     const nestedSettingsToggle = nestedFolder.locator(folderSettingsToggleSelector)
     await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(nestedFolder.locator(folderSettingsSeparatorSelector)).toHaveCount(0)
     await nestedSettingsToggle.click()
     await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(nestedFolder.locator(folderSettingsSeparatorSelector)).toHaveCount(1)
     await expect(nestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(1)
 
     const nestedDescriptionSelector = `${nestedFolderSelector} ${folderDescriptionSectionSelector}`
@@ -833,6 +837,10 @@ describe('Prompt folder subfolder rendering', () => {
         timeout: 5000
       })
       .toContain(marker)
+
+    await nestedSettingsToggle.click()
+    await expect(nestedSettingsToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(nestedFolder.locator(folderSettingsSeparatorSelector)).toHaveCount(0)
   })
 
   test('keeps subfolder editor cards flush with their virtual rows', async ({ testSetup }) => {

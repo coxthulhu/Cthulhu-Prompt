@@ -271,9 +271,9 @@
       {/if}
     </header>
 
-    <Separator />
-
     {#if isSettingsSectionExpanded && !isReadOnly}
+      <Separator data-testid="prompt-folder-editor-settings-separator" />
+
       <div class="prompt-folder-editor-sections">
         {#each PROMPT_FOLDER_SETTINGS_FIELDS as field, index (field)}
           <PromptFolderSettingsEditorSection
