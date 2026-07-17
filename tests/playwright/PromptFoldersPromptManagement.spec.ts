@@ -66,7 +66,24 @@ const statusMoreOptionsSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-status-more-options-button"]`
 const statusPillSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-status-pill"]`
+const statusIndicatorSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
+
+const expectEditedIndicator = async (page: any, promptId: string) => {
+  const indicator = page.locator(statusIndicatorSelector(promptId))
+  await expect(indicator).toHaveAttribute('data-edited', 'true')
+  await expect(indicator).toHaveCSS('visibility', 'visible')
+  const colors = await indicator.evaluate((element) => {
+    const reference = document.createElement('span')
+    reference.style.backgroundColor = 'var(--ui-info-strong-border)'
+    document.body.append(reference)
+    const expected = getComputedStyle(reference).backgroundColor
+    reference.remove()
+    return { actual: getComputedStyle(element).backgroundColor, expected }
+  })
+  expect(colors.actual).toBe(colors.expected)
+}
 
 const getPromptEditorIds = async (page: any): Promise<string[]> => {
   return await page.evaluate((selector: string) => {
@@ -453,6 +470,7 @@ describe('Prompt folder prompt management', () => {
       'placeholder',
       'New Prompt 1...'
     )
+    await expectEditedIndicator(mainWindow, newPromptId!)
   })
 
   test('regenerates the fallback title when an active title is cleared', async ({ testSetup }) => {
@@ -997,6 +1015,15 @@ describe('Prompt folder prompt management', () => {
     await waitForMonacoEditor(mainWindow, promptEditorSelector('copy-prefix-source'))
 
     await stubClipboard(mainWindow)
+    const sourceIndicator = mainWindow.locator(statusIndicatorSelector('copy-prefix-source'))
+    await expect(sourceIndicator).toHaveAttribute('data-edited', 'false')
+    await mainWindow
+      .locator(`${promptEditorSelector('copy-prefix-source')} [data-testid="prompt-copy-button"]`)
+      .click()
+    await expect(mainWindow.locator(statusPillSelector('copy-prefix-source'))).toHaveText(
+      'In Progress'
+    )
+    await expect(sourceIndicator).toHaveAttribute('data-edited', 'true')
 
     const initialIds = await getPromptEditorIds(mainWindow)
     await clickAddAfter(mainWindow, testHelpers, 'copy-prefix-source')
@@ -1056,6 +1083,7 @@ describe('Prompt folder prompt management', () => {
 
     const completedText = 'Completed prompt text saved from the latest draft.'
     await replacePromptText(mainWindow, COMPLETION_PROMPT_ID, completedText)
+    await expectEditedIndicator(mainWindow, COMPLETION_PROMPT_ID)
 
     const completeButton = mainWindow.locator(completeSelector(COMPLETION_PROMPT_ID))
     await completeButton.scrollIntoViewIfNeeded()

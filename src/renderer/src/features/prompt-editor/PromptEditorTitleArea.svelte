@@ -32,6 +32,7 @@
     copyTitle,
     completedAt,
     status = PromptStatus.Todo,
+    isEdited = false,
     titleAreaHeightPx,
     infoText
   }: Props = $props()
@@ -63,6 +64,7 @@
     {copyTitle}
     {completedAt}
     {status}
+    {isEdited}
   />
 
   {#if infoText}

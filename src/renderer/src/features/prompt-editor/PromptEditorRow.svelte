@@ -451,6 +451,7 @@
     {onDelete}
     {onStatusChange}
     {status}
+    isEdited={promptDraftRecord.isEdited}
     titleAreaHeightPx={PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}
   />
 

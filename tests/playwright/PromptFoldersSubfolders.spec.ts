@@ -94,6 +94,58 @@ const statusIndicatorSelector = (promptId: string): string =>
   `[data-testid="prompt-editor-${promptId}"] [data-testid="prompt-title-status-indicator"]`
 const statusMoreOptionsSelector = (promptId: string): string =>
   `[data-testid="prompt-editor-${promptId}"] [data-testid="prompt-status-more-options-button"]`
+type PromptIndicatorColorToken =
+  | '--ui-info-strong-border'
+  | '--ui-warning-icon-glyph'
+  | '--ui-success-normal-text'
+
+const expectStatusIndicator = async (
+  page: any,
+  promptId: string,
+  status: 'Todo' | 'InProgress' | 'Completed',
+  isEdited: boolean,
+  colorToken: PromptIndicatorColorToken | null
+) => {
+  const indicator = page.locator(statusIndicatorSelector(promptId))
+  await expect(indicator).toHaveAttribute('data-status', status)
+  await expect(indicator).toHaveAttribute('data-edited', isEdited ? 'true' : 'false')
+  await expect(indicator).toHaveCSS('visibility', colorToken ? 'visible' : 'hidden')
+
+  const geometry = await indicator.evaluate((element) => {
+    const indicatorRect = element.getBoundingClientRect()
+    const titleRowRect = element.parentElement!.getBoundingClientRect()
+    const titleAreaRect = element.parentElement!.parentElement!.getBoundingClientRect()
+    const sidebar = element.closest('[data-testid^="prompt-editor-"]')?.querySelector(
+      '.prompt-editor-sidebar'
+    )
+    const sidebarRect = sidebar?.getBoundingClientRect() ?? null
+    return {
+      height: indicatorRect.height,
+      width: indicatorRect.width,
+      x: indicatorRect.x,
+      titleAreaHeight: titleAreaRect.height,
+      titleRowX: titleRowRect.x,
+      sidebarRight: sidebarRect ? sidebarRect.right : null
+    }
+  })
+  expect(geometry.width).toBe(2)
+  expect(Math.abs(geometry.height - geometry.titleAreaHeight)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.x - geometry.titleRowX)).toBeLessThanOrEqual(1)
+  if (geometry.sidebarRight !== null) {
+    expect(Math.abs(geometry.x - geometry.sidebarRight)).toBeLessThanOrEqual(1)
+  }
+
+  if (!colorToken) return
+  const colors = await indicator.evaluate((element, token) => {
+    const reference = document.createElement('span')
+    reference.style.backgroundColor = `var(${token})`
+    document.body.append(reference)
+    const expected = getComputedStyle(reference).backgroundColor
+    reference.remove()
+    return { actual: getComputedStyle(element).backgroundColor, expected }
+  }, colorToken)
+  expect(colors.actual).toBe(colors.expected)
+}
 const orderedRowTestIds = [
   dividerTestId(hierarchyFolderId, null),
   'prompt-editor-subfolders-ui-root-before',
@@ -1257,7 +1309,15 @@ describe('Prompt folder subfolder rendering', () => {
 
     const updatedTitle = 'Nested Prompt Updated'
     const bodyMarker = '[nested-prompt-body-persisted]'
+    await expectStatusIndicator(mainWindow, 'subfolders-ui-nested-prompt', 'Todo', false, null)
     await mainWindow.locator(promptTitleSelector('subfolders-ui-nested-prompt')).fill(updatedTitle)
+    await expectStatusIndicator(
+      mainWindow,
+      'subfolders-ui-nested-prompt',
+      'Todo',
+      true,
+      '--ui-info-strong-border'
+    )
     await typeInMonacoEditor(mainWindow, nestedPromptSelector, bodyMarker)
     const updatedPromptLookup = {
       workspacePath: WORKSPACE_PATH,
@@ -1282,6 +1342,13 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(
       mainWindow.locator(promptTitleSelector('subfolders-ui-nested-prompt'))
     ).toHaveValue(updatedTitle)
+    await expectStatusIndicator(
+      mainWindow,
+      'subfolders-ui-nested-prompt',
+      'Todo',
+      true,
+      '--ui-info-strong-border'
+    )
     await expect
       .poll(async () => getMonacoEditorText(mainWindow, nestedPromptSelector))
       .toContain(bodyMarker)
@@ -1331,60 +1398,29 @@ describe('Prompt folder subfolder rendering', () => {
     )
     await waitForMonacoEditor(mainWindow, grandchildPromptSelector)
 
-    const expectStatusIndicator = async (
-      status: 'Todo' | 'InProgress' | 'Completed',
-      colorToken: '--ui-warning-icon-glyph' | '--ui-success-normal-text' | null
-    ) => {
-      const indicator = mainWindow.locator(statusIndicatorSelector(promptId))
-      await expect(indicator).toHaveAttribute('data-status', status)
-      await expect(indicator).toHaveCSS('visibility', colorToken ? 'visible' : 'hidden')
-
-      const geometry = await indicator.evaluate((element) => {
-        const indicatorRect = element.getBoundingClientRect()
-        const titleRowRect = element.parentElement!.getBoundingClientRect()
-        const titleAreaRect = element.parentElement!.parentElement!.getBoundingClientRect()
-        const sidebar = element.closest('[data-testid^="prompt-editor-"]')?.querySelector(
-          '.prompt-editor-sidebar'
-        )
-        const sidebarRect = sidebar?.getBoundingClientRect() ?? null
-        return {
-          height: indicatorRect.height,
-          width: indicatorRect.width,
-          x: indicatorRect.x,
-          titleAreaHeight: titleAreaRect.height,
-          titleRowX: titleRowRect.x,
-          sidebarRight: sidebarRect ? sidebarRect.right : null
-        }
-      })
-      expect(geometry.width).toBe(2)
-      expect(Math.abs(geometry.height - geometry.titleAreaHeight)).toBeLessThanOrEqual(1)
-      expect(Math.abs(geometry.x - geometry.titleRowX)).toBeLessThanOrEqual(1)
-      if (geometry.sidebarRight !== null) {
-        expect(Math.abs(geometry.x - geometry.sidebarRight)).toBeLessThanOrEqual(1)
-      }
-
-      if (!colorToken) return
-      const colors = await indicator.evaluate((element, token) => {
-        const reference = document.createElement('span')
-        reference.style.backgroundColor = `var(${token})`
-        document.body.append(reference)
-        const expected = getComputedStyle(reference).backgroundColor
-        reference.remove()
-        return { actual: getComputedStyle(element).backgroundColor, expected }
-      }, colorToken)
-      expect(colors.actual).toBe(colors.expected)
-    }
-
     await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Todo')
-    await expectStatusIndicator('Todo', null)
+    await expectStatusIndicator(mainWindow, promptId, 'Todo', false, null)
 
     await mainWindow.locator(statusMoreOptionsSelector(promptId)).click()
     await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
     await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('In Progress')
-    await expectStatusIndicator('InProgress', '--ui-warning-icon-glyph')
+    await expectStatusIndicator(
+      mainWindow,
+      promptId,
+      'InProgress',
+      true,
+      '--ui-warning-icon-glyph'
+    )
     await mainWindow.locator(statusMoreOptionsSelector(promptId)).click()
     await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
     await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Todo')
+    await expectStatusIndicator(
+      mainWindow,
+      promptId,
+      'Todo',
+      true,
+      '--ui-info-strong-border'
+    )
 
     await mainWindow
       .locator(`${grandchildPromptSelector} [data-testid="prompt-complete-button"]`)
@@ -1397,7 +1433,13 @@ describe('Prompt folder subfolder rendering', () => {
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
     await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('Completed')
-    await expectStatusIndicator('Completed', '--ui-success-normal-text')
+    await expectStatusIndicator(
+      mainWindow,
+      promptId,
+      'Completed',
+      true,
+      '--ui-success-normal-text'
+    )
     await mainWindow.locator(statusMoreOptionsSelector(promptId)).click()
     await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
     await expect(mainWindow.locator(grandchildPromptSelector)).toHaveCount(0)
@@ -1405,6 +1447,13 @@ describe('Prompt folder subfolder rendering', () => {
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
     await expect(mainWindow.locator(statusPillSelector(promptId))).toHaveText('In Progress')
+    await expectStatusIndicator(
+      mainWindow,
+      promptId,
+      'InProgress',
+      true,
+      '--ui-warning-icon-glyph'
+    )
     await expect
       .poll(async () => await readFolderEntryIds(electronApp, grandchildFolderOrderPath))
       .toEqual([promptId])

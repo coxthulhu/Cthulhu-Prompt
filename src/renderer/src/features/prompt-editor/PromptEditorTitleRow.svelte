@@ -24,6 +24,7 @@
     copyTitle?: string
     completedAt?: string | null
     status?: import('@shared/Prompt').PromptStatus
+    isEdited?: boolean
   }
 </script>
 
@@ -58,7 +59,8 @@
     copyLabel,
     copyTitle,
     completedAt = null,
-    status = PromptStatus.Todo
+    status = PromptStatus.Todo,
+    isEdited = false
   }: PromptEditorTitleRowProps = $props()
 
   // Derived placeholder text shows the fallback title when the title is empty.
@@ -138,6 +140,7 @@
   <span
     class="prompt-editor-title-status-indicator"
     data-status={status}
+    data-edited={isEdited ? 'true' : 'false'}
     data-testid="prompt-title-status-indicator"
     aria-hidden="true"
   ></span>
@@ -229,6 +232,11 @@
   .prompt-editor-title-status-indicator {
     align-self: stretch;
     visibility: hidden;
+  }
+
+  .prompt-editor-title-status-indicator[data-edited='true'] {
+    background: var(--ui-info-strong-border);
+    visibility: visible;
   }
 
   .prompt-editor-title-status-indicator[data-status='InProgress'] {

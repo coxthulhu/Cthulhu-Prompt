@@ -21,7 +21,10 @@ import {
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { promptEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import type { Transaction } from '@tanstack/svelte-db'
-import { promptDraftCollection } from '../Collections/PromptDraftCollection'
+import {
+  markPromptDraftEdited,
+  promptDraftCollection
+} from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
@@ -63,16 +66,18 @@ const toFullPromptSnapshot = (snapshot: {
 }
 
 const upsertPromptDraftFromPrompt = (prompt: PromptFull): void => {
+  const existingDraft = promptDraftCollection.get(prompt.id)
   const promptDraft = {
     id: prompt.id,
     title: prompt.title,
     fallbackTitle: prompt.fallbackTitle,
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
-    promptText: prompt.promptText
+    promptText: prompt.promptText,
+    isEdited: existingDraft?.isEdited ?? false
   }
 
-  if (!promptDraftCollection.get(prompt.id)) {
+  if (!existingDraft) {
     promptDraftCollection.insert(promptDraft)
     return
   }
@@ -135,7 +140,9 @@ export const createPrompt = async (
       }
 
       collections.prompt.insert(optimisticPrompt)
-      collections.promptDraft.insert(optimisticPrompt)
+      collections.promptDraft.insert(
+        markPromptDraftEdited({ ...optimisticPrompt, isEdited: false })
+      )
 
       collections.promptFolder.update(promptFolderId, (draft) => {
         let insertIndex = draft.entries.length
@@ -375,6 +382,7 @@ export const setPromptStatus = async (
         draft.createdAt = nextPrompt.createdAt
         draft.modifiedAt = nextPrompt.modifiedAt
         draft.promptText = nextPrompt.promptText
+        markPromptDraftEdited(draft)
       })
       collections.promptFolder.update(promptFolderId, (draft) => {
         if (targetStatus === PromptStatus.Completed) {

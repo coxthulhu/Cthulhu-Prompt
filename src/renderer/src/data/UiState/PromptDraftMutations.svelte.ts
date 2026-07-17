@@ -2,7 +2,11 @@ import type { Prompt, PromptFull, PromptSummaryData } from '@shared/Prompt'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import { type PromptDraftRecord, promptDraftCollection } from '../Collections/PromptDraftCollection'
+import {
+  markPromptDraftEdited,
+  type PromptDraftRecord,
+  promptDraftCollection
+} from '../Collections/PromptDraftCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
@@ -16,13 +20,14 @@ import {
 
 export type PromptDraftState = PromptDraftRecord
 
-const toPromptSnapshot = (prompt: PromptFull): PromptDraftRecord => ({
+const toPromptSnapshot = (prompt: PromptFull, isEdited = false): PromptDraftRecord => ({
   id: prompt.id,
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
-  promptText: prompt.promptText
+  promptText: prompt.promptText,
+  isEdited
 })
 
 const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRecord => ({
@@ -31,7 +36,8 @@ const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRec
   fallbackTitle: prompt.fallbackTitle,
   createdAt: '',
   modifiedAt: prompt.modifiedAt,
-  promptText: ''
+  promptText: '',
+  isEdited: false
 })
 
 const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): boolean => {
@@ -41,7 +47,8 @@ const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): bool
     left.fallbackTitle === right.fallbackTitle &&
     left.createdAt === right.createdAt &&
     left.modifiedAt === right.modifiedAt &&
-    left.promptText === right.promptText
+    left.promptText === right.promptText &&
+    left.isEdited === right.isEdited
   )
 }
 
@@ -75,7 +82,10 @@ const mutatePromptDraftOptimistically = (
     promptId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
-      collections.promptDraft.update(promptId, mutatePromptDraft)
+      collections.promptDraft.update(promptId, (draft) => {
+        mutatePromptDraft(draft)
+        markPromptDraftEdited(draft)
+      })
 
       if (mutatePrompt) {
         collections.prompt.update(promptId, mutatePrompt)
@@ -149,8 +159,8 @@ export const upsertPromptDrafts = (prompts: PromptFull[]): void => {
   const draftUpdateIds: string[] = []
 
   for (const prompt of prompts) {
-    const promptSnapshot = toPromptSnapshot(prompt)
     const existingRecord = promptDraftCollection.get(prompt.id)
+    const promptSnapshot = toPromptSnapshot(prompt, existingRecord?.isEdited)
 
     if (!existingRecord) {
       clearPromptEditorMeasuredHeight(prompt.id)

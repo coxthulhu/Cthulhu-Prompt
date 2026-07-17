@@ -8,9 +8,16 @@ export type PromptDraftRecord = {
   createdAt: PromptFull['createdAt']
   modifiedAt: PromptFull['modifiedAt']
   promptText: PromptFull['promptText']
+  isEdited: boolean
 }
 
-// Local-only UI draft state for prompt title/text editing.
+export const markPromptDraftEdited = (draft: PromptDraftRecord): PromptDraftRecord => {
+  // Latch the marker for the remainder of the renderer session.
+  draft.isEdited = true
+  return draft
+}
+
+// Local-only UI draft state for prompt editing and its session marker.
 export const promptDraftCollection = createCollection(
   localOnlyCollectionOptions<PromptDraftRecord>({
     id: 'prompt-drafts',
