@@ -22,6 +22,41 @@ const developmentPromptModifiedTimeSelector = `${DEVELOPMENT_PROMPT_EDITOR} ${PR
 const OLD_PROMPT_MODIFIED_AT = '2023-01-01T00:00:00.000Z'
 
 describe('Prompt editor metadata', () => {
+  test('keeps the Prompts item at its intrinsic width when the window narrows', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Empty')
+
+    const promptsItem = mainWindow.locator(
+      `${EMPTY_PROMPT_EDITOR} .prompt-editor-metadata-folder`
+    )
+    await expect(promptsItem).toBeVisible()
+    const initialWindowWidth = await mainWindow.evaluate(() => window.innerWidth)
+    const initialWidth = await promptsItem.evaluate(
+      (element) => element.getBoundingClientRect().width
+    )
+
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) throw new Error('Missing main window')
+      window.setSize(800, window.getBounds().height)
+    })
+
+    await expect
+      .poll(async () => await mainWindow.evaluate(() => window.innerWidth))
+      .toBeLessThan(initialWindowWidth)
+
+    const narrowedWidth = await promptsItem.evaluate(
+      (element) => element.getBoundingClientRect().width
+    )
+    expect(Math.abs(narrowedWidth - initialWidth)).toBeLessThanOrEqual(1)
+  })
+
   test('updates line and token counts from prompt text edits', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }

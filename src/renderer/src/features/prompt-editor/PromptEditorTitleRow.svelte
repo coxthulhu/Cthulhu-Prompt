@@ -326,13 +326,7 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: inline-flex;
-    flex: 0 1 auto;
     gap: 4px;
-    max-width: 220px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   :global(.prompt-editor-metadata-folder-icon) {
