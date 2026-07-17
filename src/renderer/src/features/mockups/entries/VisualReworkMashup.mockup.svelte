@@ -1034,7 +1034,7 @@
 
   .folder-prompts {
     border-top: 1px solid var(--ui-neutral-muted-border);
-    padding: 0 12px 12px;
+    padding: 0 11px 12px;
   }
 
   .folder-prompts .prompt-card {
