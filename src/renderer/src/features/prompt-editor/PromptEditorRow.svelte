@@ -47,7 +47,7 @@
     PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX,
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
-  import { getPromptLineCount, getPromptTokenCount } from './promptEditorCounts'
+  import { getPromptTokenCount } from './promptEditorCounts'
   import { PromptFolderScreenMode } from '../prompt-folders/promptFolderScreenMode'
 
   type PromptFocusRequest = { promptId: string; requestId: number }
@@ -135,7 +135,6 @@
       promptEditorSizingConfig
     )
   })
-  const lineCount = $derived(getPromptLineCount(promptData.draft.text))
   const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
   const promptTreeTitle = $derived(getPromptDisplayTitle(promptId))
   const copyText = $derived.by(() => {
@@ -440,7 +439,6 @@
     modifiedAt={promptData.modifiedAt}
     {completedAt}
     fallbackTitle={promptData.fallbackTitle}
-    {lineCount}
     {tokenCount}
     onTitleChange={promptData.setTitle}
     onSelectionChange={reportTitleSelection}

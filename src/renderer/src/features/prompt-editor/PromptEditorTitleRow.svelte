@@ -17,7 +17,6 @@
     onTitleForwardTab?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string
-    lineCount: number
     tokenCount: number
     icon?: ComponentType
     copyLabel?: string
@@ -53,7 +52,6 @@
     onTitleForwardTab,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Prompts',
-    lineCount,
     tokenCount,
     icon = FileText,
     copyLabel,
@@ -67,7 +65,6 @@
   const titlePlaceholder = $derived.by(() =>
     title.trim().length === 0 ? `${fallbackTitle}...` : 'Title...'
   )
-  const lineCountLabel = $derived(`${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`)
   const tokenCountLabel = $derived(`${tokenCount} ${tokenCount === 1 ? 'token' : 'tokens'}`)
   let nowMs = $state(Date.now())
   const modifiedRelativeLabel = $derived(
@@ -175,16 +172,14 @@
           <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
           {metadataFolderLabel}
         </span>
-        <SeparatorDot />
-        <span data-testid="prompt-line-count">{lineCountLabel}</span>
-        <SeparatorDot />
-        <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         {#if modifiedAt}
           <SeparatorDot />
           <span data-testid="prompt-modified-time" title={modifiedFullLabel}>
             {modifiedUpdatedLabel}
           </span>
         {/if}
+        <SeparatorDot />
+        <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         {#if completedAt}
           <SeparatorDot />
           <span data-testid="prompt-completed-time" title={completedFullLabel}>

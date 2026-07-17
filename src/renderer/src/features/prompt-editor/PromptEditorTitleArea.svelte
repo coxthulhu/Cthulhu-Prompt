@@ -25,7 +25,6 @@
     onTitleForwardTab,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Prompts',
-    lineCount,
     tokenCount,
     icon,
     copyLabel,
@@ -57,7 +56,6 @@
     {onTitleForwardTab}
     bind:inputRef
     {metadataFolderLabel}
-    {lineCount}
     {tokenCount}
     {icon}
     {copyLabel}
