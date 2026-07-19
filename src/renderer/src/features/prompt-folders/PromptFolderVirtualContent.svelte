@@ -713,8 +713,6 @@
     {activePromptCount}
     {completedPromptCount}
     {screenMode}
-    {isCreatingPrompt}
-    onAddPrompt={() => onAddPrompt({ ownerFolderId: screenRootFolderId, previousEntryId: null })}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
     onDeletePromptFolder={() => onDeletePromptFolder(screenRootFolderId)}
     {onScreenModeChange}

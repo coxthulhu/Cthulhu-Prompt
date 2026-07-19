@@ -586,36 +586,6 @@ describe('Prompt folder prompt management', () => {
     await expect(headerSection).toBeFocused()
   })
 
-  test('adds a prompt from the root page title button', async ({ testSetup }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptFolders('Development')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
-    const initialIds = await getPromptEditorIds(mainWindow)
-    const activeFilter = mainWindow.locator('[data-testid="prompt-folder-active-filter"]')
-    await expect(activeFilter.locator('span')).toHaveText(String(initialIds.length))
-
-    await mainWindow.locator('[data-testid="prompt-folder-new-prompt-button"]').click()
-    await waitForPromptCount(mainWindow, initialIds.length + 1)
-
-    const idsAfterAdd = await getPromptEditorIds(mainWindow)
-    const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
-    expect(newPromptId).toBeTruthy()
-    expect(idsAfterAdd).toEqual([newPromptId, ...initialIds])
-    await expect(activeFilter.locator('span')).toHaveText(String(initialIds.length + 1))
-
-    const newEditorSelector = promptEditorSelector(newPromptId!)
-    await waitForMonacoEditor(mainWindow, newEditorSelector)
-    await expect(
-      mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`)
-    ).toHaveAttribute('aria-current', 'true')
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
-      .toBe(true)
-  })
-
   test('adds a prompt from a divider with minimal scroll and focuses it', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -1550,7 +1520,7 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-new-prompt-button"]')
-    ).toBeDisabled()
+    ).toHaveCount(0)
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
     ).toHaveCount(0)

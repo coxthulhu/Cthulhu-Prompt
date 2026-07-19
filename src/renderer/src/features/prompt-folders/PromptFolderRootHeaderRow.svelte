@@ -3,8 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { Folder, Pencil, Plus, Trash2 } from 'lucide-svelte'
-  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
+  import { Folder, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
@@ -13,8 +12,6 @@
     activePromptCount,
     completedPromptCount,
     screenMode,
-    isCreatingPrompt,
-    onAddPrompt,
     onDeletePromptFolder,
     onRenamePromptFolder,
     onScreenModeChange
@@ -23,8 +20,6 @@
     activePromptCount: number
     completedPromptCount: number
     screenMode: PromptFolderScreenMode
-    isCreatingPrompt: boolean
-    onAddPrompt: () => void
     onDeletePromptFolder: () => void
     onRenamePromptFolder: () => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
@@ -67,20 +62,13 @@
     </div>
 
     <div class="prompt-folder-root-actions">
-      <Button
+      <IconButton
         icon={Trash2}
-        text="Delete Folder"
-        variant="danger"
+        label="Delete folder"
+        title="Delete folder"
+        hoverVariant="danger"
         testId="prompt-folder-delete-button"
         onclick={onDeletePromptFolder}
-      />
-      <Button
-        icon={Plus}
-        text="Add Prompt"
-        variant="accent"
-        state={isCompletedMode || isCreatingPrompt ? 'disabled' : 'enabled'}
-        testId="prompt-folder-new-prompt-button"
-        onclick={onAddPrompt}
       />
     </div>
   </div>
