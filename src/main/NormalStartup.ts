@@ -221,6 +221,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
+      focusOnNavigation: false,
       additionalArguments: [encodeRuntimeConfigArg(runtimeConfig)]
     }
   })
@@ -246,7 +247,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     mainWindow.webContents.send('window-close-requested')
   })
 
-  mainWindow.on('ready-to-show', () => {
+  mainWindow.once('ready-to-show', () => {
     mainWindow.show()
   })
 
