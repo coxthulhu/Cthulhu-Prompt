@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.0.27
+
+### New Features
+
+- Added interactive nested prompt folders throughout the editor and sidebar, including recursive navigation and divider-based creation.
+- Added drag-and-drop moving and reordering for prompts and subfolders across nested folder hierarchies.
+- Added deletion for root prompt folders and subfolders.
+- Added temporary edit indicators to prompt cards.
+
+### Changes
+
+- Expanded nested folder controls with renaming, prompt actions, statuses, and per-folder behavior.
+- Made folder descriptions, prefixes, and suffixes optional, with add/remove controls and collapsed summaries.
+- Updated completed prompt aggregation and folder selector metadata to include descendant folders.
+- Refreshed folder hierarchy, prompt editor, status controls, dividers, buttons, and Monaco theme styling.
+
+### Fixed
+
+- Fixed nested drag-and-drop targeting, indicators, ghost styling, and ordering around subfolders.
+- Fixed virtualized editor commands and focus behavior, including remounts and application reloads.
+- Fixed Monaco rendering at fractional display scaling and tokenization races when editors are recycled.
+- Fixed folder header, sidebar title, and prompt metadata sizing issues.
+
 ## 0.0.26
 
 ### New Features
