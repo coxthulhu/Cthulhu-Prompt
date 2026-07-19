@@ -5,7 +5,6 @@ import {
   PROMPT_EDITOR_BODY_PADDING_TOP_PX,
   PROMPT_EDITOR_CARD_BORDER_WIDTH_PX,
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX,
-  PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX,
   type PromptEditorSizingConfig
 } from '../prompt-editor/promptEditorSizing'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
@@ -13,7 +12,7 @@ import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@
 export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 12
 export const getPromptFolderEditorRowPaddingTopPx = (isRoot: boolean): number =>
   isRoot ? PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX : 0
-export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX
+export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = 56
 const PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX = 4
 export const EDITOR_CARD_SECTION_HEADER_HEIGHT_PX = 28
 export const EDITOR_CARD_SECTION_SEPARATOR_HEIGHT_PX = 1
@@ -42,6 +41,8 @@ const FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX =
   PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX +
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
   PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2
+const FOLDER_EDITOR_COLLAPSED_CARD_HEIGHT_PX =
+  PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX + PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2
 
 const normalizePromptFolderVirtualRowHeightPx = (heightPx: number): number => {
   if (heightPx <= 0) return 0
@@ -95,9 +96,7 @@ export const getPromptFolderEditorCardHeightPx = (
 export const getPromptFolderEditorCollapsedCardRowHeightPx = (
   rowPaddingTopPx = PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX
 ): number => {
-  return normalizePromptFolderVirtualRowHeightPx(
-    rowPaddingTopPx + FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX
-  )
+  return Math.ceil(rowPaddingTopPx + FOLDER_EDITOR_COLLAPSED_CARD_HEIGHT_PX)
 }
 
 export const getPromptFolderEditorCardRowHeightPx = (

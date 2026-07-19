@@ -357,7 +357,7 @@
     color: var(--ui-normal-text);
     font-size: 16px;
     font-weight: 700;
-    line-height: 21px;
+    line-height: 20px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

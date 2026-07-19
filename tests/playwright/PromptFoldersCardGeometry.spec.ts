@@ -8,22 +8,12 @@ import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
-import {
-  PROMPT_EDITOR_CARD_BORDER_WIDTH_PX,
-  PROMPT_EDITOR_SEPARATOR_HEIGHT_PX
-} from '@renderer/features/prompt-editor/promptEditorSizing'
-import {
-  getPromptFolderEditorCollapsedCardRowHeightPx,
-  getPromptFolderEditorRowPaddingTopPx,
-  PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX
-} from '@renderer/features/prompt-folders/promptFolderSettingsSizing'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const GEOMETRY_WORKSPACE_PATH = '/ws/card-geometry'
 const GEOMETRY_FOLDER_NAME = 'Card Geometry'
 const FILL_TOLERANCE_PX = 1
-// Folder editor rows round up to a 4px grid, so their cards carry designed slack.
 const FOLDER_ROW_HEIGHT_GRID_PX = 4
 
 const buildGeometryWorkspace = () =>
@@ -58,17 +48,30 @@ const expectPromptCardExactFill = async (mainWindow: Page, promptId: string): Pr
   const geometry = (await measureEditorCardGeometry(mainWindow, selector))!
   expect(geometry.hiddenOverflowPx, `${promptId} card clips content inside overflow:hidden`).toBe(0)
   expect(geometry.internalScrollTopPx, `${promptId} card scrolled internally`).toBe(0)
-}
 
-const getExpectedCollapsedFolderCardGapPx = (isRoot: boolean): number => {
-  const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(isRoot)
-  const cardHeightPx =
-    getPromptFolderEditorCollapsedCardRowHeightPx(rowPaddingTopPx) - rowPaddingTopPx
-  const contentBoxHeightPx = cardHeightPx - PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2
-  return (
-    contentBoxHeightPx -
-    (PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX + PROMPT_EDITOR_SEPARATOR_HEIGHT_PX)
+  const titleGeometry = await mainWindow.locator(`${selector} .prompt-editor-title-area`).evaluate(
+    (titleArea) => {
+      const areaRect = titleArea.getBoundingClientRect()
+      const titleMain = titleArea.querySelector<HTMLElement>('.prompt-editor-title-main')!
+      const titleCopy = titleArea.querySelector<HTMLElement>('.prompt-editor-title-copy')!
+      const mainRect = titleMain.getBoundingClientRect()
+      const copyRect = titleCopy.getBoundingClientRect()
+      return {
+        mainTopInsetPx: mainRect.top - areaRect.top,
+        mainBottomInsetPx: areaRect.bottom - mainRect.bottom,
+        copyTopInsetPx: copyRect.top - areaRect.top,
+        copyBottomInsetPx: areaRect.bottom - copyRect.bottom
+      }
+    }
   )
+  expect(titleGeometry.mainTopInsetPx, `${promptId} title overruns its area at the top`).toBe(0)
+  expect(titleGeometry.mainBottomInsetPx, `${promptId} title overruns its area at the bottom`).toBe(
+    0
+  )
+  expect(
+    Math.abs(titleGeometry.copyTopInsetPx - titleGeometry.copyBottomInsetPx),
+    `${promptId} title content is not vertically centered`
+  ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
 }
 
 const PROMPT_TREE_WINDOW_TEST_ID = 'prompt-tree-virtual-window'
@@ -122,7 +125,9 @@ describe('Prompt folder card geometry', () => {
     await expectPromptCardExactFill(mainWindow, 'geometry-tall')
   })
 
-  test('folder editor cards fit their content within the row grid slack', async ({ testSetup }) => {
+  test('folder editor cards fit collapsed titles exactly and expanded settings within grid slack', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders' }
     })
@@ -143,23 +148,35 @@ describe('Prompt folder card geometry', () => {
       const rowSelector = `[data-prompt-folder-id="${folderId}"]`
       await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, rowSelector)
 
-      // Collapsed cards have a deterministic slack from the 4px row grid.
-      const expectedGapPx = getExpectedCollapsedFolderCardGapPx(false)
       await expect
         .poll(async () => {
           const geometry = await measureEditorCardGeometry(mainWindow, rowSelector)
-          return geometry?.bodyChildrenFillGapPx ?? Number.POSITIVE_INFINITY
+          return Math.abs(geometry?.bodyChildrenFillGapPx ?? Number.POSITIVE_INFINITY)
         })
-        .toBeLessThanOrEqual(expectedGapPx + FILL_TOLERANCE_PX)
+        .toBeLessThanOrEqual(FILL_TOLERANCE_PX)
       const collapsed = (await measureEditorCardGeometry(mainWindow, rowSelector))!
       expect(
         collapsed.hiddenOverflowPx,
         `collapsed folder card ${folderId} clips content inside overflow:hidden`
       ).toBe(0)
       expect(
-        Math.abs(collapsed.bodyChildrenFillGapPx! - expectedGapPx),
-        `collapsed folder card ${folderId} slack ${collapsed.bodyChildrenFillGapPx} != expected ${expectedGapPx}`
+        Math.abs(collapsed.bodyChildrenFillGapPx!),
+        `collapsed folder card ${folderId} has ${collapsed.bodyChildrenFillGapPx}px of internal slack`
       ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+
+      const titleGeometry = await row
+        .locator('[data-testid="prompt-folder-editor-title-bar"]')
+        .evaluate((titleBar) => {
+          const titleBarRect = titleBar.getBoundingClientRect()
+          const titleMain = titleBar.querySelector<HTMLElement>('.prompt-folder-editor-title-main')!
+          const titleMainRect = titleMain.getBoundingClientRect()
+          return {
+            topInsetPx: titleMainRect.top - titleBarRect.top,
+            bottomInsetPx: titleBarRect.bottom - titleMainRect.bottom
+          }
+        })
+      expect(titleGeometry.topInsetPx, `folder ${folderId} title top spacing`).toBe(8)
+      expect(titleGeometry.bottomInsetPx, `folder ${folderId} title bottom spacing`).toBe(8)
 
       // Expanded settings sections must still fit inside the bordered card.
       await row.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()

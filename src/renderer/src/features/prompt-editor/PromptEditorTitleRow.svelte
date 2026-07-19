@@ -288,7 +288,7 @@
     font-family: inherit;
     font-size: 15px;
     font-weight: 600;
-    height: 22px;
+    height: 20px;
     line-height: 20px;
     min-width: 0;
     outline: none;
