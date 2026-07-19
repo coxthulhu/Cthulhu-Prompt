@@ -33,7 +33,7 @@
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
-  import { FileText, Folder } from 'lucide-svelte'
+  import { FileText, Layers } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
@@ -169,7 +169,7 @@
 
       <div class="prompt-editor-metadata-row">
         <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
-          <Folder class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
+          <Layers class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
           {metadataFolderLabel}
         </span>
         {#if modifiedAt}
