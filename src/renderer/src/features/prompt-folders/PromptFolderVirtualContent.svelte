@@ -81,6 +81,7 @@
     PromptFolderDividerTarget,
     PromptFolderPromptTarget,
     PromptFolderScreenBottomCapRow,
+    PromptFolderScreenCollapsedSummaryRow,
     PromptFolderScreenDividerRow,
     PromptFolderScreenFolderEditorRow,
     PromptFolderScreenPlaceholderRow,
@@ -96,6 +97,7 @@
         isPromptsSectionExpanded: boolean
       })
     | PromptFolderScreenPlaceholderRow
+    | PromptFolderScreenCollapsedSummaryRow
     | PromptFolderScreenBottomCapRow
     | PromptFolderScreenDividerRow
     | PromptFolderScreenPromptEditorRow
@@ -339,6 +341,10 @@
       estimateHeight: () => 120,
       snippet: placeholderRow
     },
+    'collapsed-summary': {
+      estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
+      snippet: collapsedSummaryRow
+    },
     'folder-bottom-cap': {
       estimateHeight: () => 8,
       snippet: folderBottomCapRow
@@ -421,6 +427,10 @@
 
         if (row.kind === 'folder-bottom-cap') {
           return { id: `folder-bottom-cap:${row.ownerFolderId}`, row }
+        }
+
+        if (row.kind === 'collapsed-summary') {
+          return { id: `folder-collapsed-summary:${row.ownerFolderId}`, row }
         }
 
         return { id: 'placeholder-empty', row }
@@ -796,6 +806,20 @@
     {#if !isCompletedMode}
       <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
     {/if}
+  </PromptFolderSectionRow>
+{/snippet}
+
+{#snippet collapsedSummaryRow({ row, rowHeightPx })}
+  <PromptFolderSectionRow
+    {rowHeightPx}
+    indentLevel={row.indentLevel}
+    contentClass="flex items-center justify-center text-center text-sm text-[var(--ui-secondary-text)]"
+    testId={`prompt-folder-collapsed-summary-${row.ownerFolderId}`}
+  >
+    <p>
+      {row.promptCount} {row.promptCount === 1 ? 'prompt' : 'prompts'} and {row.subfolderCount}
+      {row.subfolderCount === 1 ? 'subfolder' : 'subfolders'} hidden
+    </p>
   </PromptFolderSectionRow>
 {/snippet}
 

@@ -189,7 +189,6 @@
   <EditorCardSurface
     {showSidebar}
     class="prompt-folder-top-cap"
-    data-expanded={isPromptsSectionExpanded ? 'true' : 'false'}
     style={`height:${cardHeightPx}px; min-height:${cardHeightPx}px; max-height:${cardHeightPx}px;`}
   >
     {#snippet sidebar()}
@@ -313,9 +312,6 @@
 
   :global(.prompt-folder-top-cap.editor-card-surface) {
     border-color: var(--ui-card-nested-border);
-  }
-
-  :global(.prompt-folder-top-cap.editor-card-surface[data-expanded='true']) {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }

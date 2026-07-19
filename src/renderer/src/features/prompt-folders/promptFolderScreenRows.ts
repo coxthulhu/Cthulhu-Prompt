@@ -43,6 +43,12 @@ export type PromptFolderScreenPlaceholderRow = PromptFolderScreenOwnedRow & {
   kind: 'placeholder'
 }
 
+export type PromptFolderScreenCollapsedSummaryRow = PromptFolderScreenOwnedRow & {
+  kind: 'collapsed-summary'
+  promptCount: number
+  subfolderCount: number
+}
+
 export type PromptFolderScreenBottomCapRow = PromptFolderScreenOwnedRow & {
   kind: 'folder-bottom-cap'
 }
@@ -52,6 +58,7 @@ export type PromptFolderScreenRow =
   | PromptFolderScreenFolderEditorRow
   | PromptFolderScreenPromptEditorRow
   | PromptFolderScreenDividerRow
+  | PromptFolderScreenCollapsedSummaryRow
   | PromptFolderScreenBottomCapRow
   | PromptFolderScreenPlaceholderRow
 
@@ -85,6 +92,11 @@ export const buildPromptFolderScreenRows = ({
     visitedFolderIds.add(folder.id)
 
     const isRoot = folder.id === rootFolder.id
+    const childIndentLevel = isRoot ? 0 : indentLevel + 1
+    const entries = folder.entries.filter((entry) =>
+      entry.kind === 'folder' ? folderById.has(entry.id) : promptIdSet.has(entry.id)
+    )
+
     if (!isRoot) {
       rows.push({
         kind: 'folder-editor',
@@ -96,13 +108,26 @@ export const buildPromptFolderScreenRows = ({
         isLastSibling
       })
 
-      if (!isFolderExpanded(folder.id)) return
+      if (!isFolderExpanded(folder.id)) {
+        // Keep the collapsed folder body visible without rendering its editable descendants.
+        rows.push({
+          kind: 'collapsed-summary',
+          ownerFolderId: folder.id,
+          indentLevel: childIndentLevel,
+          isOwnerRoot: false,
+          promptCount: entries.filter((entry) => entry.kind === 'prompt').length,
+          subfolderCount: entries.filter((entry) => entry.kind === 'folder').length
+        })
+        rows.push({
+          kind: 'folder-bottom-cap',
+          ownerFolderId: folder.id,
+          indentLevel,
+          isOwnerRoot: false
+        })
+        return
+      }
     }
 
-    const childIndentLevel = isRoot ? 0 : indentLevel + 1
-    const entries = folder.entries.filter((entry) =>
-      entry.kind === 'folder' ? folderById.has(entry.id) : promptIdSet.has(entry.id)
-    )
     const directPromptIds = entries
       .filter((entry) => entry.kind === 'prompt')
       .map((entry) => entry.id)

@@ -231,12 +231,13 @@ describe('buildPromptFolderScreenRows', () => {
     })
   })
 
-  it("omits a collapsed folder's descendants while retaining its parent divider", () => {
-    const childFolder = createFolder('folder-child', ['prompt-child'])
+  it("replaces a collapsed folder's direct contents with their summary", () => {
+    const grandchildFolder = createFolder('folder-grandchild', ['prompt-grandchild'])
+    const childFolder = createFolder('folder-child', ['prompt-child', grandchildFolder.id])
     const rows = buildRows({
       rootFolder: createFolder('folder-root', [childFolder.id]),
-      descendantFolders: [childFolder],
-      promptIds: ['prompt-child'],
+      descendantFolders: [childFolder, grandchildFolder],
+      promptIds: ['prompt-child', 'prompt-grandchild'],
       collapsedFolderIds: [childFolder.id]
     })
 
@@ -244,15 +245,25 @@ describe('buildPromptFolderScreenRows', () => {
       'root-header',
       'prompt-divider',
       'folder-editor',
+      'collapsed-summary',
+      'folder-bottom-cap',
       'prompt-divider'
     ])
+    expect(rows).toContainEqual({
+      kind: 'collapsed-summary',
+      ownerFolderId: 'folder-child',
+      indentLevel: 1,
+      isOwnerRoot: false,
+      promptCount: 1,
+      subfolderCount: 1
+    })
     expect(rows).not.toContainEqual(
       expect.objectContaining({ kind: 'prompt-editor', ownerFolderId: 'folder-child' })
     )
     expect(rows).not.toContainEqual(
       expect.objectContaining({ kind: 'prompt-divider', ownerFolderId: 'folder-child' })
     )
-    expect(rows).not.toContainEqual(
+    expect(rows).toContainEqual(
       expect.objectContaining({ kind: 'folder-bottom-cap', ownerFolderId: 'folder-child' })
     )
     expect(rows.at(-1)).toEqual({
@@ -261,6 +272,24 @@ describe('buildPromptFolderScreenRows', () => {
       previousEntryId: 'folder-child',
       indentLevel: 0,
       isOwnerRoot: true
+    })
+  })
+
+  it('summarizes an empty collapsed folder with zero counts', () => {
+    const childFolder = createFolder('folder-child')
+    const rows = buildRows({
+      rootFolder: createFolder('folder-root', [childFolder.id]),
+      descendantFolders: [childFolder],
+      collapsedFolderIds: [childFolder.id]
+    })
+
+    expect(rows).toContainEqual({
+      kind: 'collapsed-summary',
+      ownerFolderId: 'folder-child',
+      indentLevel: 1,
+      isOwnerRoot: false,
+      promptCount: 0,
+      subfolderCount: 0
     })
   })
 

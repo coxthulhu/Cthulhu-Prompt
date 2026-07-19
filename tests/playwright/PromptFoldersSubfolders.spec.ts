@@ -65,6 +65,10 @@ const nestedFolderSelector = `[data-testid="prompt-folder-editor-${nestedFolderI
 const emptyNestedFolderSelector = `[data-testid="prompt-folder-editor-${emptyNestedFolderId}"]`
 const grandchildFolderSelector = `[data-testid="prompt-folder-editor-${grandchildFolderId}"]`
 const nestedBottomCapSelector = `[data-testid="prompt-folder-bottom-cap-${nestedFolderId}"]`
+const nestedCollapsedSummarySelector =
+  `[data-testid="prompt-folder-collapsed-summary-${nestedFolderId}"]`
+const emptyNestedCollapsedSummarySelector =
+  `[data-testid="prompt-folder-collapsed-summary-${emptyNestedFolderId}"]`
 const rootBeforeSelector = '[data-testid="prompt-editor-subfolders-ui-root-before"]'
 const nestedPromptSelector = '[data-testid="prompt-editor-subfolders-ui-nested-prompt"]'
 const grandchildPromptSelector = '[data-testid="prompt-editor-subfolders-ui-grandchild-prompt"]'
@@ -180,6 +184,7 @@ const collapsedNestedRowTestIds = [
   'prompt-editor-subfolders-ui-root-before',
   dividerTestId(hierarchyFolderId, 'subfolders-ui-root-before'),
   `prompt-folder-editor-${nestedFolderId}`,
+  `prompt-folder-collapsed-summary-${nestedFolderId}`,
   dividerTestId(hierarchyFolderId, nestedFolderId),
   `prompt-folder-editor-${emptyNestedFolderId}`,
   dividerTestId(emptyNestedFolderId, null),
@@ -612,6 +617,7 @@ describe('Prompt folder subfolder rendering', () => {
   })
 
   test('collapsing one subfolder hides only that folder descendants', async ({ testSetup }) => {
+    test.setTimeout(60000)
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-ui' }
     })
@@ -651,22 +657,62 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
     await nestedFolderToggle.click()
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(nestedFolderCard).toHaveCSS('border-bottom-left-radius', '8px')
-    await expect(nestedFolderCard).toHaveCSS('border-bottom-right-radius', '8px')
+    await expect(nestedFolderCard).toHaveCSS('border-bottom-left-radius', '0px')
+    await expect(nestedFolderCard).toHaveCSS('border-bottom-right-radius', '0px')
     await expect(nestedFolderTitleBar).toContainText('1 prompt')
     await expect(nestedFolderTitleBar).toContainText('1 subfolder')
     await expect.poll(readChevronRotationDegrees).toBe(0)
+    const nestedCollapsedSummary = mainWindow.locator(nestedCollapsedSummarySelector)
+    const nestedCollapsedSummaryMessage = nestedCollapsedSummary.locator('p')
+    const nestedBottomCap = mainWindow.locator(nestedBottomCapSelector)
+    await expect(nestedCollapsedSummary).toBeVisible()
+    await expect(nestedCollapsedSummary).toHaveText('1 prompt and 1 subfolder hidden')
+    await expect(nestedCollapsedSummaryMessage).toHaveCSS('font-size', '14px')
+    await expect(nestedBottomCap).toBeVisible()
+    await expect(
+      nestedCollapsedSummary.locator('.prompt-folder-section-middle-layer')
+    ).toHaveCount(1)
+    const summaryColor = await nestedCollapsedSummaryMessage.evaluate((element) => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--ui-secondary-text)'
+      document.body.append(probe)
+      const colors = {
+        actual: getComputedStyle(element).color,
+        expected: getComputedStyle(probe).color
+      }
+      probe.remove()
+      return colors
+    })
+    expect(summaryColor.actual).toBe(summaryColor.expected)
+    const nestedCardBox = await nestedFolderCard.boundingBox()
+    const nestedSummaryBox = await nestedCollapsedSummary.boundingBox()
+    const nestedBottomCapBox = await nestedBottomCap.boundingBox()
+    if (!nestedCardBox || !nestedSummaryBox || !nestedBottomCapBox) {
+      throw new Error('Missing collapsed prompt folder geometry')
+    }
+    expect(Math.abs(nestedCardBox.y + nestedCardBox.height - nestedSummaryBox.y)).toBeLessThanOrEqual(
+      1
+    )
+    expect(
+      Math.abs(nestedSummaryBox.y + nestedSummaryBox.height - nestedBottomCapBox.y)
+    ).toBeLessThanOrEqual(1)
 
+    const collapsedRowSelector = [
+      ...new Set([...orderedRowTestIds, ...collapsedNestedRowTestIds])
+    ]
+      .map(testIdSelector)
+      .join(', ')
     const rowOrderAfterCollapse = await collectVirtualRowTestIds(
       mainWindow,
       testHelpers,
-      orderedRowTestIds.map(testIdSelector).join(', ')
+      collapsedRowSelector
     )
     expect(rowOrderAfterCollapse).toEqual(collapsedNestedRowTestIds)
 
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
     await nestedFolderToggle.click()
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(nestedCollapsedSummary).toHaveCount(0)
 
     const rowOrderAfterExpand = await collectVirtualRowTestIds(
       mainWindow,
@@ -674,6 +720,18 @@ describe('Prompt folder subfolder rendering', () => {
       orderedRowTestIds.map(testIdSelector).join(', ')
     )
     expect(rowOrderAfterExpand).toEqual(orderedRowTestIds)
+
+    await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      emptyNestedFolderSelector,
+      80
+    )
+    await mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleToggleSelector).click()
+    await expect(mainWindow.locator(emptyNestedCollapsedSummarySelector)).toBeVisible()
+    await expect(mainWindow.locator(emptyNestedCollapsedSummarySelector)).toHaveText(
+      '0 prompts and 0 subfolders hidden'
+    )
   })
 
   test('renames a subfolder with sibling-scoped validation and preserves its id', async ({
