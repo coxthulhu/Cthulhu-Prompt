@@ -12,6 +12,7 @@ import {
   createStagedDirectoryRemove,
   createStagedDirectoryRename,
   createStagedEnsureDirectory,
+  createStagedFileRemove,
   createStagedFileUpsert,
   readJsonFile,
   revertStagedFileChanges,
@@ -65,9 +66,9 @@ const fromPromptFolderInfoFile = (
   }
 }
 
-const readOptionalTextFile = (filePath: string): string => {
+const readOptionalTextFile = (filePath: string): string | null => {
   const fs = getFs()
-  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null
 }
 
 export const promptFolderPersistence: PersistenceLayer<
@@ -108,16 +109,21 @@ export const promptFolderPersistence: PersistenceLayer<
     writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.entries))
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
-    const settingsTextTempPaths = settingsTextPaths.map(({ field, path }) => {
+    const settingsTextChanges = settingsTextPaths.map(({ field, path }) => {
+      const value = change.data.settings[field]
+      if (value === null) {
+        return createStagedFileRemove(path)
+      }
+
       const tempPath = resolveTempPath(path)
-      fs.writeFileSync(tempPath, change.data.settings[field], 'utf8')
-      return { path, tempPath }
+      fs.writeFileSync(tempPath, value, 'utf8')
+      return createStagedFileUpsert(path, tempPath)
     })
 
     const stagedChanges = [
       createStagedFileUpsert(orderPath, orderTempPath),
       createStagedFileUpsert(infoPath, infoTempPath),
-      ...settingsTextTempPaths.map(({ path, tempPath }) => createStagedFileUpsert(path, tempPath)),
+      ...settingsTextChanges,
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
       createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
     ]

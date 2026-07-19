@@ -58,8 +58,10 @@ const addPromptFolderSettingsFiles = (
   folder: PromptFolderConfig
 ): void => {
   for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
+    const value = folder.folderSettings?.[field]
+    if (value == null) continue
     structure[`${folderPath}/_FolderInfo/${PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]}`] =
-      folder.folderSettings?.[field] ?? ''
+      value
   }
 }
 
@@ -414,7 +416,12 @@ export function setupWorkspaceScenario(
       )
       addPromptFolderSettingsFiles(structure, subfolderPath, {
         folderName: 'Main/Nested',
-        displayName: 'Nested'
+        displayName: 'Nested',
+        folderSettings: {
+          folderDescription: '',
+          folderPrefix: '',
+          folderSuffix: ''
+        }
       })
       Object.assign(structure, promptFiles)
 

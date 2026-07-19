@@ -66,6 +66,10 @@
       text: string,
       measurement: TextMeasurement
     ) => void
+    onSettingsFieldPresenceChange: (
+      field: PromptFolderSettingsDraftField,
+      isPresent: boolean
+    ) => void
   }
 
   let {
@@ -98,7 +102,8 @@
     onPromptsSectionToggle,
     onDeletePromptFolder,
     onRenamePromptFolder,
-    onSettingsFieldChange
+    onSettingsFieldChange,
+    onSettingsFieldPresenceChange
   }: Props = $props()
 
   const promptCountLabel = $derived(`${promptCount} ${promptCount === 1 ? 'prompt' : 'prompts'}`)
@@ -292,6 +297,7 @@
             onHydrationChange={handleSectionHydrationChange}
             showTopBorder={index > 0}
             {onSettingsFieldChange}
+            {onSettingsFieldPresenceChange}
           />
         {/each}
       </div>

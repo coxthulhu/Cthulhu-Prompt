@@ -21,7 +21,7 @@ export const PROMPT_FOLDER_SETTINGS_FIELDS = [
 
 export type PromptFolderSettingsField = (typeof PROMPT_FOLDER_SETTINGS_FIELDS)[number]
 
-export type PromptFolderSettings = Record<PromptFolderSettingsField, string>
+export type PromptFolderSettings = Record<PromptFolderSettingsField, string | null>
 
 export type PromptFolderSettingsFieldMetadata = {
   field: PromptFolderSettingsField
@@ -67,9 +67,9 @@ export const PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
 ) as Record<PromptFolderSettingsField, string>
 
 export const createEmptyPromptFolderSettings = (): PromptFolderSettings => ({
-  folderDescription: '',
-  folderPrefix: '',
-  folderSuffix: ''
+  folderDescription: null,
+  folderPrefix: null,
+  folderSuffix: null
 })
 
 export const copyPromptFolderSettings = (settings: PromptFolderSettings): PromptFolderSettings => ({

@@ -44,11 +44,18 @@ export const recordPromptFolderSettingsRowMeasuredHeight = (
   )
 }
 
+export const clearPromptFolderSettingsFieldRowMeasuredHeight = (
+  promptFolderId: string,
+  field: PromptFolderSettingsField
+): void => {
+  promptFolderDraftUiCache.settingsRowMeasuredHeight.clear(
+    promptFolderSettingsRowCacheId(promptFolderId, field)
+  )
+}
+
 export const clearPromptFolderSettingsRowMeasuredHeight = (promptFolderId: string): void => {
   for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-    promptFolderDraftUiCache.settingsRowMeasuredHeight.clear(
-      promptFolderSettingsRowCacheId(promptFolderId, field)
-    )
+    clearPromptFolderSettingsFieldRowMeasuredHeight(promptFolderId, field)
   }
 }
 

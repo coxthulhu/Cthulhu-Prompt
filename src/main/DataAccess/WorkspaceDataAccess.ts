@@ -6,7 +6,6 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptStatus } from '@shared/Prompt'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { PROMPT_FOLDER_SETTINGS_FIELDS } from '@shared/PromptFolder'
 import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
@@ -16,7 +15,6 @@ import {
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
-  resolvePromptFolderSettingsTextPath,
   resolvePromptFolderOrderPath,
   resolveWorkspacePromptFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
@@ -134,14 +132,6 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     JSON.stringify({ entries: promptIds.map(promptEntryRef) }, null, 2),
     'utf8'
   )
-  for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-    fs.writeFileSync(
-      resolvePromptFolderSettingsTextPath(workspacePath, EXAMPLE_FOLDER_NAME, field),
-      '',
-      'utf8'
-    )
-  }
-
   return promptFolderId
 }
 

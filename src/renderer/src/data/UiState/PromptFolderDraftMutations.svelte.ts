@@ -14,6 +14,7 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptFolderSettingsAutosaveUpdate } from '../Mutations/PromptFolderMutations'
 import {
+  clearPromptFolderSettingsFieldRowMeasuredHeight,
   clearPromptFolderSettingsRowMeasuredHeight,
   clearPromptFolderSettingsRowMeasuredHeights,
   clearPromptFolderScrollTop,
@@ -150,6 +151,28 @@ export const setPromptFolderDraftSettingsField = (
     return
   }
 
+  mutatePromptFolderDraftOptimistically(promptFolderId, {
+    mutatePromptFolderDraft: (draft) => {
+      draft.settings[field] = value
+    },
+    mutatePromptFolder: (draft) => {
+      draft.settings[field] = value
+    }
+  })
+}
+
+export const setPromptFolderDraftSettingsFieldPresence = (
+  promptFolderId: string,
+  field: PromptFolderSettingsDraftField,
+  isPresent: boolean
+): void => {
+  const draftRecord = getPromptFolderDraftState(promptFolderId)
+  if (!draftRecord) return
+
+  const value = isPresent ? '' : null
+  if (draftRecord.settings[field] === value) return
+
+  clearPromptFolderSettingsFieldRowMeasuredHeight(promptFolderId, field)
   mutatePromptFolderDraftOptimistically(promptFolderId, {
     mutatePromptFolderDraft: (draft) => {
       draft.settings[field] = value

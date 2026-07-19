@@ -139,11 +139,11 @@
   const promptTreeTitle = $derived(getPromptDisplayTitle(promptId))
   const copyText = $derived.by(() => {
     const parts: string[] = []
-    if (folderSettings.folderPrefix.trim().length > 0) {
+    if (folderSettings.folderPrefix?.trim().length) {
       parts.push(folderSettings.folderPrefix)
     }
     parts.push(promptData.draft.text)
-    if (folderSettings.folderSuffix.trim().length > 0) {
+    if (folderSettings.folderSuffix?.trim().length) {
       parts.push(folderSettings.folderSuffix)
     }
     return parts.join('\n\n')

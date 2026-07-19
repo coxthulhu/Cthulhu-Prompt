@@ -1,12 +1,16 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { Action } from 'svelte/action'
+  import { Plus, Trash2 } from 'lucide-svelte'
   import { createPromptFolderSettingsModelUri, type monaco } from '@renderer/common/Monaco'
   import {
     PROMPT_FOLDER_SETTINGS_FIELD_METADATA,
     type PromptFolderSettings
   } from '@shared/PromptFolder'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import {
@@ -41,6 +45,8 @@
   type SettingsSectionConfig = {
     title: string
     description: string
+    addText: string
+    deleteLabel: string
     viewStateCapturePrefix: string
   }
 
@@ -49,18 +55,24 @@
       title: 'Folder Description',
       description:
         'A general description of this folder and the types of prompts that are within it. For informational use only.',
+      addText: 'Add Folder Description',
+      deleteLabel: 'folder description',
       viewStateCapturePrefix: 'prompt-folder-description'
     },
     folderPrefix: {
       title: 'Prompt Folder Prefix',
       description:
         'Text to add before each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
+      addText: 'Add Prompt Folder Prefix',
+      deleteLabel: 'prompt folder prefix',
       viewStateCapturePrefix: 'prompt-folder-prefix'
     },
     folderSuffix: {
       title: 'Prompt Folder Suffix',
       description:
         'Text to add after each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
+      addText: 'Add Prompt Folder Suffix',
+      deleteLabel: 'prompt folder suffix',
       viewStateCapturePrefix: 'prompt-folder-suffix'
     }
   }
@@ -92,6 +104,10 @@
       text: string,
       measurement: TextMeasurement
     ) => void
+    onSettingsFieldPresenceChange: (
+      field: PromptFolderSettingsDraftField,
+      isPresent: boolean
+    ) => void
   }
 
   let {
@@ -109,7 +125,8 @@
     folderSettings,
     showTopBorder = false,
     onHydrationChange,
-    onSettingsFieldChange
+    onSettingsFieldChange,
+    onSettingsFieldPresenceChange
   }: Props = $props()
 
   const systemSettings = getSystemSettingsContext()
@@ -150,6 +167,9 @@
   let revealSectionMatch = $state<((query: string, matchIndex: number) => number | null) | null>(
     null
   )
+  let isDeleteDialogOpen = $state(false)
+  let suppressViewStateCapture = false
+  let focusAfterAddPending = $state(false)
 
   // Side effect: keep the Monaco overflow host aligned to this section's editor body.
   $effect(() => {
@@ -206,7 +226,7 @@
   })
 
   const setViewState = (viewStateJson: string | null) => {
-    if (!workspaceId) return
+    if (!workspaceId || suppressViewStateCapture) return
     setPromptFolderEditorViewStateWithAutosave(workspaceId, promptFolderId, field, viewStateJson)
   }
 
@@ -235,6 +255,7 @@
   }
 
   const focusEditorFromBodyClick = async (event: MouseEvent) => {
+    if (section.value === null) return
     const target = event.target as HTMLElement | null
     if (target?.closest('.monaco-editor')) return
     if (!editor) {
@@ -244,6 +265,49 @@
     // Side effect: wait for click-triggered hydration before focusing the settings editor.
     await tick()
     editor?.focus()
+  }
+
+  const handleAddClick = () => {
+    suppressViewStateCapture = false
+    focusAfterAddPending = true
+    onSettingsFieldPresenceChange(field, true)
+  }
+
+  // Side effect: hydrate and focus the editor after an Add action mounts Monaco.
+  $effect(() => {
+    if (!focusAfterAddPending) return
+    if (!editor) {
+      void requestImmediateHydration?.()
+      return
+    }
+
+    focusAfterAddPending = false
+    editor.focus()
+  })
+
+  const performDelete = () => {
+    isDeleteDialogOpen = false
+    suppressViewStateCapture = true
+    editor?.setValue('')
+    if (workspaceId) {
+      setPromptFolderEditorViewStateWithAutosave(workspaceId, promptFolderId, field, null)
+    }
+    findContext?.reportSectionMatchCount(
+      promptFolderFindEntityId,
+      section.findSectionKey,
+      findContext.query,
+      0
+    )
+    onSettingsFieldPresenceChange(field, false)
+  }
+
+  const handleDeleteClick = () => {
+    if ((section.value ?? '').trim().length > 0) {
+      isDeleteDialogOpen = true
+      return
+    }
+
+    performDelete()
   }
 
   const focusEditorBodyClickAction: Action<HTMLDivElement, unknown> = (node) => {
@@ -303,13 +367,42 @@
   {showTopBorder}
   testId={`prompt-folder-settings-section-${field}`}
 >
+  {#snippet actions()}
+    {#if section.value !== null}
+      <IconButton
+        icon={Trash2}
+        label={`Delete ${section.deleteLabel}`}
+        title={`Delete ${section.deleteLabel}`}
+        size="tiny"
+        baseVariant="muted"
+        hoverVariant="danger"
+        borderless
+        testId={`prompt-folder-settings-delete-${field}`}
+        onclick={handleDeleteClick}
+      />
+    {/if}
+  {/snippet}
+
   <div
     bind:this={editorBodyElement}
     class="prompt-folder-settings-editor-section"
     style={`padding:${SETTINGS_EDITOR_SECTION_PADDING_TOP_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_RIGHT_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX}px ${SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX}px;`}
     use:focusEditorBodyClickAction
   >
-    {#if overflowHost}
+    {#if section.value === null}
+      <div
+        class="prompt-folder-settings-add"
+        style={`height:${placeholderMonacoHeightPx}px;`}
+      >
+        <Button
+          icon={Plus}
+          text={section.addText}
+          appearance="outline"
+          testId={`prompt-folder-settings-add-${field}`}
+          onclick={handleAddClick}
+        />
+      </div>
+    {:else if overflowHost}
       {#key `${promptFolderId}:${field}`}
         <HydratableMonacoEditor
           class="bg-[var(--ui-editor-content-surface)]"
@@ -371,10 +464,29 @@
   </div>
 </EditorCardSection>
 
+<ConfirmationDialog
+  bind:open={isDeleteDialogOpen}
+  title={`Delete ${section.title}`}
+  description={`Are you sure you want to delete this ${section.deleteLabel}?`}
+  confirmText="Delete"
+  confirmTestId={`prompt-folder-settings-confirm-delete-${field}`}
+  oncancel={() => {
+    isDeleteDialogOpen = false
+  }}
+  onconfirm={performDelete}
+/>
+
 <style>
   .prompt-folder-settings-editor-section {
     background: var(--ui-editor-content-surface);
     box-sizing: border-box;
+    min-width: 0;
+  }
+
+  .prompt-folder-settings-add {
+    align-items: center;
+    display: flex;
+    justify-content: center;
     min-width: 0;
   }
 </style>

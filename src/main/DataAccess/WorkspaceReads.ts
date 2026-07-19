@@ -45,11 +45,11 @@ const readPromptFolderInfo = (workspacePath: string, folderName: string): Prompt
   return readJsonFile<PromptFolderInfoFile>(infoPath)
 }
 
-const readOptionalTextFile = (filePath: string): string => {
+const readOptionalTextFile = (filePath: string): string | null => {
   const fs = getFs()
 
   if (!fs.existsSync(filePath)) {
-    return ''
+    return null
   }
 
   return fs.readFileSync(filePath, 'utf8')

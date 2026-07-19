@@ -8,6 +8,7 @@
     title: string
     description?: string
     children: Snippet
+    actions?: Snippet
     sectionElement?: HTMLElement | null
     class?: string
     testId?: string
@@ -18,6 +19,7 @@
     title,
     description,
     children,
+    actions,
     sectionElement = $bindable(null),
     class: className,
     testId,
@@ -33,11 +35,22 @@
 >
   <div
     class="editor-card-section-header"
+    data-testid={testId ? `editor-card-section-header-${testId}` : undefined}
     style={`height:${EDITOR_CARD_SECTION_HEADER_HEIGHT_PX}px; min-height:${EDITOR_CARD_SECTION_HEADER_HEIGHT_PX}px; max-height:${EDITOR_CARD_SECTION_HEADER_HEIGHT_PX}px;`}
   >
-    <span class="editor-card-section-title">{title}</span>
-    {#if description}
-      <span class="editor-card-section-description">- {description}</span>
+    <div class="editor-card-section-copy">
+      <span class="editor-card-section-title">{title}</span>
+      {#if description}
+        <span class="editor-card-section-description">- {description}</span>
+      {/if}
+    </div>
+    {#if actions}
+      <div
+        class="editor-card-section-actions"
+        data-testid={testId ? `editor-card-section-actions-${testId}` : undefined}
+      >
+        {@render actions()}
+      </div>
     {/if}
   </div>
 
@@ -69,6 +82,21 @@
     overflow: hidden;
     padding: 0 16px;
     white-space: nowrap;
+  }
+
+  .editor-card-section-copy {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .editor-card-section-actions {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 
   .editor-card-section-title {

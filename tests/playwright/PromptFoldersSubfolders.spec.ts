@@ -6,7 +6,10 @@ import {
 } from '../helpers/PromptFolderSelectors'
 import { PROMPT_FOLDER_SECTION_INSET_PX } from '../../src/renderer/src/features/prompt-folders/promptFolderSectionGutterMetrics'
 import {
+  focusMonacoEditor,
+  getMonacoCursorPosition,
   getMonacoEditorText,
+  isMonacoEditorFocused,
   typeInMonacoEditor,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
@@ -16,6 +19,7 @@ import {
   readPersistedPromptTextById,
   readTextFile
 } from '../helpers/PromptPersistenceTestHelpers'
+import { runSqlQuery, toSqlText } from '../helpers/UserPersistenceHelpers'
 import {
   beginPromptFolderHandleDrag,
   beginPromptTreeFolderRowDrag,
@@ -73,6 +77,8 @@ const folderSettingsSeparatorSelector =
 const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
 const nestedDescriptionPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
+const emptyNestedSettingsInfoPath =
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo`
 const rootFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`
 const nestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
 const grandchildFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
@@ -282,6 +288,39 @@ const readFolderEntryIds = async (electronApp: any, orderPath: string): Promise<
     entries: Array<{ id: string }>
   }
   return orderFile.entries.map((entry) => entry.id)
+}
+
+const expectNoPromptFolderSettingsFiles = async (
+  electronApp: any,
+  promptFolderPath: string
+): Promise<void> => {
+  await expect
+    .poll(async () =>
+      await Promise.all(
+        ['Description.md', 'PromptPrefix.md', 'PromptSuffix.md'].map((filename) =>
+          checkFileExists(electronApp, `${promptFolderPath}/_FolderInfo/${filename}`)
+        )
+      )
+    )
+    .toEqual([false, false, false])
+}
+
+const readSettingsEditorViewStateCount = async (
+  electronApp: any,
+  promptFolderId: string
+): Promise<number> => {
+  const result = await runSqlQuery(
+    electronApp,
+    `
+    SELECT COUNT(*) AS count
+    FROM prompt_folder_settings_editor_view_state
+    WHERE workspace_id = ${toSqlText(createDeterministicId(WORKSPACE_PATH))}
+      AND prompt_folder_id = ${toSqlText(promptFolderId)}
+      AND settings_field = 'folderDescription'
+    `
+  )
+  if (!result.success) throw new Error(result.error ?? 'Failed to read settings editor view state')
+  return Number(result.rows?.[0]?.count ?? 0)
 }
 
 const expectCreatedFolderVisible = async (
@@ -843,6 +882,146 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(nestedFolder.locator(folderSettingsSeparatorSelector)).toHaveCount(0)
   })
 
+  test('adds and deletes only the subfolder settings the user chooses', async ({
+    electronApp,
+    testSetup
+  }) => {
+    test.setTimeout(60000)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      emptyNestedFolderSelector,
+      80
+    )
+
+    const emptyNestedFolder = mainWindow.locator(emptyNestedFolderSelector)
+    await emptyNestedFolder.locator(folderSettingsToggleSelector).click()
+
+    const descriptionSection = `${emptyNestedFolderSelector} ${folderDescriptionSectionSelector}`
+    const descriptionPath = `${emptyNestedSettingsInfoPath}/Description.md`
+    const prefixPath = `${emptyNestedSettingsInfoPath}/PromptPrefix.md`
+    const suffixPath = `${emptyNestedSettingsInfoPath}/PromptSuffix.md`
+    await expect(
+      emptyNestedFolder.locator('[data-testid^="prompt-folder-settings-add-"]')
+    ).toHaveCount(3)
+    await expect(emptyNestedFolder.locator('.monaco-editor')).toHaveCount(0)
+    expect(
+      await Promise.all(
+        [descriptionPath, prefixPath, suffixPath].map((filePath) =>
+          checkFileExists(electronApp, filePath)
+        )
+      )
+    ).toEqual([false, false, false])
+
+    await emptyNestedFolder
+      .locator('[data-testid="prompt-folder-settings-add-folderDescription"]')
+      .click()
+    expect(await checkFileExists(electronApp, descriptionPath)).toBe(false)
+    await waitForMonacoEditor(mainWindow, descriptionSection)
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, descriptionSection))
+      .toBe(true)
+    await expect
+      .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
+      .toBe(true)
+    expect(await readTextFile(electronApp, descriptionPath)).toBe('')
+    expect(await checkFileExists(electronApp, prefixPath)).toBe(false)
+    expect(await checkFileExists(electronApp, suffixPath)).toBe(false)
+    await expect(
+      emptyNestedFolder.locator(
+        '[data-testid="prompt-folder-settings-section-folderPrefix"] .monaco-editor, [data-testid="prompt-folder-settings-section-folderSuffix"] .monaco-editor'
+      )
+    ).toHaveCount(0)
+
+    const marker = 'Setting that requires confirmation'
+    await typeInMonacoEditor(mainWindow, descriptionSection, marker)
+    await expect
+      .poll(() => readTextFile(electronApp, descriptionPath), { timeout: 15000 })
+      .toContain(marker)
+    await focusMonacoEditor(mainWindow, descriptionSection)
+    await mainWindow.keyboard.press('Control+A')
+    await mainWindow.keyboard.press('Backspace')
+    await expect
+      .poll(() => readTextFile(electronApp, descriptionPath), { timeout: 15000 })
+      .toBe('')
+    expect(await checkFileExists(electronApp, descriptionPath)).toBe(true)
+
+    await typeInMonacoEditor(mainWindow, descriptionSection, marker)
+    await emptyNestedFolder.locator(folderSettingsToggleSelector).click()
+    await expect
+      .poll(() => readSettingsEditorViewStateCount(electronApp, emptyNestedFolderId), {
+        timeout: 15000
+      })
+      .toBe(1)
+    await emptyNestedFolder.locator(folderSettingsToggleSelector).click()
+    await waitForMonacoEditor(mainWindow, descriptionSection)
+
+    const descriptionActions = emptyNestedFolder.locator(
+      '[data-testid="editor-card-section-actions-prompt-folder-settings-section-folderDescription"]'
+    )
+    await descriptionActions
+      .locator('[data-testid="prompt-folder-settings-delete-folderDescription"]')
+      .click()
+    const confirmationDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Folder Description"]'
+    )
+    await expect(confirmationDialog).toBeVisible()
+    await confirmationDialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(confirmationDialog).toHaveCount(0)
+    await expect
+      .poll(() => getMonacoEditorText(mainWindow, descriptionSection))
+      .toContain(marker)
+
+    await descriptionActions
+      .locator('[data-testid="prompt-folder-settings-delete-folderDescription"]')
+      .click()
+    await confirmationDialog
+      .locator('[data-testid="prompt-folder-settings-confirm-delete-folderDescription"]')
+      .click()
+    await expect(
+      emptyNestedFolder.locator('[data-testid="prompt-folder-settings-add-folderDescription"]')
+    ).toBeVisible()
+    expect(await checkFileExists(electronApp, descriptionPath)).toBe(true)
+    await expect
+      .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
+      .toBe(false)
+    await expect
+      .poll(() => readSettingsEditorViewStateCount(electronApp, emptyNestedFolderId), {
+        timeout: 15000
+      })
+      .toBe(0)
+
+    await emptyNestedFolder
+      .locator('[data-testid="prompt-folder-settings-add-folderDescription"]')
+      .click()
+    await waitForMonacoEditor(mainWindow, descriptionSection)
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, descriptionSection))
+      .toBe(true)
+    expect(await getMonacoEditorText(mainWindow, descriptionSection)).toBe('')
+    expect(await getMonacoCursorPosition(mainWindow, descriptionSection)).toEqual({
+      lineNumber: 1,
+      column: 1
+    })
+    await expect
+      .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
+      .toBe(true)
+    await mainWindow.keyboard.type('   ')
+
+    await emptyNestedFolder
+      .locator('[data-testid="prompt-folder-settings-delete-folderDescription"]')
+      .click()
+    await expect(confirmationDialog).toHaveCount(0)
+    await expect
+      .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
+      .toBe(false)
+  })
+
   test('keeps subfolder editor cards flush with their virtual rows', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-ui' }
@@ -933,6 +1112,10 @@ describe('Prompt folder subfolder rendering', () => {
       displayName: 'Initial Child',
       promptFolderId: initialChildId
     })
+    await expectNoPromptFolderSettingsFiles(
+      electronApp,
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/InitialChild`
+    )
 
     await createSubfolderAtDivider(
       mainWindow,
@@ -948,6 +1131,10 @@ describe('Prompt folder subfolder rendering', () => {
     expect(nestedOrder[0]).toBe('subfolders-ui-nested-prompt')
     expect(nestedOrder[2]).toBe(grandchildFolderId)
     await expectCreatedFolderVisible(mainWindow, nestedOrder[1], 'After Prompt')
+    await expectNoPromptFolderSettingsFiles(
+      electronApp,
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/AfterPrompt`
+    )
 
     await createSubfolderAtDivider(
       mainWindow,

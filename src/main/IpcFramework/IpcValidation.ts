@@ -215,9 +215,9 @@ const parseWorkspace = parseObject<Workspace>({
 const parseWorkspaceRevisionPayloadEntity = parseRevisionPayloadEntity<Workspace>(parseWorkspace)
 
 const parsePromptFolderSettings = parseObject<PromptFolderSettings>({
-  folderDescription: parseString,
-  folderPrefix: parseString,
-  folderSuffix: parseString
+  folderDescription: parseNullableString,
+  folderPrefix: parseNullableString,
+  folderSuffix: parseNullableString
 })
 
 const parsePromptFolder = parseObject<PromptFolder>({

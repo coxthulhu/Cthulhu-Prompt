@@ -435,7 +435,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeDisabled()
   })
 
-  test('creates and navigates to a new folder', async ({ testSetup }) => {
+  test('creates and navigates to a new folder', async ({ electronApp, testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'minimal' }
     })
@@ -521,6 +521,16 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator(PROMPT_FOLDER_HOST).getByText('No prompts found in this folder.')
     ).toBeVisible()
+    await expect
+      .poll(async () => {
+        const infoPath = '/ws/minimal/Prompts/TestFolder/_FolderInfo'
+        return await Promise.all(
+          ['Description.md', 'PromptPrefix.md', 'PromptSuffix.md'].map((filename) =>
+            checkFileExists(electronApp, `${infoPath}/${filename}`)
+          )
+        )
+      })
+      .toEqual([false, false, false])
 
     const emptyPromptFolderPlaceholderHasGutter = await mainWindow.evaluate((hostSelector) => {
       const host = document.querySelector<HTMLElement>(hostSelector)

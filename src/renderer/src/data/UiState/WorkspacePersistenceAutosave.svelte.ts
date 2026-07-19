@@ -115,7 +115,7 @@ const upsertPromptFolderEditorViewState = (
   entries: WorkspacePromptFolderPromptTreeEntry[],
   promptFolderId: string,
   field: PromptFolderSettingsField,
-  viewStateJson: string
+  viewStateJson: string | null
 ): WorkspacePromptFolderPromptTreeEntry[] => {
   const existingIndex = entries.findIndex((entry) => entry.promptFolderId === promptFolderId)
 
@@ -200,7 +200,7 @@ const applyPromptFolderEditorViewState = (
   record: { promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[] },
   promptFolderId: string,
   field: PromptFolderSettingsField,
-  viewStateJson: string
+  viewStateJson: string | null
 ): void => {
   record.promptFolderPromptTreeEntries = upsertPromptFolderEditorViewState(
     record.promptFolderPromptTreeEntries,
@@ -419,10 +419,6 @@ export const setPromptFolderEditorViewStateWithAutosave = (
   field: PromptFolderSettingsField,
   viewStateJson: string | null
 ): void => {
-  if (viewStateJson === null) {
-    return
-  }
-
   const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
   if (!draftRecord) {
     return

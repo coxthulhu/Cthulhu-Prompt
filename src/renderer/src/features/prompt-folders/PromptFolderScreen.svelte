@@ -234,6 +234,7 @@
             onPromptTreeDrop={controller.handlePromptTreeDrop}
             onPromptFolderTreeDrop={controller.handlePromptFolderTreeDrop}
             onSettingsFieldChange={controller.handleSettingsFieldChange}
+            onSettingsFieldPresenceChange={controller.handleSettingsFieldPresenceChange}
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
             onScrollApiChange={controller.setScrollApi}

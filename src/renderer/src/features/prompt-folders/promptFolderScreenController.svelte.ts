@@ -39,6 +39,7 @@ import {
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
 import {
   setPromptFolderDraftSettingsField,
+  setPromptFolderDraftSettingsFieldPresence,
   type PromptFolderSettingsDraftField
 } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import {
@@ -1253,6 +1254,14 @@ export const createPromptFolderScreenController = ({
     setPromptFolderDraftSettingsField(ownerFolderId, field, text, measurement)
   }
 
+  const handleSettingsFieldPresenceChange = (
+    ownerFolderId: string,
+    field: PromptFolderSettingsDraftField,
+    isPresent: boolean
+  ) => {
+    setPromptFolderDraftSettingsFieldPresence(ownerFolderId, field, isPresent)
+  }
+
   const activeHeaderRowId = 'prompt-header' as const
   const activeHeaderSection = $derived(isCompletedMode ? 'Completed Prompts' : 'Prompts')
 
@@ -1465,6 +1474,7 @@ export const createPromptFolderScreenController = ({
     handlePromptTreeDrop,
     handlePromptFolderTreeDrop,
     handleSettingsFieldChange,
+    handleSettingsFieldPresenceChange,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
     setScrollApi,

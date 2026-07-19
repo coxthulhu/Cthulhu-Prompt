@@ -151,6 +151,11 @@
       text: string,
       measurement: TextMeasurement
     ) => void
+    onSettingsFieldPresenceChange: (
+      ownerFolderId: string,
+      field: PromptFolderSettingsDraftField,
+      isPresent: boolean
+    ) => void
     onRenamePromptFolder: (promptFolderId: string) => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
@@ -194,6 +199,7 @@
     onPromptTreeDrop,
     onPromptFolderTreeDrop,
     onSettingsFieldChange,
+    onSettingsFieldPresenceChange,
     onRenamePromptFolder,
     onScreenModeChange,
     onScrollToWithinWindowBandChange,
@@ -768,6 +774,8 @@
         onPromptsSectionToggle={() => onPromptsSectionToggle(ownerFolderId)}
         onSettingsFieldChange={(field, text, measurement) =>
           onSettingsFieldChange(ownerFolderId, field, text, measurement)}
+        onSettingsFieldPresenceChange={(field, isPresent) =>
+          onSettingsFieldPresenceChange(ownerFolderId, field, isPresent)}
         onRenamePromptFolder={() => onRenamePromptFolder(ownerFolderId)}
         onDeletePromptFolder={() => onDeletePromptFolder(ownerFolderId)}
       />
