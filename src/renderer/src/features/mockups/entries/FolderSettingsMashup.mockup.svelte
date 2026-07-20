@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
+    Check,
     ChevronDown,
     ChevronRight,
     ChevronUp,
@@ -227,8 +228,6 @@
       ]
     }
   ])
-
-  let openSettingsMenuFolderId = $state<string | null>('base-implementation')
 
   const EDITOR_TITLE_HEIGHT_PX = 59
   const EDITOR_BODY_PADDING_TOP_PX = 8
@@ -490,42 +489,27 @@
               </span>
             </div>
 
-            <div class="rework-add-setting">
-              <button
-                class="rework-add-setting-trigger"
-                type="button"
-                aria-haspopup="menu"
-                aria-expanded={openSettingsMenuFolderId === folder.id}
-                onclick={() => {
-                  openSettingsMenuFolderId =
-                    openSettingsMenuFolderId === folder.id ? null : folder.id
-                }}
-              >
-                <Plus size={14} aria-hidden="true" />
-                <span>Add setting</span>
-                <ChevronDown size={13} aria-hidden="true" />
-              </button>
-
-              {#if openSettingsMenuFolderId === folder.id}
-                <div class="rework-settings-menu" role="menu" aria-label="Available folder settings">
-                  <div class="rework-settings-menu-label">Available settings</div>
-                  {#each folder.settings.filter((setting) => !setting.isPresent) as setting (setting.id)}
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onclick={() => {
-                        setting.isPresent = true
-                        openSettingsMenuFolderId = null
-                      }}
-                    >
-                      <span>{setting.title}</span>
-                      <span>{setting.description}</span>
-                    </button>
-                  {:else}
-                    <div class="rework-settings-menu-empty">All folder settings are active</div>
-                  {/each}
-                </div>
-              {/if}
+            <div class="base-settings-rail" role="group" aria-label="Folder settings">
+              {#each folder.settings as setting (setting.id)}
+                <button
+                  type="button"
+                  data-present={setting.isPresent}
+                  aria-pressed={setting.isPresent}
+                  title={setting.isPresent ? setting.title : `Add ${setting.title.toLowerCase()}`}
+                  onclick={() => {
+                    if (!setting.isPresent) setting.isPresent = true
+                  }}
+                >
+                  <span class="base-settings-pill-icon" aria-hidden="true">
+                    {#if setting.isPresent}
+                      <Check size={13} strokeWidth={2.5} />
+                    {:else}
+                      <Plus size={13} strokeWidth={2.5} />
+                    {/if}
+                  </span>
+                  <span>{setting.title.replace('Prompt Folder ', '').replace('Folder ', '')}</span>
+                </button>
+              {/each}
             </div>
           </div>
           <Separator />
@@ -1085,98 +1069,62 @@
     padding: 0 7px;
   }
 
-  .rework-add-setting {
-    position: relative;
+  .base-settings-rail {
+    align-items: center;
+    display: flex;
+    flex: 0 1 auto;
+    gap: 6px;
+    justify-content: flex-end;
+    min-width: 0;
   }
 
-  .rework-add-setting-trigger {
+  .base-settings-rail button {
     align-items: center;
-    background: var(--ui-neutral-normal-surface);
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: var(--cthulhu-ui-radius-control);
+    background: var(--ui-editor-content-surface);
+    border: 1px dashed var(--ui-neutral-emphasis-border);
+    border-radius: 999px;
     color: var(--ui-hoverable-text);
     display: inline-flex;
+    flex: 0 0 auto;
     font-size: 12px;
     font-weight: 600;
     gap: 6px;
-    height: 28px;
-    padding: 0 8px;
+    height: 30px;
+    padding: 0 10px 0 7px;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
   }
 
-  .rework-add-setting-trigger:hover,
-  .rework-add-setting-trigger[aria-expanded='true'] {
-    background: var(--ui-neutral-emphasis-surface);
-    border-color: var(--ui-neutral-emphasis-border);
+  .base-settings-rail button:hover:not([data-present='true']) {
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    border-color: var(--ui-accent-normal-border);
     color: var(--ui-normal-text);
   }
 
-  .rework-add-setting-trigger :global(svg:first-child) {
+  .base-settings-rail button[data-present='true'] {
+    background: var(--ui-neutral-normal-surface);
+    border-color: var(--ui-neutral-normal-border);
+    border-style: solid;
+    color: var(--ui-secondary-text);
+    cursor: default;
+  }
+
+  .base-settings-pill-icon {
+    align-items: center;
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    border-radius: 999px;
+    color: var(--ui-hoverable-icon-glyph);
+    display: inline-flex;
+    height: 18px;
+    justify-content: center;
+    width: 18px;
+  }
+
+  .base-settings-rail button[data-present='true'] .base-settings-pill-icon {
+    background: var(--ui-neutral-subtle-action-hover-fill);
     color: var(--ui-secondary-icon-glyph);
-  }
-
-  .rework-add-setting-trigger :global(svg:last-child) {
-    color: var(--ui-muted-icon-glyph);
-    margin-left: 1px;
-  }
-
-  .rework-settings-menu {
-    background: var(--ui-card-overlay-surface);
-    border: 1px solid var(--ui-neutral-emphasis-border);
-    border-radius: var(--cthulhu-ui-radius-card);
-    box-shadow: 0 10px 28px var(--ui-card-normal-shadow);
-    box-sizing: border-box;
-    display: grid;
-    padding: 6px;
-    position: absolute;
-    right: 0;
-    top: calc(100% + 5px);
-    width: 332px;
-    z-index: 3;
-  }
-
-  .rework-settings-menu-label {
-    color: var(--ui-muted-text);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 5px 8px 7px;
-    text-transform: uppercase;
-  }
-
-  .rework-settings-menu button {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
-    display: grid;
-    gap: 3px;
-    padding: 8px;
-    text-align: left;
-    width: 100%;
-  }
-
-  .rework-settings-menu button:hover,
-  .rework-settings-menu button:focus-visible {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-  }
-
-  .rework-settings-menu button span:first-child {
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 16px;
-  }
-
-  .rework-settings-menu button span:last-child,
-  .rework-settings-menu-empty {
-    color: var(--ui-muted-text);
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 15px;
-  }
-
-  .rework-settings-menu-empty {
-    padding: 8px;
   }
 
   .base-root-folder-inset {
