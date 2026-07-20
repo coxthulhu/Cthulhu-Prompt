@@ -1046,7 +1046,7 @@
 
   .rework-settings-heading {
     align-items: center;
-    color: var(--ui-secondary-text);
+    color: var(--ui-normal-text);
     display: flex;
     font-size: 14px;
     font-weight: 700;
@@ -1203,7 +1203,7 @@
 
   .base-settings-section > header {
     align-items: center;
-    color: var(--ui-secondary-text);
+    color: var(--ui-normal-text);
     display: flex;
     font-size: 14px;
     font-weight: 700;
