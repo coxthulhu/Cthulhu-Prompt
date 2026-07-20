@@ -1048,7 +1048,7 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     gap: 7px;
     min-width: 0;
@@ -1205,7 +1205,7 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     gap: 5px;
     height: 28px;
