@@ -482,11 +482,14 @@
         <div class="base-folder-settings">
           <div class="rework-settings-toolbar">
             <div class="rework-settings-heading">
-              <Settings size={14} aria-hidden="true" />
-              <span>Folder settings</span>
-              <span class="rework-settings-count">
-                {folder.settings.filter((setting) => setting.isPresent).length} active
-              </span>
+              <Settings size={18} aria-hidden="true" />
+              <div class="rework-settings-heading-copy">
+                <span>Folder Settings</span>
+                <span class="rework-settings-metadata">
+                  {folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings
+                    .length} configured
+                </span>
+              </div>
             </div>
 
             <div class="base-settings-rail" role="group" aria-label="Folder settings">
@@ -495,9 +498,9 @@
                   type="button"
                   data-present={setting.isPresent}
                   aria-pressed={setting.isPresent}
-                  title={setting.isPresent ? setting.title : `Add ${setting.title.toLowerCase()}`}
+                  title={`${setting.isPresent ? 'Remove' : 'Add'} ${setting.title.toLowerCase()}`}
                   onclick={() => {
-                    if (!setting.isPresent) setting.isPresent = true
+                    setting.isPresent = !setting.isPresent
                   }}
                 >
                   <span class="base-settings-pill-icon" aria-hidden="true">
@@ -525,18 +528,6 @@
                   <span>{setting.title}</span>
                   <span>- {setting.description}</span>
                 </div>
-                <IconButton
-                  icon={Trash2}
-                  label={`Delete ${setting.title.toLowerCase()}`}
-                  title={`Delete ${setting.title.toLowerCase()}`}
-                  size="tiny"
-                  baseVariant="muted"
-                  hoverVariant="danger"
-                  borderless
-                  onclick={() => {
-                    setting.isPresent = false
-                  }}
-                />
               </header>
               <Separator />
               {@render MonacoBody(setting, `base-mockup-monaco-${setting.id}`)}
@@ -1050,7 +1041,7 @@
     display: flex;
     font-size: 14px;
     font-weight: 700;
-    gap: 7px;
+    gap: 12px;
     min-width: 0;
   }
 
@@ -1058,15 +1049,16 @@
     color: var(--ui-secondary-icon-glyph);
   }
 
-  .rework-settings-count {
-    background: var(--ui-neutral-normal-surface);
-    border: 1px solid var(--ui-neutral-muted-border);
-    border-radius: 999px;
-    color: var(--ui-muted-text);
-    font-size: 10px;
-    font-weight: 600;
+  .rework-settings-heading-copy {
+    display: grid;
     line-height: 16px;
-    padding: 0 7px;
+    min-width: 0;
+  }
+
+  .rework-settings-metadata {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    font-weight: 400;
   }
 
   .base-settings-rail {
@@ -1108,7 +1100,6 @@
     border-color: var(--ui-neutral-normal-border);
     border-style: solid;
     color: var(--ui-secondary-text);
-    cursor: default;
   }
 
   .base-settings-pill-icon {
