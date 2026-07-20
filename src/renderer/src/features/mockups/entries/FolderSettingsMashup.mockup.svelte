@@ -482,7 +482,7 @@
         <div class="base-folder-settings">
           <div class="rework-settings-toolbar">
             <div class="rework-settings-heading">
-              <Settings size={18} aria-hidden="true" />
+              <Settings size={20} aria-hidden="true" />
               <div class="rework-settings-heading-copy">
                 <span>Folder Settings</span>
                 <span class="rework-settings-metadata">
@@ -1029,7 +1029,7 @@
     background: var(--ui-editor-normal-surface);
     box-sizing: border-box;
     display: flex;
-    height: 42px;
+    height: 48px;
     justify-content: space-between;
     min-width: 0;
     padding: 0 12px 0 16px;
@@ -1053,6 +1053,7 @@
     display: grid;
     line-height: 16px;
     min-width: 0;
+    row-gap: 2px;
   }
 
   .rework-settings-metadata {
