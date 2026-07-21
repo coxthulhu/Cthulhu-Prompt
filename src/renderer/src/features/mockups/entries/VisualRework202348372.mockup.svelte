@@ -505,9 +505,9 @@
                 >
                   <span class="base-settings-pill-icon" aria-hidden="true">
                     {#if setting.isPresent}
-                      <Check size={13} strokeWidth={2.5} />
+                      <Check size={16} strokeWidth={2} />
                     {:else}
-                      <Plus size={13} strokeWidth={2.5} />
+                      <Plus size={16} strokeWidth={2} />
                     {/if}
                   </span>
                   <span>{setting.title.replace('Prompt Folder ', '').replace('Folder ', '')}</span>
@@ -1078,24 +1078,29 @@
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     gap: 7px;
-    height: 34px;
-    padding: 0 11px 0 9px;
+    height: 30px;
+    justify-content: center;
+    line-height: 16px;
+    min-width: 0;
+    padding: 0 10px;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
+      background-color 50ms ease-out,
+      border-color 50ms ease-out,
+      color 50ms ease-out;
+    white-space: nowrap;
   }
 
-  .base-settings-rail button:hover:not([data-present='true']) {
-    background: var(--ui-neutral-subtle-action-hover-fill);
+  .base-settings-rail button:hover:not([data-present='true']),
+  .base-settings-rail button:focus-visible:not([data-present='true']) {
+    background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
-    color: var(--ui-normal-text);
   }
 
   .base-settings-rail button[data-present='true'] {
@@ -1104,22 +1109,31 @@
     color: var(--ui-normal-text);
   }
 
-  .base-settings-rail button[data-present='true']:hover {
+  .base-settings-rail button[data-present='true']:hover,
+  .base-settings-rail button[data-present='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
   }
 
+  .base-settings-rail button:focus-visible {
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
+  }
+
   .base-settings-pill-icon {
     align-items: center;
-    color: inherit;
+    color: var(--ui-hoverable-icon-glyph);
     display: inline-flex;
+    flex: 0 0 auto;
     height: 16px;
     justify-content: center;
     width: 16px;
   }
 
-  .base-settings-rail button[data-present='true'] .base-settings-pill-icon {
-    color: var(--ui-hoverable-icon-glyph);
+  .base-settings-rail button > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .base-root-folder-inset {

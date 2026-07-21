@@ -6,9 +6,11 @@
   type IconTextButtonState = 'enabled' | 'disabled'
   type IconTextButtonHoverVariant = 'neutral' | 'accent'
 
-  type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
+  type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled' | 'aria-pressed'> & {
     icon: ComponentType
+    pressedIcon?: ComponentType
     text: string
+    pressed?: boolean
     state?: IconTextButtonState
     hoverVariant?: IconTextButtonHoverVariant
     class?: string
@@ -20,7 +22,9 @@
 
   let {
     icon: Icon,
+    pressedIcon,
     text,
+    pressed,
     state = 'enabled',
     hoverVariant = 'neutral',
     class: className,
@@ -33,6 +37,8 @@
 
   // Derived from state so native disabled behavior mirrors the visual state.
   const isDisabled = $derived(state === 'disabled')
+  // Reactive icon selection keeps controlled toggle state visually synchronized.
+  const DisplayIcon = $derived(pressed === true && pressedIcon ? pressedIcon : Icon)
 </script>
 
 <button
@@ -41,11 +47,12 @@
   data-state={state}
   data-hover-variant={hoverVariant}
   data-testid={testId}
+  aria-pressed={pressed}
   disabled={isDisabled}
   {onclick}
   {...restProps}
 >
-  <Icon
+  <DisplayIcon
     class={mergeClasses('cthulhuUiIconTextButtonIcon', iconClass)}
     size={iconSize}
     aria-hidden="true"
@@ -87,6 +94,18 @@
 
   .cthulhuUiIconTextButton[data-hover-variant='accent']:hover,
   .cthulhuUiIconTextButton[data-hover-variant='accent']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .cthulhuUiIconTextButton[aria-pressed='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButton[aria-pressed='true']:hover,
+  .cthulhuUiIconTextButton[aria-pressed='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
   }

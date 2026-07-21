@@ -118,6 +118,18 @@ describe('Button borders', () => {
     await accentIconTextButton.hover()
     await expect(accentIconTextButton).toHaveCSS('border-top-color', accentHoverBorder)
 
+    const toggleIconTextButton = mainWindow.locator(
+      '[data-testid="test-screen-toggle-icon-text-button"]'
+    )
+    await expect(toggleIconTextButton).toHaveAttribute('aria-pressed', 'true')
+    await expect(toggleIconTextButton).toHaveCSS('border-top-color', accentBorder)
+    await toggleIconTextButton.hover()
+    await expect(toggleIconTextButton).toHaveCSS('border-top-color', accentHoverBorder)
+    await toggleIconTextButton.click()
+    await mainWindow.mouse.move(0, 0)
+    await expect(toggleIconTextButton).toHaveAttribute('aria-pressed', 'false')
+    await expect(toggleIconTextButton).toHaveCSS('border-top-color', neutralBorder)
+
     const accentButton = mainWindow.locator('[data-testid="test-screen-accent-button"]')
     await expect(accentButton).toHaveCSS('border-top-color', accentBorder)
     await accentButton.hover()

@@ -3,6 +3,7 @@
   import {
     AlertCircle,
     Archive,
+    Check,
     ClipboardList,
     Copy,
     Download,
@@ -140,6 +141,8 @@
   let workspaceNameValue = $state('Engineering Prompts')
   let readonlyPathValue = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
   let folderInputValue = $state('')
+  // Interactive gallery state demonstrates the controlled IconTextButton toggle API.
+  let iconTextButtonPressed = $state(true)
   let togglePressed = $state(true)
   let ErrorDialogOpen = $state(false)
   let ConfirmationDialogOpen = $state(false)
@@ -334,6 +337,16 @@
                     text="Archive"
                     hoverVariant="accent"
                     testId="test-screen-accent-icon-text-button"
+                  />
+                  <IconTextButton
+                    icon={Plus}
+                    pressedIcon={Check}
+                    text="Description"
+                    pressed={iconTextButtonPressed}
+                    testId="test-screen-toggle-icon-text-button"
+                    onclick={() => {
+                      iconTextButtonPressed = !iconTextButtonPressed
+                    }}
                   />
                 </div>
               </div>
