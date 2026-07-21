@@ -98,6 +98,90 @@ const expectNoRowClipsItsContent = async (
 }
 
 describe('Prompt folder card geometry', () => {
+  test('moves prompt actions below the title when the card narrows', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    const selector = promptEditorSelector('dev-1')
+    const titleRow = mainWindow.locator(`${selector} .prompt-editor-title-row`)
+
+    const setTitleRowWidth = async (targetWidthPx: number) => {
+      const currentWidthPx = await titleRow.evaluate((row) => row.getBoundingClientRect().width)
+      await electronApp.evaluate(
+        ({ BrowserWindow }, widthDeltaPx) => {
+          const window = BrowserWindow.getAllWindows()[0]
+          if (!window) throw new Error('Missing main window')
+          const bounds = window.getBounds()
+          window.setSize(bounds.width + widthDeltaPx, bounds.height)
+        },
+        Math.round(targetWidthPx - currentWidthPx)
+      )
+      await expect
+        .poll(async () => await titleRow.evaluate((row) => row.getBoundingClientRect().width))
+        .toBe(targetWidthPx)
+    }
+
+    await setTitleRowWidth(600)
+    await expect(titleRow).toHaveAttribute('data-layout', 'default')
+    await setTitleRowWidth(599)
+    await expect(titleRow).toHaveAttribute('data-layout', 'compact')
+    await waitForMonacoEditor(mainWindow, selector)
+
+    const layout = await titleRow.evaluate((row) => {
+      const rowRect = row.getBoundingClientRect()
+      const mainRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-main')!
+        .getBoundingClientRect()
+      const actions = row.querySelector<HTMLElement>('.prompt-editor-title-actions')!
+      const actionsRect = actions.getBoundingClientRect()
+      const buttonBarRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-button-bar')!
+        .getBoundingClientRect()
+      const statusRect = row
+        .querySelector<HTMLElement>('.prompt-editor-status-segmented-control')!
+        .getBoundingClientRect()
+      const verticalSeparator = row.querySelector<HTMLElement>(
+        '.prompt-editor-title-actions-separator'
+      )!
+      const actionsStyle = getComputedStyle(actions)
+
+      return {
+        widthPx: rowRect.width,
+        actionRowOffsetPx: actionsRect.top - mainRect.bottom,
+        buttonLeftInsetPx: buttonBarRect.left - actionsRect.left,
+        statusRightInsetPx: actionsRect.right - statusRect.right,
+        horizontalSeparatorWidthPx: parseFloat(actionsStyle.borderTopWidth),
+        horizontalSeparatorColor: actionsStyle.borderTopColor,
+        verticalSeparatorDisplay: getComputedStyle(verticalSeparator).display
+      }
+    })
+
+    expect(layout.widthPx).toBeLessThan(600)
+    expect(Math.abs(layout.actionRowOffsetPx)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+    expect(Math.abs(layout.buttonLeftInsetPx - 16)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+    expect(Math.abs(layout.statusRightInsetPx - 16)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+    expect(layout.horizontalSeparatorWidthPx).toBe(1)
+    expect(layout.horizontalSeparatorColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(layout.verticalSeparatorDisplay).toBe('none')
+
+    await expect
+      .poll(async () => {
+        const geometry = await measureEditorCardGeometry(mainWindow, selector)
+        if (!geometry) return Number.POSITIVE_INFINITY
+        return Math.max(
+          geometry.hiddenOverflowPx,
+          Math.abs(geometry.promptBodyFillGapPx ?? Number.POSITIVE_INFINITY),
+          Math.abs(geometry.promptSidebarFillGapPx ?? Number.POSITIVE_INFINITY)
+        )
+      })
+      .toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+  })
+
   test('prompt editor cards exactly fill their pinned row height', async ({ testSetup }) => {
     await testSetup.setupFilesystem(buildGeometryWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(GEOMETRY_WORKSPACE_PATH)])

@@ -7,6 +7,7 @@
 
   type Props = PromptEditorTitleRowProps & {
     titleAreaHeightPx: number
+    compactLayout?: boolean
     infoText?: string
   }
 
@@ -33,6 +34,7 @@
     status = PromptStatus.Todo,
     isEdited = false,
     titleAreaHeightPx,
+    compactLayout = false,
     infoText
   }: Props = $props()
 </script>
@@ -63,6 +65,7 @@
     {completedAt}
     {status}
     {isEdited}
+    {compactLayout}
   />
 
   {#if infoText}

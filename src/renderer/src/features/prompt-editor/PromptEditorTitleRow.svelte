@@ -24,6 +24,7 @@
     completedAt?: string | null
     status?: import('@shared/Prompt').PromptStatus
     isEdited?: boolean
+    compactLayout?: boolean
   }
 </script>
 
@@ -58,7 +59,8 @@
     copyTitle,
     completedAt = null,
     status = PromptStatus.Todo,
-    isEdited = false
+    isEdited = false,
+    compactLayout = false
   }: PromptEditorTitleRowProps = $props()
 
   // Derived placeholder text shows the fallback title when the title is empty.
@@ -132,7 +134,7 @@
   }
 </script>
 
-<div class="prompt-editor-title-row">
+<div class="prompt-editor-title-row" data-layout={compactLayout ? 'compact' : 'default'}>
   <!-- Reserve the indicator column so Todo titles stay aligned with other statuses. -->
   <span
     class="prompt-editor-title-status-indicator"
@@ -224,9 +226,18 @@
     min-width: 0;
   }
 
+  .prompt-editor-title-row[data-layout='compact'] {
+    grid-template-columns: 2px minmax(0, 1fr);
+    grid-template-rows: 56px 53px;
+  }
+
   .prompt-editor-title-status-indicator {
     align-self: stretch;
     visibility: hidden;
+  }
+
+  .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-status-indicator {
+    grid-row: 1 / -1;
   }
 
   .prompt-editor-title-status-indicator[data-edited='true'] {
@@ -253,12 +264,26 @@
     padding: 8px 8px 8px 16px;
   }
 
+  .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
   .prompt-editor-title-actions {
     align-items: center;
     align-self: stretch;
     display: flex;
     gap: 12px;
     min-width: 0;
+  }
+
+  .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-actions {
+    border-top: 1px solid var(--ui-neutral-normal-border);
+    box-sizing: border-box;
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: space-between;
+    padding-left: 16px;
   }
 
   .prompt-editor-title-button-bar {
@@ -272,6 +297,10 @@
     background: var(--ui-neutral-normal-border);
     flex: 0 0 1px;
     width: 1px;
+  }
+
+  .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-actions-separator {
+    display: none;
   }
 
   .prompt-editor-title-copy {

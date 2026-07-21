@@ -17,6 +17,7 @@
     clampMonacoHeightPx,
     estimatePromptEditorHeight,
     getMonacoHeightFromRowPx,
+    getPromptEditorTitleAreaWidthPx,
     getRowHeightPx,
     type PromptEditorSizingConfig
   } from '../prompt-editor/promptEditorSizing'
@@ -364,26 +365,31 @@
       snippet: dividerRow
     },
     'prompt-editor': {
-      estimateHeight: (row, widthPx, heightPx) =>
-        estimatePromptEditorHeight(
+      estimateHeight: (row, widthPx, heightPx) => {
+        const cardWidthPx = getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel)
+        return estimatePromptEditorHeight(
           promptDraftById[row.promptId]!.promptText,
-          getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel),
+          getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode),
           heightPx,
           promptEditorSizingConfig
-        ),
+        )
+      },
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
+        const cardWidthPx = getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel)
         const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
           row.promptId,
-          getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel),
+          cardWidthPx,
           devicePixelRatio
         )
         if (measuredRowHeightPx == null) return null
 
+        const titleAreaWidthPx = getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode)
         return getRowHeightPx(
           clampMonacoHeightPx(
-            getMonacoHeightFromRowPx(measuredRowHeightPx),
+            getMonacoHeightFromRowPx(measuredRowHeightPx, titleAreaWidthPx),
             promptEditorSizingConfig
-          )
+          ),
+          titleAreaWidthPx
         )
       },
       hydrationPriorityEligible: true,

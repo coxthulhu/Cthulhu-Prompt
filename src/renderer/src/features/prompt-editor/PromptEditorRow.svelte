@@ -38,14 +38,17 @@
   import {
     clampMonacoHeightPx,
     getMonacoHeightFromRowPx,
+    getPromptEditorTitleAreaHeightPx,
+    getPromptEditorTitleAreaWidthPx,
     getRowHeightPx,
+    isPromptEditorCompactLayout,
     MONACO_PADDING_PX,
     PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX,
     PROMPT_EDITOR_BODY_PADDING_LEFT_PX,
     PROMPT_EDITOR_BODY_PADDING_RIGHT_PX,
     PROMPT_EDITOR_BODY_PADDING_TOP_PX,
     PROMPT_EDITOR_SEPARATOR_HEIGHT_PX,
-    PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX,
+    PROMPT_EDITOR_SIDEBAR_WIDTH_PX,
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
   import { getPromptTokenCount } from './promptEditorCounts'
@@ -117,6 +120,13 @@
     minLines: systemSettings.promptEditorMinLines,
     maxLines: systemSettings.promptEditorMaxLines
   })
+  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  const sidebarWidthPx = $derived(isCompletedMode ? 0 : PROMPT_EDITOR_SIDEBAR_WIDTH_PX)
+  const titleAreaWidthPx = $derived(
+    getPromptEditorTitleAreaWidthPx(virtualWindowWidthPx, !isCompletedMode)
+  )
+  const titleAreaHeightPx = $derived(getPromptEditorTitleAreaHeightPx(titleAreaWidthPx))
+  const compactTitleLayout = $derived(isPromptEditorCompactLayout(titleAreaWidthPx))
   const initialEditorViewStateJson = $derived(lookupPromptEditorViewStateJson(promptId))
   // Derived prompt state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
@@ -131,7 +141,7 @@
   })
   const placeholderMonacoHeightPx = $derived.by(() => {
     return clampMonacoHeightPx(
-      getMonacoHeightFromRowPx(virtualRowHeightPx),
+      getMonacoHeightFromRowPx(virtualRowHeightPx, titleAreaWidthPx),
       promptEditorSizingConfig
     )
   })
@@ -175,16 +185,14 @@
   })
   const findContext = getPromptFolderFindContext()
 
-  const SIDEBAR_WIDTH_PX = 32
-  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
-  const sidebarWidthPx = $derived(isCompletedMode ? 0 : SIDEBAR_WIDTH_PX)
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
-  const OVERFLOW_TOP_PADDING_PX =
-    PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX +
-    PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
-    PROMPT_EDITOR_BODY_PADDING_TOP_PX +
-    MONACO_VERTICAL_PADDING_PX
+  const OVERFLOW_TOP_PADDING_PX = $derived(
+    titleAreaHeightPx +
+      PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
+      PROMPT_EDITOR_BODY_PADDING_TOP_PX +
+      MONACO_VERTICAL_PADDING_PX
+  )
   const OVERFLOW_LEFT_PADDING_PX = $derived(
     rowContentLeftOffsetPx + sidebarWidthPx + PROMPT_EDITOR_BODY_PADDING_LEFT_PX
   )
@@ -464,7 +472,8 @@
     {onStatusChange}
     {status}
     isEdited={promptDraftRecord.isEdited}
-    titleAreaHeightPx={PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX}
+    {titleAreaHeightPx}
+    compactLayout={compactTitleLayout}
   />
 
   <Separator />
@@ -511,7 +520,7 @@
               monacoHeightPx = meta.heightPx
             }
             promptData.setText(text, {
-              measuredHeightPx: getRowHeightPx(meta.heightPx),
+              measuredHeightPx: getRowHeightPx(meta.heightPx, titleAreaWidthPx),
               widthPx: virtualWindowWidthPx,
               devicePixelRatio
             })
