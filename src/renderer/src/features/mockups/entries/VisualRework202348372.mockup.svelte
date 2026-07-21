@@ -1074,11 +1074,11 @@
 
   .base-settings-rail button {
     align-items: center;
-    background: var(--ui-neutral-action-fill);
+    background: var(--ui-ghost-surface);
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
-    color: var(--ui-hoverable-text);
+    color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 13px;
@@ -1093,7 +1093,7 @@
   }
 
   .base-settings-rail button:hover:not([data-present='true']) {
-    background: var(--ui-neutral-action-hover-fill);
+    background: var(--ui-neutral-subtle-action-hover-fill);
     border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
   }
@@ -1111,7 +1111,7 @@
 
   .base-settings-pill-icon {
     align-items: center;
-    color: var(--ui-secondary-icon-glyph);
+    color: inherit;
     display: inline-flex;
     height: 16px;
     justify-content: center;
