@@ -13,7 +13,7 @@ export const PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX = 12
 export const getPromptFolderEditorRowPaddingTopPx = (isRoot: boolean): number =>
   isRoot ? PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX : 0
 export const PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX = 56
-const PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX = 4
+export const PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX = 56
 export const EDITOR_CARD_SECTION_HEADER_HEIGHT_PX = 28
 export const EDITOR_CARD_SECTION_SEPARATOR_HEIGHT_PX = 1
 export const SETTINGS_EDITOR_SECTION_PADDING_TOP_PX = PROMPT_EDITOR_BODY_PADDING_TOP_PX
@@ -39,18 +39,11 @@ export const SETTINGS_EDITOR_LEFT_OFFSET_PX = SETTINGS_EDITOR_SECTION_PADDING_LE
 // fixed chrome includes both card borders.
 const FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX =
   PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX +
+  PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX +
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
   PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2
 const FOLDER_EDITOR_COLLAPSED_CARD_HEIGHT_PX =
   PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX + PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2
-
-const normalizePromptFolderVirtualRowHeightPx = (heightPx: number): number => {
-  if (heightPx <= 0) return 0
-  return (
-    Math.ceil(heightPx / PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX) *
-    PROMPT_FOLDER_VIRTUAL_ROW_HEIGHT_GRID_PX
-  )
-}
 
 export const getPromptFolderSettingsSizingConfig = (
   fontSize: number
@@ -87,9 +80,18 @@ export const estimatePromptFolderSettingsFieldRowHeight = (
 export const getPromptFolderEditorCardHeightPx = (
   settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>
 ): number => {
+  const visibleFieldCount = PROMPT_FOLDER_SETTINGS_FIELDS.filter(
+    (field) => settingsFieldHeightsPx[field] > 0
+  ).length
+  // Each later editor adds a top border outside its measured field height.
   return Math.ceil(
     FOLDER_EDITOR_CARD_FIXED_HEIGHT_PX +
-      PROMPT_FOLDER_SETTINGS_FIELDS.reduce((sum, field) => sum + settingsFieldHeightsPx[field], 0)
+      PROMPT_FOLDER_SETTINGS_FIELDS.reduce(
+        (sum, field) => sum + settingsFieldHeightsPx[field],
+        0
+      ) +
+      (visibleFieldCount > 0 ? PROMPT_EDITOR_SEPARATOR_HEIGHT_PX : 0) +
+      Math.max(0, visibleFieldCount - 1) * EDITOR_CARD_SECTION_SEPARATOR_HEIGHT_PX
   )
 }
 
@@ -103,7 +105,5 @@ export const getPromptFolderEditorCardRowHeightPx = (
   settingsFieldHeightsPx: Record<PromptFolderSettingsField, number>,
   rowPaddingTopPx = PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX
 ): number => {
-  return normalizePromptFolderVirtualRowHeightPx(
-    rowPaddingTopPx + getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx)
-  )
+  return Math.ceil(rowPaddingTopPx + getPromptFolderEditorCardHeightPx(settingsFieldHeightsPx))
 }

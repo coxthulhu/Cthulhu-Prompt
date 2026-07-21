@@ -14,7 +14,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const GEOMETRY_WORKSPACE_PATH = '/ws/card-geometry'
 const GEOMETRY_FOLDER_NAME = 'Card Geometry'
 const FILL_TOLERANCE_PX = 1
-const FOLDER_ROW_HEIGHT_GRID_PX = 4
 
 const buildGeometryWorkspace = () =>
   createWorkspaceWithFolders(GEOMETRY_WORKSPACE_PATH, [
@@ -197,8 +196,8 @@ describe('Prompt folder card geometry', () => {
       ).toBeGreaterThanOrEqual(-FILL_TOLERANCE_PX)
       expect(
         expanded.bodyChildrenFillGapPx,
-        `expanded folder card ${folderId} slack exceeds the row grid`
-      ).toBeLessThanOrEqual(FOLDER_ROW_HEIGHT_GRID_PX + FILL_TOLERANCE_PX)
+        `expanded folder card ${folderId} has extra bottom slack`
+      ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
 
       // Restore the collapsed state for the next row's scroll math.
       await row.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()

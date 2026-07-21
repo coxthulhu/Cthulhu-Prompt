@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { ChevronRight, Folder, Pencil, Settings, Trash2 } from 'lucide-svelte'
+  import { Check, ChevronRight, Folder, Pencil, Plus, Settings, Trash2 } from 'lucide-svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import {
@@ -15,6 +16,7 @@
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsEditorSection from './PromptFolderSettingsEditorSection.svelte'
+  import { PROMPT_FOLDER_SETTINGS_EDITOR_CONFIG } from './promptFolderSettingsEditorConfig'
   import PromptFolderEditorSidebar from './PromptFolderEditorSidebar.svelte'
   import {
     droppable,
@@ -28,7 +30,8 @@
   } from '../drag-drop/promptHandleDrag'
   import {
     PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX,
-    PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX
+    PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX,
+    PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX
   } from './promptFolderSettingsSizing'
 
   type Props = {
@@ -122,6 +125,9 @@
   const isAnySectionHydrated = $derived(
     PROMPT_FOLDER_SETTINGS_FIELDS.some((field) => hydratedFields[field])
   )
+  const configuredSettingsCount = $derived(
+    PROMPT_FOLDER_SETTINGS_FIELDS.filter((field) => folderSettings[field] !== null).length
+  )
   const effectiveDropOptions = $derived<
     DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
   >(
@@ -131,6 +137,8 @@
     }
   )
   let lastReportedHydration = $state<boolean | null>(null)
+  let focusAfterAddField = $state<PromptFolderSettingsField | null>(null)
+  const deleteRequests: Partial<Record<PromptFolderSettingsField, () => void>> = {}
 
   const handlePencilClick = (event: MouseEvent) => {
     event.stopPropagation()
@@ -161,6 +169,27 @@
 
   const handleSectionHydrationChange = (field: PromptFolderSettingsField, isHydrated: boolean) => {
     hydratedFields[field] = isHydrated
+  }
+
+  const handleSettingsFieldToggle = (field: PromptFolderSettingsField) => {
+    if (folderSettings[field] !== null) {
+      deleteRequests[field]?.()
+      return
+    }
+
+    focusAfterAddField = field
+    onSettingsFieldPresenceChange(field, true)
+  }
+
+  const handleDeleteRequestChange = (
+    field: PromptFolderSettingsField,
+    requestDelete: (() => void) | null
+  ) => {
+    if (requestDelete) {
+      deleteRequests[field] = requestDelete
+    } else {
+      delete deleteRequests[field]
+    }
   }
 
   // Side effect: hidden settings sections are unmounted and no longer hydrate the virtual row.
@@ -278,27 +307,72 @@
     {#if isSettingsSectionExpanded && !isReadOnly}
       <Separator data-testid="prompt-folder-editor-settings-separator" />
 
-      <div class="prompt-folder-editor-sections">
-        {#each PROMPT_FOLDER_SETTINGS_FIELDS as field, index (field)}
-          <PromptFolderSettingsEditorSection
-            {workspaceId}
-            {promptFolderId}
-            {field}
-            {rowId}
-            {virtualWindowWidthPx}
-            {devicePixelRatio}
-            sectionHeightPx={sectionHeightsPx[field]}
-            {hydrationPriority}
-            {shouldDehydrate}
-            {overlayRowElement}
-            {scrollToWithinWindowBand}
-            {folderSettings}
-            onHydrationChange={handleSectionHydrationChange}
-            showTopBorder={index > 0}
-            {onSettingsFieldChange}
-            {onSettingsFieldPresenceChange}
-          />
-        {/each}
+      <div class="prompt-folder-editor-settings">
+        <div
+          class="prompt-folder-settings-toolbar"
+          style={`height:${PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX}px; min-height:${PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX}px; max-height:${PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX}px;`}
+          data-testid="prompt-folder-settings-toolbar"
+        >
+          <div class="prompt-folder-settings-heading">
+            <Settings size={20} aria-hidden="true" />
+            <div class="prompt-folder-settings-heading-copy">
+              <span>Folder Settings</span>
+              <span class="prompt-folder-settings-metadata">
+                {configuredSettingsCount} of {PROMPT_FOLDER_SETTINGS_FIELDS.length} configured
+              </span>
+            </div>
+          </div>
+
+          <div class="prompt-folder-settings-toggles" role="group" aria-label="Folder settings">
+            {#each PROMPT_FOLDER_SETTINGS_FIELDS as field (field)}
+              {@const isPresent = folderSettings[field] !== null}
+              {@const config = PROMPT_FOLDER_SETTINGS_EDITOR_CONFIG[field]}
+              <IconTextButton
+                icon={Plus}
+                pressedIcon={Check}
+                text={config.toggleText}
+                pressed={isPresent}
+                title={`${isPresent ? 'Remove' : 'Add'} ${config.title.toLowerCase()}`}
+                testId={`prompt-folder-settings-toggle-${field}`}
+                onclick={() => handleSettingsFieldToggle(field)}
+              />
+            {/each}
+          </div>
+        </div>
+
+        {#if configuredSettingsCount > 0}
+          <Separator data-testid="prompt-folder-settings-toolbar-separator" />
+        {/if}
+
+        <div class="prompt-folder-editor-sections">
+          {#each PROMPT_FOLDER_SETTINGS_FIELDS.filter(
+            (field) => folderSettings[field] !== null
+          ) as field, index (field)}
+            <PromptFolderSettingsEditorSection
+              {workspaceId}
+              {promptFolderId}
+              {field}
+              {rowId}
+              {virtualWindowWidthPx}
+              {devicePixelRatio}
+              sectionHeightPx={sectionHeightsPx[field]}
+              {hydrationPriority}
+              {shouldDehydrate}
+              {overlayRowElement}
+              {scrollToWithinWindowBand}
+              value={folderSettings[field]!}
+              focusAfterAdd={focusAfterAddField === field}
+              onFocusAfterAddComplete={() => {
+                focusAfterAddField = null
+              }}
+              onDeleteRequestChange={handleDeleteRequestChange}
+              onHydrationChange={handleSectionHydrationChange}
+              showTopBorder={index > 0}
+              {onSettingsFieldChange}
+              {onSettingsFieldPresenceChange}
+            />
+          {/each}
+        </div>
       </div>
     {/if}
   </EditorCardSurface>
@@ -394,9 +468,56 @@
     transform: rotate(90deg);
   }
 
+  .prompt-folder-editor-settings,
   .prompt-folder-editor-sections {
     background: var(--ui-editor-normal-surface);
     display: grid;
+    min-width: 0;
+  }
+
+  .prompt-folder-settings-toolbar {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    gap: 24px;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 10px 12px 10px 16px;
+  }
+
+  .prompt-folder-settings-heading {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    font-size: 14px;
+    font-weight: 700;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .prompt-folder-settings-heading :global(svg) {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .prompt-folder-settings-heading-copy {
+    display: grid;
+    line-height: 16px;
+    min-width: 0;
+    row-gap: 2px;
+  }
+
+  .prompt-folder-settings-metadata {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .prompt-folder-settings-toggles {
+    align-items: center;
+    display: flex;
+    flex: 0 1 auto;
+    gap: 8px;
+    justify-content: flex-end;
     min-width: 0;
   }
 </style>

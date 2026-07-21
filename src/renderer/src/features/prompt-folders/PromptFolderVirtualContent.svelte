@@ -278,10 +278,12 @@
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        estimatePromptFolderSettingsFieldRowHeight(
-          folderSettings[field],
-          promptEditorSizingConfig.fontSize
-        )
+        folderSettings[field] === null
+          ? 0
+          : estimatePromptFolderSettingsFieldRowHeight(
+              folderSettings[field],
+              promptEditorSizingConfig.fontSize
+            )
       ])
     ) as Record<PromptFolderSettingsField, number>
   }
@@ -291,12 +293,19 @@
     widthPx: number,
     devicePixelRatio: number
   ): Record<PromptFolderSettingsField, number> => {
+    const folderSettings = getFolderSettings(ownerFolderId)
     const estimatedHeights = getEstimatedFolderSettingsSectionHeights(ownerFolderId)
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        lookupFolderSettingsRowMeasuredHeight(ownerFolderId, field, widthPx, devicePixelRatio) ??
-          estimatedHeights[field]
+        folderSettings[field] === null
+          ? 0
+          : (lookupFolderSettingsRowMeasuredHeight(
+              ownerFolderId,
+              field,
+              widthPx,
+              devicePixelRatio
+            ) ?? estimatedHeights[field])
       ])
     ) as Record<PromptFolderSettingsField, number>
   }

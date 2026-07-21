@@ -260,9 +260,20 @@ describe('Prompt Folder Hydration', () => {
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
     ).toHaveCount(0)
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
+    ).toHaveCount(0)
 
     await settingsToggle.click()
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
+    ).toContainText('3 of 3 configured')
+    await expect(
+      nestedFolderEditor.locator(
+        '[data-testid^="prompt-folder-settings-toggle-"][aria-pressed="true"]'
+      )
+    ).toHaveCount(3)
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
     ).toHaveCount(3)
@@ -271,6 +282,9 @@ describe('Prompt Folder Hydration', () => {
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+    ).toHaveCount(0)
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
     ).toHaveCount(0)
 
     await settingsToggle.click()

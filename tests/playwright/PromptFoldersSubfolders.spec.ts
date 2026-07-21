@@ -19,6 +19,7 @@ import {
   readPersistedPromptTextById,
   readTextFile
 } from '../helpers/PromptPersistenceTestHelpers'
+import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
 import { runSqlQuery, toSqlText } from '../helpers/UserPersistenceHelpers'
 import {
   beginPromptFolderHandleDrag,
@@ -78,8 +79,11 @@ const folderTitleEditSelector = '[data-testid="prompt-folder-editor-title-edit"]
 const folderSettingsToggleSelector = '[data-testid="prompt-folder-editor-settings-toggle"]'
 const folderSettingsSeparatorSelector =
   '[data-testid="prompt-folder-editor-settings-separator"]'
+const folderSettingsToolbarSelector = '[data-testid="prompt-folder-settings-toolbar"]'
 const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
+const folderDescriptionToggleSelector =
+  '[data-testid="prompt-folder-settings-toggle-folderDescription"]'
 const nestedDescriptionPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
 const emptyNestedSettingsInfoPath =
   `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo`
@@ -961,12 +965,21 @@ describe('Prompt folder subfolder rendering', () => {
     await emptyNestedFolder.locator(folderSettingsToggleSelector).click()
 
     const descriptionSection = `${emptyNestedFolderSelector} ${folderDescriptionSectionSelector}`
+    const descriptionToggle = emptyNestedFolder.locator(folderDescriptionToggleSelector)
     const descriptionPath = `${emptyNestedSettingsInfoPath}/Description.md`
     const prefixPath = `${emptyNestedSettingsInfoPath}/PromptPrefix.md`
     const suffixPath = `${emptyNestedSettingsInfoPath}/PromptSuffix.md`
     await expect(
-      emptyNestedFolder.locator('[data-testid^="prompt-folder-settings-add-"]')
+      emptyNestedFolder.locator('[data-testid^="prompt-folder-settings-toggle-"]')
     ).toHaveCount(3)
+    await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toContainText(
+      '0 of 3 configured'
+    )
+    await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(emptyNestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(0)
+    await expect(
+      emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
+    ).toHaveCount(0)
     await expect(emptyNestedFolder.locator('.monaco-editor')).toHaveCount(0)
     expect(
       await Promise.all(
@@ -976,10 +989,15 @@ describe('Prompt folder subfolder rendering', () => {
       )
     ).toEqual([false, false, false])
 
-    await emptyNestedFolder
-      .locator('[data-testid="prompt-folder-settings-add-folderDescription"]')
-      .click()
+    await descriptionToggle.click()
     expect(await checkFileExists(electronApp, descriptionPath)).toBe(false)
+    await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
+    ).toHaveCount(1)
+    await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toContainText(
+      '1 of 3 configured'
+    )
     await waitForMonacoEditor(mainWindow, descriptionSection)
     await expect
       .poll(() => isMonacoEditorFocused(mainWindow, descriptionSection))
@@ -995,6 +1013,31 @@ describe('Prompt folder subfolder rendering', () => {
         '[data-testid="prompt-folder-settings-section-folderPrefix"] .monaco-editor, [data-testid="prompt-folder-settings-section-folderSuffix"] .monaco-editor'
       )
     ).toHaveCount(0)
+
+    for (const { field, filePath } of [
+      { field: 'folderPrefix', filePath: prefixPath },
+      { field: 'folderSuffix', filePath: suffixPath }
+    ]) {
+      const toggle = emptyNestedFolder.locator(
+        `[data-testid="prompt-folder-settings-toggle-${field}"]`
+      )
+      const section = emptyNestedFolder.locator(
+        `[data-testid="prompt-folder-settings-section-${field}"]`
+      )
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+      await expect(section).toHaveCount(1)
+      await expect
+        .poll(() => checkFileExists(electronApp, filePath), { timeout: 15000 })
+        .toBe(true)
+
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      await expect(section).toHaveCount(0)
+      await expect
+        .poll(() => checkFileExists(electronApp, filePath), { timeout: 15000 })
+        .toBe(false)
+    }
 
     const marker = 'Setting that requires confirmation'
     await typeInMonacoEditor(mainWindow, descriptionSection, marker)
@@ -1019,12 +1062,7 @@ describe('Prompt folder subfolder rendering', () => {
     await emptyNestedFolder.locator(folderSettingsToggleSelector).click()
     await waitForMonacoEditor(mainWindow, descriptionSection)
 
-    const descriptionActions = emptyNestedFolder.locator(
-      '[data-testid="editor-card-section-actions-prompt-folder-settings-section-folderDescription"]'
-    )
-    await descriptionActions
-      .locator('[data-testid="prompt-folder-settings-delete-folderDescription"]')
-      .click()
+    await descriptionToggle.click()
     const confirmationDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Delete Folder Description"]'
     )
@@ -1034,17 +1072,20 @@ describe('Prompt folder subfolder rendering', () => {
     await expect
       .poll(() => getMonacoEditorText(mainWindow, descriptionSection))
       .toContain(marker)
+    await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'true')
 
-    await descriptionActions
-      .locator('[data-testid="prompt-folder-settings-delete-folderDescription"]')
-      .click()
+    await descriptionToggle.click()
     await confirmationDialog
       .locator('[data-testid="prompt-folder-settings-confirm-delete-folderDescription"]')
       .click()
+    await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(emptyNestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(0)
     await expect(
-      emptyNestedFolder.locator('[data-testid="prompt-folder-settings-add-folderDescription"]')
-    ).toBeVisible()
-    expect(await checkFileExists(electronApp, descriptionPath)).toBe(true)
+      emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
+    ).toHaveCount(0)
+    await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toContainText(
+      '0 of 3 configured'
+    )
     await expect
       .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
       .toBe(false)
@@ -1054,9 +1095,7 @@ describe('Prompt folder subfolder rendering', () => {
       })
       .toBe(0)
 
-    await emptyNestedFolder
-      .locator('[data-testid="prompt-folder-settings-add-folderDescription"]')
-      .click()
+    await descriptionToggle.click()
     await waitForMonacoEditor(mainWindow, descriptionSection)
     await expect
       .poll(() => isMonacoEditorFocused(mainWindow, descriptionSection))
@@ -1071,10 +1110,9 @@ describe('Prompt folder subfolder rendering', () => {
       .toBe(true)
     await mainWindow.keyboard.type('   ')
 
-    await emptyNestedFolder
-      .locator('[data-testid="prompt-folder-settings-delete-folderDescription"]')
-      .click()
+    await descriptionToggle.click()
     await expect(confirmationDialog).toHaveCount(0)
+    await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'false')
     await expect
       .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
       .toBe(false)
@@ -1090,23 +1128,41 @@ describe('Prompt folder subfolder rendering', () => {
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
 
-    const readEditorGeometry = async (selector: string) =>
-      await mainWindow.locator(selector).evaluate((row) => {
-        const rowRect = row.getBoundingClientRect()
-        const cardRect = row.querySelector('.editor-card-surface')?.getBoundingClientRect()
-        if (!cardRect) return null
-        return {
-          cardTopOffsetPx: cardRect.top - rowRect.top,
-          heightDifferencePx: rowRect.height - cardRect.height
-        }
-      })
+    const expectFlushEditorGeometry = async (selector: string) => {
+      await expect
+        .poll(async () => {
+          const geometry = await measureEditorCardGeometry(mainWindow, selector)
+          if (!geometry) return Number.POSITIVE_INFINITY
+          return Math.max(
+            geometry.hiddenOverflowPx,
+            geometry.internalScrollTopPx,
+            Math.abs(geometry.bodyChildrenFillGapPx ?? Number.POSITIVE_INFINITY)
+          )
+        })
+        .toBeLessThanOrEqual(1)
+    }
 
-    await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
-    const nestedGeometry = await readEditorGeometry(nestedFolderSelector)
-    if (!nestedGeometry) throw new Error('Missing nested folder editor geometry')
+    await revealVirtualRow(mainWindow, testHelpers, emptyNestedFolderSelector)
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      emptyNestedFolderSelector,
+      80
+    )
+    const emptyNestedFolder = mainWindow.locator(emptyNestedFolderSelector)
+    await expectFlushEditorGeometry(emptyNestedFolderSelector)
 
-    expect(Math.abs(nestedGeometry.cardTopOffsetPx)).toBeLessThanOrEqual(1)
-    expect(Math.abs(nestedGeometry.heightDifferencePx)).toBeLessThanOrEqual(1)
+    await emptyNestedFolder.locator(folderSettingsToggleSelector).click()
+    await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toBeVisible()
+    await expectFlushEditorGeometry(emptyNestedFolderSelector)
+
+    const descriptionToggle = emptyNestedFolder.locator(folderDescriptionToggleSelector)
+    await descriptionToggle.click()
+    await expect(emptyNestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(1)
+    await expectFlushEditorGeometry(emptyNestedFolderSelector)
+
+    await descriptionToggle.click()
+    await expect(emptyNestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(0)
+    await expectFlushEditorGeometry(emptyNestedFolderSelector)
   })
 
   test('always renders root contents without a root editor row', async ({ testSetup }) => {
