@@ -44,7 +44,7 @@
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
-  import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
+  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
@@ -697,7 +697,7 @@
           onclick={openCreatePromptFolderDialog}
         />
       {:else}
-        <SelectorButtonWithDropdown
+        <DetailedSelectorButton
           label="Prompt folder selector"
           items={promptFolderDropdownItems}
           selectedItem={screenRootFolderDropdownItem}

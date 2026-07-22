@@ -47,7 +47,8 @@
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
-  import SelectorButtonWithDropdown from '@renderer/common/cthulhu-ui/SelectorButtonWithDropdown.svelte'
+  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
+  import SimpleSelectorButton from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
   import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
@@ -500,15 +501,26 @@
       <div class="component-section">
         <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle(
-              'SelectorButtonWithDropdown',
-              'Prompt-folder selector dropdown with a fixed footer action.'
-            )}
+            {@render componentTitle('Selectors', 'Compact and detailed dropdown selectors.')}
 
             <div class="stack">
               <div class="component-sample">
-                {@render componentLabel('SelectorButtonWithDropdown')}
-                <SelectorButtonWithDropdown
+                {@render componentLabel('SimpleSelectorButton')}
+                <SimpleSelectorButton
+                  label="Select prompt folder"
+                  items={detailedDropdownItems}
+                  selectedItem={selectedDetailedDropdownItem}
+                  showIcon
+                  onselect={(item) => {
+                    selectedDetailedDropdownItem = item
+                    lastDropdownAction = item.label
+                  }}
+                />
+              </div>
+
+              <div class="component-sample">
+                {@render componentLabel('DetailedSelectorButton')}
+                <DetailedSelectorButton
                   label="Prompt folder selector"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
