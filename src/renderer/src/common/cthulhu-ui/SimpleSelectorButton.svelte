@@ -46,7 +46,6 @@
     onselect
   }: SimpleSelectorButtonProps = $props()
 
-  const visibleItems = $derived(items.filter((item) => item.id !== selectedItem.id))
   const selectedLabel = $derived(selectedItem.selectedLabel ?? selectedItem.label)
   const selectedItemLabel = $derived(`${label}: ${selectedLabel}`)
   const SelectedIcon = $derived<ComponentType>(selectedItem.icon)
@@ -55,7 +54,7 @@
 
 <DropdownPopupMoreOptions
   label={moreOptionsLabel}
-  items={visibleItems}
+  {items}
   {menuWidth}
   testId={menuTestId}
   onselect={(item, event) => onselect?.(item, event)}

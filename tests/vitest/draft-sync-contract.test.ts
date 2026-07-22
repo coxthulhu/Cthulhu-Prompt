@@ -67,6 +67,7 @@ const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): Prompt
 
 const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   id: 'folder-1',
+  kind: 'prompt',
   folderName: 'folder',
   displayName: 'Folder',
   entries: [

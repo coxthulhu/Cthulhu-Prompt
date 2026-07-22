@@ -1,14 +1,21 @@
 export type PromptEntryRef = { kind: 'prompt'; id: string }
 
+export type PromptTemplateEntryRef = { kind: 'template'; id: string }
+
 export type FolderEntryRef = { kind: 'folder'; id: string }
 
-export type EntryRef = PromptEntryRef | FolderEntryRef
+export type EntryRef = PromptEntryRef | PromptTemplateEntryRef | FolderEntryRef
 
 export interface OrderContainer<TEntry extends EntryRef> {
   entries: TEntry[]
 }
 
 export const promptEntryRef = (id: string): PromptEntryRef => ({ kind: 'prompt', id })
+
+export const promptTemplateEntryRef = (id: string): PromptTemplateEntryRef => ({
+  kind: 'template',
+  id
+})
 
 export const folderEntryRef = (id: string): FolderEntryRef => ({ kind: 'folder', id })
 

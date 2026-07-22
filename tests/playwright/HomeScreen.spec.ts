@@ -120,6 +120,26 @@ describe('Home Screen', () => {
       await expect(errorDialog).toContainText('Invalid workspace path')
     })
 
+    test('rejects a workspace without a Templates directory', async ({ testSetup }) => {
+      const workspacePath = '/ws/missing-templates'
+      const filesystem = createWorkspaceWithFolders(workspacePath, [])
+      delete filesystem[`${workspacePath}/Templates`]
+      delete filesystem[`${workspacePath}/Templates/FolderOrder.json`]
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="open-workspace-button"]')
+
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
+      ).toBeVisible()
+      expect(await testHelpers.isWorkspaceReady()).toBe(false)
+    })
+
     test('repairs a missing workspace folder order during load', async ({
       electronApp,
       testSetup

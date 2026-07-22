@@ -10,6 +10,7 @@ const createFolder = (
   completedPromptIds: string[] = []
 ): PromptFolder => ({
   id,
+  kind: 'prompt',
   folderName: id,
   displayName: id,
   entries,

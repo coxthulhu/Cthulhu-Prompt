@@ -1,5 +1,6 @@
 import type { PromptPersisted } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
+import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type { EntryRef, FolderEntryRef } from '@shared/OrderContainer'
 import type { RevisionEnvelope } from '@shared/Revision'
 import type { Workspace } from '@shared/Workspace'
@@ -8,6 +9,10 @@ import {
   readPromptModifiedAt,
   type PromptPersistenceFields
 } from '../Persistence/PromptPersistence'
+import {
+  readPromptTemplateModifiedAt,
+  type PromptTemplatePersistenceFields
+} from '../Persistence/PromptTemplatePersistence'
 import type { WorkspacePersistenceFields } from '../Persistence/WorkspacePersistence'
 import type { CommittedEntry } from './CommittedStore'
 import { data } from './Data'
@@ -15,6 +20,10 @@ import { data } from './Data'
 export type WorkspaceCommittedEntry = CommittedEntry<Workspace, WorkspacePersistenceFields>
 export type PromptFolderCommittedEntry = CommittedEntry<PromptFolder, PromptFolderPersistenceFields>
 export type PromptCommittedEntry = CommittedEntry<PromptPersisted, PromptPersistenceFields>
+export type PromptTemplateCommittedEntry = CommittedEntry<
+  PromptTemplatePersisted,
+  PromptTemplatePersistenceFields
+>
 
 const filterLoadedEntityIds = <TData, TPersistenceFields>(
   entityIds: string[],
@@ -44,15 +53,25 @@ export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntr
   return getLoadedEntries(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
 }
 
+export const getLoadedPromptTemplateEntries = (
+  promptTemplateIds: string[]
+): PromptTemplateCommittedEntry[] => {
+  return getLoadedEntries(promptTemplateIds, (promptTemplateId) =>
+    data.promptTemplate.committedStore.getEntry(promptTemplateId)
+  )
+}
+
 export const filterLoadedPromptFolderEntries = (entries: FolderEntryRef[]): FolderEntryRef[] => {
   return entries.filter((entry) => data.promptFolder.committedStore.getEntry(entry.id) !== null)
 }
 
 export const filterLoadedPromptFolderEntriesByKind = (entries: EntryRef[]): EntryRef[] => {
   return entries.filter((entry) => {
-    return entry.kind === 'prompt'
-      ? data.prompt.committedStore.getEntry(entry.id) !== null
-      : data.promptFolder.committedStore.getEntry(entry.id) !== null
+    if (entry.kind === 'prompt') return data.prompt.committedStore.getEntry(entry.id) !== null
+    if (entry.kind === 'template') {
+      return data.promptTemplate.committedStore.getEntry(entry.id) !== null
+    }
+    return data.promptFolder.committedStore.getEntry(entry.id) !== null
   })
 }
 
@@ -82,7 +101,8 @@ export const buildWorkspaceSnapshot = (
     revision: workspaceEntry.revision,
     data: {
       ...workspaceEntry.committed,
-      entries: filterLoadedPromptFolderEntries(workspaceEntry.committed.entries)
+      entries: filterLoadedPromptFolderEntries(workspaceEntry.committed.entries),
+      templateEntries: filterLoadedPromptFolderEntries(workspaceEntry.committed.templateEntries)
     }
   }
 }
@@ -113,3 +133,14 @@ export const buildPromptSnapshot = (
     }
   }
 }
+
+export const buildPromptTemplateSnapshot = (
+  promptTemplateEntry: PromptTemplateCommittedEntry
+): RevisionEnvelope<PromptTemplatePersisted> => ({
+  id: promptTemplateEntry.committed.id,
+  revision: promptTemplateEntry.revision,
+  data: {
+    ...promptTemplateEntry.committed,
+    modifiedAt: readPromptTemplateModifiedAt(promptTemplateEntry.persistenceFields)
+  }
+})

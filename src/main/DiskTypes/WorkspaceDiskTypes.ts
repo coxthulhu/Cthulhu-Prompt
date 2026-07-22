@@ -5,7 +5,8 @@ export type WorkspaceInfoFile = {
 
 export type PromptFolderInfoFile = {
   displayName: string
-  promptFolderId: string
+  folderId: string
+  kind: 'prompt' | 'template'
 }
 
 export type PromptFolderOrderFile = OrderContainer<EntryRef>

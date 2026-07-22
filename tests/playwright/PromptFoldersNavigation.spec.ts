@@ -5,6 +5,10 @@ import {
   checkPersistedPromptFilesExistByTitle,
   readTextFile
 } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  createWorkspaceWithTemplateFolders,
+  getWorkspaceInfoPath
+} from '../fixtures/WorkspaceFixtures'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -29,6 +33,7 @@ const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+const TEMPLATE_WORKSPACE_PATH = '/ws/templates'
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -40,6 +45,52 @@ const createDeterministicId = (seed: string): string => {
 }
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
+  test('loads template folders and summaries without displaying them', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(
+      createWorkspaceWithTemplateFolders(TEMPLATE_WORKSPACE_PATH, [
+        {
+          folderName: 'CodeReview',
+          displayName: 'Code Review Templates',
+          folderId: 'template-folder-1',
+          description: 'Templates for code reviews.',
+          templates: [
+            {
+              id: 'template-1',
+              title: 'Review Pull Request',
+              templateText: 'Review {{diff}}.'
+            }
+          ],
+          subfolders: [
+            {
+              folderName: 'Nested',
+              displayName: 'Nested Templates',
+              folderId: 'template-folder-nested',
+              templates: [
+                {
+                  id: 'nested-template',
+                  fallbackTitle: 'Nested Template',
+                  templateText: 'Use {{nested}}.'
+                }
+              ]
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(TEMPLATE_WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toBeVisible()
+    await expect(mainWindow.getByText('Code Review Templates', { exact: true })).toHaveCount(0)
+    await expect(mainWindow.getByText('Review Pull Request', { exact: true })).toHaveCount(0)
+    await expect(mainWindow.getByText('Nested Templates', { exact: true })).toHaveCount(0)
+    await expect(mainWindow.getByText('Nested Template', { exact: true })).toHaveCount(0)
+  })
+
   test('renders prompts when opening Examples', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -547,6 +598,89 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
   })
 
+  test('creates a prompt template folder without selecting or displaying it', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
+    await expect(mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')).toHaveText(
+      'Prompt Folder'
+    )
+    await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
+    const folderTypeMenu = mainWindow.locator(
+      '[data-testid="create-prompt-folder-type-menu"]'
+    )
+    await expect(folderTypeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
+    await expect(folderTypeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
+    await folderTypeMenu.getByText('Prompt Template Folder', { exact: true }).click()
+    await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
+    await mainWindow.locator('[data-testid="create-prompt-folder-button"]').click()
+
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Development Tools'
+    )
+    await expect(mainWindow.getByText('Prompt Template Folder', { exact: true })).toHaveCount(0)
+    await expect
+      .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples`))
+      .toBe(true)
+
+    const folderInfo = JSON.parse(
+      await readTextFile(
+        electronApp,
+        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderInfo.json`
+      )
+    ) as { displayName: string; folderId: string; kind: string }
+    expect(folderInfo).toEqual({
+      displayName: 'Examples',
+      folderId: expect.any(String),
+      kind: 'template'
+    })
+    expect(
+      JSON.parse(
+        await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/FolderOrder.json`)
+      )
+    ).toEqual({ entries: [{ kind: 'folder', id: folderInfo.folderId }] })
+    expect(
+      JSON.parse(
+        await readTextFile(
+          electronApp,
+          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderOrder.json`
+        )
+      )
+    ).toEqual({ entries: [] })
+    expect(
+      await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_Completed`)
+    ).toBe(false)
+    expect(
+      await checkFileExists(
+        electronApp,
+        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/PromptPrefix.md`
+      )
+    ).toBe(false)
+    expect(
+      await checkFileExists(
+        electronApp,
+        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/PromptSuffix.md`
+      )
+    ).toBe(false)
+
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
+    await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
+    await mainWindow.getByText('Prompt Template Folder', { exact: true }).click()
+    await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
+    await expect(
+      mainWindow.locator('[data-testid="create-prompt-folder-name-error"]')
+    ).toContainText('A folder with this name already exists')
+    await expect(mainWindow.locator('[data-testid="create-prompt-folder-button"]')).toBeDisabled()
+  })
+
   test('renames a prompt folder from the root page title without changing its id', async ({
     electronApp,
     testSetup
@@ -638,11 +772,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       await readTextFile(electronApp, renamedFolderInfoPath)
     ) as {
       displayName: string
-      promptFolderId: string
+      folderId: string
+      kind: 'prompt'
     }
     expect(renamedFolderInfo).toEqual({
       displayName: 'Renamed Development',
-      promptFolderId: developmentFolderId
+      folderId: developmentFolderId,
+      kind: 'prompt'
     })
     await expect
       .poll(

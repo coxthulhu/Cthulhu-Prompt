@@ -4,6 +4,7 @@ import {
   type CreatePromptFolderPayload,
   type CreatePromptFolderResponsePayload,
   type PromptFolder,
+  type PromptFolderKind,
   type PromptFolderRevisionResponsePayload,
   type RenamePromptFolderPayload,
   type UpdatePromptFolderSettingsPayload
@@ -87,7 +88,8 @@ export const createPromptFolder = async (
   workspaceId: string,
   displayName: string,
   parentPromptFolderId: string | null = null,
-  previousEntryId: string | null = null
+  previousEntryId: string | null = null,
+  kind: PromptFolderKind = 'prompt'
 ): Promise<string> => {
   const workspace = workspaceCollection.get(workspaceId)
 
@@ -110,6 +112,7 @@ export const createPromptFolder = async (
     mutateOptimistically: ({ collections }) => {
       collections.promptFolder.insert({
         id: optimisticPromptFolderId,
+        kind,
         folderName,
         displayName: normalizedDisplayName,
         entries: [],
@@ -133,13 +136,18 @@ export const createPromptFolder = async (
         })
       } else {
         collections.workspace.update(workspaceId, (draft) => {
+          const rootEntries = kind === 'prompt' ? draft.entries : draft.templateEntries
           const insertIndex =
             previousEntryId === null
               ? 0
-              : draft.entries.findIndex((entry) => entry.id === previousEntryId) + 1
-          const entries = [...draft.entries]
+              : rootEntries.findIndex((entry) => entry.id === previousEntryId) + 1
+          const entries = [...rootEntries]
           entries.splice(insertIndex, 0, folderEntryRef(optimisticPromptFolderId))
-          draft.entries = entries
+          if (kind === 'prompt') {
+            draft.entries = entries
+          } else {
+            draft.templateEntries = entries
+          }
         })
       }
     },
@@ -159,6 +167,7 @@ export const createPromptFolder = async (
                 })
               : null,
             promptFolderId: optimisticPromptFolderId,
+            kind,
             displayName: normalizedDisplayName,
             previousEntryId
           }

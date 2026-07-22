@@ -1311,7 +1311,7 @@ describe('Prompt folder prompt management', () => {
       mainWindow.locator('[data-testid="prompt-status-more-options-menu"]')
     ).toHaveCount(0)
     await activePromptStatus.click()
-    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')
     ).toBeVisible()
@@ -1330,13 +1330,13 @@ describe('Prompt folder prompt management', () => {
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
     await expect(
       mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')
-    ).toHaveCount(0)
+    ).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
     await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText('Todo')
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
-    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
     await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
       'In Progress'
@@ -1389,9 +1389,7 @@ describe('Prompt folder prompt management', () => {
       .toEqual(['completed-mode-active', 'completed-mode-newest', 'completed-mode-oldest'])
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
-    await expect(mainWindow.locator('[data-testid="prompt-status-option-completed"]')).toHaveCount(
-      0
-    )
+    await expect(mainWindow.locator('[data-testid="prompt-status-option-completed"]')).toBeVisible()
     await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })

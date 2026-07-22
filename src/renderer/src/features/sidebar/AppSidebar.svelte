@@ -131,6 +131,18 @@
       .map((entry) => promptFolderById.get(entry.id))
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
+  const promptTemplateFolders = $derived.by((): PromptFolder[] => {
+    if (!selectedWorkspace) return []
+
+    const promptFolderById = new SvelteMap<string, PromptFolder>()
+    for (const promptFolder of promptFolderQuery.data) {
+      if (promptFolder) promptFolderById.set(promptFolder.id, promptFolder)
+    }
+
+    return selectedWorkspace.templateEntries
+      .map((entry) => promptFolderById.get(entry.id))
+      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+  })
   const promptTreePromptFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) {
       return []
@@ -781,6 +793,7 @@
           bind:this={createPromptFolderDialog}
           {isWorkspaceReady}
           {promptFolders}
+          {promptTemplateFolders}
           isPromptFolderListLoading={isWorkspaceLoading}
           onCreated={(promptFolderId) => {
             onScreenRootFolderSelect(promptFolderId)

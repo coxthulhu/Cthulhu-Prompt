@@ -1,8 +1,9 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import type { ComponentType } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import { FolderPlus } from 'lucide-svelte'
@@ -25,6 +26,7 @@
     submitTestId,
     inputTestId,
     errorTestId,
+    dialogClass = 'w-full max-w-[540px]',
     rowLabel = 'Prompt Folder Name',
     rowDetail,
     initialDisplayName = '',
@@ -33,6 +35,7 @@
     duplicatePromptFolderId = null,
     failureMessage,
     icon = FolderPlus,
+    beforeRows,
     onsubmit
   } = $props<{
     isWorkspaceReady: boolean
@@ -44,6 +47,7 @@
     submitTestId: string
     inputTestId: string
     errorTestId: string
+    dialogClass?: string
     rowLabel?: string
     rowDetail: string
     initialDisplayName?: string
@@ -52,6 +56,7 @@
     duplicatePromptFolderId?: string | null
     failureMessage: string
     icon?: ComponentType
+    beforeRows?: Snippet
     onsubmit: SubmitPromptFolderName
   }>()
 
@@ -151,7 +156,7 @@
 
 <Dialog
   bind:open={isDialogOpen}
-  class="w-full max-w-[540px]"
+  class={dialogClass}
   {title}
   submitText={isSubmitting ? submittingText : submitText}
   submitDisabled={!isValid || isSubmitting}
@@ -163,6 +168,11 @@
   onsubmit={handleSubmit}
 >
   <div class="cthulhuPromptFolderNameDialogRows flex min-w-0 flex-col">
+    {#if beforeRows}
+      {@render beforeRows()}
+      <Separator />
+    {/if}
+
     <SettingRow {icon} label={rowLabel} detail={rowDetail}>
       {#snippet control()}
         <FloatingValidationMessage message={errorMessage} textTestId={errorTestId}>

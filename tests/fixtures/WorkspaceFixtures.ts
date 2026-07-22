@@ -4,7 +4,11 @@ import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptF
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
 import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
-import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
+import {
+  serializePromptMarkdown,
+  serializePromptTemplateMarkdown
+} from '../../src/main/Persistence/PromptFrontmatter'
+import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import { PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
@@ -15,9 +19,10 @@ import {
 
 const createPromptFolderInfo = (
   displayName: string,
-  promptFolderId: string
+  folderId: string,
+  kind: 'prompt' | 'template' = 'prompt'
 ): PromptFolderInfoFile => {
-  return { displayName, promptFolderId }
+  return { displayName, folderId, kind }
 }
 
 const getPromptFolderOrderPath = (folderPath: string): string =>
@@ -47,6 +52,21 @@ export interface PromptFolderConfig {
     createdAt?: string
     status?: PromptStatus
     completedAt?: string
+  }>
+}
+
+export interface PromptTemplateFolderConfig {
+  folderName: string
+  displayName: string
+  folderId?: string
+  description?: string
+  subfolders?: PromptTemplateFolderConfig[]
+  templates?: Array<{
+    id: string
+    title?: string
+    fallbackTitle?: string
+    templateText: string
+    createdAt?: string
   }>
 }
 
@@ -273,6 +293,8 @@ export function createBasicWorkspace(
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
     [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
+    [`${workspacePath}/Templates`]: null,
+    [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,
@@ -331,6 +353,70 @@ export function createWorkspaceWithFolders(
     2
   )
 
+  return structure
+}
+
+export function createWorkspaceWithTemplateFolders(
+  workspacePath: string,
+  folderConfigs: PromptTemplateFolderConfig[]
+): Record<string, string | null> {
+  const structure = createBasicWorkspace(workspacePath)
+  const addFolder = (folder: PromptTemplateFolderConfig, parentPath: string): string => {
+    const folderPath = `${parentPath}/${folder.folderName}`
+    const folderId =
+      folder.folderId ?? createDeterministicId(`${workspacePath}:template:${folderPath}`)
+    const templates = folder.templates ?? []
+    const subfolderIds = (folder.subfolders ?? []).map((subfolder) =>
+      addFolder(subfolder, folderPath)
+    )
+
+    structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
+      createPromptFolderInfo(folder.displayName, folderId, 'template'),
+      null,
+      2
+    )
+    structure[getPromptFolderOrderPath(folderPath)] = JSON.stringify(
+      {
+        entries: [
+          ...templates.map((template) => ({ kind: 'template' as const, id: template.id })),
+          ...subfolderIds.map((id) => ({ kind: 'folder' as const, id }))
+        ]
+      },
+      null,
+      2
+    )
+    if (folder.description !== undefined) {
+      structure[`${folderPath}/_FolderInfo/Description.md`] = folder.description
+    }
+
+    for (const template of templates) {
+      const title = template.title ?? ''
+      const fallbackTitle = template.fallbackTitle ?? ''
+      const templateData: PromptTemplatePersisted = {
+        id: template.id,
+        title,
+        fallbackTitle,
+        createdAt: template.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
+        modifiedAt: template.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
+        templateText: template.templateText
+      }
+      const displayTitle = getPromptDisplayTitle(templateData)
+      structure[`${folderPath}/${buildPromptStem(displayTitle, template.id, false)}.template.md`] =
+        serializePromptTemplateMarkdown(templateData)
+    }
+
+    return folderId
+  }
+
+  const folderIds = folderConfigs.map((folder) =>
+    addFolder(folder, `${workspacePath}/Templates`)
+  )
+
+  structure[`${workspacePath}/Templates/FolderOrder.json`] = JSON.stringify(
+    folderOrderFile(folderIds),
+    null,
+    2
+  )
   return structure
 }
 

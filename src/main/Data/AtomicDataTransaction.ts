@@ -252,7 +252,8 @@ const createAtomicDataBuilder = (): {
       systemSettings: createStoreBuilder('systemSettings'),
       workspace: createStoreBuilder('workspace'),
       promptFolder: createStoreBuilder('promptFolder'),
-      prompt: createStoreBuilder('prompt')
+      prompt: createStoreBuilder('prompt'),
+      promptTemplate: createStoreBuilder('promptTemplate')
     }
   }
 }

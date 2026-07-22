@@ -3,6 +3,7 @@ import {
   createRevisionMutationRunner
 } from './RevisionMutation'
 import { promptCollection } from '../Collections/PromptCollection'
+import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -30,6 +31,7 @@ const revisionCollections = {
   workspace: workspaceCollection,
   promptFolder: promptFolderCollection,
   prompt: promptCollection,
+  promptTemplate: promptTemplateCollection,
   promptUiState: promptUiStateCollection
 }
 

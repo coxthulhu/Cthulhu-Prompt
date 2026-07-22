@@ -5,8 +5,11 @@ import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
 import type { PromptUiState } from './PromptUiState'
 
+export type PromptFolderKind = 'prompt' | 'template'
+
 export interface PromptFolder extends OrderContainer<EntryRef> {
   id: string
+  kind: PromptFolderKind
   folderName: string
   displayName: string
   completedPromptIds: string[]
@@ -102,6 +105,7 @@ export type CreatePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
   parentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
   promptFolderId: string
+  kind: PromptFolderKind
   displayName: string
   previousEntryId: string | null
 }

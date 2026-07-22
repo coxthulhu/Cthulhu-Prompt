@@ -326,6 +326,6 @@
     overscroll-behavior: contain;
     position: fixed;
     width: var(--cthulhu-ui-dropdown-popup-menu-width);
-    z-index: 30;
+    z-index: 60;
   }
 </style>

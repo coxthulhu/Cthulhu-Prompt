@@ -1,4 +1,5 @@
 import { createPromptSummary } from '@shared/Prompt'
+import { createPromptTemplateSummary } from '@shared/PromptTemplate'
 import type { LoadWorkspaceByPathRequest, LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { promptCollection } from '../Collections/PromptCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
@@ -14,6 +15,7 @@ import {
   upsertPromptSummaryDrafts
 } from '../UiState/PromptDraftMutations.svelte.ts'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 
 export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<string> => {
   const result = await runLoad(() =>
@@ -27,16 +29,27 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
 
   const previousWorkspace = workspaceCollection.get(result.workspace.id)
   const previousPromptIds = new Set<string>()
+  const previousPromptTemplateIds = new Set<string>()
+  const previousPromptFolderIds = new Set<string>()
   if (previousWorkspace) {
-    for (const { id: promptFolderId } of previousWorkspace.entries) {
+    const visitFolder = (promptFolderId: string): void => {
+      if (previousPromptFolderIds.has(promptFolderId)) return
+      previousPromptFolderIds.add(promptFolderId)
       const promptFolder = promptFolderCollection.get(promptFolderId)
-      if (!promptFolder) {
-        continue
-      }
+      if (!promptFolder) return
 
       for (const promptId of getPromptFolderAllPromptIds(promptFolder)) {
         previousPromptIds.add(promptId)
       }
+
+      for (const entry of promptFolder.entries) {
+        if (entry.kind === 'template') previousPromptTemplateIds.add(entry.id)
+        if (entry.kind === 'folder') visitFolder(entry.id)
+      }
+    }
+
+    for (const entry of [...previousWorkspace.entries, ...previousWorkspace.templateEntries]) {
+      visitFolder(entry.id)
     }
   }
 
@@ -52,6 +65,12 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
       data: createPromptSummary(prompt.data)
     }))
   )
+  promptTemplateCollection.utils.upsertManyAuthoritative(
+    result.promptTemplates.map((template) => ({
+      ...template,
+      data: createPromptTemplateSummary(template.data)
+    }))
+  )
   upsertPromptSummaryDrafts(result.prompts.map((prompt) => prompt.data))
 
   if (!previousWorkspace) {
@@ -61,7 +80,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   const nextPromptFolderIds = new Set(result.promptFolders.map((folder) => folder.id))
   const removedPromptFolderIds: string[] = []
 
-  for (const { id: promptFolderId } of previousWorkspace.entries) {
+  for (const promptFolderId of previousPromptFolderIds) {
     if (!nextPromptFolderIds.has(promptFolderId)) {
       promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
       removedPromptFolderIds.push(promptFolderId)
@@ -80,6 +99,12 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
 
   promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
   deletePromptDrafts(removedPromptIds)
+
+  const nextPromptTemplateIds = new Set(result.promptTemplates.map((template) => template.id))
+  const removedPromptTemplateIds = [...previousPromptTemplateIds].filter(
+    (templateId) => !nextPromptTemplateIds.has(templateId)
+  )
+  promptTemplateCollection.utils.deleteManyAuthoritative(removedPromptTemplateIds)
 
   return result.workspace.id
 }

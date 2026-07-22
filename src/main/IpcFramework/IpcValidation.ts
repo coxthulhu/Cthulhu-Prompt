@@ -209,6 +209,12 @@ const parseWorkspace = parseObject<Workspace>({
       kind: (value) => (value === 'folder' ? 'folder' : null),
       id: parseString
     })
+  ),
+  templateEntries: parseArray(
+    parseObject({
+      kind: (value) => (value === 'folder' ? 'folder' : null),
+      id: parseString
+    })
   )
 })
 
@@ -222,11 +228,13 @@ const parsePromptFolderSettings = parseObject<PromptFolderSettings>({
 
 const parsePromptFolder = parseObject<PromptFolder>({
   id: parseString,
+  kind: (value) => (value === 'prompt' || value === 'template' ? value : null),
   folderName: parseString,
   displayName: parseString,
   entries: parseArray(
     parseObject({
-      kind: (value) => (value === 'prompt' || value === 'folder' ? value : null),
+      kind: (value) =>
+        value === 'prompt' || value === 'template' || value === 'folder' ? value : null,
       id: parseString
     })
   ),
@@ -368,10 +376,11 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
   const valueKeys = Object.keys(record)
 
   if (
-    valueKeys.length !== 5 ||
+    valueKeys.length !== 6 ||
     !('workspace' in record) ||
     !('parentPromptFolder' in record) ||
     !('promptFolderId' in record) ||
+    !('kind' in record) ||
     !('displayName' in record) ||
     !('previousEntryId' in record)
   ) {
@@ -383,12 +392,14 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
     record.parentPromptFolder
   )
   const promptFolderId = parseString(record.promptFolderId)
+  const kind = record.kind === 'prompt' || record.kind === 'template' ? record.kind : null
   const displayName = parseString(record.displayName)
 
   if (
     !workspace ||
     parentPromptFolder === undefined ||
     promptFolderId === null ||
+    kind === null ||
     displayName === null ||
     (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
   ) {
@@ -399,6 +410,7 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
     workspace,
     parentPromptFolder,
     promptFolderId,
+    kind,
     displayName,
     previousEntryId: record.previousEntryId
   }

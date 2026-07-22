@@ -11,6 +11,7 @@ const createFolder = (
   overrides: Partial<PromptFolder> = {}
 ): PromptFolder => ({
   id,
+  kind: 'prompt',
   folderName: id,
   displayName: id,
   entries: entryIds.map((entryId) => ({

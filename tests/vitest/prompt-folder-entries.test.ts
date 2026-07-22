@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   id: 'folder',
+  kind: 'prompt',
   folderName: 'Folder',
   displayName: 'Folder',
   entries: [],

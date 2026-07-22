@@ -4,6 +4,7 @@ import { resolvePromptFolderEntryDropMove } from '@renderer/features/drag-drop/p
 
 const folder = (id: string, entries: PromptFolder['entries'] = []): PromptFolder => ({
   id,
+  kind: 'prompt',
   folderName: id,
   displayName: id,
   entries,

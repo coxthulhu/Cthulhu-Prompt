@@ -65,6 +65,13 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'Parent prompt folder not loaded' }
           }
 
+          if (
+            committedParentPromptFolder &&
+            committedParentPromptFolder.committed.kind !== payload.kind
+          ) {
+            return { success: false, error: 'Parent prompt folder kind did not match' }
+          }
+
           const treeIndex = buildPromptFolderTreeIndex(
             committedWorkspace.committed,
             collectWorkspacePromptFolders(committedWorkspace.committed)
@@ -81,7 +88,10 @@ export const setupPromptFolderMutationHandlers = (): void => {
           }
 
           const siblingEntries =
-            committedParentPromptFolder?.committed.entries ?? committedWorkspace.committed.entries
+            committedParentPromptFolder?.committed.entries ??
+            (payload.kind === 'prompt'
+              ? committedWorkspace.committed.entries
+              : committedWorkspace.committed.templateEntries)
 
           if (
             payload.previousEntryId !== null &&
@@ -133,15 +143,22 @@ export const setupPromptFolderMutationHandlers = (): void => {
                     id: requestedWorkspace.id,
                     expectedRevision: requestedWorkspace.expectedRevision,
                     recipe: (draft) => {
-                      const entries = [...draft.entries]
+                      const entries = [
+                        ...(payload.kind === 'prompt' ? draft.entries : draft.templateEntries)
+                      ]
                       entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
-                      draft.entries = entries
+                      if (payload.kind === 'prompt') {
+                        draft.entries = entries
+                      } else {
+                        draft.templateEntries = entries
+                      }
                     }
                   }),
               promptFolder: tx.promptFolder.create({
                 id: payload.promptFolderId,
                 data: {
                   id: payload.promptFolderId,
+                  kind: payload.kind,
                   folderName,
                   displayName: normalizedDisplayName,
                   entries: [],
@@ -152,7 +169,8 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   workspaceId: requestedWorkspace.id,
                   workspacePath: committedWorkspace.committed.workspacePath,
                   folderName,
-                  folderPath
+                  folderPath,
+                  kind: payload.kind
                 }
               })
             }

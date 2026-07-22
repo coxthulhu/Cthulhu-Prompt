@@ -3,6 +3,7 @@ import * as path from 'path'
 import type { WorkspaceFolderStatus } from '@shared/Workspace'
 import {
   PROMPTS_DIRECTORY_NAME,
+  TEMPLATES_DIRECTORY_NAME,
   WORKSPACE_INFO_FILENAME_SUFFIX
 } from './Persistence/PromptPersistencePaths'
 import { getDialogProvider } from './dialog-provider'
@@ -23,7 +24,9 @@ const getWorkspaceFolderStatus = (folderPath: string): WorkspaceFolderStatus => 
   }
 
   const isWorkspace =
-    hasWorkspaceInfoFile(folderPath) && fs.existsSync(path.join(folderPath, PROMPTS_DIRECTORY_NAME))
+    hasWorkspaceInfoFile(folderPath) &&
+    fs.existsSync(path.join(folderPath, PROMPTS_DIRECTORY_NAME)) &&
+    fs.existsSync(path.join(folderPath, TEMPLATES_DIRECTORY_NAME))
 
   return {
     exists: true,

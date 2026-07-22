@@ -28,13 +28,19 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
   stageChanges: async (change) => {
     const infoPath = change.persistenceFields.workspaceInfoPath
     const folderOrderPath = resolveWorkspacePromptFolderOrderPath(
-      change.persistenceFields.workspacePath
+      change.persistenceFields.workspacePath,
+      'prompt'
+    )
+    const templateFolderOrderPath = resolveWorkspacePromptFolderOrderPath(
+      change.persistenceFields.workspacePath,
+      'template'
     )
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
         createStagedFileRemove(infoPath),
-        createStagedFileRemove(folderOrderPath)
+        createStagedFileRemove(folderOrderPath),
+        createStagedFileRemove(templateFolderOrderPath)
       ])
     }
 
@@ -45,10 +51,16 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     })
     const folderOrderTempPath = resolveTempPath(folderOrderPath)
     writeJsonFile(folderOrderTempPath, toWorkspacePromptFolderOrderFile(change.data.entries))
+    const templateFolderOrderTempPath = resolveTempPath(templateFolderOrderPath)
+    writeJsonFile(
+      templateFolderOrderTempPath,
+      toWorkspacePromptFolderOrderFile(change.data.templateEntries)
+    )
 
     return createPersistenceStageResult([
       createStagedFileUpsert(infoPath, infoTempPath),
-      createStagedFileUpsert(folderOrderPath, folderOrderTempPath)
+      createStagedFileUpsert(folderOrderPath, folderOrderTempPath),
+      createStagedFileUpsert(templateFolderOrderPath, templateFolderOrderTempPath)
     ])
   },
   commitChanges: async (stagedChange) => {
@@ -61,12 +73,14 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     const { workspacePath, workspaceInfoPath } = persistenceFields
     const workspaceInfo = readWorkspaceInfo(workspaceInfoPath)
     const promptFolders = readPromptFolders(workspacePath)
+    const promptTemplateFolders = readPromptFolders(workspacePath, 'template')
 
     return {
       id: workspaceInfo.workspaceId,
       workspacePath,
       workspaceName: workspaceInfo.workspaceName,
-      entries: promptFolders.map((promptFolder) => ({ kind: 'folder', id: promptFolder.id }))
+      entries: promptFolders.map((promptFolder) => ({ kind: 'folder', id: promptFolder.id })),
+      templateEntries: promptTemplateFolders.map((folder) => ({ kind: 'folder', id: folder.id }))
     }
   }
 }

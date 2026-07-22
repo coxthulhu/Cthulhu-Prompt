@@ -9,6 +9,7 @@ import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { getPromptFolderAllPromptIds } from '../Collections/PromptFolderEntries'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import {
@@ -59,7 +60,10 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
     return
   }
 
-  for (const { id: promptFolderId } of workspace.entries) {
+  const visitedFolderIds = new Set<string>()
+  const clearFolder = (promptFolderId: string): void => {
+    if (visitedFolderIds.has(promptFolderId)) return
+    visitedFolderIds.add(promptFolderId)
     const promptFolder = promptFolderCollection.get(promptFolderId)
 
     if (promptFolder) {
@@ -68,10 +72,22 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
         removePromptDraft(promptId)
         removePromptUiState(promptId)
       }
+
+      for (const entry of promptFolder.entries) {
+        if (entry.kind === 'template') {
+          promptTemplateCollection.utils.deleteAuthoritative(entry.id)
+        } else if (entry.kind === 'folder') {
+          clearFolder(entry.id)
+        }
+      }
     }
 
     promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
     removePromptFolderDraft(promptFolderId)
+  }
+
+  for (const entry of [...workspace.entries, ...workspace.templateEntries]) {
+    clearFolder(entry.id)
   }
 
   workspaceCollection.utils.deleteAuthoritative(workspaceId)

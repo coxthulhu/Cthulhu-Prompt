@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const createFolder = (id: string, entries: EntryRef[] = []): PromptFolder => ({
   id,
+  kind: 'prompt',
   folderName: id,
   displayName: id,
   entries,

@@ -3,6 +3,7 @@ import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import type { CommittedStore } from './CommittedStore'
 import { promptData } from './PromptData'
 import { promptFolderData } from './PromptFolderData'
+import { promptTemplateData } from './PromptTemplateData'
 import { systemSettingsData } from './SystemSettingsData'
 import { workspaceData } from './WorkspaceData'
 
@@ -19,5 +20,6 @@ export const data = {
   systemSettings: systemSettingsData,
   workspace: workspaceData,
   promptFolder: promptFolderData,
-  prompt: promptData
+  prompt: promptData,
+  promptTemplate: promptTemplateData
 }

@@ -836,11 +836,13 @@ describe('Prompt folder subfolder rendering', () => {
       await readTextFile(electronApp, `${renamedFolderPath}/_FolderInfo/FolderInfo.json`)
     ) as {
       displayName: string
-      promptFolderId: string
+      folderId: string
+      kind: 'prompt'
     }
     expect(renamedFolderInfo).toEqual({
       displayName: 'Renamed Nested',
-      promptFolderId: nestedFolderId
+      folderId: nestedFolderId,
+      kind: 'prompt'
     })
     await expect
       .poll(async () => ({
@@ -1221,10 +1223,11 @@ describe('Prompt folder subfolder rendering', () => {
         electronApp,
         `${WORKSPACE_PATH}/Prompts/Hierarchy/InitialChild/_FolderInfo/FolderInfo.json`
       )
-    ) as { displayName: string; promptFolderId: string }
+    ) as { displayName: string; folderId: string; kind: 'prompt' }
     expect(persistedInitialFolderInfo).toEqual({
       displayName: 'Initial Child',
-      promptFolderId: initialChildId
+      folderId: initialChildId,
+      kind: 'prompt'
     })
     await expectNoPromptFolderSettingsFiles(
       electronApp,

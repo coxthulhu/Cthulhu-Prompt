@@ -6,11 +6,13 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptStatus } from '@shared/Prompt'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
+import type { PromptFolderKind } from '@shared/PromptFolder'
 import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
 import {
   PROMPTS_DIRECTORY_NAME,
+  TEMPLATES_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
@@ -39,10 +41,11 @@ const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): v
 
 const writeWorkspacePromptFolderOrderFile = (
   workspacePath: string,
-  promptFolderIds: string[]
+  promptFolderIds: string[],
+  kind: PromptFolderKind = 'prompt'
 ): void => {
   const fs = getFs()
-  const orderPath = resolveWorkspacePromptFolderOrderPath(workspacePath)
+  const orderPath = resolveWorkspacePromptFolderOrderPath(workspacePath, kind)
   fs.writeFileSync(
     orderPath,
     JSON.stringify({ entries: promptFolderIds.map(folderEntryRef) }, null, 2),
@@ -71,7 +74,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,
     PROMPT_FOLDER_INFO_FILENAME
   )
-  const orderPath = resolvePromptFolderOrderPath(workspacePath, EXAMPLE_FOLDER_NAME)
+  const orderPath = resolvePromptFolderOrderPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt')
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
   const examplePrompts = includeExamplePrompts
@@ -120,7 +123,8 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     JSON.stringify(
       {
         displayName: EXAMPLE_FOLDER_DISPLAY_NAME,
-        promptFolderId
+        folderId: promptFolderId,
+        kind: 'prompt'
       },
       null,
       2
@@ -142,13 +146,14 @@ const validateNewWorkspacePath = (workspacePath: string): CreateWorkspaceResult 
 
   const fs = getFs()
   const promptsPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME)
+  const templatesPath = path.join(workspacePath, TEMPLATES_DIRECTORY_NAME)
   const hasWorkspaceInfoFile =
     fs.existsSync(workspacePath) &&
     fs
       .readdirSync(workspacePath)
       .some((entryName) => entryName.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX))
 
-  if (hasWorkspaceInfoFile || fs.existsSync(promptsPath)) {
+  if (hasWorkspaceInfoFile || fs.existsSync(promptsPath) || fs.existsSync(templatesPath)) {
     return { success: false, error: 'Workspace already exists' }
   }
 
@@ -170,13 +175,16 @@ export const createWorkspace = async (
 
     const fs = getFs()
     const promptsPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME)
+    const templatesPath = path.join(workspacePath, TEMPLATES_DIRECTORY_NAME)
     const promptFolderIds: string[] = []
 
     fs.mkdirSync(promptsPath, { recursive: true })
+    fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
     promptFolderIds.push(writeMyPromptsFolder(workspacePath, includeExamplePrompts))
     writeWorkspacePromptFolderOrderFile(workspacePath, promptFolderIds)
+    writeWorkspacePromptFolderOrderFile(workspacePath, [], 'template')
 
     return { success: true }
   } catch (error) {
