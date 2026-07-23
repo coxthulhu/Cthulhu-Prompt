@@ -461,7 +461,6 @@
     modifiedAt={promptData.modifiedAt}
     {completedAt}
     fallbackTitle={promptData.fallbackTitle}
-    metadataFolderLabel="Prompts"
     {tokenCount}
     onTitleChange={promptData.setTitle}
     onSelectionChange={reportTitleSelection}
