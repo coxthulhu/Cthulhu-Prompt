@@ -248,6 +248,11 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
   })
 
   mainWindow.once('ready-to-show', () => {
+    if (isDevEnvironment()) {
+      mainWindow.showInactive()
+      return
+    }
+
     mainWindow.show()
   })
 
