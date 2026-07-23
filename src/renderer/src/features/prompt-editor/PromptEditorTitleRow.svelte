@@ -52,7 +52,7 @@
     onSelectionChange,
     onTitleForwardTab,
     inputRef = $bindable(null),
-    metadataFolderLabel = 'Prompts',
+    metadataFolderLabel = 'Template',
     tokenCount,
     icon = FileText,
     copyLabel,

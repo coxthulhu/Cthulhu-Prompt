@@ -7,7 +7,7 @@
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
-  import { FileStack, Folder, Folders } from 'lucide-svelte'
+  import { Folder, Folders, Layers } from 'lucide-svelte'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
 
   let {
@@ -37,7 +37,7 @@
       id: 'template',
       label: 'Prompt Template Folder',
       detail: 'Store reusable prompt templates',
-      icon: FileStack
+      icon: Layers
     }
   ]
   let selectedFolderType = $state<(typeof folderTypeItems)[number]>(folderTypeItems[0]!)

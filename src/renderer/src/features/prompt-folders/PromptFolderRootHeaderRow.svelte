@@ -132,7 +132,7 @@
   .prompt-folder-root-title-line {
     align-items: baseline;
     display: flex;
-    gap: 7px;
+    gap: 11px;
     height: 36px;
     margin-top: 7px;
     min-width: 0;
