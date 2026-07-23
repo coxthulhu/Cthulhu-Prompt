@@ -12,7 +12,6 @@ export interface WorkspaceRoot extends OrderContainer<FolderEntryRef> {
 export interface Workspace extends WorkspaceRoot {
   workspacePath: string
   workspaceName: string
-  templateEntries: FolderEntryRef[]
 }
 
 export type MovePromptFolderPayload = {

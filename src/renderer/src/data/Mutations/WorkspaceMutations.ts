@@ -27,7 +27,12 @@ import {
 } from '../UiState/WorkspaceSelection.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
-import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
+import {
+  folderEntryRef,
+  moveEntryWithinSubset,
+  removeEntry,
+  type EntryRef
+} from '@shared/OrderContainer'
 import type {
   DeletePromptFolderPayload,
   DeletePromptFolderResponsePayload,
@@ -86,7 +91,7 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
     removePromptFolderDraft(promptFolderId)
   }
 
-  for (const entry of [...workspace.entries, ...workspace.templateEntries]) {
+  for (const entry of workspace.entries) {
     clearFolder(entry.id)
   }
 
@@ -266,6 +271,13 @@ export const movePromptFolder = async (
     throw new Error('Destination parent prompt folder not loaded')
   }
 
+  if (
+    destinationParentPromptFolder &&
+    destinationParentPromptFolder.kind !== promptFolder.kind
+  ) {
+    throw new Error('Destination prompt folder kind did not match')
+  }
+
   const isSameParent = sourceParentPromptFolderId === destinationParentPromptFolderId
   const sourceEntries = sourceParentPromptFolder?.entries ?? workspace.entries
   const destinationEntries = isSameParent
@@ -283,7 +295,18 @@ export const movePromptFolder = async (
     mutateOptimistically: ({ collections }) => {
       if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
         collections.workspace.update(workspaceId, (draft) => {
-          draft.entries = [...nextDestinationEntries]
+          const previousFolderKind = previousEntryId
+            ? promptFolderCollection.get(previousEntryId)?.kind
+            : promptFolder.kind
+          draft.entries =
+            previousFolderKind === promptFolder.kind
+              ? moveEntryWithinSubset(
+                  sourceEntries,
+                  promptFolderId,
+                  previousEntryId,
+                  (entry) => promptFolderCollection.get(entry.id)?.kind === promptFolder.kind
+                )
+              : [...nextDestinationEntries]
         })
         return
       }

@@ -76,6 +76,17 @@ export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string):
       continue
     }
 
+    if (entry.kind === 'template') {
+      const templateEntry = data.promptTemplate.committedStore.getEntry(entry.id)
+      if (templateEntry) {
+        data.promptTemplate.committedStore.updatePersistenceFields(entry.id, {
+          ...templateEntry.persistenceFields,
+          folderPath
+        })
+      }
+      continue
+    }
+
     const promptEntry = data.prompt.committedStore.getEntry(entry.id)
     if (promptEntry) {
       const targetFolderPath =

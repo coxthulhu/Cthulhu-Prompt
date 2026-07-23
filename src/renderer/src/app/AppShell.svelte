@@ -138,7 +138,9 @@
     return selectedWorkspace.entries
       .map((entry) => entry.id)
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
-      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+      .filter(
+        (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'prompt'
+      )
   })
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
@@ -150,7 +152,7 @@
 
     return promptIds.size
   })
-  const workspacePromptFolderCount = $derived(selectedWorkspace?.entries.length ?? 0)
+  const workspacePromptFolderCount = $derived(selectedWorkspacePromptFolders.length)
   let screenRootFolderId = $state<string | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
@@ -192,7 +194,7 @@
       return false
     }
 
-    return selectedWorkspace.entries.some((entry) => entry.id === promptFolderId)
+    return selectedWorkspacePromptFolders.some((folder) => folder.id === promptFolderId)
   }
 
   const resolvePromptFolderNavigationId = (): string | null => {
@@ -200,7 +202,7 @@
     const workspacePersistence = workspaceId
       ? workspacePersistenceDraftCollection.get(workspaceId)
       : null
-    const firstPromptFolderId = selectedWorkspace?.entries[0]?.id ?? null
+    const firstPromptFolderId = selectedWorkspacePromptFolders[0]?.id ?? null
     const persistedLastPromptFolderId = workspacePersistence?.lastPromptFolderId ?? null
 
     return hasWorkspacePromptFolder(screenRootFolderId)

@@ -129,7 +129,9 @@
 
     return selectedWorkspace.entries
       .map((entry) => promptFolderById.get(entry.id))
-      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+      .filter(
+        (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'prompt'
+      )
   })
   const promptTemplateFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) return []
@@ -139,9 +141,11 @@
       if (promptFolder) promptFolderById.set(promptFolder.id, promptFolder)
     }
 
-    return selectedWorkspace.templateEntries
+    return selectedWorkspace.entries
       .map((entry) => promptFolderById.get(entry.id))
-      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+      .filter(
+        (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'template'
+      )
   })
   const promptTreePromptFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) {
@@ -160,7 +164,7 @@
     const orderedPromptFolders: PromptFolder[] = []
     const addPromptFolderWithDescendants = (promptFolderId: string): void => {
       const promptFolder = promptFolderById.get(promptFolderId)
-      if (!promptFolder) {
+      if (!promptFolder || promptFolder.kind !== 'prompt') {
         return
       }
 

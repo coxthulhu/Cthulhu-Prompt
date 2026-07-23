@@ -6,7 +6,6 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptStatus } from '@shared/Prompt'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import type { PromptFolderKind } from '@shared/PromptFolder'
 import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
@@ -18,7 +17,7 @@ import {
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolvePromptFolderOrderPath,
-  resolveWorkspacePromptFolderOrderPath
+  resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
 const EXAMPLE_FOLDER_NAME = 'MyPrompts'
@@ -39,13 +38,12 @@ const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): v
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
 }
 
-const writeWorkspacePromptFolderOrderFile = (
+const writeWorkspaceFolderOrderFile = (
   workspacePath: string,
-  promptFolderIds: string[],
-  kind: PromptFolderKind = 'prompt'
+  promptFolderIds: string[]
 ): void => {
   const fs = getFs()
-  const orderPath = resolveWorkspacePromptFolderOrderPath(workspacePath, kind)
+  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath)
   fs.writeFileSync(
     orderPath,
     JSON.stringify({ entries: promptFolderIds.map(folderEntryRef) }, null, 2),
@@ -183,8 +181,7 @@ export const createWorkspace = async (
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
     promptFolderIds.push(writeMyPromptsFolder(workspacePath, includeExamplePrompts))
-    writeWorkspacePromptFolderOrderFile(workspacePath, promptFolderIds)
-    writeWorkspacePromptFolderOrderFile(workspacePath, [], 'template')
+    writeWorkspaceFolderOrderFile(workspacePath, promptFolderIds)
 
     return { success: true }
   } catch (error) {

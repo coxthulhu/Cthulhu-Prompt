@@ -11,5 +11,5 @@ export type PromptFolderInfoFile = {
 
 export type PromptFolderOrderFile = OrderContainer<EntryRef>
 
-export type WorkspacePromptFolderOrderFile = OrderContainer<FolderEntryRef>
+export type WorkspaceFolderOrderFile = OrderContainer<FolderEntryRef>
 import type { EntryRef, FolderEntryRef, OrderContainer } from '@shared/OrderContainer'

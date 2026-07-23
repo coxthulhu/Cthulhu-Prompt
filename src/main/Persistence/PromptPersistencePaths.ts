@@ -8,6 +8,7 @@ import {
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
+export const WORKSPACE_FOLDER_ORDER_FILENAME = 'WorkspaceFolderOrder.json'
 export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
@@ -62,11 +63,8 @@ export const resolvePromptFolderOrderPath = (
   )
 }
 
-export const resolveWorkspacePromptFolderOrderPath = (
-  workspacePath: string,
-  kind: PromptFolderKind
-): string => {
-  return path.join(workspacePath, resolvePromptRootDirectoryName(kind), PROMPT_FOLDER_ORDER_FILENAME)
+export const resolveWorkspaceFolderOrderPath = (workspacePath: string): string => {
+  return path.join(workspacePath, WORKSPACE_FOLDER_ORDER_FILENAME)
 }
 
 export const resolvePromptFolderInfoDirectoryPath = (

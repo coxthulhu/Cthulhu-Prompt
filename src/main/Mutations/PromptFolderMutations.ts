@@ -1,6 +1,10 @@
 import { ipcMain } from 'electron'
 import * as path from 'path'
-import { copyPromptFolderSettings, createEmptyPromptFolderSettings } from '@shared/PromptFolder'
+import {
+  copyPromptFolderSettings,
+  createEmptyPromptFolderSettings,
+  type PromptFolderKind
+} from '@shared/PromptFolder'
 import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import {
@@ -32,11 +36,14 @@ import {
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 
-const getPromptFolderNameCandidates = (entries: readonly EntryRef[]): PromptFolderNameCandidate[] =>
+const getPromptFolderNameCandidates = (
+  entries: readonly EntryRef[],
+  kind: PromptFolderKind
+): PromptFolderNameCandidate[] =>
   entries.flatMap((entry) => {
     if (entry.kind !== 'folder') return []
     const promptFolder = data.promptFolder.committedStore.getEntry(entry.id)?.committed
-    return promptFolder ? [promptFolder] : []
+    return promptFolder?.kind === kind ? [promptFolder] : []
   })
 
 const MAX_SUBFOLDER_DEPTH = 8
@@ -88,10 +95,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
           }
 
           const siblingEntries =
-            committedParentPromptFolder?.committed.entries ??
-            (payload.kind === 'prompt'
-              ? committedWorkspace.committed.entries
-              : committedWorkspace.committed.templateEntries)
+            committedParentPromptFolder?.committed.entries ?? committedWorkspace.committed.entries
 
           if (
             payload.previousEntryId !== null &&
@@ -114,7 +118,10 @@ export const setupPromptFolderMutationHandlers = (): void => {
           }
 
           if (
-            hasPromptFolderNameConflict(getPromptFolderNameCandidates(siblingEntries), folderName)
+            hasPromptFolderNameConflict(
+              getPromptFolderNameCandidates(siblingEntries, payload.kind),
+              folderName
+            )
           ) {
             return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
@@ -143,15 +150,9 @@ export const setupPromptFolderMutationHandlers = (): void => {
                     id: requestedWorkspace.id,
                     expectedRevision: requestedWorkspace.expectedRevision,
                     recipe: (draft) => {
-                      const entries = [
-                        ...(payload.kind === 'prompt' ? draft.entries : draft.templateEntries)
-                      ]
+                      const entries = [...draft.entries]
                       entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
-                      if (payload.kind === 'prompt') {
-                        draft.entries = entries
-                      } else {
-                        draft.templateEntries = entries
-                      }
+                      draft.entries = entries
                     }
                   }),
               promptFolder: tx.promptFolder.create({
@@ -447,7 +448,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
 
           if (
             hasPromptFolderNameConflict(
-              getPromptFolderNameCandidates(siblingEntries),
+              getPromptFolderNameCandidates(siblingEntries, requestedPromptFolder.data.kind),
               folderName,
               requestedPromptFolder.id
             )

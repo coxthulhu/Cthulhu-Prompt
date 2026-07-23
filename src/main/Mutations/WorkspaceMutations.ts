@@ -11,7 +11,12 @@ import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import * as path from 'path'
 import { buildPromptFolderTreeIndex, MAX_PROMPT_SUBFOLDER_DEPTH } from '@shared/PromptFolderTree'
-import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
+import {
+  folderEntryRef,
+  moveEntryWithinSubset,
+  removeEntry,
+  type EntryRef
+} from '@shared/OrderContainer'
 import {
   buildPromptFolderSnapshot,
   buildWorkspaceSnapshot,
@@ -112,6 +117,13 @@ export const setupWorkspaceMutationHandlers = (): void => {
             return { success: false, error: 'Destination parent prompt folder not loaded' }
           }
 
+          if (
+            destinationParentPromptFolder &&
+            destinationParentPromptFolder.committed.kind !== movedPromptFolder.committed.kind
+          ) {
+            return { success: false, error: 'Destination prompt folder kind did not match' }
+          }
+
           const descendantIds = collectLoadedPromptFolderDescendantIds(payload.promptFolderId)
           if (
             destinationParentPromptFolderId === payload.promptFolderId ||
@@ -182,11 +194,25 @@ export const setupWorkspaceMutationHandlers = (): void => {
             nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
 
             if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
+              const previousFolderKind = payload.previousEntryId
+                ? data.promptFolder.committedStore.getEntry(payload.previousEntryId)?.committed.kind
+                : movedPromptFolder.committed.kind
+              const rootEntries =
+                previousFolderKind === movedPromptFolder.committed.kind
+                  ? moveEntryWithinSubset(
+                      sourceEntries,
+                      payload.promptFolderId,
+                      payload.previousEntryId,
+                      (entry) =>
+                        data.promptFolder.committedStore.getEntry(entry.id)?.committed.kind ===
+                        movedPromptFolder.committed.kind
+                    )
+                  : nextDestinationEntries
               handles.workspace = tx.workspace.update({
                 id: requestedWorkspace.id,
                 expectedRevision: requestedWorkspace.expectedRevision,
                 recipe: (draft) => {
-                  draft.entries = nextDestinationEntries.filter((entry) => entry.kind === 'folder')
+                  draft.entries = rootEntries.filter((entry) => entry.kind === 'folder')
                 }
               })
             } else if (isSameParent && sourceParentPromptFolder) {

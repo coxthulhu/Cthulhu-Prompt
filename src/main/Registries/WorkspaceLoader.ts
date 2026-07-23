@@ -85,13 +85,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     entry.id,
     ...collectLoadedPromptFolderDescendantIds(entry.id)
   ])
-  const loadedPromptTemplateFolderIds = workspaceSnapshot.data.templateEntries.flatMap((entry) => [
-    entry.id,
-    ...collectLoadedPromptFolderDescendantIds(entry.id)
-  ])
   const loadedPromptIds: string[] = []
 
-  for (const promptFolderId of [...loadedPromptFolderIds, ...loadedPromptTemplateFolderIds]) {
+  for (const promptFolderId of loadedPromptFolderIds) {
     const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
 
     if (!promptFolderEntry) {
@@ -179,13 +175,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const workspace = data.workspace.committedStore.getEntry(workspaceId)?.committed
   if (!workspace) throw new Error('Workspace data not loaded')
 
-  const treeIndex = new Map([
-    ...buildPromptFolderTreeIndex(workspace, promptFolders),
-    ...buildPromptFolderTreeIndex(
-      { id: workspace.id, entries: workspace.templateEntries },
-      promptTemplateFolders
-    )
-  ])
+  const treeIndex = buildPromptFolderTreeIndex(workspace, allPromptFolders)
   const parentPromptFolderIdById = new Map(
     [...treeIndex].map(([promptFolderId, location]) => [
       promptFolderId,

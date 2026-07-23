@@ -1,7 +1,7 @@
 import type { Workspace } from '@shared/Workspace'
 import type { FolderEntryRef } from '@shared/OrderContainer'
-import type { WorkspacePromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
-import { readPromptFolders, readWorkspaceInfo } from '../DataAccess/WorkspaceReads'
+import type { WorkspaceFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
+import { readWorkspaceFolderEntries, readWorkspaceInfo } from '../DataAccess/WorkspaceReads'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -11,36 +11,26 @@ import {
   resolveTempPath,
   writeJsonFile
 } from './FilePersistenceHelpers'
-import { resolveWorkspacePromptFolderOrderPath } from './PromptPersistencePaths'
+import { resolveWorkspaceFolderOrderPath } from './PromptPersistencePaths'
 
 export type WorkspacePersistenceFields = {
   workspacePath: string
   workspaceInfoPath: string
 }
 
-const toWorkspacePromptFolderOrderFile = (
-  entries: FolderEntryRef[]
-): WorkspacePromptFolderOrderFile => {
+const toWorkspaceFolderOrderFile = (entries: FolderEntryRef[]): WorkspaceFolderOrderFile => {
   return { entries }
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
   stageChanges: async (change) => {
     const infoPath = change.persistenceFields.workspaceInfoPath
-    const folderOrderPath = resolveWorkspacePromptFolderOrderPath(
-      change.persistenceFields.workspacePath,
-      'prompt'
-    )
-    const templateFolderOrderPath = resolveWorkspacePromptFolderOrderPath(
-      change.persistenceFields.workspacePath,
-      'template'
-    )
+    const folderOrderPath = resolveWorkspaceFolderOrderPath(change.persistenceFields.workspacePath)
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([
         createStagedFileRemove(infoPath),
-        createStagedFileRemove(folderOrderPath),
-        createStagedFileRemove(templateFolderOrderPath)
+        createStagedFileRemove(folderOrderPath)
       ])
     }
 
@@ -50,17 +40,11 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
       workspaceName: change.data.workspaceName
     })
     const folderOrderTempPath = resolveTempPath(folderOrderPath)
-    writeJsonFile(folderOrderTempPath, toWorkspacePromptFolderOrderFile(change.data.entries))
-    const templateFolderOrderTempPath = resolveTempPath(templateFolderOrderPath)
-    writeJsonFile(
-      templateFolderOrderTempPath,
-      toWorkspacePromptFolderOrderFile(change.data.templateEntries)
-    )
+    writeJsonFile(folderOrderTempPath, toWorkspaceFolderOrderFile(change.data.entries))
 
     return createPersistenceStageResult([
       createStagedFileUpsert(infoPath, infoTempPath),
-      createStagedFileUpsert(folderOrderPath, folderOrderTempPath),
-      createStagedFileUpsert(templateFolderOrderPath, templateFolderOrderTempPath)
+      createStagedFileUpsert(folderOrderPath, folderOrderTempPath)
     ])
   },
   commitChanges: async (stagedChange) => {
@@ -72,15 +56,12 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
   loadData: async (persistenceFields) => {
     const { workspacePath, workspaceInfoPath } = persistenceFields
     const workspaceInfo = readWorkspaceInfo(workspaceInfoPath)
-    const promptFolders = readPromptFolders(workspacePath)
-    const promptTemplateFolders = readPromptFolders(workspacePath, 'template')
 
     return {
       id: workspaceInfo.workspaceId,
       workspacePath,
       workspaceName: workspaceInfo.workspaceName,
-      entries: promptFolders.map((promptFolder) => ({ kind: 'folder', id: promptFolder.id })),
-      templateEntries: promptTemplateFolders.map((folder) => ({ kind: 'folder', id: folder.id }))
+      entries: readWorkspaceFolderEntries(workspacePath)
     }
   }
 }

@@ -37,7 +37,7 @@ import {
   resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath,
   resolvePromptPathsFromStem,
-  resolveWorkspacePromptFolderOrderPath
+  resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
 export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile => {
@@ -178,16 +178,42 @@ export const readPromptFolderEntries = (
   return writeRepairedOrder(orderPath, persistedEntries, discoveredEntries)
 }
 
-const readWorkspacePromptFolderEntries = (
-  workspacePath: string,
-  kind: PromptFolderKind
-): FolderEntryRef[] => {
-  const orderPath = resolveWorkspacePromptFolderOrderPath(workspacePath, kind)
+const readDirectWorkspaceFolderRefs = (workspacePath: string): FolderEntryRef[] => {
+  const fs = getFs()
+  const folders = (['prompt', 'template'] as const).flatMap((kind) => {
+    const diskPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
+
+    return fs
+      .readdirSync(diskPath, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          entry.isDirectory() && isPromptFolderDirectory(workspacePath, entry.name, kind)
+      )
+      .map((entry) => ({
+        folderName: entry.name,
+        kind,
+        ref: folderEntryRef(readPromptFolderInfo(workspacePath, entry.name, kind).folderId)
+      }))
+  })
+
+  return folders
+    .sort((left, right) => {
+      const nameComparison = left.folderName
+        .toLowerCase()
+        .localeCompare(right.folderName.toLowerCase())
+      if (nameComparison !== 0) return nameComparison
+      return left.kind === right.kind ? 0 : left.kind === 'prompt' ? -1 : 1
+    })
+    .map((folder) => folder.ref)
+}
+
+export const readWorkspaceFolderEntries = (workspacePath: string): FolderEntryRef[] => {
+  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath)
   const persistedEntries = readOrderEntries<FolderEntryRef>(orderPath)
   return writeRepairedOrder(
     orderPath,
     persistedEntries,
-    readDirectPromptFolderRefs(workspacePath, null, kind)
+    readDirectWorkspaceFolderRefs(workspacePath)
   )
 }
 
@@ -392,7 +418,7 @@ export const readPromptFolders = (
   }
 
   const promptFolderById = new Map(promptFolders.map((folder) => [folder.id, folder]))
-  return readWorkspacePromptFolderEntries(workspacePath, kind).flatMap((entry) => {
+  return readWorkspaceFolderEntries(workspacePath).flatMap((entry) => {
     const folder = promptFolderById.get(entry.id)
     return folder ? [folder] : []
   })

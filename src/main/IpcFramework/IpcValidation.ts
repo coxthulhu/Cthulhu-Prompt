@@ -209,12 +209,6 @@ const parseWorkspace = parseObject<Workspace>({
       kind: (value) => (value === 'folder' ? 'folder' : null),
       id: parseString
     })
-  ),
-  templateEntries: parseArray(
-    parseObject({
-      kind: (value) => (value === 'folder' ? 'folder' : null),
-      id: parseString
-    })
   )
 })
 

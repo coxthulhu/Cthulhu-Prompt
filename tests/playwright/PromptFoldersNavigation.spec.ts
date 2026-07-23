@@ -605,6 +605,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
+    const initialWorkspaceFolderEntries = (
+      JSON.parse(
+        await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/WorkspaceFolderOrder.json`)
+      ) as { entries: Array<{ kind: 'folder'; id: string }> }
+    ).entries
 
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
@@ -641,11 +646,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       folderId: expect.any(String),
       kind: 'template'
     })
-    expect(
-      JSON.parse(
-        await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/FolderOrder.json`)
-      )
-    ).toEqual({ entries: [{ kind: 'folder', id: folderInfo.folderId }] })
+    const workspaceFolderOrder = JSON.parse(
+      await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/WorkspaceFolderOrder.json`)
+    ) as { entries: Array<{ kind: 'folder'; id: string }> }
+    expect(workspaceFolderOrder.entries).toEqual([
+      { kind: 'folder', id: folderInfo.folderId },
+      ...initialWorkspaceFolderEntries
+    ])
     expect(
       JSON.parse(
         await readTextFile(

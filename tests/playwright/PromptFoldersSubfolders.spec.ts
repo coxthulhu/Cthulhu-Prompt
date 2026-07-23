@@ -91,7 +91,7 @@ const rootFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/Fol
 const nestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
 const grandchildFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
 const emptyNestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
-const workspaceFolderOrderPath = `${WORKSPACE_PATH}/Prompts/FolderOrder.json`
+const workspaceFolderOrderPath = `${WORKSPACE_PATH}/WorkspaceFolderOrder.json`
 const activeDividerTestIds = [
   dividerTestId(nestedFolderId, null),
   dividerTestId(nestedFolderId, 'subfolders-ui-nested-prompt'),

@@ -292,9 +292,8 @@ export function createBasicWorkspace(
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
-    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
     [`${workspacePath}/Templates`]: null,
-    [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
+    [`${workspacePath}/WorkspaceFolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,
@@ -347,7 +346,7 @@ export function createWorkspaceWithFolders(
     addPromptFolderSettingsFiles(structure, folderPath, folder)
     Object.assign(structure, promptFiles)
   }
-  structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
+  structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(
     folderOrderFile(promptFolderIds),
     null,
     2
@@ -412,7 +411,7 @@ export function createWorkspaceWithTemplateFolders(
     addFolder(folder, `${workspacePath}/Templates`)
   )
 
-  structure[`${workspacePath}/Templates/FolderOrder.json`] = JSON.stringify(
+  structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(
     folderOrderFile(folderIds),
     null,
     2

@@ -6,7 +6,7 @@ import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const workspaceFolderOrderPath = (workspacePath: string): string =>
-  `${workspacePath}/Prompts/FolderOrder.json`
+  `${workspacePath}/WorkspaceFolderOrder.json`
 
 describe('Home Screen', () => {
   test('shows the get started state on launch without a workspace', async ({ testSetup }) => {
@@ -124,7 +124,6 @@ describe('Home Screen', () => {
       const workspacePath = '/ws/missing-templates'
       const filesystem = createWorkspaceWithFolders(workspacePath, [])
       delete filesystem[`${workspacePath}/Templates`]
-      delete filesystem[`${workspacePath}/Templates/FolderOrder.json`]
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])

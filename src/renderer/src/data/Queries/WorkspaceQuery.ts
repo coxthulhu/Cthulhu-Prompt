@@ -48,7 +48,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
       }
     }
 
-    for (const entry of [...previousWorkspace.entries, ...previousWorkspace.templateEntries]) {
+    for (const entry of previousWorkspace.entries) {
       visitFolder(entry.id)
     }
   }

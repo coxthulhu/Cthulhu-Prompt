@@ -101,8 +101,7 @@ export const buildWorkspaceSnapshot = (
     revision: workspaceEntry.revision,
     data: {
       ...workspaceEntry.committed,
-      entries: filterLoadedPromptFolderEntries(workspaceEntry.committed.entries),
-      templateEntries: filterLoadedPromptFolderEntries(workspaceEntry.committed.templateEntries)
+      entries: filterLoadedPromptFolderEntries(workspaceEntry.committed.entries)
     }
   }
 }

@@ -136,18 +136,13 @@ export const createPromptFolder = async (
         })
       } else {
         collections.workspace.update(workspaceId, (draft) => {
-          const rootEntries = kind === 'prompt' ? draft.entries : draft.templateEntries
           const insertIndex =
             previousEntryId === null
               ? 0
-              : rootEntries.findIndex((entry) => entry.id === previousEntryId) + 1
-          const entries = [...rootEntries]
+              : draft.entries.findIndex((entry) => entry.id === previousEntryId) + 1
+          const entries = [...draft.entries]
           entries.splice(insertIndex, 0, folderEntryRef(optimisticPromptFolderId))
-          if (kind === 'prompt') {
-            draft.entries = entries
-          } else {
-            draft.templateEntries = entries
-          }
+          draft.entries = entries
         })
       }
     },

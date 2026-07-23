@@ -30,3 +30,25 @@ export const removeEntry = <TEntry extends EntryRef>(
   kind: TEntry['kind'],
   id: string
 ): TEntry[] => entries.filter((entry) => entry.kind !== kind || entry.id !== id)
+
+export const moveEntryWithinSubset = <TEntry extends EntryRef>(
+  entries: readonly TEntry[],
+  entryId: string,
+  previousEntryId: string | null,
+  isSubsetEntry: (entry: TEntry) => boolean
+): TEntry[] => {
+  const movedEntry = entries.find((entry) => entry.id === entryId)!
+  const subsetEntries = entries.filter(
+    (entry) => entry.id !== entryId && isSubsetEntry(entry)
+  )
+  const insertIndex =
+    previousEntryId === null
+      ? 0
+      : subsetEntries.findIndex((entry) => entry.id === previousEntryId) + 1
+  subsetEntries.splice(insertIndex, 0, movedEntry)
+
+  let subsetIndex = 0
+  return entries.map((entry) =>
+    isSubsetEntry(entry) ? subsetEntries[subsetIndex++]! : entry
+  )
+}
