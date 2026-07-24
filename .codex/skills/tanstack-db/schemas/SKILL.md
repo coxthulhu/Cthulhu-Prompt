@@ -1,313 +1,71 @@
 ---
 name: tanstack-db-schemas
 description: |
-  Schema validation and type transformations in TanStack DB.
-  Use for validation, TInput/TOutput types, transformations, defaults, and error handling.
+  Cthulhu Prompt TanStack collection type and validation boundaries. Use when changing collection record types, revision envelopes, prompt summary/full normalization, form validation, IPC payload validation, or deciding whether runtime Standard Schema validation belongs in a renderer collection.
 ---
 
-# Schemas
+# Types and Validation Boundaries
 
-TanStack DB uses schemas to validate and transform data during mutations. Schemas are optional but strongly recommended for type safety and data integrity.
+The renderer currently uses explicit TypeScript record types and domain normalization helpers, not TanStack Standard Schema validation. Do not add Zod, Valibot, ArkType, or another schema library merely because generic TanStack DB guidance recommends a collection schema.
 
-## Supported Libraries
+## Current Validation Layers
 
-Any [StandardSchema](https://standardschema.dev) compatible library:
+Use the existing layer that owns each concern:
 
-- [Zod](https://zod.dev)
-- [Valibot](https://valibot.dev)
-- [ArkType](https://arktype.io)
-- [Effect Schema](https://effect.website/docs/schema/introduction/)
+| Concern | Repository mechanism |
+| --- | --- |
+| Collection record shape | Explicit TypeScript generic on `revisionCollectionOptions<T>` or `localOnlyCollectionOptions<T>` |
+| IPC request/result shape | Shared request, result, payload, and revision-envelope types under `src/shared` |
+| Persisted-to-renderer representation | Domain constructors such as `createPromptSummary`, `createPromptFull`, and template equivalents |
+| Editable form validity | Feature/UI-state validation helpers such as `SystemSettingsFormat.ts` |
+| Security and filesystem invariants | Validation in the main-process IPC handler before mutation |
+| Optimistic concurrency | `expectedRevision` plus authoritative response reconciliation |
 
-## Common Patterns
+Keep renderer collection records free of revision metadata. `RevisionEnvelope<T>` carries `id`, `revision`, and `data`; the custom revision collection stores the revision separately and exposes the plain `T` record to UI code.
 
-### Basic Validation
+## Define Record Types
+
+Persisted collections use shared domain types:
 
 ```ts
-import { z } from 'zod'
-import { createCollection } from '@tanstack/svelte-db'
-import { queryCollectionOptions } from '@tanstack/query-db-collection'
-
-const todoSchema = z.object({
-  id: z.string(),
-  text: z.string().min(1, 'Text is required'),
-  completed: z.boolean(),
-  priority: z.number().min(0).max(5),
-})
-
-const collection = createCollection(
-  queryCollectionOptions({
-    schema: todoSchema,
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.getAll(),
-    getKey: (item) => item.id,
-  }),
-)
-
-// Invalid data throws SchemaValidationError
-collection.insert({
-  id: '1',
-  text: '', // ❌ Too short
-  completed: 'yes', // ❌ Wrong type
-  priority: 10, // ❌ Out of range
+revisionCollectionOptions<PromptFolder>({
+  id: 'prompt-folders',
+  getKey: (promptFolder) => promptFolder.id
 })
 ```
 
-### Default Values
+Local-only collections use renderer-specific draft records:
 
 ```ts
-const todoSchema = z.object({
-  id: z.string(),
-  text: z.string().min(1),
-  completed: z.boolean().default(false),
-  priority: z.number().default(0),
-  tags: z.array(z.string()).default([]),
-  created_at: z.date().default(() => new Date()),
-})
-
-// Defaults filled automatically
-collection.insert({
-  id: '1',
-  text: 'Buy groceries',
-  // completed defaults to false
-  // priority defaults to 0
-  // tags defaults to []
-  // created_at defaults to now
-})
-```
-
-### Type Transformations
-
-Transform input types to different output types:
-
-```ts
-const eventSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  // IMPORTANT: Accept both input AND output types
-  start_time: z
-    .union([z.string(), z.date()])
-    .transform((val) => (typeof val === 'string' ? new Date(val) : val)),
-})
-
-// Insert with string (TInput)
-collection.insert({
-  id: '1',
-  name: 'Conference',
-  start_time: '2024-06-15T10:00:00Z', // String in
-})
-
-// Get returns Date (TOutput)
-const event = collection.get('1')
-console.log(event.start_time.getFullYear()) // Date out!
-```
-
-### TInput vs TOutput (Critical Concept)
-
-When transforming types, TInput MUST be a superset of TOutput for updates to work:
-
-```ts
-// ❌ BAD: TInput only accepts string, but draft contains Date
-const badSchema = z.object({
-  created_at: z.string().transform((val) => new Date(val)),
-})
-// TInput:  { created_at: string }
-// TOutput: { created_at: Date }
-// Problem: collection.update() passes Date but schema expects string!
-
-// ✅ GOOD: TInput accepts both string and Date
-const goodSchema = z.object({
-  created_at: z
-    .union([z.string(), z.date()])
-    .transform((val) => (typeof val === 'string' ? new Date(val) : val)),
-})
-// TInput:  { created_at: string | Date }
-// TOutput: { created_at: Date }
-// Works: update draft.created_at is Date, which TInput accepts!
-```
-
-**Rule:** If you transform A → B, use `z.union([A, B])` as input.
-
-### Validation Patterns
-
-```ts
-// String constraints
-z.string().min(3, 'Too short')
-z.string().max(100, 'Too long')
-z.string().email('Invalid email')
-z.string().url('Invalid URL')
-z.string().regex(/^[a-z]+$/, 'Lowercase only')
-
-// Number constraints
-z.number().int('Must be whole number')
-z.number().positive('Must be positive')
-z.number().min(0).max(100)
-
-// Enums
-z.enum(['low', 'medium', 'high'])
-
-// Optional and nullable
-z.string().optional() // Can be omitted
-z.string().nullable() // Can be null
-z.string().optional().nullable() // Either
-
-// Arrays
-z.array(z.string()).min(1, 'At least one required')
-
-// Custom validation
-z.string().refine(
-  (val) => /^[a-zA-Z0-9_]+$/.test(val),
-  'Only letters, numbers, underscores',
-)
-
-// Cross-field validation
-z.object({
-  start: z.date(),
-  end: z.date(),
-}).refine((data) => data.end > data.start, 'End must be after start')
-```
-
-### Error Handling
-
-```ts
-import { SchemaValidationError } from '@tanstack/db'
-
-try {
-  collection.insert({
-    id: '1',
-    email: 'invalid',
-    age: -5,
-  })
-} catch (error) {
-  if (error instanceof SchemaValidationError) {
-    console.log(error.type) // 'insert' or 'update'
-    console.log(error.message) // 'Validation failed with 2 issues'
-    console.log(error.issues) // Array of issues
-    // [
-    //   { path: ['email'], message: 'Invalid email' },
-    //   { path: ['age'], message: 'Must be positive' }
-    // ]
-  }
+type SystemSettingsDraftRecord = {
+  id: typeof SYSTEM_SETTINGS_DRAFT_ID
+  promptFontSizeInput: string
+  promptEditorMinLinesInput: string
+  promptEditorMaxLinesInput: string
+  showLineNumbers: boolean
 }
 ```
 
-### Svelte Form Example
+Use input-friendly types in drafts. Keep numeric settings as strings while users edit them, validate with `SystemSettingsFormat`, and convert to the persisted shared type only when the paced transaction is valid.
 
-```svelte
-<script lang="ts">
-  import { SchemaValidationError } from '@tanstack/db'
+## Normalize at Boundaries
 
-  let errors = $state<Record<string, string>>({})
+Use constructors when one persisted entity has multiple renderer shapes. Prompt summaries and full prompts can share an ID and revision, but a full prompt may replace a summary at the same revision through the collection's explicit equal-revision rule.
 
-  const handleSubmit = (event: SubmitEvent) => {
-    const form = event.currentTarget as HTMLFormElement
-    errors = {}
+Keep serialization and normalization close to IPC query/mutation boundaries. Do not scatter type assertions or persisted-shape conversions through Svelte components.
 
-    try {
-      const text = (form.elements.namedItem('text') as HTMLInputElement).value
-      const priorityValue = (
-        form.elements.namedItem('priority') as HTMLInputElement
-      ).value
+## Runtime Collection Schemas
 
-      todoCollection.insert({
-        id: crypto.randomUUID(),
-        text,
-        priority: parseInt(priorityValue),
-      })
-    } catch (error) {
-      if (error instanceof SchemaValidationError) {
-        const newErrors: Record<string, string> = {}
-        error.issues.forEach((issue) => {
-          const field = issue.path?.[0] || 'form'
-          newErrors[field] = issue.message
-        })
-        errors = newErrors
-      }
-    }
-  }
-</script>
+Introduce a TanStack-compatible runtime schema only after a deliberate repository-level decision that identifies:
 
-<form on:submit|preventDefault={handleSubmit}>
-  <input name="text" />
-  {#if errors.text}
-    <span class="error">{errors.text}</span>
-  {/if}
+- which client mutations require runtime validation
+- whether input and output types transform
+- how transformed values serialize through IPC
+- how validation errors reach the existing UI
+- whether authoritative sync data needs separate boundary validation, because TanStack collection schemas validate client mutations rather than sync writes
 
-  <input name="priority" type="number" />
-  {#if errors.priority}
-    <span class="error">{errors.priority}</span>
-  {/if}
+If a schema is adopted, update the custom revision options type, all affected local collection definitions, mutation payload conversion, and tests together. Do not mix a schema-inferred type with an unrelated explicit collection generic.
 
-  <button type="submit">Add</button>
-</form>
-```
+## Testing
 
-### Schema with Computed Fields
-
-```ts
-const productSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    base_price: z.number(),
-    discount_percent: z.number().default(0),
-  })
-  .transform((data) => ({
-    ...data,
-    final_price: data.base_price * (1 - data.discount_percent / 100),
-    display_price: `$${(data.base_price * (1 - data.discount_percent / 100)).toFixed(2)}`,
-  }))
-
-collection.insert({
-  id: '1',
-  name: 'Widget',
-  base_price: 100,
-  discount_percent: 10,
-})
-
-const product = collection.get('1')
-console.log(product.final_price) // 90
-console.log(product.display_price) // '$90.00'
-```
-
-### Handlers Receive TOutput
-
-Schema transforms happen BEFORE handlers run:
-
-```ts
-const schema = z.object({
-  id: z.string(),
-  created_at: z
-    .union([z.string(), z.date()])
-    .transform((val) => (typeof val === 'string' ? new Date(val) : val)),
-})
-
-const collection = createCollection({
-  schema,
-  onInsert: async ({ transaction }) => {
-    const item = transaction.mutations[0].modified
-    // item.created_at is already a Date (TOutput)!
-
-    // If API needs string, serialize it
-    await api.create({
-      ...item,
-      created_at: item.created_at.toISOString(),
-    })
-  },
-})
-```
-
-## Important Notes
-
-- Schemas validate **client mutations only** (insert/update), not server data
-- TypeScript types are inferred from schema automatically
-- If you provide a schema, don't also pass explicit type parameter
-- Keep transformations simple—they run synchronously on every mutation
-
-## Detailed References
-
-| Reference                       | When to Use                              |
-| ------------------------------- | ---------------------------------------- |
-| `references/validation.md`      | Comprehensive validation patterns        |
-| `references/transformations.md` | Type transformations, computed fields    |
-| `references/tinput-toutput.md`  | Deep dive on TInput/TOutput relationship |
-| `references/error-handling.md`  | SchemaValidationError, form integration  |
+Test domain normalization, invalid form drafts, conversion to persisted values, IPC rejection of invalid payloads, and summary/full replacement behavior at the layer that owns each rule.

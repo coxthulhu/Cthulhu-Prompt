@@ -1,346 +1,143 @@
 ---
 name: tanstack-db-mutations
 description: |
-  Mutation patterns in TanStack DB.
-  Use for insert/update/delete, optimistic updates, transactions, paced mutations, and error handling.
+  Cthulhu Prompt revision mutation patterns. Use when adding or changing optimistic insert/update/delete behavior, multi-collection manual transactions, expected revisions, IPC persistence, authoritative success/conflict reconciliation, rollback, local draft acceptance, global ordering, or debounced autosave.
 ---
 
-# Mutations
+# Revision Mutations
 
-TanStack DB mutations follow optimistic update → server persist → sync back flow. Changes appear instantly, then confirm or rollback based on server response.
+Persist renderer changes through the shared revision mutation framework. Do not add collection-level persistence handlers, `createOptimisticAction`, or `createPacedMutations` to existing authoritative entity flows.
 
-## Common Patterns
+## Standard Mutation Flow
 
-### Collection-Level Mutations
-
-```ts
-// Insert
-todoCollection.insert({
-  id: crypto.randomUUID(),
-  text: 'Buy groceries',
-  completed: false,
-})
-
-// Insert multiple
-todoCollection.insert([
-  { id: '1', text: 'Task 1', completed: false },
-  { id: '2', text: 'Task 2', completed: false },
-])
-
-// Update (Immer-style draft)
-todoCollection.update(todoId, (draft) => {
-  draft.completed = true
-  draft.completedAt = new Date()
-})
-
-// Update multiple
-todoCollection.update([id1, id2], (drafts) => {
-  drafts.forEach((draft) => {
-    draft.completed = true
-  })
-})
-
-// Delete
-todoCollection.delete(todoId)
-
-// Delete multiple
-todoCollection.delete([id1, id2])
-```
-
-### Mutation Handlers
-
-Define handlers when creating collections to persist mutations:
+Use `runRevisionMutation` from `data/IpcFramework/RevisionCollections`:
 
 ```ts
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.getAll(),
-    getKey: (item) => item.id,
-
-    onInsert: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) => api.todos.create(m.modified)),
-      )
-    },
-
-    onUpdate: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) =>
-          api.todos.update(m.original.id, m.changes),
-        ),
-      )
-    },
-
-    onDelete: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) => api.todos.delete(m.original.id)),
-      )
-    },
-  }),
-)
-```
-
-### Custom Actions with createOptimisticAction
-
-For intent-based mutations or multi-collection changes:
-
-```ts
-import { createOptimisticAction } from '@tanstack/svelte-db'
-
-const likePost = createOptimisticAction<string>({
-  onMutate: (postId) => {
-    // Optimistic update (guess at change)
-    postCollection.update(postId, (draft) => {
-      draft.likeCount += 1
-      draft.likedByMe = true
+await runRevisionMutation<PromptRevisionResponsePayload>({
+  mutateOptimistically: ({ collections }) => {
+    collections.prompt.update(promptId, (draft) => {
+      draft.title = nextTitle
+    })
+    collections.promptDraft.update(promptId, (draft) => {
+      draft.title = nextTitle
     })
   },
-  mutationFn: async (postId) => {
-    // Send intent to server
-    await api.posts.like(postId)
-    // Wait for sync back
-    await postCollection.utils.refetch()
-  },
-})
+  persistMutations: async ({ entities, invoke, transaction }) => {
+    const latestPrompt = getLatestMutationModifiedRecord(
+      transaction,
+      promptCollection.id,
+      promptId,
+      () => promptCollection.get(promptId)!
+    )
 
-// Use it
-likePost(postId)
-```
-
-### Multi-Collection Actions
-
-```ts
-const createProject = createOptimisticAction<{ name: string; ownerId: string }>(
-  {
-    onMutate: ({ name, ownerId }) => {
-      const projectId = crypto.randomUUID()
-
-      projectCollection.insert({
-        id: projectId,
-        name,
-        ownerId,
-        createdAt: new Date(),
-      })
-
-      userCollection.update(ownerId, (draft) => {
-        draft.projectCount += 1
-      })
-    },
-    mutationFn: async ({ name, ownerId }) => {
-      await api.projects.create({ name, ownerId })
-      await Promise.all([
-        projectCollection.utils.refetch(),
-        userCollection.utils.refetch(),
-      ])
-    },
-  },
-)
-```
-
-### Manual Transactions
-
-For batch mutations with explicit commit control:
-
-```ts
-import { createTransaction } from '@tanstack/svelte-db'
-
-const reviewTx = createTransaction({
-  autoCommit: false, // Wait for explicit commit
-  mutationFn: async ({ transaction }) => {
-    await api.batchUpdate(transaction.mutations)
-  },
-})
-
-// Accumulate changes
-reviewTx.mutate(() => {
-  todoCollection.update(id1, (d) => {
-    d.status = 'reviewed'
-  })
-  todoCollection.update(id2, (d) => {
-    d.status = 'reviewed'
-  })
-})
-
-// User reviews changes...
-
-// Add more changes
-reviewTx.mutate(() => {
-  todoCollection.update(id3, (d) => {
-    d.status = 'reviewed'
-  })
-})
-
-// Commit all at once
-await reviewTx.commit()
-// Or rollback
-// reviewTx.rollback()
-```
-
-### Paced Mutations (Debounce/Throttle/Queue)
-
-```ts
-import {
-  createPacedMutations,
-  debounceStrategy,
-  throttleStrategy,
-  queueStrategy,
-} from '@tanstack/svelte-db'
-
-// Debounce: Wait for inactivity (auto-save forms)
-const mutate = createPacedMutations<{ field: string; value: string }>({
-  onMutate: ({ field, value }) => {
-    formCollection.update(formId, (draft) => {
-      draft[field] = value
+    const result = await invoke('update-prompt', {
+      payload: {
+        prompt: entities.prompt({ id: promptId, data: latestPrompt })
+      }
     })
-  },
-  mutationFn: async ({ transaction }) => {
-    await api.forms.save(transaction.mutations)
-  },
-  strategy: debounceStrategy({ wait: 500 }),
-})
 
-// Throttle: Minimum spacing (sliders)
-const mutate = createPacedMutations<number>({
-  onMutate: (volume) => {
-    settingsCollection.update('volume', (d) => {
-      d.value = volume
-    })
-  },
-  mutationFn: async ({ transaction }) => {
-    await api.settings.updateVolume(transaction.mutations)
-  },
-  strategy: throttleStrategy({ wait: 200, leading: true, trailing: true }),
-})
+    if (result.success) {
+      promptDraftCollection.utils.acceptMutations(transaction)
+    }
 
-// Queue: Sequential processing (file uploads)
-const mutate = createPacedMutations<File>({
-  onMutate: (file) => {
-    uploadCollection.insert({
-      id: crypto.randomUUID(),
-      file,
-      status: 'pending',
-    })
+    return result
   },
-  mutationFn: async ({ transaction }) => {
-    await api.files.upload(transaction.mutations[0].modified)
+  handleSuccessOrConflictResponse: (payload) => {
+    promptCollection.utils.upsertAuthoritative(payload.prompt)
   },
-  strategy: queueStrategy({ wait: 500 }),
+  conflictMessage: 'Prompt update conflict'
 })
 ```
 
-### Non-Optimistic Mutations
+Adapt the payload to the existing shared IPC contract; do not invent a generic mutation endpoint.
 
-Wait for server confirmation before showing change:
+## Optimistic Changes
+
+Put every user-visible immediate change in `mutateOptimistically`. Use only the collection helpers passed into the callback so the framework can collect touched entity keys before replaying the changes into the transaction.
+
+Update every affected authoritative relationship in the same transaction. For example, creating, moving, deleting, or completing a prompt can change the prompt, its draft, and one or two prompt folders.
+
+Do not apply authoritative snapshots in `mutateOptimistically`.
+
+## Persistence Payloads
+
+Use the `entities` builders supplied to `persistMutations`. They add the collection's current authoritative `expectedRevision` and remove TanStack virtual properties before IPC serialization.
+
+When paced transactions can merge multiple edits, read the most recent `mutation.modified` record with `getLatestMutationModifiedRecord`; do not persist a stale value captured before the transaction changed.
+
+Use `invoke` for the normal typed payload path. Follow the nearest mutation when a channel uses a specialized shared request type.
+
+## Success, Conflict, and Rollback
+
+Apply response payloads in `handleSuccessOrConflictResponse` through authoritative collection utilities. The framework invokes this handler for both success and conflict payloads so server truth is available before a failed transaction rolls its optimistic layer back.
+
+Return success only after persistence completes. Throw or return a failed/conflict result so `RevisionMutation.ts` throws and TanStack DB rolls back optimistic state.
+
+Run destructive authoritative cleanup, navigation, or cache removal in `onSuccess` when it must occur only after the transaction reaches `completed`.
+
+## Local-Only Collections
+
+Manual transactions do not automatically retain local-only mutations. After IPC success, explicitly accept each local-only collection changed by the transaction:
 
 ```ts
-// Insert without optimistic update
-const tx = todoCollection.insert(
-  { id: '1', text: 'Server-validated', completed: false },
-  { optimistic: false },
-)
-
-// Wait for persistence
-try {
-  await tx.isPersisted.promise
-  navigate('/success')
-} catch (error) {
-  toast.error('Failed to create')
+if (mutationResult.success) {
+  promptDraftCollection.utils.acceptMutations(transaction)
 }
 ```
 
-### Mutation with Metadata
+Do not accept draft mutations before server success. Failed persistence must roll them back with the authoritative optimistic changes.
 
-Annotate mutations for custom handler behavior:
+Direct local-only inserts and updates remain appropriate for initial draft hydration and renderer-session state that does not participate in an authoritative transaction.
 
-```ts
-todoCollection.update(todoId, { metadata: { intent: 'complete' } }, (draft) => {
-  draft.completed = true
-})
+Choose draft reconciliation policy per entity by following its closest existing helper:
 
-// In handler
-onUpdate: async ({ transaction }) => {
-  const mutation = transaction.mutations[0]
-  if (mutation.metadata?.intent === 'complete') {
-    await api.todos.complete(mutation.original.id)
-  } else {
-    await api.todos.update(mutation.original.id, mutation.changes)
-  }
-}
-```
+- Prompt hydration replaces authoritative fields while preserving the session `isEdited` latch.
+- System settings hydration replaces the form inputs from authoritative settings.
+- Prompt UI-state success or conflict responses overwrite the matching draft with response truth.
 
-### Waiting for Persistence
+Do not assume one policy fits every draft. Define and test what happens when authoritative truth arrives while a paced edit is pending.
 
-```ts
-const tx = todoCollection.update(todoId, (draft) => {
-  draft.completed = true
-})
+## Creation Contracts
 
-// Check state
-console.log(tx.state) // 'pending' | 'persisting' | 'completed' | 'failed'
+For a new keyed entity, use a client-generated stable ID and an `expectedRevision` of `0` through the normal entity builder. Follow prompt UI state for optimistic insert-or-update behavior. For required singleton entities such as system settings, load the existing record before allowing updates rather than treating absence as an implicit create.
 
-// Wait for completion
-try {
-  await tx.isPersisted.promise
-  console.log('Saved!')
-} catch (error) {
-  console.log('Failed:', error)
-}
-```
+## Global Ordering
 
-### Handling Temporary IDs
+Preserve the single global mutation queue in `RevisionMutation.ts`. It ensures expected revisions and authoritative responses settle in renderer intent order across entity types.
 
-When server generates the real ID:
+Before an immediate mutation touches an entity with a pending paced update, flush the matching paced transaction. Do not allow an immediate operation to overtake unsaved edits to the same collection ID and element ID.
 
-```ts
-// Option 1: Use client-generated UUIDs (recommended)
-todoCollection.insert({
-  id: crypto.randomUUID(), // Stable ID, no flicker
-  text: 'New todo',
-})
+## Paced Autosave
 
-// Option 2: Wait for persistence before enabling delete
-const tx = todoCollection.insert({ id: tempId, text: 'New todo' })
-await tx.isPersisted.promise
-// Now safe to delete with real ID
-```
+Use `mutatePacedRevisionUpdateTransaction` for prompt, settings, persistence, and UI-state autosave. The custom registry provides behavior the generic TanStack pacing helpers do not encode for this application:
 
-## Transaction Handler API
+- one pending transaction per global collection/element key
+- debounce restart after each edit
+- mutation merging within that transaction
+- optional validation before enqueue
+- explicit per-element and global flush-and-wait operations
+- matching paced-update flush before immediate mutations
+- commit through the same global queue as immediate mutations
 
-```ts
-interface OperationHandler {
-  ({ transaction, collection }): Promise<any>
-}
+Use `validateBeforeEnqueue` for draft inputs that may temporarily be invalid. When an immediate operation supersedes an invalid paced update, the registry performs a secondary rollback and removes the pending transaction.
 
-// transaction.mutations array:
-interface PendingMutation {
-  collection: Collection
-  type: 'insert' | 'update' | 'delete'
-  key: string | number
-  original: TData // Original item (update/delete)
-  modified: TData // New item (insert/update)
-  changes: Partial<TData> // Only changed fields (update)
-  metadata?: Record<string, unknown>
-}
-```
+Use the existing flush helpers before workspace changes, navigation that can discard drafts, application teardown, or other boundaries already covered by `AutosaveFlushes.svelte.ts`.
 
-## Mutation Merging
+Current aggregate flushes use `Promise.allSettled`. “Flush and wait” therefore means all save tasks settled, not that every save succeeded; workspace switching can continue and clear workspace-scoped drafts after a failed save. Preserve this behavior unless the task explicitly changes failure UX, blocking, retry, or recovery semantics.
 
-Multiple mutations on same item within a transaction merge:
+The current paced setter APIs return `void`, enqueue tracking converts rejection into a settled tracking promise, and aggregate flushes use `allSettled`. Callers therefore cannot currently surface a paced persistence failure by catching a setter or flush. If a task requires user-visible autosave errors, extend the shared mutation framework with an explicit error callback or result channel and test it; do not imply the existing controller can observe the rejection.
 
-| Existing → New  | Result    | Description                    |
-| --------------- | --------- | ------------------------------ |
-| insert + update | `insert`  | Merged into single insert      |
-| insert + delete | _removed_ | Cancel out                     |
-| update + delete | `delete`  | Delete wins                    |
-| update + update | `update`  | Changes merged, first original |
+Do not catch and swallow errors inside the transaction `mutationFn`, because TanStack rollback depends on rejection.
 
-## Detailed References
+## Testing
 
-| Reference                       | When to Use                                    |
-| ------------------------------- | ---------------------------------------------- |
-| `references/handlers.md`        | Handler patterns, collection-specific behavior |
-| `references/transactions.md`    | Manual transactions, autoCommit, lifecycle     |
-| `references/paced-mutations.md` | Debounce, throttle, queue strategies           |
-| `references/error-handling.md`  | Rollback, retry patterns, error recovery       |
-| `references/temporary-ids.md`   | Server-generated IDs, view key mapping         |
+Cover these behaviors when affected:
+
+- optimistic state appears before IPC completion
+- success commits authoritative and draft state
+- failure rolls both back
+- conflict applies response truth and rejects the transaction
+- same-entity paced edits merge
+- immediate mutations flush matching paced edits first
+- unrelated entity keys remain independent until the global commit queue
+- flush helpers await active and already in-flight work

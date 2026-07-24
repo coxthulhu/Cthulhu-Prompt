@@ -1,318 +1,111 @@
 ---
 name: tanstack-db-query
 description: |
-  QueryCollection with TanStack Query integration.
-  Use for REST API integration, sync modes, refetching, and predicate push-down.
+  Cthulhu Prompt renderer IPC load and authoritative reconciliation patterns. Use when adding or changing functions under data/Queries, loading revision envelopes through preload APIs, normalizing prompt representations, hydrating local drafts, pruning removed entities, or coordinating startup and folder-level loading state.
 ---
 
-# QueryCollection
+# IPC Loads and Reconciliation
 
-QueryCollection integrates TanStack Query with TanStack DB, enabling REST API data to be queried with live queries. Data fetched via `queryFn` automatically syncs to the in-memory collection.
+In this repository, a “query” is a preload-backed renderer-to-main IPC load followed by authoritative collection reconciliation. Do not use QueryCollection, TanStack Query, `queryFn`, query keys, refetch utilities, or REST calls for existing data flows.
 
-## Common Patterns
+## Load Through Preload IPC
 
-### Basic Setup
-
-```ts
-import { createCollection } from '@tanstack/svelte-db'
-import { queryCollectionOptions } from '@tanstack/query-db-collection'
-import { QueryClient } from '@tanstack/svelte-query'
-
-const queryClient = new QueryClient()
-
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => {
-      const response = await fetch('/api/todos')
-      return response.json()
-    },
-    getKey: (item) => item.id,
-    queryClient,
-  }),
-)
-```
-
-### With Persistence Handlers
+Put renderer load functions under `src/renderer/src/data/Queries` and use the shared request/result types:
 
 ```ts
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.getAll(),
-    getKey: (item) => item.id,
-    queryClient,
+export const loadPromptFolderInitial = async (
+  workspaceId: string,
+  promptFolderId: string
+): Promise<void> => {
+  const result = await runLoad(() =>
+    ipcInvokeWithPayload<LoadPromptFolderInitialResult, LoadPromptFolderInitialPayload>(
+      'load-prompt-folder-initial',
+      { workspaceId, promptFolderId }
+    )
+  )
 
-    onInsert: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) => api.todos.create(m.modified)),
-      )
-      // Refetch happens automatically after handler completes
-    },
-
-    onUpdate: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) =>
-          api.todos.update(m.original.id, m.changes),
-        ),
-      )
-    },
-
-    onDelete: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) => api.todos.delete(m.original.id)),
-      )
-    },
-  }),
-)
-```
-
-### Skip Auto-Refetch
-
-```ts
-onInsert: async ({ transaction }) => {
-  await api.todos.create(transaction.mutations[0].modified)
-  return { refetch: false } // Don't refetch after this handler
+  // Normalize, reconcile authoritative collections, and hydrate drafts.
 }
 ```
 
-### With Schema Validation
+Use `ipcInvoke` for channels without a request payload and `ipcInvokeWithPayload` for payloads described by shared TypeScript types. Both go through the preload-backed renderer API. Their caller-supplied generics do not create a central compile-time channel map. For payload-bearing channels, runtime safety comes from the matching parser in `src/main/IpcFramework/IpcValidation.ts`. The current no-payload system-settings and user-persistence startup query handlers do not parse the request/client context; follow their handler pattern unless the task explicitly adds validation for no-payload contexts. Never call Electron or filesystem APIs directly from a query module.
+
+Wrap loads with `runLoad` so unsuccessful `IpcResult` values become thrown errors handled by the owning startup or feature flow.
+
+## Apply Revision Envelopes
+
+Responses contain authoritative revision envelopes. Apply them with revision collection utilities:
 
 ```ts
-import { z } from 'zod'
-
-const todoSchema = z.object({
-  id: z.string(),
-  text: z.string().min(1),
-  completed: z.boolean().default(false),
-  created_at: z.coerce.date().default(() => new Date()),
-})
-
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.getAll(),
-    getKey: (item) => item.id,
-    queryClient,
-    schema: todoSchema, // Validates and transforms data
-  }),
-)
+workspaceCollection.utils.upsertAuthoritative(result.workspace)
+promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
+promptCollection.utils.upsertManyAuthoritative(promptSnapshots)
 ```
 
-### Select from Wrapped Response
+Do not unwrap an envelope and call ordinary collection `insert` or `update`; that would bypass revision ordering and optimistic reconciliation.
 
-```ts
-// API returns { data: Todo[], total: number, page: number }
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.paginated({ page: 1 }),
-    select: (response) => response.data, // Extract array from wrapper
-    getKey: (item) => item.id,
-    queryClient,
-  }),
-)
-```
+The revision adapter ignores stale snapshots. Prompt loads additionally allow a full prompt to replace a summary prompt at the same revision.
 
-### Dynamic Query Key
+## Normalize Representations
 
-```ts
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    // Function-based queryKey for dynamic values
-    queryKey: (opts) => ['todos', opts.where, opts.orderBy],
-    queryFn: async (ctx) => {
-      const opts = ctx.meta?.loadSubsetOptions
-      return api.todos.query(opts)
-    },
-    getKey: (item) => item.id,
-    queryClient,
-    syncMode: 'on-demand',
-  }),
-)
-```
+Normalize IPC data before authoritative insertion when the shared domain has distinct renderer representations:
 
-## Sync Modes
+- Use `createPromptSummary` for workspace-level prompt lists.
+- Use `createPromptFull` for prompt-folder initial loads and mutation responses.
+- Use the equivalent prompt-template constructor when loading template summaries.
+- Serialize full prompt data with the established persisted conversion before mutation IPC.
 
-| Mode          | Behavior                                   | Best For                                |
-| ------------- | ------------------------------------------ | --------------------------------------- |
-| `eager`       | Load entire collection upfront (default)   | <10k rows, mostly static data           |
-| `on-demand`   | Load only what queries request             | >50k rows, search interfaces, catalogs  |
+Keep normalization in query or mutation boundary code, not in components.
 
-### On-Demand Mode
+## Hydrate Local Drafts
 
-```ts
-import { parseLoadSubsetOptions } from '@tanstack/query-db-collection'
+After applying authoritative snapshots, call the appropriate `data/UiState` upsert functions to hydrate or reconcile renderer drafts. Preserve session-only fields and edited-draft rules implemented by those helpers.
 
-const productsCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: (opts) => ['products', opts],
-    queryFn: async (ctx) => {
-      // Parse predicates from live query
-      const { where, orderBy, limit } = parseLoadSubsetOptions(
-        ctx.meta?.loadSubsetOptions,
-      )
-      return api.products.search({ where, orderBy, limit })
-    },
-    getKey: (item) => item.id,
-    queryClient,
-    syncMode: 'on-demand',
-  }),
-)
+Examples include:
 
-// Live queries drive which data loads
-const query = useLiveQuery((q) =>
-  q
-    .from({ product: productsCollection })
-    .where(({ product }) => eq(product.category, 'electronics'))
-    .limit(20),
-)
+- prompt summary/full drafts
+- prompt-folder settings drafts
+- system-settings form inputs
+- user/workspace persistence drafts
+- prompt editor UI-state drafts
 
-query.data
-```
+Do not construct duplicate draft shapes in query modules or components.
 
-### Predicate Push-down
+## Prune Removed Entities
 
-Extract and forward query predicates to your API:
+For graph or subset reloads:
 
-```ts
-import {
-  parseWhereExpression,
-  parseOrderByExpression,
-  extractSimpleComparisons,
-} from '@tanstack/query-db-collection'
+1. Capture IDs reachable from the previous authoritative state.
+2. Apply all newer response snapshots.
+3. Compute IDs absent from the reconciled response graph.
+4. Delete those IDs through authoritative bulk delete utilities.
+5. Delete matching local drafts.
 
-queryFn: async (ctx) => {
-  const opts = ctx.meta?.loadSubsetOptions
+Reconcile only the entities owned by the load contract. For example, the current prompt-folder initial load prunes removed prompts and prompt drafts, while other associated collections have their own lifecycle. Do not infer cross-entity deletes that the response does not establish.
 
-  // Parse where clause into simple comparisons
-  if (opts?.where) {
-    const comparisons = extractSimpleComparisons(opts.where)
-    // comparisons: [{ field: 'category', operator: 'eq', value: 'electronics' }]
-  }
+Do not clear whole authoritative singleton collections when switching or reloading a workspace; preserve revision-aware reconciliation and delete only records proven absent. Workspace-scoped local draft collections are cleared through `WorkspaceStoreBridge.ts` after their autosaves flush.
 
-  // Parse order by
-  if (opts?.orderBy) {
-    const order = parseOrderByExpression(opts.orderBy)
-    // order: [{ field: 'createdAt', direction: 'desc' }]
-  }
+## Main-Process Companion Work
 
-  return api.search({ ...comparisons, orderBy: order })
-}
-```
+When adding a new loadable or mutable entity, inspect and update the applicable main-process pieces:
 
-## Utility Methods
+- persistence or data-access storage, including a SQLite migration when required
+- the revision owner appropriate to that storage: use `Registries/Revisions.ts` for SQLite-backed renderer persistence such as user/workspace persistence and prompt UI state; use committed-store entries and atomic transaction results for file-backed `RevisionData` entities such as system settings, workspaces, folders, and prompts
+- exact-shape runtime parsers in `IpcFramework/IpcValidation.ts` for payload-bearing channels
+- a payload-bearing query or mutation handler that consumes `validatedRequest`, or the established direct handler pattern for a no-payload startup query
+- handler setup registration in `NormalStartup.ts`
+- conflict handling that returns current authoritative truth, either from an atomic transaction's conflict snapshot or from a data-access reread for registry-backed persistence
 
-```ts
-// Manual refetch
-await todoCollection.utils.refetch()
-await todoCollection.utils.refetch({ throwOnError: true })
+In-memory revision keys can include scope, such as `workspaceId:entityId`, while renderer collection keys and revision envelope IDs remain the entity ID expected by that collection. Do not add an unused in-memory revision store for an entity whose committed store already owns revisions.
 
-// Direct writes (bypass queryFn, write directly to store)
-todoCollection.utils.writeInsert({ id: '1', text: 'New' })
-todoCollection.utils.writeUpdate({ id: '1', text: 'Updated' })
-todoCollection.utils.writeDelete('1')
-todoCollection.utils.writeUpsert({ id: '1', text: 'Upsert' })
-todoCollection.utils.writeBatch(() => {
-  todoCollection.utils.writeInsert(item1)
-  todoCollection.utils.writeInsert(item2)
-})
+## Loading Boundaries
 
-// Query state
-todoCollection.utils.isLoading // First fetch in progress
-todoCollection.utils.isFetching // Any fetch in progress
-todoCollection.utils.isRefetching // Background refetch
-todoCollection.utils.isError // Has error
-todoCollection.utils.lastError // Error object
-todoCollection.utils.errorCount // Consecutive failures
-todoCollection.utils.dataUpdatedAt // Last successful update timestamp
-todoCollection.utils.fetchStatus // 'fetching' | 'paused' | 'idle'
+- Load system settings and user persistence before the first Svelte mount in `main.ts`.
+- Load workspaces on explicit select/create/restore flows.
+- Load full prompt-folder data on navigation, while workspace loads retain prompt summaries.
+- Track active request IDs and feature loading/error state in the owning Svelte component or controller.
+- Do not rely on revision collection `isReady()` or live-query `isLoading` for IPC requests made outside collection sync.
 
-// Clear error and retry
-await todoCollection.utils.clearError()
-```
+## Testing
 
-## Configuration Options
-
-```ts
-queryCollectionOptions({
-  // Required
-  queryKey: QueryKey | ((opts: LoadSubsetOptions) => QueryKey),
-  queryFn: (context: QueryFunctionContext) => Promise<T[]>,
-  getKey: (item: T) => Key,
-  queryClient: QueryClient,
-
-  // Optional
-  schema?: StandardSchema,        // Validation schema
-  select?: (data: TQueryData) => T[], // Extract array from response
-  syncMode?: 'eager' | 'on-demand', // Default: 'eager'
-
-  // TanStack Query options
-  enabled?: boolean,              // Auto-fetch (default: true)
-  refetchInterval?: number,       // Poll interval in ms
-  retry?: number | boolean,       // Retry count
-  retryDelay?: number | ((attempt) => number),
-  staleTime?: number,             // Cache freshness in ms
-  meta?: Record<string, unknown>, // Custom metadata for queryFn
-
-  // Persistence handlers
-  onInsert?: MutationFn,
-  onUpdate?: MutationFn,
-  onDelete?: MutationFn,
-})
-```
-
-## Common Patterns
-
-### Polling
-
-```ts
-const statsCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['stats'],
-    queryFn: () => api.stats.current(),
-    getKey: (item) => item.id,
-    queryClient,
-    refetchInterval: 30000, // Refetch every 30 seconds
-  }),
-)
-```
-
-### Conditional Fetching
-
-```ts
-const userTodosCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos', userId],
-    queryFn: () => api.todos.forUser(userId),
-    getKey: (item) => item.id,
-    queryClient,
-    enabled: !!userId, // Only fetch when userId exists
-  }),
-)
-```
-
-### Sharing QueryClient
-
-```ts
-// Use your app's existing QueryClient
-import { queryClient } from './queryClient'
-
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: () => api.todos.getAll(),
-    getKey: (item) => item.id,
-    queryClient, // Shares cache with other queries
-  }),
-)
-```
-
-## Detailed References
-
-| Reference                          | When to Use                                |
-| ---------------------------------- | ------------------------------------------ |
-| `references/sync-modes.md`         | Choosing between eager/on-demand modes     |
-| `references/predicate-pushdown.md` | Forwarding query predicates to APIs        |
-| `references/direct-writes.md`      | Using writeInsert/writeUpdate/writeDelete  |
-| `references/query-state.md`        | Monitoring loading, error, and fetch state |
+Test normalization, stale/equal/new revision behavior, pruning, draft preservation, failed `IpcResult` handling, and overlapping load ordering when those paths change.

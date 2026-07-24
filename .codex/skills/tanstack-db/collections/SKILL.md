@@ -1,240 +1,99 @@
 ---
 name: tanstack-db-collections
 description: |
-  Collection types and configuration in TanStack DB.
-  Use for QueryCollection, local collections, and sync modes.
+  Cthulhu Prompt renderer collection patterns. Use when defining or changing revision-backed authoritative collections, local-only draft collections, custom sync utilities, revision acceptance, entity keys, initial hydration, or authoritative deletes.
 ---
 
-# Collections
+# Renderer Collections
 
-Collections are typed data stores that decouple data loading from data binding. They can be populated from REST APIs, sync engines, or local storage, then queried uniformly with live queries.
+Use one of the repository's two established collection types. Do not substitute QueryCollection or LocalStorageCollection for existing renderer data flows.
 
-## Collection Types
+## Choose the Collection Role
 
-| Type                       | Package                             | Use Case                             |
-| -------------------------- | ----------------------------------- | ------------------------------------ |
-| **QueryCollection**        | `@tanstack/query-db-collection`     | REST APIs via TanStack Query         |
-| **LocalStorageCollection** | `@tanstack/db`                      | Browser localStorage persistence     |
-| **LocalOnlyCollection**    | `@tanstack/db`                      | In-memory state (no persistence)     |
+| Role | Options creator | Examples |
+| --- | --- | --- |
+| Persisted authoritative entity | `revisionCollectionOptions<T>()` | workspace, prompt folder, prompt, settings, persistence |
+| Renderer-session draft or UI state | `localOnlyCollectionOptions<T>()` | prompt drafts, folder drafts, settings inputs, editor view-state drafts |
 
-## Common Patterns
+Create singleton collections in `src/renderer/src/data/Collections`.
 
-### QueryCollection (REST APIs)
+## Revision Collections
+
+Define persisted entity collections with the shared revision adapter:
 
 ```ts
 import { createCollection } from '@tanstack/svelte-db'
-import { queryCollectionOptions } from '@tanstack/query-db-collection'
+import type { PromptFolder } from '@shared/PromptFolder'
+import { revisionCollectionOptions } from './RevisionCollection'
 
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => {
-      const response = await fetch('/api/todos')
-      return response.json()
-    },
-    getKey: (item) => item.id,
-    schema: todoSchema, // Optional: Zod, Valibot, etc.
-
-    onInsert: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) =>
-          fetch('/api/todos', {
-            method: 'POST',
-            body: JSON.stringify(m.modified),
-          }),
-        ),
-      )
-    },
-
-    onUpdate: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) =>
-          fetch(`/api/todos/${m.original.id}`, {
-            method: 'PUT',
-            body: JSON.stringify(m.modified),
-          }),
-        ),
-      )
-    },
-
-    onDelete: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map((m) =>
-          fetch(`/api/todos/${m.original.id}`, { method: 'DELETE' }),
-        ),
-      )
-    },
-  }),
+export const promptFolderCollection = createCollection(
+  revisionCollectionOptions<PromptFolder>({
+    id: 'prompt-folders',
+    getKey: (promptFolder) => promptFolder.id
+  })
 )
 ```
 
-### Sync Modes
+The adapter owns these responsibilities:
 
-Control how data loads into collections:
+- Store the latest authoritative revision separately from entity data.
+- Ignore stale snapshots.
+- Apply external truth through `begin({ immediate: true })`, `write`, and `commit`.
+- Expose bulk and single authoritative upsert/delete utilities.
+- Mark the sync bridge ready immediately; feature loading state remains separate from collection readiness.
+- Strip sync callbacks on collection cleanup.
+
+Use the utilities for IPC results:
 
 ```ts
-const productsCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['products'],
-    queryFn: async (ctx) => {
-      // Query predicates available in ctx.meta for on-demand mode
-      const params = parseLoadSubsetOptions(ctx.meta?.loadSubsetOptions)
-      return api.getProducts(params)
-    },
-    getKey: (item) => item.id,
+promptCollection.utils.upsertManyAuthoritative(promptSnapshots)
+promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
+const expectedRevision = promptCollection.utils.getAuthoritativeRevision(promptId)
+```
 
-    // Choose sync mode:
-    syncMode: 'eager', // Default: Load all upfront (<10k rows)
-    // syncMode: 'on-demand', // Load only what queries request (>50k rows)
-  }),
+Do not use ordinary `insert`, `update`, or `delete` to apply server truth. Those methods are for optimistic transaction changes.
+
+### Equal Revisions
+
+Reject equal revisions by default. Add `shouldAcceptEqualRevision` only for a concrete representation upgrade, such as replacing a prompt summary with a full prompt at the same revision. Do not use it as a general last-write-wins escape hatch.
+
+### Bulk Reconciliation
+
+Prefer `upsertManyAuthoritative` and `deleteManyAuthoritative` when applying one IPC response. Compute removed IDs from the previously known graph and the response graph, then delete authoritative records and matching drafts together.
+
+## Local-Only Draft Collections
+
+Use local-only collections for editable copies and renderer-session markers:
+
+```ts
+import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
+
+export const promptDraftCollection = createCollection(
+  localOnlyCollectionOptions<PromptDraftRecord>({
+    id: 'prompt-drafts',
+    getKey: (draft) => draft.id
+  })
 )
 ```
 
-| Mode          | Behavior                                   | Best For                                |
-| ------------- | ------------------------------------------ | --------------------------------------- |
-| `eager`       | Load entire collection upfront             | <10k rows, mostly static data           |
-| `on-demand`   | Load only what queries request             | >50k rows, search interfaces, catalogs  |
+Keep draft record shapes specific to UI needs. A draft can flatten persisted data, keep string form inputs, or add session-only flags such as `isEdited` and `hasLoadedInitialData`.
 
+Hydrate drafts through functions under `data/UiState`; do not duplicate draft construction in components. Preserve an edited draft when an authoritative refresh must not discard current renderer-session input.
 
-### LocalStorageCollection
+When a manual transaction changes a local-only collection, call its `utils.acceptMutations(transaction)` only after IPC persistence succeeds.
 
-```ts
-import {
-  createCollection,
-  localStorageCollectionOptions,
-} from '@tanstack/svelte-db'
+## Reads
 
-const settingsCollection = createCollection(
-  localStorageCollectionOptions({
-    id: 'user-settings',
-    storageKey: 'app-settings',
-    getKey: (item) => item.id,
-    schema: settingsSchema,
-  }),
-)
+- Use `collection.get`, `has`, and `toArray` for imperative loaders, mutation preparation, flushes, and event handlers.
+- Use `useLiveQuery` for state rendered by Svelte components or reactive controllers.
+- Do not expect revision collection readiness to describe an active IPC load. Use the feature's explicit loading state.
 
-// Data persists across sessions and syncs across tabs
-settingsCollection.insert({ id: 'theme', value: 'dark' })
-```
+## Change Checklist
 
-### LocalOnlyCollection
-
-```ts
-import {
-  createCollection,
-  localOnlyCollectionOptions,
-} from '@tanstack/svelte-db'
-
-const uiStateCollection = createCollection(
-  localOnlyCollectionOptions({
-    id: 'ui-state',
-    getKey: (item) => item.id,
-  }),
-)
-
-// In-memory only, lost on refresh
-uiStateCollection.insert({ id: 'sidebar', expanded: true })
-```
-
-### Collection with Schema
-
-```ts
-import { z } from 'zod'
-
-const todoSchema = z.object({
-  id: z.string(),
-  text: z.string().min(1),
-  completed: z.boolean().default(false),
-  created_at: z
-    .union([z.string(), z.date()])
-    .transform((val) => (typeof val === 'string' ? new Date(val) : val))
-    .default(() => new Date()),
-})
-
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    schema: todoSchema, // Validates inserts/updates, transforms types
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.getAll(),
-    getKey: (item) => item.id,
-  }),
-)
-```
-
-### Using TanStack Query Client
-
-```ts
-import { QueryClient } from '@tanstack/svelte-query'
-
-const queryClient = new QueryClient()
-
-const todoCollection = createCollection(
-  queryCollectionOptions({
-    queryKey: ['todos'],
-    queryFn: async () => api.todos.getAll(),
-    getKey: (item) => item.id,
-    queryClient, // Use your existing query client
-  }),
-)
-```
-
-## Collection API
-
-```ts
-// Read operations
-collection.get(key) // Get item by key
-collection.has(key) // Check if key exists
-collection.toArray // Get all items as array
-collection.size // Number of items
-
-// Write operations (trigger handlers)
-collection.insert(item) // Insert item(s)
-collection.update(key, fn) // Update item(s) with draft function
-collection.delete(key) // Delete item(s)
-
-// Utilities (collection-specific)
-collection.utils.refetch() // QueryCollection: refetch from API
-collection.utils.acceptMutations(transaction) // LocalCollection: accept in manual tx
-```
-
-## Configuration Options
-
-```ts
-// Base CollectionConfig (for custom sync implementations)
-interface CollectionConfig {
-  id?: string // Unique identifier
-  getKey: (item) => Key // Extract unique key from item
-  schema?: StandardSchema // Validation schema (Zod, Valibot, etc.)
-  sync: SyncConfig // Required when using createCollection directly
-
-  // Persistence handlers
-  onInsert?: InsertMutationFn
-  onUpdate?: UpdateMutationFn
-  onDelete?: DeleteMutationFn
-}
-
-// QueryCollection options (from @tanstack/query-db-collection)
-queryCollectionOptions({
-  queryKey: QueryKey,
-  queryFn: QueryFn,
-  queryClient?: QueryClient,
-  syncMode?: 'eager' | 'on-demand',
-})
-```
-
-## Collection-Specific Skills
-
-For detailed patterns on each collection type, see the dedicated skill directories:
-
-| Skill                   | Directory       | When to Use                                     |
-| ----------------------- | --------------- | ----------------------------------------------- |
-| **QueryCollection**     | `../query/`     | REST API integration, TanStack Query, refetch   |
-| **TrailBaseCollection** | `../trailbase/` | TrailBase events, type conversions              |
-
-## Detailed References
-
-| Reference                          | When to Use                                 |
-| ---------------------------------- | ------------------------------------------- |
-| `references/local-collections.md`  | LocalStorage, LocalOnly, cross-tab sync     |
-| `references/sync-modes.md`         | Eager vs on-demand tradeoffs                 |
-| `references/custom-collections.md` | Building your own collection type           |
+- Keep collection IDs globally unique and stable.
+- Keep entity keys aligned with IPC revision envelope IDs.
+- Keep renderer keys and envelope IDs stable even when the main revision store uses a composite scope key such as `workspaceId:promptId`.
+- Add a revision collection to `RevisionCollections.ts` when it participates in shared mutations.
+- Add its local draft collection to the optimistic collection map when one transaction changes both.
+- Reconcile authoritative deletes as well as upserts.
+- Test stale, equal, newer, bulk, delete, rollback, and summary-to-full cases that apply.

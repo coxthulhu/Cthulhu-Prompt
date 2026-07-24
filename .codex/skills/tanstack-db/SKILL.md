@@ -1,142 +1,89 @@
 ---
 name: tanstack-db
 description: |
-  TanStack DB patterns for reactive client-side data with live queries and optimistic mutations.
-  Use for client-side collections, queries, mutations, schemas, and sync engine integration.
+  Cthulhu Prompt's TanStack DB architecture for the Svelte renderer. Use when changing renderer collections, preload-backed IPC loads, live-query subscriptions, optimistic revision mutations, local draft state, authoritative reconciliation, autosave pacing, or TanStack collection validation boundaries and tests in this repository.
 ---
 
-# TanStack DB Skills
+# TanStack DB in Cthulhu Prompt
 
-TanStack DB is the reactive client store for your API. It provides sub-millisecond live queries, instant optimistic updates, and seamless integration with REST APIs.
+Treat TanStack DB as the renderer's reactive entity cache and optimistic transaction engine. The application does not use TanStack Query, QueryCollection, REST fetching, or collection-level persistence handlers.
 
-## Routing Table
+## Architecture
 
-| Topic            | Directory       | When to Use                                                                                           |
-| ---------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
-| **Live Queries** | `live-queries/` | Querying data: filters, joins, aggregations, groupBy, orderBy, subqueries, reactive updates           |
-| **Mutations**    | `mutations/`    | Writing data: insert/update/delete, optimistic updates, transactions, paced mutations, error handling |
-| **Collections**  | `collections/`  | Data sources: overview, sync modes, local collections, choosing collection types                      |
-| **Schemas**      | `schemas/`      | Validation: schema definition, TInput/TOutput types, transformations, defaults, error handling        |
-| **Query**        | `query/`        | QueryCollection: REST API integration, TanStack Query, predicate push-down, refetch                   |
+Use this data flow:
 
-## Quick Detection
+```text
+preload-backed IPC load with shared TypeScript shapes
+  -> authoritative revision snapshot
+  -> revision collection sync write
+  -> local-only draft hydration when needed
+  -> useLiveQuery subscription
+  -> Svelte 5 derived view state
 
-**Route to `live-queries/` when:**
-
-- Building queries with `useLiveQuery` or `createLiveQueryCollection`
-- Using `from`, `where`, `select`, `join`, `groupBy`, `orderBy`
-- Working with aggregations (`count`, `sum`, `avg`, `min`, `max`)
-- Joining data across multiple collections
-- Creating derived/materialized views
-- Performance questions about query updates
-
-**Route to `mutations/` when:**
-
-- Using `collection.insert()`, `collection.update()`, `collection.delete()`
-- Creating custom actions with `createOptimisticAction`
-- Working with transactions via `createTransaction`
-- Implementing paced mutations (debounce, throttle, queue)
-- Handling mutation errors or rollbacks
-- Questions about optimistic state lifecycle
-
-**Route to `collections/` when:**
-
-- Setting up a new collection
-- Choosing between QueryCollection, LocalStorage, etc.
-- Configuring sync modes (eager, on-demand)
-- Understanding collection lifecycle
-- Loading data from APIs or sync engines
-
-**Route to `schemas/` when:**
-
-- Defining schemas with schema libraries
-- Understanding TInput vs TOutput types
-- Transforming data (string to Date, etc.)
-- Setting default values
-- Handling validation errors
-
-**Route to `query/` when:**
-
-- Using `queryCollectionOptions` with TanStack Query
-- Integrating REST APIs with TanStack DB
-- Configuring refetch, polling, or caching behavior
-- Using on-demand sync mode with predicate push-down
-- Monitoring query state (loading, error, refetching)
-
-## Core Concepts
-
-```svelte
-<script>
-  import { createCollection, useLiveQuery, eq } from '@tanstack/svelte-db'
-  import { queryCollectionOptions } from '@tanstack/query-db-collection'
-
-  // 1. Define a collection (data source)
-  const todoCollection = createCollection(
-    queryCollectionOptions({
-      queryKey: ['todos'],
-      queryFn: async () => fetch('/api/todos').then((r) => r.json()),
-      getKey: (item) => item.id,
-      onUpdate: async ({ transaction }) => {
-        await api.todos.update(
-          transaction.mutations[0].original.id,
-          transaction.mutations[0].changes,
-        )
-      },
-    }),
-  )
-
-  // 2. Query with live queries (reactive, incremental updates)
-  const query = useLiveQuery((q) =>
-    q
-      .from({ todo: todoCollection })
-      .where(({ todo }) => eq(todo.completed, false))
-      .orderBy(({ todo }) => todo.createdAt, 'desc'),
-  )
-
-  // 3. Mutate with optimistic updates
-  const toggleTodo = (id) => {
-    todoCollection.update(id, (draft) => {
-      draft.completed = !draft.completed
-    })
-  }
-</script>
-
-{#if query.isLoading}
-  <div>Loading...</div>
-{:else}
-  <ul>
-    {#each query.data as todo (todo.id)}
-      <li>
-        <button type="button" on:click={() => toggleTodo(todo.id)}>
-          {todo.text}
-        </button>
-      </li>
-    {/each}
-  </ul>
-{/if}
+user intent
+  -> shared manual transaction
+  -> optimistic changes across revision and draft collections
+  -> serialized IPC mutation with expected revisions
+  -> authoritative success/conflict snapshots
+  -> commit or automatic rollback
 ```
 
-## Data Flow
+Keep the two collection roles distinct:
 
-TanStack DB extends unidirectional data flow beyond the client:
+- Use revision collections for persisted main-process entities.
+- Use local-only collections for renderer-session drafts, form inputs, and editor UI state.
+- Keep revisions in the revision collection's side map, not in entity records.
+- Load and persist only through preload-backed IPC helpers and shared request/result types. Require main-process runtime parsers for payload-bearing channels; preserve the established no-payload startup-query exception unless the task changes it.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     OPTIMISTIC LOOP (instant)               │
-│  User Action → Optimistic State → UI Update                 │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                     PERSISTENCE LOOP (async)                │
-│  Mutation Handler → Server → Sync Back → Confirmed State    │
-└─────────────────────────────────────────────────────────────┘
-```
+## Routing
 
-## Package Overview
+| Work | Skill |
+| --- | --- |
+| Define or change revision/local-only collections and authoritative sync utilities | `collections/` |
+| Subscribe to collections and derive Svelte 5 renderer state | `live-queries/` |
+| Add optimistic writes, conflicts, rollback, autosave, or transaction ordering | `mutations/` |
+| Add or change IPC load/reconciliation functions under `data/Queries` | `query/` |
+| Decide collection types, normalization, or runtime validation boundaries | `schemas/` |
 
-| Package                             | Purpose                                 |
-| ----------------------------------- | --------------------------------------- |
-| `@tanstack/db`                      | Core: collections, queries, mutations   |
-| `@tanstack/query-db-collection`     | REST API integration via TanStack Query |
-| `@tanstack/svelte-db`               | Svelte adapter                          |
-| `@tanstack/svelte-query`            | Svelte bindings for TanStack Query      |
+Read the relevant child `SKILL.md` completely before editing that area.
+
+## Canonical Files
+
+- `src/renderer/src/data/Collections/RevisionCollection.ts`
+- `src/renderer/src/data/IpcFramework/RevisionCollections.ts`
+- `src/renderer/src/data/IpcFramework/RevisionMutation.ts`
+- `src/renderer/src/data/IpcFramework/RevisionMutationTransactionRegistry.ts`
+- `src/renderer/src/data/UiState/AutosaveFlushes.svelte.ts`
+- `src/renderer/src/data/Queries/`
+- `src/renderer/src/data/Mutations/`
+- `src/renderer/src/data/UiState/`
+- `src/main/IpcFramework/IpcValidation.ts`
+- `src/main/Registries/Revisions.ts`
+- `src/main/NormalStartup.ts`
+- `src/main/Queries/` and `src/main/Mutations/`
+
+Inspect the closest existing entity flow and its tests before adding a new pattern.
+
+## Repository Rules
+
+- Import TanStack APIs from `@tanstack/svelte-db` unless an existing local pattern requires a core type.
+- Use Svelte 5 runes for renderer state. Do not add Svelte stores.
+- Do not introduce QueryCollection, TanStack Query, collection persistence handlers, `createOptimisticAction`, or built-in paced mutation strategies into the existing revision flows.
+- Do not call Node APIs or main-process modules from the renderer.
+- Preserve optimistic rollback by throwing on failed or conflicting persistence.
+- Reconcile server responses through revision collection utilities; do not overwrite authoritative state with ordinary collection mutations.
+- Call `acceptMutations(transaction)` for each local-only collection whose transaction changes should survive a successful manual commit.
+- Preserve the global mutation queue and per-element paced-update ordering.
+- Add or update Vitest tests for collection, reconciliation, or transaction logic. Add Playwright coverage when behavior is visible in the UI.
+
+## Implementation Workflow
+
+1. Identify the authoritative entities and renderer-only draft entities involved.
+2. Inspect their collection, query, mutation, UI-state, shared IPC type, applicable main runtime parser, revision owner, handler registration, and persistence files.
+3. Load typed revision envelopes and apply them through authoritative utilities.
+4. Express user-visible changes in `mutateOptimistically` using the provided collection helpers.
+5. Build IPC payload entities from the latest transaction state and authoritative expected revisions.
+6. Apply success or conflict snapshots before allowing the transaction result to settle.
+7. Accept successful local-only mutations explicitly.
+8. Throw persistence errors so TanStack DB rolls optimistic state back.
+9. Verify mutation ordering, revision handling, draft synchronization, and user-visible behavior.
