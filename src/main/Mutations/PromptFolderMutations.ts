@@ -3,9 +3,15 @@ import * as path from 'path'
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
+  type PromptFolder,
   type PromptFolderKind
 } from '@shared/PromptFolder'
-import { folderEntryRef, removeEntry, type EntryRef } from '@shared/OrderContainer'
+import {
+  folderEntryRef,
+  removeEntry,
+  resolveEntryInsertIndex,
+  type EntryRef
+} from '@shared/OrderContainer'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import {
   hasPromptFolderNameConflict,
@@ -35,6 +41,10 @@ import {
 } from './PromptFolderPathHelpers'
 import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
+import {
+  collectPromptFolderContentIds,
+  createPromptFolderContentDeleteHandles
+} from './PromptFolderContentMutations'
 
 const getPromptFolderNameCandidates = (
   entries: readonly EntryRef[],
@@ -126,13 +136,19 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
 
-          const insertIndex =
-            payload.previousEntryId === null
-              ? 0
-              : siblingEntries.findIndex((entry) => entry.id === payload.previousEntryId) + 1
+          const insertIndex = resolveEntryInsertIndex(siblingEntries, payload.previousEntryId)!
           const folderPath = committedParentPromptFolder
             ? path.join(committedParentPromptFolder.persistenceFields.folderPath, folderName)
             : folderName
+          const newPromptFolder: PromptFolder = {
+            id: payload.promptFolderId,
+            kind: payload.kind,
+            folderName,
+            displayName: normalizedDisplayName,
+            entries: [],
+            completedPromptIds: [],
+            settings: createEmptyPromptFolderSettings(payload.kind)
+          } as PromptFolder
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
@@ -157,15 +173,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   }),
               promptFolder: tx.promptFolder.create({
                 id: payload.promptFolderId,
-                data: {
-                  id: payload.promptFolderId,
-                  kind: payload.kind,
-                  folderName,
-                  displayName: normalizedDisplayName,
-                  entries: [],
-                  completedPromptIds: [],
-                  settings: createEmptyPromptFolderSettings()
-                },
+                data: newPromptFolder,
                 persistenceFields: {
                   workspaceId: requestedWorkspace.id,
                   workspacePath: committedWorkspace.committed.workspacePath,
@@ -281,17 +289,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             requestedPromptFolder.id,
             ...collectLoadedPromptFolderDescendantIds(requestedPromptFolder.id)
           ]
-          const deletedPromptIds = deletedPromptFolderIds.flatMap((promptFolderId) => {
-            const promptFolder =
-              data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
-            if (!promptFolder) return []
-            return [
-              ...promptFolder.entries.flatMap((entry) =>
-                entry.kind === 'prompt' ? [entry.id] : []
-              ),
-              ...promptFolder.completedPromptIds
-            ]
-          })
+          const deletedContentIds = collectPromptFolderContentIds(deletedPromptFolderIds)
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => ({
             orderContainer: committedParentPromptFolder
@@ -309,12 +307,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                     draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
                   }
                 }),
-            ...Object.fromEntries(
-              deletedPromptIds.map((promptId) => [
-                `prompt:${promptId}`,
-                tx.prompt.delete({ id: promptId })
-              ])
-            ),
+            ...createPromptFolderContentDeleteHandles(tx, deletedContentIds),
             ...Object.fromEntries(
               deletedPromptFolderIds.toReversed().map((promptFolderId) => [
                 `promptFolder:${promptFolderId}`,
@@ -357,7 +350,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             )
           }
 
-          for (const promptId of deletedPromptIds) {
+          for (const promptId of deletedContentIds.prompt) {
             // Side effect: remove persisted Monaco view state for deleted prompts.
             PromptUiStateDataAccess.deletePromptUiState(requestedWorkspace.id, promptId)
           }
@@ -536,13 +529,25 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'Prompt folder not loaded' }
           }
 
+          const hasPromptSettings = 'folderPrefix' in requestedPromptFolder.data
+          if (hasPromptSettings !== (committedPromptFolder.committed.kind === 'prompt')) {
+            return { success: false, error: 'Prompt folder settings did not match folder kind' }
+          }
+
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               promptFolder: tx.promptFolder.update({
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
+                  if (draft.kind === 'prompt' && 'folderPrefix' in requestedPromptFolder.data) {
+                    draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
+                  } else if (
+                    draft.kind === 'template' &&
+                    !('folderPrefix' in requestedPromptFolder.data)
+                  ) {
+                    draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
+                  }
                 }
               })
             }

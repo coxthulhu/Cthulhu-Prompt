@@ -99,42 +99,60 @@ const resolveFrontmatterPrefix = (document: string): string => {
   return frontmatterPrefixMatch[0]
 }
 
-export const parsePromptMarkdown = (
+const parseMarkdownContent = <TFrontmatter, TContent>(
   fileText: string,
-  modifiedAt: string = ''
-): PromptPersisted | null => {
+  modifiedAt: string,
+  isFrontmatter: (data: unknown) => data is TFrontmatter,
+  createContent: (data: TFrontmatter, content: string, modifiedAt: string) => TContent
+): TContent | null => {
   try {
     // Side effect: pass explicit options to avoid gray-matter's internal content cache path.
     const parsed = matter(fileText, {})
-    if (!isPromptFrontmatterData(parsed.data)) {
-      return null
-    }
-
-    return {
-      id: parsed.data.id,
-      title: parsed.data.title ?? '',
-      fallbackTitle: parsed.data.fallbackTitle ?? '',
-      createdAt: parsed.data.createdAt,
-      modifiedAt,
-      promptText: parsed.content,
-      status: parsed.data.status,
-      ...(parsed.data.status === PromptStatus.Completed
-        ? { completedAt: parsed.data.completedAt }
-        : {})
-    }
+    return isFrontmatter(parsed.data)
+      ? createContent(parsed.data, parsed.content, modifiedAt)
+      : null
   } catch {
     return null
   }
 }
 
+const createTitleMetadata = (content: {
+  id: string
+  title: string
+  fallbackTitle: string
+  createdAt: string
+}) => ({
+  id: content.id,
+  createdAt: content.createdAt,
+  ...(normalizePromptTitle(content.title).length > 0
+    ? { title: content.title }
+    : { fallbackTitle: content.fallbackTitle })
+})
+
+const serializeMarkdownContent = (metadata: object, content: string): string => {
+  const frontmatterDocument = matter.stringify('', metadata)
+  const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)
+  // Side effect: keep markdown content exactly as provided; only prefix frontmatter.
+  return `${frontmatterPrefix}${content}`
+}
+
+export const parsePromptMarkdown = (
+  fileText: string,
+  modifiedAt: string = ''
+): PromptPersisted | null =>
+  parseMarkdownContent(fileText, modifiedAt, isPromptFrontmatterData, (data, content, timestamp) => ({
+    id: data.id,
+    title: data.title ?? '',
+    fallbackTitle: data.fallbackTitle ?? '',
+    createdAt: data.createdAt,
+    modifiedAt: timestamp,
+    promptText: content,
+    status: data.status,
+    ...(data.status === PromptStatus.Completed ? { completedAt: data.completedAt } : {})
+  }))
+
 export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
-  const baseMetadata = {
-    id: prompt.id,
-    createdAt: prompt.createdAt,
-    ...(normalizePromptTitle(prompt.title).length > 0
-      ? { title: prompt.title }
-      : { fallbackTitle: prompt.fallbackTitle })
-  }
+  const baseMetadata = createTitleMetadata(prompt)
   const metadata: PromptFrontmatterData =
     prompt.status === PromptStatus.Completed && prompt.completedAt
       ? {
@@ -147,48 +165,28 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
           status:
             prompt.status === PromptStatus.InProgress ? PromptStatus.InProgress : PromptStatus.Todo
         }
-  const frontmatterDocument = matter.stringify('', metadata)
-  const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)
-
-  // Side effect: keep promptText exactly as provided; only prefix frontmatter.
-  return `${frontmatterPrefix}${prompt.promptText}`
+  return serializeMarkdownContent(metadata, prompt.promptText)
 }
 
 export const parsePromptTemplateMarkdown = (
   fileText: string,
   modifiedAt: string = ''
-): PromptTemplatePersisted | null => {
-  try {
-    // Side effect: pass explicit options to avoid gray-matter's internal content cache path.
-    const parsed = matter(fileText, {})
-    if (!isPromptTemplateFrontmatterData(parsed.data)) {
-      return null
-    }
-
-    return {
-      id: parsed.data.id,
-      title: parsed.data.title ?? '',
-      fallbackTitle: parsed.data.fallbackTitle ?? '',
-      createdAt: parsed.data.createdAt,
-      modifiedAt,
-      templateText: parsed.content
-    }
-  } catch {
-    return null
-  }
-}
+): PromptTemplatePersisted | null =>
+  parseMarkdownContent(
+    fileText,
+    modifiedAt,
+    isPromptTemplateFrontmatterData,
+    (data, content, timestamp) => ({
+      id: data.id,
+      title: data.title ?? '',
+      fallbackTitle: data.fallbackTitle ?? '',
+      createdAt: data.createdAt,
+      modifiedAt: timestamp,
+      templateText: content
+    })
+  )
 
 export const serializePromptTemplateMarkdown = (template: PromptTemplatePersisted): string => {
-  const metadata: PromptTemplateFrontmatterData = {
-    id: template.id,
-    createdAt: template.createdAt,
-    ...(normalizePromptTitle(template.title).length > 0
-      ? { title: template.title }
-      : { fallbackTitle: template.fallbackTitle })
-  }
-  const frontmatterDocument = matter.stringify('', metadata)
-  const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)
-
-  // Side effect: keep templateText exactly as provided; only prefix frontmatter.
-  return `${frontmatterPrefix}${template.templateText}`
+  const metadata: PromptTemplateFrontmatterData = createTitleMetadata(template)
+  return serializeMarkdownContent(metadata, template.templateText)
 }

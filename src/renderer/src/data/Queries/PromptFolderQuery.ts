@@ -2,28 +2,23 @@ import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
 } from '@shared/PromptFolder'
-import { createPromptFull } from '@shared/Prompt'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
-import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { getPromptFolderAllPromptIds } from '../Collections/PromptFolderEntries'
+import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
-import { deletePromptDrafts, upsertPromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   setPromptFolderDraftHasLoadedInitialData,
   upsertPromptFolderDrafts
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { upsertPromptUiStateDrafts } from '../UiState/PromptUiStateDraftMutations.svelte.ts'
+import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 
 export const loadPromptFolderInitial = async (
   workspaceId: string,
   promptFolderId: string
 ): Promise<void> => {
-  const previousPromptFolder = promptFolderCollection.get(promptFolderId)
-  const previousPromptIds = new Set(
-    previousPromptFolder ? getPromptFolderAllPromptIds(previousPromptFolder) : []
-  )
+  const previousGraph = collectPromptFolderGraphIds([promptFolderId])
 
   const result = await runLoad(() =>
     ipcInvokeWithPayload<LoadPromptFolderInitialResult, LoadPromptFolderInitialPayload>(
@@ -35,13 +30,7 @@ export const loadPromptFolderInitial = async (
     )
   )
 
-  const fullPromptSnapshots = result.prompts.map((prompt) => ({
-    ...prompt,
-    data: createPromptFull(prompt.data)
-  }))
-
-  promptCollection.utils.upsertManyAuthoritative(fullPromptSnapshots)
-  upsertPromptDrafts(fullPromptSnapshots.map((prompt) => prompt.data))
+  for (const adapter of markdownContentQueryAdapters) adapter.applyFolderResult(result)
   promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
   upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
   promptUiStateCollection.utils.upsertManyAuthoritative(result.promptUiStates)
@@ -49,19 +38,14 @@ export const loadPromptFolderInitial = async (
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
 
   // Prune drafts against the reconciled collection state after applying the load result.
-  const nextPromptFolder = promptFolderCollection.get(promptFolderId)
-  if (!nextPromptFolder) {
+  if (!promptFolderCollection.get(promptFolderId)) {
     throw new Error('Prompt folder not loaded after initial load')
   }
-  const nextPromptIds = new Set(getPromptFolderAllPromptIds(nextPromptFolder))
-  const removedPromptIds: string[] = []
-
-  for (const previousPromptId of previousPromptIds) {
-    if (!nextPromptIds.has(previousPromptId)) {
-      removedPromptIds.push(previousPromptId)
-    }
+  const nextGraph = collectPromptFolderGraphIds([promptFolderId])
+  for (const adapter of markdownContentQueryAdapters) {
+    const removedContentIds = [...previousGraph.contentIds[adapter.kind]].filter(
+      (contentId) => !nextGraph.contentIds[adapter.kind].has(contentId)
+    )
+    adapter.delete(removedContentIds)
   }
-
-  promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
-  deletePromptDrafts(removedPromptIds)
 }

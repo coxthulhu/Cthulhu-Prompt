@@ -1,24 +1,30 @@
 import { PromptStatus } from '@shared/Prompt'
 import type {
-  CreatePromptPayload,
-  DeletePromptPayload,
-  MovePromptPayload,
   PromptPersisted,
-  PromptRevisionPayload,
   SetPromptStatusPayload
 } from '@shared/Prompt'
 import type {
   CreatePromptFolderPayload,
   DeletePromptFolderPayload,
   LoadPromptFolderInitialPayload,
+  AnyPromptFolderSettings,
   PromptFolder,
   PromptFolderSettings,
+  PromptTemplateFolderSettings,
   RenamePromptFolderPayload,
   UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
+import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type { PromptUiState, PromptUiStateRevisionPayload } from '@shared/PromptUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
+import type {
+  CreateMarkdownContentPayload,
+  DeleteMarkdownContentPayload,
+  MarkdownContentPersisted,
+  MarkdownContentRevisionPayload,
+  MoveMarkdownContentPayload
+} from '@shared/MarkdownContent'
 import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/SystemSettings'
 import type {
   LoadWorkspacePersistenceRequest,
@@ -220,7 +226,20 @@ const parsePromptFolderSettings = parseObject<PromptFolderSettings>({
   folderSuffix: parseNullableString
 })
 
-const parsePromptFolder = parseObject<PromptFolder>({
+const parsePromptTemplateFolderSettings = parseObject<PromptTemplateFolderSettings>({
+  folderDescription: parseNullableString
+})
+
+const parseAnyPromptFolderSettings: Parser<AnyPromptFolderSettings> = (value) => {
+  return parsePromptFolderSettings(value) ?? parsePromptTemplateFolderSettings(value)
+}
+
+type ParsedPromptFolder = Omit<PromptFolder, 'kind' | 'settings'> & {
+  kind: PromptFolder['kind']
+  settings: AnyPromptFolderSettings
+}
+
+const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
   id: parseString,
   kind: (value) => (value === 'prompt' || value === 'template' ? value : null),
   folderName: parseString,
@@ -233,14 +252,24 @@ const parsePromptFolder = parseObject<PromptFolder>({
     })
   ),
   completedPromptIds: parseArray(parseString),
-  settings: parsePromptFolderSettings
+  settings: parseAnyPromptFolderSettings
 })
+
+const parsePromptFolder: Parser<PromptFolder> = (value) => {
+  const promptFolder = parsePromptFolderBase(value)
+  if (!promptFolder) return null
+
+  const hasPromptSettings = 'folderPrefix' in promptFolder.settings
+  if (hasPromptSettings !== (promptFolder.kind === 'prompt')) return null
+
+  return promptFolder as PromptFolder
+}
 
 const parsePromptFolderRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
 
 const parsePromptFolderSettingsPayloadEntity =
-  parseRevisionPayloadEntity<PromptFolderSettings>(parsePromptFolderSettings)
+  parseRevisionPayloadEntity<AnyPromptFolderSettings>(parseAnyPromptFolderSettings)
 
 const parseSystemSettings = parseObject<SystemSettings>({
   promptFontSize: parseNumber,
@@ -328,6 +357,18 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
 
 const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
 
+const parsePromptTemplate = parseObject<PromptTemplatePersisted>({
+  id: parseString,
+  title: parseString,
+  fallbackTitle: parseString,
+  createdAt: parseString,
+  modifiedAt: parseString,
+  templateText: parseString
+})
+
+const parsePromptTemplateRevisionPayloadEntity =
+  parseRevisionPayloadEntity<PromptTemplatePersisted>(parsePromptTemplate)
+
 const parsePromptUiState = parseObject<PromptUiState>({
   workspaceId: parseString,
   promptId: parseString,
@@ -413,52 +454,85 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
 const parseCreatePromptFolderWireRequest: Parser<IpcRequestWithPayload<CreatePromptFolderPayload>> =
   parseWireRequestWithPayload<CreatePromptFolderPayload>(parseCreatePromptFolderPayload)
 
-const parseCreatePromptPayload: Parser<CreatePromptPayload> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
+const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPersisted>(
+  parseContentRevisionPayloadEntity: Parser<RevisionPayloadEntity<TContent>>
+) => {
+  const parseCreatePayload: Parser<CreateMarkdownContentPayload<TContent>> = (value) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+
+    const record = value as Record<string, unknown>
+    if (
+      Object.keys(record).length !== 3 ||
+      !('promptFolder' in record) ||
+      !('content' in record) ||
+      !('previousEntryId' in record)
+    ) {
+      return null
+    }
+
+    const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
+    const content = parseContentRevisionPayloadEntity(record.content)
+    const previousEntryId = record.previousEntryId
+    if (!promptFolder || !content || (previousEntryId !== null && typeof previousEntryId !== 'string')) {
+      return null
+    }
+
+    return { promptFolder, content, previousEntryId }
   }
 
-  const record = value as Record<string, unknown>
-  const valueKeys = Object.keys(record)
+  const parseRevisionPayload = parseObject<MarkdownContentRevisionPayload<TContent>>({
+    content: parseContentRevisionPayloadEntity
+  })
+  const parseDeletePayload = parseObject<DeleteMarkdownContentPayload<TContent>>({
+    promptFolder: parsePromptFolderRevisionPayloadEntity,
+    content: parseContentRevisionPayloadEntity
+  })
+  const parseMovePayload: Parser<MoveMarkdownContentPayload<TContent>> = (value) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
 
-  if (
-    valueKeys.length !== 3 ||
-    !('promptFolder' in record) ||
-    !('prompt' in record) ||
-    !('previousEntryId' in record)
-  ) {
-    return null
-  }
+    const record = value as Record<string, unknown>
+    if (
+      Object.keys(record).length !== 4 ||
+      !('sourcePromptFolder' in record) ||
+      !('destinationPromptFolder' in record) ||
+      !('content' in record) ||
+      !('previousEntryId' in record)
+    ) {
+      return null
+    }
 
-  const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
-  const prompt = parsePromptRevisionPayloadEntity(record.prompt)
+    const sourcePromptFolder = parsePromptFolderRevisionPayloadEntity(record.sourcePromptFolder)
+    const destinationPromptFolder = parsePromptFolderRevisionPayloadEntity(
+      record.destinationPromptFolder
+    )
+    const content = parseContentRevisionPayloadEntity(record.content)
+    const previousEntryId = record.previousEntryId
+    if (
+      !sourcePromptFolder ||
+      !destinationPromptFolder ||
+      !content ||
+      (previousEntryId !== null && typeof previousEntryId !== 'string')
+    ) {
+      return null
+    }
 
-  if (promptFolder === null || prompt === null) {
-    return null
-  }
-
-  const previousEntryId = record.previousEntryId
-
-  if (previousEntryId !== null && typeof previousEntryId !== 'string') {
-    return null
+    return { sourcePromptFolder, destinationPromptFolder, content, previousEntryId }
   }
 
   return {
-    promptFolder,
-    prompt,
-    previousEntryId
+    create: parseWireRequestWithPayload(parseCreatePayload),
+    update: parseWireRequestWithPayload(parseRevisionPayload),
+    delete: parseWireRequestWithPayload(parseDeletePayload),
+    move: parseWireRequestWithPayload(parseMovePayload)
   }
 }
 
-const parseCreatePromptWireRequest: Parser<IpcRequestWithPayload<CreatePromptPayload>> =
-  parseWireRequestWithPayload<CreatePromptPayload>(parseCreatePromptPayload)
-
-const parsePromptRevisionPayload = parseObject<PromptRevisionPayload>({
-  prompt: parsePromptRevisionPayloadEntity
-})
-
-const parseUpdatePromptRevisionWireRequest: Parser<IpcRequestWithPayload<PromptRevisionPayload>> =
-  parseWireRequestWithPayload<PromptRevisionPayload>(parsePromptRevisionPayload)
+const promptContentPayloadParsers = createMarkdownContentPayloadParsers(
+  parsePromptRevisionPayloadEntity
+)
+const promptTemplateContentPayloadParsers = createMarkdownContentPayloadParsers(
+  parsePromptTemplateRevisionPayloadEntity
+)
 
 const parseUpdatePromptFolderSettingsPayload = parseObject<UpdatePromptFolderSettingsPayload>({
   promptFolder: parsePromptFolderSettingsPayloadEntity
@@ -508,59 +582,6 @@ const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value
 
 const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePromptFolderPayload>> =
   parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
-
-const parseDeletePromptPayload = parseObject<DeletePromptPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity,
-  prompt: parsePromptRevisionPayloadEntity
-})
-
-const parseDeletePromptWireRequest: Parser<IpcRequestWithPayload<DeletePromptPayload>> =
-  parseWireRequestWithPayload<DeletePromptPayload>(parseDeletePromptPayload)
-
-const parseMovePromptPayload: Parser<MovePromptPayload> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const valueKeys = Object.keys(record)
-
-  if (
-    valueKeys.length !== 4 ||
-    !('sourcePromptFolder' in record) ||
-    !('destinationPromptFolder' in record) ||
-    !('prompt' in record) ||
-    !('previousEntryId' in record)
-  ) {
-    return null
-  }
-
-  const sourcePromptFolder = parsePromptFolderRevisionPayloadEntity(record.sourcePromptFolder)
-  const destinationPromptFolder = parsePromptFolderRevisionPayloadEntity(
-    record.destinationPromptFolder
-  )
-  const prompt = parsePromptRevisionPayloadEntity(record.prompt)
-
-  if (sourcePromptFolder === null || destinationPromptFolder === null || prompt === null) {
-    return null
-  }
-
-  const previousEntryId = record.previousEntryId
-
-  if (previousEntryId !== null && typeof previousEntryId !== 'string') {
-    return null
-  }
-
-  return {
-    sourcePromptFolder,
-    destinationPromptFolder,
-    prompt,
-    previousEntryId
-  }
-}
-
-const parseMovePromptWireRequest: Parser<IpcRequestWithPayload<MovePromptPayload>> =
-  parseWireRequestWithPayload<MovePromptPayload>(parseMovePromptPayload)
 
 const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
   promptFolder: parsePromptFolderRevisionPayloadEntity,
@@ -690,10 +711,10 @@ export const parseCreatePromptFolderRequest = createRequestParser(
   parseCreatePromptFolderWireRequest
 )
 
-export const parseCreatePromptRequest = createRequestParser(parseCreatePromptWireRequest)
+export const parseCreatePromptRequest = createRequestParser(promptContentPayloadParsers.create)
 
 export const parseUpdatePromptRevisionRequest = createRequestParser(
-  parseUpdatePromptRevisionWireRequest
+  promptContentPayloadParsers.update
 )
 
 export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
@@ -708,9 +729,25 @@ export const parseDeletePromptFolderRequest = createRequestParser(
   parseDeletePromptFolderWireRequest
 )
 
-export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
+export const parseDeletePromptRequest = createRequestParser(promptContentPayloadParsers.delete)
 
-export const parseMovePromptRequest = createRequestParser(parseMovePromptWireRequest)
+export const parseMovePromptRequest = createRequestParser(promptContentPayloadParsers.move)
+
+export const parseCreatePromptTemplateRequest = createRequestParser(
+  promptTemplateContentPayloadParsers.create
+)
+
+export const parseUpdatePromptTemplateRevisionRequest = createRequestParser(
+  promptTemplateContentPayloadParsers.update
+)
+
+export const parseDeletePromptTemplateRequest = createRequestParser(
+  promptTemplateContentPayloadParsers.delete
+)
+
+export const parseMovePromptTemplateRequest = createRequestParser(
+  promptTemplateContentPayloadParsers.move
+)
 
 export const parseSetPromptStatusRequest = createRequestParser(parseSetPromptStatusWireRequest)
 

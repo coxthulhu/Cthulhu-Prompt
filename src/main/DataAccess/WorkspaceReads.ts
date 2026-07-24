@@ -12,7 +12,6 @@ import {
   type FolderEntryRef
 } from '@shared/OrderContainer'
 import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
   type PromptFolder,
   type PromptFolderKind,
@@ -276,16 +275,9 @@ export const readPromptFolder = (
   kind: PromptFolderKind = 'prompt'
 ): PromptFolder => {
   const info = readPromptFolderInfo(workspacePath, folderPath, kind)
-  const folderSettings = Object.fromEntries(
-    PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
-      field,
-      kind === 'template' && field !== 'folderDescription'
-        ? null
-        : readOptionalTextFile(
-            resolvePromptFolderSettingsTextPath(workspacePath, folderPath, field, kind)
-          )
-    ])
-  ) as PromptFolderSettings
+  const folderDescription = readOptionalTextFile(
+    resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
+  )
   const entries = readPromptFolderEntries(workspacePath, folderPath, kind)
   const completedPromptIds =
     kind === 'prompt'
@@ -297,76 +289,72 @@ export const readPromptFolder = (
         ]
       : []
 
-  return {
+  const baseFolder = {
     id: info.folderId,
-    kind: info.kind,
     folderName,
     displayName: info.displayName,
     entries,
-    completedPromptIds,
+    completedPromptIds
+  }
+
+  if (kind === 'template') {
+    return {
+      ...baseFolder,
+      kind,
+      settings: { folderDescription }
+    }
+  }
+
+  const folderSettings: PromptFolderSettings = {
+    folderDescription,
+    folderPrefix: readOptionalTextFile(
+      resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderPrefix', kind)
+    ),
+    folderSuffix: readOptionalTextFile(
+      resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderSuffix', kind)
+    )
+  }
+
+  return {
+    ...baseFolder,
+    kind,
     settings: copyPromptFolderSettings(folderSettings)
   }
 }
 
-export const readPrompts = (workspacePath: string, folderName: string): PromptPersisted[] => {
+const readMarkdownContents = <TContent>(
+  workspacePath: string,
+  folderName: string,
+  kind: PromptFolderKind,
+  parseMarkdown: (fileText: string, modifiedAt: string) => TContent | null
+): TContent[] => {
   const fs = getFs()
-  const promptIds = readContentIds(workspacePath, folderName, 'prompt')
-  const promptStemByPromptId = readPromptStemByPromptId(workspacePath, folderName)
-  const folderPath = resolvePromptFolderPath(workspacePath, folderName, 'prompt')
-  const prompts: PromptPersisted[] = []
-
-  for (const promptId of promptIds) {
-    const promptStem = promptStemByPromptId.get(promptId)
-
-    if (!promptStem) {
-      continue
-    }
-
-    const promptPaths = resolvePromptPathsFromStem(folderPath, promptStem, 'prompt')
-
-    if (!fs.existsSync(promptPaths.markdownPath)) {
-      continue
-    }
-
-    const prompt = parsePromptMarkdown(
-      fs.readFileSync(promptPaths.markdownPath, 'utf8'),
-      readFileModifiedAt(promptPaths.markdownPath)
+  const contentIds = readContentIds(workspacePath, folderName, kind)
+  const contentStemById = readContentStemById(workspacePath, folderName, kind)
+  const folderPath = resolvePromptFolderPath(workspacePath, folderName, kind)
+  const contents: TContent[] = []
+  for (const contentId of contentIds) {
+    const contentStem = contentStemById.get(contentId)
+    if (!contentStem) continue
+    const contentPaths = resolvePromptPathsFromStem(folderPath, contentStem, kind)
+    if (!fs.existsSync(contentPaths.markdownPath)) continue
+    const content = parseMarkdown(
+      fs.readFileSync(contentPaths.markdownPath, 'utf8'),
+      readFileModifiedAt(contentPaths.markdownPath)
     )
-    if (!prompt) {
-      continue
-    }
-    prompts.push(prompt)
+    if (content) contents.push(content)
   }
-
-  return prompts
+  return contents
 }
+
+export const readPrompts = (workspacePath: string, folderName: string): PromptPersisted[] =>
+  readMarkdownContents(workspacePath, folderName, 'prompt', parsePromptMarkdown)
 
 export const readPromptTemplates = (
   workspacePath: string,
   folderName: string
-): PromptTemplatePersisted[] => {
-  const fs = getFs()
-  const templateIds = readContentIds(workspacePath, folderName, 'template')
-  const templateStemById = readPromptTemplateStemById(workspacePath, folderName)
-  const folderPath = resolvePromptFolderPath(workspacePath, folderName, 'template')
-  const templates: PromptTemplatePersisted[] = []
-
-  for (const templateId of templateIds) {
-    const templateStem = templateStemById.get(templateId)
-    if (!templateStem) continue
-
-    const templatePaths = resolvePromptPathsFromStem(folderPath, templateStem, 'template')
-    if (!fs.existsSync(templatePaths.markdownPath)) continue
-
-    const template = parsePromptTemplateMarkdown(
-      fs.readFileSync(templatePaths.markdownPath, 'utf8'),
-      readFileModifiedAt(templatePaths.markdownPath)
-    )
-    if (template) templates.push(template)
-  }
-
-  return templates
-}
+): PromptTemplatePersisted[] =>
+  readMarkdownContents(workspacePath, folderName, 'template', parsePromptTemplateMarkdown)
 
 export const readPromptSummaries = (
   workspacePath: string,

@@ -13,7 +13,7 @@ import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { compactGuid } from '@shared/compactGuid'
 import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { folderEntryRef } from '@shared/OrderContainer'
+import { folderEntryRef, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
@@ -107,39 +107,34 @@ export const createPromptFolder = async (
 
   const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
   const optimisticPromptFolderId = compactGuid(crypto.randomUUID())
+  const optimisticPromptFolder: PromptFolder = {
+    id: optimisticPromptFolderId,
+    kind,
+    folderName,
+    displayName: normalizedDisplayName,
+    entries: [],
+    completedPromptIds: [],
+    settings: createEmptyPromptFolderSettings(kind)
+  } as PromptFolder
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.insert({
-        id: optimisticPromptFolderId,
-        kind,
-        folderName,
-        displayName: normalizedDisplayName,
-        entries: [],
-        completedPromptIds: [],
-        settings: createEmptyPromptFolderSettings()
-      })
+      collections.promptFolder.insert(optimisticPromptFolder)
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
-        settings: createEmptyPromptFolderSettings(),
+        settings: createEmptyPromptFolderSettings(kind),
         hasLoadedInitialData: false
       })
       if (parentPromptFolderId) {
         collections.promptFolder.update(parentPromptFolderId, (draft) => {
-          const insertIndex =
-            previousEntryId === null
-              ? 0
-              : draft.entries.findIndex((entry) => entry.id === previousEntryId) + 1
+          const insertIndex = resolveEntryInsertIndex(draft.entries, previousEntryId)!
           const entries = [...draft.entries]
           entries.splice(insertIndex, 0, folderEntryRef(optimisticPromptFolderId))
           draft.entries = entries
         })
       } else {
         collections.workspace.update(workspaceId, (draft) => {
-          const insertIndex =
-            previousEntryId === null
-              ? 0
-              : draft.entries.findIndex((entry) => entry.id === previousEntryId) + 1
+          const insertIndex = resolveEntryInsertIndex(draft.entries, previousEntryId)!
           const entries = [...draft.entries]
           entries.splice(insertIndex, 0, folderEntryRef(optimisticPromptFolderId))
           draft.entries = entries

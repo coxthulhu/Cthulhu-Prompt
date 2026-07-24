@@ -1259,7 +1259,7 @@ describe('Prompt folder prompt management', () => {
           payload: {
             sourcePromptFolder: toPayloadEntity(sourcePromptFolder),
             destinationPromptFolder: toPayloadEntity(destinationPromptFolder),
-            prompt: toPayloadEntity(prompt),
+            content: toPayloadEntity(prompt),
             previousEntryId: null
           }
         })

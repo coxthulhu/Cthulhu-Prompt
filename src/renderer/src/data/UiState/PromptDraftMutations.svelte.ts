@@ -1,4 +1,4 @@
-import type { Prompt, PromptFull, PromptSummaryData } from '@shared/Prompt'
+import type { Prompt } from '@shared/Prompt'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
@@ -10,74 +10,31 @@ import {
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
-import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
-import {
-  clearPromptEditorMeasuredHeight,
-  clearPromptEditorMeasuredHeights,
-  recordPromptEditorMeasuredHeight
-} from './PromptDraftUiCache.svelte.ts'
+import { promptDraftMutations, upsertPromptDraft } from './PromptDraftHydration'
+import { recordPromptEditorMeasuredHeight } from './PromptDraftUiCache.svelte.ts'
 
 export type PromptDraftState = PromptDraftRecord
-
-const toPromptSnapshot = (prompt: PromptFull, isEdited = false): PromptDraftRecord => ({
-  id: prompt.id,
-  title: prompt.title,
-  fallbackTitle: prompt.fallbackTitle,
-  createdAt: prompt.createdAt,
-  modifiedAt: prompt.modifiedAt,
-  promptText: prompt.promptText,
-  isEdited
-})
-
-const toPromptSummaryDraftSnapshot = (prompt: PromptSummaryData): PromptDraftRecord => ({
-  id: prompt.id,
-  title: prompt.title,
-  fallbackTitle: prompt.fallbackTitle,
-  createdAt: '',
-  modifiedAt: prompt.modifiedAt,
-  promptText: '',
-  isEdited: false
-})
-
-const haveSamePrompt = (left: PromptDraftRecord, right: PromptDraftRecord): boolean => {
-  return (
-    left.id === right.id &&
-    left.title === right.title &&
-    left.fallbackTitle === right.fallbackTitle &&
-    left.createdAt === right.createdAt &&
-    left.modifiedAt === right.modifiedAt &&
-    left.promptText === right.promptText &&
-    left.isEdited === right.isEdited
-  )
-}
-
-const getPromptDraftModifiedAt = (): string => {
-  return new Date().toISOString()
-}
 
 type PromptDraftOptimisticMutationOptions = {
   mutatePromptDraft: (draft: PromptDraftRecord) => void
   mutatePrompt?: (draft: Prompt) => void
 }
 
+const getPromptDraftModifiedAt = (): string => new Date().toISOString()
+
 const getPromptIdsForPrompt = (promptId: string): string[] => {
   for (const promptFolder of promptFolderCollection.values()) {
     const promptIds = getPromptFolderPromptIds(promptFolder)
-    if (promptIds.includes(promptId)) {
-      return promptIds
-    }
+    if (promptIds.includes(promptId)) return promptIds
   }
-
   return [promptId]
 }
 
 const mutatePromptDraftOptimistically = (
   promptId: string,
-  options: PromptDraftOptimisticMutationOptions
+  { mutatePromptDraft, mutatePrompt }: PromptDraftOptimisticMutationOptions
 ): void => {
-  const { mutatePromptDraft, mutatePrompt } = options
-
   mutatePacedPromptAutosaveUpdate({
     promptId,
     debounceMs: AUTOSAVE_MS,
@@ -86,123 +43,17 @@ const mutatePromptDraftOptimistically = (
         mutatePromptDraft(draft)
         markPromptDraftEdited(draft)
       })
-
-      if (mutatePrompt) {
-        collections.prompt.update(promptId, mutatePrompt)
-      }
+      if (mutatePrompt) collections.prompt.update(promptId, mutatePrompt)
     }
   })
 }
 
-export const upsertPromptDraft = (prompt: PromptFull): void => {
-  upsertPromptDrafts([prompt])
-}
+export { upsertPromptDraft }
+export const upsertPromptSummaryDrafts = promptDraftMutations.upsertSummaryDrafts
+export const upsertPromptDrafts = promptDraftMutations.upsertDrafts
 
-export const upsertPromptSummaryDrafts = (prompts: PromptSummaryData[]): void => {
-  if (prompts.length === 0) {
-    return
-  }
-
-  const draftInserts: PromptDraftRecord[] = []
-  const draftUpdatesById: Record<string, Pick<PromptSummaryData, 'title' | 'fallbackTitle'>> = {}
-  const draftUpdateIds: string[] = []
-
-  for (const prompt of prompts) {
-    const existingRecord = promptDraftCollection.get(prompt.id)
-    if (!existingRecord) {
-      draftInserts.push(toPromptSummaryDraftSnapshot(prompt))
-      continue
-    }
-
-    if (
-      existingRecord.title === prompt.title &&
-      existingRecord.fallbackTitle === prompt.fallbackTitle
-    ) {
-      continue
-    }
-
-    if (!draftUpdatesById[prompt.id]) {
-      draftUpdateIds.push(prompt.id)
-    }
-    draftUpdatesById[prompt.id] = {
-      title: prompt.title,
-      fallbackTitle: prompt.fallbackTitle
-    }
-  }
-
-  if (draftInserts.length > 0) {
-    promptDraftCollection.insert(draftInserts)
-  }
-
-  if (draftUpdateIds.length > 0) {
-    promptDraftCollection.update(draftUpdateIds, (draftRecords) => {
-      for (const draftRecord of draftRecords) {
-        const nextDraft = draftUpdatesById[draftRecord.id]
-        if (!nextDraft) {
-          continue
-        }
-
-        draftRecord.title = nextDraft.title
-        draftRecord.fallbackTitle = nextDraft.fallbackTitle
-      }
-    })
-  }
-}
-
-export const upsertPromptDrafts = (prompts: PromptFull[]): void => {
-  if (prompts.length === 0) {
-    return
-  }
-
-  const draftInserts: PromptDraftRecord[] = []
-  const draftUpdatesById: Record<string, PromptDraftRecord> = {}
-  const draftUpdateIds: string[] = []
-
-  for (const prompt of prompts) {
-    const existingRecord = promptDraftCollection.get(prompt.id)
-    const promptSnapshot = toPromptSnapshot(prompt, existingRecord?.isEdited)
-
-    if (!existingRecord) {
-      clearPromptEditorMeasuredHeight(prompt.id)
-      draftInserts.push(promptSnapshot)
-      continue
-    }
-
-    if (haveSamePrompt(existingRecord, promptSnapshot)) {
-      continue
-    }
-
-    if (existingRecord.promptText !== promptSnapshot.promptText) {
-      clearPromptEditorMeasuredHeight(prompt.id)
-    }
-
-    if (!draftUpdatesById[prompt.id]) {
-      draftUpdateIds.push(prompt.id)
-    }
-    draftUpdatesById[prompt.id] = promptSnapshot
-  }
-
-  if (draftInserts.length > 0) {
-    promptDraftCollection.insert(draftInserts)
-  }
-
-  if (draftUpdateIds.length > 0) {
-    promptDraftCollection.update(draftUpdateIds, (draftRecords) => {
-      for (const draftRecord of draftRecords) {
-        const nextSnapshot = draftUpdatesById[draftRecord.id]
-        if (!nextSnapshot) {
-          continue
-        }
-
-        Object.assign(draftRecord, nextSnapshot)
-      }
-    })
-  }
-}
-
-export const getPromptDraftState = (promptId: string): PromptDraftState => {
-  return promptDraftCollection.get(promptId)!
-}
+export const getPromptDraftState = (promptId: string): PromptDraftState =>
+  promptDraftCollection.get(promptId)!
 
 export const setPromptDraftTitle = (promptId: string, title: string): void => {
   const draftRecord = getPromptDraftState(promptId)
@@ -214,7 +65,6 @@ export const setPromptDraftTitle = (promptId: string, title: string): void => {
     currentFallbackTitle: draftRecord.fallbackTitle,
     nextTitle: title
   })
-
   if (
     draftRecord.title === nextTitleFields.title &&
     draftRecord.fallbackTitle === nextTitleFields.fallbackTitle
@@ -232,9 +82,7 @@ export const setPromptDraftTitle = (promptId: string, title: string): void => {
     mutatePrompt: (draft) => {
       draft.title = nextTitleFields.title
       draft.fallbackTitle = nextTitleFields.fallbackTitle
-      if (draft.loadingState === 'full') {
-        draft.modifiedAt = modifiedAt
-      }
+      if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
     }
   })
 }
@@ -247,10 +95,7 @@ export const setPromptDraftText = (
   const draftRecord = getPromptDraftState(promptId)
   const textChanged = draftRecord.promptText !== promptText
   recordPromptEditorMeasuredHeight(promptId, measurement, textChanged)
-
-  if (!textChanged) {
-    return
-  }
+  if (!textChanged) return
 
   const modifiedAt = getPromptDraftModifiedAt()
   mutatePromptDraftOptimistically(promptId, {
@@ -259,36 +104,14 @@ export const setPromptDraftText = (
       draft.modifiedAt = modifiedAt
     },
     mutatePrompt: (draft) => {
-      if (draft.loadingState === 'summary') {
-        return
-      }
+      if (draft.loadingState === 'summary') return
       draft.promptText = promptText
       draft.modifiedAt = modifiedAt
     }
   })
 }
 
-export const flushPromptDraftAutosaves = async (): Promise<void> => {
-  const tasks = promptDraftCollection.toArray.map(async (draftRecord) => {
-    await submitPacedUpdateTransactionAndWait(promptCollection.id, draftRecord.id)
-  })
-  await Promise.allSettled(tasks)
-}
-
-export const deletePromptDrafts = (promptIds: string[]): void => {
-  if (promptIds.length === 0) {
-    return
-  }
-
-  clearPromptEditorMeasuredHeights(promptIds)
-  promptDraftCollection.delete(promptIds)
-}
-
-export const removePromptDraft = (promptId: string): void => {
-  deletePromptDrafts([promptId])
-}
-
-export const clearPromptDraftStore = (): void => {
-  const draftIds = Array.from(promptDraftCollection.keys(), (draftId) => String(draftId))
-  deletePromptDrafts(draftIds)
-}
+export const flushPromptDraftAutosaves = promptDraftMutations.flushAutosaves
+export const deletePromptDrafts = promptDraftMutations.deleteDrafts
+export const removePromptDraft = promptDraftMutations.removeDraft
+export const clearPromptDraftStore = promptDraftMutations.clearDraftStore

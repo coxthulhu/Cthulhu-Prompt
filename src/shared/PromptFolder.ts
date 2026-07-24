@@ -1,4 +1,5 @@
 import type { PromptPersisted } from './Prompt'
+import type { PromptTemplatePersisted } from './PromptTemplate'
 import type { EntryRef, OrderContainer } from './OrderContainer'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
@@ -7,14 +8,24 @@ import type { PromptUiState } from './PromptUiState'
 
 export type PromptFolderKind = 'prompt' | 'template'
 
-export interface PromptFolder extends OrderContainer<EntryRef> {
+interface PromptFolderBase extends OrderContainer<EntryRef> {
   id: string
-  kind: PromptFolderKind
   folderName: string
   displayName: string
   completedPromptIds: string[]
+}
+
+export interface PromptContentFolder extends PromptFolderBase {
+  kind: 'prompt'
   settings: PromptFolderSettings
 }
+
+export interface PromptTemplateFolder extends PromptFolderBase {
+  kind: 'template'
+  settings: PromptTemplateFolderSettings
+}
+
+export type PromptFolder = PromptContentFolder | PromptTemplateFolder
 
 export const PROMPT_FOLDER_SETTINGS_FIELDS = [
   'folderDescription',
@@ -25,6 +36,12 @@ export const PROMPT_FOLDER_SETTINGS_FIELDS = [
 export type PromptFolderSettingsField = (typeof PROMPT_FOLDER_SETTINGS_FIELDS)[number]
 
 export type PromptFolderSettings = Record<PromptFolderSettingsField, string | null>
+
+export type PromptTemplateFolderSettings = {
+  folderDescription: string | null
+}
+
+export type AnyPromptFolderSettings = PromptFolderSettings | PromptTemplateFolderSettings
 
 export type PromptFolderSettingsFieldMetadata = {
   field: PromptFolderSettingsField
@@ -69,27 +86,55 @@ export const PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
   PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, findSectionKey }) => [field, findSectionKey])
 ) as Record<PromptFolderSettingsField, string>
 
-export const createEmptyPromptFolderSettings = (): PromptFolderSettings => ({
-  folderDescription: null,
-  folderPrefix: null,
-  folderSuffix: null
-})
+export function createEmptyPromptFolderSettings(kind: 'template'): PromptTemplateFolderSettings
+export function createEmptyPromptFolderSettings(kind?: 'prompt'): PromptFolderSettings
+export function createEmptyPromptFolderSettings(kind: PromptFolderKind): AnyPromptFolderSettings
+export function createEmptyPromptFolderSettings(
+  kind: PromptFolderKind = 'prompt'
+): AnyPromptFolderSettings {
+  return kind === 'template'
+    ? { folderDescription: null }
+    : {
+        folderDescription: null,
+        folderPrefix: null,
+        folderSuffix: null
+      }
+}
 
-export const copyPromptFolderSettings = (settings: PromptFolderSettings): PromptFolderSettings => ({
-  folderDescription: settings.folderDescription,
-  folderPrefix: settings.folderPrefix,
-  folderSuffix: settings.folderSuffix
-})
+export function copyPromptFolderSettings(settings: PromptFolderSettings): PromptFolderSettings
+export function copyPromptFolderSettings(
+  settings: PromptTemplateFolderSettings
+): PromptTemplateFolderSettings
+export function copyPromptFolderSettings(settings: AnyPromptFolderSettings): AnyPromptFolderSettings
+export function copyPromptFolderSettings(
+  settings: AnyPromptFolderSettings
+): AnyPromptFolderSettings {
+  return 'folderPrefix' in settings
+    ? {
+        folderDescription: settings.folderDescription,
+        folderPrefix: settings.folderPrefix,
+        folderSuffix: settings.folderSuffix
+      }
+    : { folderDescription: settings.folderDescription }
+}
 
 export const haveSamePromptFolderSettings = (
-  left: PromptFolderSettings,
-  right: PromptFolderSettings
+  left: AnyPromptFolderSettings,
+  right: AnyPromptFolderSettings
 ): boolean => {
-  return PROMPT_FOLDER_SETTINGS_FIELDS.every((field) => left[field] === right[field])
+  if ('folderPrefix' in left !== 'folderPrefix' in right) {
+    return false
+  }
+
+  if ('folderPrefix' in left && 'folderPrefix' in right) {
+    return PROMPT_FOLDER_SETTINGS_FIELDS.every((field) => left[field] === right[field])
+  }
+
+  return left.folderDescription === right.folderDescription
 }
 
 export type UpdatePromptFolderSettingsPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolderSettings>
+  promptFolder: RevisionPayloadEntity<AnyPromptFolderSettings>
 }
 
 export type PromptFolderRevisionResponsePayload = {
@@ -136,5 +181,6 @@ export type LoadPromptFolderInitialPayload = {
 export type LoadPromptFolderInitialResult = IpcResult<{
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
   prompts: Array<RevisionEnvelope<PromptPersisted>>
+  promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
   promptUiStates: Array<RevisionEnvelope<PromptUiState>>
 }>

@@ -2,6 +2,7 @@ import { vol } from 'memfs'
 import { describe, expect, it, vi } from 'vitest'
 import { setFs } from '../../src/main/fs-provider'
 import { loadWorkspaceByPath } from '../../src/main/Registries/WorkspaceLoader'
+import { loadPromptFolderInitialData } from '../../src/main/Queries/PromptFolderQuery'
 import {
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath
@@ -59,17 +60,16 @@ describe('prompt template workspace loading', () => {
       'template-root',
       'template-nested'
     ])
-    expect(result.promptFolders.find((folder) => folder.id === 'template-root')?.data).toMatchObject(
-      {
-        kind: 'template',
-        entries: [{ kind: 'folder', id: 'template-nested' }],
-        settings: {
-          folderDescription: 'Root description',
-          folderPrefix: null,
-          folderSuffix: null
-        }
-      }
-    )
+    const rootTemplateFolder = result.promptFolders.find(
+      (folder) => folder.id === 'template-root'
+    )?.data
+    expect(rootTemplateFolder).toMatchObject({
+      kind: 'template',
+      entries: [{ kind: 'folder', id: 'template-nested' }]
+    })
+    expect(rootTemplateFolder?.settings).toEqual({
+      folderDescription: 'Root description'
+    })
     expect(result.promptTemplates).toHaveLength(1)
     const templateModifiedAt = vol
       .statSync(`${workspacePath}/Templates/Root/Nested/Nested Template.template.md`)
@@ -79,6 +79,21 @@ describe('prompt template workspace loading', () => {
       title: 'Nested Template',
       fallbackTitle: '',
       modifiedAt: templateModifiedAt
+    })
+
+    const folderResult = await loadPromptFolderInitialData({
+      workspaceId: result.workspace.id,
+      promptFolderId: 'template-root'
+    })
+    if (!folderResult.success) throw new Error(folderResult.error)
+
+    expect(folderResult.prompts).toEqual([])
+    expect(folderResult.promptUiStates).toEqual([])
+    expect(folderResult.promptTemplates).toHaveLength(1)
+    expect(folderResult.promptTemplates[0]?.data).toMatchObject({
+      id: 'nested-template',
+      title: 'Nested Template',
+      templateText: 'Use {{value}}.'
     })
   })
 })

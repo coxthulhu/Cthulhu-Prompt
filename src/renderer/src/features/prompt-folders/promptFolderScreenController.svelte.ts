@@ -228,9 +228,10 @@ export const createPromptFolderScreenController = ({
   const folderSettingsByFolderId = $derived.by<Record<string, PromptFolderSettings>>(() => {
     const settingsByFolderId: Record<string, PromptFolderSettings> = {}
     for (const folder of promptFolderQuery.data) {
-      if (!folder) continue
+      if (!folder || folder.kind !== 'prompt') continue
+      const draftSettings = promptFolderDraftById[folder.id]?.settings
       settingsByFolderId[folder.id] = copyPromptFolderSettings(
-        promptFolderDraftById[folder.id]?.settings ?? folder.settings
+        draftSettings && 'folderPrefix' in draftSettings ? draftSettings : folder.settings
       )
     }
     return settingsByFolderId

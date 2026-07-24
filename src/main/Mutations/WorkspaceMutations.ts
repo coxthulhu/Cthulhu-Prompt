@@ -15,7 +15,7 @@ import {
   folderEntryRef,
   moveEntryWithinSubset,
   removeEntry,
-  type EntryRef
+  resolveEntryInsertIndex
 } from '@shared/OrderContainer'
 import {
   buildPromptFolderSnapshot,
@@ -26,18 +26,6 @@ import {
   refreshPromptFolderTreePersistencePaths,
   collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
-
-const resolvePromptFolderInsertIndex = (
-  entries: readonly EntryRef[],
-  previousEntryId: string | null
-): number | null => {
-  if (previousEntryId === null) {
-    return 0
-  }
-
-  const previousIndex = entries.findIndex((entry) => entry.id === previousEntryId)
-  return previousIndex === -1 ? null : previousIndex + 1
-}
 
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
@@ -149,7 +137,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
             ? removeEntry(sourceEntries, 'folder', payload.promptFolderId)
             : (destinationParentPromptFolder?.committed.entries ??
               committedWorkspace.committed.entries)
-          const insertIndex = resolvePromptFolderInsertIndex(
+          const insertIndex = resolveEntryInsertIndex(
             destinationEntries,
             payload.previousEntryId
           )

@@ -1,8 +1,10 @@
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
+  type AnyPromptFolderSettings,
   type PromptFolder,
-  type PromptFolderSettings
+  type PromptFolderSettings,
+  type PromptTemplateFolderSettings
 } from '@shared/PromptFolder'
 import type { EntryRef } from '@shared/OrderContainer'
 import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
@@ -56,17 +58,27 @@ const fromPromptFolderInfoFile = (
   folderName: string,
   entries: EntryRef[],
   completedPromptIds: string[],
-  settings: PromptFolderSettings
+  settings: AnyPromptFolderSettings
 ): PromptFolder => {
-  return {
+  const baseFolder = {
     id: persistedInfo.folderId,
-    kind: persistedInfo.kind,
     folderName,
     displayName: persistedInfo.displayName,
     entries,
-    completedPromptIds,
-    settings
+    completedPromptIds
   }
+
+  return persistedInfo.kind === 'template'
+    ? {
+        ...baseFolder,
+        kind: 'template',
+        settings: settings as PromptTemplateFolderSettings
+      }
+    : {
+        ...baseFolder,
+        kind: 'prompt',
+        settings: settings as PromptFolderSettings
+      }
 }
 
 const readOptionalTextFile = (filePath: string): string | null => {
@@ -114,11 +126,10 @@ export const promptFolderPersistence: PersistenceLayer<
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const settingsTextChanges = settingsTextPaths.map(({ field, path }) => {
-      if (kind === 'template' && field !== 'folderDescription') {
-        return createStagedFileRemove(path)
-      }
-
-      const value = change.data.settings[field]
+      const value =
+        change.data.kind === 'template' && field !== 'folderDescription'
+          ? null
+          : change.data.settings[field as keyof typeof change.data.settings]
       if (value === null) {
         return createStagedFileRemove(path)
       }
@@ -172,16 +183,31 @@ export const promptFolderPersistence: PersistenceLayer<
             ).keys()
           ]
         : []
-    const folderSettings = Object.fromEntries(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
-        field,
-        kind === 'template' && field !== 'folderDescription'
-          ? null
-          : readOptionalTextFile(
-              resolvePromptFolderSettingsTextPath(workspacePath, folderPath, field, kind)
+    const folderDescription = readOptionalTextFile(
+      resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
+    )
+    const folderSettings: AnyPromptFolderSettings =
+      kind === 'template'
+        ? { folderDescription }
+        : {
+            folderDescription,
+            folderPrefix: readOptionalTextFile(
+              resolvePromptFolderSettingsTextPath(
+                workspacePath,
+                folderPath,
+                'folderPrefix',
+                kind
+              )
+            ),
+            folderSuffix: readOptionalTextFile(
+              resolvePromptFolderSettingsTextPath(
+                workspacePath,
+                folderPath,
+                'folderSuffix',
+                kind
+              )
             )
-      ])
-    ) as PromptFolderSettings
+          }
 
     return fromPromptFolderInfoFile(
       persistedInfo,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE,
   getPromptDisplayTitle,
   resolvePromptTitleUpdate,
   resolvePromptTitleUpdateForPromptIds,
@@ -81,5 +82,19 @@ describe('prompt fallback title helpers', () => {
         nextTitle: ''
       })
     ).toEqual({ title: '', fallbackTitle: 'New Prompt 1' })
+  })
+
+  it('numbers prompt template fallback titles from New Template', () => {
+    expect(
+      resolvePromptTitleUpdate({
+        prompts: [
+          { id: 'template-1', title: '', fallbackTitle: 'New Template' },
+          { id: 'template-2', title: '', fallbackTitle: 'New Template 1' }
+        ],
+        promptId: 'template-3',
+        nextTitle: '',
+        defaultFallbackTitle: DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE
+      })
+    ).toEqual({ title: '', fallbackTitle: 'New Template 2' })
   })
 })

@@ -4,7 +4,7 @@ import type { FilePersistenceStagedChange } from '../Persistence/FilePersistence
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
 
-type DataStoreKey = keyof typeof data
+export type DataStoreKey = keyof typeof data
 
 type StoreData<TStoreKey extends DataStoreKey> =
   (typeof data)[TStoreKey] extends RevisionData<infer TData, any> ? TData : never
@@ -54,7 +54,7 @@ export type AtomicDataCommittedResult<
   data: TData
 }
 
-type AtomicDataTransactionHandle<
+export type AtomicDataTransactionHandle<
   TStoreKey extends DataStoreKey,
   TData,
   TRevision extends number | null
@@ -70,7 +70,7 @@ type AtomicDataTransactionHandle<
   }
 }
 
-type AtomicDataStoreBuilder<TStoreKey extends DataStoreKey> = {
+export type AtomicDataStoreBuilder<TStoreKey extends DataStoreKey> = {
   create: (params: {
     id: string
     data: StoreData<TStoreKey>
@@ -88,7 +88,7 @@ type AtomicDataStoreBuilder<TStoreKey extends DataStoreKey> = {
   }) => AtomicDataTransactionHandle<TStoreKey, null, null>
 }
 
-type AtomicDataBuilder = {
+export type AtomicDataBuilder = {
   [TStoreKey in DataStoreKey]: AtomicDataStoreBuilder<TStoreKey>
 }
 

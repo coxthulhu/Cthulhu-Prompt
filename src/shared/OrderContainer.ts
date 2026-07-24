@@ -31,6 +31,15 @@ export const removeEntry = <TEntry extends EntryRef>(
   id: string
 ): TEntry[] => entries.filter((entry) => entry.kind !== kind || entry.id !== id)
 
+export const resolveEntryInsertIndex = (
+  entries: readonly EntryRef[],
+  previousEntryId: string | null
+): number | null => {
+  if (previousEntryId === null) return 0
+  const previousIndex = entries.findIndex((entry) => entry.id === previousEntryId)
+  return previousIndex === -1 ? null : previousIndex + 1
+}
+
 export const moveEntryWithinSubset = <TEntry extends EntryRef>(
   entries: readonly TEntry[],
   entryId: string,

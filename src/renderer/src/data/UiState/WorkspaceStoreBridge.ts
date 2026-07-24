@@ -1,6 +1,7 @@
 import { flushWorkspaceScopedAutosaves } from './AutosaveFlushes.svelte.ts'
 import { clearPromptFolderDraftStore } from './PromptFolderDraftMutations.svelte.ts'
 import { clearPromptDraftStore } from './PromptDraftMutations.svelte.ts'
+import { clearPromptTemplateDraftStore } from './PromptTemplateDraftMutations.svelte.ts'
 import { clearPromptUiStateStore } from './PromptUiStateDraftMutations.svelte.ts'
 
 let currentWorkspacePath: string | null = null
@@ -21,6 +22,7 @@ export const switchWorkspaceStoreBridge = async (
     // Side effect: reset workspace-scoped draft/screen state after the workspace path changes.
     clearPromptFolderDraftStore()
     clearPromptDraftStore()
+    clearPromptTemplateDraftStore()
     clearPromptUiStateStore()
   })
 

@@ -4,6 +4,7 @@ import {
 } from './RevisionMutation'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
+import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraftCollection'
 import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -38,6 +39,7 @@ const revisionCollections = {
 const optimisticCollections = {
   ...revisionCollections,
   promptDraft: promptDraftCollection,
+  promptTemplateDraft: promptTemplateDraftCollection,
   promptFolderDraft: promptFolderDraftCollection,
   promptUiStateDraft: promptUiStateDraftCollection,
   systemSettingsDraft: systemSettingsDraftCollection,

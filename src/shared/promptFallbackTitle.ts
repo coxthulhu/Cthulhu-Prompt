@@ -1,4 +1,5 @@
 export const DEFAULT_PROMPT_FALLBACK_TITLE = 'New Prompt'
+export const DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE = 'New Template'
 
 export type PromptFallbackTitleCandidate = {
   id: string
@@ -13,6 +14,7 @@ export type PromptTitleUpdateOptions = {
   currentFallbackTitle?: string
   nextTitle: string
   fallbackTitleWhenTitleCleared?: string
+  defaultFallbackTitle?: string
 }
 
 export type PromptTitleUpdateForPromptIdsOptions<TPrompt extends PromptFallbackTitleCandidate> =
@@ -49,11 +51,11 @@ export const resolveAvailablePromptFallbackTitle = (
   }
 
   let fallbackIndex = 1
-  while (fallbackTitles.has(`${DEFAULT_PROMPT_FALLBACK_TITLE} ${fallbackIndex}`)) {
+  while (fallbackTitles.has(`${baseFallbackTitle} ${fallbackIndex}`)) {
     fallbackIndex += 1
   }
 
-  return `${DEFAULT_PROMPT_FALLBACK_TITLE} ${fallbackIndex}`
+  return `${baseFallbackTitle} ${fallbackIndex}`
 }
 
 export const collectPromptFallbackTitleCandidates = <TPrompt extends PromptFallbackTitleCandidate>(
@@ -83,7 +85,8 @@ export const resolvePromptTitleUpdate = ({
   currentTitle = '',
   currentFallbackTitle = '',
   nextTitle,
-  fallbackTitleWhenTitleCleared = DEFAULT_PROMPT_FALLBACK_TITLE
+  fallbackTitleWhenTitleCleared,
+  defaultFallbackTitle = DEFAULT_PROMPT_FALLBACK_TITLE
 }: PromptTitleUpdateOptions): Pick<PromptFallbackTitleCandidate, 'title' | 'fallbackTitle'> => {
   const normalizedNextTitle = normalizePromptTitle(nextTitle)
   if (normalizedNextTitle.length > 0) {
@@ -93,8 +96,8 @@ export const resolvePromptTitleUpdate = ({
   const normalizedCurrentTitle = normalizePromptTitle(currentTitle)
   const preferredFallbackTitle =
     normalizedCurrentTitle.length > 0
-      ? fallbackTitleWhenTitleCleared
-      : currentFallbackTitle || DEFAULT_PROMPT_FALLBACK_TITLE
+      ? (fallbackTitleWhenTitleCleared ?? defaultFallbackTitle)
+      : currentFallbackTitle || defaultFallbackTitle
 
   return {
     title: '',
@@ -109,7 +112,8 @@ export const resolvePromptTitleUpdateForPromptIds = <TPrompt extends PromptFallb
   currentTitle,
   currentFallbackTitle,
   nextTitle,
-  fallbackTitleWhenTitleCleared
+  fallbackTitleWhenTitleCleared,
+  defaultFallbackTitle
 }: PromptTitleUpdateForPromptIdsOptions<TPrompt>): Pick<
   PromptFallbackTitleCandidate,
   'title' | 'fallbackTitle'
@@ -120,6 +124,7 @@ export const resolvePromptTitleUpdateForPromptIds = <TPrompt extends PromptFallb
     currentTitle,
     currentFallbackTitle,
     nextTitle,
-    fallbackTitleWhenTitleCleared
+    fallbackTitleWhenTitleCleared,
+    defaultFallbackTitle
   })
 }

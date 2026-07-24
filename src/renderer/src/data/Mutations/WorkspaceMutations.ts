@@ -7,20 +7,13 @@ import type {
 import type { IpcMutationActionResponse } from '@shared/IpcResult'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { getPromptFolderAllPromptIds } from '../Collections/PromptFolderEntries'
+import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import {
   deletePromptFolderDrafts,
   removePromptFolderDraft
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
-import { deletePromptDrafts, removePromptDraft } from '../UiState/PromptDraftMutations.svelte.ts'
-import {
-  deletePromptUiStates,
-  removePromptUiState
-} from '../UiState/PromptUiStateDraftMutations.svelte.ts'
 import {
   getSelectedWorkspaceId,
   setSelectedWorkspaceId
@@ -31,7 +24,7 @@ import {
   folderEntryRef,
   moveEntryWithinSubset,
   removeEntry,
-  type EntryRef
+  resolveEntryInsertIndex
 } from '@shared/OrderContainer'
 import type {
   DeletePromptFolderPayload,
@@ -39,6 +32,10 @@ import type {
   PromptFolder
 } from '@shared/PromptFolder'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
+import {
+  deletePromptFolderContentRecords,
+  deletePromptFolderContentsOptimistically
+} from './PromptFolderContentMutations'
 
 const collectWorkspacePromptFolders = (workspaceId: string): PromptFolder[] => {
   const workspace = workspaceCollection.get(workspaceId)
@@ -65,34 +62,11 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
     return
   }
 
-  const visitedFolderIds = new Set<string>()
-  const clearFolder = (promptFolderId: string): void => {
-    if (visitedFolderIds.has(promptFolderId)) return
-    visitedFolderIds.add(promptFolderId)
-    const promptFolder = promptFolderCollection.get(promptFolderId)
-
-    if (promptFolder) {
-      for (const promptId of getPromptFolderAllPromptIds(promptFolder)) {
-        promptCollection.utils.deleteAuthoritative(promptId)
-        removePromptDraft(promptId)
-        removePromptUiState(promptId)
-      }
-
-      for (const entry of promptFolder.entries) {
-        if (entry.kind === 'template') {
-          promptTemplateCollection.utils.deleteAuthoritative(entry.id)
-        } else if (entry.kind === 'folder') {
-          clearFolder(entry.id)
-        }
-      }
-    }
-
+  const graph = collectPromptFolderGraphIds(workspace.entries.map((entry) => entry.id))
+  deletePromptFolderContentRecords(graph)
+  for (const promptFolderId of graph.promptFolderIds) {
     promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
     removePromptFolderDraft(promptFolderId)
-  }
-
-  for (const entry of workspace.entries) {
-    clearFolder(entry.id)
   }
 
   workspaceCollection.utils.deleteAuthoritative(workspaceId)
@@ -129,18 +103,6 @@ export const closeWorkspace = async (): Promise<void> => {
   }
 }
 
-const resolvePromptFolderInsertIndex = (
-  entries: readonly EntryRef[],
-  previousEntryId: string | null
-): number | null => {
-  if (previousEntryId === null) {
-    return 0
-  }
-
-  const previousIndex = entries.findIndex((entry) => entry.id === previousEntryId)
-  return previousIndex === -1 ? null : previousIndex + 1
-}
-
 export const deletePromptFolder = async (
   workspaceId: string,
   promptFolderId: string
@@ -166,19 +128,8 @@ export const deletePromptFolder = async (
     throw new Error('Parent prompt folder not loaded')
   }
 
-  const deletedPromptFolderIds: string[] = []
-  const deletedPromptIds: string[] = []
-  const collectDeletedEntities = (currentPromptFolderId: string): void => {
-    const currentPromptFolder = promptFolderCollection.get(currentPromptFolderId)
-    if (!currentPromptFolder) return
-
-    deletedPromptFolderIds.push(currentPromptFolderId)
-    deletedPromptIds.push(...getPromptFolderAllPromptIds(currentPromptFolder))
-    for (const entry of currentPromptFolder.entries) {
-      if (entry.kind === 'folder') collectDeletedEntities(entry.id)
-    }
-  }
-  collectDeletedEntities(promptFolderId)
+  const deletedGraph = collectPromptFolderGraphIds([promptFolderId])
+  const deletedPromptFolderIds = [...deletedGraph.promptFolderIds]
 
   await runRevisionMutation<DeletePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -191,9 +142,7 @@ export const deletePromptFolder = async (
           draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
         })
       }
-      if (deletedPromptIds.length > 0) {
-        collections.prompt.delete(deletedPromptIds)
-      }
+      deletePromptFolderContentsOptimistically(collections, deletedGraph)
       collections.promptFolder.delete(deletedPromptFolderIds)
     },
     persistMutations: async ({ entities }) => {
@@ -224,10 +173,8 @@ export const deletePromptFolder = async (
     },
     conflictMessage: 'Prompt folder delete conflict',
     onSuccess: () => {
-      promptCollection.utils.deleteManyAuthoritative(deletedPromptIds)
+      deletePromptFolderContentRecords(deletedGraph)
       promptFolderCollection.utils.deleteManyAuthoritative(deletedPromptFolderIds)
-      deletePromptDrafts(deletedPromptIds)
-      deletePromptUiStates(deletedPromptIds)
       deletePromptFolderDrafts(deletedPromptFolderIds)
     }
   })
@@ -283,7 +230,7 @@ export const movePromptFolder = async (
   const destinationEntries = isSameParent
     ? removeEntry(sourceEntries, 'folder', promptFolderId)
     : (destinationParentPromptFolder?.entries ?? workspace.entries)
-  const insertIndex = resolvePromptFolderInsertIndex(destinationEntries, previousEntryId)
+  const insertIndex = resolveEntryInsertIndex(destinationEntries, previousEntryId)
 
   if (insertIndex === null) {
     throw new Error('Previous entry not found')

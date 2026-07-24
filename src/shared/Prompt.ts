@@ -1,5 +1,15 @@
 import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type {
+  CreateMarkdownContentPayload,
+  CreateMarkdownContentResponsePayload,
+  DeleteMarkdownContentPayload,
+  DeleteMarkdownContentResponsePayload,
+  MarkdownContentRevisionPayload,
+  MarkdownContentRevisionResponsePayload,
+  MoveMarkdownContentPayload,
+  MoveMarkdownContentResponsePayload
+} from './MarkdownContent'
 
 export enum PromptStatus {
   Todo = 'Todo',
@@ -70,47 +80,22 @@ export const isPromptFull = (prompt: Prompt): prompt is PromptFull => {
   return prompt.loadingState === 'full'
 }
 
-export type PromptRevisionPayload = {
-  prompt: RevisionPayloadEntity<PromptPersisted>
-}
+export type PromptRevisionPayload = MarkdownContentRevisionPayload<PromptPersisted>
 
-export type PromptRevisionResponsePayload = {
-  prompt: RevisionEnvelope<PromptPersisted>
-  promptFolder?: RevisionEnvelope<PromptFolder>
-}
+export type PromptRevisionResponsePayload =
+  MarkdownContentRevisionResponsePayload<PromptPersisted>
 
-export type CreatePromptPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  prompt: RevisionPayloadEntity<PromptPersisted>
-  previousEntryId: string | null
-}
+export type CreatePromptPayload = CreateMarkdownContentPayload<PromptPersisted>
 
-export type CreatePromptResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
-  prompt?: RevisionEnvelope<PromptPersisted>
-}
+export type CreatePromptResponsePayload = CreateMarkdownContentResponsePayload<PromptPersisted>
 
-export type DeletePromptPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  prompt: RevisionPayloadEntity<PromptPersisted>
-}
+export type DeletePromptPayload = DeleteMarkdownContentPayload<PromptPersisted>
 
-export type DeletePromptResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
-}
+export type DeletePromptResponsePayload = DeleteMarkdownContentResponsePayload
 
-export type MovePromptPayload = {
-  sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
-  destinationPromptFolder: RevisionPayloadEntity<PromptFolder>
-  prompt: RevisionPayloadEntity<PromptPersisted>
-  previousEntryId: string | null
-}
+export type MovePromptPayload = MoveMarkdownContentPayload<PromptPersisted>
 
-export type MovePromptResponsePayload = {
-  sourcePromptFolder: RevisionEnvelope<PromptFolder>
-  destinationPromptFolder: RevisionEnvelope<PromptFolder>
-  prompt: RevisionEnvelope<PromptPersisted>
-}
+export type MovePromptResponsePayload = MoveMarkdownContentResponsePayload<PromptPersisted>
 
 export type SetPromptStatusPayload = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
