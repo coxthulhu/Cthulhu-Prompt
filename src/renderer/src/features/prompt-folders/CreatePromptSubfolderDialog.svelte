@@ -20,10 +20,14 @@
   }>()
 
   let target = $state<PromptFolderDividerTarget | null>(null)
+  const targetOwner = $derived(
+    promptFolders.find((folder) => folder.id === target?.ownerFolderId) ?? null
+  )
+  const isTemplateFolder = $derived(targetOwner?.kind === 'template')
   let promptFolderNameDialog = $state<{ openDialog: () => void } | null>(null)
   const siblingPromptFolders = $derived.by(() => {
     if (!target) return []
-    const owner = promptFolders.find((folder) => folder.id === target?.ownerFolderId)
+    const owner = targetOwner
     if (!owner) return []
     const childIds = new Set(
       owner.entries.filter((entry) => entry.kind === 'folder').map((entry) => entry.id)
@@ -40,7 +44,7 @@
 
   const handleCreateSubfolder = async (normalizedDisplayName: string): Promise<boolean> => {
     const selectedTarget = target
-    if (!workspaceId || !selectedTarget) return false
+    if (!workspaceId || !selectedTarget || !targetOwner) return false
 
     return await runIpcBestEffort(
       async () => {
@@ -48,7 +52,8 @@
           workspaceId,
           normalizedDisplayName,
           selectedTarget.ownerFolderId,
-          selectedTarget.previousEntryId
+          selectedTarget.previousEntryId,
+          targetOwner.kind
         )
         onCreated?.(createdPromptFolderId)
         return true
@@ -63,13 +68,18 @@
   {isWorkspaceReady}
   promptFolders={siblingPromptFolders}
   {isPromptFolderListLoading}
-  title="Create Prompt Subfolder"
+  title={isTemplateFolder ? 'Create Prompt Template Subfolder' : 'Create Prompt Subfolder'}
   submitText="Create Subfolder"
   submittingText="Creating..."
   submitTestId="create-prompt-subfolder-button"
   inputTestId="create-prompt-subfolder-name-input"
   errorTestId="create-prompt-subfolder-name-error"
-  rowDetail="Name the new prompt subfolder."
-  failureMessage="Failed to create subfolder. Please try again."
+  rowLabel={isTemplateFolder ? 'Prompt Template Folder Name' : 'Prompt Folder Name'}
+  rowDetail={isTemplateFolder
+    ? 'Name the new template subfolder.'
+    : 'Name the new prompt subfolder.'}
+  failureMessage={isTemplateFolder
+    ? 'Failed to create prompt template subfolder. Please try again.'
+    : 'Failed to create prompt subfolder. Please try again.'}
   onsubmit={handleCreateSubfolder}
 />

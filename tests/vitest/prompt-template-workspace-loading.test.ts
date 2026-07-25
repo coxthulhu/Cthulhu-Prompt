@@ -14,9 +14,10 @@ vi.mock('../../src/main/DataAccess/UserPersistenceDataAccess', () => ({
   }
 }))
 
-vi.mock('../../src/main/DataAccess/PromptUiStateDataAccess', () => ({
-  PromptUiStateDataAccess: {
-    cleanupWorkspacePromptUiState: vi.fn()
+vi.mock('../../src/main/DataAccess/MarkdownContentUiStateDataAccess', () => ({
+  MarkdownContentUiStateDataAccess: {
+    cleanupWorkspaceMarkdownContentUiState: vi.fn(),
+    readMarkdownContentUiStates: vi.fn(() => [])
   }
 }))
 
@@ -88,7 +89,7 @@ describe('prompt template workspace loading', () => {
     if (!folderResult.success) throw new Error(folderResult.error)
 
     expect(folderResult.prompts).toEqual([])
-    expect(folderResult.promptUiStates).toEqual([])
+    expect(folderResult.markdownContentUiStates).toEqual([])
     expect(folderResult.promptTemplates).toHaveLength(1)
     expect(folderResult.promptTemplates[0]?.data).toMatchObject({
       id: 'nested-template',

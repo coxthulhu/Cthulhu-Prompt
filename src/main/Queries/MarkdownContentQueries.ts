@@ -14,6 +14,7 @@ export const loadPromptFolderMarkdownContents = (
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
 ): {
   promptIds: string[]
+  promptTemplateIds: string[]
   prompts: Array<RevisionEnvelope<PromptPersisted>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
 } => {
@@ -26,6 +27,7 @@ export const loadPromptFolderMarkdownContents = (
   const prompts = getLoadedPromptEntries(promptIds).map(buildPromptSnapshot)
   return {
     promptIds: prompts.map((prompt) => prompt.id),
+    promptTemplateIds,
     prompts,
     promptTemplates: getLoadedPromptTemplateEntries(promptTemplateIds).map(
       buildPromptTemplateSnapshot

@@ -2,9 +2,9 @@ import type { PromptHandleDragPayload } from './promptHandleDrag'
 
 type DraggedPromptEntry =
   | {
-      kind: 'prompt'
+      kind: 'content'
       folderId: string
-      promptId: string
+      contentId: string
     }
   | {
       kind: 'folder'
@@ -15,9 +15,9 @@ let draggedEntry = $state<DraggedPromptEntry | null>(null)
 
 export const startPromptDrag = (payload: PromptHandleDragPayload): void => {
   draggedEntry = {
-    kind: 'prompt',
+    kind: 'content',
     folderId: payload.sourceFolderId,
-    promptId: payload.fromId
+    contentId: payload.fromId
   }
 }
 

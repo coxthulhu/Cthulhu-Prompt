@@ -21,6 +21,8 @@
   let {
     promptId,
     promptFolderId,
+    contentKind = 'prompt',
+    contentLabel = 'prompt',
     title,
     isFirstPrompt,
     isLastPrompt,
@@ -31,6 +33,8 @@
   }: {
     promptId: string
     promptFolderId: string
+    contentKind?: import('@shared/PromptFolder').PromptFolderKind
+    contentLabel?: string
     title: string
     isFirstPrompt: boolean
     isLastPrompt: boolean
@@ -72,7 +76,8 @@
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
-      sourceFolderId: promptFolderId
+      sourceFolderId: promptFolderId,
+      contentKind
     },
     createGhost: () => createPromptDragGhost(title),
     onDragStart: handleDragStart,
@@ -101,7 +106,7 @@
 <div class="prompt-editor-sidebar">
   <IconButton
     icon={ChevronUp}
-    label="Move prompt up"
+    label={`Move ${contentLabel} up`}
     size="sidebar-rail"
     baseVariant="dim"
     class="prompt-editor-sidebar-move-button"
@@ -113,7 +118,7 @@
 
   <IconButton
     icon={GripVertical}
-    label="Drag prompt"
+    label={`Drag ${contentLabel}`}
     size="sidebar-rail"
     baseVariant="dim"
     class="prompt-editor-sidebar-drag-button"
@@ -128,7 +133,7 @@
 
   <IconButton
     icon={ChevronDown}
-    label="Move prompt down"
+    label={`Move ${contentLabel} down`}
     size="sidebar-rail"
     baseVariant="dim"
     class="prompt-editor-sidebar-move-button"

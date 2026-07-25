@@ -146,7 +146,7 @@ describe('prompt template renderer loading', () => {
           }
         }
       ],
-      promptUiStates: []
+      markdownContentUiStates: []
     })
 
     await loadPromptFolderInitial('renderer-template-workspace', 'renderer-template-folder')

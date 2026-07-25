@@ -65,6 +65,8 @@ export const resolvePromptFolderEntryDropMove = (
     : null
   const destinationParent = promptFolderById.get(dropPayload.folderId)
   if (!sourceParentPromptFolderId || !sourceParent || !destinationParent) return null
+  const movedFolder = promptFolderById.get(promptFolderId)
+  if (!movedFolder || movedFolder.kind !== destinationParent.kind) return null
 
   const descendantIds = collectDescendantFolderIds(promptFolderById, promptFolderId)
   if (dropPayload.folderId === promptFolderId || descendantIds.has(dropPayload.folderId)) {

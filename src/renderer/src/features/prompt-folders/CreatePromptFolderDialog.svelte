@@ -64,9 +64,7 @@
           selectedFolderType.id
         )
 
-        if (selectedFolderType.id === 'prompt') {
-          onCreated?.(createdPromptFolderId)
-        }
+        onCreated?.(createdPromptFolderId)
 
         return true
       },
@@ -80,15 +78,24 @@
   {isWorkspaceReady}
   promptFolders={validationFolders}
   {isPromptFolderListLoading}
-  title="Create Prompt Folder"
+  title={selectedFolderType.id === 'template'
+    ? 'Create Prompt Template Folder'
+    : 'Create Prompt Folder'}
   submitText="Create Folder"
   submittingText="Creating..."
   submitTestId="create-prompt-folder-button"
   inputTestId="create-prompt-folder-name-input"
   errorTestId="create-prompt-folder-name-error"
   dialogClass="w-full max-w-[600px]"
-  rowDetail="Name the new prompt folder."
-  failureMessage="Failed to create folder. Please try again."
+  rowLabel={selectedFolderType.id === 'template'
+    ? 'Prompt Template Folder Name'
+    : 'Prompt Folder Name'}
+  rowDetail={selectedFolderType.id === 'template'
+    ? 'Name the new prompt template folder.'
+    : 'Name the new prompt folder.'}
+  failureMessage={selectedFolderType.id === 'template'
+    ? 'Failed to create prompt template folder. Please try again.'
+    : 'Failed to create prompt folder. Please try again.'}
   onsubmit={handleCreateFolder}
 >
   {#snippet beforeRows()}

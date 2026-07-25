@@ -3,6 +3,7 @@ import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
 import { data } from '../Data/Data'
 import { buildPromptTemplateSnapshot } from '../Data/DataSnapshotHelpers'
+import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import {
   parseCreatePromptTemplateRequest,
   parseDeletePromptTemplateRequest,
@@ -68,6 +69,9 @@ export const setupPromptTemplateMutationHandlers = (): void => {
         persistenceFields
       }),
     deleteContent: (tx, templateId, expectedRevision) =>
-      tx.promptTemplate.delete({ id: templateId, expectedRevision })
+      tx.promptTemplate.delete({ id: templateId, expectedRevision }),
+    onDeleted: (workspaceId, templateId) => {
+      MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(workspaceId, templateId)
+    }
   })
 }

@@ -3,7 +3,7 @@ import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { deletePromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import { deletePromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
-import { deletePromptUiStates } from '../UiState/PromptUiStateDraftMutations.svelte.ts'
+import { deleteMarkdownContentUiStates } from '../UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 
 type MutationOptions = Parameters<typeof runRevisionMutation<unknown>>[0]
@@ -31,5 +31,5 @@ export const deletePromptFolderContentRecords = (graph: PromptFolderGraphIds): v
   promptTemplateCollection.utils.deleteManyAuthoritative(templateIds)
   deletePromptDrafts(promptIds)
   deletePromptTemplateDrafts(templateIds)
-  deletePromptUiStates(promptIds)
+  deleteMarkdownContentUiStates([...promptIds, ...templateIds])
 }

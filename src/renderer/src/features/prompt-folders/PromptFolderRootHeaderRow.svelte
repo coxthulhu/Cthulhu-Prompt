@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { Folder, Pencil, Trash2 } from 'lucide-svelte'
+  import { Folder, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
@@ -11,6 +11,7 @@
     folderDisplayName,
     activePromptCount,
     completedPromptCount,
+    contentKind,
     screenMode,
     onDeletePromptFolder,
     onRenamePromptFolder,
@@ -19,6 +20,7 @@
     folderDisplayName: string
     activePromptCount: number
     completedPromptCount: number
+    contentKind: import('@shared/PromptFolder').PromptFolderKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
     onRenamePromptFolder: () => void
@@ -26,6 +28,8 @@
   }>()
 
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  const isTemplateFolder = $derived(contentKind === 'template')
+  const folderLabel = $derived(isTemplateFolder ? 'prompt template folder' : 'prompt folder')
 </script>
 
 <div
@@ -37,8 +41,13 @@
   <div class="prompt-folder-root-screen-header">
     <div class="prompt-folder-root-title-block">
       <div class="prompt-folder-root-eyebrow">
-        <Folder size={14} aria-hidden="true" />
-        <span>Prompt folder</span>
+        {#if isTemplateFolder}
+          <Layers size={14} aria-hidden="true" />
+          <span>Prompt template folder</span>
+        {:else}
+          <Folder size={14} aria-hidden="true" />
+          <span>Prompt folder</span>
+        {/if}
       </div>
       <div class="prompt-folder-root-title-line">
         <div
@@ -50,8 +59,8 @@
         </div>
         <IconButton
           icon={Pencil}
-          label="Rename prompt folder"
-          title="Rename prompt folder"
+          label={`Rename ${folderLabel}`}
+          title={`Rename ${folderLabel}`}
           size="tiny"
           baseVariant="muted"
           hoverVariant="glyph"
@@ -64,8 +73,8 @@
     <div class="prompt-folder-root-actions">
       <IconButton
         icon={Trash2}
-        label="Delete folder"
-        title="Delete folder"
+        label={`Delete ${folderLabel}`}
+        title={`Delete ${folderLabel}`}
         hoverVariant="danger"
         testId="prompt-folder-delete-button"
         onclick={onDeletePromptFolder}
@@ -73,25 +82,33 @@
     </div>
   </div>
 
-  <div class="prompt-folder-root-filter-bar" role="group" aria-label="Filter prompts">
+  <div
+    class="prompt-folder-root-filter-bar"
+    role="group"
+    aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
+  >
     <button
-      class:active={!isCompletedMode}
+      class:active={isTemplateFolder || !isCompletedMode}
       type="button"
-      aria-pressed={!isCompletedMode}
+      aria-pressed={isTemplateFolder || !isCompletedMode}
       data-testid="prompt-folder-active-filter"
-      onclick={() => onScreenModeChange(PromptFolderScreenMode.Active)}
+      onclick={isTemplateFolder
+        ? undefined
+        : () => onScreenModeChange(PromptFolderScreenMode.Active)}
     >
-      Todo/In Progress <span>{activePromptCount}</span>
+      {isTemplateFolder ? 'Templates' : 'Todo/In Progress'} <span>{activePromptCount}</span>
     </button>
-    <button
-      class:active={isCompletedMode}
-      type="button"
-      aria-pressed={isCompletedMode}
-      data-testid="prompt-folder-completed-filter"
-      onclick={() => onScreenModeChange(PromptFolderScreenMode.Completed)}
-    >
-      Completed <span>{completedPromptCount}</span>
-    </button>
+    {#if !isTemplateFolder}
+      <button
+        class:active={isCompletedMode}
+        type="button"
+        aria-pressed={isCompletedMode}
+        data-testid="prompt-folder-completed-filter"
+        onclick={() => onScreenModeChange(PromptFolderScreenMode.Completed)}
+      >
+        Completed <span>{completedPromptCount}</span>
+      </button>
+    {/if}
   </div>
 </div>
 

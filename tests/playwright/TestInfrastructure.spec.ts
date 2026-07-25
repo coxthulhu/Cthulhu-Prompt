@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 14 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 15 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -103,7 +103,7 @@ describe('Test Infrastructure', () => {
             'workspace_ui_state',
             'prompt_folder_ui_state',
             'prompt_folder_settings_editor_view_state',
-            'prompt_ui_state'
+            'markdown_content_ui_state'
           )
         `
       )

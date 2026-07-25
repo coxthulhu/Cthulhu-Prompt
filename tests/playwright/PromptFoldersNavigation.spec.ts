@@ -45,7 +45,7 @@ const createDeterministicId = (seed: string): string => {
 }
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
-  test('loads template folders and summaries without displaying them', async ({ testSetup }) => {
+  test('opens template folders and renders template-specific controls', async ({ testSetup }) => {
     await testSetup.setupFilesystem(
       createWorkspaceWithTemplateFolders(TEMPLATE_WORKSPACE_PATH, [
         {
@@ -84,11 +84,127 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult.workspaceReady).toBe(true)
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toBeVisible()
-    await expect(mainWindow.getByText('Code Review Templates', { exact: true })).toHaveCount(0)
-    await expect(mainWindow.getByText('Review Pull Request', { exact: true })).toHaveCount(0)
-    await expect(mainWindow.getByText('Nested Templates', { exact: true })).toHaveCount(0)
-    await expect(mainWindow.getByText('Nested Template', { exact: true })).toHaveCount(0)
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toBeVisible()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-folder-dropdown-item-template-folder-1"]')
+        .locator('.lucide-layers')
+    ).toBeVisible()
+    await mainWindow.keyboard.press('Escape')
+    await testHelpers.navigateToPromptFolders('Code Review Templates')
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
+      'Code Review Templates'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
+      'Templates 2'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toHaveAttribute(
+      'title',
+      'Add Template'
+    )
+    const templateEditor = mainWindow.locator('[data-testid="prompt-editor-template-1"]')
+    await expect(templateEditor).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-move-up"]')).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-drag-handle"]')).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-move-down"]')).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-modified-time"]')).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-token-count"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-template"]')).toBeVisible()
+    await expect(
+      mainWindow
+        .locator('[data-testid="prompt-folder-editor-template-folder-nested"]')
+        .getByText('Nested Templates', { exact: true })
+    ).toBeVisible()
+    await expect(
+      mainWindow
+        .locator('[data-testid="prompt-editor-nested-template"]')
+        .locator('[data-testid="prompt-title"]')
+    ).toHaveAttribute('placeholder', 'Nested Template...')
+    await expect(mainWindow.locator('.prompt-editor-metadata-folder')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-status-pill"]')).toHaveCount(0)
+
+    const nestedFolderEditor = mainWindow.locator(
+      '[data-testid="prompt-folder-editor-template-folder-nested"]'
+    )
+    await expect(nestedFolderEditor).toContainText('1 template')
+    await expect(nestedFolderEditor).not.toContainText('completed prompt')
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-drag-handle"]')
+    ).toBeVisible()
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-toggle"]')
+    ).toHaveAttribute('aria-expanded', 'true')
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]')
+    ).toBeVisible()
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-drag-handle"]')
+    ).toHaveAttribute('aria-label', 'Drag prompt template folder')
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]')
+    ).toHaveAttribute('aria-label', 'Rename prompt template folder')
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]')
+    ).toHaveAttribute('aria-label', 'Delete prompt template folder')
+
+    await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]').click()
+    const renameTemplateFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Rename Prompt Template Folder"]'
+    )
+    await expect(renameTemplateFolderDialog).toBeVisible()
+    await expect(renameTemplateFolderDialog.getByLabel('Prompt Template Folder Name')).toBeVisible()
+    await renameTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
+
+    await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]').click()
+    const deleteTemplateFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Template Folder"]'
+    )
+    await expect(deleteTemplateFolderDialog).toBeVisible()
+    await expect(
+      deleteTemplateFolderDialog.getByRole('button', { name: 'Delete Template Folder' })
+    ).toBeVisible()
+    await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
+
+    await mainWindow.locator('[data-testid="prompt-divider-add-subfolder-initial"]').first().click()
+    const createTemplateSubfolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Prompt Template Subfolder"]'
+    )
+    await expect(createTemplateSubfolderDialog).toBeVisible()
+    await expect(
+      createTemplateSubfolderDialog.getByLabel('Prompt Template Folder Name')
+    ).toBeVisible()
+    await createTemplateSubfolderDialog.getByRole('button', { name: 'Cancel' }).click()
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toHaveAttribute(
+      'aria-label',
+      'Rename prompt template folder'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-delete-button"]')).toHaveAttribute(
+      'aria-label',
+      'Delete prompt template folder'
+    )
+    await mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]').click()
+    await expect(renameTemplateFolderDialog).toBeVisible()
+    await renameTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
+    await mainWindow.locator('[data-testid="prompt-folder-delete-button"]').click()
+    await expect(deleteTemplateFolderDialog).toBeVisible()
+    await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
+
+    await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toggle-folderDescription"]')
+    ).toBeVisible()
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toggle-folderPrefix"]')
+    ).toHaveCount(0)
+    await expect(
+      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toggle-folderSuffix"]')
+    ).toHaveCount(0)
   })
 
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -339,9 +455,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
-    await expect(
-      mainWindow.locator('[data-testid="create-prompt-folder-name-input"]')
-    ).toBeVisible()
+    const createPromptFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Prompt Folder"]'
+    )
+    await expect(createPromptFolderDialog).toBeVisible()
+    await expect(createPromptFolderDialog.getByLabel('Prompt Folder Name')).toBeVisible()
   })
 
   test('shows add prompt folder button when the workspace has no prompt folders', async ({
@@ -355,10 +473,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toBeVisible()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
-      'Create Prompt Folder'
+      'Create Folder'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toHaveCount(0)
-    await expect(mainWindow.locator('text=Create a Prompt Folder to Get Started')).toBeVisible()
+    await expect(mainWindow.locator('text=Create a Folder to Get Started')).toBeVisible()
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
     await expect(
@@ -598,7 +716,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
   })
 
-  test('creates a prompt template folder without selecting or displaying it', async ({
+  test('creates and opens a prompt template folder', async ({
     electronApp,
     testSetup
   }) => {
@@ -624,13 +742,25 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(folderTypeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
     await expect(folderTypeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
     await folderTypeMenu.getByText('Prompt Template Folder', { exact: true }).click()
+    const createTemplateFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Prompt Template Folder"]'
+    )
+    await expect(createTemplateFolderDialog).toBeVisible()
+    await expect(createTemplateFolderDialog.getByLabel('Prompt Template Folder Name')).toBeVisible()
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
     await mainWindow.locator('[data-testid="create-prompt-folder-button"]').click()
 
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
-      'Development Tools'
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Examples')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
+      'Examples'
     )
-    await expect(mainWindow.getByText('Prompt Template Folder', { exact: true })).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
+      'Templates 0'
+    )
+    await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toHaveAttribute(
+      'title',
+      'Add Template'
+    )
     await expect
       .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples`))
       .toBe(true)

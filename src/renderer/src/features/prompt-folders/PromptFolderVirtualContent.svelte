@@ -2,23 +2,26 @@
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     createEmptyPromptFolderSettings,
+    type AnyPromptFolderSettings,
     type PromptFolder,
-    type PromptFolderSettings,
+    type PromptFolderKind,
     type PromptFolderSettingsField
   } from '@shared/PromptFolder'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
   import { lookupPromptFolderSettingsRowMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
-  import type { PromptDraftRecord } from '@renderer/data/Collections/PromptDraftCollection'
+  import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
   import { PromptStatus } from '@shared/Prompt'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
+  import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import {
     clampMonacoHeightPx,
     estimatePromptEditorHeight,
     getMonacoHeightFromRowPx,
     getPromptEditorTitleAreaWidthPx,
     getRowHeightPx,
+    PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX,
     type PromptEditorSizingConfig
   } from '../prompt-editor/promptEditorSizing'
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
@@ -116,9 +119,10 @@
   type PromptFolderVirtualContentProps = {
     workspaceId: string | null
     screenRootFolderId: string
-    folderSettingsByFolderId: Record<string, PromptFolderSettings>
+    contentKind: PromptFolderKind
+    folderSettingsByFolderId: Record<string, AnyPromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
-    promptDraftById: Record<string, PromptDraftRecord>
+    promptDraftById: Record<string, MarkdownContentDraftRecord>
     promptMetadataByPromptId: Record<string, PromptMetadata>
     promptFolders: PromptFolder[]
     activeScreenRows: PromptFolderScreenRow[]
@@ -174,6 +178,7 @@
 
   let {
     workspaceId,
+    contentKind,
     screenRootFolderId,
     folderSettingsByFolderId,
     promptEditorSizingConfig,
@@ -226,7 +231,14 @@
     status: PromptStatus.Todo,
     completedAt: null
   }
-  const emptyFolderSettings = createEmptyPromptFolderSettings()
+  const isTemplateFolder = $derived(contentKind === 'template')
+  const compactLayoutMaxWidthPx = $derived(
+    isTemplateFolder ? PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX : undefined
+  )
+  const ContentEditorRow = $derived(
+    isTemplateFolder ? PromptTemplateEditorRow : PromptEditorRow
+  )
+  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings(contentKind))
   const promptFolderById = $derived.by(
     () =>
       Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
@@ -255,7 +267,7 @@
     onViewportMetricsChange(viewportMetrics)
   })
 
-  const getFolderSettings = (ownerFolderId: string): PromptFolderSettings =>
+  const getFolderSettings = (ownerFolderId: string): AnyPromptFolderSettings =>
     folderSettingsByFolderId[ownerFolderId] ??
     promptFolderById[ownerFolderId]?.settings ??
     emptyFolderSettings
@@ -279,7 +291,7 @@
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        folderSettings[field] === null
+        folderSettings[field] == null
           ? 0
           : estimatePromptFolderSettingsFieldRowHeight(
               folderSettings[field],
@@ -299,7 +311,7 @@
     return Object.fromEntries(
       PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
         field,
-        folderSettings[field] === null
+        folderSettings[field] == null
           ? 0
           : (lookupFolderSettingsRowMeasuredHeight(
               ownerFolderId,
@@ -368,10 +380,11 @@
       estimateHeight: (row, widthPx, heightPx) => {
         const cardWidthPx = getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel)
         return estimatePromptEditorHeight(
-          promptDraftById[row.promptId]!.promptText,
+          promptDraftById[row.promptId]!.text,
           getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode),
           heightPx,
-          promptEditorSizingConfig
+          promptEditorSizingConfig,
+          compactLayoutMaxWidthPx
         )
       },
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
@@ -386,10 +399,15 @@
         const titleAreaWidthPx = getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode)
         return getRowHeightPx(
           clampMonacoHeightPx(
-            getMonacoHeightFromRowPx(measuredRowHeightPx, titleAreaWidthPx),
+            getMonacoHeightFromRowPx(
+              measuredRowHeightPx,
+              titleAreaWidthPx,
+              compactLayoutMaxWidthPx
+            ),
             promptEditorSizingConfig
           ),
-          titleAreaWidthPx
+          titleAreaWidthPx,
+          compactLayoutMaxWidthPx
         )
       },
       hydrationPriorityEligible: true,
@@ -617,6 +635,7 @@
 
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     if (!sourceFolder) return false
+    if (payload.contentKind !== destinationFolder.kind) return false
     return (
       resolvePromptHandleDropMove(
         sourceFolder.id,
@@ -643,7 +662,10 @@
   const getActiveEntryIds = (folder: PromptFolder): string[] =>
     folder.entries.flatMap((entry) => {
       if (entry.kind === 'folder') return [entry.id]
-      return promptMetadataByPromptId[entry.id]?.status === PromptStatus.Completed ? [] : [entry.id]
+      if (entry.kind !== contentKind) return []
+      return !isTemplateFolder && promptMetadataByPromptId[entry.id]?.status === PromptStatus.Completed
+        ? []
+        : [entry.id]
     })
 
   const getPromptFolderDropOptions = (
@@ -684,7 +706,7 @@
     if (!folder) return 0
     return folder.entries.filter(
       (entry) =>
-        entry.kind === 'prompt' &&
+        entry.kind === contentKind &&
         promptMetadataByPromptId[entry.id] !== undefined &&
         promptMetadataByPromptId[entry.id]?.status !== PromptStatus.Completed
     ).length
@@ -740,10 +762,12 @@
 
 {#snippet rootHeaderRow()}
   <PromptFolderRootHeaderRow
-    folderDisplayName={promptFolderById[screenRootFolderId]?.displayName ?? 'Prompt Folder'}
+    folderDisplayName={promptFolderById[screenRootFolderId]?.displayName ??
+      (isTemplateFolder ? 'Prompt Template Folder' : 'Prompt Folder')}
     {activePromptCount}
     {completedPromptCount}
     {screenMode}
+    {contentKind}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
     onDeletePromptFolder={() => onDeletePromptFolder(screenRootFolderId)}
     {onScreenModeChange}
@@ -783,6 +807,7 @@
         scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
         onHydrationChange={props.onHydrationChange}
         folderSettings={getFolderSettings(ownerFolderId)}
+        {contentKind}
         {rowPaddingTopPx}
         isSettingsSectionExpanded={props.row.isSettingsSectionExpanded}
         isPromptsSectionExpanded={props.row.isPromptsSectionExpanded}
@@ -816,10 +841,15 @@
     <p>
       {isCompletedMode
         ? 'No completed prompts found in this folder'
-        : 'No prompts found in this folder.'}
+        : isTemplateFolder
+          ? 'No templates found in this folder.'
+          : 'No prompts found in this folder.'}
     </p>
     {#if !isCompletedMode}
-      <p class="text-sm mt-2">Click the Add Prompt button to create your first prompt.</p>
+      <p class="text-sm mt-2">
+        Click the Add {isTemplateFolder ? 'Template' : 'Prompt'} button to create your first
+        {isTemplateFolder ? 'template' : 'prompt'}.
+      </p>
     {/if}
   </PromptFolderSectionRow>
 {/snippet}
@@ -832,7 +862,13 @@
     testId={`prompt-folder-collapsed-summary-${row.ownerFolderId}`}
   >
     <p>
-      {row.promptCount} {row.promptCount === 1 ? 'prompt' : 'prompts'} and {row.subfolderCount}
+      {row.promptCount} {row.promptCount === 1
+        ? isTemplateFolder
+          ? 'template'
+          : 'prompt'
+        : isTemplateFolder
+          ? 'templates'
+          : 'prompts'} and {row.subfolderCount}
       {row.subfolderCount === 1 ? 'subfolder' : 'subfolders'} hidden
     </p>
   </PromptFolderSectionRow>
@@ -861,6 +897,7 @@
     <PromptDivider
       disabled={isCreatingPrompt}
       mode={showsActions ? 'add' : 'separator'}
+      contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
       onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
       onAddSubfolder={showsActions && getFolderDepth(row.ownerFolderId) < 8
         ? () => onAddSubfolder(target)
@@ -901,12 +938,18 @@
   {@const contentOffsetPx = getPromptFolderSectionContentOffsetPx(row.indentLevel)}
   {@const promptTarget = { ownerFolderId: row.ownerFolderId, promptId: row.promptId }}
   <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
-    <PromptEditorRow
+    <ContentEditorRow
       {workspaceId}
       {screenRootFolderId}
       promptFolderId={row.ownerFolderId}
       promptId={row.promptId}
-      promptDraftRecord={promptDraftById[row.promptId]!}
+      promptDraftRecord={{
+        title: promptDraftById[row.promptId]!.title,
+        fallbackTitle: promptDraftById[row.promptId]!.fallbackTitle,
+        modifiedAt: promptDraftById[row.promptId]!.modifiedAt,
+        text: promptDraftById[row.promptId]!.text,
+        isEdited: promptDraftById[row.promptId]!.isEdited
+      }}
       {rowId}
       virtualWindowWidthPx={contentWidthPx}
       rowContentLeftOffsetPx={contentOffsetPx}
@@ -925,7 +968,7 @@
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       isDragEnabled={!isCompletedMode}
       onDelete={() => onDeletePrompt({ ownerFolderId: row.ownerFolderId, promptId: row.promptId })}
-      onStatusChange={(status) => {
+      onStatusChange={isTemplateFolder ? undefined : (status) => {
         onSetPromptStatus({ ownerFolderId: row.ownerFolderId, promptId: row.promptId }, status)
       }}
       onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(promptTarget))}

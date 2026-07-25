@@ -27,16 +27,19 @@
     ChevronsDownUp,
     ExternalLink,
     Folder,
+    Layers,
     MoreHorizontal,
     Plus,
     Settings
   } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+  import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import type { Prompt } from '@shared/Prompt'
+  import type { PromptTemplate } from '@shared/PromptTemplate'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
@@ -59,6 +62,7 @@
   import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import { createBlankPromptInFolder } from '@renderer/features/prompt-folders/createBlankPromptInFolder'
+  import { createBlankPromptTemplateInFolder } from '@renderer/features/prompt-folders/createBlankPromptTemplateInFolder'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
@@ -100,6 +104,9 @@
     q.from({ promptFolder: promptFolderCollection })
   ) as { data: PromptFolder[] }
   const promptQuery = useLiveQuery(promptCollection) as { data: Prompt[] }
+  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+    data: PromptTemplate[]
+  }
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
@@ -113,7 +120,7 @@
     return null
   })
 
-  const promptFolders = $derived.by((): PromptFolder[] => {
+  const rootPromptFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) {
       return []
     }
@@ -129,10 +136,9 @@
 
     return selectedWorkspace.entries
       .map((entry) => promptFolderById.get(entry.id))
-      .filter(
-        (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'prompt'
-      )
+      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
+  const promptFolders = $derived(rootPromptFolders.filter((folder) => folder.kind === 'prompt'))
   const promptTemplateFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) return []
 
@@ -151,6 +157,11 @@
     if (!selectedWorkspace) {
       return []
     }
+    const selectedRootFolder =
+      rootPromptFolders.find((folder) => folder.id === screenRootFolderId) ??
+      rootPromptFolders[0] ??
+      null
+    if (!selectedRootFolder) return []
 
     const promptFolderById = new SvelteMap<string, PromptFolder>()
     for (const promptFolder of promptFolderQuery.data) {
@@ -164,7 +175,7 @@
     const orderedPromptFolders: PromptFolder[] = []
     const addPromptFolderWithDescendants = (promptFolderId: string): void => {
       const promptFolder = promptFolderById.get(promptFolderId)
-      if (!promptFolder || promptFolder.kind !== 'prompt') {
+      if (!promptFolder || promptFolder.kind !== selectedRootFolder.kind) {
         return
       }
 
@@ -186,21 +197,21 @@
       ? 'loading'
       : !isWorkspaceReady
         ? 'no-workspace'
-        : promptFolders.length === 0
+        : rootPromptFolders.length === 0
           ? 'empty'
           : 'ready'
   )
 
   const promptFolderSelectorPlaceholder: DropdownPopupDetailedItem = {
     id: 'no-prompt-folders',
-    label: 'No prompt folders',
+    label: 'No folders',
     detail: 'Create one from the menu',
     icon: Folder
   }
   const promptFolderSelectorFooterItem: DropdownPopupDetailedItem = {
     id: 'add-prompt-folder',
-    label: 'Create Prompt Folder',
-    detail: 'Create a new prompt folder',
+    label: 'Create Folder',
+    detail: 'Create a prompt or prompt template folder',
     icon: Plus,
     testId: 'sidebar-prompt-folder-dropdown-add-item'
   }
@@ -229,11 +240,11 @@
 
   const promptFolderDropdownFolders = $derived.by((): PromptFolder[] => {
     if (!promptFolderSelectorPreviewIds) {
-      return promptFolders
+      return rootPromptFolders
     }
 
     const promptFolderById = new SvelteMap<string, PromptFolder>()
-    for (const promptFolder of promptFolders) {
+    for (const promptFolder of rootPromptFolders) {
       promptFolderById.set(promptFolder.id, promptFolder)
     }
 
@@ -243,9 +254,12 @@
   })
   const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] => {
     const promptFolderById = new Map(
-      promptTreePromptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
+      promptFolderQuery.data.map((promptFolder) => [promptFolder.id, promptFolder])
     )
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
+    const templateById = new Map(
+      promptTemplateQuery.data.map((template) => [template.id, template])
+    )
 
     const getFolderMetadata = (
       promptFolder: PromptFolder
@@ -255,7 +269,8 @@
 
       for (const entry of promptFolder.entries) {
         if (entry.kind === 'folder') {
-          const childFolder = promptFolderById.get(entry.id)!
+          const childFolder = promptFolderById.get(entry.id)
+          if (!childFolder || childFolder.kind !== promptFolder.kind) continue
           const childMetadata = getFolderMetadata(childFolder)
           promptCount += childMetadata.promptCount
           if (
@@ -268,7 +283,11 @@
         }
 
         promptCount += 1
-        const modifiedAt = promptById.get(entry.id)!.modifiedAt
+        const modifiedAt =
+          promptFolder.kind === 'template'
+            ? templateById.get(entry.id)?.modifiedAt
+            : promptById.get(entry.id)?.modifiedAt
+        if (!modifiedAt) continue
         if (!newestModifiedAt || modifiedAt > newestModifiedAt) newestModifiedAt = modifiedAt
       }
 
@@ -278,7 +297,7 @@
     return promptFolderDropdownFolders.map((promptFolder) => {
       const { promptCount, newestModifiedAt } = getFolderMetadata(promptFolder)
       const detailParts: DropdownPopupDetailedItem['detailParts'] = [
-        `${promptCount} prompt${promptCount === 1 ? '' : 's'}`
+        `${promptCount} ${promptFolder.kind === 'template' ? 'template' : 'prompt'}${promptCount === 1 ? '' : 's'}`
       ]
 
       if (newestModifiedAt) {
@@ -292,7 +311,7 @@
         id: promptFolder.id,
         label: promptFolder.displayName,
         detailParts,
-        icon: Folder,
+        icon: promptFolder.kind === 'template' ? Layers : Folder,
         testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
       }
     })
@@ -308,19 +327,21 @@
     )
   })
   const screenRootFolder = $derived.by((): PromptFolder | null => {
-    if (promptFolders.length === 0) {
+    if (rootPromptFolders.length === 0) {
       return null
     }
 
     return (
-      promptFolders.find((promptFolder) => promptFolder.id === screenRootFolderId) ??
-      promptFolders[0]!
+      rootPromptFolders.find((promptFolder) => promptFolder.id === screenRootFolderId) ??
+      rootPromptFolders[0]!
     )
   })
   const promptFolderSelectorState = $derived(
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
-  const canTogglePromptFolders = $derived(folderListState === 'ready' && promptFolders.length > 0)
+  const canTogglePromptFolders = $derived(
+    folderListState === 'ready' && promptTreePromptFolders.length > 0
+  )
   const promptTreeExpansionRequests =
     createConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>()
   let areAllPromptFoldersCollapsed = $state(false)
@@ -331,10 +352,18 @@
   ]
   const promptFolderExpansionActionIcon = ChevronsDownUp
   const promptFolderExpansionActionLabel = $derived(
-    areAllPromptFoldersCollapsed ? 'Expand All Prompt Folders' : 'Collapse All Prompt Folders'
+    areAllPromptFoldersCollapsed
+      ? `Expand All ${screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} Folders`
+      : `Collapse All ${screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} Folders`
   )
   const isCompletedPromptMode = $derived(
-    promptFolderScreenMode === PromptFolderScreenMode.Completed
+    screenRootFolder?.kind === 'prompt' &&
+      promptFolderScreenMode === PromptFolderScreenMode.Completed
+  )
+  const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
+  const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
+  const selectedFolderActionsLabel = $derived(
+    isTemplateFolder ? 'Selected Prompt Template Folder Actions' : 'Selected Prompt Folder Actions'
   )
   // Keep selected-folder overflow actions together as the toolbar gets tighter.
   const selectedPromptFolderActionsItems: DropdownPopupItem[] = [
@@ -423,9 +452,15 @@
 
     isCreatingPromptFromSidebar = true
     try {
-      const creation = createBlankPromptInFolder(promptFolder.id, null)
-      selectCreatedPrompt(promptFolder.id, creation.promptId)
-      await runIpcBestEffort(() => creation.persistence)
+      if (promptFolder.kind === 'template') {
+        const creation = createBlankPromptTemplateInFolder(promptFolder.id, null)
+        selectCreatedPrompt(promptFolder.id, creation.templateId)
+        await runIpcBestEffort(() => creation.persistence)
+      } else {
+        const creation = createBlankPromptInFolder(promptFolder.id, null)
+        selectCreatedPrompt(promptFolder.id, creation.promptId)
+        await runIpcBestEffort(() => creation.persistence)
+      }
     } finally {
       isCreatingPromptFromSidebar = false
     }
@@ -456,7 +491,7 @@
       return
     }
 
-    if (promptFolders.some((promptFolder) => promptFolder.id === item.id)) {
+    if (rootPromptFolders.some((promptFolder) => promptFolder.id === item.id)) {
       onScreenRootFolderSelect(item.id)
     }
   }
@@ -530,7 +565,7 @@
     }
 
     const currentPreviewIds =
-      promptFolderSelectorPreviewIds ?? promptFolders.map((promptFolder) => promptFolder.id)
+      promptFolderSelectorPreviewIds ?? rootPromptFolders.map((promptFolder) => promptFolder.id)
     const targetIndex = getPromptFolderSelectorTargetIndex(clientY, currentPreviewIds.length)
     if (targetIndex === null) {
       return
@@ -570,7 +605,7 @@
       folderId: item.id
     },
     onDragStart: (payload) => {
-      const folderIds = promptFolders.map((promptFolder) => promptFolder.id)
+      const folderIds = rootPromptFolders.map((promptFolder) => promptFolder.id)
       const draggedFolderId = (payload as PromptFolderDragPayload).folderId
       draggedPromptFolderSelectorId = draggedFolderId
       promptFolderSelectorDragSourceIds = folderIds
@@ -603,7 +638,8 @@
     }),
     canDrop: (payload) => {
       const entryPayload = payload as PromptTreeEntryDragPayload
-      const destinationFolder = promptTreePromptFolders.find((folder) => folder.id === item.id)
+      const allFolders = promptFolderQuery.data
+      const destinationFolder = allFolders.find((folder) => folder.id === item.id)
       if (!destinationFolder) return false
       const dropPayload: PromptHandleDropPayload = {
         folderId: item.id,
@@ -613,17 +649,18 @@
       if (!isPromptHandleDragPayload(entryPayload)) {
         return (
           resolvePromptFolderEntryDropMove(
-            promptTreePromptFolders,
+            allFolders,
             getPromptFolderActiveEntryIds,
             entryPayload.folderId,
             dropPayload
           ) !== null
         )
       }
-      const sourceFolder = promptTreePromptFolders.find(
+      const sourceFolder = allFolders.find(
         (folder) => folder.id === entryPayload.sourceFolderId
       )
       if (!sourceFolder) return false
+      if (entryPayload.contentKind !== destinationFolder.kind) return false
       return (
         resolvePromptHandleDropMove(
           sourceFolder.id,
@@ -714,7 +751,7 @@
         />
       {:else}
         <DetailedSelectorButton
-          label="Prompt folder selector"
+          label="Folder selector"
           items={promptFolderDropdownItems}
           selectedItem={screenRootFolderDropdownItem}
           footerItem={promptFolderSelectorFooterItem}
@@ -731,13 +768,13 @@
   {/if}
 
   <div class="cthulhuSidebarPromptSectionHeader">
-    <p class="cthulhuSidebarPromptSectionTitle">Prompts</p>
+    <p class="cthulhuSidebarPromptSectionTitle">{isTemplateFolder ? 'Templates' : 'Prompts'}</p>
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
           icon={Plus}
-          label="Add Prompt"
-          title="Add Prompt"
+          label={`Add ${contentLabel}`}
+          title={`Add ${contentLabel}`}
           size="compact"
           borderless
           disabled={!screenRootFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
@@ -745,18 +782,20 @@
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={() => void addPromptToSelectedFolder()}
         />
-        <IconButton
-          icon={Check}
-          label="Show Completed Prompts"
-          title="Show Completed Prompts"
-          size="compact"
-          borderless
-          disabled={!screenRootFolder}
-          active={isCompletedPromptMode}
-          testId="toggle-completed-prompts-button"
-          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-          onclick={toggleCompletedPromptMode}
-        />
+        {#if !isTemplateFolder}
+          <IconButton
+            icon={Check}
+            label="Show Completed Prompts"
+            title="Show Completed Prompts"
+            size="compact"
+            borderless
+            disabled={!screenRootFolder}
+            active={isCompletedPromptMode}
+            testId="toggle-completed-prompts-button"
+            class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+            onclick={toggleCompletedPromptMode}
+          />
+        {/if}
         <IconButton
           icon={promptFolderExpansionActionIcon}
           label={promptFolderExpansionActionLabel}
@@ -769,7 +808,7 @@
           onclick={handlePromptFolderExpansionAction}
         />
         <DropdownPopupSimple
-          label="Selected Prompt Folder Actions"
+          label={selectedFolderActionsLabel}
           items={selectedPromptFolderActionsItems}
           menuWidth="204px"
           testId="selected-prompt-folder-actions-menu"
@@ -778,8 +817,8 @@
           {#snippet trigger(dropdown)}
             <IconButton
               icon={MoreHorizontal}
-              label="Selected Prompt Folder Actions"
-              title="Selected Prompt Folder Actions"
+              label={selectedFolderActionsLabel}
+              title={selectedFolderActionsLabel}
               size="compact"
               borderless
               disabled={!screenRootFolder}

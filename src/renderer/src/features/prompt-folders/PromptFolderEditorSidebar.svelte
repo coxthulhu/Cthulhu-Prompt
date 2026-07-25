@@ -9,10 +9,14 @@
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
   let {
-    dragOptions
+    dragOptions,
+    contentKind
   }: {
     dragOptions: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
+    contentKind: import('@shared/PromptFolder').PromptFolderKind
   } = $props()
+
+  const folderLabel = $derived(contentKind === 'template' ? 'prompt template folder' : 'prompt folder')
 
   const preventSidebarButtonMouseFocus = (event: MouseEvent) => {
     if (event.button !== 0) return
@@ -38,7 +42,7 @@
 <div class="prompt-folder-editor-sidebar" data-testid="prompt-folder-editor-sidebar">
   <IconButton
     icon={GripVertical}
-    label="Drag prompt folder"
+    label={`Drag ${folderLabel}`}
     size="sidebar-rail"
     baseVariant="dim"
     class="prompt-folder-editor-sidebar-drag-button"

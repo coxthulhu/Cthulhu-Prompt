@@ -39,7 +39,7 @@ import {
   resolvePromptFolderPathFromData,
   collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
-import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
+import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import {
   collectPromptFolderContentIds,
@@ -350,9 +350,15 @@ export const setupPromptFolderMutationHandlers = (): void => {
             )
           }
 
-          for (const promptId of deletedContentIds.prompt) {
-            // Side effect: remove persisted Monaco view state for deleted prompts.
-            PromptUiStateDataAccess.deletePromptUiState(requestedWorkspace.id, promptId)
+          for (const contentId of [
+            ...deletedContentIds.prompt,
+            ...deletedContentIds.template
+          ]) {
+            // Side effect: remove persisted Monaco view state for deleted content.
+            MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(
+              requestedWorkspace.id,
+              contentId
+            )
           }
 
           const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)

@@ -220,7 +220,7 @@ describe('Prompt Folder Order', () => {
     ).toHaveCount(0)
   })
 
-  test('repairs one combined root order while keeping template folders hidden', async ({
+  test('repairs and reorders one combined root folder order', async ({
     electronApp,
     testSetup
   }) => {
@@ -244,6 +244,8 @@ describe('Prompt Folder Order', () => {
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
         'sidebar-prompt-folder-dropdown-item-prompt-alpha',
+        'sidebar-prompt-folder-dropdown-item-template-alpha',
+        'sidebar-prompt-folder-dropdown-item-template-beta',
         'sidebar-prompt-folder-dropdown-item-prompt-zulu'
       ])
 
@@ -258,7 +260,7 @@ describe('Prompt Folder Order', () => {
         async () =>
           await readWorkspacePromptFolderIds(electronApp, COMBINED_REPAIR_WORKSPACE_PATH)
       )
-      .toEqual(['prompt-zulu', 'template-alpha', 'template-beta', 'prompt-alpha'])
+      .toEqual(['prompt-zulu', 'prompt-alpha', 'template-alpha', 'template-beta'])
   })
 
   test('preserves an explicitly interleaved combined root order', async ({
@@ -286,7 +288,9 @@ describe('Prompt Folder Order', () => {
     await expect
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
+        'sidebar-prompt-folder-dropdown-item-template-beta',
         'sidebar-prompt-folder-dropdown-item-prompt-zulu',
+        'sidebar-prompt-folder-dropdown-item-template-alpha',
         'sidebar-prompt-folder-dropdown-item-prompt-alpha'
       ])
   })

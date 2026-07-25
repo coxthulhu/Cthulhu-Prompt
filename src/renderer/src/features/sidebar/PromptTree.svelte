@@ -30,6 +30,8 @@
     promptDraftCollection
   } from '@renderer/data/Collections/PromptDraftCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+  import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+  import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
   import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
@@ -49,6 +51,7 @@
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
+  import type { PromptTemplate } from '@shared/PromptTemplate'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -197,6 +200,12 @@
   const promptQuery = useLiveQuery(promptCollection) as {
     data: Prompt[]
   }
+  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+    data: PromptTemplate[]
+  }
+  const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
+    data: Array<{ id: string; title: string; fallbackTitle: string }>
+  }
 
   const promptTreeTitleById = $derived.by(() => {
     const titlesById: Record<string, string> = {}
@@ -207,6 +216,9 @@
       }
 
       titlesById[promptDraft.id] = getPromptTitleText(promptDraft)
+    }
+    for (const templateDraft of promptTemplateDraftQuery.data) {
+      titlesById[templateDraft.id] = getPromptTitleText(templateDraft)
     }
 
     return titlesById
@@ -233,6 +245,9 @@
 
     return promptFoldersById
   })
+  const templateById = $derived.by(() =>
+    Object.fromEntries(promptTemplateQuery.data.map((template) => [template.id, template]))
+  )
 
   const screenRootFolder = $derived.by((): PromptFolder | null => {
     if (promptFolders.length === 0) {
@@ -246,7 +261,7 @@
   })
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const selectedCompletedPrompts = $derived.by(() => {
-    if (!screenRootFolder) {
+    if (!screenRootFolder || screenRootFolder.kind === 'template') {
       return []
     }
 
@@ -407,6 +422,7 @@
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     const destinationFolder = promptFolderById[dropPayload.folderId]
     if (!sourceFolder || !destinationFolder) return false
+    if (payload.contentKind !== destinationFolder.kind) return false
 
     return (
       resolvePromptHandleDropMove(
@@ -515,12 +531,14 @@
   const getPromptRowDragOptions = (
     folderId: string,
     promptId: string,
-    title: string
+    title: string,
+    contentKind: import('@shared/PromptFolder').PromptFolderKind
   ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
-      sourceFolderId: folderId
+      sourceFolderId: folderId,
+      contentKind
     },
     createGhost: () => createPromptDragGhost(title),
     onDragStart: promptTreePromptDrag.handleDragStart,
@@ -575,9 +593,9 @@
   const isPromptRowDragging = (folderId: string, promptId: string): boolean => {
     const draggedEntry = promptEntryDragState.draggedEntry
     return (
-      draggedEntry?.kind === 'prompt' &&
+      draggedEntry?.kind === 'content' &&
       draggedEntry.folderId === folderId &&
-      draggedEntry.promptId === promptId
+      draggedEntry.contentId === promptId
     )
   }
   const isPromptFolderRowDragging = (folderId: string): boolean => {
@@ -728,8 +746,10 @@
         const childEntries = promptFolder.entries.filter((entry) =>
           entry.kind === 'folder'
             ? Boolean(promptFolderById[entry.id])
-            : Boolean(promptById[entry.id]) &&
-              promptById[entry.id]?.status !== PromptStatus.Completed
+            : entry.kind === 'template'
+              ? Boolean(templateById[entry.id])
+              : Boolean(promptById[entry.id]) &&
+                promptById[entry.id]?.status !== PromptStatus.Completed
         )
 
         for (const [entryIndex, entry] of childEntries.entries()) {
@@ -784,8 +804,10 @@
         const rootEntries = screenRootFolder.entries.filter((entry) =>
           entry.kind === 'folder'
             ? Boolean(promptFolderById[entry.id])
-            : Boolean(promptById[entry.id]) &&
-              promptById[entry.id]?.status !== PromptStatus.Completed
+            : entry.kind === 'template'
+              ? Boolean(templateById[entry.id])
+              : Boolean(promptById[entry.id]) &&
+                promptById[entry.id]?.status !== PromptStatus.Completed
         )
 
         for (const [entryIndex, entry] of rootEntries.entries()) {
@@ -869,7 +891,7 @@
       Loading folders...
     </div>
   {:else if folderListState === 'empty'}
-    <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Prompt Folder to Get Started</div>
+    <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Folder to Get Started</div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
       <SvelteVirtualWindow
@@ -978,7 +1000,12 @@
           }))}
     promptDragOptions={isCompletedMode
       ? undefined
-      : getPromptRowDragOptions(props.row.folder.id, props.row.promptId, promptTitle)}
+      : getPromptRowDragOptions(
+          props.row.folder.id,
+          props.row.promptId,
+          promptTitle,
+          props.row.folder.kind
+        )}
     onPromptSelect={handlePromptTreePromptSelect}
   />
 {/snippet}
@@ -991,10 +1018,15 @@
     <p class="sidebarPromptTreeEmptyTitle">
       {isCompletedMode
         ? 'No completed prompts found in this folder'
-        : 'No prompts found in this folder.'}
+        : screenRootFolder?.kind === 'template'
+          ? 'No templates found in this folder.'
+          : 'No prompts found in this folder.'}
     </p>
     {#if !isCompletedMode}
-      <p class="mt-2">Click the Add Prompt button to create your first prompt.</p>
+      <p class="mt-2">
+        Click the Add {screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} button to
+        create your first {screenRootFolder?.kind === 'template' ? 'template' : 'prompt'}.
+      </p>
     {/if}
   </div>
 {/snippet}

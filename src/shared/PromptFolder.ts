@@ -4,7 +4,7 @@ import type { EntryRef, OrderContainer } from './OrderContainer'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
-import type { PromptUiState } from './PromptUiState'
+import type { MarkdownContentUiState } from './MarkdownContentUiState'
 
 export type PromptFolderKind = 'prompt' | 'template'
 
@@ -182,5 +182,5 @@ export type LoadPromptFolderInitialResult = IpcResult<{
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
   prompts: Array<RevisionEnvelope<PromptPersisted>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
-  promptUiStates: Array<RevisionEnvelope<PromptUiState>>
+  markdownContentUiStates: Array<RevisionEnvelope<MarkdownContentUiState>>
 }>

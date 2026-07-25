@@ -12,6 +12,9 @@
     onDelete?: () => void
     copyLabel?: string
     copyTitle?: string
+    deleteLabel?: string
+    deleteDialogTitle?: string
+    deleteDialogDescription?: string
     onCopySuccess?: () => void | Promise<void>
   }
 
@@ -22,6 +25,9 @@
     onDelete,
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt',
+    deleteLabel = 'Delete prompt',
+    deleteDialogTitle = 'Delete Prompt',
+    deleteDialogDescription = 'Are you sure you want to delete this prompt?',
     onCopySuccess
   }: Props = $props()
   let isDeleteDialogOpen = $state(false)
@@ -52,8 +58,8 @@
   {#if onDelete}
     <IconButton
       icon={Trash2}
-      label="Delete prompt"
-      title="Delete prompt"
+      label={deleteLabel}
+      title={deleteLabel}
       hoverVariant="danger"
       testId="prompt-delete-button"
       onclick={handleDeleteClick}
@@ -72,8 +78,8 @@
 {#if onDelete}
   <ConfirmationDialog
     bind:open={isDeleteDialogOpen}
-    title="Delete Prompt"
-    description="Are you sure you want to delete this prompt?"
+    title={deleteDialogTitle}
+    description={deleteDialogDescription}
     confirmText="Delete"
     confirmTestId="prompt-confirm-delete-button"
     oncancel={handleCancelDelete}

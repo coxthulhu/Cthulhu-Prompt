@@ -30,6 +30,9 @@
     icon,
     copyLabel,
     copyTitle,
+    deleteLabel,
+    deleteDialogTitle,
+    deleteDialogDescription,
     completedAt,
     status = PromptStatus.Todo,
     isEdited = false,
@@ -62,6 +65,9 @@
     {icon}
     {copyLabel}
     {copyTitle}
+    {deleteLabel}
+    {deleteDialogTitle}
+    {deleteDialogDescription}
     {completedAt}
     {status}
     {isEdited}

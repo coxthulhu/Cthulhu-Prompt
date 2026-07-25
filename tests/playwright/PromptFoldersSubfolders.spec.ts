@@ -791,6 +791,14 @@ describe('Prompt folder subfolder rendering', () => {
     })
 
     await mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]').click()
+    const renamePromptFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Rename Prompt Folder"]'
+    )
+    await expect(renamePromptFolderDialog).toBeVisible()
+    await expect(renamePromptFolderDialog.getByLabel('Prompt Folder Name')).toBeVisible()
+    await expect(
+      renamePromptFolderDialog.getByRole('button', { name: 'Rename Prompt Folder' })
+    ).toBeVisible()
     await nameInput.fill('Grandchild')
     await expect(errorMessage).toHaveCount(0)
     await expect(renameButton).toBeEnabled()

@@ -8,8 +8,8 @@ import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraf
 import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
-import { promptUiStateDraftCollection } from '../Collections/PromptUiStateDraftCollection'
+import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
+import { markdownContentUiStateDraftCollection } from '../Collections/MarkdownContentUiStateDraftCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
@@ -33,7 +33,7 @@ const revisionCollections = {
   promptFolder: promptFolderCollection,
   prompt: promptCollection,
   promptTemplate: promptTemplateCollection,
-  promptUiState: promptUiStateCollection
+  markdownContentUiState: markdownContentUiStateCollection
 }
 
 const optimisticCollections = {
@@ -41,7 +41,7 @@ const optimisticCollections = {
   promptDraft: promptDraftCollection,
   promptTemplateDraft: promptTemplateDraftCollection,
   promptFolderDraft: promptFolderDraftCollection,
-  promptUiStateDraft: promptUiStateDraftCollection,
+  markdownContentUiStateDraft: markdownContentUiStateDraftCollection,
   systemSettingsDraft: systemSettingsDraftCollection,
   userPersistenceDraft: userPersistenceDraftCollection,
   workspacePersistenceDraft: workspacePersistenceDraftCollection

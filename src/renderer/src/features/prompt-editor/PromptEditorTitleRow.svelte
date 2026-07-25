@@ -16,11 +16,14 @@
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onTitleForwardTab?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
-    metadataFolderLabel?: string
+    metadataFolderLabel?: string | null
     tokenCount: number
     icon?: ComponentType
     copyLabel?: string
     copyTitle?: string
+    deleteLabel?: string
+    deleteDialogTitle?: string
+    deleteDialogDescription?: string
     completedAt?: string | null
     status?: import('@shared/Prompt').PromptStatus
     isEdited?: boolean
@@ -57,6 +60,9 @@
     icon = FileText,
     copyLabel,
     copyTitle,
+    deleteLabel,
+    deleteDialogTitle,
+    deleteDialogDescription,
     completedAt = null,
     status = PromptStatus.Todo,
     isEdited = false,
@@ -170,17 +176,23 @@
       {/if}
 
       <div class="prompt-editor-metadata-row">
-        <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
-          <Layers class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
-          {metadataFolderLabel}
-        </span>
-        {#if modifiedAt}
+        {#if metadataFolderLabel}
+          <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
+            <Layers class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
+            {metadataFolderLabel}
+          </span>
+        {/if}
+        {#if metadataFolderLabel && modifiedAt}
           <SeparatorDot />
+        {/if}
+        {#if modifiedAt}
           <span data-testid="prompt-modified-time" title={modifiedFullLabel}>
             {modifiedUpdatedLabel}
           </span>
         {/if}
-        <SeparatorDot />
+        {#if metadataFolderLabel || modifiedAt}
+          <SeparatorDot />
+        {/if}
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         {#if completedAt}
           <SeparatorDot />
@@ -201,13 +213,15 @@
         {onDelete}
         {copyLabel}
         {copyTitle}
+        {deleteLabel}
+        {deleteDialogTitle}
+        {deleteDialogDescription}
         onCopySuccess={handleCopySuccess}
       />
     </div>
 
-    <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
-
     {#if onStatusChange}
+      <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
       <PromptEditorStatusControl {status} {onStatusChange} />
     {/if}
   </div>

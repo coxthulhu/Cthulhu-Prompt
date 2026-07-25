@@ -22,7 +22,6 @@ import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import {
   folderEntryRef,
-  moveEntryWithinSubset,
   removeEntry,
   resolveEntryInsertIndex
 } from '@shared/OrderContainer'
@@ -242,18 +241,7 @@ export const movePromptFolder = async (
     mutateOptimistically: ({ collections }) => {
       if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
         collections.workspace.update(workspaceId, (draft) => {
-          const previousFolderKind = previousEntryId
-            ? promptFolderCollection.get(previousEntryId)?.kind
-            : promptFolder.kind
-          draft.entries =
-            previousFolderKind === promptFolder.kind
-              ? moveEntryWithinSubset(
-                  sourceEntries,
-                  promptFolderId,
-                  previousEntryId,
-                  (entry) => promptFolderCollection.get(entry.id)?.kind === promptFolder.kind
-                )
-              : [...nextDestinationEntries]
+          draft.entries = [...nextDestinationEntries]
         })
         return
       }

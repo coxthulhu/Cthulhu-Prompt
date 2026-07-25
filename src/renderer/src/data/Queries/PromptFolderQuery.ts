@@ -6,12 +6,12 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
-import { promptUiStateCollection } from '../Collections/PromptUiStateCollection'
+import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
 import {
   setPromptFolderDraftHasLoadedInitialData,
   upsertPromptFolderDrafts
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
-import { upsertPromptUiStateDrafts } from '../UiState/PromptUiStateDraftMutations.svelte.ts'
+import { upsertMarkdownContentUiStateDrafts } from '../UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 
 export const loadPromptFolderInitial = async (
@@ -33,8 +33,10 @@ export const loadPromptFolderInitial = async (
   for (const adapter of markdownContentQueryAdapters) adapter.applyFolderResult(result)
   promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
   upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
-  promptUiStateCollection.utils.upsertManyAuthoritative(result.promptUiStates)
-  upsertPromptUiStateDrafts(result.promptUiStates.map((promptUiState) => promptUiState.data))
+  markdownContentUiStateCollection.utils.upsertManyAuthoritative(result.markdownContentUiStates)
+  upsertMarkdownContentUiStateDrafts(
+    result.markdownContentUiStates.map((uiState) => uiState.data)
+  )
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
 
   // Prune drafts against the reconciled collection state after applying the load result.

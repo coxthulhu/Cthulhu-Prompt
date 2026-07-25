@@ -12,7 +12,7 @@ import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import { buildPromptFolderSnapshot, buildPromptSnapshot } from '../Data/DataSnapshotHelpers'
-import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
+import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
@@ -308,7 +308,7 @@ export const setupPromptMutationHandlers = (): void => {
       tx.prompt.delete({ id: promptId, expectedRevision }),
     onDeleted: (workspaceId, promptId) => {
       // Side effect: remove persisted Monaco view state for deleted prompts.
-      PromptUiStateDataAccess.deletePromptUiState(workspaceId, promptId)
+      MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(workspaceId, promptId)
     }
   })
   setupPromptStatusMutationHandler()

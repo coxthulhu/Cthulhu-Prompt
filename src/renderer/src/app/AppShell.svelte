@@ -138,13 +138,12 @@
     return selectedWorkspace.entries
       .map((entry) => entry.id)
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
-      .filter(
-        (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'prompt'
-      )
+      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
     for (const promptFolder of selectedWorkspacePromptFolders) {
+      if (promptFolder.kind !== 'prompt') continue
       for (const promptId of getPromptFolderPromptIds(promptFolder)) {
         promptIds.add(promptId)
       }
@@ -152,7 +151,9 @@
 
     return promptIds.size
   })
-  const workspacePromptFolderCount = $derived(selectedWorkspacePromptFolders.length)
+  const workspacePromptFolderCount = $derived(
+    selectedWorkspacePromptFolders.filter((folder) => folder.kind === 'prompt').length
+  )
   let screenRootFolderId = $state<string | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
@@ -547,10 +548,22 @@
       return
     }
     screenRootFolderId = promptFolderId
+    if (
+      selectedWorkspacePromptFolders.find((folder) => folder.id === promptFolderId)?.kind ===
+      'template'
+    ) {
+      promptFolderScreenMode = PromptFolderScreenMode.Active
+    }
     navigateToScreen('prompt-folders')
   }
 
   const setPromptFolderMode = (nextMode: PromptFolderScreenMode): void => {
+    if (screenRootFolderId) {
+      const folder = selectedWorkspacePromptFolders.find(
+        (candidate) => candidate.id === screenRootFolderId
+      )
+      if (folder?.kind === 'template') return
+    }
     promptFolderScreenMode = nextMode
   }
 

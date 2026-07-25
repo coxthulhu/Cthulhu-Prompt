@@ -10,6 +10,7 @@ import {
   type PromptHandleDropPayload
 } from '@renderer/features/drag-drop/promptHandleDrag'
 import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
+import { movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
@@ -43,6 +44,11 @@ export const createPromptTreePromptDragController = ({
       return
     }
 
+    const destinationFolder = dropPayload
+      ? findPromptFolder(promptFolders, dropPayload.folderId)
+      : null
+    if (destinationFolder && destinationFolder.kind !== sourcePayload.contentKind) return
+
     const nextMove = resolvePromptHandleDropMove(
       sourcePromptFolder.id,
       getPromptFolderActiveEntryIds(sourcePromptFolder),
@@ -50,8 +56,7 @@ export const createPromptTreePromptDragController = ({
       dropPayload,
       dropPayload
         ? ((): string[] | null => {
-            const promptFolder = findPromptFolder(promptFolders, dropPayload.folderId)
-            return promptFolder ? getPromptFolderActiveEntryIds(promptFolder) : null
+            return destinationFolder ? getPromptFolderActiveEntryIds(destinationFolder) : null
           })()
         : null
     )
@@ -60,12 +65,13 @@ export const createPromptTreePromptDragController = ({
     }
 
     void runIpcBestEffort(async () => {
-      await movePrompt(
-        nextMove.sourcePromptFolderId,
-        nextMove.destinationPromptFolderId,
-        nextMove.promptId,
-        nextMove.previousEntryId
-      )
+      const move = sourcePayload.contentKind === 'template' ? movePromptTemplate : movePrompt
+      await move(
+          nextMove.sourcePromptFolderId,
+          nextMove.destinationPromptFolderId,
+          nextMove.promptId,
+          nextMove.previousEntryId
+        )
     })
 
     onPromptMove(nextMove)

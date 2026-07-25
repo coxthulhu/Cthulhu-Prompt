@@ -1,7 +1,7 @@
 import { flushPromptFolderDraftAutosaves } from './PromptFolderDraftMutations.svelte.ts'
 import { flushPromptDraftAutosaves } from './PromptDraftMutations.svelte.ts'
 import { flushPromptTemplateDraftAutosaves } from './PromptTemplateDraftMutations.svelte.ts'
-import { flushPromptUiStateAutosaves } from './PromptUiStateDraftMutations.svelte.ts'
+import { flushMarkdownContentUiStateAutosaves } from './MarkdownContentUiStateDraftMutations.svelte.ts'
 import { flushSystemSettingsAutosaves } from './SystemSettingsAutosave.svelte.ts'
 import { flushUserPersistenceAutosaves } from './UserPersistenceAutosave.svelte.ts'
 import { flushWorkspacePersistenceAutosaves } from './WorkspacePersistenceAutosave.svelte.ts'
@@ -12,7 +12,7 @@ const workspaceScopedAutosaveFlushTasks: AutosaveFlushTask[] = [
   flushPromptFolderDraftAutosaves,
   flushPromptDraftAutosaves,
   flushPromptTemplateDraftAutosaves,
-  flushPromptUiStateAutosaves,
+  flushMarkdownContentUiStateAutosaves,
   flushSystemSettingsAutosaves,
   flushWorkspacePersistenceAutosaves
 ]

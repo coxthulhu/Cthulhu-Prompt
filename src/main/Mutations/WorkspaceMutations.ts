@@ -13,7 +13,6 @@ import * as path from 'path'
 import { buildPromptFolderTreeIndex, MAX_PROMPT_SUBFOLDER_DEPTH } from '@shared/PromptFolderTree'
 import {
   folderEntryRef,
-  moveEntryWithinSubset,
   removeEntry,
   resolveEntryInsertIndex
 } from '@shared/OrderContainer'
@@ -182,25 +181,11 @@ export const setupWorkspaceMutationHandlers = (): void => {
             nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
 
             if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
-              const previousFolderKind = payload.previousEntryId
-                ? data.promptFolder.committedStore.getEntry(payload.previousEntryId)?.committed.kind
-                : movedPromptFolder.committed.kind
-              const rootEntries =
-                previousFolderKind === movedPromptFolder.committed.kind
-                  ? moveEntryWithinSubset(
-                      sourceEntries,
-                      payload.promptFolderId,
-                      payload.previousEntryId,
-                      (entry) =>
-                        data.promptFolder.committedStore.getEntry(entry.id)?.committed.kind ===
-                        movedPromptFolder.committed.kind
-                    )
-                  : nextDestinationEntries
               handles.workspace = tx.workspace.update({
                 id: requestedWorkspace.id,
                 expectedRevision: requestedWorkspace.expectedRevision,
                 recipe: (draft) => {
-                  draft.entries = rootEntries.filter((entry) => entry.kind === 'folder')
+                  draft.entries = nextDestinationEntries.filter((entry) => entry.kind === 'folder')
                 }
               })
             } else if (isSameParent && sourceParentPromptFolder) {

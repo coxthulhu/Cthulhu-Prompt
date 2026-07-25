@@ -56,6 +56,10 @@ export const createPromptEditorModelUri = (promptId: string): monaco.Uri => {
   return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/prompts/${promptId}.md`)
 }
 
+export const createPromptTemplateEditorModelUri = (templateId: string): monaco.Uri => {
+  return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/templates/${templateId}.md`)
+}
+
 export const createPromptFolderSettingsModelUri = (
   promptFolderId: string,
   field: PromptFolderSettingsField

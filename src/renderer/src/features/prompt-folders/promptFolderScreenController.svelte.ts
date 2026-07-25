@@ -3,10 +3,15 @@ import { SvelteSet } from 'svelte/reactivity'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { isPromptFull, type Prompt, PromptStatus } from '@shared/Prompt'
 import {
+  isPromptTemplateFull,
+  type PromptTemplate
+} from '@shared/PromptTemplate'
+import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
   type PromptFolder,
-  type PromptFolderSettings
+  type AnyPromptFolderSettings,
+  type PromptFolderKind
 } from '@shared/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
@@ -28,10 +33,19 @@ import {
   promptFolderDraftCollection
 } from '@renderer/data/Collections/PromptFolderDraftCollection'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import {
+  type PromptTemplateDraftRecord,
+  promptTemplateDraftCollection
+} from '@renderer/data/Collections/PromptTemplateDraftCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
+import {
+  deletePromptTemplate,
+  movePromptTemplate
+} from '@renderer/data/Mutations/PromptTemplateMutations'
 import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
 import {
   lookupPromptFolderScrollTop,
@@ -76,6 +90,7 @@ import { resolvePromptFolderEntryDropMove } from '../drag-drop/promptFolderEntry
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 import { PromptFolderScreenMode } from './promptFolderScreenMode'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
+import { createBlankPromptTemplateInFolder } from './createBlankPromptTemplateInFolder'
 import {
   buildPromptFolderScreenRows,
   type PromptFolderDividerTarget,
@@ -93,6 +108,15 @@ export type ActivePromptTreeRow =
 type PromptMetadata = {
   status: PromptStatus
   completedAt: string | null
+}
+
+export type MarkdownContentDraftRecord = {
+  id: string
+  title: string
+  fallbackTitle: string
+  modifiedAt: string
+  text: string
+  isEdited: boolean
 }
 
 type PromptFolderScreenControllerOptions = {
@@ -128,6 +152,12 @@ export const createPromptFolderScreenController = ({
   const promptQuery = useLiveQuery(promptCollection) as {
     data: Prompt[]
   }
+  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+    data: PromptTemplate[]
+  }
+  const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
+    data: PromptTemplateDraftRecord[]
+  }
   const promptFolderDraftQuery = useLiveQuery(promptFolderDraftCollection) as {
     data: PromptFolderDraftRecord[]
   }
@@ -141,6 +171,8 @@ export const createPromptFolderScreenController = ({
 
     return null
   })
+  const contentKind = $derived<PromptFolderKind>(screenRootFolder?.kind ?? 'prompt')
+  const isTemplateFolder = $derived(contentKind === 'template')
   const promptDraftById = $derived.by(() => {
     const draftsById: Record<string, PromptDraftRecord> = {}
     for (const draft of promptDraftQuery.data) {
@@ -151,6 +183,37 @@ export const createPromptFolderScreenController = ({
       draftsById[draft.id] = draft
     }
     return draftsById
+  })
+  const contentDraftById = $derived.by<Record<string, MarkdownContentDraftRecord>>(() => {
+    if (!isTemplateFolder) {
+      return Object.fromEntries(
+        Object.values(promptDraftById).map((draft) => [
+          draft.id,
+          {
+            id: draft.id,
+            title: draft.title,
+            fallbackTitle: draft.fallbackTitle,
+            modifiedAt: draft.modifiedAt,
+            text: draft.promptText,
+            isEdited: draft.isEdited
+          }
+        ])
+      )
+    }
+
+    return Object.fromEntries(
+      promptTemplateDraftQuery.data.map((draft) => [
+        draft.id,
+        {
+          id: draft.id,
+          title: draft.title,
+          fallbackTitle: draft.fallbackTitle,
+          modifiedAt: draft.modifiedAt,
+          text: draft.templateText,
+          isEdited: draft.isEdited
+        }
+      ])
+    )
   })
   const promptById = $derived.by(() => {
     const promptsById: Record<string, Prompt> = {}
@@ -163,6 +226,9 @@ export const createPromptFolderScreenController = ({
     }
     return promptsById
   })
+  const templateById = $derived.by(() =>
+    Object.fromEntries(promptTemplateQuery.data.map((template) => [template.id, template]))
+  )
   const promptFolderDraftById = $derived.by(() => {
     const draftsById: Record<string, PromptFolderDraftRecord> = {}
     for (const draft of promptFolderDraftQuery.data) {
@@ -175,17 +241,13 @@ export const createPromptFolderScreenController = ({
     return draftsById
   })
   const screenRootFolderDraft = $derived(promptFolderDraftById[screenRootFolderId] ?? null)
-  const getPromptIdsForFolder = (folder: PromptFolder): string[] =>
-    folder.entries
-      .filter(
-        (entry) =>
-          entry.kind === 'prompt' && promptById[entry.id]?.status !== PromptStatus.Completed
-      )
-      .map((entry) => entry.id)
   const getActiveEntryIdsForFolder = (folder: PromptFolder): string[] =>
     folder.entries.flatMap((entry) => {
       if (entry.kind === 'folder') return [entry.id]
-      return promptById[entry.id]?.status === PromptStatus.Completed ? [] : [entry.id]
+      if (entry.kind !== contentKind) return []
+      return contentKind === 'prompt' && promptById[entry.id]?.status === PromptStatus.Completed
+        ? []
+        : [entry.id]
     })
   const findContainingRootFolderId = (folderId: string): string => {
     let containingRootId = folderId
@@ -197,9 +259,8 @@ export const createPromptFolderScreenController = ({
       containingRootId = parent.id
     }
   }
-  const rootPromptIds = $derived(screenRootFolder ? getPromptIdsForFolder(screenRootFolder) : [])
   const completedPrompts = $derived.by(() => {
-    if (!screenRootFolder) return []
+    if (!screenRootFolder || isTemplateFolder) return []
 
     return collectCompletedPrompts({
       rootFolder: screenRootFolder,
@@ -224,14 +285,14 @@ export const createPromptFolderScreenController = ({
       completedPrompts.map(({ ownerFolderId, promptId }) => [promptId, ownerFolderId])
     )
   )
-  const emptyFolderSettings = createEmptyPromptFolderSettings()
-  const folderSettingsByFolderId = $derived.by<Record<string, PromptFolderSettings>>(() => {
-    const settingsByFolderId: Record<string, PromptFolderSettings> = {}
+  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings(contentKind))
+  const folderSettingsByFolderId = $derived.by<Record<string, AnyPromptFolderSettings>>(() => {
+    const settingsByFolderId: Record<string, AnyPromptFolderSettings> = {}
     for (const folder of promptFolderQuery.data) {
-      if (!folder || folder.kind !== 'prompt') continue
+      if (!folder || folder.kind !== contentKind) continue
       const draftSettings = promptFolderDraftById[folder.id]?.settings
       settingsByFolderId[folder.id] = copyPromptFolderSettings(
-        draftSettings && 'folderPrefix' in draftSettings ? draftSettings : folder.settings
+        draftSettings ?? folder.settings
       )
     }
     return settingsByFolderId
@@ -349,9 +410,12 @@ export const createPromptFolderScreenController = ({
         (candidate): candidate is PromptFolder =>
           candidate !== undefined && candidate.id !== screenRootFolder.id
       ),
-      promptIds: promptQuery.data.flatMap((prompt) =>
-        prompt && prompt.status !== PromptStatus.Completed ? [prompt.id] : []
-      ),
+      promptIds: isTemplateFolder
+        ? promptTemplateQuery.data.map((template) => template.id)
+        : promptQuery.data.flatMap((prompt) =>
+            prompt.status !== PromptStatus.Completed ? [prompt.id] : []
+          ),
+      contentKind,
       isFolderExpanded: (folderId) =>
         folderId === screenRootFolderId || (promptsSectionExpandedByFolderId[folderId] ?? true)
     })
@@ -370,14 +434,19 @@ export const createPromptFolderScreenController = ({
         (candidate): candidate is PromptFolder =>
           candidate !== undefined && candidate.id !== screenRootFolder.id
       ),
-      promptIds: promptQuery.data.flatMap((prompt) =>
-        prompt && prompt.status !== PromptStatus.Completed ? [prompt.id] : []
-      ),
+      promptIds: isTemplateFolder
+        ? promptTemplateQuery.data.map((template) => template.id)
+        : promptQuery.data.flatMap((prompt) =>
+            prompt.status !== PromptStatus.Completed ? [prompt.id] : []
+          ),
+      contentKind,
       isFolderExpanded: () => true
     }).flatMap((row) => (row.kind === 'prompt-editor' ? [row.promptId] : []))
   })
   const activePromptCount = $derived(allActiveScreenPromptIds.length)
-  const screenPromptIds = $derived(isCompletedMode ? orderedCompletedPromptIds : rootPromptIds)
+  const screenPromptIds = $derived(
+    isCompletedMode ? orderedCompletedPromptIds : activeScreenPromptIds
+  )
   const renderedPromptIds = $derived(
     isCompletedMode ? orderedCompletedPromptIds : activeScreenPromptIds
   )
@@ -388,6 +457,11 @@ export const createPromptFolderScreenController = ({
       metadataById[prompt.id] = {
         status: prompt.status,
         completedAt: prompt.completedAt ?? null
+      }
+    }
+    if (isTemplateFolder) {
+      for (const template of promptTemplateQuery.data) {
+        metadataById[template.id] = { status: PromptStatus.Todo, completedAt: null }
       }
     }
 
@@ -401,12 +475,17 @@ export const createPromptFolderScreenController = ({
 
     const loadedIds: string[] = []
     for (const promptId of screenPromptIds) {
-      if (!promptDraftById[promptId]) {
+      if (!contentDraftById[promptId]) {
         continue
       }
 
-      const prompt = promptById[promptId]
-      if (prompt && isPromptFull(prompt)) {
+      const content = isTemplateFolder ? templateById[promptId] : promptById[promptId]
+      if (
+        content &&
+        (isTemplateFolder
+          ? isPromptTemplateFull(content as PromptTemplate)
+          : isPromptFull(content as Prompt))
+      ) {
         loadedIds.push(promptId)
       }
     }
@@ -416,8 +495,14 @@ export const createPromptFolderScreenController = ({
 
   const navigablePromptIds = $derived(
     allActiveScreenPromptIds.filter((promptId) => {
-      const prompt = promptById[promptId]
-      return Boolean(promptDraftById[promptId] && prompt && isPromptFull(prompt))
+      const content = isTemplateFolder ? templateById[promptId] : promptById[promptId]
+      return Boolean(
+        contentDraftById[promptId] &&
+          content &&
+          (isTemplateFolder
+            ? isPromptTemplateFull(content as PromptTemplate)
+            : isPromptFull(content as Prompt))
+      )
     })
   )
 
@@ -427,8 +512,14 @@ export const createPromptFolderScreenController = ({
     if (!screenRootFolder) return false
     if (!screenRootFolderDraft?.hasLoadedInitialData) return false
     return renderedPromptIds.every((promptId) => {
-      const prompt = promptById[promptId]
-      return Boolean(promptDraftById[promptId] && prompt && isPromptFull(prompt))
+      const content = isTemplateFolder ? templateById[promptId] : promptById[promptId]
+      return Boolean(
+        contentDraftById[promptId] &&
+          content &&
+          (isTemplateFolder
+            ? isPromptTemplateFull(content as PromptTemplate)
+            : isPromptFull(content as Prompt))
+      )
     })
   })
 
@@ -436,7 +527,7 @@ export const createPromptFolderScreenController = ({
     const nextItems: PromptFolderFindItem[] = []
 
     for (const currentPromptId of visiblePromptIds) {
-      const promptDraft = promptDraftById[currentPromptId]
+      const promptDraft = contentDraftById[currentPromptId]
       if (!promptDraft) continue
       nextItems.push({
         entityId: currentPromptId,
@@ -448,7 +539,7 @@ export const createPromptFolderScreenController = ({
           },
           {
             key: PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-            text: promptDraft.promptText
+            text: promptDraft.text
           }
         ]
       })
@@ -818,15 +909,18 @@ export const createPromptFolderScreenController = ({
     }
 
     for (const promptId of cachedPromptFolder.entries
-      .filter((entry) => entry.kind === 'prompt')
+      .filter((entry) => entry.kind === cachedPromptFolder.kind)
       .map((entry) => entry.id)) {
-      if (!promptDraftCollection.get(promptId)) {
-        return false
-      }
-
-      const prompt = promptCollection.get(promptId)
-      if (!prompt || !isPromptFull(prompt)) {
-        return false
+      if (cachedPromptFolder.kind === 'template') {
+        const template = promptTemplateCollection.get(promptId)
+        if (!promptTemplateDraftCollection.get(promptId) || !template || !isPromptTemplateFull(template)) {
+          return false
+        }
+      } else {
+        const prompt = promptCollection.get(promptId)
+        if (!promptDraftCollection.get(promptId) || !prompt || !isPromptFull(prompt)) {
+          return false
+        }
       }
     }
 
@@ -1028,12 +1122,12 @@ export const createPromptFolderScreenController = ({
     previousEntryId: string | null
   ): Promise<boolean> => {
     const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
-    if (!sourcePromptFolder) {
+    if (!sourcePromptFolder || sourcePromptFolder.kind !== contentKind) {
       return false
     }
 
     const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
-    if (!destinationPromptFolder) {
+    if (!destinationPromptFolder || destinationPromptFolder.kind !== contentKind) {
       return false
     }
 
@@ -1054,12 +1148,21 @@ export const createPromptFolderScreenController = ({
 
     return await runIpcBestEffort(
       async () => {
-        await movePrompt(
-          sourcePromptFolder.id,
-          destinationPromptFolderId,
-          promptId,
-          previousEntryId
-        )
+        if (isTemplateFolder) {
+          await movePromptTemplate(
+            sourcePromptFolder.id,
+            destinationPromptFolderId,
+            promptId,
+            previousEntryId
+          )
+        } else {
+          await movePrompt(
+            sourcePromptFolder.id,
+            destinationPromptFolderId,
+            promptId,
+            previousEntryId
+          )
+        }
         return true
       },
       () => false
@@ -1074,9 +1177,18 @@ export const createPromptFolderScreenController = ({
 
     isCreatingPrompt = true
 
-    const creation = createBlankPromptInFolder(rowOwnerFolder.id, target.previousEntryId)
-    selectCreatedPrompt(rowOwnerFolder.id, creation.promptId)
-    await runIpcBestEffort(() => creation.persistence)
+    if (isTemplateFolder) {
+      const creation = createBlankPromptTemplateInFolder(
+        rowOwnerFolder.id,
+        target.previousEntryId
+      )
+      selectCreatedPrompt(rowOwnerFolder.id, creation.templateId)
+      await runIpcBestEffort(() => creation.persistence)
+    } else {
+      const creation = createBlankPromptInFolder(rowOwnerFolder.id, target.previousEntryId)
+      selectCreatedPrompt(rowOwnerFolder.id, creation.promptId)
+      await runIpcBestEffort(() => creation.persistence)
+    }
 
     isCreatingPrompt = false
   }
@@ -1087,11 +1199,16 @@ export const createPromptFolderScreenController = ({
     }
 
     void runIpcBestEffort(async () => {
-      await deletePrompt(target.ownerFolderId, target.promptId)
+      if (isTemplateFolder) {
+        await deletePromptTemplate(target.ownerFolderId, target.promptId)
+      } else {
+        await deletePrompt(target.ownerFolderId, target.promptId)
+      }
     })
   }
 
   const handleSetPromptStatus = (target: PromptFolderPromptTarget, status: PromptStatus) => {
+    if (isTemplateFolder) return
     if (!promptFolderCollection.get(target.ownerFolderId)) {
       return
     }
@@ -1264,7 +1381,9 @@ export const createPromptFolderScreenController = ({
   }
 
   const activeHeaderRowId = 'prompt-header' as const
-  const activeHeaderSection = $derived(isCompletedMode ? 'Completed Prompts' : 'Prompts')
+  const activeHeaderSection = $derived(
+    isTemplateFolder ? 'Templates' : isCompletedMode ? 'Completed Prompts' : 'Prompts'
+  )
 
   const findRenderedPromptRow = (promptId: string): PromptFolderScreenPromptEditorRow | undefined =>
     activePromptFolderScreenRows.find(
@@ -1379,10 +1498,13 @@ export const createPromptFolderScreenController = ({
     get promptEditorSizingConfig(): PromptEditorSizingConfig {
       return promptEditorSizingConfig
     },
-    get folderSettings(): PromptFolderSettings {
+    get contentKind(): PromptFolderKind {
+      return contentKind
+    },
+    get folderSettings(): AnyPromptFolderSettings {
       return folderSettings
     },
-    get folderSettingsByFolderId(): Record<string, PromptFolderSettings> {
+    get folderSettingsByFolderId(): Record<string, AnyPromptFolderSettings> {
       return folderSettingsByFolderId
     },
     get folderDisplayName(): string {
@@ -1415,8 +1537,8 @@ export const createPromptFolderScreenController = ({
     get isVirtualContentReady(): boolean {
       return isVirtualContentReady
     },
-    get promptDraftById(): Record<string, PromptDraftRecord> {
-      return promptDraftById
+    get promptDraftById(): Record<string, MarkdownContentDraftRecord> {
+      return contentDraftById
     },
     get promptMetadataByPromptId(): Record<string, PromptMetadata> {
       return promptMetadataByPromptId
@@ -1448,7 +1570,7 @@ export const createPromptFolderScreenController = ({
     get activeHeaderRowId(): 'prompt-header' {
       return activeHeaderRowId
     },
-    get activeHeaderSection(): 'Prompts' | 'Completed Prompts' {
+    get activeHeaderSection(): 'Prompts' | 'Completed Prompts' | 'Templates' {
       return activeHeaderSection
     },
     get loadingOverlay() {

@@ -5,9 +5,9 @@ import type {
 } from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
 import {
-  createPromptUiStateRevisionKey,
-  PromptUiStateDataAccess
-} from '../DataAccess/PromptUiStateDataAccess'
+  createMarkdownContentUiStateRevisionKey,
+  MarkdownContentUiStateDataAccess
+} from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
@@ -43,30 +43,33 @@ export const loadPromptFolderInitialData = async (
       if (entry) promptFolderEntries.push(entry)
     }
     const promptFolders = promptFolderEntries.map(buildPromptFolderSnapshot)
-    const { promptIds, prompts, promptTemplates } =
+    const { promptIds, promptTemplateIds, prompts, promptTemplates } =
       loadPromptFolderMarkdownContents(promptFolders)
-    const promptUiStates =
-      promptIds.length === 0
+    const contentIds = [
+      ...promptIds.filter(
+        (promptId) =>
+          data.prompt.committedStore.getEntry(promptId)?.committed.status !== PromptStatus.Completed
+      ),
+      ...promptTemplateIds
+    ]
+    const markdownContentUiStates =
+      contentIds.length === 0
         ? []
-        : PromptUiStateDataAccess.readPromptUiStates(
+        : MarkdownContentUiStateDataAccess.readMarkdownContentUiStates(
             payload.workspaceId,
-            promptIds.filter(
-              (promptId) =>
-                data.prompt.committedStore.getEntry(promptId)?.committed.status !==
-                PromptStatus.Completed
-            )
+            contentIds
           )
     return {
       success: true,
       promptFolders,
       prompts,
       promptTemplates,
-      promptUiStates: promptUiStates.map((promptUiState) => ({
-        id: promptUiState.promptId,
-        revision: revisions.promptUiState.get(
-          createPromptUiStateRevisionKey(promptUiState.workspaceId, promptUiState.promptId)
+      markdownContentUiStates: markdownContentUiStates.map((uiState) => ({
+        id: uiState.contentId,
+        revision: revisions.markdownContentUiState.get(
+          createMarkdownContentUiStateRevisionKey(uiState.workspaceId, uiState.contentId)
         ),
-        data: promptUiState
+        data: uiState
       }))
     }
   } catch (error) {

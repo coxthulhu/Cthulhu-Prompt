@@ -11,7 +11,7 @@ import {
   readWorkspaceInfo
 } from '../DataAccess/WorkspaceReads'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
-import { PromptUiStateDataAccess } from '../DataAccess/PromptUiStateDataAccess'
+import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
@@ -86,6 +86,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     ...collectLoadedPromptFolderDescendantIds(entry.id)
   ])
   const loadedPromptIds: string[] = []
+  const loadedPromptTemplateIds: string[] = []
 
   for (const promptFolderId of loadedPromptFolderIds) {
     const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
@@ -102,6 +103,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
         .filter((entry) => entry.kind === 'template')
         .map((entry) => entry.id)
       for (const templateEntry of getLoadedPromptTemplateEntries(templateIds)) {
+        loadedPromptTemplateIds.push(templateEntry.committed.id)
         promptTemplates.push({
           id: templateEntry.committed.id,
           revision: templateEntry.revision,
@@ -148,8 +150,11 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
 
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
   UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(workspaceId, loadedPromptFolderIds)
-  // Side effect: remove stale prompt editor view-state rows for prompts no longer in the workspace.
-  PromptUiStateDataAccess.cleanupWorkspacePromptUiState(workspaceId, loadedPromptIds)
+  // Side effect: remove stale editor view-state rows for content no longer in the workspace.
+  MarkdownContentUiStateDataAccess.cleanupWorkspaceMarkdownContentUiState(workspaceId, [
+    ...loadedPromptIds,
+    ...loadedPromptTemplateIds
+  ])
 
   return {
     workspace: workspaceSnapshot,

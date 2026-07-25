@@ -66,6 +66,7 @@ type BuildPromptFolderScreenRowsOptions = {
   rootFolder: PromptFolder
   descendantFolders: readonly PromptFolder[]
   promptIds: readonly string[]
+  contentKind?: import('@shared/PromptFolder').PromptFolderKind
   isFolderExpanded: (folderId: string) => boolean
 }
 
@@ -73,6 +74,7 @@ export const buildPromptFolderScreenRows = ({
   rootFolder,
   descendantFolders,
   promptIds,
+  contentKind = 'prompt',
   isFolderExpanded
 }: BuildPromptFolderScreenRowsOptions): PromptFolderScreenRow[] => {
   const rows: PromptFolderScreenRow[] = [{ kind: 'root-header' }]
@@ -115,7 +117,7 @@ export const buildPromptFolderScreenRows = ({
           ownerFolderId: folder.id,
           indentLevel: childIndentLevel,
           isOwnerRoot: false,
-          promptCount: entries.filter((entry) => entry.kind === 'prompt').length,
+          promptCount: entries.filter((entry) => entry.kind === contentKind).length,
           subfolderCount: entries.filter((entry) => entry.kind === 'folder').length
         })
         rows.push({
@@ -129,7 +131,7 @@ export const buildPromptFolderScreenRows = ({
     }
 
     const directPromptIds = entries
-      .filter((entry) => entry.kind === 'prompt')
+      .filter((entry) => entry.kind === contentKind)
       .map((entry) => entry.id)
     const directPromptIndexById = new Map(
       directPromptIds.map((promptId, promptIndex) => [promptId, promptIndex])

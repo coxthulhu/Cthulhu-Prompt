@@ -2,6 +2,7 @@
 const LINE_HEIGHT_RATIO = 1.35
 export const PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX = 56
 export const PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX = 600
+export const PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX = 420
 export const PROMPT_EDITOR_COMPACT_ACTION_ROW_HEIGHT_PX = 53
 export const PROMPT_EDITOR_SIDEBAR_WIDTH_PX = 32
 export const PROMPT_EDITOR_SEPARATOR_HEIGHT_PX = 1
@@ -13,8 +14,10 @@ export const MONACO_PADDING_PX = 0
 // CardSurface draws a 1px border on a border-box card whose outer height is
 // pinned to the virtual row height, so row chrome must include both borders.
 export const PROMPT_EDITOR_CARD_BORDER_WIDTH_PX = 1
-export const isPromptEditorCompactLayout = (titleAreaWidthPx: number): boolean =>
-  titleAreaWidthPx < PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+export const isPromptEditorCompactLayout = (
+  titleAreaWidthPx: number,
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+): boolean => titleAreaWidthPx < compactLayoutMaxWidthPx
 
 export const getPromptEditorTitleAreaWidthPx = (
   cardWidthPx: number,
@@ -24,15 +27,21 @@ export const getPromptEditorTitleAreaWidthPx = (
   PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2 -
   (showSidebar ? PROMPT_EDITOR_SIDEBAR_WIDTH_PX : 0)
 
-export const getPromptEditorTitleAreaHeightPx = (titleAreaWidthPx: number): number =>
+export const getPromptEditorTitleAreaHeightPx = (
+  titleAreaWidthPx: number,
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+): number =>
   PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX +
-  (isPromptEditorCompactLayout(titleAreaWidthPx)
+  (isPromptEditorCompactLayout(titleAreaWidthPx, compactLayoutMaxWidthPx)
     ? PROMPT_EDITOR_COMPACT_ACTION_ROW_HEIGHT_PX
     : 0)
 
-const getRowChromeHeightPx = (titleAreaWidthPx: number): number =>
+const getRowChromeHeightPx = (
+  titleAreaWidthPx: number,
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+): number =>
   PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2 +
-  getPromptEditorTitleAreaHeightPx(titleAreaWidthPx) +
+  getPromptEditorTitleAreaHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx) +
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
   PROMPT_EDITOR_BODY_PADDING_TOP_PX +
   PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX +
@@ -71,23 +80,35 @@ export const estimateMonacoHeightPx = (
   return clampMonacoHeightPx(lineCount * getLineHeightPx(sizingConfig.fontSize), sizingConfig)
 }
 
-export const getRowHeightPx = (monacoHeightPx: number, titleAreaWidthPx: number): number => {
-  return Math.ceil(monacoHeightPx + getRowChromeHeightPx(titleAreaWidthPx))
+export const getRowHeightPx = (
+  monacoHeightPx: number,
+  titleAreaWidthPx: number,
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+): number => {
+  return Math.ceil(
+    monacoHeightPx + getRowChromeHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
+  )
 }
 
 export const getMonacoHeightFromRowPx = (
   rowHeightPx: number,
-  titleAreaWidthPx: number
+  titleAreaWidthPx: number,
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
 ): number => {
-  return rowHeightPx - getRowChromeHeightPx(titleAreaWidthPx)
+  return rowHeightPx - getRowChromeHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
 }
 
 export const estimatePromptEditorHeight = (
   promptText: string,
   titleAreaWidthPx: number,
   _heightPx: number,
-  sizingConfig: PromptEditorSizingConfig
+  sizingConfig: PromptEditorSizingConfig,
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
 ): number => {
   void _heightPx
-  return getRowHeightPx(estimateMonacoHeightPx(promptText, sizingConfig), titleAreaWidthPx)
+  return getRowHeightPx(
+    estimateMonacoHeightPx(promptText, sizingConfig),
+    titleAreaWidthPx,
+    compactLayoutMaxWidthPx
+  )
 }

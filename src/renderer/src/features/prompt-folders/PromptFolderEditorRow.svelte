@@ -8,7 +8,8 @@
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
-    type PromptFolderSettings,
+    type AnyPromptFolderSettings,
+    type PromptFolderKind,
     type PromptFolderSettingsField
   } from '@shared/PromptFolder'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
@@ -41,7 +42,8 @@
     promptCount: number
     completedPromptCount: number
     subfolderCount: number
-    folderSettings: PromptFolderSettings
+    folderSettings: AnyPromptFolderSettings
+    contentKind: PromptFolderKind
     rowId: string
     virtualWindowWidthPx: number
     devicePixelRatio: number
@@ -83,6 +85,7 @@
     completedPromptCount,
     subfolderCount,
     folderSettings,
+    contentKind,
     rowId,
     virtualWindowWidthPx,
     devicePixelRatio,
@@ -109,7 +112,13 @@
     onSettingsFieldPresenceChange
   }: Props = $props()
 
-  const promptCountLabel = $derived(`${promptCount} ${promptCount === 1 ? 'prompt' : 'prompts'}`)
+  const contentName = $derived(contentKind === 'template' ? 'template' : 'prompt')
+  const folderLabel = $derived(
+    contentKind === 'template' ? 'prompt template folder' : 'prompt folder'
+  )
+  const promptCountLabel = $derived(
+    `${promptCount} ${promptCount === 1 ? contentName : `${contentName}s`}`
+  )
   const completedPromptCountLabel = $derived(
     `${completedPromptCount} completed prompt${completedPromptCount === 1 ? '' : 's'}`
   )
@@ -122,11 +131,14 @@
     folderPrefix: false,
     folderSuffix: false
   })
+  const settingsFields = $derived<PromptFolderSettingsField[]>(
+    contentKind === 'template' ? ['folderDescription'] : [...PROMPT_FOLDER_SETTINGS_FIELDS]
+  )
   const isAnySectionHydrated = $derived(
-    PROMPT_FOLDER_SETTINGS_FIELDS.some((field) => hydratedFields[field])
+    settingsFields.some((field) => hydratedFields[field])
   )
   const configuredSettingsCount = $derived(
-    PROMPT_FOLDER_SETTINGS_FIELDS.filter((field) => folderSettings[field] !== null).length
+    settingsFields.filter((field) => folderSettings[field] !== null).length
   )
   const effectiveDropOptions = $derived<
     DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
@@ -195,7 +207,7 @@
   // Side effect: hidden settings sections are unmounted and no longer hydrate the virtual row.
   $effect(() => {
     if (isSettingsSectionExpanded && !isReadOnly) return
-    PROMPT_FOLDER_SETTINGS_FIELDS.forEach((field) => {
+    settingsFields.forEach((field) => {
       hydratedFields[field] = false
     })
   })
@@ -222,7 +234,7 @@
   >
     {#snippet sidebar()}
       {#if dragOptions}
-        <PromptFolderEditorSidebar {dragOptions} />
+        <PromptFolderEditorSidebar {dragOptions} {contentKind} />
       {/if}
     {/snippet}
 
@@ -235,8 +247,12 @@
       <div class="prompt-folder-editor-title-main">
         <IconButton
           icon={ChevronRight}
-          label={isPromptsSectionExpanded ? 'Collapse folder prompts' : 'Expand folder prompts'}
-          title={isPromptsSectionExpanded ? 'Collapse folder prompts' : 'Expand folder prompts'}
+          label={isPromptsSectionExpanded
+            ? `Collapse folder ${contentName}s`
+            : `Expand folder ${contentName}s`}
+          title={isPromptsSectionExpanded
+            ? `Collapse folder ${contentName}s`
+            : `Expand folder ${contentName}s`}
           ariaExpanded={isPromptsSectionExpanded}
           iconSize={24}
           borderless
@@ -256,8 +272,8 @@
             {#if canRename && !isReadOnly}
               <IconButton
                 icon={Pencil}
-                label="Rename prompt folder"
-                title="Rename prompt folder"
+                label={`Rename ${folderLabel}`}
+                title={`Rename ${folderLabel}`}
                 size="tiny"
                 baseVariant="muted"
                 hoverVariant="glyph"
@@ -270,8 +286,10 @@
 
           <div class="prompt-folder-editor-metadata-row">
             <span>{promptCountLabel}</span>
-            <SeparatorDot />
-            <span>{completedPromptCountLabel}</span>
+            {#if contentKind === 'prompt'}
+              <SeparatorDot />
+              <span>{completedPromptCountLabel}</span>
+            {/if}
             <SeparatorDot />
             <span>{subfolderCountLabel}</span>
           </div>
@@ -282,8 +300,8 @@
         <IconButtonBar>
           <IconButton
             icon={Trash2}
-            label="Delete prompt folder"
-            title="Delete prompt folder"
+            label={`Delete ${folderLabel}`}
+            title={`Delete ${folderLabel}`}
             hoverVariant="danger"
             testId="prompt-folder-editor-delete-button"
             onclick={handleDeleteClick}
@@ -318,13 +336,13 @@
             <div class="prompt-folder-settings-heading-copy">
               <span>Folder Settings</span>
               <span class="prompt-folder-settings-metadata">
-                {configuredSettingsCount} of {PROMPT_FOLDER_SETTINGS_FIELDS.length} configured
+                {configuredSettingsCount} of {settingsFields.length} configured
               </span>
             </div>
           </div>
 
           <div class="prompt-folder-settings-toggles" role="group" aria-label="Folder settings">
-            {#each PROMPT_FOLDER_SETTINGS_FIELDS as field (field)}
+            {#each settingsFields as field (field)}
               {@const isPresent = folderSettings[field] !== null}
               {@const config = PROMPT_FOLDER_SETTINGS_EDITOR_CONFIG[field]}
               <IconTextButton
@@ -345,7 +363,7 @@
         {/if}
 
         <div class="prompt-folder-editor-sections">
-          {#each PROMPT_FOLDER_SETTINGS_FIELDS.filter(
+          {#each settingsFields.filter(
             (field) => folderSettings[field] !== null
           ) as field, index (field)}
             <PromptFolderSettingsEditorSection

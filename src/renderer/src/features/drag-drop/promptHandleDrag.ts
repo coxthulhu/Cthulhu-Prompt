@@ -3,6 +3,7 @@ export const PROMPT_HANDLE_DRAG_TYPE = 'prompt-handle'
 export type PromptHandleDragPayload = {
   fromId: string
   sourceFolderId: string
+  contentKind: import('@shared/PromptFolder').PromptFolderKind
 }
 
 export type PromptFolderEntryDragPayload = {

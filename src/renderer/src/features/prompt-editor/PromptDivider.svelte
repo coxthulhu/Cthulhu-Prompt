@@ -13,6 +13,7 @@
     onAddPrompt,
     onAddSubfolder,
     mode = 'add',
+    contentLabel = 'Prompt',
     disabled = false,
     testId,
     subfolderTestId,
@@ -21,6 +22,7 @@
     onAddPrompt?: () => void
     onAddSubfolder?: () => void
     mode?: 'add' | 'separator'
+    contentLabel?: 'Prompt' | 'Template'
     disabled?: boolean
     testId?: string
     subfolderTestId?: string
@@ -29,7 +31,7 @@
 </script>
 
 {#snippet dividerContent({ isOver = false } = {})}
-  {@const dividerText = isOver ? 'Move Here' : 'Add Prompt'}
+  {@const dividerText = isOver ? 'Move Here' : `Add ${contentLabel}`}
   <div
     class="promptDividerRow grid items-center"
     data-drop-over={isOver ? 'true' : 'false'}
@@ -63,7 +65,7 @@
         <button
           class="promptDividerSeparatorButton"
           type="button"
-          aria-label="Add Prompt from left separator"
+          aria-label={`Add ${contentLabel} from left separator`}
           title={dividerText}
           {disabled}
           data-testid={testId ? `${testId}-separator-left` : undefined}
@@ -108,7 +110,7 @@
         <button
           class="promptDividerSeparatorButton"
           type="button"
-          aria-label="Add Prompt from right separator"
+          aria-label={`Add ${contentLabel} from right separator`}
           title={dividerText}
           {disabled}
           data-testid={testId ? `${testId}-separator-right` : undefined}

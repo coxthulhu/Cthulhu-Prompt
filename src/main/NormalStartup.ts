@@ -8,7 +8,7 @@ import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
 import { setupPromptFolderMutationHandlers } from './Mutations/PromptFolderMutations'
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
 import { setupPromptTemplateMutationHandlers } from './Mutations/PromptTemplateMutations'
-import { setupPromptUiStateMutationHandlers } from './Mutations/PromptUiStateMutations'
+import { setupMarkdownContentUiStateMutationHandlers } from './Mutations/MarkdownContentUiStateMutations'
 import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsMutations'
 import { setupUserPersistenceMutationHandlers } from './Mutations/UserPersistenceMutations'
 import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
@@ -314,7 +314,7 @@ export function startupNormally(): void {
     setupPromptFolderMutationHandlers()
     setupPromptMutationHandlers()
     setupPromptTemplateMutationHandlers()
-    setupPromptUiStateMutationHandlers()
+    setupMarkdownContentUiStateMutationHandlers()
     setupWindowControlHandlers()
 
     const runtimeConfig = buildRuntimeConfig()

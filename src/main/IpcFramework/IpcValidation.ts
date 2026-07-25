@@ -15,7 +15,10 @@ import type {
   UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
-import type { PromptUiState, PromptUiStateRevisionPayload } from '@shared/PromptUiState'
+import type {
+  MarkdownContentUiState,
+  MarkdownContentUiStateRevisionPayload
+} from '@shared/MarkdownContentUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type {
@@ -369,14 +372,14 @@ const parsePromptTemplate = parseObject<PromptTemplatePersisted>({
 const parsePromptTemplateRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptTemplatePersisted>(parsePromptTemplate)
 
-const parsePromptUiState = parseObject<PromptUiState>({
+const parseMarkdownContentUiState = parseObject<MarkdownContentUiState>({
   workspaceId: parseString,
-  promptId: parseString,
+  contentId: parseString,
   editorViewStateJson: parseString
 })
 
-const parsePromptUiStateRevisionPayloadEntity =
-  parseRevisionPayloadEntity<PromptUiState>(parsePromptUiState)
+const parseMarkdownContentUiStateRevisionPayloadEntity =
+  parseRevisionPayloadEntity<MarkdownContentUiState>(parseMarkdownContentUiState)
 
 const parseCreateWorkspacePayload = parseObject<CreateWorkspacePayload>({
   workspacePath: parseString,
@@ -668,13 +671,16 @@ const parseUpdateWorkspacePersistenceRevisionWireRequest: Parser<
   parseWorkspacePersistenceRevisionPayload
 )
 
-const parsePromptUiStateRevisionPayload = parseObject<PromptUiStateRevisionPayload>({
-  promptUiState: parsePromptUiStateRevisionPayloadEntity
-})
+const parseMarkdownContentUiStateRevisionPayload =
+  parseObject<MarkdownContentUiStateRevisionPayload>({
+    markdownContentUiState: parseMarkdownContentUiStateRevisionPayloadEntity
+  })
 
-const parseUpdatePromptUiStateRevisionWireRequest: Parser<
-  IpcRequestWithPayload<PromptUiStateRevisionPayload>
-> = parseWireRequestWithPayload<PromptUiStateRevisionPayload>(parsePromptUiStateRevisionPayload)
+const parseUpdateMarkdownContentUiStateRevisionWireRequest: Parser<
+  IpcRequestWithPayload<MarkdownContentUiStateRevisionPayload>
+> = parseWireRequestWithPayload<MarkdownContentUiStateRevisionPayload>(
+  parseMarkdownContentUiStateRevisionPayload
+)
 
 const parseLoadWorkspaceByPathPayload = parseObject<LoadWorkspaceByPathRequest>({
   workspaceInfoPath: parseString
@@ -765,8 +771,8 @@ export const parseUpdateWorkspacePersistenceRevisionRequest = createRequestParse
   parseUpdateWorkspacePersistenceRevisionWireRequest
 )
 
-export const parseUpdatePromptUiStateRevisionRequest = createRequestParser(
-  parseUpdatePromptUiStateRevisionWireRequest
+export const parseUpdateMarkdownContentUiStateRevisionRequest = createRequestParser(
+  parseUpdateMarkdownContentUiStateRevisionWireRequest
 )
 
 export const parseLoadWorkspaceByPathRequest = createRequestParser(

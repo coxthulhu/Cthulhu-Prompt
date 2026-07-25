@@ -20,7 +20,7 @@ const createRevisionStore = (): RevisionStore => {
 export const revisions = {
   userPersistence: createRevisionStore(),
   workspacePersistence: createRevisionStore(),
-  promptUiState: createRevisionStore(),
+  markdownContentUiState: createRevisionStore(),
   systemSettings: createRevisionStore(),
   workspace: createRevisionStore(),
   promptFolder: createRevisionStore(),
