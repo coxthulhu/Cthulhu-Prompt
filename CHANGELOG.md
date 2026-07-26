@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.28
+
+### New Features
+
+- Added prompt template folders for creating, organizing, editing, moving, and deleting reusable templates.
+- Added per-prompt template selection and a Prompt Text parameter that applies templates when prompts are copied.
+
+### Changes
+
+- Expanded workspace navigation and folder ordering to include both prompt and template folders.
+- Reworked subfolder settings controls and refined editor labels, icons, actions, and spacing.
+
+### Fixed
+
+- Fixed prompt card actions and content clipping in narrow layouts.
+- Prevented development-mode restarts from taking focus.
+
 ## 0.0.27
 
 ### New Features
