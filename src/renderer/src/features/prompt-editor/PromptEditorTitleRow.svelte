@@ -275,7 +275,7 @@
     gap: 8px;
     grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
-    padding: 8px 8px 8px 16px;
+    padding: 8px;
   }
 
   .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-main {
