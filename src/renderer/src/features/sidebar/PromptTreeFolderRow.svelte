@@ -84,7 +84,7 @@
   const dropdownItems = $derived.by((): DropdownPopupItem[] => [
     {
       id: 'folder-settings',
-      label: 'Open folder settings',
+      label: 'Open Folder Settings',
       icon: Settings,
       testId: folderSettingsTestId(folder)
     }
