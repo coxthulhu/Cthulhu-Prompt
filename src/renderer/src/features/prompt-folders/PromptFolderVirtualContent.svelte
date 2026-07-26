@@ -15,6 +15,8 @@
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
+  import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
+  import { setPromptDraftTemplateId } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
@@ -226,6 +228,8 @@
   let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
+  let isTemplateSelectionDialogOpen = $state(false)
+  let templateSelectionPromptId = $state<string | null>(null)
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
@@ -272,6 +276,16 @@
     folderSettingsByFolderId[ownerFolderId] ??
     promptFolderById[ownerFolderId]?.settings ??
     emptyFolderSettings
+
+  const openTemplateSelectionDialog = (promptId: string): void => {
+    templateSelectionPromptId = promptId
+    isTemplateSelectionDialogOpen = true
+  }
+
+  const handleTemplateSelect = (templateId: string | null): void => {
+    if (!templateSelectionPromptId) return
+    setPromptDraftTemplateId(templateSelectionPromptId, templateId ?? undefined)
+  }
 
   const lookupFolderSettingsRowMeasuredHeight = (
     ownerFolderId: string,
@@ -952,6 +966,12 @@
         fallbackTitle: promptDraftById[row.promptId]!.fallbackTitle,
         modifiedAt: promptDraftById[row.promptId]!.modifiedAt,
         text: promptDraftById[row.promptId]!.text,
+        ...(promptDraftById[row.promptId]!.templateId
+          ? { templateId: promptDraftById[row.promptId]!.templateId }
+          : {}),
+        ...(promptDraftById[row.promptId]!.templateName
+          ? { templateName: promptDraftById[row.promptId]!.templateName }
+          : {}),
         isEdited: promptDraftById[row.promptId]!.isEdited
       }}
       {rowId}
@@ -972,6 +992,9 @@
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       isDragEnabled={!isCompletedMode}
       onDelete={() => onDeletePrompt({ ownerFolderId: row.ownerFolderId, promptId: row.promptId })}
+      onTemplateSelect={isTemplateFolder
+        ? undefined
+        : () => openTemplateSelectionDialog(row.promptId)}
       onStatusChange={isTemplateFolder ? undefined : (status) => {
         onSetPromptStatus({ ownerFolderId: row.ownerFolderId, promptId: row.promptId }, status)
       }}
@@ -989,6 +1012,15 @@
 {#snippet bottomSpacerRow({ virtualWindowHeightPx })}
   <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
 {/snippet}
+
+<PromptTemplateSelectionDialog
+  bind:open={isTemplateSelectionDialogOpen}
+  {workspaceId}
+  selectedTemplateId={templateSelectionPromptId
+    ? promptDraftById[templateSelectionPromptId]?.templateId
+    : undefined}
+  onselect={handleTemplateSelect}
+/>
 
 <style>
   .prompt-folder-bottom-cap {

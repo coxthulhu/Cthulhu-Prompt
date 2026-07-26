@@ -32,6 +32,7 @@
     isExpanded: boolean
     indentCount?: number
     isLastRow?: boolean
+    showActions?: boolean
     getFolderPromptDroppableOptions?: () => PromptRowDropOptions
     folderDragOptions?: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
     onFolderExpandedChange: (folderId: string, isExpanded: boolean) => void
@@ -49,6 +50,7 @@
     isExpanded,
     indentCount = 0,
     isLastRow = false,
+    showActions = true,
     getFolderPromptDroppableOptions,
     folderDragOptions,
     onFolderExpandedChange,
@@ -180,8 +182,9 @@
       <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
     </button>
 
-    <div class="sidebarPromptTreeActionSlot">
-      <div class="sidebarPromptTreeFolderActions">
+    {#if showActions}
+      <div class="sidebarPromptTreeActionSlot">
+        <div class="sidebarPromptTreeFolderActions">
         <DropdownPopupSimple
           label={`Folder options for ${folder.displayName}`}
           items={dropdownItems}
@@ -216,8 +219,9 @@
           active={isActive}
           class="sidebarPromptTreeActionButton"
         />
+        </div>
       </div>
-    </div>
+    {/if}
   </div>
 {/snippet}
 

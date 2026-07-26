@@ -80,6 +80,7 @@
     folderSettings,
     onTitleChange,
     onTextChange,
+    onTemplateSelect,
     copyLabel,
     copyTitle,
     deleteLabel,
@@ -108,6 +109,8 @@
       fallbackTitle: string
       modifiedAt: string
       text: string
+      templateId?: string
+      templateName?: string
       isEdited: boolean
     }
     contentKind?: import('@shared/PromptFolder').PromptFolderKind
@@ -127,6 +130,7 @@
     folderSettings?: AnyPromptFolderSettings
     onTitleChange: (title: string) => void
     onTextChange: (text: string, measurement: TextMeasurement) => void
+    onTemplateSelect?: () => void
     copyLabel?: string
     copyTitle?: string
     deleteLabel?: string
@@ -553,6 +557,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onDelete}
+    {onTemplateSelect}
     {onStatusChange}
     {metadataFolderLabel}
     {copyLabel}

@@ -12,6 +12,7 @@
     rowId?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
+    onTemplateSelect?: () => void
     onStatusChange?: (status: import('@shared/Prompt').PromptStatus) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onTitleForwardTab?: () => void | Promise<void>
@@ -51,6 +52,7 @@
     rowId,
     scrollToWithinWindowBand,
     onDelete,
+    onTemplateSelect,
     onStatusChange,
     onSelectionChange,
     onTitleForwardTab,
@@ -211,6 +213,7 @@
         {draftText}
         {copyText}
         {onDelete}
+        {onTemplateSelect}
         {copyLabel}
         {copyTitle}
         {deleteLabel}

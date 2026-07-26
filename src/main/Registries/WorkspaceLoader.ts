@@ -136,6 +136,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
           title: promptEntry.committed.title,
           fallbackTitle: promptEntry.committed.fallbackTitle,
           modifiedAt: promptEntry.committed.modifiedAt,
+          ...(promptEntry.committed.templateId
+            ? { templateId: promptEntry.committed.templateId }
+            : {}),
           status: promptEntry.committed.status,
           ...(promptEntry.committed.status === PromptStatus.Completed &&
           promptEntry.committed.completedAt

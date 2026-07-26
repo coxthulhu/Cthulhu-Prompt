@@ -4,6 +4,7 @@ import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import { normalizePromptTitle } from '@shared/promptFallbackTitle'
 
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
+  Partial<Pick<PromptPersisted, 'templateId'>> &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   (
     | { status: PromptStatus.Completed; completedAt: string }
@@ -20,22 +21,21 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
 
   const frontmatter = data as Record<string, unknown>
   const keys = Object.keys(frontmatter)
-  if (keys.length !== 4 && keys.length !== 5) {
-    return false
-  }
-
   const hasTitle = keys.includes('title')
   const hasFallbackTitle = keys.includes('fallbackTitle')
   const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
+  const hasTemplateId = keys.includes('templateId')
   const allowedKeys = new Set([
     'id',
     'createdAt',
     hasTitle ? 'title' : 'fallbackTitle',
+    ...(hasTemplateId ? ['templateId'] : []),
     'status',
     ...(hasCompletedAt ? ['completedAt'] : [])
   ])
   if (
+    keys.length !== allowedKeys.size ||
     !keys.includes('id') ||
     !keys.includes('createdAt') ||
     !hasStatus ||
@@ -56,6 +56,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   return (
     typeof frontmatter.id === 'string' &&
     typeof frontmatter.createdAt === 'string' &&
+    (!hasTemplateId || typeof frontmatter.templateId === 'string') &&
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
@@ -147,6 +148,7 @@ export const parsePromptMarkdown = (
     createdAt: data.createdAt,
     modifiedAt: timestamp,
     promptText: content,
+    ...(data.templateId ? { templateId: data.templateId } : {}),
     status: data.status,
     ...(data.status === PromptStatus.Completed ? { completedAt: data.completedAt } : {})
   }))
@@ -157,11 +159,13 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
     prompt.status === PromptStatus.Completed && prompt.completedAt
       ? {
           ...baseMetadata,
+          ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
           status: PromptStatus.Completed,
           completedAt: prompt.completedAt
         }
       : {
           ...baseMetadata,
+          ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
           status:
             prompt.status === PromptStatus.InProgress ? PromptStatus.InProgress : PromptStatus.Todo
         }

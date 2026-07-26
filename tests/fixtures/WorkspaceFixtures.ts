@@ -52,6 +52,7 @@ export interface PromptFolderConfig {
     createdAt?: string
     status?: PromptStatus
     completedAt?: string
+    templateId?: string
   }>
 }
 
@@ -173,6 +174,7 @@ const createPromptFiles = (
       modifiedAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       status: prompt.status ?? PromptStatus.Todo,
       promptText: prompt.promptText,
+      ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
       ...(prompt.status === PromptStatus.Completed && prompt.completedAt
         ? { completedAt: prompt.completedAt }
         : {})

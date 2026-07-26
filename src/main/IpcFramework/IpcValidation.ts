@@ -314,6 +314,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
   const keys = Object.keys(record)
   const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
+  const hasTemplateId = keys.includes('templateId')
   const allowedKeys = new Set([
     'id',
     'title',
@@ -321,11 +322,12 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     'createdAt',
     'modifiedAt',
     'promptText',
+    ...(hasTemplateId ? ['templateId'] : []),
     'status',
     ...(hasCompletedAt ? ['completedAt'] : [])
   ])
 
-  if (keys.length !== 7 && keys.length !== 8) {
+  if (keys.length !== allowedKeys.size) {
     return null
   }
 
@@ -345,6 +347,11 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     createdAt: parseString,
     modifiedAt: parseString,
     promptText: parseString,
+    ...(hasTemplateId
+      ? {
+          templateId: parseString
+        }
+      : {}),
     status: parsePromptStatus,
     ...(hasCompletedAt
       ? {

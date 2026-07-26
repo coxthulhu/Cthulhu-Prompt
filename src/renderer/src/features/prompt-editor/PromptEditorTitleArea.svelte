@@ -21,6 +21,7 @@
     rowId,
     scrollToWithinWindowBand,
     onDelete,
+    onTemplateSelect,
     onStatusChange,
     onSelectionChange,
     onTitleForwardTab,
@@ -56,6 +57,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onDelete}
+    {onTemplateSelect}
     {onStatusChange}
     {onSelectionChange}
     {onTitleForwardTab}

@@ -37,14 +37,18 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     createdAt: '',
     modifiedAt: prompt.modifiedAt,
     promptText: '',
+    templateId: prompt.templateId,
     isEdited: false
   }),
   applySummary: (draft, prompt) => {
     draft.title = prompt.title
     draft.fallbackTitle = prompt.fallbackTitle
+    draft.templateId = prompt.templateId
   },
   hasSameSummary: (draft, prompt) =>
-    draft.title === prompt.title && draft.fallbackTitle === prompt.fallbackTitle,
+    draft.title === prompt.title &&
+    draft.fallbackTitle === prompt.fallbackTitle &&
+    draft.templateId === prompt.templateId,
   toFullDraft: (prompt, isEdited) => ({
     id: prompt.id,
     title: prompt.title,
@@ -52,6 +56,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
     promptText: prompt.promptText,
+    templateId: prompt.templateId,
     isEdited
   }),
   haveSameDraft: (left, right) =>
@@ -61,6 +66,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     left.createdAt === right.createdAt &&
     left.modifiedAt === right.modifiedAt &&
     left.promptText === right.promptText &&
+    left.templateId === right.templateId &&
     left.isEdited === right.isEdited,
   beforeFullUpsert: (existing, next) => {
     if (!existing || existing.promptText !== next.promptText) {

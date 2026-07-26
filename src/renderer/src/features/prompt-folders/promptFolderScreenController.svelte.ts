@@ -99,6 +99,7 @@ import {
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
 import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
+import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
 
 export type ActivePromptTreeRow =
   | { kind: 'root-header'; rowOwnerFolderId: string }
@@ -116,6 +117,8 @@ export type MarkdownContentDraftRecord = {
   fallbackTitle: string
   modifiedAt: string
   text: string
+  templateId?: string
+  templateName?: string
   isEdited: boolean
 }
 
@@ -184,6 +187,14 @@ export const createPromptFolderScreenController = ({
     }
     return draftsById
   })
+  const templateTitleById = $derived.by(() =>
+    Object.fromEntries(
+      promptTemplateDraftQuery.data.map((template) => [
+        template.id,
+        getPromptTitleText(template)
+      ])
+    )
+  )
   const contentDraftById = $derived.by<Record<string, MarkdownContentDraftRecord>>(() => {
     if (!isTemplateFolder) {
       return Object.fromEntries(
@@ -195,6 +206,10 @@ export const createPromptFolderScreenController = ({
             fallbackTitle: draft.fallbackTitle,
             modifiedAt: draft.modifiedAt,
             text: draft.promptText,
+            ...(draft.templateId ? { templateId: draft.templateId } : {}),
+            templateName: draft.templateId
+              ? (templateTitleById[draft.templateId] ?? 'No Template')
+              : 'No Template',
             isEdited: draft.isEdited
           }
         ])

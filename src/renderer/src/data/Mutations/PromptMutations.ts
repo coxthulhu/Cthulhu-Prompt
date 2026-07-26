@@ -28,6 +28,7 @@ const toPersisted = (prompt: PromptFull): PromptPersisted => ({
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
+  ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }
@@ -70,6 +71,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
           createdAt: draft.createdAt,
           modifiedAt: draft.modifiedAt,
           promptText: draft.promptText,
+          ...(draft.templateId ? { templateId: draft.templateId } : {}),
           status: PromptStatus.Todo
         }
       : null
@@ -89,6 +91,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
         createdAt: prompt.createdAt,
         modifiedAt: prompt.modifiedAt,
         promptText: prompt.promptText,
+        ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
         isEdited: false
       })
     )
@@ -142,7 +145,8 @@ export const setPromptStatus = async (
           createdAt: promptDraft.createdAt,
           modifiedAt: promptDraft.modifiedAt,
           status: PromptStatus.Todo,
-          promptText: promptDraft.promptText
+          promptText: promptDraft.promptText,
+          ...(promptDraft.templateId ? { templateId: promptDraft.templateId } : {})
         }
   const modifiedAt = getCurrentIsoSecondTimestamp()
   const { completedAt: _completedAt, ...activePromptBase } = currentPrompt
@@ -179,6 +183,7 @@ export const setPromptStatus = async (
         draft.createdAt = nextPrompt.createdAt
         draft.modifiedAt = nextPrompt.modifiedAt
         draft.promptText = nextPrompt.promptText
+        draft.templateId = nextPrompt.templateId
         markPromptDraftEdited(draft)
       })
       collections.promptFolder.update(promptFolderId, (draft) => {

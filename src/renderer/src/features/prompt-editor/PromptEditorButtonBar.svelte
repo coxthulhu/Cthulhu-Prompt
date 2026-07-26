@@ -3,13 +3,14 @@
   import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import { Trash2 } from 'lucide-svelte'
+  import { Layers, Trash2 } from 'lucide-svelte'
 
   type Props = {
     title: string
     draftText: string
     copyText?: string
     onDelete?: () => void
+    onTemplateSelect?: () => void
     copyLabel?: string
     copyTitle?: string
     deleteLabel?: string
@@ -23,6 +24,7 @@
     draftText,
     copyText,
     onDelete,
+    onTemplateSelect,
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt',
     deleteLabel = 'Delete prompt',
@@ -63,6 +65,15 @@
       hoverVariant="danger"
       testId="prompt-delete-button"
       onclick={handleDeleteClick}
+    />
+  {/if}
+  {#if onTemplateSelect}
+    <IconButton
+      icon={Layers}
+      label="Set Template"
+      title="Set Template"
+      testId="prompt-template-button"
+      onclick={onTemplateSelect}
     />
   {/if}
   <CopyButton

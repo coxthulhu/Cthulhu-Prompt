@@ -111,6 +111,23 @@ export const setPromptDraftText = (
   })
 }
 
+export const setPromptDraftTemplateId = (
+  promptId: string,
+  templateId: string | undefined
+): void => {
+  const modifiedAt = getPromptDraftModifiedAt()
+  mutatePromptDraftOptimistically(promptId, {
+    mutatePromptDraft: (draft) => {
+      draft.templateId = templateId
+      draft.modifiedAt = modifiedAt
+    },
+    mutatePrompt: (draft) => {
+      draft.templateId = templateId
+      if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
+    }
+  })
+}
+
 export const flushPromptDraftAutosaves = promptDraftMutations.flushAutosaves
 export const deletePromptDrafts = promptDraftMutations.deleteDrafts
 export const removePromptDraft = promptDraftMutations.removeDraft

@@ -30,7 +30,7 @@
   {promptId}
   contentKind="prompt"
   contentLabel="prompt"
-  metadataFolderLabel="Template"
+  metadataFolderLabel={props.promptDraftRecord.templateName ?? 'No Template'}
   onTitleChange={(title) => setPromptDraftTitle(promptId, title)}
   onTextChange={(text, measurement) => setPromptDraftText(promptId, text, measurement)}
 />

@@ -53,14 +53,18 @@
   import { PromptStatus, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
-  import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
-    defineVirtualWindowRowRegistry,
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
-    type VirtualWindowRowComponentProps,
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
+  import PromptTreeVirtualList, {
+    type PromptTreeBottomSpacerRowProps,
+    type PromptTreeFolderRowProps,
+    type PromptTreePromptRowProps,
+    type PromptTreeRootFolderRowProps,
+    type PromptTreeRow
+  } from './PromptTreeVirtualList.svelte'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import { createPromptTreePromptDragController } from './promptTreeDrag'
@@ -84,45 +88,6 @@
     isExpanded: boolean
   }
 
-  type PromptTreeRow =
-    | {
-        kind: 'root-folder'
-        folder: PromptFolder
-      }
-    | {
-        kind: 'folder'
-        folder: PromptFolder
-        parentFolder: PromptFolder | null
-        indentCount: number
-        isLastRow: boolean
-        isSubfolder: boolean
-      }
-    | {
-        kind: 'folder-prompt'
-        folder: PromptFolder
-        promptId: string
-        indentCount: number
-        isLastRow: boolean
-        isNestedPrompt: boolean
-      }
-    | {
-        kind: 'empty-state'
-      }
-    | {
-        kind: 'bottom-spacer'
-      }
-
-  type PromptTreeFolderOverlayRow = Extract<PromptTreeRow, { kind: 'folder' }>
-  type PromptTreeFolderOverlayRowProps = VirtualWindowRowComponentProps<PromptTreeFolderOverlayRow>
-  type PromptTreeRootFolderOverlayRow = Extract<PromptTreeRow, { kind: 'root-folder' }>
-  type PromptTreeRootFolderOverlayRowProps =
-    VirtualWindowRowComponentProps<PromptTreeRootFolderOverlayRow>
-  type PromptTreePromptOverlayRow = Extract<PromptTreeRow, { kind: 'folder-prompt' }>
-  type PromptTreePromptOverlayRowProps = VirtualWindowRowComponentProps<PromptTreePromptOverlayRow>
-  type PromptTreeBottomSpacerOverlayRow = Extract<PromptTreeRow, { kind: 'bottom-spacer' }>
-  type PromptTreeBottomSpacerOverlayRowProps =
-    VirtualWindowRowComponentProps<PromptTreeBottomSpacerOverlayRow>
-
   let {
     promptFolders,
     folderListState,
@@ -142,51 +107,6 @@
     onAllPromptFoldersCollapsedChange: (isCollapsed: boolean) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
-
-  const PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX = 1
-  const PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX = 30
-  const PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX = 30
-  const PROMPT_TREE_FOLDER_ROW_HEIGHT_PX =
-    PROMPT_TREE_FOLDER_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
-  const PROMPT_TREE_PROMPT_ROW_HEIGHT_PX =
-    PROMPT_TREE_PROMPT_ROW_CONTENT_HEIGHT_PX + PROMPT_TREE_ROW_EMPTY_BLOCK_SPACE_PX * 2
-
-  const rowRegistry = defineVirtualWindowRowRegistry<PromptTreeRow>({
-    'root-folder': {
-      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
-      centerRowEligible: true,
-      overlayRow: {
-        snippet: promptTreeRootFolderRowOverlay
-      },
-      snippet: rootFolderRow
-    },
-    folder: {
-      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
-      centerRowEligible: true,
-      overlayRow: {
-        snippet: promptTreeFolderRowOverlay
-      },
-      snippet: folderRow
-    },
-    'folder-prompt': {
-      estimateHeight: () => PROMPT_TREE_PROMPT_ROW_HEIGHT_PX,
-      overlayRow: {
-        snippet: promptTreeRowOverlay
-      },
-      snippet: folderPromptRow
-    },
-    'empty-state': {
-      estimateHeight: () => 86,
-      snippet: emptyStateRow
-    },
-    'bottom-spacer': {
-      estimateHeight: () => PROMPT_TREE_FOLDER_ROW_HEIGHT_PX,
-      overlayRow: {
-        snippet: promptTreeBottomSpacerRowOverlay
-      },
-      snippet: bottomSpacerRow
-    }
-  })
 
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
@@ -894,22 +814,14 @@
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Folder to Get Started</div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
-      <SvelteVirtualWindow
+      <PromptTreeVirtualList
         items={virtualItems}
-        {rowRegistry}
-        overlayScrollbar
-        leftScrollPaddingPx={0}
-        rightScrollPaddingPx={0}
         testId="prompt-tree-virtual-window"
         spacerTestId="prompt-tree-virtual-window-spacer"
         bind:scrollToWithinWindowBand
         bind:viewportMetrics
-      />
-    </div>
-  {/if}
-</div>
-
-{#snippet rootFolderRow(props)}
+      >
+{#snippet rootFolderRow(props: PromptTreeRootFolderRowProps)}
   {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-root')}
 
   <PromptDropTarget
@@ -932,7 +844,7 @@
   </PromptDropTarget>
 {/snippet}
 
-{#snippet promptTreeRootFolderRowOverlay({ rowId }: PromptTreeRootFolderOverlayRowProps)}
+{#snippet promptTreeRootFolderRowOverlay({ rowId }: PromptTreeRootFolderRowProps)}
   {#if getPromptTreeDropTargetEdge(rowId)}
     <DropIndicator
       testId={promptTreeRootFolderDropIndicatorTestId}
@@ -942,7 +854,7 @@
   {/if}
 {/snippet}
 
-{#snippet folderRow(props)}
+{#snippet folderRow(props: PromptTreeFolderRowProps)}
   {@const isSettingsActive = isTreeEntryActive(props.row.folder.id, 'folder-settings')}
 
   <PromptTreeFolderRow
@@ -972,7 +884,7 @@
   />
 {/snippet}
 
-{#snippet folderPromptRow(props)}
+{#snippet folderPromptRow(props: PromptTreePromptRowProps)}
   {@const isActive = isTreeEntryActive(
     props.row.folder.id,
     promptIdToPromptNavigationRow(props.row.promptId)
@@ -1031,7 +943,9 @@
   </div>
 {/snippet}
 
-{#snippet promptTreeFolderRowOverlay({ row, rowId }: PromptTreeFolderOverlayRowProps)}
+{#snippet specialRow()}{/snippet}
+
+{#snippet promptTreeFolderRowOverlay({ row, rowId }: PromptTreeFolderRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
 
   {#if hoveredEdge}
@@ -1045,7 +959,7 @@
   {/if}
 {/snippet}
 
-{#snippet promptTreeRowOverlay({ row, rowId }: PromptTreePromptOverlayRowProps)}
+{#snippet promptTreeRowOverlay({ row, rowId }: PromptTreePromptRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
   {@const testId = folderPromptDropIndicatorTestId(row.promptId)}
 
@@ -1074,7 +988,7 @@
   {/if}
 {/snippet}
 
-{#snippet promptTreeBottomSpacerRowOverlay({ rowId }: PromptTreeBottomSpacerOverlayRowProps)}
+{#snippet promptTreeBottomSpacerRowOverlay({ rowId }: PromptTreeBottomSpacerRowProps)}
   {#if getPromptTreeDropTargetEdge(rowId)}
     <DropIndicator
       testId={promptTreeBottomSpacerDropIndicatorTestId}
@@ -1083,3 +997,7 @@
     />
   {/if}
 {/snippet}
+      </PromptTreeVirtualList>
+    </div>
+  {/if}
+</div>
