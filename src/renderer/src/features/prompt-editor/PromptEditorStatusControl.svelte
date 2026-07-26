@@ -2,7 +2,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/SimpleSelectorButtonWithIntegratedButton.svelte'
   import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import { CheckCheck, CheckCircle2, CircleDashed, Hourglass, Undo2 } from 'lucide-svelte'
+  import { CheckCheck, CheckCircle2, CircleDashed, Play, Undo2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
 
   type Props = {
@@ -27,7 +27,7 @@
       id: PromptStatus.InProgress,
       label: 'In Progress',
       detail: 'Mark this prompt as underway',
-      icon: Hourglass,
+      icon: Play,
       iconClass: 'prompt-editor-status-option-icon-in-progress',
       tone: 'warning',
       variant: 'in-progress',
