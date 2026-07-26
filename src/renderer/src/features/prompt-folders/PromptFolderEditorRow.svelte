@@ -348,6 +348,7 @@
               <IconTextButton
                 icon={Plus}
                 pressedIcon={Check}
+                pressedHoverIcon={Trash2}
                 text={config.toggleText}
                 pressed={isPresent}
                 title={`${isPresent ? 'Remove' : 'Add'} ${config.title.toLowerCase()}`}

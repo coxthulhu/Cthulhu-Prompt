@@ -9,6 +9,7 @@
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled' | 'aria-pressed'> & {
     icon: ComponentType
     pressedIcon?: ComponentType
+    pressedHoverIcon?: ComponentType
     text: string
     pressed?: boolean
     state?: IconTextButtonState
@@ -23,6 +24,7 @@
   let {
     icon: Icon,
     pressedIcon,
+    pressedHoverIcon,
     text,
     pressed,
     state = 'enabled',
@@ -46,18 +48,31 @@
   class={mergeClasses('cthulhuUiIconTextButton', className)}
   data-state={state}
   data-hover-variant={hoverVariant}
+  data-has-pressed-hover-icon={pressed === true && pressedHoverIcon !== undefined}
   data-testid={testId}
   aria-pressed={pressed}
   disabled={isDisabled}
   {onclick}
   {...restProps}
 >
-  <DisplayIcon
-    class={mergeClasses('cthulhuUiIconTextButtonIcon', iconClass)}
-    size={iconSize}
-    aria-hidden="true"
-  />
-  <span>{text}</span>
+  <span class="cthulhuUiIconTextButtonIconSlot cthulhuUiIconTextButtonDefaultIconSlot">
+    <DisplayIcon
+      class={mergeClasses('cthulhuUiIconTextButtonIcon', iconClass)}
+      size={iconSize}
+      aria-hidden="true"
+    />
+  </span>
+  {#if pressed === true && pressedHoverIcon}
+    {@const PressedHoverIcon = pressedHoverIcon}
+    <span class="cthulhuUiIconTextButtonIconSlot cthulhuUiIconTextButtonPressedHoverIconSlot">
+      <PressedHoverIcon
+        class={mergeClasses('cthulhuUiIconTextButtonIcon', iconClass)}
+        size={iconSize}
+        aria-hidden="true"
+      />
+    </span>
+  {/if}
+  <span class="cthulhuUiIconTextButtonText">{text}</span>
 </button>
 
 <style>
@@ -127,7 +142,31 @@
     stroke-width: 2;
   }
 
-  .cthulhuUiIconTextButton span {
+  .cthulhuUiIconTextButtonIconSlot {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .cthulhuUiIconTextButtonPressedHoverIconSlot {
+    display: none;
+  }
+
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:hover
+    .cthulhuUiIconTextButtonDefaultIconSlot,
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:focus-visible
+    .cthulhuUiIconTextButtonDefaultIconSlot {
+    display: none;
+  }
+
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:hover
+    .cthulhuUiIconTextButtonPressedHoverIconSlot,
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:focus-visible
+    .cthulhuUiIconTextButtonPressedHoverIconSlot {
+    display: inline-flex;
+  }
+
+  .cthulhuUiIconTextButtonText {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

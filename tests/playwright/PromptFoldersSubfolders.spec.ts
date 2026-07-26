@@ -1002,6 +1002,18 @@ describe('Prompt folder subfolder rendering', () => {
     await descriptionToggle.click()
     expect(await checkFileExists(electronApp, descriptionPath)).toBe(false)
     await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'true')
+    const configuredIcon = descriptionToggle.locator(
+      '.cthulhuUiIconTextButtonDefaultIconSlot'
+    )
+    const removeIcon = descriptionToggle.locator(
+      '.cthulhuUiIconTextButtonPressedHoverIconSlot'
+    )
+    await emptyNestedFolder.locator('[data-testid="prompt-folder-editor-title-bar"]').hover()
+    await expect(configuredIcon).toBeVisible()
+    await expect(removeIcon).toBeHidden()
+    await descriptionToggle.hover()
+    await expect(configuredIcon).toBeHidden()
+    await expect(removeIcon).toBeVisible()
     await expect(
       emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
     ).toHaveCount(1)
