@@ -17,6 +17,7 @@
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import {
     clampMonacoHeightPx,
+    EDITOR_SUBTITLE_BAR_HEIGHT_PX,
     estimatePromptEditorHeight,
     getMonacoHeightFromRowPx,
     getPromptEditorTitleAreaWidthPx,
@@ -384,7 +385,8 @@
           getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode),
           heightPx,
           promptEditorSizingConfig,
-          compactLayoutMaxWidthPx
+          compactLayoutMaxWidthPx,
+          isTemplateFolder ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
         )
       },
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
@@ -402,12 +404,14 @@
             getMonacoHeightFromRowPx(
               measuredRowHeightPx,
               titleAreaWidthPx,
-              compactLayoutMaxWidthPx
+              compactLayoutMaxWidthPx,
+              isTemplateFolder ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
             ),
             promptEditorSizingConfig
           ),
           titleAreaWidthPx,
-          compactLayoutMaxWidthPx
+          compactLayoutMaxWidthPx,
+          isTemplateFolder ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
         )
       },
       hydrationPriorityEligible: true,

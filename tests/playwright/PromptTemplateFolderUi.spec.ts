@@ -4,6 +4,7 @@ import { stubClipboard } from '../helpers/ClipboardHelpers'
 import {
   focusMonacoEditor,
   getMonacoEditorText,
+  isMonacoEditorFocused,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
@@ -99,7 +100,209 @@ const setEditorScrollTop = async (
   )
 }
 
+type MonacoSelection = {
+  startLineNumber: number
+  startColumn: number
+  endLineNumber: number
+  endColumn: number
+}
+
+const setEditorSelections = async (
+  page: Page,
+  editorSelector: string,
+  selections: MonacoSelection[]
+): Promise<void> => {
+  await page.evaluate(
+    ({ selector, nextSelections }) => {
+      const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+      const entry = window.__cthulhuMonacoEditors?.find(
+        (item) => item.container === monacoNode || item.container?.contains(monacoNode)
+      )
+      entry?.editor.setSelections(
+        nextSelections.map((selection) => ({
+          selectionStartLineNumber: selection.startLineNumber,
+          selectionStartColumn: selection.startColumn,
+          positionLineNumber: selection.endLineNumber,
+          positionColumn: selection.endColumn
+        }))
+      )
+    },
+    { selector: editorSelector, nextSelections: selections }
+  )
+}
+
 describe('Prompt template folder UI', () => {
+  test('shows template parameters and inserts Prompt Text at the default position', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createTemplateUiWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Templates')
+    await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
+
+    const toolbar = mainWindow.locator(
+      `${TEMPLATE_EDITOR} [data-testid="prompt-template-parameters-toolbar"]`
+    )
+    const promptTextButton = toolbar.locator(
+      '[data-testid="prompt-template-parameter-prompt-text"]'
+    )
+    await expect(toolbar).toContainText('Template Parameters')
+    await expect(toolbar).toContainText('0 of 1 configured')
+    await expect(toolbar.locator('.lucide-layers')).toHaveCount(1)
+    await expect(promptTextButton).toHaveText('Prompt Text')
+    await expect(promptTextButton).toHaveAttribute('aria-pressed', 'false')
+    await expect(promptTextButton.locator('.lucide-plus')).toHaveCount(1)
+
+    await promptTextButton.click()
+
+    await expect
+      .poll(() => getMonacoEditorText(mainWindow, TEMPLATE_EDITOR))
+      .toMatch(/^\[\[PROMPT_TEXT\]\]Template line 1/)
+    await expect(toolbar).toContainText('1 of 1 configured')
+    await expect(promptTextButton).toHaveAttribute('aria-pressed', 'true')
+    await expect(promptTextButton).toHaveAttribute('data-has-pressed-hover-icon', 'false')
+    await expect(promptTextButton.locator('.lucide-check')).toHaveCount(1)
+    await promptTextButton.hover()
+    await expect(promptTextButton.locator('.lucide-check')).toBeVisible()
+    await expect(promptTextButton.locator('.lucide-trash-2')).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, TEMPLATE_EDITOR)).toBe(true)
+  })
+
+  test('inserts at a Monaco cursor and detects only the exact Prompt Text token', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/template-parameter-case'
+    const templateId = 'template-parameter-case'
+    const editorSelector = promptEditorSelector(templateId)
+    await testSetup.setupFilesystem(
+      createWorkspaceWithTemplateFolders(workspacePath, [
+        {
+          folderName: 'Case',
+          displayName: 'Case Templates',
+          folderId: 'template-parameter-case-folder',
+          templates: [
+            {
+              id: templateId,
+              title: 'Case-sensitive Template',
+              templateText: 'Case [[prompt_text]] value'
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Case Templates')
+    await waitForMonacoEditor(mainWindow, editorSelector)
+
+    const toolbar = mainWindow.locator(
+      `${editorSelector} [data-testid="prompt-template-parameters-toolbar"]`
+    )
+    await expect(toolbar).toContainText('0 of 1 configured')
+    await setEditorSelections(mainWindow, editorSelector, [
+      { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 6 }
+    ])
+
+    await toolbar.locator('[data-testid="prompt-template-parameter-prompt-text"]').click()
+
+    await expect
+      .poll(() => getMonacoEditorText(mainWindow, editorSelector))
+      .toBe('Case [[PROMPT_TEXT]][[prompt_text]] value')
+    await expect(toolbar).toContainText('1 of 1 configured')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+  })
+
+  test('replaces the Monaco selection and does not add another configured token', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createTemplateUiWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Templates')
+    await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
+
+    const toolbar = mainWindow.locator(
+      `${TEMPLATE_EDITOR} [data-testid="prompt-template-parameters-toolbar"]`
+    )
+    const promptTextButton = toolbar.locator(
+      '[data-testid="prompt-template-parameter-prompt-text"]'
+    )
+    await setEditorSelections(mainWindow, TEMPLATE_EDITOR, [
+      {
+        startLineNumber: 2,
+        startColumn: 10,
+        endLineNumber: 2,
+        endColumn: 14
+      }
+    ])
+
+    await promptTextButton.click()
+
+    await expect
+      .poll(() => getMonacoEditorText(mainWindow, TEMPLATE_EDITOR))
+      .toContain('Template [[PROMPT_TEXT]] 2')
+    await focusMonacoEditor(mainWindow, TEMPLATE_EDITOR)
+    await mainWindow.keyboard.type(' [[PROMPT_TEXT]]')
+    await expect(toolbar).toContainText('1 of 1 configured')
+
+    await expect
+      .poll(async () => {
+        const text = await getMonacoEditorText(mainWindow, TEMPLATE_EDITOR)
+        return text.match(/\[\[PROMPT_TEXT\]\]/g)?.length ?? 0
+      })
+      .toBe(2)
+    const textWithTwoTokens = await getMonacoEditorText(mainWindow, TEMPLATE_EDITOR)
+    await promptTextButton.click()
+    await expect
+      .poll(() => getMonacoEditorText(mainWindow, TEMPLATE_EDITOR))
+      .toBe(textWithTwoTokens)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, TEMPLATE_EDITOR)).toBe(true)
+  })
+
+  test('does not insert Prompt Text when Monaco has multiple cursors', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(createTemplateUiWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Templates')
+    await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
+
+    await setEditorSelections(mainWindow, TEMPLATE_EDITOR, [
+      { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
+      { startLineNumber: 2, startColumn: 1, endLineNumber: 2, endColumn: 1 }
+    ])
+    const initialText = await getMonacoEditorText(mainWindow, TEMPLATE_EDITOR)
+    await mainWindow
+      .locator(
+        `${TEMPLATE_EDITOR} [data-testid="prompt-template-parameter-prompt-text"]`
+      )
+      .click()
+
+    await expect
+      .poll(() => getMonacoEditorText(mainWindow, TEMPLATE_EDITOR))
+      .toBe(initialText)
+    await expect
+      .poll(() =>
+        mainWindow
+          .locator(`${TEMPLATE_EDITOR} [data-testid="prompt-template-parameters-toolbar"]`)
+          .textContent()
+      )
+      .toContain('0 of 1 configured')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, TEMPLATE_EDITOR)).toBe(true)
+  })
+
   test('creates, edits, copies, and deletes a template', async ({ electronApp, testSetup }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])

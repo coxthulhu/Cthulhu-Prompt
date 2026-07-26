@@ -15,6 +15,7 @@
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
+  import EditorSubtitleBar from '../prompt-editor/EditorSubtitleBar.svelte'
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
   import PromptFolderSettingsEditorSection from './PromptFolderSettingsEditorSection.svelte'
   import { PROMPT_FOLDER_SETTINGS_EDITOR_CONFIG } from './promptFolderSettingsEditorConfig'
@@ -31,8 +32,7 @@
   } from '../drag-drop/promptHandleDrag'
   import {
     PROMPT_FOLDER_EDITOR_ROW_PADDING_TOP_PX,
-    PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX,
-    PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX
+    PROMPT_FOLDER_EDITOR_TITLE_AREA_HEIGHT_PX
   } from './promptFolderSettingsSizing'
 
   type Props = {
@@ -326,22 +326,15 @@
       <Separator data-testid="prompt-folder-editor-settings-separator" />
 
       <div class="prompt-folder-editor-settings">
-        <div
-          class="prompt-folder-settings-toolbar"
-          style={`height:${PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX}px; min-height:${PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX}px; max-height:${PROMPT_FOLDER_SETTINGS_TOOLBAR_HEIGHT_PX}px;`}
-          data-testid="prompt-folder-settings-toolbar"
+        <EditorSubtitleBar
+          icon={Settings}
+          title="Folder Settings"
+          configuredCount={configuredSettingsCount}
+          totalCount={settingsFields.length}
+          actionsLabel="Folder settings"
+          testId="prompt-folder-settings-toolbar"
         >
-          <div class="prompt-folder-settings-heading">
-            <Settings size={20} aria-hidden="true" />
-            <div class="prompt-folder-settings-heading-copy">
-              <span>Folder Settings</span>
-              <span class="prompt-folder-settings-metadata">
-                {configuredSettingsCount} of {settingsFields.length} configured
-              </span>
-            </div>
-          </div>
-
-          <div class="prompt-folder-settings-toggles" role="group" aria-label="Folder settings">
+          {#snippet actions()}
             {#each settingsFields as field (field)}
               {@const isPresent = folderSettings[field] !== null}
               {@const config = PROMPT_FOLDER_SETTINGS_EDITOR_CONFIG[field]}
@@ -356,8 +349,8 @@
                 onclick={() => handleSettingsFieldToggle(field)}
               />
             {/each}
-          </div>
-        </div>
+          {/snippet}
+        </EditorSubtitleBar>
 
         {#if configuredSettingsCount > 0}
           <Separator data-testid="prompt-folder-settings-toolbar-separator" />
@@ -494,49 +487,4 @@
     min-width: 0;
   }
 
-  .prompt-folder-settings-toolbar {
-    align-items: center;
-    box-sizing: border-box;
-    display: flex;
-    gap: 24px;
-    justify-content: space-between;
-    min-width: 0;
-    padding: 10px 12px 10px 16px;
-  }
-
-  .prompt-folder-settings-heading {
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: flex;
-    font-size: 14px;
-    font-weight: 700;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  .prompt-folder-settings-heading :global(svg) {
-    color: var(--ui-secondary-icon-glyph);
-  }
-
-  .prompt-folder-settings-heading-copy {
-    display: grid;
-    line-height: 16px;
-    min-width: 0;
-    row-gap: 2px;
-  }
-
-  .prompt-folder-settings-metadata {
-    color: var(--ui-muted-text);
-    font-size: 12px;
-    font-weight: 400;
-  }
-
-  .prompt-folder-settings-toggles {
-    align-items: center;
-    display: flex;
-    flex: 0 1 auto;
-    gap: 8px;
-    justify-content: flex-end;
-    min-width: 0;
-  }
 </style>

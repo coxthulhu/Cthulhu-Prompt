@@ -1,14 +1,17 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { Action } from 'svelte/action'
-  import { createPromptEditorModelUri, type monaco } from '@renderer/common/Monaco'
+  import { Check, Layers, Plus } from 'lucide-svelte'
+  import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
   import type { AnyPromptFolderSettings } from '@shared/PromptFolder'
   import { PromptStatus } from '@shared/Prompt'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptEntryDragState } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import EditorCardSurface from './EditorCardSurface.svelte'
+  import EditorSubtitleBar from './EditorSubtitleBar.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleArea from './PromptEditorTitleArea.svelte'
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
@@ -34,6 +37,7 @@
   } from '../prompt-folders/find/promptFolderFindSectionKeys'
   import {
     clampMonacoHeightPx,
+    EDITOR_SUBTITLE_BAR_HEIGHT_PX,
     getMonacoHeightFromRowPx,
     getPromptEditorTitleAreaHeightPx,
     getPromptEditorTitleAreaWidthPx,
@@ -50,6 +54,7 @@
   } from './promptEditorSizing'
   import { getPromptTokenCount } from './promptEditorCounts'
   import { PromptFolderScreenMode } from '../prompt-folders/promptFolderScreenMode'
+  import { PROMPT_TEXT_TEMPLATE_PARAMETER } from './promptTemplateParameters'
 
   // Shared editor implementation; prompt and template wrappers provide the variant behavior.
   let {
@@ -159,6 +164,10 @@
   const compactTitleLayout = $derived(
     isPromptEditorCompactLayout(titleAreaWidthPx, compactLayoutMaxWidthPx)
   )
+  // Derive the template-only parameter bar height for rendering and virtual-row sizing.
+  const subtitleBarHeightPx = $derived(
+    contentKind === 'template' ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
+  )
   const initialEditorViewStateJson = $derived(lookupMarkdownContentEditorViewStateJson(promptId))
   // Derived content state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
@@ -178,12 +187,17 @@
       getMonacoHeightFromRowPx(
         virtualRowHeightPx,
         titleAreaWidthPx,
-        compactLayoutMaxWidthPx
+        compactLayoutMaxWidthPx,
+        subtitleBarHeightPx
       ),
       promptEditorSizingConfig
     )
   })
   const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
+  // Derive configured state from the exact built-in token, regardless of occurrence count.
+  const isPromptTextParameterConfigured = $derived(
+    promptData.draft.text.includes(PROMPT_TEXT_TEMPLATE_PARAMETER.token)
+  )
   const promptTreeTitle = $derived(getPromptTitleText(promptDraftRecord))
   const copyText = $derived.by(() => {
     const parts: string[] = []
@@ -228,6 +242,8 @@
   const OVERFLOW_TOP_PADDING_PX = $derived(
     titleAreaHeightPx +
       PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
+      subtitleBarHeightPx +
+      (subtitleBarHeightPx > 0 ? PROMPT_EDITOR_SEPARATOR_HEIGHT_PX : 0) +
       PROMPT_EDITOR_BODY_PADDING_TOP_PX +
       MONACO_VERTICAL_PADDING_PX
   )
@@ -329,6 +345,34 @@
     // Side effect: wait for immediate hydration to mount and activate Monaco.
     await findRowHandlers.requestImmediateHydration?.()
     return isHydrated
+  }
+
+  const handlePromptTextParameterClick = async () => {
+    if (!editorInstance) {
+      await ensureHydrated()
+      // Side effect: wait for Monaco lifecycle registration before editing or restoring focus.
+      await tick()
+    }
+
+    const editor = editorInstance
+    if (!editor) return
+
+    if (!isPromptTextParameterConfigured) {
+      const selections = editor.getSelections()
+      if (selections && selections.length > 1) {
+        editor.focus()
+        return
+      }
+
+      editor.executeEdits('insert-prompt-text-template-parameter', [
+        {
+          range: selections?.[0] ?? new monaco.Selection(1, 1, 1, 1),
+          text: PROMPT_TEXT_TEMPLATE_PARAMETER.token
+        }
+      ])
+    }
+
+    editor.focus()
   }
 
   const focusEditorFromTitleTab = async () => {
@@ -524,6 +568,33 @@
 
   <Separator />
 
+  {#if contentKind === 'template'}
+    <EditorSubtitleBar
+      icon={Layers}
+      title="Template Parameters"
+      configuredCount={isPromptTextParameterConfigured ? 1 : 0}
+      totalCount={1}
+      actionsLabel="Template parameters"
+      testId="prompt-template-parameters-toolbar"
+    >
+      {#snippet actions()}
+        <IconTextButton
+          icon={Plus}
+          pressedIcon={Check}
+          text={PROMPT_TEXT_TEMPLATE_PARAMETER.name}
+          pressed={isPromptTextParameterConfigured}
+          title={isPromptTextParameterConfigured
+            ? 'Prompt text configured'
+            : 'Add prompt text'}
+          testId="prompt-template-parameter-prompt-text"
+          onclick={handlePromptTextParameterClick}
+        />
+      {/snippet}
+    </EditorSubtitleBar>
+
+    <Separator />
+  {/if}
+
   <div
     class="prompt-editor-body-editor-section"
     style={`padding:${PROMPT_EDITOR_BODY_PADDING_TOP_PX}px ${PROMPT_EDITOR_BODY_PADDING_RIGHT_PX}px ${PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX}px ${PROMPT_EDITOR_BODY_PADDING_LEFT_PX}px;`}
@@ -569,7 +640,8 @@
               measuredHeightPx: getRowHeightPx(
                 meta.heightPx,
                 titleAreaWidthPx,
-                compactLayoutMaxWidthPx
+                compactLayoutMaxWidthPx,
+                subtitleBarHeightPx
               ),
               widthPx: virtualWindowWidthPx,
               devicePixelRatio

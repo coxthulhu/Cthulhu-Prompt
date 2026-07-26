@@ -1,6 +1,7 @@
 // Match Monaco's default Windows line height ratio when lineHeight=0.
 const LINE_HEIGHT_RATIO = 1.35
 export const PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX = 56
+export const EDITOR_SUBTITLE_BAR_HEIGHT_PX = 56
 export const PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX = 600
 export const PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX = 420
 export const PROMPT_EDITOR_COMPACT_ACTION_ROW_HEIGHT_PX = 53
@@ -38,11 +39,14 @@ export const getPromptEditorTitleAreaHeightPx = (
 
 const getRowChromeHeightPx = (
   titleAreaWidthPx: number,
-  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX,
+  subtitleBarHeightPx = 0
 ): number =>
   PROMPT_EDITOR_CARD_BORDER_WIDTH_PX * 2 +
   getPromptEditorTitleAreaHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx) +
   PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
+  subtitleBarHeightPx +
+  (subtitleBarHeightPx > 0 ? PROMPT_EDITOR_SEPARATOR_HEIGHT_PX : 0) +
   PROMPT_EDITOR_BODY_PADDING_TOP_PX +
   PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX +
   MONACO_PADDING_PX
@@ -83,19 +87,25 @@ export const estimateMonacoHeightPx = (
 export const getRowHeightPx = (
   monacoHeightPx: number,
   titleAreaWidthPx: number,
-  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX,
+  subtitleBarHeightPx = 0
 ): number => {
   return Math.ceil(
-    monacoHeightPx + getRowChromeHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
+    monacoHeightPx +
+      getRowChromeHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx, subtitleBarHeightPx)
   )
 }
 
 export const getMonacoHeightFromRowPx = (
   rowHeightPx: number,
   titleAreaWidthPx: number,
-  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX,
+  subtitleBarHeightPx = 0
 ): number => {
-  return rowHeightPx - getRowChromeHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
+  return (
+    rowHeightPx -
+    getRowChromeHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx, subtitleBarHeightPx)
+  )
 }
 
 export const estimatePromptEditorHeight = (
@@ -103,12 +113,14 @@ export const estimatePromptEditorHeight = (
   titleAreaWidthPx: number,
   _heightPx: number,
   sizingConfig: PromptEditorSizingConfig,
-  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX
+  compactLayoutMaxWidthPx = PROMPT_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX,
+  subtitleBarHeightPx = 0
 ): number => {
   void _heightPx
   return getRowHeightPx(
     estimateMonacoHeightPx(promptText, sizingConfig),
     titleAreaWidthPx,
-    compactLayoutMaxWidthPx
+    compactLayoutMaxWidthPx,
+    subtitleBarHeightPx
   )
 }
