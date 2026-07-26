@@ -1,5 +1,5 @@
 import { createPromptFull, createPromptSummary } from '@shared/Prompt'
-import { createPromptTemplateFull, createPromptTemplateSummary } from '@shared/PromptTemplate'
+import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import type { PromptFolderKind } from '@shared/PromptFolder'
@@ -8,8 +8,7 @@ import { promptTemplateCollection } from '../Collections/PromptTemplateCollectio
 import { deletePromptDrafts, upsertPromptDrafts, upsertPromptSummaryDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
   deletePromptTemplateDrafts,
-  upsertPromptTemplateDrafts,
-  upsertPromptTemplateSummaryDrafts
+  upsertPromptTemplateDrafts
 } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
 
 type MarkdownContentQueryAdapter = {
@@ -47,13 +46,12 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
     kind: 'template',
     getWorkspaceIds: (result) => new Set(result.promptTemplates.map((template) => template.id)),
     applyWorkspaceResult: (result) => {
-      promptTemplateCollection.utils.upsertManyAuthoritative(
-        result.promptTemplates.map((template) => ({
-          ...template,
-          data: createPromptTemplateSummary(template.data)
-        }))
-      )
-      upsertPromptTemplateSummaryDrafts(result.promptTemplates.map((template) => template.data))
+      const snapshots = result.promptTemplates.map((template) => ({
+        ...template,
+        data: createPromptTemplateFull(template.data)
+      }))
+      promptTemplateCollection.utils.upsertManyAuthoritative(snapshots)
+      upsertPromptTemplateDrafts(snapshots.map((template) => template.data))
     },
     applyFolderResult: (result) => {
       const snapshots = result.promptTemplates.map((template) => ({

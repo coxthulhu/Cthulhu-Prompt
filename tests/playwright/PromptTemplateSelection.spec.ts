@@ -6,6 +6,12 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { stubClipboard } from '../helpers/ClipboardHelpers'
+import {
+  focusMonacoEditor,
+  getMonacoEditorText,
+  waitForMonacoEditor
+} from '../helpers/MonacoHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -23,6 +29,10 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
       folderName: 'Prompts',
       displayName: 'Prompts',
       promptFolderId: PROMPT_FOLDER_ID,
+      folderSettings: {
+        folderPrefix: 'Prompt folder prefix',
+        folderSuffix: 'Prompt folder suffix'
+      },
       prompts: [
         {
           id: 'select-template-prompt',
@@ -47,7 +57,12 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
         {
           id: 'template-second',
           title: 'Second Root Template',
-          templateText: 'Second root.'
+          templateText: 'Second root [[PROMPT_TEXT]].'
+        },
+        {
+          id: 'template-invalid',
+          title: 'Invalid Template',
+          templateText: 'No prompt insertion point.'
         }
       ]
     },
@@ -59,7 +74,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
         {
           id: 'template-first',
           title: 'First Root Template',
-          templateText: 'First root.'
+          templateText: 'First root [[PROMPT_TEXT]].'
         }
       ],
       subfolders: [
@@ -71,7 +86,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
             {
               id: 'template-nested',
               title: 'Nested Template',
-              templateText: 'Nested.'
+              templateText: 'Nested [[PROMPT_TEXT]].'
             }
           ]
         }
@@ -146,6 +161,9 @@ describe('Prompt template selection', () => {
       'Nested Template',
       'First Root Template'
     ])
+    await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-invalid"]')).toHaveCount(
+      0
+    )
 
     await dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]').click()
     await expect(dialog).toBeHidden()
@@ -191,5 +209,66 @@ describe('Prompt template selection', () => {
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
     await expect(templateEditor.locator('[data-testid="prompt-template-button"]')).toHaveCount(0)
     await expect(templateEditor.locator('.prompt-editor-metadata-folder')).toHaveCount(0)
+  })
+
+  test('copies with the current template draft and ignores it after its token is removed', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Prompts')
+
+    const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
+    await promptEditor.locator('[data-testid="prompt-template-button"]').click()
+    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+
+    await testHelpers.navigateToPromptFolders('First Templates')
+    const templateEditorSelector = promptEditorSelector('template-first')
+    await waitForMonacoEditor(mainWindow, templateEditorSelector)
+    await focusMonacoEditor(mainWindow, templateEditorSelector)
+    await mainWindow.keyboard.press('Control+A')
+    await mainWindow.keyboard.insertText('Draft [[PROMPT_TEXT]] wrapper')
+    await expect.poll(() => getMonacoEditorText(mainWindow, templateEditorSelector)).toBe(
+      'Draft [[PROMPT_TEXT]] wrapper'
+    )
+
+    await testHelpers.navigateToPromptFolders('Prompts')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('select-template-prompt'))
+    await stubClipboard(mainWindow)
+    await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe(
+        'Draft Prompt folder prefix\n\nChoose a template.\n\nPrompt folder suffix wrapper'
+      )
+
+    await testHelpers.navigateToPromptFolders('First Templates')
+    await focusMonacoEditor(mainWindow, templateEditorSelector)
+    await mainWindow.keyboard.press('Control+A')
+    await mainWindow.keyboard.insertText('Draft without a token')
+    await expect.poll(() => getMonacoEditorText(mainWindow, templateEditorSelector)).toBe(
+      'Draft without a token'
+    )
+
+    await testHelpers.navigateToPromptFolders('Prompts')
+    await stubClipboard(mainWindow)
+    await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe('Prompt folder prefix\n\nChoose a template.\n\nPrompt folder suffix')
+    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'First Root Template'
+    )
+    await promptEditor.locator('[data-testid="prompt-template-button"]').click()
+    await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-first"]')).toHaveCount(
+      0
+    )
+    expect(await readTextFile(electronApp, PROMPT_PATH)).toContain('templateId: template-first')
   })
 })

@@ -22,7 +22,7 @@ vi.mock('../../src/main/DataAccess/MarkdownContentUiStateDataAccess', () => ({
 }))
 
 describe('prompt template workspace loading', () => {
-  it('loads nested template folders and sends template summaries to the renderer', async () => {
+  it('loads nested template folders and sends full templates to the renderer', async () => {
     const workspacePath = '/ws/template-loading'
     vol.fromJSON(
       createWorkspaceWithTemplateFolders(workspacePath, [
@@ -79,7 +79,8 @@ describe('prompt template workspace loading', () => {
       id: 'nested-template',
       title: 'Nested Template',
       fallbackTitle: '',
-      modifiedAt: templateModifiedAt
+      modifiedAt: templateModifiedAt,
+      templateText: 'Use {{value}}.'
     })
 
     const folderResult = await loadPromptFolderInitialData({

@@ -16,6 +16,7 @@
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
+  import { createPromptFolderTemplate } from '../prompt-editor/promptTemplatingEngine'
   import { setPromptDraftTemplateId } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
@@ -126,6 +127,7 @@
     folderSettingsByFolderId: Record<string, AnyPromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, MarkdownContentDraftRecord>
+    promptTemplateTextById: Record<string, string>
     promptMetadataByPromptId: Record<string, PromptMetadata>
     promptFolders: PromptFolder[]
     activeScreenRows: PromptFolderScreenRow[]
@@ -186,6 +188,7 @@
     folderSettingsByFolderId,
     promptEditorSizingConfig,
     promptDraftById,
+    promptTemplateTextById,
     promptMetadataByPromptId,
     promptFolders,
     activeScreenRows,
@@ -251,6 +254,15 @@
         PromptFolder
       >
   )
+  const parentPromptFolderIdById = $derived.by<Record<string, string>>(() =>
+    Object.fromEntries(
+      promptFolders.flatMap((folder) =>
+        folder.entries.flatMap((entry) =>
+          entry.kind === 'folder' ? [[entry.id, folder.id] as const] : []
+        )
+      )
+    )
+  )
 
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
@@ -276,6 +288,32 @@
     folderSettingsByFolderId[ownerFolderId] ??
     promptFolderById[ownerFolderId]?.settings ??
     emptyFolderSettings
+
+  const getCopyTemplateTexts = (
+    ownerFolderId: string,
+    selectedTemplateId: string | undefined
+  ): string[] => {
+    if (isTemplateFolder) return []
+
+    const templateTexts: string[] = []
+    let folderId: string | undefined = ownerFolderId
+    // Applying the owner first lets each parent wrap its descendants while climbing upward.
+    while (folderId) {
+      const settings = getFolderSettings(folderId)
+      if ('folderPrefix' in settings) {
+        templateTexts.push(
+          createPromptFolderTemplate(settings.folderPrefix, settings.folderSuffix)
+        )
+      }
+      folderId = parentPromptFolderIdById[folderId]
+    }
+
+    const selectedTemplateText = selectedTemplateId
+      ? promptTemplateTextById[selectedTemplateId]
+      : undefined
+    if (selectedTemplateText !== undefined) templateTexts.push(selectedTemplateText)
+    return templateTexts
+  }
 
   const openTemplateSelectionDialog = (promptId: string): void => {
     templateSelectionPromptId = promptId
@@ -983,7 +1021,10 @@
       {shouldDehydrate}
       {overlayRowElement}
       {onHydrationChange}
-      folderSettings={getFolderSettings(row.ownerFolderId)}
+      copyTemplateTexts={getCopyTemplateTexts(
+        row.ownerFolderId,
+        promptDraftById[row.promptId]!.templateId
+      )}
       {screenMode}
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}

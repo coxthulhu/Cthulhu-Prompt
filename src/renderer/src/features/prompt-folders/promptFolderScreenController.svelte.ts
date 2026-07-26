@@ -195,6 +195,11 @@ export const createPromptFolderScreenController = ({
       ])
     )
   )
+  const promptTemplateTextById = $derived.by<Record<string, string>>(() =>
+    Object.fromEntries(
+      promptTemplateDraftQuery.data.map((template) => [template.id, template.templateText])
+    )
+  )
   const contentDraftById = $derived.by<Record<string, MarkdownContentDraftRecord>>(() => {
     if (!isTemplateFolder) {
       return Object.fromEntries(
@@ -1554,6 +1559,9 @@ export const createPromptFolderScreenController = ({
     },
     get promptDraftById(): Record<string, MarkdownContentDraftRecord> {
       return contentDraftById
+    },
+    get promptTemplateTextById(): Record<string, string> {
+      return promptTemplateTextById
     },
     get promptMetadataByPromptId(): Record<string, PromptMetadata> {
       return promptMetadataByPromptId

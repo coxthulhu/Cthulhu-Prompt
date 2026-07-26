@@ -1,6 +1,6 @@
 import type { PromptFolder } from './PromptFolder'
 import type { PromptSummaryData } from './Prompt'
-import type { PromptTemplateSummaryData } from './PromptTemplate'
+import type { PromptTemplatePersisted } from './PromptTemplate'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { FolderEntryRef, OrderContainer } from './OrderContainer'
@@ -51,5 +51,5 @@ export type LoadWorkspaceByPathResult = IpcResult<{
   workspace: RevisionEnvelope<Workspace>
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
   prompts: Array<RevisionEnvelope<PromptSummaryData>>
-  promptTemplates: Array<RevisionEnvelope<PromptTemplateSummaryData>>
+  promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
 }>

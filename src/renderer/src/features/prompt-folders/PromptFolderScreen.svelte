@@ -222,6 +222,7 @@
             folderSettingsByFolderId={controller.folderSettingsByFolderId}
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
             promptDraftById={controller.promptDraftById}
+            promptTemplateTextById={controller.promptTemplateTextById}
             promptMetadataByPromptId={controller.promptMetadataByPromptId}
             promptFolders={controller.promptFolders}
             activeScreenRows={controller.activePromptFolderScreenRows}

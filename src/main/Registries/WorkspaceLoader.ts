@@ -15,6 +15,7 @@ import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentU
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
+  buildPromptTemplateSnapshot,
   buildWorkspaceSnapshot,
   collectLoadedPromptFolderDescendantIds,
   getLoadedPromptEntries,
@@ -104,16 +105,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
         .map((entry) => entry.id)
       for (const templateEntry of getLoadedPromptTemplateEntries(templateIds)) {
         loadedPromptTemplateIds.push(templateEntry.committed.id)
-        promptTemplates.push({
-          id: templateEntry.committed.id,
-          revision: templateEntry.revision,
-          data: {
-            id: templateEntry.committed.id,
-            title: templateEntry.committed.title,
-            fallbackTitle: templateEntry.committed.fallbackTitle,
-            modifiedAt: templateEntry.committed.modifiedAt
-          }
-        })
+        promptTemplates.push(buildPromptTemplateSnapshot(templateEntry))
       }
       continue
     }

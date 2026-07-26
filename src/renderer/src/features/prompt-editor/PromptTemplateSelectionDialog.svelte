@@ -18,6 +18,7 @@
     type PromptTreeSpecialRowProps
   } from '../sidebar/PromptTreeVirtualList.svelte'
   import type { VirtualWindowItem } from '../virtualizer/virtualWindowTypes'
+  import { hasPromptTextToken } from './promptTemplatingEngine'
 
   let {
     open = $bindable(false),
@@ -34,7 +35,7 @@
   const workspaceQuery = useLiveQuery(workspaceCollection) as { data: Workspace[] }
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as { data: PromptFolder[] }
   const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
-    data: Array<{ id: string; title: string; fallbackTitle: string }>
+    data: Array<{ id: string; title: string; fallbackTitle: string; templateText: string }>
   }
   const collapsedFolderIds = new SvelteSet<string>()
   let wasOpen = $state(false)
@@ -47,7 +48,11 @@
   )
   const templateTitleById = $derived.by(() =>
     Object.fromEntries(
-      promptTemplateDraftQuery.data.map((template) => [template.id, getPromptDisplayTitle(template)])
+      promptTemplateDraftQuery.data.flatMap((template) =>
+        hasPromptTextToken(template.templateText)
+          ? [[template.id, getPromptDisplayTitle(template)] as const]
+          : []
+      )
     )
   )
   const rootTemplateFolders = $derived.by(() =>

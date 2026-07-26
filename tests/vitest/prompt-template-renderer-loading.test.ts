@@ -22,7 +22,7 @@ describe('prompt template renderer loading', () => {
     promptFolderCollection.utils.deleteAuthoritative('renderer-template-folder')
   })
 
-  it('stores workspace template summaries in the renderer collection', async () => {
+  it('stores full workspace templates and drafts in the renderer', async () => {
     ipcInvokeWithPayload.mockResolvedValue({
       success: true,
       workspace: {
@@ -61,7 +61,9 @@ describe('prompt template renderer loading', () => {
             id: 'renderer-template',
             title: 'Renderer Template',
             fallbackTitle: '',
-            modifiedAt: '2026-07-22T12:00:00.000Z'
+            createdAt: '2026-07-22T11:00:00.000Z',
+            modifiedAt: '2026-07-22T12:00:00.000Z',
+            templateText: 'Review [[PROMPT_TEXT]].'
           }
         }
       ]
@@ -74,11 +76,12 @@ describe('prompt template renderer loading', () => {
       title: 'Renderer Template',
       fallbackTitle: '',
       modifiedAt: '2026-07-22T12:00:00.000Z',
-      loadingState: 'summary'
+      templateText: 'Review [[PROMPT_TEXT]].',
+      loadingState: 'full'
     })
     expect(promptTemplateDraftCollection.get('renderer-template')).toMatchObject({
       title: 'Renderer Template',
-      templateText: '',
+      templateText: 'Review [[PROMPT_TEXT]].',
       isEdited: false
     })
   })

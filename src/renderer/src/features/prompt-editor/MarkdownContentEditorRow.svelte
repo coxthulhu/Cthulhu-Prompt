@@ -3,7 +3,6 @@
   import type { Action } from 'svelte/action'
   import { Check, Layers, Plus } from 'lucide-svelte'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
-  import type { AnyPromptFolderSettings } from '@shared/PromptFolder'
   import { PromptStatus } from '@shared/Prompt'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
@@ -55,6 +54,7 @@
   import { getPromptTokenCount } from './promptEditorCounts'
   import { PromptFolderScreenMode } from '../prompt-folders/promptFolderScreenMode'
   import { PROMPT_TEXT_TEMPLATE_PARAMETER } from './promptTemplateParameters'
+  import { applyPromptTemplates } from './promptTemplatingEngine'
 
   // Shared editor implementation; prompt and template wrappers provide the variant behavior.
   let {
@@ -77,7 +77,7 @@
     shouldDehydrate,
     overlayRowElement,
     onHydrationChange,
-    folderSettings,
+    copyTemplateTexts = [],
     onTitleChange,
     onTextChange,
     onTemplateSelect,
@@ -127,7 +127,7 @@
     shouldDehydrate: boolean
     overlayRowElement?: HTMLDivElement | null
     onHydrationChange?: (isHydrated: boolean) => void
-    folderSettings?: AnyPromptFolderSettings
+    copyTemplateTexts?: readonly string[]
     onTitleChange: (title: string) => void
     onTextChange: (text: string, measurement: TextMeasurement) => void
     onTemplateSelect?: () => void
@@ -203,17 +203,7 @@
     promptData.draft.text.includes(PROMPT_TEXT_TEMPLATE_PARAMETER.token)
   )
   const promptTreeTitle = $derived(getPromptTitleText(promptDraftRecord))
-  const copyText = $derived.by(() => {
-    const parts: string[] = []
-    if (folderSettings && 'folderPrefix' in folderSettings && folderSettings.folderPrefix?.trim().length) {
-      parts.push(folderSettings.folderPrefix)
-    }
-    parts.push(promptData.draft.text)
-    if (folderSettings && 'folderSuffix' in folderSettings && folderSettings.folderSuffix?.trim().length) {
-      parts.push(folderSettings.folderSuffix)
-    }
-    return parts.join('\n\n')
-  })
+  const copyText = $derived(applyPromptTemplates(promptData.draft.text, copyTemplateTexts))
   // Track shared tree-entry drag state so both prompt drag entry points dim this row.
   const isDragging = $derived.by(() => {
     const draggedEntry = promptEntryDragState.draggedEntry

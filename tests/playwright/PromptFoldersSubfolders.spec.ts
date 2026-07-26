@@ -1840,6 +1840,46 @@ describe('Prompt folder subfolder rendering', () => {
       .toContain('status: InProgress')
   })
 
+  test('wraps copied prompt text from its owner folder upward through the root', async ({
+    testSetup
+  }) => {
+    const structure = setupWorkspaceScenario(WORKSPACE_PATH, 'subfolders-ui')
+    structure[`${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/PromptPrefix.md`] =
+      'Root folder prefix'
+    structure[`${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/PromptSuffix.md`] =
+      'Root folder suffix'
+    structure[
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/PromptPrefix.md`
+    ] = 'Grandchild folder prefix'
+    structure[
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/PromptSuffix.md`
+    ] = 'Grandchild folder suffix'
+    await testSetup.setupFilesystem(structure)
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await revealVirtualRow(mainWindow, testHelpers, grandchildPromptSelector)
+    await waitForMonacoEditor(mainWindow, grandchildPromptSelector)
+    await stubClipboard(mainWindow)
+    await mainWindow
+      .locator(`${grandchildPromptSelector} [data-testid="prompt-copy-button"]`)
+      .click()
+
+    await expect
+      .poll(() =>
+        mainWindow.evaluate(() =>
+          ((window as any).__testClipboardText ?? '').replace(/\r\n?/g, '\n')
+        )
+      )
+      .toBe(
+        'Root folder prefix\n\nNested folder prefix\n\nGrandchild folder prefix\n\nPrompt text inside the grandchild folder.\n\nGrandchild folder suffix\n\nNested folder suffix\n\nRoot folder suffix'
+      )
+  })
+
   test('uses the direct owner for every nested prompt status transition', async ({
     testSetup,
     electronApp
