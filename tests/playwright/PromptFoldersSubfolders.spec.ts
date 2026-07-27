@@ -667,16 +667,27 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(nestedFolderTitleBar).toContainText('1 subfolder')
     await expect.poll(readChevronRotationDegrees).toBe(0)
     const nestedCollapsedSummary = mainWindow.locator(nestedCollapsedSummarySelector)
-    const nestedCollapsedSummaryMessage = nestedCollapsedSummary.locator('p')
+    const nestedCollapsedSummaryButton = nestedCollapsedSummary.locator('button')
     const nestedBottomCap = mainWindow.locator(nestedBottomCapSelector)
     await expect(nestedCollapsedSummary).toBeVisible()
-    await expect(nestedCollapsedSummary).toHaveText('1 prompt and 1 subfolder hidden')
-    await expect(nestedCollapsedSummaryMessage).toHaveCSS('font-size', '14px')
+    await expect(nestedCollapsedSummary).toHaveText(
+      '1 prompt and 1 subfolder hidden. Click to expand...'
+    )
+    await expect(nestedCollapsedSummaryButton).toHaveClass(/cthulhuUiInlineTextButton/)
+    await expect(nestedCollapsedSummaryButton).toHaveAttribute('data-size', 'default')
+    await expect(nestedCollapsedSummaryButton).toHaveAttribute(
+      'data-base-variant',
+      'secondary'
+    )
+    await expect(nestedCollapsedSummaryButton).toHaveCSS('font-size', '14px')
+    await expect(nestedCollapsedSummaryButton).toHaveCSS('line-height', '20px')
+    await expect(nestedCollapsedSummaryButton).toHaveCSS('text-align', 'center')
+    await expect(nestedCollapsedSummaryButton).toHaveCSS('cursor', 'pointer')
     await expect(nestedBottomCap).toBeVisible()
     await expect(
       nestedCollapsedSummary.locator('.prompt-folder-section-middle-layer')
     ).toHaveCount(1)
-    const summaryColor = await nestedCollapsedSummaryMessage.evaluate((element) => {
+    const summaryColor = await nestedCollapsedSummaryButton.evaluate((element) => {
       const probe = document.createElement('span')
       probe.style.color = 'var(--ui-secondary-text)'
       document.body.append(probe)
@@ -714,7 +725,7 @@ describe('Prompt folder subfolder rendering', () => {
     expect(rowOrderAfterCollapse).toEqual(collapsedNestedRowTestIds)
 
     await revealVirtualRow(mainWindow, testHelpers, nestedFolderSelector)
-    await nestedFolderToggle.click()
+    await nestedCollapsedSummaryButton.click()
     await expect(nestedFolderToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(nestedCollapsedSummary).toHaveCount(0)
 
@@ -734,7 +745,7 @@ describe('Prompt folder subfolder rendering', () => {
     await mainWindow.locator(emptyNestedFolderSelector).locator(folderTitleToggleSelector).click()
     await expect(mainWindow.locator(emptyNestedCollapsedSummarySelector)).toBeVisible()
     await expect(mainWindow.locator(emptyNestedCollapsedSummarySelector)).toHaveText(
-      '0 prompts and 0 subfolders hidden'
+      '0 prompts and 0 subfolders hidden. Click to expand...'
     )
   })
 

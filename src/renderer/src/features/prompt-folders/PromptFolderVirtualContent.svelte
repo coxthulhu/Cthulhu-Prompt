@@ -84,6 +84,7 @@
     startPromptFolderDrag
   } from '../drag-drop/promptEntryDragState.svelte.ts'
   import type { ActivePromptTreeRow } from './promptFolderScreenController.svelte.ts'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import type {
     PromptFolderDividerTarget,
@@ -911,22 +912,29 @@
 {/snippet}
 
 {#snippet collapsedSummaryRow({ row, rowHeightPx })}
+  {@const summaryText = `${row.promptCount} ${
+    row.promptCount === 1
+      ? isTemplateFolder
+        ? 'template'
+        : 'prompt'
+      : isTemplateFolder
+        ? 'templates'
+        : 'prompts'
+  } and ${row.subfolderCount} ${
+    row.subfolderCount === 1 ? 'subfolder' : 'subfolders'
+  } hidden. Click to expand...`}
   <PromptFolderSectionRow
     {rowHeightPx}
     indentLevel={row.indentLevel}
-    contentClass="flex items-center justify-center text-center text-sm text-[var(--ui-secondary-text)]"
+    contentClass="flex items-center justify-center text-center"
     testId={`prompt-folder-collapsed-summary-${row.ownerFolderId}`}
   >
-    <p>
-      {row.promptCount} {row.promptCount === 1
-        ? isTemplateFolder
-          ? 'template'
-          : 'prompt'
-        : isTemplateFolder
-          ? 'templates'
-          : 'prompts'} and {row.subfolderCount}
-      {row.subfolderCount === 1 ? 'subfolder' : 'subfolders'} hidden
-    </p>
+    <InlineTextButton
+      text={summaryText}
+      size="default"
+      baseVariant="secondary"
+      onclick={() => onPromptsSectionToggle(row.ownerFolderId)}
+    />
   </PromptFolderSectionRow>
 {/snippet}
 
