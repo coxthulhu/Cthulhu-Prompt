@@ -50,12 +50,24 @@ export const resolveAvailablePromptFallbackTitle = (
     return baseFallbackTitle
   }
 
-  let fallbackIndex = 1
-  while (fallbackTitles.has(`${baseFallbackTitle} ${fallbackIndex}`)) {
+  const numberedFallbackMatch = /^(.*) ([1-9]\d*)$/.exec(baseFallbackTitle)
+  const numberedFallbackIndex = numberedFallbackMatch
+    ? Number(numberedFallbackMatch[2])
+    : null
+  const hasNumberedFallback =
+    numberedFallbackMatch !== null &&
+    numberedFallbackMatch[1].length > 0 &&
+    numberedFallbackIndex !== null &&
+    Number.isSafeInteger(numberedFallbackIndex) &&
+    numberedFallbackIndex < Number.MAX_SAFE_INTEGER
+  const fallbackBase = hasNumberedFallback ? numberedFallbackMatch[1] : baseFallbackTitle
+  let fallbackIndex = hasNumberedFallback ? numberedFallbackIndex + 1 : 1
+
+  while (fallbackTitles.has(`${fallbackBase} ${fallbackIndex}`)) {
     fallbackIndex += 1
   }
 
-  return `${baseFallbackTitle} ${fallbackIndex}`
+  return `${fallbackBase} ${fallbackIndex}`
 }
 
 export const collectPromptFallbackTitleCandidates = <TPrompt extends PromptFallbackTitleCandidate>(

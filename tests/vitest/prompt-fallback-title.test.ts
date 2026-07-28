@@ -71,6 +71,20 @@ describe('prompt fallback title helpers', () => {
     ).toEqual({ title: '', fallbackTitle: 'New Prompt 1' })
   })
 
+  it('increments an existing numeric fallback suffix when it collides', () => {
+    expect(
+      resolvePromptTitleUpdate({
+        prompts: [
+          { id: 'existing-new-prompt-1', title: '', fallbackTitle: 'New Prompt 1' }
+        ],
+        promptId: 'moved-new-prompt-1',
+        currentTitle: '',
+        currentFallbackTitle: 'New Prompt 1',
+        nextTitle: ''
+      })
+    ).toEqual({ title: '', fallbackTitle: 'New Prompt 2' })
+  })
+
   it('resolves sibling candidates from prompt ids', () => {
     const promptById = new Map(prompts.map((prompt) => [prompt.id, prompt]))
 

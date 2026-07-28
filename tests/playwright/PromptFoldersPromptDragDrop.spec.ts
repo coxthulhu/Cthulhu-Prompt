@@ -395,9 +395,14 @@ const buildMoveFallbackWorkspace = () =>
       displayName: FALLBACK_SOURCE_FOLDER_NAME,
       prompts: [
         {
+          id: 'move-fallback-source-existing',
+          title: '',
+          promptText: 'I already use New Prompt in the source folder.'
+        },
+        {
           id: 'move-fallback-source',
           title: '',
-          promptText: 'Move me.'
+          promptText: 'Move New Prompt 1.'
         }
       ]
     },
@@ -409,13 +414,18 @@ const buildMoveFallbackWorkspace = () =>
           id: 'move-fallback-destination',
           title: '',
           promptText: 'I already use New Prompt.'
+        },
+        {
+          id: 'move-fallback-destination-1',
+          title: '',
+          promptText: 'I already use New Prompt 1.'
         }
       ]
     }
   ])
 
 describe('Prompt folder prompt drag-drop', () => {
-  test('increments a fallback title when moving into a folder with a fallback collision', async ({
+  test('increments an existing fallback suffix when moving into a folder with a collision', async ({
     testSetup,
     electronApp
   }) => {
@@ -437,7 +447,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPromptTreeRowActiveState(mainWindow, 'move-fallback-source', true)
     await expect(
       mainWindow.locator(`${promptEditorSelector('move-fallback-source')} ${PROMPT_TITLE_SELECTOR}`)
-    ).toHaveAttribute('placeholder', 'New Prompt 1...')
+    ).toHaveAttribute('placeholder', 'New Prompt 2...')
 
     await expect
       .poll(async () => {
@@ -446,13 +456,13 @@ describe('Prompt folder prompt drag-drop', () => {
             workspacePath: MOVE_FALLBACK_WORKSPACE_PATH,
             folderName: FALLBACK_SOURCE_FOLDER_NAME,
             promptId: 'move-fallback-source',
-            promptTitle: 'New Prompt'
+            promptTitle: 'New Prompt 1'
           }),
           checkPersistedPromptFilesExistByTitle(electronApp, {
             workspacePath: MOVE_FALLBACK_WORKSPACE_PATH,
             folderName: FALLBACK_DESTINATION_FOLDER_NAME,
             promptId: 'move-fallback-source',
-            promptTitle: 'New Prompt 1'
+            promptTitle: 'New Prompt 2'
           })
         ])
 
