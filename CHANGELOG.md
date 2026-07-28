@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.29
+
+### Changes
+
+- Made collapsed prompt and template folder summaries clickable to expand their contents.
+
+### Fixed
+
+- Fixed numbered fallback prompt names so collisions increment the existing suffix.
+
 ## 0.0.28
 
 ### New Features
