@@ -1049,36 +1049,14 @@ export const createPromptFolderScreenController = ({
         (row) => row.kind === 'folder-editor' && row.ownerFolderId === target.rowOwnerFolderId
       )
     }
-    return activePromptFolderScreenRows.some(
-      (row) => row.kind === 'prompt-editor' && row.promptId === target.promptId
-    )
+    return visiblePromptIds.includes(target.promptId)
   }
-
-  // Side effect: active-content commands cannot be fulfilled while completed mode is shown.
-  $effect(() => {
-    if (!isCompletedMode) return
-
-    const revealRequest = promptNavigation.contentRevealRequests.pending
-    if (revealRequest?.payload.screenRootFolderId === screenRootFolderId) {
-      cancelNavigationTargetRequests(revealRequest.payload)
-    }
-
-    const expansionRequest = promptNavigation.contentExpansionRequests.pending
-    if (expansionRequest?.payload.screenRootFolderId === screenRootFolderId) {
-      promptNavigation.contentExpansionRequests.cancel(expansionRequest)
-    }
-
-    const focusRequest = promptNavigation.promptFocusRequests.pending
-    if (focusRequest?.payload.screenRootFolderId === screenRootFolderId) {
-      promptNavigation.promptFocusRequests.cancel(focusRequest)
-    }
-  })
 
   // Side effect: expand the requested content path once folder rows are ready.
   $effect(() => {
     const request = promptNavigation.contentExpansionRequests.pending
     if (!request || request.payload.screenRootFolderId !== screenRootFolderId) return
-    if (isCompletedMode || !isVirtualContentReady) return
+    if (!isVirtualContentReady) return
 
     promptNavigation.contentExpansionRequests.consume(request, (payload) => {
       expandSectionForRow(toActivePromptTreeTarget(payload), payload.expandFolderSettings)
@@ -1089,7 +1067,7 @@ export const createPromptFolderScreenController = ({
   $effect(() => {
     const request = promptNavigation.contentRevealRequests.pending
     if (!request || request.payload.screenRootFolderId !== screenRootFolderId) return
-    if (isCompletedMode || !isVirtualContentReady) return
+    if (!isVirtualContentReady) return
     if (!viewportMetrics || viewportMetrics.heightPx <= 0) return
 
     const pendingExpansion = promptNavigation.contentExpansionRequests.pending
@@ -1454,7 +1432,7 @@ export const createPromptFolderScreenController = ({
     }
     setCurrentFolderSelection(targetRow, 'find', {
       forceRequest: true,
-      contentReveal: isCompletedMode ? undefined : { scrollType: 'center' }
+      contentReveal: { scrollType: 'center' }
     })
   }
 

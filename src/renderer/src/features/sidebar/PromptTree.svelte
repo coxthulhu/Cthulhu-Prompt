@@ -539,13 +539,10 @@
       row,
       source,
       forceRequest: true,
-      contentReveal:
-        screenMode === PromptFolderScreenMode.Active
-          ? {
-              scrollType: 'center',
-              expandFolderSettings: source !== 'folder-open'
-            }
-          : undefined
+      contentReveal: {
+        scrollType: 'center',
+        expandFolderSettings: source !== 'folder-open'
+      }
     })
 
     if (!isSameRootActive) {

@@ -16,6 +16,7 @@ import {
   seedUserPersistence,
   seedWorkspacePersistence
 } from '../helpers/UserPersistenceHelpers'
+import { PromptStatus } from '../../src/shared/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -41,6 +42,10 @@ const UNOPENED_UNTITLED_WORKSPACE_PATH = '/ws/tree-untitled-summaries'
 const LOADED_FOLDER_NAME = 'Loaded'
 const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-1"]'
 const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-2"]'
+const COMPLETED_TREE_WORKSPACE_PATH = '/ws/completed-tree-navigation'
+const COMPLETED_TREE_FOLDER_NAME = 'Completed Tree Navigation'
+const COMPLETED_TREE_PROMPT_COUNT = 20
+const COMPLETED_TREE_TARGET_PROMPT_ID = 'completed-tree-prompt-0'
 const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
 const SUBFOLDERS_MAIN_FOLDER_ID = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main`)
 const SUBFOLDERS_NESTED_FOLDER_ID = createDeterministicId(
@@ -66,6 +71,34 @@ function createDeterministicId(seed: string): string {
   }
   const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
   return `00000000000000000000${suffix}`
+}
+
+const buildCompletedTreeWorkspace = (): Record<string, string | null> => {
+  const workspace = createWorkspaceWithFolders(COMPLETED_TREE_WORKSPACE_PATH, [
+    {
+      folderName: COMPLETED_TREE_FOLDER_NAME,
+      displayName: COMPLETED_TREE_FOLDER_NAME,
+      prompts: Array.from({ length: COMPLETED_TREE_PROMPT_COUNT }, (_, index) => ({
+        id: `completed-tree-prompt-${index}`,
+        title: `Completed Tree Prompt ${index}`,
+        promptText: `Completed prompt body ${index}.`,
+        status: PromptStatus.Completed,
+        completedAt: `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`
+      }))
+    }
+  ])
+  const activeFolderPrefix =
+    `${COMPLETED_TREE_WORKSPACE_PATH}/Prompts/${COMPLETED_TREE_FOLDER_NAME}/`
+  const completedFolderPrefix = `${activeFolderPrefix}_Completed/`
+
+  for (const [path, content] of Object.entries(workspace)) {
+    if (!path.startsWith(activeFolderPrefix) || !path.endsWith('.prompt.md')) continue
+
+    delete workspace[path]
+    workspace[path.replace(activeFolderPrefix, completedFolderPrefix)] = content
+  }
+
+  return workspace
 }
 
 const scrollPromptTreeRowIntoView = async (
@@ -484,6 +517,33 @@ describe('Prompt folder prompt tree', () => {
     expect(centeredRowId).toBe(expectedCenteredRowId)
 
     await expect(promptTreeButton).toHaveAttribute('data-row-state', 'active')
+  })
+
+  test('centers a completed prompt when clicking its prompt tree row', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(buildCompletedTreeWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(COMPLETED_TREE_FOLDER_NAME)
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+
+    const targetTreeRow = `[data-testid="prompt-tree-prompt-${COMPLETED_TREE_TARGET_PROMPT_ID}"]`
+    const targetEditor = promptEditorSelector(COMPLETED_TREE_TARGET_PROMPT_ID)
+    await scrollPromptTreeRowIntoView(mainWindow, testHelpers, targetTreeRow)
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await expect(mainWindow.locator(targetEditor)).toHaveCount(0)
+
+    await mainWindow.locator(targetTreeRow).click()
+
+    await expect(mainWindow.locator(targetTreeRow)).toHaveAttribute('data-row-state', 'active')
+    await expectRowToReachClosestPromptFolderViewportCenter(
+      mainWindow,
+      testHelpers,
+      targetEditor
+    )
   })
 
   test('keeps selected root folder settings action inert', async ({ testSetup }) => {
