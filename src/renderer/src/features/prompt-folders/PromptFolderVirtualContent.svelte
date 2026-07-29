@@ -802,6 +802,7 @@
   {rowRegistry}
   {initialScrollTopPx}
   rightScrollPaddingPx={12}
+  scrollbarWidthPx={16}
   testId="prompt-folder-virtual-window"
   spacerTestId="prompt-folder-virtual-window-spacer"
   bind:scrollToWithinWindowBand

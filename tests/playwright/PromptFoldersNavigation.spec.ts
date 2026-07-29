@@ -364,7 +364,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
   })
 
   test('opens Prompt Folders view and renders prompt list', async ({ testSetup }) => {
-    const { testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
@@ -375,6 +375,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-screen"] .virtual-window-scrollbar')
+    ).toHaveCSS('width', '16px')
   })
 
   test('opens the first folder from the activity bar when no folder was selected', async ({

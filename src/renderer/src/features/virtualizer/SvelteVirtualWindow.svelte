@@ -33,6 +33,7 @@
     viewportMetrics?: VirtualWindowViewportMetrics | null
     leftScrollPaddingPx?: number
     rightScrollPaddingPx?: number
+    scrollbarWidthPx?: number
     testId?: string
     spacerTestId?: string
   }
@@ -40,8 +41,8 @@
   // Generic over row shape; callers provide the concrete discriminated union.
   const DEFAULT_LEFT_SCROLL_PADDING_PX = 24
   const DEFAULT_RIGHT_SCROLL_PADDING_PX = 8
+  const DEFAULT_SCROLLBAR_WIDTH_PX = 10
   const WINDOW_BAND_PADDING_PX = 100
-  const SCROLLBAR_WIDTH_PX = 10
   const WHEEL_SCROLL_MULTIPLIER = 0.4
 
   let {
@@ -58,6 +59,7 @@
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
     leftScrollPaddingPx = DEFAULT_LEFT_SCROLL_PADDING_PX,
     rightScrollPaddingPx = DEFAULT_RIGHT_SCROLL_PADDING_PX,
+    scrollbarWidthPx = DEFAULT_SCROLLBAR_WIDTH_PX,
     testId = 'virtual-window',
     spacerTestId = 'virtual-window-spacer'
   }: VirtualWindowProps = $props()
@@ -65,7 +67,7 @@
   let viewportFrame = $state<HTMLDivElement | null>(null)
 
   let isPointerOverWindow = $state(false)
-  const reservedScrollbarWidthPx = $derived(overlayScrollbar ? 0 : SCROLLBAR_WIDTH_PX)
+  const reservedScrollbarWidthPx = $derived(overlayScrollbar ? 0 : scrollbarWidthPx)
 
   const { getMeasurementWidth, getViewportHeight, getDevicePixelRatio, getWidthResizeActive } =
     createVirtualWindowMeasurements({
@@ -269,7 +271,7 @@
       {scrollTopPx}
       viewportHeightPx={viewportHeight}
       {totalHeightPx}
-      widthPx={SCROLLBAR_WIDTH_PX}
+      widthPx={scrollbarWidthPx}
       overlay={overlayScrollbar}
       {isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
