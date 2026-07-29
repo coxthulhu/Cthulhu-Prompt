@@ -5,7 +5,6 @@ out
 .eslintcache
 *.log*
 temp
-test-results
 .cthulhu/
 .claude/
 .idea/

@@ -21,7 +21,7 @@ interface RendererErrorPayload {
 }
 
 const RENDERER_ERROR_ANNOTATION = 'renderer-errors-json'
-const REPORT_FILE = path.resolve(process.cwd(), 'test-results', 'renderer-errors.txt')
+const REPORT_FILE = path.resolve(process.cwd(), 'temp', 'test-results', 'renderer-errors.txt')
 
 class RendererErrorReporter implements Reporter {
   onBegin() {

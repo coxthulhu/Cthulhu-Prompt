@@ -63,7 +63,7 @@ Playwright must run in the Windows environment. Use the wrapper, which changes t
 - Multiple files: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
 - Single test by name: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
 
-Keep the 300000 ms timeout. Don't override the reporter unless you include the custom one — the default config uses the dot reporter plus the console/page error reporter. Console/page errors are written to `test-results/renderer-errors.txt`. If you do override, include it explicitly (e.g. `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`). If you hit a Svelte hydration/runtime error, search for the exact message online.
+Keep the 300000 ms timeout. Don't override the reporter unless you include the custom one — the default config uses the dot reporter plus the console/page error reporter. Console/page errors are written to `temp/test-results/renderer-errors.txt`. If you do override, include it explicitly (e.g. `--reporter=dot,./tests/helpers/RendererErrorReporter.ts`). If you hit a Svelte hydration/runtime error, search for the exact message online.
 
 ### Sandbox & permissions notes (Claude Code)
 
