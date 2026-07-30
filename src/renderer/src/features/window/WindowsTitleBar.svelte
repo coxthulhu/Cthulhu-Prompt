@@ -1,6 +1,7 @@
 <script lang="ts">
-  let { title } = $props<{
+  let { title, isDevBuild = false } = $props<{
     title: string
+    isDevBuild?: boolean
   }>()
 
   const windowControls = window.windowControls
@@ -62,7 +63,7 @@
 >
   <!-- Keep the title centered by matching the left brand width to the control cluster. -->
   <div class="titlebar__brand" aria-hidden="true"></div>
-  <div class="titlebar__title" {title}>{title}</div>
+  <div class="titlebar__title" data-dev-build={isDevBuild} {title}>{title}</div>
   <div class="titlebar__controls">
     <button
       type="button"
@@ -128,6 +129,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     padding: 0 12px;
+  }
+
+  .titlebar__title[data-dev-build='true'] {
+    color: var(--ui-development-indicator-text);
   }
 
   .titlebar__controls {

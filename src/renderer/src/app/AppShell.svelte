@@ -68,6 +68,7 @@
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
+  const isDevBuild = runtimeConfig.environment === 'DEV'
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsQuery = useLiveQuery((q) =>
@@ -576,7 +577,7 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar title={windowTitle} />
+    <WindowsTitleBar title={windowTitle} {isDevBuild} />
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
