@@ -15,7 +15,7 @@
     onTemplateSelect?: () => void
     onStatusChange?: (status: import('@shared/Prompt').PromptStatus) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
-    onTitleForwardTab?: () => void | Promise<void>
+    onTitleEditorFocus?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string | null
     tokenCount: number
@@ -55,7 +55,7 @@
     onTemplateSelect,
     onStatusChange,
     onSelectionChange,
-    onTitleForwardTab,
+    onTitleEditorFocus,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Template',
     tokenCount,
@@ -130,10 +130,17 @@
   }
 
   const handleTitleKeydown = (event: KeyboardEvent) => {
-    if (event.key !== 'Tab' || event.shiftKey) return
-    if (!onTitleForwardTab) return
+    const isForwardTab = event.key === 'Tab' && !event.shiftKey
+    const isPlainEnter =
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey
+    if (!isForwardTab && !isPlainEnter) return
+    if (!onTitleEditorFocus) return
     event.preventDefault()
-    void onTitleForwardTab()
+    void onTitleEditorFocus()
   }
 
   const handleCopySuccess = async () => {

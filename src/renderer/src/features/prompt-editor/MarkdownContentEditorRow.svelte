@@ -369,7 +369,7 @@
     editor.focus()
   }
 
-  const focusEditorFromTitleTab = async () => {
+  const focusEditorFromTitle = async () => {
     if (!editorInstance) {
       await ensureHydrated()
     }
@@ -542,7 +542,7 @@
     {tokenCount}
     onTitleChange={promptData.setTitle}
     onSelectionChange={reportTitleSelection}
-    onTitleForwardTab={focusEditorFromTitleTab}
+    onTitleEditorFocus={focusEditorFromTitle}
     bind:inputRef={titleInputRef}
     {rowId}
     {scrollToWithinWindowBand}

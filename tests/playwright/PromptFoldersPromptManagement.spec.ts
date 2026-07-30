@@ -602,7 +602,7 @@ describe('Prompt folder prompt management', () => {
     )
   })
 
-  test('tabs from the prompt title to the Monaco editor', async ({ testSetup }) => {
+  test('moves focus from the prompt title to Monaco with Tab or Enter', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -611,8 +611,21 @@ describe('Prompt folder prompt management', () => {
     const editorSelector = promptEditorSelector('dev-1')
     await waitForMonacoEditor(mainWindow, editorSelector)
 
-    await mainWindow.locator(promptTitleSelector('dev-1')).focus()
+    const titleInput = mainWindow.locator(promptTitleSelector('dev-1'))
+    await titleInput.focus()
+    for (const modifier of ['shiftKey', 'ctrlKey', 'altKey', 'metaKey']) {
+      await titleInput.dispatchEvent('keydown', { key: 'Enter', [modifier]: true })
+      await expect(titleInput).toBeFocused()
+    }
+
     await mainWindow.keyboard.press('Tab')
+
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+
+    await titleInput.focus()
+    await mainWindow.keyboard.press('Enter')
 
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })

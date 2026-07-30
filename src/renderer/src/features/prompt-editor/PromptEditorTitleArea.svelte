@@ -24,7 +24,7 @@
     onTemplateSelect,
     onStatusChange,
     onSelectionChange,
-    onTitleForwardTab,
+    onTitleEditorFocus,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Template',
     tokenCount,
@@ -60,7 +60,7 @@
     {onTemplateSelect}
     {onStatusChange}
     {onSelectionChange}
-    {onTitleForwardTab}
+    {onTitleEditorFocus}
     bind:inputRef
     {metadataFolderLabel}
     {tokenCount}
