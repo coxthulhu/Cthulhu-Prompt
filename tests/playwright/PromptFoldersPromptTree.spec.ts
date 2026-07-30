@@ -16,6 +16,11 @@ import {
   seedUserPersistence,
   seedWorkspacePersistence
 } from '../helpers/UserPersistenceHelpers'
+import {
+  focusMonacoEditor,
+  moveMonacoCursorToEnd,
+  waitForMonacoEditor
+} from '../helpers/MonacoHelpers'
 import { PromptStatus } from '../../src/shared/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -517,6 +522,63 @@ describe('Prompt folder prompt tree', () => {
     expect(centeredRowId).toBe(expectedCenteredRowId)
 
     await expect(promptTreeButton).toHaveAttribute('data-row-state', 'active')
+  })
+
+  test('stops tracking a centered prompt after hydration beside collapsed folder settings', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Main')
+    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
+    await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
+
+    const promptEditor = promptEditorSelector('nested-prompt')
+    const promptTreeRow = mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, promptEditor)
+    await promptTreeRow.click()
+    await expectRowToReachClosestPromptFolderViewportCenter(
+      mainWindow,
+      testHelpers,
+      promptEditor
+    )
+    await waitForMonacoEditor(mainWindow, promptEditor)
+
+    // Wait for every mounted viewport editor to hydrate before checking that tracking stopped.
+    await mainWindow.waitForFunction(
+      ({ hostSelector, placeholderSelector }) => {
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        return host != null && host.querySelectorAll(placeholderSelector).length === 0
+      },
+      {
+        hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+        placeholderSelector: MONACO_PLACEHOLDER_SELECTOR
+      }
+    )
+
+    await focusMonacoEditor(mainWindow, promptEditor)
+    await moveMonacoCursorToEnd(mainWindow, promptEditor)
+    const beforeEdit = await mainWindow.locator(promptEditor).boundingBox()
+    expect(beforeEdit).not.toBeNull()
+
+    for (let index = 0; index < 8; index += 1) {
+      await mainWindow.keyboard.press('Enter')
+    }
+
+    await expect
+      .poll(async () => (await mainWindow.locator(promptEditor).boundingBox())?.height ?? 0)
+      .toBeGreaterThan(beforeEdit!.height)
+    const afterEdit = await mainWindow.locator(promptEditor).boundingBox()
+    expect(afterEdit).not.toBeNull()
+    expect(Math.abs(afterEdit!.y - beforeEdit!.y)).toBeLessThanOrEqual(2)
   })
 
   test('centers a completed prompt when clicking its prompt tree row', async ({ testSetup }) => {

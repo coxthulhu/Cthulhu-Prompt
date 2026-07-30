@@ -140,6 +140,10 @@
   const configuredSettingsCount = $derived(
     settingsFields.filter((field) => folderSettings[field] !== null).length
   )
+  const hasHydratableSection = $derived(
+    isSettingsSectionExpanded && !isReadOnly && configuredSettingsCount > 0
+  )
+  const isRowHydrated = $derived(!hasHydratableSection || isAnySectionHydrated)
   const effectiveDropOptions = $derived<
     DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
   >(
@@ -214,9 +218,9 @@
 
   // Side effect: report aggregate row hydration to the virtual window.
   $effect(() => {
-    if (lastReportedHydration === isAnySectionHydrated) return
-    lastReportedHydration = isAnySectionHydrated
-    onHydrationChange?.(isAnySectionHydrated)
+    if (lastReportedHydration === isRowHydrated) return
+    lastReportedHydration = isRowHydrated
+    onHydrationChange?.(isRowHydrated)
   })
 </script>
 
