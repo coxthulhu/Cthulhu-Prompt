@@ -28,6 +28,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
 const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
+const COMPLETED_FALLBACK_GAP_WORKSPACE_PATH = '/ws/completed-fallback-gap'
 const COPY_PREFIX_SUFFIX_WORKSPACE_PATH = '/ws/copy-prefix-suffix'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SELF_HEALING_WORKSPACE_PATH = '/ws/completed-self-healing'
@@ -37,6 +38,8 @@ const COMPLETED_MODE_FOLDER_ID = 'completed-mode-folder'
 const NO_COMPLETED_FOLDER_ID = 'no-completed-folder'
 const MOVE_SCROLL_FOLDER_NAME = 'Move Scroll Anchor'
 const FALLBACK_TITLE_FOLDER_NAME = 'Fallback Titles'
+const COMPLETED_FALLBACK_GAP_FOLDER_NAME = 'Completed Fallback Gap'
+const COMPLETED_FALLBACK_GAP_FOLDER_ID = 'completed-fallback-gap-folder'
 const COMPLETION_FOLDER_NAME = 'Development'
 const COMPLETION_PROMPT_ID = 'dev-1'
 const COMPLETION_PROMPT_TITLE = 'Code Review'
@@ -283,6 +286,63 @@ const buildFallbackTitleWorkspace = () =>
     }
   ])
 
+const buildCompletedFallbackGapWorkspace = () => {
+  const activePrompts = [
+    { id: 'fallback-gap-base', fallbackTitle: 'New Prompt' },
+    { id: 'fallback-gap-1', fallbackTitle: 'New Prompt 1' },
+    { id: 'fallback-gap-2', fallbackTitle: 'New Prompt 2' },
+    { id: 'fallback-gap-4', fallbackTitle: 'New Prompt 4' }
+  ]
+  const completedPrompt: PromptPersisted = {
+    id: 'completed-fallback-gap-3',
+    title: '',
+    fallbackTitle: 'New Prompt 3',
+    createdAt: '2023-01-02T00:00:00.000Z',
+    modifiedAt: '2023-01-03T00:00:00.000Z',
+    status: PromptStatus.Completed,
+    completedAt: '2023-01-03T00:00:00.000Z',
+    promptText: 'Completed prompts do not reserve active fallback titles.'
+  }
+  const workspace = createWorkspaceWithFolders(COMPLETED_FALLBACK_GAP_WORKSPACE_PATH, [
+    {
+      folderName: COMPLETED_FALLBACK_GAP_FOLDER_NAME,
+      displayName: COMPLETED_FALLBACK_GAP_FOLDER_NAME,
+      promptFolderId: COMPLETED_FALLBACK_GAP_FOLDER_ID,
+      prompts: activePrompts.map((prompt) => ({
+        ...prompt,
+        title: '',
+        promptText: `${prompt.fallbackTitle} is active.`
+      }))
+    }
+  ])
+  const completedPath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
+    folderName: `${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/_Completed`,
+    promptId: completedPrompt.id,
+    promptTitle: completedPrompt.fallbackTitle
+  }).markdownPath
+
+  workspace[
+    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/_FolderInfo/FolderOrder.json`
+  ] = JSON.stringify(
+    {
+      entries: [...activePrompts.map((prompt) => prompt.id), completedPrompt.id].map((id) => ({
+        kind: 'prompt',
+        id
+      }))
+    },
+    null,
+    2
+  )
+
+  return {
+    ...workspace,
+    [`${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/_Completed`]:
+      null,
+    [completedPath]: serializePromptMarkdown(completedPrompt)
+  }
+}
+
 const buildCompletedSelfHealingWorkspace = () => {
   const folderName = 'Self Healing'
   const activePrompt: PromptPersisted = {
@@ -471,6 +531,59 @@ describe('Prompt folder prompt management', () => {
       'New Prompt 1...'
     )
     await expectEditedIndicator(mainWindow, newPromptId!)
+  })
+
+  test('does not let completed prompts reserve active fallback titles', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildCompletedFallbackGapWorkspace())
+    await testSetup.setupFileDialog([
+      getWorkspaceInfoPath(COMPLETED_FALLBACK_GAP_WORKSPACE_PATH)
+    ])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(COMPLETED_FALLBACK_GAP_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('fallback-gap-2'))
+
+    const initialIds = await getPromptEditorIds(mainWindow)
+    await clickAddAfter(mainWindow, testHelpers, 'fallback-gap-2')
+    await waitForPromptCount(mainWindow, 5)
+
+    const newPromptId = (await getPromptEditorIds(mainWindow)).find(
+      (promptId) => !initialIds.includes(promptId)
+    )
+    expect(newPromptId).toBeTruthy()
+    const titleInput = mainWindow.locator(promptTitleSelector(newPromptId!))
+    await expect(titleInput).toHaveAttribute('placeholder', 'New Prompt 3...')
+
+    await expect
+      .poll(
+        async () => {
+          const [firstAvailable, nextAfterVisibleGap] = await Promise.all([
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
+              folderName: COMPLETED_FALLBACK_GAP_FOLDER_NAME,
+              promptId: newPromptId!,
+              promptTitle: 'New Prompt 3'
+            }),
+            checkPersistedPromptFilesExistByTitle(electronApp, {
+              workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
+              folderName: COMPLETED_FALLBACK_GAP_FOLDER_NAME,
+              promptId: newPromptId!,
+              promptTitle: 'New Prompt 5'
+            })
+          ])
+          return { firstAvailable, nextAfterVisibleGap }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        firstAvailable: { markdownExists: true },
+        nextAfterVisibleGap: { markdownExists: false }
+      })
+    await expect(titleInput).toHaveAttribute('placeholder', 'New Prompt 3...')
   })
 
   test('regenerates the fallback title when an active title is cleared', async ({ testSetup }) => {

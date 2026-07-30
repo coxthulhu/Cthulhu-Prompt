@@ -190,7 +190,7 @@ export const setupMarkdownContentMutationHandlers = <
         }
 
         const titleFields = resolvePromptTitleUpdateForPromptIds({
-          promptIds: getMarkdownContentIds(promptFolder.committed, config.kind),
+          promptIds: getActiveMarkdownContentIds(promptFolder.committed, config.kind),
           lookupPrompt: (contentId) => config.getContent(contentId)?.committed ?? null,
           promptId: contentId,
           currentFallbackTitle: requestedContent.data.fallbackTitle,
@@ -334,7 +334,7 @@ export const setupMarkdownContentMutationHandlers = <
         }
 
         const titleFields = resolvePromptTitleUpdateForPromptIds({
-          promptIds: getMarkdownContentIds(promptFolder.committed, config.kind),
+          promptIds: getActiveMarkdownContentIds(promptFolder.committed, config.kind),
           lookupPrompt: (contentId) => config.getContent(contentId)?.committed ?? null,
           promptId: requestedContent.id,
           currentTitle: content.committed.title,
