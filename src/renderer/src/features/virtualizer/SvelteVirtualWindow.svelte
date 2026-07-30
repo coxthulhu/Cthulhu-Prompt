@@ -218,16 +218,19 @@
     isPointerOverWindow = false
   }}
 >
-  <div bind:this={viewportFrame} class="flex h-full w-full">
+  <div
+    bind:this={viewportFrame}
+    class="flex h-full w-full"
+    onwheel={(event) => {
+      event.preventDefault()
+      handleWheel(event)
+    }}
+  >
     <div
       class="h-full flex-1 min-w-0"
       style="overflow-anchor: none; overflow: clip; position: relative;"
       data-testid={testId}
       data-virtual-window-viewport
-      onwheel={(event) => {
-        event.preventDefault()
-        handleWheel(event)
-      }}
     >
       <div
         aria-hidden="true"
