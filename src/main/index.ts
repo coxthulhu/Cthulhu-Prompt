@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { startupNormally } from './NormalStartup'
 import { setupTestStartupListener } from './IntegrationTests/TestStartup'
@@ -32,7 +32,21 @@ const shouldUsePlaywrightSetup = isPlaywrightEnvironment()
 if (shouldUsePlaywrightSetup) {
   // Set up the test startup listener and hang here for playwright test setup.
   setupTestStartupListener()
+} else if (!app.requestSingleInstanceLock()) {
+  app.quit()
 } else {
+  app.on('second-instance', () => {
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    if (!mainWindow) return
+
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
   // Normal startup path
   startupNormally()
 }
