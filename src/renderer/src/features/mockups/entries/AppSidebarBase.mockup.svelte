@@ -71,16 +71,123 @@
     verification: true
   })
   let selectedPromptId = $state('map-implementation')
+  let promptTreeElement = $state<HTMLDivElement | null>(null)
+  let promptTreeScrollTopPx = $state(0)
+  let promptTreeViewportHeightPx = $state(0)
+  let promptTreeScrollHeightPx = $state(0)
+  let isPromptTreeHovered = $state(false)
+  let isScrollbarDragging = $state(false)
+  let scrollbarDragOffsetPx = 0
+
+  const SCROLLBAR_WIDTH_PX = 10
+  const MIN_SCROLLBAR_THUMB_HEIGHT_PX = 20
+  const promptTreeMaxScrollTopPx = $derived(
+    Math.max(0, promptTreeScrollHeightPx - promptTreeViewportHeightPx)
+  )
+  const scrollbarThumbHeightPx = $derived.by(() => {
+    if (promptTreeScrollHeightPx <= 0) return MIN_SCROLLBAR_THUMB_HEIGHT_PX
+    const proportionalHeight =
+      (promptTreeViewportHeightPx / promptTreeScrollHeightPx) * promptTreeViewportHeightPx
+    return Math.min(
+      promptTreeViewportHeightPx,
+      Math.max(MIN_SCROLLBAR_THUMB_HEIGHT_PX, proportionalHeight)
+    )
+  })
+  const scrollbarMaxThumbTopPx = $derived(
+    Math.max(0, promptTreeViewportHeightPx - scrollbarThumbHeightPx)
+  )
+  const scrollbarThumbTopPx = $derived(
+    promptTreeMaxScrollTopPx <= 0
+      ? 0
+      : (promptTreeScrollTopPx / promptTreeMaxScrollTopPx) * scrollbarMaxThumbTopPx
+  )
+  const isScrollbarNeeded = $derived(promptTreeScrollHeightPx > promptTreeViewportHeightPx)
+
+  const measurePromptTree = () => {
+    if (!promptTreeElement) return
+    promptTreeViewportHeightPx = promptTreeElement.clientHeight
+    promptTreeScrollHeightPx = promptTreeElement.scrollHeight
+    promptTreeScrollTopPx = promptTreeElement.scrollTop
+  }
+
+  const observePromptTree = (node: HTMLDivElement) => {
+    promptTreeElement = node
+    measurePromptTree()
+
+    // Side effect: keep the cloned overlay scrollbar sized to its local scroll viewport.
+    const resizeObserver = new ResizeObserver(measurePromptTree)
+    resizeObserver.observe(node)
+
+    return {
+      destroy() {
+        resizeObserver.disconnect()
+        if (promptTreeElement === node) promptTreeElement = null
+      }
+    }
+  }
+
+  const applyPromptTreeScrollTop = (nextScrollTopPx: number) => {
+    if (!promptTreeElement) return
+    promptTreeElement.scrollTop = Math.min(Math.max(nextScrollTopPx, 0), promptTreeMaxScrollTopPx)
+    promptTreeScrollTopPx = promptTreeElement.scrollTop
+  }
+
+  const applyScrollbarThumbTop = (nextThumbTopPx: number) => {
+    if (scrollbarMaxThumbTopPx <= 0) {
+      applyPromptTreeScrollTop(0)
+      return
+    }
+
+    const clampedThumbTopPx = Math.min(Math.max(nextThumbTopPx, 0), scrollbarMaxThumbTopPx)
+    applyPromptTreeScrollTop(
+      (clampedThumbTopPx / scrollbarMaxThumbTopPx) * promptTreeMaxScrollTopPx
+    )
+  }
+
+  const handleScrollbarTrackPointerDown = (event: PointerEvent) => {
+    if (!(event.currentTarget instanceof HTMLDivElement) || event.target !== event.currentTarget) {
+      return
+    }
+
+    const trackRect = event.currentTarget.getBoundingClientRect()
+    applyScrollbarThumbTop(event.clientY - trackRect.top - scrollbarThumbHeightPx / 2)
+  }
+
+  const handleScrollbarThumbPointerDown = (event: PointerEvent) => {
+    if (!(event.currentTarget instanceof HTMLDivElement)) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const thumbRect = event.currentTarget.getBoundingClientRect()
+    scrollbarDragOffsetPx = event.clientY - thumbRect.top
+    isScrollbarDragging = true
+  }
+
+  const handleScrollbarThumbPointerMove = (event: PointerEvent) => {
+    if (!isScrollbarDragging || !(event.currentTarget instanceof HTMLDivElement)) return
+    const trackRect = event.currentTarget.parentElement?.getBoundingClientRect()
+    if (!trackRect) return
+    applyScrollbarThumbTop(event.clientY - trackRect.top - scrollbarDragOffsetPx)
+  }
+
+  const handleScrollbarThumbPointerUp = (event: PointerEvent) => {
+    if (!(event.currentTarget instanceof HTMLDivElement)) return
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    isScrollbarDragging = false
+  }
 
   const toggleFolder = (folderId: string) => {
     expandedFolderIds = {
       ...expandedFolderIds,
       [folderId]: !expandedFolderIds[folderId]
     }
+    window.queueMicrotask(measurePromptTree)
   }
 
   const expandAllFolders = () => {
     expandedFolderIds = { research: true, verification: true }
+    window.queueMicrotask(measurePromptTree)
   }
 </script>
 
@@ -94,16 +201,17 @@
   </button>
 {/snippet}
 
-{#snippet TreeGutter(indentCount: number)}
-  <span class="tree-gutter" aria-hidden="true">
+{#snippet TreeGutter(indentCount: number, isLastRow: boolean)}
+  <span class="tree-gutter" data-last-row={isLastRow ? 'true' : undefined} aria-hidden="true">
     {#each indentLevels(indentCount) as level (level)}
-      <span class="tree-guide"></span>
+      <span class="tree-guide" style={`--tree-guide-index:${level};`}></span>
     {/each}
   </span>
 {/snippet}
 
 {#snippet TreeEntries(treeEntries: MockEntry[], indentCount: number)}
-  {#each treeEntries as entry (entry.id)}
+  {#each treeEntries as entry, entryIndex (entry.id)}
+    {@const isLastRow = entryIndex === treeEntries.length - 1}
     {#if entry.kind === 'folder'}
       <div
         class="tree-folder-row"
@@ -119,7 +227,7 @@
             onclick={() => toggleFolder(entry.id)}
           >
             {#if indentCount > 0}
-              {@render TreeGutter(indentCount)}
+              {@render TreeGutter(indentCount, isLastRow)}
             {/if}
             <span class="tree-chevron">
               {#if expandedFolderIds[entry.id]}
@@ -152,7 +260,7 @@
             selectedPromptId = entry.id
           }}
         >
-          {@render TreeGutter(indentCount)}
+          {@render TreeGutter(indentCount, isLastRow)}
           <span class="tree-label">{entry.title}</span>
         </button>
       </div>
@@ -219,12 +327,56 @@
         </div>
       </header>
 
-      <div class="prompt-tree">
-        <div class="root-folder-row">
-          <button type="button">Product Work</button>
+      <div
+        class="prompt-tree-shell"
+        role="presentation"
+        style={`--mock-scrollbar-width:${SCROLLBAR_WIDTH_PX}px;`}
+        onmouseenter={() => {
+          isPromptTreeHovered = true
+        }}
+        onmouseleave={() => {
+          isPromptTreeHovered = false
+        }}
+      >
+        <div
+          class="prompt-tree"
+          bind:this={promptTreeElement}
+          use:observePromptTree
+          onscroll={measurePromptTree}
+        >
+          <div class="root-folder-row">
+            <button type="button">Product Work</button>
+          </div>
+          {@render TreeEntries(entries, 0)}
+          <div class="tree-bottom-spacer" aria-hidden="true"></div>
         </div>
-        {@render TreeEntries(entries, 0)}
-        <div class="tree-bottom-spacer" aria-hidden="true"></div>
+
+        <div
+          class="mock-overlay-scrollbar"
+          data-visible={isScrollbarNeeded && (isPromptTreeHovered || isScrollbarDragging)
+            ? 'true'
+            : 'false'}
+          aria-hidden="true"
+        >
+          <div
+            class="mock-scrollbar-track"
+            role="button"
+            tabindex="-1"
+            onpointerdown={handleScrollbarTrackPointerDown}
+          >
+            <div
+              class="mock-scrollbar-thumb"
+              class:active={isScrollbarDragging}
+              role="button"
+              tabindex="-1"
+              style={`height:${scrollbarThumbHeightPx}px; transform:translate3d(0, ${scrollbarThumbTopPx}px, 0);`}
+              onpointerdown={handleScrollbarThumbPointerDown}
+              onpointermove={handleScrollbarThumbPointerMove}
+              onpointerup={handleScrollbarThumbPointerUp}
+              onpointercancel={handleScrollbarThumbPointerUp}
+            ></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -478,14 +630,23 @@
     color: var(--ui-hoverable-icon-glyph);
   }
 
-  .prompt-tree {
+  .prompt-tree-shell {
     flex: 1 1 auto;
     min-height: 0;
+    position: relative;
+  }
+
+  .prompt-tree {
+    height: 100%;
     outline: none;
     overflow-x: hidden;
     overflow-y: auto;
-    scrollbar-color: var(--ui-neutral-emphasis-border) transparent;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+    width: 100%;
+  }
+
+  .prompt-tree::-webkit-scrollbar {
+    display: none;
   }
 
   .root-folder-row,
@@ -622,24 +783,74 @@
 
   .tree-gutter {
     align-self: stretch;
-    display: grid;
-    grid-auto-columns: 12px;
-    grid-auto-flow: column;
     height: 30px;
     margin-left: 5px;
     min-height: 30px;
+    min-width: 0;
+    position: relative;
   }
 
   .tree-guide {
-    border-left: 1px solid var(--ui-neutral-normal-border);
-    height: 100%;
+    background: var(--ui-neutral-emphasis-border);
+    bottom: -1px;
+    left: calc(8px + 12px * var(--tree-guide-index));
     opacity: 0;
+    position: absolute;
+    top: -1px;
     transition: opacity 100ms ease-out;
+    width: 1px;
   }
 
-  .prompt-tree:hover .tree-guide,
-  .prompt-tree:focus-within .tree-guide {
+  .tree-gutter[data-last-row='true'] .tree-guide {
+    bottom: 0;
+  }
+
+  .prompt-tree-shell:hover .tree-guide,
+  .prompt-tree-shell:focus-within .tree-guide {
     opacity: 1;
+  }
+
+  .mock-overlay-scrollbar {
+    bottom: 0;
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: opacity 800ms linear;
+    user-select: none;
+    width: var(--mock-scrollbar-width);
+  }
+
+  .mock-overlay-scrollbar[data-visible='true'] {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 100ms linear;
+    z-index: 11;
+  }
+
+  .mock-scrollbar-track {
+    background: transparent;
+    height: 100%;
+    position: relative;
+    width: 100%;
+  }
+
+  .mock-scrollbar-thumb {
+    background: rgba(121, 121, 121, 0.4);
+    left: 0;
+    position: absolute;
+    right: 0;
+    touch-action: none;
+  }
+
+  .mock-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.7);
+  }
+
+  .mock-scrollbar-thumb.active {
+    background: rgba(191, 191, 191, 0.4);
   }
 
   .tree-bottom-spacer {

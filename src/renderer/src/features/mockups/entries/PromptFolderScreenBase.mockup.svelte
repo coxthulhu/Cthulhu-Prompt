@@ -1,33 +1,52 @@
 <script lang="ts">
+  import type { ComponentType } from 'svelte'
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
+    Check,
+    CheckCheck,
+    CheckCircle2,
     ChevronDown,
     ChevronRight,
     ChevronUp,
+    CircleDashed,
     Copy,
     FileText,
     Folder,
+    FolderPlus,
     GripVertical,
     Layers,
     Pencil,
+    Play,
     Plus,
     Search,
     Settings,
-    Trash2
+    Trash2,
+    Undo2
   } from 'lucide-svelte'
-  import { monaco } from '@renderer/common/Monaco'
-  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
-  import PromptDivider from '@renderer/features/prompt-editor/PromptDivider.svelte'
-  import PromptEditorStatusControl from '@renderer/features/prompt-editor/PromptEditorStatusControl.svelte'
-  import { PromptStatus } from '@shared/Prompt'
+  import * as monaco from 'monaco-editor'
 
-  type MockPromptStatus = PromptStatus
+  const MockPromptStatus = {
+    Todo: 'Todo',
+    InProgress: 'InProgress',
+    Completed: 'Completed'
+  } as const
+  type MockPromptStatus = (typeof MockPromptStatus)[keyof typeof MockPromptStatus]
+
+  type MockIconButtonOptions = {
+    active?: boolean
+    ariaExpanded?: boolean
+    ariaPressed?: boolean
+    baseVariant?: 'normal' | 'dim' | 'muted'
+    borderless?: boolean
+    disabled?: boolean
+    hoverVariant?: 'neutral' | 'accent' | 'success' | 'danger' | 'glyph'
+    iconClass?: string
+    iconSize?: number
+    onclick?: (event: MouseEvent) => void
+    size?: 'default' | 'compact' | 'tiny' | 'sidebar-rail'
+    testId?: string
+  }
 
   type MockDocument = {
     id: string
@@ -38,7 +57,7 @@
   type MockPrompt = MockDocument & {
     title: string
     folderId: string
-    folderLabel: string
+    templateLabel: string
     modifiedLabel: string
     status: MockPromptStatus
   }
@@ -95,14 +114,14 @@
     id: string,
     title: string,
     folderId: string,
-    folderLabel: string,
+    templateLabel: string,
     text: string,
-    status: MockPromptStatus = PromptStatus.Todo
+    status: MockPromptStatus = MockPromptStatus.Todo
   ): MockPrompt => ({
     id,
     title,
     folderId,
-    folderLabel,
+    templateLabel,
     modifiedLabel: 'Updated today',
     status,
     text
@@ -113,19 +132,19 @@
       'base-discovery',
       'Map the current implementation',
       'base-root',
-      'Product Work',
+      'No Template',
       [
         'Inspect the existing implementation and summarize the relevant components, data flow, and tests.',
         '',
         'Call out constraints that the change must preserve.'
       ].join('\n'),
-      PromptStatus.InProgress
+      MockPromptStatus.InProgress
     ),
     createPrompt(
       'base-requirements',
       'Turn notes into requirements',
       'base-root',
-      'Product Work',
+      'No Template',
       [
         'Convert the supplied product notes into a concise implementation checklist.',
         '',
@@ -136,7 +155,7 @@
       'base-plan',
       'Draft an implementation plan',
       'base-root',
-      'Product Work',
+      'No Template',
       [
         'Create an implementation plan grounded in the current repository.',
         '',
@@ -147,7 +166,7 @@
       'base-review',
       'Review the completed change',
       'base-root',
-      'Product Work',
+      'No Template',
       [
         'Review the completed change for user-visible regressions, missing edge cases, and unnecessary complexity.',
         '',
@@ -158,7 +177,7 @@
       'base-docs',
       'Update developer documentation',
       'base-root',
-      'Product Work',
+      'No Template',
       [
         'Update the relevant developer documentation to match the implemented behavior.',
         '',
@@ -169,7 +188,7 @@
       'base-handoff',
       'Prepare the final handoff',
       'base-root',
-      'Product Work',
+      'No Template',
       [
         'Prepare a short handoff with the outcome, changed files, and verification results.',
         '',
@@ -192,13 +211,13 @@
           'base-build',
           'Implement the approved change',
           'base-implementation',
-          'Implementation',
+          'No Template',
           [
             'Implement the approved change using the existing architecture and shared UI components.',
             '',
             'Keep the patch focused and preserve unrelated work in the tree.'
           ].join('\n'),
-          PromptStatus.InProgress
+          MockPromptStatus.InProgress
         )
       ],
       children: [
@@ -215,7 +234,7 @@
               'base-regression',
               'Add focused regression coverage',
               'base-verification',
-              'Verification',
+              'No Template',
               [
                 'Add focused regression coverage for the behavior changed in this task.',
                 '',
@@ -229,7 +248,7 @@
     }
   ])
 
-  const EDITOR_TITLE_HEIGHT_PX = 59
+  const EDITOR_TITLE_HEIGHT_PX = 56
   const EDITOR_BODY_PADDING_TOP_PX = 8
   const EDITOR_BODY_PADDING_RIGHT_PX = 10
   const EDITOR_BODY_PADDING_BOTTOM_PX = 10
@@ -330,10 +349,127 @@
     editorCleanupCallbacks.clear()
   })
 
-  const setPromptStatus = (prompt: MockPrompt, status: PromptStatus) => {
+  const setPromptStatus = (prompt: MockPrompt, status: MockPromptStatus) => {
     prompt.status = status
   }
 </script>
+
+{#snippet IconButton(
+  Icon: ComponentType,
+  label: string,
+  options: MockIconButtonOptions = {}
+)}
+  <button
+    type="button"
+    class="base-icon-button"
+    aria-label={label}
+    aria-expanded={options.ariaExpanded}
+    aria-pressed={options.ariaPressed}
+    data-active={options.active === undefined ? undefined : options.active ? 'true' : 'false'}
+    data-base-variant={options.baseVariant ?? 'normal'}
+    data-borderless={options.borderless ? 'true' : 'false'}
+    data-hover-variant={options.hoverVariant ?? 'neutral'}
+    data-size={options.size ?? 'default'}
+    data-testid={options.testId}
+    title={label}
+    disabled={options.disabled}
+    onclick={options.onclick}
+  >
+    <Icon
+      class={options.iconClass}
+      size={options.iconSize ?? (options.size === 'tiny' ? 14 : options.size === 'default' ? 20 : 16)}
+      aria-hidden="true"
+    />
+  </button>
+{/snippet}
+
+{#snippet IconCell(Icon: ComponentType)}
+  <span class="base-icon-cell">
+    <Icon size={24} aria-hidden="true" />
+  </span>
+{/snippet}
+
+{#snippet Separator()}
+  <div class="base-separator" role="presentation"></div>
+{/snippet}
+
+{#snippet SeparatorDot()}
+  <span class="base-separator-dot" aria-hidden="true"></span>
+{/snippet}
+
+{#snippet StatusControl(prompt: MockPrompt)}
+  {@const isCompleted = prompt.status === MockPromptStatus.Completed}
+  {@const StatusIcon = isCompleted
+    ? CheckCircle2
+    : prompt.status === MockPromptStatus.InProgress
+      ? Play
+      : CircleDashed}
+  <div class="base-status-control">
+    <div class="base-status-segmented" data-status={prompt.status}>
+      {@render IconButton(
+        isCompleted ? Undo2 : CheckCheck,
+        isCompleted ? 'Uncomplete prompt' : 'Complete prompt',
+        {
+          hoverVariant: isCompleted ? 'neutral' : 'success',
+          onclick: () =>
+            setPromptStatus(
+              prompt,
+              isCompleted ? MockPromptStatus.Todo : MockPromptStatus.Completed
+            )
+        }
+      )}
+      <span class="base-status-selector">
+        <button
+          type="button"
+          class="base-status-value"
+          aria-label={`Change status: ${isCompleted ? 'Completed' : prompt.status === MockPromptStatus.InProgress ? 'In Progress' : 'Todo'}`}
+          onclick={() => {
+            setPromptStatus(
+              prompt,
+              prompt.status === MockPromptStatus.Todo
+                ? MockPromptStatus.InProgress
+                : prompt.status === MockPromptStatus.InProgress
+                  ? MockPromptStatus.Completed
+                  : MockPromptStatus.Todo
+            )
+          }}
+        >
+          <StatusIcon size={16} aria-hidden="true" />
+          <span>{isCompleted ? 'Completed' : prompt.status === MockPromptStatus.InProgress ? 'In Progress' : 'Todo'}</span>
+        </button>
+        <button type="button" class="base-status-more" aria-label="Change status More Options" title="More Options">
+          <ChevronDown size={16} aria-hidden="true" />
+        </button>
+      </span>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet SettingsToggle(setting: MockFolderSetting)}
+  <button
+    type="button"
+    class="base-settings-toggle"
+    aria-pressed={setting.isPresent}
+    title={`${setting.isPresent ? 'Remove' : 'Add'} ${setting.title.toLowerCase()}`}
+    onclick={() => {
+      setting.isPresent = !setting.isPresent
+    }}
+  >
+    <span class="base-settings-toggle-default-icon">
+      {#if setting.isPresent}
+        <Check size={16} aria-hidden="true" />
+      {:else}
+        <Plus size={16} aria-hidden="true" />
+      {/if}
+    </span>
+    {#if setting.isPresent}
+      <span class="base-settings-toggle-remove-icon">
+        <Trash2 size={16} aria-hidden="true" />
+      </span>
+    {/if}
+    <span>{setting.title.replace('Folder Description', 'Description').replace('Prompt Folder ', '')}</span>
+  </button>
+{/snippet}
 
 {#snippet MonacoBody(document: MockDocument, testId: string)}
   <div
@@ -349,7 +485,24 @@
 {/snippet}
 
 {#snippet Divider()}
-  <PromptDivider onAddPrompt={() => undefined} onAddSubfolder={() => undefined} />
+  <div class="base-divider-row">
+    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from left separator">
+      {@render Separator()}
+    </button>
+    <div class="base-divider-actions">
+      <button type="button" class="base-divider-action-button" aria-label="Add Prompt">
+        <Plus size={13} aria-hidden="true" />
+        <span>Add Prompt</span>
+      </button>
+      <button type="button" class="base-divider-action-button" aria-label="Add Subfolder">
+        <FolderPlus size={13} aria-hidden="true" />
+        <span>Add Subfolder</span>
+      </button>
+    </div>
+    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from right separator">
+      {@render Separator()}
+    </button>
+  </div>
 {/snippet}
 
 {#snippet PromptCard(prompt: MockPrompt, index: number, siblingCount: number)}
@@ -374,46 +527,34 @@
       <header class="base-prompt-title-area" style={`height:${EDITOR_TITLE_HEIGHT_PX}px;`}>
         <span class="base-status-indicator" data-status={prompt.status} aria-hidden="true"></span>
         <div class="base-prompt-title-main">
-          <IconCell icon={FileText} size="title" />
+          {@render IconCell(FileText)}
           <div class="base-title-copy">
             <input aria-label="Prompt title" bind:value={prompt.title} />
             <div class="base-metadata-row">
               <span class="base-folder-label">
                 <Layers size={12} aria-hidden="true" />
-                {prompt.folderLabel}
+                {prompt.templateLabel}
               </span>
-              <SeparatorDot />
+              {@render SeparatorDot()}
               <span>{prompt.modifiedLabel}</span>
-              <SeparatorDot />
+              {@render SeparatorDot()}
               <span>{getTokenCount(prompt.text)} tokens</span>
             </div>
           </div>
         </div>
 
         <div class="base-prompt-actions">
-          <IconButtonBar>
-            <IconButton
-              icon={Trash2}
-              label="Delete prompt"
-              title="Delete prompt"
-              hoverVariant="danger"
-            />
-            <IconButton
-              icon={Copy}
-              label="Copy prompt"
-              title="Copy prompt"
-              hoverVariant="accent"
-            />
-          </IconButtonBar>
+          <div class="base-icon-button-bar">
+            {@render IconButton(Trash2, 'Delete prompt', { hoverVariant: 'danger' })}
+            {@render IconButton(Layers, 'Set Template')}
+            {@render IconButton(Copy, 'Copy prompt', { hoverVariant: 'accent' })}
+          </div>
           <span class="base-actions-separator" aria-hidden="true"></span>
-          <PromptEditorStatusControl
-            status={prompt.status}
-            onStatusChange={(status) => setPromptStatus(prompt, status)}
-          />
+          {@render StatusControl(prompt)}
         </div>
       </header>
 
-      <Separator />
+      {@render Separator()}
       {@render MonacoBody(prompt, `base-mockup-monaco-${prompt.id}`)}
     </div>
   </article>
@@ -434,101 +575,78 @@
             <button class="base-folder-chevron" type="button" aria-label="Folder prompts shown">
               <ChevronRight size={24} aria-hidden="true" />
             </button>
-            <IconCell icon={Folder} size="title" />
+            {@render IconCell(Folder)}
             <div class="base-folder-title-copy">
               <div class="base-folder-title-line">
                 <span class="base-folder-title" title={folder.title}>{folder.title}</span>
-                <IconButton
-                  icon={Pencil}
-                  label="Rename prompt folder"
-                  title="Rename prompt folder"
-                  size="tiny"
-                  baseVariant="muted"
-                  hoverVariant="glyph"
-                />
+                {@render IconButton(Pencil, 'Rename prompt folder', {
+                  size: 'tiny',
+                  baseVariant: 'muted',
+                  hoverVariant: 'glyph'
+                })}
               </div>
               <div class="base-metadata-row">
                 <span>{folder.prompts.length} prompt</span>
-                <SeparatorDot />
+                {@render SeparatorDot()}
                 <span>0 completed prompts</span>
-                <SeparatorDot />
+                {@render SeparatorDot()}
                 <span>{folder.children.length} {folder.children.length === 1 ? 'subfolder' : 'subfolders'}</span>
               </div>
             </div>
           </div>
 
           <div class="base-folder-actions">
-            <IconButtonBar>
-              <IconButton
-                icon={Trash2}
-                label="Delete prompt folder"
-                title="Delete prompt folder"
-                hoverVariant="danger"
-              />
-              <IconButton
-                icon={Settings}
-                label="Hide folder settings"
-                title="Hide folder settings"
-                hoverVariant="accent"
-                active
-                ariaPressed
-                testId={`base-mockup-settings-expanded-${folder.id}`}
-              />
-            </IconButtonBar>
+            <div class="base-icon-button-bar">
+              {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger' })}
+              {@render IconButton(Settings, 'Hide folder settings', {
+                hoverVariant: 'accent',
+                active: true,
+                ariaPressed: true,
+                testId: `base-mockup-settings-expanded-${folder.id}`
+              })}
+            </div>
           </div>
         </header>
 
-        <Separator />
+        {@render Separator()}
         <div class="base-folder-settings">
-          {#each folder.settings as setting, settingIndex (setting.id)}
-            <section
-              class="base-settings-section"
-              class:withTopBorder={settingIndex > 0}
-              data-testid={`base-mockup-settings-section-${setting.id}`}
-            >
-              <header>
-                <div class="base-settings-copy">
-                  <span>{setting.title}</span>
-                  <span>- {setting.description}</span>
-                </div>
-                {#if setting.isPresent}
-                  <IconButton
-                    icon={Trash2}
-                    label={`Delete ${setting.title.toLowerCase()}`}
-                    title={`Delete ${setting.title.toLowerCase()}`}
-                    size="tiny"
-                    baseVariant="muted"
-                    hoverVariant="danger"
-                    borderless
-                    onclick={() => {
-                      setting.isPresent = false
-                    }}
-                  />
-                {/if}
-              </header>
-              <Separator />
-              {#if setting.isPresent}
-                {@render MonacoBody(setting, `base-mockup-monaco-${setting.id}`)}
-              {:else}
-                <div
-                  class="base-monaco-shell base-settings-add-shell"
-                  style={`padding:${EDITOR_BODY_PADDING_TOP_PX}px ${EDITOR_BODY_PADDING_RIGHT_PX}px ${EDITOR_BODY_PADDING_BOTTOM_PX}px ${EDITOR_BODY_PADDING_LEFT_PX}px;`}
-                >
-                  <div class="base-settings-add" style={`height:${lineHeightPx}px;`}>
-                    <Button
-                      icon={Plus}
-                      text={`Add ${setting.title}`}
-                      appearance="outline"
-                      testId={`base-mockup-add-${setting.id}`}
-                      onclick={() => {
-                        setting.isPresent = true
-                      }}
-                    />
+          <div class="base-settings-toolbar">
+            <div class="base-settings-toolbar-heading">
+              <Settings size={20} aria-hidden="true" />
+              <div class="base-settings-toolbar-copy">
+                <span>Folder Settings</span>
+                <span>{folder.settings.filter((setting) => setting.isPresent).length} of 3 configured</span>
+              </div>
+            </div>
+            <div class="base-settings-toolbar-actions" role="group" aria-label="Folder settings">
+              {#each folder.settings as setting (setting.id)}
+                {@render SettingsToggle(setting)}
+              {/each}
+            </div>
+          </div>
+
+          {#if folder.settings.some((setting) => setting.isPresent)}
+            {@render Separator()}
+          {/if}
+
+          <div class="base-folder-settings-sections">
+            {#each folder.settings.filter((setting) => setting.isPresent) as setting, settingIndex (setting.id)}
+              <section
+                class="base-settings-section"
+                class:withTopBorder={settingIndex > 0}
+                data-testid={`base-mockup-settings-section-${setting.id}`}
+              >
+                <header>
+                  <div class="base-settings-copy">
+                    <span>{setting.title}</span>
+                    <span>- {setting.description}</span>
                   </div>
-                </div>
-              {/if}
-            </section>
-          {/each}
+                </header>
+                {@render Separator()}
+                {@render MonacoBody(setting, `base-mockup-monaco-${setting.id}`)}
+              </section>
+            {/each}
+          </div>
         </div>
       </div>
     </article>
@@ -553,14 +671,9 @@
     <div class="base-breadcrumb">
       <button type="button">Product Work</button>
       <span>/</span>
-      <button type="button">Folder Settings</button>
+      <button type="button">Prompts</button>
     </div>
-    <IconButton
-      icon={Search}
-      label="Find in Folder (Control + F)"
-      title="Find in Folder (Control + F)"
-      size="compact"
-    />
+    {@render IconButton(Search, 'Find in Folder (Control + F)', { size: 'compact' })}
   </div>
 
   <div class="base-content-viewport">
@@ -573,22 +686,14 @@
           </div>
           <div class="base-root-title-line">
             <h1>Product Work</h1>
-            <IconButton
-              icon={Pencil}
-              label="Rename prompt folder"
-              title="Rename prompt folder"
-              size="tiny"
-              baseVariant="muted"
-              hoverVariant="glyph"
-            />
+            {@render IconButton(Pencil, 'Rename prompt folder', {
+              size: 'tiny',
+              baseVariant: 'muted',
+              hoverVariant: 'glyph'
+            })}
           </div>
         </div>
-        <IconButton
-          icon={Trash2}
-          label="Delete folder"
-          title="Delete folder"
-          hoverVariant="danger"
-        />
+        {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger' })}
       </div>
 
       <div class="base-filter-bar" role="group" aria-label="Filter prompts">
@@ -639,6 +744,121 @@
 
   button {
     cursor: pointer;
+  }
+
+  .base-icon-button {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    color: var(--ui-hoverable-icon-glyph);
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 36px;
+    justify-content: center;
+    min-width: 0;
+    padding: 0;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+    width: 36px;
+  }
+
+  .base-icon-button[data-size='compact'] {
+    height: 28px;
+    width: 28px;
+  }
+
+  .base-icon-button[data-size='tiny'] {
+    border-radius: 0;
+    height: 18px;
+    width: 18px;
+  }
+
+  .base-icon-button[data-base-variant='muted'] {
+    color: var(--ui-muted-icon-glyph);
+  }
+
+  .base-icon-button[data-hover-variant='glyph'],
+  .base-icon-button[data-borderless='true'] {
+    border: 0;
+  }
+
+  .base-icon-button:hover,
+  .base-icon-button:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .base-icon-button[data-hover-variant='accent']:hover,
+  .base-icon-button[data-hover-variant='accent']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .base-icon-button[data-hover-variant='success']:hover,
+  .base-icon-button[data-hover-variant='success']:focus-visible {
+    background: var(--ui-success-action-hover-fill);
+    border-color: var(--ui-success-muted-hover-border);
+  }
+
+  .base-icon-button[data-hover-variant='danger']:hover,
+  .base-icon-button[data-hover-variant='danger']:focus-visible {
+    background: var(--ui-danger-action-hover-fill);
+    border-color: var(--ui-danger-muted-hover-border);
+  }
+
+  .base-icon-button[data-hover-variant='glyph']:hover,
+  .base-icon-button[data-hover-variant='glyph']:focus-visible {
+    background: var(--ui-ghost-surface);
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .base-icon-button[data-active='true'] {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-normal-border);
+  }
+
+  .base-icon-button:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .base-icon-button-bar {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .base-icon-cell {
+    align-items: center;
+    border-radius: var(--cthulhu-ui-radius-card);
+    color: var(--ui-hoverable-icon-glyph);
+    display: flex;
+    flex: 0 0 40px;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+
+  .base-separator {
+    background: var(--ui-neutral-muted-border);
+    flex: 0 0 1px;
+    height: 1px;
+    width: 100%;
+  }
+
+  .base-separator-dot {
+    background: currentColor;
+    border-radius: 999px;
+    display: inline-block;
+    flex: 0 0 auto;
+    height: 3px;
+    width: 3px;
   }
 
   .base-header-bar {
@@ -737,7 +957,7 @@
   .base-root-title-line {
     align-items: baseline;
     display: flex;
-    gap: 7px;
+    gap: 11px;
     height: 36px;
     margin-top: 7px;
     min-width: 0;
@@ -767,7 +987,7 @@
   }
 
   .base-filter-bar button {
-    background: transparent;
+    background: var(--ui-ghost-surface);
     border: 0;
     border-bottom: 2px solid transparent;
     color: var(--ui-muted-text);
@@ -792,6 +1012,76 @@
   .base-entry-flow {
     min-width: 0;
     padding-bottom: 24px;
+  }
+
+  .base-divider-row {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(14px, 1fr) auto minmax(14px, 1fr);
+    height: 28px;
+    min-width: 0;
+  }
+
+  .base-divider-line-button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    display: flex;
+    height: 100%;
+    padding: 0 9px;
+    width: 100%;
+  }
+
+  .base-divider-line-button:first-child {
+    padding-left: 0;
+  }
+
+  .base-divider-line-button:last-child {
+    padding-right: 0;
+  }
+
+  .base-divider-line-button .base-separator {
+    transition: background-color 120ms ease;
+  }
+
+  .base-divider-actions {
+    align-items: center;
+    display: inline-flex;
+    gap: 20px;
+    height: 100%;
+    min-width: 0;
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .base-divider-action-button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--ui-muted-text);
+    display: inline-flex;
+    font-size: 12px;
+    gap: 4px;
+    height: 100%;
+    line-height: 16px;
+    padding: 0;
+    transition: color 120ms ease;
+    white-space: nowrap;
+  }
+
+  .base-divider-row:hover .base-divider-actions,
+  .base-divider-row:focus-within .base-divider-actions {
+    opacity: 1;
+  }
+
+  .base-divider-row:hover .base-divider-action-button,
+  .base-divider-row:focus-within .base-divider-action-button {
+    color: var(--ui-accent-normal-text);
+  }
+
+  .base-divider-row:hover .base-divider-line-button .base-separator,
+  .base-divider-row:focus-within .base-divider-line-button .base-separator {
+    background: var(--ui-accent-normal-border);
   }
 
   .base-editor-card {
@@ -921,7 +1211,7 @@
     gap: 8px;
     grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
-    padding: 8px 8px 8px 16px;
+    padding: 8px;
   }
 
   .base-title-copy,
@@ -937,7 +1227,7 @@
     color: var(--ui-normal-text);
     font-size: 15px;
     font-weight: 600;
-    height: 22px;
+    height: 20px;
     line-height: 20px;
     min-width: 0;
     outline: none;
@@ -1007,6 +1297,86 @@
     width: 1px;
   }
 
+  .base-status-control {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding-left: 4px;
+    padding-right: 16px;
+  }
+
+  .base-status-segmented {
+    align-items: stretch;
+    display: inline-flex;
+  }
+
+  .base-status-segmented > .base-icon-button {
+    background: transparent;
+    border-bottom-right-radius: 0;
+    border-right: 0;
+    border-top-right-radius: 0;
+  }
+
+  .base-status-selector {
+    --base-status-color: var(--ui-normal-text);
+
+    align-items: stretch;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 0 var(--cthulhu-ui-radius-control) var(--cthulhu-ui-radius-control) 0;
+    box-sizing: border-box;
+    display: inline-flex;
+    height: 36px;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .base-status-segmented[data-status='InProgress'] .base-status-selector {
+    --base-status-color: var(--ui-warning-icon-glyph);
+  }
+
+  .base-status-segmented[data-status='Completed'] .base-status-selector {
+    --base-status-color: var(--ui-success-normal-text);
+  }
+
+  .base-status-selector:hover,
+  .base-status-selector:focus-within {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .base-status-value,
+  .base-status-more {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--base-status-color);
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .base-status-value {
+    border-right: 1px solid var(--ui-neutral-normal-border);
+    box-sizing: border-box;
+    font-size: 14px;
+    font-weight: 500;
+    gap: 6px;
+    padding: 0 12px;
+    white-space: nowrap;
+    width: 116px;
+  }
+
+  .base-status-more {
+    width: 23px;
+  }
+
+  .base-status-value:focus-visible,
+  .base-status-more:focus-visible {
+    outline: none;
+  }
+
   .base-monaco-shell {
     background: var(--ui-editor-content-surface);
     box-sizing: border-box;
@@ -1018,17 +1388,6 @@
     min-width: 0;
     position: relative;
     width: 100%;
-  }
-
-  .base-settings-add-shell {
-    min-width: 0;
-  }
-
-  .base-settings-add {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-    min-width: 0;
   }
 
   .base-root-folder-inset {
@@ -1051,7 +1410,7 @@
     display: grid;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
-    height: 59px;
+    height: 56px;
     min-width: 0;
     overflow: hidden;
     padding: 8px 16px;
@@ -1083,7 +1442,7 @@
     color: var(--ui-normal-text);
     font-size: 16px;
     font-weight: 700;
-    line-height: 21px;
+    line-height: 20px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1091,6 +1450,125 @@
   }
 
   .base-folder-settings {
+    background: var(--ui-editor-normal-surface);
+    display: grid;
+    min-width: 0;
+  }
+
+  .base-settings-toolbar {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    gap: 24px;
+    height: 56px;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 10px 12px 10px 16px;
+  }
+
+  .base-settings-toolbar-heading {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    font-size: 14px;
+    font-weight: 700;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .base-settings-toolbar-heading > :global(svg) {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .base-settings-toolbar-copy {
+    display: grid;
+    line-height: 16px;
+    min-width: 0;
+    row-gap: 2px;
+  }
+
+  .base-settings-toolbar-copy span:last-child {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .base-settings-toolbar-actions {
+    align-items: center;
+    display: flex;
+    flex: 0 1 auto;
+    gap: 8px;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .base-settings-toggle {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    color: var(--ui-hoverable-text);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 14px;
+    font-weight: 600;
+    gap: 7px;
+    height: 30px;
+    justify-content: center;
+    line-height: 16px;
+    min-width: 0;
+    padding: 0 10px;
+    transition:
+      background-color 50ms ease-out,
+      border-color 50ms ease-out,
+      color 50ms ease-out;
+    white-space: nowrap;
+  }
+
+  .base-settings-toggle:hover,
+  .base-settings-toggle:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .base-settings-toggle[aria-pressed='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+    color: var(--ui-normal-text);
+  }
+
+  .base-settings-toggle[aria-pressed='true']:hover,
+  .base-settings-toggle[aria-pressed='true']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .base-settings-toggle :global(svg) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .base-settings-toggle-remove-icon {
+    display: none;
+  }
+
+  .base-settings-toggle[aria-pressed='true']:hover .base-settings-toggle-default-icon,
+  .base-settings-toggle[aria-pressed='true']:focus-visible .base-settings-toggle-default-icon {
+    display: none;
+  }
+
+  .base-settings-toggle[aria-pressed='true']:hover .base-settings-toggle-remove-icon,
+  .base-settings-toggle[aria-pressed='true']:focus-visible .base-settings-toggle-remove-icon {
+    display: inline-flex;
+  }
+
+  .base-settings-toggle-default-icon,
+  .base-settings-toggle-remove-icon {
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .base-folder-settings-sections {
     background: var(--ui-editor-normal-surface);
     display: grid;
     min-width: 0;
