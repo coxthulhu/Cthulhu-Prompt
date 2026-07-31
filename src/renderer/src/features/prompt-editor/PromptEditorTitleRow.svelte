@@ -296,9 +296,11 @@
   .prompt-editor-title-actions {
     align-items: center;
     align-self: stretch;
+    box-sizing: border-box;
     display: flex;
     gap: 12px;
     min-width: 0;
+    padding-right: 12px;
   }
 
   .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-actions {

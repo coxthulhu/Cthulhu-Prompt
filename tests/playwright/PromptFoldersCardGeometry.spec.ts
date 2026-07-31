@@ -145,6 +145,7 @@ describe('Prompt folder card geometry', () => {
       const statusRect = row
         .querySelector<HTMLElement>('.prompt-editor-status-segmented-control')!
         .getBoundingClientRect()
+      const statusControl = row.querySelector<HTMLElement>('.prompt-editor-status-control')!
       const verticalSeparator = row.querySelector<HTMLElement>(
         '.prompt-editor-title-actions-separator'
       )!
@@ -154,6 +155,7 @@ describe('Prompt folder card geometry', () => {
         widthPx: rowRect.width,
         actionRowOffsetPx: actionsRect.top - mainRect.bottom,
         buttonLeftInsetPx: buttonBarRect.left - actionsRect.left,
+        statusControlLeftPaddingPx: parseFloat(getComputedStyle(statusControl).paddingLeft),
         statusRightInsetPx: actionsRect.right - statusRect.right,
         horizontalSeparatorWidthPx: parseFloat(actionsStyle.borderTopWidth),
         horizontalSeparatorColor: actionsStyle.borderTopColor,
@@ -164,7 +166,8 @@ describe('Prompt folder card geometry', () => {
     expect(layout.widthPx).toBeLessThan(600)
     expect(Math.abs(layout.actionRowOffsetPx)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(Math.abs(layout.buttonLeftInsetPx - 16)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
-    expect(Math.abs(layout.statusRightInsetPx - 16)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+    expect(layout.statusControlLeftPaddingPx).toBe(0)
+    expect(Math.abs(layout.statusRightInsetPx - 12)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(layout.horizontalSeparatorWidthPx).toBe(1)
     expect(layout.horizontalSeparatorColor).not.toBe('rgba(0, 0, 0, 0)')
     expect(layout.verticalSeparatorDisplay).toBe('none')

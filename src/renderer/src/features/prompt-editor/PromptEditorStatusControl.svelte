@@ -100,8 +100,6 @@
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
-    padding-left: 4px;
-    padding-right: 16px;
   }
 
   :global(.prompt-editor-status-option-icon-todo) {

@@ -383,6 +383,14 @@ describe('Prompt template folder UI', () => {
 
     await setTitleRowWidth(422)
     await expect(titleRow).toHaveAttribute('data-layout', 'default')
+    const defaultActionRightInsetPx = await titleRow.evaluate((row) => {
+      const rowRect = row.getBoundingClientRect()
+      const buttonBarRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-button-bar')!
+        .getBoundingClientRect()
+      return Math.round(rowRect.right - buttonBarRect.right)
+    })
+    expect(defaultActionRightInsetPx).toBe(12)
     await setTitleRowWidth(417)
     await expect(titleRow).toHaveAttribute('data-layout', 'compact')
   })
