@@ -31,9 +31,25 @@ describe('prompt frontmatter', () => {
     })
   })
 
-  it('omits the template id when no template is selected', () => {
+  it('round trips an explicit no-template selection', () => {
     const serialized = serializePromptMarkdown({
       id: 'prompt-2',
+      title: 'Plain Prompt',
+      fallbackTitle: '',
+      createdAt: '2026-07-26T12:00:00.000Z',
+      modifiedAt: '',
+      promptText: 'Plain text',
+      templateId: null,
+      status: PromptStatus.Todo
+    })
+
+    expect(serialized).toContain('templateId: null')
+    expect(parsePromptMarkdown(serialized)).toMatchObject({ templateId: null })
+  })
+
+  it('omits the template id when a template has not been selected', () => {
+    const serialized = serializePromptMarkdown({
+      id: 'prompt-3',
       title: 'Plain Prompt',
       fallbackTitle: '',
       createdAt: '2026-07-26T12:00:00.000Z',

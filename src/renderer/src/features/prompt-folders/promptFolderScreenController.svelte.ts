@@ -117,7 +117,7 @@ export type MarkdownContentDraftRecord = {
   fallbackTitle: string
   modifiedAt: string
   text: string
-  templateId?: string
+  templateId?: string | null
   templateName?: string
   isEdited: boolean
 }
@@ -211,10 +211,13 @@ export const createPromptFolderScreenController = ({
             fallbackTitle: draft.fallbackTitle,
             modifiedAt: draft.modifiedAt,
             text: draft.promptText,
-            ...(draft.templateId ? { templateId: draft.templateId } : {}),
-            templateName: draft.templateId
-              ? (templateTitleById[draft.templateId] ?? 'No Template')
-              : 'No Template',
+            ...(draft.templateId !== undefined ? { templateId: draft.templateId } : {}),
+            templateName:
+              draft.templateId === undefined
+                ? 'Not Selected'
+                : draft.templateId === null
+                  ? 'No Template'
+                  : (templateTitleById[draft.templateId] ?? 'No Template'),
             isEdited: draft.isEdited
           }
         ])

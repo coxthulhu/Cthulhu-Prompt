@@ -349,7 +349,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     promptText: parseString,
     ...(hasTemplateId
       ? {
-          templateId: parseString
+          templateId: parseNullableString
         }
       : {}),
     status: parsePromptStatus,

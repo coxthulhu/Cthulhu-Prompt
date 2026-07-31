@@ -377,7 +377,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(screenInfo.promptCount).toBe(1)
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-screen"] .virtual-window-scrollbar')
-    ).toHaveCSS('width', '16px')
+    ).toHaveCSS('width', '14px')
   })
 
   test('opens the first folder from the activity bar when no folder was selected', async ({

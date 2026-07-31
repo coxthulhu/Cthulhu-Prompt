@@ -81,6 +81,8 @@
     onTitleChange,
     onTextChange,
     onTemplateSelect,
+    onTemplateSelectAndCopy,
+    onCopySuccess,
     copyLabel,
     copyTitle,
     deleteLabel,
@@ -109,7 +111,7 @@
       fallbackTitle: string
       modifiedAt: string
       text: string
-      templateId?: string
+      templateId?: string | null
       templateName?: string
       isEdited: boolean
     }
@@ -131,6 +133,8 @@
     onTitleChange: (title: string) => void
     onTextChange: (text: string, measurement: TextMeasurement) => void
     onTemplateSelect?: () => void
+    onTemplateSelectAndCopy?: () => void
+    onCopySuccess?: () => void | Promise<void>
     copyLabel?: string
     copyTitle?: string
     deleteLabel?: string
@@ -548,6 +552,8 @@
     {scrollToWithinWindowBand}
     {onDelete}
     {onTemplateSelect}
+    {onTemplateSelectAndCopy}
+    {onCopySuccess}
     {onStatusChange}
     {metadataFolderLabel}
     {copyLabel}

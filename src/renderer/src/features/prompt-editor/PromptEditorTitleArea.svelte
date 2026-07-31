@@ -22,6 +22,8 @@
     scrollToWithinWindowBand,
     onDelete,
     onTemplateSelect,
+    onTemplateSelectAndCopy,
+    onCopySuccess,
     onStatusChange,
     onSelectionChange,
     onTitleEditorFocus,
@@ -58,6 +60,8 @@
     {scrollToWithinWindowBand}
     {onDelete}
     {onTemplateSelect}
+    {onTemplateSelectAndCopy}
+    {onCopySuccess}
     {onStatusChange}
     {onSelectionChange}
     {onTitleEditorFocus}

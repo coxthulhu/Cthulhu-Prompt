@@ -113,7 +113,7 @@ export const setPromptDraftText = (
 
 export const setPromptDraftTemplateId = (
   promptId: string,
-  templateId: string | undefined
+  templateId: string | null
 ): void => {
   const modifiedAt = getPromptDraftModifiedAt()
   mutatePromptDraftOptimistically(promptId, {

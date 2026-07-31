@@ -13,6 +13,8 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
     onTemplateSelect?: () => void
+    onTemplateSelectAndCopy?: () => void
+    onCopySuccess?: () => void | Promise<void>
     onStatusChange?: (status: import('@shared/Prompt').PromptStatus) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onTitleEditorFocus?: () => void | Promise<void>
@@ -53,6 +55,8 @@
     scrollToWithinWindowBand,
     onDelete,
     onTemplateSelect,
+    onTemplateSelectAndCopy,
+    onCopySuccess,
     onStatusChange,
     onSelectionChange,
     onTitleEditorFocus,
@@ -144,6 +148,7 @@
   }
 
   const handleCopySuccess = async () => {
+    await onCopySuccess?.()
     if (status === PromptStatus.Completed || status === PromptStatus.InProgress) return
     await onStatusChange?.(PromptStatus.InProgress)
   }
@@ -221,6 +226,7 @@
         {copyText}
         {onDelete}
         {onTemplateSelect}
+        {onTemplateSelectAndCopy}
         {copyLabel}
         {copyTitle}
         {deleteLabel}

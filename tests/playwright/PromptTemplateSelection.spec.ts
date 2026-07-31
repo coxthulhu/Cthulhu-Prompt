@@ -21,6 +21,7 @@ const SECOND_TEMPLATE_FOLDER_ID = 'selection-templates-second'
 const FIRST_TEMPLATE_FOLDER_ID = 'selection-templates-first'
 const NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-nested'
 const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Select Template.prompt.md`
+const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Stale Template.prompt.md`
 
 const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
@@ -44,6 +45,12 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
           title: 'Stale Template',
           promptText: 'Keep the missing selection.',
           templateId: 'deleted-template'
+        },
+        {
+          id: 'no-template-prompt',
+          title: 'Explicit No Template',
+          promptText: 'Copy without a template.',
+          templateId: null
         }
       ]
     }
@@ -136,15 +143,28 @@ describe('Prompt template selection', () => {
 
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     const stalePromptEditor = mainWindow.locator(promptEditorSelector('stale-template-prompt'))
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
+    const noTemplatePromptEditor = mainWindow.locator(
+      promptEditorSelector('no-template-prompt')
+    )
+    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'Not Selected'
+    )
     await expect(stalePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'No Template'
+    )
+    await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'No Template'
     )
     expect(
       await promptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Delete prompt', 'Set Template', 'Copy prompt'])
+    ).toEqual([
+      'Delete prompt',
+      'Set Template',
+      'Copy prompt',
+      'Select Template and Copy'
+    ])
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
@@ -164,6 +184,18 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-invalid"]')).toHaveCount(
       0
     )
+    await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).not.toHaveAttribute(
+      'aria-current',
+      'true'
+    )
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await noTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
+    await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
+      'aria-current',
+      'true'
+    )
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await promptEditor.locator('[data-testid="prompt-template-button"]').click()
 
     await dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]').click()
     await expect(dialog).toBeHidden()
@@ -193,7 +225,7 @@ describe('Prompt template selection', () => {
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .not.toContain('templateId:')
+      .toContain('templateId: null')
 
     await stalePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
@@ -208,7 +240,81 @@ describe('Prompt template selection', () => {
     await testHelpers.navigateToPromptFolders('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
     await expect(templateEditor.locator('[data-testid="prompt-template-button"]')).toHaveCount(0)
+    await expect(
+      templateEditor.locator('[data-testid="prompt-template-and-copy-button"]')
+    ).toHaveCount(0)
     await expect(templateEditor.locator('.prompt-editor-metadata-folder')).toHaveCount(0)
+  })
+
+  test('saves copy defaults and quick-selects templates before copying', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Prompts')
+    await stubClipboard(mainWindow)
+
+    const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
+    const quickPromptEditor = mainWindow.locator(promptEditorSelector('no-template-prompt'))
+    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'Not Selected'
+    )
+    expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templateId:')
+
+    await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe('Prompt folder prefix\n\nChoose a template.\n\nPrompt folder suffix')
+    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
+    await expect
+      .poll(() => readTextFile(electronApp, PROMPT_PATH))
+      .toContain('templateId: null')
+    await expect.poll(() => readTextFile(electronApp, PROMPT_PATH)).toContain('status: InProgress')
+
+    await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
+    const quickDialog = mainWindow.getByRole('dialog', { name: 'Select Template and Copy' })
+    await expect(quickDialog).toBeVisible()
+    await expect(
+      quickDialog.locator('[data-testid="prompt-template-option-none"]')
+    ).toHaveAttribute('aria-current', 'true')
+    await quickDialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await expect(quickDialog).toBeHidden()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe('First root Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix.')
+    await expect(quickPromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'First Root Template'
+    )
+    await expect
+      .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
+      .toContain('templateId: template-first')
+    await expect
+      .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
+      .toContain('status: InProgress')
+
+    await mainWindow.evaluate(() => {
+      const testWindow = window as any
+      testWindow.__testClipboardText = 'sentinel'
+    })
+    await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
+    await quickDialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe('First root Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix.')
+
+    await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
+    await quickDialog.locator('[data-testid="prompt-template-option-none"]').click()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe('Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix')
+    await expect
+      .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
+      .toContain('templateId: null')
   })
 
   test('copies with the current template draft and ignores it after its token is removed', async ({

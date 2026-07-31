@@ -24,11 +24,15 @@
     open = $bindable(false),
     workspaceId,
     selectedTemplateId,
+    title = 'Select Template',
+    notifyOnReselect = false,
     onselect
   }: {
     open?: boolean
     workspaceId: string | null
-    selectedTemplateId?: string
+    selectedTemplateId?: string | null
+    title?: string
+    notifyOnReselect?: boolean
     onselect: (templateId: string | null) => void
   } = $props()
 
@@ -62,7 +66,11 @@
     })
   )
   const resolvedSelectedTemplateId = $derived(
-    selectedTemplateId && templateTitleById[selectedTemplateId] ? selectedTemplateId : null
+    selectedTemplateId === undefined
+      ? undefined
+      : selectedTemplateId && templateTitleById[selectedTemplateId]
+        ? selectedTemplateId
+        : null
   )
 
   // Side effect: each dialog opening starts from a fully expanded template tree.
@@ -79,7 +87,7 @@
   }
 
   const handleSelect = (templateId: string | null): void => {
-    if (templateId !== resolvedSelectedTemplateId) onselect(templateId)
+    if (notifyOnReselect || templateId !== resolvedSelectedTemplateId) onselect(templateId)
     open = false
   }
 
@@ -175,7 +183,7 @@
 <Dialog
   bind:open
   class="w-full max-w-[480px]"
-  title="Select Template"
+  {title}
   submitText=""
   showSubmitButton={false}
 >

@@ -56,7 +56,9 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   return (
     typeof frontmatter.id === 'string' &&
     typeof frontmatter.createdAt === 'string' &&
-    (!hasTemplateId || typeof frontmatter.templateId === 'string') &&
+    (!hasTemplateId ||
+      frontmatter.templateId === null ||
+      typeof frontmatter.templateId === 'string') &&
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
@@ -148,7 +150,7 @@ export const parsePromptMarkdown = (
     createdAt: data.createdAt,
     modifiedAt: timestamp,
     promptText: content,
-    ...(data.templateId ? { templateId: data.templateId } : {}),
+    ...(data.templateId !== undefined ? { templateId: data.templateId } : {}),
     status: data.status,
     ...(data.status === PromptStatus.Completed ? { completedAt: data.completedAt } : {})
   }))
@@ -159,13 +161,13 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
     prompt.status === PromptStatus.Completed && prompt.completedAt
       ? {
           ...baseMetadata,
-          ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
+          ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
           status: PromptStatus.Completed,
           completedAt: prompt.completedAt
         }
       : {
           ...baseMetadata,
-          ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
+          ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
           status:
             prompt.status === PromptStatus.InProgress ? PromptStatus.InProgress : PromptStatus.Todo
         }

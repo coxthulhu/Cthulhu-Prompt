@@ -22,7 +22,7 @@ export type PromptSummary = {
   title: string
   fallbackTitle: string
   modifiedAt: string
-  templateId?: string
+  templateId?: string | null
   status: PromptStatus
   completedAt?: string
   loadingState: 'summary'
@@ -35,7 +35,7 @@ export type PromptFull = {
   modifiedAt: string
   promptText: string
   fallbackTitle: string
-  templateId?: string
+  templateId?: string | null
   status: PromptStatus
   completedAt?: string
   loadingState: 'full'
@@ -63,7 +63,7 @@ export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary =>
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
   modifiedAt: prompt.modifiedAt,
-  ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
+  ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }
@@ -78,7 +78,7 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
   fallbackTitle: prompt.fallbackTitle,
-  ...(prompt.templateId ? { templateId: prompt.templateId } : {}),
+  ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }
