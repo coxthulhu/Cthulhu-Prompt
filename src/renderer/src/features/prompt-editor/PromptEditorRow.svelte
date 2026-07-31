@@ -11,6 +11,7 @@
     | 'contentKind'
     | 'contentLabel'
     | 'metadataFolderLabel'
+    | 'metadataFolderState'
     | 'modelUri'
     | 'compactLayoutMaxWidthPx'
     | 'copyLabel'
@@ -31,6 +32,7 @@
   contentKind="prompt"
   contentLabel="prompt"
   metadataFolderLabel={props.promptDraftRecord.templateName ?? 'Not Selected'}
+  metadataFolderState={props.promptDraftRecord.templateState ?? 'not-selected'}
   onTitleChange={(title) => setPromptDraftTitle(promptId, title)}
   onTextChange={(text, measurement) => setPromptDraftText(promptId, text, measurement)}
 />

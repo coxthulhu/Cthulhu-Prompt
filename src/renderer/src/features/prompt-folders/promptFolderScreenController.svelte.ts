@@ -119,6 +119,7 @@ export type MarkdownContentDraftRecord = {
   text: string
   templateId?: string | null
   templateName?: string
+  templateState?: 'not-selected' | 'no-template' | 'selected'
   isEdited: boolean
 }
 
@@ -218,6 +219,13 @@ export const createPromptFolderScreenController = ({
                 : draft.templateId === null
                   ? 'No Template'
                   : (templateTitleById[draft.templateId] ?? 'No Template'),
+            // Missing template ids use the same indicator treatment as No Template.
+            templateState:
+              draft.templateId === undefined
+                ? 'not-selected'
+                : draft.templateId === null || !(draft.templateId in templateTitleById)
+                  ? 'no-template'
+                  : 'selected',
             isEdited: draft.isEdited
           }
         ])

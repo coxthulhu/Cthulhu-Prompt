@@ -66,6 +66,7 @@
     contentKind = 'prompt',
     contentLabel = 'prompt',
     metadataFolderLabel = 'Template',
+    metadataFolderState = 'not-selected',
     modelUri = createPromptEditorModelUri(promptId),
     compactLayoutMaxWidthPx,
     rowId,
@@ -113,11 +114,13 @@
       text: string
       templateId?: string | null
       templateName?: string
+      templateState?: 'not-selected' | 'no-template' | 'selected'
       isEdited: boolean
     }
     contentKind?: import('@shared/PromptFolder').PromptFolderKind
     contentLabel?: string
     metadataFolderLabel?: string | null
+    metadataFolderState?: 'not-selected' | 'no-template' | 'selected'
     modelUri?: monaco.Uri
     compactLayoutMaxWidthPx?: number
     rowId: string
@@ -556,6 +559,7 @@
     {onCopySuccess}
     {onStatusChange}
     {metadataFolderLabel}
+    {metadataFolderState}
     {copyLabel}
     {copyTitle}
     {deleteLabel}

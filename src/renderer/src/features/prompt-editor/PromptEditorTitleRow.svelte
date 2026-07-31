@@ -20,6 +20,7 @@
     onTitleEditorFocus?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string | null
+    metadataFolderState?: 'not-selected' | 'no-template' | 'selected'
     tokenCount: number
     icon?: ComponentType
     copyLabel?: string
@@ -62,6 +63,7 @@
     onTitleEditorFocus,
     inputRef = $bindable(null),
     metadataFolderLabel = 'Template',
+    metadataFolderState = 'not-selected',
     tokenCount,
     icon = FileText,
     copyLabel,
@@ -191,7 +193,11 @@
 
       <div class="prompt-editor-metadata-row">
         {#if metadataFolderLabel}
-          <span class="prompt-editor-metadata-folder" title={metadataFolderLabel}>
+          <span
+            class="prompt-editor-metadata-folder"
+            data-template-state={metadataFolderState}
+            title={metadataFolderLabel}
+          >
             <Layers class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
             {metadataFolderLabel}
           </span>
@@ -380,13 +386,20 @@
 
   .prompt-editor-metadata-folder {
     align-items: center;
-    color: var(--ui-secondary-text);
     display: inline-flex;
     gap: 4px;
   }
 
-  :global(.prompt-editor-metadata-folder-icon) {
-    color: var(--ui-secondary-icon-glyph);
+  .prompt-editor-metadata-folder[data-template-state='not-selected'] {
+    color: var(--ui-secondary-text);
+  }
+
+  .prompt-editor-metadata-folder[data-template-state='no-template'] {
+    color: var(--ui-muted-text);
+  }
+
+  .prompt-editor-metadata-folder[data-template-state='selected'] {
+    color: var(--ui-normal-text);
   }
 
 </style>

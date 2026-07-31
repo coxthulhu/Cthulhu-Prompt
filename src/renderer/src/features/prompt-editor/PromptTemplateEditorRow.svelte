@@ -13,6 +13,7 @@
     | 'contentKind'
     | 'contentLabel'
     | 'metadataFolderLabel'
+    | 'metadataFolderState'
     | 'modelUri'
     | 'compactLayoutMaxWidthPx'
     | 'copyLabel'

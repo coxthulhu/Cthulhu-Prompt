@@ -1049,6 +1049,9 @@
         ...(promptDraftById[row.promptId]!.templateName
           ? { templateName: promptDraftById[row.promptId]!.templateName }
           : {}),
+        ...(promptDraftById[row.promptId]!.templateState
+          ? { templateState: promptDraftById[row.promptId]!.templateState }
+          : {}),
         isEdited: promptDraftById[row.promptId]!.isEdited
       }}
       {rowId}

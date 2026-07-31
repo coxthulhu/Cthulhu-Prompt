@@ -24,6 +24,34 @@ const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Select Template.prompt.md
 const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Stale Template.prompt.md`
 
+type TemplateIndicatorColorToken =
+  | '--ui-muted-text'
+  | '--ui-secondary-text'
+  | '--ui-normal-text'
+
+const expectTemplateIndicator = async (
+  promptEditor: any,
+  state: 'not-selected' | 'no-template' | 'selected',
+  colorToken: TemplateIndicatorColorToken
+) => {
+  const indicator = promptEditor.locator('.prompt-editor-metadata-folder')
+  await expect(indicator).toHaveAttribute('data-template-state', state)
+  const colors = await indicator.evaluate((element: Element, token: string) => {
+    const reference = document.createElement('span')
+    reference.style.color = `var(${token})`
+    document.body.append(reference)
+    const expected = getComputedStyle(reference).color
+    reference.remove()
+    return {
+      text: getComputedStyle(element).color,
+      icon: getComputedStyle(element.querySelector('svg')!).color,
+      expected
+    }
+  }, colorToken)
+  expect(colors.text).toBe(colors.expected)
+  expect(colors.icon).toBe(colors.expected)
+}
+
 const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
   const promptWorkspace = createWorkspaceWithFolders(WORKSPACE_PATH, [
     {
@@ -155,6 +183,9 @@ describe('Prompt template selection', () => {
     await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'No Template'
     )
+    await expectTemplateIndicator(promptEditor, 'not-selected', '--ui-secondary-text')
+    await expectTemplateIndicator(stalePromptEditor, 'no-template', '--ui-muted-text')
+    await expectTemplateIndicator(noTemplatePromptEditor, 'no-template', '--ui-muted-text')
     expect(
       await promptEditor
         .locator('.prompt-editor-title-button-bar button')
@@ -202,6 +233,7 @@ describe('Prompt template selection', () => {
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Nested Template'
     )
+    await expectTemplateIndicator(promptEditor, 'selected', '--ui-normal-text')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
       .toContain('templateId: template-nested')
@@ -223,6 +255,7 @@ describe('Prompt template selection', () => {
     ).toBeVisible()
     await dialog.locator('[data-testid="prompt-template-option-none"]').click()
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
+    await expectTemplateIndicator(promptEditor, 'no-template', '--ui-muted-text')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
       .toContain('templateId: null')
