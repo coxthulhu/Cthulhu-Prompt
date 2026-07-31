@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { Play } from 'lucide-svelte'
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
+  import { PromptStatus } from '@shared/Prompt'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
@@ -9,6 +11,7 @@
     folderId: string
     promptId: string
     promptTitle: string
+    status?: PromptStatus
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
@@ -23,6 +26,7 @@
     folderId,
     promptId,
     promptTitle,
+    status,
     isActive,
     isDragging,
     isPromptDragActive,
@@ -60,6 +64,24 @@
   )
 </script>
 
+{#snippet promptButtonContent()}
+  <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
+  <span class="prompt-tree-prompt-content">
+    <span class="sidebarPromptTreeSettingsLabel prompt-tree-prompt-label">{promptTitle}</span>
+    {#if status === PromptStatus.InProgress}
+      <span
+        class="prompt-tree-in-progress-indicator"
+        data-testid="prompt-tree-in-progress-indicator"
+        role="img"
+        aria-label="In Progress"
+        title="In Progress"
+      >
+        <Play size={16} aria-hidden="true" />
+      </span>
+    {/if}
+  </span>
+{/snippet}
+
 {#snippet promptButton()}
   <button
     type="button"
@@ -69,8 +91,7 @@
     onclick={handlePromptSelect}
     class="sidebarPromptTreeSettingsButton"
   >
-    <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
-    <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
+    {@render promptButtonContent()}
   </button>
 {/snippet}
 
@@ -89,8 +110,7 @@
       onclick={handlePromptSelect}
       class="sidebarPromptTreeSettingsButton"
     >
-      <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
-      <span class="sidebarPromptTreeSettingsLabel">{promptTitle}</span>
+      {@render promptButtonContent()}
     </button>
   </PromptDropTarget>
 {:else}
@@ -98,3 +118,22 @@
     {@render promptButton()}
   </div>
 {/if}
+
+<style>
+  .prompt-tree-prompt-content {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .prompt-tree-prompt-label {
+    flex: 1 1 auto;
+  }
+
+  .prompt-tree-in-progress-indicator {
+    color: var(--ui-warning-icon-glyph);
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+</style>

@@ -1430,6 +1430,18 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Completed Mode')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
     const activePromptStatus = mainWindow.locator(statusPillSelector('completed-mode-active'))
+    const activePromptTreeRow = mainWindow.locator(
+      '[data-testid="prompt-tree-prompt-completed-mode-active"]'
+    )
+    const inProgressTreeIndicator = activePromptTreeRow.locator(
+      '[data-testid="prompt-tree-in-progress-indicator"]'
+    )
+    await expect(inProgressTreeIndicator).toHaveCount(0)
+    const todoTitleBox = await activePromptTreeRow
+      .locator('.sidebarPromptTreeSettingsLabel')
+      .boundingBox()
+    if (!todoTitleBox) throw new Error('Missing Todo prompt tree title geometry')
+    const todoTitleRightPx = todoTitleBox.x + todoTitleBox.width
     await activePromptStatus.click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')).toBeVisible()
     await activePromptStatus.click()
@@ -1451,6 +1463,12 @@ describe('Prompt folder prompt management', () => {
       'data-variant',
       'in-progress'
     )
+    await expect(inProgressTreeIndicator).toBeVisible()
+    const inProgressIndicatorBox = await inProgressTreeIndicator.boundingBox()
+    if (!inProgressIndicatorBox) throw new Error('Missing In Progress tree indicator geometry')
+    expect(
+      Math.abs(inProgressIndicatorBox.x + inProgressIndicatorBox.width - todoTitleRightPx)
+    ).toBeLessThanOrEqual(2)
     expect(await getPromptEditorIds(mainWindow)).toEqual(['completed-mode-active'])
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
@@ -1460,6 +1478,7 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
     await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText('Todo')
+    await expect(inProgressTreeIndicator).toHaveCount(0)
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
@@ -1513,6 +1532,7 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-active', 'completed-mode-newest', 'completed-mode-oldest'])
+    await expect(inProgressTreeIndicator).toHaveCount(0)
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-completed"]')).toBeVisible()

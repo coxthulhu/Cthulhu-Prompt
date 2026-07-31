@@ -894,6 +894,7 @@
     folderId={props.row.folder.id}
     promptId={props.row.promptId}
     {promptTitle}
+    status={promptById[props.row.promptId]?.status}
     {isActive}
     {isDragging}
     {isPromptDragActive}
