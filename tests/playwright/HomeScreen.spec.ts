@@ -78,6 +78,102 @@ describe('Home Screen', () => {
     expect(await homeScreen.evaluate((element) => element.scrollTop)).toBe(0)
   })
 
+  test('stacks the title words at the same breakpoint as the cards', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const cthulhuWord = mainWindow.locator('[data-testid="home-title-word-cthulhu"]')
+    const promptWord = mainWindow.locator('[data-testid="home-title-word-prompt"]')
+    const homeLayout = mainWindow.locator('[data-testid="home-layout"]')
+    const setHomeLayoutWidth = async (width: number) => {
+      const currentWidth = await homeLayout.evaluate((element) => element.getBoundingClientRect().width)
+      await electronApp.evaluate(
+        ({ BrowserWindow }, widthDelta) => {
+          const window = BrowserWindow.getAllWindows()[0]
+          if (!window) throw new Error('Missing main window')
+          const bounds = window.getBounds()
+          window.setSize(bounds.width + widthDelta, bounds.height)
+        },
+        Math.round(width - currentWidth)
+      )
+      await expect
+        .poll(async () => homeLayout.evaluate((element) => element.getBoundingClientRect().width))
+        .toBe(width)
+    }
+
+    await setHomeLayoutWidth(1023)
+    const [narrowCthulhuBox, narrowPromptBox] = await Promise.all([
+      cthulhuWord.boundingBox(),
+      promptWord.boundingBox()
+    ])
+    expect(narrowCthulhuBox).not.toBeNull()
+    expect(narrowPromptBox).not.toBeNull()
+    expect(narrowPromptBox!.y).toBeGreaterThanOrEqual(
+      narrowCthulhuBox!.y + narrowCthulhuBox!.height - 1
+    )
+
+    await setHomeLayoutWidth(1024)
+    const [wideCthulhuBox, widePromptBox] = await Promise.all([
+      cthulhuWord.boundingBox(),
+      promptWord.boundingBox()
+    ])
+    expect(wideCthulhuBox).not.toBeNull()
+    expect(widePromptBox).not.toBeNull()
+    expect(Math.abs(widePromptBox!.y - wideCthulhuBox!.y)).toBeLessThanOrEqual(1)
+  })
+
+  test('switches card columns without changing their maximum width', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const homeLayout = mainWindow.locator('[data-testid="home-layout"]')
+    const primaryCard = mainWindow.locator('[data-testid="home-primary-card"]')
+    const actionsCard = mainWindow.locator('[data-testid="home-workspace-actions-card"]')
+    const setHomeLayoutWidth = async (width: number) => {
+      const currentWidth = await homeLayout.evaluate((element) => element.getBoundingClientRect().width)
+      await electronApp.evaluate(
+        ({ BrowserWindow }, widthDelta) => {
+          const window = BrowserWindow.getAllWindows()[0]
+          if (!window) throw new Error('Missing main window')
+          const bounds = window.getBounds()
+          window.setSize(bounds.width + widthDelta, bounds.height)
+        },
+        Math.round(width - currentWidth)
+      )
+      await expect
+        .poll(async () => homeLayout.evaluate((element) => element.getBoundingClientRect().width))
+        .toBe(width)
+    }
+
+    await setHomeLayoutWidth(1023)
+    const [stackedPrimaryBox, stackedActionsBox] = await Promise.all([
+      primaryCard.boundingBox(),
+      actionsCard.boundingBox()
+    ])
+    expect(stackedPrimaryBox).not.toBeNull()
+    expect(stackedActionsBox).not.toBeNull()
+    expect(Math.abs(stackedPrimaryBox!.width - 504)).toBeLessThanOrEqual(1)
+    expect(Math.abs(stackedActionsBox!.width - 504)).toBeLessThanOrEqual(1)
+    expect(stackedActionsBox!.y).toBeGreaterThan(stackedPrimaryBox!.y + stackedPrimaryBox!.height)
+
+    await setHomeLayoutWidth(1024)
+    const [widePrimaryBox, wideActionsBox] = await Promise.all([
+      primaryCard.boundingBox(),
+      actionsCard.boundingBox()
+    ])
+    expect(widePrimaryBox).not.toBeNull()
+    expect(wideActionsBox).not.toBeNull()
+    expect(Math.abs(stackedPrimaryBox!.width - widePrimaryBox!.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(stackedActionsBox!.width - wideActionsBox!.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(wideActionsBox!.y - widePrimaryBox!.y)).toBeLessThanOrEqual(1)
+  })
+
   describe('Workspace Management', () => {
     test('closes a workspace while hydrated folder settings are mounted', async ({ testSetup }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({

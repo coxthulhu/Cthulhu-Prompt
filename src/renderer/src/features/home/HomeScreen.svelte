@@ -55,6 +55,7 @@
   }
 
   const secondaryTitleText = 'CTHULHU PROMPT'
+  const secondaryTitleWords = ['CTHULHU', 'PROMPT'] as const
   const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const workspaceOpenErrorFallbackText = 'Failed to open workspace. Please try again.'
@@ -131,7 +132,7 @@
   })
   const displayedPromptCount = $derived(String(promptCount))
   const displayedPromptFolderCount = $derived(String(promptFolderCount))
-  const homeCardClass = 'w-full max-w-[632px] min-w-0 xl:max-w-none'
+  const homeCardClass = 'w-full min-w-0'
   const secondaryTitleFontSizePx = $derived.by(() => {
     if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
       return null
@@ -173,18 +174,26 @@
 
 <main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
   <div class="flex min-h-full w-full min-w-0 items-start justify-center">
-    <section class="relative my-auto w-full max-w-5xl min-w-0">
+    <section
+      class="cthulhuHomeLayout relative my-auto w-full max-w-5xl min-w-0"
+      data-testid="home-layout"
+    >
       <header>
         <div
           bind:this={secondaryTitleContainerElement}
-          class="mx-auto w-full max-w-[632px] space-y-6 xl:max-w-none"
+          class="cthulhuHomeTitleContainer mx-auto w-full space-y-6"
         >
           <h2
             class="cthulhuHomeSecondaryTitle"
             data-testid="home-title"
+            aria-label={secondaryTitleText}
             style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
           >
-            {secondaryTitleText}
+            {#each secondaryTitleWords as word (word)}
+              <span aria-hidden="true" data-testid={`home-title-word-${word.toLowerCase()}`}>
+                {word}
+              </span>
+            {/each}
           </h2>
           <div class="cthulhuHomeTitleSeparator" data-testid="home-title-separator"></div>
         </div>
@@ -194,14 +203,16 @@
         aria-hidden="true"
         class="cthulhuHomeSecondaryTitle cthulhuHomeSecondaryTitleMeasure"
       >
-        {secondaryTitleText}
+        {#each secondaryTitleWords as word (word)}
+          <span>{word}</span>
+        {/each}
       </span>
 
       <div
-        class="mt-7 grid grid-cols-1 items-start justify-items-center gap-4 xl:grid-cols-2 xl:justify-items-stretch"
+        class="cthulhuHomeCardGrid mt-7 grid w-full grid-cols-1 items-start gap-4"
       >
         {#if !currentWorkspaceDetails}
-          <Card label="Get Started" class={homeCardClass}>
+          <Card label="Get Started" class={homeCardClass} data-testid="home-primary-card">
             <div class="flex flex-col">
               <DisplayRow
                 icon={FolderPlus}
@@ -239,7 +250,7 @@
             </div>
           </Card>
         {:else}
-          <Card label="Current Workspace" class={homeCardClass}>
+          <Card label="Current Workspace" class={homeCardClass} data-testid="home-primary-card">
             <div class="flex flex-col">
               <DisplayRow
                 icon={FolderOpen}
@@ -292,7 +303,11 @@
           </Card>
         {/if}
 
-        <Card label="Workspace Actions" class={homeCardClass}>
+        <Card
+          label="Workspace Actions"
+          class={homeCardClass}
+          data-testid="home-workspace-actions-card"
+        >
           <div class="flex flex-col">
             <DisplayRow
               icon={FolderOpen}
@@ -380,8 +395,25 @@
 </main>
 
 <style>
+  .cthulhuHomeLayout {
+    container-name: cthulhu-home-layout;
+    container-type: inline-size;
+  }
+
+  .cthulhuHomeTitleContainer,
+  .cthulhuHomeCardGrid {
+    max-width: 31.5rem;
+  }
+
+  .cthulhuHomeCardGrid {
+    margin-inline: auto;
+  }
+
   .cthulhuHomeSecondaryTitle {
+    align-items: center;
     color: var(--ui-normal-text);
+    display: flex;
+    flex-direction: column;
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: clamp(64px, 9vw, 88px);
     font-weight: 700;
@@ -389,6 +421,23 @@
     line-height: 1;
     text-align: center;
     white-space: nowrap;
+  }
+
+  @container cthulhu-home-layout (min-width: 64rem) {
+    .cthulhuHomeTitleContainer,
+    .cthulhuHomeCardGrid {
+      max-width: none;
+    }
+
+    .cthulhuHomeCardGrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cthulhuHomeSecondaryTitle {
+      column-gap: 1.14em;
+      flex-direction: row;
+      justify-content: center;
+    }
   }
 
   .cthulhuHomeSecondaryTitleMeasure {
