@@ -1,5 +1,4 @@
 <script lang="ts">
-  import CardSurface from '@renderer/common/cthulhu-ui/CardSurface.svelte'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -23,8 +22,8 @@
   const layout = $derived(sidebar && showSidebar ? 'sidebar' : 'plain')
 </script>
 
-<CardSurface
-  bind:elementRef={rowElement}
+<div
+  bind:this={rowElement}
   class={mergeClasses('editor-card-surface', className)}
   data-layout={layout}
   {...restProps}
@@ -36,16 +35,18 @@
   <div class="editor-card-body">
     {@render children()}
   </div>
-</CardSurface>
+</div>
 
 <style>
   :global(.editor-card-surface) {
     align-items: stretch;
-    background: var(--ui-editor-normal-surface);
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: var(--cthulhu-ui-radius-card);
     box-sizing: border-box;
     display: grid;
     min-width: 0;
     overflow: hidden;
+    width: 100%;
   }
 
   :global(.editor-card-surface[data-layout='sidebar']) {
@@ -57,7 +58,7 @@
   }
 
   .editor-card-body {
-    /* The outer CardSurface clips the rail and body into one card silhouette. */
+    /* The outer wrapper clips the rail and body into one card silhouette. */
     align-content: start;
     background: var(--ui-editor-normal-surface);
     display: grid;
