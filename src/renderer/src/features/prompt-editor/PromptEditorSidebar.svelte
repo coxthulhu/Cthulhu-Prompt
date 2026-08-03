@@ -146,7 +146,7 @@
 
 <style>
   .prompt-editor-sidebar {
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     border-right: 1px solid var(--ui-neutral-muted-border);
     box-sizing: border-box;
     display: flex;

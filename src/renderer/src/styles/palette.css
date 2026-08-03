@@ -36,7 +36,6 @@
   --ui-shadow-raised: oklch(0 0 0 / 20%);
 
   /* Editor */
-  --ui-editor-normal-surface: oklch(0.22 0.008 275);
   /* Keep this hex value to exactly match Monaco's Dark 2026 editor.background. */
   --ui-editor-content-surface: #121314;
 

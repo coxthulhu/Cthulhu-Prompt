@@ -1335,7 +1335,7 @@
 
   .base-editor-body {
     align-content: start;
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     display: grid;
     min-width: 0;
     position: relative;
@@ -1343,7 +1343,7 @@
 
   .base-editor-sidebar,
   .base-folder-sidebar {
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     border-right: 1px solid var(--ui-neutral-muted-border);
     box-sizing: border-box;
     color: var(--ui-muted-icon-glyph);
@@ -1686,7 +1686,7 @@
   }
 
   .base-folder-settings {
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     display: grid;
     min-width: 0;
   }
@@ -1805,7 +1805,7 @@
   }
 
   .base-folder-settings-sections {
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     display: grid;
     min-width: 0;
   }

@@ -486,7 +486,7 @@
 
   .prompt-folder-editor-settings,
   .prompt-folder-editor-sections {
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     display: grid;
     min-width: 0;
   }

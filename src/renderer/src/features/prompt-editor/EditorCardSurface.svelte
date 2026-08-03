@@ -60,7 +60,7 @@
   .editor-card-body {
     /* The outer wrapper clips the rail and body into one card silhouette. */
     align-content: start;
-    background: var(--ui-editor-normal-surface);
+    background: var(--ui-card-normal-surface);
     display: grid;
     min-width: 0;
     position: relative;
