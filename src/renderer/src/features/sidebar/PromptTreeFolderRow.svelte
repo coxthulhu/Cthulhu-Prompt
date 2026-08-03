@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, MoreHorizontal, Settings } from 'lucide-svelte'
+  import { ArrowRight, Folder, MoreHorizontal, Settings } from 'lucide-svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -179,6 +179,7 @@
         iconSize={20}
         class="sidebarPromptTreeChevronWrap"
       />
+      <Folder class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
       <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
     </button>
 

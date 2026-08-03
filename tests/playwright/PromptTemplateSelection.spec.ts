@@ -212,6 +212,20 @@ describe('Prompt template selection', () => {
       'Nested Template',
       'First Root Template'
     ])
+    await expect(
+      dialog
+        .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+        .locator('.sidebarPromptTreeFolderIcon')
+    ).toBeVisible()
+    await expect(
+      dialog.locator('.sidebarPromptTreeBaseFolderButton .sidebarPromptTreeFolderIcon')
+    ).toHaveCount(2)
+    await expect(
+      dialog.locator('.sidebarPromptTreeBaseFolderButton .sidebarPromptTreeChevronWrap')
+    ).toHaveCount(0)
+    await expect(
+      dialog.locator('[data-testid="prompt-template-option-none"] .sidebarPromptTreeFolderIcon')
+    ).toHaveCount(0)
     await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-invalid"]')).toHaveCount(
       0
     )

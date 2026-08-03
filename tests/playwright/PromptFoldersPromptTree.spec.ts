@@ -218,11 +218,12 @@ describe('Prompt folder prompt tree', () => {
     const rootFolderRow = mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_SELECTOR)
     await expect(rootFolderRow).toHaveText('Main')
     await expect(rootFolderRow).toHaveAttribute('data-row-state', 'active')
-    await expect(rootFolderRow.locator('svg')).toHaveCount(0)
+    await expect(rootFolderRow.locator('.sidebarPromptTreeFolderIcon')).toBeVisible()
+    await expect(rootFolderRow.locator('.sidebarPromptTreeChevronWrap')).toHaveCount(0)
     await expect(rootFolderRow.locator('xpath=..').locator('button')).toHaveCount(1)
     const rootFolderRowBox = await rootFolderRow.locator('xpath=..').boundingBox()
     expect(rootFolderRowBox?.height).toBe(32)
-    await expect(rootFolderRow).toHaveCSS('font-weight', '600')
+    await expect(rootFolderRow).toHaveCSS('font-weight', '400')
     const rootFolderBackground = await rootFolderRow.evaluate(
       (element) => getComputedStyle(element).backgroundColor
     )
@@ -267,21 +268,51 @@ describe('Prompt folder prompt tree', () => {
         const basePromptLabel = document
           .querySelector<HTMLElement>('[data-testid="prompt-tree-prompt-base-before"]')
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
-        const rootFolderLabel = document
-          .querySelector<HTMLElement>('[data-testid="prompt-tree-root-folder"]')
-          ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
+        const rootFolderButton = document.querySelector<HTMLElement>(
+          '[data-testid="prompt-tree-root-folder"]'
+        )
+        const rootFolderIcon = rootFolderButton?.querySelector<SVGElement>(
+          '.sidebarPromptTreeFolderIcon'
+        )
+        const rootFolderLabel = rootFolderButton?.querySelector<HTMLElement>(
+          '.sidebarPromptTreeSettingsLabel'
+        )
         const nestedRow = document.querySelector<HTMLElement>(nestedSelector)
+        const nestedChevron = nestedRow?.querySelector<HTMLElement>(
+          '.sidebarPromptTreeChevronWrap'
+        )
         const nestedPromptLabel = document
           .querySelector<HTMLElement>(nestedPromptSelector)
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
 
-        if (!basePromptLabel || !rootFolderLabel || !nestedRow || !nestedPromptLabel) {
+        if (
+          !basePromptLabel ||
+          !rootFolderButton ||
+          !rootFolderIcon ||
+          !rootFolderLabel ||
+          !nestedRow ||
+          !nestedChevron ||
+          !nestedPromptLabel
+        ) {
           return null
         }
 
+        const rootFolderButtonRect = rootFolderButton.getBoundingClientRect()
+        const rootFolderIconRect = rootFolderIcon.getBoundingClientRect()
+        const rootFolderLabelRect = rootFolderLabel.getBoundingClientRect()
+        const nestedChevronRect = nestedChevron.getBoundingClientRect()
         return {
           basePromptLabelLeft: Math.round(basePromptLabel.getBoundingClientRect().left),
-          rootFolderLabelLeft: Math.round(rootFolderLabel.getBoundingClientRect().left),
+          rootFolderIconInsetPx: rootFolderIconRect.left - rootFolderButtonRect.left,
+          rootFolderLabelOffsetPx: rootFolderLabelRect.left - rootFolderIconRect.left,
+          rootIconToNestedChevronCenterDeltaPx:
+            rootFolderIconRect.left +
+            rootFolderIconRect.width / 2 -
+            (nestedChevronRect.left + nestedChevronRect.width / 2),
+          rootFolderHasChevron: Boolean(
+            rootFolderButton.querySelector('.sidebarPromptTreeChevronWrap')
+          ),
+          rootFolderLabelFontWeight: getComputedStyle(rootFolderLabel).fontWeight,
           nestedHasGutter: Boolean(nestedRow.querySelector('.sidebarPromptTreeGutter')),
           nestedPromptLabelLeft: Math.round(nestedPromptLabel.getBoundingClientRect().left)
         }
@@ -292,9 +323,11 @@ describe('Prompt folder prompt tree', () => {
       }
     )
     expect(indentation).not.toBeNull()
-    expect(
-      Math.abs(indentation!.rootFolderLabelLeft - indentation!.basePromptLabelLeft)
-    ).toBeLessThanOrEqual(1)
+    expect(Math.abs(indentation!.rootFolderIconInsetPx - 13)).toBeLessThanOrEqual(1)
+    expect(Math.abs(indentation!.rootFolderLabelOffsetPx - 28)).toBeLessThanOrEqual(1)
+    expect(Math.abs(indentation!.rootIconToNestedChevronCenterDeltaPx)).toBeLessThanOrEqual(1)
+    expect(indentation!.rootFolderHasChevron).toBe(false)
+    expect(indentation!.rootFolderLabelFontWeight).toBe('400')
     expect(indentation!.nestedHasGutter).toBe(false)
     expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(indentation!.basePromptLabelLeft + 2)
 
@@ -728,6 +761,35 @@ describe('Prompt folder prompt tree', () => {
     await expect(basePrompt.locator('[data-indent-guide-line]')).toHaveCount(0)
     await expect(nestedFolder.locator('.sidebarPromptTreeGutter')).toHaveCount(0)
     await expect(nestedPrompt.locator('[data-indent-guide-line]')).toHaveCount(1)
+
+    const folderRowTreatment = await nestedFolder.evaluate((button) => {
+      const chevron = button.querySelector<HTMLElement>('.sidebarPromptTreeChevronWrap')
+      const folderIcon = button.querySelector<SVGElement>('.sidebarPromptTreeFolderIcon')
+      const label = button.querySelector<HTMLElement>('.sidebarPromptTreeFolderLabel')
+      if (!chevron || !folderIcon || !label) return null
+
+      const buttonRect = button.getBoundingClientRect()
+      const chevronRect = chevron.getBoundingClientRect()
+      const folderIconRect = folderIcon.getBoundingClientRect()
+      const labelRect = label.getBoundingClientRect()
+      const labelStyle = getComputedStyle(label)
+      return {
+        chevronInsetPx: chevronRect.left - buttonRect.left,
+        folderIconOffsetPx: folderIconRect.left - chevronRect.left,
+        labelOffsetPx: labelRect.left - folderIconRect.left,
+        folderIconWidthPx: folderIconRect.width,
+        labelFontSize: labelStyle.fontSize,
+        labelFontWeight: labelStyle.fontWeight
+      }
+    })
+
+    expect(folderRowTreatment).not.toBeNull()
+    expect(Math.abs(folderRowTreatment!.chevronInsetPx - 9)).toBeLessThanOrEqual(1)
+    expect(Math.abs(folderRowTreatment!.folderIconOffsetPx - 32)).toBeLessThanOrEqual(1)
+    expect(Math.abs(folderRowTreatment!.labelOffsetPx - 26)).toBeLessThanOrEqual(1)
+    expect(Math.abs(folderRowTreatment!.folderIconWidthPx - 16)).toBeLessThanOrEqual(1)
+    expect(folderRowTreatment!.labelFontSize).toBe('14px')
+    expect(folderRowTreatment!.labelFontWeight).toBe('400')
   })
 
   test('uses the folder action space only while folder actions are visible', async ({

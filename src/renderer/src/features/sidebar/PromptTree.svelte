@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteSet } from 'svelte/reactivity'
-  import { Loader } from 'lucide-svelte'
+  import { Folder, Loader } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
     type DroppableAllowedEdges,
@@ -834,8 +834,9 @@
       data-row-state={isActive ? 'active' : isPromptDragActive ? 'drag-idle' : 'idle'}
       aria-current={isActive ? 'true' : undefined}
       onclick={handlePromptTreeRootFolderSelect}
-      class="sidebarPromptTreeSettingsButton sidebarPromptTreeRootButton"
+      class="sidebarPromptTreeSettingsButton sidebarPromptTreeRootButton sidebarPromptTreeBaseFolderButton"
     >
+      <Folder class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
       <span class="sidebarPromptTreeSettingsLabel">{props.row.folder.displayName}</span>
     </button>
   </PromptDropTarget>

@@ -85,7 +85,7 @@
 }
 
 .sidebarPromptTreeToggleButton {
-  display: flex;
+  display: grid;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -94,6 +94,7 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
+  grid-template-columns: 24px 18px minmax(0, 1fr);
   border: 0;
   background: var(--ui-ghost-surface);
   padding: 0 12px 0 9px;
@@ -102,16 +103,19 @@
 }
 
 .sidebarPromptTreeFolderRow[data-indented='true'] .sidebarPromptTreeToggleButton {
-  display: grid;
   grid-template-columns:
-    calc(5px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
-    auto minmax(0, 1fr);
+    calc(1px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
+    24px 18px minmax(0, 1fr);
   padding-left: 0;
 }
 
 .sidebarPromptTreeChevronWrap {
   border-radius: var(--cthulhu-ui-radius-control);
   color: var(--ui-hoverable-icon-glyph);
+}
+
+.sidebarPromptTreeFolderIcon {
+  color: var(--ui-secondary-icon-glyph);
 }
 
 .sidebarPromptTreeFolderLabel {
@@ -121,7 +125,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .sidebarPromptTreeCountBadge {
@@ -307,6 +311,18 @@
   display: flex;
   padding-left: 13px;
   font-weight: 600;
+}
+
+.sidebarPromptTreeBaseFolderButton {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  padding: 0 12px 0 9px;
+  font-weight: 400;
+}
+
+.sidebarPromptTreeBaseFolderButton .sidebarPromptTreeFolderIcon {
+  justify-self: center;
 }
 
 .sidebarPromptTreeSettingsLabel {

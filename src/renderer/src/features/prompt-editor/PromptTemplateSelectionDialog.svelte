@@ -1,6 +1,7 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteSet } from 'svelte/reactivity'
+  import { Folder } from 'lucide-svelte'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
@@ -210,7 +211,10 @@
 
       {#snippet rootFolderRow(props: PromptTreeRootFolderRowProps)}
         <div class="sidebarPromptTreeSettingsRow">
-          <div class="sidebarPromptTreeSettingsButton sidebarPromptTreeRootButton">
+          <div
+            class="sidebarPromptTreeSettingsButton sidebarPromptTreeRootButton sidebarPromptTreeBaseFolderButton"
+          >
+            <Folder class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
             <span class="sidebarPromptTreeSettingsLabel">{props.row.folder.displayName}</span>
           </div>
         </div>
