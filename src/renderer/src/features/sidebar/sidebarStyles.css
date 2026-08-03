@@ -152,7 +152,7 @@
   justify-content: flex-end;
   flex-shrink: 0;
   margin-left: auto;
-  margin-right: 20px;
+  margin-right: 14px;
   pointer-events: none;
 }
 
@@ -169,7 +169,7 @@
 .sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeToggleButton,
 .sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeToggleButton,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeToggleButton {
-  padding-right: 92px;
+  padding-right: 86px;
 }
 
 .sidebarPromptTreeActionButton {

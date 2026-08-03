@@ -817,8 +817,18 @@ describe('Prompt folder prompt tree', () => {
     await folderToggle.hover()
     await expect(folderActions).toBeVisible()
     const hoveredLabelWidth = await readRoundedLabelWidth()
+    const folderToggleBox = await folderToggle.boundingBox()
+    const folderActionsBox = await folderActions.boundingBox()
 
-    expect(Math.abs(restingLabelWidth - hoveredLabelWidth - 80)).toBeLessThanOrEqual(1)
+    expect(Math.abs(restingLabelWidth - hoveredLabelWidth - 74)).toBeLessThanOrEqual(1)
+    expect(folderToggleBox).not.toBeNull()
+    expect(folderActionsBox).not.toBeNull()
+    const folderActionsRightInset =
+      folderToggleBox!.x +
+      folderToggleBox!.width -
+      folderActionsBox!.x -
+      folderActionsBox!.width
+    expect(Math.abs(folderActionsRightInset - 14)).toBeLessThanOrEqual(1)
 
     await mainWindow.mouse.move(0, 0)
     await expect(folderActions).toBeHidden()
