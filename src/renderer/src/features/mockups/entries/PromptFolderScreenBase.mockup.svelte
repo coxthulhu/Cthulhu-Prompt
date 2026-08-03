@@ -1322,7 +1322,7 @@
 
   .base-editor-card {
     align-items: stretch;
-    background: var(--ui-card-normal-surface-gradient-start);
+    background: var(--ui-card-normal-surface);
     border: 1px solid var(--ui-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-card);
     box-sizing: border-box;

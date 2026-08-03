@@ -20,9 +20,11 @@
   /* Development diagnostics only; do not use for general application UI. */
   --ui-development-indicator-text: oklch(0.628 0.258 29.234);
 
+  /* Chrome */
+  --ui-chrome-normal-surface: oklch(0.18 0 0);
+
   /* Cards */
-  --ui-card-normal-surface-gradient-start: oklch(1 0 0 / 6%);
-  --ui-card-normal-surface-gradient-end: oklch(1 0 0 / 3%);
+  --ui-card-normal-surface: oklch(0.21 0 0);
   --ui-card-solid-surface: oklch(0.16 0 0);
   --ui-card-overlay-surface: oklch(0.2 0 0);
   --ui-card-normal-border: oklch(1 0 0 / 12%);
@@ -35,7 +37,8 @@
 
   /* Editor */
   --ui-editor-normal-surface: oklch(0.22 0.008 275);
-  --ui-editor-content-surface: oklch(0.186042 0.002588 247.966);
+  /* Keep this hex value to exactly match Monaco's Dark 2026 editor.background. */
+  --ui-editor-content-surface: #121314;
 
   /* Neutral */
   --ui-ghost-surface: transparent;

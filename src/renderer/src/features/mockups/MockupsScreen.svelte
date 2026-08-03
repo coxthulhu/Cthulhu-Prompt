@@ -123,7 +123,7 @@
   .mockups-tab {
     appearance: none;
     border: 1px solid var(--ui-neutral-muted-border);
-    background: var(--ui-card-normal-surface-gradient-end);
+    background: var(--ui-neutral-action-fill);
     color: var(--ui-secondary-text);
     padding: 11px 16px;
     border-radius: 16px;
