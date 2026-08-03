@@ -44,6 +44,40 @@ describe('Home Screen', () => {
     expect(Math.abs(separatorBox!.width - titleBox!.width)).toBeLessThanOrEqual(1)
   })
 
+  test('keeps the title reachable at the minimum window height', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) throw new Error('Missing main window')
+      window.setSize(800, 600)
+    })
+
+    const homeScreen = mainWindow.locator('[data-testid="home-screen"]')
+    const homeTitle = mainWindow.locator('[data-testid="home-title"]')
+
+    await expect
+      .poll(async () =>
+        homeScreen.evaluate((element) => element.scrollHeight > element.clientHeight)
+      )
+      .toBe(true)
+
+    const [homeScreenBox, homeTitleBox] = await Promise.all([
+      homeScreen.boundingBox(),
+      homeTitle.boundingBox()
+    ])
+
+    expect(homeScreenBox).not.toBeNull()
+    expect(homeTitleBox).not.toBeNull()
+    expect(homeTitleBox!.y).toBeGreaterThanOrEqual(homeScreenBox!.y)
+    expect(await homeScreen.evaluate((element) => element.scrollTop)).toBe(0)
+  })
+
   describe('Workspace Management', () => {
     test('closes a workspace while hydrated folder settings are mounted', async ({ testSetup }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
