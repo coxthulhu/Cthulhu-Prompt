@@ -52,7 +52,7 @@
   }
 
   .cthulhuUiIndentGuideGutterLine {
-    background: var(--ui-neutral-emphasis-border);
+    border-left: var(--indent-guide-line-width) solid var(--ui-neutral-emphasis-border);
     bottom: var(--indent-guide-line-bottom-inset);
     display: block;
     left: calc(
@@ -61,6 +61,6 @@
     );
     position: absolute;
     top: var(--indent-guide-line-top-inset);
-    width: var(--indent-guide-line-width);
+    width: 0;
   }
 </style>
