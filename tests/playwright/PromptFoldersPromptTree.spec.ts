@@ -67,6 +67,9 @@ const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
 const NESTED_FOLDER_EDITOR = `[data-testid="prompt-folder-editor-${SUBFOLDERS_NESTED_FOLDER_ID}"]`
 const NESTED_FOLDER_SETTINGS_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-settings-toggle"]`
 const NESTED_FOLDER_TITLE_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
+const GRANDCHILD_FOLDER_TOGGLE =
+  '[data-testid="prompt-tree-folder-toggle-button-Grandchild"]'
+const GRANDCHILD_PROMPT = '[data-testid="prompt-tree-prompt-subfolders-ui-grandchild-prompt"]'
 
 function createDeterministicId(seed: string): string {
   let hash = 0
@@ -201,6 +204,45 @@ const scrollPromptFolderRowAwayFromViewportCenter = async (
 }
 
 describe('Prompt folder prompt tree', () => {
+  test('keeps an expanded terminal subfolder gutter connected to its first prompt', async ({
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    const grandchildFolder = mainWindow.locator(GRANDCHILD_FOLDER_TOGGLE)
+    const grandchildGutter = grandchildFolder.locator('.sidebarPromptTreeGutter')
+    await expect(grandchildFolder).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(GRANDCHILD_PROMPT)).toBeVisible()
+    await expect(grandchildGutter).toHaveCount(1)
+    await expect
+      .poll(() =>
+        grandchildGutter.evaluate((gutter) =>
+          getComputedStyle(gutter)
+            .getPropertyValue('--indent-guide-line-bottom-inset')
+            .trim()
+        )
+      )
+      .toBe('-1px')
+
+    await grandchildFolder.click()
+    await expect(grandchildFolder).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(GRANDCHILD_PROMPT)).toHaveCount(0)
+    await expect
+      .poll(() =>
+        grandchildGutter.evaluate((gutter) =>
+          getComputedStyle(gutter)
+            .getPropertyValue('--indent-guide-line-bottom-inset')
+            .trim()
+        )
+      )
+      .toBe('0px')
+  })
+
   test('renders subfolders and persists prompt tree expansion state', async ({
     electronApp,
     testSetup

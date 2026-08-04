@@ -104,8 +104,15 @@
       folder: PromptFolder,
       parentFolder: PromptFolder,
       indentCount: number,
-      isLastRow: boolean
+      isLastSibling: boolean
     ): void => {
+      const isExpanded = getFolderExpanded(folder.id)
+      const childEntries = folder.entries.filter((entry) =>
+        entry.kind === 'folder'
+          ? promptFolderById[entry.id]?.kind === 'template'
+          : entry.kind === 'template' && Boolean(templateTitleById[entry.id])
+      )
+
       items.push({
         id: `${folder.id}:folder`,
         row: {
@@ -113,17 +120,12 @@
           folder,
           parentFolder,
           indentCount,
-          isLastRow,
+          endsVisibleBranch: isLastSibling && (!isExpanded || childEntries.length === 0),
           isSubfolder: true
         }
       })
-      if (!getFolderExpanded(folder.id)) return
+      if (!isExpanded) return
 
-      const childEntries = folder.entries.filter((entry) =>
-        entry.kind === 'folder'
-          ? promptFolderById[entry.id]?.kind === 'template'
-          : entry.kind === 'template' && Boolean(templateTitleById[entry.id])
-      )
       for (const [entryIndex, entry] of childEntries.entries()) {
         const isLastChild = entryIndex === childEntries.length - 1
         const childFolder = entry.kind === 'folder' ? promptFolderById[entry.id] : null
@@ -228,7 +230,7 @@
           isPromptDragActive={false}
           isExpanded={getFolderExpanded(props.row.folder.id)}
           indentCount={props.row.indentCount}
-          isLastRow={props.row.isLastRow}
+          endsVisibleBranch={props.row.endsVisibleBranch}
           showActions={false}
           onFolderExpandedChange={handleFolderExpandedChange}
           onPromptFolderOpen={() => {}}

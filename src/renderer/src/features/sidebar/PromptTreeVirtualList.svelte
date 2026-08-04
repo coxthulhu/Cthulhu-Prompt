@@ -12,7 +12,7 @@
         folder: PromptFolder
         parentFolder: PromptFolder | null
         indentCount: number
-        isLastRow: boolean
+        endsVisibleBranch: boolean
         isSubfolder: boolean
       }
     | {

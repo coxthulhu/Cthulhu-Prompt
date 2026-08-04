@@ -642,24 +642,9 @@
         promptFolder: PromptFolder,
         parentFolder: PromptFolder | null,
         indentCount: number,
-        isLastRow: boolean
+        isLastSibling: boolean
       ): void => {
-        items.push({
-          id: folderRootRowId(promptFolder.id),
-          row: {
-            kind: 'folder',
-            folder: promptFolder,
-            parentFolder,
-            indentCount,
-            isLastRow,
-            isSubfolder: promptFolder.id !== screenRootFolder.id
-          }
-        })
-
-        if (!getPromptTreeFolderExpandedState(promptFolder.id)) {
-          return
-        }
-
+        const isExpanded = getPromptTreeFolderExpandedState(promptFolder.id)
         const childEntries = promptFolder.entries.filter((entry) =>
           entry.kind === 'folder'
             ? Boolean(promptFolderById[entry.id])
@@ -668,6 +653,22 @@
               : Boolean(promptById[entry.id]) &&
                 promptById[entry.id]?.status !== PromptStatus.Completed
         )
+
+        items.push({
+          id: folderRootRowId(promptFolder.id),
+          row: {
+            kind: 'folder',
+            folder: promptFolder,
+            parentFolder,
+            indentCount,
+            endsVisibleBranch: isLastSibling && (!isExpanded || childEntries.length === 0),
+            isSubfolder: promptFolder.id !== screenRootFolder.id
+          }
+        })
+
+        if (!isExpanded) {
+          return
+        }
 
         for (const [entryIndex, entry] of childEntries.entries()) {
           const isLastChild = entryIndex === childEntries.length - 1
@@ -863,7 +864,7 @@
     showDropOverHighlight={!props.row.isSubfolder}
     isExpanded={getPromptTreeFolderExpandedState(props.row.folder.id)}
     indentCount={props.row.indentCount}
-    isLastRow={props.row.isLastRow}
+    endsVisibleBranch={props.row.endsVisibleBranch}
     getFolderPromptDroppableOptions={isCompletedMode
       ? undefined
       : () =>

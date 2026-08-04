@@ -29,7 +29,7 @@
     showDropOverHighlight?: boolean
     isExpanded: boolean
     indentCount?: number
-    isLastRow?: boolean
+    endsVisibleBranch?: boolean
     showActions?: boolean
     getFolderPromptDroppableOptions?: () => PromptRowDropOptions
     folderDragOptions?: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
@@ -46,7 +46,7 @@
     showDropOverHighlight = true,
     isExpanded,
     indentCount = 0,
-    isLastRow = false,
+    endsVisibleBranch = false,
     showActions = true,
     getFolderPromptDroppableOptions,
     folderDragOptions,
@@ -170,7 +170,7 @@
     class="sidebarPromptTreeToggleButton"
   >
     {#if indentCount > 0}
-      <PromptTreeGutter {indentCount} {isLastRow} />
+      <PromptTreeGutter {indentCount} isLastRow={endsVisibleBranch} />
     {/if}
     <RotatingChevron
       expanded={isExpanded}
