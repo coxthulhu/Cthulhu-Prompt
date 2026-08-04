@@ -19,6 +19,15 @@ export const promptEditorRowId = (promptId: string): string => `${promptId}-edit
 
 export const promptDividerRowId = (promptId: string): string => `${promptId}-divider`
 
+export const promptFolderDividerRowId = (
+  screenRootFolderId: string,
+  ownerFolderId: string,
+  previousEntryId: string | null
+): string => {
+  if (previousEntryId !== null) return promptDividerRowId(previousEntryId)
+  return ownerFolderId === screenRootFolderId ? 'divider-initial' : `divider:${ownerFolderId}:initial`
+}
+
 export const promptFolderSettingsFindEntityId = (
   promptFolderId: string,
   field: PromptFolderSettingsField

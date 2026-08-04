@@ -112,6 +112,26 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     scrollAnchorMode = next
   }
 
+  const compensateForRowMove = (
+    sourceRowId: string,
+    sourceTrailingRowId: string,
+    destinationDividerRowId: string
+  ): void => {
+    const rows = getRowStates()
+    const sourceRow = rows.find((row) => row.id === sourceRowId)
+    const sourceTrailingRow = rows.find((row) => row.id === sourceTrailingRowId)
+    const destinationDividerRow = rows.find((row) => row.id === destinationDividerRowId)
+    if (!sourceRow || !sourceTrailingRow || !destinationDividerRow) return
+
+    let destinationTop = destinationDividerRow.offset + destinationDividerRow.height
+    if (sourceRow.offset < destinationDividerRow.offset) {
+      destinationTop -= sourceRow.height + sourceTrailingRow.height
+    }
+    applyProgrammaticScrollTop(
+      clampedAnchoredScrollTopPx + destinationTop - sourceRow.offset
+    )
+  }
+
   const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
     rowId: string,
     offsetPx: number,
@@ -233,6 +253,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getScrollShadowActive: () => scrollShadowActive,
     getScrollbarRevealVersion: () => scrollbarRevealVersion,
     scrollToWithinWindowBand,
-    scrollToAndTrackRowCentered
+    scrollToAndTrackRowCentered,
+    compensateForRowMove
   }
 }

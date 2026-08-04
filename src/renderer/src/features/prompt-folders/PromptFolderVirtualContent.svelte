@@ -52,6 +52,7 @@
     PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
     promptDividerRowId,
     promptEditorRowId,
+    promptFolderDividerRowId,
     promptFolderEditorRowId
   } from './promptFolderRowIds'
   import PromptFolderSectionRow from './PromptFolderSectionRow.svelte'
@@ -536,13 +537,14 @@
         }
 
         if (row.kind === 'prompt-divider') {
-          const previousEntryId = row.previousEntryId
-          const id = row.isOwnerRoot
-            ? previousEntryId === null
-              ? 'divider-initial'
-              : promptDividerRowId(previousEntryId)
-            : `divider:${row.ownerFolderId}:${previousEntryId ?? 'initial'}`
-          return { id, row }
+          return {
+            id: promptFolderDividerRowId(
+              screenRootFolderId,
+              row.ownerFolderId,
+              row.previousEntryId
+            ),
+            row
+          }
         }
 
         if (row.kind === 'folder-bottom-cap') {
@@ -641,52 +643,6 @@
       return
     }
     onCenterRowChange(null)
-  }
-
-  const getRootEntryBlockRowIds = (entryId: string): string[] => {
-    const endIndex = virtualItems.findIndex(
-      ({ row }) =>
-        row.kind === 'prompt-divider' && row.isOwnerRoot && row.previousEntryId === entryId
-    )
-    if (endIndex === -1) return []
-
-    let previousRootDividerIndex = endIndex - 1
-    while (previousRootDividerIndex >= 0) {
-      const row = virtualItems[previousRootDividerIndex].row
-      if (row.kind === 'prompt-divider' && row.isOwnerRoot) break
-      previousRootDividerIndex -= 1
-    }
-
-    // A root subfolder block includes its editor, expanded descendants, and trailing divider.
-    return virtualItems.slice(previousRootDividerIndex + 1, endIndex + 1).map(({ id }) => id)
-  }
-
-  const scrollByAdjacentEntryBlockHeight = (direction: 'up' | 'down', promptId: string) => {
-    if (!scrollApi) return
-
-    const rootEntryIds =
-      promptFolderById[screenRootFolderId]?.entries.map((entry) => entry.id) ?? []
-    const promptIndex = rootEntryIds.indexOf(promptId)
-    const adjacentEntryId =
-      direction === 'up' ? rootEntryIds[promptIndex - 1] : rootEntryIds[promptIndex + 1]
-    if (!adjacentEntryId) return
-
-    // Keep the clicked move button anchored while the adjacent root entry crosses it.
-    scrollApi.scrollByRowHeights(getRootEntryBlockRowIds(adjacentEntryId), direction)
-  }
-
-  const handleMovePromptUp = (target: PromptFolderPromptTarget): Promise<boolean> => {
-    if (target.ownerFolderId === screenRootFolderId) {
-      scrollByAdjacentEntryBlockHeight('up', target.promptId)
-    }
-    return onMovePromptUp(target)
-  }
-
-  const handleMovePromptDown = (target: PromptFolderPromptTarget): Promise<boolean> => {
-    if (target.ownerFolderId === screenRootFolderId) {
-      scrollByAdjacentEntryBlockHeight('down', target.promptId)
-    }
-    return onMovePromptDown(target)
   }
 
   const getPromptDividerDropPayload = (
@@ -1085,9 +1041,9 @@
       onStatusChange={isTemplateFolder ? undefined : (status) => {
         onSetPromptStatus({ ownerFolderId: row.ownerFolderId, promptId: row.promptId }, status)
       }}
-      onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : handleMovePromptUp(promptTarget))}
+      onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : onMovePromptUp(promptTarget))}
       onMoveDown={() =>
-        isCompletedMode ? Promise.resolve(false) : handleMovePromptDown(promptTarget)}
+        isCompletedMode ? Promise.resolve(false) : onMovePromptDown(promptTarget)}
       onPromptTreeDrop={(dropPayload) => {
         if (isCompletedMode) return
         return onPromptTreeDrop(promptTarget, dropPayload)

@@ -79,6 +79,7 @@ import type { PromptFolderFindItem, PromptFolderFindMatch } from './find/promptF
 import {
   PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
   promptEditorRowId,
+  promptFolderDividerRowId,
   promptFolderEditorRowId
 } from './promptFolderRowIds'
 import {
@@ -851,7 +852,11 @@ export const createPromptFolderScreenController = ({
     })
   }
 
-  const selectMovedPrompt = (destinationPromptFolderId: string, promptId: string): void => {
+  const selectMovedPrompt = (
+    destinationPromptFolderId: string,
+    promptId: string,
+    shouldRevealContent = true
+  ): void => {
     const row = promptIdToPromptNavigationRow(promptId)
     const destinationRootFolderId = findContainingRootFolderId(destinationPromptFolderId)
 
@@ -861,7 +866,7 @@ export const createPromptFolderScreenController = ({
       row,
       source: 'prompt-move',
       forceRequest: true,
-      contentReveal: { scrollType: 'center' },
+      ...(shouldRevealContent ? { contentReveal: { scrollType: 'center' as const } } : {}),
       treeExpansion: 'owner'
     })
 
@@ -1292,6 +1297,19 @@ export const createPromptFolderScreenController = ({
   ): Promise<boolean> => {
     const move = resolveAdjacentPromptMove(target, direction)
     if (!move) return false
+    scrollApi?.compensateForRowMove(
+      promptEditorRowId(move.promptId),
+      promptFolderDividerRowId(
+        screenRootFolderId,
+        move.sourcePromptFolderId,
+        move.promptId
+      ),
+      promptFolderDividerRowId(
+        screenRootFolderId,
+        move.destinationPromptFolderId,
+        move.previousEntryId
+      )
+    )
     const didMove = await movePromptFromFolder(
       move.sourcePromptFolderId,
       move.promptId,
@@ -1299,7 +1317,7 @@ export const createPromptFolderScreenController = ({
       move.previousEntryId
     )
     if (didMove && move.sourcePromptFolderId !== move.destinationPromptFolderId) {
-      selectMovedPrompt(move.destinationPromptFolderId, move.promptId)
+      selectMovedPrompt(move.destinationPromptFolderId, move.promptId, false)
     }
     return didMove
   }

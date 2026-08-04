@@ -1,4 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { readPromptFolderEntryIds } from '../helpers/PromptDragDropHelpers'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
@@ -7,6 +8,13 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/move-reorder-atomicity'
 const FOLDER_NAME = 'Move Reorder Atomicity'
+const ROOT_ORDER_PATH =
+  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/_FolderInfo/FolderOrder.json`
+const NESTED_WORKSPACE_PATH = '/ws/subfolders-controls'
+const NESTED_ROOT_ORDER_PATH =
+  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/_FolderInfo/FolderOrder.json`
+const NESTED_FOLDER_ORDER_PATH =
+  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Nested/_FolderInfo/FolderOrder.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
 const moveUpSelector = (promptId: string) =>
@@ -78,9 +86,83 @@ const stopFrameRecorder = async (page: any): Promise<FrameSnapshot[]> => {
   return frames
 }
 
+const runMove = async (
+  page: any,
+  testHelpers: any,
+  label: string,
+  targetId: string,
+  direction: 'up' | 'down',
+  waitForMove?: () => Promise<void>
+) => {
+  const buttonSelector =
+    direction === 'down' ? moveDownSelector(targetId) : moveUpSelector(targetId)
+  await testHelpers.scrollVirtualElementIntoView(
+    PROMPT_FOLDER_HOST_SELECTOR,
+    promptEditorSelector(targetId),
+    120
+  )
+  await testHelpers.scrollVirtualElementIntoView(
+    PROMPT_FOLDER_HOST_SELECTOR,
+    buttonSelector,
+    120
+  )
+  // Let scroll persistence and height measurement settle before recording.
+  await page.waitForTimeout(400)
+
+  await expect(page.locator(buttonSelector)).toBeEnabled()
+  const initialTop = await page.locator(promptEditorSelector(targetId)).evaluate(
+    (element: HTMLElement) => element.getBoundingClientRect().top
+  )
+  await startFrameRecorder(page, targetId)
+  await page.locator(buttonSelector).click()
+  if (waitForMove) {
+    await waitForMove()
+  } else {
+    await page.waitForTimeout(600)
+  }
+  // Capture the final authoritative layout before stopping the recorder.
+  await page.waitForTimeout(50)
+  const frames = await stopFrameRecorder(page)
+
+  expect(frames.length, `${label}: recorder captured no frames`).toBeGreaterThan(0)
+
+  for (const [frameIndex, frame] of frames.entries()) {
+    const describeFrame = `${label}: frame ${frameIndex} [${frame.editorIdsByTop.join(', ')}]`
+    expect(frame.movedRowTop, `${describeFrame} unmounted the moved row`).not.toBeNull()
+    expect(
+      Math.abs(frame.movedRowTop! - initialTop),
+      `${describeFrame} shifted the moved row from ${initialTop} to ${frame.movedRowTop}`
+    ).toBeLessThanOrEqual(MOVED_ROW_POSITION_TOLERANCE_PX)
+  }
+}
+
+const expectFolderOrder = async (
+  electronApp: any,
+  orderPath: string,
+  expectedOrder: string[]
+): Promise<void> => {
+  await expect
+    .poll(async () => await readPromptFolderEntryIds(electronApp, orderPath))
+    .toEqual(expectedOrder)
+}
+
+const expectNestedFolderOrders = async (
+  electronApp: any,
+  rootOrder: string[],
+  nestedOrder: string[]
+): Promise<void> => {
+  await expect
+    .poll(async () => ({
+      root: await readPromptFolderEntryIds(electronApp, NESTED_ROOT_ORDER_PATH),
+      nested: await readPromptFolderEntryIds(electronApp, NESTED_FOLDER_ORDER_PATH)
+    }))
+    .toEqual({ root: rootOrder, nested: nestedOrder })
+}
+
 describe('Prompt move reorder atomicity', () => {
   test('keeps the moved prompt mounted and stationary on every frame of a move', async ({
-    testSetup
+    testSetup,
+    electronApp
   }) => {
     await testSetup.setupFilesystem(buildWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
@@ -89,49 +171,194 @@ describe('Prompt move reorder atomicity', () => {
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptFolders(FOLDER_NAME)
 
-    const runMove = async (label: string, targetId: string, direction: 'up' | 'down') => {
-      const buttonSelector =
-        direction === 'down' ? moveDownSelector(targetId) : moveUpSelector(targetId)
-      await testHelpers.scrollVirtualElementIntoView(
-        PROMPT_FOLDER_HOST_SELECTOR,
-        promptEditorSelector(targetId),
-        120
-      )
-      await testHelpers.scrollVirtualElementIntoView(
-        PROMPT_FOLDER_HOST_SELECTOR,
-        buttonSelector,
-        120
-      )
-      // Let scroll persistence and height measurement settle before recording.
-      await mainWindow.waitForTimeout(400)
-
-      await expect(mainWindow.locator(buttonSelector)).toBeEnabled()
-      await startFrameRecorder(mainWindow, targetId)
-      await mainWindow.locator(buttonSelector).click()
-      // Cover the optimistic paint plus the authoritative IPC confirmation.
-      await mainWindow.waitForTimeout(600)
-      const frames = await stopFrameRecorder(mainWindow)
-
-      expect(frames.length, `${label}: recorder captured no frames`).toBeGreaterThan(0)
-      const initialTop = frames[0].movedRowTop
-      expect(initialTop, `${label}: moved row not mounted before the click`).not.toBeNull()
-
-      for (const [frameIndex, frame] of frames.entries()) {
-        const describeFrame = `${label}: frame ${frameIndex} [${frame.editorIdsByTop.join(', ')}]`
-        expect(frame.movedRowTop, `${describeFrame} unmounted the moved row`).not.toBeNull()
-        expect(
-          Math.abs(frame.movedRowTop! - initialTop!),
-          `${describeFrame} shifted the moved row from ${initialTop} to ${frame.movedRowTop}`
-        ).toBeLessThanOrEqual(MOVED_ROW_POSITION_TOLERANCE_PX)
-      }
-    }
-
     // Downward moves exercised the optimistic-order bug; upward moves are the control.
-    await runMove('move atomic-2 down past a 25-line prompt', 'atomic-2', 'down')
-    await runMove('move atomic-2 up past a 25-line prompt', 'atomic-2', 'up')
-    await runMove('move atomic-3 down past a 40-line prompt', 'atomic-3', 'down')
-    await runMove('move atomic-3 up past a 40-line prompt', 'atomic-3', 'up')
-    await runMove('move atomic-4 down past a 10-line prompt', 'atomic-4', 'down')
-    await runMove('move atomic-4 up past a 10-line prompt', 'atomic-4', 'up')
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move atomic-2 down past a 25-line prompt',
+      'atomic-2',
+      'down',
+      () => expectFolderOrder(electronApp, ROOT_ORDER_PATH, [
+        'atomic-1',
+        'atomic-3',
+        'atomic-2',
+        'atomic-4',
+        'atomic-5',
+        'atomic-6'
+      ])
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move atomic-2 up past a 25-line prompt',
+      'atomic-2',
+      'up',
+      () => expectFolderOrder(electronApp, ROOT_ORDER_PATH, [
+        'atomic-1',
+        'atomic-2',
+        'atomic-3',
+        'atomic-4',
+        'atomic-5',
+        'atomic-6'
+      ])
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move atomic-3 down past a 40-line prompt',
+      'atomic-3',
+      'down',
+      () => expectFolderOrder(electronApp, ROOT_ORDER_PATH, [
+        'atomic-1',
+        'atomic-2',
+        'atomic-4',
+        'atomic-3',
+        'atomic-5',
+        'atomic-6'
+      ])
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move atomic-3 up past a 40-line prompt',
+      'atomic-3',
+      'up',
+      () => expectFolderOrder(electronApp, ROOT_ORDER_PATH, [
+        'atomic-1',
+        'atomic-2',
+        'atomic-3',
+        'atomic-4',
+        'atomic-5',
+        'atomic-6'
+      ])
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move atomic-4 down past a 10-line prompt',
+      'atomic-4',
+      'down',
+      () => expectFolderOrder(electronApp, ROOT_ORDER_PATH, [
+        'atomic-1',
+        'atomic-2',
+        'atomic-3',
+        'atomic-5',
+        'atomic-4',
+        'atomic-6'
+      ])
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move atomic-4 up past a 10-line prompt',
+      'atomic-4',
+      'up',
+      () => expectFolderOrder(electronApp, ROOT_ORDER_PATH, [
+        'atomic-1',
+        'atomic-2',
+        'atomic-3',
+        'atomic-4',
+        'atomic-5',
+        'atomic-6'
+      ])
+    )
+  })
+
+  test('keeps nested prompts stationary within and across folder boundaries', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'subfolders-controls' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Controls')
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 160)
+
+    const promptId = 'subfolders-controls-first'
+    const secondPromptId = 'subfolders-controls-second'
+    const [nestedFolderId, siblingFolderId] = await readPromptFolderEntryIds(
+      electronApp,
+      NESTED_ROOT_ORDER_PATH
+    )
+
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move nested prompt up to root',
+      promptId,
+      'up',
+      () =>
+        expectNestedFolderOrders(
+          electronApp,
+          [promptId, nestedFolderId, siblingFolderId],
+          [secondPromptId]
+        )
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move root prompt down into subfolder',
+      promptId,
+      'down',
+      () =>
+        expectNestedFolderOrders(
+          electronApp,
+          [nestedFolderId, siblingFolderId],
+          [promptId, secondPromptId]
+        )
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move nested prompt down within subfolder',
+      promptId,
+      'down',
+      () =>
+        expectNestedFolderOrders(
+          electronApp,
+          [nestedFolderId, siblingFolderId],
+          [secondPromptId, promptId]
+        )
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move nested prompt down to root',
+      promptId,
+      'down',
+      () =>
+        expectNestedFolderOrders(
+          electronApp,
+          [nestedFolderId, promptId, siblingFolderId],
+          [secondPromptId]
+        )
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move root prompt up into subfolder',
+      promptId,
+      'up',
+      () =>
+        expectNestedFolderOrders(
+          electronApp,
+          [nestedFolderId, siblingFolderId],
+          [secondPromptId, promptId]
+        )
+    )
+    await runMove(
+      mainWindow,
+      testHelpers,
+      'move nested prompt up within subfolder',
+      promptId,
+      'up',
+      () =>
+        expectNestedFolderOrders(
+          electronApp,
+          [nestedFolderId, siblingFolderId],
+          [promptId, secondPromptId]
+        )
+    )
   })
 })
