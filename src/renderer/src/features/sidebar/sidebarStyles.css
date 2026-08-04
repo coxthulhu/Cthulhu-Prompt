@@ -169,7 +169,7 @@
 .sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeToggleButton,
 .sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeToggleButton,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeToggleButton {
-  padding-right: 86px;
+  padding-right: 56px;
 }
 
 .sidebarPromptTreeActionButton {

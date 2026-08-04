@@ -59,7 +59,6 @@ const SUBFOLDERS_NESTED_FOLDER_ID = createDeterministicId(
 const MAIN_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Main"]'
 const NESTED_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Nested"]'
 const NESTED_FOLDER_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Nested"]'
-const NESTED_FOLDER_OPTIONS_BUTTON = '[data-testid="prompt-tree-folder-options-button-Nested"]'
 const NESTED_FOLDER_SETTINGS_MENU_ITEM =
   '[data-testid="prompt-tree-folder-settings-menu-item-Nested"]'
 const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
@@ -404,8 +403,35 @@ describe('Prompt folder prompt tree', () => {
 
     await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, NESTED_FOLDER_EDITOR)
     await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
-    await expect(mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON)).toBeVisible()
-    await mainWindow.locator(NESTED_FOLDER_OPTIONS_BUTTON).click()
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-tree-folder-options-button-"]')
+    ).toHaveCount(0)
+    // Captures an ordinary point inside the row instead of either hover action.
+    const nestedFolderToggleBox = await mainWindow.locator(NESTED_FOLDER_TOGGLE).boundingBox()
+    expect(nestedFolderToggleBox).not.toBeNull()
+    // Anchors the expected popup position to the exact right-click coordinates.
+    const rowContextMenuPoint = {
+      x: nestedFolderToggleBox!.x + nestedFolderToggleBox!.width / 2,
+      y: nestedFolderToggleBox!.y + nestedFolderToggleBox!.height / 2
+    }
+    await mainWindow.mouse.click(rowContextMenuPoint.x, rowContextMenuPoint.y, { button: 'right' })
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    // Reads the rendered popup geometry to verify cursor-relative placement.
+    const rowContextMenuBox = await mainWindow
+      .locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)
+      .locator('xpath=ancestor::*[@role="menu"]')
+      .boundingBox()
+    expect(rowContextMenuBox).not.toBeNull()
+    expect(Math.abs(rowContextMenuBox!.x - rowContextMenuPoint.x)).toBeLessThanOrEqual(2)
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).focus()
+    await mainWindow.keyboard.press('Enter')
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toHaveCount(0)
+    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await mainWindow.keyboard.press('Escape')
+    await mainWindow.locator(NESTED_FOLDER_TOGGLE).focus()
+    await mainWindow.keyboard.press('Shift+F10')
+    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toHaveCount(0)
+    await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click({ button: 'right' })
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
@@ -820,7 +846,7 @@ describe('Prompt folder prompt tree', () => {
     const folderToggleBox = await folderToggle.boundingBox()
     const folderActionsBox = await folderActions.boundingBox()
 
-    expect(Math.abs(restingLabelWidth - hoveredLabelWidth - 74)).toBeLessThanOrEqual(1)
+    expect(Math.abs(restingLabelWidth - hoveredLabelWidth - 44)).toBeLessThanOrEqual(1)
     expect(folderToggleBox).not.toBeNull()
     expect(folderActionsBox).not.toBeNull()
     const folderActionsRightInset =

@@ -858,7 +858,6 @@
   <PromptTreeFolderRow
     folder={props.row.folder}
     isActive={isSettingsActive}
-    {isSettingsActive}
     isDragging={isPromptFolderRowDragging(props.row.folder.id)}
     {isPromptDragActive}
     showDropOverHighlight={!props.row.isSubfolder}

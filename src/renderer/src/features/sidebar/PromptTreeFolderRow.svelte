@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, Folder, MoreHorizontal, Settings } from 'lucide-svelte'
+  import { ArrowRight, Folder, Settings } from 'lucide-svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -16,7 +16,6 @@
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import {
     folderOpenTestId,
-    folderOptionsTestId,
     folderSettingsTestId,
     folderToggleTestId
   } from './promptTreeTestIds'
@@ -25,7 +24,6 @@
   type Props = {
     folder: PromptFolder
     isActive: boolean
-    isSettingsActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
     showDropOverHighlight?: boolean
@@ -43,7 +41,6 @@
   let {
     folder,
     isActive,
-    isSettingsActive,
     isDragging,
     isPromptDragActive,
     showDropOverHighlight = true,
@@ -79,6 +76,20 @@
   const handlePromptFolderOpen = (event: MouseEvent) => {
     onPromptFolderOpen(folder.id)
     blurButtonAfterMouseClick(event)
+  }
+
+  // Replaces the native browser context menu with this folder's options at the cursor.
+  const handleFolderContextMenu = (
+    event: MouseEvent,
+    openAt: (event: MouseEvent) => void
+  ): void => {
+    event.preventDefault()
+
+    if (event.button !== 2) {
+      return
+    }
+
+    openAt(event)
   }
 
   const dropdownItems = $derived.by((): DropdownPopupItem[] => [
@@ -148,6 +159,47 @@
   }
 </script>
 
+{#snippet folderRowChildren()}
+  <button
+    use:optionalFolderDraggable={folderDragOptions}
+    type="button"
+    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.displayName}`}
+    aria-expanded={isExpanded}
+    onclick={handleFolderToggleClick}
+    data-testid={folderToggleTestId(folder)}
+    class="sidebarPromptTreeToggleButton"
+  >
+    {#if indentCount > 0}
+      <PromptTreeGutter {indentCount} {isLastRow} />
+    {/if}
+    <RotatingChevron
+      expanded={isExpanded}
+      size={24}
+      iconSize={20}
+      class="sidebarPromptTreeChevronWrap"
+    />
+    <Folder class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
+    <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
+  </button>
+
+  {#if showActions}
+    <div class="sidebarPromptTreeActionSlot">
+      <div class="sidebarPromptTreeFolderActions">
+        <IconButton
+          icon={ArrowRight}
+          label={`Open ${folder.displayName}`}
+          size="compact"
+          borderless
+          onclick={handlePromptFolderOpen}
+          testId={folderOpenTestId(folder)}
+          active={isActive}
+          class="sidebarPromptTreeActionButton"
+        />
+      </div>
+    </div>
+  {/if}
+{/snippet}
+
 {#snippet folderRowContent(isOver: boolean)}
   {@const rowState = isDragging
     ? 'dragging'
@@ -160,70 +212,30 @@
         : isPromptDragActive
           ? 'drag-idle'
           : 'idle'}
-  <div class="sidebarPromptTreeRow group" data-row-state={rowState}>
-    <button
-      use:optionalFolderDraggable={folderDragOptions}
-      type="button"
-      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.displayName}`}
-      aria-expanded={isExpanded}
-      onclick={handleFolderToggleClick}
-      data-testid={folderToggleTestId(folder)}
-      class="sidebarPromptTreeToggleButton"
+  {#if showActions}
+    <DropdownPopupSimple
+      label={`Folder options for ${folder.displayName}`}
+      items={dropdownItems}
+      menuWidth="196px"
+      onselect={handleFolderOptionsSelect}
     >
-      {#if indentCount > 0}
-        <PromptTreeGutter {indentCount} {isLastRow} />
-      {/if}
-      <RotatingChevron
-        expanded={isExpanded}
-        size={24}
-        iconSize={20}
-        class="sidebarPromptTreeChevronWrap"
-      />
-      <Folder class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
-      <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
-    </button>
-
-    {#if showActions}
-      <div class="sidebarPromptTreeActionSlot">
-        <div class="sidebarPromptTreeFolderActions">
-        <DropdownPopupSimple
-          label={`Folder options for ${folder.displayName}`}
-          items={dropdownItems}
-          menuWidth="196px"
-          onselect={handleFolderOptionsSelect}
+      {#snippet trigger(dropdown)}
+        <div
+          use:dropdown.triggerAction
+          role="group"
+          class="sidebarPromptTreeRow group"
+          data-row-state={rowState}
+          oncontextmenu={(event) => handleFolderContextMenu(event, dropdown.openAt)}
         >
-          {#snippet trigger(dropdown)}
-            <IconButton
-              icon={MoreHorizontal}
-              label={`Folder options for ${folder.displayName}`}
-              title="Folder Options"
-              size="compact"
-              borderless
-              active={dropdown.open || isSettingsActive}
-              ariaHaspopup={dropdown.ariaHaspopup}
-              ariaExpanded={dropdown.ariaExpanded}
-              ariaCurrent={isSettingsActive ? 'true' : undefined}
-              buttonAction={dropdown.triggerAction}
-              onclick={dropdown.toggle}
-              testId={folderOptionsTestId(folder)}
-              class="sidebarPromptTreeActionButton"
-            />
-          {/snippet}
-        </DropdownPopupSimple>
-        <IconButton
-          icon={ArrowRight}
-          label={`Open ${folder.displayName}`}
-          size="compact"
-          borderless
-          onclick={handlePromptFolderOpen}
-          testId={folderOpenTestId(folder)}
-          active={isActive}
-          class="sidebarPromptTreeActionButton"
-        />
+          {@render folderRowChildren()}
         </div>
-      </div>
-    {/if}
-  </div>
+      {/snippet}
+    </DropdownPopupSimple>
+  {:else}
+    <div class="sidebarPromptTreeRow group" data-row-state={rowState}>
+      {@render folderRowChildren()}
+    </div>
+  {/if}
 {/snippet}
 
 {#if getFolderPromptDroppableOptions}

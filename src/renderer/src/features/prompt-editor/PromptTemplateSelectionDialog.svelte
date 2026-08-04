@@ -224,7 +224,6 @@
         <PromptTreeFolderRow
           folder={props.row.folder}
           isActive={false}
-          isSettingsActive={false}
           isDragging={false}
           isPromptDragActive={false}
           isExpanded={getFolderExpanded(props.row.folder.id)}

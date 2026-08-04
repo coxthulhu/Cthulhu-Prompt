@@ -1,3 +1,8 @@
+<script module lang="ts">
+  // Holds the closer for the single dropdown currently open across the renderer.
+  let activeDropdownCloser: (() => void) | null = null
+</script>
+
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
@@ -23,6 +28,8 @@
     triggerAction: DropdownPopupTriggerAction
     open: boolean
     toggle: (event?: MouseEvent) => void
+    /** Opens or repositions the popup at a mouse event's cursor coordinates. */
+    openAt: (event: MouseEvent) => void
     ariaHaspopup: 'menu'
     ariaExpanded: boolean
   }
@@ -133,9 +140,15 @@
     open = false
     openedByDrag = false
     menuAnchor = null
+
+    if (activeDropdownCloser === closeMenu) {
+      activeDropdownCloser = null
+    }
   }
 
   const openMenu = (nextMenuAnchor: MenuAnchor, nextOpenedByDrag: boolean) => {
+    activeDropdownCloser?.()
+    activeDropdownCloser = closeMenu
     menuAnchor = nextMenuAnchor
     measuredMenuSize = { width: fallbackMenuWidth, height: fallbackMenuHeight }
     openedByDrag = nextOpenedByDrag
@@ -170,6 +183,11 @@
     openMenu(nextMenuAnchor, false)
   }
 
+  // Opens or repositions the popup from an explicit mouse interaction.
+  const openMenuAt = (event: MouseEvent): void => {
+    openMenu({ x: event.clientX, y: event.clientY }, false)
+  }
+
   const openMenuForDrag = () => {
     if (open || !anchorElement) {
       return
@@ -200,6 +218,7 @@
     triggerAction,
     open,
     toggle: toggleMenu,
+    openAt: openMenuAt,
     ariaHaspopup: 'menu' as const,
     ariaExpanded: open
   })
