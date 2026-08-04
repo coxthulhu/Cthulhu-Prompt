@@ -551,6 +551,16 @@
     }
   }
 
+  const reportSectionTextChange = (entityId: string, sectionKey: string, text: string) => {
+    if (!isFindOpen || trimmedQuery.length === 0) return
+    reportSectionMatchCount(
+      entityId,
+      sectionKey,
+      trimmedQuery,
+      searchModel.countMatchesInText(text, trimmedQuery)
+    )
+  }
+
   const registerRow = (handle: PromptFolderFindRowHandle) => {
     rowHandlesByEntityId.set(handle.entityId, handle)
     return () => {
@@ -568,6 +578,7 @@
     focusRequests,
     reportSelection: recordSelectionAnchor,
     reportHydration,
+    reportSectionTextChange,
     reportSectionMatchCount,
     registerRow
   })

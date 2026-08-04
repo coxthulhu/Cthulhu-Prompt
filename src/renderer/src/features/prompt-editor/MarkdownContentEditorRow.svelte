@@ -301,6 +301,11 @@
     )
   }
 
+  const handleTitleChange = (title: string) => {
+    promptData.setTitle(title)
+    findContext?.reportSectionTextChange(promptId, PROMPT_FOLDER_FIND_TITLE_SECTION_KEY, title)
+  }
+
   const handleEditorLifecycle = (
     editor: monaco.editor.IStandaloneCodeEditor,
     isActive: boolean
@@ -547,7 +552,7 @@
     {completedAt}
     fallbackTitle={promptData.fallbackTitle}
     {tokenCount}
-    onTitleChange={promptData.setTitle}
+    onTitleChange={handleTitleChange}
     onSelectionChange={reportTitleSelection}
     onTitleEditorFocus={focusEditorFromTitle}
     bind:inputRef={titleInputRef}

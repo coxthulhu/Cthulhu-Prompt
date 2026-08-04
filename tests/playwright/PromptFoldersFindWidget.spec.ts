@@ -26,6 +26,7 @@ const LOOP_MATCH_PROMPT_IDS = Array.from(
 const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 const PREFIX_SUFFIX_FIND_QUERY = 'cthulhu-prefix-suffix-find-marker'
+const LIVE_COUNT_QUERY = 'cthulhu-live-find-count-marker'
 
 const getMonacoSelectedText = async (
   mainWindow: any,
@@ -326,6 +327,53 @@ describe('Prompt folder find dialog', () => {
     await mainWindow.locator(FIND_INPUT).fill('best practices')
 
     await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toBeVisible()
+  })
+
+  test('updates the match count while editing Monaco content and a prompt title', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-live-counts'
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Live Counts',
+          displayName: 'Live Counts',
+          promptFolderId: 'find-live-counts-folder',
+          prompts: [
+            {
+              id: 'find-live-counts-prompt',
+              title: `Existing ${LIVE_COUNT_QUERY}`,
+              promptText: ''
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Live Counts')
+    const editorSelector = promptEditorSelector('find-live-counts-prompt')
+    const title = mainWindow.locator(`${editorSelector} ${PROMPT_TITLE_SELECTOR}`)
+    await mainWindow.waitForSelector(editorSelector, { state: 'attached' })
+
+    await mainWindow.keyboard.press('Control+F')
+    await mainWindow.locator(FIND_INPUT).fill(LIVE_COUNT_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.type(LIVE_COUNT_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 2')
+
+    await title.click()
+    await title.press('End')
+    await title.pressSequentially(` ${LIVE_COUNT_QUERY}`)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
   })
 
   test('excludes root folder prefix and suffix from matches', async ({ testSetup }) => {
