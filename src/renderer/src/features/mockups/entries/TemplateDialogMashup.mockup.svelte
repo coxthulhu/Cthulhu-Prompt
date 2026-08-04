@@ -4,6 +4,7 @@
   import { SvelteSet } from 'svelte/reactivity'
   import {
     ArrowRight,
+    Ban,
     Check,
     CheckCheck,
     CheckCircle2,
@@ -548,7 +549,6 @@
       </span>
       <Folder size={16} aria-hidden="true" />
       <span>{folder.title}</span>
-      <span class="base-template-folder-count">{folder.templates.length}</span>
     </button>
   </div>
 
@@ -972,7 +972,7 @@
               : selectedTemplateIds.size === 0}
             onclick={() => selectTemplate(null)}
           >
-            <span class="base-no-template-icon"><X size={16} aria-hidden="true" /></span>
+            <span class="base-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
             <span class="base-no-template-copy">
               <strong>No Template</strong>
               <small>Use the prompt exactly as written</small>
@@ -2098,9 +2098,7 @@
 
   .base-no-template-icon {
     align-items: center;
-    background: var(--ui-neutral-normal-surface);
-    border-radius: 50%;
-    color: var(--ui-muted-icon-glyph);
+    color: var(--ui-normal-text);
     display: flex;
     height: 28px;
     justify-content: center;
@@ -2139,8 +2137,11 @@
   }
 
   .base-template-tree-label span:last-child:not(:first-child) {
-    color: var(--ui-accent-normal-text);
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    font-weight: 400;
     letter-spacing: 0;
+    line-height: 16px;
     text-transform: none;
   }
 
@@ -2200,18 +2201,19 @@
   .base-template-option-button,
   .base-template-folder-button {
     border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
   }
 
   .base-template-root-option:hover,
   .base-template-option-button:hover,
   .base-template-folder-button:hover {
-    background: var(--ui-neutral-normal-surface);
+    background: var(--ui-neutral-subtle-action-hover-fill);
     color: var(--ui-normal-text);
   }
 
   .base-template-root-option.active,
   .base-template-option-button.active {
-    background: var(--ui-neutral-selection-surface);
+    background: var(--ui-accent-action-fill);
     color: var(--ui-normal-text);
   }
 
@@ -2221,7 +2223,7 @@
 
   .base-template-root-option.active:hover,
   .base-template-option-button.active:hover {
-    background: var(--ui-neutral-selection-surface);
+    background: var(--ui-accent-action-hover-fill);
   }
 
   .base-template-option-button {
@@ -2276,7 +2278,7 @@
 
   .base-template-option-button.active .base-template-selection-mark,
   .base-template-root-option.active .base-template-selection-mark {
-    background: var(--ui-accent-action-fill);
+    background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-normal-border);
     color: var(--ui-normal-text);
   }
@@ -2290,23 +2292,13 @@
     align-items: center;
     display: grid;
     gap: 8px;
-    color: var(--ui-secondary-text);
-    grid-template-columns: 24px 16px minmax(0, 1fr) auto;
+    grid-template-columns: 24px 18px minmax(0, 1fr);
     padding: 0 12px 0 calc(9px + 12px * var(--base-template-indent-count, 0));
     text-align: left;
   }
 
-  .base-template-folder-count {
-    align-items: center;
-    background: var(--ui-neutral-normal-surface);
-    border-radius: 999px;
-    color: var(--ui-muted-text);
-    display: inline-flex;
-    font-size: 10px;
-    height: 18px;
-    justify-content: center;
-    min-width: 18px;
-    padding: 0 5px;
+  .base-template-folder-button > :global(svg) {
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .base-template-chevron {
