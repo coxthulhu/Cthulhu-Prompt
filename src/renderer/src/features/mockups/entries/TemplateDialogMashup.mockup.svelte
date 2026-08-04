@@ -183,6 +183,10 @@
     }
   ]
 
+  const getTemplateCount = (folder: MockTemplateFolder): number =>
+    folder.templates.length +
+    folder.children.reduce((count, child) => count + getTemplateCount(child), 0)
+
   const collapsedTemplateFolderIds = new SvelteSet<string>()
   const selectedTemplateIds = new SvelteSet<string>()
   let templateDialogPrompt = $state<MockPrompt | null>(null)
@@ -984,7 +988,7 @@
         </div>
 
         <div class="base-template-tree-label">
-          <span>Template folders</span>
+          <span>Template Library</span>
           {#if templateDialogMode === 'select'}
             <span>{selectedTemplateIds.size} selected</span>
           {/if}
@@ -992,13 +996,16 @@
 
         <div class="base-template-tree" data-testid="base-mockup-template-tree">
           {#each templateFolders as rootFolder (rootFolder.id)}
+            {@const templateCount = getTemplateCount(rootFolder)}
             <section class="base-template-root-group">
               <div class="base-template-root-heading">
                 <span class="base-template-root-folder-icon">
                   <FolderOpen size={18} aria-hidden="true" />
                 </span>
-                <span>{rootFolder.title}</span>
-                <span class="base-template-root-badge">Base folder</span>
+                <div class="base-template-root-copy">
+                  <strong>{rootFolder.title}</strong>
+                  <span>{templateCount} {templateCount === 1 ? 'template' : 'templates'}</span>
+                </div>
               </div>
               <div class="base-template-root-contents">
                 {#each rootFolder.templates as template (template.id)}
@@ -2125,15 +2132,17 @@
   }
 
   .base-template-tree-label {
-    align-items: center;
-    color: var(--ui-muted-text);
+    align-items: flex-end;
     display: flex;
-    font-size: 11px;
-    font-weight: 600;
     justify-content: space-between;
-    letter-spacing: 0.055em;
     padding: 0 3px 8px;
-    text-transform: uppercase;
+  }
+
+  .base-template-tree-label > span:first-child {
+    color: var(--ui-normal-text);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
   }
 
   .base-template-tree-label span:last-child:not(:first-child) {
@@ -2142,7 +2151,6 @@
     font-weight: 400;
     letter-spacing: 0;
     line-height: 16px;
-    text-transform: none;
   }
 
   .base-template-root-group {
@@ -2158,8 +2166,8 @@
     color: var(--ui-normal-text);
     cursor: default;
     gap: 9px;
-    height: 40px;
-    padding: 0 12px;
+    height: auto;
+    padding: 9px 12px;
   }
 
   .base-template-root-folder-icon {
@@ -2168,21 +2176,29 @@
     display: flex;
   }
 
-  .base-template-root-heading > span:nth-child(2) {
+  .base-template-root-copy {
+    display: grid;
     flex: 1 1 auto;
-    font-size: 13px;
-    font-weight: 650;
+    gap: 1px;
+    min-width: 0;
   }
 
-  .base-template-root-badge {
-    border: 1px solid var(--ui-neutral-muted-border);
-    border-radius: 999px;
+  .base-template-root-copy strong {
+    color: var(--ui-normal-text);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .base-template-root-copy span {
     color: var(--ui-muted-text);
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 18px;
-    padding: 0 8px;
-    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 16px;
   }
 
   .base-template-root-contents {
