@@ -43,10 +43,10 @@
       <div class="prompt-folder-root-eyebrow">
         {#if isTemplateFolder}
           <Layers size={14} aria-hidden="true" />
-          <span>Prompt template folder</span>
+          <span>Prompt Template Folder</span>
         {:else}
           <Folder size={14} aria-hidden="true" />
-          <span>Prompt folder</span>
+          <span>Prompt Folder</span>
         {/if}
       </div>
       <div class="prompt-folder-root-title-line">
