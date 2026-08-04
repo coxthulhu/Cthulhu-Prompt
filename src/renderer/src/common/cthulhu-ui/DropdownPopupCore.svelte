@@ -65,6 +65,7 @@
   const fallbackMenuWidth = 236
   const fallbackMenuHeight = 336
   const firstItemCenterOffset = 25
+  const cursorContextMenuGap = 4
   const belowTriggerGap = 4
   const bottomGap = 8
   const viewportMargin = 16
@@ -185,7 +186,7 @@
 
   // Opens or repositions the popup from an explicit mouse interaction.
   const openMenuAt = (event: MouseEvent): void => {
-    openMenu({ x: event.clientX, y: event.clientY }, false)
+    openMenu({ x: event.clientX + cursorContextMenuGap, y: event.clientY }, false)
   }
 
   const openMenuForDrag = () => {

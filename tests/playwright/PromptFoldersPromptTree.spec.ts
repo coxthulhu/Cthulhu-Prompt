@@ -409,11 +409,12 @@ describe('Prompt folder prompt tree', () => {
     // Captures an ordinary point inside the row instead of either hover action.
     const nestedFolderToggleBox = await mainWindow.locator(NESTED_FOLDER_TOGGLE).boundingBox()
     expect(nestedFolderToggleBox).not.toBeNull()
-    // Anchors the expected popup position to the exact right-click coordinates.
+    // Anchors the expected popup position to the right-click coordinates and cursor gap.
     const rowContextMenuPoint = {
       x: nestedFolderToggleBox!.x + nestedFolderToggleBox!.width / 2,
       y: nestedFolderToggleBox!.y + nestedFolderToggleBox!.height / 2
     }
+    const contextMenuCursorGap = 4
     await mainWindow.mouse.click(rowContextMenuPoint.x, rowContextMenuPoint.y, { button: 'right' })
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     // Reads the rendered popup geometry to verify cursor-relative placement.
@@ -422,7 +423,9 @@ describe('Prompt folder prompt tree', () => {
       .locator('xpath=ancestor::*[@role="menu"]')
       .boundingBox()
     expect(rowContextMenuBox).not.toBeNull()
-    expect(Math.abs(rowContextMenuBox!.x - rowContextMenuPoint.x)).toBeLessThanOrEqual(2)
+    expect(
+      Math.abs(rowContextMenuBox!.x - rowContextMenuPoint.x - contextMenuCursorGap)
+    ).toBeLessThanOrEqual(2)
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).focus()
     await mainWindow.keyboard.press('Enter')
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toHaveCount(0)
