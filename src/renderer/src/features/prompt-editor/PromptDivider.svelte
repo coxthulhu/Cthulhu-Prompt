@@ -61,7 +61,7 @@
         </div>
         <Separator class="!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]" />
       {:else}
-        <!-- The full-height line buttons make the complete separator area clickable. -->
+        <!-- The centered line buttons limit separator clicks without moving the visible lines. -->
         <button
           class="promptDividerSeparatorButton"
           type="button"
@@ -168,7 +168,7 @@
     border: 0;
     cursor: pointer;
     display: flex;
-    height: 100%;
+    height: 12px;
     padding: 0 9px;
     width: 100%;
   }
@@ -229,8 +229,15 @@
     color: var(--ui-accent-normal-text);
   }
 
-  .promptDividerRow:hover .promptDividerSeparatorButton :global(.cthulhuUiSeparator),
-  .promptDividerRow:focus-within .promptDividerSeparatorButton :global(.cthulhuUiSeparator) {
+  .promptDividerContent:has(.promptDividerSeparatorButton:hover)
+    .promptDividerSeparatorButton
+    :global(.cthulhuUiSeparator),
+  .promptDividerRow:has(
+      .promptDividerSeparatorButton:focus-visible,
+      .promptDividerActionButton:focus-visible
+    )
+    .promptDividerSeparatorButton
+    :global(.cthulhuUiSeparator) {
     background-color: var(--ui-accent-normal-border);
   }
 

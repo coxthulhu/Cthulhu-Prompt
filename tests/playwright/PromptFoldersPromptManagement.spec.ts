@@ -759,7 +759,7 @@ describe('Prompt folder prompt management', () => {
     expect(editorCenter).toBeGreaterThan(hostCenter + MINIMAL_SCROLL_POSITION_TOLERANCE_PX)
   })
 
-  test('adds prompts from either full-height divider separator', async ({ testSetup }) => {
+  test('adds prompts from either centered divider separator', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -866,11 +866,14 @@ describe('Prompt folder prompt management', () => {
     const separatorHeights = await dividerSeparators.evaluateAll((separators) =>
       separators.map((separator) => separator.getBoundingClientRect().height)
     )
-    const separatorColorsBefore = await dividerRow
-      .locator('.cthulhuUiSeparator')
-      .evaluateAll((separators) =>
-        separators.map((separator) => getComputedStyle(separator).backgroundColor)
-      )
+    // Read both separator colors for hover and keyboard-focus assertions.
+    const readSeparatorColors = async () =>
+      await dividerRow
+        .locator('.cthulhuUiSeparator')
+        .evaluateAll((separators) =>
+          separators.map((separator) => getComputedStyle(separator).backgroundColor)
+        )
+    const separatorColorsBefore = await readSeparatorColors()
 
     await expect(dividerActions).toHaveCSS('opacity', '0')
     await expect(dividerActions).toHaveCSS('transition-property', 'opacity')
@@ -886,9 +889,24 @@ describe('Prompt folder prompt management', () => {
     expect(dividerButtonBoxBefore!.height).toBe(28)
     expect(dividerButtonIconBox!.height).toBe(13)
     expect(dividerRowBox!.height).toBe(28)
-    expect(separatorHeights).toEqual([28, 28])
+    expect(separatorHeights).toEqual([12, 12])
     const dividerButtonCenter = dividerButtonBoxBefore!.y + dividerButtonBoxBefore!.height / 2
     const dividerRowCenter = dividerRowBox!.y + dividerRowBox!.height / 2
+    // Confirm the smaller separator hitboxes remain centered within the unchanged row.
+    const separatorCenterOffsets = await dividerSeparators.evaluateAll(
+      (separators, rowCenter) =>
+        separators.map((separator) => {
+          // Read each hitbox once so its center uses one geometry snapshot.
+          const bounds = separator.getBoundingClientRect()
+          return Math.abs(bounds.y + bounds.height / 2 - rowCenter)
+        }),
+      dividerRowCenter
+    )
+    expect(
+      separatorCenterOffsets.every(
+        (offset) => offset <= MOVE_BUTTON_POSITION_TOLERANCE_PX
+      )
+    ).toBe(true)
     expect(Math.abs(dividerButtonCenter - dividerRowCenter)).toBeLessThanOrEqual(
       MOVE_BUTTON_POSITION_TOLERANCE_PX
     )
@@ -897,13 +915,9 @@ describe('Prompt folder prompt management', () => {
     expect(Math.abs(dividerActionsCenter - dividerRowHorizontalCenter)).toBeLessThanOrEqual(
       MOVE_BUTTON_POSITION_TOLERANCE_PX
     )
-    await dividerRow.hover()
+    await dividerButton.hover()
     await expect(dividerActions).toHaveCSS('opacity', '1')
-    const separatorColorsAfter = await dividerRow
-      .locator('.cthulhuUiSeparator')
-      .evaluateAll((separators) =>
-        separators.map((separator) => getComputedStyle(separator).backgroundColor)
-      )
+    await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
     const accentSeparatorColor = await dividerRow.evaluate(() => {
       const reference = document.createElement('span')
       reference.style.backgroundColor = 'var(--ui-accent-normal-border)'
@@ -912,8 +926,15 @@ describe('Prompt folder prompt management', () => {
       reference.remove()
       return color
     })
-    expect(separatorColorsAfter[0]).toBe(separatorColorsAfter[1])
-    expect(separatorColorsAfter[0]).toBe(accentSeparatorColor)
+
+    await dividerSeparators.first().hover()
+    await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
+
+    await dividerRow.hover({ position: { x: 2, y: 2 } })
+    await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
+
+    await dividerSeparators.last().hover()
+    await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
     expect(accentSeparatorColor).not.toBe(separatorColorsBefore[0])
 
     const dividerButtonBoxAfter = await dividerButton.boundingBox()
@@ -925,8 +946,15 @@ describe('Prompt folder prompt management', () => {
       MOVE_BUTTON_POSITION_TOLERANCE_PX
     )
     await mainWindow.mouse.move(0, 0)
+    await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
     await dividerButton.focus()
     await expect(dividerActions).toHaveCSS('opacity', '1')
+    await mainWindow.keyboard.press('Tab')
+    await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
+    await mainWindow.keyboard.press('Shift+Tab')
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect(dividerSeparators.first()).toBeFocused()
+    await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
   })
 
   test('reorders prompts with move buttons', async ({ testSetup }) => {
