@@ -197,6 +197,7 @@
             label="Find in Folder (Control + F)"
             title="Find in Folder (Control + F)"
             size="compact"
+            borderless
             testId="prompt-folder-find-button"
             onclick={findControls.toggleFindDialog}
           />

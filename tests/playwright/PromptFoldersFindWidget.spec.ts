@@ -305,6 +305,7 @@ describe('Prompt folder find dialog', () => {
 
     await expect(findButton).toBeVisible()
     await expect(findButton).toHaveAttribute('title', 'Find in Folder (Control + F)')
+    await expect(findButton).toHaveCSS('border-top-width', '0px')
 
     await findButton.click()
     await expect(findInput).toBeVisible()
