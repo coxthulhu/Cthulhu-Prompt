@@ -284,7 +284,7 @@ export function startupNormally(): void {
   // Some APIs can only be used after this event occurs.
   app.whenReady().then(async () => {
     // Set app user model id for windows
-    electronApp.setAppUserModelId('com.electron.app')
+    electronApp.setAppUserModelId('com.cthulhuprompt')
 
     // Install DevTools and ensure they are active without reload (dev only)
     if (is.dev) {

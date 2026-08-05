@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.cthulhuprompt
 productName: Cthulhu Prompt
 directories:
   buildResources: build

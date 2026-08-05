@@ -1,11 +1,11 @@
 {
   "name": "cthulhuprompt",
-  "productName": "CthulhuPrompt",
+  "productName": "Cthulhu Prompt",
   "version": "0.0.30",
   "description": "Cthulhu Prompt",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "coxthulhu",
+  "homepage": "https://github.com/coxthulhu/Cthulhu-Prompt",
   "scripts": {
     "format": "prettier --plugin prettier-plugin-svelte --write .",
     "lint": "eslint --cache .",
