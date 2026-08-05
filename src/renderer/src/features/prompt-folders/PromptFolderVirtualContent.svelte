@@ -1078,6 +1078,7 @@
 <PromptTemplateSelectionDialog
   bind:open={isTemplateSelectionDialogOpen}
   {workspaceId}
+  mode={templateSelectionMode}
   title={templateSelectionMode === 'select-and-copy'
     ? 'Select Template and Copy'
     : 'Select Template'}

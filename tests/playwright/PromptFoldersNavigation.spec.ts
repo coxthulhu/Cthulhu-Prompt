@@ -156,6 +156,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Rename Prompt Template Folder"]'
     )
     await expect(renameTemplateFolderDialog).toBeVisible()
+    await expect(
+      renameTemplateFolderDialog.locator('[data-testid="dialog-header-icon"]')
+    ).toBeVisible()
+    await expect(
+      renameTemplateFolderDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveText('Choose a new name for this prompt template folder.')
     await expect(renameTemplateFolderDialog.getByLabel('Prompt Template Folder Name')).toBeVisible()
     await renameTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
 
@@ -164,6 +170,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Delete Prompt Template Folder"]'
     )
     await expect(deleteTemplateFolderDialog).toBeVisible()
+    await expect(
+      deleteTemplateFolderDialog.locator('[data-testid="dialog-header-icon"]')
+    ).toBeVisible()
+    await expect(
+      deleteTemplateFolderDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveCount(0)
     await expect(
       deleteTemplateFolderDialog.getByRole('button', { name: 'Delete Template Folder' })
     ).toBeVisible()
@@ -174,6 +186,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Create Prompt Template Subfolder"]'
     )
     await expect(createTemplateSubfolderDialog).toBeVisible()
+    await expect(
+      createTemplateSubfolderDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveText('Add a new subfolder to this prompt template folder.')
     await expect(
       createTemplateSubfolderDialog.getByLabel('Prompt Template Folder Name')
     ).toBeVisible()
@@ -462,6 +477,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Create Prompt Folder"]'
     )
     await expect(createPromptFolderDialog).toBeVisible()
+    await expect(
+      createPromptFolderDialog.locator('[data-testid="dialog-header-icon"]')
+    ).toBeVisible()
+    await expect(
+      createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveText('Choose the folder type and name for the new folder.')
     await expect(createPromptFolderDialog.getByLabel('Prompt Folder Name')).toBeVisible()
   })
 

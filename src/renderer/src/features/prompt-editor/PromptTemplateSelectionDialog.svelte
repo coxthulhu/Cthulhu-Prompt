@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteSet } from 'svelte/reactivity'
-  import { Folder } from 'lucide-svelte'
+  import { Copy, Folder, Layers } from 'lucide-svelte'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
@@ -25,6 +25,7 @@
     open = $bindable(false),
     workspaceId,
     selectedTemplateId,
+    mode = 'select',
     title = 'Select Template',
     notifyOnReselect = false,
     onselect
@@ -32,6 +33,7 @@
     open?: boolean
     workspaceId: string | null
     selectedTemplateId?: string | null
+    mode?: 'select' | 'select-and-copy'
     title?: string
     notifyOnReselect?: boolean
     onselect: (templateId: string | null) => void
@@ -72,6 +74,12 @@
       : selectedTemplateId && templateTitleById[selectedTemplateId]
         ? selectedTemplateId
         : null
+  )
+  const dialogIcon = $derived(mode === 'select-and-copy' ? Copy : Layers)
+  const dialogSubtitle = $derived(
+    mode === 'select-and-copy'
+      ? 'Choose a template to apply and copy this prompt immediately.'
+      : 'Choose a template to apply to this prompt.'
   )
 
   // Side effect: each dialog opening starts from a fully expanded template tree.
@@ -186,7 +194,9 @@
 <Dialog
   bind:open
   class="w-full max-w-[480px]"
+  icon={dialogIcon}
   {title}
+  subtitle={dialogSubtitle}
   submitText=""
   showSubmitButton={false}
 >

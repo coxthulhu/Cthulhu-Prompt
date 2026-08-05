@@ -938,11 +938,11 @@
     >
       <header class="base-template-dialog-header">
         <div class="base-template-dialog-heading">
-          <div class="base-template-dialog-icon" data-mode={templateDialogMode}>
+          <div class="base-template-dialog-icon">
             {#if templateDialogMode === 'select-and-copy'}
-              <Copy size={20} aria-hidden="true" />
+              <Copy size={24} aria-hidden="true" />
             {:else}
-              <Layers size={20} aria-hidden="true" />
+              <Layers size={24} aria-hidden="true" />
             {/if}
           </div>
           <div>
@@ -2009,7 +2009,7 @@
   }
 
   .base-template-dialog-heading {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
     gap: 12px;
     min-width: 0;
@@ -2017,21 +2017,12 @@
 
   .base-template-dialog-icon {
     align-items: center;
-    background: var(--ui-neutral-emphasis-surface);
-    border: 1px solid var(--ui-neutral-emphasis-border);
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-secondary-icon-glyph);
+    color: var(--ui-normal-text);
     display: flex;
     flex: 0 0 auto;
     height: 38px;
     justify-content: center;
     width: 38px;
-  }
-
-  .base-template-dialog-icon[data-mode='select-and-copy'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-normal-text);
   }
 
   .base-template-dialog-header h2 {

@@ -236,6 +236,10 @@ describe('Prompt template selection', () => {
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
     await expect(dialog).toBeVisible()
+    await expect(dialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
+    await expect(dialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
+      'Choose a template to apply to this prompt.'
+    )
     expect((await dialog.boundingBox())!.width).toBeLessThanOrEqual(482)
     await expect(
       dialog.locator('.sidebarPromptTreeSettingsLabel, .sidebarPromptTreeFolderLabel')
@@ -400,6 +404,10 @@ describe('Prompt template selection', () => {
     await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
     const quickDialog = mainWindow.getByRole('dialog', { name: 'Select Template and Copy' })
     await expect(quickDialog).toBeVisible()
+    await expect(quickDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
+    await expect(quickDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
+      'Choose a template to apply and copy this prompt immediately.'
+    )
     await expect(
       quickDialog.locator('[data-testid="prompt-template-option-none"]')
     ).toHaveAttribute('aria-current', 'true')

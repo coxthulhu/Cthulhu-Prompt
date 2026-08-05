@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { AlertCircle } from 'lucide-svelte'
   import Dialog from './Dialog.svelte'
   import LogDetails from './LogDetails.svelte'
   import Title from './Title.svelte'
@@ -16,6 +17,7 @@
 <Dialog
   bind:open
   class="w-full max-w-[576px]"
+  icon={AlertCircle}
   {title}
   submitText=""
   cancelText="Close"

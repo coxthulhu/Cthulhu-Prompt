@@ -246,6 +246,17 @@ describe('Home Screen', () => {
         '[role="dialog"][aria-label="Failed to Open Workspace"]'
       )
       await expect(errorDialog).toBeVisible()
+      await expect(errorDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
+      await expect(errorDialog.locator('[data-testid="dialog-subtitle"]')).toHaveCount(0)
+      await expect(errorDialog).toHaveCSS('padding-top', '16px')
+      await expect(errorDialog.locator('.cthulhuUiDialogHeader')).toHaveCSS(
+        'padding-bottom',
+        '12px'
+      )
+      await expect(errorDialog.locator('.cthulhuUiDialogHeader .cthulhuUiTitle')).toHaveCSS(
+        'line-height',
+        '22px'
+      )
       await expect(errorDialog).toContainText('The workspace could not be opened.')
       await expect(errorDialog).toContainText('Invalid workspace path')
     })
@@ -345,6 +356,19 @@ describe('Home Screen', () => {
 
       const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
       await expect(createDialog).toBeVisible()
+      await expect(createDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
+      await expect(createDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
+        'Choose a name and location for your new workspace.'
+      )
+      await expect(createDialog).toHaveCSS('padding-top', '18px')
+      await expect(createDialog.locator('.cthulhuUiDialogHeader')).toHaveCSS(
+        'padding-bottom',
+        '16px'
+      )
+      await expect(createDialog.locator('.cthulhuUiDialogHeader .cthulhuUiTitle')).toHaveCSS(
+        'line-height',
+        '24px'
+      )
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Example Workspace')
 
       await mainWindow.mouse.click(10, 10)

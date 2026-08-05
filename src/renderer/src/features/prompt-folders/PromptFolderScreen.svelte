@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { Search } from 'lucide-svelte'
+  import { Pencil, Search } from 'lucide-svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
@@ -291,7 +291,9 @@
   isWorkspaceReady={controller.screenRootFolder !== null}
   promptFolders={renamePromptFolderSiblings}
   isPromptFolderListLoading={false}
+  icon={Pencil}
   title={`Rename ${renameFolderTitle}`}
+  subtitle={`Choose a new name for this ${renameFolderTitle.toLowerCase()}.`}
   submitText={renamePromptFolderTarget?.kind === 'template'
     ? 'Rename Template Folder'
     : 'Rename Prompt Folder'}

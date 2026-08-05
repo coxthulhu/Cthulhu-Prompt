@@ -1,6 +1,6 @@
 <script lang="ts">
   import { X } from 'lucide-svelte'
-  import type { Snippet } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import Button, { type ButtonVariant } from './Button.svelte'
   import CardSurface from './CardSurface.svelte'
@@ -11,7 +11,9 @@
 
   type Props = {
     open?: boolean
+    icon: ComponentType
     title: string
+    subtitle?: string
     submitText: string
     cancelText?: string
     showCloseButton?: boolean
@@ -31,7 +33,9 @@
 
   let {
     open = $bindable(false),
+    icon: Icon,
     title,
+    subtitle,
     submitText,
     cancelText = 'Cancel',
     showCloseButton = true,
@@ -114,14 +118,31 @@
   >
     <CardSurface
       variant="overlay"
-      class={mergeClasses('cthulhuUiDialog flex flex-col p-4', className)}
+      class={mergeClasses(
+        'cthulhuUiDialog flex flex-col px-4 pb-4',
+        subtitle ? 'pt-[18px]' : 'pt-4',
+        className
+      )}
       role="dialog"
       aria-label={title}
       aria-modal="true"
       onclick={(event) => event.stopPropagation()}
     >
-      <div class="cthulhuUiDialogHeader">
-        <Title {title} variant="dialog" />
+      <div
+        class="cthulhuUiDialogHeader"
+        data-has-subtitle={subtitle ? 'true' : 'false'}
+      >
+        <div class="cthulhuUiDialogHeading">
+          <div class="cthulhuUiDialogIcon" data-testid="dialog-header-icon">
+            <Icon size={24} aria-hidden="true" />
+          </div>
+          <div class="cthulhuUiDialogHeadingText">
+            <Title {title} variant="dialog" />
+            {#if subtitle}
+              <p class="cthulhuUiDialogSubtitle" data-testid="dialog-subtitle">{subtitle}</p>
+            {/if}
+          </div>
+        </div>
 
         {#if showCloseButton}
           <IconButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
@@ -182,12 +203,49 @@
   }
 
   .cthulhuUiDialogHeader {
-    align-items: center;
+    align-items: flex-start;
     display: flex;
     gap: 12px;
     justify-content: space-between;
     min-width: 0;
     padding: 0 4px 12px;
+  }
+
+  .cthulhuUiDialogHeader[data-has-subtitle='true'] {
+    padding-bottom: 16px;
+  }
+
+  .cthulhuUiDialogHeader[data-has-subtitle='true']
+    :global(.cthulhuUiTitle[data-variant='dialog']) {
+    line-height: 24px;
+  }
+
+  .cthulhuUiDialogHeading {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .cthulhuUiDialogIcon {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    flex: 0 0 38px;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+  }
+
+  .cthulhuUiDialogHeadingText {
+    min-width: 0;
+  }
+
+  .cthulhuUiDialogSubtitle {
+    color: var(--ui-muted-text);
+    font-size: 13px;
+    line-height: 19px;
+    margin: 3px 0 0;
   }
 
   .cthulhuUiDialogBody {

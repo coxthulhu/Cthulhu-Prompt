@@ -69,6 +69,9 @@
   promptFolders={siblingPromptFolders}
   {isPromptFolderListLoading}
   title={isTemplateFolder ? 'Create Prompt Template Subfolder' : 'Create Prompt Subfolder'}
+  subtitle={isTemplateFolder
+    ? 'Add a new subfolder to this prompt template folder.'
+    : 'Add a new subfolder to this prompt folder.'}
   submitText="Create Subfolder"
   submittingText="Creating..."
   submitTestId="create-prompt-subfolder-button"

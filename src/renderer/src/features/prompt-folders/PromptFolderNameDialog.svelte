@@ -21,6 +21,7 @@
     promptFolders = [],
     isPromptFolderListLoading,
     title,
+    subtitle,
     submitText,
     submittingText,
     submitTestId,
@@ -42,6 +43,7 @@
     promptFolders: PromptFolder[]
     isPromptFolderListLoading: boolean
     title: string
+    subtitle: string
     submitText: string
     submittingText: string
     submitTestId: string
@@ -157,7 +159,9 @@
 <Dialog
   bind:open={isDialogOpen}
   class={dialogClass}
+  icon={icon}
   {title}
+  {subtitle}
   submitText={isSubmitting ? submittingText : submitText}
   submitDisabled={!isValid || isSubmitting}
   cancelDisabled={isSubmitting}

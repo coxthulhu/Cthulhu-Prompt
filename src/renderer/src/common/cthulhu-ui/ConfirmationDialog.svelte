@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Trash2 } from 'lucide-svelte'
   import Dialog from './Dialog.svelte'
 
   type Props = {
@@ -25,6 +26,7 @@
 <Dialog
   bind:open
   class="w-full max-w-[480px]"
+  icon={Trash2}
   {title}
   submitText={confirmText}
   showSeparators={false}

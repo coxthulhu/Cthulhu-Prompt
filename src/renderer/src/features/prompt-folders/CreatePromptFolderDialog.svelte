@@ -81,6 +81,7 @@
   title={selectedFolderType.id === 'template'
     ? 'Create Prompt Template Folder'
     : 'Create Prompt Folder'}
+  subtitle="Choose the folder type and name for the new folder."
   submitText="Create Folder"
   submittingText="Creating..."
   submitTestId="create-prompt-folder-button"

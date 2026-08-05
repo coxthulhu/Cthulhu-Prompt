@@ -10,7 +10,7 @@
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { WorkspaceFolderStatus } from '@shared/Workspace'
   import { preparePromptFolderName } from '@shared/promptFolderName'
-  import { FolderOpen, Route, Sparkles, Type } from 'lucide-svelte'
+  import { FolderOpen, FolderPlus, Route, Sparkles, Type } from 'lucide-svelte'
   import type { WorkspaceCreationResult } from '@renderer/features/workspace/types'
 
   let {
@@ -131,7 +131,9 @@
 <Dialog
   bind:open
   class="w-full max-w-[608px]"
+  icon={FolderPlus}
   title="Create Workspace"
+  subtitle="Choose a name and location for your new workspace."
   submitText={isWorkspaceLoading ? 'Creating...' : 'Create Workspace'}
   submitDisabled={!canCreateWorkspace}
   submitTestId="create-workspace-submit-button"
