@@ -10,6 +10,17 @@ import {
   clearPromptEditorMeasuredHeights
 } from './PromptDraftUiCache.svelte.ts'
 
+// Compares ordered template references by ID while preserving null and missing states.
+const haveSamePromptTemplates = (
+  left: PromptFull['templates'],
+  right: PromptFull['templates']
+): boolean =>
+  left === right ||
+  (Array.isArray(left) &&
+    Array.isArray(right) &&
+    left.length === right.length &&
+    left.every((template, index) => template.id === right[index].id))
+
 export const promptDraftMutations = createMarkdownContentDraftMutations<
   PromptSummaryData,
   PromptFull,
@@ -37,18 +48,18 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     createdAt: '',
     modifiedAt: prompt.modifiedAt,
     promptText: '',
-    templateId: prompt.templateId,
+    templates: prompt.templates,
     isEdited: false
   }),
   applySummary: (draft, prompt) => {
     draft.title = prompt.title
     draft.fallbackTitle = prompt.fallbackTitle
-    draft.templateId = prompt.templateId
+    draft.templates = prompt.templates
   },
   hasSameSummary: (draft, prompt) =>
     draft.title === prompt.title &&
     draft.fallbackTitle === prompt.fallbackTitle &&
-    draft.templateId === prompt.templateId,
+    haveSamePromptTemplates(draft.templates, prompt.templates),
   toFullDraft: (prompt, isEdited) => ({
     id: prompt.id,
     title: prompt.title,
@@ -56,7 +67,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
     promptText: prompt.promptText,
-    templateId: prompt.templateId,
+    templates: prompt.templates,
     isEdited
   }),
   haveSameDraft: (left, right) =>
@@ -66,7 +77,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     left.createdAt === right.createdAt &&
     left.modifiedAt === right.modifiedAt &&
     left.promptText === right.promptText &&
-    left.templateId === right.templateId &&
+    haveSamePromptTemplates(left.templates, right.templates) &&
     left.isEdited === right.isEdited,
   beforeFullUpsert: (existing, next) => {
     if (!existing || existing.promptText !== next.promptText) {

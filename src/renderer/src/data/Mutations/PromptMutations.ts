@@ -28,7 +28,7 @@ const toPersisted = (prompt: PromptFull): PromptPersisted => ({
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
-  ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+  ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }
@@ -71,7 +71,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
           createdAt: draft.createdAt,
           modifiedAt: draft.modifiedAt,
           promptText: draft.promptText,
-          ...(draft.templateId !== undefined ? { templateId: draft.templateId } : {}),
+          ...(draft.templates !== undefined ? { templates: draft.templates } : {}),
           status: PromptStatus.Todo
         }
       : null
@@ -91,7 +91,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
         createdAt: prompt.createdAt,
         modifiedAt: prompt.modifiedAt,
         promptText: prompt.promptText,
-        ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+        ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
         isEdited: false
       })
     )
@@ -146,8 +146,8 @@ export const setPromptStatus = async (
           modifiedAt: promptDraft.modifiedAt,
           status: PromptStatus.Todo,
           promptText: promptDraft.promptText,
-          ...(promptDraft.templateId !== undefined
-            ? { templateId: promptDraft.templateId }
+          ...(promptDraft.templates !== undefined
+            ? { templates: promptDraft.templates }
             : {})
         }
   const modifiedAt = getCurrentIsoSecondTimestamp()
@@ -185,7 +185,7 @@ export const setPromptStatus = async (
         draft.createdAt = nextPrompt.createdAt
         draft.modifiedAt = nextPrompt.modifiedAt
         draft.promptText = nextPrompt.promptText
-        draft.templateId = nextPrompt.templateId
+        draft.templates = nextPrompt.templates
         markPromptDraftEdited(draft)
       })
       collections.promptFolder.update(promptFolderId, (draft) => {

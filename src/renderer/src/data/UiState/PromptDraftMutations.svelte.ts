@@ -1,4 +1,4 @@
-import type { Prompt } from '@shared/Prompt'
+import type { Prompt, PromptTemplateReference } from '@shared/Prompt'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
@@ -111,18 +111,19 @@ export const setPromptDraftText = (
   })
 }
 
-export const setPromptDraftTemplateId = (
+// Replaces a prompt's ordered template selection and schedules its autosave.
+export const setPromptDraftTemplates = (
   promptId: string,
-  templateId: string | null
+  templates: PromptTemplateReference[] | null
 ): void => {
   const modifiedAt = getPromptDraftModifiedAt()
   mutatePromptDraftOptimistically(promptId, {
     mutatePromptDraft: (draft) => {
-      draft.templateId = templateId
+      draft.templates = templates
       draft.modifiedAt = modifiedAt
     },
     mutatePrompt: (draft) => {
-      draft.templateId = templateId
+      draft.templates = templates
       if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
     }
   })

@@ -112,7 +112,6 @@
       fallbackTitle: string
       modifiedAt: string
       text: string
-      templateId?: string | null
       templateName?: string
       templateState?: 'not-selected' | 'no-template' | 'selected'
       isEdited: boolean

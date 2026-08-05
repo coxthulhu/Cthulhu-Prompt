@@ -1,7 +1,11 @@
 import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
-import { parsePromptMarkdown, serializePromptMarkdown } from './PromptFrontmatter'
+import {
+  parsePromptMarkdown,
+  promptMarkdownHasLegacyTemplateId,
+  serializePromptMarkdown
+} from './PromptFrontmatter'
 import { COMPLETED_PROMPTS_FOLDER_NAME } from './PromptPersistencePaths'
 import {
   createMarkdownPersistence,
@@ -61,6 +65,7 @@ export const promptPersistence = createMarkdownPersistence<PromptPersisted>({
   serializeMarkdown: serializePromptMarkdown,
   normalizeLoadedData: (prompt, folderPath) =>
     normalizePromptCompletionForFolder(prompt, isCompletedPromptFolderName(folderPath)),
-  shouldRewriteNormalizedData: (loaded, normalized) =>
-    !hasSameCompletionMetadata(loaded, normalized)
+  shouldRewriteNormalizedData: (loaded, normalized, fileText) =>
+    !hasSameCompletionMetadata(loaded, normalized) ||
+    promptMarkdownHasLegacyTemplateId(fileText)
 })

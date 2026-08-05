@@ -7,6 +7,7 @@ import {
 import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
+import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   focusMonacoEditor,
   getMonacoEditorText,
@@ -23,6 +24,7 @@ const NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-nested'
 const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Select Template.prompt.md`
 const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Stale Template.prompt.md`
+const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Multiple Templates.prompt.md`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'
@@ -72,13 +74,25 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
           id: 'stale-template-prompt',
           title: 'Stale Template',
           promptText: 'Keep the missing selection.',
-          templateId: 'deleted-template'
+          templates: [{ id: 'deleted-template' }]
         },
         {
           id: 'no-template-prompt',
           title: 'Explicit No Template',
           promptText: 'Copy without a template.',
-          templateId: null
+          templates: null
+        },
+        {
+          id: 'multi-template-prompt',
+          title: 'Multiple Templates',
+          promptText: 'Copy with several templates.',
+          templates: [
+            { id: 'deleted-template' },
+            { id: 'template-second' },
+            { id: 'deleted-template-after' },
+            { id: 'template-second' },
+            { id: 'template-nested' }
+          ]
         }
       ]
     }
@@ -132,6 +146,22 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
   return {
     ...promptWorkspace,
     ...templateWorkspace,
+    [STALE_PROMPT_PATH]: `---
+id: stale-template-prompt
+createdAt: '2026-01-01T00:00:00.000Z'
+title: Stale Template
+templateId: deleted-template
+status: Todo
+---
+Keep the missing selection.`,
+    [NO_TEMPLATE_PROMPT_PATH]: `---
+id: no-template-prompt
+createdAt: '2026-01-01T00:00:00.000Z'
+title: Explicit No Template
+templateId: null
+status: Todo
+---
+Copy without a template.`,
     [`${WORKSPACE_PATH}/WorkspaceFolderOrder.json`]: JSON.stringify(
       {
         entries: [
@@ -174,6 +204,9 @@ describe('Prompt template selection', () => {
     const noTemplatePromptEditor = mainWindow.locator(
       promptEditorSelector('no-template-prompt')
     )
+    const multiTemplatePromptEditor = mainWindow.locator(
+      promptEditorSelector('multi-template-prompt')
+    )
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Not Selected'
     )
@@ -182,6 +215,9 @@ describe('Prompt template selection', () => {
     )
     await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'No Template'
+    )
+    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'Second Root Template + 2 More'
     )
     await expectTemplateIndicator(promptEditor, 'not-selected', '--ui-secondary-text')
     await expectTemplateIndicator(stalePromptEditor, 'no-template', '--ui-muted-text')
@@ -250,7 +286,7 @@ describe('Prompt template selection', () => {
     await expectTemplateIndicator(promptEditor, 'selected', '--ui-normal-text')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templateId: template-nested')
+      .toContain('templates:\n  - id: template-nested')
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(
@@ -272,7 +308,7 @@ describe('Prompt template selection', () => {
     await expectTemplateIndicator(promptEditor, 'no-template', '--ui-muted-text')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templateId: null')
+      .toContain('templates: null')
 
     await stalePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
@@ -281,8 +317,24 @@ describe('Prompt template selection', () => {
     )
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).toContain(
-      'templateId: deleted-template'
+      'templates:\n  - id: deleted-template'
     )
+    expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).not.toContain('templateId:')
+    expect(await readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH)).not.toContain('templateId:')
+
+    await multiTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'First Root Template'
+    )
+    await expect
+      .poll(
+        async () =>
+          parsePromptMarkdown(
+            await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH)
+          )?.templates
+      )
+      .toEqual([{ id: 'template-first' }])
 
     await testHelpers.navigateToPromptFolders('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
@@ -308,10 +360,32 @@ describe('Prompt template selection', () => {
 
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     const quickPromptEditor = mainWindow.locator(promptEditorSelector('no-template-prompt'))
+    const multiTemplatePromptEditor = mainWindow.locator(
+      promptEditorSelector('multi-template-prompt')
+    )
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Not Selected'
     )
-    expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templateId:')
+    expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templates:')
+
+    await multiTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe(
+        'Nested Second root Second root Prompt folder prefix\n\nCopy with several templates.\n\nPrompt folder suffix...'
+      )
+    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+      'Second Root Template + 2 More'
+    )
+    expect(
+      parsePromptMarkdown(await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH))?.templates
+    ).toEqual([
+      { id: 'deleted-template' },
+      { id: 'template-second' },
+      { id: 'deleted-template-after' },
+      { id: 'template-second' },
+      { id: 'template-nested' }
+    ])
 
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
@@ -320,7 +394,7 @@ describe('Prompt template selection', () => {
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templateId: null')
+      .toContain('templates: null')
     await expect.poll(() => readTextFile(electronApp, PROMPT_PATH)).toContain('status: InProgress')
 
     await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
@@ -339,7 +413,7 @@ describe('Prompt template selection', () => {
     )
     await expect
       .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
-      .toContain('templateId: template-first')
+      .toContain('templates:\n  - id: template-first')
     await expect
       .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
       .toContain('status: InProgress')
@@ -361,7 +435,7 @@ describe('Prompt template selection', () => {
       .toBe('Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix')
     await expect
       .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
-      .toContain('templateId: null')
+      .toContain('templates: null')
   })
 
   test('copies with the current template draft and ignores it after its token is removed', async ({
@@ -422,6 +496,8 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-first"]')).toHaveCount(
       0
     )
-    expect(await readTextFile(electronApp, PROMPT_PATH)).toContain('templateId: template-first')
+    expect(await readTextFile(electronApp, PROMPT_PATH)).toContain(
+      'templates:\n  - id: template-first'
+    )
   })
 })

@@ -11,16 +11,17 @@
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
   import { lookupPromptFolderSettingsRowMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
-  import { PromptStatus } from '@shared/Prompt'
+  import { PromptStatus, type PromptTemplateReference } from '@shared/Prompt'
   import type { PromptFolderSettingsDraftField } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
   import {
     applyPromptTemplates,
-    createPromptFolderTemplate
+    createPromptFolderTemplate,
+    hasPromptTextToken
   } from '../prompt-editor/promptTemplatingEngine'
-  import { setPromptDraftTemplateId } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+  import { setPromptDraftTemplates } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
@@ -297,7 +298,7 @@
 
   const getCopyTemplateTexts = (
     ownerFolderId: string,
-    selectedTemplateId: string | null | undefined
+    selectedTemplates: PromptTemplateReference[] | null | undefined
   ): string[] => {
     if (isTemplateFolder) return []
 
@@ -314,11 +315,26 @@
       folderId = parentPromptFolderIdById[folderId]
     }
 
-    const selectedTemplateText = selectedTemplateId
-      ? promptTemplateTextById[selectedTemplateId]
-      : undefined
-    if (selectedTemplateText !== undefined) templateTexts.push(selectedTemplateText)
+    for (const template of selectedTemplates ?? []) {
+      const selectedTemplateText = promptTemplateTextById[template.id]
+      if (selectedTemplateText !== undefined) templateTexts.push(selectedTemplateText)
+    }
     return templateTexts
+  }
+
+  // Resolves the single current option shown by the temporary single-select dialog.
+  const getDialogSelectedTemplateId = (
+    templates: PromptTemplateReference[] | null | undefined
+  ): string | null | undefined => {
+    if (templates === undefined || templates === null) return templates
+    return (
+      templates.find((template) => {
+        const templateText = promptTemplateTextById[template.id]
+        return templateText !== undefined && hasPromptTextToken(templateText)
+      })?.id ??
+      templates[0]?.id ??
+      null
+    )
   }
 
   const openTemplateSelectionDialog = (
@@ -332,18 +348,24 @@
 
   const handleTemplateSelect = (templateId: string | null): void => {
     if (!templateSelectionTarget) return
-    setPromptDraftTemplateId(templateSelectionTarget.promptId, templateId)
+    setPromptDraftTemplates(
+      templateSelectionTarget.promptId,
+      templateId === null ? null : [{ id: templateId }]
+    )
   }
 
   const handleTemplateSelectAndCopy = async (templateId: string | null): Promise<void> => {
     if (!templateSelectionTarget) return
     const { ownerFolderId, promptId } = templateSelectionTarget
     const promptDraft = promptDraftById[promptId]!
-    setPromptDraftTemplateId(promptId, templateId)
+    setPromptDraftTemplates(promptId, templateId === null ? null : [{ id: templateId }])
     await window.navigator.clipboard.writeText(
       applyPromptTemplates(
         promptDraft.text,
-        getCopyTemplateTexts(ownerFolderId, templateId)
+        getCopyTemplateTexts(
+          ownerFolderId,
+          templateId === null ? null : [{ id: templateId }]
+        )
       )
     )
     if ((promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status === PromptStatus.Todo) {
@@ -352,8 +374,8 @@
   }
 
   const handlePromptCopySuccess = (promptId: string): void => {
-    if (promptDraftById[promptId]!.templateId === undefined) {
-      setPromptDraftTemplateId(promptId, null)
+    if (promptDraftById[promptId]!.templates === undefined) {
+      setPromptDraftTemplates(promptId, null)
     }
   }
 
@@ -999,9 +1021,6 @@
         fallbackTitle: promptDraftById[row.promptId]!.fallbackTitle,
         modifiedAt: promptDraftById[row.promptId]!.modifiedAt,
         text: promptDraftById[row.promptId]!.text,
-        ...(promptDraftById[row.promptId]!.templateId !== undefined
-          ? { templateId: promptDraftById[row.promptId]!.templateId }
-          : {}),
         ...(promptDraftById[row.promptId]!.templateName
           ? { templateName: promptDraftById[row.promptId]!.templateName }
           : {}),
@@ -1021,7 +1040,7 @@
       {onHydrationChange}
       copyTemplateTexts={getCopyTemplateTexts(
         row.ownerFolderId,
-        promptDraftById[row.promptId]!.templateId
+        promptDraftById[row.promptId]!.templates
       )}
       {screenMode}
       status={promptMetadata.status}
@@ -1064,7 +1083,7 @@
     : 'Select Template'}
   notifyOnReselect={templateSelectionMode === 'select-and-copy'}
   selectedTemplateId={templateSelectionTarget
-    ? promptDraftById[templateSelectionTarget.promptId]?.templateId
+    ? getDialogSelectedTemplateId(promptDraftById[templateSelectionTarget.promptId]?.templates)
     : undefined}
   onselect={templateSelectionMode === 'select-and-copy'
     ? handleTemplateSelectAndCopy

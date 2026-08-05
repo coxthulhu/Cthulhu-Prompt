@@ -1,10 +1,19 @@
 import matter from 'gray-matter'
-import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
+import {
+  PromptStatus,
+  type PromptPersisted,
+  type PromptTemplateReference
+} from '@shared/Prompt'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import { normalizePromptTitle } from '@shared/promptFallbackTitle'
 
+// Current and legacy template fields accepted while workspace startup migrates prompt files.
+type PromptSelectionFrontmatterData =
+  | { templates?: PromptTemplateReference[] | null; templateId?: never }
+  | { templates?: never; templateId?: string | null }
+
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
-  Partial<Pick<PromptPersisted, 'templateId'>> &
+  PromptSelectionFrontmatterData &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   (
     | { status: PromptStatus.Completed; completedAt: string }
@@ -25,12 +34,14 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   const hasFallbackTitle = keys.includes('fallbackTitle')
   const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
-  const hasTemplateId = keys.includes('templateId')
+  const hasTemplates = keys.includes('templates')
+  const hasLegacyTemplateId = keys.includes('templateId')
   const allowedKeys = new Set([
     'id',
     'createdAt',
     hasTitle ? 'title' : 'fallbackTitle',
-    ...(hasTemplateId ? ['templateId'] : []),
+    ...(hasTemplates ? ['templates'] : []),
+    ...(hasLegacyTemplateId ? ['templateId'] : []),
     'status',
     ...(hasCompletedAt ? ['completedAt'] : [])
   ])
@@ -39,7 +50,8 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     !keys.includes('id') ||
     !keys.includes('createdAt') ||
     !hasStatus ||
-    hasTitle === hasFallbackTitle
+    hasTitle === hasFallbackTitle ||
+    (hasTemplates && hasLegacyTemplateId)
   ) {
     return false
   }
@@ -56,7 +68,18 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   return (
     typeof frontmatter.id === 'string' &&
     typeof frontmatter.createdAt === 'string' &&
-    (!hasTemplateId ||
+    (!hasTemplates ||
+      frontmatter.templates === null ||
+      (Array.isArray(frontmatter.templates) &&
+        frontmatter.templates.every(
+          (template) =>
+            typeof template === 'object' &&
+            template !== null &&
+            !Array.isArray(template) &&
+            Object.keys(template).length === 1 &&
+            typeof (template as Record<string, unknown>).id === 'string'
+        ))) &&
+    (!hasLegacyTemplateId ||
       frontmatter.templateId === null ||
       typeof frontmatter.templateId === 'string') &&
     (hasTitle
@@ -150,7 +173,11 @@ export const parsePromptMarkdown = (
     createdAt: data.createdAt,
     modifiedAt: timestamp,
     promptText: content,
-    ...(data.templateId !== undefined ? { templateId: data.templateId } : {}),
+    ...(data.templates !== undefined
+      ? { templates: data.templates }
+      : data.templateId !== undefined
+        ? { templates: data.templateId === null ? null : [{ id: data.templateId }] }
+        : {}),
     status: data.status,
     ...(data.status === PromptStatus.Completed ? { completedAt: data.completedAt } : {})
   }))
@@ -161,17 +188,32 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
     prompt.status === PromptStatus.Completed && prompt.completedAt
       ? {
           ...baseMetadata,
-          ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+          ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
           status: PromptStatus.Completed,
           completedAt: prompt.completedAt
         }
       : {
           ...baseMetadata,
-          ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+          ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
           status:
             prompt.status === PromptStatus.InProgress ? PromptStatus.InProgress : PromptStatus.Todo
         }
   return serializeMarkdownContent(metadata, prompt.promptText)
+}
+
+// Detects legacy prompt template metadata so startup rewrites only files that need migration.
+export const promptMarkdownHasLegacyTemplateId = (fileText: string): boolean => {
+  try {
+    const parsed = matter(fileText, {})
+    return (
+      typeof parsed.data === 'object' &&
+      parsed.data !== null &&
+      !Array.isArray(parsed.data) &&
+      Object.keys(parsed.data).includes('templateId')
+    )
+  } catch {
+    return false
+  }
 }
 
 export const parsePromptTemplateMarkdown = (

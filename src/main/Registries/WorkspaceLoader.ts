@@ -128,8 +128,8 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
           title: promptEntry.committed.title,
           fallbackTitle: promptEntry.committed.fallbackTitle,
           modifiedAt: promptEntry.committed.modifiedAt,
-          ...(promptEntry.committed.templateId !== undefined
-            ? { templateId: promptEntry.committed.templateId }
+          ...(promptEntry.committed.templates !== undefined
+            ? { templates: promptEntry.committed.templates }
             : {}),
           status: promptEntry.committed.status,
           ...(promptEntry.committed.status === PromptStatus.Completed &&

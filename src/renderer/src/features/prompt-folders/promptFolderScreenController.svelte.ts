@@ -1,7 +1,12 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { isPromptFull, type Prompt, PromptStatus } from '@shared/Prompt'
+import {
+  isPromptFull,
+  type Prompt,
+  PromptStatus,
+  type PromptTemplateReference
+} from '@shared/Prompt'
 import {
   isPromptTemplateFull,
   type PromptTemplate
@@ -118,7 +123,7 @@ export type MarkdownContentDraftRecord = {
   fallbackTitle: string
   modifiedAt: string
   text: string
-  templateId?: string | null
+  templates?: PromptTemplateReference[] | null
   templateName?: string
   templateState?: 'not-selected' | 'no-template' | 'selected'
   isEdited: boolean
@@ -205,31 +210,42 @@ export const createPromptFolderScreenController = ({
   const contentDraftById = $derived.by<Record<string, MarkdownContentDraftRecord>>(() => {
     if (!isTemplateFolder) {
       return Object.fromEntries(
-        Object.values(promptDraftById).map((draft) => [
-          draft.id,
-          {
+        Object.values(promptDraftById).map((draft) => {
+          // Resolved names drive both the compact label and its additional-template count.
+          const templateNames = (draft.templates ?? []).flatMap((template) => {
+            const title = templateTitleById[template.id]
+            return title === undefined ? [] : [title]
+          })
+          // Missing references are skipped so the first available template names the selection.
+          const templateName = templateNames[0]
+          return [
+            draft.id,
+            {
             id: draft.id,
             title: draft.title,
             fallbackTitle: draft.fallbackTitle,
             modifiedAt: draft.modifiedAt,
             text: draft.promptText,
-            ...(draft.templateId !== undefined ? { templateId: draft.templateId } : {}),
+            ...(draft.templates !== undefined ? { templates: draft.templates } : {}),
             templateName:
-              draft.templateId === undefined
+              draft.templates === undefined
                 ? 'Not Selected'
-                : draft.templateId === null
+                : templateName === undefined
                   ? 'No Template'
-                  : (templateTitleById[draft.templateId] ?? 'No Template'),
+                  : templateNames.length > 1
+                    ? `${templateName} + ${templateNames.length - 1} More`
+                    : templateName,
             // Missing template ids use the same indicator treatment as No Template.
             templateState:
-              draft.templateId === undefined
+              draft.templates === undefined
                 ? 'not-selected'
-                : draft.templateId === null || !(draft.templateId in templateTitleById)
+                : templateName === undefined
                   ? 'no-template'
                   : 'selected',
             isEdited: draft.isEdited
-          }
-        ])
+            }
+          ]
+        })
       )
     }
 

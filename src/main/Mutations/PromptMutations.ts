@@ -205,7 +205,7 @@ const setupPromptStatusMutationHandler = (): void => {
               recipe: (draft) => {
                 Object.assign(draft, targetPrompt)
                 if (targetStatus !== PromptStatus.Completed) delete draft.completedAt
-                if (targetPrompt.templateId === undefined) delete draft.templateId
+                if (targetPrompt.templates === undefined) delete draft.templates
               },
               persistenceFields: getPlannedMarkdownPersistenceFields(
                 filenamePlans,
@@ -274,7 +274,7 @@ export const setupPromptMutationHandlers = (): void => {
       modifiedAt: now,
       status: PromptStatus.Todo,
       promptText: requested.promptText,
-      ...(requested.templateId !== undefined ? { templateId: requested.templateId } : {})
+      ...(requested.templates !== undefined ? { templates: requested.templates } : {})
     }),
     updatePersisted: (requested, _current, titleFields) => ({
       id: requested.id,
@@ -282,7 +282,7 @@ export const setupPromptMutationHandlers = (): void => {
       createdAt: requested.createdAt,
       modifiedAt: requested.modifiedAt,
       promptText: requested.promptText,
-      ...(requested.templateId !== undefined ? { templateId: requested.templateId } : {}),
+      ...(requested.templates !== undefined ? { templates: requested.templates } : {}),
       status: requested.status,
       ...(requested.status === PromptStatus.Completed && requested.completedAt
         ? { completedAt: requested.completedAt }
@@ -302,7 +302,7 @@ export const setupPromptMutationHandlers = (): void => {
         recipe: (draft) => {
           Object.assign(draft, operation.data)
           if (!operation.data.completedAt) delete draft.completedAt
-          if (operation.data.templateId === undefined) delete draft.templateId
+          if (operation.data.templates === undefined) delete draft.templates
         },
         persistenceFields: operation.persistenceFields
       }),

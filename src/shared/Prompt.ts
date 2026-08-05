@@ -17,12 +17,17 @@ export enum PromptStatus {
   Completed = 'Completed'
 }
 
+// Ordered reference to a prompt template selected for a prompt.
+export type PromptTemplateReference = {
+  id: string
+}
+
 export type PromptSummary = {
   id: string
   title: string
   fallbackTitle: string
   modifiedAt: string
-  templateId?: string | null
+  templates?: PromptTemplateReference[] | null
   status: PromptStatus
   completedAt?: string
   loadingState: 'summary'
@@ -35,7 +40,7 @@ export type PromptFull = {
   modifiedAt: string
   promptText: string
   fallbackTitle: string
-  templateId?: string | null
+  templates?: PromptTemplateReference[] | null
   status: PromptStatus
   completedAt?: string
   loadingState: 'full'
@@ -53,7 +58,7 @@ export type PromptSummaryData = Pick<
   | 'title'
   | 'fallbackTitle'
   | 'modifiedAt'
-  | 'templateId'
+  | 'templates'
   | 'status'
   | 'completedAt'
 >
@@ -63,7 +68,7 @@ export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary =>
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
   modifiedAt: prompt.modifiedAt,
-  ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+  ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }
@@ -78,7 +83,7 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   modifiedAt: prompt.modifiedAt,
   promptText: prompt.promptText,
   fallbackTitle: prompt.fallbackTitle,
-  ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+  ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
     ? { completedAt: prompt.completedAt }

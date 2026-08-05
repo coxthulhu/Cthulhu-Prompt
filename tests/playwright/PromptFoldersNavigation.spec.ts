@@ -813,7 +813,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
-    await mainWindow.getByText('Prompt Template Folder', { exact: true }).click()
+    await mainWindow
+      .locator('[data-testid="create-prompt-folder-type-menu"]')
+      .getByRole('menuitem', { name: /^Prompt Template Folder\b/ })
+      .click()
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-name-error"]')

@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { PromptStatus } from '@shared/Prompt'
 import {
   parsePromptMarkdown,
+  promptMarkdownHasLegacyTemplateId,
   serializePromptMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
 
 describe('prompt frontmatter', () => {
-  it('round trips an optional template id', () => {
+  it('round trips ordered template references', () => {
     const serialized = serializePromptMarkdown({
       id: 'prompt-1',
       title: 'Review Change',
@@ -14,11 +15,13 @@ describe('prompt frontmatter', () => {
       createdAt: '2026-07-26T12:00:00.000Z',
       modifiedAt: 'ignored',
       promptText: 'Review this change.\n',
-      templateId: 'template-1',
+      templates: [{ id: 'template-1' }, { id: 'template-2' }, { id: 'template-1' }],
       status: PromptStatus.Todo
     })
 
-    expect(serialized).toContain('templateId: template-1')
+    expect(serialized).toContain(
+      'templates:\n  - id: template-1\n  - id: template-2\n  - id: template-1'
+    )
     expect(parsePromptMarkdown(serialized, '2026-07-26T13:00:00.000Z')).toEqual({
       id: 'prompt-1',
       title: 'Review Change',
@@ -26,7 +29,7 @@ describe('prompt frontmatter', () => {
       createdAt: '2026-07-26T12:00:00.000Z',
       modifiedAt: '2026-07-26T13:00:00.000Z',
       promptText: 'Review this change.\n',
-      templateId: 'template-1',
+      templates: [{ id: 'template-1' }, { id: 'template-2' }, { id: 'template-1' }],
       status: PromptStatus.Todo
     })
   })
@@ -39,12 +42,12 @@ describe('prompt frontmatter', () => {
       createdAt: '2026-07-26T12:00:00.000Z',
       modifiedAt: '',
       promptText: 'Plain text',
-      templateId: null,
+      templates: null,
       status: PromptStatus.Todo
     })
 
-    expect(serialized).toContain('templateId: null')
-    expect(parsePromptMarkdown(serialized)).toMatchObject({ templateId: null })
+    expect(serialized).toContain('templates: null')
+    expect(parsePromptMarkdown(serialized)).toMatchObject({ templates: null })
   })
 
   it('omits the template id when a template has not been selected', () => {
@@ -58,7 +61,28 @@ describe('prompt frontmatter', () => {
       status: PromptStatus.Todo
     })
 
-    expect(serialized).not.toContain('templateId:')
-    expect(parsePromptMarkdown(serialized)).not.toHaveProperty('templateId')
+    expect(serialized).not.toContain('templates:')
+    expect(parsePromptMarkdown(serialized)).not.toHaveProperty('templates')
+  })
+
+  it('parses legacy template ids into the list model for startup migration', () => {
+    const legacyMarkdown = `---
+id: prompt-4
+createdAt: '2026-07-26T12:00:00.000Z'
+title: Legacy Prompt
+templateId: template-1
+status: Todo
+---
+Legacy text`
+
+    expect(parsePromptMarkdown(legacyMarkdown)).toMatchObject({
+      templates: [{ id: 'template-1' }]
+    })
+    expect(promptMarkdownHasLegacyTemplateId(legacyMarkdown)).toBe(true)
+    expect(
+      promptMarkdownHasLegacyTemplateId(
+        serializePromptMarkdown(parsePromptMarkdown(legacyMarkdown)!)
+      )
+    ).toBe(false)
   })
 })

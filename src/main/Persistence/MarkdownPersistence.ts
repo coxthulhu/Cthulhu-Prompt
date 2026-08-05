@@ -35,7 +35,11 @@ type MarkdownPersistenceOptions<TData extends MarkdownData> = {
   parseMarkdown: (fileText: string) => TData | null
   serializeMarkdown: (data: TData) => string
   normalizeLoadedData?: (data: TData, folderPath: string) => TData
-  shouldRewriteNormalizedData?: (loaded: TData, normalized: TData) => boolean
+  shouldRewriteNormalizedData?: (
+    loaded: TData,
+    normalized: TData,
+    fileText: string
+  ) => boolean
 }
 
 export const readMarkdownModifiedAt = (
@@ -124,11 +128,13 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     const fs = getFs()
     if (!fs.existsSync(filePaths.markdownPath)) return null
 
-    const loadedData = parseMarkdown(fs.readFileSync(filePaths.markdownPath, 'utf8'))
+    // Source text is retained so kind-specific startup migrations can request a rewrite.
+    const fileText = fs.readFileSync(filePaths.markdownPath, 'utf8')
+    const loadedData = parseMarkdown(fileText)
     if (!loadedData) return null
 
     const normalizedData = normalizeLoadedData(loadedData, persistenceFields.folderPath)
-    if (shouldRewriteNormalizedData(loadedData, normalizedData)) {
+    if (shouldRewriteNormalizedData(loadedData, normalizedData, fileText)) {
       fs.writeFileSync(filePaths.markdownPath, serializeMarkdown(normalizedData), 'utf8')
     }
 

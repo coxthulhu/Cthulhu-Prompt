@@ -1,6 +1,7 @@
 import { PromptStatus } from '@shared/Prompt'
 import type {
   PromptPersisted,
+  PromptTemplateReference,
   SetPromptStatusPayload
 } from '@shared/Prompt'
 import type {
@@ -314,7 +315,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
   const keys = Object.keys(record)
   const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
-  const hasTemplateId = keys.includes('templateId')
+  const hasTemplates = keys.includes('templates')
   const allowedKeys = new Set([
     'id',
     'title',
@@ -322,7 +323,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     'createdAt',
     'modifiedAt',
     'promptText',
-    ...(hasTemplateId ? ['templateId'] : []),
+    ...(hasTemplates ? ['templates'] : []),
     'status',
     ...(hasCompletedAt ? ['completedAt'] : [])
   ])
@@ -340,18 +341,15 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     return null
   }
 
-  const prompt = parseObject<PromptPersisted>({
+  // Template references are parsed separately because null is a valid selection value.
+  const { templates: templateReferences, ...recordWithoutTemplates } = record
+  const prompt = parseObject<Omit<PromptPersisted, 'templates'>>({
     id: parseString,
     title: parseString,
     fallbackTitle: parseString,
     createdAt: parseString,
     modifiedAt: parseString,
     promptText: parseString,
-    ...(hasTemplateId
-      ? {
-          templateId: parseNullableString
-        }
-      : {}),
     status: parsePromptStatus,
     ...(hasCompletedAt
       ? {
@@ -359,10 +357,19 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
         }
       : {})
   } as {
-    [TKey in keyof PromptPersisted]: Parser<PromptPersisted[TKey]>
-  })(record)
+    [TKey in keyof Omit<PromptPersisted, 'templates'>]: Parser<
+      Omit<PromptPersisted, 'templates'>[TKey]
+    >
+  })(recordWithoutTemplates)
 
-  return prompt
+  if (!prompt || !hasTemplates) return prompt
+  if (templateReferences === null) return { ...prompt, templates: null }
+
+  // Strict reference parser keeps the current on-wire object shape exact.
+  const parsedTemplateReferences = parseArray(
+    parseObject<PromptTemplateReference>({ id: parseString })
+  )(templateReferences)
+  return parsedTemplateReferences ? { ...prompt, templates: parsedTemplateReferences } : null
 }
 
 const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)

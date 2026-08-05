@@ -8,7 +8,7 @@ export type PromptDraftRecord = {
   createdAt: PromptFull['createdAt']
   modifiedAt: PromptFull['modifiedAt']
   promptText: PromptFull['promptText']
-  templateId?: PromptFull['templateId']
+  templates?: PromptFull['templates']
   isEdited: boolean
 }
 

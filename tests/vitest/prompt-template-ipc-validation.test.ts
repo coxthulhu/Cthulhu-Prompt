@@ -145,6 +145,11 @@ describe('prompt template IPC validation', () => {
               createdAt: '',
               modifiedAt: '',
               promptText: '',
+              templates: [
+                { id: 'template-1' },
+                { id: 'template-2' },
+                { id: 'template-1' }
+              ],
               status: 'Todo'
             }
           },
@@ -152,5 +157,43 @@ describe('prompt template IPC validation', () => {
         })
       ).success
     ).toBe(true)
+  })
+
+  it('rejects prompt template references without object ids', () => {
+    expect(
+      parseCreatePromptRequest(
+        request({
+          promptFolder: {
+            id: 'prompt-folder',
+            expectedRevision: 1,
+            data: {
+              ...templateFolder,
+              id: 'prompt-folder',
+              kind: 'prompt',
+              settings: {
+                folderDescription: null,
+                folderPrefix: null,
+                folderSuffix: null
+              }
+            }
+          },
+          content: {
+            id: 'prompt-1',
+            expectedRevision: 0,
+            data: {
+              id: 'prompt-1',
+              title: '',
+              fallbackTitle: 'New Prompt',
+              createdAt: '',
+              modifiedAt: '',
+              promptText: '',
+              templates: ['template-1'],
+              status: 'Todo'
+            }
+          },
+          previousEntryId: null
+        })
+      ).success
+    ).toBe(false)
   })
 })

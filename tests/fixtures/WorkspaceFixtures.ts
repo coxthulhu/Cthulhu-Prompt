@@ -2,7 +2,11 @@ import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
-import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
+import {
+  PromptStatus,
+  type PromptPersisted,
+  type PromptTemplateReference
+} from '@shared/Prompt'
 import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
 import {
   serializePromptMarkdown,
@@ -52,7 +56,7 @@ export interface PromptFolderConfig {
     createdAt?: string
     status?: PromptStatus
     completedAt?: string
-    templateId?: string | null
+    templates?: PromptTemplateReference[] | null
   }>
 }
 
@@ -174,7 +178,7 @@ const createPromptFiles = (
       modifiedAt: prompt.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
       status: prompt.status ?? PromptStatus.Todo,
       promptText: prompt.promptText,
-      ...(prompt.templateId !== undefined ? { templateId: prompt.templateId } : {}),
+      ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
       ...(prompt.status === PromptStatus.Completed && prompt.completedAt
         ? { completedAt: prompt.completedAt }
         : {})
