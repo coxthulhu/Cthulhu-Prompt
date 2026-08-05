@@ -28,7 +28,7 @@ const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-ad
 const SHORT_PROMPT_50 = '[data-testid="prompt-tree-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
-const PROMPT_TREE_ROOT_FOLDER = '[data-testid="prompt-tree-root-folder"]'
+const SIDEBAR_FOLDER_ROOT_BUTTON = '[data-testid="sidebar-folder-root-button"]'
 const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
@@ -1000,7 +1000,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('selects the root folder row at the top and keeps root settings action inert', async ({
+  test('selects the root folder target at the top and keeps root settings action inert', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1019,9 +1019,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(mainWindow.locator(PROMPT_TREE_ROOT_FOLDER)).toHaveAttribute(
-      'data-row-state',
-      'active'
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+      'data-active',
+      'true'
     )
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
@@ -1033,7 +1033,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toHaveCount(0)
   })
 
-  test('maps prompt header navigation to the first prompt tree row', async ({ testSetup }) => {
+  test('maps prompt header navigation to the folder root target', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -1155,7 +1155,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
   })
 
-  test('root prompt tree row scrolls to top', async ({ testSetup }) => {
+  test('sidebar folder root button scrolls to top', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -1167,13 +1167,23 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(1200)
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 0)
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+      'data-active',
+      'false'
+    )
 
-    await mainWindow.locator(PROMPT_TREE_ROOT_FOLDER).click()
+    await mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON).click()
 
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(mainWindow.locator(PROMPT_TREE_ROOT_FOLDER)).toHaveAttribute(
-      'data-row-state',
-      'active'
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await testHelpers.navigateToHomeScreen()
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toBeVisible()
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+      'data-active',
+      'false'
     )
   })
 })

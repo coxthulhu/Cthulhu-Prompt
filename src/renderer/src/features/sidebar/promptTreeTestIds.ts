@@ -13,10 +13,6 @@ export const folderOpenTestId = (folder: PromptFolder): string =>
 
 export const folderPromptTestId = (promptId: string): string => `prompt-tree-prompt-${promptId}`
 
-export const promptTreeRootFolderTestId = 'prompt-tree-root-folder'
-
-export const promptTreeRootFolderDropIndicatorTestId = 'prompt-tree-root-folder-drop-indicator'
-
 export const folderPromptShowAllTestId = (folder: PromptFolder): string =>
   `prompt-tree-folder-show-all-prompts-${getFolderTestKey(folder)}`
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteSet } from 'svelte/reactivity'
-  import { FolderOpen, Loader } from 'lucide-svelte'
+  import { Loader } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
     type DroppableAllowedEdges,
@@ -62,7 +62,6 @@
     type PromptTreeBottomSpacerRowProps,
     type PromptTreeFolderRowProps,
     type PromptTreePromptRowProps,
-    type PromptTreeRootFolderRowProps,
     type PromptTreeRow
   } from './PromptTreeVirtualList.svelte'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
@@ -73,8 +72,6 @@
   import {
     folderDropIndicatorTestId,
     folderPromptDropIndicatorTestId,
-    promptTreeRootFolderDropIndicatorTestId,
-    promptTreeRootFolderTestId,
     promptTreeBottomSpacerDropIndicatorTestId,
     promptTreeBottomSpacerDropTargetTestId
   } from './promptTreeTestIds'
@@ -300,9 +297,9 @@
     left.rowOwnerFolderId === right.rowOwnerFolderId &&
     left.row === right.row
 
-  const getPromptTreeRowId = (target: PromptNavigationTarget): string => {
+  const getPromptTreeRowId = (target: PromptNavigationTarget): string | null => {
     if (target.row === 'folder-root') {
-      return folderRootRowId(target.screenRootFolderId)
+      return null
     }
     if (target.row === 'folder-settings') {
       return folderRootRowId(target.rowOwnerFolderId)
@@ -365,16 +362,6 @@
     parentFolder && edge === 'top'
       ? { folderId: parentFolder.id, targetEntryId: folder.id, position: 'before' }
       : { folderId: folder.id, targetEntryId: null, position: 'after' }
-
-  // The root row's bottom edge inserts before the first entry shown beneath it.
-  const getPromptTreeRootStartDropPayload = (): PromptHandleDropPayload => {
-    const rootEntryIds = getPromptFolderActiveEntryIds(screenRootFolder!)
-    return {
-      folderId: screenRootFolder!.id,
-      targetEntryId: rootEntryIds[0] ?? null,
-      position: rootEntryIds.length > 0 ? 'before' : 'after'
-    }
-  }
 
   const getPromptTreeBottomSpacerDropPayload = (): PromptHandleDropPayload => {
     const rootEntryIds = getPromptFolderActiveEntryIds(screenRootFolder!)
@@ -556,11 +543,6 @@
     handlePromptTreeEntrySelect(promptFolderId, promptIdToPromptNavigationRow(promptId))
   }
 
-  const handlePromptTreeRootFolderSelect = () => {
-    if (!screenRootFolder) return
-    handlePromptTreeEntrySelect(screenRootFolder.id, 'folder-root')
-  }
-
   const handlePromptTreeFolderExpandedChange = (promptFolderId: string, isExpanded: boolean) => {
     setPromptTreeFolderExpandedState(promptFolderId, isExpanded)
   }
@@ -632,14 +614,6 @@
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
     if (screenRootFolder) {
-      items.push({
-        id: folderRootRowId(screenRootFolder.id),
-        row: {
-          kind: 'root-folder',
-          folder: screenRootFolder
-        }
-      })
-
       const addPromptFolderRows = (
         promptFolder: PromptFolder,
         parentFolder: PromptFolder | null,
@@ -793,7 +767,13 @@
       return
     }
 
+    if (request.payload.row === 'folder-root') {
+      promptNavigation.treeRevealRequests.consume(request, () => undefined)
+      return
+    }
+
     const rowId = getPromptTreeRowId(request.payload)
+    if (!rowId) return
     if (!virtualItems.some((item) => item.id === rowId)) return
 
     promptNavigation.treeRevealRequests.consume(request, () => {
@@ -821,38 +801,8 @@
         bind:scrollToWithinWindowBand
         bind:viewportMetrics
       >
-{#snippet rootFolderRow(props: PromptTreeRootFolderRowProps)}
-  {@const isActive = isTreeEntryActive(props.row.folder.id, 'folder-root')}
-
-  <PromptDropTarget
-    getOptions={() => ({
-      ...getPromptTreeDroppableOptions(props.rowId, 'bottom', getPromptTreeRootStartDropPayload),
-      snap: false
-    })}
-    class="sidebarPromptTreeSettingsRow sidebarPromptTreeRootRow"
-  >
-    <button
-      type="button"
-      data-testid={promptTreeRootFolderTestId}
-      data-row-state={isActive ? 'active' : isPromptDragActive ? 'drag-idle' : 'idle'}
-      aria-current={isActive ? 'true' : undefined}
-      onclick={handlePromptTreeRootFolderSelect}
-      class="sidebarPromptTreeSettingsButton sidebarPromptTreeRootButton sidebarPromptTreeBaseFolderButton"
-    >
-      <FolderOpen class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
-      <span class="sidebarPromptTreeSettingsLabel">{props.row.folder.displayName}</span>
-    </button>
-  </PromptDropTarget>
-{/snippet}
-
-{#snippet promptTreeRootFolderRowOverlay({ rowId }: PromptTreeRootFolderRowProps)}
-  {#if getPromptTreeDropTargetEdge(rowId)}
-    <DropIndicator
-      testId={promptTreeRootFolderDropIndicatorTestId}
-      insetStart={getPromptTreeDropIndicatorInset(0)}
-      edge="bottom"
-    />
-  {/if}
+{#snippet rootFolderRow()}
+  <!-- Root navigation lives in the sidebar toolbar, so this shared row renderer stays empty. -->
 {/snippet}
 
 {#snippet folderRow(props: PromptTreeFolderRowProps)}

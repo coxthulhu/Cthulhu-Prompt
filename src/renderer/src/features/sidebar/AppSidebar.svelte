@@ -360,6 +360,14 @@
     screenRootFolder?.kind === 'prompt' &&
       promptFolderScreenMode === PromptFolderScreenMode.Completed
   )
+  // Highlights the folder overview action only while its navigation target is active onscreen.
+  const isFolderRootActive = $derived(
+    activeScreen === 'prompt-folders' &&
+      screenRootFolder !== null &&
+      promptNavigation.screenRootFolderId === screenRootFolder.id &&
+      promptNavigation.rowOwnerFolderId === screenRootFolder.id &&
+      promptNavigation.selectedRow === 'folder-root'
+  )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
   const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
   const selectedFolderActionsLabel = $derived(
@@ -417,6 +425,26 @@
     onPromptFolderModeChange(
       isCompletedPromptMode ? PromptFolderScreenMode.Active : PromptFolderScreenMode.Completed
     )
+  }
+
+  // Selects and reveals the root folder overview formerly represented by the first tree row.
+  const selectFolderRoot = () => {
+    // The selected root owns both the toolbar state and the overview navigation target.
+    const rootFolderId = screenRootFolder?.id
+    if (!rootFolderId) return
+
+    promptNavigation.select({
+      screenRootFolderId: rootFolderId,
+      rowOwnerFolderId: rootFolderId,
+      row: 'folder-root',
+      source: 'tree-click',
+      forceRequest: true,
+      contentReveal: { scrollType: 'center' }
+    })
+
+    if (activeScreen !== 'prompt-folders') {
+      onScreenRootFolderSelect(rootFolderId)
+    }
   }
 
   const selectCreatedPrompt = (promptFolderId: string, promptId: string): void => {
@@ -768,26 +796,24 @@
   {/if}
 
   <div class="cthulhuSidebarPromptSectionHeader">
-    <p class="cthulhuSidebarPromptSectionTitle">{isTemplateFolder ? 'Templates' : 'Prompts'}</p>
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
-          icon={Plus}
-          label={`Add ${contentLabel}`}
-          title={`Add ${contentLabel}`}
-          size="compact"
+          icon={Settings}
+          label="Show Folder Overview"
+          title="Show Folder Overview"
           borderless
-          disabled={!screenRootFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
-          testId="sidebar-add-prompt-button"
+          disabled={!screenRootFolder}
+          active={isFolderRootActive}
+          testId="sidebar-folder-root-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-          onclick={() => void addPromptToSelectedFolder()}
+          onclick={selectFolderRoot}
         />
         {#if !isTemplateFolder}
           <IconButton
             icon={Check}
             label="Show Completed Prompts"
             title="Show Completed Prompts"
-            size="compact"
             borderless
             disabled={!screenRootFolder}
             active={isCompletedPromptMode}
@@ -800,12 +826,21 @@
           icon={promptFolderExpansionActionIcon}
           label={promptFolderExpansionActionLabel}
           title={promptFolderExpansionActionLabel}
-          size="compact"
           borderless
           disabled={!canTogglePromptFolders}
           testId="toggle-all-prompt-folders-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={handlePromptFolderExpansionAction}
+        />
+        <IconButton
+          icon={Plus}
+          label={`Add ${contentLabel}`}
+          title={`Add ${contentLabel}`}
+          borderless
+          disabled={!screenRootFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
+          testId="sidebar-add-prompt-button"
+          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+          onclick={() => void addPromptToSelectedFolder()}
         />
         <DropdownPopupSimple
           label={selectedFolderActionsLabel}
@@ -819,7 +854,6 @@
               icon={MoreHorizontal}
               label={selectedFolderActionsLabel}
               title={selectedFolderActionsLabel}
-              size="compact"
               borderless
               disabled={!screenRootFolder}
               active={dropdown.open}
@@ -865,21 +899,12 @@
 </aside>
 
 <style>
-  .cthulhuSidebarPromptSectionTitle {
-    margin: 0;
-    color: var(--ui-normal-text);
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 20px;
-  }
-
   .cthulhuSidebarPromptSectionHeader {
     display: flex;
     min-height: 40px;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 4px 8px 0 12px;
+    justify-content: center;
+    padding: 8px;
   }
 
   .cthulhuSidebarPromptSectionActions {

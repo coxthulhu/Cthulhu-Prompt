@@ -26,7 +26,7 @@ import { PromptStatus } from '../../src/shared/Prompt'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
-const PROMPT_TREE_ROOT_FOLDER_SELECTOR = '[data-testid="prompt-tree-root-folder"]'
+const SIDEBAR_FOLDER_ROOT_BUTTON_SELECTOR = '[data-testid="sidebar-folder-root-button"]'
 const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
 const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
@@ -256,28 +256,82 @@ describe('Prompt folder prompt tree', () => {
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
-    const rootFolderRow = mainWindow.locator(PROMPT_TREE_ROOT_FOLDER_SELECTOR)
-    await expect(rootFolderRow).toHaveText('Main')
-    await expect(rootFolderRow).toHaveAttribute('data-row-state', 'active')
-    await expect(rootFolderRow.locator('.sidebarPromptTreeFolderIcon')).toBeVisible()
-    await expect(rootFolderRow.locator('.sidebarPromptTreeChevronWrap')).toHaveCount(0)
-    await expect(rootFolderRow.locator('xpath=..').locator('button')).toHaveCount(1)
-    const rootFolderRowBox = await rootFolderRow.locator('xpath=..').boundingBox()
-    expect(rootFolderRowBox?.height).toBe(32)
-    await expect(rootFolderRow).toHaveCSS('font-weight', '400')
-    const rootFolderBackground = await rootFolderRow.evaluate(
-      (element) => getComputedStyle(element).backgroundColor
-    )
-    await rootFolderRow.hover()
+    const folderRootButton = mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON_SELECTOR)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-root-folder"]')).toHaveCount(0)
+    await expect(folderRootButton).toHaveAttribute('data-active', 'true')
+    await expect(folderRootButton).toHaveCSS('border-top-style', 'none')
+    const folderRootButtonBox = await folderRootButton.boundingBox()
+    const folderRootIconBox = await folderRootButton.locator('svg').boundingBox()
+    expect(folderRootButtonBox?.width).toBe(36)
+    expect(folderRootButtonBox?.height).toBe(36)
+    expect(folderRootIconBox?.width).toBe(20)
+    expect(folderRootIconBox?.height).toBe(20)
+    expect(
+      await mainWindow
+        .locator('.cthulhuSidebarPromptSectionActions .cthulhuUiIconButton')
+        .evaluateAll((buttons) =>
+          buttons.every((button) => {
+            const buttonBox = button.getBoundingClientRect()
+            const iconBox = button.querySelector('svg')?.getBoundingClientRect()
+            return (
+              buttonBox.width === 36 &&
+              buttonBox.height === 36 &&
+              iconBox?.width === 20 &&
+              iconBox.height === 20
+            )
+          })
+        )
+    ).toBe(true)
+    expect(
+      await mainWindow
+        .locator('.cthulhuSidebarPromptSectionActions .cthulhuUiIconButton')
+        .evaluateAll((buttons) =>
+          buttons.every((button) => button.getAttribute('data-borderless') === 'true')
+        )
+    ).toBe(true)
+    expect(
+      await mainWindow
+        .locator('.cthulhuSidebarPromptSectionActions .cthulhuUiIconButton')
+        .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-testid')))
+    ).toEqual([
+      'sidebar-folder-root-button',
+      'toggle-completed-prompts-button',
+      'toggle-all-prompt-folders-button',
+      'sidebar-add-prompt-button',
+      'selected-prompt-folder-actions-button'
+    ])
+    const promptSectionAlignment = await mainWindow
+      .locator('.cthulhuSidebarPromptSectionHeader')
+      .evaluate((header) => {
+        const actions = header.querySelector<HTMLElement>('.cthulhuSidebarPromptSectionActions')
+        if (!actions) return null
+        const headerBox = header.getBoundingClientRect()
+        const actionsBox = actions.getBoundingClientRect()
+        return actionsBox.left + actionsBox.width / 2 - (headerBox.left + headerBox.width / 2)
+      })
+    expect(promptSectionAlignment).not.toBeNull()
+    expect(Math.abs(promptSectionAlignment!)).toBeLessThanOrEqual(1)
+    await expect(mainWindow.locator('.cthulhuSidebarPromptSectionTitle')).toHaveCount(0)
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+    await expect(folderRootButton).toHaveAttribute('data-active', 'true')
+    await expect(
+      mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
+    ).toHaveAttribute('data-active', 'true')
+    // The gear uses the completed-check button's active background and glyph treatment.
+    const folderRootActiveStyles = await folderRootButton.evaluate((button) => ({
+      backgroundColor: getComputedStyle(button).backgroundColor,
+      color: getComputedStyle(button).color
+    }))
     await expect
       .poll(async () =>
-        rootFolderRow.evaluate((element) => getComputedStyle(element).backgroundColor)
+        mainWindow
+          .locator('[data-testid="toggle-completed-prompts-button"]')
+          .evaluate((button) => ({
+            backgroundColor: getComputedStyle(button).backgroundColor,
+            color: getComputedStyle(button).color
+          }))
       )
-      .not.toBe(rootFolderBackground)
-    await mainWindow.mouse.move(0, 0)
-    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
-    await expect(rootFolderRow).toBeVisible()
-    await expect(rootFolderRow).toHaveText('Main')
+      .toEqual(folderRootActiveStyles)
     await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
     await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
     await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
@@ -309,15 +363,6 @@ describe('Prompt folder prompt tree', () => {
         const basePromptLabel = document
           .querySelector<HTMLElement>('[data-testid="prompt-tree-prompt-base-before"]')
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
-        const rootFolderButton = document.querySelector<HTMLElement>(
-          '[data-testid="prompt-tree-root-folder"]'
-        )
-        const rootFolderIcon = rootFolderButton?.querySelector<SVGElement>(
-          '.sidebarPromptTreeFolderIcon'
-        )
-        const rootFolderLabel = rootFolderButton?.querySelector<HTMLElement>(
-          '.sidebarPromptTreeSettingsLabel'
-        )
         const nestedRow = document.querySelector<HTMLElement>(nestedSelector)
         const nestedChevron = nestedRow?.querySelector<HTMLElement>(
           '.sidebarPromptTreeChevronWrap'
@@ -328,9 +373,6 @@ describe('Prompt folder prompt tree', () => {
 
         if (
           !basePromptLabel ||
-          !rootFolderButton ||
-          !rootFolderIcon ||
-          !rootFolderLabel ||
           !nestedRow ||
           !nestedChevron ||
           !nestedPromptLabel
@@ -338,22 +380,8 @@ describe('Prompt folder prompt tree', () => {
           return null
         }
 
-        const rootFolderButtonRect = rootFolderButton.getBoundingClientRect()
-        const rootFolderIconRect = rootFolderIcon.getBoundingClientRect()
-        const rootFolderLabelRect = rootFolderLabel.getBoundingClientRect()
-        const nestedChevronRect = nestedChevron.getBoundingClientRect()
         return {
           basePromptLabelLeft: Math.round(basePromptLabel.getBoundingClientRect().left),
-          rootFolderIconInsetPx: rootFolderIconRect.left - rootFolderButtonRect.left,
-          rootFolderLabelOffsetPx: rootFolderLabelRect.left - rootFolderIconRect.left,
-          rootIconToNestedChevronCenterDeltaPx:
-            rootFolderIconRect.left +
-            rootFolderIconRect.width / 2 -
-            (nestedChevronRect.left + nestedChevronRect.width / 2),
-          rootFolderHasChevron: Boolean(
-            rootFolderButton.querySelector('.sidebarPromptTreeChevronWrap')
-          ),
-          rootFolderLabelFontWeight: getComputedStyle(rootFolderLabel).fontWeight,
           nestedHasGutter: Boolean(nestedRow.querySelector('.sidebarPromptTreeGutter')),
           nestedPromptLabelLeft: Math.round(nestedPromptLabel.getBoundingClientRect().left)
         }
@@ -364,11 +392,6 @@ describe('Prompt folder prompt tree', () => {
       }
     )
     expect(indentation).not.toBeNull()
-    expect(Math.abs(indentation!.rootFolderIconInsetPx - 13)).toBeLessThanOrEqual(1)
-    expect(Math.abs(indentation!.rootFolderLabelOffsetPx - 28)).toBeLessThanOrEqual(1)
-    expect(Math.abs(indentation!.rootIconToNestedChevronCenterDeltaPx)).toBeLessThanOrEqual(1)
-    expect(indentation!.rootFolderHasChevron).toBe(false)
-    expect(indentation!.rootFolderLabelFontWeight).toBe('400')
     expect(indentation!.nestedHasGutter).toBe(false)
     expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(indentation!.basePromptLabelLeft + 2)
 
