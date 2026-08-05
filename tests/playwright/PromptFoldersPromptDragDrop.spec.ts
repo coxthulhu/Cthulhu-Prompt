@@ -43,6 +43,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/sample'
 const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+const VIRTUAL_WORKSPACE_PATH = '/ws/virtual'
 const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
 const promptFolderOrderPath = (workspacePath: string, folderName: string): string =>
@@ -86,6 +87,7 @@ const ANCHOR_2_ID = 'anchor-2'
 const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
+const SHORT_FOLDER_PATH = promptFolderOrderPath(VIRTUAL_WORKSPACE_PATH, SHORT_FOLDER_NAME)
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_TREE_ROOT_FOLDER_SELECTOR = '[data-testid="prompt-tree-root-folder"]'
 const PROMPT_TREE_ROOT_FOLDER_DROP_INDICATOR_SELECTOR =
@@ -1367,6 +1369,66 @@ describe('Prompt folder prompt drag-drop', () => {
     expect(treeGhost.borderColor).toBe(treeGhost.mutedBorderColor)
     expect(treeGhost.width).toBeLessThanOrEqual(400)
     expect(handleGhost).toEqual(treeGhost)
+  })
+
+  test('skips a clipped prompt edge and snaps to the nearest visible edge', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await beginPromptTreeRowDrag(mainWindow, 'short-3')
+    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 40)
+
+    const clippedRow = mainWindow.locator(promptTreePromptSelector('short-1'))
+    await expect
+      .poll(async () => {
+        const clippedPx = await clippedRow.evaluate((row) => {
+          const viewport = row.closest<HTMLElement>('[data-virtual-window-viewport]')
+          return viewport
+            ? Math.round(viewport.getBoundingClientRect().top - row.getBoundingClientRect().top)
+            : null
+        })
+        return clippedPx === null ? null : Math.abs(clippedPx - 8)
+      })
+      .toBeLessThanOrEqual(1)
+
+    const viewportBox = await mainWindow.locator(PROMPT_TREE_HOST_SELECTOR).boundingBox()
+    if (!viewportBox) {
+      throw new Error('Missing prompt tree viewport geometry for clipped-edge drag')
+    }
+
+    await mainWindow.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y + 1, {
+      steps: 12
+    })
+
+    const indicator = mainWindow.locator(
+      [
+        `${promptTreePromptDropIndicatorSelector('short-1')}[data-edge="bottom"]`,
+        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="top"]`
+      ].join(', ')
+    )
+    await expect(indicator).toHaveCount(1)
+    await expect(indicator).toBeVisible()
+
+    const clippedRowBox = await clippedRow.boundingBox()
+    const indicatorBox = await indicator.boundingBox()
+    if (!clippedRowBox || !indicatorBox) {
+      throw new Error('Missing prompt tree geometry for visible-edge assertion')
+    }
+    expect(
+      Math.abs(
+        indicatorBox.y + indicatorBox.height / 2 - (clippedRowBox.y + clippedRowBox.height)
+      )
+    ).toBeLessThanOrEqual(2)
+
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () => (await readPromptFolderEntryIds(electronApp, SHORT_FOLDER_PATH)).slice(0, 3))
+      .toEqual(['short-1', 'short-3', 'short-2'])
   })
 
   test('moves the prompt-tree indicator between the top and bottom edges of a prompt row', async ({

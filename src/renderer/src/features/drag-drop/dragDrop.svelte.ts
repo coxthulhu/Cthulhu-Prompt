@@ -96,6 +96,12 @@ type SnapCandidate = ActiveDropTarget & {
   distance: number
 }
 
+type VirtualDropGeometry = {
+  nodeRect: DOMRect
+  viewportRect: DOMRect
+  visibleRect: DOMRect
+}
+
 type DragDropDropdownRegistration = {
   triggerNode: HTMLElement
   getMenuNode: () => HTMLElement | null
@@ -411,7 +417,35 @@ const getVirtualViewport = (node: HTMLElement): HTMLElement | null => {
   return node.closest('[data-virtual-window-viewport]')
 }
 
-const getClippedVirtualRect = (node: HTMLElement, x: number, y: number): DOMRect | null => {
+const getDroppableEdgeY = (nodeRect: DOMRect, edge: DroppableEdge): number => {
+  return edge === 'top' ? nodeRect.top : nodeRect.bottom
+}
+
+const isDroppableEdgeVisibleInViewport = (
+  edge: DroppableEdge,
+  nodeRect: DOMRect,
+  viewportRect: DOMRect
+): boolean => {
+  const edgeY = getDroppableEdgeY(nodeRect, edge)
+  return edgeY >= viewportRect.top && edgeY <= viewportRect.bottom
+}
+
+const isDroppableEdgeVisible = (node: HTMLElement, edge: DroppableEdge): boolean => {
+  const viewport = getVirtualViewport(node)
+  if (!viewport) {
+    return true
+  }
+
+  const viewportRect = viewport.getBoundingClientRect()
+  const nodeRect = node.getBoundingClientRect()
+  return isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect)
+}
+
+const getVirtualDropGeometry = (
+  node: HTMLElement,
+  x: number,
+  y: number
+): VirtualDropGeometry | null => {
   const viewport = getVirtualViewport(node)
   if (!viewport) {
     return null
@@ -432,12 +466,16 @@ const getClippedVirtualRect = (node: HTMLElement, x: number, y: number): DOMRect
     return null
   }
 
-  return DOMRect.fromRect({
-    x: left,
-    y: top,
-    width: right - left,
-    height: bottom - top
-  })
+  return {
+    nodeRect,
+    viewportRect,
+    visibleRect: DOMRect.fromRect({
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top
+    })
+  }
 }
 
 const getSnapCandidatesForRegistration = (
@@ -446,42 +484,44 @@ const getSnapCandidatesForRegistration = (
   y: number
 ): SnapCandidate[] => {
   const options = registration.getOptions()
-  const rect = getClippedVirtualRect(registration.node, x, y)
-  if (!rect) {
+  const geometry = getVirtualDropGeometry(registration.node, x, y)
+  if (!geometry) {
     return []
   }
 
-  if (options.allowedEdges === 'top-and-bottom') {
-    return [
-      {
-        registration,
-        edge: 'top',
-        distance: distanceToSegment(x, y, rect.left, rect.top, rect.right, rect.top)
-      },
-      {
-        registration,
-        edge: 'bottom',
-        distance: distanceToSegment(x, y, rect.left, rect.bottom, rect.right, rect.bottom)
-      }
-    ]
-  }
+  const { nodeRect, viewportRect, visibleRect } = geometry
+  const allowedEdges: DroppableEdge[] =
+    options.allowedEdges === 'top-and-bottom'
+      ? ['top', 'bottom']
+      : options.allowedEdges === 'top' || options.allowedEdges === 'bottom'
+        ? [options.allowedEdges]
+        : []
 
-  if (options.allowedEdges === 'top' || options.allowedEdges === 'bottom') {
-    const edgeY = options.allowedEdges === 'top' ? rect.top : rect.bottom
-    return [
-      {
-        registration,
-        edge: options.allowedEdges,
-        distance: distanceToSegment(x, y, rect.left, edgeY, rect.right, edgeY)
-      }
-    ]
+  if (allowedEdges.length > 0) {
+    return allowedEdges
+      .filter((edge) => isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect))
+      .map((edge) => {
+        const edgeY = getDroppableEdgeY(nodeRect, edge)
+        return {
+          registration,
+          edge,
+          distance: distanceToSegment(
+            x,
+            y,
+            visibleRect.left,
+            edgeY,
+            visibleRect.right,
+            edgeY
+          )
+        }
+      })
   }
 
   return [
     {
       registration,
       edge: null,
-      distance: distanceToRect(x, y, rect)
+      distance: distanceToRect(x, y, visibleRect)
     }
   ]
 }
@@ -504,6 +544,10 @@ const getDropTargetFromPoint = (
 
       const options = registration.getOptions()
       const edge = resolveDropEdge(registration.node, options.allowedEdges, y)
+      if (edge && !isDroppableEdgeVisible(registration.node, edge)) {
+        continue
+      }
+
       if (!options.canDrop(draggedPayload, edge)) {
         continue
       }
