@@ -8,6 +8,12 @@ const DROPDOWN_KEEP_OPEN_INSET_PX = 16
 
 export type DroppableEdge = 'top' | 'bottom'
 export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
+export type DroppableSnapViewportOutset = {
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
+}
 type DroppablePayloadResolver<TDropPayload> = (edge: DroppableEdge | null) => TDropPayload
 
 export type DragFinishResult<TSourcePayload, TDropPayload> = {
@@ -40,6 +46,7 @@ export type DroppableOptions<TDraggedPayload = unknown, TDropPayload = unknown> 
   payload?: TDropPayload | DroppablePayloadResolver<TDropPayload>
   allowedEdges?: DroppableAllowedEdges
   snap?: boolean
+  snapViewportOutset?: DroppableSnapViewportOutset
   canDrop?: (payload: TDraggedPayload, edge: DroppableEdge | null) => boolean
   onDrop?: (payload: TDraggedPayload) => void
   state?: DroppableState
@@ -76,6 +83,7 @@ type NormalizedDroppableOptions = {
   dragType: string
   allowedEdges: DroppableAllowedEdges
   snap: boolean
+  snapViewportOutset: Required<DroppableSnapViewportOutset>
   canDrop: (payload: unknown, edge: DroppableEdge | null) => boolean
   resolvePayload: (edge: DroppableEdge | null) => unknown | null
   onDrop: ((payload: unknown) => void) | null
@@ -224,6 +232,12 @@ const normalizeDroppableOptions = <TDraggedPayload, TDropPayload>(
     dragType: options.dragType,
     allowedEdges: options.allowedEdges ?? 'none',
     snap: options.snap ?? true,
+    snapViewportOutset: {
+      top: options.snapViewportOutset?.top ?? 0,
+      right: options.snapViewportOutset?.right ?? 0,
+      bottom: options.snapViewportOutset?.bottom ?? 0,
+      left: options.snapViewportOutset?.left ?? 0
+    },
     canDrop: canDrop
       ? (draggedPayload, edge) => canDrop(draggedPayload as TDraggedPayload, edge)
       : () => true,
@@ -290,10 +304,6 @@ const distanceToRect = (x: number, y: number, rect: DOMRect): number => {
   const clampedX = Math.min(Math.max(x, rect.left), rect.right)
   const clampedY = Math.min(Math.max(y, rect.top), rect.bottom)
   return Math.hypot(x - clampedX, y - clampedY)
-}
-
-const isPointInRect = (x: number, y: number, rect: DOMRect): boolean => {
-  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 }
 
 const isPointInInflatedRect = (x: number, y: number, rect: DOMRect, insetPx: number): boolean => {
@@ -444,7 +454,8 @@ const isDroppableEdgeVisible = (node: HTMLElement, edge: DroppableEdge): boolean
 const getVirtualDropGeometry = (
   node: HTMLElement,
   x: number,
-  y: number
+  y: number,
+  snapViewportOutset: Required<DroppableSnapViewportOutset>
 ): VirtualDropGeometry | null => {
   const viewport = getVirtualViewport(node)
   if (!viewport) {
@@ -452,7 +463,12 @@ const getVirtualDropGeometry = (
   }
 
   const viewportRect = viewport.getBoundingClientRect()
-  if (!isPointInRect(x, y, viewportRect)) {
+  if (
+    x < viewportRect.left - snapViewportOutset.left ||
+    x > viewportRect.right + snapViewportOutset.right ||
+    y < viewportRect.top - snapViewportOutset.top ||
+    y > viewportRect.bottom + snapViewportOutset.bottom
+  ) {
     return null
   }
 
@@ -484,7 +500,7 @@ const getSnapCandidatesForRegistration = (
   y: number
 ): SnapCandidate[] => {
   const options = registration.getOptions()
-  const geometry = getVirtualDropGeometry(registration.node, x, y)
+  const geometry = getVirtualDropGeometry(registration.node, x, y, options.snapViewportOutset)
   if (!geometry) {
     return []
   }

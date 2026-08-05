@@ -202,6 +202,7 @@
   })
   const PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX = 15
   const PROMPT_TREE_INDENT_WIDTH_PX = 12
+  const PROMPT_TREE_SNAP_VIEWPORT_OUTSET_PX = { top: 8 }
   const getPromptTreeDropIndicatorInset = (indentCount: number): string =>
     `${PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX + indentCount * PROMPT_TREE_INDENT_WIDTH_PX}px`
 
@@ -319,6 +320,7 @@
   ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges,
+    snapViewportOutset: PROMPT_TREE_SNAP_VIEWPORT_OUTSET_PX,
     canDrop: (payload, edge) => canDropOnPromptTree(payload, getDropPayload(edge)),
     payload: getDropPayload,
     state: promptTreePromptDroppableState.getState(rowId)

@@ -1431,6 +1431,59 @@ describe('Prompt folder prompt drag-drop', () => {
       .toEqual(['short-1', 'short-3', 'short-2'])
   })
 
+  test('snaps within the configured zone above the prompt tree', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await beginPromptTreeRowDrag(mainWindow, 'short-3')
+    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 64)
+
+    const viewport = mainWindow.locator(PROMPT_TREE_HOST_SELECTOR)
+    const topRow = mainWindow.locator(promptTreePromptSelector('short-2'))
+    await expect
+      .poll(async () => {
+        const viewportBox = await viewport.boundingBox()
+        const topRowBox = await topRow.boundingBox()
+        return viewportBox && topRowBox ? Math.abs(topRowBox.y - viewportBox.y) : null
+      })
+      .toBeLessThanOrEqual(1)
+
+    const viewportBox = await viewport.boundingBox()
+    if (!viewportBox) {
+      throw new Error('Missing prompt tree viewport geometry for snap-zone drag')
+    }
+
+    await mainWindow.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y - 9, {
+      steps: 12
+    })
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-tree-drop-indicator-"]')
+    ).toHaveCount(0)
+
+    await mainWindow.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y - 7, {
+      steps: 12
+    })
+
+    const indicator = mainWindow.locator(
+      [
+        `${promptTreePromptDropIndicatorSelector('short-1')}[data-edge="bottom"]`,
+        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="top"]`
+      ].join(', ')
+    )
+    await expect(indicator).toHaveCount(1)
+    await expect(indicator).toBeVisible()
+
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () => (await readPromptFolderEntryIds(electronApp, SHORT_FOLDER_PATH)).slice(0, 3))
+      .toEqual(['short-1', 'short-3', 'short-2'])
+  })
+
   test('moves the prompt-tree indicator between the top and bottom edges of a prompt row', async ({
     testSetup
   }) => {
