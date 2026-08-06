@@ -18,8 +18,7 @@
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
   import {
     applyPromptTemplates,
-    createPromptFolderTemplate,
-    hasPromptTextToken
+    createPromptFolderTemplate
   } from '../prompt-editor/promptTemplatingEngine'
   import { setPromptDraftTemplates } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import {
@@ -322,21 +321,6 @@
     return templateTexts
   }
 
-  // Resolves the single current option shown by the temporary single-select dialog.
-  const getDialogSelectedTemplateId = (
-    templates: PromptTemplateReference[] | null | undefined
-  ): string | null | undefined => {
-    if (templates === undefined || templates === null) return templates
-    return (
-      templates.find((template) => {
-        const templateText = promptTemplateTextById[template.id]
-        return templateText !== undefined && hasPromptTextToken(templateText)
-      })?.id ??
-      templates[0]?.id ??
-      null
-    )
-  }
-
   const openTemplateSelectionDialog = (
     target: PromptFolderPromptTarget,
     mode: 'select' | 'select-and-copy'
@@ -346,26 +330,22 @@
     isTemplateSelectionDialogOpen = true
   }
 
-  const handleTemplateSelect = (templateId: string | null): void => {
+  const handleTemplateSelect = (templates: PromptTemplateReference[] | null): void => {
     if (!templateSelectionTarget) return
-    setPromptDraftTemplates(
-      templateSelectionTarget.promptId,
-      templateId === null ? null : [{ id: templateId }]
-    )
+    setPromptDraftTemplates(templateSelectionTarget.promptId, templates)
   }
 
-  const handleTemplateSelectAndCopy = async (templateId: string | null): Promise<void> => {
+  const handleTemplateSelectAndCopy = async (
+    templates: PromptTemplateReference[] | null
+  ): Promise<void> => {
     if (!templateSelectionTarget) return
     const { ownerFolderId, promptId } = templateSelectionTarget
     const promptDraft = promptDraftById[promptId]!
-    setPromptDraftTemplates(promptId, templateId === null ? null : [{ id: templateId }])
+    setPromptDraftTemplates(promptId, templates)
     await window.navigator.clipboard.writeText(
       applyPromptTemplates(
         promptDraft.text,
-        getCopyTemplateTexts(
-          ownerFolderId,
-          templateId === null ? null : [{ id: templateId }]
-        )
+        getCopyTemplateTexts(ownerFolderId, templates)
       )
     )
     if ((promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status === PromptStatus.Todo) {
@@ -1079,12 +1059,8 @@
   bind:open={isTemplateSelectionDialogOpen}
   {workspaceId}
   mode={templateSelectionMode}
-  title={templateSelectionMode === 'select-and-copy'
-    ? 'Select Template and Copy'
-    : 'Select Template'}
-  notifyOnReselect={templateSelectionMode === 'select-and-copy'}
-  selectedTemplateId={templateSelectionTarget
-    ? getDialogSelectedTemplateId(promptDraftById[templateSelectionTarget.promptId]?.templates)
+  selectedTemplates={templateSelectionTarget
+    ? promptDraftById[templateSelectionTarget.promptId]?.templates
     : undefined}
   onselect={templateSelectionMode === 'select-and-copy'
     ? handleTemplateSelectAndCopy

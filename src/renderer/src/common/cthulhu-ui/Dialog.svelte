@@ -27,6 +27,10 @@
     class?: string
     children?: Snippet
     submitVariant?: ButtonVariant
+    // Optional leading icon for the primary action.
+    submitIcon?: ComponentType
+    // Places Cancel before the primary action when the dialog requires that action order.
+    cancelFirst?: boolean
     oncancel?: () => void
     onsubmit?: () => void
   }
@@ -49,6 +53,8 @@
     class: className,
     children,
     submitVariant = 'accent',
+    submitIcon,
+    cancelFirst = false,
     oncancel,
     onsubmit
   }: Props = $props()
@@ -164,8 +170,17 @@
       {/if}
 
       <div class="cthulhuUiDialogFooter">
+        {#if cancelFirst}
+          <Button
+            text={cancelText}
+            state={cancelDisabled ? 'disabled' : 'enabled'}
+            testId={cancelTestId}
+            onclick={closeDialog}
+          />
+        {/if}
         {#if showSubmitButton}
           <Button
+            icon={submitIcon}
             text={submitText}
             state={submitDisabled ? 'disabled' : 'enabled'}
             variant={submitVariant}
@@ -173,12 +188,14 @@
             onclick={submitDialog}
           />
         {/if}
-        <Button
-          text={cancelText}
-          state={cancelDisabled ? 'disabled' : 'enabled'}
-          testId={cancelTestId}
-          onclick={closeDialog}
-        />
+        {#if !cancelFirst}
+          <Button
+            text={cancelText}
+            state={cancelDisabled ? 'disabled' : 'enabled'}
+            testId={cancelTestId}
+            onclick={closeDialog}
+          />
+        {/if}
       </div>
     </CardSurface>
   </div>

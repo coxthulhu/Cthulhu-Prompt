@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { Play } from 'lucide-svelte'
+  import { Check, Copy, Play } from 'lucide-svelte'
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import { PromptStatus } from '@shared/Prompt'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
+
+  // Optional control displayed before a prompt label when the row is reused by a picker.
+  type SelectionControl = 'checkbox' | 'copy'
 
   type Props = {
     folderId: string
@@ -17,6 +20,7 @@
     isPromptDragActive: boolean
     indentCount?: number
     isLastRow?: boolean
+    selectionControl?: SelectionControl
     getPromptDroppableOptions?: () => PromptRowDropOptions
     promptDragOptions?: PromptRowDragOptions
     onPromptSelect: (folderId: string, promptId: string) => void
@@ -32,6 +36,7 @@
     isPromptDragActive,
     indentCount = 0,
     isLastRow = false,
+    selectionControl,
     getPromptDroppableOptions,
     promptDragOptions,
     onPromptSelect
@@ -67,6 +72,19 @@
 {#snippet promptButtonContent()}
   <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
   <span class="prompt-tree-prompt-content">
+    {#if selectionControl}
+      <span
+        class="prompt-tree-selection-control"
+        data-control={selectionControl}
+        aria-hidden="true"
+      >
+        {#if selectionControl === 'checkbox'}
+          <Check size={13} />
+        {:else}
+          <Copy size={16} />
+        {/if}
+      </span>
+    {/if}
     <span class="sidebarPromptTreeSettingsLabel prompt-tree-prompt-label">{promptTitle}</span>
     {#if status === PromptStatus.InProgress}
       <span
@@ -87,7 +105,9 @@
     type="button"
     data-testid={folderPromptTestId(promptId)}
     data-row-state={rowState}
+    data-selection-control={selectionControl}
     aria-current={isActive ? 'true' : undefined}
+    aria-pressed={selectionControl === 'checkbox' ? isActive : undefined}
     onclick={handlePromptSelect}
     class="sidebarPromptTreeSettingsButton"
   >
@@ -106,7 +126,9 @@
       type="button"
       data-testid={folderPromptTestId(promptId)}
       data-row-state={rowState}
+      data-selection-control={selectionControl}
       aria-current={isActive ? 'true' : undefined}
+      aria-pressed={selectionControl === 'checkbox' ? isActive : undefined}
       onclick={handlePromptSelect}
       class="sidebarPromptTreeSettingsButton"
     >
@@ -125,6 +147,51 @@
     display: flex;
     gap: 8px;
     min-width: 0;
+  }
+
+  .sidebarPromptTreeSettingsButton[data-selection-control] {
+    border-radius: var(--cthulhu-ui-radius-control);
+    cursor: pointer;
+    padding-right: 14px;
+  }
+
+  .sidebarPromptTreeSettingsButton[data-selection-control][data-row-state='active'] {
+    background: var(--ui-accent-action-fill);
+  }
+
+  .sidebarPromptTreeSettingsButton[data-selection-control][data-row-state='active']:hover {
+    background: var(--ui-accent-action-hover-fill);
+  }
+
+  .prompt-tree-selection-control {
+    align-items: center;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 17px;
+    justify-content: center;
+    width: 17px;
+  }
+
+  .prompt-tree-selection-control[data-control='checkbox'] {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 4px;
+    color: transparent;
+    transition:
+      background-color 80ms ease-out,
+      border-color 80ms ease-out,
+      color 80ms ease-out;
+  }
+
+  .sidebarPromptTreeSettingsButton[data-row-state='active']
+    .prompt-tree-selection-control[data-control='checkbox'] {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-normal-border);
+    color: var(--ui-normal-text);
+  }
+
+  .prompt-tree-selection-control[data-control='copy'] {
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .prompt-tree-prompt-label {

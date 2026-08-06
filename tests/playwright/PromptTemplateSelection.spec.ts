@@ -187,7 +187,7 @@ Copy without a template.`,
 }
 
 describe('Prompt template selection', () => {
-  test('selects and clears ordered templates while preserving unresolved ids', async ({
+  test('stages and normalizes ordered template selections', async ({
     electronApp,
     testSetup
   }) => {
@@ -198,6 +198,9 @@ describe('Prompt template selection', () => {
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Prompts')
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-prompt-select-template-prompt"]')
+    ).not.toHaveCSS('cursor', 'pointer')
 
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     const stalePromptEditor = mainWindow.locator(promptEditorSelector('stale-template-prompt'))
@@ -234,34 +237,45 @@ describe('Prompt template selection', () => {
     ])
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
-    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
+    const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
     await expect(dialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
-      'Choose a template to apply to this prompt.'
+      'Select one or more templates to apply to this prompt.'
     )
-    expect((await dialog.boundingBox())!.width).toBeLessThanOrEqual(482)
-    await expect(
-      dialog.locator('.sidebarPromptTreeSettingsLabel, .sidebarPromptTreeFolderLabel')
-    ).toHaveText([
-      'No Template',
+    expect(Math.abs((await dialog.boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
+    await expect(dialog.locator('.prompt-template-base-folder-copy strong')).toHaveText([
       'Second Templates',
+      'First Templates'
+    ])
+    await expect(dialog.locator('.sidebarPromptTreeSettingsLabel')).toHaveText([
       'Second Root Template',
-      'First Templates',
-      'Nested Templates',
       'Nested Template',
       'First Root Template'
     ])
+    await expect(dialog.locator('.sidebarPromptTreeFolderLabel')).toHaveText([
+      'Nested Templates'
+    ])
+    await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveCSS(
+      'cursor',
+      'pointer'
+    )
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
+    ).toHaveCSS('cursor', 'pointer')
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+    ).toHaveCSS('cursor', 'pointer')
     await expect(
       dialog
         .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
         .locator('.sidebarPromptTreeFolderIcon')
     ).toBeVisible()
     await expect(
-      dialog.locator('.sidebarPromptTreeBaseFolderButton .sidebarPromptTreeFolderIcon')
+      dialog.locator('.prompt-template-base-folder-header .prompt-template-base-folder-icon')
     ).toHaveCount(2)
     await expect(
-      dialog.locator('.sidebarPromptTreeBaseFolderButton .sidebarPromptTreeChevronWrap')
+      dialog.locator('.prompt-template-base-folder-header .sidebarPromptTreeChevronWrap')
     ).toHaveCount(0)
     await expect(
       dialog.locator('[data-testid="prompt-template-option-none"] .sidebarPromptTreeFolderIcon')
@@ -269,20 +283,30 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-invalid"]')).toHaveCount(
       0
     )
-    await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).not.toHaveAttribute(
-      'aria-current',
+    await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
+      'aria-pressed',
       'true'
     )
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await noTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
-      'aria-current',
+      'aria-pressed',
       'true'
     )
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
+    expect(
+      parsePromptMarkdown(await readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))?.templates
+    ).toBeNull()
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
 
     await dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]').click()
+    await expect(dialog).toBeVisible()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templates:')
+    await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(dialog).toBeHidden()
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Nested Template'
@@ -295,7 +319,17 @@ describe('Prompt template selection', () => {
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(
       dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
-    ).toHaveAttribute('aria-current', 'true')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]').click()
+    await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    expect(
+      parsePromptMarkdown(await readTextFile(electronApp, PROMPT_PATH))?.templates
+    ).toEqual([{ id: 'template-nested' }])
+    await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await dialog
       .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
       .click()
@@ -308,6 +342,8 @@ describe('Prompt template selection', () => {
       dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
     ).toBeVisible()
     await dialog.locator('[data-testid="prompt-template-option-none"]').click()
+    await expect(dialog).toBeVisible()
+    await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
     await expectTemplateIndicator(promptEditor, 'no-template', '--ui-muted-text')
     await expect
@@ -316,20 +352,53 @@ describe('Prompt template selection', () => {
 
     await stalePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
-      'aria-current',
+      'aria-pressed',
       'true'
     )
-    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await mainWindow.locator('.cthulhuUiDialogLayer').click({ position: { x: 2, y: 2 } })
+    await expect(dialog).toBeHidden()
     expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).toContain(
       'templates:\n  - id: deleted-template'
     )
     expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).not.toContain('templateId:')
     expect(await readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH)).not.toContain('templateId:')
+    await stalePromptEditor.locator('[data-testid="prompt-template-button"]').click()
+    await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
+    await expect
+      .poll(
+        async () => parsePromptMarkdown(await readTextFile(electronApp, STALE_PROMPT_PATH))?.templates
+      )
+      .toBeNull()
 
     await multiTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await mainWindow.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    expect(
+      parsePromptMarkdown(await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH))?.templates
+    ).toEqual([
+      { id: 'deleted-template' },
+      { id: 'template-second' },
+      { id: 'deleted-template-after' },
+      { id: 'template-second' },
+      { id: 'template-nested' }
+    ])
+
+    await multiTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
+    await expect(dialog.locator('.prompt-template-tree-label')).toContainText('2 selected')
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-second"]').click()
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-second"]').click()
+    await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'First Root Template'
+      'Nested Template + 2 More'
     )
     await expect
       .poll(
@@ -338,7 +407,11 @@ describe('Prompt template selection', () => {
             await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH)
           )?.templates
       )
-      .toEqual([{ id: 'template-first' }])
+      .toEqual([
+        { id: 'template-nested' },
+        { id: 'template-first' },
+        { id: 'template-second' }
+      ])
 
     await testHelpers.navigateToPromptFolders('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
@@ -402,15 +475,31 @@ describe('Prompt template selection', () => {
     await expect.poll(() => readTextFile(electronApp, PROMPT_PATH)).toContain('status: InProgress')
 
     await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
-    const quickDialog = mainWindow.getByRole('dialog', { name: 'Select Template and Copy' })
+    const quickDialog = mainWindow.getByRole('dialog', { name: 'Quick Template Selection' })
     await expect(quickDialog).toBeVisible()
     await expect(quickDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
     await expect(quickDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
-      'Choose a template to apply and copy this prompt immediately.'
+      'Click a template to apply it and copy this prompt immediately.'
     )
     await expect(
       quickDialog.locator('[data-testid="prompt-template-option-none"]')
-    ).toHaveAttribute('aria-current', 'true')
+    ).not.toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      quickDialog.locator('[data-testid="prompt-template-option-none"]')
+    ).toHaveCSS('cursor', 'pointer')
+    await expect(
+      quickDialog.locator('[data-testid="prompt-tree-prompt-template-first"]')
+    ).toHaveCSS('cursor', 'pointer')
+    await expect(
+      quickDialog.locator(
+        '[data-testid="prompt-template-option-none"] .prompt-template-no-template-control[data-control="copy"]'
+      )
+    ).toBeVisible()
+    await expect(
+      quickDialog.locator(
+        '[data-testid="prompt-tree-prompt-template-first"] .prompt-tree-selection-control[data-control="copy"]'
+      )
+    ).toBeVisible()
     await quickDialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
     await expect(quickDialog).toBeHidden()
     await expect
@@ -431,19 +520,156 @@ describe('Prompt template selection', () => {
       testWindow.__testClipboardText = 'sentinel'
     })
     await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
+    await expect(quickDialog.locator('[data-row-state="active"]')).toHaveCount(0)
     await quickDialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
       .toBe('First root Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix.')
 
     await quickPromptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
+    await expect(quickDialog.locator('[data-row-state="active"]')).toHaveCount(0)
     await quickDialog.locator('[data-testid="prompt-template-option-none"]').click()
+    await expect(quickDialog).toBeHidden()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
       .toBe('Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix')
     await expect
       .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
       .toContain('templates: null')
+
+    await multiTemplatePromptEditor
+      .locator('[data-testid="prompt-template-and-copy-button"]')
+      .click()
+    await quickDialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await expect(quickDialog).toBeHidden()
+    await expect
+      .poll(
+        async () =>
+          parsePromptMarkdown(
+            await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH)
+          )?.templates
+      )
+      .toEqual([{ id: 'template-first' }])
+    await expect
+      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .toBe(
+        'First root Prompt folder prefix\n\nCopy with several templates.\n\nPrompt folder suffix.'
+      )
+  })
+
+  test('virtualizes the complete template library folder cards', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const virtualWorkspacePath = '/ws/template-selection-virtual'
+    const promptWorkspace = createWorkspaceWithFolders(virtualWorkspacePath, [
+      {
+        folderName: 'Prompts',
+        displayName: 'Prompts',
+        promptFolderId: 'virtual-selection-prompts',
+        prompts: [
+          {
+            id: 'virtual-selection-prompt',
+            title: 'Virtual Selection',
+            promptText: 'Choose from a long template library.'
+          }
+        ]
+      }
+    ])
+    const templateWorkspace = createWorkspaceWithTemplateFolders(virtualWorkspacePath, [
+      {
+        folderName: 'Templates',
+        displayName: 'Virtual Templates',
+        folderId: 'virtual-selection-templates',
+        templates: Array.from({ length: 60 }, (_value, index) => ({
+          id: `virtual-template-${index + 1}`,
+          title: `Virtual Template ${index + 1}`,
+          templateText: `Virtual ${index + 1} [[PROMPT_TEXT]]`
+        }))
+      }
+    ])
+    await testSetup.setupFilesystem({
+      ...promptWorkspace,
+      ...templateWorkspace,
+      [`${virtualWorkspacePath}/WorkspaceFolderOrder.json`]: JSON.stringify(
+        {
+          entries: [
+            { kind: 'folder', id: 'virtual-selection-prompts' },
+            { kind: 'folder', id: 'virtual-selection-templates' }
+          ]
+        },
+        null,
+        2
+      )
+    })
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(virtualWorkspacePath)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Prompts')
+
+    const promptEditor = mainWindow.locator(promptEditorSelector('virtual-selection-prompt'))
+    await promptEditor.locator('[data-testid="prompt-template-button"]').click()
+    const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
+    const virtualWindowSelector = '[data-testid="prompt-template-selection-tree"]'
+    const spacerSelector = '[data-testid="prompt-template-selection-tree-spacer"]'
+    const headerSelector =
+      '[data-testid="prompt-template-base-folder-header-virtual-selection-templates"]'
+    const footerSelector =
+      '[data-testid="prompt-template-base-folder-footer-virtual-selection-templates"]'
+    await expect(dialog.locator(headerSelector)).toBeVisible()
+    await expect(dialog.locator(footerSelector)).toHaveCount(0)
+    await expect(dialog.locator('[data-testid="prompt-tree-prompt-virtual-template-1"]')).toBeVisible()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-virtual-template-60"]')
+    ).toHaveCount(0)
+
+    const metrics = await mainWindow.evaluate(
+      ({ virtualWindowSelector, spacerSelector }) => {
+        const virtualWindow = document.querySelector<HTMLElement>(virtualWindowSelector)
+        const spacer = document.querySelector<HTMLElement>(spacerSelector)
+        if (!virtualWindow || !spacer) return null
+        return {
+          innerHeight: window.innerHeight,
+          viewportHeight: virtualWindow.clientHeight,
+          spacerHeight: spacer.offsetHeight
+        }
+      },
+      { virtualWindowSelector, spacerSelector }
+    )
+    expect(metrics).not.toBeNull()
+    expect(
+      Math.abs(
+        (metrics?.viewportHeight ?? 0) - Math.min(470, (metrics?.innerHeight ?? 0) - 295)
+      )
+    ).toBeLessThanOrEqual(2)
+    expect(metrics?.spacerHeight).toBeGreaterThan(metrics?.viewportHeight ?? 0)
+
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) throw new Error('Missing main window')
+      window.setSize(800, 600)
+    })
+    await expect
+      .poll(() =>
+        mainWindow.evaluate((virtualWindowSelector) => {
+          const virtualWindow = document.querySelector<HTMLElement>(virtualWindowSelector)
+          if (!virtualWindow) return Number.POSITIVE_INFINITY
+          return Math.abs(
+            virtualWindow.clientHeight - Math.min(470, window.innerHeight - 295)
+          )
+        }, virtualWindowSelector)
+      )
+      .toBeLessThanOrEqual(2)
+
+    const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(virtualWindowSelector)
+    await testHelpers.scrollVirtualWindowTo(virtualWindowSelector, scrollHeight)
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-virtual-template-60"]')
+    ).toBeVisible()
+    await expect(dialog.locator(headerSelector)).toHaveCount(0)
+    await expect(dialog.locator(footerSelector)).toBeVisible()
   })
 
   test('copies with the current template draft and ignores it after its token is removed', async ({
@@ -460,8 +686,9 @@ describe('Prompt template selection', () => {
 
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
-    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
+    const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
     await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
 
     await testHelpers.navigateToPromptFolders('First Templates')
     const templateEditorSelector = promptEditorSelector('template-first')

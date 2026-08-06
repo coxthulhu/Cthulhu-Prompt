@@ -31,6 +31,8 @@
     indentCount?: number
     endsVisibleBranch?: boolean
     showActions?: boolean
+    // Gives picker reuse rounded rows without changing the sidebar tree.
+    roundedCorners?: boolean
     getFolderPromptDroppableOptions?: () => PromptRowDropOptions
     folderDragOptions?: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
     onFolderExpandedChange: (folderId: string, isExpanded: boolean) => void
@@ -48,6 +50,7 @@
     indentCount = 0,
     endsVisibleBranch = false,
     showActions = true,
+    roundedCorners = false,
     getFolderPromptDroppableOptions,
     folderDragOptions,
     onFolderExpandedChange,
@@ -225,6 +228,7 @@
           role="group"
           class="sidebarPromptTreeRow group"
           data-row-state={rowState}
+          data-rounded-corners={roundedCorners ? 'true' : undefined}
           oncontextmenu={(event) => handleFolderContextMenu(event, dropdown.openAt)}
         >
           {@render folderRowChildren()}
@@ -232,7 +236,11 @@
       {/snippet}
     </DropdownPopupSimple>
   {:else}
-    <div class="sidebarPromptTreeRow group" data-row-state={rowState}>
+    <div
+      class="sidebarPromptTreeRow group"
+      data-row-state={rowState}
+      data-rounded-corners={roundedCorners ? 'true' : undefined}
+    >
       {@render folderRowChildren()}
     </div>
   {/if}
@@ -258,3 +266,14 @@
     {@render folderRowContent(false)}
   </div>
 {/if}
+
+<style>
+  .sidebarPromptTreeRow[data-rounded-corners='true'],
+  .sidebarPromptTreeRow[data-rounded-corners='true'] .sidebarPromptTreeToggleButton {
+    border-radius: var(--cthulhu-ui-radius-control);
+  }
+
+  .sidebarPromptTreeRow[data-rounded-corners='true'] .sidebarPromptTreeToggleButton {
+    cursor: pointer;
+  }
+</style>
