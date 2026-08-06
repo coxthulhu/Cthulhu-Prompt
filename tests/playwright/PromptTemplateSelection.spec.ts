@@ -244,6 +244,29 @@ describe('Prompt template selection', () => {
       'Select one or more templates to apply to this prompt.'
     )
     expect(Math.abs((await dialog.boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
+    const firstBaseFolderHeader = dialog.locator('.prompt-template-base-folder-header').first()
+    const firstBaseFolderHeaderSpacer = dialog
+      .locator('.prompt-template-base-folder-header-spacer')
+      .first()
+    const firstBaseFolderContentRow = dialog
+      .locator('.prompt-template-base-folder-content-row')
+      .first()
+    const firstBaseFolderHeaderBox = (await firstBaseFolderHeader.boundingBox())!
+    const firstBaseFolderHeaderSpacerBox = (await firstBaseFolderHeaderSpacer.boundingBox())!
+    const firstBaseFolderContentRowBox = (await firstBaseFolderContentRow.boundingBox())!
+    expect(
+      Math.abs(
+        firstBaseFolderHeaderSpacerBox.y -
+          (firstBaseFolderHeaderBox.y + firstBaseFolderHeaderBox.height)
+      )
+    ).toBeLessThanOrEqual(2)
+    expect(Math.abs(firstBaseFolderHeaderSpacerBox.height - 6)).toBeLessThanOrEqual(2)
+    expect(
+      Math.abs(
+        firstBaseFolderContentRowBox.y -
+          (firstBaseFolderHeaderSpacerBox.y + firstBaseFolderHeaderSpacerBox.height)
+      )
+    ).toBeLessThanOrEqual(2)
     await expect(dialog.locator('.prompt-template-base-folder-copy strong')).toHaveText([
       'Second Templates',
       'First Templates'

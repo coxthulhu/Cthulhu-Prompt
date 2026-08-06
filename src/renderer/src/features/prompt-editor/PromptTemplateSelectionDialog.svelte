@@ -32,6 +32,10 @@
         templateCount: number
       }
     | {
+        kind: 'base-folder-header-spacer'
+        folderId: string
+      }
+    | {
         kind: 'folder'
         folder: PromptFolder
         indentCount: number
@@ -55,6 +59,11 @@
   // Props received by a virtualized base-folder header snippet.
   type BaseFolderHeaderRowProps = VirtualWindowRowComponentProps<
     Extract<TemplateDialogRow, { kind: 'base-folder-header' }>
+  >
+
+  // Props received by the spacing row between a base-folder header and its content.
+  type BaseFolderHeaderSpacerRowProps = VirtualWindowRowComponentProps<
+    Extract<TemplateDialogRow, { kind: 'base-folder-header-spacer' }>
   >
 
   // Props received by a virtualized nested-folder snippet.
@@ -279,6 +288,10 @@
           templateCount: getAvailableTemplateCount(rootFolder)
         }
       })
+      items.push({
+        id: `${rootFolder.id}:header-spacer`,
+        row: { kind: 'base-folder-header-spacer', folderId: rootFolder.id }
+      })
 
       const rootEntries = getAvailableEntries(rootFolder)
       for (const [entryIndex, entry] of rootEntries.entries()) {
@@ -315,6 +328,10 @@
     'base-folder-header': {
       estimateHeight: () => 51,
       snippet: baseFolderHeaderRow
+    },
+    'base-folder-header-spacer': {
+      estimateHeight: () => 6,
+      snippet: baseFolderHeaderSpacerRow
     },
     folder: {
       estimateHeight: () => 32,
@@ -415,6 +432,14 @@
       <span>{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
     </span>
   </div>
+{/snippet}
+
+{#snippet baseFolderHeaderSpacerRow({ row }: BaseFolderHeaderSpacerRowProps)}
+  <div
+    class="prompt-template-base-folder-header-spacer"
+    data-testid={`prompt-template-base-folder-header-spacer-${row.folderId}`}
+    aria-hidden="true"
+  ></div>
 {/snippet}
 
 {#snippet folderRow({ row }: FolderRowProps)}
@@ -633,6 +658,14 @@
     color: var(--ui-muted-text);
     font-size: 12px;
     line-height: 16px;
+  }
+
+  .prompt-template-base-folder-header-spacer {
+    background: var(--ui-card-solid-surface);
+    border-left: 1px solid var(--ui-card-nested-border);
+    border-right: 1px solid var(--ui-card-nested-border);
+    box-sizing: border-box;
+    height: 6px;
   }
 
   .prompt-template-base-folder-content-row {
