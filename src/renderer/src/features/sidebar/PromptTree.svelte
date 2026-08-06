@@ -429,7 +429,11 @@
   const promptTreePromptDrag = createPromptTreePromptDragController({
     getPromptFolders: () => promptFolders,
     onPromptMove: (move) => {
-      if (move.sourcePromptFolderId === move.destinationPromptFolderId) {
+      const sourceRootFolderId = findContainingRootFolderId(move.sourcePromptFolderId)
+      const destinationRootFolderId = findContainingRootFolderId(
+        move.destinationPromptFolderId
+      )
+      if (sourceRootFolderId === destinationRootFolderId) {
         return
       }
 

@@ -1376,7 +1376,10 @@ export const createPromptFolderScreenController = ({
       nextMove.previousEntryId
     )
 
-    if (nextMove.sourcePromptFolderId !== nextMove.destinationPromptFolderId) {
+    const destinationRootFolderId = findContainingRootFolderId(
+      nextMove.destinationPromptFolderId
+    )
+    if (destinationRootFolderId !== screenRootFolderId) {
       selectMovedPrompt(nextMove.destinationPromptFolderId, source.promptId)
     }
   }

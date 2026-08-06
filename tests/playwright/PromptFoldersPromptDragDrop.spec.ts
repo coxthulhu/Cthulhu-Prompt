@@ -92,7 +92,7 @@ const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_TREE_BOTTOM_SPACER_SELECTOR = '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
 const PROMPT_TREE_BOTTOM_SPACER_INDICATOR_SELECTOR =
   '[data-testid="prompt-tree-bottom-spacer-drop-indicator"]'
-const SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX = 32
+const PROMPT_MOVE_SCROLL_TOLERANCE_PX = 2
 const FALLBACK_DESTINATION_FOLDER_ID = createDeterministicId(
   `${MOVE_FALLBACK_WORKSPACE_PATH}:${FALLBACK_DESTINATION_FOLDER_NAME}`
 )
@@ -680,11 +680,15 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await testHelpers.navigateToPromptFolders('Main')
     await scrollUntilPromptEditorVisible(mainWindow, testHelpers, BASE_BEFORE_ID)
-    await dragPromptHandleToTarget(
+    await beginPromptHandleDrag(mainWindow, BASE_BEFORE_ID)
+    await moveActiveDragToTarget(
       mainWindow,
-      BASE_BEFORE_ID,
       `[data-testid="prompt-folder-editor-${NESTED_FOLDER_ID}"] [data-testid="prompt-folder-editor-title-bar"]`
     )
+    const rootToNestedScrollTop = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+    await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
       .toEqual([NESTED_FOLDER_ID, BASE_AFTER_ID])
@@ -692,6 +696,14 @@ describe('Prompt folder prompt drag-drop', () => {
       BASE_BEFORE_ID,
       'nested-prompt'
     ])
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) -
+            rootToNestedScrollTop
+        )
+      )
+      .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
 
     await beginPromptHandleDrag(mainWindow, 'nested-prompt')
     await testHelpers.scrollVirtualElementIntoView(
@@ -704,6 +716,9 @@ describe('Prompt folder prompt drag-drop', () => {
       'data-drop-over',
       'true'
     )
+    const nestedToRootScrollTop = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
     await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
@@ -711,6 +726,14 @@ describe('Prompt folder prompt drag-drop', () => {
     await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [
       BASE_BEFORE_ID
     ])
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) -
+            nestedToRootScrollTop
+        )
+      )
+      .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
   })
 
   test('moves nested prompts and subfolders to the root start from the first row', async ({
@@ -722,16 +745,32 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Main')
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      promptEditorSelector(BASE_AFTER_ID),
+      20
+    )
     await beginPromptTreeRowDrag(mainWindow, 'nested-prompt')
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(BASE_BEFORE_ID), 'top')
     await expect(
       mainWindow.locator(promptTreePromptDropIndicatorSelector(BASE_BEFORE_ID))
     ).toHaveAttribute('data-edge', 'top')
+    const sameRootTreeDragScrollTop = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
     await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readPromptFolderEntryIds(electronApp, SUBFOLDERS_MAIN_FOLDER_PATH))
       .toEqual(['nested-prompt', BASE_BEFORE_ID, NESTED_FOLDER_ID, BASE_AFTER_ID])
     await expectPersistedFolderPromptIds(electronApp, SUBFOLDERS_NESTED_FOLDER_PATH, [])
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) -
+            sameRootTreeDragScrollTop
+        )
+      )
+      .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
 
     await beginPromptTreeFolderRowDrag(mainWindow, 'Nested')
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector('nested-prompt'), 'top')
@@ -1210,7 +1249,7 @@ describe('Prompt folder prompt drag-drop', () => {
           (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) - scrollTopBefore
         )
       )
-      .toBeLessThanOrEqual(SAME_FOLDER_REORDER_SCROLL_TOLERANCE_PX)
+      .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
   })
 
   test('moves a prompt before a different prompt when dropped on the top half of that prompt row', async ({
