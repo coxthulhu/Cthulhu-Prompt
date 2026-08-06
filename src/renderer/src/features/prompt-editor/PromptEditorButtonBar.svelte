@@ -12,6 +12,8 @@
     onDelete?: () => void
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
+    // The prompt's template decision controls whether Copy or quick selection is available.
+    templateSelectionState?: 'not-selected' | 'no-template' | 'selected'
     copyLabel?: string
     copyTitle?: string
     deleteLabel?: string
@@ -27,6 +29,8 @@
     onDelete,
     onTemplateSelect,
     onTemplateSelectAndCopy,
+    // Template editors omit quick selection and retain Copy with this default state.
+    templateSelectionState = 'not-selected',
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt',
     deleteLabel = 'Delete prompt',
@@ -78,15 +82,17 @@
       onclick={onTemplateSelect}
     />
   {/if}
-  <CopyButton
-    text={copyText ?? draftText}
-    label={copyLabel}
-    title={copyTitle}
-    hoverVariant="accent"
-    testId="prompt-copy-button"
-    onCopied={onCopySuccess}
-  />
-  {#if onTemplateSelectAndCopy}
+  {#if !onTemplateSelectAndCopy || templateSelectionState !== 'not-selected'}
+    <CopyButton
+      text={copyText ?? draftText}
+      label={copyLabel}
+      title={copyTitle}
+      hoverVariant="accent"
+      testId="prompt-copy-button"
+      onCopied={onCopySuccess}
+    />
+  {/if}
+  {#if onTemplateSelectAndCopy && templateSelectionState === 'not-selected'}
     <IconButton
       icon={Zap}
       label="Select Template and Copy"

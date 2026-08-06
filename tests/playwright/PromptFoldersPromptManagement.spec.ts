@@ -1169,7 +1169,8 @@ describe('Prompt folder prompt management', () => {
             {
               id: 'copy-prefix-source',
               title: 'Copy Source',
-              promptText: 'Source prompt'
+              promptText: 'Source prompt',
+              templates: null
             }
           ]
         }
@@ -1209,10 +1210,14 @@ describe('Prompt folder prompt management', () => {
     await replacePromptText(mainWindow, newPromptId!, promptText)
 
     const copyButton = mainWindow.locator(
-      `${promptEditorSelector(newPromptId!)} [data-testid="prompt-copy-button"]`
+      `${promptEditorSelector(newPromptId!)} [data-testid="prompt-template-and-copy-button"]`
     )
     await copyButton.scrollIntoViewIfNeeded()
     await copyButton.click()
+    await mainWindow
+      .getByRole('dialog', { name: 'Quick Template Selection' })
+      .locator('[data-testid="prompt-template-option-none"]')
+      .click()
 
     // Normalize clipboard line endings so the assertion stays stable on Windows.
     const normalizeNewlines = (value: string) => value.replace(/\r\n?/g, '\n')

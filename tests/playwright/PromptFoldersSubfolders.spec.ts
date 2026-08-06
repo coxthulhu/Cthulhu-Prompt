@@ -1826,7 +1826,21 @@ describe('Prompt folder subfolder rendering', () => {
       .toContain(bodyMarker)
 
     await stubClipboard(mainWindow)
-    await mainWindow.locator(`${nestedPromptSelector} [data-testid="prompt-copy-button"]`).click()
+    await mainWindow
+      .locator(`${nestedPromptSelector} [data-testid="prompt-template-and-copy-button"]`)
+      .click()
+    await mainWindow
+      .getByRole('dialog', { name: 'Quick Template Selection' })
+      .locator('[data-testid="prompt-template-option-none"]')
+      .click()
+    await expect(
+      mainWindow.locator(`${nestedPromptSelector} [data-testid="prompt-copy-button"]`)
+    ).toBeVisible()
+    await expect(
+      mainWindow.locator(
+        `${nestedPromptSelector} [data-testid="prompt-template-and-copy-button"]`
+      )
+    ).toHaveCount(0)
     const normalizeNewlines = (value: string): string => value.replace(/\r\n?/g, '\n')
     await expect
       .poll(async () =>
@@ -1849,6 +1863,9 @@ describe('Prompt folder subfolder rendering', () => {
     await expect
       .poll(async () => await readPersistedPromptTextById(electronApp, updatedPromptLookup))
       .toContain('status: InProgress')
+    await expect
+      .poll(async () => await readPersistedPromptTextById(electronApp, updatedPromptLookup))
+      .toContain('templates: null')
   })
 
   test('wraps copied prompt text from its owner folder upward through the root', async ({
@@ -1877,7 +1894,11 @@ describe('Prompt folder subfolder rendering', () => {
     await waitForMonacoEditor(mainWindow, grandchildPromptSelector)
     await stubClipboard(mainWindow)
     await mainWindow
-      .locator(`${grandchildPromptSelector} [data-testid="prompt-copy-button"]`)
+      .locator(`${grandchildPromptSelector} [data-testid="prompt-template-and-copy-button"]`)
+      .click()
+    await mainWindow
+      .getByRole('dialog', { name: 'Quick Template Selection' })
+      .locator('[data-testid="prompt-template-option-none"]')
       .click()
 
     await expect

@@ -233,6 +233,7 @@
         {onDelete}
         {onTemplateSelect}
         {onTemplateSelectAndCopy}
+        templateSelectionState={metadataFolderState}
         {copyLabel}
         {copyTitle}
         {deleteLabel}
