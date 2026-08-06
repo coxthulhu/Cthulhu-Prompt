@@ -350,7 +350,7 @@ describe('Prompt template folder UI', () => {
     await expect.poll(() => checkFileExists(electronApp, persistedPath)).toBe(false)
   })
 
-  test('wraps template actions only below 420 pixels', async ({ electronApp, testSetup }) => {
+  test('wraps template actions only below 480 pixels', async ({ electronApp, testSetup }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -381,7 +381,7 @@ describe('Prompt template folder UI', () => {
         .toBeLessThanOrEqual(2)
     }
 
-    await setTitleRowWidth(422)
+    await setTitleRowWidth(482)
     await expect(titleRow).toHaveAttribute('data-layout', 'default')
     const defaultActionRightInsetPx = await titleRow.evaluate((row) => {
       const rowRect = row.getBoundingClientRect()
@@ -391,7 +391,7 @@ describe('Prompt template folder UI', () => {
       return Math.round(rowRect.right - buttonBarRect.right)
     })
     expect(defaultActionRightInsetPx).toBe(12)
-    await setTitleRowWidth(417)
+    await setTitleRowWidth(477)
     await expect(titleRow).toHaveAttribute('data-layout', 'compact')
   })
 

@@ -126,9 +126,9 @@ describe('Prompt folder card geometry', () => {
         .toBe(targetWidthPx)
     }
 
-    await setTitleRowWidth(600)
+    await setTitleRowWidth(720)
     await expect(titleRow).toHaveAttribute('data-layout', 'default')
-    await setTitleRowWidth(599)
+    await setTitleRowWidth(719)
     await expect(titleRow).toHaveAttribute('data-layout', 'compact')
     await waitForMonacoEditor(mainWindow, selector)
 
@@ -163,7 +163,7 @@ describe('Prompt folder card geometry', () => {
       }
     })
 
-    expect(layout.widthPx).toBeLessThan(600)
+    expect(layout.widthPx).toBeLessThan(720)
     expect(Math.abs(layout.actionRowOffsetPx)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(Math.abs(layout.buttonLeftInsetPx - 16)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(layout.statusControlLeftPaddingPx).toBe(0)
