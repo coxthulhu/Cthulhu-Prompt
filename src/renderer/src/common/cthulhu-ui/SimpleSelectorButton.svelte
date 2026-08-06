@@ -156,7 +156,6 @@
     align-items: center;
     background: transparent;
     border: 0;
-    border-right: 1px solid var(--cthulhu-ui-simple-selector-border);
     border-radius: 0;
     box-sizing: border-box;
     color: var(--cthulhu-ui-simple-selector-text);
