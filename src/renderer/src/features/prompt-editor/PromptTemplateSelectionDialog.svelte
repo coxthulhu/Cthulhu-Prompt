@@ -620,7 +620,7 @@
 
   .prompt-template-base-folder-header {
     align-items: center;
-    background: var(--ui-card-nested-surface);
+    background: var(--ui-card-normal-surface);
     border: 1px solid var(--ui-card-nested-border);
     border-radius: var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card) 0 0;
     box-sizing: border-box;
