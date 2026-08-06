@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import * as path from 'path'
+import matter from 'gray-matter'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
@@ -9,6 +10,8 @@ import { preparePromptFolderName } from '@shared/promptFolderName'
 import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
+import addFeaturePromptSource from '../BundledPrompts/AddFeature.md?raw'
+import fixBugPromptSource from '../BundledPrompts/FixBug.md?raw'
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
@@ -22,6 +25,8 @@ import {
 
 const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
+// Ordered bundled prompt sources used when initializing a workspace with examples.
+const BUNDLED_PROMPT_SOURCES = [addFeaturePromptSource, fixBugPromptSource]
 // Default on-disk directory name for the template folder created with each workspace.
 const DEFAULT_TEMPLATE_FOLDER_NAME = 'MyTemplates'
 // Default display name for the template folder created with each workspace.
@@ -80,26 +85,20 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
   const examplePrompts = includeExamplePrompts
-    ? [
-        {
+    ? BUNDLED_PROMPT_SOURCES.map((source) => {
+        // Parsed bundled document that supplies the prompt's title and body.
+        const bundledPrompt = matter(source, {})
+
+        return {
           id: compactGuid(randomUUID()),
-          title: 'Example: Add a Feature',
+          title: bundledPrompt.data.title as string,
           fallbackTitle: '',
           createdAt: now,
           modifiedAt: now,
           status: PromptStatus.Todo,
-          promptText: 'Placeholder prompt text.'
-        },
-        {
-          id: compactGuid(randomUUID()),
-          title: 'Example: Fix a Bug',
-          fallbackTitle: '',
-          createdAt: now,
-          modifiedAt: now,
-          status: PromptStatus.Todo,
-          promptText: 'Placeholder prompt text.'
+          promptText: bundledPrompt.content.replace(/\r?\n$/, '')
         }
-      ]
+      })
     : []
   const promptIds: string[] = []
   const duplicateTitleStems = getDuplicateTitleStems(examplePrompts)
