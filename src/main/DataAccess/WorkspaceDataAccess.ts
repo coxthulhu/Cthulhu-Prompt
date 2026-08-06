@@ -22,6 +22,10 @@ import {
 
 const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
+// Default on-disk directory name for the template folder created with each workspace.
+const DEFAULT_TEMPLATE_FOLDER_NAME = 'MyTemplates'
+// Default display name for the template folder created with each workspace.
+const DEFAULT_TEMPLATE_FOLDER_DISPLAY_NAME = 'My Templates'
 
 type CreateWorkspaceResult = { success: true } | { success: false; error: string }
 
@@ -40,13 +44,13 @@ const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): v
 
 const writeWorkspaceFolderOrderFile = (
   workspacePath: string,
-  promptFolderIds: string[]
+  folderIds: string[]
 ): void => {
   const fs = getFs()
   const orderPath = resolveWorkspaceFolderOrderPath(workspacePath)
   fs.writeFileSync(
     orderPath,
-    JSON.stringify({ entries: promptFolderIds.map(folderEntryRef) }, null, 2),
+    JSON.stringify({ entries: folderIds.map(folderEntryRef) }, null, 2),
     'utf8'
   )
 }
@@ -137,6 +141,48 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   return promptFolderId
 }
 
+/** Creates the empty default template folder and returns its persisted folder ID. */
+const writeMyTemplatesFolder = (workspacePath: string): string => {
+  // Filesystem used to persist the default template folder.
+  const fs = getFs()
+  // Root path for the default template folder.
+  const templateFolderPath = path.join(
+    workspacePath,
+    TEMPLATES_DIRECTORY_NAME,
+    DEFAULT_TEMPLATE_FOLDER_NAME
+  )
+  // Unique identity persisted for this newly created template folder.
+  const templateFolderId = compactGuid(randomUUID())
+
+  fs.mkdirSync(path.join(templateFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), {
+    recursive: true
+  })
+  fs.writeFileSync(
+    path.join(
+      templateFolderPath,
+      PROMPT_FOLDER_INFO_DIRECTORY_NAME,
+      PROMPT_FOLDER_INFO_FILENAME
+    ),
+    JSON.stringify(
+      {
+        displayName: DEFAULT_TEMPLATE_FOLDER_DISPLAY_NAME,
+        folderId: templateFolderId,
+        kind: 'template'
+      },
+      null,
+      2
+    ),
+    'utf8'
+  )
+  fs.writeFileSync(
+    resolvePromptFolderOrderPath(workspacePath, DEFAULT_TEMPLATE_FOLDER_NAME, 'template'),
+    JSON.stringify({ entries: [] }, null, 2),
+    'utf8'
+  )
+
+  return templateFolderId
+}
+
 const validateNewWorkspacePath = (workspacePath: string): CreateWorkspaceResult | null => {
   if (isWorkspaceRootPath(workspacePath)) {
     return { success: false, error: workspaceRootPathErrorMessage }
@@ -174,14 +220,18 @@ export const createWorkspace = async (
     const fs = getFs()
     const promptsPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME)
     const templatesPath = path.join(workspacePath, TEMPLATES_DIRECTORY_NAME)
-    const promptFolderIds: string[] = []
+    // Ordered root folder IDs persisted for both prompt and template folders.
+    const rootFolderIds: string[] = []
 
     fs.mkdirSync(promptsPath, { recursive: true })
     fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
-    promptFolderIds.push(writeMyPromptsFolder(workspacePath, includeExamplePrompts))
-    writeWorkspaceFolderOrderFile(workspacePath, promptFolderIds)
+    rootFolderIds.push(
+      writeMyPromptsFolder(workspacePath, includeExamplePrompts),
+      writeMyTemplatesFolder(workspacePath)
+    )
+    writeWorkspaceFolderOrderFile(workspacePath, rootFolderIds)
 
     return { success: true }
   } catch (error) {

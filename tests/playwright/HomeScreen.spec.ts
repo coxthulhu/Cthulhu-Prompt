@@ -421,6 +421,25 @@ describe('Home Screen', () => {
 
       const screenInfo = await testHelpers.getPromptFolderScreenInfo()
       expect(screenInfo.promptCount).toBe(2)
+
+      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+      ).toHaveCount(2)
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+      ).toContainText('My Prompts')
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+      ).toContainText('My Templates')
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+      ).toContainText('0 templates')
+      await mainWindow
+        .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        .nth(1)
+        .click()
+      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(0)
     })
 
     test('creates a blank My Prompts folder when examples are disabled', async ({ testSetup }) => {
@@ -459,6 +478,29 @@ describe('Home Screen', () => {
       const screenInfo = await testHelpers.getPromptFolderScreenInfo()
       expect(screenInfo.hasPromptEditors).toBe(false)
       expect(screenInfo.promptCount).toBe(0)
+
+      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+      ).toHaveCount(2)
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+      ).toContainText('My Prompts')
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+      ).toContainText('My Templates')
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+      ).toContainText('0 templates')
+
+      await mainWindow
+        .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        .nth(1)
+        .click()
+      await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toHaveText(
+        'My Templates'
+      )
+      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(0)
     })
 
     test('disables Create Workspace for invalid workspace names', async ({ testSetup }) => {
