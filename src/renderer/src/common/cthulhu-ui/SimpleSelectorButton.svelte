@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import { ChevronDown } from 'lucide-svelte'
+  import { ChevronDown, ChevronUp } from 'lucide-svelte'
   import DropdownPopupMoreOptions from './DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupDetailedItem } from './DropdownPopupDetailed.svelte'
   import IconButton from './IconButton.svelte'
@@ -61,6 +61,7 @@
 >
   {#snippet trigger(dropdown)}
     {@const triggerAction = dropdown.triggerAction}
+    {@const DropdownChevron = dropdown.open ? ChevronUp : ChevronDown}
     <span
       use:triggerAction
       class={mergeClasses('cthulhuUiSimpleSelectorButton', className)}
@@ -88,7 +89,7 @@
       </button>
 
       <IconButton
-        icon={ChevronDown}
+        icon={DropdownChevron}
         label={moreOptionsLabel}
         title="More Options"
         ariaHaspopup={dropdown.ariaHaspopup}

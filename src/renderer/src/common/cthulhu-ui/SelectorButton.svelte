@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
+  import { ChevronDown, ChevronUp } from 'lucide-svelte'
   import { mergeClasses } from './mergeClasses'
-  import RotatingChevron from './RotatingChevron.svelte'
   import SeparatorDot from './SeparatorDot.svelte'
 
   type SelectorButtonState = 'enabled' | 'disabled'
@@ -134,12 +134,13 @@
   </span>
 
   {#if showChevron}
-    <RotatingChevron
-      expanded={open}
-      size={22}
-      iconSize={20}
-      class="cthulhuUiSelectorButtonChevronWrap"
-    />
+    <span class="cthulhuUiSelectorButtonChevronWrap cthulhuUiSelectorButtonChevron">
+      {#if open}
+        <ChevronUp size={20} aria-hidden="true" />
+      {:else}
+        <ChevronDown size={20} aria-hidden="true" />
+      {/if}
+    </span>
   {/if}
 </button>
 
@@ -286,5 +287,13 @@
   .cthulhuUiSelectorButton[data-leading-accessory='true']
     :global(.cthulhuUiSelectorButtonChevronWrap) {
     grid-column: 6;
+  }
+
+  .cthulhuUiSelectorButtonChevron {
+    align-items: center;
+    display: flex;
+    height: 22px;
+    justify-content: center;
+    width: 22px;
   }
 </style>
