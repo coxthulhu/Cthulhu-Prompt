@@ -10,8 +10,8 @@ import { preparePromptFolderName } from '@shared/promptFolderName'
 import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
 import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
-import addFeaturePromptSource from '../BundledPrompts/AddFeature.md?raw'
-import fixBugPromptSource from '../BundledPrompts/FixBug.md?raw'
+import example1PromptSource from '../BundledPrompts/Example1.md?raw'
+import example2PromptSource from '../BundledPrompts/Example2.md?raw'
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
@@ -26,7 +26,7 @@ import {
 const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
 // Ordered bundled prompt sources used when initializing a workspace with examples.
-const BUNDLED_PROMPT_SOURCES = [addFeaturePromptSource, fixBugPromptSource]
+const BUNDLED_PROMPT_SOURCES = [example1PromptSource, example2PromptSource]
 // Default on-disk directory name for the template folder created with each workspace.
 const DEFAULT_TEMPLATE_FOLDER_NAME = 'MyTemplates'
 // Default display name for the template folder created with each workspace.

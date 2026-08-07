@@ -414,8 +414,8 @@ describe('Home Screen', () => {
         state: 'attached'
       })
 
-      const firstPrompt = await testHelpers.verifyPromptVisible('Example: Add a Feature')
-      const secondPrompt = await testHelpers.verifyPromptVisible('Example: Fix a Bug')
+      const firstPrompt = await testHelpers.verifyPromptVisible('Example1')
+      const secondPrompt = await testHelpers.verifyPromptVisible('Example2')
       expect(firstPrompt.found).toBe(true)
       expect(secondPrompt.found).toBe(true)
 
