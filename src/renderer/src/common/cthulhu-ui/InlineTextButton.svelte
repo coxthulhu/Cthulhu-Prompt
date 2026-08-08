@@ -54,7 +54,7 @@
     font-weight: 400;
     line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
     text-align: inherit;
-    transition: color 50ms ease-out;
+    transition: color var(--ui-animation-duration-fast) ease-out;
   }
 
   .cthulhuUiInlineTextButton[data-size='default'] {

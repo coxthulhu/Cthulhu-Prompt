@@ -61,7 +61,7 @@
     border-radius: 0;
     background: var(--ui-ghost-surface);
     color: var(--ui-muted-icon-glyph);
-    transition: color 120ms ease-out;
+    transition: color var(--ui-animation-duration-standard) ease-out;
   }
 
   .cthulhuUiActivityBarButton:hover {

@@ -519,8 +519,8 @@
     padding: 0 13px 0 10px;
     text-align: left;
     transition:
-      background-color 50ms ease-out,
-      color 50ms ease-out;
+      background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
     width: 100%;
   }
 

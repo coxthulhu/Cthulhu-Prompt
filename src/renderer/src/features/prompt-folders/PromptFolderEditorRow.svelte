@@ -475,7 +475,7 @@
   :global(.prompt-folder-editor-chevron) {
     transform: rotate(0deg);
     transform-origin: center;
-    transition: transform 50ms ease-out;
+    transition: transform var(--ui-animation-duration-fast) ease-out;
   }
 
   :global(

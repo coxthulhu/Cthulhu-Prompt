@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
+  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import {
     AlertCircle,
     Archive,
@@ -134,7 +135,7 @@
   ]
   const errorDialogText = 'Invalid workspace path\nC:\\Source\\PromptApps\\MissingWorkspace'
   const TEST_LOADING_OVERLAY_VISIBLE_MS = 5000
-  const TEST_LOADING_OVERLAY_FADE_MS = 125
+  const TEST_LOADING_OVERLAY_FADE_MS = uiAnimationDurationMs.standard
   const DRAG_DROP_REGRESSION_TYPE = 'test-dropdown-unregister-drag'
 
   let fontSizeStepperValue = $state('14')

@@ -116,8 +116,8 @@
     display: inline-flex;
     height: 36px;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease;
     width: fit-content;
   }
 

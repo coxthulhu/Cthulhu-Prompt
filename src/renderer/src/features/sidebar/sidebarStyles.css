@@ -54,8 +54,8 @@
   background-color: var(--ui-ghost-surface);
   color: var(--ui-hoverable-text);
   transition:
-    background-color 50ms ease-out,
-    color 50ms ease-out;
+    background-color var(--ui-animation-duration-fast) ease-out,
+    color var(--ui-animation-duration-fast) ease-out;
 }
 
 .sidebarPromptTreeRow[data-row-state='idle']:hover {
@@ -185,8 +185,8 @@
   color: var(--ui-hoverable-icon-glyph);
   cursor: pointer;
   transition:
-    background-color 50ms ease-out,
-    color 50ms ease-out;
+    background-color var(--ui-animation-duration-fast) ease-out,
+    color var(--ui-animation-duration-fast) ease-out;
 }
 
 .sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeFolderActions,
@@ -258,7 +258,7 @@
 
 .sidebarPromptTree .sidebarPromptTreeGutter [data-indent-guide-line] {
   opacity: 0;
-  transition: opacity 100ms ease-out;
+  transition: opacity var(--ui-animation-duration-standard) ease-out;
 }
 
 .sidebarPromptTree:hover .sidebarPromptTreeGutter [data-indent-guide-line],
@@ -282,8 +282,8 @@
   color: var(--ui-hoverable-text);
   text-align: left;
   transition:
-    background-color 50ms ease-out,
-    color 50ms ease-out;
+    background-color var(--ui-animation-duration-fast) ease-out,
+    color var(--ui-animation-duration-fast) ease-out;
 }
 
 .sidebarPromptTreeSettingsButton[data-row-state='idle']:hover {

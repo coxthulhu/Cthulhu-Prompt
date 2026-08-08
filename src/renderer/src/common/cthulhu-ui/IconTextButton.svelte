@@ -95,9 +95,9 @@
     min-width: 0;
     padding: 0 10px;
     transition:
-      background-color 50ms ease-out,
-      border-color 50ms ease-out,
-      color 50ms ease-out;
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
     white-space: nowrap;
   }
 

@@ -159,8 +159,8 @@
     padding: 8px;
     text-align: left;
     transition:
-      background-color 120ms ease,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
     width: 100%;
   }
 
@@ -212,7 +212,7 @@
     grid-column: 1;
     height: 34px;
     justify-content: center;
-    transition: color 120ms ease;
+    transition: color var(--ui-animation-duration-standard) ease;
     width: 34px;
   }
 

@@ -125,9 +125,9 @@
     grid-template-columns: 40px minmax(80px, auto) 40px;
     min-width: 0;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      box-shadow 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease,
+      box-shadow var(--ui-animation-duration-standard) ease;
   }
 
   .cthulhuUiNumericStepperInput:focus-within {
@@ -160,8 +160,8 @@
     justify-content: center;
     padding: 0;
     transition:
-      background-color 120ms ease,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
   }
 
   .cthulhuUiNumericStepperInputButton:first-child {

@@ -670,7 +670,7 @@
 
 <style>
   :global(.editor-card-surface) {
-    transition: opacity 50ms ease-out;
+    transition: opacity var(--ui-animation-duration-fast) ease-out;
   }
 
   :global(.editor-card-surface[data-dragging='true']) {

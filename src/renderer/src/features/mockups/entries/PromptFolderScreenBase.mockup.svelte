@@ -996,9 +996,9 @@
     min-width: 0;
     padding: 0;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
     width: 36px;
   }
 
@@ -1277,7 +1277,7 @@
   }
 
   .base-divider-line-button .base-separator {
-    transition: background-color 120ms ease;
+    transition: background-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-divider-actions {
@@ -1287,7 +1287,7 @@
     height: 100%;
     min-width: 0;
     opacity: 0;
-    transition: opacity 120ms ease;
+    transition: opacity var(--ui-animation-duration-standard) ease;
   }
 
   .base-divider-action-button {
@@ -1301,7 +1301,7 @@
     height: 100%;
     line-height: 16px;
     padding: 0;
-    transition: color 120ms ease;
+    transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
   }
 
@@ -1367,9 +1367,9 @@
     min-height: 32px;
     padding: 0;
     transition:
-      background-color 120ms ease,
-      border-color 50ms ease-out,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-standard) ease;
   }
 
   .base-editor-sidebar .base-drag-button {
@@ -1382,7 +1382,7 @@
 
   .base-editor-sidebar button:not(.base-drag-button) :global(svg) {
     opacity: 0;
-    transition: opacity 50ms ease-out;
+    transition: opacity var(--ui-animation-duration-fast) ease-out;
   }
 
   .base-editor-sidebar:hover button,
@@ -1563,8 +1563,8 @@
     display: inline-flex;
     height: 36px;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-status-segmented[data-status='InProgress'] .base-status-selector {
@@ -1756,9 +1756,9 @@
     min-width: 0;
     padding: 0 10px;
     transition:
-      background-color 50ms ease-out,
-      border-color 50ms ease-out,
-      color 50ms ease-out;
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
     white-space: nowrap;
   }
 
@@ -1965,8 +1965,8 @@
     background: var(--ui-ghost-surface);
     border: 0;
     transition:
-      background-color 50ms ease-out,
-      color 50ms ease-out;
+      background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
   }
 
   .base-template-root-option:hover,
@@ -2012,7 +2012,7 @@
     justify-self: start;
     margin-left: calc(1px + 12px * var(--base-template-indent-count, 1));
     opacity: 0;
-    transition: opacity 100ms ease-out;
+    transition: opacity var(--ui-animation-duration-standard) ease-out;
     width: 1px;
   }
 
@@ -2040,7 +2040,7 @@
     display: inline-flex;
     height: 24px;
     justify-content: center;
-    transition: transform 120ms ease;
+    transition: transform var(--ui-animation-duration-standard) ease;
     width: 24px;
   }
 
@@ -2073,8 +2073,8 @@
     line-height: 20px;
     padding: 0 14px;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-dialog-cancel-button:hover,

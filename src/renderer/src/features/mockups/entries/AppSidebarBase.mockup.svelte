@@ -797,7 +797,7 @@
     opacity: 0;
     position: absolute;
     top: -1px;
-    transition: opacity 100ms ease-out;
+    transition: opacity var(--ui-animation-duration-standard) ease-out;
     width: 1px;
   }
 
@@ -826,7 +826,7 @@
   .mock-overlay-scrollbar[data-visible='true'] {
     opacity: 1;
     pointer-events: auto;
-    transition: opacity 100ms linear;
+    transition: opacity var(--ui-animation-duration-standard) linear;
     z-index: 11;
   }
 

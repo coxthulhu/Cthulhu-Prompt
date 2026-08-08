@@ -178,9 +178,9 @@
     border-radius: 4px;
     color: transparent;
     transition:
-      background-color 80ms ease-out,
-      border-color 80ms ease-out,
-      color 80ms ease-out;
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
   }
 
   .sidebarPromptTreeSettingsButton[data-row-state='active']

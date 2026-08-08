@@ -91,8 +91,8 @@
     padding: 4px 8px;
     text-align: left;
     transition:
-      background-color 120ms ease,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
     width: 100%;
   }
 

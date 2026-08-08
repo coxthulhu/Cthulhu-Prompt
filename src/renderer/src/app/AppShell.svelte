@@ -6,6 +6,7 @@
   import AppActivityBar from '@renderer/features/sidebar/AppActivityBar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
+  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import AppOverlays from './AppOverlays.svelte'
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
@@ -160,7 +161,7 @@
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
-  const STARTUP_LOADING_OVERLAY_FADE_MS = 200
+  const STARTUP_LOADING_OVERLAY_FADE_MS = uiAnimationDurationMs.standard
   type StartupRestorePhase = 'pending' | 'restoring' | 'ready'
   let startupRestorePhase = $state<StartupRestorePhase>('pending')
   const startupRestoreOverlay = createLoadingOverlayState({

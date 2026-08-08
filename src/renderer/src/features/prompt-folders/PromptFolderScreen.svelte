@@ -176,7 +176,7 @@
             <button
               type="button"
               data-testid="prompt-folder-header-folder"
-              class="prompt-folder-header-folder min-w-0 cursor-pointer truncate transition-colors"
+              class="prompt-folder-header-folder min-w-0 cursor-pointer truncate transition-colors duration-[var(--ui-animation-duration-standard)]"
               onclick={controller.handleHeaderFolderClick}
             >
               {controller.folderDisplayName}
@@ -185,7 +185,7 @@
             <button
               type="button"
               data-testid="prompt-folder-header-section"
-              class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors"
+              class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors duration-[var(--ui-animation-duration-standard)]"
               onclick={controller.handleHeaderSegmentClick}
             >
               {controller.activeHeaderSection}

@@ -20,6 +20,9 @@
   --cthulhu-ui-radius-control: 6px;
   /* Shared cthulhu-ui typography for primary row/button labels. */
   --cthulhu-ui-font-size-primary: 16px;
+  /* Shared UI animation durations. */
+  --ui-animation-duration-fast: 50ms;
+  --ui-animation-duration-standard: 120ms;
   /* Shared cthulhu-ui shadow recipes. */
   --cthulhu-ui-shadow-focus: 0 0 0 3px var(--ui-neutral-emphasis-surface);
   --cthulhu-ui-shadow-focus-danger: 0 0 0 3px var(--ui-danger-normal-ring);

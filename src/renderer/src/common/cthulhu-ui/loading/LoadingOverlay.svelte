@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Loader } from 'lucide-svelte'
+  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import { mergeClasses } from '../mergeClasses'
 
   let {
-    fadeMs = 125,
+    fadeMs = uiAnimationDurationMs.standard,
     isFading = false,
     message = 'Loading...',
     testId,

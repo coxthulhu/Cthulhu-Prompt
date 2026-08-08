@@ -186,7 +186,7 @@
   }
 
   .promptDividerSeparatorButton :global(.cthulhuUiSeparator) {
-    transition: background-color 120ms ease;
+    transition: background-color var(--ui-animation-duration-standard) ease;
   }
 
   .promptDividerActions {
@@ -196,7 +196,7 @@
     height: 100%;
     min-width: 0;
     opacity: 0;
-    transition: opacity 120ms ease;
+    transition: opacity var(--ui-animation-duration-standard) ease;
   }
 
   .promptDividerActionButton {
@@ -211,7 +211,7 @@
     height: 100%;
     line-height: 16px;
     padding: 0;
-    transition: color 120ms ease;
+    transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
   }
 

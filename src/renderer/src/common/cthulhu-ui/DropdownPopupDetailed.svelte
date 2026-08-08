@@ -3,6 +3,7 @@
   import type { Action } from 'svelte/action'
   import { flip } from 'svelte/animate'
   import { GripVertical } from 'lucide-svelte'
+  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import {
     draggable,
     type DraggableOptions,
@@ -137,7 +138,10 @@
         data-testid={testId ? `${testId}-items` : undefined}
       >
         {#each items as item (item.id)}
-          <div class="cthulhuUiDropdownPopupDetailedAnimatedItem" animate:flip={{ duration: 100 }}>
+          <div
+            class="cthulhuUiDropdownPopupDetailedAnimatedItem"
+            animate:flip={{ duration: uiAnimationDurationMs.standard }}
+          >
             {#if itemDragOptions}
               {#if itemDragOptions.getRowDroppableOptions}
                 <PromptDropTarget

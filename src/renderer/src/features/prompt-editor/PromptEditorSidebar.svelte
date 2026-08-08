@@ -163,9 +163,9 @@
     /* Transparent borders preserve both separator space and rail sizing. */
     border-bottom-color: transparent;
     transition:
-      background-color 120ms ease,
-      border-color 50ms ease-out,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-standard) ease;
   }
 
   .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button) {
@@ -179,7 +179,7 @@
 
   .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button svg) {
     opacity: 0;
-    transition: opacity 50ms ease-out;
+    transition: opacity var(--ui-animation-duration-fast) ease-out;
   }
 
   .prompt-editor-sidebar:hover :global(.cthulhuUiIconButton[data-size='sidebar-rail']),

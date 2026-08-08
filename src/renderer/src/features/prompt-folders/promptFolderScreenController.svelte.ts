@@ -19,6 +19,7 @@ import {
   type PromptFolderKind
 } from '@shared/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
+import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
 import {
   getPromptNavigationContext,
@@ -354,7 +355,7 @@ export const createPromptFolderScreenController = ({
   let promptFolderLoadRequestId = $state(0)
   let isLoading = $state(true)
   let initialContentRevealRequestId = $state<number | null>(null)
-  const LOADING_OVERLAY_FADE_MS = 125
+  const LOADING_OVERLAY_FADE_MS = uiAnimationDurationMs.standard
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
     fadeMs: LOADING_OVERLAY_FADE_MS,

@@ -120,9 +120,9 @@
     min-width: 0;
     padding: 0;
     transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
     width: 36px;
   }
 

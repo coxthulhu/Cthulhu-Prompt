@@ -30,7 +30,7 @@ describe('Prompt folder loading overlay', () => {
       const overlay = mainWindow.locator(OVERLAY_SELECTOR)
       await expect(overlay.locator('text=Loading prompt folder...')).toBeVisible()
       await expect(overlay.locator('.animate-spin')).toBeVisible()
-      await expect(overlay).toHaveAttribute('style', /transition-duration:\s*125ms/)
+      await expect(overlay).toHaveAttribute('style', /transition-duration:\s*120ms/)
 
       await testHelpers.resumeIpcChannel(LOADING_CHANNEL)
 

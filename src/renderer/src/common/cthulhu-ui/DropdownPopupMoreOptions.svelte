@@ -131,7 +131,7 @@
     min-height: 50px;
     padding: 6px 8px;
     text-align: left;
-    transition: background-color 120ms ease;
+    transition: background-color var(--ui-animation-duration-standard) ease;
     width: 100%;
   }
 
