@@ -414,8 +414,12 @@ describe('Home Screen', () => {
         state: 'attached'
       })
 
-      const firstPrompt = await testHelpers.verifyPromptVisible('Example1')
-      const secondPrompt = await testHelpers.verifyPromptVisible('Example2')
+      const firstPrompt = await testHelpers.verifyPromptVisible(
+        'Example: Add Birthday Date to Settings Page'
+      )
+      const secondPrompt = await testHelpers.verifyPromptVisible(
+        'Example: Define Example Prompts in Files'
+      )
       expect(firstPrompt.found).toBe(true)
       expect(secondPrompt.found).toBe(true)
 
