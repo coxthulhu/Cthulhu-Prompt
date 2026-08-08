@@ -47,24 +47,40 @@
   ]
 
   const selectedStatusItem = $derived(statusItems.find((item) => item.id === status)!)
-  const defaultStatusAction = $derived.by(() =>
+  // A quick status action describes one optional outer segment of the status control.
+  type QuickStatusAction = {
+    icon: typeof CheckCheck
+    label: string
+    hoverVariant: 'neutral' | 'success'
+    testId: string
+    status: PromptStatus
+  }
+  // The forward action completes any active prompt and disappears once it is completed.
+  const forwardStatusAction = $derived.by<QuickStatusAction | null>(() =>
     status === PromptStatus.Completed
-      ? {
-          icon: Undo2,
-          label: 'Uncomplete prompt',
-          hoverVariant: 'neutral' as const,
-          testId: 'prompt-uncomplete-button',
-          status: PromptStatus.Todo
-        }
+      ? null
       : {
           icon: CheckCheck,
           label: 'Complete prompt',
-          hoverVariant: 'success' as const,
+          hoverVariant: 'success',
           testId: 'prompt-complete-button',
           status: PromptStatus.Completed
         }
   )
-  const statusMoreOptionsLabel = $derived(`${defaultStatusAction.label} More Options`)
+  // The backward action returns In Progress or Completed prompts directly to Todo.
+  const backwardStatusAction = $derived.by<QuickStatusAction | null>(() => {
+    if (status === PromptStatus.Todo) return null
+    return {
+      icon: Undo2,
+      label: status === PromptStatus.Completed ? 'Uncomplete prompt' : 'Set prompt to Todo',
+      hoverVariant: 'neutral',
+      testId:
+        status === PromptStatus.Completed
+          ? 'prompt-uncomplete-button'
+          : 'prompt-previous-status-button',
+      status: PromptStatus.Todo
+    }
+  })
 </script>
 
 <div class="prompt-editor-status-control">
@@ -75,22 +91,39 @@
     selectedItem={selectedStatusItem}
     showIcon
     valueWidth="116px"
-    moreOptionsLabel={statusMoreOptionsLabel}
+    moreOptionsLabel="Change status More Options"
     menuTestId="prompt-status-more-options-menu"
     testId="prompt-status-pill"
     moreOptionsTestId="prompt-status-more-options-button"
+    showIntegratedButton={forwardStatusAction !== null}
+    showTrailingIntegratedButton={backwardStatusAction !== null}
     onselect={(item) => onStatusChange(item.id as PromptStatus)}
   >
     {#snippet integratedButton()}
-      <IconButton
-        icon={defaultStatusAction.icon}
-        label={defaultStatusAction.label}
-        title={defaultStatusAction.label}
-        hoverVariant={defaultStatusAction.hoverVariant}
-        testId={defaultStatusAction.testId}
-        onclick={() => onStatusChange(defaultStatusAction.status)}
-        class="prompt-editor-status-default-action"
-      />
+      {#if forwardStatusAction}
+        <IconButton
+          icon={forwardStatusAction.icon}
+          label={forwardStatusAction.label}
+          title={forwardStatusAction.label}
+          hoverVariant={forwardStatusAction.hoverVariant}
+          testId={forwardStatusAction.testId}
+          onclick={() => onStatusChange(forwardStatusAction.status)}
+          class="prompt-editor-status-forward-action"
+        />
+      {/if}
+    {/snippet}
+    {#snippet trailingIntegratedButton()}
+      {#if backwardStatusAction}
+        <IconButton
+          icon={backwardStatusAction.icon}
+          label={backwardStatusAction.label}
+          title={backwardStatusAction.label}
+          hoverVariant={backwardStatusAction.hoverVariant}
+          testId={backwardStatusAction.testId}
+          onclick={() => onStatusChange(backwardStatusAction.status)}
+          class="prompt-editor-status-backward-action"
+        />
+      {/if}
     {/snippet}
   </SimpleSelectorButtonWithIntegratedButton>
 </div>

@@ -65,6 +65,9 @@ const completeSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-complete-button"]`
 const uncompleteSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-uncomplete-button"]`
+// Selector targets the quick action that moves an In Progress prompt back to Todo.
+const previousStatusSelector = (promptId: string) =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-previous-status-button"]`
 const statusMoreOptionsSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-status-more-options-button"]`
 const statusPillSelector = (promptId: string) =>
@@ -1451,7 +1454,7 @@ describe('Prompt folder prompt management', () => {
     ).toEqual({ markdownExists: false })
   })
 
-  test('sets prompt statuses from the more options menu', async ({ testSetup, electronApp }) => {
+  test('sets prompt statuses from the status control', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
 
@@ -1463,6 +1466,8 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Completed Mode')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
     const activePromptStatus = mainWindow.locator(statusPillSelector('completed-mode-active'))
+    // The selector segment exposes the corner rounding that changes with its adjacent actions.
+    const activePromptStatusSelector = activePromptStatus.locator('..')
     const activePromptTreeRow = mainWindow.locator(
       '[data-testid="prompt-tree-prompt-completed-mode-active"]'
     )
@@ -1475,6 +1480,10 @@ describe('Prompt folder prompt management', () => {
       .boundingBox()
     if (!todoTitleBox) throw new Error('Missing Todo prompt tree title geometry')
     const todoTitleRightPx = todoTitleBox.x + todoTitleBox.width
+    await expect(mainWindow.locator(completeSelector('completed-mode-active'))).toBeVisible()
+    await expect(mainWindow.locator(previousStatusSelector('completed-mode-active'))).toHaveCount(0)
+    await expect(mainWindow.locator(uncompleteSelector('completed-mode-active'))).toHaveCount(0)
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '6px')
     await activePromptStatus.click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')).toBeVisible()
     await activePromptStatus.click()
@@ -1504,14 +1513,59 @@ describe('Prompt folder prompt management', () => {
     ).toBeLessThanOrEqual(2)
     expect(await getPromptEditorIds(mainWindow)).toEqual(['completed-mode-active'])
 
-    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
-    await expect(
-      mainWindow.locator('[data-testid="prompt-status-option-in-progress"]')
-    ).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
-    await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
+    // In Progress places the quick forward and backward actions on opposite sides of the selector.
+    const inProgressCompleteButton = mainWindow.locator(completeSelector('completed-mode-active'))
+    // The previous-status button is the new trailing segment.
+    const inProgressPreviousButton = mainWindow.locator(
+      previousStatusSelector('completed-mode-active')
+    )
+    // Segment boxes verify left-to-right placement within the joined control.
+    const [inProgressCompleteBox, inProgressStatusBox, inProgressPreviousBox] = await Promise.all([
+      inProgressCompleteButton.boundingBox(),
+      activePromptStatusSelector.boundingBox(),
+      inProgressPreviousButton.boundingBox()
+    ])
+    expect(inProgressCompleteBox).not.toBeNull()
+    expect(inProgressStatusBox).not.toBeNull()
+    expect(inProgressPreviousBox).not.toBeNull()
+    expect(
+      Math.abs(
+        inProgressCompleteBox!.x + inProgressCompleteBox!.width - inProgressStatusBox!.x
+      )
+    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    expect(
+      Math.abs(
+        inProgressStatusBox!.x +
+          inProgressStatusBox!.width -
+          inProgressPreviousBox!.x
+      )
+    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-right-radius', '0px')
+    await expect(inProgressPreviousButton).toHaveCSS('border-top-left-radius', '0px')
+    await expect(inProgressPreviousButton).toHaveCSS('border-bottom-left-radius', '0px')
+    await expect(inProgressPreviousButton).toHaveCSS('border-top-right-radius', '6px')
+    await expect(inProgressPreviousButton).toHaveCSS('border-bottom-right-radius', '6px')
+    await expect(mainWindow.locator(uncompleteSelector('completed-mode-active'))).toHaveCount(0)
+
+    await inProgressPreviousButton.click()
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText('Todo')
     await expect(inProgressTreeIndicator).toHaveCount(0)
+    await expect(mainWindow.locator(previousStatusSelector('completed-mode-active'))).toHaveCount(0)
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '6px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-right-radius', '6px')
+    await expect
+      .poll(async () => {
+        return await readPersistedPromptTextById(electronApp, {
+          workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+          folderName: 'Completed Mode',
+          promptId: 'completed-mode-active',
+          promptTitle: 'Active Prompt'
+        })
+      })
+      .toContain('status: Todo')
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toBeVisible()
@@ -1708,6 +1762,35 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(0)
     await expect(mainWindow.locator(completeSelector('completed-mode-newest'))).toHaveCount(0)
     await expect(mainWindow.locator(uncompleteSelector('completed-mode-newest'))).toBeVisible()
+    await expect(mainWindow.locator(previousStatusSelector('completed-mode-newest'))).toHaveCount(0)
+    // With no leading Complete action, the Completed selector owns the rounded left edge.
+    const completedStatusSelector = mainWindow
+      .locator(statusPillSelector('completed-mode-newest'))
+      .locator('..')
+    // The Uncomplete segment must touch the selector's right edge.
+    const completedUncompleteButton = mainWindow.locator(
+      uncompleteSelector('completed-mode-newest')
+    )
+    // Joined segment boxes verify that Uncomplete is on the right without a gap.
+    const [completedStatusBox, completedUncompleteBox] = await Promise.all([
+      completedStatusSelector.boundingBox(),
+      completedUncompleteButton.boundingBox()
+    ])
+    expect(completedStatusBox).not.toBeNull()
+    expect(completedUncompleteBox).not.toBeNull()
+    expect(
+      Math.abs(
+        completedStatusBox!.x + completedStatusBox!.width - completedUncompleteBox!.x
+      )
+    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    await expect(completedStatusSelector).toHaveCSS('border-top-left-radius', '6px')
+    await expect(completedStatusSelector).toHaveCSS('border-bottom-left-radius', '6px')
+    await expect(completedStatusSelector).toHaveCSS('border-top-right-radius', '0px')
+    await expect(completedStatusSelector).toHaveCSS('border-bottom-right-radius', '0px')
+    await expect(completedUncompleteButton).toHaveCSS('border-top-left-radius', '0px')
+    await expect(completedUncompleteButton).toHaveCSS('border-bottom-left-radius', '0px')
+    await expect(completedUncompleteButton).toHaveCSS('border-top-right-radius', '6px')
+    await expect(completedUncompleteButton).toHaveCSS('border-bottom-right-radius', '6px')
     await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveText(
       'Completed'
     )
