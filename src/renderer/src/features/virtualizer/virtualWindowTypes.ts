@@ -24,13 +24,14 @@ export type VirtualWindowRowComponentProps<TRow> = {
 
 export type VirtualWindowRowSnippet<TRow> = Snippet<[VirtualWindowRowComponentProps<TRow>]>
 
-export type ScrollToWithinWindowBandType = 'center' | 'minimal'
+// Defines how a requested row position is placed within the virtual viewport.
+export type ScrollToWithinWindowBandType = 'align-top' | 'center' | 'minimal'
 
 export type ScrollToWithinWindowBand = (
   rowId: string,
   offsetPx: number,
   scrollType: ScrollToWithinWindowBandType,
-  minimalPaddingPx?: number
+  scrollPaddingPx?: number
 ) => void
 
 export type ScrollToAndTrackRowCentered = (rowId: string) => void

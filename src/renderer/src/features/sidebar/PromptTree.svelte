@@ -533,7 +533,7 @@
       source,
       forceRequest: true,
       contentReveal: {
-        scrollType: 'center',
+        scrollType: row === 'folder-settings' ? 'align-top' : 'center',
         expandFolderSettings: source !== 'folder-open'
       }
     })

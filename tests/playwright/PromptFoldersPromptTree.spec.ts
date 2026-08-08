@@ -67,6 +67,8 @@ const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
 const NESTED_FOLDER_EDITOR = `[data-testid="prompt-folder-editor-${SUBFOLDERS_NESTED_FOLDER_ID}"]`
 const NESTED_FOLDER_SETTINGS_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-settings-toggle"]`
 const NESTED_FOLDER_TITLE_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
+// Matches the folder-navigation offset requested from the virtual window.
+const PROMPT_FOLDER_NAVIGATION_TOP_OFFSET_PX = 80
 const GRANDCHILD_FOLDER_TOGGLE =
   '[data-testid="prompt-tree-folder-toggle-button-Grandchild"]'
 const GRANDCHILD_PROMPT = '[data-testid="prompt-tree-prompt-subfolders-ui-grandchild-prompt"]'
@@ -171,6 +173,31 @@ const expectRowToReachClosestPromptFolderViewportCenter = async (
       return geometry.isFullyVisible && (isAtTopBoundary || isAtBottomBoundary)
     })
     .toBe(true)
+}
+
+// Verifies folder navigation aligns the row below the virtual viewport's top edge.
+const expectRowToReachPromptFolderViewportTopOffset = async (
+  mainWindow: any,
+  rowSelector: string
+) => {
+  await expect
+    .poll(async () => {
+      // Measures the rendered folder row from the scrollable viewport edge.
+      const topOffsetPx = await mainWindow.evaluate(
+        ({ hostSelector, targetSelector }) => {
+          const host = document.querySelector<HTMLElement>(hostSelector)
+          const target = document.querySelector<HTMLElement>(targetSelector)
+          if (!host || !target) return null
+
+          return target.getBoundingClientRect().top - host.getBoundingClientRect().top
+        },
+        { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
+      )
+      return topOffsetPx == null
+        ? null
+        : Math.abs(topOffsetPx - PROMPT_FOLDER_NAVIGATION_TOP_OFFSET_PX)
+    })
+    .toBeLessThanOrEqual(1)
 }
 
 const scrollPromptFolderRowAwayFromViewportCenter = async (
@@ -451,11 +478,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachClosestPromptFolderViewportCenter(
-      mainWindow,
-      testHelpers,
-      NESTED_FOLDER_EDITOR
-    )
+    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, NESTED_FOLDER_EDITOR)
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -503,11 +526,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachClosestPromptFolderViewportCenter(
-      mainWindow,
-      testHelpers,
-      NESTED_FOLDER_EDITOR
-    )
+    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, NESTED_FOLDER_EDITOR)
     await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'true'

@@ -136,7 +136,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     rowId: string,
     offsetPx: number,
     scrollType: ScrollToWithinWindowBandType,
-    minimalPaddingPx = windowBandPaddingPx
+    scrollPaddingPx = windowBandPaddingPx
   ) => {
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
@@ -146,15 +146,23 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     if (!row) return
 
     const targetOffsetPx = row.offset + offsetPx
-    const bandPaddingPx = scrollType === 'minimal' ? minimalPaddingPx : windowBandPaddingPx
+    const bandPaddingPx = scrollType === 'minimal' ? scrollPaddingPx : windowBandPaddingPx
     const bandTopPx = scrollTopPx + bandPaddingPx
     const bandBottomPx = scrollTopPx + viewportHeight - bandPaddingPx
 
-    if (targetOffsetPx >= bandTopPx && targetOffsetPx <= bandBottomPx) return
+    if (
+      scrollType !== 'align-top' &&
+      targetOffsetPx >= bandTopPx &&
+      targetOffsetPx <= bandBottomPx
+    ) {
+      return
+    }
 
     let nextScrollTop = scrollTopPx
 
-    if (scrollType === 'center') {
+    if (scrollType === 'align-top') {
+      nextScrollTop = targetOffsetPx - scrollPaddingPx
+    } else if (scrollType === 'center') {
       nextScrollTop = targetOffsetPx - viewportHeight / 2
     } else if (targetOffsetPx < bandTopPx) {
       nextScrollTop = targetOffsetPx - bandPaddingPx
@@ -163,6 +171,9 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     }
 
     nextScrollTop = clampScrollTop(nextScrollTop)
+    if (scrollType === 'align-top') {
+      scrollAnchorMode = 'top'
+    }
     if (nextScrollTop === scrollTopPx) return
 
     applyProgrammaticScrollTop(nextScrollTop)

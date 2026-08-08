@@ -26,6 +26,7 @@ import {
   persistedPromptTreeEntryIdToPromptNavigationRow,
   promptIdToPromptNavigationRow,
   promptNavigationRowToPersistedEntryId,
+  type PromptContentRevealScrollType,
   type PromptNavigationRow,
   type PromptNavigationSource,
   type PromptNavigationTarget
@@ -112,6 +113,9 @@ export type ActivePromptTreeRow =
   | { kind: 'root-header'; rowOwnerFolderId: string }
   | { kind: 'folder-settings'; rowOwnerFolderId: string }
   | { kind: 'prompt'; rowOwnerFolderId: string; promptId: string }
+
+// Leaves navigated folder headers comfortably below the virtual viewport edge.
+const NAVIGATED_FOLDER_TOP_OFFSET_PX = 80
 
 type PromptMetadata = {
   status: PromptStatus
@@ -790,7 +794,7 @@ export const createPromptFolderScreenController = ({
     options: {
       forceRequest?: boolean
       contentReveal?: {
-        scrollType: 'center' | 'minimal'
+        scrollType: PromptContentRevealScrollType
         expandFolderSettings?: boolean
       }
       focusPromptId?: string
@@ -1012,7 +1016,8 @@ export const createPromptFolderScreenController = ({
         kind: 'root-header',
         rowOwnerFolderId: screenRootFolderId
       }
-    const shouldApplyInitialCenterRow =
+    // Reveals an explicit or persisted selection after its virtual rows are first created.
+    const shouldApplyInitialReveal =
       !isCompletedMode && Boolean(explicitSelectionTarget || persistedSelectionTarget)
     const restoredScrollTop = explicitSelectionTarget ? 0 : getRestoredPromptFolderScrollTop()
     const restoreSelectionSource: PromptNavigationSource =
@@ -1029,10 +1034,16 @@ export const createPromptFolderScreenController = ({
     scrollTopPx = restoredScrollTop
     latestCenteredPromptTreeRow = isCompletedMode ? null : initialSelectionTarget
 
-    if (shouldApplyInitialCenterRow) {
+    if (shouldApplyInitialReveal) {
       const source = explicitSelectionTarget
         ? promptNavigation.selectionSource!
         : restoreSelectionSource
+      // Preserves sidebar folder alignment when navigation also opens the prompt-folder screen.
+      const initialRevealScrollType: PromptContentRevealScrollType =
+        explicitSelectionTarget?.kind === 'folder-settings' &&
+        (source === 'tree-click' || source === 'folder-open')
+          ? 'align-top'
+          : 'center'
       const result = promptNavigation.select({
         screenRootFolderId,
         rowOwnerFolderId: initialSelectionTarget.rowOwnerFolderId,
@@ -1040,7 +1051,7 @@ export const createPromptFolderScreenController = ({
         source,
         forceRequest: true,
         contentReveal: {
-          scrollType: 'center',
+          scrollType: initialRevealScrollType,
           expandFolderSettings:
             source !== 'folder-open' && source !== 'subfolder-create' && source !== 'folder-move'
         },
@@ -1115,14 +1126,19 @@ export const createPromptFolderScreenController = ({
     }
 
     if (request.payload.scrollType === 'center' && !scrollToAndTrackRowCentered) return
-    if (request.payload.scrollType === 'minimal' && !scrollToWithinWindowBand) return
+    if (request.payload.scrollType !== 'center' && !scrollToWithinWindowBand) return
 
     promptNavigation.contentRevealRequests.consume(request, (payload) => {
       const rowId = toPromptFolderRowId(toActivePromptTreeTarget(payload))
       if (payload.scrollType === 'center') {
         scrollToAndTrackRowCentered!(rowId)
       } else {
-        scrollToWithinWindowBand!(rowId, 0, 'minimal')
+        scrollToWithinWindowBand!(
+          rowId,
+          0,
+          payload.scrollType,
+          payload.scrollType === 'align-top' ? NAVIGATED_FOLDER_TOP_OFFSET_PX : undefined
+        )
       }
     })
   })

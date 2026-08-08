@@ -42,8 +42,11 @@ export type PromptContentExpansionRequest = PromptNavigationTarget & {
   expandFolderSettings: boolean
 }
 
+// Defines how content navigation positions its target in the prompt-folder viewport.
+export type PromptContentRevealScrollType = 'align-top' | 'center' | 'minimal'
+
 export type PromptContentRevealRequest = PromptNavigationTarget & {
-  scrollType: 'center' | 'minimal'
+  scrollType: PromptContentRevealScrollType
 }
 
 export type PromptFocusRequest = {
@@ -62,7 +65,7 @@ type SelectPromptNavigationOptions = {
   source: PromptNavigationSource
   forceRequest?: boolean
   contentReveal?: {
-    scrollType: 'center' | 'minimal'
+    scrollType: PromptContentRevealScrollType
     expandFolderSettings?: boolean
   }
   focusPromptId?: string
