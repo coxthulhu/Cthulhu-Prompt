@@ -644,14 +644,19 @@ const restoreDocumentDragState = (): void => {
   document.body.style.userSelect = ''
 }
 
+const snapToDevicePixel = (value: number): number => {
+  const devicePixelRatio = window.devicePixelRatio || 1
+  return Math.round(value * devicePixelRatio) / devicePixelRatio
+}
+
 const updateDragCursor = (nextX: number, nextY: number): void => {
   cursorX = nextX
   cursorY = nextY
   if (activeDragGhost) {
     activeDragGhost = {
       ...activeDragGhost,
-      x: nextX + DRAG_GHOST_OFFSET_PX,
-      y: nextY + DRAG_GHOST_OFFSET_PX
+      x: snapToDevicePixel(nextX + DRAG_GHOST_OFFSET_PX),
+      y: snapToDevicePixel(nextY + DRAG_GHOST_OFFSET_PX)
     }
   }
   updateDragOpenDropdowns()
@@ -673,8 +678,8 @@ const showDragGhost = <TSourcePayload, TDropPayload>(
   activeDragGhost = {
     ...ghost,
     opacity: DRAG_GHOST_OPACITY,
-    x: cursorX + DRAG_GHOST_OFFSET_PX,
-    y: cursorY + DRAG_GHOST_OFFSET_PX
+    x: snapToDevicePixel(cursorX + DRAG_GHOST_OFFSET_PX),
+    y: snapToDevicePixel(cursorY + DRAG_GHOST_OFFSET_PX)
   }
 }
 
