@@ -1,7 +1,7 @@
 {
   "name": "cthulhuprompt",
   "productName": "Cthulhu Prompt",
-  "version": "0.0.30",
+  "version": "0.0.31",
   "description": "Cthulhu Prompt",
   "main": "./out/main/index.js",
   "author": "coxthulhu",
