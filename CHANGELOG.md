@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.30
+
+### New Features
+
+- Added support for applying multiple ordered templates to a prompt.
+- Added quick template selection when copying prompts and prompt status indicators in the sidebar tree.
+- Added bundled example prompts and a default template folder to new workspaces.
+
+### Changes
+
+- Redesigned template selection with folder browsing and staged multi-selection.
+- Moved nested folder actions into context menus and refined prompt status controls.
+- Refined home screen responsiveness, prompt tree navigation, editor actions, and shared interface styling.
+
+### Fixed
+
+- Fixed prompt navigation and scrolling when selecting completed prompts or moving and reordering prompts.
+- Fixed fallback prompt numbering, find results after title edits, and prompt tree drag-and-drop edge cases.
+- Fixed virtual scrollbar interaction, high-DPI prompt tree rendering, home screen overflow, and Windows application identity.
+
 ## 0.0.29
 
 ### Changes
