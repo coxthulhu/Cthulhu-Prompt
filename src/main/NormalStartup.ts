@@ -31,7 +31,7 @@ import { systemSettingsData } from './Data/SystemSettingsData'
 
 const WINDOW_DEFAULT_WIDTH = 1366
 const WINDOW_DEFAULT_HEIGHT = 768
-const WINDOW_MIN_WIDTH = 800
+const WINDOW_MIN_WIDTH = 950
 const WINDOW_MIN_HEIGHT = 600
 
 function getWorkingDirectoryName(): string | null {
