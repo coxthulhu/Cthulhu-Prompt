@@ -369,7 +369,9 @@
 
 /* Keep the drag ghost independent from the prompt tree row layout. */
 .promptDragGhostButton {
+  align-items: center;
   display: flex;
+  gap: 8px;
   width: max-content;
   min-width: 120px;
   max-width: 400px;
@@ -379,6 +381,11 @@
   padding: 0 8px;
   color: var(--ui-normal-text);
   cursor: grabbing;
+}
+
+.promptDragGhostIcon {
+  color: var(--ui-hoverable-icon-glyph);
+  flex: 0 0 auto;
 }
 
 .sidebarPromptTreeStatus {

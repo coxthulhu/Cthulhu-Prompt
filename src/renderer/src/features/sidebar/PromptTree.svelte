@@ -453,7 +453,7 @@
       sourceFolderId: folderId,
       contentKind
     },
-    createGhost: () => createPromptDragGhost(title),
+    createGhost: () => createPromptDragGhost(title, contentKind),
     onDragStart: promptTreePromptDrag.handleDragStart,
     onDragFinish: promptTreePromptDrag.handleDragFinish
   })

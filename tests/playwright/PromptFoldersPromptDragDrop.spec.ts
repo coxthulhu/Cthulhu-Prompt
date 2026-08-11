@@ -17,6 +17,7 @@ import {
   dragPromptHandleToTarget,
   dragPromptTreeRowToTarget,
   expectCurrentFolderPromptEditors,
+  expectDragGhostIconBeforeLabel,
   expectPersistedFolderPromptIds,
   expectPromptTreeRowDraggingState,
   expectPromptTreeRowActiveState,
@@ -854,6 +855,10 @@ describe('Prompt folder prompt drag-drop', () => {
 
     const dragGhost = mainWindow.locator(dragGhostSelector)
     await expect(dragGhost).toBeVisible()
+    await expect(dragGhost.locator('[data-testid="drag-ghost-icon"]')).toHaveClass(
+      /lucide-folder/
+    )
+    await expectDragGhostIconBeforeLabel(dragGhost)
     expect(await getPromptDragGhostSnapshot(dragGhost)).toMatchObject({
       height: 30,
       kind: 'folder',
@@ -1365,6 +1370,10 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
     await expect(dragGhost).toBeVisible()
+    await expect(dragGhost.locator('[data-testid="drag-ghost-icon"]')).toHaveClass(
+      /lucide-file-text/
+    )
+    await expectDragGhostIconBeforeLabel(dragGhost)
     const treeGhost = await getPromptDragGhostSnapshot(dragGhost)
     await mainWindow.mouse.move(320, 320, { steps: 2 })
     await expectDragGhostNear(dragGhost, 320, 320)

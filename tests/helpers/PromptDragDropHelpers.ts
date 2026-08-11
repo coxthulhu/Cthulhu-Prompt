@@ -50,6 +50,21 @@ const getRequiredBox = async (locator: Locator, errorMessage: string): Promise<E
   return box
 }
 
+/** Verifies that the drag ghost keeps its leading icon to the left of its label. */
+export const expectDragGhostIconBeforeLabel = async (dragGhost: Locator): Promise<void> => {
+  // These boxes compare the rendered icon and label edges with the standard 2px tolerance.
+  const iconBox = await getRequiredBox(
+    dragGhost.locator('[data-testid="drag-ghost-icon"]'),
+    'Missing drag ghost icon geometry'
+  )
+  const labelBox = await getRequiredBox(
+    dragGhost.locator('.sidebarPromptTreeSettingsLabel'),
+    'Missing drag ghost label geometry'
+  )
+
+  expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(labelBox.x + 2)
+}
+
 const getTargetPoint = (
   targetBox: ElementBox,
   verticalAlign: TargetVerticalAlign

@@ -79,7 +79,7 @@
       sourceFolderId: promptFolderId,
       contentKind
     },
-    createGhost: () => createPromptDragGhost(title),
+    createGhost: () => createPromptDragGhost(title, contentKind),
     onDragStart: handleDragStart,
     onDragFinish: handleDragFinish
   })

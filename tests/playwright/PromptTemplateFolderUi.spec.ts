@@ -17,6 +17,8 @@ import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestH
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 import {
   beginPromptHandleDrag,
+  dragGhostSelector,
+  expectDragGhostIconBeforeLabel,
   finishActiveDrag,
   moveActiveDragToTarget,
   promptFolderSelectorDropdownItemSelector,
@@ -513,6 +515,16 @@ describe('Prompt template folder UI', () => {
       await testHelpers.navigateToPromptFolders(sourceName)
       await waitForMonacoEditor(mainWindow, promptEditorSelector(contentId))
       await beginPromptHandleDrag(mainWindow, contentId)
+      // The active ghost exposes the content kind and editor-matching icon for this source.
+      const dragGhost = mainWindow.locator(dragGhostSelector)
+      await expect(dragGhost).toHaveAttribute(
+        'data-drag-ghost-kind',
+        sourceName === 'Templates' ? 'template' : 'prompt'
+      )
+      await expect(dragGhost.locator('[data-testid="drag-ghost-icon"]')).toHaveClass(
+        /lucide-file-text/
+      )
+      await expectDragGhostIconBeforeLabel(dragGhost)
       await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
       await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
       const destination = mainWindow.locator(
