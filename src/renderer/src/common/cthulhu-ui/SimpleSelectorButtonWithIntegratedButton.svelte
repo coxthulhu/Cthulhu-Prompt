@@ -51,11 +51,27 @@
     display: inline-flex;
   }
 
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton
+    > :global(.cthulhuUiIconButton),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
+    position: relative;
+  }
+
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton
+    > :global(.cthulhuUiIconButton:hover),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton
+    > :global(.cthulhuUiIconButton:focus-visible),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:hover),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:has(:focus-visible)) {
+    z-index: 1;
+  }
+
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
     > :global(.cthulhuUiIconButton:first-child) {
-    background: transparent;
     border-bottom-right-radius: 0;
-    border-right: 0;
     border-top-right-radius: 0;
   }
 
@@ -63,6 +79,7 @@
     > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
     border-bottom-left-radius: 0;
     border-top-left-radius: 0;
+    margin-left: -1px;
   }
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']
@@ -73,43 +90,62 @@
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']
     > :global(.cthulhuUiIconButton:last-child) {
-    background: transparent;
     border-bottom-left-radius: 0;
-    border-left: 0;
     border-top-left-radius: 0;
+    margin-left: -1px;
   }
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
-    > :global(.cthulhuUiIconButton[data-hover-variant='success']:hover)
-    + :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector),
-  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
-    > :global(.cthulhuUiIconButton[data-hover-variant='success']:focus-visible)
-    + :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
-    border-left-color: var(--ui-success-muted-hover-border);
+    > :global(.cthulhuUiIconButton:first-child:not(:hover):not(:focus-visible)) {
+    border-right-color: transparent;
+  }
+
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']
+    > :global(.cthulhuUiIconButton:last-child:not(:hover):not(:focus-visible)) {
+    border-left-color: transparent;
   }
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
-    > :global(.cthulhuUiIconButton[data-hover-variant='neutral']:hover)
+    > :global(.cthulhuUiIconButton:first-child:hover)
     + :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector),
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
-    > :global(.cthulhuUiIconButton[data-hover-variant='neutral']:focus-visible)
+    > :global(.cthulhuUiIconButton:first-child:focus-visible)
     + :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
-    border-left-color: var(--ui-neutral-hover-border);
+    border-left-color: transparent;
   }
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']:has(
-      > :global(.cthulhuUiIconButton[data-hover-variant='success']:last-child:hover),
-      > :global(.cthulhuUiIconButton[data-hover-variant='success']:last-child:focus-visible)
+      > :global(.cthulhuUiIconButton:last-child:hover)
+    )
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']:has(
+      > :global(.cthulhuUiIconButton:last-child:focus-visible)
     )
     > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
-    border-right-color: var(--ui-success-muted-hover-border);
+    border-right-color: transparent;
   }
 
-  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']:has(
-      > :global(.cthulhuUiIconButton[data-hover-variant='neutral']:last-child:hover),
-      > :global(.cthulhuUiIconButton[data-hover-variant='neutral']:last-child:focus-visible)
-    )
-    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
-    border-right-color: var(--ui-neutral-hover-border);
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
+    > :global(
+      .cthulhuUiIconButton:first-child:has(
+        + .cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:hover
+      )
+    ),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
+    > :global(
+      .cthulhuUiIconButton:first-child:has(
+        + .cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:focus-within
+      )
+    ) {
+    border-right-color: transparent;
+  }
+
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:hover)
+    + :global(.cthulhuUiIconButton:last-child),
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:focus-within)
+    + :global(.cthulhuUiIconButton:last-child) {
+    border-left-color: transparent;
   }
 </style>
