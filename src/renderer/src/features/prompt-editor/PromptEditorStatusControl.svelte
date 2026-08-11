@@ -95,24 +95,11 @@
     menuTestId="prompt-status-more-options-menu"
     testId="prompt-status-pill"
     moreOptionsTestId="prompt-status-more-options-button"
-    showIntegratedButton={forwardStatusAction !== null}
-    showTrailingIntegratedButton={backwardStatusAction !== null}
+    showIntegratedButton={backwardStatusAction !== null}
+    showTrailingIntegratedButton={forwardStatusAction !== null}
     onselect={(item) => onStatusChange(item.id as PromptStatus)}
   >
     {#snippet integratedButton()}
-      {#if forwardStatusAction}
-        <IconButton
-          icon={forwardStatusAction.icon}
-          label={forwardStatusAction.label}
-          title={forwardStatusAction.label}
-          hoverVariant={forwardStatusAction.hoverVariant}
-          testId={forwardStatusAction.testId}
-          onclick={() => onStatusChange(forwardStatusAction.status)}
-          class="prompt-editor-status-forward-action"
-        />
-      {/if}
-    {/snippet}
-    {#snippet trailingIntegratedButton()}
       {#if backwardStatusAction}
         <IconButton
           icon={backwardStatusAction.icon}
@@ -122,6 +109,19 @@
           testId={backwardStatusAction.testId}
           onclick={() => onStatusChange(backwardStatusAction.status)}
           class="prompt-editor-status-backward-action"
+        />
+      {/if}
+    {/snippet}
+    {#snippet trailingIntegratedButton()}
+      {#if forwardStatusAction}
+        <IconButton
+          icon={forwardStatusAction.icon}
+          label={forwardStatusAction.label}
+          title={forwardStatusAction.label}
+          hoverVariant={forwardStatusAction.hoverVariant}
+          testId={forwardStatusAction.testId}
+          onclick={() => onStatusChange(forwardStatusAction.status)}
+          class="prompt-editor-status-forward-action"
         />
       {/if}
     {/snippet}

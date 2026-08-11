@@ -98,8 +98,16 @@
   }
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']:has(
-      > :global(.cthulhuUiIconButton:last-child:hover),
-      > :global(.cthulhuUiIconButton:last-child:focus-visible)
+      > :global(.cthulhuUiIconButton[data-hover-variant='success']:last-child:hover),
+      > :global(.cthulhuUiIconButton[data-hover-variant='success']:last-child:focus-visible)
+    )
+    > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
+    border-right-color: var(--ui-success-muted-hover-border);
+  }
+
+  .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-trailing-action='true']:has(
+      > :global(.cthulhuUiIconButton[data-hover-variant='neutral']:last-child:hover),
+      > :global(.cthulhuUiIconButton[data-hover-variant='neutral']:last-child:focus-visible)
     )
     > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector) {
     border-right-color: var(--ui-neutral-hover-border);
