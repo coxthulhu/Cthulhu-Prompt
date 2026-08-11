@@ -159,6 +159,16 @@ describe('Prompt template folder UI', () => {
     await expect(promptTextButton).toHaveAttribute('aria-pressed', 'false')
     await expect(promptTextButton.locator('.lucide-plus')).toHaveCount(1)
 
+    const titleBox = await mainWindow
+      .locator(`${TEMPLATE_EDITOR} [data-testid="prompt-title"]`)
+      .boundingBox()
+    const parametersHeadingBox = await toolbar
+      .locator('.editor-subtitle-bar-heading-copy')
+      .boundingBox()
+    expect(titleBox).not.toBeNull()
+    expect(parametersHeadingBox).not.toBeNull()
+    expect(Math.abs(titleBox!.x - parametersHeadingBox!.x)).toBeLessThanOrEqual(1)
+
     await promptTextButton.click()
 
     await expect

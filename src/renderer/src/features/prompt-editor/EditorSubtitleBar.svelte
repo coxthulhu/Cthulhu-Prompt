@@ -51,21 +51,23 @@
     gap: 24px;
     justify-content: space-between;
     min-width: 0;
-    padding: 10px 12px 10px 16px;
+    padding: 10px 12px 10px 10px;
   }
 
   .editor-subtitle-bar-heading {
     align-items: center;
     color: var(--ui-normal-text);
-    display: flex;
+    display: grid;
     font-size: 14px;
     font-weight: 700;
-    gap: 12px;
+    gap: 8px;
+    grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
   }
 
   .editor-subtitle-bar-heading :global(svg) {
     color: var(--ui-secondary-icon-glyph);
+    justify-self: center;
   }
 
   .editor-subtitle-bar-heading-copy {
