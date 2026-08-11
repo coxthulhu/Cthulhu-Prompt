@@ -128,6 +128,41 @@ describe('Prompt folder card geometry', () => {
 
     await setTitleRowWidth(720)
     await expect(titleRow).toHaveAttribute('data-layout', 'default')
+    const defaultActionLayout = await titleRow.evaluate((row) => {
+      const buttonBarRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-button-bar')!
+        .getBoundingClientRect()
+      const statusRect = row
+        .querySelector<HTMLElement>('.prompt-editor-status-control')!
+        .getBoundingClientRect()
+      const deleteRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-delete-section')!
+        .getBoundingClientRect()
+      const separatorRects = Array.from(
+        row.querySelectorAll<HTMLElement>('.prompt-editor-title-actions-separator')
+      ).map((separator) => separator.getBoundingClientRect())
+
+      return {
+        separatorCount: separatorRects.length,
+        separatorsVisible: Array.from(
+          row.querySelectorAll<HTMLElement>('.prompt-editor-title-actions-separator')
+        ).every((separator) => getComputedStyle(separator).display !== 'none'),
+        actionsBeforeStatus: buttonBarRect.right < statusRect.left,
+        leadingSeparatorBetweenSections:
+          separatorRects[0].left >= buttonBarRect.right &&
+          separatorRects[0].right <= statusRect.left,
+        statusBeforeDelete: statusRect.right < deleteRect.left,
+        trailingSeparatorBetweenSections:
+          separatorRects[1].left >= statusRect.right && separatorRects[1].right <= deleteRect.left
+      }
+    })
+    expect(defaultActionLayout.separatorCount).toBe(2)
+    expect(defaultActionLayout.separatorsVisible).toBe(true)
+    expect(defaultActionLayout.actionsBeforeStatus).toBe(true)
+    expect(defaultActionLayout.leadingSeparatorBetweenSections).toBe(true)
+    expect(defaultActionLayout.statusBeforeDelete).toBe(true)
+    expect(defaultActionLayout.trailingSeparatorBetweenSections).toBe(true)
+
     await setTitleRowWidth(719)
     await expect(titleRow).toHaveAttribute('data-layout', 'compact')
     await waitForMonacoEditor(mainWindow, selector)
@@ -142,13 +177,13 @@ describe('Prompt folder card geometry', () => {
       const buttonBarRect = row
         .querySelector<HTMLElement>('.prompt-editor-title-button-bar')!
         .getBoundingClientRect()
-      const statusRect = row
-        .querySelector<HTMLElement>('.prompt-editor-status-segmented-control')!
-        .getBoundingClientRect()
       const statusControl = row.querySelector<HTMLElement>('.prompt-editor-status-control')!
-      const verticalSeparator = row.querySelector<HTMLElement>(
-        '.prompt-editor-title-actions-separator'
-      )!
+      const deleteRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-delete-section')!
+        .getBoundingClientRect()
+      const verticalSeparators = Array.from(
+        row.querySelectorAll<HTMLElement>('.prompt-editor-title-actions-separator')
+      )
       const actionsStyle = getComputedStyle(actions)
 
       return {
@@ -156,10 +191,12 @@ describe('Prompt folder card geometry', () => {
         actionRowOffsetPx: actionsRect.top - mainRect.bottom,
         buttonLeftInsetPx: buttonBarRect.left - actionsRect.left,
         statusControlLeftPaddingPx: parseFloat(getComputedStyle(statusControl).paddingLeft),
-        statusRightInsetPx: actionsRect.right - statusRect.right,
+        deleteRightInsetPx: actionsRect.right - deleteRect.right,
         horizontalSeparatorWidthPx: parseFloat(actionsStyle.borderTopWidth),
         horizontalSeparatorColor: actionsStyle.borderTopColor,
-        verticalSeparatorDisplay: getComputedStyle(verticalSeparator).display
+        verticalSeparatorDisplays: verticalSeparators.map(
+          (separator) => getComputedStyle(separator).display
+        )
       }
     })
 
@@ -167,10 +204,10 @@ describe('Prompt folder card geometry', () => {
     expect(Math.abs(layout.actionRowOffsetPx)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(Math.abs(layout.buttonLeftInsetPx - 16)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(layout.statusControlLeftPaddingPx).toBe(0)
-    expect(Math.abs(layout.statusRightInsetPx - 12)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
+    expect(Math.abs(layout.deleteRightInsetPx - 12)).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
     expect(layout.horizontalSeparatorWidthPx).toBe(1)
     expect(layout.horizontalSeparatorColor).not.toBe('rgba(0, 0, 0, 0)')
-    expect(layout.verticalSeparatorDisplay).toBe('none')
+    expect(layout.verticalSeparatorDisplays).toEqual(['none', 'none'])
 
     await expect
       .poll(async () => {

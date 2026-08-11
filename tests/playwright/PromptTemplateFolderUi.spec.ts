@@ -383,16 +383,33 @@ describe('Prompt template folder UI', () => {
 
     await setTitleRowWidth(482)
     await expect(titleRow).toHaveAttribute('data-layout', 'default')
-    const defaultActionRightInsetPx = await titleRow.evaluate((row) => {
+    const defaultActionLayout = await titleRow.evaluate((row) => {
       const rowRect = row.getBoundingClientRect()
       const buttonBarRect = row
         .querySelector<HTMLElement>('.prompt-editor-title-button-bar')!
         .getBoundingClientRect()
-      return Math.round(rowRect.right - buttonBarRect.right)
+      const separator = row.querySelector<HTMLElement>(
+        '.prompt-editor-title-actions-separator'
+      )!
+      const separatorRect = separator.getBoundingClientRect()
+      const deleteRect = row
+        .querySelector<HTMLElement>('.prompt-editor-title-delete-section')!
+        .getBoundingClientRect()
+      return {
+        deleteRightInsetPx: Math.round(rowRect.right - deleteRect.right),
+        separatorCount: row.querySelectorAll('.prompt-editor-title-actions-separator').length,
+        separatorVisible: getComputedStyle(separator).display !== 'none',
+        separatorBetweenSections:
+          separatorRect.left >= buttonBarRect.right && separatorRect.right <= deleteRect.left
+      }
     })
-    expect(defaultActionRightInsetPx).toBe(12)
+    expect(defaultActionLayout.deleteRightInsetPx).toBe(12)
+    expect(defaultActionLayout.separatorCount).toBe(1)
+    expect(defaultActionLayout.separatorVisible).toBe(true)
+    expect(defaultActionLayout.separatorBetweenSections).toBe(true)
     await setTitleRowWidth(477)
     await expect(titleRow).toHaveAttribute('data-layout', 'compact')
+    await expect(titleRow.locator('.prompt-editor-title-actions-separator')).toBeHidden()
   })
 
   test('finds template text and restores its persisted Monaco scroll state', async ({

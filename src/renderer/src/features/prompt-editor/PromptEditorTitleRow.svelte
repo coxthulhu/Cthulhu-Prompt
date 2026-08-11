@@ -37,11 +37,13 @@
 
 <script lang="ts">
   import { onMount } from 'svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
-  import { FileText, Layers } from 'lucide-svelte'
+  import { FileText, Layers, Trash2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
@@ -68,15 +70,17 @@
     icon = FileText,
     copyLabel,
     copyTitle,
-    deleteLabel,
-    deleteDialogTitle,
-    deleteDialogDescription,
+    deleteLabel = 'Delete prompt',
+    deleteDialogTitle = 'Delete Prompt',
+    deleteDialogDescription = 'Are you sure you want to delete this prompt?',
     completedAt = null,
     status = PromptStatus.Todo,
     isEdited = false,
     compactLayout = false
   }: PromptEditorTitleRowProps = $props()
 
+  // Delete dialog state keeps confirmation behavior with the isolated delete section.
+  let isDeleteDialogOpen = $state(false)
   // Derived placeholder text shows the fallback title when the title is empty.
   const titlePlaceholder = $derived.by(() =>
     title.trim().length === 0 ? `${fallbackTitle}...` : 'Title...'
@@ -154,6 +158,30 @@
     if (status === PromptStatus.Completed || status === PromptStatus.InProgress) return
     await onStatusChange?.(PromptStatus.InProgress)
   }
+
+  // The delete action immediately removes blank prompts and confirms deletion for nonblank prompts.
+  const handleDeleteClick = () => {
+    if (!onDelete) return
+    const hasContent = title.trim().length > 0 || draftText.trim().length > 0
+    if (hasContent) {
+      isDeleteDialogOpen = true
+      return
+    }
+
+    onDelete()
+  }
+
+  // Confirming closes the dialog before deleting the prompt.
+  const handleConfirmDelete = () => {
+    if (!onDelete) return
+    isDeleteDialogOpen = false
+    onDelete()
+  }
+
+  // Cancelling closes the delete dialog without changing the prompt.
+  const handleCancelDelete = () => {
+    isDeleteDialogOpen = false
+  }
 </script>
 
 <div class="prompt-editor-title-row" data-layout={compactLayout ? 'compact' : 'default'}>
@@ -227,18 +255,13 @@
   <div class="prompt-editor-title-actions">
     <div class="prompt-editor-title-button-bar">
       <PromptEditorButtonBar
-        {title}
         {draftText}
         {copyText}
-        {onDelete}
         {onTemplateSelect}
         {onTemplateSelectAndCopy}
         templateSelectionState={metadataFolderState}
         {copyLabel}
         {copyTitle}
-        {deleteLabel}
-        {deleteDialogTitle}
-        {deleteDialogDescription}
         onCopySuccess={handleCopySuccess}
       />
     </div>
@@ -247,8 +270,34 @@
       <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
       <PromptEditorStatusControl {status} {onStatusChange} />
     {/if}
+
+    {#if onDelete}
+      <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
+      <div class="prompt-editor-title-delete-section">
+        <IconButton
+          icon={Trash2}
+          label={deleteLabel}
+          title={deleteLabel}
+          hoverVariant="danger"
+          testId="prompt-delete-button"
+          onclick={handleDeleteClick}
+        />
+      </div>
+    {/if}
   </div>
 </div>
+
+{#if onDelete}
+  <ConfirmationDialog
+    bind:open={isDeleteDialogOpen}
+    title={deleteDialogTitle}
+    description={deleteDialogDescription}
+    confirmText="Delete"
+    confirmTestId="prompt-confirm-delete-button"
+    oncancel={handleCancelDelete}
+    onconfirm={handleConfirmDelete}
+  />
+{/if}
 
 <style>
   .prompt-editor-title-row {
@@ -329,6 +378,12 @@
     align-items: center;
     display: flex;
     min-width: 0;
+  }
+
+  .prompt-editor-title-delete-section {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
   }
 
   .prompt-editor-title-actions-separator {

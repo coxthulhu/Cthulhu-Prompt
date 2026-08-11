@@ -229,22 +229,22 @@ describe('Prompt template selection', () => {
       await promptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Delete prompt', 'Set Template', 'Select Template and Copy'])
+    ).toEqual(['Set Template', 'Select Template and Copy'])
     expect(
       await stalePromptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Delete prompt', 'Set Template', 'Copy prompt'])
+    ).toEqual(['Set Template', 'Copy prompt'])
     expect(
       await noTemplatePromptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Delete prompt', 'Set Template', 'Copy prompt'])
+    ).toEqual(['Set Template', 'Copy prompt'])
     expect(
       await multiTemplatePromptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Delete prompt', 'Set Template', 'Copy prompt'])
+    ).toEqual(['Set Template', 'Copy prompt'])
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
