@@ -30,15 +30,6 @@
 </script>
 
 <IconButtonBar>
-  {#if onTemplateSelect}
-    <IconButton
-      icon={Layers}
-      label="Set Template"
-      title="Set Template"
-      testId="prompt-template-button"
-      onclick={onTemplateSelect}
-    />
-  {/if}
   {#if !onTemplateSelectAndCopy || templateSelectionState !== 'not-selected'}
     <CopyButton
       text={copyText ?? draftText}
@@ -56,6 +47,15 @@
       title="Select Template and Copy"
       testId="prompt-template-and-copy-button"
       onclick={onTemplateSelectAndCopy}
+    />
+  {/if}
+  {#if onTemplateSelect}
+    <IconButton
+      icon={Layers}
+      label="Set Template"
+      title="Set Template"
+      testId="prompt-template-button"
+      onclick={onTemplateSelect}
     />
   {/if}
 </IconButtonBar>
