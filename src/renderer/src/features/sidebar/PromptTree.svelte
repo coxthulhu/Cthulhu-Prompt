@@ -787,16 +787,14 @@
 </script>
 
 <div class="sidebarPromptTree flex min-h-0 flex-1 flex-col">
-  {#if folderListState === 'no-workspace'}
-    <div class="sidebarPromptTreeStatus px-2 text-xs">Select a Workspace to Get Started</div>
-  {:else if folderListState === 'loading'}
+  {#if folderListState === 'loading'}
     <div class="sidebarPromptTreeStatus flex items-center gap-2 px-2 text-xs">
       <Loader class="size-4 animate-spin" />
       Loading folders...
     </div>
   {:else if folderListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Folder to Get Started</div>
-  {:else}
+  {:else if folderListState === 'ready'}
     <div class="flex min-h-0 flex-1 flex-col">
       <PromptTreeVirtualList
         items={virtualItems}

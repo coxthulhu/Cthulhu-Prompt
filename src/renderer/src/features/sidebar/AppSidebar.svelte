@@ -499,7 +499,7 @@
     if (!workspacePath) {
       return {
         title: 'No Workspace Selected',
-        path: ''
+        path: 'Select a Workspace to Get Started'
       }
     }
 
@@ -755,6 +755,7 @@
           {/if}
         </div>
         <p
+          data-testid="sidebar-workspace-subtitle"
           class="cthulhuSidebarWorkspacePath truncate pt-0.5 text-xs"
           title={workspacePath ?? undefined}
         >
