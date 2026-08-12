@@ -31,6 +31,7 @@
     onScrollTopChange?: (scrollTopPx: number) => void
     scrollApi?: VirtualWindowScrollApi | null
     viewportMetrics?: VirtualWindowViewportMetrics | null
+    contentHeightPx?: number
     leftScrollPaddingPx?: number
     rightScrollPaddingPx?: number
     scrollbarWidthPx?: number
@@ -57,6 +58,7 @@
     onScrollTopChange,
     scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
+    contentHeightPx = $bindable(0),
     leftScrollPaddingPx = DEFAULT_LEFT_SCROLL_PADDING_PX,
     rightScrollPaddingPx = DEFAULT_RIGHT_SCROLL_PADDING_PX,
     scrollbarWidthPx = DEFAULT_SCROLLBAR_WIDTH_PX,
@@ -143,6 +145,11 @@
   const scrollShadowActive = $derived(getScrollShadowActive())
   const scrollbarRevealVersion = $derived(getScrollbarRevealVersion())
   const hydrationPriorityByRowId = $derived(getHydrationPriorityByRowId())
+
+  // Side effect: expose the calculated row extent so content-sized hosts can clamp their viewport.
+  $effect(() => {
+    contentHeightPx = totalHeightPx
+  })
 
   const scrollApiInternal: VirtualWindowScrollApi = {
     scrollTo: (scrollTopPx: number) => applyProgrammaticScrollTop(scrollTopPx),

@@ -320,6 +320,47 @@ describe('Prompt template selection', () => {
       'aria-pressed',
       'true'
     )
+
+    const templateTree = dialog.locator('[data-testid="prompt-template-selection-tree"]')
+    const templateTreeSpacer = dialog.locator(
+      '[data-testid="prompt-template-selection-tree-spacer"]'
+    )
+    await expect
+      .poll(async () => {
+        const treeBox = await templateTree.boundingBox()
+        const spacerBox = await templateTreeSpacer.boundingBox()
+        return Math.abs((treeBox?.height ?? 0) - (spacerBox?.height ?? 0))
+      })
+      .toBeLessThanOrEqual(2)
+    const expandedDialogHeight = (await dialog.boundingBox())!.height
+    const expandedTreeHeight = (await templateTree.boundingBox())!.height
+
+    await dialog
+      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .click()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+    ).toHaveCount(0)
+    await expect
+      .poll(async () => (await templateTree.boundingBox())?.height ?? Number.POSITIVE_INFINITY)
+      .toBeLessThan(expandedTreeHeight)
+    const collapsedDialogHeight = (await dialog.boundingBox())!.height
+    const collapsedTreeHeight = (await templateTree.boundingBox())!.height
+    expect(
+      Math.abs(
+        expandedDialogHeight - collapsedDialogHeight - (expandedTreeHeight - collapsedTreeHeight)
+      )
+    ).toBeLessThanOrEqual(2)
+    expect(
+      Math.abs(collapsedTreeHeight - (await templateTreeSpacer.boundingBox())!.height)
+    ).toBeLessThanOrEqual(2)
+
+    await dialog
+      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .click()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+    ).toBeVisible()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await noTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
@@ -652,7 +693,8 @@ describe('Prompt template selection', () => {
     expect(metrics).not.toBeNull()
     expect(
       Math.abs(
-        (metrics?.viewportHeight ?? 0) - Math.min(470, (metrics?.innerHeight ?? 0) - 295)
+        (metrics?.viewportHeight ?? 0) -
+          Math.min(metrics?.spacerHeight ?? 0, 470, (metrics?.innerHeight ?? 0) - 295)
       )
     ).toBeLessThanOrEqual(2)
     expect(metrics?.spacerHeight).toBeGreaterThan(metrics?.viewportHeight ?? 0)
@@ -664,13 +706,15 @@ describe('Prompt template selection', () => {
     })
     await expect
       .poll(() =>
-        mainWindow.evaluate((virtualWindowSelector) => {
+        mainWindow.evaluate(({ virtualWindowSelector, spacerSelector }) => {
           const virtualWindow = document.querySelector<HTMLElement>(virtualWindowSelector)
-          if (!virtualWindow) return Number.POSITIVE_INFINITY
+          const spacer = document.querySelector<HTMLElement>(spacerSelector)
+          if (!virtualWindow || !spacer) return Number.POSITIVE_INFINITY
           return Math.abs(
-            virtualWindow.clientHeight - Math.min(470, window.innerHeight - 295)
+            virtualWindow.clientHeight -
+              Math.min(spacer.offsetHeight, 470, window.innerHeight - 295)
           )
-        }, virtualWindowSelector)
+        }, { virtualWindowSelector, spacerSelector })
       )
       .toBeLessThanOrEqual(2)
 

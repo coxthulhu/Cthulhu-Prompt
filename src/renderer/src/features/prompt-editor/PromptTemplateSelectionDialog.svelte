@@ -52,9 +52,6 @@
         kind: 'base-folder-footer'
         folderId: string
       }
-    | {
-        kind: 'bottom-spacer'
-      }
 
   // Props received by a virtualized base-folder header snippet.
   type BaseFolderHeaderRowProps = VirtualWindowRowComponentProps<
@@ -112,6 +109,8 @@
   let stagedTemplateIds = $state<string[]>([])
   // Tracks the opening edge so staging is initialized exactly once per opening.
   let wasOpen = $state(false)
+  // Calculated virtual row extent lets short template libraries size the dialog to their content.
+  let templateTreeContentHeightPx = $state(0)
 
   // Workspace currently supplying the template library.
   const selectedWorkspace = $derived(
@@ -319,7 +318,6 @@
       })
     }
 
-    items.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
     return items
   })
 
@@ -344,10 +342,6 @@
     'base-folder-footer': {
       estimateHeight: () => 18,
       snippet: baseFolderFooterRow
-    },
-    'bottom-spacer': {
-      estimateHeight: () => 24,
-      snippet: bottomSpacerRow
     }
   })
 </script>
@@ -406,10 +400,14 @@
     </div>
     <Separator class="mb-2" />
 
-    <div class="prompt-template-selection-tree sidebarPromptTree">
+    <div
+      class="prompt-template-selection-tree sidebarPromptTree"
+      style={`--template-tree-content-height:${templateTreeContentHeightPx}px;`}
+    >
       <SvelteVirtualWindow
         items={virtualItems}
         {rowRegistry}
+        bind:contentHeightPx={templateTreeContentHeightPx}
         leftScrollPaddingPx={0}
         rightScrollPaddingPx={4}
         testId="prompt-template-selection-tree"
@@ -484,10 +482,6 @@
     data-testid={`prompt-template-base-folder-footer-${row.folderId}`}
     aria-hidden="true"
   ></div>
-{/snippet}
-
-{#snippet bottomSpacerRow()}
-  <div class="h-full" aria-hidden="true"></div>
 {/snippet}
 
 <style>
@@ -614,7 +608,7 @@
   }
 
   .prompt-template-selection-tree {
-    height: min(470px, calc(100vh - 295px));
+    height: min(var(--template-tree-content-height), 470px, calc(100vh - 295px));
     width: 100%;
   }
 
