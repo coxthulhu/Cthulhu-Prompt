@@ -890,7 +890,7 @@ describe('Prompt folder prompt management', () => {
       await dividerRow
         .locator('.cthulhuUiSeparator')
         .evaluateAll((separators) =>
-          separators.map((separator) => getComputedStyle(separator).backgroundColor)
+          separators.map((separator) => getComputedStyle(separator).borderTopColor)
         )
     const separatorColorsBefore = await readSeparatorColors()
 

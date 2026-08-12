@@ -101,7 +101,7 @@ const FALLBACK_DESTINATION_FOLDER_ID = createDeterministicId(
 type PromptDividerHighlightStyles = {
   indicatorBackgroundColor: string
   buttonBorderWidth: string
-  separatorBackgroundColors: string[]
+  separatorColors: string[]
 }
 
 type PromptDragGhostSnapshot = {
@@ -206,9 +206,11 @@ const getPromptDividerHighlightStyles = async (
     return {
       indicatorBackgroundColor: buttonStyle.backgroundColor,
       buttonBorderWidth: buttonStyle.borderWidth,
-      separatorBackgroundColors: separators.map(
-        (separator) => getComputedStyle(separator).backgroundColor
-      )
+      separatorColors: separators.map((separator) => {
+        // Read the border for normal separators and the fill for thick drop indicators.
+        const style = getComputedStyle(separator)
+        return style.borderTopWidth === '0px' ? style.backgroundColor : style.borderTopColor
+      })
     }
   })
 }
@@ -998,15 +1000,11 @@ describe('Prompt folder prompt drag-drop', () => {
     expect(dropStyles.indicatorBackgroundColor).not.toBe(defaultStyles.indicatorBackgroundColor)
     expect(dropStyles.buttonBorderWidth).toBe(defaultStyles.buttonBorderWidth)
     expect(dropStyles.buttonBorderWidth).toBe('0px')
-    expect(defaultStyles.separatorBackgroundColors).toHaveLength(2)
-    expect(defaultStyles.separatorBackgroundColors[1]).toBe(
-      defaultStyles.separatorBackgroundColors[0]
-    )
-    expect(dropStyles.separatorBackgroundColors).toHaveLength(2)
-    expect(dropStyles.separatorBackgroundColors[1]).toBe(dropStyles.separatorBackgroundColors[0])
-    expect(dropStyles.separatorBackgroundColors[0]).not.toBe(
-      defaultStyles.separatorBackgroundColors[0]
-    )
+    expect(defaultStyles.separatorColors).toHaveLength(2)
+    expect(defaultStyles.separatorColors[1]).toBe(defaultStyles.separatorColors[0])
+    expect(dropStyles.separatorColors).toHaveLength(2)
+    expect(dropStyles.separatorColors[1]).toBe(dropStyles.separatorColors[0])
+    expect(dropStyles.separatorColors[0]).not.toBe(defaultStyles.separatorColors[0])
 
     await finishActiveDrag(mainWindow)
   })

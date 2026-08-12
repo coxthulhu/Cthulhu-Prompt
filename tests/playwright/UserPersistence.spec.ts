@@ -154,10 +154,18 @@ describe('User Persistence', () => {
   })
 
   test('restores persisted window bounds on startup', async ({ electronApp, testSetup }) => {
+    // Use the active Windows display origin so the minimum-size rectangle is fully on-screen.
+    const displayBounds = await electronApp.evaluate(({ screen }) => {
+      const bounds = screen.getPrimaryDisplay().bounds
+      return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
+    })
+    expect(displayBounds.width).toBeGreaterThanOrEqual(950)
+    expect(displayBounds.height).toBeGreaterThanOrEqual(600)
+
     await seedWindowPersistence(electronApp, {
-      x: 0,
-      y: 0,
-      width: 800,
+      x: displayBounds.x,
+      y: displayBounds.y,
+      width: 950,
       height: 600,
       isMaximized: false,
       isFullScreen: false
@@ -172,7 +180,7 @@ describe('User Persistence', () => {
         const state = await readMainWindowState(electronApp)
         return `${state.x}:${state.y}:${state.width}:${state.height}`
       })
-      .toBe('0:0:800:600')
+      .toBe(`${displayBounds.x}:${displayBounds.y}:950:600`)
   })
 
   test('uses default window size when persisted bounds are invalid', async ({

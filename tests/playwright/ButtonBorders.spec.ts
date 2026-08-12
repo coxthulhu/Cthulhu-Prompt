@@ -190,11 +190,13 @@ describe('Button borders', () => {
     await expect(compoundMainButton).toHaveAttribute('data-hover-variant', 'accent')
     await expect(compoundChevronButton).toHaveAttribute('data-hover-variant', 'neutral')
     await expect(compoundMainButton).toHaveCSS('border-top-style', 'none')
-    await expect(compoundSeparator).toHaveCSS('background-color', neutralBorder)
+    await expect(compoundSeparator).toHaveAttribute('data-orientation', 'vertical')
+    await expect(compoundSeparator).toHaveCSS('border-left-color', neutralBorder)
+    await expect(compoundSeparator).toHaveCSS('border-left-style', 'solid')
     await expect(compoundSeparator).toHaveCSS('width', '1px')
     await compoundChevronButton.hover()
     await expect(compoundChevronButton).toHaveCSS('background-color', neutralFill)
-    await expect(compoundSeparator).toHaveCSS('background-color', neutralBorder)
+    await expect(compoundSeparator).toHaveCSS('border-left-color', neutralBorder)
 
     await compoundChevronButton.click()
     const moreOptionsItem = mainWindow

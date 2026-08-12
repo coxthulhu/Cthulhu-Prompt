@@ -46,11 +46,13 @@
         <!-- Completed mode uses the divider as a plain section separator. -->
         <Separator
           class={isOver
-            ? '!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]'
-            : 'bg-[var(--ui-neutral-muted-border)]'}
+            ? '!h-2.5 rounded-full !border-0 !bg-[var(--ui-info-strong-border)]'
+            : undefined}
         />
       {:else if isOver}
-        <Separator class="!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]" />
+        <Separator
+          class="!h-2.5 rounded-full !border-0 !bg-[var(--ui-info-strong-border)]"
+        />
         <div
           class="promptDividerMoveIndicator"
           data-drop-over="true"
@@ -59,7 +61,9 @@
         >
           <span>{dividerText}</span>
         </div>
-        <Separator class="!h-2.5 rounded-full !bg-[var(--ui-info-strong-border)]" />
+        <Separator
+          class="!h-2.5 rounded-full !border-0 !bg-[var(--ui-info-strong-border)]"
+        />
       {:else}
         <!-- The centered line buttons limit separator clicks without moving the visible lines. -->
         <button
@@ -186,7 +190,7 @@
   }
 
   .promptDividerSeparatorButton :global(.cthulhuUiSeparator) {
-    transition: background-color var(--ui-animation-duration-standard) ease;
+    transition: border-color var(--ui-animation-duration-standard) ease;
   }
 
   .promptDividerActions {
@@ -238,7 +242,7 @@
     )
     .promptDividerSeparatorButton
     :global(.cthulhuUiSeparator) {
-    background-color: var(--ui-accent-normal-border);
+    border-color: var(--ui-accent-normal-border);
   }
 
   .promptDividerSeparatorButton:focus-visible,

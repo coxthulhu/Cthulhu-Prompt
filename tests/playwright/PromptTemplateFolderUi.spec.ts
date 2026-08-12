@@ -14,6 +14,7 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { dragSidebarHandleBy } from '../helpers/PromptFolderHelpers'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 import {
   beginPromptHandleDrag,
@@ -372,17 +373,19 @@ describe('Prompt template folder UI', () => {
     await testHelpers.navigateToPromptFolders('Templates')
 
     const titleRow = mainWindow.locator(`${TEMPLATE_EDITOR} .prompt-editor-title-row`)
+    // Use the supported minimum window width before narrowing the title row through the sidebar.
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      // The active application window supplies the existing height to preserve.
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) throw new Error('Missing main window')
+      window.setSize(950, window.getBounds().height)
+    })
+    // Wait for the renderer layout to observe the BrowserWindow resize.
+    await expect.poll(async () => await mainWindow.evaluate(() => window.innerWidth)).toBe(950)
+
     const setTitleRowWidth = async (targetWidthPx: number) => {
       const currentWidthPx = await titleRow.evaluate((row) => row.getBoundingClientRect().width)
-      await electronApp.evaluate(
-        ({ BrowserWindow }, widthDeltaPx) => {
-          const window = BrowserWindow.getAllWindows()[0]
-          if (!window) throw new Error('Missing main window')
-          const bounds = window.getBounds()
-          window.setSize(bounds.width + widthDeltaPx, bounds.height)
-        },
-        Math.round(targetWidthPx - currentWidthPx)
-      )
+      await dragSidebarHandleBy(mainWindow, Math.round(currentWidthPx - targetWidthPx))
       await expect
         .poll(async () =>
           Math.abs(

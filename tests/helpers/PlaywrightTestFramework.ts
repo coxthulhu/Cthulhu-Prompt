@@ -47,6 +47,17 @@ const defaultOptions: Required<PlaywrightTestOptions> = {
   launchOptions: {}
 }
 
+// Shared Electron arguments keep every Playwright suite on the same supported virtual display.
+const DEFAULT_ELECTRON_LAUNCH_ARGS = [
+  './out/main/index.js',
+  '--no-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-extensions',
+  '--disable-gpu',
+  '--headless',
+  '--screen-info={1920x1080}'
+]
+
 const RENDERER_ERROR_ANNOTATION = 'renderer-errors-json'
 
 export const createTestRequestId = (prefix: string): string => {
@@ -66,14 +77,6 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
 
       try {
         const electronLaunchConfig = {
-          args: [
-            './out/main/index.js',
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-extensions',
-            '--disable-gpu',
-            '--headless'
-          ],
           timeout: 60000,
           env: {
             ...process.env,
@@ -81,7 +84,8 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
             NODE_ENV: 'test',
             DEV_ENVIRONMENT: 'PLAYWRIGHT'
           },
-          ...config.launchOptions
+          ...config.launchOptions,
+          args: [...DEFAULT_ELECTRON_LAUNCH_ARGS, ...(config.launchOptions.args ?? [])]
         }
 
         app = await electron.launch(electronLaunchConfig)

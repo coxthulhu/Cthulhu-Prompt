@@ -40,6 +40,7 @@
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
@@ -267,12 +268,12 @@
     </div>
 
     {#if onStatusChange}
-      <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
+      <Separator orientation="vertical" class="prompt-editor-title-actions-separator" />
       <PromptEditorStatusControl {status} {onStatusChange} />
     {/if}
 
     {#if onDelete}
-      <span class="prompt-editor-title-actions-separator" aria-hidden="true"></span>
+      <Separator orientation="vertical" class="prompt-editor-title-actions-separator" />
       <div class="prompt-editor-title-delete-section">
         <IconButton
           icon={Trash2}
@@ -386,14 +387,15 @@
     flex: 0 0 auto;
   }
 
-  .prompt-editor-title-actions-separator {
+  :global(.prompt-editor-title-actions-separator.cthulhuUiSeparator) {
+    --cthulhu-ui-separator-color: var(--ui-neutral-normal-border);
     align-self: stretch;
-    background: var(--ui-neutral-normal-border);
     flex: 0 0 1px;
-    width: 1px;
+    height: auto;
   }
 
-  .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-actions-separator {
+  .prompt-editor-title-row[data-layout='compact']
+    :global(.prompt-editor-title-actions-separator.cthulhuUiSeparator) {
     display: none;
   }
 

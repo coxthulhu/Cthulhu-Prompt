@@ -2,15 +2,7 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite({
   launchOptions: {
-    args: [
-      './out/main/index.js',
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-extensions',
-      '--disable-gpu',
-      '--headless',
-      '--force-device-scale-factor=1.25'
-    ]
+    args: ['--force-device-scale-factor=1.25']
   }
 })
 

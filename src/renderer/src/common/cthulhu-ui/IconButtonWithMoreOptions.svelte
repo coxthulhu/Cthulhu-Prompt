@@ -11,6 +11,7 @@
     type IconButtonSize
   } from './IconButton.svelte'
   import { mergeClasses } from './mergeClasses'
+  import Separator from './Separator.svelte'
 
   type IconButtonAction = Action<HTMLButtonElement, unknown>
 
@@ -92,7 +93,7 @@
     class="cthulhuUiIconButtonWithMoreOptionsMain"
   />
 
-  <span class="cthulhuUiIconButtonWithMoreOptionsSeparator" aria-hidden="true"></span>
+  <Separator orientation="vertical" class="cthulhuUiIconButtonWithMoreOptionsSeparator" />
 
   <DropdownPopupMoreOptions
     label={moreOptionsLabel}
@@ -147,11 +148,11 @@
     border-top-left-radius: var(--cthulhu-ui-radius-control);
   }
 
-  .cthulhuUiIconButtonWithMoreOptionsSeparator {
+  :global(.cthulhuUiIconButtonWithMoreOptionsSeparator.cthulhuUiSeparator) {
+    --cthulhu-ui-separator-color: var(--ui-neutral-normal-border);
     align-self: stretch;
-    background: var(--ui-neutral-normal-border);
     flex: 0 0 1px;
-    width: 1px;
+    height: auto;
   }
 
   .cthulhuUiIconButtonWithMoreOptions
