@@ -429,5 +429,6 @@
   :global(.prompt-folder-settings-editor-card-section .editor-card-section-header) {
     color: var(--ui-normal-text);
     font-size: 14px;
+    line-height: 18px;
   }
 </style>
