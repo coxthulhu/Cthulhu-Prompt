@@ -21,6 +21,8 @@ const PROMPT_FOLDER_ID = 'selection-prompts'
 const SECOND_TEMPLATE_FOLDER_ID = 'selection-templates-second'
 const FIRST_TEMPLATE_FOLDER_ID = 'selection-templates-first'
 const NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-nested'
+const EMPTY_TEMPLATE_FOLDER_ID = 'selection-templates-empty'
+const UNUSABLE_NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-unusable-nested'
 const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Select Template.prompt.md`
 const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Stale Template.prompt.md`
@@ -138,8 +140,25 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
               templateText: 'Nested [[PROMPT_TEXT]].'
             }
           ]
+        },
+        {
+          folderName: 'UnusableNested',
+          displayName: 'Unusable Nested Templates',
+          folderId: UNUSABLE_NESTED_TEMPLATE_FOLDER_ID,
+          templates: [
+            {
+              id: 'template-unusable-nested',
+              title: 'Unusable Nested Template',
+              templateText: 'No prompt insertion point.'
+            }
+          ]
         }
       ]
+    },
+    {
+      folderName: 'Empty',
+      displayName: 'Empty Templates',
+      folderId: EMPTY_TEMPLATE_FOLDER_ID
     }
   ])
 
@@ -167,7 +186,8 @@ Copy without a template.`,
         entries: [
           { kind: 'folder', id: PROMPT_FOLDER_ID },
           { kind: 'folder', id: SECOND_TEMPLATE_FOLDER_ID },
-          { kind: 'folder', id: FIRST_TEMPLATE_FOLDER_ID }
+          { kind: 'folder', id: FIRST_TEMPLATE_FOLDER_ID },
+          { kind: 'folder', id: EMPTY_TEMPLATE_FOLDER_ID }
         ]
       },
       null,
@@ -177,6 +197,7 @@ Copy without a template.`,
       {
         entries: [
           { kind: 'folder', id: NESTED_TEMPLATE_FOLDER_ID },
+          { kind: 'folder', id: UNUSABLE_NESTED_TEMPLATE_FOLDER_ID },
           { kind: 'template', id: 'template-first' }
         ]
       },
@@ -289,6 +310,14 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('.sidebarPromptTreeFolderLabel')).toHaveText([
       'Nested Templates'
     ])
+    await expect(
+      dialog.locator(`[data-testid="prompt-template-base-folder-header-${EMPTY_TEMPLATE_FOLDER_ID}"]`)
+    ).toHaveCount(0)
+    await expect(
+      dialog.locator(
+        `[data-testid="prompt-tree-folder-toggle-button-${UNUSABLE_NESTED_TEMPLATE_FOLDER_ID}"]`
+      )
+    ).toHaveCount(0)
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveCSS(
       'cursor',
       'pointer'

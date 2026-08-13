@@ -130,11 +130,38 @@
       )
     )
   )
-  // Root template folders retain workspace ordering.
+  // Recursive usable-template totals drive both folder visibility and header summaries.
+  const availableTemplateCountByFolderId = $derived.by(() => {
+    const counts: Record<string, number> = {}
+
+    const countAvailableTemplates = (folder: PromptFolder): number => {
+      if (counts[folder.id] !== undefined) return counts[folder.id]
+
+      const count = folder.entries.reduce((total, entry) => {
+        if (entry.kind === 'template') {
+          return total + (templateTitleById[entry.id] ? 1 : 0)
+        }
+
+        const childFolder = promptFolderById[entry.id]
+        return total +
+          (childFolder?.kind === 'template' ? countAvailableTemplates(childFolder) : 0)
+      }, 0)
+      counts[folder.id] = count
+      return count
+    }
+
+    for (const folder of promptFolderQuery.data) {
+      if (folder.kind === 'template') countAvailableTemplates(folder)
+    }
+    return counts
+  })
+  // Root template folders with usable descendants retain workspace ordering.
   const rootTemplateFolders = $derived.by(() =>
     (selectedWorkspace?.entries ?? []).flatMap((entry) => {
       const folder = promptFolderById[entry.id]
-      return folder?.kind === 'template' ? [folder] : []
+      return folder?.kind === 'template' && availableTemplateCountByFolderId[folder.id] > 0
+        ? [folder]
+        : []
     })
   )
   // Dialog icon follows the selected full or quick behavior.
@@ -188,21 +215,14 @@
     else collapsedFolderIds.add(folderId)
   }
 
-  // Filters a folder to nested template folders and usable template drafts.
+  // Filters a folder to nonempty nested template folders and usable template drafts.
   const getAvailableEntries = (folder: PromptFolder) =>
     folder.entries.filter((entry) =>
       entry.kind === 'folder'
-        ? promptFolderById[entry.id]?.kind === 'template'
+        ? promptFolderById[entry.id]?.kind === 'template' &&
+          availableTemplateCountByFolderId[entry.id] > 0
         : entry.kind === 'template' && Boolean(templateTitleById[entry.id])
     )
-
-  // Counts every usable template below a base folder for its header summary.
-  const getAvailableTemplateCount = (folder: PromptFolder): number =>
-    getAvailableEntries(folder).reduce((count, entry) => {
-      if (entry.kind === 'template') return count + 1
-      const childFolder = promptFolderById[entry.id]
-      return count + (childFolder ? getAvailableTemplateCount(childFolder) : 0)
-    }, 0)
 
   // Applies a quick selection immediately or toggles an ordered staged selection.
   const handleTemplateSelect = (templateId: string): void => {
@@ -284,7 +304,7 @@
         row: {
           kind: 'base-folder-header',
           folder: rootFolder,
-          templateCount: getAvailableTemplateCount(rootFolder)
+          templateCount: availableTemplateCountByFolderId[rootFolder.id]
         }
       })
       items.push({
