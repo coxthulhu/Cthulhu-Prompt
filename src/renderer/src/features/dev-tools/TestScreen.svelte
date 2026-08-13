@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
+  import { onDestroy, type ComponentType } from 'svelte'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import {
     AlertCircle,
@@ -10,13 +10,19 @@
     Download,
     FileText,
     Folder,
+    Layers,
+    LayoutGrid,
+    LibraryBig,
     Loader,
     MoreHorizontal,
     Pencil,
     Pin,
     Plus,
     Settings,
+    Shapes,
     Sparkles,
+    Tag,
+    Tags,
     Trash2
   } from 'lucide-svelte'
   import CardSurface, {
@@ -73,6 +79,43 @@
     'glyph'
   ]
   const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'tiny', 'sidebar-rail']
+  const categoryIconSizes = [14, 18, 24, 32] as const
+  const categoryIconCandidates: {
+    name: string
+    description: string
+    icon: ComponentType
+  }[] = [
+    {
+      name: 'Tag',
+      description: 'The clearest match for one category assigned to a prompt.',
+      icon: Tag
+    },
+    {
+      name: 'Tags',
+      description: 'Suggests the full category collection or category management.',
+      icon: Tags
+    },
+    {
+      name: 'Shapes',
+      description: 'Represents distinct prompt types without implying a hierarchy.',
+      icon: Shapes
+    },
+    {
+      name: 'LayoutGrid',
+      description: 'Feels like browsing a set of equally weighted groups.',
+      icon: LayoutGrid
+    },
+    {
+      name: 'Layers',
+      description: 'Communicates organized sets, but can also suggest stacking.',
+      icon: Layers
+    },
+    {
+      name: 'LibraryBig',
+      description: 'Frames categories as sections within the prompt library.',
+      icon: LibraryBig
+    }
+  ]
   const folderDropdownItems: DropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
@@ -268,6 +311,40 @@
     </section>
 
     <section class="component-grid">
+      <div class="component-section icon-candidates-section" data-testid="icon-candidates">
+        <CardSurface>
+          <div class="component-section-content">
+            {@render componentTitle(
+              'Icon Candidates',
+              'Lucide alternatives for replacing the subfolder metaphor. Tag is the strongest match for a prompt with one category.'
+            )}
+
+            <div class="category-icon-grid">
+              {#each categoryIconCandidates as candidate (candidate.name)}
+                {@const CandidateIcon = candidate.icon}
+                <div class="category-icon-candidate">
+                  <div class="category-icon-heading">
+                    <CandidateIcon size={20} aria-hidden="true" />
+                    <span>{candidate.name}</span>
+                  </div>
+                  <p>{candidate.description}</p>
+                  <div class="category-icon-sizes">
+                    {#each categoryIconSizes as size (size)}
+                      <div class="category-icon-size-sample">
+                        <span class="category-icon-preview">
+                          <CandidateIcon {size} aria-hidden="true" />
+                        </span>
+                        <span>{size}px</span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        </CardSurface>
+      </div>
+
       <div class="component-section">
         <CardSurface>
           <div class="component-section-content">
@@ -809,6 +886,66 @@
   .component-section,
   .sample-card {
     min-width: 0;
+  }
+
+  .icon-candidates-section {
+    grid-column: 1 / -1;
+  }
+
+  .category-icon-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .category-icon-candidate {
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .category-icon-heading {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    font-size: 14px;
+    font-weight: 700;
+    gap: 8px;
+  }
+
+  .category-icon-candidate p {
+    color: var(--ui-muted-text);
+    font-size: 13px;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .category-icon-sizes {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .category-icon-size-sample {
+    align-items: center;
+    color: var(--ui-muted-text);
+    display: grid;
+    font-size: 11px;
+    gap: 4px;
+    justify-items: center;
+  }
+
+  .category-icon-preview {
+    align-items: center;
+    color: var(--ui-hoverable-icon-glyph);
+    display: flex;
+    height: 36px;
+    justify-content: center;
+    width: 36px;
   }
 
   .test-screen-title-block,
