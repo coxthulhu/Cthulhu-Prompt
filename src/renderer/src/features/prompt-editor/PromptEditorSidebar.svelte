@@ -33,7 +33,7 @@
   }: {
     promptId: string
     promptFolderId: string
-    contentKind?: import('@shared/PromptFolder').PromptFolderKind
+    contentKind?: import('@shared/PromptFolder').PromptFolderContentKind
     contentLabel?: string
     title: string
     isFirstPrompt: boolean

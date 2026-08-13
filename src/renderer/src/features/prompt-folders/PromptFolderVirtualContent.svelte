@@ -2,9 +2,10 @@
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     createEmptyPromptFolderSettings,
+    getPromptFolderContentKind,
     type AnyPromptFolderSettings,
     type PromptFolder,
-    type PromptFolderKind,
+    type PromptFolderContentKind,
     type PromptFolderSettingsField
   } from '@shared/PromptFolder'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
@@ -128,7 +129,7 @@
   type PromptFolderVirtualContentProps = {
     workspaceId: string | null
     screenRootFolderId: string
-    contentKind: PromptFolderKind
+    contentKind: PromptFolderContentKind
     folderSettingsByFolderId: Record<string, AnyPromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, MarkdownContentDraftRecord>
@@ -147,7 +148,7 @@
     initialScrollTopPx: number
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
-    onAddSubfolder: (target: PromptFolderDividerTarget) => void
+    onAddSubfolder?: (target: PromptFolderDividerTarget) => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
     onDeletePromptFolder: (promptFolderId: string) => void
     onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
@@ -680,7 +681,12 @@
 
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     if (!sourceFolder) return false
-    if (payload.contentKind !== destinationFolder.kind) return false
+    if (
+      payload.contentKind !== getPromptFolderContentKind(destinationFolder.kind) ||
+      sourceFolder.kind !== destinationFolder.kind
+    ) {
+      return false
+    }
     return (
       resolvePromptHandleDropMove(
         sourceFolder.id,
@@ -952,7 +958,7 @@
       mode={showsActions ? 'add' : 'separator'}
       contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
       onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
-      onAddSubfolder={showsActions && getFolderDepth(row.ownerFolderId) < 8
+      onAddSubfolder={showsActions && onAddSubfolder && getFolderDepth(row.ownerFolderId) < 8
         ? () => onAddSubfolder(target)
         : undefined}
       getDropOptions={!showsActions

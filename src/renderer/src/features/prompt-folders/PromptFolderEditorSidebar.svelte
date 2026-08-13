@@ -13,7 +13,7 @@
     contentKind
   }: {
     dragOptions: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
-    contentKind: import('@shared/PromptFolder').PromptFolderKind
+    contentKind: import('@shared/PromptFolder').PromptFolderContentKind
   } = $props()
 
   const folderLabel = $derived(contentKind === 'template' ? 'prompt template folder' : 'prompt folder')

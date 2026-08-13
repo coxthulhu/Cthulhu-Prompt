@@ -17,7 +17,10 @@ import {
   resolveEntryInsertIndex,
   type EntryRef
 } from '@shared/OrderContainer'
-import type { PromptFolderKind } from '@shared/PromptFolder'
+import {
+  getPromptFolderContentKind,
+  type PromptFolderContentKind
+} from '@shared/PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from '@shared/Revision'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -40,7 +43,7 @@ export type MarkdownContentRendererMutationConfig<
   TPersisted extends MarkdownContentPersisted,
   TFull extends TPersisted
 > = {
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
   label: string
   collectionId: string
   defaultFallbackTitle?: string
@@ -97,7 +100,7 @@ export const createMarkdownContentRendererMutations = <
     previousEntryId: string | null
   ): Promise<void> => {
     const promptFolder = promptFolderCollection.get(promptFolderId)
-    if (!promptFolder || promptFolder.kind !== config.kind) {
+    if (!promptFolder || getPromptFolderContentKind(promptFolder.kind) !== config.kind) {
       throw new Error(`${config.label} folder not loaded`)
     }
     const titleFields = resolvePromptTitleUpdateForPromptIds({
@@ -189,7 +192,7 @@ export const createMarkdownContentRendererMutations = <
   ): Promise<void> => {
     const promptFolder = promptFolderCollection.get(promptFolderId)
     const content = config.getFullPersisted(contentId)
-    if (!promptFolder || promptFolder.kind !== config.kind) {
+    if (!promptFolder || getPromptFolderContentKind(promptFolder.kind) !== config.kind) {
       throw new Error(`${config.label} folder not loaded`)
     }
     if (!content) throw new Error(`${config.label} not loaded`)
@@ -231,11 +234,14 @@ export const createMarkdownContentRendererMutations = <
   ): Promise<void> => {
     const source = promptFolderCollection.get(sourcePromptFolderId)
     const destination = promptFolderCollection.get(destinationPromptFolderId)
-    if (!source || source.kind !== config.kind) {
+    if (!source || getPromptFolderContentKind(source.kind) !== config.kind) {
       throw new Error(`Source ${config.label.toLowerCase()} folder not loaded`)
     }
-    if (!destination || destination.kind !== config.kind) {
+    if (!destination || getPromptFolderContentKind(destination.kind) !== config.kind) {
       throw new Error(`Destination ${config.label.toLowerCase()} folder not loaded`)
+    }
+    if (source.kind !== destination.kind) {
+      throw new Error(`${config.label} folders must use the same storage version`)
     }
     const persistedContent =
       config.getFullPersisted(contentId) ?? config.getDraftPersisted(contentId)

@@ -127,7 +127,7 @@ export const setPromptStatus = async (
   targetStatus: PromptStatus
 ): Promise<void> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
-  if (!promptFolder || promptFolder.kind !== 'prompt') {
+  if (!promptFolder || promptFolder.kind === 'template') {
     throw new Error('Prompt folder not loaded')
   }
   const prompt = promptCollection.get(promptId)

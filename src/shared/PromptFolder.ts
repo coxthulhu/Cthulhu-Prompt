@@ -6,7 +6,10 @@ import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
 import type { MarkdownContentUiState } from './MarkdownContentUiState'
 
-export type PromptFolderKind = 'prompt' | 'template'
+export type PromptFolderKind = 'prompt' | 'prompt-v2' | 'template'
+
+// Markdown content kinds remain stable even when prompt folder storage versions differ.
+export type PromptFolderContentKind = 'prompt' | 'template'
 
 interface PromptFolderBase extends OrderContainer<EntryRef> {
   id: string
@@ -20,12 +23,18 @@ export interface PromptContentFolder extends PromptFolderBase {
   settings: PromptFolderSettings
 }
 
+// V2 prompt folders keep only root-level description settings and contain no subfolders.
+export interface PromptContentFolderV2 extends PromptFolderBase {
+  kind: 'prompt-v2'
+  settings: PromptFolderV2Settings
+}
+
 export interface PromptTemplateFolder extends PromptFolderBase {
   kind: 'template'
   settings: PromptTemplateFolderSettings
 }
 
-export type PromptFolder = PromptContentFolder | PromptTemplateFolder
+export type PromptFolder = PromptContentFolder | PromptContentFolderV2 | PromptTemplateFolder
 
 export const PROMPT_FOLDER_SETTINGS_FIELDS = [
   'folderDescription',
@@ -41,7 +50,15 @@ export type PromptTemplateFolderSettings = {
   folderDescription: string | null
 }
 
-export type AnyPromptFolderSettings = PromptFolderSettings | PromptTemplateFolderSettings
+// V2 prompt folder settings intentionally omit V1 prompt prefixes and suffixes.
+export type PromptFolderV2Settings = {
+  folderDescription: string | null
+}
+
+export type AnyPromptFolderSettings =
+  | PromptFolderSettings
+  | PromptFolderV2Settings
+  | PromptTemplateFolderSettings
 
 export type PromptFolderSettingsFieldMetadata = {
   field: PromptFolderSettingsField
@@ -87,12 +104,13 @@ export const PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
 ) as Record<PromptFolderSettingsField, string>
 
 export function createEmptyPromptFolderSettings(kind: 'template'): PromptTemplateFolderSettings
+export function createEmptyPromptFolderSettings(kind: 'prompt-v2'): PromptFolderV2Settings
 export function createEmptyPromptFolderSettings(kind?: 'prompt'): PromptFolderSettings
 export function createEmptyPromptFolderSettings(kind: PromptFolderKind): AnyPromptFolderSettings
 export function createEmptyPromptFolderSettings(
   kind: PromptFolderKind = 'prompt'
 ): AnyPromptFolderSettings {
-  return kind === 'template'
+  return kind !== 'prompt'
     ? { folderDescription: null }
     : {
         folderDescription: null,
@@ -100,6 +118,16 @@ export function createEmptyPromptFolderSettings(
         folderSuffix: null
       }
 }
+
+// Resolves the markdown content kind stored by a prompt folder kind.
+export const getPromptFolderContentKind = (
+  kind: PromptFolderKind
+): PromptFolderContentKind => (kind === 'template' ? 'template' : 'prompt')
+
+// Identifies both prompt storage versions while excluding template folders.
+export const isPromptContentFolderKind = (
+  kind: PromptFolderKind
+): kind is 'prompt' | 'prompt-v2' => kind !== 'template'
 
 export function copyPromptFolderSettings(settings: PromptFolderSettings): PromptFolderSettings
 export function copyPromptFolderSettings(

@@ -14,9 +14,10 @@ import {
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
+  getPromptFolderContentKind,
   type PromptFolder,
   type AnyPromptFolderSettings,
-  type PromptFolderKind
+  type PromptFolderContentKind
 } from '@shared/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
@@ -186,7 +187,9 @@ export const createPromptFolderScreenController = ({
 
     return null
   })
-  const contentKind = $derived<PromptFolderKind>(screenRootFolder?.kind ?? 'prompt')
+  const contentKind = $derived<PromptFolderContentKind>(
+    getPromptFolderContentKind(screenRootFolder?.kind ?? 'prompt')
+  )
   const isTemplateFolder = $derived(contentKind === 'template')
   const promptDraftById = $derived.by(() => {
     const draftsById: Record<string, PromptDraftRecord> = {}
@@ -342,7 +345,7 @@ export const createPromptFolderScreenController = ({
   const folderSettingsByFolderId = $derived.by<Record<string, AnyPromptFolderSettings>>(() => {
     const settingsByFolderId: Record<string, AnyPromptFolderSettings> = {}
     for (const folder of promptFolderQuery.data) {
-      if (!folder || folder.kind !== contentKind) continue
+      if (!folder || getPromptFolderContentKind(folder.kind) !== contentKind) continue
       const draftSettings = promptFolderDraftById[folder.id]?.settings
       settingsByFolderId[folder.id] = copyPromptFolderSettings(
         draftSettings ?? folder.settings
@@ -1169,12 +1172,19 @@ export const createPromptFolderScreenController = ({
     previousEntryId: string | null
   ): Promise<boolean> => {
     const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
-    if (!sourcePromptFolder || sourcePromptFolder.kind !== contentKind) {
+    if (
+      !sourcePromptFolder ||
+      getPromptFolderContentKind(sourcePromptFolder.kind) !== contentKind
+    ) {
       return false
     }
 
     const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
-    if (!destinationPromptFolder || destinationPromptFolder.kind !== contentKind) {
+    if (
+      !destinationPromptFolder ||
+      getPromptFolderContentKind(destinationPromptFolder.kind) !== contentKind ||
+      sourcePromptFolder.kind !== destinationPromptFolder.kind
+    ) {
       return false
     }
 
@@ -1561,7 +1571,7 @@ export const createPromptFolderScreenController = ({
     get promptEditorSizingConfig(): PromptEditorSizingConfig {
       return promptEditorSizingConfig
     },
-    get contentKind(): PromptFolderKind {
+    get contentKind(): PromptFolderContentKind {
       return contentKind
     },
     get folderSettings(): AnyPromptFolderSettings {

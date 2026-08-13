@@ -22,7 +22,10 @@ import {
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import type { MarkdownPersistenceFields } from '../Persistence/MarkdownPersistence'
-import { resolveCompletedPromptFolderName } from '../Persistence/PromptPersistencePaths'
+import {
+  resolveActivePromptFolderName,
+  resolveCompletedPromptFolderName
+} from '../Persistence/PromptPersistencePaths'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 import {
   getPlannedMarkdownPersistenceFields,
@@ -144,8 +147,15 @@ const setupPromptStatusMutationHandler = (): void => {
                   modifiedAt: now
                 }
               : { ...activePromptBase, status: targetStatus, modifiedAt: now }
-          const activeFolderPath = promptFolder.persistenceFields.folderPath
-          const completedFolderPath = resolveCompletedPromptFolderName(activeFolderPath)
+          const promptFolderPath = promptFolder.persistenceFields.folderPath
+          const activeFolderPath = resolveActivePromptFolderName(
+            promptFolderPath,
+            promptFolder.committed.kind
+          )
+          const completedFolderPath = resolveCompletedPromptFolderName(
+            promptFolderPath,
+            promptFolder.committed.kind
+          )
           const persistenceFields =
             targetStatus === PromptStatus.Completed && !isCompletedPrompt
               ? {

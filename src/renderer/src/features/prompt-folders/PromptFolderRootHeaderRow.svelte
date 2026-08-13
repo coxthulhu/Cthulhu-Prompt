@@ -20,7 +20,7 @@
     folderDisplayName: string
     activePromptCount: number
     completedPromptCount: number
-    contentKind: import('@shared/PromptFolder').PromptFolderKind
+    contentKind: import('@shared/PromptFolder').PromptFolderContentKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
     onRenamePromptFolder: () => void

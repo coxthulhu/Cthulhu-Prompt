@@ -3,7 +3,10 @@ import { PromptStatus } from '@shared/Prompt'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import type { PromptFolder } from '@shared/PromptFolder'
 import type { Workspace } from '@shared/Workspace'
-import { resolveCompletedPromptFolderName } from '../Persistence/PromptPersistencePaths'
+import {
+  resolveActivePromptFolderName,
+  resolveCompletedPromptFolderName
+} from '../Persistence/PromptPersistencePaths'
 import { data } from '../Data/Data'
 
 export type PromptFolderPathOverride = {
@@ -89,10 +92,15 @@ export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string):
 
     const promptEntry = data.prompt.committedStore.getEntry(entry.id)
     if (promptEntry) {
+      // Active and completed paths depend on the owning prompt folder storage version.
+      const activeFolderPath = resolveActivePromptFolderName(
+        folderPath,
+        promptFolderEntry.committed.kind
+      )
       const targetFolderPath =
         promptEntry.committed.status === PromptStatus.Completed
-          ? resolveCompletedPromptFolderName(folderPath)
-          : folderPath
+          ? resolveCompletedPromptFolderName(folderPath, promptFolderEntry.committed.kind)
+          : activeFolderPath
       data.prompt.committedStore.updatePersistenceFields(entry.id, {
         ...promptEntry.persistenceFields,
         folderPath: targetFolderPath
@@ -105,7 +113,7 @@ export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string):
     if (promptEntry) {
       data.prompt.committedStore.updatePersistenceFields(promptId, {
         ...promptEntry.persistenceFields,
-        folderPath: resolveCompletedPromptFolderName(folderPath)
+        folderPath: resolveCompletedPromptFolderName(folderPath, promptFolderEntry.committed.kind)
       })
     }
   }

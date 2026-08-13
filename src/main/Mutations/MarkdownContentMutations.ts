@@ -11,7 +11,11 @@ import {
 } from '@shared/MarkdownContent'
 import type { EntryRef } from '@shared/OrderContainer'
 import { removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
-import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
+import {
+  getPromptFolderContentKind,
+  type PromptFolder,
+  type PromptFolderContentKind
+} from '@shared/PromptFolder'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { RevisionEnvelope } from '@shared/Revision'
@@ -27,6 +31,7 @@ import { buildPromptFolderSnapshot } from '../Data/DataSnapshotHelpers'
 import type { ParsedRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import type { MarkdownPersistenceFields } from '../Persistence/MarkdownPersistence'
+import { resolveActivePromptFolderName } from '../Persistence/PromptPersistencePaths'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
 import {
   getPlannedMarkdownPersistenceFields,
@@ -49,7 +54,7 @@ type ContentOperation<TContent extends MarkdownContentPersisted> = {
 }
 
 export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersisted> = {
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
   label: string
   channels: {
     create: string
@@ -97,7 +102,7 @@ export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersis
 
 const getFilenameGroups = (
   promptFolder: PromptFolder,
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
 ): string[][] => [
   getActiveMarkdownContentIds(promptFolder, kind),
   ...(kind === 'prompt' ? [[...promptFolder.completedPromptIds]] : [])
@@ -174,7 +179,10 @@ export const setupMarkdownContentMutationHandlers = <
           validatedRequest.payload
         const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
         const contentId = requestedContent.data.id
-        if (!promptFolder || promptFolder.committed.kind !== config.kind) {
+        if (
+          !promptFolder ||
+          getPromptFolderContentKind(promptFolder.committed.kind) !== config.kind
+        ) {
           return { success: false, error: `${config.label} folder not loaded` }
         }
         if (config.getContent(contentId)) {
@@ -207,7 +215,10 @@ export const setupMarkdownContentMutationHandlers = <
         const basePersistenceFields: MarkdownPersistenceFields = {
           workspaceId: promptFolder.persistenceFields.workspaceId,
           workspacePath: promptFolder.persistenceFields.workspacePath,
-          folderPath: promptFolder.persistenceFields.folderPath,
+          folderPath: resolveActivePromptFolderName(
+            promptFolder.persistenceFields.folderPath,
+            promptFolder.committed.kind
+          ),
           promptFolderId: requestedFolder.id,
           promptId: contentId,
           promptStem: contentId,
@@ -268,7 +279,7 @@ export const setupMarkdownContentMutationHandlers = <
         const content = config.getContent(contentId)
         if (
           !promptFolder ||
-          promptFolder.committed.kind !== config.kind ||
+          getPromptFolderContentKind(promptFolder.committed.kind) !== config.kind ||
           !content ||
           !getMarkdownContentIds(promptFolder.committed, config.kind).includes(contentId)
         ) {
@@ -329,7 +340,10 @@ export const setupMarkdownContentMutationHandlers = <
         const promptFolder = data.promptFolder.committedStore.getEntry(
           content.persistenceFields.promptFolderId
         )
-        if (!promptFolder || promptFolder.committed.kind !== config.kind) {
+        if (
+          !promptFolder ||
+          getPromptFolderContentKind(promptFolder.committed.kind) !== config.kind
+        ) {
           return { success: false, error: `${config.label} folder not loaded` }
         }
 
@@ -415,8 +429,9 @@ export const setupMarkdownContentMutationHandlers = <
         if (
           !source ||
           !destination ||
-          source.committed.kind !== config.kind ||
-          destination.committed.kind !== config.kind ||
+          getPromptFolderContentKind(source.committed.kind) !== config.kind ||
+          getPromptFolderContentKind(destination.committed.kind) !== config.kind ||
+          source.committed.kind !== destination.committed.kind ||
           !content ||
           !config.canMove(content.committed) ||
           !getActiveMarkdownContentIds(source.committed, config.kind).includes(requestedContent.id)
@@ -474,8 +489,14 @@ export const setupMarkdownContentMutationHandlers = <
           ? content.persistenceFields
           : {
               ...content.persistenceFields,
-              folderPath: destination.persistenceFields.folderPath,
-              previousFolderPath: source.persistenceFields.folderPath,
+              folderPath: resolveActivePromptFolderName(
+                destination.persistenceFields.folderPath,
+                destination.committed.kind
+              ),
+              previousFolderPath: resolveActivePromptFolderName(
+                source.persistenceFields.folderPath,
+                source.committed.kind
+              ),
               promptFolderId: requestedDestination.id
             }
         const filenamePlans = isSameFolder

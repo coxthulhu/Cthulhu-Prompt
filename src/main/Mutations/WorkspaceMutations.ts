@@ -111,6 +111,14 @@ export const setupWorkspaceMutationHandlers = (): void => {
             return { success: false, error: 'Destination prompt folder kind did not match' }
           }
 
+          if (
+            destinationParentPromptFolder &&
+            (destinationParentPromptFolder.committed.kind === 'prompt-v2' ||
+              movedPromptFolder.committed.kind === 'prompt-v2')
+          ) {
+            return { success: false, error: 'Prompt Folder V2 does not support subfolders' }
+          }
+
           const descendantIds = collectLoadedPromptFolderDescendantIds(payload.promptFolderId)
           if (
             destinationParentPromptFolderId === payload.promptFolderId ||

@@ -9,7 +9,7 @@
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     type AnyPromptFolderSettings,
-    type PromptFolderKind,
+    type PromptFolderContentKind,
     type PromptFolderSettingsField
   } from '@shared/PromptFolder'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
@@ -43,7 +43,7 @@
     completedPromptCount: number
     subfolderCount: number
     folderSettings: AnyPromptFolderSettings
-    contentKind: PromptFolderKind
+    contentKind: PromptFolderContentKind
     rowId: string
     virtualWindowWidthPx: number
     devicePixelRatio: number

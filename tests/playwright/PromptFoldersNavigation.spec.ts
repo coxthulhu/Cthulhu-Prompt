@@ -474,7 +474,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     const createPromptFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Prompt Folder"]'
+      '[role="dialog"][aria-label="Create Prompt Folder V1"]'
     )
     await expect(createPromptFolderDialog).toBeVisible()
     await expect(
@@ -483,7 +483,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
     ).toHaveText('Choose the folder type and name for the new folder.')
-    await expect(createPromptFolderDialog.getByLabel('Prompt Folder Name')).toBeVisible()
+    await expect(createPromptFolderDialog.getByLabel('Prompt Folder V1 Name')).toBeVisible()
   })
 
   test('shows add prompt folder button when the workspace has no prompt folders', async ({
@@ -757,13 +757,14 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     await expect(mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')).toHaveText(
-      'Prompt Folder'
+      'Prompt Folder V1'
     )
     await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
     const folderTypeMenu = mainWindow.locator(
       '[data-testid="create-prompt-folder-type-menu"]'
     )
-    await expect(folderTypeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
+    await expect(folderTypeMenu.getByText('Prompt Folder V1', { exact: true })).toBeVisible()
+    await expect(folderTypeMenu.getByText('Prompt Folder V2', { exact: true })).toBeVisible()
     await expect(folderTypeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
     await folderTypeMenu.getByText('Prompt Template Folder', { exact: true }).click()
     const createTemplateFolderDialog = mainWindow.locator(

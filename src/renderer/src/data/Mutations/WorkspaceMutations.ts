@@ -224,6 +224,13 @@ export const movePromptFolder = async (
     throw new Error('Destination prompt folder kind did not match')
   }
 
+  if (
+    destinationParentPromptFolder &&
+    (destinationParentPromptFolder.kind === 'prompt-v2' || promptFolder.kind === 'prompt-v2')
+  ) {
+    throw new Error('Prompt Folder V2 does not support subfolders')
+  }
+
   const isSameParent = sourceParentPromptFolderId === destinationParentPromptFolderId
   const sourceEntries = sourceParentPromptFolder?.entries ?? workspace.entries
   const destinationEntries = isSameParent

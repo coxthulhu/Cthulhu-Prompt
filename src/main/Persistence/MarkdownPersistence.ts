@@ -1,4 +1,4 @@
-import type { PromptFolderKind } from '@shared/PromptFolder'
+import type { PromptFolderContentKind } from '@shared/PromptFolder'
 import { buildPromptStem } from '@shared/promptFilename'
 import {
   commitStagedFileChanges,
@@ -30,7 +30,7 @@ type MarkdownData = {
 }
 
 type MarkdownPersistenceOptions<TData extends MarkdownData> = {
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
   getDisplayTitle: (data: TData) => string
   parseMarkdown: (fileText: string) => TData | null
   serializeMarkdown: (data: TData) => string
@@ -44,7 +44,7 @@ type MarkdownPersistenceOptions<TData extends MarkdownData> = {
 
 export const readMarkdownModifiedAt = (
   persistenceFields: MarkdownPersistenceFields,
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
 ): string => {
   const folderPath = resolvePromptFolderPath(
     persistenceFields.workspacePath,

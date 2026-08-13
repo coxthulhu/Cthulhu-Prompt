@@ -56,7 +56,11 @@
     controller.promptFolders.find((folder) => folder.id === renamePromptFolderId) ?? null
   )
   const renameFolderTitle = $derived(
-    renamePromptFolderTarget?.kind === 'template' ? 'Prompt Template Folder' : 'Prompt Folder'
+    renamePromptFolderTarget?.kind === 'template'
+      ? 'Prompt Template Folder'
+      : renamePromptFolderTarget?.kind === 'prompt-v2'
+        ? 'Prompt Folder V2'
+        : 'Prompt Folder'
   )
   // Duplicate folder names only conflict within the same on-disk parent folder.
   const renamePromptFolderSiblings = $derived.by(() => {
@@ -83,7 +87,11 @@
     )
 
     return controller.promptFolders.filter(
-      (folder) => folder.kind === renamePromptFolderTarget.kind && siblingIds.has(folder.id)
+      (folder) =>
+        (parentFolder
+          ? folder.kind === renamePromptFolderTarget.kind
+          : (folder.kind === 'template') === (renamePromptFolderTarget.kind === 'template')) &&
+        siblingIds.has(folder.id)
     )
   })
 
@@ -238,7 +246,9 @@
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
-            onAddSubfolder={openCreatePromptSubfolderDialog}
+            onAddSubfolder={controller.screenRootFolder?.kind === 'prompt-v2'
+              ? undefined
+              : openCreatePromptSubfolderDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptFolder={handleDeletePromptFolder}
             onSetPromptStatus={controller.handleSetPromptStatus}
@@ -278,14 +288,16 @@
   {/snippet}
 </PromptFolderFindIntegration>
 
-<CreatePromptSubfolderDialog
-  bind:this={createPromptSubfolderDialog}
-  workspaceId={controller.workspaceId}
-  isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
-  promptFolders={controller.promptFolders}
-  isPromptFolderListLoading={false}
-  onCreated={controller.handleCreatedSubfolder}
-/>
+{#if controller.screenRootFolder?.kind !== 'prompt-v2'}
+  <CreatePromptSubfolderDialog
+    bind:this={createPromptSubfolderDialog}
+    workspaceId={controller.workspaceId}
+    isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
+    promptFolders={controller.promptFolders}
+    isPromptFolderListLoading={false}
+    onCreated={controller.handleCreatedSubfolder}
+  />
+{/if}
 
 <PromptFolderNameDialog
   bind:this={renamePromptFolderDialog}
@@ -315,7 +327,7 @@
 <ConfirmationDialog
   open={deletePromptFolderTarget !== null}
   title={`Delete ${deleteFolderTitle}`}
-  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents and subfolders?`}
+  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents${deletePromptFolderTarget?.kind === 'prompt-v2' ? '?' : ' and subfolders?'}`}
   confirmText={deletePromptFolderTarget?.kind === 'template'
     ? 'Delete Template Folder'
     : 'Delete Prompt Folder'}

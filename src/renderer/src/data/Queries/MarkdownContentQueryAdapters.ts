@@ -2,7 +2,7 @@ import { createPromptFull, createPromptSummary } from '@shared/Prompt'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
-import type { PromptFolderKind } from '@shared/PromptFolder'
+import type { PromptFolderContentKind } from '@shared/PromptFolder'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { deletePromptDrafts, upsertPromptDrafts, upsertPromptSummaryDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
@@ -12,7 +12,7 @@ import {
 } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
 
 type MarkdownContentQueryAdapter = {
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
   getWorkspaceIds: (result: LoadWorkspaceByPathResult & { success: true }) => Set<string>
   applyWorkspaceResult: (result: LoadWorkspaceByPathResult & { success: true }) => void
   applyFolderResult: (result: LoadPromptFolderInitialResult & { success: true }) => void

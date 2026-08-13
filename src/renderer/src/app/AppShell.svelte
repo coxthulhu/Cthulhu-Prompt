@@ -145,7 +145,7 @@
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
     for (const promptFolder of selectedWorkspacePromptFolders) {
-      if (promptFolder.kind !== 'prompt') continue
+      if (promptFolder.kind === 'template') continue
       for (const promptId of getPromptFolderPromptIds(promptFolder)) {
         promptIds.add(promptId)
       }
@@ -154,7 +154,7 @@
     return promptIds.size
   })
   const workspacePromptFolderCount = $derived(
-    selectedWorkspacePromptFolders.filter((folder) => folder.kind === 'prompt').length
+    selectedWorkspacePromptFolders.filter((folder) => folder.kind !== 'template').length
   )
   let screenRootFolderId = $state<string | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)

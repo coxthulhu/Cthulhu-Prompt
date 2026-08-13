@@ -116,7 +116,7 @@
       templateState?: 'not-selected' | 'no-template' | 'selected'
       isEdited: boolean
     }
-    contentKind?: import('@shared/PromptFolder').PromptFolderKind
+    contentKind?: import('@shared/PromptFolder').PromptFolderContentKind
     contentLabel?: string
     metadataFolderLabel?: string | null
     metadataFolderState?: 'not-selected' | 'no-template' | 'selected'

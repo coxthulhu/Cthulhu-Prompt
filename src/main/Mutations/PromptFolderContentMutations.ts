@@ -2,7 +2,7 @@ import {
   MARKDOWN_CONTENT_KINDS,
   getMarkdownContentIds
 } from '@shared/MarkdownContent'
-import type { PromptFolderKind } from '@shared/PromptFolder'
+import type { PromptFolderContentKind } from '@shared/PromptFolder'
 import type {
   AtomicDataBuilder,
   AtomicDataTransactionHandle,
@@ -14,8 +14,8 @@ type AtomicHandle = AtomicDataTransactionHandle<DataStoreKey, unknown, number | 
 
 export const collectPromptFolderContentIds = (
   promptFolderIds: string[]
-): Record<PromptFolderKind, string[]> => {
-  const contentIds: Record<PromptFolderKind, string[]> = { prompt: [], template: [] }
+): Record<PromptFolderContentKind, string[]> => {
+  const contentIds: Record<PromptFolderContentKind, string[]> = { prompt: [], template: [] }
   for (const promptFolderId of promptFolderIds) {
     const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
     if (!promptFolder) continue
@@ -28,7 +28,7 @@ export const collectPromptFolderContentIds = (
 
 export const createPromptFolderContentDeleteHandles = (
   tx: AtomicDataBuilder,
-  contentIds: Record<PromptFolderKind, string[]>
+  contentIds: Record<PromptFolderContentKind, string[]>
 ): Record<string, AtomicHandle> => ({
   ...Object.fromEntries(
     contentIds.prompt.map((promptId) => [

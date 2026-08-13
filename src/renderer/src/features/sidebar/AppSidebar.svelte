@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ComponentType } from 'svelte'
   import { onMount } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
@@ -40,7 +41,10 @@
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import type { Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
-  import type { PromptFolder } from '@shared/PromptFolder'
+  import {
+    getPromptFolderContentKind,
+    type PromptFolder
+  } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
@@ -65,6 +69,7 @@
   import { createBlankPromptTemplateInFolder } from '@renderer/features/prompt-folders/createBlankPromptTemplateInFolder'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
+  import PromptFolderV2Icon from '../prompt-folders/PromptFolderV2Icon.svelte'
 
   type CreatePromptFolderDialogHandle = {
     openDialog: () => void
@@ -138,7 +143,7 @@
       .map((entry) => promptFolderById.get(entry.id))
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
-  const promptFolders = $derived(rootPromptFolders.filter((folder) => folder.kind === 'prompt'))
+  const promptFolders = $derived(rootPromptFolders.filter((folder) => folder.kind !== 'template'))
   const promptTemplateFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) return []
 
@@ -311,7 +316,12 @@
         id: promptFolder.id,
         label: promptFolder.displayName,
         detailParts,
-        icon: promptFolder.kind === 'template' ? Layers : Folder,
+        icon:
+          promptFolder.kind === 'template'
+            ? Layers
+            : promptFolder.kind === 'prompt-v2'
+              ? (PromptFolderV2Icon as unknown as ComponentType)
+              : Folder,
         testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
       }
     })
@@ -340,7 +350,9 @@
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
   const canTogglePromptFolders = $derived(
-    folderListState === 'ready' && promptTreePromptFolders.length > 0
+    folderListState === 'ready' &&
+      screenRootFolder?.kind !== 'prompt-v2' &&
+      promptTreePromptFolders.length > 0
   )
   const promptTreeExpansionRequests =
     createConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>()
@@ -357,7 +369,8 @@
       : `Collapse All ${screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} Folders`
   )
   const isCompletedPromptMode = $derived(
-    screenRootFolder?.kind === 'prompt' &&
+    screenRootFolder?.kind !== 'template' &&
+      screenRootFolder !== null &&
       promptFolderScreenMode === PromptFolderScreenMode.Completed
   )
   // Highlights the folder overview action only while its navigation target is active onscreen.
@@ -675,6 +688,11 @@
         position: 'after'
       }
       if (!isPromptHandleDragPayload(entryPayload)) {
+        // Folder-entry drags cannot create subfolders in or from the flat V2 structure.
+        const sourceFolder = allFolders.find((folder) => folder.id === entryPayload.folderId)
+        if (sourceFolder?.kind === 'prompt-v2' || destinationFolder.kind === 'prompt-v2') {
+          return false
+        }
         return (
           resolvePromptFolderEntryDropMove(
             allFolders,
@@ -688,7 +706,12 @@
         (folder) => folder.id === entryPayload.sourceFolderId
       )
       if (!sourceFolder) return false
-      if (entryPayload.contentKind !== destinationFolder.kind) return false
+      if (
+        entryPayload.contentKind !== getPromptFolderContentKind(destinationFolder.kind) ||
+        sourceFolder.kind !== destinationFolder.kind
+      ) {
+        return false
+      }
       return (
         resolvePromptHandleDropMove(
           sourceFolder.id,

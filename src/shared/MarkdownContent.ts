@@ -1,4 +1,4 @@
-import type { PromptFolder, PromptFolderKind } from './PromptFolder'
+import type { PromptFolder, PromptFolderContentKind } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type MarkdownContentPersisted = {
@@ -13,13 +13,13 @@ export const MARKDOWN_CONTENT_KINDS = ['prompt', 'template'] as const
 
 export const getActiveMarkdownContentIds = (
   promptFolder: PromptFolder,
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
 ): string[] =>
   promptFolder.entries.flatMap((entry) => (entry.kind === kind ? [entry.id] : []))
 
 export const getMarkdownContentIds = (
   promptFolder: PromptFolder,
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
 ): string[] => [
   ...getActiveMarkdownContentIds(promptFolder, kind),
   ...(kind === 'prompt' ? promptFolder.completedPromptIds : [])

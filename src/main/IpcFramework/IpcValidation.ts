@@ -245,7 +245,8 @@ type ParsedPromptFolder = Omit<PromptFolder, 'kind' | 'settings'> & {
 
 const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
   id: parseString,
-  kind: (value) => (value === 'prompt' || value === 'template' ? value : null),
+  kind: (value) =>
+    value === 'prompt' || value === 'prompt-v2' || value === 'template' ? value : null,
   folderName: parseString,
   displayName: parseString,
   entries: parseArray(
@@ -444,7 +445,10 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
     record.parentPromptFolder
   )
   const promptFolderId = parseString(record.promptFolderId)
-  const kind = record.kind === 'prompt' || record.kind === 'template' ? record.kind : null
+  const kind =
+    record.kind === 'prompt' || record.kind === 'prompt-v2' || record.kind === 'template'
+      ? record.kind
+      : null
   const displayName = parseString(record.displayName)
 
   if (

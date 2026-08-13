@@ -2,12 +2,12 @@ import {
   MARKDOWN_CONTENT_KINDS,
   getMarkdownContentIds
 } from '@shared/MarkdownContent'
-import type { PromptFolderKind } from '@shared/PromptFolder'
+import type { PromptFolderContentKind } from '@shared/PromptFolder'
 import { promptFolderCollection } from './PromptFolderCollection'
 
 export type PromptFolderGraphIds = {
   promptFolderIds: Set<string>
-  contentIds: Record<PromptFolderKind, Set<string>>
+  contentIds: Record<PromptFolderContentKind, Set<string>>
 }
 
 export const collectPromptFolderGraphIds = (

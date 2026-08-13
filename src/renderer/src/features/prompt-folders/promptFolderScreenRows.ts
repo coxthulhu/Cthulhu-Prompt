@@ -66,7 +66,7 @@ type BuildPromptFolderScreenRowsOptions = {
   rootFolder: PromptFolder
   descendantFolders: readonly PromptFolder[]
   promptIds: readonly string[]
-  contentKind?: import('@shared/PromptFolder').PromptFolderKind
+  contentKind?: import('@shared/PromptFolder').PromptFolderContentKind
   isFolderExpanded: (folderId: string) => boolean
 }
 

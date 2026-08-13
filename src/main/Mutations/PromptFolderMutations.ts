@@ -53,7 +53,9 @@ const getPromptFolderNameCandidates = (
   entries.flatMap((entry) => {
     if (entry.kind !== 'folder') return []
     const promptFolder = data.promptFolder.committedStore.getEntry(entry.id)?.committed
-    return promptFolder?.kind === kind ? [promptFolder] : []
+    return promptFolder && (promptFolder.kind === 'template') === (kind === 'template')
+      ? [promptFolder]
+      : []
   })
 
 const MAX_SUBFOLDER_DEPTH = 8
@@ -87,6 +89,14 @@ export const setupPromptFolderMutationHandlers = (): void => {
             committedParentPromptFolder.committed.kind !== payload.kind
           ) {
             return { success: false, error: 'Parent prompt folder kind did not match' }
+          }
+
+          if (committedParentPromptFolder?.committed.kind === 'prompt-v2') {
+            return { success: false, error: 'Prompt Folder V2 does not support subfolders' }
+          }
+
+          if (payload.kind === 'prompt-v2' && requestedParentPromptFolder) {
+            return { success: false, error: 'Prompt Folder V2 can only be created at the root' }
           }
 
           const treeIndex = buildPromptFolderTreeIndex(
@@ -549,7 +559,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   if (draft.kind === 'prompt' && 'folderPrefix' in requestedPromptFolder.data) {
                     draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
                   } else if (
-                    draft.kind === 'template' &&
+                    draft.kind !== 'prompt' &&
                     !('folderPrefix' in requestedPromptFolder.data)
                   ) {
                     draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)

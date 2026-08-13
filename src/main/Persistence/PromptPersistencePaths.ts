@@ -1,6 +1,7 @@
 import * as path from 'path'
 import {
   PROMPT_FOLDER_SETTINGS_DISK_FILENAMES,
+  type PromptFolderContentKind,
   type PromptFolderKind,
   type PromptFolderSettingsField
 } from '@shared/PromptFolder'
@@ -15,6 +16,10 @@ export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 export const PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX = '.template.md'
 export const COMPLETED_PROMPTS_FOLDER_NAME = '_Completed'
+// V2 active prompts live beneath this status directory.
+export const ACTIVE_PROMPTS_V2_FOLDER_NAME = 'Active'
+// V2 completed prompts live beneath this status directory.
+export const COMPLETED_PROMPTS_V2_FOLDER_NAME = 'Completed'
 
 export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES = PROMPT_FOLDER_SETTINGS_DISK_FILENAMES
 
@@ -23,7 +28,7 @@ export type PromptFilePaths = {
 }
 
 export const resolvePromptRootDirectoryName = (kind: PromptFolderKind): string =>
-  kind === 'prompt' ? PROMPTS_DIRECTORY_NAME : TEMPLATES_DIRECTORY_NAME
+  kind === 'template' ? TEMPLATES_DIRECTORY_NAME : PROMPTS_DIRECTORY_NAME
 
 export const resolvePromptFolderPath = (
   workspacePath: string,
@@ -33,8 +38,21 @@ export const resolvePromptFolderPath = (
   return path.join(workspacePath, resolvePromptRootDirectoryName(kind), folderName)
 }
 
-export const resolveCompletedPromptFolderName = (folderName: string): string => {
-  return path.join(folderName, COMPLETED_PROMPTS_FOLDER_NAME)
+export const resolveActivePromptFolderName = (
+  folderName: string,
+  kind: PromptFolderKind
+): string => {
+  return kind === 'prompt-v2' ? path.join(folderName, ACTIVE_PROMPTS_V2_FOLDER_NAME) : folderName
+}
+
+export const resolveCompletedPromptFolderName = (
+  folderName: string,
+  kind: PromptFolderKind = 'prompt'
+): string => {
+  return path.join(
+    folderName,
+    kind === 'prompt-v2' ? COMPLETED_PROMPTS_V2_FOLDER_NAME : COMPLETED_PROMPTS_FOLDER_NAME
+  )
 }
 
 export const resolveWorkspaceInfoPath = (
@@ -57,8 +75,10 @@ export const resolvePromptFolderOrderPath = (
   folderName: string,
   kind: PromptFolderKind
 ): string => {
+  // Only V2 redirects its authoritative order into the Active status metadata directory.
+  const orderFolderName = resolveActivePromptFolderName(folderName, kind)
   return path.join(
-    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName, kind),
+    resolvePromptFolderInfoDirectoryPath(workspacePath, orderFolderName, kind),
     PROMPT_FOLDER_ORDER_FILENAME
   )
 }
@@ -104,7 +124,7 @@ export const resolvePromptFolderSettingsTextPath = (
 export const resolvePromptPathsFromStem = (
   folderPath: string,
   stem: string,
-  kind: PromptFolderKind
+  kind: PromptFolderContentKind
 ): PromptFilePaths => {
   return {
     markdownPath: path.join(

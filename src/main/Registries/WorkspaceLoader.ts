@@ -25,6 +25,7 @@ import {
   isWorkspaceInfoPath,
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
+  resolveActivePromptFolderName,
   resolveCompletedPromptFolderName,
   resolveWorkspacePathFromInfoPath
 } from '../Persistence/PromptPersistencePaths'
@@ -163,8 +164,10 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
   const workspaceId = readWorkspaceInfo(workspaceInfoPath).workspaceId
   const promptFolders = readAllPromptFolders(workspacePath)
+  // V2 roots share the Prompts directory but are loaded by their distinct persisted kind.
+  const promptFoldersV2 = readAllPromptFolders(workspacePath, 'prompt-v2')
   const promptTemplateFolders = readAllPromptFolders(workspacePath, 'template')
-  const allPromptFolders = [...promptFolders, ...promptTemplateFolders]
+  const allPromptFolders = [...promptFolders, ...promptFoldersV2, ...promptTemplateFolders]
   const promptFolderById = new Map(
     allPromptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
   )
@@ -202,10 +205,12 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
     )
   )
 
-  const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
+  const promptLoadTasks = [...promptFolders, ...promptFoldersV2].flatMap((promptFolder) => {
     const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
-    const promptStemByPromptId = readPromptStemByPromptId(workspacePath, folderPath)
-    const completedFolderPath = resolveCompletedPromptFolderName(folderPath)
+    // Active and completed prompt paths differ between V1 and V2 storage.
+    const activeFolderPath = resolveActivePromptFolderName(folderPath, promptFolder.kind)
+    const promptStemByPromptId = readPromptStemByPromptId(workspacePath, activeFolderPath)
+    const completedFolderPath = resolveCompletedPromptFolderName(folderPath, promptFolder.kind)
     const completedPromptStemByPromptId = readPromptStemByPromptId(
       workspacePath,
       completedFolderPath
@@ -218,7 +223,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         ),
         ...promptFolder.completedPromptIds.map((promptId) => ({ promptId, isCompleted: true }))
       ].flatMap(({ promptId, isCompleted }) => {
-        const persistedFolderPath = isCompleted ? completedFolderPath : folderPath
+        const persistedFolderPath = isCompleted ? completedFolderPath : activeFolderPath
         const stems = isCompleted ? completedPromptStemByPromptId : promptStemByPromptId
         if (!stems.has(promptId)) return []
         const promptStem = stems.get(promptId) ?? promptId
