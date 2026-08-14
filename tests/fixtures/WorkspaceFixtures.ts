@@ -330,8 +330,18 @@ export function createWorkspaceWithFolders(
   // Add each folder
   for (const folder of folderConfigs) {
     const folderPath = `${workspacePath}/Prompts/${folder.folderName}`
+    // Canonical root directory that owns active prompt files and ordering.
+    const activeFolderPath = `${folderPath}/Active`
     const { prompts } = normalizePrompts(folder.prompts)
-    const { promptIds, promptFiles } = createPromptFiles(folderPath, prompts)
+    // Active fixture prompts remain in the hierarchy and its authoritative order.
+    const activePrompts = prompts.filter((prompt) => prompt.status !== PromptStatus.Completed)
+    // Completed fixture prompts share the root's flat completed directory.
+    const completedPrompts = prompts.filter((prompt) => prompt.status === PromptStatus.Completed)
+    const { promptIds, promptFiles } = createPromptFiles(activeFolderPath, activePrompts)
+    const { promptFiles: completedPromptFiles } = createPromptFiles(
+      `${folderPath}/Completed`,
+      completedPrompts
+    )
     const promptFolderId =
       typeof folder.promptFolderId === 'string'
         ? folder.promptFolderId
@@ -339,7 +349,7 @@ export function createWorkspaceWithFolders(
     promptFolderIds.push(promptFolderId)
 
     // Create folder metadata
-    structure[getPromptFolderOrderPath(folderPath)] = JSON.stringify(
+    structure[getPromptFolderOrderPath(activeFolderPath)] = JSON.stringify(
       promptOrderFile(promptIds),
       null,
       2
@@ -350,7 +360,9 @@ export function createWorkspaceWithFolders(
       2
     )
     addPromptFolderSettingsFiles(structure, folderPath, folder)
+    structure[`${folderPath}/Completed`] = null
     Object.assign(structure, promptFiles)
+    Object.assign(structure, completedPromptFiles)
   }
   structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(
     folderOrderFile(promptFolderIds),
@@ -474,7 +486,7 @@ export function setupWorkspaceScenario(
         }
       ])
       const subfolderId = createDeterministicId(`${workspacePath}:Main/Nested`)
-      const subfolderPath = `${workspacePath}/Prompts/Main/Nested`
+      const subfolderPath = `${workspacePath}/Prompts/Main/Active/Nested`
       const { prompts } = normalizePrompts([
         {
           id: 'nested-prompt',
@@ -484,7 +496,7 @@ export function setupWorkspaceScenario(
       ])
       const { promptIds, promptFiles } = createPromptFiles(subfolderPath, prompts)
 
-      structure[`${workspacePath}/Prompts/Main/_FolderInfo/FolderOrder.json`] = JSON.stringify(
+      structure[`${workspacePath}/Prompts/Main/Active/_FolderInfo/FolderOrder.json`] = JSON.stringify(
         {
           entries: [
             { kind: 'prompt', id: 'base-before' },
@@ -509,9 +521,7 @@ export function setupWorkspaceScenario(
         folderName: 'Main/Nested',
         displayName: 'Nested',
         folderSettings: {
-          folderDescription: '',
-          folderPrefix: '',
-          folderSuffix: ''
+          folderDescription: ''
         }
       })
       Object.assign(structure, promptFiles)
@@ -551,8 +561,8 @@ export function setupWorkspaceScenario(
         `${workspacePath}:Hierarchy/Nested/Grandchild`
       )
       const rootFolderPath = `${workspacePath}/Prompts/Hierarchy`
-      const nestedFolderPath = `${workspacePath}/Prompts/Hierarchy/Nested`
-      const emptyNestedFolderPath = `${workspacePath}/Prompts/Hierarchy/EmptyNested`
+      const nestedFolderPath = `${workspacePath}/Prompts/Hierarchy/Active/Nested`
+      const emptyNestedFolderPath = `${workspacePath}/Prompts/Hierarchy/Active/EmptyNested`
       const grandchildFolderPath = `${nestedFolderPath}/Grandchild`
       const { prompts } = normalizePrompts([
         {
@@ -581,7 +591,7 @@ export function setupWorkspaceScenario(
         }
       ])
       const { promptFiles: rootCompletedPromptFiles } = createPromptFiles(
-        `${rootFolderPath}/_Completed`,
+        `${rootFolderPath}/Completed`,
         rootCompletedPrompts
       )
       const { prompts: nestedCompletedPrompts } = normalizePrompts([
@@ -601,14 +611,13 @@ export function setupWorkspaceScenario(
         }
       ])
       const { promptFiles: nestedCompletedPromptFiles } = createPromptFiles(
-        `${nestedFolderPath}/_Completed`,
+        `${rootFolderPath}/Completed`,
         nestedCompletedPrompts
       )
 
-      structure[`${workspacePath}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`] = JSON.stringify(
+      structure[`${workspacePath}/Prompts/Hierarchy/Active/_FolderInfo/FolderOrder.json`] = JSON.stringify(
         {
           entries: [
-            { kind: 'prompt', id: 'subfolders-ui-root-completed' },
             { kind: 'prompt', id: 'subfolders-ui-root-before' },
             { kind: 'folder', id: nestedFolderId },
             { kind: 'folder', id: emptyNestedFolderId },
@@ -621,8 +630,6 @@ export function setupWorkspaceScenario(
       structure[getPromptFolderOrderPath(nestedFolderPath)] = JSON.stringify(
         {
           entries: [
-            { kind: 'prompt', id: 'subfolders-ui-nested-completed-1' },
-            { kind: 'prompt', id: 'subfolders-ui-nested-completed-2' },
             ...promptIds.map((id) => ({ kind: 'prompt', id })),
             { kind: 'folder', id: grandchildFolderId }
           ]
@@ -639,9 +646,7 @@ export function setupWorkspaceScenario(
         folderName: 'Hierarchy/Nested',
         displayName: 'Nested',
         folderSettings: {
-          folderDescription: 'Nested folder description.',
-          folderPrefix: 'Nested folder prefix',
-          folderSuffix: 'Nested folder suffix'
+          folderDescription: 'Nested folder description.'
         }
       })
       structure[getPromptFolderOrderPath(grandchildFolderPath)] = JSON.stringify(
@@ -688,7 +693,7 @@ export function setupWorkspaceScenario(
       const structure = createWorkspaceWithFolders(workspacePath, [
         { folderName: rootName, displayName: 'Depth Root' }
       ])
-      let parentPath = `${workspacePath}/Prompts/${rootName}`
+      let parentPath = `${workspacePath}/Prompts/${rootName}/Active`
 
       for (let depth = 1; depth <= 8; depth += 1) {
         const childName = `Level${depth}`
@@ -730,8 +735,8 @@ export function setupWorkspaceScenario(
       ])
       const nestedFolderId = createDeterministicId(`${workspacePath}:Controls/Nested`)
       const siblingFolderId = createDeterministicId(`${workspacePath}:Controls/Sibling`)
-      const nestedFolderPath = `${workspacePath}/Prompts/Controls/Nested`
-      const siblingFolderPath = `${workspacePath}/Prompts/Controls/Sibling`
+      const nestedFolderPath = `${workspacePath}/Prompts/Controls/Active/Nested`
+      const siblingFolderPath = `${workspacePath}/Prompts/Controls/Active/Sibling`
       const { prompts } = normalizePrompts([
         {
           id: 'subfolders-controls-first',
@@ -746,7 +751,7 @@ export function setupWorkspaceScenario(
       ])
       const { promptIds, promptFiles } = createPromptFiles(nestedFolderPath, prompts)
 
-      structure[getPromptFolderOrderPath(`${workspacePath}/Prompts/Controls`)] = JSON.stringify(
+      structure[getPromptFolderOrderPath(`${workspacePath}/Prompts/Controls/Active`)] = JSON.stringify(
         folderOrderFile([nestedFolderId, siblingFolderId]),
         null,
         2
@@ -905,21 +910,37 @@ export function addFolderToWorkspace(
   folderConfig: PromptFolderConfig
 ): Record<string, string | null> {
   const folderPath = `${workspacePath}/Prompts/${folderConfig.folderName}`
+  // Canonical root directory that owns active prompt files and ordering.
+  const activeFolderPath = `${folderPath}/Active`
   const { prompts } = normalizePrompts(folderConfig.prompts)
-  const { promptIds, promptFiles } = createPromptFiles(folderPath, prompts)
+  // Active fixture prompts remain in the hierarchy and its authoritative order.
+  const activePrompts = prompts.filter((prompt) => prompt.status !== PromptStatus.Completed)
+  // Completed fixture prompts share the root's flat completed directory.
+  const completedPrompts = prompts.filter((prompt) => prompt.status === PromptStatus.Completed)
+  const { promptIds, promptFiles } = createPromptFiles(activeFolderPath, activePrompts)
+  const { promptFiles: completedPromptFiles } = createPromptFiles(
+    `${folderPath}/Completed`,
+    completedPrompts
+  )
   const promptFolderId =
     typeof folderConfig.promptFolderId === 'string'
       ? folderConfig.promptFolderId
       : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
 
   const structure: Record<string, string | null> = {
-    [getPromptFolderOrderPath(folderPath)]: JSON.stringify(promptOrderFile(promptIds), null, 2),
+    [getPromptFolderOrderPath(activeFolderPath)]: JSON.stringify(
+      promptOrderFile(promptIds),
+      null,
+      2
+    ),
     [`${folderPath}/_FolderInfo/FolderInfo.json`]: JSON.stringify(
       createPromptFolderInfo(folderConfig.displayName, promptFolderId),
       null,
       2
     ),
-    ...promptFiles
+    [`${folderPath}/Completed`]: null,
+    ...promptFiles,
+    ...completedPromptFiles
   }
   addPromptFolderSettingsFiles(structure, folderPath, folderConfig)
 

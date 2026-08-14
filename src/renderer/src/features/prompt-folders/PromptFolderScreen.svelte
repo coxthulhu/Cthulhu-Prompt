@@ -58,9 +58,7 @@
   const renameFolderTitle = $derived(
     renamePromptFolderTarget?.kind === 'template'
       ? 'Prompt Template Folder'
-      : renamePromptFolderTarget?.kind === 'prompt-v2'
-        ? 'Prompt Folder V2'
-        : 'Prompt Folder'
+      : 'Prompt Folder'
   )
   // Duplicate folder names only conflict within the same on-disk parent folder.
   const renamePromptFolderSiblings = $derived.by(() => {
@@ -246,9 +244,7 @@
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
-            onAddSubfolder={controller.screenRootFolder?.kind === 'prompt-v2'
-              ? undefined
-              : openCreatePromptSubfolderDialog}
+            onAddSubfolder={openCreatePromptSubfolderDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptFolder={handleDeletePromptFolder}
             onSetPromptStatus={controller.handleSetPromptStatus}
@@ -288,16 +284,14 @@
   {/snippet}
 </PromptFolderFindIntegration>
 
-{#if controller.screenRootFolder?.kind !== 'prompt-v2'}
-  <CreatePromptSubfolderDialog
-    bind:this={createPromptSubfolderDialog}
-    workspaceId={controller.workspaceId}
-    isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
-    promptFolders={controller.promptFolders}
-    isPromptFolderListLoading={false}
-    onCreated={controller.handleCreatedSubfolder}
-  />
-{/if}
+<CreatePromptSubfolderDialog
+  bind:this={createPromptSubfolderDialog}
+  workspaceId={controller.workspaceId}
+  isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
+  promptFolders={controller.promptFolders}
+  isPromptFolderListLoading={false}
+  onCreated={controller.handleCreatedSubfolder}
+/>
 
 <PromptFolderNameDialog
   bind:this={renamePromptFolderDialog}
@@ -327,7 +321,7 @@
 <ConfirmationDialog
   open={deletePromptFolderTarget !== null}
   title={`Delete ${deleteFolderTitle}`}
-  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents${deletePromptFolderTarget?.kind === 'prompt-v2' ? '?' : ' and subfolders?'}`}
+  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents and subfolders?`}
   confirmText={deletePromptFolderTarget?.kind === 'template'
     ? 'Delete Template Folder'
     : 'Delete Prompt Folder'}

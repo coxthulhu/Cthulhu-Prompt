@@ -674,7 +674,7 @@ describe('User Persistence', () => {
     ).toHaveAttribute('aria-pressed', 'true')
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
-    ).toHaveCount(3)
+    ).toHaveCount(1)
   })
 
   test('restores persisted prompt tree entry on startup', async ({ electronApp, testSetup }) => {

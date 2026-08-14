@@ -47,8 +47,11 @@ const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
 const VIRTUAL_WORKSPACE_PATH = '/ws/virtual'
 const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
-const promptFolderOrderPath = (workspacePath: string, folderName: string): string =>
-  `${workspacePath}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`
+const promptFolderOrderPath = (workspacePath: string, folderName: string): string => {
+  // Root and descendant segments used to place order metadata beneath Active.
+  const [rootFolderName, ...subfolderNames] = folderName.split('/')
+  return `${workspacePath}/Prompts/${rootFolderName}/Active/${subfolderNames.length > 0 ? `${subfolderNames.join('/')}/` : ''}_FolderInfo/FolderOrder.json`
+}
 const DEVELOPMENT_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, DEVELOPMENT_FOLDER_NAME)
 const EXAMPLES_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, EXAMPLES_FOLDER_NAME)
 const createDeterministicId = (seed: string): string => {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyPromptTemplates,
-  createPromptFolderTemplate,
   hasPromptTextToken
 } from '@renderer/features/prompt-editor/promptTemplatingEngine'
 
@@ -14,19 +13,13 @@ describe('prompt templating engine', () => {
     ).toBe('First Prompt between Prompt last')
   })
 
-  it('applies folder and selected templates in order', () => {
-    const ownerFolder = createPromptFolderTemplate('Owner prefix', 'Owner suffix')
-    const parentFolder = createPromptFolderTemplate('Parent prefix', 'Parent suffix')
-
+  it('applies selected templates in order', () => {
     expect(
       applyPromptTemplates('Prompt', [
-        ownerFolder,
-        parentFolder,
+        'Inner [[PROMPT_TEXT]] wrapper',
         'Template prefix\n\n[[PROMPT_TEXT]]\n\nTemplate suffix'
       ])
-    ).toBe(
-      'Template prefix\n\nParent prefix\n\nOwner prefix\n\nPrompt\n\nOwner suffix\n\nParent suffix\n\nTemplate suffix'
-    )
+    ).toBe('Template prefix\n\nInner Prompt wrapper\n\nTemplate suffix')
   })
 
   it('ignores templates without the prompt text token', () => {

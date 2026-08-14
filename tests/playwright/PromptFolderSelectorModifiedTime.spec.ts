@@ -22,12 +22,12 @@ describe('Prompt folder selector metadata', () => {
       workspace: {
         scenario: 'subfolders-ui',
         fileModifiedTimes: {
-          '/ws/subfolders-ui/Prompts/Hierarchy/Root Before.prompt.md': daysAgo(5),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Root After.prompt.md': daysAgo(4),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Nested/Nested Prompt.prompt.md': daysAgo(3),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Nested/Grandchild/Grandchild Prompt.prompt.md':
+          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Root Before.prompt.md': daysAgo(5),
+          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Root After.prompt.md': daysAgo(4),
+          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Nested/Nested Prompt.prompt.md': daysAgo(3),
+          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Nested/Grandchild/Grandchild Prompt.prompt.md':
             daysAgo(2),
-          '/ws/subfolders-ui/Prompts/Hierarchy/_Completed/Root Completed.prompt.md': daysAgo(0)
+          '/ws/subfolders-ui/Prompts/Hierarchy/Completed/Root Completed.prompt.md': daysAgo(0)
         }
       }
     })

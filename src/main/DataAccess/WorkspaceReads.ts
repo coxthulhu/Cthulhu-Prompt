@@ -13,12 +13,10 @@ import {
 } from '@shared/OrderContainer'
 import {
   copyPromptFolderSettings,
-  getPromptFolderContentKind,
   type PromptFolder,
   type PromptFolderContentKind,
   type PromptFolderKind,
-  type PromptFolderSettings,
-  type PromptFolderV2Settings
+  type PromptFolderSettings
 } from '@shared/PromptFolder'
 import type { PromptFolderInfoFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
@@ -28,7 +26,6 @@ import {
   parsePromptTemplateMarkdown
 } from '../Persistence/PromptFrontmatter'
 import {
-  COMPLETED_PROMPTS_FOLDER_NAME,
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
@@ -39,6 +36,7 @@ import {
   resolvePromptFolderOrderPath,
   resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath,
+  resolvePromptFolderStorageName,
   resolvePromptPathsFromStem,
   resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
@@ -77,9 +75,7 @@ const readContentIds = (
   folderName: string,
   kind: PromptFolderKind
 ): string[] => {
-  // Folder storage versions map to one of the two stable markdown content kinds.
-  const contentKind = getPromptFolderContentKind(kind)
-  // V2 active prompt files are nested beneath the root folder's Active directory.
+  const contentKind = kind
   const activeFolderName = resolveActivePromptFolderName(folderName, kind)
   const contentStemById = readContentStemById(workspacePath, activeFolderName, contentKind)
   return readPromptFolderEntries(workspacePath, folderName, kind)
@@ -143,11 +139,15 @@ const readDirectPromptFolderRefs = (
   parentFolderPath: string | null,
   kind: PromptFolderKind
 ): FolderEntryRef[] => {
-  if (kind === 'prompt-v2') return []
-
   const fs = getFs()
   const diskPath = parentFolderPath
-    ? resolvePromptFolderPath(workspacePath, parentFolderPath, kind)
+    ? resolvePromptFolderPath(
+        workspacePath,
+        kind === 'prompt'
+          ? resolveActivePromptFolderName(parentFolderPath, kind)
+          : parentFolderPath,
+        kind
+      )
     : path.join(workspacePath, resolvePromptRootDirectoryName(kind))
 
   if (!fs.existsSync(diskPath)) return []
@@ -157,10 +157,7 @@ const readDirectPromptFolderRefs = (
     .filter((entry) => entry.isDirectory())
     .sort((left, right) => left.name.toLowerCase().localeCompare(right.name.toLowerCase()))
     .flatMap((entry) => {
-      if (
-        entry.name === PROMPT_FOLDER_INFO_DIRECTORY_NAME ||
-        entry.name === COMPLETED_PROMPTS_FOLDER_NAME
-      ) {
+      if (entry.name === PROMPT_FOLDER_INFO_DIRECTORY_NAME) {
         return []
       }
 
@@ -177,9 +174,8 @@ export const readPromptFolderEntries = (
 ): EntryRef[] => {
   const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName, kind)
   const persistedEntries = readOrderEntries<EntryRef>(orderPath)
-  // V2 discovers prompt files from Active while V1 and templates use their root directory.
   const activeFolderName = resolveActivePromptFolderName(folderName, kind)
-  const contentKind = getPromptFolderContentKind(kind)
+  const contentKind = kind
   const activeContentEntries = [
     ...readContentStemById(workspacePath, activeFolderName, contentKind).keys()
   ].map((id) => (contentKind === 'prompt' ? promptEntryRef(id) : promptTemplateEntryRef(id)))
@@ -192,8 +188,7 @@ export const readPromptFolderEntries = (
 
 const readDirectWorkspaceFolderRefs = (workspacePath: string): FolderEntryRef[] => {
   const fs = getFs()
-  // Prompt V1 and V2 share the Prompts root but are distinguished by FolderInfo.kind.
-  const folders = (['prompt', 'prompt-v2', 'template'] as const).flatMap((kind) => {
+  const folders = (['prompt', 'template'] as const).flatMap((kind) => {
     const diskPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
 
     return fs
@@ -294,7 +289,7 @@ export const readPromptFolder = (
   )
   const entries = readPromptFolderEntries(workspacePath, folderPath, kind)
   const completedPromptIds =
-    kind !== 'template'
+    kind === 'prompt' && folderName === folderPath
       ? [
           ...readPromptStemByPromptId(
             workspacePath,
@@ -319,25 +314,7 @@ export const readPromptFolder = (
     }
   }
 
-  if (kind === 'prompt-v2') {
-    // V2 root metadata supports descriptions without V1 prefix or suffix settings.
-    const folderSettings: PromptFolderV2Settings = { folderDescription }
-    return {
-      ...baseFolder,
-      kind,
-      settings: copyPromptFolderSettings(folderSettings)
-    }
-  }
-
-  const folderSettings: PromptFolderSettings = {
-    folderDescription,
-    folderPrefix: readOptionalTextFile(
-      resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderPrefix', kind)
-    ),
-    folderSuffix: readOptionalTextFile(
-      resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderSuffix', kind)
-    )
-  }
+  const folderSettings: PromptFolderSettings = { folderDescription }
 
   return {
     ...baseFolder,
@@ -353,8 +330,7 @@ const readMarkdownContents = <TContent>(
   parseMarkdown: (fileText: string, modifiedAt: string) => TContent | null
 ): TContent[] => {
   const fs = getFs()
-  // Content serializers remain prompt/template based even for versioned prompt folders.
-  const contentKind = getPromptFolderContentKind(folderKind)
+  const contentKind = folderKind
   const activeFolderName = resolveActivePromptFolderName(folderName, folderKind)
   const contentIds = readContentIds(workspacePath, folderName, folderKind)
   const contentStemById = readContentStemById(workspacePath, activeFolderName, contentKind)
@@ -377,7 +353,7 @@ const readMarkdownContents = <TContent>(
 export const readPrompts = (
   workspacePath: string,
   folderName: string,
-  folderKind: 'prompt' | 'prompt-v2' = 'prompt'
+  folderKind: 'prompt' = 'prompt'
 ): PromptPersisted[] =>
   readMarkdownContents(workspacePath, folderName, folderKind, parsePromptMarkdown)
 
@@ -390,7 +366,7 @@ export const readPromptTemplates = (
 export const readPromptSummaries = (
   workspacePath: string,
   folderName: string,
-  folderKind: 'prompt' | 'prompt-v2' = 'prompt'
+  folderKind: 'prompt' = 'prompt'
 ): PromptSummaryData[] => {
   const prompts = readPrompts(workspacePath, folderName, folderKind)
   return prompts.map((prompt) => ({
@@ -450,7 +426,6 @@ const isPromptFolderDirectory = (
   kind: PromptFolderKind
 ): boolean => {
   const fs = getFs()
-  // Exact metadata matching distinguishes V1 and V2 roots in the shared Prompts directory.
   const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName, kind)
   return fs.existsSync(infoPath) && readJsonFile<PromptFolderInfoFile>(infoPath).kind === kind
 }
@@ -460,10 +435,14 @@ const readPromptSubfolders = (
   parentFolderPath: string,
   kind: PromptFolderKind
 ): PromptFolder[] => {
-  if (kind === 'prompt-v2') return []
-
   const fs = getFs()
-  const parentDiskFolderPath = resolvePromptFolderPath(workspacePath, parentFolderPath, kind)
+  const parentDiskFolderPath = resolvePromptFolderPath(
+    workspacePath,
+    kind === 'prompt'
+      ? resolveActivePromptFolderName(parentFolderPath, kind)
+      : resolvePromptFolderStorageName(parentFolderPath, kind),
+    kind
+  )
   const promptFolders: PromptFolder[] = []
 
   if (!fs.existsSync(parentDiskFolderPath)) {
@@ -475,10 +454,7 @@ const readPromptSubfolders = (
       continue
     }
 
-    if (
-      entry.name === PROMPT_FOLDER_INFO_DIRECTORY_NAME ||
-      entry.name === COMPLETED_PROMPTS_FOLDER_NAME
-    ) {
+    if (entry.name === PROMPT_FOLDER_INFO_DIRECTORY_NAME) {
       continue
     }
 

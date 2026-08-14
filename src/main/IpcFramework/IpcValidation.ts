@@ -8,10 +8,8 @@ import type {
   CreatePromptFolderPayload,
   DeletePromptFolderPayload,
   LoadPromptFolderInitialPayload,
-  AnyPromptFolderSettings,
   PromptFolder,
   PromptFolderSettings,
-  PromptTemplateFolderSettings,
   RenamePromptFolderPayload,
   UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
@@ -225,28 +223,17 @@ const parseWorkspace = parseObject<Workspace>({
 const parseWorkspaceRevisionPayloadEntity = parseRevisionPayloadEntity<Workspace>(parseWorkspace)
 
 const parsePromptFolderSettings = parseObject<PromptFolderSettings>({
-  folderDescription: parseNullableString,
-  folderPrefix: parseNullableString,
-  folderSuffix: parseNullableString
-})
-
-const parsePromptTemplateFolderSettings = parseObject<PromptTemplateFolderSettings>({
   folderDescription: parseNullableString
 })
 
-const parseAnyPromptFolderSettings: Parser<AnyPromptFolderSettings> = (value) => {
-  return parsePromptFolderSettings(value) ?? parsePromptTemplateFolderSettings(value)
-}
-
 type ParsedPromptFolder = Omit<PromptFolder, 'kind' | 'settings'> & {
   kind: PromptFolder['kind']
-  settings: AnyPromptFolderSettings
+  settings: PromptFolderSettings
 }
 
 const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
   id: parseString,
-  kind: (value) =>
-    value === 'prompt' || value === 'prompt-v2' || value === 'template' ? value : null,
+  kind: (value) => (value === 'prompt' || value === 'template' ? value : null),
   folderName: parseString,
   displayName: parseString,
   entries: parseArray(
@@ -257,24 +244,18 @@ const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
     })
   ),
   completedPromptIds: parseArray(parseString),
-  settings: parseAnyPromptFolderSettings
+  settings: parsePromptFolderSettings
 })
 
 const parsePromptFolder: Parser<PromptFolder> = (value) => {
-  const promptFolder = parsePromptFolderBase(value)
-  if (!promptFolder) return null
-
-  const hasPromptSettings = 'folderPrefix' in promptFolder.settings
-  if (hasPromptSettings !== (promptFolder.kind === 'prompt')) return null
-
-  return promptFolder as PromptFolder
+  return parsePromptFolderBase(value) as PromptFolder | null
 }
 
 const parsePromptFolderRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
 
 const parsePromptFolderSettingsPayloadEntity =
-  parseRevisionPayloadEntity<AnyPromptFolderSettings>(parseAnyPromptFolderSettings)
+  parseRevisionPayloadEntity<PromptFolderSettings>(parsePromptFolderSettings)
 
 const parseSystemSettings = parseObject<SystemSettings>({
   promptFontSize: parseNumber,
@@ -445,10 +426,7 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
     record.parentPromptFolder
   )
   const promptFolderId = parseString(record.promptFolderId)
-  const kind =
-    record.kind === 'prompt' || record.kind === 'prompt-v2' || record.kind === 'template'
-      ? record.kind
-      : null
+  const kind = record.kind === 'prompt' || record.kind === 'template' ? record.kind : null
   const displayName = parseString(record.displayName)
 
   if (
@@ -605,7 +583,8 @@ const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePro
   parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
 
 const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  sourcePromptFolder: parsePromptFolderRevisionPayloadEntity,
+  rootPromptFolder: parsePromptFolderRevisionPayloadEntity,
   prompt: parsePromptRevisionPayloadEntity,
   status: parsePromptStatus
 })

@@ -268,15 +268,15 @@ describe('Prompt Folder Hydration', () => {
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(
       nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
-    ).toContainText('3 of 3 configured')
+    ).toContainText('1 of 1 configured')
     await expect(
       nestedFolderEditor.locator(
         '[data-testid^="prompt-folder-settings-toggle-"][aria-pressed="true"]'
       )
-    ).toHaveCount(3)
+    ).toHaveCount(1)
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
-    ).toHaveCount(3)
+    ).toHaveCount(1)
 
     await settingsToggle.click()
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
@@ -291,7 +291,7 @@ describe('Prompt Folder Hydration', () => {
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(
       mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
-    ).toHaveCount(3)
+    ).toHaveCount(1)
 
     const settingsSections = await mainWindow.evaluate((hostSelector) => {
       const host = document.querySelector<HTMLElement>(hostSelector)
@@ -314,14 +314,12 @@ describe('Prompt Folder Hydration', () => {
       })
     }, HOST_SELECTOR)
 
-    expect(settingsSections).toHaveLength(3)
+    expect(settingsSections).toHaveLength(1)
     expect(settingsSections.every((section) => section.rowCount === 1)).toBe(true)
     expect(settingsSections.map((section) => section.testId)).toEqual([
-      expect.stringContaining('folderDescription'),
-      expect.stringContaining('folderPrefix'),
-      expect.stringContaining('folderSuffix')
+      expect.stringContaining('folderDescription')
     ])
-    expect(new Set(settingsSections.map((section) => section.top)).size).toBe(3)
+    expect(new Set(settingsSections.map((section) => section.top)).size).toBe(1)
   })
 
   test('keeps scroll position at the top when loading tall prompts', async ({ testSetup }) => {

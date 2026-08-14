@@ -6,10 +6,7 @@ import {
   promptMarkdownHasLegacyTemplateId,
   serializePromptMarkdown
 } from './PromptFrontmatter'
-import {
-  COMPLETED_PROMPTS_FOLDER_NAME,
-  COMPLETED_PROMPTS_V2_FOLDER_NAME
-} from './PromptPersistencePaths'
+import { COMPLETED_PROMPTS_FOLDER_NAME } from './PromptPersistencePaths'
 import {
   createMarkdownPersistence,
   readMarkdownModifiedAt,
@@ -20,12 +17,8 @@ export type PromptPersistenceFields = MarkdownPersistenceFields
 
 const isCompletedPromptFolderName = (folderName: string): boolean => {
   const folderNameParts = folderName.split(/[\\/]/)
-  // The final path segment supports both V1 and V2 completed directory names.
   const finalFolderName = folderNameParts[folderNameParts.length - 1]
-  return (
-    finalFolderName === COMPLETED_PROMPTS_FOLDER_NAME ||
-    finalFolderName === COMPLETED_PROMPTS_V2_FOLDER_NAME
-  )
+  return finalFolderName === COMPLETED_PROMPTS_FOLDER_NAME
 }
 
 const normalizePromptCompletionForFolder = (

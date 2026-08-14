@@ -157,7 +157,7 @@ describe('Prompt persistence filenames', () => {
 
     const firstCollisionTitle = 'Case/Name'
     const secondCollisionTitle = 'casename'
-    const folderPath = `${COLLISION_WORKSPACE_PATH}/Prompts/${COLLISION_FOLDER_NAME}`
+    const folderPath = `${COLLISION_WORKSPACE_PATH}/Prompts/${COLLISION_FOLDER_NAME}/Active`
 
     await setPromptTitle(mainWindow, COLLISION_FIRST_PROMPT_ID, firstCollisionTitle)
     await setPromptTitle(mainWindow, COLLISION_SECOND_PROMPT_ID, secondCollisionTitle)

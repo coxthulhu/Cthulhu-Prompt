@@ -8,7 +8,7 @@
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
-    type AnyPromptFolderSettings,
+    type PromptFolderSettings,
     type PromptFolderContentKind,
     type PromptFolderSettingsField
   } from '@shared/PromptFolder'
@@ -42,7 +42,7 @@
     promptCount: number
     completedPromptCount: number
     subfolderCount: number
-    folderSettings: AnyPromptFolderSettings
+    folderSettings: PromptFolderSettings
     contentKind: PromptFolderContentKind
     rowId: string
     virtualWindowWidthPx: number
@@ -127,12 +127,10 @@
   )
   const cardHeightPx = $derived(Math.max(0, virtualRowHeightPx - rowPaddingTopPx))
   const hydratedFields = $state<Record<PromptFolderSettingsField, boolean>>({
-    folderDescription: false,
-    folderPrefix: false,
-    folderSuffix: false
+    folderDescription: false
   })
   const settingsFields = $derived<PromptFolderSettingsField[]>(
-    contentKind === 'template' ? ['folderDescription'] : [...PROMPT_FOLDER_SETTINGS_FIELDS]
+    [...PROMPT_FOLDER_SETTINGS_FIELDS]
   )
   const isAnySectionHydrated = $derived(
     settingsFields.some((field) => hydratedFields[field])

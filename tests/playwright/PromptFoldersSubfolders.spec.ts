@@ -84,13 +84,12 @@ const folderDescriptionSectionSelector =
   '[data-testid="prompt-folder-settings-section-folderDescription"]'
 const folderDescriptionToggleSelector =
   '[data-testid="prompt-folder-settings-toggle-folderDescription"]'
-const nestedDescriptionPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/Description.md`
+const nestedDescriptionPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/_FolderInfo/Description.md`
 const emptyNestedSettingsInfoPath =
-  `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo`
-const rootFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderOrder.json`
-const nestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderOrder.json`
-const grandchildFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/FolderOrder.json`
-const emptyNestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested/_FolderInfo/FolderOrder.json`
+  `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/EmptyNested/_FolderInfo`
+const rootFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/_FolderInfo/FolderOrder.json`
+const nestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/_FolderInfo/FolderOrder.json`
+const emptyNestedFolderOrderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/EmptyNested/_FolderInfo/FolderOrder.json`
 const workspaceFolderOrderPath = `${WORKSPACE_PATH}/WorkspaceFolderOrder.json`
 const activeDividerTestIds = [
   dividerTestId(nestedFolderId, null),
@@ -306,12 +305,12 @@ const expectNoPromptFolderSettingsFiles = async (
   await expect
     .poll(async () =>
       await Promise.all(
-        ['Description.md', 'PromptPrefix.md', 'PromptSuffix.md'].map((filename) =>
+        ['Description.md'].map((filename) =>
           checkFileExists(electronApp, `${promptFolderPath}/_FolderInfo/${filename}`)
         )
       )
     )
-    .toEqual([false, false, false])
+    .toEqual([false])
 }
 
 const readSettingsEditorViewStateCount = async (
@@ -393,7 +392,7 @@ describe('Prompt folder subfolder rendering', () => {
     ).toContainText('Nested')
     await expect(
       mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
-    ).toContainText('2 completed prompts')
+    ).toContainText('0 completed prompts')
     await expect(
       mainWindow.locator(nestedFolderSelector).locator(folderTitleBarSelector)
     ).toContainText('1 subfolder')
@@ -850,7 +849,7 @@ describe('Prompt folder subfolder rendering', () => {
       mainWindow.locator(nestedFolderSelector).getByText('Renamed Nested', { exact: true })
     ).toBeVisible()
 
-    const renamedFolderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/RenamedNested`
+    const renamedFolderPath = `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/RenamedNested`
     const renamedFolderInfo = JSON.parse(
       await readTextFile(electronApp, `${renamedFolderPath}/_FolderInfo/FolderInfo.json`)
     ) as {
@@ -867,7 +866,7 @@ describe('Prompt folder subfolder rendering', () => {
       .poll(async () => ({
         oldFolderInfo: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_FolderInfo/FolderInfo.json`
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/_FolderInfo/FolderInfo.json`
         ),
         nestedPrompt: await checkFileExists(
           electronApp,
@@ -875,7 +874,7 @@ describe('Prompt folder subfolder rendering', () => {
         ),
         completedPrompt: await checkFileExists(
           electronApp,
-          `${renamedFolderPath}/_Completed/Nested Completed One.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Completed/Nested Completed One.prompt.md`
         ),
         grandchildPrompt: await checkFileExists(
           electronApp,
@@ -988,13 +987,11 @@ describe('Prompt folder subfolder rendering', () => {
     const descriptionSection = `${emptyNestedFolderSelector} ${folderDescriptionSectionSelector}`
     const descriptionToggle = emptyNestedFolder.locator(folderDescriptionToggleSelector)
     const descriptionPath = `${emptyNestedSettingsInfoPath}/Description.md`
-    const prefixPath = `${emptyNestedSettingsInfoPath}/PromptPrefix.md`
-    const suffixPath = `${emptyNestedSettingsInfoPath}/PromptSuffix.md`
     await expect(
       emptyNestedFolder.locator('[data-testid^="prompt-folder-settings-toggle-"]')
-    ).toHaveCount(3)
+    ).toHaveCount(1)
     await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toContainText(
-      '0 of 3 configured'
+      '0 of 1 configured'
     )
     await expect(descriptionToggle).toHaveAttribute('aria-pressed', 'false')
     await expect(emptyNestedFolder.locator(folderDescriptionSectionSelector)).toHaveCount(0)
@@ -1002,13 +999,7 @@ describe('Prompt folder subfolder rendering', () => {
       emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
     ).toHaveCount(0)
     await expect(emptyNestedFolder.locator('.monaco-editor')).toHaveCount(0)
-    expect(
-      await Promise.all(
-        [descriptionPath, prefixPath, suffixPath].map((filePath) =>
-          checkFileExists(electronApp, filePath)
-        )
-      )
-    ).toEqual([false, false, false])
+    expect(await checkFileExists(electronApp, descriptionPath)).toBe(false)
 
     await descriptionToggle.click()
     expect(await checkFileExists(electronApp, descriptionPath)).toBe(false)
@@ -1029,7 +1020,7 @@ describe('Prompt folder subfolder rendering', () => {
       emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
     ).toHaveCount(1)
     await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toContainText(
-      '1 of 3 configured'
+      '1 of 1 configured'
     )
     await waitForMonacoEditor(mainWindow, descriptionSection)
     await expect
@@ -1039,38 +1030,6 @@ describe('Prompt folder subfolder rendering', () => {
       .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
       .toBe(true)
     expect(await readTextFile(electronApp, descriptionPath)).toBe('')
-    expect(await checkFileExists(electronApp, prefixPath)).toBe(false)
-    expect(await checkFileExists(electronApp, suffixPath)).toBe(false)
-    await expect(
-      emptyNestedFolder.locator(
-        '[data-testid="prompt-folder-settings-section-folderPrefix"] .monaco-editor, [data-testid="prompt-folder-settings-section-folderSuffix"] .monaco-editor'
-      )
-    ).toHaveCount(0)
-
-    for (const { field, filePath } of [
-      { field: 'folderPrefix', filePath: prefixPath },
-      { field: 'folderSuffix', filePath: suffixPath }
-    ]) {
-      const toggle = emptyNestedFolder.locator(
-        `[data-testid="prompt-folder-settings-toggle-${field}"]`
-      )
-      const section = emptyNestedFolder.locator(
-        `[data-testid="prompt-folder-settings-section-${field}"]`
-      )
-      await toggle.click()
-      await expect(toggle).toHaveAttribute('aria-pressed', 'true')
-      await expect(section).toHaveCount(1)
-      await expect
-        .poll(() => checkFileExists(electronApp, filePath), { timeout: 15000 })
-        .toBe(true)
-
-      await toggle.click()
-      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
-      await expect(section).toHaveCount(0)
-      await expect
-        .poll(() => checkFileExists(electronApp, filePath), { timeout: 15000 })
-        .toBe(false)
-    }
 
     const marker = 'Setting that requires confirmation'
     await typeInMonacoEditor(mainWindow, descriptionSection, marker)
@@ -1117,7 +1076,7 @@ describe('Prompt folder subfolder rendering', () => {
       emptyNestedFolder.locator('[data-testid="prompt-folder-settings-toolbar-separator"]')
     ).toHaveCount(0)
     await expect(emptyNestedFolder.locator(folderSettingsToolbarSelector)).toContainText(
-      '0 of 3 configured'
+      '0 of 1 configured'
     )
     await expect
       .poll(() => checkFileExists(electronApp, descriptionPath), { timeout: 15000 })
@@ -1252,7 +1211,7 @@ describe('Prompt folder subfolder rendering', () => {
     const persistedInitialFolderInfo = JSON.parse(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Prompts/Hierarchy/InitialChild/_FolderInfo/FolderInfo.json`
+        `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/InitialChild/_FolderInfo/FolderInfo.json`
       )
     ) as { displayName: string; folderId: string; kind: 'prompt' }
     expect(persistedInitialFolderInfo).toEqual({
@@ -1262,7 +1221,7 @@ describe('Prompt folder subfolder rendering', () => {
     })
     await expectNoPromptFolderSettingsFiles(
       electronApp,
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/InitialChild`
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/InitialChild`
     )
 
     await createSubfolderAtDivider(
@@ -1281,7 +1240,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expectCreatedFolderVisible(mainWindow, nestedOrder[1], 'After Prompt')
     await expectNoPromptFolderSettingsFiles(
       electronApp,
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/AfterPrompt`
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/AfterPrompt`
     )
 
     await createSubfolderAtDivider(
@@ -1446,7 +1405,7 @@ describe('Prompt folder subfolder rendering', () => {
     testSetup
   }) => {
     const filesystem = setupWorkspaceScenario(WORKSPACE_PATH, 'subfolders-ui')
-    filesystem[`${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Unmanaged.txt`] =
+    filesystem[`${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/Unmanaged.txt`] =
       'Delete this unmanaged file with its prompt folder.'
     await testSetup.setupFilesystem(filesystem)
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
@@ -1476,7 +1435,7 @@ describe('Prompt folder subfolder rendering', () => {
     await expect
       .poll(
         async () =>
-          await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/EmptyNested`)
+          await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/EmptyNested`)
       )
       .toBe(false)
 
@@ -1498,7 +1457,8 @@ describe('Prompt folder subfolder rendering', () => {
     await expect(mainWindow.locator(grandchildFolderSelector)).toHaveCount(0)
     await expect
       .poll(
-        async () => await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested`)
+        async () =>
+          await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested`)
       )
       .toBe(false)
     await expect
@@ -1542,8 +1502,8 @@ describe('Prompt folder subfolder rendering', () => {
     const controlledRootSelector = `[data-testid="prompt-folder-editor-${rootFolderId}"]`
     const controlledNestedSelector = `[data-testid="prompt-folder-editor-${controlledNestedFolderId}"]`
     const controlledPromptSelector = '[data-testid="prompt-editor-subfolders-controls-first"]'
-    const controlledRootOrderPath = `${workspacePath}/Prompts/Controls/_FolderInfo/FolderOrder.json`
-    const controlledNestedOrderPath = `${workspacePath}/Prompts/Controls/Nested/_FolderInfo/FolderOrder.json`
+    const controlledRootOrderPath = `${workspacePath}/Prompts/Controls/Active/_FolderInfo/FolderOrder.json`
+    const controlledNestedOrderPath = `${workspacePath}/Prompts/Controls/Active/Nested/_FolderInfo/FolderOrder.json`
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'subfolders-controls' }
     })
@@ -1661,7 +1621,7 @@ describe('Prompt folder subfolder rendering', () => {
       .poll(async () =>
         readFolderEntryIds(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Active/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual([nestedFolderId, 'destination-existing'])
@@ -1669,34 +1629,34 @@ describe('Prompt folder subfolder rendering', () => {
       .poll(async () => ({
         oldCompletedOne: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_Completed/Nested Completed One.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Completed/Nested Completed One.prompt.md`
         ),
         oldCompletedTwo: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/_Completed/Nested Completed Two.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/Hierarchy/Completed/Nested Completed Two.prompt.md`
         ),
         newCompletedOne: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/_Completed/Nested Completed One.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Completed/Nested Completed One.prompt.md`
         ),
         newCompletedTwo: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/_Completed/Nested Completed Two.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Completed/Nested Completed Two.prompt.md`
         ),
         activePrompt: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/Nested Prompt.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Active/Nested/Nested Prompt.prompt.md`
         ),
         grandchildPrompt: await checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Nested/Grandchild/Grandchild Prompt.prompt.md`
+          `${WORKSPACE_PATH}/Prompts/${destinationFolderName}/Active/Nested/Grandchild/Grandchild Prompt.prompt.md`
         )
       }))
       .toEqual({
-        oldCompletedOne: false,
-        oldCompletedTwo: false,
-        newCompletedOne: true,
-        newCompletedTwo: true,
+        oldCompletedOne: true,
+        oldCompletedTwo: true,
+        newCompletedOne: false,
+        newCompletedTwo: false,
         activePrompt: true,
         grandchildPrompt: true
       })
@@ -1849,11 +1809,6 @@ describe('Prompt folder subfolder rendering', () => {
         )
       )
       .toContain(bodyMarker)
-    const clipboardText = normalizeNewlines(
-      await mainWindow.evaluate(() => (window as any).__testClipboardText ?? '')
-    )
-    expect(clipboardText).toMatch(/^Nested folder prefix\n\n/)
-    expect(clipboardText).toMatch(/\n\nNested folder suffix$/)
     await expect(mainWindow.locator(statusPillSelector('subfolders-ui-nested-prompt'))).toHaveText(
       'In Progress'
     )
@@ -1868,20 +1823,10 @@ describe('Prompt folder subfolder rendering', () => {
       .toContain('templates: null')
   })
 
-  test('wraps copied prompt text from its owner folder upward through the root', async ({
+  test('copies a grandchild prompt without folder-level wrapping', async ({
     testSetup
   }) => {
     const structure = setupWorkspaceScenario(WORKSPACE_PATH, 'subfolders-ui')
-    structure[`${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/PromptPrefix.md`] =
-      'Root folder prefix'
-    structure[`${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/PromptSuffix.md`] =
-      'Root folder suffix'
-    structure[
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/PromptPrefix.md`
-    ] = 'Grandchild folder prefix'
-    structure[
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/Nested/Grandchild/_FolderInfo/PromptSuffix.md`
-    ] = 'Grandchild folder suffix'
     await testSetup.setupFilesystem(structure)
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -1907,12 +1852,10 @@ describe('Prompt folder subfolder rendering', () => {
           ((window as any).__testClipboardText ?? '').replace(/\r\n?/g, '\n')
         )
       )
-      .toBe(
-        'Root folder prefix\n\nNested folder prefix\n\nGrandchild folder prefix\n\nPrompt text inside the grandchild folder.\n\nGrandchild folder suffix\n\nNested folder suffix\n\nRoot folder suffix'
-      )
+      .toBe('Prompt text inside the grandchild folder.')
   })
 
-  test('uses the direct owner for every nested prompt status transition', async ({
+  test('moves an uncompleted nested prompt to the root active list', async ({
     testSetup,
     electronApp
   }) => {
@@ -1959,6 +1902,16 @@ describe('Prompt folder subfolder rendering', () => {
       .locator(`${grandchildPromptSelector} [data-testid="prompt-complete-button"]`)
       .click()
     await expect(mainWindow.locator(grandchildPromptSelector)).toHaveCount(0)
+    // Nested completion transfers the Markdown file to the root's flat Completed directory.
+    const rootCompletedPromptPath =
+      `${WORKSPACE_PATH}/Prompts/Hierarchy/Completed/Grandchild Prompt.prompt.md`
+    await expect.poll(() => checkFileExists(electronApp, rootCompletedPromptPath)).toBe(true)
+    await expect(
+      checkFileExists(
+        electronApp,
+        `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/Grandchild/Completed`
+      )
+    ).resolves.toBe(false)
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
     ).toContainText('Hierarchy')
@@ -1988,19 +1941,26 @@ describe('Prompt folder subfolder rendering', () => {
       '--ui-warning-icon-glyph'
     )
     await expect
-      .poll(async () => await readFolderEntryIds(electronApp, grandchildFolderOrderPath))
-      .toEqual([promptId])
+      .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
+      .toEqual([
+        promptId,
+        'subfolders-ui-root-before',
+        nestedFolderId,
+        emptyNestedFolderId,
+        'subfolders-ui-root-after'
+      ])
     await expect
       .poll(
         async () =>
           await readPersistedPromptTextById(electronApp, {
             workspacePath: WORKSPACE_PATH,
-            folderName: 'Hierarchy/Nested/Grandchild',
+            folderName: 'Hierarchy',
             promptId,
             promptTitle: 'Grandchild Prompt'
           })
       )
       .toContain('status: InProgress')
+    await expect(checkFileExists(electronApp, rootCompletedPromptPath)).resolves.toBe(false)
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')
     ).toContainText('Hierarchy')
@@ -2046,7 +2006,7 @@ describe('Prompt folder subfolder rendering', () => {
     ).toContainText('Hierarchy')
   })
 
-  test('deletes a nested completed prompt from its direct owner', async ({
+  test('deletes a root-owned completed prompt', async ({
     testSetup,
     electronApp
   }) => {
@@ -2071,7 +2031,7 @@ describe('Prompt folder subfolder rendering', () => {
         async () =>
           await checkPersistedPromptFilesExistByTitle(electronApp, {
             workspacePath: WORKSPACE_PATH,
-            folderName: 'Hierarchy/Nested/_Completed',
+            folderName: 'Hierarchy/Completed',
             promptId,
             promptTitle: 'Nested Completed One'
           })
@@ -2082,7 +2042,7 @@ describe('Prompt folder subfolder rendering', () => {
     ).toContainText('Hierarchy')
   })
 
-  test('aggregates completed prompts across descendants and restores to the direct owner', async ({
+  test('shows root-owned completed prompts and restores one to root active', async ({
     testSetup,
     electronApp
   }) => {
@@ -2151,11 +2111,13 @@ describe('Prompt folder subfolder rendering', () => {
       mainWindow.locator('[data-testid="prompt-editor-subfolders-ui-nested-completed-2"]')
     ).toBeAttached()
     await expect
-      .poll(async () => await readFolderEntryIds(electronApp, nestedFolderOrderPath))
+      .poll(async () => await readFolderEntryIds(electronApp, rootFolderOrderPath))
       .toEqual([
         'subfolders-ui-nested-completed-2',
-        'subfolders-ui-nested-prompt',
-        grandchildFolderId
+        'subfolders-ui-root-before',
+        nestedFolderId,
+        emptyNestedFolderId,
+        'subfolders-ui-root-after'
       ])
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]')

@@ -161,17 +161,13 @@ export const createEmptyPromptFolderSettingsEditorViewStates = (): Record<
   PromptFolderSettingsField,
   string | null
 > => ({
-  folderDescription: null,
-  folderPrefix: null,
-  folderSuffix: null
+  folderDescription: null
 })
 
 export const copyPromptFolderSettingsEditorViewStates = (
   viewStates: Record<PromptFolderSettingsField, string | null>
 ): Record<PromptFolderSettingsField, string | null> => ({
-  folderDescription: viewStates.folderDescription,
-  folderPrefix: viewStates.folderPrefix,
-  folderSuffix: viewStates.folderSuffix
+  folderDescription: viewStates.folderDescription
 })
 
 export const parseUserPersistence = (value: unknown): UserPersistence | null => {
@@ -280,20 +276,6 @@ const parseWorkspacePromptFolderPromptTreeEntry = (
 
     for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
       const viewState = value.settingsEditorViewStates[field]
-      if (viewState !== undefined && viewState !== null && typeof viewState !== 'string') {
-        return null
-      }
-      settingsEditorViewStates[field] = viewState ?? null
-    }
-  } else {
-    const legacyViewStateFields: Record<PromptFolderSettingsField, unknown> = {
-      folderDescription: value.folderDescriptionEditorViewStateJson,
-      folderPrefix: value.folderPrefixEditorViewStateJson,
-      folderSuffix: value.folderSuffixEditorViewStateJson
-    }
-
-    for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-      const viewState = legacyViewStateFields[field]
       if (viewState !== undefined && viewState !== null && typeof viewState !== 'string') {
         return null
       }

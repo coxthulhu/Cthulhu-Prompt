@@ -20,9 +20,7 @@ const createFolder = (
   })),
   completedPromptIds: [],
   settings: {
-    folderDescription: '',
-    folderPrefix: '',
-    folderSuffix: ''
+    folderDescription: ''
   },
   ...overrides
 })

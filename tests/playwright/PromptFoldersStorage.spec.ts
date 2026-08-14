@@ -15,7 +15,7 @@ import {
 // The repository Playwright wrapper supplies the configured test primitives.
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-// The sample workspace lets the tests exercise V1 and V2 roots together.
+// The sample workspace supplies existing canonical prompt roots.
 const WORKSPACE_PATH = '/ws/sample'
 // These selectors target the shared folder-creation controls.
 const FOLDER_ADD_ITEM = '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
@@ -23,30 +23,27 @@ const FOLDER_TYPE_SELECTOR = '[data-testid="create-prompt-folder-type-selector"]
 const FOLDER_TYPE_MENU = '[data-testid="create-prompt-folder-type-menu"]'
 const FOLDER_NAME_INPUT = '[data-testid="create-prompt-folder-name-input"]'
 const FOLDER_CREATE_BUTTON = '[data-testid="create-prompt-folder-button"]'
-// These selectors target V2 prompt and status controls.
+// These selectors target prompt and status controls.
 const ADD_PROMPT_BUTTON = '[data-testid="sidebar-add-prompt-button"]'
 const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]'
-const TOGGLE_ALL_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
-// These stable names make the persisted V2 paths explicit in the assertions.
-const ALPHA_NAME = 'V2 Alpha'
-const BETA_NAME = 'V2 Beta'
+// These stable names make the persisted canonical paths explicit in the assertions.
+const ALPHA_NAME = 'Alpha'
+const BETA_NAME = 'Beta'
 const FIRST_PROMPT_TITLE = 'Alpha First'
 const SECOND_PROMPT_TITLE = 'Alpha Second'
 
-// Returns the root disk path for one V2 prompt folder.
-const v2FolderPath = (folderName: string): string =>
+// Returns the root disk path for one prompt folder.
+const folderPath = (folderName: string): string =>
   `${WORKSPACE_PATH}/Prompts/${folderName.replace(/\s+/g, '')}`
 
-// Returns the only persisted ordering file used by a V2 prompt folder.
-const v2ActiveOrderPath = (folderName: string): string =>
-  `${v2FolderPath(folderName)}/Active/_FolderInfo/FolderOrder.json`
+// Returns the persisted ordering file used by a prompt folder's active hierarchy.
+const activeOrderPath = (folderName: string): string =>
+  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrder.json`
 
-// Creates and selects a V2 root through the production creation dialog.
-const createV2Folder = async (page: Page, folderName: string): Promise<void> => {
+// Creates and selects a prompt root through the production creation dialog.
+const createFolder = async (page: Page, folderName: string): Promise<void> => {
   await page.locator(promptFolderSelectorTriggerSelector).click()
   await page.locator(FOLDER_ADD_ITEM).click()
-  await page.locator(FOLDER_TYPE_SELECTOR).click()
-  await page.locator(FOLDER_TYPE_MENU).getByText('Prompt Folder V2', { exact: true }).click()
   await page.locator(FOLDER_NAME_INPUT).fill(folderName)
   await page.locator(FOLDER_CREATE_BUTTON).click()
   await expect(page.locator(promptFolderSelectorTriggerSelector)).toContainText(folderName)
@@ -71,73 +68,68 @@ const waitForActivePromptIds = async (
   let promptIds: string[] = []
   await expect
     .poll(async () => {
-      promptIds = await readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(folderName))
+      promptIds = await readPromptFolderEntryIds(electronApp, activeOrderPath(folderName))
       return promptIds.length
     })
     .toBe(count)
   return promptIds
 }
 
-describe('Prompt Folder V2', () => {
-  test('creates the V2 disk layout and disables subfolder controls', async ({
+describe('Prompt folder storage', () => {
+  test('creates the canonical disk layout and enables subfolder controls', async ({
     electronApp,
     testSetup
   }) => {
-    // The sample workspace starts on an existing V1 root with a visible selector.
+    // The sample workspace starts on an existing prompt root with a visible selector.
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
 
     await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
     await mainWindow.locator(FOLDER_ADD_ITEM).click()
-    await expect(mainWindow.locator(FOLDER_TYPE_SELECTOR)).toHaveText('Prompt Folder V1')
+    await expect(mainWindow.locator(FOLDER_TYPE_SELECTOR)).toHaveText('Prompt Folder')
     await mainWindow.locator(FOLDER_TYPE_SELECTOR).click()
-    // The creation menu exposes exactly the two prompt versions and template folders.
+    // The creation menu exposes prompt and template folders.
     const typeMenu = mainWindow.locator(FOLDER_TYPE_MENU)
-    await expect(typeMenu.locator('[role="menuitem"]')).toHaveCount(3)
-    await expect(typeMenu.getByText('Prompt Folder V1', { exact: true })).toBeVisible()
-    await expect(typeMenu.getByText('Prompt Folder V2', { exact: true })).toBeVisible()
+    await expect(typeMenu.locator('[role="menuitem"]')).toHaveCount(2)
+    await expect(typeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
     await expect(typeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
-    await typeMenu.getByText('Prompt Folder V2', { exact: true }).click()
+    await typeMenu.getByText('Prompt Folder', { exact: true }).click()
     await expect(
-      mainWindow.locator('[role="dialog"][aria-label="Create Prompt Folder V2"]')
+      mainWindow.locator('[role="dialog"][aria-label="Create Prompt Folder"]')
     ).toBeVisible()
-    await expect(mainWindow.getByLabel('Prompt Folder V2 Name')).toBeVisible()
+    await expect(mainWindow.getByLabel('Prompt Folder Name')).toBeVisible()
     await mainWindow.locator(FOLDER_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
 
-    // The selected V2 root uses the dedicated numeral icon in the sidebar trigger.
+    // The selected prompt root exposes subfolder insertion controls.
     const selectorTrigger = mainWindow.locator(promptFolderSelectorTriggerSelector)
     await expect(selectorTrigger).toContainText(ALPHA_NAME)
-    await expect(selectorTrigger.locator('[data-testid="prompt-folder-v2-icon"]')).toHaveText('2')
-    await expect(mainWindow.locator(TOGGLE_ALL_FOLDERS_BUTTON)).toBeDisabled()
     await expect(
       mainWindow.locator('[data-testid^="prompt-divider-add-subfolder-"]')
-    ).toHaveCount(0)
+    ).not.toHaveCount(0)
 
-    // The root metadata identifies V2 while only Active owns an order file.
-    const alphaPath = v2FolderPath(ALPHA_NAME)
+    // The root metadata identifies a prompt folder while only Active owns an order file.
+    const alphaPath = folderPath(ALPHA_NAME)
     await expect
       .poll(() => checkFileExists(electronApp, `${alphaPath}/_FolderInfo/FolderInfo.json`))
       .toBe(true)
     expect(JSON.parse(await readTextFile(electronApp, `${alphaPath}/_FolderInfo/FolderInfo.json`)))
-      .toMatchObject({ displayName: ALPHA_NAME, kind: 'prompt-v2' })
-    // Root V1, V2, and template folders share the authoritative workspace ordering file.
+      .toMatchObject({ displayName: ALPHA_NAME, kind: 'prompt' })
+    // Prompt and template roots share the authoritative workspace ordering file.
     const alphaId = await readFolderId(electronApp, alphaPath)
     const workspaceOrder = JSON.parse(
       await readTextFile(electronApp, `${WORKSPACE_PATH}/WorkspaceFolderOrder.json`)
     ) as { entries: Array<{ kind: 'folder'; id: string }> }
     expect(workspaceOrder.entries).toContainEqual({ kind: 'folder', id: alphaId })
     await expect(
-      readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(ALPHA_NAME))
+      readPromptFolderEntryIds(electronApp, activeOrderPath(ALPHA_NAME))
     ).resolves.toEqual([])
-    await expect(checkFileExists(electronApp, `${alphaPath}/Completed/_FolderInfo`)).resolves.toBe(
+    await expect(checkFileExists(electronApp, `${alphaPath}/Completed`)).resolves.toBe(
       true
     )
 
-    // V2 omits root ordering and all status metadata not explicitly required.
+    // The canonical layout omits root ordering and status metadata not explicitly required.
     const omittedPaths = [
       `${alphaPath}/_FolderInfo/FolderOrder.json`,
-      `${alphaPath}/_FolderInfo/PromptPrefix.md`,
-      `${alphaPath}/_FolderInfo/PromptSuffix.md`,
       `${alphaPath}/Active/_FolderInfo/FolderInfo.json`,
       `${alphaPath}/Active/_FolderInfo/Description.md`,
       `${alphaPath}/Completed/_FolderInfo/FolderInfo.json`,
@@ -149,26 +141,22 @@ describe('Prompt Folder V2', () => {
     ).resolves.toEqual(omittedPaths.map(() => false))
   })
 
-  test('orders active prompts, moves only within V2, and switches completed storage', async ({
+  test('orders and moves active prompts and switches completed storage', async ({
     electronApp,
     testSetup
   }) => {
-    // Two V2 roots provide a legal destination alongside the sample V1 roots.
+    // Two prompt roots provide a cross-folder move destination.
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await createV2Folder(mainWindow, ALPHA_NAME)
-    await createV2Folder(mainWindow, BETA_NAME)
+    await createFolder(mainWindow, ALPHA_NAME)
+    await createFolder(mainWindow, BETA_NAME)
 
     // Folder IDs identify legal and illegal selector drop targets.
-    const alphaPath = v2FolderPath(ALPHA_NAME)
-    const betaPath = v2FolderPath(BETA_NAME)
+    const alphaPath = folderPath(ALPHA_NAME)
+    const betaPath = folderPath(BETA_NAME)
     const alphaId = await readFolderId(electronApp, alphaPath)
     const betaId = await readFolderId(electronApp, betaPath)
-    const developmentId = await readFolderId(
-      electronApp,
-      `${WORKSPACE_PATH}/Prompts/Development`
-    )
     await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
     await mainWindow.locator(promptFolderSelectorDropdownItemSelector(alphaId)).click()
 
@@ -195,67 +183,29 @@ describe('Prompt Folder V2', () => {
       .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-move-down"]`)
       .click()
     await expect
-      .poll(() => readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(ALPHA_NAME)))
+      .poll(() => readPromptFolderEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
       .toEqual(reversedPromptIds)
     await mainWindow
       .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-move-up"]`)
       .click()
     await expect
-      .poll(() => readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(ALPHA_NAME)))
+      .poll(() => readPromptFolderEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
       .toEqual(initialPromptIds)
 
-    // A V2 prompt cannot be dropped on a V1 destination.
+    // The active prompt can move to another prompt root.
     await beginPromptHandleDrag(mainWindow, firstPromptId)
     await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
     await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
-    const v1Destination = mainWindow.locator(
-      promptFolderSelectorDropdownItemSelector(developmentId)
-    )
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptFolderSelectorDropdownItemSelector(developmentId)
-    )
-    await expect(v1Destination).not.toHaveAttribute('data-row-state', 'over')
-    await finishActiveDrag(mainWindow)
-    await expect(
-      readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(ALPHA_NAME))
-    ).resolves.toEqual(initialPromptIds)
-
-    // The same active prompt can move to another V2 root.
-    await beginPromptHandleDrag(mainWindow, firstPromptId)
-    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
-    const v2Destination = mainWindow.locator(promptFolderSelectorDropdownItemSelector(betaId))
+    const destination = mainWindow.locator(promptFolderSelectorDropdownItemSelector(betaId))
     await moveActiveDragToTarget(mainWindow, promptFolderSelectorDropdownItemSelector(betaId))
-    await expect(v2Destination).toHaveAttribute('data-row-state', 'over')
+    await expect(destination).toHaveAttribute('data-row-state', 'over')
     await finishActiveDrag(mainWindow)
     await expect
-      .poll(() => readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(ALPHA_NAME)))
+      .poll(() => readPromptFolderEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
       .toEqual([secondPromptId])
     await expect
-      .poll(() => readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(BETA_NAME)))
+      .poll(() => readPromptFolderEntryIds(electronApp, activeOrderPath(BETA_NAME)))
       .toEqual([firstPromptId])
-
-    // The reverse V1-to-V2 drag is also rejected.
-    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
-    await mainWindow.locator(promptFolderSelectorDropdownItemSelector(developmentId)).click()
-    await beginPromptHandleDrag(mainWindow, 'dev-1')
-    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
-    const reverseV2Destination = mainWindow.locator(
-      promptFolderSelectorDropdownItemSelector(betaId)
-    )
-    await moveActiveDragToTarget(mainWindow, promptFolderSelectorDropdownItemSelector(betaId))
-    await expect(reverseV2Destination).not.toHaveAttribute('data-row-state', 'over')
-    await finishActiveDrag(mainWindow)
-    await expect(
-      readPromptFolderEntryIds(
-        electronApp,
-        `${WORKSPACE_PATH}/Prompts/Development/_FolderInfo/FolderOrder.json`
-      )
-    ).resolves.toEqual(['dev-1', 'dev-2'])
-    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
-    await mainWindow.locator(promptFolderSelectorDropdownItemSelector(betaId)).click()
 
     // Completing moves the Markdown file from Active to Completed and updates frontmatter.
     const activePromptPath = `${betaPath}/Active/${FIRST_PROMPT_TITLE}.prompt.md`
@@ -269,7 +219,7 @@ describe('Prompt Folder V2', () => {
       'status: Completed'
     )
     await expect(
-      readPromptFolderEntryIds(electronApp, v2ActiveOrderPath(BETA_NAME))
+      readPromptFolderEntryIds(electronApp, activeOrderPath(BETA_NAME))
     ).resolves.toEqual([])
 
     // Completed mode shows the prompt without any movement affordance.
@@ -291,7 +241,7 @@ describe('Prompt Folder V2', () => {
     await expect.poll(() => checkFileExists(electronApp, activePromptPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, activePromptPath)).toContain('status: Todo')
 
-    // Switching back to Active reveals the restored prompt in the V2 root.
+    // Switching back to Active reveals the restored prompt in the root.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
     await expect(mainWindow.locator(promptEditorSelector(firstPromptId))).toBeVisible()
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')

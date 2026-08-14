@@ -164,10 +164,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
   const workspaceId = readWorkspaceInfo(workspaceInfoPath).workspaceId
   const promptFolders = readAllPromptFolders(workspacePath)
-  // V2 roots share the Prompts directory but are loaded by their distinct persisted kind.
-  const promptFoldersV2 = readAllPromptFolders(workspacePath, 'prompt-v2')
   const promptTemplateFolders = readAllPromptFolders(workspacePath, 'template')
-  const allPromptFolders = [...promptFolders, ...promptFoldersV2, ...promptTemplateFolders]
+  const allPromptFolders = [...promptFolders, ...promptTemplateFolders]
   const promptFolderById = new Map(
     allPromptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
   )
@@ -205,9 +203,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
     )
   )
 
-  const promptLoadTasks = [...promptFolders, ...promptFoldersV2].flatMap((promptFolder) => {
+  const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
     const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
-    // Active and completed prompt paths differ between V1 and V2 storage.
     const activeFolderPath = resolveActivePromptFolderName(folderPath, promptFolder.kind)
     const promptStemByPromptId = readPromptStemByPromptId(workspacePath, activeFolderPath)
     const completedFolderPath = resolveCompletedPromptFolderName(folderPath, promptFolder.kind)

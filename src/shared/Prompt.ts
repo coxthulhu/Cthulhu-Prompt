@@ -113,12 +113,16 @@ export type MovePromptPayload = MoveMarkdownContentPayload<PromptPersisted>
 export type MovePromptResponsePayload = MoveMarkdownContentResponsePayload<PromptPersisted>
 
 export type SetPromptStatusPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
+  // Folder that currently owns the prompt shown in the active hierarchy.
+  sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
+  // Root folder that owns completed prompts and restored active prompts.
+  rootPromptFolder: RevisionPayloadEntity<PromptFolder>
   prompt: RevisionPayloadEntity<PromptPersisted>
   status: PromptStatus
 }
 
 export type SetPromptStatusResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
+  // Authoritative source/root snapshots reconcile both sides of an ownership transfer.
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
   prompt: RevisionEnvelope<PromptPersisted>
 }

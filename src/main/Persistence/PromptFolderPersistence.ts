@@ -1,10 +1,9 @@
+import * as path from 'path'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
-  type AnyPromptFolderSettings,
   type PromptFolder,
   type PromptFolderSettings,
-  type PromptFolderV2Settings,
   type PromptTemplateFolderSettings
 } from '@shared/PromptFolder'
 import type { EntryRef } from '@shared/OrderContainer'
@@ -24,12 +23,12 @@ import {
 } from './FilePersistenceHelpers'
 import {
   resolveCompletedPromptFolderName,
-  resolveActivePromptFolderName,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
   resolvePromptFolderPath,
-  resolvePromptFolderSettingsTextPath
+  resolvePromptFolderSettingsTextPath,
+  resolvePromptFolderStorageName
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 import { readPromptStemByPromptId } from '../DataAccess/WorkspaceReads'
@@ -60,7 +59,7 @@ const fromPromptFolderInfoFile = (
   folderName: string,
   entries: EntryRef[],
   completedPromptIds: string[],
-  settings: AnyPromptFolderSettings
+  settings: PromptFolderSettings
 ): PromptFolder => {
   const baseFolder = {
     id: persistedInfo.folderId,
@@ -76,16 +75,10 @@ const fromPromptFolderInfoFile = (
         kind: 'template',
         settings: settings as PromptTemplateFolderSettings
       }
-    : persistedInfo.kind === 'prompt-v2'
-      ? {
-          ...baseFolder,
-          kind: 'prompt-v2',
-          settings: settings as PromptFolderV2Settings
-        }
-      : {
+    : {
         ...baseFolder,
         kind: 'prompt',
-        settings: settings as PromptFolderSettings
+        settings
       }
 }
 
@@ -102,7 +95,11 @@ export const promptFolderPersistence: PersistenceLayer<
     const { workspacePath, folderPath: targetRelativePath, kind } = change.persistenceFields
     const previousFolderPath = change.persistenceFields.previousFolderPath
     const stagingRelativePath = previousFolderPath ?? targetRelativePath
-    const folderPath = resolvePromptFolderPath(workspacePath, stagingRelativePath, kind)
+    const folderPath = resolvePromptFolderPath(
+      workspacePath,
+      resolvePromptFolderStorageName(stagingRelativePath, kind),
+      kind
+    )
     const orderPath = resolvePromptFolderOrderPath(workspacePath, stagingRelativePath, kind)
     const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(
       workspacePath,
@@ -116,27 +113,30 @@ export const promptFolderPersistence: PersistenceLayer<
     }))
     const isFolderRename =
       previousFolderPath !== undefined && previousFolderPath !== targetRelativePath
-    const targetFolderPath = resolvePromptFolderPath(workspacePath, targetRelativePath, kind)
+    const targetFolderPath = resolvePromptFolderPath(
+      workspacePath,
+      resolvePromptFolderStorageName(targetRelativePath, kind),
+      kind
+    )
     const fs = getFs()
-    // V2 status metadata directories are created with the root folder but contain only allowed files.
-    const v2StatusInfoDirectories =
-      kind === 'prompt-v2'
-        ? [
-            resolvePromptFolderInfoDirectoryPath(
-              workspacePath,
-              resolveActivePromptFolderName(stagingRelativePath, kind),
-              kind
-            ),
-            resolvePromptFolderInfoDirectoryPath(
-              workspacePath,
-              resolveCompletedPromptFolderName(stagingRelativePath, kind),
-              kind
-            )
-          ].map((statusInfoDirectoryPath) => ({
-            path: statusInfoDirectoryPath,
-            alreadyExists: fs.existsSync(statusInfoDirectoryPath)
-          }))
-        : []
+    // Root prompt folders own the Active order metadata and the shared Completed directory.
+    const isPromptRoot = kind === 'prompt' && !/[\\/]/.test(stagingRelativePath)
+    const activeInfoDirectoryPath = isPromptRoot
+      ? path.dirname(orderPath)
+      : null
+    const completedDirectoryPath = isPromptRoot
+      ? resolvePromptFolderPath(
+          workspacePath,
+          resolveCompletedPromptFolderName(stagingRelativePath, kind),
+          kind
+        )
+      : null
+    const activeInfoDirectoryAlreadyExists = activeInfoDirectoryPath
+      ? fs.existsSync(activeInfoDirectoryPath)
+      : true
+    const completedDirectoryAlreadyExists = completedDirectoryPath
+      ? fs.existsSync(completedDirectoryPath)
+      : true
 
     if (change.type === 'remove') {
       return createPersistenceStageResult([createStagedDirectoryRemove(folderPath)])
@@ -147,20 +147,15 @@ export const promptFolderPersistence: PersistenceLayer<
     // Side effect: create prompt folder metadata directories before staging writes.
     fs.mkdirSync(folderPath, { recursive: true })
     fs.mkdirSync(infoDirectoryPath, { recursive: true })
-    // Side effect: establish both V2 status directories without status metadata files.
-    v2StatusInfoDirectories.forEach((statusInfoDirectory) => {
-      fs.mkdirSync(statusInfoDirectory.path, { recursive: true })
-    })
+    if (activeInfoDirectoryPath) fs.mkdirSync(activeInfoDirectoryPath, { recursive: true })
+    if (completedDirectoryPath) fs.mkdirSync(completedDirectoryPath, { recursive: true })
 
     const orderTempPath = resolveTempPath(orderPath)
     writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.entries))
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const settingsTextChanges = settingsTextPaths.map(({ field, path }) => {
-      const value =
-        change.data.kind !== 'prompt' && field !== 'folderDescription'
-          ? null
-          : change.data.settings[field as keyof typeof change.data.settings]
+      const value = change.data.settings[field]
       if (value === null) {
         return createStagedFileRemove(path)
       }
@@ -178,12 +173,17 @@ export const promptFolderPersistence: PersistenceLayer<
       createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
     ]
 
-    for (const statusInfoDirectory of v2StatusInfoDirectories) {
+    if (activeInfoDirectoryPath) {
       stagedChanges.push(
         createStagedEnsureDirectory(
-          statusInfoDirectory.path,
-          !statusInfoDirectory.alreadyExists
+          activeInfoDirectoryPath,
+          !activeInfoDirectoryAlreadyExists
         )
+      )
+    }
+    if (completedDirectoryPath) {
+      stagedChanges.push(
+        createStagedEnsureDirectory(completedDirectoryPath, !completedDirectoryAlreadyExists)
       )
     }
 
@@ -215,7 +215,7 @@ export const promptFolderPersistence: PersistenceLayer<
     const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
     const entries = [...readJsonFile<PromptFolderOrderFile>(orderPath).entries]
     const completedPromptIds =
-      kind !== 'template'
+      kind === 'prompt' && folderName === folderPath
         ? [
             ...readPromptStemByPromptId(
               workspacePath,
@@ -226,28 +226,7 @@ export const promptFolderPersistence: PersistenceLayer<
     const folderDescription = readOptionalTextFile(
       resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
     )
-    const folderSettings: AnyPromptFolderSettings =
-      kind !== 'prompt'
-        ? { folderDescription }
-        : {
-            folderDescription,
-            folderPrefix: readOptionalTextFile(
-              resolvePromptFolderSettingsTextPath(
-                workspacePath,
-                folderPath,
-                'folderPrefix',
-                kind
-              )
-            ),
-            folderSuffix: readOptionalTextFile(
-              resolvePromptFolderSettingsTextPath(
-                workspacePath,
-                folderPath,
-                'folderSuffix',
-                kind
-              )
-            )
-          }
+    const folderSettings: PromptFolderSettings = { folderDescription }
 
     return fromPromptFolderInfoFile(
       persistedInfo,

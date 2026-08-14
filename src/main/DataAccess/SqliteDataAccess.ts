@@ -271,14 +271,6 @@ const migrateSchemaV7ToV8 = (db: Database.Database): void => {
 
 const migrateSchemaV8ToV9 = (db: Database.Database): void => {
   const migrate = db.transaction(() => {
-    db.exec(`
-      ALTER TABLE prompt_folder_ui_state
-      ADD COLUMN folder_prefix_editor_view_state_json TEXT;
-
-      ALTER TABLE prompt_folder_ui_state
-      ADD COLUMN folder_suffix_editor_view_state_json TEXT;
-    `)
-
     db.prepare('UPDATE schema_version SET version = ?').run(9)
   })
 
@@ -309,34 +301,6 @@ const migrateSchemaV9ToV10 = (db: Database.Database): void => {
         folder_description_editor_view_state_json
       FROM prompt_folder_ui_state
       WHERE folder_description_editor_view_state_json IS NOT NULL;
-
-      INSERT INTO prompt_folder_settings_editor_view_state (
-        workspace_id,
-        prompt_folder_id,
-        settings_field,
-        editor_view_state_json
-      )
-      SELECT
-        workspace_id,
-        prompt_folder_id,
-        'folderPrefix',
-        folder_prefix_editor_view_state_json
-      FROM prompt_folder_ui_state
-      WHERE folder_prefix_editor_view_state_json IS NOT NULL;
-
-      INSERT INTO prompt_folder_settings_editor_view_state (
-        workspace_id,
-        prompt_folder_id,
-        settings_field,
-        editor_view_state_json
-      )
-      SELECT
-        workspace_id,
-        prompt_folder_id,
-        'folderSuffix',
-        folder_suffix_editor_view_state_json
-      FROM prompt_folder_ui_state
-      WHERE folder_suffix_editor_view_state_json IS NOT NULL;
 
       CREATE TABLE prompt_folder_ui_state_new (
         workspace_id TEXT NOT NULL,

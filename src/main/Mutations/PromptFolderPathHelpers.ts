@@ -92,7 +92,7 @@ export const refreshPromptFolderTreePersistencePaths = (promptFolderId: string):
 
     const promptEntry = data.prompt.committedStore.getEntry(entry.id)
     if (promptEntry) {
-      // Active and completed paths depend on the owning prompt folder storage version.
+      // Active prompts follow their owning subfolder in the canonical active hierarchy.
       const activeFolderPath = resolveActivePromptFolderName(
         folderPath,
         promptFolderEntry.committed.kind

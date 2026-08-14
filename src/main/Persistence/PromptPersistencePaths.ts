@@ -15,11 +15,10 @@ export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 export const PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX = '.template.md'
-export const COMPLETED_PROMPTS_FOLDER_NAME = '_Completed'
-// V2 active prompts live beneath this status directory.
-export const ACTIVE_PROMPTS_V2_FOLDER_NAME = 'Active'
-// V2 completed prompts live beneath this status directory.
-export const COMPLETED_PROMPTS_V2_FOLDER_NAME = 'Completed'
+// Canonical directory containing active prompts, subfolders, and active ordering.
+export const ACTIVE_PROMPTS_FOLDER_NAME = 'Active'
+// Canonical flat directory containing every completed prompt owned by a root.
+export const COMPLETED_PROMPTS_FOLDER_NAME = 'Completed'
 
 export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES = PROMPT_FOLDER_SETTINGS_DISK_FILENAMES
 
@@ -38,21 +37,35 @@ export const resolvePromptFolderPath = (
   return path.join(workspacePath, resolvePromptRootDirectoryName(kind), folderName)
 }
 
+// Maps a logical prompt-folder path into the canonical active hierarchy.
 export const resolveActivePromptFolderName = (
   folderName: string,
   kind: PromptFolderKind
 ): string => {
-  return kind === 'prompt-v2' ? path.join(folderName, ACTIVE_PROMPTS_V2_FOLDER_NAME) : folderName
+  if (kind === 'template') return folderName
+
+  const [rootFolderName, ...subfolderNames] = folderName.split(/[\\/]/)
+  return path.join(rootFolderName!, ACTIVE_PROMPTS_FOLDER_NAME, ...subfolderNames)
 }
 
+// Maps every logical prompt-folder path to its root folder's flat completed directory.
 export const resolveCompletedPromptFolderName = (
   folderName: string,
   kind: PromptFolderKind = 'prompt'
 ): string => {
-  return path.join(
-    folderName,
-    kind === 'prompt-v2' ? COMPLETED_PROMPTS_V2_FOLDER_NAME : COMPLETED_PROMPTS_FOLDER_NAME
-  )
+  if (kind === 'template') return folderName
+
+  const [rootFolderName] = folderName.split(/[\\/]/)
+  return path.join(rootFolderName!, COMPLETED_PROMPTS_FOLDER_NAME)
+}
+
+// Resolves the physical directory that owns one prompt-folder entity's metadata.
+export const resolvePromptFolderStorageName = (
+  folderName: string,
+  kind: PromptFolderKind
+): string => {
+  if (kind === 'template' || !/[\\/]/.test(folderName)) return folderName
+  return resolveActivePromptFolderName(folderName, kind)
 }
 
 export const resolveWorkspaceInfoPath = (
@@ -75,10 +88,11 @@ export const resolvePromptFolderOrderPath = (
   folderName: string,
   kind: PromptFolderKind
 ): string => {
-  // Only V2 redirects its authoritative order into the Active status metadata directory.
-  const orderFolderName = resolveActivePromptFolderName(folderName, kind)
+  const orderFolderName =
+    kind === 'prompt' ? resolveActivePromptFolderName(folderName, kind) : folderName
   return path.join(
-    resolvePromptFolderInfoDirectoryPath(workspacePath, orderFolderName, kind),
+    resolvePromptFolderPath(workspacePath, orderFolderName, kind),
+    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
     PROMPT_FOLDER_ORDER_FILENAME
   )
 }
@@ -93,7 +107,11 @@ export const resolvePromptFolderInfoDirectoryPath = (
   kind: PromptFolderKind
 ): string => {
   return path.join(
-    resolvePromptFolderPath(workspacePath, folderName, kind),
+    resolvePromptFolderPath(
+      workspacePath,
+      resolvePromptFolderStorageName(folderName, kind),
+      kind
+    ),
     PROMPT_FOLDER_INFO_DIRECTORY_NAME
   )
 }

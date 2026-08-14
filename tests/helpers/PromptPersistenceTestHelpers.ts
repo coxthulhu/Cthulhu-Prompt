@@ -40,7 +40,14 @@ export const checkFileExists = async (electronApp: any, filePath: string): Promi
 export const resolvePersistedPromptFilePathsByTitle = (
   lookup: PersistedPromptLookup
 ): PersistedPromptFilePaths => {
-  const folderPath = `${lookup.workspacePath}/Prompts/${lookup.folderName}`
+  // Logical folder segments used to insert the canonical Active directory when needed.
+  const [rootFolderName, ...folderSegments] = lookup.folderName.split('/')
+  // Explicit status paths remain direct while logical active paths are nested beneath Active.
+  const persistedFolderSegments =
+    folderSegments[0] === 'Active' || folderSegments[0] === 'Completed'
+      ? [rootFolderName, ...folderSegments]
+      : [rootFolderName, 'Active', ...folderSegments]
+  const folderPath = `${lookup.workspacePath}/Prompts/${persistedFolderSegments.join('/')}`
   const promptStem = buildPromptStem(
     lookup.promptTitle,
     lookup.promptId,

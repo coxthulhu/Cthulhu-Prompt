@@ -553,7 +553,7 @@ describe('Prompt template folder UI', () => {
     await expect(
       readPromptFolderEntryIds(
         electronApp,
-        `${workspacePath}/Prompts/Prompts/_FolderInfo/FolderOrder.json`
+        `${workspacePath}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
       )
     ).resolves.toEqual(['cross-kind-prompt'])
     await expect(

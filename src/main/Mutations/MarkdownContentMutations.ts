@@ -12,7 +12,6 @@ import {
 import type { EntryRef } from '@shared/OrderContainer'
 import { removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import {
-  getPromptFolderContentKind,
   type PromptFolder,
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
@@ -181,7 +180,7 @@ export const setupMarkdownContentMutationHandlers = <
         const contentId = requestedContent.data.id
         if (
           !promptFolder ||
-          getPromptFolderContentKind(promptFolder.committed.kind) !== config.kind
+          promptFolder.committed.kind !== config.kind
         ) {
           return { success: false, error: `${config.label} folder not loaded` }
         }
@@ -279,7 +278,7 @@ export const setupMarkdownContentMutationHandlers = <
         const content = config.getContent(contentId)
         if (
           !promptFolder ||
-          getPromptFolderContentKind(promptFolder.committed.kind) !== config.kind ||
+          promptFolder.committed.kind !== config.kind ||
           !content ||
           !getMarkdownContentIds(promptFolder.committed, config.kind).includes(contentId)
         ) {
@@ -342,7 +341,7 @@ export const setupMarkdownContentMutationHandlers = <
         )
         if (
           !promptFolder ||
-          getPromptFolderContentKind(promptFolder.committed.kind) !== config.kind
+          promptFolder.committed.kind !== config.kind
         ) {
           return { success: false, error: `${config.label} folder not loaded` }
         }
@@ -429,9 +428,8 @@ export const setupMarkdownContentMutationHandlers = <
         if (
           !source ||
           !destination ||
-          getPromptFolderContentKind(source.committed.kind) !== config.kind ||
-          getPromptFolderContentKind(destination.committed.kind) !== config.kind ||
-          source.committed.kind !== destination.committed.kind ||
+          source.committed.kind !== config.kind ||
+          destination.committed.kind !== config.kind ||
           !content ||
           !config.canMove(content.committed) ||
           !getActiveMarkdownContentIds(source.committed, config.kind).includes(requestedContent.id)

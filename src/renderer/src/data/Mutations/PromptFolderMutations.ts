@@ -114,7 +114,7 @@ export const createPromptFolder = async (
     displayName: normalizedDisplayName,
     entries: [],
     completedPromptIds: [],
-    settings: createEmptyPromptFolderSettings(kind)
+    settings: createEmptyPromptFolderSettings()
   } as PromptFolder
 
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
@@ -122,7 +122,7 @@ export const createPromptFolder = async (
       collections.promptFolder.insert(optimisticPromptFolder)
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
-        settings: createEmptyPromptFolderSettings(kind),
+        settings: createEmptyPromptFolderSettings(),
         hasLoadedInitialData: false
       })
       if (parentPromptFolderId) {

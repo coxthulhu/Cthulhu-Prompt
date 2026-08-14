@@ -14,9 +14,8 @@ import {
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
-  getPromptFolderContentKind,
   type PromptFolder,
-  type AnyPromptFolderSettings,
+  type PromptFolderSettings,
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
@@ -188,7 +187,7 @@ export const createPromptFolderScreenController = ({
     return null
   })
   const contentKind = $derived<PromptFolderContentKind>(
-    getPromptFolderContentKind(screenRootFolder?.kind ?? 'prompt')
+    screenRootFolder?.kind ?? 'prompt'
   )
   const isTemplateFolder = $derived(contentKind === 'template')
   const promptDraftById = $derived.by(() => {
@@ -320,10 +319,6 @@ export const createPromptFolderScreenController = ({
 
     return collectCompletedPrompts({
       rootFolder: screenRootFolder,
-      descendantFolders: promptFolderQuery.data.filter(
-        (candidate): candidate is PromptFolder =>
-          candidate !== undefined && candidate.id !== screenRootFolder.id
-      ),
       statusByPromptId: Object.fromEntries(
         promptQuery.data.flatMap((prompt) => (prompt ? [[prompt.id, prompt.status]] : []))
       ),
@@ -341,11 +336,11 @@ export const createPromptFolderScreenController = ({
       completedPrompts.map(({ ownerFolderId, promptId }) => [promptId, ownerFolderId])
     )
   )
-  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings(contentKind))
-  const folderSettingsByFolderId = $derived.by<Record<string, AnyPromptFolderSettings>>(() => {
-    const settingsByFolderId: Record<string, AnyPromptFolderSettings> = {}
+  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings())
+  const folderSettingsByFolderId = $derived.by<Record<string, PromptFolderSettings>>(() => {
+    const settingsByFolderId: Record<string, PromptFolderSettings> = {}
     for (const folder of promptFolderQuery.data) {
-      if (!folder || getPromptFolderContentKind(folder.kind) !== contentKind) continue
+      if (!folder || folder.kind !== contentKind) continue
       const draftSettings = promptFolderDraftById[folder.id]?.settings
       settingsByFolderId[folder.id] = copyPromptFolderSettings(
         draftSettings ?? folder.settings
@@ -1174,7 +1169,7 @@ export const createPromptFolderScreenController = ({
     const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
     if (
       !sourcePromptFolder ||
-      getPromptFolderContentKind(sourcePromptFolder.kind) !== contentKind
+      sourcePromptFolder.kind !== contentKind
     ) {
       return false
     }
@@ -1182,7 +1177,7 @@ export const createPromptFolderScreenController = ({
     const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
     if (
       !destinationPromptFolder ||
-      getPromptFolderContentKind(destinationPromptFolder.kind) !== contentKind ||
+      destinationPromptFolder.kind !== contentKind ||
       sourcePromptFolder.kind !== destinationPromptFolder.kind
     ) {
       return false
@@ -1271,7 +1266,7 @@ export const createPromptFolderScreenController = ({
     }
 
     void runIpcBestEffort(async () => {
-      await setPromptStatus(target.ownerFolderId, target.promptId, status)
+      await setPromptStatus(target.ownerFolderId, screenRootFolderId, target.promptId, status)
     })
   }
 
@@ -1574,10 +1569,10 @@ export const createPromptFolderScreenController = ({
     get contentKind(): PromptFolderContentKind {
       return contentKind
     },
-    get folderSettings(): AnyPromptFolderSettings {
+    get folderSettings(): PromptFolderSettings {
       return folderSettings
     },
-    get folderSettingsByFolderId(): Record<string, AnyPromptFolderSettings> {
+    get folderSettingsByFolderId(): Record<string, PromptFolderSettings> {
       return folderSettingsByFolderId
     },
     get folderDisplayName(): string {

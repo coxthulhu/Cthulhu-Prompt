@@ -45,7 +45,7 @@ describe('prompt template IPC validation', () => {
     ).toBe(true)
   })
 
-  it('rejects prefix and suffix fields on template folders', () => {
+  it('rejects unsupported settings fields on template folders', () => {
     expect(
       parseCreatePromptTemplateRequest(
         request({
@@ -56,8 +56,7 @@ describe('prompt template IPC validation', () => {
               ...templateFolder,
               settings: {
                 folderDescription: null,
-                folderPrefix: null,
-                folderSuffix: null
+                unsupported: null
               }
             }
           },
@@ -129,9 +128,7 @@ describe('prompt template IPC validation', () => {
               id: 'prompt-folder',
               kind: 'prompt',
               settings: {
-                folderDescription: null,
-                folderPrefix: null,
-                folderSuffix: null
+                folderDescription: null
               }
             }
           },
@@ -171,9 +168,7 @@ describe('prompt template IPC validation', () => {
               id: 'prompt-folder',
               kind: 'prompt',
               settings: {
-                folderDescription: null,
-                folderPrefix: null,
-                folderSuffix: null
+                folderDescription: null
               }
             }
           },

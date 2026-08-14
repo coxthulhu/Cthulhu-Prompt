@@ -212,14 +212,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toggle-folderDescription"]')
-    ).toBeVisible()
-    await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toggle-folderPrefix"]')
-    ).toHaveCount(0)
-    await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toggle-folderSuffix"]')
-    ).toHaveCount(0)
+      nestedFolderEditor.locator('[data-testid^="prompt-folder-settings-toggle-"]')
+    ).toHaveCount(1)
   })
 
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -474,7 +468,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     const createPromptFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Prompt Folder V1"]'
+      '[role="dialog"][aria-label="Create Prompt Folder"]'
     )
     await expect(createPromptFolderDialog).toBeVisible()
     await expect(
@@ -483,7 +477,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
     ).toHaveText('Choose the folder type and name for the new folder.')
-    await expect(createPromptFolderDialog.getByLabel('Prompt Folder V1 Name')).toBeVisible()
+    await expect(createPromptFolderDialog.getByLabel('Prompt Folder Name')).toBeVisible()
   })
 
   test('shows add prompt folder button when the workspace has no prompt folders', async ({
@@ -718,12 +712,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       .poll(async () => {
         const infoPath = '/ws/minimal/Prompts/TestFolder/_FolderInfo'
         return await Promise.all(
-          ['Description.md', 'PromptPrefix.md', 'PromptSuffix.md'].map((filename) =>
+          ['Description.md'].map((filename) =>
             checkFileExists(electronApp, `${infoPath}/${filename}`)
           )
         )
       })
-      .toEqual([false, false, false])
+      .toEqual([false])
 
     const emptyPromptFolderPlaceholderHasGutter = await mainWindow.evaluate((hostSelector) => {
       const host = document.querySelector<HTMLElement>(hostSelector)
@@ -757,14 +751,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     await expect(mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')).toHaveText(
-      'Prompt Folder V1'
+      'Prompt Folder'
     )
     await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
     const folderTypeMenu = mainWindow.locator(
       '[data-testid="create-prompt-folder-type-menu"]'
     )
-    await expect(folderTypeMenu.getByText('Prompt Folder V1', { exact: true })).toBeVisible()
-    await expect(folderTypeMenu.getByText('Prompt Folder V2', { exact: true })).toBeVisible()
+    await expect(folderTypeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
     await expect(folderTypeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
     await folderTypeMenu.getByText('Prompt Template Folder', { exact: true }).click()
     const createTemplateFolderDialog = mainWindow.locator(
@@ -817,21 +810,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       )
     ).toEqual({ entries: [] })
     expect(
-      await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_Completed`)
+      await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Completed`)
     ).toBe(false)
-    expect(
-      await checkFileExists(
-        electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/PromptPrefix.md`
-      )
-    ).toBe(false)
-    expect(
-      await checkFileExists(
-        electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/PromptSuffix.md`
-      )
-    ).toBe(false)
-
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()

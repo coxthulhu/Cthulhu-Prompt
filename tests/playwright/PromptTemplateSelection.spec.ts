@@ -23,10 +23,10 @@ const FIRST_TEMPLATE_FOLDER_ID = 'selection-templates-first'
 const NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-nested'
 const EMPTY_TEMPLATE_FOLDER_ID = 'selection-templates-empty'
 const UNUSABLE_NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-unusable-nested'
-const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Select Template.prompt.md`
-const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Explicit No Template.prompt.md`
-const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Stale Template.prompt.md`
-const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Multiple Templates.prompt.md`
+const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Select Template.prompt.md`
+const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Explicit No Template.prompt.md`
+const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Stale Template.prompt.md`
+const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Multiple Templates.prompt.md`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'
@@ -62,10 +62,6 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
       folderName: 'Prompts',
       displayName: 'Prompts',
       promptFolderId: PROMPT_FOLDER_ID,
-      folderSettings: {
-        folderPrefix: 'Prompt folder prefix',
-        folderSuffix: 'Prompt folder suffix'
-      },
       prompts: [
         {
           id: 'select-template-prompt',
@@ -561,9 +557,7 @@ describe('Prompt template selection', () => {
     await multiTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
-      .toBe(
-        'Nested Second root Second root Prompt folder prefix\n\nCopy with several templates.\n\nPrompt folder suffix...'
-      )
+      .toBe('Nested Second root Second root Copy with several templates....')
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Second Root Template + 2 More'
     )
@@ -580,7 +574,7 @@ describe('Prompt template selection', () => {
     await noTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
-      .toBe('Prompt folder prefix\n\nCopy without a template.\n\nPrompt folder suffix')
+      .toBe('Copy without a template.')
     await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'No Template'
     )
@@ -624,7 +618,7 @@ describe('Prompt template selection', () => {
     await expect(quickDialog).toBeHidden()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
-      .toBe('First root Prompt folder prefix\n\nChoose a template.\n\nPrompt folder suffix.')
+      .toBe('First root Choose a template..')
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'First Root Template'
     )
@@ -790,9 +784,7 @@ describe('Prompt template selection', () => {
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
-      .toBe(
-        'Draft Prompt folder prefix\n\nChoose a template.\n\nPrompt folder suffix wrapper'
-      )
+      .toBe('Draft Choose a template. wrapper')
 
     await testHelpers.navigateToPromptFolders('First Templates')
     await focusMonacoEditor(mainWindow, templateEditorSelector)
@@ -807,7 +799,7 @@ describe('Prompt template selection', () => {
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
-      .toBe('Prompt folder prefix\n\nChoose a template.\n\nPrompt folder suffix')
+      .toBe('Choose a template.')
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'First Root Template'
     )

@@ -9,7 +9,7 @@ const folder = (id: string, entries: PromptFolder['entries'] = []): PromptFolder
   displayName: id,
   entries,
   completedPromptIds: [],
-  settings: { folderDescription: '', folderPrefix: '', folderSuffix: '' }
+  settings: { folderDescription: '' }
 })
 
 const activeEntryIds = (promptFolder: PromptFolder): string[] =>

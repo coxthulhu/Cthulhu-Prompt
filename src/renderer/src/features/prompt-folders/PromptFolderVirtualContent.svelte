@@ -2,8 +2,7 @@
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
     createEmptyPromptFolderSettings,
-    getPromptFolderContentKind,
-    type AnyPromptFolderSettings,
+    type PromptFolderSettings,
     type PromptFolder,
     type PromptFolderContentKind,
     type PromptFolderSettingsField
@@ -17,10 +16,7 @@
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
-  import {
-    applyPromptTemplates,
-    createPromptFolderTemplate
-  } from '../prompt-editor/promptTemplatingEngine'
+  import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
   import { setPromptDraftTemplates } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
@@ -130,7 +126,7 @@
     workspaceId: string | null
     screenRootFolderId: string
     contentKind: PromptFolderContentKind
-    folderSettingsByFolderId: Record<string, AnyPromptFolderSettings>
+    folderSettingsByFolderId: Record<string, PromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, MarkdownContentDraftRecord>
     promptTemplateTextById: Record<string, string>
@@ -253,7 +249,7 @@
   const ContentEditorRow = $derived(
     isTemplateFolder ? PromptTemplateEditorRow : PromptEditorRow
   )
-  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings(contentKind))
+  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings())
   const promptFolderById = $derived.by(
     () =>
       Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
@@ -261,16 +257,6 @@
         PromptFolder
       >
   )
-  const parentPromptFolderIdById = $derived.by<Record<string, string>>(() =>
-    Object.fromEntries(
-      promptFolders.flatMap((folder) =>
-        folder.entries.flatMap((entry) =>
-          entry.kind === 'folder' ? [[entry.id, folder.id] as const] : []
-        )
-      )
-    )
-  )
-
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
     onScrollToWithinWindowBandChange(scrollToWithinWindowBand)
@@ -291,29 +277,17 @@
     onViewportMetricsChange(viewportMetrics)
   })
 
-  const getFolderSettings = (ownerFolderId: string): AnyPromptFolderSettings =>
+  const getFolderSettings = (ownerFolderId: string): PromptFolderSettings =>
     folderSettingsByFolderId[ownerFolderId] ??
     promptFolderById[ownerFolderId]?.settings ??
     emptyFolderSettings
 
   const getCopyTemplateTexts = (
-    ownerFolderId: string,
     selectedTemplates: PromptTemplateReference[] | null | undefined
   ): string[] => {
     if (isTemplateFolder) return []
 
     const templateTexts: string[] = []
-    let folderId: string | undefined = ownerFolderId
-    // Applying the owner first lets each parent wrap its descendants while climbing upward.
-    while (folderId) {
-      const settings = getFolderSettings(folderId)
-      if ('folderPrefix' in settings) {
-        templateTexts.push(
-          createPromptFolderTemplate(settings.folderPrefix, settings.folderSuffix)
-        )
-      }
-      folderId = parentPromptFolderIdById[folderId]
-    }
 
     for (const template of selectedTemplates ?? []) {
       const selectedTemplateText = promptTemplateTextById[template.id]
@@ -340,13 +314,13 @@
     templates: PromptTemplateReference[] | null
   ): Promise<void> => {
     if (!templateSelectionTarget) return
-    const { ownerFolderId, promptId } = templateSelectionTarget
+    const { promptId } = templateSelectionTarget
     const promptDraft = promptDraftById[promptId]!
     setPromptDraftTemplates(promptId, templates)
     await window.navigator.clipboard.writeText(
       applyPromptTemplates(
         promptDraft.text,
-        getCopyTemplateTexts(ownerFolderId, templates)
+        getCopyTemplateTexts(templates)
       )
     )
     if ((promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status === PromptStatus.Todo) {
@@ -682,7 +656,7 @@
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     if (!sourceFolder) return false
     if (
-      payload.contentKind !== getPromptFolderContentKind(destinationFolder.kind) ||
+      payload.contentKind !== destinationFolder.kind ||
       sourceFolder.kind !== destinationFolder.kind
     ) {
       return false
@@ -1024,10 +998,7 @@
       {shouldDehydrate}
       {overlayRowElement}
       {onHydrationChange}
-      copyTemplateTexts={getCopyTemplateTexts(
-        row.ownerFolderId,
-        promptDraftById[row.promptId]!.templates
-      )}
+      copyTemplateTexts={getCopyTemplateTexts(promptDraftById[row.promptId]!.templates)}
       {screenMode}
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}

@@ -49,10 +49,7 @@
     setPromptFolderPromptTreeExpandedStateWithAutosave,
     setPromptFolderPromptTreeEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
-  import {
-    getPromptFolderContentKind,
-    type PromptFolder
-  } from '@shared/PromptFolder'
+  import type { PromptFolder } from '@shared/PromptFolder'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
@@ -191,7 +188,6 @@
 
     return collectCompletedPrompts({
       rootFolder: screenRootFolder,
-      descendantFolders: promptFolders.filter((folder) => folder.id !== screenRootFolder.id),
       statusByPromptId: Object.fromEntries(
         Object.values(promptById).map((prompt) => [prompt.id, prompt.status])
       ),
@@ -330,12 +326,10 @@
     payload: PromptTreeEntryDragPayload,
     dropPayload: PromptHandleDropPayload
   ): boolean => {
-    // The destination kind determines both flat V2 folder rules and prompt storage compatibility.
     const destinationFolder = promptFolderById[dropPayload.folderId]
     if (!destinationFolder) return false
 
     if (!isPromptHandleDragPayload(payload)) {
-      if (destinationFolder.kind === 'prompt-v2') return false
       return (
         resolvePromptFolderEntryDropMove(
           promptFolders,
@@ -349,7 +343,7 @@
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     if (!sourceFolder) return false
     if (
-      payload.contentKind !== getPromptFolderContentKind(destinationFolder.kind) ||
+      payload.contentKind !== destinationFolder.kind ||
       sourceFolder.kind !== destinationFolder.kind
     ) {
       return false
@@ -881,7 +875,7 @@
           props.row.folder.id,
           props.row.promptId,
           promptTitle,
-          getPromptFolderContentKind(props.row.folder.kind)
+          props.row.folder.kind
         )}
     onPromptSelect={handlePromptTreePromptSelect}
   />

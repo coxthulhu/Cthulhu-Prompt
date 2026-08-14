@@ -10,9 +10,7 @@ const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   entries: [],
   completedPromptIds: [],
   settings: {
-    folderDescription: '',
-    folderPrefix: '',
-    folderSuffix: ''
+    folderDescription: ''
   },
   ...overrides
 })
@@ -31,9 +29,7 @@ describe('isPromptFolderEmpty', () => {
       isPromptFolderEmpty(
         createFolder({
           settings: {
-            folderDescription: 'Description',
-            folderPrefix: '',
-            folderSuffix: ''
+            folderDescription: 'Description'
           }
         })
       )

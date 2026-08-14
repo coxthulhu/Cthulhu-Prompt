@@ -134,11 +134,11 @@ describe('Prompt Folder Order', () => {
     testSetup
   }) => {
     const filesystem = setupWorkspaceScenario(NESTED_REPAIR_WORKSPACE_PATH, 'subfolders')
-    const nestedInfoPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/Nested/_FolderInfo/FolderInfo.json`
+    const nestedInfoPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/Active/Nested/_FolderInfo/FolderInfo.json`
     const nestedFolderId = (
       JSON.parse(filesystem[nestedInfoPath] as string) as { folderId: string }
     ).folderId
-    const orderPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/_FolderInfo/FolderOrder.json`
+    const orderPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/Active/_FolderInfo/FolderOrder.json`
     filesystem[orderPath] = JSON.stringify(
       {
         entries: [

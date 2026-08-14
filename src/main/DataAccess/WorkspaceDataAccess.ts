@@ -19,6 +19,9 @@ import {
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
+  resolveActivePromptFolderName,
+  resolveCompletedPromptFolderName,
+  resolvePromptFolderPath,
   resolvePromptFolderOrderPath,
   resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
@@ -76,6 +79,18 @@ const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> 
 const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: boolean): string => {
   const fs = getFs()
   const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_FOLDER_NAME)
+  // Canonical directory that owns active prompts and root ordering.
+  const activeFolderPath = resolvePromptFolderPath(
+    workspacePath,
+    resolveActivePromptFolderName(EXAMPLE_FOLDER_NAME, 'prompt'),
+    'prompt'
+  )
+  // Canonical flat directory that owns all completed prompts in the root tree.
+  const completedFolderPath = resolvePromptFolderPath(
+    workspacePath,
+    resolveCompletedPromptFolderName(EXAMPLE_FOLDER_NAME),
+    'prompt'
+  )
   const folderInfoPath = path.join(
     exampleFolderPath,
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,
@@ -103,15 +118,15 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   const promptIds: string[] = []
   const duplicateTitleStems = getDuplicateTitleStems(examplePrompts)
 
-  fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), {
-    recursive: true
-  })
+  fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
+  fs.mkdirSync(path.join(activeFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
+  fs.mkdirSync(completedFolderPath, { recursive: true })
 
   for (const prompt of examplePrompts) {
     const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
     const promptStem = buildPromptStem(prompt.title, prompt.id, duplicateTitleStems.has(titleStem))
     const markdownPath = path.join(
-      exampleFolderPath,
+      activeFolderPath,
       `${promptStem}${PROMPT_MARKDOWN_FILENAME_SUFFIX}`
     )
 

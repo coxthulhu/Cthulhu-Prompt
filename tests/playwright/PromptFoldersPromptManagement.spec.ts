@@ -45,7 +45,7 @@ const resolvePaletteColors = async (locator: Locator, tokens: readonly string[])
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
 const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
 const COMPLETED_FALLBACK_GAP_WORKSPACE_PATH = '/ws/completed-fallback-gap'
-const COPY_PREFIX_SUFFIX_WORKSPACE_PATH = '/ws/copy-prefix-suffix'
+const COPY_WORKSPACE_PATH = '/ws/copy-prompt'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SELF_HEALING_WORKSPACE_PATH = '/ws/completed-self-healing'
 const COMPLETED_MODE_WORKSPACE_PATH = '/ws/completed-mode'
@@ -336,13 +336,13 @@ const buildCompletedFallbackGapWorkspace = () => {
   ])
   const completedPath = resolvePersistedPromptFilePathsByTitle({
     workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
-    folderName: `${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/_Completed`,
+    folderName: `${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Completed`,
     promptId: completedPrompt.id,
     promptTitle: completedPrompt.fallbackTitle
   }).markdownPath
 
   workspace[
-    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/_FolderInfo/FolderOrder.json`
+    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
   ] = JSON.stringify(
     {
       entries: [...activePrompts.map((prompt) => prompt.id), completedPrompt.id].map((id) => ({
@@ -356,7 +356,7 @@ const buildCompletedFallbackGapWorkspace = () => {
 
   return {
     ...workspace,
-    [`${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/_Completed`]:
+    [`${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Completed`]:
       null,
     [completedPath]: serializePromptMarkdown(completedPrompt)
   }
@@ -405,14 +405,14 @@ const buildCompletedSelfHealingWorkspace = () => {
   }).markdownPath
   const completedPath = resolvePersistedPromptFilePathsByTitle({
     workspacePath: SELF_HEALING_WORKSPACE_PATH,
-    folderName: `${folderName}/_Completed`,
+    folderName: `${folderName}/Completed`,
     promptId: completedPrompt.id,
     promptTitle: completedPrompt.title
   }).markdownPath
 
   return {
     ...workspace,
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`]:
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`]:
       JSON.stringify(
         {
           entries: [completedPrompt.id, activePrompt.id].map((id) => ({
@@ -423,7 +423,7 @@ const buildCompletedSelfHealingWorkspace = () => {
         null,
         2
       ),
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_Completed`]: null,
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
     [activePath]: serializePromptMarkdown(activePrompt),
     [completedPath]: serializePromptMarkdown(completedPrompt)
   }
@@ -495,18 +495,18 @@ const buildCompletedModeWorkspace = () => {
   )
   const newestCompletedPath = resolvePersistedPromptFilePathsByTitle({
     workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-    folderName: `${folderName}/_Completed`,
+    folderName: `${folderName}/Completed`,
     promptId: newestCompletedPrompt.id,
     promptTitle: newestCompletedPrompt.title
   }).markdownPath
   const oldestCompletedPath = resolvePersistedPromptFilePathsByTitle({
     workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-    folderName: `${folderName}/_Completed`,
+    folderName: `${folderName}/Completed`,
     promptId: oldestCompletedPrompt.id,
     promptTitle: oldestCompletedPrompt.title
   }).markdownPath
 
-  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`] =
+  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`] =
     JSON.stringify(
       {
         entries: [newestCompletedPrompt.id, oldestCompletedPrompt.id, activePrompt.id].map(
@@ -519,7 +519,7 @@ const buildCompletedModeWorkspace = () => {
 
   return {
     ...workspace,
-    [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/_Completed`]: null,
+    [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
     [newestCompletedPath]: serializePromptMarkdown(newestCompletedPrompt),
     [oldestCompletedPath]: serializePromptMarkdown(oldestCompletedPrompt)
   }
@@ -1176,17 +1176,13 @@ describe('Prompt folder prompt management', () => {
 
   test('copies prompt text to clipboard', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(
-      createWorkspaceWithFolders(COPY_PREFIX_SUFFIX_WORKSPACE_PATH, [
+      createWorkspaceWithFolders(COPY_WORKSPACE_PATH, [
         {
-          folderName: 'Copy Prefix Suffix',
-          displayName: 'Copy Prefix Suffix',
-          folderSettings: {
-            folderPrefix: 'Folder prefix text',
-            folderSuffix: 'Folder suffix text'
-          },
+          folderName: 'Copy Prompt',
+          displayName: 'Copy Prompt',
           prompts: [
             {
-              id: 'copy-prefix-source',
+              id: 'copy-source',
               title: 'Copy Source',
               promptText: 'Source prompt',
               templates: null
@@ -1195,7 +1191,7 @@ describe('Prompt folder prompt management', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COPY_PREFIX_SUFFIX_WORKSPACE_PATH)])
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COPY_WORKSPACE_PATH)])
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1203,22 +1199,22 @@ describe('Prompt folder prompt management', () => {
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders('Copy Prefix Suffix')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('copy-prefix-source'))
+    await testHelpers.navigateToPromptFolders('Copy Prompt')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('copy-source'))
 
     await stubClipboard(mainWindow)
-    const sourceIndicator = mainWindow.locator(statusIndicatorSelector('copy-prefix-source'))
+    const sourceIndicator = mainWindow.locator(statusIndicatorSelector('copy-source'))
     await expect(sourceIndicator).toHaveAttribute('data-edited', 'false')
     await mainWindow
-      .locator(`${promptEditorSelector('copy-prefix-source')} [data-testid="prompt-copy-button"]`)
+      .locator(`${promptEditorSelector('copy-source')} [data-testid="prompt-copy-button"]`)
       .click()
-    await expect(mainWindow.locator(statusPillSelector('copy-prefix-source'))).toHaveText(
+    await expect(mainWindow.locator(statusPillSelector('copy-source'))).toHaveText(
       'In Progress'
     )
     await expect(sourceIndicator).toHaveAttribute('data-edited', 'true')
 
     const initialIds = await getPromptEditorIds(mainWindow)
-    await clickAddAfter(mainWindow, testHelpers, 'copy-prefix-source')
+    await clickAddAfter(mainWindow, testHelpers, 'copy-source')
     await waitForPromptCount(mainWindow, 2)
 
     const idsAfterAdd = await getPromptEditorIds(mainWindow)
@@ -1248,7 +1244,7 @@ describe('Prompt folder prompt management', () => {
         )
         return normalizeNewlines(clipboardText)
       })
-      .toBe(`Folder prefix text\n\n${promptText}\n\nFolder suffix text`)
+      .toBe(promptText)
     await expect(mainWindow.locator(statusPillSelector(newPromptId!))).toHaveText('In Progress')
     await expect(mainWindow.locator(statusPillSelector(newPromptId!))).toHaveAttribute(
       'data-variant',
@@ -1257,8 +1253,8 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => {
         return await readPersistedPromptTextById(electronApp, {
-          workspacePath: COPY_PREFIX_SUFFIX_WORKSPACE_PATH,
-          folderName: 'Copy Prefix Suffix',
+          workspacePath: COPY_WORKSPACE_PATH,
+          folderName: 'Copy Prompt',
           promptId: newPromptId!,
           promptTitle: 'New Prompt'
         })
@@ -1303,7 +1299,7 @@ describe('Prompt folder prompt management', () => {
             }),
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: SAMPLE_WORKSPACE_PATH,
-              folderName: `${COMPLETION_FOLDER_NAME}/_Completed`,
+              folderName: `${COMPLETION_FOLDER_NAME}/Completed`,
               promptId: COMPLETION_PROMPT_ID,
               promptTitle: COMPLETION_PROMPT_TITLE
             })
@@ -1320,7 +1316,7 @@ describe('Prompt folder prompt management', () => {
 
     const completedMarkdown = await readPersistedPromptTextById(electronApp, {
       workspacePath: SAMPLE_WORKSPACE_PATH,
-      folderName: `${COMPLETION_FOLDER_NAME}/_Completed`,
+      folderName: `${COMPLETION_FOLDER_NAME}/Completed`,
       promptId: COMPLETION_PROMPT_ID,
       promptTitle: COMPLETION_PROMPT_TITLE
     })
@@ -1330,7 +1326,7 @@ describe('Prompt folder prompt management', () => {
     expect(
       await readPromptFolderEntries(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/_FolderInfo/FolderOrder.json`
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
       )
     ).toEqual([{ kind: 'prompt', id: 'dev-2' }])
 
@@ -1379,7 +1375,7 @@ describe('Prompt folder prompt management', () => {
         async () =>
           await readPromptFolderEntries(
             electronApp,
-            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/_FolderInfo/FolderOrder.json`
+            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`
           )
       )
       .toEqual([{ kind: 'prompt', id: activePromptId }])
@@ -1387,7 +1383,7 @@ describe('Prompt folder prompt management', () => {
 
     const completedMarkdown = await readPersistedPromptTextById(electronApp, {
       workspacePath: SELF_HEALING_WORKSPACE_PATH,
-      folderName: `${folderName}/_Completed`,
+      folderName: `${folderName}/Completed`,
       promptId: completedPromptId,
       promptTitle: completedPromptTitle
     })
@@ -1455,7 +1451,7 @@ describe('Prompt folder prompt management', () => {
     expect(
       await checkPersistedPromptFilesExistByTitle(electronApp, {
         workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-        folderName: 'Completed Mode/_Completed',
+        folderName: 'Completed Mode/Completed',
         promptId: 'completed-mode-newest',
         promptTitle: 'Newest Completed'
       })
@@ -1717,7 +1713,7 @@ describe('Prompt folder prompt management', () => {
             }),
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode/_Completed',
+              folderName: 'Completed Mode/Completed',
               promptId: 'completed-mode-active',
               promptTitle: 'Active Prompt'
             })
@@ -1733,7 +1729,7 @@ describe('Prompt folder prompt management', () => {
       })
     const completedFromMenuMarkdown = await readPersistedPromptTextById(electronApp, {
       workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-      folderName: 'Completed Mode/_Completed',
+      folderName: 'Completed Mode/Completed',
       promptId: 'completed-mode-active',
       promptTitle: 'Active Prompt'
     })
@@ -1773,7 +1769,7 @@ describe('Prompt folder prompt management', () => {
             }),
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode/_Completed',
+              folderName: 'Completed Mode/Completed',
               promptId: 'completed-mode-active',
               promptTitle: 'Active Prompt'
             })
@@ -1979,7 +1975,7 @@ describe('Prompt folder prompt management', () => {
             }),
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode/_Completed',
+              folderName: 'Completed Mode/Completed',
               promptId: 'completed-mode-newest',
               promptTitle: 'Newest Completed'
             })
@@ -2007,7 +2003,7 @@ describe('Prompt folder prompt management', () => {
         async () =>
           await readPromptFolderEntries(
             electronApp,
-            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/_FolderInfo/FolderOrder.json`
+            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrder.json`
           )
       )
       .toEqual([

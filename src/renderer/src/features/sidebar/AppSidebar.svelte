@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import { onMount } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
@@ -41,10 +40,7 @@
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import type { Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
-  import {
-    getPromptFolderContentKind,
-    type PromptFolder
-  } from '@shared/PromptFolder'
+  import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
@@ -69,7 +65,6 @@
   import { createBlankPromptTemplateInFolder } from '@renderer/features/prompt-folders/createBlankPromptTemplateInFolder'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
   import PromptTree from './PromptTree.svelte'
-  import PromptFolderV2Icon from '../prompt-folders/PromptFolderV2Icon.svelte'
 
   type CreatePromptFolderDialogHandle = {
     openDialog: () => void
@@ -316,12 +311,7 @@
         id: promptFolder.id,
         label: promptFolder.displayName,
         detailParts,
-        icon:
-          promptFolder.kind === 'template'
-            ? Layers
-            : promptFolder.kind === 'prompt-v2'
-              ? (PromptFolderV2Icon as unknown as ComponentType)
-              : Folder,
+        icon: promptFolder.kind === 'template' ? Layers : Folder,
         testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
       }
     })
@@ -351,7 +341,6 @@
   )
   const canTogglePromptFolders = $derived(
     folderListState === 'ready' &&
-      screenRootFolder?.kind !== 'prompt-v2' &&
       promptTreePromptFolders.length > 0
   )
   const promptTreeExpansionRequests =
@@ -688,11 +677,6 @@
         position: 'after'
       }
       if (!isPromptHandleDragPayload(entryPayload)) {
-        // Folder-entry drags cannot create subfolders in or from the flat V2 structure.
-        const sourceFolder = allFolders.find((folder) => folder.id === entryPayload.folderId)
-        if (sourceFolder?.kind === 'prompt-v2' || destinationFolder.kind === 'prompt-v2') {
-          return false
-        }
         return (
           resolvePromptFolderEntryDropMove(
             allFolders,
@@ -707,7 +691,7 @@
       )
       if (!sourceFolder) return false
       if (
-        entryPayload.contentKind !== getPromptFolderContentKind(destinationFolder.kind) ||
+        entryPayload.contentKind !== destinationFolder.kind ||
         sourceFolder.kind !== destinationFolder.kind
       ) {
         return false

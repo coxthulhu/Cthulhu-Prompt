@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
   import SimpleSelectorButton, {
     type SimpleSelectorButtonItem
@@ -10,7 +9,6 @@
   import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
   import { Folder, Folders, Layers } from 'lucide-svelte'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
-  import PromptFolderV2Icon from './PromptFolderV2Icon.svelte'
 
   let {
     isWorkspaceReady,
@@ -31,15 +29,9 @@
   const folderTypeItems: Array<SimpleSelectorButtonItem & { id: PromptFolderKind }> = [
     {
       id: 'prompt',
-      label: 'Prompt Folder V1',
-      detail: 'Store prompts in the original folder structure',
+      label: 'Prompt Folder',
+      detail: 'Store and organize prompts',
       icon: Folder
-    },
-    {
-      id: 'prompt-v2',
-      label: 'Prompt Folder V2',
-      detail: 'Store prompts in Active and Completed folders',
-      icon: PromptFolderV2Icon as unknown as ComponentType
     },
     {
       id: 'template',
@@ -88,9 +80,7 @@
   {isPromptFolderListLoading}
   title={selectedFolderType.id === 'template'
     ? 'Create Prompt Template Folder'
-    : selectedFolderType.id === 'prompt-v2'
-      ? 'Create Prompt Folder V2'
-      : 'Create Prompt Folder V1'}
+    : 'Create Prompt Folder'}
   subtitle="Choose the folder type and name for the new folder."
   submitText="Create Folder"
   submittingText="Creating..."
@@ -100,9 +90,7 @@
   dialogClass="w-full max-w-[600px]"
   rowLabel={selectedFolderType.id === 'template'
     ? 'Prompt Template Folder Name'
-    : selectedFolderType.id === 'prompt-v2'
-      ? 'Prompt Folder V2 Name'
-      : 'Prompt Folder V1 Name'}
+    : 'Prompt Folder Name'}
   rowDetail={selectedFolderType.id === 'template'
     ? 'Name the new prompt template folder.'
     : 'Name the new prompt folder.'}

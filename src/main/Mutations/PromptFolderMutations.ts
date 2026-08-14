@@ -91,14 +91,6 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'Parent prompt folder kind did not match' }
           }
 
-          if (committedParentPromptFolder?.committed.kind === 'prompt-v2') {
-            return { success: false, error: 'Prompt Folder V2 does not support subfolders' }
-          }
-
-          if (payload.kind === 'prompt-v2' && requestedParentPromptFolder) {
-            return { success: false, error: 'Prompt Folder V2 can only be created at the root' }
-          }
-
           const treeIndex = buildPromptFolderTreeIndex(
             committedWorkspace.committed,
             collectWorkspacePromptFolders(committedWorkspace.committed)
@@ -157,7 +149,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             displayName: normalizedDisplayName,
             entries: [],
             completedPromptIds: [],
-            settings: createEmptyPromptFolderSettings(payload.kind)
+            settings: createEmptyPromptFolderSettings()
           } as PromptFolder
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
@@ -545,25 +537,13 @@ export const setupPromptFolderMutationHandlers = (): void => {
             return { success: false, error: 'Prompt folder not loaded' }
           }
 
-          const hasPromptSettings = 'folderPrefix' in requestedPromptFolder.data
-          if (hasPromptSettings !== (committedPromptFolder.committed.kind === 'prompt')) {
-            return { success: false, error: 'Prompt folder settings did not match folder kind' }
-          }
-
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             return {
               promptFolder: tx.promptFolder.update({
                 id: requestedPromptFolder.id,
                 expectedRevision: requestedPromptFolder.expectedRevision,
                 recipe: (draft) => {
-                  if (draft.kind === 'prompt' && 'folderPrefix' in requestedPromptFolder.data) {
-                    draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
-                  } else if (
-                    draft.kind !== 'prompt' &&
-                    !('folderPrefix' in requestedPromptFolder.data)
-                  ) {
-                    draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
-                  }
+                  draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
                 }
               })
             }

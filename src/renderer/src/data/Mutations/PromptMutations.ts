@@ -123,12 +123,17 @@ export const movePrompt = mutations.move
 
 export const setPromptStatus = async (
   promptFolderId: string,
+  rootPromptFolderId: string,
   promptId: string,
   targetStatus: PromptStatus
 ): Promise<void> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder || promptFolder.kind === 'template') {
     throw new Error('Prompt folder not loaded')
+  }
+  const rootPromptFolder = promptFolderCollection.get(rootPromptFolderId)
+  if (!rootPromptFolder || rootPromptFolder.kind === 'template') {
+    throw new Error('Root prompt folder not loaded')
   }
   const prompt = promptCollection.get(promptId)
   const isCompletedPrompt = prompt?.status === PromptStatus.Completed
@@ -191,7 +196,10 @@ export const setPromptStatus = async (
       collections.promptFolder.update(promptFolderId, (draft) => {
         if (targetStatus === PromptStatus.Completed) {
           draft.entries = removeEntry(draft.entries, 'prompt', promptId)
-          if (!draft.completedPromptIds.includes(promptId)) {
+          if (
+            promptFolderId === rootPromptFolderId &&
+            !draft.completedPromptIds.includes(promptId)
+          ) {
             draft.completedPromptIds = [...draft.completedPromptIds, promptId]
           }
           return
@@ -199,6 +207,18 @@ export const setPromptStatus = async (
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
         if (isCompletedPrompt) draft.entries = [promptEntryRef(promptId), ...draft.entries]
       })
+      if (promptFolderId !== rootPromptFolderId) {
+        collections.promptFolder.update(rootPromptFolderId, (draft) => {
+          if (
+            targetStatus === PromptStatus.Completed &&
+            !draft.completedPromptIds.includes(promptId)
+          ) {
+            draft.completedPromptIds = [...draft.completedPromptIds, promptId]
+          } else if (targetStatus !== PromptStatus.Completed) {
+            draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
+          }
+        })
+      }
     },
     persistMutations: async ({ entities, transaction }) => {
       const promptEntity = entities.prompt({ id: promptId, data: createPromptFull(nextPrompt) })
@@ -206,7 +226,11 @@ export const setPromptStatus = async (
         IpcMutationPayloadResult<SetPromptStatusResponsePayload>,
         SetPromptStatusPayload
       >('set-prompt-status', {
-        promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
+        sourcePromptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
+        rootPromptFolder: entities.promptFolder({
+          id: rootPromptFolderId,
+          data: rootPromptFolder
+        }),
         prompt: { ...promptEntity, data: nextPrompt },
         status: targetStatus
       })
@@ -214,7 +238,7 @@ export const setPromptStatus = async (
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
       reconcilePrompt(payload.prompt)
     },
     conflictMessage: 'Prompt status conflict'

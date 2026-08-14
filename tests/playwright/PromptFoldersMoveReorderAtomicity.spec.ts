@@ -9,12 +9,12 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const WORKSPACE_PATH = '/ws/move-reorder-atomicity'
 const FOLDER_NAME = 'Move Reorder Atomicity'
 const ROOT_ORDER_PATH =
-  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/_FolderInfo/FolderOrder.json`
+  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
 const NESTED_WORKSPACE_PATH = '/ws/subfolders-controls'
 const NESTED_ROOT_ORDER_PATH =
-  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/_FolderInfo/FolderOrder.json`
+  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrder.json`
 const NESTED_FOLDER_ORDER_PATH =
-  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Nested/_FolderInfo/FolderOrder.json`
+  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Active/Nested/_FolderInfo/FolderOrder.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
 const moveUpSelector = (promptId: string) =>

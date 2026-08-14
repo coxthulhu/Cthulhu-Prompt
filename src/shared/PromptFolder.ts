@@ -6,10 +6,9 @@ import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
 import type { MarkdownContentUiState } from './MarkdownContentUiState'
 
-export type PromptFolderKind = 'prompt' | 'prompt-v2' | 'template'
+export type PromptFolderKind = 'prompt' | 'template'
 
-// Markdown content kinds remain stable even when prompt folder storage versions differ.
-export type PromptFolderContentKind = 'prompt' | 'template'
+export type PromptFolderContentKind = PromptFolderKind
 
 interface PromptFolderBase extends OrderContainer<EntryRef> {
   id: string
@@ -23,42 +22,20 @@ export interface PromptContentFolder extends PromptFolderBase {
   settings: PromptFolderSettings
 }
 
-// V2 prompt folders keep only root-level description settings and contain no subfolders.
-export interface PromptContentFolderV2 extends PromptFolderBase {
-  kind: 'prompt-v2'
-  settings: PromptFolderV2Settings
-}
-
 export interface PromptTemplateFolder extends PromptFolderBase {
   kind: 'template'
   settings: PromptTemplateFolderSettings
 }
 
-export type PromptFolder = PromptContentFolder | PromptContentFolderV2 | PromptTemplateFolder
+export type PromptFolder = PromptContentFolder | PromptTemplateFolder
 
-export const PROMPT_FOLDER_SETTINGS_FIELDS = [
-  'folderDescription',
-  'folderPrefix',
-  'folderSuffix'
-] as const
+export const PROMPT_FOLDER_SETTINGS_FIELDS = ['folderDescription'] as const
 
 export type PromptFolderSettingsField = (typeof PROMPT_FOLDER_SETTINGS_FIELDS)[number]
 
 export type PromptFolderSettings = Record<PromptFolderSettingsField, string | null>
 
-export type PromptTemplateFolderSettings = {
-  folderDescription: string | null
-}
-
-// V2 prompt folder settings intentionally omit V1 prompt prefixes and suffixes.
-export type PromptFolderV2Settings = {
-  folderDescription: string | null
-}
-
-export type AnyPromptFolderSettings =
-  | PromptFolderSettings
-  | PromptFolderV2Settings
-  | PromptTemplateFolderSettings
+export type PromptTemplateFolderSettings = PromptFolderSettings
 
 export type PromptFolderSettingsFieldMetadata = {
   field: PromptFolderSettingsField
@@ -73,18 +50,6 @@ export const PROMPT_FOLDER_SETTINGS_FIELD_METADATA = [
     diskFilename: 'Description.md',
     monacoModelUriSegment: 'folder-descriptions',
     findSectionKey: 'folder-description'
-  },
-  {
-    field: 'folderPrefix',
-    diskFilename: 'PromptPrefix.md',
-    monacoModelUriSegment: 'folder-prefixes',
-    findSectionKey: 'folder-prefix'
-  },
-  {
-    field: 'folderSuffix',
-    diskFilename: 'PromptSuffix.md',
-    monacoModelUriSegment: 'folder-suffixes',
-    findSectionKey: 'folder-suffix'
   }
 ] as const satisfies readonly PromptFolderSettingsFieldMetadata[]
 
@@ -103,66 +68,21 @@ export const PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
   PROMPT_FOLDER_SETTINGS_FIELD_METADATA.map(({ field, findSectionKey }) => [field, findSectionKey])
 ) as Record<PromptFolderSettingsField, string>
 
-export function createEmptyPromptFolderSettings(kind: 'template'): PromptTemplateFolderSettings
-export function createEmptyPromptFolderSettings(kind: 'prompt-v2'): PromptFolderV2Settings
-export function createEmptyPromptFolderSettings(kind?: 'prompt'): PromptFolderSettings
-export function createEmptyPromptFolderSettings(kind: PromptFolderKind): AnyPromptFolderSettings
-export function createEmptyPromptFolderSettings(
-  kind: PromptFolderKind = 'prompt'
-): AnyPromptFolderSettings {
-  return kind !== 'prompt'
-    ? { folderDescription: null }
-    : {
-        folderDescription: null,
-        folderPrefix: null,
-        folderSuffix: null
-      }
-}
+export const createEmptyPromptFolderSettings = (): PromptFolderSettings => ({
+  folderDescription: null
+})
 
-// Resolves the markdown content kind stored by a prompt folder kind.
-export const getPromptFolderContentKind = (
-  kind: PromptFolderKind
-): PromptFolderContentKind => (kind === 'template' ? 'template' : 'prompt')
-
-// Identifies both prompt storage versions while excluding template folders.
-export const isPromptContentFolderKind = (
-  kind: PromptFolderKind
-): kind is 'prompt' | 'prompt-v2' => kind !== 'template'
-
-export function copyPromptFolderSettings(settings: PromptFolderSettings): PromptFolderSettings
-export function copyPromptFolderSettings(
-  settings: PromptTemplateFolderSettings
-): PromptTemplateFolderSettings
-export function copyPromptFolderSettings(settings: AnyPromptFolderSettings): AnyPromptFolderSettings
-export function copyPromptFolderSettings(
-  settings: AnyPromptFolderSettings
-): AnyPromptFolderSettings {
-  return 'folderPrefix' in settings
-    ? {
-        folderDescription: settings.folderDescription,
-        folderPrefix: settings.folderPrefix,
-        folderSuffix: settings.folderSuffix
-      }
-    : { folderDescription: settings.folderDescription }
-}
+export const copyPromptFolderSettings = (
+  settings: PromptFolderSettings
+): PromptFolderSettings => ({ folderDescription: settings.folderDescription })
 
 export const haveSamePromptFolderSettings = (
-  left: AnyPromptFolderSettings,
-  right: AnyPromptFolderSettings
-): boolean => {
-  if ('folderPrefix' in left !== 'folderPrefix' in right) {
-    return false
-  }
-
-  if ('folderPrefix' in left && 'folderPrefix' in right) {
-    return PROMPT_FOLDER_SETTINGS_FIELDS.every((field) => left[field] === right[field])
-  }
-
-  return left.folderDescription === right.folderDescription
-}
+  left: PromptFolderSettings,
+  right: PromptFolderSettings
+): boolean => left.folderDescription === right.folderDescription
 
 export type UpdatePromptFolderSettingsPayload = {
-  promptFolder: RevisionPayloadEntity<AnyPromptFolderSettings>
+  promptFolder: RevisionPayloadEntity<PromptFolderSettings>
 }
 
 export type PromptFolderRevisionResponsePayload = {
