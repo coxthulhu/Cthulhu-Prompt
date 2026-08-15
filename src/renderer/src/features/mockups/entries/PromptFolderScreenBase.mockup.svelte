@@ -3,6 +3,7 @@
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
+    Ban,
     Check,
     CheckCheck,
     CheckCircle2,
@@ -13,6 +14,7 @@
     Copy,
     FileText,
     Folder,
+    FolderOpen,
     FolderPlus,
     GripVertical,
     Layers,
@@ -62,7 +64,7 @@
     templateLabel: string
     modifiedLabel: string
     status: MockPromptStatus
-    templateId: string | null
+    templateIds: string[]
     templateState: 'not-selected' | 'no-template' | 'selected'
   }
 
@@ -118,8 +120,8 @@
     templateLabel,
     modifiedLabel: 'Updated today',
     status,
-    templateId:
-      templateLabel === 'Draft Implementation Plan' ? 'draft-implementation-plan' : null,
+    templateIds:
+      templateLabel === 'Draft Implementation Plan' ? ['draft-implementation-plan'] : [],
     templateState:
       templateLabel === 'Not Selected'
         ? 'not-selected'
@@ -167,7 +169,17 @@
     }
   ]
 
+  const getTemplateCount = (folder: MockTemplateFolder): number =>
+    folder.templates.length +
+    folder.children.reduce((count, child) => count + getTemplateCount(child), 0)
+
+  const getTemplates = (folder: MockTemplateFolder): MockTemplate[] => [
+    ...folder.templates,
+    ...folder.children.flatMap(getTemplates)
+  ]
+
   const collapsedTemplateFolderIds = new SvelteSet<string>()
+  const selectedTemplateIds = new SvelteSet<string>()
   let templateDialogPrompt = $state<MockPrompt | null>(null)
   let templateDialogMode = $state<'select' | 'select-and-copy'>('select')
 
@@ -178,6 +190,10 @@
     templateDialogPrompt = prompt
     templateDialogMode = mode
     collapsedTemplateFolderIds.clear()
+    selectedTemplateIds.clear()
+    if (mode === 'select') {
+      for (const templateId of prompt.templateIds) selectedTemplateIds.add(templateId)
+    }
   }
 
   const closeTemplateDialog = () => {
@@ -190,9 +206,35 @@
 
   const selectTemplate = (template: MockTemplate | null) => {
     if (!templateDialogPrompt) return
-    templateDialogPrompt.templateId = template?.id ?? null
-    templateDialogPrompt.templateLabel = template?.title ?? 'No Template'
-    templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
+
+    if (templateDialogMode === 'select-and-copy') {
+      templateDialogPrompt.templateIds = template ? [template.id] : []
+      templateDialogPrompt.templateLabel = template?.title ?? 'No Template'
+      templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
+      closeTemplateDialog()
+      return
+    }
+
+    if (!template) {
+      selectedTemplateIds.clear()
+      return
+    }
+
+    if (selectedTemplateIds.has(template.id)) selectedTemplateIds.delete(template.id)
+    else selectedTemplateIds.add(template.id)
+  }
+
+  const confirmTemplateSelections = () => {
+    if (!templateDialogPrompt) return
+    const selectedTemplates = templateFolders
+      .flatMap(getTemplates)
+      .filter((template) => selectedTemplateIds.has(template.id))
+
+    templateDialogPrompt.templateIds = selectedTemplates.map((template) => template.id)
+    templateDialogPrompt.templateLabel = selectedTemplates.length
+      ? selectedTemplates.map((template) => template.title).join(', ')
+      : 'No Template'
+    templateDialogPrompt.templateState = selectedTemplates.length ? 'selected' : 'no-template'
     closeTemplateDialog()
   }
 
@@ -499,6 +541,7 @@
       <span class="base-template-chevron" data-expanded={isExpanded ? 'true' : 'false'}>
         <ChevronRight size={20} aria-hidden="true" />
       </span>
+      <Folder size={16} aria-hidden="true" />
       <span>{folder.title}</span>
     </button>
   </div>
@@ -509,9 +552,11 @@
         <button
           type="button"
           class="base-template-option-button"
-          class:active={templateDialogPrompt?.templateId === template.id}
+          class:active={templateDialogMode === 'select' && selectedTemplateIds.has(template.id)}
           style={`--base-template-indent-count:${indentCount + 1};`}
-          aria-current={templateDialogPrompt?.templateId === template.id ? 'true' : undefined}
+          aria-pressed={templateDialogMode === 'select'
+            ? selectedTemplateIds.has(template.id)
+            : undefined}
           onclick={() => selectTemplate(template)}
         >
           <span
@@ -519,6 +564,17 @@
             data-indent-count={indentCount + 1}
             aria-hidden="true"
           ></span>
+          <span
+            class="base-template-selection-mark"
+            data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'checkbox'}
+            aria-hidden="true"
+          >
+            {#if templateDialogMode === 'select-and-copy'}
+              <Copy size={16} />
+            {:else}
+              <Check size={13} />
+            {/if}
+          </span>
           <span>{template.title}</span>
         </button>
       </div>
@@ -898,66 +954,129 @@
       role="dialog"
       aria-modal="true"
       aria-label={templateDialogMode === 'select-and-copy'
-        ? 'Select Template and Copy'
-        : 'Select Template'}
+        ? 'Quick Template Selection'
+        : 'Configure Templates'}
     >
       <header class="base-template-dialog-header">
-        <h2>
-          {templateDialogMode === 'select-and-copy'
-            ? 'Select Template and Copy'
-            : 'Select Template'}
-        </h2>
+        <div class="base-template-dialog-heading">
+          <div class="base-template-dialog-icon">
+            {#if templateDialogMode === 'select-and-copy'}
+              <Copy size={24} aria-hidden="true" />
+            {:else}
+              <Layers size={24} aria-hidden="true" />
+            {/if}
+          </div>
+          <div class="base-template-dialog-heading-copy">
+            <h2>
+              {templateDialogMode === 'select-and-copy'
+                ? 'Quick Template Selection'
+                : 'Configure Templates'}
+            </h2>
+            <p>
+              {templateDialogMode === 'select-and-copy'
+                ? 'Click a template to apply it and copy this prompt immediately.'
+                : 'Select one or more templates to apply to this prompt.'}
+            </p>
+          </div>
+        </div>
         {@render IconButton(X, 'Close', { onclick: closeTemplateDialog })}
       </header>
 
       {@render Separator()}
 
       <div class="base-template-dialog-body">
-        <div class="base-template-tree" data-testid="base-mockup-template-tree">
-          <div class="base-template-option-row">
-            <button
-              type="button"
-              class="base-template-root-option"
-              class:active={templateDialogPrompt.templateState === 'no-template'}
-              aria-current={templateDialogPrompt.templateState === 'no-template'
-                ? 'true'
-                : undefined}
-              onclick={() => selectTemplate(null)}
+        <div class="base-no-template-panel">
+          <button
+            type="button"
+            class="base-template-root-option"
+            class:active={templateDialogMode === 'select' && selectedTemplateIds.size === 0}
+            aria-pressed={templateDialogMode === 'select'
+              ? selectedTemplateIds.size === 0
+              : undefined}
+            onclick={() => selectTemplate(null)}
+          >
+            <span class="base-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
+            <span class="base-no-template-copy">
+              <strong>No Template</strong>
+              <small>Use the prompt exactly as written</small>
+            </span>
+            <span
+              class="base-template-selection-mark"
+              data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'checkbox'}
+              aria-hidden="true"
             >
-              No Template
-            </button>
-          </div>
+              {#if templateDialogMode === 'select-and-copy'}
+                <Copy size={16} />
+              {:else}
+                <Check size={13} />
+              {/if}
+            </span>
+          </button>
+        </div>
 
+        <div class="base-template-tree-label">
+          <span>Template Library</span>
+          {#if templateDialogMode === 'select'}
+            <span>{selectedTemplateIds.size} selected</span>
+          {/if}
+        </div>
+        {@render Separator()}
+
+        <div class="base-template-tree" data-testid="base-mockup-template-tree">
           {#each templateFolders as rootFolder (rootFolder.id)}
-            <div class="base-template-option-row">
-              <div class="base-template-root-heading">{rootFolder.title}</div>
-            </div>
-            {#each rootFolder.templates as template (template.id)}
-              <div class="base-template-option-row">
-                <button
-                  type="button"
-                  class="base-template-option-button"
-                  class:active={templateDialogPrompt.templateId === template.id}
-                  style="--base-template-indent-count:0;"
-                  aria-current={templateDialogPrompt.templateId === template.id
-                    ? 'true'
-                    : undefined}
-                  onclick={() => selectTemplate(template)}
-                >
-                  <span
-                    class="base-template-guide"
-                    data-indent-count="0"
-                    aria-hidden="true"
-                  ></span>
-                  <span>{template.title}</span>
-                </button>
+            {@const templateCount = getTemplateCount(rootFolder)}
+            <section class="base-template-root-group">
+              <div class="base-template-root-heading">
+                <span class="base-template-root-folder-icon">
+                  <FolderOpen size={18} aria-hidden="true" />
+                </span>
+                <div class="base-template-root-copy">
+                  <strong>{rootFolder.title}</strong>
+                  <span>{templateCount} {templateCount === 1 ? 'template' : 'templates'}</span>
+                </div>
               </div>
-            {/each}
-            {#each rootFolder.children as child (child.id)}
-              {@render TemplateFolderRows(child, 0)}
-            {/each}
+              <div class="base-template-root-contents">
+                {#each rootFolder.templates as template (template.id)}
+                  <div class="base-template-option-row">
+                    <button
+                      type="button"
+                      class="base-template-option-button"
+                      class:active={templateDialogMode === 'select' &&
+                        selectedTemplateIds.has(template.id)}
+                      style="--base-template-indent-count:0;"
+                      aria-pressed={templateDialogMode === 'select'
+                        ? selectedTemplateIds.has(template.id)
+                        : undefined}
+                      onclick={() => selectTemplate(template)}
+                    >
+                      <span
+                        class="base-template-guide"
+                        data-indent-count="0"
+                        aria-hidden="true"
+                      ></span>
+                      <span
+                        class="base-template-selection-mark"
+                        data-control={templateDialogMode === 'select-and-copy'
+                          ? 'copy'
+                          : 'checkbox'}
+                        aria-hidden="true"
+                      >
+                        {#if templateDialogMode === 'select-and-copy'}
+                          <Copy size={16} />
+                        {:else}
+                          <Check size={13} />
+                        {/if}
+                      </span>
+                      <span>{template.title}</span>
+                    </button>
+                  </div>
+                {/each}
+                {#each rootFolder.children as child (child.id)}
+                  {@render TemplateFolderRows(child, 0)}
+                {/each}
+              </div>
+            </section>
           {/each}
-          <div class="base-template-tree-spacer" aria-hidden="true"></div>
         </div>
       </div>
 
@@ -967,6 +1086,16 @@
         <button type="button" class="base-dialog-cancel-button" onclick={closeTemplateDialog}>
           Cancel
         </button>
+        {#if templateDialogMode === 'select'}
+          <button
+            type="button"
+            class="base-dialog-confirm-button"
+            onclick={confirmTemplateSelections}
+          >
+            <Check size={16} aria-hidden="true" />
+            Confirm Selections
+          </button>
+        {/if}
       </footer>
     </div>
   </div>
@@ -1964,26 +2093,47 @@
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 32px);
-    max-width: 480px;
+    max-width: 580px;
     min-width: 0;
-    padding: 16px;
+    padding: 18px 16px 16px;
     width: 100%;
   }
 
   .base-template-dialog-header {
-    align-items: center;
+    align-items: flex-start;
     display: flex;
     gap: 12px;
     justify-content: space-between;
     min-width: 0;
-    padding: 0 4px 12px;
+    padding: 0 4px 16px;
+  }
+
+  .base-template-dialog-heading {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .base-template-dialog-heading-copy {
+    min-width: 0;
+  }
+
+  .base-template-dialog-icon {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    flex: 0 0 38px;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
   }
 
   .base-template-dialog-header h2 {
     color: var(--ui-normal-text);
     font-size: 18px;
     font-weight: 500;
-    line-height: 22px;
+    line-height: 24px;
     margin: 0;
     min-width: 0;
     overflow: hidden;
@@ -1991,13 +2141,27 @@
     white-space: nowrap;
   }
 
+  .base-template-dialog-heading p {
+    color: var(--ui-muted-text);
+    font-size: 13px;
+    line-height: 19px;
+    margin: 3px 0 0;
+  }
+
   .base-template-dialog-body {
     min-width: 0;
+    padding-top: 14px;
+  }
+
+  .base-no-template-panel {
+    margin-bottom: 15px;
   }
 
   .base-template-tree {
-    height: min(520px, calc(100vh - 180px));
+    max-height: min(470px, calc(100vh - 295px));
     overflow-y: auto;
+    padding-right: 4px;
+    padding-top: 8px;
     width: 100%;
   }
 
@@ -2008,7 +2172,6 @@
   }
 
   .base-template-root-option,
-  .base-template-root-heading,
   .base-template-option-button,
   .base-template-folder-button {
     box-sizing: border-box;
@@ -2023,16 +2186,126 @@
   .base-template-root-heading {
     align-items: center;
     display: flex;
-    font-weight: 600;
-    padding: 0 13px;
     text-align: left;
+  }
+
+  .base-template-root-option {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    display: grid;
+    gap: 11px;
+    grid-template-columns: 32px minmax(0, 1fr) 20px;
+    height: 54px;
+    padding: 0 13px 0 10px;
+  }
+
+  .base-no-template-icon {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+  }
+
+  .base-no-template-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .base-no-template-copy strong {
+    color: var(--ui-normal-text);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+  }
+
+  .base-no-template-copy small {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    line-height: 17px;
+  }
+
+  .base-template-tree-label {
+    align-items: flex-end;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 3px 8px;
+  }
+
+  .base-template-tree-label > span:first-child {
+    color: var(--ui-normal-text);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+  }
+
+  .base-template-tree-label span:last-child:not(:first-child) {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .base-template-root-group {
+    border: 1px solid var(--ui-card-nested-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .base-template-root-heading {
+    background: var(--ui-card-normal-surface);
+    border-bottom: 1px solid var(--ui-card-nested-border);
+    color: var(--ui-normal-text);
+    gap: 9px;
+    padding: 9px 12px;
+  }
+
+  .base-template-root-folder-icon {
+    align-items: center;
+    color: var(--ui-secondary-icon-glyph);
+    display: flex;
+  }
+
+  .base-template-root-copy {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .base-template-root-copy strong {
+    color: var(--ui-normal-text);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .base-template-root-copy span {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .base-template-root-contents {
+    background: var(--ui-card-solid-surface);
+    padding: 5px;
+  }
+
+  .base-template-option-button,
+  .base-template-folder-button {
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
   }
 
   .base-template-root-option,
   .base-template-option-button,
   .base-template-folder-button {
     background: var(--ui-ghost-surface);
-    border: 0;
     transition:
       background-color var(--ui-animation-duration-fast) ease-out,
       color var(--ui-animation-duration-fast) ease-out;
@@ -2041,19 +2314,23 @@
   .base-template-root-option:hover,
   .base-template-option-button:hover,
   .base-template-folder-button:hover {
-    background: var(--ui-neutral-normal-surface);
+    background: var(--ui-neutral-subtle-action-hover-fill);
     color: var(--ui-normal-text);
   }
 
   .base-template-root-option.active,
   .base-template-option-button.active {
-    background: var(--ui-neutral-emphasis-surface);
+    background: var(--ui-accent-action-fill);
     color: var(--ui-normal-text);
+  }
+
+  .base-template-root-option.active {
+    border-color: var(--ui-accent-muted-border);
   }
 
   .base-template-root-option.active:hover,
   .base-template-option-button.active:hover {
-    background: var(--ui-neutral-selection-surface);
+    background: var(--ui-accent-action-hover-fill);
   }
 
   .base-template-option-button {
@@ -2062,13 +2339,14 @@
     gap: 8px;
     grid-template-columns:
       calc(5px + 12px * var(--base-template-indent-count, 1))
+      20px
       minmax(0, 1fr);
-    padding: 0 22px 0 0;
+    padding: 0 14px 0 0;
     text-align: left;
   }
 
   .base-template-option-button > span:last-child,
-  .base-template-folder-button > span:last-child {
+  .base-template-folder-button > span:nth-child(3) {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2089,6 +2367,37 @@
     border-right: 0;
   }
 
+  .base-template-selection-mark {
+    align-items: center;
+    box-sizing: border-box;
+    display: inline-flex;
+    height: 17px;
+    justify-content: center;
+    width: 17px;
+  }
+
+  .base-template-selection-mark[data-control='checkbox'] {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 4px;
+    color: transparent;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-template-selection-mark[data-control='copy'] {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .base-template-option-button.active
+    .base-template-selection-mark[data-control='checkbox'],
+  .base-template-root-option.active .base-template-selection-mark[data-control='checkbox'] {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-normal-border);
+    color: var(--ui-normal-text);
+  }
+
   .base-template-tree:hover .base-template-guide,
   .base-template-tree:focus-within .base-template-guide {
     opacity: 1;
@@ -2098,9 +2407,13 @@
     align-items: center;
     display: grid;
     gap: 8px;
-    grid-template-columns: 24px minmax(0, 1fr);
+    grid-template-columns: 24px 18px minmax(0, 1fr);
     padding: 0 12px 0 calc(9px + 12px * var(--base-template-indent-count, 0));
     text-align: left;
+  }
+
+  .base-template-folder-button > :global(svg) {
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .base-template-chevron {
@@ -2117,15 +2430,35 @@
     transform: rotate(90deg);
   }
 
-  .base-template-tree-spacer {
-    height: 24px;
-  }
-
   .base-template-dialog-footer {
     display: flex;
+    gap: 8px;
     justify-content: flex-end;
     min-width: 0;
     padding-top: 16px;
+  }
+
+  .base-dialog-confirm-button {
+    align-items: center;
+    background: var(--ui-accent-action-fill);
+    border: 1px solid var(--ui-accent-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-normal-text);
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 600;
+    gap: 7px;
+    height: 40px;
+    padding: 0 15px;
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease;
+  }
+
+  .base-dialog-confirm-button:hover,
+  .base-dialog-confirm-button:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
   }
 
   .base-dialog-cancel-button {
