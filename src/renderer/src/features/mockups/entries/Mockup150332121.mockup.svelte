@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import { onDestroy } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
-    ArrowRight,
     Ban,
     Check,
     CheckCheck,
@@ -24,8 +23,10 @@
     Plus,
     Search,
     Settings,
+    Tags,
     Trash2,
     Undo2,
+    Zap,
     X
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
@@ -59,12 +60,14 @@
   }
 
   type MockPrompt = MockDocument & {
+    categoryLabel: string
     title: string
     folderId: string
     templateLabel: string
     modifiedLabel: string
     status: MockPromptStatus
-    templateId: string | null
+    templateIds: string[]
+    templateState: 'not-selected' | 'no-template' | 'selected'
   }
 
   type MockTemplate = {
@@ -93,11 +96,7 @@
     children: MockFolder[]
   }
 
-  const createSettings = (
-    folderId: string,
-    description: string,
-    prefix: string
-  ): MockFolderSetting[] => [
+  const createSettings = (folderId: string, description: string): MockFolderSetting[] => [
     {
       id: `${folderId}-description`,
       title: 'Folder Description',
@@ -106,24 +105,6 @@
       isPresent: true,
       minLines: 1,
       text: description
-    },
-    {
-      id: `${folderId}-prefix`,
-      title: 'Prompt Folder Prefix',
-      description:
-        'Text to add before each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
-      isPresent: true,
-      minLines: 1,
-      text: prefix
-    },
-    {
-      id: `${folderId}-suffix`,
-      title: 'Prompt Folder Suffix',
-      description:
-        'Text to add after each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
-      isPresent: false,
-      minLines: 1,
-      text: ''
     }
   ]
 
@@ -135,13 +116,30 @@
     text: string,
     status: MockPromptStatus = MockPromptStatus.Todo
   ): MockPrompt => ({
+    categoryLabel:
+      title.includes('implementation') || title.includes('approved')
+        ? 'Implementation'
+        : title.includes('regression') || title.includes('Review')
+          ? 'Quality'
+          : title.includes('documentation') || title.includes('handoff')
+            ? 'Documentation'
+            : title.includes('requirements') || title.includes('plan')
+              ? 'Planning'
+              : 'Discovery',
     id,
     title,
     folderId,
     templateLabel,
     modifiedLabel: 'Updated today',
     status,
-    templateId: null,
+    templateIds:
+      templateLabel === 'Draft Implementation Plan' ? ['draft-implementation-plan'] : [],
+    templateState:
+      templateLabel === 'Not Selected'
+        ? 'not-selected'
+        : templateLabel === 'No Template'
+          ? 'no-template'
+          : 'selected',
     text
   })
 
@@ -187,10 +185,48 @@
     folder.templates.length +
     folder.children.reduce((count, child) => count + getTemplateCount(child), 0)
 
+  const getTemplates = (folder: MockTemplateFolder): MockTemplate[] => [
+    ...folder.templates,
+    ...folder.children.flatMap(getTemplates)
+  ]
+
   const collapsedTemplateFolderIds = new SvelteSet<string>()
   const selectedTemplateIds = new SvelteSet<string>()
   let templateDialogPrompt = $state<MockPrompt | null>(null)
   let templateDialogMode = $state<'select' | 'select-and-copy'>('select')
+  let categoriesDialog: HTMLDialogElement
+
+  const categories = [
+    { id: 'Discovery', name: 'Discovery' },
+    { id: 'Planning', name: 'Planning' },
+    { id: 'Implementation', name: 'Implementation' },
+    { id: 'Quality', name: 'Quality' },
+    { id: 'Documentation', name: 'Documentation' }
+  ]
+
+  const openCategoriesDialog = () => {
+    if (!categoriesDialog.open) categoriesDialog.showModal()
+  }
+
+  const closeCategoriesDialog = () => {
+    categoriesDialog.close()
+  }
+
+  const handleCategoriesDialogClick = (event: MouseEvent) => {
+    if (event.target !== event.currentTarget) return
+
+    const bounds = categoriesDialog.getBoundingClientRect()
+    const clickedOutside =
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom
+
+    if (clickedOutside) closeCategoriesDialog()
+  }
+
+  // Side effect: present the category-management concept immediately when this mockup mounts.
+  onMount(openCategoriesDialog)
 
   const openTemplateDialog = (
     prompt: MockPrompt,
@@ -200,7 +236,9 @@
     templateDialogMode = mode
     collapsedTemplateFolderIds.clear()
     selectedTemplateIds.clear()
-    if (prompt.templateId) selectedTemplateIds.add(prompt.templateId)
+    if (mode === 'select') {
+      for (const templateId of prompt.templateIds) selectedTemplateIds.add(templateId)
+    }
   }
 
   const closeTemplateDialog = () => {
@@ -215,8 +253,9 @@
     if (!templateDialogPrompt) return
 
     if (templateDialogMode === 'select-and-copy') {
-      templateDialogPrompt.templateId = template?.id ?? null
+      templateDialogPrompt.templateIds = template ? [template.id] : []
       templateDialogPrompt.templateLabel = template?.title ?? 'No Template'
+      templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
       closeTemplateDialog()
       return
     }
@@ -232,15 +271,15 @@
 
   const confirmTemplateSelections = () => {
     if (!templateDialogPrompt) return
-    const selectedTemplates = templateFolders.flatMap((folder) => [
-      ...folder.templates,
-      ...folder.children.flatMap((child) => child.templates)
-    ]).filter((template) => selectedTemplateIds.has(template.id))
+    const selectedTemplates = templateFolders
+      .flatMap(getTemplates)
+      .filter((template) => selectedTemplateIds.has(template.id))
 
-    templateDialogPrompt.templateId = selectedTemplates[0]?.id ?? null
+    templateDialogPrompt.templateIds = selectedTemplates.map((template) => template.id)
     templateDialogPrompt.templateLabel = selectedTemplates.length
       ? selectedTemplates.map((template) => template.title).join(', ')
       : 'No Template'
+    templateDialogPrompt.templateState = selectedTemplates.length ? 'selected' : 'no-template'
     closeTemplateDialog()
   }
 
@@ -254,7 +293,7 @@
       'base-discovery',
       'Map the current implementation',
       'base-root',
-      'No Template',
+      'Not Selected',
       [
         'Inspect the existing implementation and summarize the relevant components, data flow, and tests.',
         '',
@@ -277,7 +316,7 @@
       'base-plan',
       'Draft an implementation plan',
       'base-root',
-      'No Template',
+      'Draft Implementation Plan',
       [
         'Create an implementation plan grounded in the current repository.',
         '',
@@ -319,16 +358,13 @@
     )
   ])
 
-  openTemplateDialog(rootPrompts[0], 'select')
-
   let subfolders = $state<MockFolder[]>([
     {
       id: 'base-implementation',
       title: 'Implementation',
       settings: createSettings(
         'base-implementation',
-        'Prompts used while implementing an approved product change.',
-        'Work directly in the current repository and follow its local contribution guidelines.'
+        'Prompts used while implementing an approved product change.'
       ),
       prompts: [
         createPrompt(
@@ -350,8 +386,7 @@
           title: 'Verification',
           settings: createSettings(
             'base-verification',
-            'Prompts for validating product behavior after implementation.',
-            'Use the repository test helpers and stable data-testid selectors.'
+            'Prompts for validating product behavior after implementation.'
           ),
           prompts: [
             createPrompt(
@@ -562,11 +597,11 @@
         <button
           type="button"
           class="base-template-option-button"
-          class:active={templateDialogMode === 'select-and-copy'
-            ? templateDialogPrompt?.templateId === template.id
-            : selectedTemplateIds.has(template.id)}
+          class:active={templateDialogMode === 'select' && selectedTemplateIds.has(template.id)}
           style={`--base-template-indent-count:${indentCount + 1};`}
-          aria-pressed={selectedTemplateIds.has(template.id)}
+          aria-pressed={templateDialogMode === 'select'
+            ? selectedTemplateIds.has(template.id)
+            : undefined}
           onclick={() => selectTemplate(template)}
         >
           <span
@@ -574,8 +609,16 @@
             data-indent-count={indentCount + 1}
             aria-hidden="true"
           ></span>
-          <span class="base-template-selection-mark" aria-hidden="true">
-            <Check size={13} />
+          <span
+            class="base-template-selection-mark"
+            data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'checkbox'}
+            aria-hidden="true"
+          >
+            {#if templateDialogMode === 'select-and-copy'}
+              <Copy size={16} />
+            {:else}
+              <Check size={13} />
+            {/if}
           </span>
           <span>{template.title}</span>
         </button>
@@ -589,25 +632,25 @@
 
 {#snippet StatusControl(prompt: MockPrompt)}
   {@const isCompleted = prompt.status === MockPromptStatus.Completed}
+  {@const isTodo = prompt.status === MockPromptStatus.Todo}
   {@const StatusIcon = isCompleted
     ? CheckCircle2
     : prompt.status === MockPromptStatus.InProgress
       ? Play
       : CircleDashed}
   <div class="base-status-control">
-    <div class="base-status-segmented" data-status={prompt.status}>
-      {@render IconButton(
-        isCompleted ? Undo2 : CheckCheck,
-        isCompleted ? 'Uncomplete prompt' : 'Complete prompt',
-        {
-          hoverVariant: isCompleted ? 'neutral' : 'success',
-          onclick: () =>
-            setPromptStatus(
-              prompt,
-              isCompleted ? MockPromptStatus.Todo : MockPromptStatus.Completed
-            )
-        }
-      )}
+    <div
+      class="base-status-segmented"
+      data-status={prompt.status}
+      data-leading-action={!isTodo ? 'true' : 'false'}
+      data-trailing-action={!isCompleted ? 'true' : 'false'}
+    >
+      {#if !isTodo}
+        {@render IconButton(Undo2, isCompleted ? 'Uncomplete prompt' : 'Set prompt to Todo', {
+          hoverVariant: 'neutral',
+          onclick: () => setPromptStatus(prompt, MockPromptStatus.Todo)
+        })}
+      {/if}
       <span class="base-status-selector">
         <button
           type="button"
@@ -631,6 +674,12 @@
           <ChevronDown size={16} aria-hidden="true" />
         </button>
       </span>
+      {#if !isCompleted}
+        {@render IconButton(CheckCheck, 'Complete prompt', {
+          hoverVariant: 'success',
+          onclick: () => setPromptStatus(prompt, MockPromptStatus.Completed)
+        })}
+      {/if}
     </div>
   </div>
 {/snippet}
@@ -721,9 +770,18 @@
           <div class="base-title-copy">
             <input aria-label="Prompt title" bind:value={prompt.title} />
             <div class="base-metadata-row">
-              <span class="base-folder-label">
+              <span
+                class="base-folder-label"
+                data-template-state={prompt.templateState}
+                title={prompt.templateLabel}
+              >
                 <Layers size={12} aria-hidden="true" />
                 {prompt.templateLabel}
+              </span>
+              {@render SeparatorDot()}
+              <span class="base-category-label" title={prompt.categoryLabel}>
+                <Tags size={12} aria-hidden="true" />
+                {prompt.categoryLabel}
               </span>
               {@render SeparatorDot()}
               <span>{prompt.modifiedLabel}</span>
@@ -735,17 +793,30 @@
 
         <div class="base-prompt-actions">
           <div class="base-icon-button-bar">
-            {@render IconButton(Trash2, 'Delete prompt', { hoverVariant: 'danger' })}
+            {#if prompt.templateState === 'not-selected'}
+              {@render IconButton(Zap, 'Select Template and Copy', {
+                onclick: () => openTemplateDialog(prompt, 'select-and-copy')
+              })}
+            {:else}
+              {@render IconButton(Copy, 'Copy prompt', {
+                hoverVariant: 'accent',
+                onclick: () => {
+                  if (prompt.status === MockPromptStatus.Todo) {
+                    setPromptStatus(prompt, MockPromptStatus.InProgress)
+                  }
+                }
+              })}
+            {/if}
             {@render IconButton(Layers, 'Set Template', {
               onclick: () => openTemplateDialog(prompt)
-            })}
-            {@render IconButton(Copy, 'Copy prompt', { hoverVariant: 'accent' })}
-            {@render IconButton(ArrowRight, 'Select Template and Copy', {
-              onclick: () => openTemplateDialog(prompt, 'select-and-copy')
             })}
           </div>
           <span class="base-actions-separator" aria-hidden="true"></span>
           {@render StatusControl(prompt)}
+          <span class="base-actions-separator" aria-hidden="true"></span>
+          <div class="base-prompt-delete-section">
+            {@render IconButton(Trash2, 'Delete prompt', { hoverVariant: 'danger' })}
+          </div>
         </div>
       </header>
 
@@ -810,7 +881,7 @@
               <Settings size={20} aria-hidden="true" />
               <div class="base-settings-toolbar-copy">
                 <span>Folder Settings</span>
-                <span>{folder.settings.filter((setting) => setting.isPresent).length} of 3 configured</span>
+                <span>{folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings.length} configured</span>
               </div>
             </div>
             <div class="base-settings-toolbar-actions" role="group" aria-label="Folder settings">
@@ -877,7 +948,7 @@
         <div class="base-root-title-block">
           <div class="base-root-eyebrow">
             <Folder size={14} aria-hidden="true" />
-            <span>Prompt folder</span>
+            <span>Prompt Folder</span>
           </div>
           <div class="base-root-title-line">
             <h1>Product Work</h1>
@@ -888,7 +959,17 @@
             })}
           </div>
         </div>
-        {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger' })}
+        <div class="base-root-actions">
+          <button
+            type="button"
+            class="base-manage-categories-button"
+            onclick={openCategoriesDialog}
+          >
+            <Tags size={16} aria-hidden="true" />
+            <span>Manage Categories</span>
+          </button>
+          {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger' })}
+        </div>
       </div>
 
       <div class="base-filter-bar" role="group" aria-label="Filter prompts">
@@ -921,6 +1002,93 @@
   </div>
 </main>
 
+<dialog
+  bind:this={categoriesDialog}
+  class="base-categories-dialog"
+  aria-labelledby="base-categories-dialog-title"
+  onclick={handleCategoriesDialogClick}
+  oncancel={(event) => {
+    event.preventDefault()
+    closeCategoriesDialog()
+  }}
+>
+  <header class="base-categories-dialog-header">
+    <div class="base-categories-dialog-heading">
+      <span class="base-categories-dialog-icon">
+        <Tags size={23} aria-hidden="true" />
+      </span>
+      <div>
+        <h2 id="base-categories-dialog-title">Manage Categories</h2>
+        <p>Categories are available to every prompt in Product Work.</p>
+      </div>
+    </div>
+    {@render IconButton(X, 'Close', { onclick: closeCategoriesDialog })}
+  </header>
+
+  {@render Separator()}
+
+  <div class="base-categories-dialog-body">
+    <div class="base-categories-toolbar">
+      <div class="base-categories-count">
+        <strong>Categories</strong>
+        <span>{categories.length} total</span>
+      </div>
+      <button type="button" class="base-add-category-button">
+        <Plus size={16} aria-hidden="true" />
+        <span>Add Category</span>
+      </button>
+    </div>
+
+    <div class="base-categories-table">
+      <div class="base-categories-table-header" aria-hidden="true">
+        <span>Name</span>
+        <span>ID</span>
+        <span></span>
+      </div>
+      <div class="base-categories-list">
+        {#each categories as category, categoryIndex (category.id)}
+          <div class="base-category-row">
+            <div class="base-category-name-field">
+              <span class="base-category-swatch" data-index={categoryIndex} aria-hidden="true">
+                <Tags size={14} />
+              </span>
+              <input
+                aria-label={`${category.name} category name`}
+                value={category.name}
+                spellcheck="false"
+              />
+            </div>
+            <div class="base-category-id-field">
+              <span aria-hidden="true">#</span>
+              <input
+                aria-label={`${category.name} category ID`}
+                value={category.id}
+                spellcheck="false"
+              />
+            </div>
+            {@render IconButton(Trash2, `Remove ${category.name}`, {
+              hoverVariant: 'danger',
+              size: 'compact'
+            })}
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+
+  {@render Separator()}
+
+  <footer class="base-categories-dialog-footer">
+    <button type="button" class="base-dialog-cancel-button" onclick={closeCategoriesDialog}>
+      Cancel
+    </button>
+    <button type="button" class="base-dialog-confirm-button" onclick={closeCategoriesDialog}>
+      <Check size={16} aria-hidden="true" />
+      Save Changes
+    </button>
+  </footer>
+</dialog>
+
 {#if templateDialogPrompt}
   <div
     class="base-template-dialog-layer"
@@ -945,7 +1113,7 @@
               <Layers size={24} aria-hidden="true" />
             {/if}
           </div>
-          <div>
+          <div class="base-template-dialog-heading-copy">
             <h2>
               {templateDialogMode === 'select-and-copy'
                 ? 'Quick Template Selection'
@@ -968,12 +1136,10 @@
           <button
             type="button"
             class="base-template-root-option"
-            class:active={templateDialogMode === 'select-and-copy'
-              ? templateDialogPrompt.templateId === null
-              : selectedTemplateIds.size === 0}
-            aria-pressed={templateDialogMode === 'select-and-copy'
-              ? templateDialogPrompt.templateId === null
-              : selectedTemplateIds.size === 0}
+            class:active={templateDialogMode === 'select' && selectedTemplateIds.size === 0}
+            aria-pressed={templateDialogMode === 'select'
+              ? selectedTemplateIds.size === 0
+              : undefined}
             onclick={() => selectTemplate(null)}
           >
             <span class="base-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
@@ -981,8 +1147,16 @@
               <strong>No Template</strong>
               <small>Use the prompt exactly as written</small>
             </span>
-            <span class="base-template-selection-mark" aria-hidden="true">
-              <Check size={13} />
+            <span
+              class="base-template-selection-mark"
+              data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'checkbox'}
+              aria-hidden="true"
+            >
+              {#if templateDialogMode === 'select-and-copy'}
+                <Copy size={16} />
+              {:else}
+                <Check size={13} />
+              {/if}
             </span>
           </button>
         </div>
@@ -993,6 +1167,7 @@
             <span>{selectedTemplateIds.size} selected</span>
           {/if}
         </div>
+        {@render Separator()}
 
         <div class="base-template-tree" data-testid="base-mockup-template-tree">
           {#each templateFolders as rootFolder (rootFolder.id)}
@@ -1013,17 +1188,31 @@
                     <button
                       type="button"
                       class="base-template-option-button"
-                      class:active={templateDialogMode === 'select-and-copy'
-                        ? templateDialogPrompt.templateId === template.id
-                        : selectedTemplateIds.has(template.id)}
+                      class:active={templateDialogMode === 'select' &&
+                        selectedTemplateIds.has(template.id)}
                       style="--base-template-indent-count:0;"
-                      aria-pressed={selectedTemplateIds.has(template.id)}
+                      aria-pressed={templateDialogMode === 'select'
+                        ? selectedTemplateIds.has(template.id)
+                        : undefined}
                       onclick={() => selectTemplate(template)}
                     >
-                      <span class="base-template-guide" data-indent-count="0" aria-hidden="true"
+                      <span
+                        class="base-template-guide"
+                        data-indent-count="0"
+                        aria-hidden="true"
                       ></span>
-                      <span class="base-template-selection-mark" aria-hidden="true">
-                        <Check size={13} />
+                      <span
+                        class="base-template-selection-mark"
+                        data-control={templateDialogMode === 'select-and-copy'
+                          ? 'copy'
+                          : 'checkbox'}
+                        aria-hidden="true"
+                      >
+                        {#if templateDialogMode === 'select-and-copy'}
+                          <Copy size={16} />
+                        {:else}
+                          <Check size={13} />
+                        {/if}
                       </span>
                       <span>{template.title}</span>
                     </button>
@@ -1035,7 +1224,6 @@
               </div>
             </section>
           {/each}
-          <div class="base-template-tree-spacer" aria-hidden="true"></div>
         </div>
       </div>
 
@@ -1051,7 +1239,7 @@
             class="base-dialog-confirm-button"
             onclick={confirmTemplateSelections}
           >
-            <Check size={17} aria-hidden="true" />
+            <Check size={16} aria-hidden="true" />
             Confirm Selections
           </button>
         {/if}
@@ -1180,7 +1368,8 @@
   }
 
   .base-separator {
-    background: var(--ui-neutral-muted-border);
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    box-sizing: border-box;
     flex: 0 0 1px;
     height: 1px;
     width: 100%;
@@ -1361,7 +1550,7 @@
     background: transparent;
     border: 0;
     display: flex;
-    height: 100%;
+    height: 12px;
     padding: 0 9px;
     width: 100%;
   }
@@ -1375,7 +1564,7 @@
   }
 
   .base-divider-line-button .base-separator {
-    transition: background-color var(--ui-animation-duration-standard) ease;
+    transition: border-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-divider-actions {
@@ -1413,9 +1602,14 @@
     color: var(--ui-accent-normal-text);
   }
 
-  .base-divider-row:hover .base-divider-line-button .base-separator,
-  .base-divider-row:focus-within .base-divider-line-button .base-separator {
-    background: var(--ui-accent-normal-border);
+  .base-divider-row:has(.base-divider-line-button:hover) .base-divider-line-button .base-separator,
+  .base-divider-row:has(
+      .base-divider-line-button:focus-visible,
+      .base-divider-action-button:focus-visible
+    )
+    .base-divider-line-button
+    .base-separator {
+    border-color: var(--ui-accent-normal-border);
   }
 
   .base-editor-card {
@@ -1584,10 +1778,32 @@
 
   .base-folder-label {
     align-items: center;
-    color: var(--ui-secondary-text);
     display: inline-flex;
     gap: 4px;
     max-width: 150px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .base-folder-label[data-template-state='not-selected'] {
+    color: var(--ui-secondary-text);
+  }
+
+  .base-folder-label[data-template-state='no-template'] {
+    color: var(--ui-muted-text);
+  }
+
+  .base-folder-label[data-template-state='selected'] {
+    color: var(--ui-normal-text);
+  }
+
+  .base-category-label {
+    align-items: center;
+    color: var(--ui-accent-normal-text);
+    display: inline-flex;
+    gap: 4px;
+    max-width: 118px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1603,6 +1819,7 @@
 
   .base-prompt-actions {
     gap: 12px;
+    padding-right: 12px;
   }
 
   .base-folder-chevron {
@@ -1626,7 +1843,8 @@
 
   .base-actions-separator {
     align-self: stretch;
-    background: var(--ui-neutral-normal-border);
+    border-left: 1px solid var(--ui-neutral-normal-border);
+    box-sizing: border-box;
     flex: 0 0 1px;
     width: 1px;
   }
@@ -1635,8 +1853,6 @@
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
-    padding-left: 4px;
-    padding-right: 16px;
   }
 
   .base-status-segmented {
@@ -1644,11 +1860,48 @@
     display: inline-flex;
   }
 
-  .base-status-segmented > .base-icon-button {
-    background: transparent;
+  .base-status-segmented > .base-icon-button,
+  .base-status-segmented > .base-status-selector {
+    position: relative;
+  }
+
+  .base-status-segmented > .base-icon-button:hover,
+  .base-status-segmented > .base-icon-button:focus-visible,
+  .base-status-segmented > .base-status-selector:hover,
+  .base-status-segmented > .base-status-selector:focus-within {
+    z-index: 1;
+  }
+
+  .base-status-segmented[data-leading-action='true'] > .base-icon-button:first-child {
     border-bottom-right-radius: 0;
-    border-right: 0;
     border-top-right-radius: 0;
+  }
+
+  .base-status-segmented[data-leading-action='true'] > .base-status-selector {
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    margin-left: -1px;
+  }
+
+  .base-status-segmented[data-trailing-action='true'] > .base-status-selector {
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .base-status-segmented[data-trailing-action='true'] > .base-icon-button:last-child {
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    margin-left: -1px;
+  }
+
+  .base-status-segmented[data-leading-action='true']
+    > .base-icon-button:first-child:not(:hover):not(:focus-visible) {
+    border-right-color: transparent;
+  }
+
+  .base-status-segmented[data-trailing-action='true']
+    > .base-icon-button:last-child:not(:hover):not(:focus-visible) {
+    border-left-color: transparent;
   }
 
   .base-status-selector {
@@ -1656,7 +1909,7 @@
 
     align-items: stretch;
     border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 0 var(--cthulhu-ui-radius-control) var(--cthulhu-ui-radius-control) 0;
+    border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
     display: inline-flex;
     height: 36px;
@@ -1692,7 +1945,6 @@
   }
 
   .base-status-value {
-    border-right: 1px solid var(--ui-neutral-normal-border);
     box-sizing: border-box;
     font-size: 14px;
     font-weight: 500;
@@ -1704,6 +1956,12 @@
 
   .base-status-more {
     width: 23px;
+  }
+
+  .base-prompt-delete-section {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
   }
 
   .base-status-value:focus-visible,
@@ -1972,6 +2230,272 @@
     width: 100%;
   }
 
+  .base-root-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+  }
+
+  .base-manage-categories-button,
+  .base-add-category-button {
+    align-items: center;
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 600;
+    gap: 7px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .base-manage-categories-button {
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
+    color: var(--ui-hoverable-text);
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .base-manage-categories-button :global(svg) {
+    color: var(--ui-accent-normal-text);
+  }
+
+  .base-manage-categories-button:hover,
+  .base-manage-categories-button:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .base-categories-dialog {
+    background: var(--ui-card-solid-surface);
+    border: 1px solid var(--ui-card-normal-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    box-shadow: 0 12px 30px var(--ui-card-normal-shadow);
+    box-sizing: border-box;
+    color: var(--ui-normal-text);
+    margin: auto;
+    max-height: calc(100vh - 32px);
+    max-width: 680px;
+    padding: 18px 16px 16px;
+    width: calc(100% - 32px);
+  }
+
+  .base-categories-dialog::backdrop {
+    background: var(--ui-card-normal-shadow);
+  }
+
+  .base-categories-dialog-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 0 4px 16px;
+  }
+
+  .base-categories-dialog-heading {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .base-categories-dialog-icon {
+    align-items: center;
+    background: var(--ui-accent-action-fill);
+    border: 1px solid var(--ui-accent-muted-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    color: var(--ui-accent-normal-text);
+    display: flex;
+    flex: 0 0 40px;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+
+  .base-categories-dialog-heading h2 {
+    color: var(--ui-normal-text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 24px;
+    margin: 0;
+  }
+
+  .base-categories-dialog-heading p {
+    color: var(--ui-muted-text);
+    font-size: 13px;
+    line-height: 19px;
+    margin: 3px 0 0;
+  }
+
+  .base-categories-dialog-body {
+    min-width: 0;
+    padding: 15px 3px 16px;
+  }
+
+  .base-categories-toolbar {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 0 1px 12px;
+  }
+
+  .base-categories-count {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+  }
+
+  .base-categories-count strong {
+    color: var(--ui-normal-text);
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  .base-categories-count span {
+    color: var(--ui-muted-text);
+    font-size: 12px;
+  }
+
+  .base-add-category-button {
+    background: var(--ui-accent-action-fill);
+    border: 1px solid var(--ui-accent-muted-border);
+    color: var(--ui-normal-text);
+    height: 32px;
+    padding: 0 11px;
+  }
+
+  .base-add-category-button:hover,
+  .base-add-category-button:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .base-categories-table {
+    border: 1px solid var(--ui-card-nested-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    overflow: hidden;
+  }
+
+  .base-categories-table-header,
+  .base-category-row {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr) 28px;
+    min-width: 0;
+  }
+
+  .base-categories-table-header {
+    background: var(--ui-card-normal-surface);
+    border-bottom: 1px solid var(--ui-card-nested-border);
+    color: var(--ui-muted-text);
+    font-size: 11px;
+    font-weight: 700;
+    height: 30px;
+    letter-spacing: 0.04em;
+    padding: 0 10px;
+    text-transform: uppercase;
+  }
+
+  .base-categories-list {
+    background: var(--ui-card-solid-surface);
+    display: grid;
+  }
+
+  .base-category-row {
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    padding: 8px 10px;
+  }
+
+  .base-category-row:last-child {
+    border-bottom: 0;
+  }
+
+  .base-category-name-field,
+  .base-category-id-field {
+    align-items: center;
+    background: var(--ui-editor-content-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    display: flex;
+    height: 34px;
+    min-width: 0;
+  }
+
+  .base-category-name-field {
+    gap: 8px;
+    padding: 0 9px;
+  }
+
+  .base-category-id-field {
+    color: var(--ui-muted-text);
+    gap: 2px;
+    padding: 0 9px;
+  }
+
+  .base-category-name-field:focus-within,
+  .base-category-id-field:focus-within {
+    border-color: var(--ui-neutral-focus-border);
+  }
+
+  .base-category-name-field input,
+  .base-category-id-field input {
+    background: transparent;
+    border: 0;
+    color: var(--ui-normal-text);
+    font-size: 13px;
+    height: 30px;
+    min-width: 0;
+    outline: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  .base-category-id-field input {
+    color: var(--ui-secondary-text);
+    font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  .base-category-swatch {
+    align-items: center;
+    background: var(--ui-accent-action-fill);
+    border-radius: 6px;
+    color: var(--ui-accent-normal-text);
+    display: inline-flex;
+    flex: 0 0 24px;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+  }
+
+  .base-category-swatch[data-index='1'],
+  .base-category-swatch[data-index='4'] {
+    background: var(--ui-neutral-action-fill);
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .base-category-swatch[data-index='2'] {
+    background: var(--ui-success-action-hover-fill);
+    color: var(--ui-success-normal-text);
+  }
+
+  .base-category-swatch[data-index='3'] {
+    background: var(--ui-danger-action-hover-fill);
+    color: var(--ui-danger-icon-glyph);
+  }
+
+  .base-categories-dialog-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 16px;
+  }
+
   .base-template-dialog-layer {
     -webkit-app-region: no-drag;
     align-items: center;
@@ -1987,15 +2511,15 @@
   .base-template-dialog {
     background: var(--ui-card-solid-surface);
     border: 1px solid var(--ui-card-normal-border);
-    border-radius: calc(var(--cthulhu-ui-radius-card) + 2px);
-    box-shadow: 0 14px 36px var(--ui-card-normal-shadow);
+    border-radius: var(--cthulhu-ui-radius-card);
+    box-shadow: 0 8px 12px var(--ui-card-normal-shadow);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 32px);
-    max-width: 620px;
+    max-width: 580px;
     min-width: 0;
-    padding: 18px;
+    padding: 18px 16px 16px;
     width: 100%;
   }
 
@@ -2005,7 +2529,7 @@
     gap: 12px;
     justify-content: space-between;
     min-width: 0;
-    padding: 0 2px 16px;
+    padding: 0 4px 16px;
   }
 
   .base-template-dialog-heading {
@@ -2015,11 +2539,15 @@
     min-width: 0;
   }
 
+  .base-template-dialog-heading-copy {
+    min-width: 0;
+  }
+
   .base-template-dialog-icon {
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    flex: 0 0 auto;
+    flex: 0 0 38px;
     height: 38px;
     justify-content: center;
     width: 38px;
@@ -2054,9 +2582,10 @@
   }
 
   .base-template-tree {
-    height: min(470px, calc(100vh - 295px));
+    max-height: min(470px, calc(100vh - 295px));
     overflow-y: auto;
-    padding-right: 5px;
+    padding-right: 4px;
+    padding-top: 8px;
     width: 100%;
   }
 
@@ -2139,8 +2668,6 @@
   .base-template-tree-label span:last-child:not(:first-child) {
     color: var(--ui-muted-text);
     font-size: 12px;
-    font-weight: 400;
-    letter-spacing: 0;
     line-height: 16px;
   }
 
@@ -2152,12 +2679,10 @@
   }
 
   .base-template-root-heading {
-    background: var(--ui-card-nested-surface);
+    background: var(--ui-card-normal-surface);
     border-bottom: 1px solid var(--ui-card-nested-border);
     color: var(--ui-normal-text);
-    cursor: default;
     gap: 9px;
-    height: auto;
     padding: 9px 12px;
   }
 
@@ -2187,13 +2712,18 @@
   .base-template-root-copy span {
     color: var(--ui-muted-text);
     font-size: 12px;
-    font-weight: 400;
-    letter-spacing: 0;
     line-height: 16px;
   }
 
   .base-template-root-contents {
+    background: var(--ui-card-solid-surface);
     padding: 5px;
+  }
+
+  .base-template-option-button,
+  .base-template-folder-button {
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
   }
 
   .base-template-root-option,
@@ -2203,12 +2733,6 @@
     transition:
       background-color var(--ui-animation-duration-fast) ease-out,
       color var(--ui-animation-duration-fast) ease-out;
-  }
-
-  .base-template-option-button,
-  .base-template-folder-button {
-    border: 0;
-    border-radius: var(--cthulhu-ui-radius-control);
   }
 
   .base-template-root-option:hover,
@@ -2269,22 +2793,30 @@
 
   .base-template-selection-mark {
     align-items: center;
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 4px;
     box-sizing: border-box;
-    color: transparent;
     display: inline-flex;
     height: 17px;
     justify-content: center;
+    width: 17px;
+  }
+
+  .base-template-selection-mark[data-control='checkbox'] {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 4px;
+    color: transparent;
     transition:
       background-color var(--ui-animation-duration-fast) ease-out,
       border-color var(--ui-animation-duration-fast) ease-out,
       color var(--ui-animation-duration-fast) ease-out;
-    width: 17px;
   }
 
-  .base-template-option-button.active .base-template-selection-mark,
-  .base-template-root-option.active .base-template-selection-mark {
+  .base-template-selection-mark[data-control='copy'] {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .base-template-option-button.active
+    .base-template-selection-mark[data-control='checkbox'],
+  .base-template-root-option.active .base-template-selection-mark[data-control='checkbox'] {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-normal-border);
     color: var(--ui-normal-text);
@@ -2322,34 +2854,12 @@
     transform: rotate(90deg);
   }
 
-  .base-template-tree-spacer {
-    height: 24px;
-  }
-
   .base-template-dialog-footer {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
     min-width: 0;
     padding-top: 16px;
-  }
-
-  .base-dialog-cancel-button {
-    align-items: center;
-    background: var(--ui-neutral-action-fill);
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
-    color: var(--ui-normal-text);
-    display: inline-flex;
-    font-size: 14px;
-    font-weight: 500;
-    height: 40px;
-    line-height: 20px;
-    padding: 0 14px;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      border-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-dialog-confirm-button {
@@ -2373,6 +2883,24 @@
   .base-dialog-confirm-button:focus-visible {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .base-dialog-cancel-button {
+    align-items: center;
+    background: var(--ui-neutral-action-fill);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    color: var(--ui-normal-text);
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    line-height: 20px;
+    padding: 0 14px;
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-dialog-cancel-button:hover,
