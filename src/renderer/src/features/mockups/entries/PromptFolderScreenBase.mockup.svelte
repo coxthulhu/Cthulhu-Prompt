@@ -3,7 +3,6 @@
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
-    ArrowRight,
     Check,
     CheckCheck,
     CheckCircle2,
@@ -24,6 +23,7 @@
     Settings,
     Trash2,
     Undo2,
+    Zap,
     X
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
@@ -63,6 +63,7 @@
     modifiedLabel: string
     status: MockPromptStatus
     templateId: string | null
+    templateState: 'not-selected' | 'no-template' | 'selected'
   }
 
   type MockTemplate = {
@@ -91,11 +92,7 @@
     children: MockFolder[]
   }
 
-  const createSettings = (
-    folderId: string,
-    description: string,
-    prefix: string
-  ): MockFolderSetting[] => [
+  const createSettings = (folderId: string, description: string): MockFolderSetting[] => [
     {
       id: `${folderId}-description`,
       title: 'Folder Description',
@@ -104,24 +101,6 @@
       isPresent: true,
       minLines: 1,
       text: description
-    },
-    {
-      id: `${folderId}-prefix`,
-      title: 'Prompt Folder Prefix',
-      description:
-        'Text to add before each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
-      isPresent: true,
-      minLines: 1,
-      text: prefix
-    },
-    {
-      id: `${folderId}-suffix`,
-      title: 'Prompt Folder Suffix',
-      description:
-        'Text to add after each prompt copied from this folder. Two line breaks are added between this and the prompt text.',
-      isPresent: false,
-      minLines: 1,
-      text: ''
     }
   ]
 
@@ -139,7 +118,14 @@
     templateLabel,
     modifiedLabel: 'Updated today',
     status,
-    templateId: null,
+    templateId:
+      templateLabel === 'Draft Implementation Plan' ? 'draft-implementation-plan' : null,
+    templateState:
+      templateLabel === 'Not Selected'
+        ? 'not-selected'
+        : templateLabel === 'No Template'
+          ? 'no-template'
+          : 'selected',
     text
   })
 
@@ -206,6 +192,7 @@
     if (!templateDialogPrompt) return
     templateDialogPrompt.templateId = template?.id ?? null
     templateDialogPrompt.templateLabel = template?.title ?? 'No Template'
+    templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
     closeTemplateDialog()
   }
 
@@ -219,7 +206,7 @@
       'base-discovery',
       'Map the current implementation',
       'base-root',
-      'No Template',
+      'Not Selected',
       [
         'Inspect the existing implementation and summarize the relevant components, data flow, and tests.',
         '',
@@ -242,7 +229,7 @@
       'base-plan',
       'Draft an implementation plan',
       'base-root',
-      'No Template',
+      'Draft Implementation Plan',
       [
         'Create an implementation plan grounded in the current repository.',
         '',
@@ -290,8 +277,7 @@
       title: 'Implementation',
       settings: createSettings(
         'base-implementation',
-        'Prompts used while implementing an approved product change.',
-        'Work directly in the current repository and follow its local contribution guidelines.'
+        'Prompts used while implementing an approved product change.'
       ),
       prompts: [
         createPrompt(
@@ -313,8 +299,7 @@
           title: 'Verification',
           settings: createSettings(
             'base-verification',
-            'Prompts for validating product behavior after implementation.',
-            'Use the repository test helpers and stable data-testid selectors.'
+            'Prompts for validating product behavior after implementation.'
           ),
           prompts: [
             createPrompt(
@@ -546,25 +531,25 @@
 
 {#snippet StatusControl(prompt: MockPrompt)}
   {@const isCompleted = prompt.status === MockPromptStatus.Completed}
+  {@const isTodo = prompt.status === MockPromptStatus.Todo}
   {@const StatusIcon = isCompleted
     ? CheckCircle2
     : prompt.status === MockPromptStatus.InProgress
       ? Play
       : CircleDashed}
   <div class="base-status-control">
-    <div class="base-status-segmented" data-status={prompt.status}>
-      {@render IconButton(
-        isCompleted ? Undo2 : CheckCheck,
-        isCompleted ? 'Uncomplete prompt' : 'Complete prompt',
-        {
-          hoverVariant: isCompleted ? 'neutral' : 'success',
-          onclick: () =>
-            setPromptStatus(
-              prompt,
-              isCompleted ? MockPromptStatus.Todo : MockPromptStatus.Completed
-            )
-        }
-      )}
+    <div
+      class="base-status-segmented"
+      data-status={prompt.status}
+      data-leading-action={!isTodo ? 'true' : 'false'}
+      data-trailing-action={!isCompleted ? 'true' : 'false'}
+    >
+      {#if !isTodo}
+        {@render IconButton(Undo2, isCompleted ? 'Uncomplete prompt' : 'Set prompt to Todo', {
+          hoverVariant: 'neutral',
+          onclick: () => setPromptStatus(prompt, MockPromptStatus.Todo)
+        })}
+      {/if}
       <span class="base-status-selector">
         <button
           type="button"
@@ -588,6 +573,12 @@
           <ChevronDown size={16} aria-hidden="true" />
         </button>
       </span>
+      {#if !isCompleted}
+        {@render IconButton(CheckCheck, 'Complete prompt', {
+          hoverVariant: 'success',
+          onclick: () => setPromptStatus(prompt, MockPromptStatus.Completed)
+        })}
+      {/if}
     </div>
   </div>
 {/snippet}
@@ -678,7 +669,11 @@
           <div class="base-title-copy">
             <input aria-label="Prompt title" bind:value={prompt.title} />
             <div class="base-metadata-row">
-              <span class="base-folder-label">
+              <span
+                class="base-folder-label"
+                data-template-state={prompt.templateState}
+                title={prompt.templateLabel}
+              >
                 <Layers size={12} aria-hidden="true" />
                 {prompt.templateLabel}
               </span>
@@ -692,17 +687,30 @@
 
         <div class="base-prompt-actions">
           <div class="base-icon-button-bar">
-            {@render IconButton(Trash2, 'Delete prompt', { hoverVariant: 'danger' })}
+            {#if prompt.templateState === 'not-selected'}
+              {@render IconButton(Zap, 'Select Template and Copy', {
+                onclick: () => openTemplateDialog(prompt, 'select-and-copy')
+              })}
+            {:else}
+              {@render IconButton(Copy, 'Copy prompt', {
+                hoverVariant: 'accent',
+                onclick: () => {
+                  if (prompt.status === MockPromptStatus.Todo) {
+                    setPromptStatus(prompt, MockPromptStatus.InProgress)
+                  }
+                }
+              })}
+            {/if}
             {@render IconButton(Layers, 'Set Template', {
               onclick: () => openTemplateDialog(prompt)
-            })}
-            {@render IconButton(Copy, 'Copy prompt', { hoverVariant: 'accent' })}
-            {@render IconButton(ArrowRight, 'Select Template and Copy', {
-              onclick: () => openTemplateDialog(prompt, 'select-and-copy')
             })}
           </div>
           <span class="base-actions-separator" aria-hidden="true"></span>
           {@render StatusControl(prompt)}
+          <span class="base-actions-separator" aria-hidden="true"></span>
+          <div class="base-prompt-delete-section">
+            {@render IconButton(Trash2, 'Delete prompt', { hoverVariant: 'danger' })}
+          </div>
         </div>
       </header>
 
@@ -767,7 +775,7 @@
               <Settings size={20} aria-hidden="true" />
               <div class="base-settings-toolbar-copy">
                 <span>Folder Settings</span>
-                <span>{folder.settings.filter((setting) => setting.isPresent).length} of 3 configured</span>
+                <span>{folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings.length} configured</span>
               </div>
             </div>
             <div class="base-settings-toolbar-actions" role="group" aria-label="Folder settings">
@@ -834,7 +842,7 @@
         <div class="base-root-title-block">
           <div class="base-root-eyebrow">
             <Folder size={14} aria-hidden="true" />
-            <span>Prompt folder</span>
+            <span>Prompt Folder</span>
           </div>
           <div class="base-root-title-line">
             <h1>Product Work</h1>
@@ -910,8 +918,10 @@
             <button
               type="button"
               class="base-template-root-option"
-              class:active={templateDialogPrompt.templateId === null}
-              aria-current={templateDialogPrompt.templateId === null ? 'true' : undefined}
+              class:active={templateDialogPrompt.templateState === 'no-template'}
+              aria-current={templateDialogPrompt.templateState === 'no-template'
+                ? 'true'
+                : undefined}
               onclick={() => selectTemplate(null)}
             >
               No Template
@@ -1082,7 +1092,8 @@
   }
 
   .base-separator {
-    background: var(--ui-neutral-muted-border);
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    box-sizing: border-box;
     flex: 0 0 1px;
     height: 1px;
     width: 100%;
@@ -1263,7 +1274,7 @@
     background: transparent;
     border: 0;
     display: flex;
-    height: 100%;
+    height: 12px;
     padding: 0 9px;
     width: 100%;
   }
@@ -1277,7 +1288,7 @@
   }
 
   .base-divider-line-button .base-separator {
-    transition: background-color var(--ui-animation-duration-standard) ease;
+    transition: border-color var(--ui-animation-duration-standard) ease;
   }
 
   .base-divider-actions {
@@ -1315,9 +1326,14 @@
     color: var(--ui-accent-normal-text);
   }
 
-  .base-divider-row:hover .base-divider-line-button .base-separator,
-  .base-divider-row:focus-within .base-divider-line-button .base-separator {
-    background: var(--ui-accent-normal-border);
+  .base-divider-row:has(.base-divider-line-button:hover) .base-divider-line-button .base-separator,
+  .base-divider-row:has(
+      .base-divider-line-button:focus-visible,
+      .base-divider-action-button:focus-visible
+    )
+    .base-divider-line-button
+    .base-separator {
+    border-color: var(--ui-accent-normal-border);
   }
 
   .base-editor-card {
@@ -1486,13 +1502,24 @@
 
   .base-folder-label {
     align-items: center;
-    color: var(--ui-secondary-text);
     display: inline-flex;
     gap: 4px;
     max-width: 150px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .base-folder-label[data-template-state='not-selected'] {
+    color: var(--ui-secondary-text);
+  }
+
+  .base-folder-label[data-template-state='no-template'] {
+    color: var(--ui-muted-text);
+  }
+
+  .base-folder-label[data-template-state='selected'] {
+    color: var(--ui-normal-text);
   }
 
   .base-prompt-actions,
@@ -1505,6 +1532,7 @@
 
   .base-prompt-actions {
     gap: 12px;
+    padding-right: 12px;
   }
 
   .base-folder-chevron {
@@ -1528,7 +1556,8 @@
 
   .base-actions-separator {
     align-self: stretch;
-    background: var(--ui-neutral-normal-border);
+    border-left: 1px solid var(--ui-neutral-normal-border);
+    box-sizing: border-box;
     flex: 0 0 1px;
     width: 1px;
   }
@@ -1537,8 +1566,6 @@
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
-    padding-left: 4px;
-    padding-right: 16px;
   }
 
   .base-status-segmented {
@@ -1546,11 +1573,48 @@
     display: inline-flex;
   }
 
-  .base-status-segmented > .base-icon-button {
-    background: transparent;
+  .base-status-segmented > .base-icon-button,
+  .base-status-segmented > .base-status-selector {
+    position: relative;
+  }
+
+  .base-status-segmented > .base-icon-button:hover,
+  .base-status-segmented > .base-icon-button:focus-visible,
+  .base-status-segmented > .base-status-selector:hover,
+  .base-status-segmented > .base-status-selector:focus-within {
+    z-index: 1;
+  }
+
+  .base-status-segmented[data-leading-action='true'] > .base-icon-button:first-child {
     border-bottom-right-radius: 0;
-    border-right: 0;
     border-top-right-radius: 0;
+  }
+
+  .base-status-segmented[data-leading-action='true'] > .base-status-selector {
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    margin-left: -1px;
+  }
+
+  .base-status-segmented[data-trailing-action='true'] > .base-status-selector {
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .base-status-segmented[data-trailing-action='true'] > .base-icon-button:last-child {
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    margin-left: -1px;
+  }
+
+  .base-status-segmented[data-leading-action='true']
+    > .base-icon-button:first-child:not(:hover):not(:focus-visible) {
+    border-right-color: transparent;
+  }
+
+  .base-status-segmented[data-trailing-action='true']
+    > .base-icon-button:last-child:not(:hover):not(:focus-visible) {
+    border-left-color: transparent;
   }
 
   .base-status-selector {
@@ -1558,7 +1622,7 @@
 
     align-items: stretch;
     border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 0 var(--cthulhu-ui-radius-control) var(--cthulhu-ui-radius-control) 0;
+    border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
     display: inline-flex;
     height: 36px;
@@ -1594,7 +1658,6 @@
   }
 
   .base-status-value {
-    border-right: 1px solid var(--ui-neutral-normal-border);
     box-sizing: border-box;
     font-size: 14px;
     font-weight: 500;
@@ -1606,6 +1669,12 @@
 
   .base-status-more {
     width: 23px;
+  }
+
+  .base-prompt-delete-section {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
   }
 
   .base-status-value:focus-visible,
