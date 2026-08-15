@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Check, Copy, Play } from 'lucide-svelte'
+  import { Check, Copy } from 'lucide-svelte'
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
-  import { PromptStatus } from '@shared/Prompt'
+  import type { PromptStatus } from '@shared/Prompt'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
@@ -15,6 +15,8 @@
     promptId: string
     promptTitle: string
     status?: PromptStatus
+    // Whether this prompt has been edited during the current renderer session.
+    isEdited?: boolean
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
@@ -31,6 +33,7 @@
     promptId,
     promptTitle,
     status,
+    isEdited = false,
     isActive,
     isDragging,
     isPromptDragActive,
@@ -86,18 +89,18 @@
       </span>
     {/if}
     <span class="sidebarPromptTreeSettingsLabel prompt-tree-prompt-label">{promptTitle}</span>
-    {#if status === PromptStatus.InProgress}
-      <span
-        class="prompt-tree-in-progress-indicator"
-        data-testid="prompt-tree-in-progress-indicator"
-        role="img"
-        aria-label="In Progress"
-        title="In Progress"
-      >
-        <Play size={16} aria-hidden="true" />
-      </span>
-    {/if}
   </span>
+{/snippet}
+
+{#snippet promptStatusIndicator()}
+  <!-- The status accent overlays the row so it does not alter button geometry or interaction. -->
+  <span
+    class="prompt-tree-status-indicator"
+    data-status={status}
+    data-edited={isEdited ? 'true' : 'false'}
+    data-testid="prompt-tree-status-indicator"
+    aria-hidden="true"
+  ></span>
 {/snippet}
 
 {#snippet promptButton()}
@@ -121,6 +124,7 @@
     class="sidebarPromptTreeSettingsRow"
     style={rowStyle}
   >
+    {@render promptStatusIndicator()}
     <button
       use:draggable={promptDragOptions}
       type="button"
@@ -137,6 +141,7 @@
   </PromptDropTarget>
 {:else}
   <div class="sidebarPromptTreeSettingsRow" style={rowStyle}>
+    {@render promptStatusIndicator()}
     {@render promptButton()}
   </div>
 {/if}
@@ -147,6 +152,39 @@
     display: flex;
     gap: 8px;
     min-width: 0;
+  }
+
+  .sidebarPromptTreeSettingsRow {
+    position: relative;
+  }
+
+  .prompt-tree-status-indicator {
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    visibility: hidden;
+    width: 2px;
+    z-index: 1;
+  }
+
+  .prompt-tree-status-indicator[data-edited='true'] {
+    background: var(--ui-info-strong-border);
+    color: var(--ui-info-strong-border);
+    visibility: visible;
+  }
+
+  .prompt-tree-status-indicator[data-status='InProgress'] {
+    background: var(--ui-warning-icon-glyph);
+    color: var(--ui-warning-icon-glyph);
+    visibility: visible;
+  }
+
+  .prompt-tree-status-indicator[data-status='Completed'] {
+    background: var(--ui-success-normal-text);
+    color: var(--ui-success-normal-text);
+    visibility: visible;
   }
 
   .sidebarPromptTreeSettingsButton[data-selection-control] {
@@ -196,11 +234,5 @@
 
   .prompt-tree-prompt-label {
     flex: 1 1 auto;
-  }
-
-  .prompt-tree-in-progress-indicator {
-    color: var(--ui-warning-icon-glyph);
-    display: inline-flex;
-    flex: 0 0 auto;
   }
 </style>

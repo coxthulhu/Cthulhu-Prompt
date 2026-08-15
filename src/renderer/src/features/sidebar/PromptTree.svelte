@@ -140,6 +140,12 @@
 
     return titlesById
   })
+  // Maps prompt IDs to the session-latched edited state displayed by prompt-tree accents.
+  const promptEditedById = $derived.by(() =>
+    Object.fromEntries(
+      promptDraftQuery.data.map((promptDraft) => [promptDraft.id, promptDraft.isEdited])
+    )
+  )
   const promptById = $derived.by(() => {
     const promptsById: Record<string, Prompt> = {}
 
@@ -856,6 +862,7 @@
     promptId={props.row.promptId}
     {promptTitle}
     status={promptById[props.row.promptId]?.status}
+    isEdited={promptEditedById[props.row.promptId] ?? false}
     {isActive}
     {isDragging}
     {isPromptDragActive}

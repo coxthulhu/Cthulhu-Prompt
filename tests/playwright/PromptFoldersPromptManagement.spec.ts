@@ -5,6 +5,7 @@ import {
   focusMonacoEditor,
   getMonacoEditorText,
   isMonacoEditorFocused,
+  typeInMonacoEditor,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import {
@@ -1483,15 +1484,42 @@ describe('Prompt folder prompt management', () => {
     const activePromptTreeRow = mainWindow.locator(
       '[data-testid="prompt-tree-prompt-completed-mode-active"]'
     )
-    const inProgressTreeIndicator = activePromptTreeRow.locator(
-      '[data-testid="prompt-tree-in-progress-indicator"]'
+    // The persistent tree accent exposes status and edited-state presentation for this prompt.
+    const promptTreeStatusIndicator = activePromptTreeRow.locator('..').locator(
+      '[data-testid="prompt-tree-status-indicator"]'
     )
-    await expect(inProgressTreeIndicator).toHaveCount(0)
+    await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'Todo')
+    await expect(promptTreeStatusIndicator).toHaveAttribute('data-edited', 'false')
+    await expect(promptTreeStatusIndicator).toHaveCSS('visibility', 'hidden')
     const todoTitleBox = await activePromptTreeRow
       .locator('.sidebarPromptTreeSettingsLabel')
       .boundingBox()
     if (!todoTitleBox) throw new Error('Missing Todo prompt tree title geometry')
-    const todoTitleRightPx = todoTitleBox.x + todoTitleBox.width
+    // The initial button geometry must remain unchanged as accent states change.
+    const todoPromptTreeButtonBox = await activePromptTreeRow.boundingBox()
+    if (!todoPromptTreeButtonBox) throw new Error('Missing Todo prompt tree button geometry')
+
+    await typeInMonacoEditor(
+      mainWindow,
+      promptEditorSelector('completed-mode-active'),
+      'edited tree accent'
+    )
+    await expect(promptTreeStatusIndicator).toHaveAttribute('data-edited', 'true')
+    await expect(promptTreeStatusIndicator).toHaveCSS('visibility', 'visible')
+    await expect(promptTreeStatusIndicator).toHaveCSS(
+      'background-color',
+      (await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-info-strong-border']))[0]!
+    )
+    await expect
+      .poll(async () => {
+        return await readPersistedPromptTextById(electronApp, {
+          workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+          folderName: 'Completed Mode',
+          promptId: 'completed-mode-active',
+          promptTitle: 'Active Prompt'
+        })
+      })
+      .toContain('edited tree accent')
     // The Todo Complete button is the only quick action and occupies the trailing segment.
     const todoCompleteButton = mainWindow.locator(completeSelector('completed-mode-active'))
     await expect(todoCompleteButton).toBeVisible()
@@ -1536,12 +1564,49 @@ describe('Prompt folder prompt management', () => {
       'data-variant',
       'in-progress'
     )
-    await expect(inProgressTreeIndicator).toBeVisible()
-    const inProgressIndicatorBox = await inProgressTreeIndicator.boundingBox()
-    if (!inProgressIndicatorBox) throw new Error('Missing In Progress tree indicator geometry')
+    await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'InProgress')
+    await expect(promptTreeStatusIndicator).toHaveCSS('visibility', 'visible')
+    // The warning token comparison ensures the tree accent exactly matches the editor accent.
+    const warningColor = (
+      await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-warning-icon-glyph'])
+    )[0]!
+    await expect(promptTreeStatusIndicator).toHaveCSS('background-color', warningColor)
+    // The In Progress presentation verifies the full-row line.
+    const inProgressIndicatorPresentation = await promptTreeStatusIndicator.evaluate((element) => {
+      // Browser-computed geometry captures the line within its prompt-tree row.
+      const indicatorRect = element.getBoundingClientRect()
+      const rowRect = element.parentElement!.getBoundingClientRect()
+      return {
+        height: indicatorRect.height,
+        rowHeight: rowRect.height,
+        rowLeft: rowRect.left,
+        left: indicatorRect.left,
+        width: indicatorRect.width
+      }
+    })
+    expect(inProgressIndicatorPresentation.height).toBe(inProgressIndicatorPresentation.rowHeight)
+    expect(inProgressIndicatorPresentation.left).toBe(inProgressIndicatorPresentation.rowLeft)
+    expect(inProgressIndicatorPresentation.width).toBe(2)
+    // In Progress no longer adds a trailing icon or changes the button's clickable geometry.
+    const inProgressTitleBox = await activePromptTreeRow
+      .locator('.sidebarPromptTreeSettingsLabel')
+      .boundingBox()
+    const inProgressPromptTreeButtonBox = await activePromptTreeRow.boundingBox()
+    if (!inProgressTitleBox) throw new Error('Missing In Progress prompt tree title geometry')
+    if (!inProgressPromptTreeButtonBox) {
+      throw new Error('Missing In Progress prompt tree button geometry')
+    }
+    expect(Math.abs(inProgressTitleBox.x - todoTitleBox.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(inProgressTitleBox.width - todoTitleBox.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(inProgressPromptTreeButtonBox.x - todoPromptTreeButtonBox.x)).toBeLessThanOrEqual(
+      1
+    )
     expect(
-      Math.abs(inProgressIndicatorBox.x + inProgressIndicatorBox.width - todoTitleRightPx)
-    ).toBeLessThanOrEqual(2)
+      Math.abs(inProgressPromptTreeButtonBox.width - todoPromptTreeButtonBox.width)
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(inProgressPromptTreeButtonBox.height - todoPromptTreeButtonBox.height)
+    ).toBeLessThanOrEqual(1)
     expect(await getPromptEditorIds(mainWindow)).toEqual(['completed-mode-active'])
 
     // In Progress places Backward left and Forward right of the selector.
@@ -1671,7 +1736,11 @@ describe('Prompt folder prompt management', () => {
 
     await inProgressPreviousButton.click()
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText('Todo')
-    await expect(inProgressTreeIndicator).toHaveCount(0)
+    await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'Todo')
+    await expect(promptTreeStatusIndicator).toHaveCSS(
+      'background-color',
+      (await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-info-strong-border']))[0]!
+    )
     await expect(mainWindow.locator(previousStatusSelector('completed-mode-active'))).toHaveCount(0)
     await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '6px')
     await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '6px')
@@ -1740,7 +1809,11 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-active', 'completed-mode-newest', 'completed-mode-oldest'])
-    await expect(inProgressTreeIndicator).toHaveCount(0)
+    await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'Completed')
+    await expect(promptTreeStatusIndicator).toHaveCSS(
+      'background-color',
+      (await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-success-normal-text']))[0]!
+    )
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-completed"]')).toBeVisible()
