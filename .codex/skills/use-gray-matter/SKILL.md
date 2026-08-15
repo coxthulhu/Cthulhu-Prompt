@@ -7,7 +7,7 @@ description: Explain and apply the Node.js gray-matter library for parsing and s
 
 ## Workflow
 
-1. Read the canonical project reference at `.cthulhu/References/gray-matter/README.md`.
+1. Read the canonical [API reference](references/api-reference.md).
 2. Identify the user task:
    - Parse front matter from a string or file.
    - Check whether front matter exists.
@@ -90,9 +90,9 @@ import * as matter from 'gray-matter';
 - Match module style (CommonJS vs TypeScript) to the user request.
 - Include expected `file.data` and `file.content` behavior.
 - Mention `file.empty` and `file.isEmpty` when handling empty front matter.
-- State when behavior is inferred from the README versus directly shown there.
+- State when behavior is inferred from the API reference versus directly shown there.
 
 ## References
 
-- Canonical docs: `.cthulhu/References/gray-matter/README.md`
-- Quick lookup: `references/api-quick-reference.md`
+- Canonical API reference: [references/api-reference.md](references/api-reference.md)
+- Quick lookup: [references/api-quick-reference.md](references/api-quick-reference.md)

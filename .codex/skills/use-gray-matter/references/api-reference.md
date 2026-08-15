@@ -2,6 +2,14 @@
 
 > Parse front-matter from a string or file. Fast, reliable and easy to use. Parses YAML front matter by default, but also has support for YAML, JSON, TOML or Coffee Front-Matter, with options to set custom delimiters. Used by metalsmith, assemble, verb and many other projects.
 
+## Contents
+
+- [What does this do?](#what-does-this-do)
+- [Usage](#usage)
+- [Returned object](#returned-object)
+- [API](#api)
+- [Options](#options)
+
 Please consider following this project's author, [Jon Schlinkert](https://github.com/jonschlinkert), and consider starring the project to show your :heart: and support.
 
 ## Install
@@ -14,7 +22,7 @@ $ npm install --save gray-matter
 
 ## Heads up!
 
-Please see the [changelog](CHANGELOG.md) to learn about breaking changes that were made in v3.0.
+Please see the [changelog](https://github.com/jonschlinkert/gray-matter/blob/master/CHANGELOG.md) to learn about breaking changes that were made in v3.0.
 
 <br />
 
@@ -172,7 +180,7 @@ CD into `my-project` and install dependencies:
 $ cd my-project && npm install
 ```
 
-Then run any of the [examples](./examples) to see how gray-matter works:
+Then run any of the [examples](https://github.com/jonschlinkert/gray-matter/tree/master/examples) to see how gray-matter works:
 
 ```sh
 $ node examples/<example_name>
@@ -180,23 +188,23 @@ $ node examples/<example_name>
 
 **Links to examples**
 
-* [coffee](examples/coffee.js)
-* [excerpt-separator](examples/excerpt-separator.js)
-* [excerpt-stringify](examples/excerpt-stringify.js)
-* [excerpt](examples/excerpt.js)
-* [javascript](examples/javascript.js)
-* [json-stringify](examples/json-stringify.js)
-* [json](examples/json.js)
-* [restore-empty](examples/restore-empty.js)
-* [sections-excerpt](examples/sections-excerpt.js)
-* [sections](examples/sections.js)
-* [toml](examples/toml.js)
-* [yaml-stringify](examples/yaml-stringify.js)
-* [yaml](examples/yaml.js)
+* [coffee](https://github.com/jonschlinkert/gray-matter/blob/master/examples/coffee.js)
+* [excerpt-separator](https://github.com/jonschlinkert/gray-matter/blob/master/examples/excerpt-separator.js)
+* [excerpt-stringify](https://github.com/jonschlinkert/gray-matter/blob/master/examples/excerpt-stringify.js)
+* [excerpt](https://github.com/jonschlinkert/gray-matter/blob/master/examples/excerpt.js)
+* [javascript](https://github.com/jonschlinkert/gray-matter/blob/master/examples/javascript.js)
+* [json-stringify](https://github.com/jonschlinkert/gray-matter/blob/master/examples/json-stringify.js)
+* [json](https://github.com/jonschlinkert/gray-matter/blob/master/examples/json.js)
+* [restore-empty](https://github.com/jonschlinkert/gray-matter/blob/master/examples/restore-empty.js)
+* [sections-excerpt](https://github.com/jonschlinkert/gray-matter/blob/master/examples/sections-excerpt.js)
+* [sections](https://github.com/jonschlinkert/gray-matter/blob/master/examples/sections.js)
+* [toml](https://github.com/jonschlinkert/gray-matter/blob/master/examples/toml.js)
+* [yaml-stringify](https://github.com/jonschlinkert/gray-matter/blob/master/examples/yaml-stringify.js)
+* [yaml](https://github.com/jonschlinkert/gray-matter/blob/master/examples/yaml.js)
 
 ## API
 
-### [matter](index.js#L29)
+### [matter](https://github.com/jonschlinkert/gray-matter/blob/master/index.js#L29)
 
 Takes a string or object with `content` property, extracts and parses front-matter from the string, then returns an object with `data`, `content` and other [useful properties](#returned-object).
 
@@ -214,7 +222,7 @@ console.log(matter('---\ntitle: Home\n---\nOther stuff'));
 //=> { data: { title: 'Home'}, content: 'Other stuff' }
 ```
 
-### [.stringify](index.js#L160)
+### [.stringify](https://github.com/jonschlinkert/gray-matter/blob/master/index.js#L160)
 
 Stringify an object to YAML or the specified language, and append it to the given string. By default, only YAML and JSON can be stringified. See the [engines](#engines) section to learn how to stringify other languages.
 
@@ -236,7 +244,7 @@ console.log(matter.stringify('foo bar baz', {title: 'Home'}));
 // foo bar baz
 ```
 
-### [.read](index.js#L178)
+### [.read](https://github.com/jonschlinkert/gray-matter/blob/master/index.js#L178)
 
 Synchronously read a file from the file system and parse front matter. Returns the same object as the [main function](#matter).
 
@@ -252,7 +260,7 @@ Synchronously read a file from the file system and parse front matter. Returns t
 const file = matter.read('./content/blog-post.md');
 ```
 
-### [.test](index.js#L193)
+### [.test](https://github.com/jonschlinkert/gray-matter/blob/master/index.js#L193)
 
 Returns true if the given `string` has front matter.
 
@@ -500,7 +508,7 @@ Decrecated, please use [options.engines](#optionsengines) instead.
 <details>
 <summary><strong>Contributing</strong></summary>
 
-Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](../../issues/new).
+Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/jonschlinkert/gray-matter/issues/new).
 
 </details>
 
@@ -518,7 +526,7 @@ $ npm install && npm test
 <details>
 <summary><strong>Building docs</strong></summary>
 
-_(This project's readme.md is generated by [verb](https://github.com/verbose/verb-generate-readme), please don't edit the readme directly. Any changes to the readme must be made in the [.verb.md](.verb.md) readme template.)_
+_(This project's readme.md is generated by [verb](https://github.com/verbose/verb-generate-readme), please don't edit the readme directly. Any changes to the readme must be made in the [.verb.md](https://github.com/jonschlinkert/gray-matter/blob/master/.verb.md) readme template.)_
 
 To generate the readme, run the following command:
 
@@ -569,7 +577,7 @@ You might also be interested in these projects:
 ### License
 
 Copyright © 2023, [Jon Schlinkert](https://github.com/jonschlinkert).
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](https://github.com/jonschlinkert/gray-matter/blob/master/LICENSE).
 
 ***
 

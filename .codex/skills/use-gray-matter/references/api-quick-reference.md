@@ -1,6 +1,6 @@
 # gray-matter Quick Reference
 
-Use this file for fast API lookup, then confirm exact behavior in `.cthulhu/References/gray-matter/README.md`.
+Use this file for fast API lookup, then confirm exact behavior in the canonical [API reference](api-reference.md).
 
 ## Core APIs
 
