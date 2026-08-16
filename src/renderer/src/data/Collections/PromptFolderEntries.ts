@@ -1,4 +1,7 @@
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  getCategoryOrderCategoryIds,
+  type PromptFolder
+} from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
 import { promptCollection } from './PromptCollection'
 
@@ -10,7 +13,7 @@ export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[
 export const isPromptFolderEmpty = (promptFolder: PromptFolder): boolean =>
   promptFolder.entries.length === 0 &&
   promptFolder.completedPromptIds.length === 0 &&
-  promptFolder.categoryIds.length === 0 &&
+  getCategoryOrderCategoryIds(promptFolder.categoryOrder).length === 0 &&
   Object.values(promptFolder.settings).every((value) => (value ?? '').trim().length === 0)
 
 export const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] => {

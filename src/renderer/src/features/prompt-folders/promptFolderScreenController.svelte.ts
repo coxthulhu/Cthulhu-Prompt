@@ -14,6 +14,7 @@ import {
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
+  getCategoryOrderCategoryIds,
   type PromptFolder,
   type PromptFolderSettings,
   type PromptFolderContentKind
@@ -1594,7 +1595,9 @@ export const createPromptFolderScreenController = ({
       )
     },
     get categories(): Category[] {
-      const ownedCategoryIds = new SvelteSet(screenRootFolder?.categoryIds ?? [])
+      const ownedCategoryIds = new SvelteSet(
+        screenRootFolder ? getCategoryOrderCategoryIds(screenRootFolder.categoryOrder) : []
+      )
       return categoryQuery.data.filter((category) => ownedCategoryIds.has(category.id))
     },
     get activePromptFolderScreenRows(): PromptFolderScreenRow[] {

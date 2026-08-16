@@ -48,7 +48,12 @@ describe('category mutations', () => {
         displayName: 'Root',
         entries: [{ kind: 'prompt', id: PROMPT_ID }],
         completedPromptIds: [],
-        categoryIds: [CATEGORY_ID],
+        categoryOrder: {
+          categories: [
+            { categoryId: null, entries: [] },
+            { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+          ]
+        },
         settings: { folderDescription: null }
       }
     })
@@ -86,7 +91,14 @@ describe('category mutations', () => {
     /** Revision mutation options registered by deleteCategory. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Mutable folder state used to observe the optimistic recipe. */
-    const folderState = { categoryIds: [CATEGORY_ID] }
+    const folderState = {
+      categoryOrder: {
+        categories: [
+          { categoryId: null, entries: [] },
+          { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt' as const, id: PROMPT_ID }] }
+        ]
+      }
+    }
     /** Mutable prompt state used to observe category and timestamp cleanup. */
     const promptState = {
       id: PROMPT_ID,
@@ -142,7 +154,9 @@ describe('category mutations', () => {
       }
     })
 
-    expect(folderState.categoryIds).toEqual([])
+    expect(folderState.categoryOrder.categories).toEqual([
+      { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+    ])
     expect(deleteCategoryOptimistically).toHaveBeenCalledWith(CATEGORY_ID)
     expect(promptState).not.toHaveProperty('category')
     expect(promptDraftState).not.toHaveProperty('category')
@@ -195,7 +209,14 @@ describe('category mutations', () => {
       promptFolder: {
         id: ROOT_FOLDER_ID,
         revision: 4,
-        data: { ...promptFolderCollection.get(ROOT_FOLDER_ID)!, categoryIds: [] }
+        data: {
+          ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
+          categoryOrder: {
+            categories: [
+              { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+            ]
+          }
+        }
       },
       prompts: [
         {
@@ -252,7 +273,9 @@ describe('category mutations', () => {
     options.handleSuccessOrConflictResponse(payload)
     options.onSuccess()
     expect(categoryCollection.get(CATEGORY_ID)).toBeUndefined()
-    expect(promptFolderCollection.get(ROOT_FOLDER_ID)?.categoryIds).toEqual([])
+    expect(promptFolderCollection.get(ROOT_FOLDER_ID)?.categoryOrder.categories).toEqual([
+      { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+    ])
     expect(promptDraftCollection.get(PROMPT_ID)).not.toHaveProperty('category')
     expect(promptTemplateDraftCollection.get(TEMPLATE_ID)).not.toHaveProperty('category')
     expect(promptCollection.get(PROMPT_ID)).toMatchObject({

@@ -111,6 +111,18 @@ describe('Prompt template mutations', () => {
         )
       )
     ).toEqual({ entries: [{ kind: 'template', id: templateId }] })
+    expect(
+      JSON.parse(
+        await readTextFile(
+          electronApp,
+          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrderV2.json`
+        )
+      )
+    ).toEqual({
+      categories: [
+        { categoryId: null, entries: [{ kind: 'template', id: templateId }] }
+      ]
+    })
 
     const updateResult = await invoke('update-prompt-template', {
       content: {
@@ -151,7 +163,11 @@ describe('Prompt template mutations', () => {
     ).toContain('Updated {{value}}.')
 
     const moveResult = await invoke('move-prompt-template', {
-      sourcePromptFolder: toPayloadEntity(updateResult.payload.promptFolder),
+      sourcePromptFolder: toPayloadEntity(
+        updateResult.payload.promptFolders.find(
+          (folder: { id: string }) => folder.id === SOURCE_FOLDER_ID
+        )
+      ),
       destinationPromptFolder: toPayloadEntity(destinationFolder),
       content: toPayloadEntity(updateResult.payload.content),
       previousEntryId: null
@@ -160,10 +176,18 @@ describe('Prompt template mutations', () => {
     expect(moveResult).toMatchObject({
       success: true,
       payload: {
-        sourcePromptFolder: { data: { entries: [] } },
-        destinationPromptFolder: {
-          data: { entries: [{ kind: 'template', id: 'ipc-template' }] }
-        }
+        promptFolders: expect.arrayContaining([
+          expect.objectContaining({
+            id: SOURCE_FOLDER_ID,
+            data: expect.objectContaining({ entries: [] })
+          }),
+          expect.objectContaining({
+            id: DESTINATION_FOLDER_ID,
+            data: expect.objectContaining({
+              entries: [{ kind: 'template', id: 'ipc-template' }]
+            })
+          })
+        ])
       }
     })
     expect(
@@ -194,15 +218,46 @@ describe('Prompt template mutations', () => {
         )
       )
     ).toEqual({ entries: [{ kind: 'template', id: templateId }] })
+    expect(
+      JSON.parse(
+        await readTextFile(
+          electronApp,
+          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrderV2.json`
+        )
+      )
+    ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
+    expect(
+      JSON.parse(
+        await readTextFile(
+          electronApp,
+          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrderV2.json`
+        )
+      )
+    ).toEqual({
+      categories: [
+        { categoryId: null, entries: [{ kind: 'template', id: templateId }] }
+      ]
+    })
 
     const deleteResult = await invoke('delete-prompt-template', {
-      promptFolder: toPayloadEntity(moveResult.payload.destinationPromptFolder),
+      promptFolder: toPayloadEntity(
+        moveResult.payload.promptFolders.find(
+          (folder: { id: string }) => folder.id === DESTINATION_FOLDER_ID
+        )
+      ),
       content: toPayloadEntity(moveResult.payload.content)
     })
 
     expect(deleteResult).toMatchObject({
       success: true,
-      payload: { promptFolder: { data: { entries: [] } } }
+      payload: {
+        promptFolders: expect.arrayContaining([
+          expect.objectContaining({
+            id: DESTINATION_FOLDER_ID,
+            data: expect.objectContaining({ entries: [] })
+          })
+        ])
+      }
     })
     expect(
       await checkFileExists(
@@ -218,5 +273,13 @@ describe('Prompt template mutations', () => {
         )
       )
     ).toEqual({ entries: [] })
+    expect(
+      JSON.parse(
+        await readTextFile(
+          electronApp,
+          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrderV2.json`
+        )
+      )
+    ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
   })
 })

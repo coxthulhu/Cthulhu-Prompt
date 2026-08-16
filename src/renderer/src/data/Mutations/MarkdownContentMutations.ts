@@ -14,10 +14,12 @@ import {
 } from '@shared/MarkdownContent'
 import {
   removeEntry,
-  resolveEntryInsertIndex,
-  type EntryRef
+  resolveEntryInsertIndex
 } from '@shared/OrderContainer'
 import {
+  appendCategoryOrderEntry,
+  removeCategoryOrderEntry,
+  type CategoryOrderEntryRef,
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from '@shared/Revision'
@@ -52,7 +54,7 @@ export type MarkdownContentRendererMutationConfig<
     delete: string
     move: string
   }
-  createEntryRef: (contentId: string) => EntryRef
+  createEntryRef: (contentId: string) => CategoryOrderEntryRef
   getContent: (contentId: string) => ContentDraft | undefined
   getFullPersisted: (contentId: string) => TPersisted | null
   getDraftPersisted: (contentId: string) => TPersisted | null
@@ -123,6 +125,10 @@ export const createMarkdownContentRendererMutations = <
       defaultFallbackTitle: config.defaultFallbackTitle
     })
     const optimisticContent = { ...content, ...titleFields }
+    /** Root folder whose V2 order owns the new content. */
+    const rootPromptFolderId = findContainingRootFolderId(promptFolderId)
+    /** Category-order reference inserted with the new content. */
+    const categoryOrderEntry = config.createEntryRef(content.id)
 
     await runRevisionMutation<CreateMarkdownContentResponsePayload<TPersisted>>({
       mutateOptimistically: ({ collections }) => {
@@ -132,7 +138,23 @@ export const createMarkdownContentRendererMutations = <
           const entries = [...draft.entries]
           entries.splice(insertIndex ?? entries.length, 0, config.createEntryRef(content.id))
           draft.entries = entries
+          if (promptFolderId === rootPromptFolderId) {
+            draft.categoryOrder = appendCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry,
+              optimisticContent.category
+            )
+          }
         })
+        if (promptFolderId !== rootPromptFolderId) {
+          collections.promptFolder.update(rootPromptFolderId, (draft) => {
+            draft.categoryOrder = appendCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry,
+              optimisticContent.category
+            )
+          })
+        }
       },
       persistMutations: async ({ entities, transaction }) => {
         const result = await ipcInvokeWithPayload<
@@ -151,7 +173,7 @@ export const createMarkdownContentRendererMutations = <
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
-        promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
         if (payload.content) config.reconcile(payload.content)
       },
       conflictMessage: `${config.label} create conflict`
@@ -188,9 +210,7 @@ export const createMarkdownContentRendererMutations = <
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
-        if (payload.promptFolder) {
-          promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-        }
+        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
         config.reconcile(payload.content)
       },
       conflictMessage: `${config.label} update conflict`
@@ -207,6 +227,10 @@ export const createMarkdownContentRendererMutations = <
       throw new Error(`${config.label} folder not loaded`)
     }
     if (!content) throw new Error(`${config.label} not loaded`)
+    /** Root folder whose V2 order contains the deleted content. */
+    const rootPromptFolderId = findContainingRootFolderId(promptFolderId)
+    /** Category-order reference removed with the content. */
+    const categoryOrderEntry = config.createEntryRef(contentId)
 
     await runRevisionMutation<DeleteMarkdownContentResponsePayload>({
       mutateOptimistically: ({ collections }) => {
@@ -216,7 +240,21 @@ export const createMarkdownContentRendererMutations = <
           if (config.kind === 'prompt') {
             draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== contentId)
           }
+          if (promptFolderId === rootPromptFolderId) {
+            draft.categoryOrder = removeCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry
+            )
+          }
         })
+        if (promptFolderId !== rootPromptFolderId) {
+          collections.promptFolder.update(rootPromptFolderId, (draft) => {
+            draft.categoryOrder = removeCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry
+            )
+          })
+        }
       },
       persistMutations: async ({ entities, transaction }) => {
         const result = await ipcInvokeWithPayload<
@@ -230,7 +268,7 @@ export const createMarkdownContentRendererMutations = <
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
-        promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
       },
       conflictMessage: `${config.label} delete conflict`,
       onSuccess: () => config.deleteAuthoritative(contentId)
@@ -260,6 +298,14 @@ export const createMarkdownContentRendererMutations = <
     const isCrossRootMove =
       findContainingRootFolderId(sourcePromptFolderId) !==
       findContainingRootFolderId(destinationPromptFolderId)
+    /** Source root that loses V2 ownership during a cross-root move. */
+    const sourceRootPromptFolderId = findContainingRootFolderId(sourcePromptFolderId)
+    /** Destination root that gains Uncategorized V2 ownership during a cross-root move. */
+    const destinationRootPromptFolderId = findContainingRootFolderId(
+      destinationPromptFolderId
+    )
+    /** Category-order reference transferred between roots. */
+    const categoryOrderEntry = config.createEntryRef(contentId)
     const contentToMove: TPersisted = { ...persistedContent }
     if (isCrossRootMove) delete contentToMove.category
     const destinationEntries = isSameFolder
@@ -290,6 +336,12 @@ export const createMarkdownContentRendererMutations = <
 
         collections.promptFolder.update(sourcePromptFolderId, (draft) => {
           draft.entries = removeEntry(draft.entries, config.kind, contentId)
+          if (isCrossRootMove && sourcePromptFolderId === sourceRootPromptFolderId) {
+            draft.categoryOrder = removeCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry
+            )
+          }
         })
         collections.promptFolder.update(destinationPromptFolderId, (draft) => {
           const entries = [...draft.entries]
@@ -299,7 +351,34 @@ export const createMarkdownContentRendererMutations = <
             config.createEntryRef(contentId)
           )
           draft.entries = entries
+          if (
+            isCrossRootMove &&
+            destinationPromptFolderId === destinationRootPromptFolderId
+          ) {
+            draft.categoryOrder = appendCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry,
+              undefined
+            )
+          }
         })
+        if (isCrossRootMove && sourcePromptFolderId !== sourceRootPromptFolderId) {
+          collections.promptFolder.update(sourceRootPromptFolderId, (draft) => {
+            draft.categoryOrder = removeCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry
+            )
+          })
+        }
+        if (isCrossRootMove && destinationPromptFolderId !== destinationRootPromptFolderId) {
+          collections.promptFolder.update(destinationRootPromptFolderId, (draft) => {
+            draft.categoryOrder = appendCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry,
+              undefined
+            )
+          })
+        }
         config.updateContentOptimistically(collections, contentId, (draft) => {
           if (isCrossRootMove) delete draft.category
           if (draft.title.trim().length > 0) return
@@ -331,8 +410,7 @@ export const createMarkdownContentRendererMutations = <
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
-        promptFolderCollection.utils.upsertAuthoritative(payload.sourcePromptFolder)
-        promptFolderCollection.utils.upsertAuthoritative(payload.destinationPromptFolder)
+        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
         config.reconcile(payload.content)
       },
       conflictMessage: `${config.label} move conflict`

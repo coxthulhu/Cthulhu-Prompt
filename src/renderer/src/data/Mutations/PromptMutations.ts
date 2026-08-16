@@ -2,6 +2,10 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { promptEntryRef, removeEntry } from '@shared/OrderContainer'
 import {
+  appendCategoryOrderEntry,
+  removeCategoryOrderEntry
+} from '@shared/PromptFolder'
+import {
   createPromptFull,
   isPromptFull,
   PromptStatus,
@@ -154,6 +158,7 @@ export const setPromptStatus = async (
           modifiedAt: promptDraft.modifiedAt,
           status: PromptStatus.Todo,
           promptText: promptDraft.promptText,
+          ...(promptDraft.category !== undefined ? { category: promptDraft.category } : {}),
           ...(promptDraft.templates !== undefined
             ? { templates: promptDraft.templates }
             : {})
@@ -179,6 +184,17 @@ export const setPromptStatus = async (
           status: targetStatus,
           modifiedAt
         }
+  /** Category-order reference removed on completion and restored on activation. */
+  const categoryOrderEntry = promptEntryRef(promptId)
+  if (
+    targetStatus !== PromptStatus.Completed &&
+    nextPrompt.category !== undefined &&
+    !rootPromptFolder.categoryOrder.categories.some(
+      (category) => category.categoryId === nextPrompt.category
+    )
+  ) {
+    delete nextPrompt.category
+  }
 
   await runRevisionMutation<SetPromptStatusResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -194,6 +210,8 @@ export const setPromptStatus = async (
         draft.modifiedAt = nextPrompt.modifiedAt
         draft.promptText = nextPrompt.promptText
         draft.templates = nextPrompt.templates
+        if (nextPrompt.category === undefined) delete draft.category
+        else draft.category = nextPrompt.category
         markPromptDraftEdited(draft)
       })
       collections.promptFolder.update(promptFolderId, (draft) => {
@@ -205,10 +223,23 @@ export const setPromptStatus = async (
           ) {
             draft.completedPromptIds = [...draft.completedPromptIds, promptId]
           }
+          if (promptFolderId === rootPromptFolderId) {
+            draft.categoryOrder = removeCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry
+            )
+          }
           return
         }
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
         if (isCompletedPrompt) draft.entries = [promptEntryRef(promptId), ...draft.entries]
+        if (promptFolderId === rootPromptFolderId) {
+          draft.categoryOrder = appendCategoryOrderEntry(
+            draft.categoryOrder,
+            categoryOrderEntry,
+            nextPrompt.category
+          )
+        }
       })
       if (promptFolderId !== rootPromptFolderId) {
         collections.promptFolder.update(rootPromptFolderId, (draft) => {
@@ -220,6 +251,14 @@ export const setPromptStatus = async (
           } else if (targetStatus !== PromptStatus.Completed) {
             draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
           }
+          draft.categoryOrder =
+            targetStatus === PromptStatus.Completed
+              ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
+              : appendCategoryOrderEntry(
+                  draft.categoryOrder,
+                  categoryOrderEntry,
+                  nextPrompt.category
+                )
         })
       }
     },

@@ -75,7 +75,7 @@ const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder
     { kind: 'prompt', id: 'prompt-2' }
   ],
   completedPromptIds: [],
-  categoryIds: [],
+  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: {
     folderDescription: 'Original folder description'
   },

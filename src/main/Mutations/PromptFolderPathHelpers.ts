@@ -33,6 +33,32 @@ export const collectWorkspacePromptFolders = (workspace: Workspace): PromptFolde
   return promptFolders
 }
 
+/** Resolves the top-level folder that owns categories for one loaded folder. */
+export const resolveRootPromptFolderIdFromData = (promptFolderId: string): string => {
+  /** Folder entry used to locate the owning workspace. */
+  const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
+  if (!promptFolderEntry) throw new Error('Prompt folder not loaded')
+  /** Workspace containing the requested folder. */
+  const workspace = data.workspace.committedStore.getEntry(
+    promptFolderEntry.persistenceFields.workspaceId
+  )?.committed
+  if (!workspace) throw new Error('Workspace not loaded')
+  /** Current folder ancestry for the loaded workspace. */
+  const treeIndex = buildPromptFolderTreeIndex(
+    workspace,
+    collectWorkspacePromptFolders(workspace)
+  )
+  /** Root candidate advanced through each loaded parent. */
+  let rootPromptFolderId = promptFolderId
+  /** Current parent of the root candidate. */
+  let parentPromptFolderId = treeIndex.get(rootPromptFolderId)?.parentPromptFolderId ?? null
+  while (parentPromptFolderId !== null) {
+    rootPromptFolderId = parentPromptFolderId
+    parentPromptFolderId = treeIndex.get(rootPromptFolderId)?.parentPromptFolderId ?? null
+  }
+  return rootPromptFolderId
+}
+
 export const resolvePromptFolderPathFromData = (
   promptFolderId: string,
   overrides: Map<string, PromptFolderPathOverride> = new Map()

@@ -40,6 +40,24 @@ const folderPath = (folderName: string): string =>
 const activeOrderPath = (folderName: string): string =>
   `${folderPath(folderName)}/Active/_FolderInfo/FolderOrder.json`
 
+// Returns the persisted category-view ordering file owned by a prompt root.
+const activeCategoryOrderPath = (folderName: string): string =>
+  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrderV2.json`
+
+// Reads every prompt ID across the persisted category groups in UI order.
+const readCategoryOrderPromptIds = async (
+  electronApp: any,
+  folderName: string
+): Promise<string[]> => {
+  // Parsed category order whose nested entries are flattened for assertions.
+  const categoryOrder = JSON.parse(
+    await readTextFile(electronApp, activeCategoryOrderPath(folderName))
+  ) as { categories: Array<{ entries: Array<{ id: string }> }> }
+  return categoryOrder.categories.flatMap((category) =>
+    category.entries.map((entry) => entry.id)
+  )
+}
+
 // Creates and selects a prompt root through the production creation dialog.
 const createFolder = async (page: Page, folderName: string): Promise<void> => {
   await page.locator(promptFolderSelectorTriggerSelector).click()
@@ -123,6 +141,7 @@ describe('Prompt folder storage', () => {
     await expect(
       readPromptFolderEntryIds(electronApp, activeOrderPath(ALPHA_NAME))
     ).resolves.toEqual([])
+    await expect(readCategoryOrderPromptIds(electronApp, ALPHA_NAME)).resolves.toEqual([])
     await expect(checkFileExists(electronApp, `${alphaPath}/Completed`)).resolves.toBe(
       true
     )
@@ -206,6 +225,12 @@ describe('Prompt folder storage', () => {
     await expect
       .poll(() => readPromptFolderEntryIds(electronApp, activeOrderPath(BETA_NAME)))
       .toEqual([firstPromptId])
+    await expect
+      .poll(() => readCategoryOrderPromptIds(electronApp, ALPHA_NAME))
+      .toEqual([secondPromptId])
+    await expect
+      .poll(() => readCategoryOrderPromptIds(electronApp, BETA_NAME))
+      .toEqual([firstPromptId])
 
     // Completing moves the Markdown file from Active to Completed and updates frontmatter.
     const activePromptPath = `${betaPath}/Active/${FIRST_PROMPT_TITLE}.prompt.md`
@@ -221,6 +246,7 @@ describe('Prompt folder storage', () => {
     await expect(
       readPromptFolderEntryIds(electronApp, activeOrderPath(BETA_NAME))
     ).resolves.toEqual([])
+    await expect(readCategoryOrderPromptIds(electronApp, BETA_NAME)).resolves.toEqual([])
 
     // Completed mode shows the prompt without any movement affordance.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
@@ -240,10 +266,24 @@ describe('Prompt folder storage', () => {
     await expect.poll(() => checkFileExists(electronApp, completedPromptPath)).toBe(false)
     await expect.poll(() => checkFileExists(electronApp, activePromptPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, activePromptPath)).toContain('status: Todo')
+    await expect
+      .poll(() => readCategoryOrderPromptIds(electronApp, BETA_NAME))
+      .toEqual([firstPromptId])
 
     // Switching back to Active reveals the restored prompt in the root.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
     await expect(mainWindow.locator(promptEditorSelector(firstPromptId))).toBeVisible()
     expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
+
+    // Deleting the restored prompt removes it from both active and category-view ordering.
+    await mainWindow
+      .locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-delete-button"]`)
+      .click()
+    await mainWindow
+      .locator('[role="dialog"][aria-label="Delete Prompt"] button:has-text("Delete")')
+      .click()
+    await expect
+      .poll(() => readCategoryOrderPromptIds(electronApp, BETA_NAME))
+      .toEqual([])
   })
 })

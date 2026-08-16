@@ -32,6 +32,10 @@ const createPromptFolderInfo = (
 const getPromptFolderOrderPath = (folderPath: string): string =>
   `${folderPath}/_FolderInfo/FolderOrder.json`
 
+/** Returns the FolderOrderV2 path owned by one prompt or template root. */
+const getPromptFolderCategoryOrderPath = (folderPath: string): string =>
+  `${folderPath}/_FolderInfo/FolderOrderV2.json`
+
 const promptOrderFile = (promptIds: string[]) => ({
   entries: promptIds.map((id) => ({ kind: 'prompt' as const, id }))
 })
@@ -39,6 +43,57 @@ const promptOrderFile = (promptIds: string[]) => ({
 const folderOrderFile = (promptFolderIds: string[]) => ({
   entries: promptFolderIds.map((id) => ({ kind: 'folder' as const, id }))
 })
+
+/** Builds root category groups from configured fixture ownership and displayed-name order. */
+const categoryOrderFile = (
+  kind: 'prompt' | 'template',
+  contents: Array<{
+    id: string
+    title?: string
+    fallbackTitle?: string
+    category?: string
+  }>
+) => {
+  /** Fixture content sorted by the same displayed-name rule as startup repair. */
+  const sortedContents = contents.toSorted((left, right) => {
+    const nameComparison = getPromptDisplayTitle({
+      title: left.title ?? '',
+      fallbackTitle: left.fallbackTitle ?? ''
+    })
+      .toLocaleLowerCase()
+      .localeCompare(
+        getPromptDisplayTitle({
+          title: right.title ?? '',
+          fallbackTitle: right.fallbackTitle ?? ''
+        }).toLocaleLowerCase()
+      )
+    return nameComparison || left.id.localeCompare(right.id)
+  })
+  /** Stable configured category IDs emitted after Uncategorized. */
+  const categoryIds = [
+    ...new Set(
+      sortedContents.flatMap((content) =>
+        content.category === undefined ? [] : [content.category]
+      )
+    )
+  ]
+  return {
+    categories: [
+      {
+        categoryId: null,
+        entries: sortedContents
+          .filter((content) => content.category === undefined)
+          .map((content) => ({ kind, id: content.id }))
+      },
+      ...categoryIds.map((categoryId) => ({
+        categoryId,
+        entries: sortedContents
+          .filter((content) => content.category === categoryId)
+          .map((content) => ({ kind, id: content.id }))
+      }))
+    ]
+  }
+}
 
 /**
  * Configuration for creating a prompt folder
@@ -76,6 +131,14 @@ export interface PromptTemplateFolderConfig {
     category?: string
   }>
 }
+
+/** Collects every template recursively owned by one template-root fixture. */
+const collectPromptTemplateFolderTemplates = (
+  folder: PromptTemplateFolderConfig
+): NonNullable<PromptTemplateFolderConfig['templates']> => [
+  ...(folder.templates ?? []),
+  ...(folder.subfolders ?? []).flatMap(collectPromptTemplateFolderTemplates)
+]
 
 type PromptTemplate = NonNullable<PromptFolderConfig['prompts']>[number]
 
@@ -357,6 +420,11 @@ export function createWorkspaceWithFolders(
       null,
       2
     )
+    structure[getPromptFolderCategoryOrderPath(activeFolderPath)] = JSON.stringify(
+      categoryOrderFile('prompt', activePrompts),
+      null,
+      2
+    )
     structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
       createPromptFolderInfo(folder.displayName, promptFolderId),
       null,
@@ -413,7 +481,16 @@ export function createWorkspaceWithTemplateFolders(
     if (folder.description !== undefined) {
       structure[`${folderPath}/_FolderInfo/Description.md`] = folder.description
     }
-    if (isRoot) structure[`${folderPath}/Categories`] = null
+    if (isRoot) {
+      structure[`${folderPath}/Categories`] = null
+      /** All templates recursively owned by this root's category view. */
+      const rootTemplates = collectPromptTemplateFolderTemplates(folder)
+      structure[getPromptFolderCategoryOrderPath(folderPath)] = JSON.stringify(
+        categoryOrderFile('template', rootTemplates),
+        null,
+        2
+      )
+    }
 
     for (const template of templates) {
       const title = template.title ?? ''

@@ -32,7 +32,7 @@ export type MarkdownContentRevisionPayload<TContent extends MarkdownContentPersi
 
 export type MarkdownContentRevisionResponsePayload<TContent extends MarkdownContentPersisted> = {
   content: RevisionEnvelope<TContent>
-  promptFolder?: RevisionEnvelope<PromptFolder>
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
 }
 
 export type CreateMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
@@ -42,7 +42,7 @@ export type CreateMarkdownContentPayload<TContent extends MarkdownContentPersist
 }
 
 export type CreateMarkdownContentResponsePayload<TContent extends MarkdownContentPersisted> = {
-  promptFolder: RevisionEnvelope<PromptFolder>
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
   content?: RevisionEnvelope<TContent>
 }
 
@@ -52,7 +52,7 @@ export type DeleteMarkdownContentPayload<TContent extends MarkdownContentPersist
 }
 
 export type DeleteMarkdownContentResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
 }
 
 export type MoveMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
@@ -63,7 +63,6 @@ export type MoveMarkdownContentPayload<TContent extends MarkdownContentPersisted
 }
 
 export type MoveMarkdownContentResponsePayload<TContent extends MarkdownContentPersisted> = {
-  sourcePromptFolder: RevisionEnvelope<PromptFolder>
-  destinationPromptFolder: RevisionEnvelope<PromptFolder>
+  promptFolders: Array<RevisionEnvelope<PromptFolder>>
   content: RevisionEnvelope<TContent>
 }

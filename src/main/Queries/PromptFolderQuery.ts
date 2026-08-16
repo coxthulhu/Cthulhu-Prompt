@@ -4,6 +4,7 @@ import type {
   LoadPromptFolderInitialResult
 } from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
+import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import {
   createMarkdownContentUiStateRevisionKey,
   MarkdownContentUiStateDataAccess
@@ -46,9 +47,9 @@ export const loadPromptFolderInitialData = async (
     }
     const promptFolders = promptFolderEntries.map(buildPromptFolderSnapshot)
     /** Root-owned category snapshots needed by prompt and template metadata rows. */
-    const categories = getLoadedCategoryEntries(promptFolderEntry.committed.categoryIds).map(
-      buildCategorySnapshot
-    )
+    const categories = getLoadedCategoryEntries(
+      getCategoryOrderCategoryIds(promptFolderEntry.committed.categoryOrder)
+    ).map(buildCategorySnapshot)
     const { promptIds, promptTemplateIds, prompts, promptTemplates } =
       loadPromptFolderMarkdownContents(promptFolders)
     const contentIds = [

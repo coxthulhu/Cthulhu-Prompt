@@ -1,6 +1,11 @@
 import type { PromptPersisted } from './Prompt'
 import type { PromptTemplatePersisted } from './PromptTemplate'
-import type { EntryRef, OrderContainer } from './OrderContainer'
+import type {
+  EntryRef,
+  OrderContainer,
+  PromptEntryRef,
+  PromptTemplateEntryRef
+} from './OrderContainer'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
@@ -10,12 +15,120 @@ export type PromptFolderKind = 'prompt' | 'template'
 
 export type PromptFolderContentKind = PromptFolderKind
 
+/** Ordered prompt or template reference stored inside one category group. */
+export type CategoryOrderEntryRef = PromptEntryRef | PromptTemplateEntryRef
+
+/** One category and its ordered active content references. */
+export type CategoryOrderGroup = {
+  categoryId: string | null
+  entries: CategoryOrderEntryRef[]
+}
+
+/** Root-folder category ordering persisted in FolderOrderV2.json. */
+export type CategoryOrder = {
+  categories: CategoryOrderGroup[]
+}
+
+/** Creates category ordering for a root folder with Uncategorized first. */
+export const createRootCategoryOrder = (): CategoryOrder => ({
+  categories: [{ categoryId: null, entries: [] }]
+})
+
+/** Creates empty category ordering for a non-root folder. */
+export const createNestedCategoryOrder = (): CategoryOrder => ({ categories: [] })
+
+/** Returns the ordered category IDs owned by one root folder. */
+export const getCategoryOrderCategoryIds = (categoryOrder: CategoryOrder): string[] =>
+  categoryOrder.categories.flatMap(({ categoryId }) =>
+    categoryId === null ? [] : [categoryId]
+  )
+
+/** Removes one content reference from every category group. */
+export const removeCategoryOrderEntry = (
+  categoryOrder: CategoryOrder,
+  entry: CategoryOrderEntryRef
+): CategoryOrder => ({
+  categories: categoryOrder.categories.map((category) => ({
+    ...category,
+    entries: category.entries.filter(
+      (candidate) => candidate.kind !== entry.kind || candidate.id !== entry.id
+    )
+  }))
+})
+
+/** Finds the category group currently containing one content reference. */
+export const findCategoryOrderEntryCategoryId = (
+  categoryOrder: CategoryOrder,
+  entry: CategoryOrderEntryRef
+): string | null | undefined =>
+  categoryOrder.categories.find((category) =>
+    category.entries.some(
+      (candidate) => candidate.kind === entry.kind && candidate.id === entry.id
+    )
+  )?.categoryId
+
+/** Appends one content reference to its requested category or Uncategorized. */
+export const appendCategoryOrderEntry = (
+  categoryOrder: CategoryOrder,
+  entry: CategoryOrderEntryRef,
+  categoryId: string | undefined
+): CategoryOrder => {
+  /** Category ID accepted only when its group currently exists. */
+  const targetCategoryId = categoryOrder.categories.some(
+    (category) => category.categoryId === categoryId
+  )
+    ? (categoryId ?? null)
+    : null
+  /** Ordering with any previous occurrence of the content removed. */
+  const withoutEntry = removeCategoryOrderEntry(categoryOrder, entry)
+
+  return {
+    categories: withoutEntry.categories.map((category) =>
+      category.categoryId === targetCategoryId
+        ? { ...category, entries: [...category.entries, entry] }
+        : category
+    )
+  }
+}
+
+/** Inserts a new empty category immediately after Uncategorized. */
+export const insertCategoryOrderGroup = (
+  categoryOrder: CategoryOrder,
+  categoryId: string
+): CategoryOrder => ({
+  categories: [
+    categoryOrder.categories[0]!,
+    { categoryId, entries: [] },
+    ...categoryOrder.categories.slice(1)
+  ]
+})
+
+/** Deletes a category group and appends its content to Uncategorized. */
+export const deleteCategoryOrderGroup = (
+  categoryOrder: CategoryOrder,
+  categoryId: string
+): CategoryOrder => {
+  /** Entries whose deleted category ownership becomes Uncategorized. */
+  const movedEntries = categoryOrder.categories.find(
+    (category) => category.categoryId === categoryId
+  )?.entries ?? []
+  return {
+    categories: categoryOrder.categories
+      .filter((category) => category.categoryId !== categoryId)
+      .map((category) =>
+        category.categoryId === null
+          ? { ...category, entries: [...category.entries, ...movedEntries] }
+          : category
+      )
+  }
+}
+
 interface PromptFolderBase extends OrderContainer<EntryRef> {
   id: string
   folderName: string
   displayName: string
   completedPromptIds: string[]
-  categoryIds: string[]
+  categoryOrder: CategoryOrder
 }
 
 export interface PromptContentFolder extends PromptFolderBase {
@@ -120,6 +233,7 @@ export type DeletePromptFolderResponsePayload = {
   workspace?: RevisionEnvelope<Workspace>
   parentPromptFolder?: RevisionEnvelope<PromptFolder>
   promptFolder?: RevisionEnvelope<PromptFolder>
+  categoryOrderPromptFolder?: RevisionEnvelope<PromptFolder>
 }
 
 export type LoadPromptFolderInitialPayload = {

@@ -12,7 +12,7 @@ const templateFolder = {
   displayName: 'Templates',
   entries: [],
   completedPromptIds: [],
-  categoryIds: [],
+  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: { folderDescription: null }
 }
 

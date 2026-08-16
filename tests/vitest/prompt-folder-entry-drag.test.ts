@@ -9,7 +9,7 @@ const folder = (id: string, entries: PromptFolder['entries'] = []): PromptFolder
   displayName: id,
   entries,
   completedPromptIds: [],
-  categoryIds: [],
+  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: { folderDescription: '' }
 })
 

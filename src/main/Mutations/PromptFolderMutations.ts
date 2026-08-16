@@ -3,11 +3,17 @@ import * as path from 'path'
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
+  createNestedCategoryOrder,
+  createRootCategoryOrder,
+  getCategoryOrderCategoryIds,
+  removeCategoryOrderEntry,
   type PromptFolder,
   type PromptFolderKind
 } from '@shared/PromptFolder'
 import {
   folderEntryRef,
+  promptEntryRef,
+  promptTemplateEntryRef,
   removeEntry,
   resolveEntryInsertIndex,
   type EntryRef
@@ -37,7 +43,8 @@ import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
 import {
   refreshPromptFolderTreePersistencePaths,
   resolvePromptFolderPathFromData,
-  collectWorkspacePromptFolders
+  collectWorkspacePromptFolders,
+  resolveRootPromptFolderIdFromData
 } from './PromptFolderPathHelpers'
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
@@ -149,7 +156,9 @@ export const setupPromptFolderMutationHandlers = (): void => {
             displayName: normalizedDisplayName,
             entries: [],
             completedPromptIds: [],
-            categoryIds: [],
+            categoryOrder: requestedParentPromptFolder
+              ? createNestedCategoryOrder()
+              : createRootCategoryOrder(),
             settings: createEmptyPromptFolderSettings()
           } as PromptFolder
 
@@ -293,19 +302,36 @@ export const setupPromptFolderMutationHandlers = (): void => {
             ...collectLoadedPromptFolderDescendantIds(requestedPromptFolder.id)
           ]
           const deletedContentIds = collectPromptFolderContentIds(deletedPromptFolderIds)
+          /** Surviving root whose V2 order loses content from a deleted nested subtree. */
+          const categoryOrderPromptFolderId = parentPromptFolderId
+            ? resolveRootPromptFolderIdFromData(requestedPromptFolder.id)
+            : null
+          /** V2 content references removed with the deleted subtree. */
+          const deletedCategoryOrderEntries = [
+            ...deletedContentIds.prompt.map(promptEntryRef),
+            ...deletedContentIds.template.map(promptTemplateEntryRef)
+          ]
           /** Category records owned by roots included in the deleted folder subtree. */
           const deletedCategoryIds = deletedPromptFolderIds.flatMap(
             (promptFolderId) =>
-              data.promptFolder.committedStore.getEntry(promptFolderId)?.committed.categoryIds ?? []
+              getCategoryOrderCategoryIds(
+                data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
+                  .categoryOrder ?? createNestedCategoryOrder()
+              )
           )
 
-          const transactionOutcome = await runAtomicDataTransaction((tx) => ({
+          const transactionOutcome = (await runAtomicDataTransaction((tx) => ({
             orderContainer: committedParentPromptFolder
               ? tx.promptFolder.update({
                   id: committedParentPromptFolder.committed.id,
                   expectedRevision: requestedParentPromptFolder?.expectedRevision,
                   recipe: (draft) => {
                     draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
+                    if (committedParentPromptFolder.committed.id === categoryOrderPromptFolderId) {
+                      for (const entry of deletedCategoryOrderEntries) {
+                        draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+                      }
+                    }
                   }
                 })
               : tx.workspace.update({
@@ -315,6 +341,19 @@ export const setupPromptFolderMutationHandlers = (): void => {
                     draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
                   }
                 }),
+            ...(categoryOrderPromptFolderId !== null &&
+              committedParentPromptFolder?.committed.id !== categoryOrderPromptFolderId
+              ? {
+                  categoryOrderPromptFolder: tx.promptFolder.update({
+                    id: categoryOrderPromptFolderId,
+                    recipe: (draft) => {
+                      for (const entry of deletedCategoryOrderEntries) {
+                        draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+                      }
+                    }
+                  })
+                }
+              : {}),
             ...createPromptFolderContentDeleteHandles(tx, deletedContentIds),
             ...Object.fromEntries(
               deletedCategoryIds.map((categoryId) => [
@@ -334,7 +373,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
                 })
               ])
             )
-          }))
+          })))!
 
           if (transactionOutcome.status === 'conflict') {
             if (transactionOutcome.conflictLabel === 'orderContainer') {
@@ -397,7 +436,16 @@ export const setupPromptFolderMutationHandlers = (): void => {
             success: true,
             payload: committedParentPromptFolder
               ? {
-                  parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder!)
+                  parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder!),
+                  ...(categoryOrderPromptFolderId
+                    ? {
+                        categoryOrderPromptFolder: buildPromptFolderSnapshot(
+                          data.promptFolder.committedStore.getEntry(
+                            categoryOrderPromptFolderId
+                          )!
+                        )
+                      }
+                    : {})
                 }
               : {
                   workspace: buildWorkspaceSnapshot(updatedWorkspace)

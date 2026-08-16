@@ -30,13 +30,16 @@ import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import {
   folderEntryRef,
+  promptEntryRef,
+  promptTemplateEntryRef,
   removeEntry,
   resolveEntryInsertIndex
 } from '@shared/OrderContainer'
-import type {
-  DeletePromptFolderPayload,
-  DeletePromptFolderResponsePayload,
-  PromptFolder
+import {
+  removeCategoryOrderEntry,
+  type DeletePromptFolderPayload,
+  type DeletePromptFolderResponsePayload,
+  type PromptFolder
 } from '@shared/PromptFolder'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import {
@@ -137,16 +140,44 @@ export const deletePromptFolder = async (
 
   const deletedGraph = collectPromptFolderGraphIds([promptFolderId])
   const deletedPromptFolderIds = [...deletedGraph.promptFolderIds]
+  /** Root folder whose V2 order loses content from a deleted nested subtree. */
+  let categoryOrderPromptFolderId = promptFolderId
+  /** Parent walked while resolving the V2 owner. */
+  let categoryOrderParentId = treeIndex.get(categoryOrderPromptFolderId)?.parentPromptFolderId ?? null
+  while (categoryOrderParentId !== null) {
+    categoryOrderPromptFolderId = categoryOrderParentId
+    categoryOrderParentId = treeIndex.get(categoryOrderPromptFolderId)?.parentPromptFolderId ?? null
+  }
+  /** V2 content references removed with the deleted subtree. */
+  const deletedCategoryOrderEntries = [
+    ...[...deletedGraph.contentIds.prompt].map(promptEntryRef),
+    ...[...deletedGraph.contentIds.template].map(promptTemplateEntryRef)
+  ]
 
   await runRevisionMutation<DeletePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       if (parentPromptFolderId) {
         collections.promptFolder.update(parentPromptFolderId, (draft) => {
           draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
+          if (parentPromptFolderId === categoryOrderPromptFolderId) {
+            for (const entry of deletedCategoryOrderEntries) {
+              draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+            }
+          }
         })
       } else {
         collections.workspace.update(workspaceId, (draft) => {
           draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
+        })
+      }
+      if (
+        parentPromptFolderId !== null &&
+        parentPromptFolderId !== categoryOrderPromptFolderId
+      ) {
+        collections.promptFolder.update(categoryOrderPromptFolderId, (draft) => {
+          for (const entry of deletedCategoryOrderEntries) {
+            draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+          }
         })
       }
       deletePromptFolderContentsOptimistically(collections, deletedGraph)
@@ -176,6 +207,9 @@ export const deletePromptFolder = async (
       }
       if (payload.promptFolder) {
         promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+      }
+      if (payload.categoryOrderPromptFolder) {
+        promptFolderCollection.utils.upsertAuthoritative(payload.categoryOrderPromptFolder)
       }
     },
     conflictMessage: 'Prompt folder delete conflict',

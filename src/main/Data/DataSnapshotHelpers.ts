@@ -1,5 +1,5 @@
 import type { PromptPersisted } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
+import type { CategoryOrder, PromptFolder } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type { EntryRef, FolderEntryRef } from '@shared/OrderContainer'
 import type { RevisionEnvelope } from '@shared/Revision'
@@ -53,12 +53,27 @@ export const filterLoadedPromptIds = (promptIds: string[]): string[] => {
   )
 }
 
-/** Filters category ownership to records loaded in the authoritative store. */
-export const filterLoadedCategoryIds = (categoryIds: string[]): string[] => {
-  return filterLoadedEntityIds(categoryIds, (categoryId) =>
-    data.category.committedStore.getEntry(categoryId)
-  )
-}
+/** Filters category groups and entries to entities loaded in authoritative stores. */
+const filterLoadedCategoryOrder = (categoryOrder: CategoryOrder): CategoryOrder => ({
+  categories: categoryOrder.categories.flatMap((category) => {
+    if (
+      category.categoryId !== null &&
+      data.category.committedStore.getEntry(category.categoryId) === null
+    ) {
+      return []
+    }
+    return [
+      {
+        ...category,
+        entries: category.entries.filter((entry) =>
+          entry.kind === 'prompt'
+            ? data.prompt.committedStore.getEntry(entry.id) !== null
+            : data.promptTemplate.committedStore.getEntry(entry.id) !== null
+        )
+      }
+    ]
+  })
+})
 
 export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntry[] => {
   return getLoadedEntries(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
@@ -134,7 +149,7 @@ export const buildPromptFolderSnapshot = (
       ...promptFolderEntry.committed,
       entries: filterLoadedPromptFolderEntriesByKind(promptFolderEntry.committed.entries),
       completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds),
-      categoryIds: filterLoadedCategoryIds(promptFolderEntry.committed.categoryIds)
+      categoryOrder: filterLoadedCategoryOrder(promptFolderEntry.committed.categoryOrder)
     }
   }
 }

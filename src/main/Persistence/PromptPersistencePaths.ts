@@ -11,6 +11,8 @@ export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const WORKSPACE_FOLDER_ORDER_FILENAME = 'WorkspaceFolderOrder.json'
 export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
+/** Filename for category-view ordering owned by a root folder. */
+export const PROMPT_FOLDER_CATEGORY_ORDER_FILENAME = 'FolderOrderV2.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
@@ -98,6 +100,22 @@ export const resolvePromptFolderOrderPath = (
     resolvePromptFolderPath(workspacePath, orderFolderName, kind),
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,
     PROMPT_FOLDER_ORDER_FILENAME
+  )
+}
+
+/** Resolves the root-owned category ordering file for prompts or templates. */
+export const resolvePromptFolderCategoryOrderPath = (
+  workspacePath: string,
+  rootFolderName: string,
+  kind: PromptFolderKind
+): string => {
+  /** Prompt roots store active metadata below Active; template roots store it directly. */
+  const orderFolderName =
+    kind === 'prompt' ? resolveActivePromptFolderName(rootFolderName, kind) : rootFolderName
+  return path.join(
+    resolvePromptFolderPath(workspacePath, orderFolderName, kind),
+    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
+    PROMPT_FOLDER_CATEGORY_ORDER_FILENAME
   )
 }
 

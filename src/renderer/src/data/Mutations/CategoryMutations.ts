@@ -13,6 +13,11 @@ import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { createPromptFull } from '@shared/Prompt'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
+import {
+  deleteCategoryOrderGroup,
+  getCategoryOrderCategoryIds,
+  insertCategoryOrderGroup
+} from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptDraftCollection } from '../Collections/PromptDraftCollection'
@@ -38,7 +43,7 @@ export const createCategory = async (
     mutateOptimistically: ({ collections }) => {
       collections.category.insert(category)
       collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.categoryIds = [...draft.categoryIds, categoryId]
+        draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, categoryId)
       })
     },
     persistMutations: async ({ entities, invoke }) => {
@@ -125,7 +130,7 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   if (!category) throw new Error('Category not loaded')
   /** Root folder that currently owns the category. */
   const promptFolder = promptFolderCollection.toArray.find((folder) =>
-    folder.categoryIds.includes(categoryId)
+    getCategoryOrderCategoryIds(folder.categoryOrder).includes(categoryId)
   )
   if (!promptFolder) throw new Error('Category root prompt folder not loaded')
   /** Every renderer prompt carrying the deleted category ID. */
@@ -142,7 +147,7 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   await runRevisionMutation<DeleteCategoryResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.promptFolder.update(promptFolder.id, (draft) => {
-        draft.categoryIds = draft.categoryIds.filter((id) => id !== categoryId)
+        draft.categoryOrder = deleteCategoryOrderGroup(draft.categoryOrder, categoryId)
       })
       collections.category.delete(categoryId)
       for (const promptId of promptIds) {

@@ -1,5 +1,6 @@
 import * as path from 'path'
 import { PromptStatus } from '@shared/Prompt'
+import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
@@ -104,7 +105,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
     promptFolders.push(promptFolderSnapshot)
 
-    for (const categoryEntry of getLoadedCategoryEntries(promptFolderSnapshot.data.categoryIds)) {
+    for (const categoryEntry of getLoadedCategoryEntries(
+      getCategoryOrderCategoryIds(promptFolderSnapshot.data.categoryOrder)
+    )) {
       categories.push(buildCategorySnapshot(categoryEntry))
     }
 
@@ -220,7 +223,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
     if (parentPromptFolderIdById.get(promptFolder.id) !== null) return []
     const rootFolderName = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
     const categoryStemById = readCategoryStemById(workspacePath, rootFolderName, promptFolder.kind)
-    return promptFolder.categoryIds.flatMap((categoryId) => {
+    return getCategoryOrderCategoryIds(promptFolder.categoryOrder).flatMap((categoryId) => {
       const categoryStem = categoryStemById.get(categoryId)
       if (!categoryStem) return []
       return [

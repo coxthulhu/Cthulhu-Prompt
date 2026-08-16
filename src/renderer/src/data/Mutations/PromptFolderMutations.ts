@@ -1,6 +1,8 @@
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
+  createNestedCategoryOrder,
+  createRootCategoryOrder,
   type CreatePromptFolderPayload,
   type CreatePromptFolderResponsePayload,
   type PromptFolder,
@@ -114,7 +116,9 @@ export const createPromptFolder = async (
     displayName: normalizedDisplayName,
     entries: [],
     completedPromptIds: [],
-    categoryIds: [],
+    categoryOrder: parentPromptFolderId
+      ? createNestedCategoryOrder()
+      : createRootCategoryOrder(),
     settings: createEmptyPromptFolderSettings()
   } as PromptFolder
 

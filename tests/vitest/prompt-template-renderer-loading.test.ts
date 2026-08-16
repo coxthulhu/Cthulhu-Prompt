@@ -46,7 +46,14 @@ describe('prompt template renderer loading', () => {
             displayName: 'Templates',
             entries: [{ kind: 'template', id: 'renderer-template' }],
             completedPromptIds: [],
-            categoryIds: [],
+            categoryOrder: {
+              categories: [
+                {
+                  categoryId: null,
+                  entries: [{ kind: 'template', id: 'renderer-template' }]
+                }
+              ]
+            },
             settings: {
               folderDescription: 'Template description'
             }
@@ -99,7 +106,14 @@ describe('prompt template renderer loading', () => {
         displayName: 'Templates',
         entries: [{ kind: 'template', id: 'renderer-template' }],
         completedPromptIds: [],
-        categoryIds: [],
+        categoryOrder: {
+          categories: [
+            {
+              categoryId: null,
+              entries: [{ kind: 'template', id: 'renderer-template' }]
+            }
+          ]
+        },
         settings: { folderDescription: 'Template description' }
       }
     })
@@ -133,7 +147,14 @@ describe('prompt template renderer loading', () => {
             displayName: 'Templates',
             entries: [{ kind: 'template', id: 'renderer-template' }],
             completedPromptIds: [],
-            categoryIds: [],
+            categoryOrder: {
+              categories: [
+                {
+                  categoryId: null,
+                  entries: [{ kind: 'template', id: 'renderer-template' }]
+                }
+              ]
+            },
             settings: { folderDescription: 'Template description' }
           }
         }

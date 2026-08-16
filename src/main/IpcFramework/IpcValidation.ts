@@ -251,7 +251,20 @@ const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
     })
   ),
   completedPromptIds: parseArray(parseString),
-  categoryIds: parseArray(parseString),
+  categoryOrder: parseObject({
+    categories: parseArray(
+      parseObject({
+        categoryId: parseNullableString,
+        entries: parseArray(
+          parseObject({
+            kind: (value) =>
+              value === 'prompt' || value === 'template' ? value : null,
+            id: parseString
+          })
+        )
+      })
+    )
+  }),
   settings: parsePromptFolderSettings
 })
 

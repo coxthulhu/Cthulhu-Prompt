@@ -9,7 +9,7 @@ const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   displayName: 'Folder',
   entries: [],
   completedPromptIds: [],
-  categoryIds: [],
+  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: {
     folderDescription: ''
   },

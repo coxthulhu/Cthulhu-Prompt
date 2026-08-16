@@ -7,6 +7,10 @@ import {
 import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
 import { promptEntryRef, removeEntry } from '@shared/OrderContainer'
 import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  appendCategoryOrderEntry,
+  removeCategoryOrderEntry
+} from '@shared/PromptFolder'
 import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
@@ -200,6 +204,17 @@ const setupPromptStatusMutationHandler = (): void => {
                   modifiedAt: now
                 }
               : { ...activePromptBase, status: targetStatus, modifiedAt: now }
+          /** Category-order reference removed on completion and restored on activation. */
+          const categoryOrderEntry = promptEntryRef(requestedPrompt.id)
+          if (
+            targetStatus !== PromptStatus.Completed &&
+            targetPrompt.category !== undefined &&
+            !rootPromptFolder.committed.categoryOrder.categories.some(
+              (category) => category.categoryId === targetPrompt.category
+            )
+          ) {
+            delete targetPrompt.category
+          }
           const sourcePromptFolderPath = sourcePromptFolder.persistenceFields.folderPath
           const rootPromptFolderPath = rootPromptFolder.persistenceFields.folderPath
           const activeFolderPath = resolveActivePromptFolderName(
@@ -262,6 +277,14 @@ const setupPromptStatusMutationHandler = (): void => {
                 draft.entries = nextEntries
                 if (requestedSourcePromptFolder.id === requestedRootPromptFolder.id) {
                   draft.completedPromptIds = completedPromptIds
+                  draft.categoryOrder =
+                    targetStatus === PromptStatus.Completed
+                      ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
+                      : appendCategoryOrderEntry(
+                          draft.categoryOrder,
+                          categoryOrderEntry,
+                          targetPrompt.category
+                        )
                 }
               }
             }),
@@ -273,6 +296,14 @@ const setupPromptStatusMutationHandler = (): void => {
                     expectedRevision: requestedRootPromptFolder.expectedRevision,
                     recipe: (draft) => {
                       draft.completedPromptIds = completedPromptIds
+                      draft.categoryOrder =
+                        targetStatus === PromptStatus.Completed
+                          ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
+                          : appendCategoryOrderEntry(
+                              draft.categoryOrder,
+                              categoryOrderEntry,
+                              targetPrompt.category
+                            )
                     }
                   })
                 }),

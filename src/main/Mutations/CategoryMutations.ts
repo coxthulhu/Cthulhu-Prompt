@@ -8,6 +8,11 @@ import {
   type DeleteCategoryResponsePayload
 } from '@shared/Category'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import {
+  deleteCategoryOrderGroup,
+  getCategoryOrderCategoryIds,
+  insertCategoryOrderGroup
+} from '@shared/PromptFolder'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
@@ -147,7 +152,9 @@ export const setupCategoryMutationHandlers = (): void => {
           return { success: false, error: 'Root prompt folder not loaded' }
         }
         const displayName = normalizeCategoryDisplayName(requestedCategory.data.displayName)
-        const categories = getRootCategories(folder.committed.categoryIds)
+        const categories = getRootCategories(
+          getCategoryOrderCategoryIds(folder.committed.categoryOrder)
+        )
         if (!displayName) return { success: false, error: 'Category name is required' }
         if (hasCategoryDisplayNameConflict(categories, displayName)) {
           return { success: false, error: 'Category name already exists' }
@@ -170,7 +177,11 @@ export const setupCategoryMutationHandlers = (): void => {
           categoryStem: requestedCategory.id,
           needsFilenameIdSuffix: false
         }
-        const nextCategoryIds = [...folder.committed.categoryIds, category.id]
+        /** Category IDs after inserting the new group at index 1. */
+        const nextCategoryIds = [
+          category.id,
+          ...getCategoryOrderCategoryIds(folder.committed.categoryOrder)
+        ]
         const filenamePlans = planCategoryFilenames(
           nextCategoryIds,
           new Map([[category.id, { category, persistenceFields }]])
@@ -181,7 +192,7 @@ export const setupCategoryMutationHandlers = (): void => {
             id: folder.committed.id,
             expectedRevision: requestedFolder.expectedRevision,
             recipe: (draft) => {
-              draft.categoryIds = nextCategoryIds
+              draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, category.id)
             }
           }),
           category: tx.category.create({
@@ -229,14 +240,16 @@ export const setupCategoryMutationHandlers = (): void => {
         )
         if (!rootFolder) return { success: false, error: 'Root prompt folder not loaded' }
         const displayName = normalizeCategoryDisplayName(validated.payload.displayName)
-        const categories = getRootCategories(rootFolder.committed.categoryIds)
+        const categories = getRootCategories(
+          getCategoryOrderCategoryIds(rootFolder.committed.categoryOrder)
+        )
         if (!displayName) return { success: false, error: 'Category name is required' }
         if (hasCategoryDisplayNameConflict(categories, displayName, requestedCategory.id)) {
           return { success: false, error: 'Category name already exists' }
         }
         const renamedCategory = { ...categoryEntry.committed, displayName }
         const filenamePlans = planCategoryFilenames(
-          rootFolder.committed.categoryIds,
+          getCategoryOrderCategoryIds(rootFolder.committed.categoryOrder),
           new Map([
             [
               requestedCategory.id,
@@ -324,7 +337,9 @@ export const setupCategoryMutationHandlers = (): void => {
           !category ||
           !promptFolder ||
           category.persistenceFields.rootPromptFolderId !== requestedFolder.id ||
-          !promptFolder.committed.categoryIds.includes(requestedCategory.id)
+          !getCategoryOrderCategoryIds(promptFolder.committed.categoryOrder).includes(
+            requestedCategory.id
+          )
         ) {
           return { success: false, error: 'Category ownership not loaded' }
         }
@@ -359,7 +374,10 @@ export const setupCategoryMutationHandlers = (): void => {
             id: requestedFolder.id,
             expectedRevision: requestedFolder.expectedRevision,
             recipe: (draft) => {
-              draft.categoryIds = draft.categoryIds.filter((id) => id !== requestedCategory.id)
+              draft.categoryOrder = deleteCategoryOrderGroup(
+                draft.categoryOrder,
+                requestedCategory.id
+              )
             }
           }),
           category: tx.category.delete({

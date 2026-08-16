@@ -22,6 +22,7 @@ import {
   resolveActivePromptFolderName,
   resolveCategoriesDirectoryPath,
   resolveCompletedPromptFolderName,
+  resolvePromptFolderCategoryOrderPath,
   resolvePromptFolderPath,
   resolvePromptFolderOrderPath,
   resolveWorkspaceFolderOrderPath
@@ -156,6 +157,16 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     JSON.stringify({ entries: promptIds.map(promptEntryRef) }, null, 2),
     'utf8'
   )
+  // Side effect: initialize category-view ordering with every bundled prompt uncategorized.
+  fs.writeFileSync(
+    resolvePromptFolderCategoryOrderPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'),
+    JSON.stringify(
+      { categories: [{ categoryId: null, entries: promptIds.map(promptEntryRef) }] },
+      null,
+      2
+    ),
+    'utf8'
+  )
   return promptFolderId
 }
 
@@ -199,6 +210,16 @@ const writeMyTemplatesFolder = (workspacePath: string): string => {
   fs.writeFileSync(
     resolvePromptFolderOrderPath(workspacePath, DEFAULT_TEMPLATE_FOLDER_NAME, 'template'),
     JSON.stringify({ entries: [] }, null, 2),
+    'utf8'
+  )
+  // Side effect: initialize template category-view ordering at the template root.
+  fs.writeFileSync(
+    resolvePromptFolderCategoryOrderPath(
+      workspacePath,
+      DEFAULT_TEMPLATE_FOLDER_NAME,
+      'template'
+    ),
+    JSON.stringify({ categories: [{ categoryId: null, entries: [] }] }, null, 2),
     'utf8'
   )
 

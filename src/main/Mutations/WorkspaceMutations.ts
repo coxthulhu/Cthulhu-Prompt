@@ -28,6 +28,14 @@ import {
   collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
 import { collectPromptFolderContentIds } from './PromptFolderContentMutations'
+import {
+  appendCategoryOrderEntry,
+  createNestedCategoryOrder,
+  createRootCategoryOrder,
+  removeCategoryOrderEntry,
+  type CategoryOrder
+} from '@shared/PromptFolder'
+import { PromptStatus } from '@shared/Prompt'
 
 /** Resolves the top-level owner of one folder in a loaded workspace tree. */
 const resolveRootPromptFolderId = (
@@ -200,6 +208,58 @@ export const setupWorkspaceMutationHandlers = (): void => {
             payload.promptFolderId,
             ...descendantIds
           ])
+          /** Active prompt IDs represented in FolderOrderV2. */
+          const movedActivePromptIds = movedContentIds.prompt.filter(
+            (promptId) =>
+              data.prompt.committedStore.getEntry(promptId)?.committed.status !==
+              PromptStatus.Completed
+          )
+          /** Active content keys used to preserve the source V2 relative order. */
+          const movedActiveContentKeys = new Set([
+            ...movedActivePromptIds.map((promptId) => `prompt:${promptId}`),
+            ...movedContentIds.template.map((templateId) => `template:${templateId}`)
+          ])
+          /** Source root entry used to derive transferred V2 ordering. */
+          const sourceRootPromptFolder = data.promptFolder.committedStore.getEntry(
+            sourceRootPromptFolderId
+          )!
+          /** Active moved entries in their prior category-view order. */
+          const movedCategoryOrderEntries = sourceRootPromptFolder.committed.categoryOrder.categories
+            .flatMap((category) => category.entries)
+            .filter((entry) => movedActiveContentKeys.has(`${entry.kind}:${entry.id}`))
+          /** Repaired V2 values assigned to roots affected by a cross-root move. */
+          const categoryOrderByPromptFolderId = new Map<string, CategoryOrder>()
+          if (isCrossRootMove) {
+            /** Source order after removing every active entry in the moved subtree. */
+            let nextSourceCategoryOrder = sourceRootPromptFolder.committed.categoryOrder
+            for (const entry of movedCategoryOrderEntries) {
+              nextSourceCategoryOrder = removeCategoryOrderEntry(nextSourceCategoryOrder, entry)
+            }
+            categoryOrderByPromptFolderId.set(
+              sourceRootPromptFolderId,
+              sourceRootPromptFolderId === payload.promptFolderId
+                ? createNestedCategoryOrder()
+                : nextSourceCategoryOrder
+            )
+
+            /** Destination root order, initialized when the moved folder becomes a new root. */
+            let nextDestinationCategoryOrder =
+              destinationRootPromptFolderId === payload.promptFolderId
+                ? createRootCategoryOrder()
+                : data.promptFolder.committedStore.getEntry(destinationRootPromptFolderId)!
+                    .committed.categoryOrder
+            for (const entry of movedCategoryOrderEntries) {
+              nextDestinationCategoryOrder = appendCategoryOrderEntry(
+                nextDestinationCategoryOrder,
+                entry,
+                undefined
+              )
+            }
+            categoryOrderByPromptFolderId.set(
+              destinationRootPromptFolderId,
+              nextDestinationCategoryOrder
+            )
+          }
           const categoryClearedPromptIds = isCrossRootMove
             ? movedContentIds.prompt.filter(
                 (promptId) => data.prompt.committedStore.getEntry(promptId)?.committed.category
@@ -221,6 +281,8 @@ export const setupWorkspaceMutationHandlers = (): void => {
               | ReturnType<typeof tx.prompt.update>
               | ReturnType<typeof tx.promptTemplate.update>
             > = {}
+            /** Folder IDs whose existing transaction handles also apply V2 changes. */
+            const handledPromptFolderIds = new Set<string>()
 
             const nextDestinationEntries = [...destinationEntries]
             nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
@@ -235,21 +297,29 @@ export const setupWorkspaceMutationHandlers = (): void => {
               })
             } else if (isSameParent && sourceParentPromptFolder) {
               modifiedPromptFolderIds.add(sourceParentPromptFolder.committed.id)
+              handledPromptFolderIds.add(sourceParentPromptFolder.committed.id)
               handles.sourceParentPromptFolder = tx.promptFolder.update({
                 id: sourceParentPromptFolder.committed.id,
                 expectedRevision: payload.sourceParentPromptFolder?.expectedRevision,
                 recipe: (draft) => {
                   draft.entries = nextDestinationEntries
+                  /** V2 order assigned when this parent is also an affected root. */
+                  const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
+                  if (categoryOrder) draft.categoryOrder = categoryOrder
                 }
               })
             } else {
               if (sourceParentPromptFolder) {
                 modifiedPromptFolderIds.add(sourceParentPromptFolder.committed.id)
+                handledPromptFolderIds.add(sourceParentPromptFolder.committed.id)
                 handles.sourceParentPromptFolder = tx.promptFolder.update({
                   id: sourceParentPromptFolder.committed.id,
                   expectedRevision: payload.sourceParentPromptFolder?.expectedRevision,
                   recipe: (draft) => {
                     draft.entries = removeEntry(draft.entries, 'folder', payload.promptFolderId)
+                    /** V2 order assigned when this parent is also the source root. */
+                    const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
+                    if (categoryOrder) draft.categoryOrder = categoryOrder
                   }
                 })
               } else {
@@ -264,11 +334,15 @@ export const setupWorkspaceMutationHandlers = (): void => {
 
               if (destinationParentPromptFolder) {
                 modifiedPromptFolderIds.add(destinationParentPromptFolder.committed.id)
+                handledPromptFolderIds.add(destinationParentPromptFolder.committed.id)
                 handles.destinationParentPromptFolder = tx.promptFolder.update({
                   id: destinationParentPromptFolder.committed.id,
                   expectedRevision: payload.destinationParentPromptFolder?.expectedRevision,
                   recipe: (draft) => {
                     draft.entries = nextDestinationEntries
+                    /** V2 order assigned when this parent is also the destination root. */
+                    const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
+                    if (categoryOrder) draft.categoryOrder = categoryOrder
                   }
                 })
               } else {
@@ -303,13 +377,29 @@ export const setupWorkspaceMutationHandlers = (): void => {
 
             if (!isSameParent) {
               modifiedPromptFolderIds.add(payload.promptFolderId)
+              handledPromptFolderIds.add(payload.promptFolderId)
               handles.movedPromptFolder = tx.promptFolder.update({
                 id: payload.promptFolderId,
-                recipe: () => {},
+                recipe: (draft) => {
+                  /** Root/nested V2 shape assigned when the moved folder changes ownership role. */
+                  const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
+                  if (categoryOrder) draft.categoryOrder = categoryOrder
+                },
                 persistenceFields: {
                   ...movedPromptFolder.persistenceFields,
                   folderPath: movedFolderPath,
                   previousFolderPath: movedPromptFolder.persistenceFields.folderPath
+                }
+              })
+            }
+
+            for (const [categoryOrderPromptFolderId, categoryOrder] of categoryOrderByPromptFolderId) {
+              if (handledPromptFolderIds.has(categoryOrderPromptFolderId)) continue
+              modifiedPromptFolderIds.add(categoryOrderPromptFolderId)
+              handles[`categoryOrder:${categoryOrderPromptFolderId}`] = tx.promptFolder.update({
+                id: categoryOrderPromptFolderId,
+                recipe: (draft) => {
+                  draft.categoryOrder = categoryOrder
                 }
               })
             }

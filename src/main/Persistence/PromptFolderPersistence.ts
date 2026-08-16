@@ -2,12 +2,18 @@ import * as path from 'path'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   copyPromptFolderSettings,
+  createNestedCategoryOrder,
+  type CategoryOrder,
   type PromptFolder,
   type PromptFolderSettings,
   type PromptTemplateFolderSettings
 } from '@shared/PromptFolder'
 import type { EntryRef } from '@shared/OrderContainer'
-import type { PromptFolderInfoFile, PromptFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
+import type {
+  PromptFolderCategoryOrderFile,
+  PromptFolderInfoFile,
+  PromptFolderOrderFile
+} from '../DiskTypes/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -24,6 +30,7 @@ import {
 import {
   resolveCompletedPromptFolderName,
   resolveCategoriesDirectoryPath,
+  resolvePromptFolderCategoryOrderPath,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
@@ -32,7 +39,10 @@ import {
   resolvePromptFolderStorageName
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
-import { readCategoryStemById, readPromptStemByPromptId } from '../DataAccess/WorkspaceReads'
+import {
+  readPromptFolderCategoryOrder,
+  readPromptStemByPromptId
+} from '../DataAccess/WorkspaceReads'
 
 export type PromptFolderPersistenceFields = {
   workspaceId: string
@@ -55,12 +65,17 @@ const toPromptFolderOrderFile = (entries: EntryRef[]): PromptFolderOrderFile => 
   return { entries }
 }
 
+/** Converts authoritative root category ordering into its disk-file shape. */
+const toPromptFolderCategoryOrderFile = (
+  categoryOrder: CategoryOrder
+): PromptFolderCategoryOrderFile => categoryOrder
+
 const fromPromptFolderInfoFile = (
   persistedInfo: PromptFolderInfoFile,
   folderName: string,
   entries: EntryRef[],
   completedPromptIds: string[],
-  categoryIds: string[],
+  categoryOrder: CategoryOrder,
   settings: PromptFolderSettings
 ): PromptFolder => {
   const baseFolder = {
@@ -69,7 +84,7 @@ const fromPromptFolderInfoFile = (
     displayName: persistedInfo.displayName,
     entries,
     completedPromptIds,
-    categoryIds
+    categoryOrder
   }
 
   return persistedInfo.kind === 'template'
@@ -104,6 +119,12 @@ export const promptFolderPersistence: PersistenceLayer<
       kind
     )
     const orderPath = resolvePromptFolderOrderPath(workspacePath, stagingRelativePath, kind)
+    /** Target root's FolderOrderV2 path, used only by root prompt or template folders. */
+    const categoryOrderPath = resolvePromptFolderCategoryOrderPath(
+      workspacePath,
+      stagingRelativePath,
+      kind
+    )
     const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(
       workspacePath,
       stagingRelativePath,
@@ -134,8 +155,9 @@ export const promptFolderPersistence: PersistenceLayer<
           kind
         )
       : null
-    const isRoot = !/[\\/]/.test(stagingRelativePath)
-    const categoriesDirectoryPath = isRoot
+    /** Whether the committed target owns root-only category persistence. */
+    const isTargetRoot = !/[\\/]/.test(targetRelativePath)
+    const categoriesDirectoryPath = isTargetRoot
       ? resolveCategoriesDirectoryPath(workspacePath, stagingRelativePath, kind)
       : null
     const activeInfoDirectoryAlreadyExists = activeInfoDirectoryPath
@@ -163,6 +185,15 @@ export const promptFolderPersistence: PersistenceLayer<
 
     const orderTempPath = resolveTempPath(orderPath)
     writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.entries))
+    /** Staged FolderOrderV2 update for a target root folder. */
+    const categoryOrderChange = isTargetRoot
+      ? (() => {
+          /** Temporary JSON path committed atomically with the root folder. */
+          const tempPath = resolveTempPath(categoryOrderPath)
+          writeJsonFile(tempPath, toPromptFolderCategoryOrderFile(change.data.categoryOrder))
+          return createStagedFileUpsert(categoryOrderPath, tempPath)
+        })()
+      : null
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
     const settingsTextChanges = settingsTextPaths.map(({ field, path }) => {
@@ -178,6 +209,7 @@ export const promptFolderPersistence: PersistenceLayer<
 
     const stagedChanges = [
       createStagedFileUpsert(orderPath, orderTempPath),
+      ...(categoryOrderChange ? [categoryOrderChange] : []),
       createStagedFileUpsert(infoPath, infoTempPath),
       ...settingsTextChanges,
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
@@ -239,10 +271,11 @@ export const promptFolderPersistence: PersistenceLayer<
             ).keys()
           ]
         : []
-    const categoryIds =
+    /** Root-owned repaired category order, absent for nested folders. */
+    const categoryOrder =
       folderName === folderPath
-        ? [...readCategoryStemById(workspacePath, folderPath, kind).keys()]
-        : []
+        ? readPromptFolderCategoryOrder(workspacePath, folderPath, kind)
+        : createNestedCategoryOrder()
     const folderDescription = readOptionalTextFile(
       resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
     )
@@ -253,7 +286,7 @@ export const promptFolderPersistence: PersistenceLayer<
       folderName,
       entries,
       completedPromptIds,
-      categoryIds,
+      categoryOrder,
       copyPromptFolderSettings(folderSettings)
     )
   }

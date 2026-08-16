@@ -13,7 +13,7 @@ const createFolder = (
   displayName: id,
   entries: [],
   completedPromptIds,
-  categoryIds: [],
+  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: {
     folderDescription: ''
   }
