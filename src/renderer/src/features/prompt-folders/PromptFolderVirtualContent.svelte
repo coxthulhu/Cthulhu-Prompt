@@ -120,6 +120,7 @@
   type PromptMetadata = {
     status: PromptStatus
     completedAt: string | null
+    categoryLabel: string
   }
 
   type PromptFolderVirtualContentProps = {
@@ -145,6 +146,7 @@
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
     onAddSubfolder?: (target: PromptFolderDividerTarget) => void
+    onAddCategory: () => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
     onDeletePromptFolder: (promptFolderId: string) => void
     onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
@@ -206,6 +208,7 @@
     scrollToWithinWindowBandForRows,
     onAddPrompt,
     onAddSubfolder,
+    onAddCategory,
     onDeletePrompt,
     onDeletePromptFolder,
     onSetPromptStatus,
@@ -240,7 +243,8 @@
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
     status: PromptStatus.Todo,
-    completedAt: null
+    completedAt: null,
+    categoryLabel: 'Uncategorized'
   }
   const isTemplateFolder = $derived(contentKind === 'template')
   const compactLayoutMaxWidthPx = $derived(
@@ -796,6 +800,7 @@
     {contentKind}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
     onDeletePromptFolder={() => onDeletePromptFolder(screenRootFolderId)}
+    {onAddCategory}
     {onScreenModeChange}
   />
 {/snippet}
@@ -1002,6 +1007,7 @@
       {screenMode}
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}
+      categoryLabel={promptMetadata.categoryLabel}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}

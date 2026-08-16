@@ -11,7 +11,9 @@ import {
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
+  buildCategorySnapshot,
   collectLoadedPromptFolderDescendantIds,
+  getLoadedCategoryEntries,
   type PromptFolderCommittedEntry
 } from '../Data/DataSnapshotHelpers'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
@@ -43,6 +45,10 @@ export const loadPromptFolderInitialData = async (
       if (entry) promptFolderEntries.push(entry)
     }
     const promptFolders = promptFolderEntries.map(buildPromptFolderSnapshot)
+    /** Root-owned category snapshots needed by prompt and template metadata rows. */
+    const categories = getLoadedCategoryEntries(promptFolderEntry.committed.categoryIds).map(
+      buildCategorySnapshot
+    )
     const { promptIds, promptTemplateIds, prompts, promptTemplates } =
       loadPromptFolderMarkdownContents(promptFolders)
     const contentIds = [
@@ -62,6 +68,7 @@ export const loadPromptFolderInitialData = async (
     return {
       success: true,
       promptFolders,
+      categories,
       prompts,
       promptTemplates,
       markdownContentUiStates: markdownContentUiStates.map((uiState) => ({

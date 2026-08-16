@@ -468,7 +468,7 @@ export const setupMarkdownContentMutationHandlers = <
           destination.committed,
           config.kind
         ).filter((id) => id !== requestedContent.id)
-        const movedContent =
+        const contentWithDestinationFallback =
           !isSameFolder && content.committed.title.trim().length === 0
             ? {
                 ...content.committed,
@@ -483,6 +483,15 @@ export const setupMarkdownContentMutationHandlers = <
                 }).fallbackTitle
               }
             : content.committed
+        /** Root folder names are the first logical persistence-path segment. */
+        const sourceRootFolderName = source.persistenceFields.folderPath.split(/[\\/]/)[0]
+        /** Destination root name determines whether the category remains valid. */
+        const destinationRootFolderName = destination.persistenceFields.folderPath.split(/[\\/]/)[0]
+        /** Cross-root content drops remove the category before the file is persisted. */
+        const movedContent: TContent = { ...contentWithDestinationFallback }
+        if (!isSameFolder && sourceRootFolderName !== destinationRootFolderName) {
+          delete movedContent.category
+        }
         const movedPersistenceFields: MarkdownPersistenceFields = isSameFolder
           ? content.persistenceFields
           : {

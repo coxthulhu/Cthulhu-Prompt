@@ -5,6 +5,7 @@ import { deletePromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import { deletePromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
 import { deleteMarkdownContentUiStates } from '../UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import { categoryCollection } from '../Collections/CategoryCollection'
 
 type MutationOptions = Parameters<typeof runRevisionMutation<unknown>>[0]
 type OptimisticCollections = Parameters<MutationOptions['mutateOptimistically']>[0][
@@ -22,6 +23,8 @@ export const deletePromptFolderContentsOptimistically = (
     collections.promptTemplate.delete(templateIds)
     collections.promptTemplateDraft.delete(templateIds)
   }
+  const categoryIds = [...graph.categoryIds]
+  if (categoryIds.length > 0) collections.category.delete(categoryIds)
 }
 
 export const deletePromptFolderContentRecords = (graph: PromptFolderGraphIds): void => {
@@ -32,4 +35,5 @@ export const deletePromptFolderContentRecords = (graph: PromptFolderGraphIds): v
   deletePromptDrafts(promptIds)
   deletePromptTemplateDrafts(templateIds)
   deleteMarkdownContentUiStates([...promptIds, ...templateIds])
+  categoryCollection.utils.deleteManyAuthoritative([...graph.categoryIds])
 }

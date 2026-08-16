@@ -19,6 +19,7 @@ const createFolder = (
     id: entryId
   })),
   completedPromptIds: [],
+  categoryIds: [],
   settings: {
     folderDescription: ''
   },

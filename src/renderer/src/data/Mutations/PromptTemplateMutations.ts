@@ -20,6 +20,7 @@ const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => (
   fallbackTitle: template.fallbackTitle,
   createdAt: template.createdAt,
   modifiedAt: template.modifiedAt,
+  ...(template.category !== undefined ? { category: template.category } : {}),
   templateText: template.templateText
 })
 
@@ -67,7 +68,7 @@ const mutations = createMarkdownContentRendererMutations<
     collections.promptTemplate.delete(templateId)
     collections.promptTemplateDraft.delete(templateId)
   },
-  updateFallbackTitleOptimistically: (collections, templateId, update) => {
+  updateContentOptimistically: (collections, templateId, update) => {
     collections.promptTemplate.update(templateId, update)
     collections.promptTemplateDraft.update(templateId, update)
   },

@@ -27,6 +27,7 @@ const toPersisted = (prompt: PromptFull): PromptPersisted => ({
   fallbackTitle: prompt.fallbackTitle,
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
+  ...(prompt.category !== undefined ? { category: prompt.category } : {}),
   promptText: prompt.promptText,
   ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
   status: prompt.status,
@@ -70,6 +71,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
           fallbackTitle: draft.fallbackTitle,
           createdAt: draft.createdAt,
           modifiedAt: draft.modifiedAt,
+          ...(draft.category !== undefined ? { category: draft.category } : {}),
           promptText: draft.promptText,
           ...(draft.templates !== undefined ? { templates: draft.templates } : {}),
           status: PromptStatus.Todo
@@ -90,6 +92,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
         fallbackTitle: prompt.fallbackTitle,
         createdAt: prompt.createdAt,
         modifiedAt: prompt.modifiedAt,
+        ...(prompt.category !== undefined ? { category: prompt.category } : {}),
         promptText: prompt.promptText,
         ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
         isEdited: false
@@ -100,7 +103,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
     collections.prompt.delete(promptId)
     collections.promptDraft.delete(promptId)
   },
-  updateFallbackTitleOptimistically: (collections, promptId, update) => {
+  updateContentOptimistically: (collections, promptId, update) => {
     collections.prompt.update(promptId, update)
     collections.promptDraft.update(promptId, update)
   },

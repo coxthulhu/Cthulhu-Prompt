@@ -12,7 +12,7 @@ type PromptSelectionFrontmatterData =
   | { templates?: PromptTemplateReference[] | null; templateId?: never }
   | { templates?: never; templateId?: string | null }
 
-type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
+type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'category'> &
   PromptSelectionFrontmatterData &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   (
@@ -20,7 +20,10 @@ type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt'> &
     | { status: PromptStatus.Todo | PromptStatus.InProgress; completedAt?: never }
   )
 
-type PromptTemplateFrontmatterData = Pick<PromptTemplatePersisted, 'id' | 'createdAt'> &
+type PromptTemplateFrontmatterData = Pick<
+  PromptTemplatePersisted,
+  'id' | 'createdAt' | 'category'
+> &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string })
 
 const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData => {
@@ -36,12 +39,14 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   const hasCompletedAt = keys.includes('completedAt')
   const hasTemplates = keys.includes('templates')
   const hasLegacyTemplateId = keys.includes('templateId')
+  const hasCategory = keys.includes('category')
   const allowedKeys = new Set([
     'id',
     'createdAt',
     hasTitle ? 'title' : 'fallbackTitle',
     ...(hasTemplates ? ['templates'] : []),
     ...(hasLegacyTemplateId ? ['templateId'] : []),
+    ...(hasCategory ? ['category'] : []),
     'status',
     ...(hasCompletedAt ? ['completedAt'] : [])
   ])
@@ -68,6 +73,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   return (
     typeof frontmatter.id === 'string' &&
     typeof frontmatter.createdAt === 'string' &&
+    (!hasCategory || typeof frontmatter.category === 'string') &&
     (!hasTemplates ||
       frontmatter.templates === null ||
       (Array.isArray(frontmatter.templates) &&
@@ -100,17 +106,24 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
   const keys = Object.keys(frontmatter)
   const hasTitle = keys.includes('title')
   const hasFallbackTitle = keys.includes('fallbackTitle')
+  const hasCategory = keys.includes('category')
 
   return (
-    keys.length === 3 &&
+    keys.length === (hasCategory ? 4 : 3) &&
     keys.includes('id') &&
     keys.includes('createdAt') &&
     hasTitle !== hasFallbackTitle &&
     keys.every((key) =>
-      new Set(['id', 'createdAt', hasTitle ? 'title' : 'fallbackTitle']).has(key)
+      new Set([
+        'id',
+        'createdAt',
+        hasTitle ? 'title' : 'fallbackTitle',
+        ...(hasCategory ? ['category'] : [])
+      ]).has(key)
     ) &&
     typeof frontmatter.id === 'string' &&
     typeof frontmatter.createdAt === 'string' &&
+    (!hasCategory || typeof frontmatter.category === 'string') &&
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string')
@@ -172,6 +185,7 @@ export const parsePromptMarkdown = (
     fallbackTitle: data.fallbackTitle ?? '',
     createdAt: data.createdAt,
     modifiedAt: timestamp,
+    ...(data.category !== undefined ? { category: data.category } : {}),
     promptText: content,
     ...(data.templates !== undefined
       ? { templates: data.templates }
@@ -188,12 +202,14 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
     prompt.status === PromptStatus.Completed && prompt.completedAt
       ? {
           ...baseMetadata,
+          ...(prompt.category !== undefined ? { category: prompt.category } : {}),
           ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
           status: PromptStatus.Completed,
           completedAt: prompt.completedAt
         }
       : {
           ...baseMetadata,
+          ...(prompt.category !== undefined ? { category: prompt.category } : {}),
           ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
           status:
             prompt.status === PromptStatus.InProgress ? PromptStatus.InProgress : PromptStatus.Todo
@@ -230,11 +246,15 @@ export const parsePromptTemplateMarkdown = (
       fallbackTitle: data.fallbackTitle ?? '',
       createdAt: data.createdAt,
       modifiedAt: timestamp,
+      ...(data.category !== undefined ? { category: data.category } : {}),
       templateText: content
     })
   )
 
 export const serializePromptTemplateMarkdown = (template: PromptTemplatePersisted): string => {
-  const metadata: PromptTemplateFrontmatterData = createTitleMetadata(template)
+  const metadata: PromptTemplateFrontmatterData = {
+    ...createTitleMetadata(template),
+    ...(template.category !== undefined ? { category: template.category } : {})
+  }
   return serializeMarkdownContent(metadata, template.templateText)
 }

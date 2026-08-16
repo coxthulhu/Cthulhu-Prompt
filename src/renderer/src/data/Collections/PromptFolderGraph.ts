@@ -7,6 +7,7 @@ import { promptFolderCollection } from './PromptFolderCollection'
 
 export type PromptFolderGraphIds = {
   promptFolderIds: Set<string>
+  categoryIds: Set<string>
   contentIds: Record<PromptFolderContentKind, Set<string>>
 }
 
@@ -15,6 +16,7 @@ export const collectPromptFolderGraphIds = (
 ): PromptFolderGraphIds => {
   const graph: PromptFolderGraphIds = {
     promptFolderIds: new Set<string>(),
+    categoryIds: new Set<string>(),
     contentIds: { prompt: new Set<string>(), template: new Set<string>() }
   }
   const visitFolder = (promptFolderId: string): void => {
@@ -22,6 +24,7 @@ export const collectPromptFolderGraphIds = (
     graph.promptFolderIds.add(promptFolderId)
     const promptFolder = promptFolderCollection.get(promptFolderId)
     if (!promptFolder) return
+    for (const categoryId of promptFolder.categoryIds) graph.categoryIds.add(categoryId)
 
     for (const kind of MARKDOWN_CONTENT_KINDS) {
       for (const contentId of getMarkdownContentIds(promptFolder, kind)) {

@@ -25,6 +25,8 @@ export type MovePromptFolderPayload = {
 export type MovePromptFolderResponsePayload = {
   workspace: RevisionEnvelope<Workspace>
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
+  prompts: Array<RevisionEnvelope<import('./Prompt').PromptPersisted>>
+  promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
 }
 
 // Special-case create payload. This is command data for workspace setup,
@@ -50,6 +52,7 @@ export type WorkspaceFolderStatus = {
 export type LoadWorkspaceByPathResult = IpcResult<{
   workspace: RevisionEnvelope<Workspace>
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
+  categories: Array<RevisionEnvelope<import('./Category').Category>>
   prompts: Array<RevisionEnvelope<PromptSummaryData>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
 }>

@@ -12,7 +12,8 @@ describe('prompt template frontmatter', () => {
       fallbackTitle: '',
       createdAt: '2026-07-22T12:00:00.000Z',
       modifiedAt: 'ignored',
-      templateText: 'Review {{change}} exactly.\n'
+      templateText: 'Review {{change}} exactly.\n',
+      category: 'category-1'
     })
 
     expect(parsePromptTemplateMarkdown(serialized, '2026-07-22T13:00:00.000Z')).toEqual({
@@ -21,7 +22,8 @@ describe('prompt template frontmatter', () => {
       fallbackTitle: '',
       createdAt: '2026-07-22T12:00:00.000Z',
       modifiedAt: '2026-07-22T13:00:00.000Z',
-      templateText: 'Review {{change}} exactly.\n'
+      templateText: 'Review {{change}} exactly.\n',
+      category: 'category-1'
     })
   })
 
@@ -41,6 +43,7 @@ describe('prompt template frontmatter', () => {
       title: '',
       fallbackTitle: 'New Template'
     })
+    expect(parsePromptTemplateMarkdown(serialized)).not.toHaveProperty('category')
   })
 
   it.each([

@@ -23,6 +23,7 @@ import {
 } from './FilePersistenceHelpers'
 import {
   resolveCompletedPromptFolderName,
+  resolveCategoriesDirectoryPath,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderOrderPath,
@@ -31,7 +32,7 @@ import {
   resolvePromptFolderStorageName
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
-import { readPromptStemByPromptId } from '../DataAccess/WorkspaceReads'
+import { readCategoryStemById, readPromptStemByPromptId } from '../DataAccess/WorkspaceReads'
 
 export type PromptFolderPersistenceFields = {
   workspaceId: string
@@ -59,6 +60,7 @@ const fromPromptFolderInfoFile = (
   folderName: string,
   entries: EntryRef[],
   completedPromptIds: string[],
+  categoryIds: string[],
   settings: PromptFolderSettings
 ): PromptFolder => {
   const baseFolder = {
@@ -66,7 +68,8 @@ const fromPromptFolderInfoFile = (
     folderName,
     displayName: persistedInfo.displayName,
     entries,
-    completedPromptIds
+    completedPromptIds,
+    categoryIds
   }
 
   return persistedInfo.kind === 'template'
@@ -131,11 +134,18 @@ export const promptFolderPersistence: PersistenceLayer<
           kind
         )
       : null
+    const isRoot = !/[\\/]/.test(stagingRelativePath)
+    const categoriesDirectoryPath = isRoot
+      ? resolveCategoriesDirectoryPath(workspacePath, stagingRelativePath, kind)
+      : null
     const activeInfoDirectoryAlreadyExists = activeInfoDirectoryPath
       ? fs.existsSync(activeInfoDirectoryPath)
       : true
     const completedDirectoryAlreadyExists = completedDirectoryPath
       ? fs.existsSync(completedDirectoryPath)
+      : true
+    const categoriesDirectoryAlreadyExists = categoriesDirectoryPath
+      ? fs.existsSync(categoriesDirectoryPath)
       : true
 
     if (change.type === 'remove') {
@@ -149,6 +159,7 @@ export const promptFolderPersistence: PersistenceLayer<
     fs.mkdirSync(infoDirectoryPath, { recursive: true })
     if (activeInfoDirectoryPath) fs.mkdirSync(activeInfoDirectoryPath, { recursive: true })
     if (completedDirectoryPath) fs.mkdirSync(completedDirectoryPath, { recursive: true })
+    if (categoriesDirectoryPath) fs.mkdirSync(categoriesDirectoryPath, { recursive: true })
 
     const orderTempPath = resolveTempPath(orderPath)
     writeJsonFile(orderTempPath, toPromptFolderOrderFile(change.data.entries))
@@ -184,6 +195,11 @@ export const promptFolderPersistence: PersistenceLayer<
     if (completedDirectoryPath) {
       stagedChanges.push(
         createStagedEnsureDirectory(completedDirectoryPath, !completedDirectoryAlreadyExists)
+      )
+    }
+    if (categoriesDirectoryPath) {
+      stagedChanges.push(
+        createStagedEnsureDirectory(categoriesDirectoryPath, !categoriesDirectoryAlreadyExists)
       )
     }
 
@@ -223,6 +239,10 @@ export const promptFolderPersistence: PersistenceLayer<
             ).keys()
           ]
         : []
+    const categoryIds =
+      folderName === folderPath
+        ? [...readCategoryStemById(workspacePath, folderPath, kind).keys()]
+        : []
     const folderDescription = readOptionalTextFile(
       resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
     )
@@ -233,6 +253,7 @@ export const promptFolderPersistence: PersistenceLayer<
       folderName,
       entries,
       completedPromptIds,
+      categoryIds,
       copyPromptFolderSettings(folderSettings)
     )
   }

@@ -6,6 +6,7 @@ import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import {
   readAllPromptFolders,
+  readCategoryStemById,
   readPromptStemByPromptId,
   readPromptTemplateStemById,
   readWorkspaceInfo
@@ -14,10 +15,12 @@ import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAcce
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { data } from '../Data/Data'
 import {
+  buildCategorySnapshot,
   buildPromptFolderSnapshot,
   buildPromptTemplateSnapshot,
   buildWorkspaceSnapshot,
   collectLoadedPromptFolderDescendantIds,
+  getLoadedCategoryEntries,
   getLoadedPromptEntries,
   getLoadedPromptTemplateEntries
 } from '../Data/DataSnapshotHelpers'
@@ -80,6 +83,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   }
 
   const promptFolders: WorkspaceLoadPayload['promptFolders'] = []
+  const categories: WorkspaceLoadPayload['categories'] = []
   const prompts: WorkspaceLoadPayload['prompts'] = []
   const promptTemplates: WorkspaceLoadPayload['promptTemplates'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
@@ -99,6 +103,10 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
 
     const promptFolderSnapshot = buildPromptFolderSnapshot(promptFolderEntry)
     promptFolders.push(promptFolderSnapshot)
+
+    for (const categoryEntry of getLoadedCategoryEntries(promptFolderSnapshot.data.categoryIds)) {
+      categories.push(buildCategorySnapshot(categoryEntry))
+    }
 
     if (promptFolderSnapshot.data.kind === 'template') {
       const templateIds = promptFolderSnapshot.data.entries
@@ -129,6 +137,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
           title: promptEntry.committed.title,
           fallbackTitle: promptEntry.committed.fallbackTitle,
           modifiedAt: promptEntry.committed.modifiedAt,
+          ...(promptEntry.committed.category !== undefined
+            ? { category: promptEntry.committed.category }
+            : {}),
           ...(promptEntry.committed.templates !== undefined
             ? { templates: promptEntry.committed.templates }
             : {}),
@@ -155,6 +166,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   return {
     workspace: workspaceSnapshot,
     promptFolders,
+    categories,
     prompts,
     promptTemplates
   }
@@ -202,6 +214,31 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
       })
     )
   )
+
+  /** Category load tasks hydrate records owned only by top-level prompt and template folders. */
+  const categoryLoadTasks = allPromptFolders.flatMap((promptFolder) => {
+    if (parentPromptFolderIdById.get(promptFolder.id) !== null) return []
+    const rootFolderName = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
+    const categoryStemById = readCategoryStemById(workspacePath, rootFolderName, promptFolder.kind)
+    return promptFolder.categoryIds.flatMap((categoryId) => {
+      const categoryStem = categoryStemById.get(categoryId)
+      if (!categoryStem) return []
+      return [
+        data.category.loadDataFromPersistence(categoryId, {
+          workspaceId,
+          workspacePath,
+          rootPromptFolderId: promptFolder.id,
+          rootFolderName,
+          kind: promptFolder.kind,
+          categoryStem,
+          needsFilenameIdSuffix: categoryStem.endsWith(`-${categoryId.slice(0, 8)}`)
+        })
+      ]
+    })
+  })
+
+  // Side effect: hydrate root-owned categories before constructing workspace snapshots.
+  await Promise.all(categoryLoadTasks)
 
   const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
     const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName

@@ -6,6 +6,7 @@ import { promptFolderData } from './PromptFolderData'
 import { promptTemplateData } from './PromptTemplateData'
 import { systemSettingsData } from './SystemSettingsData'
 import { workspaceData } from './WorkspaceData'
+import { categoryData } from './CategoryData'
 
 export type DataRecipe<TData> = (draft: Draft<TData>) => void
 
@@ -20,6 +21,7 @@ export const data = {
   systemSettings: systemSettingsData,
   workspace: workspaceData,
   promptFolder: promptFolderData,
+  category: categoryData,
   prompt: promptData,
   promptTemplate: promptTemplateData
 }

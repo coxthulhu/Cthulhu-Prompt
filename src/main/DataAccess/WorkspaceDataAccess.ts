@@ -20,6 +20,7 @@ import {
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolveActivePromptFolderName,
+  resolveCategoriesDirectoryPath,
   resolveCompletedPromptFolderName,
   resolvePromptFolderPath,
   resolvePromptFolderOrderPath,
@@ -121,6 +122,9 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
   fs.mkdirSync(path.join(activeFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
   fs.mkdirSync(completedFolderPath, { recursive: true })
+  fs.mkdirSync(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'), {
+    recursive: true
+  })
 
   for (const prompt of examplePrompts) {
     const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
@@ -171,6 +175,10 @@ const writeMyTemplatesFolder = (workspacePath: string): string => {
   fs.mkdirSync(path.join(templateFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), {
     recursive: true
   })
+  fs.mkdirSync(
+    resolveCategoriesDirectoryPath(workspacePath, DEFAULT_TEMPLATE_FOLDER_NAME, 'template'),
+    { recursive: true }
+  )
   fs.writeFileSync(
     path.join(
       templateFolderPath,

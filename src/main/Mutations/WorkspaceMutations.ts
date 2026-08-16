@@ -18,6 +18,8 @@ import {
 } from '@shared/OrderContainer'
 import {
   buildPromptFolderSnapshot,
+  buildPromptSnapshot,
+  buildPromptTemplateSnapshot,
   buildWorkspaceSnapshot,
   collectLoadedPromptFolderDescendantIds
 } from '../Data/DataSnapshotHelpers'
@@ -25,6 +27,21 @@ import {
   refreshPromptFolderTreePersistencePaths,
   collectWorkspacePromptFolders
 } from './PromptFolderPathHelpers'
+import { collectPromptFolderContentIds } from './PromptFolderContentMutations'
+
+/** Resolves the top-level owner of one folder in a loaded workspace tree. */
+const resolveRootPromptFolderId = (
+  treeIndex: ReturnType<typeof buildPromptFolderTreeIndex>,
+  promptFolderId: string
+): string => {
+  let rootFolderId = promptFolderId
+  let parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
+  while (parentFolderId !== null) {
+    rootFolderId = parentFolderId
+    parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
+  }
+  return rootFolderId
+}
 
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
@@ -169,12 +186,40 @@ export const setupWorkspaceMutationHandlers = (): void => {
                 movedPromptFolder.committed.folderName
               )
             : movedPromptFolder.committed.folderName
+          /** Source and destination roots determine whether category IDs remain valid. */
+          const sourceRootPromptFolderId = resolveRootPromptFolderId(
+            treeIndex,
+            payload.promptFolderId
+          )
+          const destinationRootPromptFolderId = destinationParentPromptFolderId
+            ? resolveRootPromptFolderId(treeIndex, destinationParentPromptFolderId)
+            : payload.promptFolderId
+          const isCrossRootMove =
+            sourceRootPromptFolderId !== destinationRootPromptFolderId
+          const movedContentIds = collectPromptFolderContentIds([
+            payload.promptFolderId,
+            ...descendantIds
+          ])
+          const categoryClearedPromptIds = isCrossRootMove
+            ? movedContentIds.prompt.filter(
+                (promptId) => data.prompt.committedStore.getEntry(promptId)?.committed.category
+              )
+            : []
+          const categoryClearedTemplateIds = isCrossRootMove
+            ? movedContentIds.template.filter(
+                (templateId) =>
+                  data.promptTemplate.committedStore.getEntry(templateId)?.committed.category
+              )
+            : []
           const modifiedPromptFolderIds = new Set<string>()
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => {
             const handles: Record<
               string,
-              ReturnType<typeof tx.workspace.update> | ReturnType<typeof tx.promptFolder.update>
+              | ReturnType<typeof tx.workspace.update>
+              | ReturnType<typeof tx.promptFolder.update>
+              | ReturnType<typeof tx.prompt.update>
+              | ReturnType<typeof tx.promptTemplate.update>
             > = {}
 
             const nextDestinationEntries = [...destinationEntries]
@@ -239,6 +284,23 @@ export const setupWorkspaceMutationHandlers = (): void => {
               }
             }
 
+            for (const promptId of categoryClearedPromptIds) {
+              handles[`prompt:${promptId}`] = tx.prompt.update({
+                id: promptId,
+                recipe: (draft) => {
+                  delete draft.category
+                }
+              })
+            }
+            for (const templateId of categoryClearedTemplateIds) {
+              handles[`promptTemplate:${templateId}`] = tx.promptTemplate.update({
+                id: templateId,
+                recipe: (draft) => {
+                  delete draft.category
+                }
+              })
+            }
+
             if (!isSameParent) {
               modifiedPromptFolderIds.add(payload.promptFolderId)
               handles.movedPromptFolder = tx.promptFolder.update({
@@ -270,6 +332,14 @@ export const setupWorkspaceMutationHandlers = (): void => {
                 promptFolders: [...modifiedPromptFolderIds].flatMap((promptFolderId) => {
                   const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)
                   return promptFolder ? [buildPromptFolderSnapshot(promptFolder)] : []
+                }),
+                prompts: categoryClearedPromptIds.flatMap((promptId) => {
+                  const prompt = data.prompt.committedStore.getEntry(promptId)
+                  return prompt ? [buildPromptSnapshot(prompt)] : []
+                }),
+                promptTemplates: categoryClearedTemplateIds.flatMap((templateId) => {
+                  const template = data.promptTemplate.committedStore.getEntry(templateId)
+                  return template ? [buildPromptTemplateSnapshot(template)] : []
                 })
               }
             }
@@ -290,6 +360,14 @@ export const setupWorkspaceMutationHandlers = (): void => {
               promptFolders: [...modifiedPromptFolderIds].flatMap((promptFolderId) => {
                 const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)
                 return promptFolder ? [buildPromptFolderSnapshot(promptFolder)] : []
+              }),
+              prompts: categoryClearedPromptIds.flatMap((promptId) => {
+                const prompt = data.prompt.committedStore.getEntry(promptId)
+                return prompt ? [buildPromptSnapshot(prompt)] : []
+              }),
+              promptTemplates: categoryClearedTemplateIds.flatMap((templateId) => {
+                const template = data.promptTemplate.committedStore.getEntry(templateId)
+                return template ? [buildPromptTemplateSnapshot(template)] : []
               })
             }
           }

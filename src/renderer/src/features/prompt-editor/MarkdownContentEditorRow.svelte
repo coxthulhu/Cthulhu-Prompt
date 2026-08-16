@@ -67,6 +67,7 @@
     contentLabel = 'prompt',
     metadataFolderLabel = 'Template',
     metadataFolderState = 'not-selected',
+    categoryLabel = 'Uncategorized',
     modelUri = createPromptEditorModelUri(promptId),
     compactLayoutMaxWidthPx,
     rowId,
@@ -120,6 +121,7 @@
     contentLabel?: string
     metadataFolderLabel?: string | null
     metadataFolderState?: 'not-selected' | 'no-template' | 'selected'
+    categoryLabel?: string
     modelUri?: monaco.Uri
     compactLayoutMaxWidthPx?: number
     rowId: string
@@ -564,6 +566,7 @@
     {onStatusChange}
     {metadataFolderLabel}
     {metadataFolderState}
+    {categoryLabel}
     {copyLabel}
     {copyTitle}
     {deleteLabel}

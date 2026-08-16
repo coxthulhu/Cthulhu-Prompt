@@ -16,6 +16,7 @@ describe('prompt frontmatter', () => {
       modifiedAt: 'ignored',
       promptText: 'Review this change.\n',
       templates: [{ id: 'template-1' }, { id: 'template-2' }, { id: 'template-1' }],
+      category: 'category-1',
       status: PromptStatus.Todo
     })
 
@@ -30,6 +31,7 @@ describe('prompt frontmatter', () => {
       modifiedAt: '2026-07-26T13:00:00.000Z',
       promptText: 'Review this change.\n',
       templates: [{ id: 'template-1' }, { id: 'template-2' }, { id: 'template-1' }],
+      category: 'category-1',
       status: PromptStatus.Todo
     })
   })
@@ -63,6 +65,7 @@ describe('prompt frontmatter', () => {
 
     expect(serialized).not.toContain('templates:')
     expect(parsePromptMarkdown(serialized)).not.toHaveProperty('templates')
+    expect(parsePromptMarkdown(serialized)).not.toHaveProperty('category')
   })
 
   it('parses legacy template ids into the list model for startup migration', () => {

@@ -15,6 +15,8 @@
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
   import CreatePromptSubfolderDialog from './CreatePromptSubfolderDialog.svelte'
   import type { PromptFolderDividerTarget } from './promptFolderScreenRows'
+  import CreateCategoryDialog from './CreateCategoryDialog.svelte'
+  import { createCategory } from '@renderer/data/Mutations/CategoryMutations'
 
   let {
     screenRootFolderId,
@@ -50,6 +52,8 @@
   let createPromptSubfolderDialog = $state<{
     openDialog: (target: PromptFolderDividerTarget) => void
   } | null>(null)
+  /** Imperative handle for opening category creation from the root header. */
+  let createCategoryDialog = $state<{ openDialog: () => void } | null>(null)
   let deletePromptFolderId = $state<string | null>(null)
 
   const renamePromptFolderTarget = $derived(
@@ -115,6 +119,23 @@
 
   const openCreatePromptSubfolderDialog = (target: PromptFolderDividerTarget) => {
     createPromptSubfolderDialog?.openDialog(target)
+  }
+
+  /** Opens category creation for the screen's root folder. */
+  const openCreateCategoryDialog = (): void => {
+    createCategoryDialog?.openDialog()
+  }
+
+  /** Persists one validated root-owned category. */
+  const handleCreateCategory = async (displayName: string): Promise<boolean> => {
+    if (!controller.screenRootFolder) return false
+    return await runIpcBestEffort(
+      async () => {
+        await createCategory(controller.screenRootFolderId, displayName)
+        return true
+      },
+      () => false
+    )
   }
 
   const isEmptyPromptFolder = (promptFolderId: string): boolean => {
@@ -245,6 +266,7 @@
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
             onAddSubfolder={openCreatePromptSubfolderDialog}
+            onAddCategory={openCreateCategoryDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptFolder={handleDeletePromptFolder}
             onSetPromptStatus={controller.handleSetPromptStatus}
@@ -291,6 +313,13 @@
   promptFolders={controller.promptFolders}
   isPromptFolderListLoading={false}
   onCreated={controller.handleCreatedSubfolder}
+/>
+
+<CreateCategoryDialog
+  bind:this={createCategoryDialog}
+  categories={controller.categories}
+  isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
+  onsubmit={handleCreateCategory}
 />
 
 <PromptFolderNameDialog

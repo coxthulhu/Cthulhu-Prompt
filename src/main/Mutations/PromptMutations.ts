@@ -359,6 +359,7 @@ export const setupPromptMutationHandlers = (): void => {
       modifiedAt: now,
       status: PromptStatus.Todo,
       promptText: requested.promptText,
+      ...(requested.category !== undefined ? { category: requested.category } : {}),
       ...(requested.templates !== undefined ? { templates: requested.templates } : {})
     }),
     updatePersisted: (requested, _current, titleFields) => ({
@@ -367,6 +368,7 @@ export const setupPromptMutationHandlers = (): void => {
       createdAt: requested.createdAt,
       modifiedAt: requested.modifiedAt,
       promptText: requested.promptText,
+      ...(requested.category !== undefined ? { category: requested.category } : {}),
       ...(requested.templates !== undefined ? { templates: requested.templates } : {}),
       status: requested.status,
       ...(requested.status === PromptStatus.Completed && requested.completedAt
@@ -388,6 +390,7 @@ export const setupPromptMutationHandlers = (): void => {
           Object.assign(draft, operation.data)
           if (!operation.data.completedAt) delete draft.completedAt
           if (operation.data.templates === undefined) delete draft.templates
+          if (operation.data.category === undefined) delete draft.category
         },
         persistenceFields: operation.persistenceFields
       }),

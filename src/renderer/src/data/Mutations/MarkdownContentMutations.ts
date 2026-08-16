@@ -36,7 +36,7 @@ type OptimisticCollections = Parameters<MutationOptions<unknown>['mutateOptimist
 ]
 type PersistHelpers = Parameters<MutationOptions<unknown>['persistMutations']>[0]
 
-type ContentDraft = { id: string; title: string; fallbackTitle: string }
+type ContentDraft = { id: string; title: string; fallbackTitle: string; category?: string }
 
 export type MarkdownContentRendererMutationConfig<
   TPersisted extends MarkdownContentPersisted,
@@ -64,7 +64,7 @@ export type MarkdownContentRendererMutationConfig<
   ) => RevisionPayloadEntity<TPersisted>
   insertOptimistically: (collections: OptimisticCollections, content: TFull) => void
   deleteOptimistically: (collections: OptimisticCollections, contentId: string) => void
-  updateFallbackTitleOptimistically: (
+  updateContentOptimistically: (
     collections: OptimisticCollections,
     contentId: string,
     update: (draft: ContentDraft) => void
@@ -80,6 +80,18 @@ export const createMarkdownContentRendererMutations = <
 >(
   config: MarkdownContentRendererMutationConfig<TPersisted, TFull>
 ) => {
+  /** Resolves the top-level owner of one currently loaded prompt folder. */
+  const findContainingRootFolderId = (promptFolderId: string): string => {
+    let rootFolderId = promptFolderId
+    while (true) {
+      const parent = Array.from(promptFolderCollection.values()).find((folder) =>
+        folder.entries.some((entry) => entry.kind === 'folder' && entry.id === rootFolderId)
+      )
+      if (!parent) return rootFolderId
+      rootFolderId = parent.id
+    }
+  }
+
   const readLatestFromTransaction = (
     transaction: Transaction<any>,
     contentId: string
@@ -244,6 +256,12 @@ export const createMarkdownContentRendererMutations = <
     if (!persistedContent) throw new Error(`${config.label} data not loaded`)
 
     const isSameFolder = sourcePromptFolderId === destinationPromptFolderId
+    /** Cross-root moves must discard a category owned by the previous root. */
+    const isCrossRootMove =
+      findContainingRootFolderId(sourcePromptFolderId) !==
+      findContainingRootFolderId(destinationPromptFolderId)
+    const contentToMove: TPersisted = { ...persistedContent }
+    if (isCrossRootMove) delete contentToMove.category
     const destinationEntries = isSameFolder
       ? removeEntry(source.entries, config.kind, contentId)
       : destination.entries
@@ -282,7 +300,8 @@ export const createMarkdownContentRendererMutations = <
           )
           draft.entries = entries
         })
-        config.updateFallbackTitleOptimistically(collections, contentId, (draft) => {
+        config.updateContentOptimistically(collections, contentId, (draft) => {
+          if (isCrossRootMove) delete draft.category
           if (draft.title.trim().length > 0) return
           draft.fallbackTitle = resolvePromptTitleUpdateForPromptIds({
             promptIds: destinationContentIds,
@@ -305,7 +324,7 @@ export const createMarkdownContentRendererMutations = <
             id: destinationPromptFolderId,
             data: destination
           }),
-          content: config.createEntity(entities, contentId, persistedContent),
+          content: config.createEntity(entities, contentId, contentToMove),
           previousEntryId
         })
         if (result.success) config.acceptDraftMutations(transaction)

@@ -27,6 +27,7 @@ export type PromptSummary = {
   title: string
   fallbackTitle: string
   modifiedAt: string
+  category?: string
   templates?: PromptTemplateReference[] | null
   status: PromptStatus
   completedAt?: string
@@ -38,6 +39,7 @@ export type PromptFull = {
   title: string
   createdAt: string
   modifiedAt: string
+  category?: string
   promptText: string
   fallbackTitle: string
   templates?: PromptTemplateReference[] | null
@@ -58,6 +60,7 @@ export type PromptSummaryData = Pick<
   | 'title'
   | 'fallbackTitle'
   | 'modifiedAt'
+  | 'category'
   | 'templates'
   | 'status'
   | 'completedAt'
@@ -68,6 +71,7 @@ export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary =>
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
   modifiedAt: prompt.modifiedAt,
+  ...(prompt.category !== undefined ? { category: prompt.category } : {}),
   ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
   status: prompt.status,
   ...(prompt.status === PromptStatus.Completed && prompt.completedAt
@@ -81,6 +85,7 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   title: prompt.title,
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,
+  ...(prompt.category !== undefined ? { category: prompt.category } : {}),
   promptText: prompt.promptText,
   fallbackTitle: prompt.fallbackTitle,
   ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),

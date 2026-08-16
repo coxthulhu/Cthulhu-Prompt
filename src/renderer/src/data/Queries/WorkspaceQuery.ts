@@ -9,6 +9,7 @@ import {
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
+import { categoryCollection } from '../Collections/CategoryCollection'
 
 export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<string> => {
   const result = await runLoad(() =>
@@ -26,6 +27,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
     : null
 
   workspaceCollection.utils.upsertAuthoritative(result.workspace)
+  categoryCollection.utils.upsertManyAuthoritative(result.categories)
 
   for (const promptFolder of result.promptFolders) {
     promptFolderCollection.utils.upsertAuthoritative(promptFolder)
@@ -47,6 +49,12 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
     }
   }
   deletePromptFolderDrafts(removedPromptFolderIds)
+
+  const nextCategoryIds = new Set(result.categories.map((category) => category.id))
+  const removedCategoryIds = [...previousGraph.categoryIds].filter(
+    (categoryId) => !nextCategoryIds.has(categoryId)
+  )
+  categoryCollection.utils.deleteManyAuthoritative(removedCategoryIds)
 
   for (const adapter of markdownContentQueryAdapters) {
     const nextContentIds = adapter.getWorkspaceIds(result)

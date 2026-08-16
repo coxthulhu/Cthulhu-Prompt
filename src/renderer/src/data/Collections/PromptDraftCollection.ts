@@ -7,6 +7,7 @@ export type PromptDraftRecord = {
   fallbackTitle: PromptFull['fallbackTitle']
   createdAt: PromptFull['createdAt']
   modifiedAt: PromptFull['modifiedAt']
+  category?: PromptFull['category']
   promptText: PromptFull['promptText']
   templates?: PromptFull['templates']
   isEdited: boolean

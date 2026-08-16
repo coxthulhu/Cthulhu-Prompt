@@ -48,6 +48,7 @@ const draftMutations = createMarkdownContentDraftMutations<
     fallbackTitle: template.fallbackTitle,
     createdAt: '',
     modifiedAt: template.modifiedAt,
+    ...(template.category !== undefined ? { category: template.category } : {}),
     templateText: '',
     isEdited: false
   }),
@@ -55,17 +56,20 @@ const draftMutations = createMarkdownContentDraftMutations<
     draft.title = template.title
     draft.fallbackTitle = template.fallbackTitle
     draft.modifiedAt = template.modifiedAt
+    draft.category = template.category
   },
   hasSameSummary: (draft, template) =>
     draft.title === template.title &&
     draft.fallbackTitle === template.fallbackTitle &&
-    draft.modifiedAt === template.modifiedAt,
+    draft.modifiedAt === template.modifiedAt &&
+    draft.category === template.category,
   toFullDraft: (template, isEdited) => ({
     id: template.id,
     title: template.title,
     fallbackTitle: template.fallbackTitle,
     createdAt: template.createdAt,
     modifiedAt: template.modifiedAt,
+    ...(template.category !== undefined ? { category: template.category } : {}),
     templateText: template.templateText,
     isEdited
   }),
@@ -75,6 +79,7 @@ const draftMutations = createMarkdownContentDraftMutations<
     left.fallbackTitle === right.fallbackTitle &&
     left.createdAt === right.createdAt &&
     left.modifiedAt === right.modifiedAt &&
+    left.category === right.category &&
     left.templateText === right.templateText &&
     left.isEdited === right.isEdited,
   beforeFullUpsert: (existing, next) => {

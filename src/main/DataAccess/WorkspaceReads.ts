@@ -21,6 +21,7 @@ import {
 import type { PromptFolderInfoFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { readJsonFile } from '../Persistence/FilePersistenceHelpers'
+import { parseCategoryJson } from '../Persistence/CategoryPersistence'
 import {
   parsePromptMarkdown,
   parsePromptTemplateMarkdown
@@ -29,6 +30,7 @@ import {
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
+  CATEGORY_FILENAME_SUFFIX,
   resolveActivePromptFolderName,
   resolvePromptFolderPath,
   resolvePromptRootDirectoryName,
@@ -38,6 +40,7 @@ import {
   resolvePromptFolderSettingsTextPath,
   resolvePromptFolderStorageName,
   resolvePromptPathsFromStem,
+  resolveCategoriesDirectoryPath,
   resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
@@ -277,6 +280,29 @@ export const readPromptTemplateStemById = (
   folderName: string
 ): Map<string, string> => readContentStemById(workspacePath, folderName, 'template')
 
+/** Reads category IDs and their persisted filename stems from one root folder. */
+export const readCategoryStemById = (
+  workspacePath: string,
+  rootFolderName: string,
+  kind: PromptFolderKind
+): Map<string, string> => {
+  const fs = getFs()
+  const categoriesPath = resolveCategoriesDirectoryPath(workspacePath, rootFolderName, kind)
+  const categoryStemById = new Map<string, string>()
+  if (!fs.existsSync(categoriesPath)) return categoryStemById
+
+  for (const entry of fs.readdirSync(categoriesPath, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(CATEGORY_FILENAME_SUFFIX)) continue
+    const category = parseCategoryJson(
+      fs.readFileSync(path.join(categoriesPath, entry.name), 'utf8')
+    )
+    if (!category) continue
+    categoryStemById.set(category.id, entry.name.slice(0, -CATEGORY_FILENAME_SUFFIX.length))
+  }
+
+  return categoryStemById
+}
+
 export const readPromptFolder = (
   workspacePath: string,
   folderPath: string,
@@ -297,13 +323,18 @@ export const readPromptFolder = (
           ).keys()
         ]
       : []
+  const categoryIds =
+    folderName === folderPath
+      ? [...readCategoryStemById(workspacePath, folderPath, kind).keys()]
+      : []
 
   const baseFolder = {
     id: info.folderId,
     folderName,
     displayName: info.displayName,
     entries,
-    completedPromptIds
+    completedPromptIds,
+    categoryIds
   }
 
   if (kind === 'template') {

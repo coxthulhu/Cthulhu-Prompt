@@ -12,6 +12,7 @@ const templateFolder = {
   displayName: 'Templates',
   entries: [],
   completedPromptIds: [],
+  categoryIds: [],
   settings: { folderDescription: null }
 }
 

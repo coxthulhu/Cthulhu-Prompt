@@ -7,6 +7,7 @@ export type MarkdownContentPersisted = {
   fallbackTitle: string
   createdAt: string
   modifiedAt: string
+  category?: string
 }
 
 export const MARKDOWN_CONTENT_KINDS = ['prompt', 'template'] as const

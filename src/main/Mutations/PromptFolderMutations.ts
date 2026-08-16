@@ -149,6 +149,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
             displayName: normalizedDisplayName,
             entries: [],
             completedPromptIds: [],
+            categoryIds: [],
             settings: createEmptyPromptFolderSettings()
           } as PromptFolder
 
@@ -292,6 +293,11 @@ export const setupPromptFolderMutationHandlers = (): void => {
             ...collectLoadedPromptFolderDescendantIds(requestedPromptFolder.id)
           ]
           const deletedContentIds = collectPromptFolderContentIds(deletedPromptFolderIds)
+          /** Category records owned by roots included in the deleted folder subtree. */
+          const deletedCategoryIds = deletedPromptFolderIds.flatMap(
+            (promptFolderId) =>
+              data.promptFolder.committedStore.getEntry(promptFolderId)?.committed.categoryIds ?? []
+          )
 
           const transactionOutcome = await runAtomicDataTransaction((tx) => ({
             orderContainer: committedParentPromptFolder
@@ -310,6 +316,12 @@ export const setupPromptFolderMutationHandlers = (): void => {
                   }
                 }),
             ...createPromptFolderContentDeleteHandles(tx, deletedContentIds),
+            ...Object.fromEntries(
+              deletedCategoryIds.map((categoryId) => [
+                `category:${categoryId}`,
+                tx.category.delete({ id: categoryId })
+              ])
+            ),
             ...Object.fromEntries(
               deletedPromptFolderIds.toReversed().map((promptFolderId) => [
                 `promptFolder:${promptFolderId}`,

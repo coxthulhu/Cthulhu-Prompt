@@ -19,6 +19,10 @@ export const PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX = '.template.md'
 export const ACTIVE_PROMPTS_FOLDER_NAME = 'Active'
 // Canonical flat directory containing every completed prompt owned by a root.
 export const COMPLETED_PROMPTS_FOLDER_NAME = 'Completed'
+/** Canonical directory containing categories owned by one root folder. */
+export const CATEGORIES_DIRECTORY_NAME = 'Categories'
+/** File suffix used by persisted category records. */
+export const CATEGORY_FILENAME_SUFFIX = '.category.json'
 
 export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES = PROMPT_FOLDER_SETTINGS_DISK_FILENAMES
 
@@ -138,6 +142,22 @@ export const resolvePromptFolderSettingsTextPath = (
     PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]
   )
 }
+
+/** Resolves the category directory owned by one root prompt or template folder. */
+export const resolveCategoriesDirectoryPath = (
+  workspacePath: string,
+  rootFolderName: string,
+  kind: PromptFolderKind
+): string =>
+  path.join(resolvePromptFolderPath(workspacePath, rootFolderName, kind), CATEGORIES_DIRECTORY_NAME)
+
+/** Resolves one category JSON path from its prompt-style filename stem. */
+export const resolveCategoryPathFromStem = (
+  workspacePath: string,
+  rootFolderName: string,
+  kind: PromptFolderKind,
+  stem: string
+): string => path.join(resolveCategoriesDirectoryPath(workspacePath, rootFolderName, kind), `${stem}${CATEGORY_FILENAME_SUFFIX}`)
 
 export const resolvePromptPathsFromStem = (
   folderPath: string,

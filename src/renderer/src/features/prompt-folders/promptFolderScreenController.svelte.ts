@@ -46,6 +46,8 @@ import {
   promptTemplateDraftCollection
 } from '@renderer/data/Collections/PromptTemplateDraftCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
+import type { Category } from '@shared/Category'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
@@ -120,6 +122,7 @@ const NAVIGATED_FOLDER_TOP_OFFSET_PX = 80
 type PromptMetadata = {
   status: PromptStatus
   completedAt: string | null
+  categoryLabel: string
 }
 
 export type MarkdownContentDraftRecord = {
@@ -176,6 +179,7 @@ export const createPromptFolderScreenController = ({
   const promptFolderDraftQuery = useLiveQuery(promptFolderDraftCollection) as {
     data: PromptFolderDraftRecord[]
   }
+  const categoryQuery = useLiveQuery(categoryCollection) as { data: Category[] }
 
   const screenRootFolder = $derived.by(() => {
     for (const candidate of promptFolderQuery.data) {
@@ -503,16 +507,31 @@ export const createPromptFolderScreenController = ({
   )
   const promptMetadataByPromptId = $derived.by(() => {
     const metadataById: Record<string, PromptMetadata> = {}
+    const allowedCategoryIds = new SvelteSet(screenRootFolder?.categoryIds ?? [])
+    const categoryNameById = Object.fromEntries(
+      categoryQuery.data
+        .filter((category) => allowedCategoryIds.has(category.id))
+        .map((category) => [category.id, category.displayName])
+    )
     for (const prompt of promptQuery.data) {
       if (!prompt) continue
       metadataById[prompt.id] = {
         status: prompt.status,
-        completedAt: prompt.completedAt ?? null
+        completedAt: prompt.completedAt ?? null,
+        categoryLabel: prompt.category
+          ? (categoryNameById[prompt.category] ?? 'Uncategorized')
+          : 'Uncategorized'
       }
     }
     if (isTemplateFolder) {
       for (const template of promptTemplateQuery.data) {
-        metadataById[template.id] = { status: PromptStatus.Todo, completedAt: null }
+        metadataById[template.id] = {
+          status: PromptStatus.Todo,
+          completedAt: null,
+          categoryLabel: template.category
+            ? (categoryNameById[template.category] ?? 'Uncategorized')
+            : 'Uncategorized'
+        }
       }
     }
 
@@ -1586,6 +1605,10 @@ export const createPromptFolderScreenController = ({
         (currentPromptFolder): currentPromptFolder is PromptFolder =>
           currentPromptFolder !== undefined
       )
+    },
+    get categories(): Category[] {
+      const ownedCategoryIds = new SvelteSet(screenRootFolder?.categoryIds ?? [])
+      return categoryQuery.data.filter((category) => ownedCategoryIds.has(category.id))
     },
     get activePromptFolderScreenRows(): PromptFolderScreenRow[] {
       return activePromptFolderScreenRows

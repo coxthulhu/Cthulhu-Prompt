@@ -10,6 +10,14 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { promptCollection } from '../Collections/PromptCollection'
+import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
+import { promptDraftCollection } from '../Collections/PromptDraftCollection'
+import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraftCollection'
+import { createPromptFull } from '@shared/Prompt'
+import { createPromptTemplateFull } from '@shared/PromptTemplate'
+import { upsertPromptDraft } from '../UiState/PromptDraftHydration'
+import { upsertPromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
 import {
   deletePromptFolderDrafts,
   removePromptFolderDraft
@@ -208,6 +216,23 @@ export const movePromptFolder = async (
   const destinationParentPromptFolder = destinationParentPromptFolderId
     ? promptFolderCollection.get(destinationParentPromptFolderId)
     : null
+  /** Resolves a folder's current top-level owner from the renderer tree index. */
+  const resolveRootFolderId = (folderId: string): string => {
+    let rootFolderId = folderId
+    let parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
+    while (parentFolderId !== null) {
+      rootFolderId = parentFolderId
+      parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
+    }
+    return rootFolderId
+  }
+  /** Cross-root subtree moves invalidate every assigned category in that subtree. */
+  const isCrossRootMove =
+    resolveRootFolderId(promptFolderId) !==
+    (destinationParentPromptFolderId
+      ? resolveRootFolderId(destinationParentPromptFolderId)
+      : promptFolderId)
+  const movedGraph = collectPromptFolderGraphIds([promptFolderId])
 
   if (sourceParentPromptFolderId && !sourceParentPromptFolder) {
     throw new Error('Source parent prompt folder not loaded')
@@ -239,6 +264,24 @@ export const movePromptFolder = async (
   nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(promptFolderId))
   await runRevisionMutation<MovePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
+      if (isCrossRootMove) {
+        for (const promptId of movedGraph.contentIds.prompt) {
+          collections.prompt.update(promptId, (draft) => {
+            delete draft.category
+          })
+          collections.promptDraft.update(promptId, (draft) => {
+            delete draft.category
+          })
+        }
+        for (const templateId of movedGraph.contentIds.template) {
+          collections.promptTemplate.update(templateId, (draft) => {
+            delete draft.category
+          })
+          collections.promptTemplateDraft.update(templateId, (draft) => {
+            delete draft.category
+          })
+        }
+      }
       if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
         collections.workspace.update(workspaceId, (draft) => {
           draft.entries = [...nextDestinationEntries]
@@ -273,8 +316,8 @@ export const movePromptFolder = async (
         })
       }
     },
-    persistMutations: async ({ entities, invoke }) => {
-      return await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {
+    persistMutations: async ({ entities, invoke, transaction }) => {
+      const result = await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {
         payload: {
           workspace: entities.workspace({
             id: workspaceId,
@@ -296,10 +339,25 @@ export const movePromptFolder = async (
           previousEntryId
         }
       })
+      if (result.success && isCrossRootMove) {
+        promptDraftCollection.utils.acceptMutations(transaction)
+        promptTemplateDraftCollection.utils.acceptMutations(transaction)
+      }
+      return result
     },
     handleSuccessOrConflictResponse: (payload) => {
       workspaceCollection.utils.upsertAuthoritative(payload.workspace)
       promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
+      for (const prompt of payload.prompts) {
+        const fullPrompt = { ...prompt, data: createPromptFull(prompt.data) }
+        promptCollection.utils.upsertAuthoritative(fullPrompt)
+        upsertPromptDraft(fullPrompt.data)
+      }
+      for (const template of payload.promptTemplates) {
+        const fullTemplate = { ...template, data: createPromptTemplateFull(template.data) }
+        promptTemplateCollection.utils.upsertAuthoritative(fullTemplate)
+        upsertPromptTemplateDrafts([fullTemplate.data])
+      }
     },
     conflictMessage: 'Prompt folder move conflict'
   })

@@ -36,6 +36,7 @@ const templateFolder = (id: string, templateIds: string[] = []) => ({
   displayName: id,
   entries: templateIds.map((templateId) => ({ kind: 'template' as const, id: templateId })),
   completedPromptIds: [],
+  categoryIds: [],
   settings: { folderDescription: null }
 })
 

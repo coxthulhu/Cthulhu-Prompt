@@ -17,6 +17,7 @@ import { userPersistenceDraftCollection } from '../Collections/UserPersistenceDr
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { categoryCollection } from '../Collections/CategoryCollection'
 
 export {
   mutatePacedUpdateTransaction,
@@ -31,6 +32,7 @@ const revisionCollections = {
   systemSettings: systemSettingsCollection,
   workspace: workspaceCollection,
   promptFolder: promptFolderCollection,
+  category: categoryCollection,
   prompt: promptCollection,
   promptTemplate: promptTemplateCollection,
   markdownContentUiState: markdownContentUiStateCollection

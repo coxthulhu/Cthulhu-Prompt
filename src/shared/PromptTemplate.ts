@@ -3,6 +3,7 @@ export type PromptTemplateSummary = {
   title: string
   fallbackTitle: string
   modifiedAt: string
+  category?: string
   loadingState: 'summary'
 }
 
@@ -12,6 +13,7 @@ export type PromptTemplateFull = {
   fallbackTitle: string
   createdAt: string
   modifiedAt: string
+  category?: string
   templateText: string
   loadingState: 'full'
 }
@@ -24,7 +26,7 @@ export type PromptTemplatePersisted = Omit<PromptTemplateFull, 'loadingState'>
 // Prompt template data loaded during workspace bootstrap for tree/title hydration.
 export type PromptTemplateSummaryData = Pick<
   PromptTemplatePersisted,
-  'id' | 'title' | 'fallbackTitle' | 'modifiedAt'
+  'id' | 'title' | 'fallbackTitle' | 'modifiedAt' | 'category'
 >
 
 export const createPromptTemplateSummary = (

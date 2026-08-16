@@ -114,6 +114,7 @@ export const createPromptFolder = async (
     displayName: normalizedDisplayName,
     entries: [],
     completedPromptIds: [],
+    categoryIds: [],
     settings: createEmptyPromptFolderSettings()
   } as PromptFolder
 

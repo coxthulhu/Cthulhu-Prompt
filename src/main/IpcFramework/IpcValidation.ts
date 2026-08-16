@@ -15,6 +15,12 @@ import type {
 } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type {
+  Category,
+  CreateCategoryPayload,
+  RenameCategoryPayload,
+  SetCategoryDescriptionPayload
+} from '@shared/Category'
+import type {
   MarkdownContentUiState,
   MarkdownContentUiStateRevisionPayload
 } from '@shared/MarkdownContentUiState'
@@ -244,6 +250,7 @@ const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
     })
   ),
   completedPromptIds: parseArray(parseString),
+  categoryIds: parseArray(parseString),
   settings: parsePromptFolderSettings
 })
 
@@ -298,6 +305,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
   const hasStatus = keys.includes('status')
   const hasCompletedAt = keys.includes('completedAt')
   const hasTemplates = keys.includes('templates')
+  const hasCategory = keys.includes('category')
   const allowedKeys = new Set([
     'id',
     'title',
@@ -305,6 +313,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     'createdAt',
     'modifiedAt',
     'promptText',
+    ...(hasCategory ? ['category'] : []),
     ...(hasTemplates ? ['templates'] : []),
     'status',
     ...(hasCompletedAt ? ['completedAt'] : [])
@@ -332,6 +341,7 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
     createdAt: parseString,
     modifiedAt: parseString,
     promptText: parseString,
+    ...(hasCategory ? { category: parseString } : {}),
     status: parsePromptStatus,
     ...(hasCompletedAt
       ? {
@@ -356,17 +366,33 @@ const parsePrompt: Parser<PromptPersisted> = (value) => {
 
 const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
 
-const parsePromptTemplate = parseObject<PromptTemplatePersisted>({
-  id: parseString,
-  title: parseString,
-  fallbackTitle: parseString,
-  createdAt: parseString,
-  modifiedAt: parseString,
-  templateText: parseString
-})
+const parsePromptTemplate: Parser<PromptTemplatePersisted> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const record = value as Record<string, unknown>
+  const hasCategory = Object.keys(record).includes('category')
+  return parseObject<PromptTemplatePersisted>({
+    id: parseString,
+    title: parseString,
+    fallbackTitle: parseString,
+    createdAt: parseString,
+    modifiedAt: parseString,
+    templateText: parseString,
+    ...(hasCategory ? { category: parseString } : {})
+  } as { [TKey in keyof PromptTemplatePersisted]: Parser<PromptTemplatePersisted[TKey]> })(record)
+}
 
 const parsePromptTemplateRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptTemplatePersisted>(parsePromptTemplate)
+
+/** Exact parser for category records sent over mutation IPC. */
+const parseCategory = parseObject<Category>({
+  id: parseString,
+  displayName: parseString,
+  description: parseNullableString
+})
+
+/** Revision payload parser for category mutations. */
+const parseCategoryRevisionPayloadEntity = parseRevisionPayloadEntity<Category>(parseCategory)
 
 const parseMarkdownContentUiState = parseObject<MarkdownContentUiState>({
   workspaceId: parseString,
@@ -551,6 +577,39 @@ const parseRenamePromptFolderPayload = parseObject<RenamePromptFolderPayload>({
 const parseRenamePromptFolderWireRequest: Parser<IpcRequestWithPayload<RenamePromptFolderPayload>> =
   parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
 
+/** Parser for category creation payloads. */
+const parseCreateCategoryPayload = parseObject<CreateCategoryPayload>({
+  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  category: parseCategoryRevisionPayloadEntity
+})
+
+/** Wire request parser for category creation. */
+const parseCreateCategoryWireRequest: Parser<IpcRequestWithPayload<CreateCategoryPayload>> =
+  parseWireRequestWithPayload<CreateCategoryPayload>(parseCreateCategoryPayload)
+
+/** Parser for category rename payloads. */
+const parseRenameCategoryPayload = parseObject<RenameCategoryPayload>({
+  category: parseCategoryRevisionPayloadEntity,
+  displayName: parseString
+})
+
+/** Wire request parser for category renames. */
+const parseRenameCategoryWireRequest: Parser<IpcRequestWithPayload<RenameCategoryPayload>> =
+  parseWireRequestWithPayload<RenameCategoryPayload>(parseRenameCategoryPayload)
+
+/** Parser for category description payloads. */
+const parseSetCategoryDescriptionPayload = parseObject<SetCategoryDescriptionPayload>({
+  category: parseCategoryRevisionPayloadEntity,
+  description: parseNullableString
+})
+
+/** Wire request parser for category description updates. */
+const parseSetCategoryDescriptionWireRequest: Parser<
+  IpcRequestWithPayload<SetCategoryDescriptionPayload>
+> = parseWireRequestWithPayload<SetCategoryDescriptionPayload>(
+  parseSetCategoryDescriptionPayload
+)
+
 const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -726,6 +785,17 @@ export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
 
 export const parseRenamePromptFolderRequest = createRequestParser(
   parseRenamePromptFolderWireRequest
+)
+
+/** Validated request parser for category creation IPC. */
+export const parseCreateCategoryRequest = createRequestParser(parseCreateCategoryWireRequest)
+
+/** Validated request parser for category rename IPC. */
+export const parseRenameCategoryRequest = createRequestParser(parseRenameCategoryWireRequest)
+
+/** Validated request parser for category description IPC. */
+export const parseSetCategoryDescriptionRequest = createRequestParser(
+  parseSetCategoryDescriptionWireRequest
 )
 
 export const parseDeletePromptFolderRequest = createRequestParser(

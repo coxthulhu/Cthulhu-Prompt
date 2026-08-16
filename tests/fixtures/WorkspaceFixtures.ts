@@ -57,6 +57,7 @@ export interface PromptFolderConfig {
     status?: PromptStatus
     completedAt?: string
     templates?: PromptTemplateReference[] | null
+    category?: string
   }>
 }
 
@@ -72,6 +73,7 @@ export interface PromptTemplateFolderConfig {
     fallbackTitle?: string
     templateText: string
     createdAt?: string
+    category?: string
   }>
 }
 
@@ -179,6 +181,7 @@ const createPromptFiles = (
       status: prompt.status ?? PromptStatus.Todo,
       promptText: prompt.promptText,
       ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
+      ...(prompt.category !== undefined ? { category: prompt.category } : {}),
       ...(prompt.status === PromptStatus.Completed && prompt.completedAt
         ? { completedAt: prompt.completedAt }
         : {})
@@ -361,6 +364,7 @@ export function createWorkspaceWithFolders(
     )
     addPromptFolderSettingsFiles(structure, folderPath, folder)
     structure[`${folderPath}/Completed`] = null
+    structure[`${folderPath}/Categories`] = null
     Object.assign(structure, promptFiles)
     Object.assign(structure, completedPromptFiles)
   }
@@ -378,13 +382,17 @@ export function createWorkspaceWithTemplateFolders(
   folderConfigs: PromptTemplateFolderConfig[]
 ): Record<string, string | null> {
   const structure = createBasicWorkspace(workspacePath)
-  const addFolder = (folder: PromptTemplateFolderConfig, parentPath: string): string => {
+  const addFolder = (
+    folder: PromptTemplateFolderConfig,
+    parentPath: string,
+    isRoot: boolean
+  ): string => {
     const folderPath = `${parentPath}/${folder.folderName}`
     const folderId =
       folder.folderId ?? createDeterministicId(`${workspacePath}:template:${folderPath}`)
     const templates = folder.templates ?? []
     const subfolderIds = (folder.subfolders ?? []).map((subfolder) =>
-      addFolder(subfolder, folderPath)
+      addFolder(subfolder, folderPath, false)
     )
 
     structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
@@ -405,6 +413,7 @@ export function createWorkspaceWithTemplateFolders(
     if (folder.description !== undefined) {
       structure[`${folderPath}/_FolderInfo/Description.md`] = folder.description
     }
+    if (isRoot) structure[`${folderPath}/Categories`] = null
 
     for (const template of templates) {
       const title = template.title ?? ''
@@ -415,7 +424,8 @@ export function createWorkspaceWithTemplateFolders(
         fallbackTitle,
         createdAt: template.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
         modifiedAt: template.createdAt ?? DEFAULT_PROMPT_TIMESTAMP,
-        templateText: template.templateText
+        templateText: template.templateText,
+        ...(template.category !== undefined ? { category: template.category } : {})
       }
       const displayTitle = getPromptDisplayTitle(templateData)
       structure[`${folderPath}/${buildPromptStem(displayTitle, template.id, false)}.template.md`] =
@@ -426,7 +436,7 @@ export function createWorkspaceWithTemplateFolders(
   }
 
   const folderIds = folderConfigs.map((folder) =>
-    addFolder(folder, `${workspacePath}/Templates`)
+    addFolder(folder, `${workspacePath}/Templates`, true)
   )
 
   structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(

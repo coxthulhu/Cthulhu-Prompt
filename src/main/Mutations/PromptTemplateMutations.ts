@@ -37,14 +37,16 @@ export const setupPromptTemplateMutationHandlers = (): void => {
       ...titleFields,
       createdAt: now,
       modifiedAt: now,
-      templateText: requested.templateText
+      templateText: requested.templateText,
+      ...(requested.category !== undefined ? { category: requested.category } : {})
     }),
     updatePersisted: (requested, _current, titleFields) => ({
       id: requested.id,
       ...titleFields,
       createdAt: requested.createdAt,
       modifiedAt: requested.modifiedAt,
-      templateText: requested.templateText
+      templateText: requested.templateText,
+      ...(requested.category !== undefined ? { category: requested.category } : {})
     }),
     canMove: () => true,
     createContent: (tx, operation) =>
@@ -59,6 +61,7 @@ export const setupPromptTemplateMutationHandlers = (): void => {
         expectedRevision: operation.expectedRevision,
         recipe: (draft) => {
           Object.assign(draft, operation.data)
+          if (operation.data.category === undefined) delete draft.category
         },
         persistenceFields: operation.persistenceFields
       }),

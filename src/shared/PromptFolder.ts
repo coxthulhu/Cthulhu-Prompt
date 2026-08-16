@@ -15,6 +15,7 @@ interface PromptFolderBase extends OrderContainer<EntryRef> {
   folderName: string
   displayName: string
   completedPromptIds: string[]
+  categoryIds: string[]
 }
 
 export interface PromptContentFolder extends PromptFolderBase {
@@ -128,6 +129,7 @@ export type LoadPromptFolderInitialPayload = {
 
 export type LoadPromptFolderInitialResult = IpcResult<{
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
+  categories: Array<RevisionEnvelope<import('./Category').Category>>
   prompts: Array<RevisionEnvelope<PromptPersisted>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
   markdownContentUiStates: Array<RevisionEnvelope<MarkdownContentUiState>>

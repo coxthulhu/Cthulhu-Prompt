@@ -4,6 +4,7 @@ import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type { EntryRef, FolderEntryRef } from '@shared/OrderContainer'
 import type { RevisionEnvelope } from '@shared/Revision'
 import type { Workspace } from '@shared/Workspace'
+import type { Category } from '@shared/Category'
 import type { PromptFolderPersistenceFields } from '../Persistence/PromptFolderPersistence'
 import {
   readPromptModifiedAt,
@@ -14,6 +15,7 @@ import {
   type PromptTemplatePersistenceFields
 } from '../Persistence/PromptTemplatePersistence'
 import type { WorkspacePersistenceFields } from '../Persistence/WorkspacePersistence'
+import type { CategoryPersistenceFields } from '../Persistence/CategoryPersistence'
 import type { CommittedEntry } from './CommittedStore'
 import { data } from './Data'
 
@@ -24,6 +26,8 @@ export type PromptTemplateCommittedEntry = CommittedEntry<
   PromptTemplatePersisted,
   PromptTemplatePersistenceFields
 >
+/** Loaded category entry with its persisted filename state. */
+export type CategoryCommittedEntry = CommittedEntry<Category, CategoryPersistenceFields>
 
 const filterLoadedEntityIds = <TData, TPersistenceFields>(
   entityIds: string[],
@@ -49,6 +53,13 @@ export const filterLoadedPromptIds = (promptIds: string[]): string[] => {
   )
 }
 
+/** Filters category ownership to records loaded in the authoritative store. */
+export const filterLoadedCategoryIds = (categoryIds: string[]): string[] => {
+  return filterLoadedEntityIds(categoryIds, (categoryId) =>
+    data.category.committedStore.getEntry(categoryId)
+  )
+}
+
 export const getLoadedPromptEntries = (promptIds: string[]): PromptCommittedEntry[] => {
   return getLoadedEntries(promptIds, (promptId) => data.prompt.committedStore.getEntry(promptId))
 }
@@ -58,6 +69,13 @@ export const getLoadedPromptTemplateEntries = (
 ): PromptTemplateCommittedEntry[] => {
   return getLoadedEntries(promptTemplateIds, (promptTemplateId) =>
     data.promptTemplate.committedStore.getEntry(promptTemplateId)
+  )
+}
+
+/** Returns loaded category entries for the requested IDs. */
+export const getLoadedCategoryEntries = (categoryIds: string[]): CategoryCommittedEntry[] => {
+  return getLoadedEntries(categoryIds, (categoryId) =>
+    data.category.committedStore.getEntry(categoryId)
   )
 }
 
@@ -115,7 +133,8 @@ export const buildPromptFolderSnapshot = (
     data: {
       ...promptFolderEntry.committed,
       entries: filterLoadedPromptFolderEntriesByKind(promptFolderEntry.committed.entries),
-      completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds)
+      completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds),
+      categoryIds: filterLoadedCategoryIds(promptFolderEntry.committed.categoryIds)
     }
   }
 }
@@ -142,4 +161,13 @@ export const buildPromptTemplateSnapshot = (
     ...promptTemplateEntry.committed,
     modifiedAt: readPromptTemplateModifiedAt(promptTemplateEntry.persistenceFields)
   }
+})
+
+/** Builds a renderer revision envelope for one category. */
+export const buildCategorySnapshot = (
+  categoryEntry: CategoryCommittedEntry
+): RevisionEnvelope<Category> => ({
+  id: categoryEntry.committed.id,
+  revision: categoryEntry.revision,
+  data: categoryEntry.committed
 })

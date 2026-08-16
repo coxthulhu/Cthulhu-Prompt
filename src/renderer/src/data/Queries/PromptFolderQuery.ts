@@ -13,6 +13,7 @@ import {
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
 import { upsertMarkdownContentUiStateDrafts } from '../UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
+import { categoryCollection } from '../Collections/CategoryCollection'
 
 export const loadPromptFolderInitial = async (
   workspaceId: string,
@@ -31,6 +32,7 @@ export const loadPromptFolderInitial = async (
   )
 
   for (const adapter of markdownContentQueryAdapters) adapter.applyFolderResult(result)
+  categoryCollection.utils.upsertManyAuthoritative(result.categories)
   promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
   upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
   markdownContentUiStateCollection.utils.upsertManyAuthoritative(result.markdownContentUiStates)
@@ -44,6 +46,10 @@ export const loadPromptFolderInitial = async (
     throw new Error('Prompt folder not loaded after initial load')
   }
   const nextGraph = collectPromptFolderGraphIds([promptFolderId])
+  const removedCategoryIds = [...previousGraph.categoryIds].filter(
+    (categoryId) => !nextGraph.categoryIds.has(categoryId)
+  )
+  categoryCollection.utils.deleteManyAuthoritative(removedCategoryIds)
   for (const adapter of markdownContentQueryAdapters) {
     const removedContentIds = [...previousGraph.contentIds[adapter.kind]].filter(
       (contentId) => !nextGraph.contentIds[adapter.kind].has(contentId)

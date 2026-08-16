@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { Folder, Layers, Pencil, Trash2 } from 'lucide-svelte'
+  import { Folder, FolderPlus, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
@@ -14,6 +14,7 @@
     contentKind,
     screenMode,
     onDeletePromptFolder,
+    onAddCategory,
     onRenamePromptFolder,
     onScreenModeChange
   } = $props<{
@@ -23,6 +24,7 @@
     contentKind: import('@shared/PromptFolder').PromptFolderContentKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
+    onAddCategory: () => void
     onRenamePromptFolder: () => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
   }>()
@@ -71,6 +73,14 @@
     </div>
 
     <div class="prompt-folder-root-actions">
+      <IconButton
+        icon={FolderPlus}
+        label="Add category"
+        title="Add category"
+        hoverVariant="accent"
+        testId="prompt-folder-add-category-button"
+        onclick={onAddCategory}
+      />
       <IconButton
         icon={Trash2}
         label={`Delete ${folderLabel}`}

@@ -47,6 +47,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     fallbackTitle: prompt.fallbackTitle,
     createdAt: '',
     modifiedAt: prompt.modifiedAt,
+    ...(prompt.category !== undefined ? { category: prompt.category } : {}),
     promptText: '',
     templates: prompt.templates,
     isEdited: false
@@ -54,11 +55,13 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
   applySummary: (draft, prompt) => {
     draft.title = prompt.title
     draft.fallbackTitle = prompt.fallbackTitle
+    draft.category = prompt.category
     draft.templates = prompt.templates
   },
   hasSameSummary: (draft, prompt) =>
     draft.title === prompt.title &&
     draft.fallbackTitle === prompt.fallbackTitle &&
+    draft.category === prompt.category &&
     haveSamePromptTemplates(draft.templates, prompt.templates),
   toFullDraft: (prompt, isEdited) => ({
     id: prompt.id,
@@ -66,6 +69,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     fallbackTitle: prompt.fallbackTitle,
     createdAt: prompt.createdAt,
     modifiedAt: prompt.modifiedAt,
+    ...(prompt.category !== undefined ? { category: prompt.category } : {}),
     promptText: prompt.promptText,
     templates: prompt.templates,
     isEdited
@@ -76,6 +80,7 @@ export const promptDraftMutations = createMarkdownContentDraftMutations<
     left.fallbackTitle === right.fallbackTitle &&
     left.createdAt === right.createdAt &&
     left.modifiedAt === right.modifiedAt &&
+    left.category === right.category &&
     left.promptText === right.promptText &&
     haveSamePromptTemplates(left.templates, right.templates) &&
     left.isEdited === right.isEdited,

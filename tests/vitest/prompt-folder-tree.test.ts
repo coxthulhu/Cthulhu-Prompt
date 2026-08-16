@@ -10,6 +10,7 @@ const createFolder = (id: string, entries: EntryRef[] = []): PromptFolder => ({
   displayName: id,
   entries,
   completedPromptIds: [],
+  categoryIds: [],
   settings: {
     folderDescription: ''
   }
