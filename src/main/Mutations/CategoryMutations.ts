@@ -4,8 +4,10 @@ import {
   normalizeCategoryDisplayName,
   type Category,
   type CategoryRevisionResponsePayload,
-  type CreateCategoryResponsePayload
+  type CreateCategoryResponsePayload,
+  type DeleteCategoryResponsePayload
 } from '@shared/Category'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
@@ -13,15 +15,20 @@ import { data } from '../Data/Data'
 import {
   buildCategorySnapshot,
   buildPromptFolderSnapshot,
+  buildPromptSnapshot,
+  buildPromptTemplateSnapshot,
   getLoadedCategoryEntries
 } from '../Data/DataSnapshotHelpers'
 import {
   parseCreateCategoryRequest,
+  parseDeleteCategoryRequest,
   parseRenameCategoryRequest,
   parseSetCategoryDescriptionRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import type { CategoryPersistenceFields } from '../Persistence/CategoryPersistence'
+import { collectPromptFolderContentIds } from './PromptFolderContentMutations'
+import { collectWorkspacePromptFolders } from './PromptFolderPathHelpers'
 
 /** Planned category data and filename state for one root-owned category. */
 type CategoryFilenamePlan = {
@@ -99,7 +106,36 @@ const createCategoryFilenameUpdateHandles = (
     })
   )
 
-/** Registers create, rename, and description category mutation channels. */
+/** Builds the authoritative graph affected by one category deletion attempt. */
+const buildDeleteCategoryResponsePayload = (
+  rootPromptFolderId: string,
+  categoryId: string,
+  promptIds: string[],
+  promptTemplateIds: string[]
+): DeleteCategoryResponsePayload | null => {
+  /** Latest owning root snapshot source. */
+  const promptFolder = data.promptFolder.committedStore.getEntry(rootPromptFolderId)
+  if (!promptFolder) return null
+
+  /** Latest category snapshot source, absent after successful deletion. */
+  const category = data.category.committedStore.getEntry(categoryId)
+  return {
+    promptFolder: buildPromptFolderSnapshot(promptFolder),
+    ...(category ? { category: buildCategorySnapshot(category) } : {}),
+    prompts: promptIds.flatMap((promptId) => {
+      /** Latest affected prompt snapshot source. */
+      const prompt = data.prompt.committedStore.getEntry(promptId)
+      return prompt ? [buildPromptSnapshot(prompt)] : []
+    }),
+    promptTemplates: promptTemplateIds.flatMap((promptTemplateId) => {
+      /** Latest affected template snapshot source. */
+      const promptTemplate = data.promptTemplate.committedStore.getEntry(promptTemplateId)
+      return promptTemplate ? [buildPromptTemplateSnapshot(promptTemplate)] : []
+    })
+  }
+}
+
+/** Registers create, rename, description, and deletion category mutation channels. */
 export const setupCategoryMutationHandlers = (): void => {
   ipcMain.handle('create-category', async (_, request: unknown) => {
     return await runMutationIpcRequest(request, parseCreateCategoryRequest, async (validated) => {
@@ -271,5 +307,104 @@ export const setupCategoryMutationHandlers = (): void => {
         }
       }
     )
+  })
+
+  ipcMain.handle('delete-category', async (_, request: unknown) => {
+    return await runMutationIpcRequest(request, parseDeleteCategoryRequest, async (validated) => {
+      try {
+        /** Revision-bearing category requested for deletion. */
+        const requestedCategory = validated.payload.category
+        /** Revision-bearing root folder that owns the category. */
+        const requestedFolder = validated.payload.promptFolder
+        /** Current category record and persistence ownership. */
+        const category = data.category.committedStore.getEntry(requestedCategory.id)
+        /** Current owning root folder record. */
+        const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
+        if (
+          !category ||
+          !promptFolder ||
+          category.persistenceFields.rootPromptFolderId !== requestedFolder.id ||
+          !promptFolder.committed.categoryIds.includes(requestedCategory.id)
+        ) {
+          return { success: false, error: 'Category ownership not loaded' }
+        }
+
+        /** Workspace whose loaded content is scanned for every matching reference. */
+        const workspace = data.workspace.committedStore.getEntry(
+          category.persistenceFields.workspaceId
+        )
+        if (!workspace) return { success: false, error: 'Workspace not loaded' }
+
+        /** All loaded prompt and template IDs in the active workspace. */
+        const workspaceContentIds = collectPromptFolderContentIds(
+          collectWorkspacePromptFolders(workspace.committed).map((folder) => folder.id)
+        )
+        /** Prompt IDs whose category reference must be cleared. */
+        const promptIds = workspaceContentIds.prompt.filter(
+          (promptId) =>
+            data.prompt.committedStore.getEntry(promptId)?.committed.category ===
+            requestedCategory.id
+        )
+        /** Template IDs whose category reference must be cleared. */
+        const promptTemplateIds = workspaceContentIds.template.filter(
+          (promptTemplateId) =>
+            data.promptTemplate.committedStore.getEntry(promptTemplateId)?.committed.category ===
+            requestedCategory.id
+        )
+        /** One logical optimistic timestamp shared by every cleared reference. */
+        const modifiedAt = getCurrentIsoSecondTimestamp()
+        /** Atomic category, ownership, and referencing-content persistence outcome. */
+        const outcome = await runAtomicDataTransaction((tx) => ({
+          promptFolder: tx.promptFolder.update({
+            id: requestedFolder.id,
+            expectedRevision: requestedFolder.expectedRevision,
+            recipe: (draft) => {
+              draft.categoryIds = draft.categoryIds.filter((id) => id !== requestedCategory.id)
+            }
+          }),
+          category: tx.category.delete({
+            id: requestedCategory.id,
+            expectedRevision: requestedCategory.expectedRevision
+          }),
+          ...Object.fromEntries(
+            promptIds.map((promptId) => [
+              `prompt:${promptId}`,
+              tx.prompt.update({
+                id: promptId,
+                recipe: (draft) => {
+                  delete draft.category
+                  draft.modifiedAt = modifiedAt
+                }
+              })
+            ])
+          ),
+          ...Object.fromEntries(
+            promptTemplateIds.map((promptTemplateId) => [
+              `promptTemplate:${promptTemplateId}`,
+              tx.promptTemplate.update({
+                id: promptTemplateId,
+                recipe: (draft) => {
+                  delete draft.category
+                  draft.modifiedAt = modifiedAt
+                }
+              })
+            ])
+          )
+        }))
+        /** Latest authoritative graph returned for success or rollback reconciliation. */
+        const payload = buildDeleteCategoryResponsePayload(
+          requestedFolder.id,
+          requestedCategory.id,
+          promptIds,
+          promptTemplateIds
+        )
+        if (!payload) return { success: false, error: 'Category delete commit did not complete' }
+        return outcome.status === 'conflict'
+          ? { success: false, conflict: true, payload }
+          : { success: true, payload }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) }
+      }
+    })
   })
 }

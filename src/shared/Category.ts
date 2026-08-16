@@ -1,4 +1,6 @@
 import type { PromptFolder } from './PromptFolder'
+import type { PromptPersisted } from './Prompt'
+import type { PromptTemplatePersisted } from './PromptTemplate'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 /** Persisted category metadata owned by one root prompt or template folder. */
@@ -35,6 +37,20 @@ export type SetCategoryDescriptionPayload = {
 /** Authoritative category snapshot returned by category updates. */
 export type CategoryRevisionResponsePayload = {
   category: RevisionEnvelope<Category>
+}
+
+/** Payload used to delete one category from its owning root folder. */
+export type DeleteCategoryPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+  category: RevisionPayloadEntity<Category>
+}
+
+/** Authoritative snapshots returned after category deletion or conflict. */
+export type DeleteCategoryResponsePayload = {
+  promptFolder: RevisionEnvelope<PromptFolder>
+  category?: RevisionEnvelope<Category>
+  prompts: Array<RevisionEnvelope<PromptPersisted>>
+  promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
 }
 
 /** Trims a category display name before validation or persistence. */

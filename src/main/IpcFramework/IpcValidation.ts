@@ -17,6 +17,7 @@ import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type {
   Category,
   CreateCategoryPayload,
+  DeleteCategoryPayload,
   RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
@@ -610,6 +611,16 @@ const parseSetCategoryDescriptionWireRequest: Parser<
   parseSetCategoryDescriptionPayload
 )
 
+/** Parser for category deletion payloads. */
+const parseDeleteCategoryPayload = parseObject<DeleteCategoryPayload>({
+  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  category: parseCategoryRevisionPayloadEntity
+})
+
+/** Wire request parser for category deletion. */
+const parseDeleteCategoryWireRequest: Parser<IpcRequestWithPayload<DeleteCategoryPayload>> =
+  parseWireRequestWithPayload<DeleteCategoryPayload>(parseDeleteCategoryPayload)
+
 const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -797,6 +808,9 @@ export const parseRenameCategoryRequest = createRequestParser(parseRenameCategor
 export const parseSetCategoryDescriptionRequest = createRequestParser(
   parseSetCategoryDescriptionWireRequest
 )
+
+/** Validated request parser for category deletion IPC. */
+export const parseDeleteCategoryRequest = createRequestParser(parseDeleteCategoryWireRequest)
 
 export const parseDeletePromptFolderRequest = createRequestParser(
   parseDeletePromptFolderWireRequest

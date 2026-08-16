@@ -100,9 +100,10 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
 /** Starts the app with a caller-provided category workspace. */
 const startCategoryWorkspace = async (
   testSetup: any,
-  filesystem: Record<string, string | null>
+  filesystem: Record<string, string | null>,
+  fileModifiedTimes?: Record<string, string>
 ): Promise<{ mainWindow: any; testHelpers: any }> => {
-  await testSetup.setupFilesystem(filesystem)
+  await testSetup.setupFilesystem(filesystem, { fileModifiedTimes })
   await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
   const { mainWindow, testHelpers } = await testSetup.setupAndStart({
     workspace: { scenario: 'none' }
@@ -250,6 +251,92 @@ describe('Prompt categories', () => {
     await expect(
       mainWindow.locator('[role="dialog"][aria-label="Delete Prompt Folder"]')
     ).toBeVisible()
+  })
+
+  test('deletes a category and clears every prompt and template reference', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Category workspace with one deliberately cross-kind reference. */
+    const filesystem = createCategorizedWorkspace()
+    /** Known initial file timestamp used to verify deletion changes modifiedAt. */
+    const initialModifiedAt = '2020-01-01T00:00:00.000Z'
+    /** Template path whose category is changed to the prompt-owned category. */
+    const templatePath =
+      `${WORKSPACE_PATH}/Templates/Templates/Categorized Template.template.md`
+    /** Prompt path expected to be rewritten during category deletion. */
+    const promptPath =
+      `${WORKSPACE_PATH}/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
+    /** Parsed template text with the shared category reference. */
+    const templateText = filesystem[templatePath]!
+    filesystem[templatePath] = templateText.replace(TEMPLATE_CATEGORY_ID, PROMPT_CATEGORY_ID)
+    /** Running category workspace used for direct non-UI IPC coverage. */
+    const { mainWindow } = await startCategoryWorkspace(testSetup, filesystem, {
+      [promptPath]: initialModifiedAt,
+      [templatePath]: initialModifiedAt
+    })
+    expect(await readTextFile(electronApp, promptPath)).toContain(PROMPT_CATEGORY_ID)
+    expect(await readTextFile(electronApp, templatePath)).toContain(PROMPT_CATEGORY_ID)
+
+    /** Atomic deletion response returned by the main-process IPC handler. */
+    const deleteResponse = await mainWindow.evaluate(
+      async ({ categoryId, rootFolderId }) => {
+        return await (window as any).electron.ipcRenderer.invoke('delete-category', {
+          requestId: 'delete-category-test',
+          clientId: (window as any).ipcClientId,
+          payload: {
+            promptFolder: {
+              id: rootFolderId,
+              expectedRevision: 0,
+              data: {
+                id: rootFolderId,
+                kind: 'prompt',
+                folderName: 'Prompts',
+                displayName: 'Prompts',
+                entries: [
+                  { kind: 'prompt', id: 'categorized-prompt' },
+                  { kind: 'prompt', id: 'uncategorized-prompt' },
+                  { kind: 'prompt', id: 'unknown-category-prompt' }
+                ],
+                completedPromptIds: [],
+                categoryIds: [categoryId],
+                settings: { folderDescription: null }
+              }
+            },
+            category: {
+              id: categoryId,
+              expectedRevision: 0,
+              data: { id: categoryId, displayName: 'Code Review', description: null }
+            }
+          }
+        })
+      },
+      { categoryId: PROMPT_CATEGORY_ID, rootFolderId: PROMPT_ROOT_ID }
+    )
+
+    expect(deleteResponse).toMatchObject({
+      success: true,
+      payload: {
+        promptFolder: { data: { categoryIds: [] } },
+        prompts: [{ data: { id: 'categorized-prompt' } }],
+        promptTemplates: [{ data: { id: 'categorized-template' } }]
+      }
+    })
+    expect(deleteResponse.payload).not.toHaveProperty('category')
+    expect(deleteResponse.payload.prompts[0].data).not.toHaveProperty('category')
+    expect(deleteResponse.payload.promptTemplates[0].data).not.toHaveProperty('category')
+    expect(deleteResponse.payload.prompts[0].data.modifiedAt).not.toBe(initialModifiedAt)
+    expect(deleteResponse.payload.promptTemplates[0].data.modifiedAt).not.toBe(initialModifiedAt)
+    await expect
+      .poll(() =>
+        checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Code Review.category.json`
+        )
+      )
+      .toBe(false)
+    await expect.poll(() => readTextFile(electronApp, promptPath)).not.toContain('category:')
+    await expect.poll(() => readTextFile(electronApp, templatePath)).not.toContain('category:')
   })
 
   test('clears prompt and template categories when moving content to another root', async ({
