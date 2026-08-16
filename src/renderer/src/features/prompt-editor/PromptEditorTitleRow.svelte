@@ -21,7 +21,6 @@
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string | null
     metadataFolderState?: 'not-selected' | 'no-template' | 'selected'
-    categoryLabel?: string
     tokenCount: number
     icon?: ComponentType
     copyLabel?: string
@@ -45,7 +44,7 @@
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
-  import { FileText, Layers, Tag, Trash2 } from 'lucide-svelte'
+  import { FileText, Layers, Trash2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
@@ -68,7 +67,6 @@
     inputRef = $bindable(null),
     metadataFolderLabel = 'Template',
     metadataFolderState = 'not-selected',
-    categoryLabel = 'Uncategorized',
     tokenCount,
     icon = FileText,
     copyLabel,
@@ -223,11 +221,6 @@
       {/if}
 
       <div class="prompt-editor-metadata-row">
-        <span class="prompt-editor-metadata-category" title={categoryLabel}>
-          <Tag class="prompt-editor-metadata-category-icon h-3 w-3 shrink-0" />
-          {categoryLabel}
-        </span>
-        <SeparatorDot />
         {#if metadataFolderLabel}
           <span
             class="prompt-editor-metadata-folder"
@@ -451,13 +444,6 @@
 
   .prompt-editor-metadata-folder {
     align-items: center;
-    display: inline-flex;
-    gap: 4px;
-  }
-
-  .prompt-editor-metadata-category {
-    align-items: center;
-    color: var(--ui-normal-text);
     display: inline-flex;
     gap: 4px;
   }

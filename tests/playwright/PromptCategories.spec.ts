@@ -113,7 +113,7 @@ const startCategoryWorkspace = async (
 }
 
 describe('Prompt categories', () => {
-  test('shows root-owned category names and the uncategorized fallback in metadata', async ({
+  test('omits categories from prompt metadata while preserving category front matter', async ({
     electronApp,
     testSetup
   }) => {
@@ -123,28 +123,7 @@ describe('Prompt categories', () => {
     )
 
     await testHelpers.navigateToPromptFolders('Prompts')
-    await expect(
-      mainWindow
-        .locator(promptEditorSelector('categorized-prompt'))
-        .locator('.prompt-editor-metadata-category')
-    ).toHaveText('Code Review')
-    await expect(
-      mainWindow
-        .locator(promptEditorSelector('uncategorized-prompt'))
-        .locator('.prompt-editor-metadata-category')
-    ).toHaveText('Uncategorized')
-    const categorizedMetadata = mainWindow
-      .locator(promptEditorSelector('categorized-prompt'))
-      .locator('.prompt-editor-metadata-row')
-    await expect(categorizedMetadata.locator(':scope > :first-child')).toHaveClass(
-      /prompt-editor-metadata-category/
-    )
-    await expect(categorizedMetadata.locator(':scope > :first-child svg')).toHaveClass(/lucide-tag/)
-    await expect(
-      mainWindow
-        .locator(promptEditorSelector('unknown-category-prompt'))
-        .locator('.prompt-editor-metadata-category')
-    ).toHaveText('Uncategorized')
+    await expect(mainWindow.locator('.prompt-editor-metadata-category')).toHaveCount(0)
     await mainWindow
       .locator(`${promptEditorSelector('unknown-category-prompt')} [data-testid="prompt-title"]`)
       .fill('Unknown Category Renamed')
@@ -156,11 +135,7 @@ describe('Prompt categories', () => {
     )
 
     await testHelpers.navigateToPromptFolders('Templates')
-    await expect(
-      mainWindow
-        .locator(promptEditorSelector('categorized-template'))
-        .locator('.prompt-editor-metadata-category')
-    ).toHaveText('Writing')
+    await expect(mainWindow.locator('.prompt-editor-metadata-category')).toHaveCount(0)
   })
 
   test('creates trimmed unique categories and treats them as root content', async ({
@@ -426,9 +401,7 @@ describe('Prompt categories', () => {
     await finishActiveDrag(mainWindow)
 
     const movedEditor = mainWindow.locator(promptEditorSelector('moving-category-prompt'))
-    await expect(movedEditor.locator('.prompt-editor-metadata-category')).toHaveText(
-      'Uncategorized'
-    )
+    await expect(movedEditor.locator('.prompt-editor-metadata-category')).toHaveCount(0)
     const movedPromptPath = `${WORKSPACE_PATH}/Prompts/Destination/Active/Moving Prompt.prompt.md`
     await expect.poll(() => checkFileExists(electronApp, movedPromptPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, movedPromptPath)).not.toContain('category:')
@@ -443,9 +416,7 @@ describe('Prompt categories', () => {
     await finishActiveDrag(mainWindow)
 
     const movedTemplate = mainWindow.locator(promptEditorSelector('moving-category-template'))
-    await expect(movedTemplate.locator('.prompt-editor-metadata-category')).toHaveText(
-      'Uncategorized'
-    )
+    await expect(movedTemplate.locator('.prompt-editor-metadata-category')).toHaveCount(0)
     const movedTemplatePath =
       `${WORKSPACE_PATH}/Templates/TemplateDestination/Moving Template.template.md`
     await expect.poll(() => checkFileExists(electronApp, movedTemplatePath)).toBe(true)
@@ -506,7 +477,7 @@ describe('Prompt categories', () => {
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptFolders('Hierarchy')
     const nestedPrompt = mainWindow.locator(promptEditorSelector('subfolders-ui-nested-prompt'))
-    await expect(nestedPrompt.locator('.prompt-editor-metadata-category')).toHaveText('Code Review')
+    await expect(nestedPrompt.locator('.prompt-editor-metadata-category')).toHaveCount(0)
 
     await beginPromptFolderHandleDrag(mainWindow, nestedFolderId)
     await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
@@ -528,8 +499,6 @@ describe('Prompt categories', () => {
     await expect.poll(() => readTextFile(electronApp, movedGrandchildPromptPath)).not.toContain(
       'category:'
     )
-    await expect(nestedPrompt.locator('.prompt-editor-metadata-category')).toHaveText(
-      'Uncategorized'
-    )
+    await expect(nestedPrompt.locator('.prompt-editor-metadata-category')).toHaveCount(0)
   })
 })

@@ -30,7 +30,6 @@
     inputRef = $bindable(null),
     metadataFolderLabel = 'Template',
     metadataFolderState = 'not-selected',
-    categoryLabel = 'Uncategorized',
     tokenCount,
     icon,
     copyLabel,
@@ -70,7 +69,6 @@
     bind:inputRef
     {metadataFolderLabel}
     {metadataFolderState}
-    {categoryLabel}
     {tokenCount}
     {icon}
     {copyLabel}

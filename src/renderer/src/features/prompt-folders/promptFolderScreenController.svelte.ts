@@ -122,7 +122,6 @@ const NAVIGATED_FOLDER_TOP_OFFSET_PX = 80
 type PromptMetadata = {
   status: PromptStatus
   completedAt: string | null
-  categoryLabel: string
 }
 
 export type MarkdownContentDraftRecord = {
@@ -507,30 +506,18 @@ export const createPromptFolderScreenController = ({
   )
   const promptMetadataByPromptId = $derived.by(() => {
     const metadataById: Record<string, PromptMetadata> = {}
-    const allowedCategoryIds = new SvelteSet(screenRootFolder?.categoryIds ?? [])
-    const categoryNameById = Object.fromEntries(
-      categoryQuery.data
-        .filter((category) => allowedCategoryIds.has(category.id))
-        .map((category) => [category.id, category.displayName])
-    )
     for (const prompt of promptQuery.data) {
       if (!prompt) continue
       metadataById[prompt.id] = {
         status: prompt.status,
-        completedAt: prompt.completedAt ?? null,
-        categoryLabel: prompt.category
-          ? (categoryNameById[prompt.category] ?? 'Uncategorized')
-          : 'Uncategorized'
+        completedAt: prompt.completedAt ?? null
       }
     }
     if (isTemplateFolder) {
       for (const template of promptTemplateQuery.data) {
         metadataById[template.id] = {
           status: PromptStatus.Todo,
-          completedAt: null,
-          categoryLabel: template.category
-            ? (categoryNameById[template.category] ?? 'Uncategorized')
-            : 'Uncategorized'
+          completedAt: null
         }
       }
     }

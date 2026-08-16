@@ -120,7 +120,6 @@
   type PromptMetadata = {
     status: PromptStatus
     completedAt: string | null
-    categoryLabel: string
   }
 
   type PromptFolderVirtualContentProps = {
@@ -243,8 +242,7 @@
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
     status: PromptStatus.Todo,
-    completedAt: null,
-    categoryLabel: 'Uncategorized'
+    completedAt: null
   }
   const isTemplateFolder = $derived(contentKind === 'template')
   const compactLayoutMaxWidthPx = $derived(
@@ -1007,7 +1005,6 @@
       {screenMode}
       status={promptMetadata.status}
       completedAt={promptMetadata.completedAt}
-      categoryLabel={promptMetadata.categoryLabel}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}

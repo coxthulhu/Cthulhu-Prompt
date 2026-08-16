@@ -301,15 +301,6 @@
       {#if !isReadOnly}
         <IconButtonBar>
           <IconButton
-            icon={Trash2}
-            label={`Delete ${folderLabel}`}
-            title={`Delete ${folderLabel}`}
-            hoverVariant="danger"
-            testId="prompt-folder-editor-delete-button"
-            onclick={handleDeleteClick}
-            onmousedown={handleDeleteMouseDown}
-          />
-          <IconButton
             icon={Settings}
             label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
             title={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
@@ -319,6 +310,15 @@
             testId="prompt-folder-editor-settings-toggle"
             onclick={handleSettingsClick}
             onmousedown={handleSettingsMouseDown}
+          />
+          <IconButton
+            icon={Trash2}
+            label={`Delete ${folderLabel}`}
+            title={`Delete ${folderLabel}`}
+            hoverVariant="danger"
+            testId="prompt-folder-editor-delete-button"
+            onclick={handleDeleteClick}
+            onmousedown={handleDeleteMouseDown}
           />
         </IconButtonBar>
       {/if}
