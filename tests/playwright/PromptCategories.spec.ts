@@ -331,8 +331,33 @@ describe('Prompt categories', () => {
     const categoryTitleBar =
       `[data-testid="category-editor-${PROMPT_CATEGORY_ID}"] ` +
       '[data-testid="category-editor-title-bar"]'
+    /** First category divider owns the expanded title target's indicator. */
+    const firstCategoryDividerRow = mainWindow
+      .locator(`[data-testid="prompt-folder-divider-${PROMPT_CATEGORY_ID}-initial"]`)
+      .locator('.promptDividerRow')
+    await beginPromptHandleDrag(mainWindow, 'categorized-prompt')
+    await moveActiveDragToTarget(mainWindow, categoryTitleBar, 'bottom')
+    await expect(firstCategoryDividerRow).toHaveAttribute('data-drop-over', 'true')
+    await expect(firstCategoryDividerRow).toHaveAttribute('data-drop-blocked', 'true')
+    await finishActiveDrag(mainWindow)
+
+    await categoryEditor.locator('[data-testid="category-editor-content-toggle"]').click()
+    /** Collapsed summary row replaces its text with the title target's indicator. */
+    const collapsedCategorySummary = mainWindow.locator(
+      `[data-testid="category-collapsed-summary-${PROMPT_CATEGORY_ID}"]`
+    )
+    await expect(collapsedCategorySummary).toContainText('1 prompt hidden')
     await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
     await moveActiveDragToTarget(mainWindow, categoryTitleBar, 'bottom')
+    await expect(
+      collapsedCategorySummary.locator(
+        `[data-testid="category-collapsed-drop-indicator-${PROMPT_CATEGORY_ID}"]`
+      )
+    ).toBeVisible()
+    await expect(collapsedCategorySummary.locator('.promptDividerRow')).not.toHaveAttribute(
+      'data-drop-blocked',
+      'true'
+    )
     await finishActiveDrag(mainWindow)
     await expect
       .poll(() => readCategoryOrder(electronApp, orderPath))

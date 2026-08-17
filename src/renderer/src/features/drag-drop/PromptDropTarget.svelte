@@ -11,6 +11,7 @@
 
   export type PromptDropTargetState = {
     isOver: boolean
+    isBlocked: boolean
     edge: DroppableEdge | null
   }
 
@@ -33,6 +34,7 @@
 
   const targetState = $derived({
     isOver: dropState?.isOver ?? false,
+    isBlocked: dropState?.isBlocked ?? false,
     edge: dropState?.edge ?? null
   })
 
@@ -43,7 +45,7 @@
     let resolveOptions = initialGetOptions
     const readOptions = () => {
       const options = resolveOptions()
-      dropState = options.state ?? null
+      dropState = options.indicator
       return options
     }
     const action = droppable(node, readOptions())

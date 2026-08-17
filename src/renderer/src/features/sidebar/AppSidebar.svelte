@@ -643,6 +643,8 @@
         (folder) => folder.id === entryPayload.sourceFolderId
       )
       if (!sourceFolder) return false
+      // The dropdown would move a same-folder prompt to the top, but that route is too confusing.
+      if (sourceFolder.id === destinationFolder.id) return false
       if (
         entryPayload.contentKind !== destinationFolder.kind ||
         sourceFolder.kind !== destinationFolder.kind
@@ -659,7 +661,7 @@
         ) !== null
       )
     },
-    state: promptFolderSelectorPromptDroppableState.getState(item.id)
+    indicator: promptFolderSelectorPromptDroppableState.getState(item.id)
   })
 
   const promptFolderSelectorItemDragOptions = {

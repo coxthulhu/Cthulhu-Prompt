@@ -70,11 +70,12 @@
 
   const getItemRowState = (
     item: DropdownPopupDetailedItem,
-    isRowDropOver: boolean
+    isRowDropOver: boolean,
+    isDropBlocked = false
   ): SelectorButtonRowState => {
     const isDraggingAny = itemDragOptions?.isDraggingAny() ?? false
 
-    if (isRowDropOver) return 'over'
+    if (isRowDropOver) return isDropBlocked ? 'blocked-over' : 'over'
     if (itemDragOptions?.isDragging(item)) return 'dragging'
     if (selectedItem?.id === item.id) return isDraggingAny ? 'drag-active' : 'active'
     return isDraggingAny ? 'drag-idle' : 'idle'
@@ -96,7 +97,12 @@
   }
 </script>
 
-{#snippet draggableItem(item: DropdownPopupDetailedItem, close: () => void, isRowDropOver: boolean)}
+{#snippet draggableItem(
+  item: DropdownPopupDetailedItem,
+  close: () => void,
+  isRowDropOver: boolean,
+  isDropBlocked = false
+)}
   <SelectorButton
     icon={item.icon}
     iconClass={item.iconClass}
@@ -105,7 +111,7 @@
     detailParts={item.detailParts}
     showChevron={false}
     selected={selectedItem?.id === item.id}
-    rowState={getItemRowState(item, isRowDropOver)}
+    rowState={getItemRowState(item, isRowDropOver, isDropBlocked)}
     role="menuitem"
     ariaSelected={selectedItem?.id === item.id}
     testId={item.testId}
@@ -148,8 +154,8 @@
                   getOptions={() => itemDragOptions.getRowDroppableOptions!(item)}
                   class="cthulhuUiDropdownPopupDetailedRowDropTarget"
                 >
-                  {#snippet children({ isOver })}
-                    {@render draggableItem(item, close, isOver)}
+                  {#snippet children({ isOver, isBlocked })}
+                    {@render draggableItem(item, close, isOver, isBlocked)}
                   {/snippet}
                 </PromptDropTarget>
               {:else}

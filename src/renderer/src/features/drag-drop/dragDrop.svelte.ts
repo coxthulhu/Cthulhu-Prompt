@@ -5,14 +5,15 @@ const DRAG_START_DISTANCE_PX = 4
 const DRAG_GHOST_OFFSET_PX = 4
 const DRAG_GHOST_OPACITY = '1'
 const DROPDOWN_KEEP_OPEN_INSET_PX = 16
+/** Default symmetric snap expansion applied to every drop target. */
+export const DEFAULT_DROPPABLE_SNAP_DIMENSIONS = { x: 0, y: 100 } as const
 
 export type DroppableEdge = 'top' | 'bottom'
 export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
-export type DroppableSnapViewportOutset = {
-  top?: number
-  right?: number
-  bottom?: number
-  left?: number
+/** Symmetric target expansion used to make a drop target snappable. */
+export type DroppableSnapDimensions = {
+  x?: number
+  y?: number
 }
 type DroppablePayloadResolver<TDropPayload> = (edge: DroppableEdge | null) => TDropPayload
 
@@ -45,21 +46,23 @@ export type DroppableOptions<TDraggedPayload = unknown, TDropPayload = unknown> 
   dragType: string
   payload?: TDropPayload | DroppablePayloadResolver<TDropPayload>
   allowedEdges?: DroppableAllowedEdges
-  snap?: boolean
-  snapViewportOutset?: DroppableSnapViewportOutset
+  snapDimensions?: DroppableSnapDimensions
   canDrop?: (payload: TDraggedPayload, edge: DroppableEdge | null) => boolean
   onDrop?: (payload: TDraggedPayload) => void
-  state?: DroppableState
+  indicator: DroppableState
 }
 
+/** Local indicator state controlled exclusively by the drag/drop resolver. */
 export type DroppableState = {
   isOver: boolean
+  isBlocked: boolean
   edge: DroppableEdge | null
 }
 
 export type DroppableStateRegistry<TKey extends string = string> = {
   getState: (key: TKey) => DroppableState
   isOver: (key: TKey) => boolean
+  isBlocked: (key: TKey) => boolean
   edge: (key: TKey) => DroppableEdge | null
 }
 
@@ -82,12 +85,11 @@ export type ActiveDragGhost = DragGhostOptions & {
 type NormalizedDroppableOptions = {
   dragType: string
   allowedEdges: DroppableAllowedEdges
-  snap: boolean
-  snapViewportOutset: Required<DroppableSnapViewportOutset>
+  snapDimensions: Required<DroppableSnapDimensions>
   canDrop: (payload: unknown, edge: DroppableEdge | null) => boolean
   resolvePayload: (edge: DroppableEdge | null) => unknown | null
   onDrop: ((payload: unknown) => void) | null
-  state?: DroppableState
+  indicator: DroppableState
 }
 
 type DroppableRegistration = {
@@ -98,15 +100,23 @@ type DroppableRegistration = {
 type ActiveDropTarget = {
   registration: DroppableRegistration
   edge: DroppableEdge | null
+  isBlocked: boolean
 }
 
-type SnapCandidate = ActiveDropTarget & {
+type SnapCandidate = {
+  registration: DroppableRegistration
+  edge: DroppableEdge | null
+  distance: number
+}
+
+/** Minimal geometry shared by candidates participating in nearest-target selection. */
+export type DroppableDistanceCandidate = {
   distance: number
 }
 
 type VirtualDropGeometry = {
   nodeRect: DOMRect
-  viewportRect: DOMRect
+  viewportRect: DOMRect | null
   visibleRect: DOMRect
 }
 
@@ -125,7 +135,6 @@ let cursorX = $state(0)
 let cursorY = $state(0)
 let activeDragGhost = $state<ActiveDragGhost | null>(null)
 let activeDropTarget: ActiveDropTarget | null = null
-const droppableRegistrationByNode = new WeakMap<HTMLElement, DroppableRegistration>()
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
 const dragDropDropdownRegistrations = new SvelteSet<DragDropDropdownRegistration>()
 
@@ -138,8 +147,12 @@ export const dragDropOverlayState = {
 export const createDroppableStateRegistry = <
   TKey extends string
 >(): DroppableStateRegistry<TKey> => {
-  const stateByKey = new SvelteMap<TKey, DroppableState>()
+  // This identity cache is intentionally nonreactive so render-time lookups can create entries.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const stateByKey = new Map<TKey, DroppableState>()
   const isOverByKey = new SvelteMap<TKey, boolean>()
+  /** Blocked status keyed separately so indicator state stays rune-reactive. */
+  const isBlockedByKey = new SvelteMap<TKey, boolean>()
   const edgeByKey = new SvelteMap<TKey, DroppableEdge>()
 
   const getState = (key: TKey): DroppableState => {
@@ -159,6 +172,17 @@ export const createDroppableStateRegistry = <
         }
 
         isOverByKey.delete(key)
+      },
+      get isBlocked() {
+        return isBlockedByKey.get(key) ?? false
+      },
+      set isBlocked(value: boolean) {
+        if (value) {
+          isBlockedByKey.set(key, true)
+          return
+        }
+
+        isBlockedByKey.delete(key)
       },
       get edge() {
         return edgeByKey.get(key) ?? null
@@ -180,23 +204,46 @@ export const createDroppableStateRegistry = <
   return {
     getState,
     isOver: (key: TKey) => isOverByKey.get(key) ?? false,
+    isBlocked: (key: TKey) => isBlockedByKey.get(key) ?? false,
     edge: (key: TKey) => edgeByKey.get(key) ?? null
   }
 }
 
 const setDroppableState = (dropTarget: ActiveDropTarget | null, isOver: boolean): void => {
-  const dropState = dropTarget?.registration.getOptions().state
-  if (dropState) {
-    dropState.isOver = isOver
-    dropState.edge = isOver ? dropTarget.edge : null
+  const dropState = dropTarget?.registration.getOptions().indicator
+  if (!dropState) return
+
+  dropTarget.registration.node.dataset.dropIndicatorActive = isOver ? 'true' : 'false'
+  dropState.isOver = isOver
+  dropState.isBlocked = isOver && dropTarget.isBlocked
+  dropState.edge = isOver ? dropTarget.edge : null
+}
+
+/** Selects the nearest candidate while retaining iterable order for exact ties. */
+export const selectNearestDroppableCandidate = <TCandidate extends DroppableDistanceCandidate>(
+  candidates: Iterable<TCandidate>
+): TCandidate | null => {
+  /** Current winner, retained when a later candidate has equal distance. */
+  let nearestCandidate: TCandidate | null = null
+
+  for (const candidate of candidates) {
+    if (!nearestCandidate || candidate.distance < nearestCandidate.distance) {
+      nearestCandidate = candidate
+    }
   }
+
+  return nearestCandidate
 }
 
 const areSameActiveDropTarget = (
   left: ActiveDropTarget | null,
   right: ActiveDropTarget | null
 ): boolean => {
-  return left?.registration === right?.registration && left?.edge === right?.edge
+  return (
+    left?.registration === right?.registration &&
+    left?.edge === right?.edge &&
+    left?.isBlocked === right?.isBlocked
+  )
 }
 
 const setActiveDropTarget = (nextDropTarget: ActiveDropTarget | null): void => {
@@ -231,12 +278,9 @@ const normalizeDroppableOptions = <TDraggedPayload, TDropPayload>(
   return {
     dragType: options.dragType,
     allowedEdges: options.allowedEdges ?? 'none',
-    snap: options.snap ?? true,
-    snapViewportOutset: {
-      top: options.snapViewportOutset?.top ?? 0,
-      right: options.snapViewportOutset?.right ?? 0,
-      bottom: options.snapViewportOutset?.bottom ?? 0,
-      left: options.snapViewportOutset?.left ?? 0
+    snapDimensions: {
+      x: options.snapDimensions?.x ?? DEFAULT_DROPPABLE_SNAP_DIMENSIONS.x,
+      y: options.snapDimensions?.y ?? DEFAULT_DROPPABLE_SNAP_DIMENSIONS.y
     },
     canDrop: canDrop
       ? (draggedPayload, edge) => canDrop(draggedPayload as TDraggedPayload, edge)
@@ -248,43 +292,8 @@ const normalizeDroppableOptions = <TDraggedPayload, TDropPayload>(
     onDrop: options.onDrop
       ? (draggedPayload) => options.onDrop?.(draggedPayload as TDraggedPayload)
       : null,
-    state: options.state
+    indicator: options.indicator
   }
-}
-
-const getClosestRegisteredDroppable = (
-  startElement: Element | null,
-  dragType: string
-): DroppableRegistration | null => {
-  let currentElement = startElement
-
-  while (currentElement instanceof HTMLElement) {
-    const registration = droppableRegistrationByNode.get(currentElement)
-    if (registration && registration.getOptions().dragType === dragType) {
-      return registration
-    }
-
-    currentElement = currentElement.parentElement
-  }
-
-  return null
-}
-
-const resolveDropEdge = (
-  node: HTMLElement,
-  allowedEdges: DroppableAllowedEdges,
-  cursorY: number
-): DroppableEdge | null => {
-  if (allowedEdges === 'none') {
-    return null
-  }
-
-  if (allowedEdges === 'top' || allowedEdges === 'bottom') {
-    return allowedEdges
-  }
-
-  const { top, height } = node.getBoundingClientRect()
-  return cursorY < top + height / 2 ? 'top' : 'bottom'
 }
 
 const distanceToSegment = (
@@ -434,45 +443,28 @@ const getDroppableEdgeY = (nodeRect: DOMRect, edge: DroppableEdge): number => {
 const isDroppableEdgeVisibleInViewport = (
   edge: DroppableEdge,
   nodeRect: DOMRect,
-  viewportRect: DOMRect
+  viewportRect: DOMRect | null
 ): boolean => {
+  if (!viewportRect) return true
   const edgeY = getDroppableEdgeY(nodeRect, edge)
   return edgeY >= viewportRect.top && edgeY <= viewportRect.bottom
 }
 
-const isDroppableEdgeVisible = (node: HTMLElement, edge: DroppableEdge): boolean => {
-  const viewport = getVirtualViewport(node)
-  if (!viewport) {
-    return true
-  }
-
-  const viewportRect = viewport.getBoundingClientRect()
-  const nodeRect = node.getBoundingClientRect()
-  return isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect)
-}
-
+/** Returns target geometry after clipping it to its virtual viewport. */
 const getVirtualDropGeometry = (
-  node: HTMLElement,
-  x: number,
-  y: number,
-  snapViewportOutset: Required<DroppableSnapViewportOutset>
+  node: HTMLElement
 ): VirtualDropGeometry | null => {
+  const nodeRect = node.getBoundingClientRect()
   const viewport = getVirtualViewport(node)
   if (!viewport) {
-    return null
+    return {
+      nodeRect,
+      viewportRect: null,
+      visibleRect: nodeRect
+    }
   }
 
   const viewportRect = viewport.getBoundingClientRect()
-  if (
-    x < viewportRect.left - snapViewportOutset.left ||
-    x > viewportRect.right + snapViewportOutset.right ||
-    y < viewportRect.top - snapViewportOutset.top ||
-    y > viewportRect.bottom + snapViewportOutset.bottom
-  ) {
-    return null
-  }
-
-  const nodeRect = node.getBoundingClientRect()
   const left = Math.max(nodeRect.left, viewportRect.left)
   const right = Math.min(nodeRect.right, viewportRect.right)
   const top = Math.max(nodeRect.top, viewportRect.top)
@@ -494,105 +486,81 @@ const getVirtualDropGeometry = (
   }
 }
 
+/** Returns whether the pointer is inside one target's expanded snap zone. */
+export const isPointInDroppableSnapZone = (
+  x: number,
+  y: number,
+  visibleRect: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
+  snapDimensions: Required<DroppableSnapDimensions>
+): boolean => {
+  return (
+    x >= visibleRect.left - snapDimensions.x &&
+    x <= visibleRect.right + snapDimensions.x &&
+    y >= visibleRect.top - snapDimensions.y &&
+    y <= visibleRect.bottom + snapDimensions.y
+  )
+}
+
+/** Builds the eligible edge list for one registered target. */
+const getDroppableEdges = (allowedEdges: DroppableAllowedEdges): (DroppableEdge | null)[] => {
+  if (allowedEdges === 'top-and-bottom') return ['top', 'bottom']
+  if (allowedEdges === 'top' || allowedEdges === 'bottom') return [allowedEdges]
+  return [null]
+}
+
+/** Measures the pointer against one candidate's unexpanded target geometry. */
+const getCandidateDistance = (
+  x: number,
+  y: number,
+  edge: DroppableEdge | null,
+  nodeRect: DOMRect,
+  visibleRect: DOMRect
+): number => {
+  if (!edge) return distanceToRect(x, y, visibleRect)
+
+  const edgeY = getDroppableEdgeY(nodeRect, edge)
+  return distanceToSegment(x, y, visibleRect.left, edgeY, visibleRect.right, edgeY)
+}
+
+/** Builds snap candidates for one registration using its clipped geometry. */
 const getSnapCandidatesForRegistration = (
   registration: DroppableRegistration,
   x: number,
   y: number
 ): SnapCandidate[] => {
   const options = registration.getOptions()
-  const geometry = getVirtualDropGeometry(registration.node, x, y, options.snapViewportOutset)
+  const geometry = getVirtualDropGeometry(registration.node)
   if (!geometry) {
     return []
   }
 
   const { nodeRect, viewportRect, visibleRect } = geometry
-  const allowedEdges: DroppableEdge[] =
-    options.allowedEdges === 'top-and-bottom'
-      ? ['top', 'bottom']
-      : options.allowedEdges === 'top' || options.allowedEdges === 'bottom'
-        ? [options.allowedEdges]
-        : []
-
-  if (allowedEdges.length > 0) {
-    return allowedEdges
-      .filter((edge) => isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect))
-      .map((edge) => {
-        const edgeY = getDroppableEdgeY(nodeRect, edge)
-        return {
-          registration,
-          edge,
-          distance: distanceToSegment(
-            x,
-            y,
-            visibleRect.left,
-            edgeY,
-            visibleRect.right,
-            edgeY
-          )
-        }
-      })
+  if (!isPointInDroppableSnapZone(x, y, visibleRect, options.snapDimensions)) {
+    return []
   }
 
-  return [
-    {
+  return getDroppableEdges(options.allowedEdges)
+    .filter((edge) => !edge || isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect))
+    .map((edge) => ({
       registration,
-      edge: null,
-      distance: distanceToRect(x, y, visibleRect)
-    }
-  ]
+      edge,
+      distance: getCandidateDistance(x, y, edge, nodeRect, visibleRect)
+    }))
 }
 
-const getDropTargetFromPoint = (
+/** Resolves the nearest eligible target without preferring allowed drops. */
+const getNearestDropTarget = (
   x: number,
   y: number,
   dragType: string,
   draggedPayload: unknown
 ): ActiveDropTarget | null => {
-  for (const element of document.elementsFromPoint(x, y)) {
-    const registration = getClosestRegisteredDroppable(
-      element instanceof Element ? element : null,
-      dragType
-    )
-    if (registration) {
-      if (!isDroppableInOpenDropdownLayer(registration)) {
-        continue
-      }
-
-      const options = registration.getOptions()
-      const edge = resolveDropEdge(registration.node, options.allowedEdges, y)
-      if (edge && !isDroppableEdgeVisible(registration.node, edge)) {
-        continue
-      }
-
-      if (!options.canDrop(draggedPayload, edge)) {
-        continue
-      }
-
-      return {
-        registration,
-        edge
-      }
-    }
-  }
-
-  return null
-}
-
-const getSnappedDropTarget = (
-  x: number,
-  y: number,
-  dragType: string,
-  draggedPayload: unknown
-): ActiveDropTarget | null => {
-  let nearestCandidate: SnapCandidate | null = null
+  /** Candidates retain target registration and edge declaration order. */
+  const candidates: SnapCandidate[] = []
 
   for (const registration of droppableRegistrations) {
     const options = registration.getOptions()
     if (options.dragType !== dragType) {
-      continue
-    }
-
-    if (!options.snap) {
       continue
     }
 
@@ -601,24 +569,21 @@ const getSnappedDropTarget = (
     }
 
     for (const candidate of getSnapCandidatesForRegistration(registration, x, y)) {
-      if (!nearestCandidate || candidate.distance < nearestCandidate.distance) {
-        nearestCandidate = candidate
-      }
+      candidates.push(candidate)
     }
   }
 
+  const nearestCandidate = selectNearestDroppableCandidate(candidates)
   if (!nearestCandidate) {
     return null
   }
 
   const options = nearestCandidate.registration.getOptions()
-  if (!options.canDrop(draggedPayload, nearestCandidate.edge)) {
-    return null
-  }
 
   return {
     registration: nearestCandidate.registration,
-    edge: nearestCandidate.edge
+    edge: nearestCandidate.edge,
+    isBlocked: !options.canDrop(draggedPayload, nearestCandidate.edge)
   }
 }
 
@@ -628,9 +593,12 @@ const updateActiveDropTarget = (): void => {
     return
   }
 
-  const matchedDropTarget =
-    getDropTargetFromPoint(cursorX, cursorY, activeDrag.dragType, activeDrag.payload) ??
-    getSnappedDropTarget(cursorX, cursorY, activeDrag.dragType, activeDrag.payload)
+  const matchedDropTarget = getNearestDropTarget(
+    cursorX,
+    cursorY,
+    activeDrag.dragType,
+    activeDrag.payload
+  )
 
   setActiveDropTarget(matchedDropTarget)
 }
@@ -740,8 +708,12 @@ const endDrag = (): void => {
   }
 
   const dropPayload =
-    completedDropTarget?.registration.getOptions().resolvePayload(completedDropTarget.edge) ?? null
-  completedDropTarget?.registration.getOptions().onDrop?.(completedDrag.payload)
+    completedDropTarget && !completedDropTarget.isBlocked
+      ? completedDropTarget.registration.getOptions().resolvePayload(completedDropTarget.edge)
+      : null
+  if (completedDropTarget && !completedDropTarget.isBlocked) {
+    completedDropTarget.registration.getOptions().onDrop?.(completedDrag.payload)
+  }
   completedDrag.onDragFinish?.(dropPayload)
   closeDragOpenedDropdowns()
 }
@@ -873,7 +845,6 @@ export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
     getOptions: () => droppableOptions
   }
 
-  droppableRegistrationByNode.set(node, registration)
   droppableRegistrations.add(registration)
   if (activeDrag) {
     updateActiveDropTarget()
@@ -885,15 +856,16 @@ export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
 
   return {
     update(nextOptions: DroppableOptions<TDraggedPayload, TDropPayload>) {
-      const previousState = droppableOptions.state
+      const previousState = droppableOptions.indicator
       droppableOptions = normalizeDroppableOptions(nextOptions)
       if (activeDrag) {
         updateActiveDropTarget()
       }
 
       // Side effect: keep opt-in row hover state aligned when options swap state objects.
-      if (previousState && previousState !== droppableOptions.state) {
+      if (previousState !== droppableOptions.indicator) {
         previousState.isOver = false
+        previousState.isBlocked = false
         previousState.edge = null
       }
       setDroppableState(
@@ -906,7 +878,6 @@ export const droppable = <TDraggedPayload = unknown, TDropPayload = unknown>(
         activeDropTarget?.registration === registration ? activeDropTarget : null,
         false
       )
-      droppableRegistrationByNode.delete(node)
       droppableRegistrations.delete(registration)
       if (activeDropTarget?.registration === registration) {
         updateActiveDropTarget()

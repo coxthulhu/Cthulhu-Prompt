@@ -13,6 +13,7 @@
     | 'drag-active'
     | 'dragging'
     | 'over'
+    | 'blocked-over'
   export type SelectorButtonDetailPart =
     | string
     | {
@@ -195,6 +196,11 @@
   .cthulhuUiSelectorButton[data-row-state='dragging'],
   .cthulhuUiSelectorButton[data-row-state='over'] {
     background-color: var(--ui-info-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiSelectorButton[data-row-state='blocked-over'] {
+    background-color: var(--ui-neutral-emphasis-surface);
     color: var(--ui-normal-text);
   }
 

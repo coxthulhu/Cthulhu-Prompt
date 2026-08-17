@@ -2,7 +2,10 @@
   import { Plus } from 'lucide-svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
-  import type { DroppableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import type {
+    DroppableOptions,
+    DroppableState
+  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
     PromptHandleDragPayload,
     PromptHandleDropPayload
@@ -15,7 +18,8 @@
     contentLabel = 'Prompt',
     disabled = false,
     testId,
-    getDropOptions
+    getDropOptions,
+    indicatorState
   }: {
     onAddPrompt?: () => void
     mode?: 'add' | 'separator'
@@ -23,31 +27,34 @@
     disabled?: boolean
     testId?: string
     getDropOptions?: () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
+    indicatorState?: DroppableState
   } = $props()
 </script>
 
-{#snippet dividerContent({ isOver = false } = {})}
+{#snippet dividerContent({ isOver = false, isBlocked = false } = {})}
   {@const dividerText = isOver ? 'Move Here' : `Add ${contentLabel}`}
   <div
     class="promptDividerRow grid items-center"
     data-drop-over={isOver ? 'true' : 'false'}
+    data-drop-blocked={isBlocked ? 'true' : undefined}
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
   >
     <div
-      class={mode === 'separator'
+      class={mode === 'separator' || (isOver && isBlocked)
         ? 'grid h-full grid-cols-1 items-center'
         : 'promptDividerContent grid h-full items-center'}
     >
-      {#if mode === 'separator'}
-        <!-- Completed mode uses the divider as a plain section separator. -->
+      {#if mode === 'separator' || (isOver && isBlocked)}
+        <!-- Completed rows and blocked drops use one uninterrupted separator. -->
         <Separator
+          data-testid={isOver && isBlocked ? testId : undefined}
           class={isOver
-            ? '!h-2.5 rounded-full !border-0 !bg-[var(--ui-info-strong-border)]'
+            ? `!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`
             : undefined}
         />
       {:else if isOver}
         <Separator
-          class="!h-2.5 rounded-full !border-0 !bg-[var(--ui-info-strong-border)]"
+          class={`!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`}
         />
         <div
           class="promptDividerMoveIndicator"
@@ -58,7 +65,7 @@
           <span>{dividerText}</span>
         </div>
         <Separator
-          class="!h-2.5 rounded-full !border-0 !bg-[var(--ui-info-strong-border)]"
+          class={`!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`}
         />
       {:else}
         <!-- The centered line buttons limit separator clicks without moving the visible lines. -->
@@ -111,12 +118,14 @@
 
 {#if getDropOptions}
   <PromptDropTarget getOptions={getDropOptions}>
-    {#snippet children({ isOver })}
-      {@render dividerContent({ isOver })}
+    {#snippet children(targetState)}
+      <!-- The closest active target wins over a category title's external indicator. -->
+      {@const resolvedState = targetState.isOver ? targetState : indicatorState}
+      {@render dividerContent(resolvedState)}
     {/snippet}
   </PromptDropTarget>
 {:else}
-  {@render dividerContent()}
+  {@render dividerContent(indicatorState)}
 {/if}
 
 <style>
@@ -136,6 +145,10 @@
     min-width: 96px;
     padding: 0 10px;
     white-space: nowrap;
+  }
+
+  .promptDividerRow[data-drop-blocked='true'] .promptDividerMoveIndicator {
+    background: var(--ui-neutral-emphasis-surface);
   }
 
   .promptDividerContent {

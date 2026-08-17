@@ -232,6 +232,8 @@
   let templateSelectionTarget = $state<PromptFolderPromptTarget | null>(null)
   let templateSelectionMode = $state<'select' | 'select-and-copy'>('select')
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
+  /** Indicator state for category title targets rendered at their content destination. */
+  const categoryDroppableState = createDroppableStateRegistry<string>()
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
     status: PromptStatus.Todo,
@@ -644,7 +646,7 @@
     allowedEdges: 'none',
     payload: () => getPromptDividerDropPayload(categoryId, previousPromptId),
     canDrop: (payload) => canDropOnPromptDivider(categoryId, previousPromptId, payload),
-    state: promptDividerDroppableState.getState(rowId)
+    indicator: promptDividerDroppableState.getState(rowId)
   })
 
   /** Returns active content IDs from one exact FolderOrderV2 category group. */
@@ -675,7 +677,8 @@
     canDrop: (payload) =>
       isPromptHandleDragPayload(payload)
         ? canDropOnPromptDivider(categoryId, null, payload)
-        : payload.categoryId !== categoryId
+        : payload.categoryId !== categoryId,
+    indicator: categoryDroppableState.getState(categoryId)
   })
 
   /** Builds the draggable category handle while preserving the existing ghost icon. */
@@ -836,18 +839,29 @@
         ? 'templates'
         : 'prompts'
   } hidden. Click to expand...`}
+  <!-- Category title indicator state is shared with this collapsed destination row. -->
+  {@const categoryIndicatorState = categoryDroppableState.getState(row.categoryId)}
   <PromptFolderSectionRow
     {rowHeightPx}
     indentLevel={row.indentLevel}
     contentClass="flex items-center justify-center text-center"
     testId={`category-collapsed-summary-${row.categoryId}`}
   >
-    <InlineTextButton
-      text={summaryText}
-      size="default"
-      baseVariant="secondary"
-      onclick={() => onContentSectionToggle(row.contentOwnerId)}
-    />
+    {#if categoryIndicatorState.isOver}
+      <PromptDivider
+        mode="add"
+        contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
+        indicatorState={categoryIndicatorState}
+        testId={`category-collapsed-drop-indicator-${row.categoryId}`}
+      />
+    {:else}
+      <InlineTextButton
+        text={summaryText}
+        size="default"
+        baseVariant="secondary"
+        onclick={() => onContentSectionToggle(row.contentOwnerId)}
+      />
+    {/if}
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -895,6 +909,9 @@
         ? row.previousEntryId
           ? `prompt-divider-add-after-${row.previousEntryId}`
           : 'prompt-divider-add-initial'
+        : undefined}
+      indicatorState={row.categoryId !== null && row.previousEntryId === null
+        ? categoryDroppableState.getState(row.categoryId)
         : undefined}
     />
   </PromptFolderSectionRow>

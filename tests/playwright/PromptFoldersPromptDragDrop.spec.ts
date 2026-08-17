@@ -433,7 +433,37 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID))
-    await expect(mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))).toHaveCount(0)
+    /** Gray edge indicator claimed by the blocked self target. */
+    const blockedIndicator = mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))
+    await expect(blockedIndicator).toHaveCount(1)
+    await expect(blockedIndicator).toHaveAttribute('data-blocked', 'true')
+    /** Computed blocked stroke and its palette-token reference color. */
+    const blockedIndicatorColors = await blockedIndicator.evaluate((indicator) => {
+      /** Rendered arrow/line stroke controlled by the blocked target. */
+      const stroke = indicator.querySelector('.dragDropIndicatorStroke')
+      if (!stroke) throw new Error('Missing blocked prompt-tree indicator stroke')
+      /** Temporary element resolving the expected palette token through Chromium. */
+      const probe = document.createElement('div')
+      probe.style.color = 'var(--ui-muted-icon-glyph)'
+      document.body.appendChild(probe)
+      /** Resolved blocked-stroke palette color. */
+      const expectedColor = getComputedStyle(probe).color
+      /** One-pixel canvas used to read the resolved color's alpha channel. */
+      const canvas = document.createElement('canvas')
+      canvas.width = 1
+      canvas.height = 1
+      /** Raster context used to convert the CSS color into channel data. */
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error('Missing canvas context for blocked indicator color')
+      context.fillStyle = expectedColor
+      context.fillRect(0, 0, 1, 1)
+      /** Alpha byte proving the blocked indicator token is fully opaque. */
+      const expectedAlpha = context.getImageData(0, 0, 1, 1).data[3]
+      probe.remove()
+      return { expectedAlpha, expectedColor, strokeColor: getComputedStyle(stroke).stroke }
+    })
+    expect(blockedIndicatorColors.expectedAlpha).toBe(255)
+    expect(blockedIndicatorColors.strokeColor).toBe(blockedIndicatorColors.expectedColor)
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
@@ -475,12 +505,21 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await beginPromptHandleDrag(mainWindow, DEV_2_ID)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_1_ID), 'bottom')
-    await expect(mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))).toHaveCount(0)
+    await expect(
+      mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_1_ID))
+    ).toHaveAttribute('data-blocked', 'true')
     await finishActiveDrag(mainWindow)
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_2_ID), 'top')
-    await expect(mainWindow.locator(promptTreePromptDropIndicatorSelector(DEV_2_ID))).toHaveCount(0)
+    await expect(
+      mainWindow.locator(
+        [
+          `${promptTreePromptDropIndicatorSelector(DEV_1_ID)}[data-edge="bottom"]`,
+          `${promptTreePromptDropIndicatorSelector(DEV_2_ID)}[data-edge="top"]`
+        ].join(', ')
+      )
+    ).toHaveAttribute('data-blocked', 'true')
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
@@ -501,15 +540,57 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await beginPromptHandleDrag(mainWindow, DEV_1_ID)
     await moveActiveDragToTarget(mainWindow, promptDividerSelector(null))
-    await expect(getPromptDividerRow(mainWindow, null)).toHaveAttribute('data-drop-over', 'false')
+    /** Initial divider claimed by the blocked no-op placement. */
+    const initialDividerRow = getPromptDividerRow(mainWindow, null)
+    await expect(initialDividerRow).toHaveAttribute('data-drop-over', 'true')
+    await expect(initialDividerRow).toHaveAttribute('data-drop-blocked', 'true')
+    await expect(initialDividerRow.locator('.cthulhuUiSeparator')).toHaveCount(1)
+    await expect(initialDividerRow.locator('.promptDividerMoveIndicator')).toHaveCount(0)
     await finishActiveDrag(mainWindow)
 
     await beginPromptHandleDrag(mainWindow, DEV_2_ID)
     await moveActiveDragToTarget(mainWindow, promptDividerSelector(DEV_1_ID))
-    await expect(getPromptDividerRow(mainWindow, DEV_1_ID)).toHaveAttribute(
-      'data-drop-over',
-      'false'
-    )
+    /** Adjacent divider claimed by the second blocked no-op placement. */
+    const afterFirstPromptDividerRow = getPromptDividerRow(mainWindow, DEV_1_ID)
+    await expect(afterFirstPromptDividerRow).toHaveAttribute('data-drop-over', 'true')
+    await expect(afterFirstPromptDividerRow).toHaveAttribute('data-drop-blocked', 'true')
+    /** Computed blocked separator color and its palette-token reference. */
+    const blockedDividerColors = await afterFirstPromptDividerRow.evaluate((dividerRow) => {
+      /** Single solid separator in the blocked divider indicator. */
+      const separator = dividerRow.querySelector<HTMLElement>('.cthulhuUiSeparator')
+      if (!separator) throw new Error('Missing blocked divider separator')
+      /** Temporary element resolving the blocked separator token. */
+      const borderProbe = document.createElement('div')
+      borderProbe.style.backgroundColor = 'var(--ui-muted-icon-glyph)'
+      document.body.appendChild(borderProbe)
+      /** Resolved actual and expected colors returned to the test process. */
+      const colors = {
+        expectedSeparator: getComputedStyle(borderProbe).backgroundColor,
+        separator: getComputedStyle(separator).backgroundColor
+      }
+      borderProbe.remove()
+      return colors
+    })
+    await expect(afterFirstPromptDividerRow.locator('.cthulhuUiSeparator')).toHaveCount(1)
+    await expect(afterFirstPromptDividerRow.locator('.promptDividerMoveIndicator')).toHaveCount(0)
+    /** Blocked divider row geometry used to verify the separator spans the target. */
+    const blockedDividerRowBox = await afterFirstPromptDividerRow.boundingBox()
+    /** Single blocked separator geometry compared against the full row. */
+    const blockedSeparatorBox = await afterFirstPromptDividerRow
+      .locator('.cthulhuUiSeparator')
+      .boundingBox()
+    if (!blockedDividerRowBox || !blockedSeparatorBox) {
+      throw new Error('Missing blocked divider width geometry')
+    }
+    expect(Math.abs(blockedSeparatorBox.x - blockedDividerRowBox.x)).toBeLessThanOrEqual(2)
+    expect(
+      Math.abs(
+        blockedSeparatorBox.x +
+          blockedSeparatorBox.width -
+          (blockedDividerRowBox.x + blockedDividerRowBox.width)
+      )
+    ).toBeLessThanOrEqual(2)
+    expect(blockedDividerColors.separator).toBe(blockedDividerColors.expectedSeparator)
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
@@ -831,9 +912,9 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
 
-    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await beginPromptHandleDrag(mainWindow, DEV_2_ID)
     await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
     await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
 
@@ -844,7 +925,21 @@ describe('Prompt folder prompt drag-drop', () => {
       mainWindow,
       promptFolderSelectorDropdownItemSelector(DEVELOPMENT_FOLDER_ID)
     )
-    await expect(sourceItem).toHaveAttribute('data-row-state', 'active')
+    await expect(sourceItem).toHaveAttribute('data-row-state', 'blocked-over')
+    await expect
+      .poll(() =>
+        sourceItem.evaluate((item) => {
+          /** Temporary element resolving the blocked row token. */
+          const probe = document.createElement('div')
+          probe.style.backgroundColor = 'var(--ui-neutral-emphasis-surface)'
+          document.body.appendChild(probe)
+          /** Whether the completed transition reached the blocked row color. */
+          const matches = getComputedStyle(item).backgroundColor === getComputedStyle(probe).backgroundColor
+          probe.remove()
+          return matches
+        })
+      )
+      .toBe(true)
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
@@ -1083,6 +1178,7 @@ describe('Prompt folder prompt drag-drop', () => {
     )
     await expect(indicator).toHaveCount(1)
     await expect(indicator).toBeVisible()
+    await expect(mainWindow.locator('[data-drop-indicator-active="true"]')).toHaveCount(1)
 
     const clippedRowBox = await clippedRow.boundingBox()
     const indicatorBox = await indicator.boundingBox()
@@ -1101,7 +1197,7 @@ describe('Prompt folder prompt drag-drop', () => {
       .toEqual(['short-1', 'short-3', 'short-2'])
   })
 
-  test('snaps within the configured zone above the prompt tree', async ({
+  test('snaps within the default dimensions above the prompt tree', async ({
     testSetup,
     electronApp
   }) => {
@@ -1128,16 +1224,15 @@ describe('Prompt folder prompt drag-drop', () => {
       throw new Error('Missing prompt tree viewport geometry for snap-zone drag')
     }
 
-    await mainWindow.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y - 9, {
+    /** Positive page-space distance that remains inside the default 100px vertical zone. */
+    const snapDistancePx = Math.min(50, Math.floor(viewportBox.y) - 1)
+    await mainWindow.mouse.move(
+      viewportBox.x + viewportBox.width / 2,
+      viewportBox.y - snapDistancePx,
+      {
       steps: 12
-    })
-    await expect(
-      mainWindow.locator('[data-testid^="prompt-tree-drop-indicator-"]')
-    ).toHaveCount(0)
-
-    await mainWindow.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y - 7, {
-      steps: 12
-    })
+      }
+    )
 
     const indicator = mainWindow.locator(
       [
@@ -1147,6 +1242,22 @@ describe('Prompt folder prompt drag-drop', () => {
     )
     await expect(indicator).toHaveCount(1)
     await expect(indicator).toBeVisible()
+
+    await mainWindow.mouse.move(
+      viewportBox.x + viewportBox.width + 1,
+      viewportBox.y - snapDistancePx,
+      { steps: 12 }
+    )
+    await expect(
+      mainWindow.locator('[data-testid^="prompt-tree-drop-indicator-"]')
+    ).toHaveCount(0)
+
+    await mainWindow.mouse.move(
+      viewportBox.x + viewportBox.width / 2,
+      viewportBox.y - snapDistancePx,
+      { steps: 12 }
+    )
+    await expect(indicator).toHaveCount(1)
 
     await finishActiveDrag(mainWindow)
     await expect
@@ -1167,15 +1278,25 @@ describe('Prompt folder prompt drag-drop', () => {
     await beginPromptHandleDrag(mainWindow, 'short-1')
 
     const promptRow = mainWindow.locator(promptTreePromptSelector('short-3'))
-    const indicator = mainWindow.locator(promptTreePromptDropIndicatorSelector('short-3'))
+    /** Shared top-boundary indicator selected from the two equivalent row edges. */
+    const topIndicator = mainWindow.locator(
+      [
+        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="bottom"]`,
+        `${promptTreePromptDropIndicatorSelector('short-3')}[data-edge="top"]`
+      ].join(', ')
+    )
+    /** Bottom-edge indicator owned unambiguously by the tested row. */
+    const bottomIndicator = mainWindow.locator(
+      `${promptTreePromptDropIndicatorSelector('short-3')}[data-edge="bottom"]`
+    )
 
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector('short-3'), 'top')
-    await expect(indicator).toHaveAttribute('data-edge', 'top')
+    await expect(topIndicator).toHaveCount(1)
 
     const promptRowBox = await promptRow.boundingBox()
-    const topIndicatorBox = await indicator.boundingBox()
+    const topIndicatorBox = await topIndicator.boundingBox()
     const promptLabelBox = await promptRow.locator('.sidebarPromptTreeSettingsLabel').boundingBox()
-    const indicatorArrowBox = await indicator.locator('path').boundingBox()
+    const indicatorArrowBox = await topIndicator.locator('path').boundingBox()
     if (!promptRowBox || !topIndicatorBox || !promptLabelBox || !indicatorArrowBox) {
       throw new Error('Missing geometry for top-edge indicator assertion')
     }
@@ -1188,9 +1309,9 @@ describe('Prompt folder prompt drag-drop', () => {
     ).toBeLessThanOrEqual(2)
 
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector('short-3'), 'bottom')
-    await expect(indicator).toHaveAttribute('data-edge', 'bottom')
+    await expect(bottomIndicator).toHaveCount(1)
 
-    const bottomIndicatorBox = await indicator.boundingBox()
+    const bottomIndicatorBox = await bottomIndicator.boundingBox()
     if (!bottomIndicatorBox) {
       throw new Error('Missing geometry for bottom-edge indicator assertion')
     }
@@ -1202,6 +1323,38 @@ describe('Prompt folder prompt drag-drop', () => {
           (promptRowBox.y + promptRowBox.height)
       )
     ).toBeLessThanOrEqual(2)
+
+    await finishActiveDrag(mainWindow)
+  })
+
+  test('preserves registration order when nearest target edges tie', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
+    await beginPromptTreeRowDrag(mainWindow, 'short-1')
+
+    /** Earlier registered row whose bottom edge must win the exact tie. */
+    const earlierRow = mainWindow.locator(promptTreePromptSelector('short-2'))
+    /** Earlier row geometry used to address the exact shared boundary. */
+    const earlierRowBox = await earlierRow.boundingBox()
+    if (!earlierRowBox) throw new Error('Missing earlier prompt row geometry for tie assertion')
+
+    await mainWindow.mouse.move(
+      earlierRowBox.x + earlierRowBox.width / 2,
+      earlierRowBox.y + earlierRowBox.height,
+      { steps: 12 }
+    )
+
+    await expect(
+      mainWindow.locator(
+        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="bottom"]`
+      )
+    ).toHaveCount(1)
+    await expect(
+      mainWindow.locator(`${promptTreePromptDropIndicatorSelector('short-3')}[data-edge="top"]`)
+    ).toHaveCount(0)
 
     await finishActiveDrag(mainWindow)
   })

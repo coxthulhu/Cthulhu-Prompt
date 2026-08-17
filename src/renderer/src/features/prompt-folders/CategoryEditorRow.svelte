@@ -109,13 +109,16 @@
   )
   /** Aggregate hydration state reported to the virtual window. */
   const isRowHydrated = $derived(!hasHydratableSection || isDescriptionHydrated)
+  /** Inactive indicator required by the read-only title bar's disabled target. */
+  const disabledDropIndicator = $state({ isOver: false, isBlocked: false, edge: null })
   /** Effective row drop options, including the disabled fallback. */
   const effectiveDropOptions = $derived<
     DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
   >(
     dropOptions ?? {
       dragType: 'disabled-prompt-folder-row',
-      canDrop: () => false
+      canDrop: () => false,
+      indicator: disabledDropIndicator
     }
   )
   /** Last aggregate hydration value sent to the parent. */

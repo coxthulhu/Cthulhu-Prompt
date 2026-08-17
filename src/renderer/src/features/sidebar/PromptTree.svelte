@@ -206,7 +206,6 @@
   })
   const PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX = 15
   const PROMPT_TREE_INDENT_WIDTH_PX = 12
-  const PROMPT_TREE_SNAP_VIEWPORT_OUTSET_PX = { top: 8 }
   const getPromptTreeDropIndicatorInset = (indentCount: number): string =>
     `${PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX + indentCount * PROMPT_TREE_INDENT_WIDTH_PX}px`
 
@@ -297,10 +296,9 @@
   ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges,
-    snapViewportOutset: PROMPT_TREE_SNAP_VIEWPORT_OUTSET_PX,
     canDrop: (payload, edge) => canDropOnPromptTree(payload, getDropPayload(edge)),
     payload: getDropPayload,
-    state: promptTreePromptDroppableState.getState(rowId)
+    indicator: promptTreePromptDroppableState.getState(rowId)
   })
 
   const canDropOnPromptTree = (
@@ -768,7 +766,7 @@
     isActive={isSettingsActive}
     isDragging={isCategoryRowDragging(props.row.category.id)}
     {isPromptDragActive}
-    showDropOverHighlight
+    showDropOverHighlight={false}
     isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
     indentCount={props.row.indentCount}
     endsVisibleBranch={props.row.endsVisibleBranch}
@@ -853,6 +851,7 @@
 
 {#snippet promptTreeCategoryRowOverlay({ row, rowId }: PromptTreeCategoryRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
+  {@const isBlocked = promptTreePromptDroppableState.isBlocked(rowId)}
 
   {#if hoveredEdge}
     <DropIndicator
@@ -861,12 +860,14 @@
         row.indentCount + (hoveredEdge === 'bottom' ? 1 : 0)
       )}
       edge={hoveredEdge}
+      {isBlocked}
     />
   {/if}
 {/snippet}
 
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreePromptRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
+  {@const isBlocked = promptTreePromptDroppableState.isBlocked(rowId)}
   {@const testId = folderPromptDropIndicatorTestId(row.promptId)}
 
   {#if hoveredEdge}
@@ -874,6 +875,7 @@
       {testId}
       insetStart={getPromptTreeDropIndicatorInset(row.indentCount)}
       edge={hoveredEdge}
+      {isBlocked}
     />
   {/if}
 {/snippet}

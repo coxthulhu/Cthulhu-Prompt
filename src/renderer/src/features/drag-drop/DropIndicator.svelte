@@ -6,16 +6,30 @@
     edge: DroppableEdge
     insetStart?: string
     edgeOffset?: string
+    isBlocked?: boolean
   }
 
-  let { testId, edge, insetStart = '38px', edgeOffset = '0px' }: Props = $props()
+  let {
+    testId,
+    edge,
+    insetStart = '38px',
+    edgeOffset = '0px',
+    isBlocked = false
+  }: Props = $props()
 
   const style = $derived(
     `--drag-drop-indicator-inset-start:${insetStart};--drag-drop-indicator-edge-offset:${edgeOffset};`
   )
 </script>
 
-<div class="dragDropIndicator" {style} data-testid={testId} data-edge={edge} aria-hidden="true">
+<div
+  class="dragDropIndicator"
+  {style}
+  data-testid={testId}
+  data-edge={edge}
+  data-blocked={isBlocked ? 'true' : undefined}
+  aria-hidden="true"
+>
   <svg class="dragDropIndicatorSvg" width="100%" height="10">
     <path class="dragDropIndicatorStroke" d="M3 1.5 L8 5 L3 8.5" />
     <line class="dragDropIndicatorStroke" x1="8" y1="5" x2="100%" y2="5"></line>
@@ -52,5 +66,9 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
+  }
+
+  .dragDropIndicator[data-blocked='true'] .dragDropIndicatorStroke {
+    stroke: var(--ui-muted-icon-glyph);
   }
 </style>
