@@ -1918,8 +1918,9 @@ describe('Prompt folder prompt management', () => {
     await expect(
       mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
     ).toHaveAttribute('data-active', 'true')
+    // The selected root folder is not duplicated as a category in completed mode.
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-CompletedMode"]')
+      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-CompletedMode"]')
     ).toHaveCount(0)
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
@@ -1955,10 +1956,10 @@ describe('Prompt folder prompt management', () => {
       mainWindow.locator('[data-testid="prompt-folder-new-prompt-button"]')
     ).toHaveCount(0)
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+      mainWindow.locator('[data-testid="category-editor-settings-toggle"]')
     ).toHaveCount(0)
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(0)
@@ -2095,8 +2096,9 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toBeDisabled()
+    // The selected root folder is not duplicated as a category in completed mode.
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-NoCompleted"]')
+      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-NoCompleted"]')
     ).toHaveCount(0)
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
@@ -2117,7 +2119,7 @@ describe('Prompt folder prompt management', () => {
     ).toHaveText('0')
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]')
+      mainWindow.locator('[data-testid="category-editor-settings-toggle"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).not.toContainText(
       'Click the Add Prompt button'

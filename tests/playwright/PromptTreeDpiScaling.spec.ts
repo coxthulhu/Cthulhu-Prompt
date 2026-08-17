@@ -11,12 +11,12 @@ describe('Prompt tree DPI scaling', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders-ui' }
+      workspace: { scenario: 'categories-ui' }
     })
 
     await testHelpers.navigateToPromptFolders('Hierarchy')
     const guide = mainWindow
-      .locator('[data-testid="prompt-tree-prompt-subfolders-ui-grandchild-prompt"]')
+      .locator('[data-testid="prompt-tree-prompt-categories-ui-second-category-prompt"]')
       .locator('[data-indent-guide-line]')
       .first()
     await expect(guide).toBeVisible()

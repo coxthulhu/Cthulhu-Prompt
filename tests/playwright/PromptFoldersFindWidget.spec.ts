@@ -321,7 +321,7 @@ describe('Prompt folder find dialog', () => {
 
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(promptEditorSelector('dev-1'), { state: 'attached' })
-    await expect(mainWindow.locator('[data-testid^="prompt-folder-editor-"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="category-editor-"]')).toHaveCount(0)
 
     await mainWindow.locator(FIND_BUTTON).click()
     await mainWindow.locator(FIND_INPUT).fill('best practices')

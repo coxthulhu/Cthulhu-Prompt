@@ -133,7 +133,11 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   }
 
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
-  UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(workspaceId, loadedPromptFolderIds)
+  UserPersistenceDataAccess.cleanupWorkspacePromptFolderViewState(
+    workspaceId,
+    loadedPromptFolderIds,
+    categories.map((category) => category.data.id)
+  )
   // Side effect: remove stale editor view-state rows for content no longer in the workspace.
   MarkdownContentUiStateDataAccess.cleanupWorkspaceMarkdownContentUiState(workspaceId, [
     ...loadedPromptIds,

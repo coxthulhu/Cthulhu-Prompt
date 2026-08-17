@@ -1,16 +1,12 @@
 <script lang="ts">
   import {
-    PROMPT_FOLDER_SETTINGS_FIELDS,
-    createEmptyPromptFolderSettings,
-    type PromptFolderSettings,
     type PromptFolder,
-    type PromptFolderContentKind,
-    type PromptFolderSettingsField
+    type PromptFolderContentKind
   } from '@shared/PromptFolder'
   import type { Category } from '@shared/Category'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
-  import { lookupPromptFolderSettingsRowMeasuredHeight } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
+  import { lookupCategoryDescriptionMeasuredHeight } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
   import { PromptStatus, type PromptTemplateReference } from '@shared/Prompt'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
@@ -41,7 +37,7 @@
     type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
-  import PromptFolderEditorRow from './PromptFolderEditorRow.svelte'
+  import CategoryEditorRow from './CategoryEditorRow.svelte'
   import PromptFolderRootHeaderRow, {
     PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX
   } from './PromptFolderRootHeaderRow.svelte'
@@ -50,20 +46,19 @@
     promptDividerRowId,
     promptEditorRowId,
     promptFolderDividerRowId,
-    promptFolderEditorRowId
+    categoryEditorRowId
   } from './promptFolderRowIds'
   import PromptFolderSectionRow from './PromptFolderSectionRow.svelte'
   import {
-    PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX,
+    CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX,
     getPromptFolderSectionContentOffsetPx,
     getPromptFolderSectionContentWidthPx
   } from './promptFolderSectionGutterMetrics'
   import {
-    estimatePromptFolderSettingsFieldRowHeight,
-    getPromptFolderEditorCollapsedCardRowHeightPx,
-    getPromptFolderEditorCardRowHeightPx,
-    getPromptFolderEditorRowPaddingTopPx
-  } from './promptFolderSettingsSizing'
+    estimateCategoryDescriptionRowHeight,
+    getCategoryEditorCollapsedRowHeightPx,
+    getCategoryEditorRowHeightPx
+  } from './categoryEditorSizing'
   import {
     createDroppableStateRegistry,
     type DragFinishResult,
@@ -74,26 +69,26 @@
     PROMPT_HANDLE_DRAG_TYPE,
     isPromptHandleDragPayload,
     resolvePromptHandleDropMove,
-    type PromptFolderEntryDragPayload,
+    type CategoryDragPayload,
     type PromptHandleDropPayload,
     type PromptTreeEntryDragPayload
   } from '../drag-drop/promptHandleDrag'
   import { createPromptDragGhost } from '../drag-drop/promptDragGhost'
   import {
     clearPromptEntryDrag,
-    startPromptFolderDrag
+    startCategoryDrag
   } from '../drag-drop/promptEntryDragState.svelte.ts'
-  import type { ActivePromptTreeRow } from './promptFolderScreenController.svelte.ts'
+  import type { ActivePromptScreenRow } from './promptFolderScreenController.svelte.ts'
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import type {
     PromptFolderDividerTarget,
     PromptFolderPromptTarget,
-    PromptFolderScreenBottomCapRow,
+    PromptFolderScreenCategoryBottomCapRow,
     PromptFolderScreenCategorySeparatorRow,
     PromptFolderScreenCollapsedSummaryRow,
     PromptFolderScreenDividerRow,
-    PromptFolderScreenFolderEditorRow,
+    PromptFolderScreenCategoryEditorRow,
     PromptFolderScreenPlaceholderRow,
     PromptFolderScreenPromptEditorRow,
     PromptFolderScreenRootHeaderRow,
@@ -102,13 +97,13 @@
 
   type PromptFolderRow =
     | PromptFolderScreenRootHeaderRow
-    | (PromptFolderScreenFolderEditorRow & {
-        isSettingsSectionExpanded: boolean
-        isPromptsSectionExpanded: boolean
+    | (PromptFolderScreenCategoryEditorRow & {
+        isDetailsSectionExpanded: boolean
+        isContentSectionExpanded: boolean
       })
     | PromptFolderScreenPlaceholderRow
     | PromptFolderScreenCollapsedSummaryRow
-    | PromptFolderScreenBottomCapRow
+    | PromptFolderScreenCategoryBottomCapRow
     | PromptFolderScreenCategorySeparatorRow
     | PromptFolderScreenDividerRow
     | PromptFolderScreenPromptEditorRow
@@ -127,7 +122,6 @@
     workspaceId: string | null
     screenRootFolderId: string
     contentKind: PromptFolderContentKind
-    folderSettingsByFolderId: Record<string, PromptFolderSettings>
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, MarkdownContentDraftRecord>
     promptTemplateTextById: Record<string, string>
@@ -138,11 +132,11 @@
     visiblePromptIds: string[]
     activePromptCount: number
     completedPromptCount: number
-    completedPromptOwnerByPromptId: Record<string, string>
+    completedPromptContentOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
-    settingsSectionExpandedByFolderId: Record<string, boolean>
-    promptsSectionExpandedByFolderId: Record<string, boolean>
+    detailsSectionExpandedByOwnerId: Record<string, boolean>
+    contentSectionExpandedByOwnerId: Record<string, boolean>
     initialScrollTopPx: number
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
@@ -176,17 +170,16 @@
     onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
-    onCenterRowChange: (row: ActivePromptTreeRow | null) => void
+    onCenterRowChange: (row: ActivePromptScreenRow | null) => void
     onUserScroll: () => void
-    onSettingsSectionToggle: (ownerFolderId: string) => void
-    onPromptsSectionToggle: (ownerFolderId: string) => void
+    onDetailsSectionToggle: (contentOwnerId: string) => void
+    onContentSectionToggle: (contentOwnerId: string) => void
   }
 
   let {
     workspaceId,
     contentKind,
     screenRootFolderId,
-    folderSettingsByFolderId,
     promptEditorSizingConfig,
     promptDraftById,
     promptTemplateTextById,
@@ -197,11 +190,11 @@
     visiblePromptIds,
     activePromptCount,
     completedPromptCount,
-    completedPromptOwnerByPromptId,
+    completedPromptContentOwnerByPromptId,
     screenMode,
     isCreatingPrompt,
-    settingsSectionExpandedByFolderId,
-    promptsSectionExpandedByFolderId,
+    detailsSectionExpandedByOwnerId,
+    contentSectionExpandedByOwnerId,
     initialScrollTopPx,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
@@ -227,8 +220,8 @@
     onScrollTopChange,
     onCenterRowChange,
     onUserScroll,
-    onSettingsSectionToggle,
-    onPromptsSectionToggle
+    onDetailsSectionToggle,
+    onContentSectionToggle
   }: PromptFolderVirtualContentProps = $props()
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
@@ -251,7 +244,6 @@
   const ContentEditorRow = $derived(
     isTemplateFolder ? PromptTemplateEditorRow : PromptEditorRow
   )
-  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings())
   const promptFolderById = $derived.by(
     () =>
       Object.fromEntries(promptFolders.map((folder) => [folder.id, folder])) as Record<
@@ -259,7 +251,7 @@
         PromptFolder
       >
   )
-  /** Loaded category metadata indexed for folder-style category rows. */
+  /** Loaded category metadata indexed for category cards. */
   const categoryById = $derived(
     Object.fromEntries(categories.map((category) => [category.id, category])) as Record<
       string,
@@ -285,15 +277,6 @@
   $effect(() => {
     onViewportMetricsChange(viewportMetrics)
   })
-
-  /** Resolves description-only settings for a root folder or category row. */
-  const getFolderSettings = (ownerFolderId: string): PromptFolderSettings => {
-    const category = categoryById[ownerFolderId]
-    if (category) return { folderDescription: category.description }
-    return folderSettingsByFolderId[ownerFolderId] ??
-      promptFolderById[ownerFolderId]?.settings ??
-      emptyFolderSettings
-  }
 
   const getCopyTemplateTexts = (
     selectedTemplates: PromptTemplateReference[] | null | undefined
@@ -347,55 +330,18 @@
     }
   }
 
-  const lookupFolderSettingsRowMeasuredHeight = (
-    ownerFolderId: string,
-    field: PromptFolderSettingsField,
+  /** Resolves a category description height from measurement or estimation. */
+  const getCategoryDescriptionHeight = (
+    categoryId: string,
     widthPx: number,
     devicePixelRatio: number
-  ): number | null => {
-    return lookupPromptFolderSettingsRowMeasuredHeight(
-      ownerFolderId,
-      field,
-      widthPx,
-      devicePixelRatio
+  ): number => {
+    const description = categoryById[categoryId]?.description
+    if (description === null || description === undefined) return 0
+    return (
+      lookupCategoryDescriptionMeasuredHeight(categoryId, widthPx, devicePixelRatio) ??
+      estimateCategoryDescriptionRowHeight(description, promptEditorSizingConfig.fontSize)
     )
-  }
-
-  const getEstimatedFolderSettingsSectionHeights = (ownerFolderId: string) => {
-    const folderSettings = getFolderSettings(ownerFolderId)
-    return Object.fromEntries(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
-        field,
-        folderSettings[field] == null
-          ? 0
-          : estimatePromptFolderSettingsFieldRowHeight(
-              folderSettings[field],
-              promptEditorSizingConfig.fontSize
-            )
-      ])
-    ) as Record<PromptFolderSettingsField, number>
-  }
-
-  const getFolderSettingsSectionHeights = (
-    ownerFolderId: string,
-    widthPx: number,
-    devicePixelRatio: number
-  ): Record<PromptFolderSettingsField, number> => {
-    const folderSettings = getFolderSettings(ownerFolderId)
-    const estimatedHeights = getEstimatedFolderSettingsSectionHeights(ownerFolderId)
-    return Object.fromEntries(
-      PROMPT_FOLDER_SETTINGS_FIELDS.map((field) => [
-        field,
-        folderSettings[field] == null
-          ? 0
-          : (lookupFolderSettingsRowMeasuredHeight(
-              ownerFolderId,
-              field,
-              widthPx,
-              devicePixelRatio
-            ) ?? estimatedHeights[field])
-      ])
-    ) as Record<PromptFolderSettingsField, number>
   }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
@@ -404,35 +350,37 @@
       centerRowEligible: true,
       snippet: rootHeaderRow
     },
-    'folder-editor': {
+    'category-editor': {
       estimateHeight: (row) => {
-        const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(row.isRoot)
-        return row.isSettingsSectionExpanded
-          ? getPromptFolderEditorCardRowHeightPx(
-              getEstimatedFolderSettingsSectionHeights(row.ownerFolderId),
-              rowPaddingTopPx
-            )
-          : getPromptFolderEditorCollapsedCardRowHeightPx(rowPaddingTopPx)
+        const description = categoryById[row.categoryId]?.description
+        const descriptionHeightPx =
+          description === null || description === undefined
+            ? 0
+            : estimateCategoryDescriptionRowHeight(
+                description,
+                promptEditorSizingConfig.fontSize
+              )
+        return row.isDetailsSectionExpanded
+          ? getCategoryEditorRowHeightPx(descriptionHeightPx)
+          : getCategoryEditorCollapsedRowHeightPx()
       },
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
-        const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(row.isRoot)
-        const settingsWidthPx = getPromptFolderSectionContentWidthPx(
+        const detailsWidthPx = getPromptFolderSectionContentWidthPx(
           widthPx,
           row.indentLevel,
-          row.isRoot ? 0 : PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX
+          CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX
         )
-        return row.isSettingsSectionExpanded
-          ? getPromptFolderEditorCardRowHeightPx(
-              getFolderSettingsSectionHeights(row.ownerFolderId, settingsWidthPx, devicePixelRatio),
-              rowPaddingTopPx
+        return row.isDetailsSectionExpanded
+          ? getCategoryEditorRowHeightPx(
+              getCategoryDescriptionHeight(row.categoryId, detailsWidthPx, devicePixelRatio)
             )
-          : getPromptFolderEditorCollapsedCardRowHeightPx(rowPaddingTopPx)
+          : getCategoryEditorCollapsedRowHeightPx()
       },
       centerRowEligible: true,
       hydrationPriorityEligible: true,
       overlayRow: {},
       dehydrateOnWidthResize: true,
-      snippet: folderEditorRow
+      snippet: categoryEditorRow
     },
     placeholder: {
       estimateHeight: () => 120,
@@ -442,9 +390,9 @@
       estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
       snippet: collapsedSummaryRow
     },
-    'folder-bottom-cap': {
+    'category-bottom-cap': {
       estimateHeight: () => 8,
-      snippet: folderBottomCapRow
+      snippet: categoryBottomCapRow
     },
     'category-separator': {
       estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
@@ -511,14 +459,15 @@
           return { id: PROMPT_FOLDER_ROOT_HEADER_ROW_ID, row }
         }
 
-        if (row.kind === 'folder-editor') {
+        if (row.kind === 'category-editor') {
           return {
-            id: promptFolderEditorRowId(screenRootFolderId, row.ownerFolderId),
+            id: categoryEditorRowId(row.categoryId),
             row: {
               ...row,
-              isSettingsSectionExpanded:
-                settingsSectionExpandedByFolderId[row.ownerFolderId] ?? false,
-              isPromptsSectionExpanded: promptsSectionExpandedByFolderId[row.ownerFolderId] ?? true
+              isDetailsSectionExpanded:
+                detailsSectionExpandedByOwnerId[row.contentOwnerId] ?? false,
+              isContentSectionExpanded:
+                contentSectionExpandedByOwnerId[row.contentOwnerId] ?? true
             }
           }
         }
@@ -534,7 +483,7 @@
           return {
             id: promptFolderDividerRowId(
               screenRootFolderId,
-              row.ownerFolderId,
+              row.contentOwnerId,
               row.previousEntryId
             ),
             row
@@ -545,12 +494,12 @@
           return { id: `category-separator:${row.categoryId}`, row }
         }
 
-        if (row.kind === 'folder-bottom-cap') {
-          return { id: `folder-bottom-cap:${row.ownerFolderId}`, row }
+        if (row.kind === 'category-bottom-cap') {
+          return { id: `category-bottom-cap:${row.categoryId}`, row }
         }
 
         if (row.kind === 'collapsed-summary') {
-          return { id: `folder-collapsed-summary:${row.ownerFolderId}`, row }
+          return { id: `category-collapsed-summary:${row.categoryId}`, row }
         }
 
         return { id: 'placeholder-empty', row }
@@ -572,10 +521,9 @@
         id: 'placeholder-empty',
         row: {
           kind: 'placeholder',
-          ownerFolderId: screenRootFolderId,
+          contentOwnerId: screenRootFolderId,
           categoryId: null,
-          indentLevel: 0,
-          isOwnerRoot: true
+          indentLevel: 0
         }
       })
     } else {
@@ -583,25 +531,24 @@
         id: 'divider-initial',
         row: {
           kind: 'prompt-divider',
-          ownerFolderId: screenRootFolderId,
+          contentOwnerId: screenRootFolderId,
           categoryId: null,
           previousEntryId: null,
-          indentLevel: 0,
-          isOwnerRoot: true
+          indentLevel: 0
         }
       })
 
       visiblePromptIds.forEach((promptId, promptIndex) => {
-        const ownerFolderId = completedPromptOwnerByPromptId[promptId] ?? screenRootFolderId
+        const contentOwnerId =
+          completedPromptContentOwnerByPromptId[promptId] ?? screenRootFolderId
         completedRows.push({
           id: promptEditorRowId(promptId),
           row: {
             kind: 'prompt-editor',
-            ownerFolderId,
+            contentOwnerId,
             categoryId: null,
             promptId,
             indentLevel: 0,
-            isOwnerRoot: ownerFolderId === screenRootFolderId,
             isFirstPrompt: promptIndex === 0,
             isLastPrompt: promptIndex === visiblePromptIds.length - 1
           }
@@ -610,11 +557,10 @@
           id: promptDividerRowId(promptId),
           row: {
             kind: 'prompt-divider',
-            ownerFolderId: screenRootFolderId,
+            contentOwnerId: screenRootFolderId,
             categoryId: null,
             previousEntryId: promptId,
-            indentLevel: 0,
-            isOwnerRoot: true
+            indentLevel: 0
           }
         })
       })
@@ -626,21 +572,21 @@
 
   const handleCenterRowChange = (row: PromptFolderRow | null) => {
     if (row?.kind === 'root-header') {
-      onCenterRowChange({ kind: 'root-header', rowOwnerFolderId: screenRootFolderId })
+      onCenterRowChange({ kind: 'root-header', contentOwnerId: screenRootFolderId })
       return
     }
     if (row?.kind === 'prompt-editor') {
       onCenterRowChange({
         kind: 'prompt',
-        rowOwnerFolderId: row.ownerFolderId,
+        contentOwnerId: row.contentOwnerId,
         promptId: row.promptId
       })
       return
     }
-    if (!isCompletedMode && row?.kind === 'folder-editor') {
+    if (!isCompletedMode && row?.kind === 'category-editor') {
       onCenterRowChange({
-        kind: 'folder-settings',
-        rowOwnerFolderId: row.ownerFolderId
+        kind: 'category-details',
+        contentOwnerId: row.contentOwnerId
       })
       return
     }
@@ -729,29 +675,29 @@
     canDrop: (payload) =>
       isPromptHandleDragPayload(payload)
         ? canDropOnPromptDivider(categoryId, null, payload)
-        : payload.folderId !== categoryId
+        : payload.categoryId !== categoryId
   })
 
-  /** Builds the draggable category handle while preserving the folder-style ghost. */
+  /** Builds the draggable category handle while preserving the existing ghost icon. */
   const getCategoryDragOptions = (
     category: Category
-  ): DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> => ({
+  ): DraggableOptions<CategoryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
-    payload: { folderId: category.id },
-    createGhost: () => createPromptDragGhost(category.displayName, 'folder'),
+    payload: { categoryId: category.id },
+    createGhost: () => createPromptDragGhost(category.displayName, 'category'),
     onDragStart: () => {
-      startPromptFolderDrag(category.id)
+      startCategoryDrag(category.id)
     },
     onDragFinish: ({
       sourcePayload,
       dropPayload
-    }: DragFinishResult<PromptFolderEntryDragPayload, PromptHandleDropPayload>) => {
+    }: DragFinishResult<CategoryDragPayload, PromptHandleDropPayload>) => {
       clearPromptEntryDrag()
-      if (!dropPayload?.categoryId || dropPayload.categoryId === sourcePayload.folderId) return
+      if (!dropPayload?.categoryId || dropPayload.categoryId === sourcePayload.categoryId) return
       /** Ordered categories excluding the dragged category. */
       const remainingCategoryIds = categories
         .map((candidate) => candidate.id)
-        .filter((candidateId) => candidateId !== sourcePayload.folderId)
+        .filter((candidateId) => candidateId !== sourcePayload.categoryId)
       /** Target category index after removing the dragged category. */
       const targetIndex = remainingCategoryIds.indexOf(dropPayload.categoryId)
       if (targetIndex === -1) return
@@ -760,13 +706,12 @@
         dropPayload.position === 'after'
           ? dropPayload.categoryId
           : (remainingCategoryIds[targetIndex - 1] ?? null)
-      onMoveCategory(sourcePayload.folderId, previousCategoryId)
+      onMoveCategory(sourcePayload.categoryId, previousCategoryId)
     }
   })
 
-  const getFolderPromptCount = (row: PromptFolderScreenFolderEditorRow): number => {
-    if (row.isRoot && isCompletedMode) return visiblePromptIds.length
-
+  /** Returns the active content count displayed by a category card. */
+  const getCategoryContentCount = (row: PromptFolderScreenCategoryEditorRow): number => {
     return getCategoryEntryIds(row.categoryId).filter(
       (entryId) => promptMetadataByPromptId[entryId]?.status !== PromptStatus.Completed
     ).length
@@ -810,28 +755,27 @@
   />
 {/snippet}
 
-{#snippet folderEditorRow(props)}
-  {@const ownerFolderId = props.row.ownerFolderId}
-  {@const rowCategory = categoryById[ownerFolderId]}
-  {@const rowPaddingTopPx = getPromptFolderEditorRowPaddingTopPx(props.row.isRoot)}
+{#snippet categoryEditorRow(props)}
+  {@const category = categoryById[props.row.categoryId]}
   {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
     props.virtualWindowWidthPx,
     props.row.indentLevel,
-    props.row.isRoot ? 0 : PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX
+    CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX
   )}
-  {#if rowCategory}
+  {#if category}
     <PromptFolderSectionRow rowHeightPx={props.rowHeightPx} indentLevel={props.row.indentLevel}>
-      <PromptFolderEditorRow
+      <CategoryEditorRow
         {workspaceId}
-        promptFolderId={ownerFolderId}
-        folderDisplayName={rowCategory.displayName}
-        promptCount={getFolderPromptCount(props.row)}
+        categoryId={category.id}
+        displayName={category.displayName}
+        contentCount={getCategoryContentCount(props.row)}
+        description={category.description}
         rowId={props.rowId}
         virtualWindowWidthPx={contentWidthPx}
         devicePixelRatio={props.devicePixelRatio}
         rowHeightPx={props.rowHeightPx}
-        sectionHeightsPx={getFolderSettingsSectionHeights(
-          ownerFolderId,
+        descriptionHeightPx={getCategoryDescriptionHeight(
+          category.id,
           contentWidthPx,
           props.devicePixelRatio
         )}
@@ -840,28 +784,22 @@
         overlayRowElement={props.overlayRowElement ?? null}
         scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
         onHydrationChange={props.onHydrationChange}
-        folderSettings={getFolderSettings(ownerFolderId)}
         {contentKind}
-        {rowPaddingTopPx}
-        isSettingsSectionExpanded={props.row.isSettingsSectionExpanded}
-        isPromptsSectionExpanded={props.row.isPromptsSectionExpanded}
+        isDetailsSectionExpanded={props.row.isDetailsSectionExpanded}
+        isContentSectionExpanded={props.row.isContentSectionExpanded}
         isReadOnly={isCompletedMode}
         canRename={!isCompletedMode}
-        showSidebar={!props.row.isRoot}
-        dragOptions={!props.row.isRoot && !isCompletedMode
-          ? getCategoryDragOptions(rowCategory)
-          : undefined}
-        dropOptions={!props.row.isRoot && !isCompletedMode
-          ? getCategoryDropOptions(ownerFolderId)
-          : undefined}
-        onSettingsSectionToggle={() => onSettingsSectionToggle(ownerFolderId)}
-        onPromptsSectionToggle={() => onPromptsSectionToggle(ownerFolderId)}
-        onSettingsFieldChange={(_field, text, measurement) =>
-          onCategoryDescriptionChange(ownerFolderId, text, measurement)}
-        onSettingsFieldPresenceChange={(_field, isPresent) =>
-          onCategoryDescriptionPresenceChange(ownerFolderId, isPresent)}
-        onRenamePromptFolder={() => onRenameCategory(ownerFolderId)}
-        onDeletePromptFolder={() => onDeleteCategory(ownerFolderId)}
+        showSidebar
+        dragOptions={!isCompletedMode ? getCategoryDragOptions(category) : undefined}
+        dropOptions={!isCompletedMode ? getCategoryDropOptions(category.id) : undefined}
+        onDetailsSectionToggle={() => onDetailsSectionToggle(category.id)}
+        onContentSectionToggle={() => onContentSectionToggle(category.id)}
+        onDescriptionChange={(text, measurement) =>
+          onCategoryDescriptionChange(category.id, text, measurement)}
+        onDescriptionPresenceChange={(isPresent) =>
+          onCategoryDescriptionPresenceChange(category.id, isPresent)}
+        onRenameCategory={() => onRenameCategory(category.id)}
+        onDeleteCategory={() => onDeleteCategory(category.id)}
       />
     </PromptFolderSectionRow>
   {/if}
@@ -902,22 +840,22 @@
     {rowHeightPx}
     indentLevel={row.indentLevel}
     contentClass="flex items-center justify-center text-center"
-    testId={`prompt-folder-collapsed-summary-${row.ownerFolderId}`}
+    testId={`category-collapsed-summary-${row.categoryId}`}
   >
     <InlineTextButton
       text={summaryText}
       size="default"
       baseVariant="secondary"
-      onclick={() => onPromptsSectionToggle(row.ownerFolderId)}
+      onclick={() => onContentSectionToggle(row.contentOwnerId)}
     />
   </PromptFolderSectionRow>
 {/snippet}
 
-{#snippet folderBottomCapRow({ row, rowHeightPx })}
+{#snippet categoryBottomCapRow({ row, rowHeightPx })}
   <PromptFolderSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <div
-      class="prompt-folder-bottom-cap"
-      data-testid={`prompt-folder-bottom-cap-${row.ownerFolderId}`}
+      class="category-bottom-cap"
+      data-testid={`category-bottom-cap-${row.categoryId}`}
     ></div>
   </PromptFolderSectionRow>
 {/snippet}
@@ -935,7 +873,7 @@
 
 {#snippet dividerRow({ row, rowId, rowHeightPx })}
   {@const target = {
-    ownerFolderId: row.ownerFolderId,
+    contentOwnerId: row.contentOwnerId,
     categoryId: row.categoryId,
     previousEntryId: row.previousEntryId
   }}
@@ -943,7 +881,7 @@
   <PromptFolderSectionRow
     {rowHeightPx}
     indentLevel={row.indentLevel}
-    testId={`prompt-folder-divider-${row.ownerFolderId}-${row.previousEntryId ?? 'initial'}`}
+    testId={`prompt-folder-divider-${row.contentOwnerId}-${row.previousEntryId ?? 'initial'}`}
   >
     <PromptDivider
       disabled={isCreatingPrompt}
@@ -980,7 +918,7 @@
   )}
   {@const contentOffsetPx = getPromptFolderSectionContentOffsetPx(row.indentLevel)}
   {@const promptTarget = {
-    ownerFolderId: row.ownerFolderId,
+    contentOwnerId: row.contentOwnerId,
     categoryId: row.categoryId,
     promptId: row.promptId
   }}
@@ -1059,7 +997,7 @@
 />
 
 <style>
-  .prompt-folder-bottom-cap {
+  .category-bottom-cap {
     background: var(--ui-card-nested-surface);
     border: 1px solid var(--ui-card-nested-border);
     border-radius: 0 0 8px 8px;

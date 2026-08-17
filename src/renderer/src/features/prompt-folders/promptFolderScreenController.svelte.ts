@@ -1,5 +1,4 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
-import { SvelteSet } from 'svelte/reactivity'
 import {
   isPromptFull,
   type Prompt,
@@ -11,11 +10,8 @@ import {
   type PromptTemplate
 } from '@shared/PromptTemplate'
 import {
-  copyPromptFolderSettings,
-  createEmptyPromptFolderSettings,
   getCategoryOrderCategoryIds,
   type PromptFolder,
-  type PromptFolderSettings,
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
@@ -61,12 +57,12 @@ import {
   recordPromptFolderScrollTop
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
 import {
-  lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState,
-  lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState,
-  lookupWorkspacePersistedPromptFolderPromptTreeEntryId,
-  setPromptFolderSettingsSectionExpandedStateWithAutosave,
-  setPromptFolderPromptsSectionExpandedStateWithAutosave,
-  setPromptFolderPromptTreeEntryIdWithAutosave
+  lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState,
+  lookupWorkspacePersistedPromptFolderContentSectionExpandedState,
+  lookupWorkspacePersistedPromptFolderSelectedEntryId,
+  setPromptFolderDetailsSectionExpandedStateWithAutosave,
+  setPromptFolderContentSectionExpandedStateWithAutosave,
+  setPromptFolderSelectedEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
@@ -84,7 +80,7 @@ import {
   PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
   promptEditorRowId,
   promptFolderDividerRowId,
-  promptFolderEditorRowId
+  categoryEditorRowId
 } from './promptFolderRowIds'
 import {
   resolvePromptHandleDropMove,
@@ -104,10 +100,11 @@ import {
 import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
 import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
 
-export type ActivePromptTreeRow =
-  | { kind: 'root-header'; rowOwnerFolderId: string }
-  | { kind: 'folder-settings'; rowOwnerFolderId: string }
-  | { kind: 'prompt'; rowOwnerFolderId: string; promptId: string }
+/** Virtual prompt-folder row currently aligned with sidebar navigation. */
+export type ActivePromptScreenRow =
+  | { kind: 'root-header'; contentOwnerId: string }
+  | { kind: 'category-details'; contentOwnerId: string }
+  | { kind: 'prompt'; contentOwnerId: string; promptId: string }
 
 // Leaves navigated folder headers comfortably below the virtual viewport edge.
 const NAVIGATED_FOLDER_TOP_OFFSET_PX = 80
@@ -306,8 +303,8 @@ export const createPromptFolderScreenController = ({
       : []
   )
   // Categories belong to the current root while root-folder destinations own themselves.
-  const findContainingRootFolderId = (folderId: string): string =>
-    categoryById[folderId] ? screenRootFolderId : folderId
+  const findContainingRootFolderId = (contentOwnerId: string): string =>
+    categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
   const completedPrompts = $derived.by(() => {
     if (!screenRootFolder || isTemplateFolder) return []
 
@@ -325,25 +322,10 @@ export const createPromptFolderScreenController = ({
   })
   const completedPromptCount = $derived(completedPrompts.length)
   const orderedCompletedPromptIds = $derived(completedPrompts.map(({ promptId }) => promptId))
-  const completedPromptOwnerByPromptId = $derived.by<Record<string, string>>(() =>
+  const completedPromptContentOwnerByPromptId = $derived.by<Record<string, string>>(() =>
     Object.fromEntries(
-      completedPrompts.map(({ ownerFolderId, promptId }) => [promptId, ownerFolderId])
+      completedPrompts.map(({ contentOwnerId, promptId }) => [promptId, contentOwnerId])
     )
-  )
-  const emptyFolderSettings = $derived(createEmptyPromptFolderSettings())
-  const folderSettingsByFolderId = $derived.by<Record<string, PromptFolderSettings>>(() => {
-    const settingsByFolderId: Record<string, PromptFolderSettings> = {}
-    for (const folder of promptFolderQuery.data) {
-      if (!folder || folder.kind !== contentKind) continue
-      const draftSettings = promptFolderDraftById[folder.id]?.settings
-      settingsByFolderId[folder.id] = copyPromptFolderSettings(
-        draftSettings ?? folder.settings
-      )
-    }
-    return settingsByFolderId
-  })
-  const folderSettings = $derived(
-    folderSettingsByFolderId[screenRootFolderId] ?? emptyFolderSettings
   )
   const folderDisplayName = $derived(screenRootFolder?.displayName ?? 'Prompt Folder')
 
@@ -371,17 +353,17 @@ export const createPromptFolderScreenController = ({
     isCompletedMode ? 0 : (lookupPromptFolderScrollTop(screenRootFolderId) ?? 0)
 
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
-  let latestCenteredPromptTreeRow = $state<ActivePromptTreeRow | null>(null)
+  let latestCenteredPromptScreenRow = $state<ActivePromptScreenRow | null>(null)
   let scrollTopPx = $state(getRestoredPromptFolderScrollTop())
   const TOP_SCROLL_EPSILON_PX = 1
 
-  let settingsSectionExpandedStates = $state<Record<string, boolean>>({})
-  let promptsSectionExpandedStates = $state<Record<string, boolean>>({})
+  let detailsSectionExpandedStates = $state<Record<string, boolean>>({})
+  let contentSectionExpandedStates = $state<Record<string, boolean>>({})
 
-  const getPromptFolderSectionStateKey = (ownerFolderId: string): string =>
-    `${workspaceId ?? 'no-workspace'}:${ownerFolderId}:${screenMode}`
+  const getContentSectionStateKey = (contentOwnerId: string): string =>
+    `${workspaceId ?? 'no-workspace'}:${contentOwnerId}:${screenMode}`
 
-  const lookupPersistedSettingsSectionExpandedState = (ownerFolderId: string): boolean => {
+  const lookupPersistedDetailsSectionExpandedState = (contentOwnerId: string): boolean => {
     if (isCompletedMode) {
       return false
     }
@@ -391,14 +373,14 @@ export const createPromptFolderScreenController = ({
     }
 
     return (
-      lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState(
+      lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState(
         workspaceId,
-        ownerFolderId
+        contentOwnerId
       ) ?? false
     )
   }
 
-  const lookupPersistedPromptsSectionExpandedState = (ownerFolderId: string): boolean => {
+  const lookupPersistedContentSectionExpandedState = (contentOwnerId: string): boolean => {
     if (isCompletedMode) {
       return true
     }
@@ -408,48 +390,48 @@ export const createPromptFolderScreenController = ({
     }
 
     return (
-      lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState(workspaceId, ownerFolderId) ??
+      lookupWorkspacePersistedPromptFolderContentSectionExpandedState(workspaceId, contentOwnerId) ??
       true
     )
   }
 
-  const getIsPromptsSectionExpanded = (ownerFolderId: string): boolean =>
-    promptsSectionExpandedStates[getPromptFolderSectionStateKey(ownerFolderId)] ??
-    lookupPersistedPromptsSectionExpandedState(ownerFolderId)
+  const getIsContentSectionExpanded = (contentOwnerId: string): boolean =>
+    contentSectionExpandedStates[getContentSectionStateKey(contentOwnerId)] ??
+    lookupPersistedContentSectionExpandedState(contentOwnerId)
 
-  const getIsSettingsSectionExpanded = (ownerFolderId: string): boolean =>
-    settingsSectionExpandedStates[getPromptFolderSectionStateKey(ownerFolderId)] ??
-    lookupPersistedSettingsSectionExpandedState(ownerFolderId)
+  const getIsDetailsSectionExpanded = (contentOwnerId: string): boolean =>
+    detailsSectionExpandedStates[getContentSectionStateKey(contentOwnerId)] ??
+    lookupPersistedDetailsSectionExpandedState(contentOwnerId)
 
-  const promptsSectionExpandedByFolderId = $derived.by<Record<string, boolean>>(() => {
-    const expandedByFolderId: Record<string, boolean> = {}
+  const contentSectionExpandedByOwnerId = $derived.by<Record<string, boolean>>(() => {
+    const expandedByOwnerId: Record<string, boolean> = {}
     for (const folder of promptFolderQuery.data) {
       if (!folder) continue
-      expandedByFolderId[folder.id] = getIsPromptsSectionExpanded(folder.id)
+      expandedByOwnerId[folder.id] = getIsContentSectionExpanded(folder.id)
     }
     for (const category of categories) {
-      expandedByFolderId[category.id] = getIsPromptsSectionExpanded(category.id)
+      expandedByOwnerId[category.id] = getIsContentSectionExpanded(category.id)
     }
-    return expandedByFolderId
+    return expandedByOwnerId
   })
-  const settingsSectionExpandedByFolderId = $derived.by<Record<string, boolean>>(() => {
-    const expandedByFolderId: Record<string, boolean> = {}
+  const detailsSectionExpandedByOwnerId = $derived.by<Record<string, boolean>>(() => {
+    const expandedByOwnerId: Record<string, boolean> = {}
     for (const folder of promptFolderQuery.data) {
       if (!folder) continue
-      expandedByFolderId[folder.id] = getIsSettingsSectionExpanded(folder.id)
+      expandedByOwnerId[folder.id] = getIsDetailsSectionExpanded(folder.id)
     }
     for (const category of categories) {
-      expandedByFolderId[category.id] = getIsSettingsSectionExpanded(category.id)
+      expandedByOwnerId[category.id] = getIsDetailsSectionExpanded(category.id)
     }
-    return expandedByFolderId
+    return expandedByOwnerId
   })
-  const isPromptsSectionExpanded = $derived(
-    promptsSectionExpandedByFolderId[screenRootFolderId] ??
-      lookupPersistedPromptsSectionExpandedState(screenRootFolderId)
+  const isContentSectionExpanded = $derived(
+    contentSectionExpandedByOwnerId[screenRootFolderId] ??
+      lookupPersistedContentSectionExpandedState(screenRootFolderId)
   )
-  const isSettingsSectionExpanded = $derived(
-    settingsSectionExpandedByFolderId[screenRootFolderId] ??
-      lookupPersistedSettingsSectionExpandedState(screenRootFolderId)
+  const isDetailsSectionExpanded = $derived(
+    detailsSectionExpandedByOwnerId[screenRootFolderId] ??
+      lookupPersistedDetailsSectionExpandedState(screenRootFolderId)
   )
 
   const activePromptFolderScreenRows = $derived.by((): PromptFolderScreenRow[] => {
@@ -463,8 +445,7 @@ export const createPromptFolderScreenController = ({
         : promptQuery.data.flatMap((prompt) =>
             prompt.status !== PromptStatus.Completed ? [prompt.id] : []
           ),
-      isFolderExpanded: (folderId) =>
-        folderId === screenRootFolderId || (promptsSectionExpandedByFolderId[folderId] ?? true)
+      isCategoryExpanded: (categoryId) => contentSectionExpandedByOwnerId[categoryId] ?? true
     })
   })
   const activeScreenPromptIds = $derived.by(() =>
@@ -483,7 +464,7 @@ export const createPromptFolderScreenController = ({
         : promptQuery.data.flatMap((prompt) =>
             prompt.status !== PromptStatus.Completed ? [prompt.id] : []
           ),
-      isFolderExpanded: () => true
+      isCategoryExpanded: () => true
     }).flatMap((row) => (row.kind === 'prompt-editor' ? [row.promptId] : []))
   })
   const activePromptCount = $derived(allActiveScreenPromptIds.length)
@@ -601,22 +582,22 @@ export const createPromptFolderScreenController = ({
 
     return (
       promptNavigation.selectionSource === 'tree-click' ||
-      promptNavigation.selectionSource === 'folder-open' ||
+      promptNavigation.selectionSource === 'category-open' ||
       promptNavigation.selectionSource === 'prompt-create' ||
       promptNavigation.selectionSource === 'prompt-divider-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
-      promptNavigation.selectionSource === 'folder-move' ||
+      promptNavigation.selectionSource === 'category-move' ||
       promptNavigation.selectionSource === 'header' ||
       promptNavigation.selectionSource === 'restore-hold'
     )
   }
 
   const resolveScrollFollowRow = (
-    nextCenteredRow: ActivePromptTreeRow | null
-  ): ActivePromptTreeRow | null => {
+    nextCenteredRow: ActivePromptScreenRow | null
+  ): ActivePromptScreenRow | null => {
     // Treat near-zero virtual scroll values as the root page header.
     if (scrollTopPx < TOP_SCROLL_EPSILON_PX) {
-      return { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
+      return { kind: 'root-header', contentOwnerId: screenRootFolderId }
     }
 
     return nextCenteredRow
@@ -635,7 +616,9 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    const fallbackRow = resolveScrollFollowRow(latestCenteredPromptTreeRow ?? activePromptTreeRow)
+    const fallbackRow = resolveScrollFollowRow(
+      latestCenteredPromptScreenRow ?? activePromptScreenRow
+    )
     if (!fallbackRow) {
       return
     }
@@ -643,44 +626,44 @@ export const createPromptFolderScreenController = ({
     setCurrentFolderSelection(fallbackRow, 'scroll-follow')
   }
 
-  const toPromptNavigationRow = (row: ActivePromptTreeRow): PromptNavigationRow => {
+  const toPromptNavigationRow = (row: ActivePromptScreenRow): PromptNavigationRow => {
     return row.kind === 'prompt'
       ? `prompt:${row.promptId}`
       : row.kind === 'root-header'
-        ? 'folder-root'
-        : 'folder-settings'
+        ? 'root-header'
+        : 'category-details'
   }
 
-  const toActivePromptTreeRow = (
-    rowOwnerFolderId: string,
+  const toActivePromptScreenRow = (
+    contentOwnerId: string,
     row: PromptNavigationRow
-  ): ActivePromptTreeRow => {
-    return row === 'folder-root'
-      ? { kind: 'root-header', rowOwnerFolderId }
-      : row === 'folder-settings'
-        ? { kind: 'folder-settings', rowOwnerFolderId }
-        : { kind: 'prompt', rowOwnerFolderId, promptId: row.slice('prompt:'.length) }
+  ): ActivePromptScreenRow => {
+    return row === 'root-header'
+      ? { kind: 'root-header', contentOwnerId }
+      : row === 'category-details'
+        ? { kind: 'category-details', contentOwnerId }
+        : { kind: 'prompt', contentOwnerId, promptId: row.slice('prompt:'.length) }
   }
 
-  const toActivePromptTreeTarget = (target: PromptNavigationTarget): ActivePromptTreeRow =>
-    toActivePromptTreeRow(target.rowOwnerFolderId, target.row)
+  const toActivePromptScreenTarget = (target: PromptNavigationTarget): ActivePromptScreenRow =>
+    toActivePromptScreenRow(target.contentOwnerId, target.row)
 
-  const toPromptFolderRowId = (row: ActivePromptTreeRow): string => {
+  const toPromptFolderRowId = (row: ActivePromptScreenRow): string => {
     return row.kind === 'root-header'
       ? PROMPT_FOLDER_ROOT_HEADER_ROW_ID
-      : row.kind === 'folder-settings'
-        ? promptFolderEditorRowId(screenRootFolderId, row.rowOwnerFolderId)
+      : row.kind === 'category-details'
+        ? categoryEditorRowId(row.contentOwnerId)
         : promptEditorRowId(row.promptId)
   }
 
-  const setSettingsSectionExpanded = (ownerFolderId: string, isExpanded: boolean) => {
-    if (getIsSettingsSectionExpanded(ownerFolderId) === isExpanded) {
+  const setDetailsSectionExpanded = (contentOwnerId: string, isExpanded: boolean) => {
+    if (getIsDetailsSectionExpanded(contentOwnerId) === isExpanded) {
       return
     }
 
-    const stateKey = getPromptFolderSectionStateKey(ownerFolderId)
-    settingsSectionExpandedStates = {
-      ...settingsSectionExpandedStates,
+    const stateKey = getContentSectionStateKey(contentOwnerId)
+    detailsSectionExpandedStates = {
+      ...detailsSectionExpandedStates,
       [stateKey]: isExpanded
     }
 
@@ -688,21 +671,21 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    setPromptFolderSettingsSectionExpandedStateWithAutosave(workspaceId, ownerFolderId, isExpanded)
+    setPromptFolderDetailsSectionExpandedStateWithAutosave(workspaceId, contentOwnerId, isExpanded)
   }
 
-  const toggleSettingsSectionExpanded = (ownerFolderId: string) => {
-    setSettingsSectionExpanded(ownerFolderId, !getIsSettingsSectionExpanded(ownerFolderId))
+  const toggleDetailsSectionExpanded = (contentOwnerId: string) => {
+    setDetailsSectionExpanded(contentOwnerId, !getIsDetailsSectionExpanded(contentOwnerId))
   }
 
-  const setPromptsSectionExpanded = (ownerFolderId: string, isExpanded: boolean) => {
-    if (getIsPromptsSectionExpanded(ownerFolderId) === isExpanded) {
+  const setContentSectionExpanded = (contentOwnerId: string, isExpanded: boolean) => {
+    if (getIsContentSectionExpanded(contentOwnerId) === isExpanded) {
       return
     }
 
-    const stateKey = getPromptFolderSectionStateKey(ownerFolderId)
-    promptsSectionExpandedStates = {
-      ...promptsSectionExpandedStates,
+    const stateKey = getContentSectionStateKey(contentOwnerId)
+    contentSectionExpandedStates = {
+      ...contentSectionExpandedStates,
       [stateKey]: isExpanded
     }
 
@@ -710,73 +693,69 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    setPromptFolderPromptsSectionExpandedStateWithAutosave(workspaceId, ownerFolderId, isExpanded)
+    setPromptFolderContentSectionExpandedStateWithAutosave(workspaceId, contentOwnerId, isExpanded)
   }
 
-  const togglePromptsSectionExpanded = (ownerFolderId: string) => {
-    setPromptsSectionExpanded(ownerFolderId, !getIsPromptsSectionExpanded(ownerFolderId))
+  const toggleContentSectionExpanded = (contentOwnerId: string) => {
+    setContentSectionExpanded(contentOwnerId, !getIsContentSectionExpanded(contentOwnerId))
   }
 
-  const findFolderPath = (
-    _currentFolderId: string,
-    targetFolderId: string,
-    _visitedFolderIds = new SvelteSet<string>()
-  ): string[] | null => {
-    if (targetFolderId === screenRootFolderId) return [screenRootFolderId]
-    return categoryById[targetFolderId] ? [screenRootFolderId, targetFolderId] : null
+  const findContentOwnerPath = (contentOwnerId: string): string[] | null => {
+    if (contentOwnerId === screenRootFolderId) return [screenRootFolderId]
+    return categoryById[contentOwnerId] ? [screenRootFolderId, contentOwnerId] : null
   }
 
-  const expandSectionForRow = (row: ActivePromptTreeRow, expandFolderSettings = true): boolean => {
+  const expandSectionForRow = (row: ActivePromptScreenRow, expandDetails = true): boolean => {
     let changed = false
     if (isCompletedMode || row.kind === 'root-header') return false
 
-    const ownerPath = findFolderPath(screenRootFolderId, row.rowOwnerFolderId) ?? []
-    for (const ancestorFolderId of ownerPath.slice(0, -1)) {
-      if (!getIsPromptsSectionExpanded(ancestorFolderId)) {
-        setPromptsSectionExpanded(ancestorFolderId, true)
+    const ownerPath = findContentOwnerPath(row.contentOwnerId) ?? []
+    for (const ancestorOwnerId of ownerPath.slice(0, -1)) {
+      if (!getIsContentSectionExpanded(ancestorOwnerId)) {
+        setContentSectionExpanded(ancestorOwnerId, true)
         changed = true
       }
     }
 
     if (
-      row.kind === 'folder-settings' &&
-      expandFolderSettings &&
-      !getIsSettingsSectionExpanded(row.rowOwnerFolderId)
+      row.kind === 'category-details' &&
+      expandDetails &&
+      !getIsDetailsSectionExpanded(row.contentOwnerId)
     ) {
-      setSettingsSectionExpanded(row.rowOwnerFolderId, true)
+      setDetailsSectionExpanded(row.contentOwnerId, true)
       changed = true
     }
 
-    if (row.kind === 'prompt' && !getIsPromptsSectionExpanded(row.rowOwnerFolderId)) {
-      setPromptsSectionExpanded(row.rowOwnerFolderId, true)
+    if (row.kind === 'prompt' && !getIsContentSectionExpanded(row.contentOwnerId)) {
+      setContentSectionExpanded(row.contentOwnerId, true)
       changed = true
     }
 
     return changed
   }
 
-  const selectedNavigationTarget = $derived.by((): ActivePromptTreeRow | null => {
+  const selectedNavigationTarget = $derived.by((): ActivePromptScreenRow | null => {
     if (
       promptNavigation.screenRootFolderId !== screenRootFolderId ||
-      !promptNavigation.rowOwnerFolderId ||
+      !promptNavigation.contentOwnerId ||
       !promptNavigation.selectedRow
     ) {
       return null
     }
 
-    return toActivePromptTreeRow(promptNavigation.rowOwnerFolderId, promptNavigation.selectedRow)
+    return toActivePromptScreenRow(promptNavigation.contentOwnerId, promptNavigation.selectedRow)
   })
 
-  const activePromptTreeRow = $derived(selectedNavigationTarget)
+  const activePromptScreenRow = $derived(selectedNavigationTarget)
 
   const setCurrentFolderSelection = (
-    nextRow: ActivePromptTreeRow | null,
+    nextRow: ActivePromptScreenRow | null,
     source: PromptNavigationSource,
     options: {
       forceRequest?: boolean
       contentReveal?: {
         scrollType: PromptContentRevealScrollType
-        expandFolderSettings?: boolean
+        expandDetails?: boolean
       }
       focusPromptId?: string
       treeExpansion?: 'owner' | 'ancestors'
@@ -788,7 +767,7 @@ export const createPromptFolderScreenController = ({
 
     promptNavigation.select({
       screenRootFolderId,
-      rowOwnerFolderId: nextRow.rowOwnerFolderId,
+      contentOwnerId: nextRow.contentOwnerId,
       row: toPromptNavigationRow(nextRow),
       source,
       forceRequest: options.forceRequest ?? false,
@@ -798,7 +777,7 @@ export const createPromptFolderScreenController = ({
     })
   }
 
-  const persistActivePromptTreeRow = () => {
+  const persistActivePromptScreenRow = () => {
     if (isCompletedMode) {
       return
     }
@@ -813,19 +792,19 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    setPromptFolderPromptTreeEntryIdWithAutosave(
+    setPromptFolderSelectedEntryIdWithAutosave(
       workspaceId,
-      selectedTarget.rowOwnerFolderId,
+      selectedTarget.contentOwnerId,
       promptNavigationRowToPersistedEntryId(toPromptNavigationRow(selectedTarget))
     )
   }
 
-  const selectCreatedPrompt = (rowOwnerFolderId: string, promptId: string): void => {
+  const selectCreatedPrompt = (contentOwnerId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
 
     promptNavigation.select({
       screenRootFolderId,
-      rowOwnerFolderId,
+      contentOwnerId,
       row,
       source: 'prompt-divider-create',
       forceRequest: true,
@@ -835,9 +814,9 @@ export const createPromptFolderScreenController = ({
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderPromptTreeEntryIdWithAutosave(
+      setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
-        rowOwnerFolderId,
+        contentOwnerId,
         promptNavigationRowToPersistedEntryId(row)
       )
     }
@@ -853,7 +832,7 @@ export const createPromptFolderScreenController = ({
 
     promptNavigation.select({
       screenRootFolderId: destinationRootFolderId,
-      rowOwnerFolderId: destinationPromptFolderId,
+      contentOwnerId: destinationPromptFolderId,
       row,
       source: 'prompt-move',
       forceRequest: true,
@@ -863,7 +842,7 @@ export const createPromptFolderScreenController = ({
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderPromptTreeEntryIdWithAutosave(
+      setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
         destinationPromptFolderId,
         promptNavigationRowToPersistedEntryId(row)
@@ -887,7 +866,7 @@ export const createPromptFolderScreenController = ({
     right: PromptNavigationTarget
   ): boolean =>
     left.screenRootFolderId === right.screenRootFolderId &&
-    left.rowOwnerFolderId === right.rowOwnerFolderId &&
+    left.contentOwnerId === right.contentOwnerId &&
     left.row === right.row
 
   const cancelNavigationTargetRequests = (target: PromptNavigationTarget): void => {
@@ -957,21 +936,21 @@ export const createPromptFolderScreenController = ({
     const hasExplicitSelection =
       currentNavigationTarget !== null && promptNavigation.selectionSource !== 'scroll-follow'
     const explicitSelectionTarget = hasExplicitSelection ? currentNavigationTarget : null
-    const persistedPromptTreeEntryId =
+    const persistedSelectedEntryId =
       !explicitSelectionTarget && !canUseCachedData
-        ? lookupWorkspacePersistedPromptFolderPromptTreeEntryId(workspaceId, screenRootFolderId)
+        ? lookupWorkspacePersistedPromptFolderSelectedEntryId(workspaceId, screenRootFolderId)
         : null
-    const persistedSelectionTarget = persistedPromptTreeEntryId
-      ? toActivePromptTreeRow(
+    const persistedSelectionTarget = persistedSelectedEntryId
+      ? toActivePromptScreenRow(
           screenRootFolderId,
-          persistedPromptTreeEntryIdToPromptNavigationRow(persistedPromptTreeEntryId)
+          persistedPromptTreeEntryIdToPromptNavigationRow(persistedSelectedEntryId)
         )
       : null
     const initialSelectionTarget = explicitSelectionTarget ??
       currentNavigationTarget ??
       persistedSelectionTarget ?? {
         kind: 'root-header',
-        rowOwnerFolderId: screenRootFolderId
+        contentOwnerId: screenRootFolderId
       }
     // Reveals an explicit or persisted selection after its virtual rows are first created.
     const shouldApplyInitialReveal =
@@ -989,35 +968,39 @@ export const createPromptFolderScreenController = ({
     errorMessage = null
     initialPromptFolderScrollTopPx = restoredScrollTop
     scrollTopPx = restoredScrollTop
-    latestCenteredPromptTreeRow = isCompletedMode ? null : initialSelectionTarget
+    latestCenteredPromptScreenRow = isCompletedMode ? null : initialSelectionTarget
 
     if (shouldApplyInitialReveal) {
       const source = explicitSelectionTarget
         ? promptNavigation.selectionSource!
         : restoreSelectionSource
-      // Preserves sidebar folder alignment when navigation also opens the prompt-folder screen.
+      // Preserves sidebar category alignment when navigation also opens the prompt-folder screen.
       const initialRevealScrollType: PromptContentRevealScrollType =
-        explicitSelectionTarget?.kind === 'folder-settings' &&
-        (source === 'tree-click' || source === 'folder-open')
+        explicitSelectionTarget?.kind === 'category-details' &&
+        (source === 'tree-click' || source === 'category-open')
           ? 'align-top'
           : 'center'
       const result = promptNavigation.select({
         screenRootFolderId,
-        rowOwnerFolderId: initialSelectionTarget.rowOwnerFolderId,
+        contentOwnerId: initialSelectionTarget.contentOwnerId,
         row: toPromptNavigationRow(initialSelectionTarget),
         source,
         forceRequest: true,
         contentReveal: {
           scrollType: initialRevealScrollType,
-          expandFolderSettings:
-            source !== 'folder-open' && source !== 'folder-move'
+          expandDetails:
+            source !== 'category-open' && source !== 'category-move'
         },
         focusPromptId:
           source === 'prompt-create' && initialSelectionTarget.kind === 'prompt'
             ? initialSelectionTarget.promptId
             : undefined,
         treeExpansion:
-          source === 'prompt-move' ? 'owner' : source === 'folder-move' ? 'ancestors' : undefined
+          source === 'prompt-move'
+            ? 'owner'
+            : source === 'category-move'
+              ? 'ancestors'
+              : undefined
       })
       initialContentRevealRequestId = result.contentRevealRequest?.id ?? null
     } else if (!currentNavigationTarget) {
@@ -1043,24 +1026,25 @@ export const createPromptFolderScreenController = ({
     })()
   })
 
-  const hasPromptFolderRow = (target: ActivePromptTreeRow): boolean => {
+  const hasPromptScreenRow = (target: ActivePromptScreenRow): boolean => {
     if (target.kind === 'root-header') return true
-    if (target.kind === 'folder-settings') {
+    if (target.kind === 'category-details') {
       return activePromptFolderScreenRows.some(
-        (row) => row.kind === 'folder-editor' && row.ownerFolderId === target.rowOwnerFolderId
+        (row) =>
+          row.kind === 'category-editor' && row.contentOwnerId === target.contentOwnerId
       )
     }
     return visiblePromptIds.includes(target.promptId)
   }
 
-  // Side effect: expand the requested content path once folder rows are ready.
+  // Side effect: expand the requested content path once category rows are ready.
   $effect(() => {
     const request = promptNavigation.contentExpansionRequests.pending
     if (!request || request.payload.screenRootFolderId !== screenRootFolderId) return
     if (!isVirtualContentReady) return
 
     promptNavigation.contentExpansionRequests.consume(request, (payload) => {
-      expandSectionForRow(toActivePromptTreeTarget(payload), payload.expandFolderSettings)
+      expandSectionForRow(toActivePromptScreenTarget(payload), payload.expandDetails)
     })
   })
 
@@ -1076,8 +1060,8 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    const target = toActivePromptTreeTarget(request.payload)
-    if (!hasPromptFolderRow(target)) {
+    const target = toActivePromptScreenTarget(request.payload)
+    if (!hasPromptScreenRow(target)) {
       promptNavigation.contentRevealRequests.cancel(request)
       return
     }
@@ -1086,7 +1070,7 @@ export const createPromptFolderScreenController = ({
     if (request.payload.scrollType !== 'center' && !scrollToWithinWindowBand) return
 
     promptNavigation.contentRevealRequests.consume(request, (payload) => {
-      const rowId = toPromptFolderRowId(toActivePromptTreeTarget(payload))
+      const rowId = toPromptFolderRowId(toActivePromptScreenTarget(payload))
       if (payload.scrollType === 'center') {
         scrollToAndTrackRowCentered!(rowId)
       } else {
@@ -1104,15 +1088,15 @@ export const createPromptFolderScreenController = ({
   $effect(() => {
     if (!isVirtualContentReady) return
     if (isCompletedMode) return
-    if (!activePromptTreeRow || activePromptTreeRow.kind !== 'prompt') return
-    if (navigablePromptIds.includes(activePromptTreeRow.promptId)) return
+    if (!activePromptScreenRow || activePromptScreenRow.kind !== 'prompt') return
+    if (navigablePromptIds.includes(activePromptScreenRow.promptId)) return
 
     setCurrentFolderSelection(
-      activePromptTreeRow.rowOwnerFolderId === screenRootFolderId
-        ? { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
+      activePromptScreenRow.contentOwnerId === screenRootFolderId
+        ? { kind: 'root-header', contentOwnerId: screenRootFolderId }
         : {
-            kind: 'folder-settings',
-            rowOwnerFolderId: activePromptTreeRow.rowOwnerFolderId
+            kind: 'category-details',
+            contentOwnerId: activePromptScreenRow.contentOwnerId
       },
       'restore',
       { forceRequest: true }
@@ -1304,7 +1288,7 @@ export const createPromptFolderScreenController = ({
       promptEditorRowId(move.promptId),
       promptFolderDividerRowId(
         screenRootFolderId,
-        target.ownerFolderId,
+        target.contentOwnerId,
         move.promptId
       ),
       promptFolderDividerRowId(
@@ -1406,18 +1390,18 @@ export const createPromptFolderScreenController = ({
         row.kind === 'prompt-editor' && row.promptId === promptId
     )
 
-  const resolveHeaderSelectionRow = (): ActivePromptTreeRow => {
+  const resolveHeaderSelectionRow = (): ActivePromptScreenRow => {
     const firstPromptId = visiblePromptIds[0]
     if (firstPromptId) {
       const promptRow = findRenderedPromptRow(firstPromptId)
       return {
         kind: 'prompt',
-        rowOwnerFolderId: promptRow?.ownerFolderId ?? screenRootFolderId,
+        contentOwnerId: promptRow?.contentOwnerId ?? screenRootFolderId,
         promptId: firstPromptId
       }
     }
 
-    return { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
+    return { kind: 'root-header', contentOwnerId: screenRootFolderId }
   }
 
   const handleHeaderSegmentClick = () => {
@@ -1434,7 +1418,7 @@ export const createPromptFolderScreenController = ({
   const handleHeaderFolderClick = () => {
     if (!scrollApi) return
     setCurrentFolderSelection(
-      { kind: 'root-header', rowOwnerFolderId: screenRootFolderId },
+      { kind: 'root-header', contentOwnerId: screenRootFolderId },
       'header',
       { forceRequest: true }
     )
@@ -1442,9 +1426,10 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
-    const targetRow: ActivePromptTreeRow = {
+    const targetRow: ActivePromptScreenRow = {
       kind: 'prompt',
-      rowOwnerFolderId: findRenderedPromptRow(match.entityId)?.ownerFolderId ?? screenRootFolderId,
+      contentOwnerId:
+        findRenderedPromptRow(match.entityId)?.contentOwnerId ?? screenRootFolderId,
       promptId: match.entityId
     }
     setCurrentFolderSelection(targetRow, 'find', {
@@ -1482,15 +1467,15 @@ export const createPromptFolderScreenController = ({
     recordPromptFolderScrollTop(screenRootFolderId, nextScrollTop)
   }
 
-  const handleVirtualCenterRowChange = (nextCenteredRow: ActivePromptTreeRow | null) => {
-    latestCenteredPromptTreeRow = nextCenteredRow
+  const handleVirtualCenterRowChange = (nextCenteredRow: ActivePromptScreenRow | null) => {
+    latestCenteredPromptScreenRow = nextCenteredRow
     if (hasManualSelectionSource()) return
-    setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptTreeRow), 'scroll-follow')
+    setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptScreenRow), 'scroll-follow')
   }
 
   const handleVirtualUserScroll = () => {
     clearManualSelectionSource()
-    setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptTreeRow), 'scroll-follow')
+    setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptScreenRow), 'scroll-follow')
   }
 
   return {
@@ -1505,12 +1490,6 @@ export const createPromptFolderScreenController = ({
     },
     get contentKind(): PromptFolderContentKind {
       return contentKind
-    },
-    get folderSettings(): PromptFolderSettings {
-      return folderSettings
-    },
-    get folderSettingsByFolderId(): Record<string, PromptFolderSettings> {
-      return folderSettingsByFolderId
     },
     get folderDisplayName(): string {
       return folderDisplayName
@@ -1539,8 +1518,8 @@ export const createPromptFolderScreenController = ({
     get completedPromptCount(): number {
       return completedPromptCount
     },
-    get completedPromptOwnerByPromptId(): Record<string, string> {
-      return completedPromptOwnerByPromptId
+    get completedPromptContentOwnerByPromptId(): Record<string, string> {
+      return completedPromptContentOwnerByPromptId
     },
     get isVirtualContentReady(): boolean {
       return isVirtualContentReady
@@ -1560,17 +1539,17 @@ export const createPromptFolderScreenController = ({
     get isCreatingPrompt(): boolean {
       return isCreatingPrompt
     },
-    get isSettingsSectionExpanded(): boolean {
-      return isSettingsSectionExpanded
+    get isDetailsSectionExpanded(): boolean {
+      return isDetailsSectionExpanded
     },
-    get isPromptsSectionExpanded(): boolean {
-      return isPromptsSectionExpanded
+    get isContentSectionExpanded(): boolean {
+      return isContentSectionExpanded
     },
-    get settingsSectionExpandedByFolderId(): Record<string, boolean> {
-      return settingsSectionExpandedByFolderId
+    get detailsSectionExpandedByOwnerId(): Record<string, boolean> {
+      return detailsSectionExpandedByOwnerId
     },
-    get promptsSectionExpandedByFolderId(): Record<string, boolean> {
-      return promptsSectionExpandedByFolderId
+    get contentSectionExpandedByOwnerId(): Record<string, boolean> {
+      return contentSectionExpandedByOwnerId
     },
     get initialPromptFolderScrollTopPx(): number {
       return initialPromptFolderScrollTopPx
@@ -1590,10 +1569,10 @@ export const createPromptFolderScreenController = ({
     get loadingOverlayFadeMs(): number {
       return LOADING_OVERLAY_FADE_MS
     },
-    persistActivePromptTreeRow,
+    persistActivePromptScreenRow,
     scrollToWithinWindowBandWithManualClear,
-    toggleSettingsSectionExpanded,
-    togglePromptsSectionExpanded,
+    toggleDetailsSectionExpanded,
+    toggleContentSectionExpanded,
     handleHeaderSegmentClick,
     handleHeaderFolderClick,
     handleFindMatchReveal,

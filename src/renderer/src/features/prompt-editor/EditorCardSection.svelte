@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
-  import { EDITOR_CARD_SECTION_HEADER_HEIGHT_PX } from '../prompt-folders/promptFolderSettingsSizing'
+  import { EDITOR_CARD_SECTION_HEADER_HEIGHT_PX } from './promptEditorSizing'
 
   type Props = {
     title: string

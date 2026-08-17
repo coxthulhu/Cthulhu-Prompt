@@ -53,16 +53,16 @@ const createTemplateUiWorkspace = () =>
           ).join('\n')
         }
       ],
-      subfolders: [
+      categories: [
         {
-          folderName: 'Nested',
-          displayName: 'Nested Templates',
-          folderId: 'template-ui-nested-folder',
+          categoryName: 'Category',
+          displayName: 'Category Templates',
+          categoryId: 'template-ui-category',
           templates: [
             {
-              id: 'template-ui-nested',
-              title: 'Nested Template',
-              templateText: `Nested ${FIND_MATCH}.`
+              id: 'template-ui-category-template',
+              title: 'Category Template',
+              templateText: `Category ${FIND_MATCH}.`
             }
           ]
         }

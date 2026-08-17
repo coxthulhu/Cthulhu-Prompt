@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 15 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 16 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -101,8 +101,8 @@ describe('Test Infrastructure', () => {
           AND name IN (
             'app_persistence',
             'workspace_ui_state',
-            'prompt_folder_ui_state',
-            'prompt_folder_settings_editor_view_state',
+            'prompt_folder_view_state',
+            'category_description_editor_view_state',
             'markdown_content_ui_state'
           )
         `
@@ -111,17 +111,19 @@ describe('Test Infrastructure', () => {
       expect(persistenceTablesResult.success).toBe(true)
       expect(persistenceTablesResult.rows).toHaveLength(5)
 
-      const promptFolderUiStateColumnsResult = await runSqlQuery(
+      const promptFolderViewStateColumnsResult = await runSqlQuery(
         electronApp,
-        'PRAGMA table_info(prompt_folder_ui_state)'
+        'PRAGMA table_info(prompt_folder_view_state)'
       )
-      const promptFolderUiStateColumnNames = (promptFolderUiStateColumnsResult.rows ?? []).map(
+      const promptFolderViewStateColumnNames = (promptFolderViewStateColumnsResult.rows ?? []).map(
         (row) => row.name
       )
 
-      expect(promptFolderUiStateColumnsResult.success).toBe(true)
-      expect(promptFolderUiStateColumnNames).toContain('prompt_tree_is_expanded')
-      expect(promptFolderUiStateColumnNames).not.toContain('prompt_tree_is_showing_all_prompts')
+      expect(promptFolderViewStateColumnsResult.success).toBe(true)
+      expect(promptFolderViewStateColumnNames).toContain('tree_is_expanded')
+      expect(promptFolderViewStateColumnNames).not.toContain(
+        'prompt_tree_is_showing_all_prompts'
+      )
     })
   })
 

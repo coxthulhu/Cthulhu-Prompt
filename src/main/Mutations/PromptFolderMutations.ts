@@ -212,10 +212,23 @@ export const setupPromptFolderMutationHandlers = (): void => {
           if (!updatedWorkspace) {
             return { success: false, error: 'Prompt folder delete commit did not complete' }
           }
-          // Side effect: prune UI state for the deleted root folder.
-          UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
+          /** Root folders remaining after the delete commit. */
+          const remainingPromptFolderIds = updatedWorkspace.committed.entries.map(
+            (entry) => entry.id
+          )
+          /** Categories remaining across those root folders. */
+          const remainingCategoryIds = remainingPromptFolderIds.flatMap((promptFolderId) => {
+            const remainingPromptFolder =
+              data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
+            return remainingPromptFolder
+              ? getCategoryOrderCategoryIds(remainingPromptFolder.categoryOrder)
+              : []
+          })
+          // Side effect: prune UI state for the deleted root folder and its categories.
+          UserPersistenceDataAccess.cleanupWorkspacePromptFolderViewState(
             payload.workspace.id,
-            updatedWorkspace.committed.entries.map((entry) => entry.id)
+            remainingPromptFolderIds,
+            remainingCategoryIds
           )
           return { success: true, payload: { workspace: buildWorkspaceSnapshot(updatedWorkspace) } }
         } catch (error) {

@@ -1,19 +1,9 @@
-import {
-  PROMPT_FOLDER_SETTINGS_FIELDS,
-  PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS,
-  type PromptFolderSettingsField
-} from '@shared/PromptFolder'
-
-export const PROMPT_FOLDER_SETTINGS_ROW_ID = 'folder-settings'
+export const CATEGORY_DETAILS_ROW_ID = 'category-details'
 export const PROMPT_FOLDER_ROOT_HEADER_ROW_ID = 'root-header'
 
-export const promptFolderEditorRowId = (
-  screenRootFolderId: string,
-  rowOwnerFolderId: string
-): string =>
-  screenRootFolderId === rowOwnerFolderId
-    ? PROMPT_FOLDER_SETTINGS_ROW_ID
-    : `folder-settings:${rowOwnerFolderId}`
+/** Returns the virtual-row ID for one category editor. */
+export const categoryEditorRowId = (categoryId: string): string =>
+  `${CATEGORY_DETAILS_ROW_ID}:${categoryId}`
 
 export const promptEditorRowId = (promptId: string): string => `${promptId}-editor`
 
@@ -21,29 +11,15 @@ export const promptDividerRowId = (promptId: string): string => `${promptId}-div
 
 export const promptFolderDividerRowId = (
   screenRootFolderId: string,
-  ownerFolderId: string,
+  contentOwnerId: string,
   previousEntryId: string | null
 ): string => {
   if (previousEntryId !== null) return promptDividerRowId(previousEntryId)
-  return ownerFolderId === screenRootFolderId ? 'divider-initial' : `divider:${ownerFolderId}:initial`
+  return contentOwnerId === screenRootFolderId
+    ? 'divider-initial'
+    : `divider:${contentOwnerId}:initial`
 }
 
-export const promptFolderSettingsFindEntityId = (
-  promptFolderId: string,
-  field: PromptFolderSettingsField
-): string => `folder-settings:${promptFolderId}:${field}`
-
-export const isPromptFolderSettingsFindEntityId = (
-  entityId: string,
-  promptFolderId: string
-): boolean => entityId.startsWith(`folder-settings:${promptFolderId}:`)
-
-export const promptFolderSettingsFieldFromFindSectionKey = (
-  sectionKey: string
-): PromptFolderSettingsField | null => {
-  return (
-    PROMPT_FOLDER_SETTINGS_FIELDS.find(
-      (field) => PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS[field] === sectionKey
-    ) ?? null
-  )
-}
+/** Returns the find entity ID for one category description. */
+export const categoryDescriptionFindEntityId = (categoryId: string): string =>
+  `category-description:${categoryId}`

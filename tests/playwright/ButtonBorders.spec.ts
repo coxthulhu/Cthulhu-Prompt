@@ -18,7 +18,7 @@ describe('Button borders', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
     await testHelpers.clickNavButton('Test Screen')
 

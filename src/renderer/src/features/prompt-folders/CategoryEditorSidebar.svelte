@@ -4,32 +4,34 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
-    PromptFolderEntryDragPayload,
+    CategoryDragPayload,
     PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
   /** Category drag-handle inputs supplied by the folder-style category row. */
   type Props = {
-    dragOptions: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
+    dragOptions: DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
   }
 
   /** Draggable options for the category represented by this side rail. */
   let { dragOptions }: Props = $props()
 
+  /** Prevents a category drag gesture from moving keyboard focus. */
   const preventSidebarButtonMouseFocus = (event: MouseEvent) => {
     if (event.button !== 0) return
     event.preventDefault()
   }
 
+  /** Bridges the category drag options into the reusable draggable action. */
   const dragHandleAction: Action<HTMLButtonElement, unknown> = (node, options) => {
     const action = draggable(
       node,
-      options as DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
+      options as DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
     )
     return {
       update(nextOptions) {
         action.update(
-          nextOptions as DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
+          nextOptions as DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
         )
       },
       destroy: action.destroy
@@ -37,14 +39,14 @@
   }
 </script>
 
-<div class="prompt-folder-editor-sidebar" data-testid="prompt-folder-editor-sidebar">
+<div class="category-editor-sidebar" data-testid="category-editor-sidebar">
   <IconButton
     icon={GripVertical}
     label="Drag category"
     size="sidebar-rail"
     baseVariant="dim"
-    class="prompt-folder-editor-sidebar-drag-button"
-    testId="prompt-folder-drag-handle"
+    class="category-editor-sidebar-drag-button"
+    testId="category-drag-handle"
     buttonAction={dragHandleAction}
     buttonActionParameter={dragOptions}
     grabCursor
@@ -54,7 +56,7 @@
 </div>
 
 <style>
-  .prompt-folder-editor-sidebar {
+  .category-editor-sidebar {
     background: var(--ui-card-normal-surface);
     border-right: 1px solid var(--ui-neutral-muted-border);
     box-sizing: border-box;
@@ -67,11 +69,11 @@
     width: 32px;
   }
 
-  .prompt-folder-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
+  .category-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
     border-bottom-color: transparent;
   }
 
-  .prompt-folder-editor-sidebar :global(.prompt-folder-editor-sidebar-drag-button) {
+  .category-editor-sidebar :global(.category-editor-sidebar-drag-button) {
     flex: 1 1 auto;
   }
 </style>

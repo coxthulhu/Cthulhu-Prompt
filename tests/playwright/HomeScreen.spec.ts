@@ -181,17 +181,17 @@ describe('Home Screen', () => {
   describe('Workspace Management', () => {
     test('closes a workspace while hydrated folder settings are mounted', async ({ testSetup }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-        workspace: { scenario: 'subfolders' }
+        workspace: { scenario: 'categories' }
       })
 
       expect(workspaceSetupResult.setupDialogAppeared).toBe(false)
       expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-      await testHelpers.assertWorkspaceReadyPath('/ws/subfolders')
+      await testHelpers.assertWorkspaceReadyPath('/ws/categories')
       await testHelpers.navigateToPromptFolders('Main')
-      await mainWindow.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+      await mainWindow.locator('[data-testid="category-editor-settings-toggle"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="prompt-folder-settings-section-"] .monaco-editor')
+        mainWindow.locator('[data-testid^="category-description-section"] .monaco-editor')
       ).not.toHaveCount(0)
       await testHelpers.navigateToHomeScreen()
 

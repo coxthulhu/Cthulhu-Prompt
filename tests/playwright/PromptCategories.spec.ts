@@ -9,7 +9,7 @@ import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestH
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   beginPromptHandleDrag,
-  beginPromptTreeFolderRowDrag,
+  beginPromptTreeCategoryRowDrag,
   finishActiveDrag,
   moveActiveDragToTarget,
   promptFolderSelectorDropdownItemSelector,
@@ -285,23 +285,23 @@ describe('Prompt categories', () => {
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptFolders('Prompts')
 
-    /** Folder-style category editor for the populated category. */
+    /** Category editor for the populated category. */
     const categoryEditor = mainWindow.locator(
-      `[data-testid="prompt-folder-editor-${PROMPT_CATEGORY_ID}"]`
+      `[data-testid="category-editor-${PROMPT_CATEGORY_ID}"]`
     )
     await expect(categoryEditor).toContainText('Code Review')
     await expect(categoryEditor).toContainText('1 prompt')
-    await expect(categoryEditor).not.toContainText('subfolder')
-    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-subfolder"]')).toHaveCount(0)
-    await categoryEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
-    await expect(categoryEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')).toBeVisible()
+    await expect(categoryEditor).not.toContainText('folder')
+    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category"]')).toHaveCount(0)
+    await categoryEditor.locator('[data-testid="category-editor-settings-toggle"]').click()
+    await expect(categoryEditor.locator('[data-testid="category-settings-toolbar"]')).toBeVisible()
     await expect(
-      categoryEditor.locator('[data-testid^="prompt-folder-settings-toggle-"]')
+      categoryEditor.locator('[data-testid^="category-settings-toggle-"]')
     ).toHaveCount(1)
     await expect(
-      categoryEditor.locator('[data-testid="prompt-folder-settings-toggle-folderDescription"]')
+      categoryEditor.locator('[data-testid="category-settings-toggle-description"]')
     ).toContainText('Description')
-    await categoryEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+    await categoryEditor.locator('[data-testid="category-editor-settings-toggle"]').click()
 
     /** Plain divider after the first category separates the two category cards. */
     const betweenCategorySeparator = mainWindow.locator(
@@ -329,8 +329,8 @@ describe('Prompt categories', () => {
 
     /** Category title bar accepts the formerly uncategorized prompt at its start. */
     const categoryTitleBar =
-      `[data-testid="prompt-folder-editor-${PROMPT_CATEGORY_ID}"] ` +
-      '[data-testid="prompt-folder-editor-title-bar"]'
+      `[data-testid="category-editor-${PROMPT_CATEGORY_ID}"] ` +
+      '[data-testid="category-editor-title-bar"]'
     await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
     await moveActiveDragToTarget(mainWindow, categoryTitleBar, 'bottom')
     await finishActiveDrag(mainWindow)
@@ -389,8 +389,8 @@ describe('Prompt categories', () => {
       })
 
     /** Dragging the first category after the second retains its prompt as one group. */
-    const secondCategoryTitleBar = '[data-testid="prompt-tree-folder-toggle-button-Second"]'
-    await beginPromptTreeFolderRowDrag(mainWindow, 'Code Review')
+    const secondCategoryTitleBar = '[data-testid="prompt-tree-category-toggle-button-Second"]'
+    await beginPromptTreeCategoryRowDrag(mainWindow, 'Code Review')
     await moveActiveDragToTarget(mainWindow, secondCategoryTitleBar, 'bottom')
     await finishActiveDrag(mainWindow)
     await expect

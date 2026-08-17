@@ -12,7 +12,7 @@
     PROMPT_HANDLE_DRAG_TYPE,
     isPromptHandleDragPayload,
     resolvePromptHandleDropMove,
-    type PromptFolderEntryDragPayload,
+    type CategoryDragPayload,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload,
     type PromptTreeEntryDragPayload
@@ -22,7 +22,7 @@
     clearPromptEntryDrag,
     promptEntryDragState,
     startPromptDrag,
-    startPromptFolderDrag
+    startCategoryDrag
   } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import {
     type PromptDraftRecord,
@@ -44,9 +44,9 @@
   import type { ConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import {
-    lookupWorkspacePersistedPromptFolderPromptTreeExpandedState,
-    setPromptFolderPromptTreeExpandedStateWithAutosave,
-    setPromptFolderPromptTreeEntryIdWithAutosave
+    lookupWorkspacePersistedCategoryTreeExpandedState,
+    setCategoryTreeExpandedStateWithAutosave,
+    setPromptFolderSelectedEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
@@ -58,16 +58,16 @@
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import PromptTreeVirtualList, {
-    type PromptTreeFolderRowProps,
+    type PromptTreeCategoryRowProps,
     type PromptTreePromptRowProps,
     type PromptTreeRow
   } from './PromptTreeVirtualList.svelte'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
-  import PromptTreeFolderRow from './PromptTreeFolderRow.svelte'
+  import PromptTreeCategoryRow from './PromptTreeCategoryRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import {
-    folderDropIndicatorTestId,
+    categoryDropIndicatorTestId,
     folderPromptDropIndicatorTestId
   } from './promptTreeTestIds'
   import { collectCompletedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
@@ -89,7 +89,7 @@
     expansionRequests,
     isPromptFoldersScreenActive = false,
     screenMode = PromptFolderScreenMode.Active,
-    onAllPromptFoldersCollapsedChange,
+    onAllCategoriesCollapsedChange,
     onScreenRootFolderSelect
   } = $props<{
     promptFolders: PromptFolder[]
@@ -98,14 +98,14 @@
     expansionRequests: ConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>
     isPromptFoldersScreenActive?: boolean
     screenMode?: PromptFolderScreenMode
-    onAllPromptFoldersCollapsedChange: (isCollapsed: boolean) => void
+    onAllCategoriesCollapsedChange: (isCollapsed: boolean) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
-  let promptTreeExpandedStates = $state<Record<string, boolean>>({})
+  let categoryTreeExpandedStates = $state<Record<string, boolean>>({})
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
@@ -211,16 +211,18 @@
   const getPromptTreeDropIndicatorInset = (indentCount: number): string =>
     `${PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX + indentCount * PROMPT_TREE_INDENT_WIDTH_PX}px`
 
-  const folderRootRowId = (folderId: string): string => `${folderId}:folder`
-  const folderPromptRowId = (folderId: string, promptId: string): string =>
-    `${folderId}:prompt:${promptId}`
+  /** Returns the virtual-row ID for a category header. */
+  const categoryRowId = (categoryId: string): string => `${categoryId}:category`
+  /** Returns the virtual-row ID for content owned by a root group or category. */
+  const contentPromptRowId = (contentOwnerId: string, promptId: string): string =>
+    `${contentOwnerId}:prompt:${promptId}`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
-  const getPromptTreeExpandedStateKey = (promptFolderId: string): string =>
-    `${workspaceSelection.selectedWorkspaceId ?? 'no-workspace'}:${promptFolderId}`
+  const getCategoryTreeExpandedStateKey = (categoryId: string): string =>
+    `${workspaceSelection.selectedWorkspaceId ?? 'no-workspace'}:${categoryId}`
 
-  const getPromptTreeFolderExpandedState = (promptFolderId: string): boolean => {
-    const stateKey = getPromptTreeExpandedStateKey(promptFolderId)
-    const localState = promptTreeExpandedStates[stateKey]
+  const getPromptTreeCategoryExpandedState = (categoryId: string): boolean => {
+    const stateKey = getCategoryTreeExpandedStateKey(categoryId)
+    const localState = categoryTreeExpandedStates[stateKey]
     if (localState !== undefined) {
       return localState
     }
@@ -231,41 +233,41 @@
     }
 
     return (
-      lookupWorkspacePersistedPromptFolderPromptTreeExpandedState(workspaceId, promptFolderId) ??
+      lookupWorkspacePersistedCategoryTreeExpandedState(workspaceId, categoryId) ??
       true
     )
   }
 
-  const setPromptTreeFolderExpandedState = (promptFolderId: string, isExpanded: boolean): void => {
-    const stateKey = getPromptTreeExpandedStateKey(promptFolderId)
-    if (promptTreeExpandedStates[stateKey] === isExpanded) {
+  const setPromptTreeCategoryExpandedState = (categoryId: string, isExpanded: boolean): void => {
+    const stateKey = getCategoryTreeExpandedStateKey(categoryId)
+    if (categoryTreeExpandedStates[stateKey] === isExpanded) {
       return
     }
 
-    promptTreeExpandedStates = {
-      ...promptTreeExpandedStates,
+    categoryTreeExpandedStates = {
+      ...categoryTreeExpandedStates,
       [stateKey]: isExpanded
     }
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderPromptTreeExpandedStateWithAutosave(workspaceId, promptFolderId, isExpanded)
+      setCategoryTreeExpandedStateWithAutosave(workspaceId, categoryId, isExpanded)
     }
   }
 
-  const promptFolderTreeIds = $derived.by((): string[] => {
+  const categoryTreeIds = $derived.by((): string[] => {
     if (!screenRootFolder) return []
     return screenRootFolder.categoryOrder.categories.flatMap((group) =>
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     )
   })
 
-  const findPromptFolderPath = (
-    currentFolder: PromptFolder,
-    targetFolderId: string
+  const findContentOwnerPath = (
+    rootFolder: PromptFolder,
+    contentOwnerId: string
   ): string[] | null => {
-    if (currentFolder.id === targetFolderId) return [currentFolder.id]
-    return categoryById[targetFolderId] ? [currentFolder.id, targetFolderId] : null
+    if (rootFolder.id === contentOwnerId) return [rootFolder.id]
+    return categoryById[contentOwnerId] ? [rootFolder.id, contentOwnerId] : null
   }
 
   const isSameNavigationTarget = (
@@ -273,18 +275,18 @@
     right: PromptNavigationTarget
   ): boolean =>
     left.screenRootFolderId === right.screenRootFolderId &&
-    left.rowOwnerFolderId === right.rowOwnerFolderId &&
+    left.contentOwnerId === right.contentOwnerId &&
     left.row === right.row
 
   const getPromptTreeRowId = (target: PromptNavigationTarget): string | null => {
-    if (target.row === 'folder-root') {
+    if (target.row === 'root-header') {
       return null
     }
-    if (target.row === 'folder-settings') {
-      return folderRootRowId(target.rowOwnerFolderId)
+    if (target.row === 'category-details') {
+      return categoryRowId(target.contentOwnerId)
     }
-    return folderPromptRowId(
-      target.rowOwnerFolderId,
+    return contentPromptRowId(
+      target.contentOwnerId,
       promptNavigationRowToPersistedEntryId(target.row)
     )
   }
@@ -310,7 +312,7 @@
     if (!destinationFolder) return false
 
     if (!isPromptHandleDragPayload(payload)) {
-      return Boolean(dropPayload.categoryId && payload.folderId !== dropPayload.categoryId)
+      return Boolean(dropPayload.categoryId && payload.categoryId !== dropPayload.categoryId)
     }
 
     const sourceFolder = promptFolderById[payload.sourceFolderId]
@@ -346,7 +348,7 @@
       group.entries.some((entry) => entry.id === entryId)
     )?.categoryId ?? null
 
-  const getPromptTreeFolderDropPayload = (
+  const getPromptTreeCategoryDropPayload = (
     categoryId: string,
     edge: DroppableEdge | null
   ): PromptHandleDropPayload => ({
@@ -359,13 +361,13 @@
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreePromptDroppableState.edge(rowId)
 
-  const selectMovedPrompt = (destinationRootFolderId: string, promptId: string): void => {
+  const selectMovedPrompt = (destinationContentOwnerId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
-    const containingRootFolderId = findContainingRootFolderId(destinationRootFolderId)
+    const containingRootFolderId = findContainingRootFolderId(destinationContentOwnerId)
 
     promptNavigation.select({
       screenRootFolderId: containingRootFolderId,
-      rowOwnerFolderId: destinationRootFolderId,
+      contentOwnerId: destinationContentOwnerId,
       row,
       source: 'prompt-move',
       forceRequest: true,
@@ -375,9 +377,9 @@
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderPromptTreeEntryIdWithAutosave(
+      setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
-        destinationRootFolderId,
+        destinationContentOwnerId,
         promptNavigationRowToPersistedEntryId(row)
       )
     }
@@ -385,8 +387,10 @@
     onScreenRootFolderSelect(containingRootFolderId)
   }
 
-  const findContainingRootFolderId = (folderId: string): string => {
-    return categoryById[folderId] ? screenRootFolder?.id ?? folderId : folderId
+  const findContainingRootFolderId = (contentOwnerId: string): string => {
+    return categoryById[contentOwnerId]
+      ? screenRootFolder?.id ?? contentOwnerId
+      : contentOwnerId
   }
 
   const getPromptRowDragOptions = (
@@ -433,21 +437,22 @@
     }
   })
 
-  const getPromptFolderRowDragOptions = (
+  /** Creates drag options for reordering one category. */
+  const getCategoryRowDragOptions = (
     categoryId: string,
     displayName: string
-  ): DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> => ({
+  ): DraggableOptions<CategoryDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
-    payload: { folderId: categoryId },
-    createGhost: () => createPromptDragGhost(displayName, 'folder'),
+    payload: { categoryId },
+    createGhost: () => createPromptDragGhost(displayName, 'category'),
     onDragStart: (payload) => {
-      startPromptFolderDrag(payload.folderId)
+      startCategoryDrag(payload.categoryId)
     },
     onDragFinish: ({ sourcePayload, dropPayload }) => {
       clearPromptEntryDrag()
       if (!screenRootFolder || !dropPayload?.categoryId) return
       /** Ordered category IDs excluding the dragged category. */
-      const categoryIds = promptFolderTreeIds.filter((id) => id !== sourcePayload.folderId)
+      const categoryIds = categoryTreeIds.filter((id) => id !== sourcePayload.categoryId)
       /** Destination category index after removal. */
       const targetIndex = categoryIds.indexOf(dropPayload.categoryId)
       if (targetIndex === -1) return
@@ -457,19 +462,19 @@
           ? dropPayload.categoryId
           : (categoryIds[targetIndex - 1] ?? null)
       void runIpcBestEffort(() =>
-        moveCategory(screenRootFolder.id, sourcePayload.folderId, previousCategoryId)
+        moveCategory(screenRootFolder.id, sourcePayload.categoryId, previousCategoryId)
       )
     }
   })
 
-  const isTreeEntryActive = (rowOwnerFolderId: string, row: PromptNavigationRow): boolean => {
+  const isTreeEntryActive = (contentOwnerId: string, row: PromptNavigationRow): boolean => {
     if (!isPromptFoldersScreenActive || !promptNavigation.selectedRow) {
       return false
     }
 
     return (
       promptNavigation.screenRootFolderId === screenRootFolder?.id &&
-      promptNavigation.rowOwnerFolderId === rowOwnerFolderId &&
+      promptNavigation.contentOwnerId === contentOwnerId &&
       promptNavigation.selectedRow === row
     )
   }
@@ -482,18 +487,18 @@
       draggedEntry.contentId === promptId
     )
   }
-  const isPromptFolderRowDragging = (folderId: string): boolean => {
+  const isCategoryRowDragging = (categoryId: string): boolean => {
     const draggedEntry = promptEntryDragState.draggedEntry
-    return draggedEntry?.kind === 'folder' && draggedEntry.folderId === folderId
+    return draggedEntry?.kind === 'category' && draggedEntry.categoryId === categoryId
   }
   const isPromptDragActive = $derived(promptEntryDragState.draggedEntry !== null)
   /** Whether a content drag needs an explicit empty Uncategorized target. */
   const isContentDragActive = $derived(promptEntryDragState.draggedEntry?.kind === 'content')
 
   const handlePromptTreeEntrySelect = (
-    rowOwnerFolderId: string,
+    contentOwnerId: string,
     row: PromptNavigationRow,
-    source: 'tree-click' | 'folder-open' = 'tree-click'
+    source: 'tree-click' | 'category-open' = 'tree-click'
   ) => {
     const rootFolderId = screenRootFolder?.id
     if (!rootFolderId) return
@@ -501,13 +506,13 @@
 
     promptNavigation.select({
       screenRootFolderId: rootFolderId,
-      rowOwnerFolderId,
+      contentOwnerId,
       row,
       source,
       forceRequest: true,
       contentReveal: {
-        scrollType: row === 'folder-settings' ? 'align-top' : 'center',
-        expandFolderSettings: source !== 'folder-open'
+        scrollType: row === 'category-details' ? 'align-top' : 'center',
+        expandDetails: source !== 'category-open'
       }
     })
 
@@ -516,31 +521,32 @@
     }
   }
 
-  const handlePromptTreePromptSelect = (promptFolderId: string, promptId: string) => {
-    handlePromptTreeEntrySelect(promptFolderId, promptIdToPromptNavigationRow(promptId))
+  /** Selects a prompt owned by either the root folder or a category. */
+  const handlePromptTreePromptSelect = (contentOwnerId: string, promptId: string) => {
+    handlePromptTreeEntrySelect(contentOwnerId, promptIdToPromptNavigationRow(promptId))
   }
 
-  const handlePromptTreeFolderExpandedChange = (promptFolderId: string, isExpanded: boolean) => {
-    setPromptTreeFolderExpandedState(promptFolderId, isExpanded)
+  const handleCategoryExpandedChange = (categoryId: string, isExpanded: boolean) => {
+    setPromptTreeCategoryExpandedState(categoryId, isExpanded)
   }
 
-  const handlePromptTreeFolderOpen = (promptFolderId: string) => {
-    handlePromptTreeEntrySelect(promptFolderId, 'folder-settings', 'folder-open')
+  const handleCategoryOpen = (categoryId: string) => {
+    handlePromptTreeEntrySelect(categoryId, 'category-details', 'category-open')
   }
 
-  const handlePromptTreeFolderSettingsOpen = (promptFolderId: string) => {
-    handlePromptTreeEntrySelect(promptFolderId, 'folder-settings')
+  const handleCategorySettingsOpen = (categoryId: string) => {
+    handlePromptTreeEntrySelect(categoryId, 'category-details')
   }
 
   // Side effect: report the current tree collapse state to the sidebar action button.
   $effect(() => {
-    const areAllPromptFoldersCollapsed =
-      promptFolderTreeIds.length > 0 &&
-      promptFolderTreeIds.every(
-        (promptFolderId) => !getPromptTreeFolderExpandedState(promptFolderId)
+    const areAllCategoriesCollapsed =
+      categoryTreeIds.length > 0 &&
+      categoryTreeIds.every(
+        (categoryId) => !getPromptTreeCategoryExpandedState(categoryId)
       )
 
-    onAllPromptFoldersCollapsedChange(areAllPromptFoldersCollapsed)
+    onAllCategoriesCollapsedChange(areAllCategoriesCollapsed)
   })
 
   // Side effect: apply a header expansion request once the selected tree is loaded.
@@ -555,8 +561,8 @@
     }
 
     expansionRequests.consume(request, ({ isExpanded }) => {
-      for (const promptFolderId of promptFolderTreeIds) {
-        setPromptTreeFolderExpandedState(promptFolderId, isExpanded)
+      for (const categoryId of categoryTreeIds) {
+        setPromptTreeCategoryExpandedState(categoryId, isExpanded)
       }
     })
   })
@@ -575,14 +581,16 @@
       return
     }
 
-    const folderPath = findPromptFolderPath(rootFolder, request.payload.rowOwnerFolderId)
-    if (!folderPath) return
+    const contentOwnerPath = findContentOwnerPath(rootFolder, request.payload.contentOwnerId)
+    if (!contentOwnerPath) return
 
     promptNavigation.treeExpansionRequests.consume(request, ({ expandPath }) => {
-      const folderIds =
-        expandPath === 'owner' ? folderPath.slice(1) : folderPath.slice(1, -1)
-      for (const promptFolderId of folderIds) {
-        setPromptTreeFolderExpandedState(promptFolderId, true)
+      const categoryIds =
+        expandPath === 'owner'
+          ? contentOwnerPath.slice(1)
+          : contentOwnerPath.slice(1, -1)
+      for (const categoryId of categoryIds) {
+        setPromptTreeCategoryExpandedState(categoryId, true)
       }
     })
   })
@@ -601,18 +609,17 @@
           })
         } else {
           for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
-            const ownerFolder = promptFolderById[completedPrompt.ownerFolderId]
+            const ownerFolder = promptFolderById[completedPrompt.contentOwnerId]
             if (!ownerFolder) continue
             items.push({
-              id: folderPromptRowId(ownerFolder.id, completedPrompt.promptId),
+              id: contentPromptRowId(ownerFolder.id, completedPrompt.promptId),
               row: {
-                kind: 'folder-prompt',
+                kind: 'prompt',
                 folder: ownerFolder,
                 categoryId: null,
                 promptId: completedPrompt.promptId,
                 indentCount: 0,
-                isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
-                isNestedPrompt: ownerFolder.id !== screenRootFolder.id
+                isLastRow: promptIndex === selectedCompletedPrompts.length - 1
               }
             })
           }
@@ -629,15 +636,14 @@
         ) ?? []
         for (const [entryIndex, entry] of uncategorizedEntries.entries()) {
           items.push({
-            id: folderPromptRowId(screenRootFolder.id, entry.id),
+            id: contentPromptRowId(screenRootFolder.id, entry.id),
             row: {
-              kind: 'folder-prompt',
+              kind: 'prompt',
               folder: screenRootFolder,
               categoryId: null,
               promptId: entry.id,
               indentCount: 0,
-              isLastRow: entryIndex === uncategorizedEntries.length - 1,
-              isNestedPrompt: false
+              isLastRow: entryIndex === uncategorizedEntries.length - 1
             }
           })
         }
@@ -655,11 +661,11 @@
               : Boolean(promptById[entry.id]) &&
                 promptById[entry.id]?.status !== PromptStatus.Completed
           )
-          const isExpanded = getPromptTreeFolderExpandedState(category.id)
+          const isExpanded = getPromptTreeCategoryExpandedState(category.id)
           items.push({
-            id: folderRootRowId(category.id),
+            id: categoryRowId(category.id),
             row: {
-              kind: 'folder',
+              kind: 'category',
               category,
               rootFolder: screenRootFolder,
               indentCount: 0,
@@ -670,15 +676,14 @@
           if (!isExpanded) continue
           for (const [entryIndex, entry] of categoryEntries.entries()) {
             items.push({
-              id: folderPromptRowId(category.id, entry.id),
+              id: contentPromptRowId(category.id, entry.id),
               row: {
-                kind: 'folder-prompt',
+                kind: 'prompt',
                 folder: screenRootFolder,
                 categoryId: category.id,
                 promptId: entry.id,
                 indentCount: 1,
-                isLastRow: entryIndex === categoryEntries.length - 1,
-                isNestedPrompt: true
+                isLastRow: entryIndex === categoryEntries.length - 1
               }
             })
           }
@@ -695,7 +700,7 @@
       }
     }
 
-    // Keep one folder row of trailing space at the end of the tree.
+    // Keep one virtual row of trailing space at the end of the tree.
     items.push({
       id: 'bottom-spacer',
       row: {
@@ -725,7 +730,7 @@
       return
     }
 
-    if (request.payload.row === 'folder-root') {
+    if (request.payload.row === 'root-header') {
       promptNavigation.treeRevealRequests.consume(request, () => undefined)
       return
     }
@@ -761,36 +766,36 @@
   <!-- Root navigation lives in the sidebar toolbar, so this shared row renderer stays empty. -->
 {/snippet}
 
-{#snippet folderRow(props: PromptTreeFolderRowProps)}
-  {@const isSettingsActive = isTreeEntryActive(props.row.category.id, 'folder-settings')}
+{#snippet categoryRow(props: PromptTreeCategoryRowProps)}
+  {@const isSettingsActive = isTreeEntryActive(props.row.category.id, 'category-details')}
 
-  <PromptTreeFolderRow
-    folder={props.row.category}
+  <PromptTreeCategoryRow
+    category={props.row.category}
     isActive={isSettingsActive}
-    isDragging={isPromptFolderRowDragging(props.row.category.id)}
+    isDragging={isCategoryRowDragging(props.row.category.id)}
     {isPromptDragActive}
     showDropOverHighlight
-    isExpanded={getPromptTreeFolderExpandedState(props.row.category.id)}
+    isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
     indentCount={props.row.indentCount}
     endsVisibleBranch={props.row.endsVisibleBranch}
-    getFolderPromptDroppableOptions={isCompletedMode
+    getCategoryContentDroppableOptions={isCompletedMode
       ? undefined
       : () =>
           getPromptTreeDroppableOptions(
             props.rowId,
             'top-and-bottom',
-            (edge) => getPromptTreeFolderDropPayload(props.row.category.id, edge)
+            (edge) => getPromptTreeCategoryDropPayload(props.row.category.id, edge)
           )}
-    folderDragOptions={!isCompletedMode
-      ? getPromptFolderRowDragOptions(props.row.category.id, props.row.category.displayName)
+    categoryDragOptions={!isCompletedMode
+      ? getCategoryRowDragOptions(props.row.category.id, props.row.category.displayName)
       : undefined}
-    onFolderExpandedChange={handlePromptTreeFolderExpandedChange}
-    onPromptFolderOpen={handlePromptTreeFolderOpen}
-    onFolderSettingsOpen={handlePromptTreeFolderSettingsOpen}
+    onCategoryExpandedChange={handleCategoryExpandedChange}
+    onCategoryOpen={handleCategoryOpen}
+    onCategorySettingsOpen={handleCategorySettingsOpen}
   />
 {/snippet}
 
-{#snippet folderPromptRow(props: PromptTreePromptRowProps)}
+{#snippet promptRow(props: PromptTreePromptRowProps)}
   {@const isActive = isTreeEntryActive(
     props.row.categoryId ?? props.row.folder.id,
     promptIdToPromptNavigationRow(props.row.promptId)
@@ -870,12 +875,12 @@
   {/if}
 {/snippet}
 
-{#snippet promptTreeFolderRowOverlay({ row, rowId }: PromptTreeFolderRowProps)}
+{#snippet promptTreeCategoryRowOverlay({ row, rowId }: PromptTreeCategoryRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
 
   {#if hoveredEdge}
     <DropIndicator
-      testId={folderDropIndicatorTestId(row.category)}
+      testId={categoryDropIndicatorTestId(row.category)}
       insetStart={getPromptTreeDropIndicatorInset(
         row.indentCount + (hoveredEdge === 'bottom' ? 1 : 0)
       )}

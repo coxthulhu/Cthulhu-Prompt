@@ -316,7 +316,7 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Icon Candidates',
-              'Lucide alternatives for replacing the subfolder metaphor. Tag is the strongest match for a prompt with one category.'
+              'Lucide alternatives for category presentation. Tag is the strongest match for a prompt with one category.'
             )}
 
             <div class="category-icon-grid">

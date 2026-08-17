@@ -13,7 +13,7 @@
   import type { Category } from '@shared/Category'
   import type { Workspace } from '@shared/Workspace'
   import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
-  import PromptTreeFolderRow from '../sidebar/PromptTreeFolderRow.svelte'
+  import PromptTreeCategoryRow from '../sidebar/PromptTreeCategoryRow.svelte'
   import PromptTreePromptRow from '../sidebar/PromptTreePromptRow.svelte'
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
@@ -26,7 +26,7 @@
   // Dialog behavior selected by the prompt editor action that opened it.
   type TemplateDialogMode = 'select' | 'select-and-copy'
 
-  // Virtual rows used to render complete base-folder cards and their nested tree entries.
+  // Virtual rows used to render complete root-folder cards and their category entries.
   type TemplateDialogRow =
     | {
         kind: 'base-folder-header'
@@ -38,8 +38,8 @@
         folderId: string
       }
     | {
-        kind: 'folder'
-        folder: Category
+        kind: 'category'
+        category: Category
         indentCount: number
         endsVisibleBranch: boolean
       }
@@ -65,9 +65,9 @@
     Extract<TemplateDialogRow, { kind: 'base-folder-header-spacer' }>
   >
 
-  // Props received by a virtualized nested-folder snippet.
-  type FolderRowProps = VirtualWindowRowComponentProps<
-    Extract<TemplateDialogRow, { kind: 'folder' }>
+  // Props received by a virtualized category snippet.
+  type CategoryRowProps = VirtualWindowRowComponentProps<
+    Extract<TemplateDialogRow, { kind: 'category' }>
   >
 
   // Props received by a virtualized template-option snippet.
@@ -99,7 +99,7 @@
 
   // Reactive workspaces determine which root template folders appear in the dialog.
   const workspaceQuery = useLiveQuery(workspaceCollection) as { data: Workspace[] }
-  // Reactive folders provide the complete nested template-folder hierarchy.
+  // Reactive root folders provide the complete template-category hierarchy.
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as { data: PromptFolder[] }
   // Reactive template drafts keep picker titles and token eligibility current.
   const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
@@ -108,7 +108,8 @@
   // Reactive category metadata supplies folder-style rows inside each template root.
   const categoryQuery = useLiveQuery(categoryCollection)
   // Folder expansion is local to one opening of the dialog.
-  const collapsedFolderIds = new SvelteSet<string>()
+  /** Category IDs collapsed within the template picker. */
+  const collapsedCategoryIds = new SvelteSet<string>()
   // Ordered available IDs stage full-dialog edits until confirmation.
   let stagedTemplateIds = $state<string[]>([])
   // Tracks the opening edge so staging is initialized exactly once per opening.
@@ -203,7 +204,7 @@
   // Side effect: every dialog opening expands folders and initializes independent staging.
   $effect(() => {
     if (open && !wasOpen) {
-      collapsedFolderIds.clear()
+      collapsedCategoryIds.clear()
       stagedTemplateIds =
         mode === 'select'
           ? normalizeTemplateIds((selectedTemplates ?? []).map((template) => template.id))
@@ -212,13 +213,16 @@
     wasOpen = open
   })
 
-  // Reports whether one nested template folder is expanded.
-  const getFolderExpanded = (folderId: string): boolean => !collapsedFolderIds.has(folderId)
+  // Reports whether one template category is expanded.
+  /** Returns whether a template category is expanded. */
+  const getCategoryExpanded = (categoryId: string): boolean =>
+    !collapsedCategoryIds.has(categoryId)
 
   // Updates local expansion without changing prompt-tree persistence.
-  const handleFolderExpandedChange = (folderId: string, isExpanded: boolean): void => {
-    if (isExpanded) collapsedFolderIds.delete(folderId)
-    else collapsedFolderIds.add(folderId)
+  /** Updates template category expansion without affecting root prompt folders. */
+  const handleCategoryExpandedChange = (categoryId: string, isExpanded: boolean): void => {
+    if (isExpanded) collapsedCategoryIds.delete(categoryId)
+    else collapsedCategoryIds.add(categoryId)
   }
 
   // Filters one category group to usable template drafts.
@@ -297,12 +301,12 @@
         const category = categoryById[group.categoryId]
         const categoryEntries = getAvailableEntries(rootFolder, group.categoryId)
         if (!category || categoryEntries.length === 0) continue
-        const isExpanded = getFolderExpanded(category.id)
+        const isExpanded = getCategoryExpanded(category.id)
         items.push({
-          id: `${category.id}:folder`,
+          id: `${category.id}:category`,
           row: {
-            kind: 'folder',
-            folder: category,
+            kind: 'category',
+            category,
             indentCount: 0,
             endsVisibleBranch:
               groupIndex === rootFolder.categoryOrder.categories.length - 2 &&
@@ -343,9 +347,9 @@
       estimateHeight: () => 6,
       snippet: baseFolderHeaderSpacerRow
     },
-    folder: {
+    category: {
       estimateHeight: () => 32,
-      snippet: folderRow
+      snippet: categoryRow
     },
     template: {
       estimateHeight: () => 32,
@@ -452,21 +456,21 @@
   ></div>
 {/snippet}
 
-{#snippet folderRow({ row }: FolderRowProps)}
+{#snippet categoryRow({ row }: CategoryRowProps)}
   <div class="prompt-template-base-folder-content-row">
-    <PromptTreeFolderRow
-      folder={row.folder}
+    <PromptTreeCategoryRow
+      category={row.category}
       isActive={false}
       isDragging={false}
       isPromptDragActive={false}
-      isExpanded={getFolderExpanded(row.folder.id)}
+      isExpanded={getCategoryExpanded(row.category.id)}
       indentCount={row.indentCount}
       endsVisibleBranch={row.endsVisibleBranch}
       showActions={false}
       roundedCorners
-      onFolderExpandedChange={handleFolderExpandedChange}
-      onPromptFolderOpen={() => {}}
-      onFolderSettingsOpen={() => {}}
+      onCategoryExpandedChange={handleCategoryExpandedChange}
+      onCategoryOpen={() => {}}
+      onCategorySettingsOpen={() => {}}
     />
   </div>
 {/snippet}

@@ -1,8 +1,4 @@
 import * as monaco from 'monaco-editor'
-import {
-  PROMPT_FOLDER_SETTINGS_MONACO_MODEL_URI_SEGMENTS,
-  type PromptFolderSettingsField
-} from '@shared/PromptFolder'
 
 export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
 
@@ -60,14 +56,9 @@ export const createPromptTemplateEditorModelUri = (templateId: string): monaco.U
   return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/templates/${templateId}.md`)
 }
 
-export const createPromptFolderSettingsModelUri = (
-  promptFolderId: string,
-  field: PromptFolderSettingsField
-): monaco.Uri => {
-  return monaco.Uri.file(
-    `${PROMPT_EDITOR_MODEL_URI_ROOT}/${PROMPT_FOLDER_SETTINGS_MONACO_MODEL_URI_SEGMENTS[field]}/${promptFolderId}.md`
-  )
-}
+/** Creates the Monaco model URI for one category description editor. */
+export const createCategoryDescriptionModelUri = (categoryId: string): monaco.Uri =>
+  monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/category-descriptions/${categoryId}.md`)
 
 export const warmupMonacoEditor = async (): Promise<void> => {
   const warmupHost = document.createElement('div')

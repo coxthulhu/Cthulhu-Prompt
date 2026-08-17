@@ -11,9 +11,9 @@ const WORKSPACE_PATH = '/ws/move-reorder-atomicity'
 const FOLDER_NAME = 'Move Reorder Atomicity'
 const ROOT_ORDER_PATH =
   `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
-const NESTED_WORKSPACE_PATH = '/ws/subfolders-controls'
-const NESTED_ROOT_ORDER_PATH =
-  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrderV2.json`
+const CATEGORY_WORKSPACE_PATH = '/ws/categories-controls'
+const CATEGORY_ROOT_ORDER_PATH =
+  `${CATEGORY_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrderV2.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
 const moveUpSelector = (promptId: string) =>
@@ -153,7 +153,7 @@ const expectCategoryOrders = async (
     .poll(async () => {
       /** Current V2 category groups flattened to prompt IDs per owner. */
       const categoryOrder = JSON.parse(
-        await readTextFile(electronApp, NESTED_ROOT_ORDER_PATH)
+        await readTextFile(electronApp, CATEGORY_ROOT_ORDER_PATH)
       ) as { categories: Array<{ entries: Array<{ id: string }> }> }
       return categoryOrder.categories.map((category) =>
         category.entries.map((entry) => entry.id)
@@ -272,14 +272,14 @@ describe('Prompt move reorder atomicity', () => {
     electronApp
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders-controls' }
+      workspace: { scenario: 'categories-controls' }
     })
 
     await testHelpers.navigateToPromptFolders('Controls')
     await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 160)
 
-    const promptId = 'subfolders-controls-first'
-    const secondPromptId = 'subfolders-controls-second'
+    const promptId = 'categories-controls-first'
+    const secondPromptId = 'categories-controls-second'
     await runMove(
       mainWindow,
       testHelpers,

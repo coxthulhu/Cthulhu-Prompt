@@ -24,8 +24,9 @@ export const promptHandleSelector = (promptId: string): string =>
 export const promptTreePromptSelector = (promptId: string): string =>
   `[data-testid="prompt-tree-prompt-${promptId}"]`
 
-export const promptTreeFolderSelector = (folderName: string): string =>
-  `[data-testid="prompt-tree-folder-toggle-button-${folderName.replace(/\s+/g, '')}"]`
+/** Returns the sidebar toggle selector for one category name. */
+export const promptTreeCategorySelector = (categoryName: string): string =>
+  `[data-testid="prompt-tree-category-toggle-button-${categoryName.replace(/\s+/g, '')}"]`
 
 export const promptFolderSelectorTriggerSelector =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
@@ -155,27 +156,29 @@ export const beginPromptTreeRowDrag = async (page: Page, promptId: string): Prom
   )
 }
 
-export const beginPromptFolderHandleDrag = async (
+/** Starts a category-card drag from its dedicated handle. */
+export const beginCategoryHandleDrag = async (
   page: Page,
-  promptFolderId: string
+  categoryId: string
 ): Promise<void> => {
   await beginDragFromLocator(
     page,
     page.locator(
-      `[data-testid="prompt-folder-editor-${promptFolderId}"] [data-testid="prompt-folder-drag-handle"]`
+      `[data-testid="category-editor-${categoryId}"] [data-testid="category-drag-handle"]`
     ),
-    `Missing prompt folder drag geometry for ${promptFolderId}`
+    `Missing category drag geometry for ${categoryId}`
   )
 }
 
-export const beginPromptTreeFolderRowDrag = async (
+/** Starts a category drag from its sidebar row. */
+export const beginPromptTreeCategoryRowDrag = async (
   page: Page,
-  folderName: string
+  categoryName: string
 ): Promise<void> => {
   await beginDragFromLocator(
     page,
-    page.locator(promptTreeFolderSelector(folderName)),
-    `Missing prompt tree folder drag geometry for ${folderName}`
+    page.locator(promptTreeCategorySelector(categoryName)),
+    `Missing prompt tree category drag geometry for ${categoryName}`
   )
 }
 

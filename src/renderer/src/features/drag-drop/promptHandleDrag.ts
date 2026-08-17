@@ -7,11 +7,13 @@ export type PromptHandleDragPayload = {
   contentKind: import('@shared/PromptFolder').PromptFolderContentKind
 }
 
-export type PromptFolderEntryDragPayload = {
-  folderId: string
+/** Drag payload for reordering one category. */
+export type CategoryDragPayload = {
+  categoryId: string
 }
 
-export type PromptTreeEntryDragPayload = PromptHandleDragPayload | PromptFolderEntryDragPayload
+/** Every drag payload accepted by prompt tree and prompt-folder screen targets. */
+export type PromptTreeEntryDragPayload = PromptHandleDragPayload | CategoryDragPayload
 
 export const isPromptHandleDragPayload = (
   payload: PromptTreeEntryDragPayload

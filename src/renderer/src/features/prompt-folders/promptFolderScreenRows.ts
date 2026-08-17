@@ -2,26 +2,23 @@ import type { Category } from '@shared/Category'
 import type { PromptFolder } from '@shared/PromptFolder'
 
 /** Placement identity shared by category-screen rows. */
-type PromptFolderScreenOwnedRow = {
-  ownerFolderId: string
+type PromptFolderScreenContentRow = {
+  contentOwnerId: string
   categoryId: string | null
   indentLevel: number
-  isOwnerRoot: boolean
 }
 
 /** Root page-header row. */
 export type PromptFolderScreenRootHeaderRow = { kind: 'root-header' }
 
 /** Folder-style editor row backed by one category. */
-export type PromptFolderScreenFolderEditorRow = PromptFolderScreenOwnedRow & {
-  kind: 'folder-editor'
-  isRoot: false
-  isFirstSibling: boolean
-  isLastSibling: boolean
+export type PromptFolderScreenCategoryEditorRow = PromptFolderScreenContentRow & {
+  kind: 'category-editor'
+  categoryId: string
 }
 
 /** Prompt or template editor row at one category placement. */
-export type PromptFolderScreenPromptEditorRow = PromptFolderScreenOwnedRow & {
+export type PromptFolderScreenPromptEditorRow = PromptFolderScreenContentRow & {
   kind: 'prompt-editor'
   promptId: string
   isFirstPrompt: boolean
@@ -29,7 +26,7 @@ export type PromptFolderScreenPromptEditorRow = PromptFolderScreenOwnedRow & {
 }
 
 /** Add-content and drop-target divider within one category group. */
-export type PromptFolderScreenDividerRow = PromptFolderScreenOwnedRow & {
+export type PromptFolderScreenDividerRow = PromptFolderScreenContentRow & {
   kind: 'prompt-divider'
   previousEntryId: string | null
 }
@@ -42,43 +39,43 @@ export type PromptFolderScreenCategorySeparatorRow = {
 
 /** Exact category placement selected by a divider. */
 export type PromptFolderDividerTarget = {
-  ownerFolderId: string
+  contentOwnerId: string
   categoryId: string | null
   previousEntryId: string | null
 }
 
 /** Exact category placement of one rendered content row. */
 export type PromptFolderPromptTarget = {
-  ownerFolderId: string
+  contentOwnerId: string
   categoryId: string | null
   promptId: string
 }
 
 /** Empty root content placeholder. */
-export type PromptFolderScreenPlaceholderRow = PromptFolderScreenOwnedRow & {
+export type PromptFolderScreenPlaceholderRow = PromptFolderScreenContentRow & {
   kind: 'placeholder'
 }
 
 /** Count summary shown while one category is collapsed. */
-export type PromptFolderScreenCollapsedSummaryRow = PromptFolderScreenOwnedRow & {
+export type PromptFolderScreenCollapsedSummaryRow = PromptFolderScreenContentRow & {
   kind: 'collapsed-summary'
   promptCount: number
 }
 
 /** Rounded bottom cap for one expanded category card. */
-export type PromptFolderScreenBottomCapRow = PromptFolderScreenOwnedRow & {
-  kind: 'folder-bottom-cap'
+export type PromptFolderScreenCategoryBottomCapRow = PromptFolderScreenContentRow & {
+  kind: 'category-bottom-cap'
 }
 
 /** Every virtual row emitted by the active category screen. */
 export type PromptFolderScreenRow =
   | PromptFolderScreenRootHeaderRow
-  | PromptFolderScreenFolderEditorRow
+  | PromptFolderScreenCategoryEditorRow
   | PromptFolderScreenPromptEditorRow
   | PromptFolderScreenDividerRow
   | PromptFolderScreenCategorySeparatorRow
   | PromptFolderScreenCollapsedSummaryRow
-  | PromptFolderScreenBottomCapRow
+  | PromptFolderScreenCategoryBottomCapRow
   | PromptFolderScreenPlaceholderRow
 
 /** Inputs used to project FolderOrderV2 into screen rows. */
@@ -86,7 +83,7 @@ type BuildPromptFolderScreenRowsOptions = {
   rootFolder: PromptFolder
   categories: readonly Category[]
   promptIds: readonly string[]
-  isFolderExpanded: (categoryId: string) => boolean
+  isCategoryExpanded: (categoryId: string) => boolean
 }
 
 /** Projects Uncategorized and ordered category groups into the existing folder-style UI. */
@@ -94,7 +91,7 @@ export const buildPromptFolderScreenRows = ({
   rootFolder,
   categories,
   promptIds,
-  isFolderExpanded
+  isCategoryExpanded
 }: BuildPromptFolderScreenRowsOptions): PromptFolderScreenRow[] => {
   /** Rows emitted in virtual display order. */
   const rows: PromptFolderScreenRow[] = [{ kind: 'root-header' }]
@@ -109,14 +106,14 @@ export const buildPromptFolderScreenRows = ({
   /** Total visible active content used by the empty-root decision. */
   let visiblePromptCount = 0
 
-  for (const [groupIndex, group] of groups.entries()) {
+  for (const group of groups) {
     /** Loaded content IDs retained in this group order. */
     const groupPromptIds = group.entries
       .filter((entry) => promptIdSet.has(entry.id))
       .map((entry) => entry.id)
     visiblePromptCount += groupPromptIds.length
-    /** Stable row owner uses the root for Uncategorized and category ID otherwise. */
-    const ownerFolderId = group.categoryId ?? rootFolder.id
+    /** Stable content owner uses the root for Uncategorized and category ID otherwise. */
+    const contentOwnerId = group.categoryId ?? rootFolder.id
     /** Whether this group is the unheaded root-level Uncategorized area. */
     const isUncategorized = group.categoryId === null
 
@@ -124,30 +121,24 @@ export const buildPromptFolderScreenRows = ({
       /** Non-null category ID established by the Uncategorized branch. */
       const categoryId = group.categoryId as string
       rows.push({
-        kind: 'folder-editor',
-        ownerFolderId,
+        kind: 'category-editor',
+        contentOwnerId,
         categoryId,
-        indentLevel: 0,
-        isOwnerRoot: false,
-        isRoot: false,
-        isFirstSibling: groupIndex === 1,
-        isLastSibling: groupIndex === groups.length - 1
+        indentLevel: 0
       })
-      if (!isFolderExpanded(categoryId)) {
+      if (!isCategoryExpanded(categoryId)) {
         rows.push({
           kind: 'collapsed-summary',
-          ownerFolderId,
+          contentOwnerId,
           categoryId,
           indentLevel: 1,
-          isOwnerRoot: false,
           promptCount: groupPromptIds.length
         })
         rows.push({
-          kind: 'folder-bottom-cap',
-          ownerFolderId,
+          kind: 'category-bottom-cap',
+          contentOwnerId,
           categoryId,
-          indentLevel: 0,
-          isOwnerRoot: false
+          indentLevel: 0
         })
         rows.push({ kind: 'category-separator', categoryId })
         continue
@@ -156,51 +147,46 @@ export const buildPromptFolderScreenRows = ({
 
     rows.push({
       kind: 'prompt-divider',
-      ownerFolderId,
+      contentOwnerId,
       categoryId: group.categoryId,
       previousEntryId: null,
-      indentLevel: isUncategorized ? 0 : 1,
-      isOwnerRoot: isUncategorized
+      indentLevel: isUncategorized ? 0 : 1
     })
     for (const [promptIndex, promptId] of groupPromptIds.entries()) {
       rows.push({
         kind: 'prompt-editor',
-        ownerFolderId,
+        contentOwnerId,
         categoryId: group.categoryId,
         promptId,
         indentLevel: isUncategorized ? 0 : 1,
-        isOwnerRoot: isUncategorized,
         isFirstPrompt: promptIndex === 0,
         isLastPrompt: promptIndex === groupPromptIds.length - 1
       })
       rows.push({
         kind: 'prompt-divider',
-        ownerFolderId,
+        contentOwnerId,
         categoryId: group.categoryId,
         previousEntryId: promptId,
-        indentLevel: isUncategorized ? 0 : 1,
-        isOwnerRoot: isUncategorized
+        indentLevel: isUncategorized ? 0 : 1
       })
     }
     if (!isUncategorized) {
       rows.push({
-        kind: 'folder-bottom-cap',
-        ownerFolderId,
+        kind: 'category-bottom-cap',
+        contentOwnerId,
         categoryId: group.categoryId,
-        indentLevel: 0,
-        isOwnerRoot: false
+        indentLevel: 0
       })
-      rows.push({ kind: 'category-separator', categoryId: ownerFolderId })
+      rows.push({ kind: 'category-separator', categoryId: contentOwnerId })
     }
   }
 
   if (visiblePromptCount === 0 && groups.length === 1) {
     rows.push({
       kind: 'placeholder',
-      ownerFolderId: rootFolder.id,
+      contentOwnerId: rootFolder.id,
       categoryId: null,
-      indentLevel: 0,
-      isOwnerRoot: true
+      indentLevel: 0
     })
   }
   return rows

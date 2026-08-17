@@ -20,9 +20,9 @@ const WORKSPACE_PATH = '/ws/template-selection'
 const PROMPT_FOLDER_ID = 'selection-prompts'
 const SECOND_TEMPLATE_FOLDER_ID = 'selection-templates-second'
 const FIRST_TEMPLATE_FOLDER_ID = 'selection-templates-first'
-const NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-nested'
+const TEMPLATE_CATEGORY_ID = 'selection-templates-category'
 const EMPTY_TEMPLATE_FOLDER_ID = 'selection-templates-empty'
-const UNUSABLE_NESTED_TEMPLATE_FOLDER_ID = 'selection-templates-unusable-nested'
+const UNUSABLE_CATEGORY_ID = 'selection-templates-unusable-category'
 const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Select Template.prompt.md`
 const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Stale Template.prompt.md`
@@ -89,7 +89,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
             { id: 'template-second' },
             { id: 'deleted-template-after' },
             { id: 'template-second' },
-            { id: 'template-nested' }
+            { id: 'template-category' }
           ]
         }
       ]
@@ -124,27 +124,27 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
           templateText: 'First root [[PROMPT_TEXT]].'
         }
       ],
-      subfolders: [
+      categories: [
         {
-          folderName: 'Nested',
-          displayName: 'Nested Templates',
-          folderId: NESTED_TEMPLATE_FOLDER_ID,
+          categoryName: 'Category',
+          displayName: 'Category Templates',
+          categoryId: TEMPLATE_CATEGORY_ID,
           templates: [
             {
-              id: 'template-nested',
-              title: 'Nested Template',
-              templateText: 'Nested [[PROMPT_TEXT]].'
+              id: 'template-category',
+              title: 'Category Template',
+              templateText: 'Category [[PROMPT_TEXT]].'
             }
           ]
         },
         {
-          folderName: 'UnusableNested',
-          displayName: 'Unusable Nested Templates',
-          folderId: UNUSABLE_NESTED_TEMPLATE_FOLDER_ID,
+          categoryName: 'UnusableCategory',
+          displayName: 'Unusable Category Templates',
+          categoryId: UNUSABLE_CATEGORY_ID,
           templates: [
             {
-              id: 'template-unusable-nested',
-              title: 'Unusable Nested Template',
+              id: 'template-unusable-category',
+              title: 'Unusable Category Template',
               templateText: 'No prompt insertion point.'
             }
           ]
@@ -290,17 +290,17 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('.sidebarPromptTreeSettingsLabel')).toHaveText([
       'Second Root Template',
       'First Root Template',
-      'Nested Template'
+      'Category Template'
     ])
-    await expect(dialog.locator('.sidebarPromptTreeFolderLabel')).toHaveText([
-      'Nested Templates'
+    await expect(dialog.locator('.sidebarPromptTreeCategoryLabel')).toHaveText([
+      'Category Templates'
     ])
     await expect(
       dialog.locator(`[data-testid="prompt-template-base-folder-header-${EMPTY_TEMPLATE_FOLDER_ID}"]`)
     ).toHaveCount(0)
     await expect(
       dialog.locator(
-        '[data-testid="prompt-tree-folder-toggle-button-UnusableNestedTemplates"]'
+        '[data-testid="prompt-tree-category-toggle-button-UnusableCategoryTemplates"]'
       )
     ).toHaveCount(0)
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveCSS(
@@ -311,12 +311,12 @@ describe('Prompt template selection', () => {
       dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
     ).toHaveCSS('cursor', 'pointer')
     await expect(
-      dialog.locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
+      dialog.locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
     ).toHaveCSS('cursor', 'pointer')
     await expect(
       dialog
-        .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
-        .locator('.sidebarPromptTreeFolderIcon')
+        .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
+        .locator('.sidebarPromptTreeCategoryIcon')
     ).toBeVisible()
     await expect(
       dialog.locator('.prompt-template-base-folder-header .prompt-template-base-folder-icon')
@@ -325,7 +325,7 @@ describe('Prompt template selection', () => {
       dialog.locator('.prompt-template-base-folder-header .sidebarPromptTreeChevronWrap')
     ).toHaveCount(0)
     await expect(
-      dialog.locator('[data-testid="prompt-template-option-none"] .sidebarPromptTreeFolderIcon')
+      dialog.locator('[data-testid="prompt-template-option-none"] .sidebarPromptTreeCategoryIcon')
     ).toHaveCount(0)
     await expect(dialog.locator('[data-testid="prompt-tree-prompt-template-invalid"]')).toHaveCount(
       0
@@ -350,10 +350,10 @@ describe('Prompt template selection', () => {
     const expandedTreeHeight = (await templateTree.boundingBox())!.height
 
     await dialog
-      .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
+      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
       .click()
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toHaveCount(0)
     await expect
       .poll(async () => (await templateTree.boundingBox())?.height ?? Number.POSITIVE_INFINITY)
@@ -370,10 +370,10 @@ describe('Prompt template selection', () => {
     ).toBeLessThanOrEqual(2)
 
     await dialog
-      .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
+      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
       .click()
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toBeVisible()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await noTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
@@ -388,16 +388,16 @@ describe('Prompt template selection', () => {
     ).toBeNull()
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
 
-    await dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]').click()
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-category"]').click()
     await expect(dialog).toBeVisible()
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toHaveAttribute('aria-pressed', 'true')
     expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templates:')
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(dialog).toBeHidden()
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'Nested Template'
+      'Category Template'
     )
     await expectTemplateIndicator(promptEditor, 'selected', '--ui-normal-text')
     await expect(promptEditor.locator('[data-testid="prompt-copy-button"]')).toBeVisible()
@@ -406,13 +406,13 @@ describe('Prompt template selection', () => {
     ).toHaveCount(0)
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templates:\n  - id: template-nested')
+      .toContain('templates:\n  - id: template-category')
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toHaveAttribute('aria-pressed', 'true')
-    await dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]').click()
+    await dialog.locator('[data-testid="prompt-tree-prompt-template-category"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -420,18 +420,18 @@ describe('Prompt template selection', () => {
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     expect(
       parsePromptMarkdown(await readTextFile(electronApp, PROMPT_PATH))?.templates
-    ).toEqual([{ id: 'template-nested' }])
+    ).toEqual([{ id: 'template-category' }])
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await dialog
-      .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
+      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
       .click()
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toHaveCount(0)
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toBeVisible()
     await dialog.locator('[data-testid="prompt-template-option-none"]').click()
     await expect(dialog).toBeVisible()
@@ -474,7 +474,7 @@ describe('Prompt template selection', () => {
       { id: 'template-second' },
       { id: 'deleted-template-after' },
       { id: 'template-second' },
-      { id: 'template-nested' }
+      { id: 'template-category' }
     ])
 
     await multiTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
@@ -483,14 +483,14 @@ describe('Prompt template selection', () => {
       dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
     ).toHaveAttribute('aria-pressed', 'true')
     await expect(
-      dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toHaveAttribute('aria-pressed', 'true')
     await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
     await dialog.locator('[data-testid="prompt-tree-prompt-template-second"]').click()
     await dialog.locator('[data-testid="prompt-tree-prompt-template-second"]').click()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'Nested Template + 2 More'
+      'Category Template + 2 More'
     )
     await expect
       .poll(
@@ -500,7 +500,7 @@ describe('Prompt template selection', () => {
           )?.templates
       )
       .toEqual([
-        { id: 'template-nested' },
+        { id: 'template-category' },
         { id: 'template-first' },
         { id: 'template-second' }
       ])
@@ -546,7 +546,7 @@ describe('Prompt template selection', () => {
     await multiTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
-      .toBe('Nested Second root Second root Copy with several templates....')
+      .toBe('Category Second root Second root Copy with several templates....')
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Second Root Template + 2 More'
     )
@@ -557,7 +557,7 @@ describe('Prompt template selection', () => {
       { id: 'template-second' },
       { id: 'deleted-template-after' },
       { id: 'template-second' },
-      { id: 'template-nested' }
+      { id: 'template-category' }
     ])
 
     await noTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()

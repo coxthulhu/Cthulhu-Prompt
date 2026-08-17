@@ -118,11 +118,11 @@ describe('Prompt folder storage', () => {
     await mainWindow.locator(FOLDER_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
 
-    // The selected prompt root exposes category creation without legacy subfolder dividers.
+    // The selected prompt root exposes category creation without add-category dividers.
     const selectorTrigger = mainWindow.locator(promptFolderSelectorTriggerSelector)
     await expect(selectorTrigger).toContainText(ALPHA_NAME)
     await expect(mainWindow.locator('[data-testid="prompt-folder-add-category-button"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-subfolder-"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category-"]')).toHaveCount(0)
 
     // The root metadata identifies a prompt folder while only Active owns an order file.
     const alphaPath = folderPath(ALPHA_NAME)

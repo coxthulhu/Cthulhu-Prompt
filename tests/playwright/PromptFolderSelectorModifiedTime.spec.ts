@@ -9,8 +9,8 @@ const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
 const SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME = '[data-testid="sidebar-prompt-folder-modified-time"]'
-const NESTED_PROMPT_EDITOR = promptEditorSelector('subfolders-ui-nested-prompt')
-const NESTED_PROMPT_TITLE = `${NESTED_PROMPT_EDITOR} ${PROMPT_TITLE_SELECTOR}`
+const CATEGORY_PROMPT_EDITOR = promptEditorSelector('categories-ui-category-prompt')
+const CATEGORY_PROMPT_TITLE = `${CATEGORY_PROMPT_EDITOR} ${PROMPT_TITLE_SELECTOR}`
 
 const daysAgo = (days: number): string => new Date(Date.now() - days * DAY_MS).toISOString()
 
@@ -20,14 +20,14 @@ describe('Prompt folder selector metadata', () => {
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: {
-        scenario: 'subfolders-ui',
+        scenario: 'categories-ui',
         fileModifiedTimes: {
-          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Root Before.prompt.md': daysAgo(5),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Root After.prompt.md': daysAgo(4),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Nested Prompt.prompt.md': daysAgo(3),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Grandchild Prompt.prompt.md':
+          '/ws/categories-ui/Prompts/Hierarchy/Active/Root Before.prompt.md': daysAgo(5),
+          '/ws/categories-ui/Prompts/Hierarchy/Active/Root After.prompt.md': daysAgo(4),
+          '/ws/categories-ui/Prompts/Hierarchy/Active/Category Prompt.prompt.md': daysAgo(3),
+          '/ws/categories-ui/Prompts/Hierarchy/Active/Second Category Prompt.prompt.md':
             daysAgo(2),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Completed/Root Completed.prompt.md': daysAgo(0)
+          '/ws/categories-ui/Prompts/Hierarchy/Completed/Root Completed.prompt.md': daysAgo(0)
         }
       }
     })
@@ -51,8 +51,8 @@ describe('Prompt folder selector metadata', () => {
 
     await testHelpers.pauseIpcChannel('update-prompt')
     await testHelpers.navigateToPromptFolders('Hierarchy')
-    await waitForMonacoEditor(mainWindow, NESTED_PROMPT_EDITOR)
-    await mainWindow.locator(NESTED_PROMPT_TITLE).fill('Nested Prompt Updated')
+    await waitForMonacoEditor(mainWindow, CATEGORY_PROMPT_EDITOR)
+    await mainWindow.locator(CATEGORY_PROMPT_TITLE).fill('Category Prompt Updated')
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await expect(hierarchyItem.locator(SIDEBAR_PROMPT_FOLDER_MODIFIED_TIME)).toHaveText('Today')

@@ -23,9 +23,9 @@
   import { setCategoryDescriptionWithAutosave } from '@renderer/data/Mutations/CategoryMutations'
   import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
   import {
-    clearPromptFolderSettingsFieldRowMeasuredHeight,
-    recordPromptFolderSettingsRowMeasuredHeight
-  } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
+    clearCategoryDescriptionMeasuredHeight,
+    recordCategoryDescriptionMeasuredHeight
+  } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 
   let {
@@ -54,7 +54,7 @@
   // Side effect: persist the last selected row for this folder when the screen unmounts.
   onDestroy(() => {
     if (didDeleteScreenRootFolder) return
-    controller.persistActivePromptTreeRow()
+    controller.persistActivePromptScreenRow()
   })
 
   let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
@@ -164,7 +164,7 @@
     )
   }
 
-  /** Updates and measures the sole category setting before its paced autosave. */
+  /** Updates and measures a category description before its paced autosave. */
   const handleCategoryDescriptionChange = (
     categoryId: string,
     text: string,
@@ -173,12 +173,7 @@
     const category = controller.categories.find((candidate) => candidate.id === categoryId)
     if (!category) return
     const textChanged = category.description !== text
-    recordPromptFolderSettingsRowMeasuredHeight(
-      categoryId,
-      'folderDescription',
-      measurement,
-      textChanged
-    )
+    recordCategoryDescriptionMeasuredHeight(categoryId, measurement, textChanged)
     if (textChanged) setCategoryDescriptionWithAutosave(categoryId, text, AUTOSAVE_MS)
   }
 
@@ -190,7 +185,7 @@
     const category = controller.categories.find((candidate) => candidate.id === categoryId)
     const description = isPresent ? '' : null
     if (!category || category.description === description) return
-    clearPromptFolderSettingsFieldRowMeasuredHeight(categoryId, 'folderDescription')
+    clearCategoryDescriptionMeasuredHeight(categoryId)
     setCategoryDescriptionWithAutosave(categoryId, description, AUTOSAVE_MS)
   }
 
@@ -298,7 +293,6 @@
             workspaceId={controller.workspaceId}
             contentKind={controller.contentKind}
             screenRootFolderId={controller.screenRootFolderId}
-            folderSettingsByFolderId={controller.folderSettingsByFolderId}
             promptEditorSizingConfig={controller.promptEditorSizingConfig}
             promptDraftById={controller.promptDraftById}
             promptTemplateTextById={controller.promptTemplateTextById}
@@ -309,11 +303,11 @@
             visiblePromptIds={controller.visiblePromptIds}
             activePromptCount={controller.activePromptCount}
             completedPromptCount={controller.completedPromptCount}
-            completedPromptOwnerByPromptId={controller.completedPromptOwnerByPromptId}
+            completedPromptContentOwnerByPromptId={controller.completedPromptContentOwnerByPromptId}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
-            settingsSectionExpandedByFolderId={controller.settingsSectionExpandedByFolderId}
-            promptsSectionExpandedByFolderId={controller.promptsSectionExpandedByFolderId}
+            detailsSectionExpandedByOwnerId={controller.detailsSectionExpandedByOwnerId}
+            contentSectionExpandedByOwnerId={controller.contentSectionExpandedByOwnerId}
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
@@ -335,8 +329,8 @@
             onScrollTopChange={controller.handleVirtualScrollTopChange}
             onCenterRowChange={controller.handleVirtualCenterRowChange}
             onUserScroll={controller.handleVirtualUserScroll}
-            onSettingsSectionToggle={controller.toggleSettingsSectionExpanded}
-            onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
+            onDetailsSectionToggle={controller.toggleDetailsSectionExpanded}
+            onContentSectionToggle={controller.toggleContentSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}
             onRenameCategory={openRenameCategoryDialog}
             onDeleteCategory={(categoryId) => {

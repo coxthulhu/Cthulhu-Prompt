@@ -25,7 +25,9 @@ const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
 const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
-const SHORT_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Short"]'
+/** Category selector used to prove the Short root is not duplicated in the tree. */
+const SHORT_ROOT_DUPLICATE_CATEGORY_TOGGLE =
+  '[data-testid="prompt-tree-category-toggle-button-Short"]'
 const SHORT_SCROLL_TARGET_PX = 2000
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
@@ -43,22 +45,24 @@ const COMPLETED_TREE_WORKSPACE_PATH = '/ws/completed-tree-navigation'
 const COMPLETED_TREE_FOLDER_NAME = 'Completed Tree Navigation'
 const COMPLETED_TREE_PROMPT_COUNT = 20
 const COMPLETED_TREE_TARGET_PROMPT_ID = 'completed-tree-prompt-0'
-const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
-const SUBFOLDERS_MAIN_FOLDER_ID = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main`)
-const SUBFOLDERS_NESTED_FOLDER_ID = createDeterministicId(
-  `${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`
+const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
+const CATEGORIES_MAIN_FOLDER_ID = createDeterministicId(`${CATEGORIES_WORKSPACE_PATH}:Main`)
+const CATEGORY_ID = createDeterministicId(
+  `${CATEGORIES_WORKSPACE_PATH}:Main/Category`
 )
-const MAIN_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Main"]'
-const NESTED_FOLDER_TOGGLE = '[data-testid="prompt-tree-folder-toggle-button-Nested"]'
-const NESTED_FOLDER_OPEN_BUTTON = '[data-testid="prompt-tree-folder-open-button-Nested"]'
-const NESTED_FOLDER_SETTINGS_MENU_ITEM =
-  '[data-testid="prompt-tree-folder-settings-menu-item-Nested"]'
-const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
+/** Category selector used to prove the Main root is not duplicated in the tree. */
+const MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE =
+  '[data-testid="prompt-tree-category-toggle-button-Main"]'
+const CATEGORY_TOGGLE = '[data-testid="prompt-tree-category-toggle-button-Category"]'
+const CATEGORY_OPEN_BUTTON = '[data-testid="prompt-tree-category-open-button-Category"]'
+const CATEGORY_SETTINGS_MENU_ITEM =
+  '[data-testid="prompt-tree-category-settings-menu-item-Category"]'
+const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
-const NESTED_FOLDER_EDITOR = `[data-testid="prompt-folder-editor-${SUBFOLDERS_NESTED_FOLDER_ID}"]`
-const NESTED_FOLDER_SETTINGS_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-settings-toggle"]`
-const NESTED_FOLDER_TITLE_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
+const CATEGORY_EDITOR = `[data-testid="category-editor-${CATEGORY_ID}"]`
+const CATEGORY_SETTINGS_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-settings-toggle"]`
+const CATEGORY_CONTENT_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-content-toggle"]`
 // Matches the folder-navigation offset requested from the virtual window.
 const PROMPT_FOLDER_NAVIGATION_TOP_OFFSET_PX = 80
 function createDeterministicId(seed: string): string {
@@ -224,9 +228,9 @@ describe('Prompt folder prompt tree', () => {
     electronApp,
     testSetup
   }) => {
-    const workspaceId = createDeterministicId(SUBFOLDERS_WORKSPACE_PATH)
+    const workspaceId = createDeterministicId(CATEGORIES_WORKSPACE_PATH)
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
@@ -273,7 +277,7 @@ describe('Prompt folder prompt tree', () => {
     ).toEqual([
       'sidebar-folder-root-button',
       'toggle-completed-prompts-button',
-      'toggle-all-prompt-folders-button',
+      'toggle-all-categories-button',
       'sidebar-add-prompt-button',
       'selected-prompt-folder-actions-button'
     ])
@@ -310,11 +314,11 @@ describe('Prompt folder prompt tree', () => {
       )
       .toEqual(folderRootActiveStyles)
     await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
-    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-after"]')).toBeVisible()
 
@@ -323,68 +327,68 @@ describe('Prompt folder prompt tree', () => {
         [
           '[data-testid="prompt-tree-prompt-base-before"]',
           '[data-testid="prompt-tree-prompt-base-after"]',
-          '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
-          '[data-testid="prompt-tree-prompt-nested-prompt"]'
+          '[data-testid="prompt-tree-category-toggle-button-Category"]',
+          '[data-testid="prompt-tree-prompt-category-prompt"]'
         ].join(', ')
       )
       .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
     expect(treeOrder).toEqual([
       'prompt-tree-prompt-base-before',
       'prompt-tree-prompt-base-after',
-      'prompt-tree-folder-toggle-button-Nested',
-      'prompt-tree-prompt-nested-prompt'
+      'prompt-tree-category-toggle-button-Category',
+      'prompt-tree-prompt-category-prompt'
     ])
 
     const indentation = await mainWindow.evaluate(
-      ({ nestedSelector, nestedPromptSelector }) => {
+      ({ categorySelector, categoryPromptSelector }) => {
         const basePromptLabel = document
           .querySelector<HTMLElement>('[data-testid="prompt-tree-prompt-base-before"]')
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
-        const nestedRow = document.querySelector<HTMLElement>(nestedSelector)
-        const nestedChevron = nestedRow?.querySelector<HTMLElement>(
+        const categoryRow = document.querySelector<HTMLElement>(categorySelector)
+        const categoryChevron = categoryRow?.querySelector<HTMLElement>(
           '.sidebarPromptTreeChevronWrap'
         )
-        const nestedPromptLabel = document
-          .querySelector<HTMLElement>(nestedPromptSelector)
+        const categoryPromptLabel = document
+          .querySelector<HTMLElement>(categoryPromptSelector)
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
 
         if (
           !basePromptLabel ||
-          !nestedRow ||
-          !nestedChevron ||
-          !nestedPromptLabel
+          !categoryRow ||
+          !categoryChevron ||
+          !categoryPromptLabel
         ) {
           return null
         }
 
         return {
           basePromptLabelLeft: Math.round(basePromptLabel.getBoundingClientRect().left),
-          nestedHasGutter: Boolean(nestedRow.querySelector('.sidebarPromptTreeGutter')),
-          nestedPromptLabelLeft: Math.round(nestedPromptLabel.getBoundingClientRect().left)
+          categoryHasGutter: Boolean(categoryRow.querySelector('.sidebarPromptTreeGutter')),
+          categoryPromptLabelLeft: Math.round(categoryPromptLabel.getBoundingClientRect().left)
         }
       },
       {
-        nestedSelector: NESTED_FOLDER_TOGGLE,
-        nestedPromptSelector: '[data-testid="prompt-tree-prompt-nested-prompt"]'
+        categorySelector: CATEGORY_TOGGLE,
+        categoryPromptSelector: '[data-testid="prompt-tree-prompt-category-prompt"]'
       }
     )
     expect(indentation).not.toBeNull()
-    expect(indentation!.nestedHasGutter).toBe(false)
-    expect(indentation!.nestedPromptLabelLeft).toBeGreaterThan(indentation!.basePromptLabelLeft + 2)
+    expect(indentation!.categoryHasGutter).toBe(false)
+    expect(indentation!.categoryPromptLabelLeft).toBeGreaterThan(indentation!.basePromptLabelLeft + 2)
 
     await scrollPromptFolderRowAwayFromViewportCenter(
       mainWindow,
       testHelpers,
-      '[data-testid="prompt-editor-nested-prompt"]'
+      '[data-testid="prompt-editor-category-prompt"]'
     )
-    await mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]').click()
+    await mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]').click()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveAttribute('data-row-state', 'active')
     await expectRowToReachClosestPromptFolderViewportCenter(
       mainWindow,
       testHelpers,
-      '[data-testid="prompt-editor-nested-prompt"]'
+      '[data-testid="prompt-editor-category-prompt"]'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
     await expect
@@ -394,70 +398,70 @@ describe('Prompt folder prompt tree', () => {
           ? persisted.selectedScreenData.promptFolderId
           : null
       })
-      .toBe(SUBFOLDERS_MAIN_FOLDER_ID)
+      .toBe(CATEGORIES_MAIN_FOLDER_ID)
 
     await testHelpers.navigateToHomeScreen()
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          return persisted.promptFolderPromptTreeEntries.find(
-            (entry) => entry.promptFolderId === SUBFOLDERS_NESTED_FOLDER_ID
-          )?.promptTreeEntryId
+          return persisted.promptFolderViewEntries.find(
+            (entry) => entry.contentOwnerId === CATEGORY_ID
+          )?.selectedEntryId
         },
         { timeout: 15000 }
       )
-      .toBe('nested-prompt')
+      .toBe('category-prompt')
     await testHelpers.navigateToPromptFolders('Main')
     await expectRowToReachClosestPromptFolderViewportCenter(
       mainWindow,
       testHelpers,
-      '[data-testid="prompt-editor-nested-prompt"]'
+      '[data-testid="prompt-editor-category-prompt"]'
     )
 
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
     )
-    await expect(mainWindow.locator(NESTED_FOLDER_TITLE_TOGGLE)).toHaveAttribute(
+    await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
       'true'
     )
-    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, NESTED_FOLDER_EDITOR)
-    await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
-    await expect(mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON)).toBeVisible()
-    await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click()
+    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, CATEGORY_EDITOR)
+    await mainWindow.locator(CATEGORY_TOGGLE).hover()
+    await expect(mainWindow.locator(CATEGORY_OPEN_BUTTON)).toBeVisible()
+    await mainWindow.locator(CATEGORY_OPEN_BUTTON).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, NESTED_FOLDER_EDITOR)
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, CATEGORY_EDITOR)
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
     )
-    await expect(mainWindow.locator(NESTED_FOLDER_TITLE_TOGGLE)).toHaveAttribute(
+    await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
       'true'
     )
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
 
-    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, NESTED_FOLDER_EDITOR)
-    await mainWindow.locator(NESTED_FOLDER_TOGGLE).hover()
+    await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, CATEGORY_EDITOR)
+    await mainWindow.locator(CATEGORY_TOGGLE).hover()
     await expect(
-      mainWindow.locator('[data-testid^="prompt-tree-folder-options-button-"]')
+      mainWindow.locator('[data-testid^="prompt-tree-category-options-button-"]')
     ).toHaveCount(0)
     // Captures an ordinary point inside the row instead of either hover action.
-    const nestedFolderToggleBox = await mainWindow.locator(NESTED_FOLDER_TOGGLE).boundingBox()
-    expect(nestedFolderToggleBox).not.toBeNull()
+    const categoryToggleBox = await mainWindow.locator(CATEGORY_TOGGLE).boundingBox()
+    expect(categoryToggleBox).not.toBeNull()
     // Anchors the expected popup position to the right-click coordinates and cursor gap.
     const rowContextMenuPoint = {
-      x: nestedFolderToggleBox!.x + nestedFolderToggleBox!.width / 2,
-      y: nestedFolderToggleBox!.y + nestedFolderToggleBox!.height / 2
+      x: categoryToggleBox!.x + categoryToggleBox!.width / 2,
+      y: categoryToggleBox!.y + categoryToggleBox!.height / 2
     }
     const contextMenuCursorGap = 4
     await mainWindow.mouse.click(rowContextMenuPoint.x, rowContextMenuPoint.y, { button: 'right' })
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toBeVisible()
     // Reads the rendered popup geometry to verify cursor-relative placement.
     const rowContextMenuBox = await mainWindow
-      .locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)
+      .locator(CATEGORY_SETTINGS_MENU_ITEM)
       .locator('xpath=ancestor::*[@role="menu"]')
       .boundingBox()
     expect(rowContextMenuBox).not.toBeNull()
@@ -466,56 +470,56 @@ describe('Prompt folder prompt tree', () => {
     ).toBeLessThanOrEqual(2)
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).focus()
     await mainWindow.keyboard.press('Enter')
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toHaveCount(0)
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toHaveCount(0)
     await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.keyboard.press('Escape')
-    await mainWindow.locator(NESTED_FOLDER_TOGGLE).focus()
+    await mainWindow.locator(CATEGORY_TOGGLE).focus()
     await mainWindow.keyboard.press('Shift+F10')
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toHaveCount(0)
-    await mainWindow.locator(NESTED_FOLDER_OPEN_BUTTON).click({ button: 'right' })
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
-    await mainWindow.locator(NESTED_FOLDER_SETTINGS_MENU_ITEM).click()
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toHaveCount(0)
+    await mainWindow.locator(CATEGORY_OPEN_BUTTON).click({ button: 'right' })
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, NESTED_FOLDER_EDITOR)
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, CATEGORY_EDITOR)
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'true'
     )
 
-    await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await mainWindow.locator(CATEGORY_TOGGLE).click()
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          return persisted.promptFolderPromptTreeEntries.find(
-            (entry) => entry.promptFolderId === SUBFOLDERS_NESTED_FOLDER_ID
-          )?.promptTreeIsExpanded
+          return persisted.promptFolderViewEntries.find(
+            (entry) => entry.contentOwnerId === CATEGORY_ID
+          )?.treeIsExpanded
         },
         { timeout: 15000 }
       )
       .toBe(false)
 
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toHaveAttribute(
       'aria-label',
-      'Expand All Prompt Folders'
+      'Expand All Categories'
     )
-    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).click()
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toBeVisible()
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const nestedEntry = persisted.promptFolderPromptTreeEntries.find(
-            (entry) => entry.promptFolderId === SUBFOLDERS_NESTED_FOLDER_ID
+          const categoryEntry = persisted.promptFolderViewEntries.find(
+            (entry) => entry.contentOwnerId === CATEGORY_ID
           )
-          return nestedEntry?.promptTreeIsExpanded
+          return categoryEntry?.treeIsExpanded
         },
         { timeout: 15000 }
       )
@@ -584,7 +588,7 @@ describe('Prompt folder prompt tree', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
@@ -593,9 +597,9 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    const promptEditor = promptEditorSelector('nested-prompt')
-    const promptTreeRow = mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
-    await expect(mainWindow.locator(NESTED_FOLDER_SETTINGS_TOGGLE)).toHaveAttribute(
+    const promptEditor = promptEditorSelector('category-prompt')
+    const promptTreeRow = mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
     )
@@ -687,14 +691,14 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeGreaterThan(0)
-    await expect(mainWindow.locator(SHORT_FOLDER_TOGGLE)).toHaveCount(0)
+    await expect(mainWindow.locator(SHORT_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
   })
 
   test('expands collapsed prompts section when selecting a prompt in the prompt tree', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
@@ -703,15 +707,15 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    const promptsToggle = mainWindow.locator(NESTED_FOLDER_TITLE_TOGGLE)
+    const promptsToggle = mainWindow.locator(CATEGORY_CONTENT_TOGGLE)
     await promptsToggle.click()
     await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(promptEditorSelector('nested-prompt'))).toHaveCount(0)
+    await expect(mainWindow.locator(promptEditorSelector('category-prompt'))).toHaveCount(0)
 
-    await mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]').click()
+    await mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]').click()
 
     await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(promptEditorSelector('nested-prompt'))).toBeVisible()
+    await expect(mainWindow.locator(promptEditorSelector('category-prompt'))).toBeVisible()
   })
 
   test('updates prompt tree title while typing in title input', async ({ testSetup }) => {
@@ -767,111 +771,111 @@ describe('Prompt folder prompt tree', () => {
 
   test('omits the root row and reduces direct entry indentation', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
-    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
+    await expect(mainWindow.locator(MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
     const basePrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
-    const nestedFolder = mainWindow.locator(NESTED_FOLDER_TOGGLE)
-    const nestedPrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+    const category = mainWindow.locator(CATEGORY_TOGGLE)
+    const categoryPrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     await expect(basePrompt).toBeVisible()
-    await expect(nestedFolder).toBeVisible()
-    await expect(nestedPrompt).toBeVisible()
+    await expect(category).toBeVisible()
+    await expect(categoryPrompt).toBeVisible()
 
     await expect(basePrompt.locator('[data-indent-guide-line]')).toHaveCount(0)
-    await expect(nestedFolder.locator('.sidebarPromptTreeGutter')).toHaveCount(0)
-    await expect(nestedPrompt.locator('[data-indent-guide-line]')).toHaveCount(1)
+    await expect(category.locator('.sidebarPromptTreeGutter')).toHaveCount(0)
+    await expect(categoryPrompt.locator('[data-indent-guide-line]')).toHaveCount(1)
 
-    const folderRowTreatment = await nestedFolder.evaluate((button) => {
+    const categoryRowTreatment = await category.evaluate((button) => {
       const chevron = button.querySelector<HTMLElement>('.sidebarPromptTreeChevronWrap')
-      const folderIcon = button.querySelector<SVGElement>('.sidebarPromptTreeFolderIcon')
-      const label = button.querySelector<HTMLElement>('.sidebarPromptTreeFolderLabel')
-      if (!chevron || !folderIcon || !label) return null
+      const categoryIcon = button.querySelector<SVGElement>('.sidebarPromptTreeCategoryIcon')
+      const label = button.querySelector<HTMLElement>('.sidebarPromptTreeCategoryLabel')
+      if (!chevron || !categoryIcon || !label) return null
 
       const buttonRect = button.getBoundingClientRect()
       const chevronRect = chevron.getBoundingClientRect()
-      const folderIconRect = folderIcon.getBoundingClientRect()
+      const categoryIconRect = categoryIcon.getBoundingClientRect()
       const labelRect = label.getBoundingClientRect()
       const labelStyle = getComputedStyle(label)
       return {
         chevronInsetPx: chevronRect.left - buttonRect.left,
-        folderIconOffsetPx: folderIconRect.left - chevronRect.left,
-        labelOffsetPx: labelRect.left - folderIconRect.left,
-        folderIconWidthPx: folderIconRect.width,
+        categoryIconOffsetPx: categoryIconRect.left - chevronRect.left,
+        labelOffsetPx: labelRect.left - categoryIconRect.left,
+        categoryIconWidthPx: categoryIconRect.width,
         labelFontSize: labelStyle.fontSize,
         labelFontWeight: labelStyle.fontWeight
       }
     })
 
-    expect(folderRowTreatment).not.toBeNull()
-    expect(Math.abs(folderRowTreatment!.chevronInsetPx - 9)).toBeLessThanOrEqual(1)
-    expect(Math.abs(folderRowTreatment!.folderIconOffsetPx - 32)).toBeLessThanOrEqual(1)
-    expect(Math.abs(folderRowTreatment!.labelOffsetPx - 26)).toBeLessThanOrEqual(1)
-    expect(Math.abs(folderRowTreatment!.folderIconWidthPx - 16)).toBeLessThanOrEqual(1)
-    expect(folderRowTreatment!.labelFontSize).toBe('14px')
-    expect(folderRowTreatment!.labelFontWeight).toBe('400')
+    expect(categoryRowTreatment).not.toBeNull()
+    expect(Math.abs(categoryRowTreatment!.chevronInsetPx - 9)).toBeLessThanOrEqual(1)
+    expect(Math.abs(categoryRowTreatment!.categoryIconOffsetPx - 32)).toBeLessThanOrEqual(1)
+    expect(Math.abs(categoryRowTreatment!.labelOffsetPx - 26)).toBeLessThanOrEqual(1)
+    expect(Math.abs(categoryRowTreatment!.categoryIconWidthPx - 16)).toBeLessThanOrEqual(1)
+    expect(categoryRowTreatment!.labelFontSize).toBe('14px')
+    expect(categoryRowTreatment!.labelFontWeight).toBe('400')
   })
 
-  test('uses the folder action space only while folder actions are visible', async ({
+  test('uses the category action space only while category actions are visible', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
-    const folderToggle = mainWindow.locator(NESTED_FOLDER_TOGGLE)
-    const folderLabel = folderToggle.locator('.sidebarPromptTreeFolderLabel')
-    const folderActions = mainWindow.locator(
-      '[data-testid="prompt-tree-folder-open-button-Nested"]'
+    const categoryToggle = mainWindow.locator(CATEGORY_TOGGLE)
+    const categoryLabel = categoryToggle.locator('.sidebarPromptTreeCategoryLabel')
+    const categoryActions = mainWindow.locator(
+      '[data-testid="prompt-tree-category-open-button-Category"]'
     )
     const readRoundedLabelWidth = async (): Promise<number> =>
-      folderLabel.evaluate((label) => Math.round(label.getBoundingClientRect().width))
+      categoryLabel.evaluate((label) => Math.round(label.getBoundingClientRect().width))
 
     await mainWindow.mouse.move(0, 0)
-    await expect(folderActions).toBeHidden()
+    await expect(categoryActions).toBeHidden()
     const restingLabelWidth = await readRoundedLabelWidth()
 
-    await folderToggle.hover()
-    await expect(folderActions).toBeVisible()
+    await categoryToggle.hover()
+    await expect(categoryActions).toBeVisible()
     const hoveredLabelWidth = await readRoundedLabelWidth()
-    const folderToggleBox = await folderToggle.boundingBox()
-    const folderActionsBox = await folderActions.boundingBox()
+    const categoryToggleBox = await categoryToggle.boundingBox()
+    const categoryActionsBox = await categoryActions.boundingBox()
 
     expect(Math.abs(restingLabelWidth - hoveredLabelWidth - 44)).toBeLessThanOrEqual(1)
-    expect(folderToggleBox).not.toBeNull()
-    expect(folderActionsBox).not.toBeNull()
-    const folderActionsRightInset =
-      folderToggleBox!.x +
-      folderToggleBox!.width -
-      folderActionsBox!.x -
-      folderActionsBox!.width
-    expect(Math.abs(folderActionsRightInset - 14)).toBeLessThanOrEqual(1)
+    expect(categoryToggleBox).not.toBeNull()
+    expect(categoryActionsBox).not.toBeNull()
+    const categoryActionsRightInset =
+      categoryToggleBox!.x +
+      categoryToggleBox!.width -
+      categoryActionsBox!.x -
+      categoryActionsBox!.width
+    expect(Math.abs(categoryActionsRightInset - 14)).toBeLessThanOrEqual(1)
 
     await mainWindow.mouse.move(0, 0)
-    await expect(folderActions).toBeHidden()
+    await expect(categoryActions).toBeHidden()
     await expect.poll(readRoundedLabelWidth).toBe(restingLabelWidth)
   })
 
-  test('selects prompt rows and toggles folder rows from the left gutter', async ({
+  test('selects prompt rows and toggles category rows from the left gutter', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     const promptRow = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
-    const folderToggle = mainWindow.locator(NESTED_FOLDER_TOGGLE)
+    const categoryToggle = mainWindow.locator(CATEGORY_TOGGLE)
     await expect(promptRow).toBeVisible()
-    await expect(folderToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(categoryToggle).toHaveAttribute('aria-expanded', 'true')
 
     const promptBox = await promptRow.boundingBox()
     if (!promptBox) {
@@ -880,14 +884,14 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.mouse.click(promptBox.x + 8, promptBox.y + promptBox.height / 2)
     await expect(promptRow).toHaveAttribute('data-row-state', 'active')
 
-    const folderBox = await folderToggle.boundingBox()
-    if (!folderBox) {
-      throw new Error('Missing prompt tree folder edge click geometry')
+    const categoryBox = await categoryToggle.boundingBox()
+    if (!categoryBox) {
+      throw new Error('Missing prompt tree category edge click geometry')
     }
-    await mainWindow.mouse.click(folderBox.x + 2, folderBox.y + folderBox.height / 2)
-    await expect(folderToggle).toHaveAttribute('aria-expanded', 'false')
+    await mainWindow.mouse.click(categoryBox.x + 2, categoryBox.y + categoryBox.height / 2)
+    await expect(categoryToggle).toHaveAttribute('aria-expanded', 'false')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect(promptRow).toBeVisible()
   })
@@ -896,29 +900,29 @@ describe('Prompt folder prompt tree', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     const firstPrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
-    const nestedFolder = mainWindow.locator(NESTED_FOLDER_TOGGLE)
+    const category = mainWindow.locator(CATEGORY_TOGGLE)
     await expect(firstPrompt).toBeVisible()
-    await expect(nestedFolder).toBeVisible()
+    await expect(category).toBeVisible()
 
     const firstPromptBox = await firstPrompt.boundingBox()
-    const nestedFolderBox = await nestedFolder.boundingBox()
-    if (!firstPromptBox || !nestedFolderBox) {
+    const categoryBox = await category.boundingBox()
+    if (!firstPromptBox || !categoryBox) {
       throw new Error('Missing prompt tree row-gap drag geometry')
     }
 
-    const gapY = (firstPromptBox.y + firstPromptBox.height + nestedFolderBox.y) / 2
+    const gapY = (firstPromptBox.y + firstPromptBox.height + categoryBox.y) / 2
     await mainWindow.mouse.move(firstPromptBox.x + firstPromptBox.width / 2, gapY)
     await mainWindow.mouse.down()
     await mainWindow.mouse.move(
-      nestedFolderBox.x + nestedFolderBox.width - 24,
-      nestedFolderBox.y + nestedFolderBox.height / 2,
+      categoryBox.x + categoryBox.width - 24,
+      categoryBox.y + categoryBox.height / 2,
       { steps: 4 }
     )
     await mainWindow.mouse.up()
@@ -928,24 +932,24 @@ describe('Prompt folder prompt tree', () => {
       .toBe('')
   })
 
-  test('keeps root prompt rows visible when a descendant folder is collapsed', async ({
+  test('keeps root prompt rows visible when a category is collapsed', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
 
-    await mainWindow.locator(NESTED_FOLDER_TOGGLE).click()
+    await mainWindow.locator(CATEGORY_TOGGLE).click()
 
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-editor-base-before"]')).toBeAttached()

@@ -39,7 +39,7 @@ const buildRows = (
     rootFolder,
     categories,
     promptIds,
-    isFolderExpanded: (categoryId) => !collapsed.has(categoryId)
+    isCategoryExpanded: (categoryId) => !collapsed.has(categoryId)
   })
 }
 
@@ -57,7 +57,7 @@ describe('buildPromptFolderScreenRows', () => {
 
     expect(
       rows.flatMap((row) =>
-        row.kind === 'folder-editor'
+        row.kind === 'category-editor'
           ? [`category:${row.categoryId}`]
           : row.kind === 'category-separator'
             ? [`separator:${row.categoryId}`]
@@ -80,7 +80,7 @@ describe('buildPromptFolderScreenRows', () => {
     const rows = buildRows(createFolder([{ categoryId: null, promptIds: [] }]), [], [])
 
     expect(rows.map((row) => row.kind)).toEqual(['root-header', 'prompt-divider', 'placeholder'])
-    expect(rows[1]).toMatchObject({ categoryId: null, ownerFolderId: 'folder-root' })
+    expect(rows[1]).toMatchObject({ categoryId: null, contentOwnerId: 'folder-root' })
   })
 
   it('renders an empty category without adding a nested placeholder', () => {

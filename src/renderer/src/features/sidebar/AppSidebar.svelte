@@ -58,7 +58,7 @@
     promptIdToPromptNavigationRow,
     promptNavigationRowToPersistedEntryId
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
-  import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import { createBlankPromptInFolder } from '@renderer/features/prompt-folders/createBlankPromptInFolder'
   import { createBlankPromptTemplateInFolder } from '@renderer/features/prompt-folders/createBlankPromptTemplateInFolder'
@@ -296,23 +296,25 @@
   const promptFolderSelectorState = $derived(
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
-  const canTogglePromptFolders = $derived(
+  const canToggleCategories = $derived(
     folderListState === 'ready' &&
       promptTreePromptFolders.length > 0
   )
   const promptTreeExpansionRequests =
     createConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>()
-  let areAllPromptFoldersCollapsed = $state(false)
+  let areAllCategoriesCollapsed = $state(false)
   const promptFolderSelectorPromptDroppableState = createDroppableStateRegistry<string>()
   const promptFolderSelectorDragOpenTypes = [
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE
   ]
-  const promptFolderExpansionActionIcon = ChevronsDownUp
-  const promptFolderExpansionActionLabel = $derived(
-    areAllPromptFoldersCollapsed
-      ? `Expand All ${screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} Folders`
-      : `Collapse All ${screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} Folders`
+  /** Icon for expanding or collapsing every category in the active root folder. */
+  const categoryExpansionActionIcon = ChevronsDownUp
+  /** Accessible label for the category expansion action. */
+  const categoryExpansionActionLabel = $derived(
+    areAllCategoriesCollapsed
+      ? 'Expand All Categories'
+      : 'Collapse All Categories'
   )
   const isCompletedPromptMode = $derived(
     screenRootFolder?.kind !== 'template' &&
@@ -324,8 +326,8 @@
     activeScreen === 'prompt-folders' &&
       screenRootFolder !== null &&
       promptNavigation.screenRootFolderId === screenRootFolder.id &&
-      promptNavigation.rowOwnerFolderId === screenRootFolder.id &&
-      promptNavigation.selectedRow === 'folder-root'
+      promptNavigation.contentOwnerId === screenRootFolder.id &&
+      promptNavigation.selectedRow === 'root-header'
   )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
   const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
@@ -342,11 +344,12 @@
     }
   ]
 
-  const handlePromptFolderExpansionAction = () => {
+  /** Expands or collapses every category under the selected root folder. */
+  const handleCategoryExpansionAction = () => {
     const selectedRootFolderId = screenRootFolder?.id
     if (!selectedRootFolderId) return
 
-    if (areAllPromptFoldersCollapsed) {
+    if (areAllCategoriesCollapsed) {
       promptTreeExpansionRequests.request({
         screenRootFolderId: selectedRootFolderId,
         isExpanded: true
@@ -394,8 +397,8 @@
 
     promptNavigation.select({
       screenRootFolderId: rootFolderId,
-      rowOwnerFolderId: rootFolderId,
-      row: 'folder-root',
+      contentOwnerId: rootFolderId,
+      row: 'root-header',
       source: 'tree-click',
       forceRequest: true,
       contentReveal: { scrollType: 'center' }
@@ -411,7 +414,7 @@
 
     promptNavigation.select({
       screenRootFolderId: promptFolderId,
-      rowOwnerFolderId: promptFolderId,
+      contentOwnerId: promptFolderId,
       row,
       source: 'prompt-create',
       forceRequest: true,
@@ -421,7 +424,7 @@
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderPromptTreeEntryIdWithAutosave(
+      setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
         promptFolderId,
         promptNavigationRowToPersistedEntryId(row)
@@ -781,14 +784,14 @@
           />
         {/if}
         <IconButton
-          icon={promptFolderExpansionActionIcon}
-          label={promptFolderExpansionActionLabel}
-          title={promptFolderExpansionActionLabel}
+          icon={categoryExpansionActionIcon}
+          label={categoryExpansionActionLabel}
+          title={categoryExpansionActionLabel}
           borderless
-          disabled={!canTogglePromptFolders}
-          testId="toggle-all-prompt-folders-button"
+          disabled={!canToggleCategories}
+          testId="toggle-all-categories-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-          onclick={handlePromptFolderExpansionAction}
+          onclick={handleCategoryExpansionAction}
         />
         <IconButton
           icon={Plus}
@@ -848,8 +851,8 @@
       screenMode={promptFolderScreenMode}
       expansionRequests={promptTreeExpansionRequests}
       isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
-      onAllPromptFoldersCollapsedChange={(isCollapsed) => {
-        areAllPromptFoldersCollapsed = isCollapsed
+      onAllCategoriesCollapsedChange={(isCollapsed) => {
+        areAllCategoriesCollapsed = isCollapsed
       }}
       {onScreenRootFolderSelect}
     />

@@ -752,11 +752,11 @@ describe('Prompt folder prompt drag-drop', () => {
       workspaceId: WORKSPACE_ID,
       selectedScreen: 'home',
       selectedScreenData: null,
-      promptFolderPromptTreeEntries: [
+      promptFolderViewEntries: [
         {
-          promptFolderId: EXAMPLES_FOLDER_ID,
-          promptTreeEntryId: 'folder-root',
-          folderSettingsSectionIsExpanded: true
+          contentOwnerId: EXAMPLES_FOLDER_ID,
+          selectedEntryId: 'root-header',
+          detailsSectionIsExpanded: true
         }
       ]
     })

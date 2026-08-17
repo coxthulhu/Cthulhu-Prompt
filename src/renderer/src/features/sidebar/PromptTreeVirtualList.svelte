@@ -9,20 +9,19 @@
         folder: PromptFolder
       }
     | {
-        kind: 'folder'
+        kind: 'category'
         category: Category
         rootFolder: PromptFolder
         indentCount: number
         endsVisibleBranch: boolean
       }
     | {
-        kind: 'folder-prompt'
+        kind: 'prompt'
         folder: PromptFolder
         categoryId: string | null
         promptId: string
         indentCount: number
         isLastRow: boolean
-        isNestedPrompt: boolean
       }
     | {
         kind: 'special'
@@ -39,11 +38,12 @@
   export type PromptTreeRootFolderRowProps = VirtualWindowRowComponentProps<
     Extract<PromptTreeRow, { kind: 'root-folder' }>
   >
-  export type PromptTreeFolderRowProps = VirtualWindowRowComponentProps<
-    Extract<PromptTreeRow, { kind: 'folder' }>
+  /** Virtual-row props for one category header. */
+  export type PromptTreeCategoryRowProps = VirtualWindowRowComponentProps<
+    Extract<PromptTreeRow, { kind: 'category' }>
   >
   export type PromptTreePromptRowProps = VirtualWindowRowComponentProps<
-    Extract<PromptTreeRow, { kind: 'folder-prompt' }>
+    Extract<PromptTreeRow, { kind: 'prompt' }>
   >
   export type PromptTreeSpecialRowProps = VirtualWindowRowComponentProps<
     Extract<PromptTreeRow, { kind: 'special' }>
@@ -74,9 +74,9 @@
     viewportMetrics?: VirtualWindowViewportMetrics | null
     rootFolderRow: Snippet<[PromptTreeRootFolderRowProps]>
     promptTreeRootFolderRowOverlay?: Snippet<[PromptTreeRootFolderRowProps]>
-    folderRow: Snippet<[PromptTreeFolderRowProps]>
-    promptTreeFolderRowOverlay?: Snippet<[PromptTreeFolderRowProps]>
-    folderPromptRow: Snippet<[PromptTreePromptRowProps]>
+    categoryRow: Snippet<[PromptTreeCategoryRowProps]>
+    promptTreeCategoryRowOverlay?: Snippet<[PromptTreeCategoryRowProps]>
+    promptRow: Snippet<[PromptTreePromptRowProps]>
     promptTreeRowOverlay?: Snippet<[PromptTreePromptRowProps]>
     specialRow: Snippet<[PromptTreeSpecialRowProps]>
     emptyStateRow: Snippet<[PromptTreeEmptyStateRowProps]>
@@ -92,9 +92,9 @@
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
     rootFolderRow,
     promptTreeRootFolderRowOverlay,
-    folderRow,
-    promptTreeFolderRowOverlay,
-    folderPromptRow,
+    categoryRow,
+    promptTreeCategoryRowOverlay,
+    promptRow,
     promptTreeRowOverlay,
     specialRow,
     emptyStateRow,
@@ -111,16 +111,16 @@
         overlayRow: { snippet: promptTreeRootFolderRowOverlay },
         snippet: rootFolderRow
       },
-      folder: {
+      category: {
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
         centerRowEligible: true,
-        overlayRow: { snippet: promptTreeFolderRowOverlay },
-        snippet: folderRow
+        overlayRow: { snippet: promptTreeCategoryRowOverlay },
+        snippet: categoryRow
       },
-      'folder-prompt': {
+      prompt: {
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
         overlayRow: { snippet: promptTreeRowOverlay },
-        snippet: folderPromptRow
+        snippet: promptRow
       },
       special: {
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,

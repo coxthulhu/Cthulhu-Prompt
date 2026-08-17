@@ -23,7 +23,7 @@ const PROMPT_ROW_SELECTOR = PROMPT_EDITOR_PREFIX_SELECTOR
 const LONG_FOLDER_NAME = 'Long'
 const BASELINE_EXPAND_DRAG_DISTANCE = -200
 const MIN_EXPECTED_WIDTH_DELTA_PX = 8
-const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -34,7 +34,7 @@ const createDeterministicId = (seed: string): string => {
   return `00000000000000000000${suffix}`
 }
 
-const NESTED_FOLDER_EDITOR_SELECTOR = `[data-testid="prompt-folder-editor-${createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)}"]`
+const CATEGORY_EDITOR_SELECTOR = `[data-testid="category-editor-${createDeterministicId(`${CATEGORIES_WORKSPACE_PATH}:Main/Category`)}"]`
 
 type PromptAnchorData = {
   rowId: string
@@ -236,11 +236,11 @@ const prepareUncappedSidebarBaseline = async (
 }
 
 describe('Prompt Folder Hydration', () => {
-  test('shows subfolder settings editors when the settings gear is toggled on', async ({
+  test('shows category settings editors when the settings gear is toggled on', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
@@ -248,49 +248,49 @@ describe('Prompt Folder Hydration', () => {
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
     await mainWindow.waitForSelector(
-      `${HOST_SELECTOR} ${NESTED_FOLDER_EDITOR_SELECTOR}[data-virtual-window-row]`,
+      `${HOST_SELECTOR} ${CATEGORY_EDITOR_SELECTOR}[data-virtual-window-row]`,
       { state: 'attached' }
     )
 
-    const nestedFolderEditor = mainWindow.locator(NESTED_FOLDER_EDITOR_SELECTOR)
-    const settingsToggle = nestedFolderEditor.locator(
-      '[data-testid="prompt-folder-editor-settings-toggle"]'
+    const categoryEditor = mainWindow.locator(CATEGORY_EDITOR_SELECTOR)
+    const settingsToggle = categoryEditor.locator(
+      '[data-testid="category-editor-settings-toggle"]'
     )
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(0)
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
+      categoryEditor.locator('[data-testid="category-settings-toolbar"]')
     ).toHaveCount(0)
 
     await settingsToggle.click()
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
+      categoryEditor.locator('[data-testid="category-settings-toolbar"]')
     ).toContainText('1 of 1 configured')
     await expect(
-      nestedFolderEditor.locator(
-        '[data-testid^="prompt-folder-settings-toggle-"][aria-pressed="true"]'
+      categoryEditor.locator(
+        '[data-testid^="category-settings-toggle-"][aria-pressed="true"]'
       )
     ).toHaveCount(1)
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(1)
 
     await settingsToggle.click()
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(0)
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')
+      categoryEditor.locator('[data-testid="category-settings-toolbar"]')
     ).toHaveCount(0)
 
     await settingsToggle.click()
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(1)
 
     const settingsSections = await mainWindow.evaluate((hostSelector) => {
@@ -298,10 +298,10 @@ describe('Prompt Folder Hydration', () => {
       if (!host) return []
 
       const rows = host.querySelectorAll<HTMLElement>(
-        '[data-testid^="prompt-folder-editor-"][data-virtual-window-row]'
+        '[data-testid^="category-editor-"][data-virtual-window-row]'
       )
       const sections = Array.from(
-        host.querySelectorAll<HTMLElement>('[data-testid^="prompt-folder-settings-section-"]')
+        host.querySelectorAll<HTMLElement>('[data-testid^="category-description-section"]')
       )
 
       return sections.map((section) => {
@@ -317,7 +317,7 @@ describe('Prompt Folder Hydration', () => {
     expect(settingsSections).toHaveLength(1)
     expect(settingsSections.every((section) => section.rowCount === 1)).toBe(true)
     expect(settingsSections.map((section) => section.testId)).toEqual([
-      expect.stringContaining('folderDescription')
+      'category-description-section'
     ])
     expect(new Set(settingsSections.map((section) => section.top)).size).toBe(1)
   })

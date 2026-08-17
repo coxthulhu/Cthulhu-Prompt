@@ -1,8 +1,9 @@
 import type { PromptFolder } from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
 
+/** Completed prompt paired with the root-content owner used by navigation. */
 export type CompletedPromptWithOwner = {
-  ownerFolderId: string
+  contentOwnerId: string
   promptId: string
 }
 
@@ -19,7 +20,7 @@ export const collectCompletedPrompts = ({
 }: CollectCompletedPromptIdsOptions): CompletedPromptWithOwner[] => {
   const completedPrompts = rootFolder.completedPromptIds.flatMap((promptId) =>
     statusByPromptId[promptId] === PromptStatus.Completed
-      ? [{ ownerFolderId: rootFolder.id, promptId }]
+      ? [{ contentOwnerId: rootFolder.id, promptId }]
       : []
   )
 

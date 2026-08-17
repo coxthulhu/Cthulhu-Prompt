@@ -10,7 +10,7 @@ import {
 
 vi.mock('../../src/main/DataAccess/UserPersistenceDataAccess', () => ({
   UserPersistenceDataAccess: {
-    cleanupWorkspacePromptFolderUiState: vi.fn()
+    cleanupWorkspacePromptFolderViewState: vi.fn()
   }
 }))
 
@@ -33,8 +33,8 @@ describe('prompt template workspace loading', () => {
           description: 'Root description',
           templates: [
             {
-              id: 'nested-template',
-              title: 'Nested Template',
+              id: 'category-template',
+              title: 'Category Template',
               templateText: 'Use {{value}}.'
             }
           ]
@@ -59,7 +59,7 @@ describe('prompt template workspace loading', () => {
         categories: [
           {
             categoryId: null,
-            entries: [{ kind: 'template', id: 'nested-template' }]
+            entries: [{ kind: 'template', id: 'category-template' }]
           }
         ]
       }
@@ -69,11 +69,11 @@ describe('prompt template workspace loading', () => {
     })
     expect(result.promptTemplates).toHaveLength(1)
     const templateModifiedAt = vol
-      .statSync(`${workspacePath}/Templates/Root/Nested Template.template.md`)
+      .statSync(`${workspacePath}/Templates/Root/Category Template.template.md`)
       .mtime.toISOString()
     expect(result.promptTemplates[0]?.data).toMatchObject({
-      id: 'nested-template',
-      title: 'Nested Template',
+      id: 'category-template',
+      title: 'Category Template',
       fallbackTitle: '',
       modifiedAt: templateModifiedAt,
       templateText: 'Use {{value}}.'
@@ -89,8 +89,8 @@ describe('prompt template workspace loading', () => {
     expect(folderResult.markdownContentUiStates).toEqual([])
     expect(folderResult.promptTemplates).toHaveLength(1)
     expect(folderResult.promptTemplates[0]?.data).toMatchObject({
-      id: 'nested-template',
-      title: 'Nested Template',
+      id: 'category-template',
+      title: 'Category Template',
       templateText: 'Use {{value}}.'
     })
   })

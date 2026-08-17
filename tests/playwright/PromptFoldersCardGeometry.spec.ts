@@ -248,27 +248,27 @@ describe('Prompt folder card geometry', () => {
     await expectPromptCardExactFill(mainWindow, 'geometry-tall')
   })
 
-  test('folder editor cards fit collapsed titles exactly and expanded settings within grid slack', async ({
+  test('category editor cards fit collapsed titles exactly and expanded settings within grid slack', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
 
-    // Only subfolders render folder-editor cards; the screen root uses a
+    // Only categories render category-editor cards; the screen root uses a
     // root-header row instead.
-    const folderRows = mainWindow.locator('[data-prompt-folder-id]')
-    await expect.poll(async () => await folderRows.count()).toBeGreaterThanOrEqual(1)
+    const categoryRows = mainWindow.locator('[data-category-id]')
+    await expect.poll(async () => await categoryRows.count()).toBeGreaterThanOrEqual(1)
 
-    const rowCount = await folderRows.count()
+    const rowCount = await categoryRows.count()
     for (let index = 0; index < rowCount; index += 1) {
-      const row = folderRows.nth(index)
-      const folderId = (await row.getAttribute('data-prompt-folder-id'))!
-      const rowSelector = `[data-prompt-folder-id="${folderId}"]`
+      const row = categoryRows.nth(index)
+      const categoryId = (await row.getAttribute('data-category-id'))!
+      const rowSelector = `[data-category-id="${categoryId}"]`
       await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, rowSelector)
 
       await expect
@@ -280,31 +280,31 @@ describe('Prompt folder card geometry', () => {
       const collapsed = (await measureEditorCardGeometry(mainWindow, rowSelector))!
       expect(
         collapsed.hiddenOverflowPx,
-        `collapsed folder card ${folderId} clips content inside overflow:hidden`
+        `collapsed category card ${categoryId} clips content inside overflow:hidden`
       ).toBe(0)
       expect(
         Math.abs(collapsed.bodyChildrenFillGapPx!),
-        `collapsed folder card ${folderId} has ${collapsed.bodyChildrenFillGapPx}px of internal slack`
+        `collapsed category card ${categoryId} has ${collapsed.bodyChildrenFillGapPx}px of internal slack`
       ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
 
       const titleGeometry = await row
-        .locator('[data-testid="prompt-folder-editor-title-bar"]')
+        .locator('[data-testid="category-editor-title-bar"]')
         .evaluate((titleBar) => {
           const titleBarRect = titleBar.getBoundingClientRect()
-          const titleMain = titleBar.querySelector<HTMLElement>('.prompt-folder-editor-title-main')!
+          const titleMain = titleBar.querySelector<HTMLElement>('.category-editor-title-main')!
           const titleMainRect = titleMain.getBoundingClientRect()
           return {
             topInsetPx: titleMainRect.top - titleBarRect.top,
             bottomInsetPx: titleBarRect.bottom - titleMainRect.bottom
           }
         })
-      expect(titleGeometry.topInsetPx, `folder ${folderId} title top spacing`).toBe(8)
-      expect(titleGeometry.bottomInsetPx, `folder ${folderId} title bottom spacing`).toBe(8)
+      expect(titleGeometry.topInsetPx, `category ${categoryId} title top spacing`).toBe(8)
+      expect(titleGeometry.bottomInsetPx, `category ${categoryId} title bottom spacing`).toBe(8)
 
       // Expanded settings sections must still fit inside the bordered card.
-      await row.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+      await row.locator('[data-testid="category-editor-settings-toggle"]').click()
       await row
-        .locator('[data-testid="prompt-folder-settings-section-folderDescription"]')
+        .locator('[data-testid="category-description-section"]')
         .waitFor({ state: 'attached' })
       await expect
         .poll(async () => {
@@ -316,25 +316,25 @@ describe('Prompt folder card geometry', () => {
       const expanded = (await measureEditorCardGeometry(mainWindow, rowSelector))!
       expect(
         expanded.bodyChildrenFillGapPx,
-        `expanded folder card ${folderId} content overflows the card`
+        `expanded category card ${categoryId} content overflows the card`
       ).toBeGreaterThanOrEqual(-FILL_TOLERANCE_PX)
       expect(
         expanded.bodyChildrenFillGapPx,
-        `expanded folder card ${folderId} has extra bottom slack`
+        `expanded category card ${categoryId} has extra bottom slack`
       ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
 
       // Restore the collapsed state for the next row's scroll math.
-      await row.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+      await row.locator('[data-testid="category-editor-settings-toggle"]').click()
     }
   })
 
   test('no virtual row clips its content in either virtual window', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
-    // The subfolders screen mounts every folder-screen row kind: root header,
-    // dividers, prompt editors, a subfolder editor, and the bottom spacer.
+    // The categories screen mounts every folder-screen row kind: root header,
+    // dividers, prompt editors, a category editor, and the bottom spacer.
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)

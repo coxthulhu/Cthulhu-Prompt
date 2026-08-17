@@ -1,5 +1,4 @@
 import type { IpcResult } from './IpcResult'
-import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type UserPersistence = {
@@ -47,19 +46,20 @@ export type WorkspaceScreenSelection =
       }
     }
 
-export type WorkspacePromptFolderPromptTreeEntry = {
-  promptFolderId: string
-  promptTreeEntryId: string
-  promptTreeIsExpanded: boolean
-  folderSettingsSectionIsExpanded: boolean
-  promptsSectionIsExpanded: boolean
-  settingsEditorViewStates: Record<PromptFolderSettingsField, string | null>
+/** Persisted view state for one root-content or category owner on the prompt-folder screen. */
+export type WorkspacePromptFolderViewEntry = {
+  contentOwnerId: string
+  selectedEntryId: string
+  treeIsExpanded: boolean
+  detailsSectionIsExpanded: boolean
+  contentSectionIsExpanded: boolean
+  categoryDescriptionEditorViewStateJson: string | null
 }
 
 export type WorkspacePersistence = WorkspaceScreenSelection & {
   workspaceId: string
   lastPromptFolderId: string | null
-  promptFolderPromptTreeEntries: WorkspacePromptFolderPromptTreeEntry[]
+  promptFolderViewEntries: WorkspacePromptFolderViewEntry[]
 }
 
 export const isWorkspaceScreenSelectionSame = (
@@ -87,22 +87,21 @@ export const createDefaultWorkspacePersistence = (workspaceId: string): Workspac
     selectedScreen: 'home',
     selectedScreenData: null,
     lastPromptFolderId: null,
-    promptFolderPromptTreeEntries: []
+    promptFolderViewEntries: []
   }
 }
 
-export const cloneWorkspacePromptFolderPromptTreeEntries = (
-  entries: WorkspacePromptFolderPromptTreeEntry[]
-): WorkspacePromptFolderPromptTreeEntry[] => {
+/** Clones prompt-folder screen view entries for serialization. */
+export const cloneWorkspacePromptFolderViewEntries = (
+  entries: WorkspacePromptFolderViewEntry[]
+): WorkspacePromptFolderViewEntry[] => {
   return entries.map((entry) => ({
-    promptFolderId: entry.promptFolderId,
-    promptTreeEntryId: entry.promptTreeEntryId,
-    promptTreeIsExpanded: entry.promptTreeIsExpanded,
-    folderSettingsSectionIsExpanded: entry.folderSettingsSectionIsExpanded,
-    promptsSectionIsExpanded: entry.promptsSectionIsExpanded,
-    settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
-      entry.settingsEditorViewStates
-    )
+    contentOwnerId: entry.contentOwnerId,
+    selectedEntryId: entry.selectedEntryId,
+    treeIsExpanded: entry.treeIsExpanded,
+    detailsSectionIsExpanded: entry.detailsSectionIsExpanded,
+    contentSectionIsExpanded: entry.contentSectionIsExpanded,
+    categoryDescriptionEditorViewStateJson: entry.categoryDescriptionEditorViewStateJson
   }))
 }
 
@@ -114,8 +113,8 @@ export const toSerializableWorkspacePersistence = (
     selectedScreen: workspacePersistence.selectedScreen,
     selectedScreenData: workspacePersistence.selectedScreenData,
     lastPromptFolderId: workspacePersistence.lastPromptFolderId,
-    promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
-      workspacePersistence.promptFolderPromptTreeEntries
+    promptFolderViewEntries: cloneWorkspacePromptFolderViewEntries(
+      workspacePersistence.promptFolderViewEntries
     )
   } as WorkspacePersistence
 }
@@ -156,19 +155,6 @@ export type LoadWorkspacePersistenceResult = IpcResult<{
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
-
-export const createEmptyPromptFolderSettingsEditorViewStates = (): Record<
-  PromptFolderSettingsField,
-  string | null
-> => ({
-  folderDescription: null
-})
-
-export const copyPromptFolderSettingsEditorViewStates = (
-  viewStates: Record<PromptFolderSettingsField, string | null>
-): Record<PromptFolderSettingsField, string | null> => ({
-  folderDescription: viewStates.folderDescription
-})
 
 export const parseUserPersistence = (value: unknown): UserPersistence | null => {
   if (!isRecord(value)) {
@@ -257,83 +243,79 @@ export const parseWorkspaceScreenSelection = (
   }
 }
 
-const parseWorkspacePromptFolderPromptTreeEntry = (
+/** Parses one persisted prompt-folder screen view entry. */
+const parseWorkspacePromptFolderViewEntry = (
   value: unknown
-): WorkspacePromptFolderPromptTreeEntry | null => {
+): WorkspacePromptFolderViewEntry | null => {
   if (!isRecord(value)) {
     return null
   }
 
-  if (typeof value.promptFolderId !== 'string' || typeof value.promptTreeEntryId !== 'string') {
+  if (typeof value.contentOwnerId !== 'string' || typeof value.selectedEntryId !== 'string') {
     return null
   }
 
-  const settingsEditorViewStates = createEmptyPromptFolderSettingsEditorViewStates()
-  if (value.settingsEditorViewStates !== undefined) {
-    if (!isRecord(value.settingsEditorViewStates)) {
-      return null
-    }
-
-    for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-      const viewState = value.settingsEditorViewStates[field]
-      if (viewState !== undefined && viewState !== null && typeof viewState !== 'string') {
-        return null
-      }
-      settingsEditorViewStates[field] = viewState ?? null
-    }
+  const categoryDescriptionEditorViewStateJson =
+    value.categoryDescriptionEditorViewStateJson ?? null
+  if (
+    categoryDescriptionEditorViewStateJson !== null &&
+    typeof categoryDescriptionEditorViewStateJson !== 'string'
+  ) {
+    return null
   }
 
-  const folderSettingsSectionIsExpanded =
-    value.folderSettingsSectionIsExpanded === undefined
+  const detailsSectionIsExpanded =
+    value.detailsSectionIsExpanded === undefined
       ? false
-      : typeof value.folderSettingsSectionIsExpanded === 'boolean'
-        ? value.folderSettingsSectionIsExpanded
+      : typeof value.detailsSectionIsExpanded === 'boolean'
+        ? value.detailsSectionIsExpanded
         : null
-  if (folderSettingsSectionIsExpanded === null) {
+  if (detailsSectionIsExpanded === null) {
     return null
   }
 
-  const promptTreeIsExpanded =
-    value.promptTreeIsExpanded === undefined
+  const treeIsExpanded =
+    value.treeIsExpanded === undefined
       ? true
-      : typeof value.promptTreeIsExpanded === 'boolean'
-        ? value.promptTreeIsExpanded
+      : typeof value.treeIsExpanded === 'boolean'
+        ? value.treeIsExpanded
         : null
-  if (promptTreeIsExpanded === null) {
+  if (treeIsExpanded === null) {
     return null
   }
 
-  const promptsSectionIsExpanded =
-    value.promptsSectionIsExpanded === undefined
+  const contentSectionIsExpanded =
+    value.contentSectionIsExpanded === undefined
       ? true
-      : typeof value.promptsSectionIsExpanded === 'boolean'
-        ? value.promptsSectionIsExpanded
+      : typeof value.contentSectionIsExpanded === 'boolean'
+        ? value.contentSectionIsExpanded
         : null
-  if (promptsSectionIsExpanded === null) {
+  if (contentSectionIsExpanded === null) {
     return null
   }
 
   return {
-    promptFolderId: value.promptFolderId,
-    promptTreeEntryId: value.promptTreeEntryId,
-    promptTreeIsExpanded,
-    folderSettingsSectionIsExpanded,
-    promptsSectionIsExpanded,
-    settingsEditorViewStates
+    contentOwnerId: value.contentOwnerId,
+    selectedEntryId: value.selectedEntryId,
+    treeIsExpanded,
+    detailsSectionIsExpanded,
+    contentSectionIsExpanded,
+    categoryDescriptionEditorViewStateJson
   }
 }
 
-const parseWorkspacePromptFolderPromptTreeEntries = (
+/** Parses the persisted prompt-folder screen view-entry array. */
+const parseWorkspacePromptFolderViewEntries = (
   value: unknown
-): WorkspacePromptFolderPromptTreeEntry[] => {
+): WorkspacePromptFolderViewEntry[] => {
   if (!Array.isArray(value)) {
     return []
   }
 
-  const parsedEntries: WorkspacePromptFolderPromptTreeEntry[] = []
+  const parsedEntries: WorkspacePromptFolderViewEntry[] = []
 
   for (const entry of value) {
-    const parsedEntry = parseWorkspacePromptFolderPromptTreeEntry(entry)
+    const parsedEntry = parseWorkspacePromptFolderViewEntry(entry)
     if (!parsedEntry) {
       continue
     }
@@ -360,8 +342,8 @@ export const parseWorkspacePersistence = (
     return null
   }
 
-  const promptFolderPromptTreeEntries = parseWorkspacePromptFolderPromptTreeEntries(
-    value.promptFolderPromptTreeEntries
+  const promptFolderViewEntries = parseWorkspacePromptFolderViewEntries(
+    value.promptFolderViewEntries
   )
   const lastPromptFolderId = value.lastPromptFolderId ?? null
   if (lastPromptFolderId !== null && typeof lastPromptFolderId !== 'string') {
@@ -372,6 +354,6 @@ export const parseWorkspacePersistence = (
     workspaceId,
     ...workspaceScreenSelection,
     lastPromptFolderId,
-    promptFolderPromptTreeEntries
+    promptFolderViewEntries
   } as WorkspacePersistence
 }

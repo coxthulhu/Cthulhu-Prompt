@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 15
+const LATEST_SCHEMA_VERSION = 16
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -428,6 +428,37 @@ const migrateSchemaV14ToV15 = (db: Database.Database): void => {
   migrate()
 }
 
+/** Replaces obsolete category workspace view-state tables without migrating their data. */
+const migrateSchemaV15ToV16 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      DROP TABLE prompt_folder_settings_editor_view_state;
+      DROP TABLE prompt_folder_ui_state;
+
+      CREATE TABLE prompt_folder_view_state (
+        workspace_id TEXT NOT NULL,
+        content_owner_id TEXT NOT NULL,
+        selected_entry_id TEXT NOT NULL,
+        tree_is_expanded INTEGER NOT NULL DEFAULT 1,
+        details_section_is_expanded INTEGER NOT NULL DEFAULT 0,
+        content_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (workspace_id, content_owner_id)
+      );
+
+      CREATE TABLE category_description_editor_view_state (
+        workspace_id TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        editor_view_state_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, category_id)
+      );
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(16)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -525,6 +556,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 14) {
       migrateSchemaV14ToV15(db)
       schemaVersion = 15
+      continue
+    }
+
+    if (schemaVersion === 15) {
+      migrateSchemaV15ToV16(db)
+      schemaVersion = 16
       continue
     }
 

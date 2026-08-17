@@ -7,13 +7,14 @@ import {
 
 const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
 
-export type PromptNavigationRow = 'folder-root' | 'folder-settings' | `prompt:${string}`
+/** Selectable row identities within one root prompt-folder screen. */
+export type PromptNavigationRow = 'root-header' | 'category-details' | `prompt:${string}`
 export const promptIdToPromptNavigationRow = (promptId: string): PromptNavigationRow =>
   `prompt:${promptId}`
 
 export type PromptNavigationSource =
   | 'tree-click'
-  | 'folder-open'
+  | 'category-open'
   | 'restore'
   | 'restore-hold'
   | 'scroll-follow'
@@ -22,23 +23,23 @@ export type PromptNavigationSource =
   | 'prompt-create'
   | 'prompt-divider-create'
   | 'prompt-move'
-  | 'folder-move'
+  | 'category-move'
 
 type PromptNavigationState = {
   screenRootFolderId: string | null
-  rowOwnerFolderId: string | null
+  contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
 }
 
 export type PromptNavigationTarget = {
   screenRootFolderId: string
-  rowOwnerFolderId: string
+  contentOwnerId: string
   row: PromptNavigationRow
 }
 
 export type PromptContentExpansionRequest = PromptNavigationTarget & {
-  expandFolderSettings: boolean
+  expandDetails: boolean
 }
 
 // Defines how content navigation positions its target in the prompt-folder viewport.
@@ -59,13 +60,13 @@ export type PromptTreeExpansionRequest = PromptNavigationTarget & {
 
 type SelectPromptNavigationOptions = {
   screenRootFolderId: string
-  rowOwnerFolderId: string
+  contentOwnerId: string
   row: PromptNavigationRow
   source: PromptNavigationSource
   forceRequest?: boolean
   contentReveal?: {
     scrollType: PromptContentRevealScrollType
-    expandFolderSettings?: boolean
+    expandDetails?: boolean
   }
   focusPromptId?: string
   treeExpansion?: PromptTreeExpansionRequest['expandPath']
@@ -77,7 +78,7 @@ type SelectPromptNavigationResult = {
 
 export type PromptNavigationContext = {
   screenRootFolderId: string | null
-  rowOwnerFolderId: string | null
+  contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
   contentExpansionRequests: ConsumableRequestCoordinator<PromptContentExpansionRequest>
@@ -89,7 +90,7 @@ export type PromptNavigationContext = {
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
-  if (row === 'folder-root' || row === 'folder-settings') {
+  if (row === 'root-header' || row === 'category-details') {
     return row
   }
 
@@ -99,13 +100,15 @@ export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow):
 export const persistedPromptTreeEntryIdToPromptNavigationRow = (
   entryId: string
 ): PromptNavigationRow => {
-  return entryId === 'folder-root' || entryId === 'folder-settings' ? entryId : `prompt:${entryId}`
+  return entryId === 'root-header' || entryId === 'category-details'
+    ? entryId
+    : `prompt:${entryId}`
 }
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {
   const state = $state<PromptNavigationState>({
     screenRootFolderId: null,
-    rowOwnerFolderId: null,
+    contentOwnerId: null,
     selectedRow: null,
     selectionSource: null
   })
@@ -118,7 +121,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
 
   const select = ({
     screenRootFolderId,
-    rowOwnerFolderId,
+    contentOwnerId,
     row,
     source,
     forceRequest = false,
@@ -128,7 +131,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
   }: SelectPromptNavigationOptions): SelectPromptNavigationResult => {
     const hasChanged =
       state.screenRootFolderId !== screenRootFolderId ||
-      state.rowOwnerFolderId !== rowOwnerFolderId ||
+      state.contentOwnerId !== contentOwnerId ||
       state.selectedRow !== row ||
       state.selectionSource !== source
 
@@ -137,13 +140,13 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     }
 
     state.screenRootFolderId = screenRootFolderId
-    state.rowOwnerFolderId = rowOwnerFolderId
+    state.contentOwnerId = contentOwnerId
     state.selectedRow = row
     state.selectionSource = source
 
     const target: PromptNavigationTarget = {
       screenRootFolderId,
-      rowOwnerFolderId,
+      contentOwnerId,
       row
     }
 
@@ -157,7 +160,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     if (contentReveal) {
       contentExpansionRequests.request({
         ...target,
-        expandFolderSettings: contentReveal.expandFolderSettings ?? true
+        expandDetails: contentReveal.expandDetails ?? true
       })
     } else {
       contentExpansionRequests.clear()
@@ -183,8 +186,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     get screenRootFolderId() {
       return state.screenRootFolderId
     },
-    get rowOwnerFolderId() {
-      return state.rowOwnerFolderId
+    get contentOwnerId() {
+      return state.contentOwnerId
     },
     get selectedRow() {
       return state.selectedRow

@@ -1,5 +1,6 @@
 export const PROMPT_FOLDER_SECTION_INSET_PX = 12
-export const PROMPT_FOLDER_EDITOR_SIDE_RAIL_WIDTH_PX = 36
+/** Width reserved for a category editor's drag rail and border. */
+export const CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX = 36
 
 export const getPromptFolderSectionContentOffsetPx = (indentLevel: number): number =>
   PROMPT_FOLDER_SECTION_INSET_PX * indentLevel

@@ -37,8 +37,8 @@ describe('collectCompletedPrompts', () => {
         }
       })
     ).toEqual([
-      { ownerFolderId: 'root', promptId: 'newer' },
-      { ownerFolderId: 'root', promptId: 'older' }
+      { contentOwnerId: 'root', promptId: 'newer' },
+      { contentOwnerId: 'root', promptId: 'older' }
     ])
   })
 })

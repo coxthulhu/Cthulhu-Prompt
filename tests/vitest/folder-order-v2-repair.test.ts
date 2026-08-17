@@ -19,7 +19,7 @@ const ROOT_FOLDER_NAME = 'Root'
 const ACTIVE_PATH = `${WORKSPACE_PATH}/Prompts/${ROOT_FOLDER_NAME}/Active`
 /** Canonical category-order file path under the Active metadata directory. */
 const CATEGORY_ORDER_PATH = `${ACTIVE_PATH}/_FolderInfo/FolderOrderV2.json`
-/** Template root containing direct and nested templates for repair coverage. */
+/** Template root containing direct and categorized templates for repair coverage. */
 const TEMPLATE_ROOT_PATH = `${WORKSPACE_PATH}/Templates/Templates`
 /** Canonical template category-order file stored at the template root. */
 const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/_FolderInfo/FolderOrderV2.json`
@@ -186,8 +186,8 @@ describe('FolderOrderV2 repair', () => {
       [`${TEMPLATE_ROOT_PATH}/Direct.template.md`]: serializePromptTemplateMarkdown(
         createTemplate('template-direct', 'Direct', retainedCategoryId)
       ),
-      [`${TEMPLATE_ROOT_PATH}/Nested.template.md`]: serializePromptTemplateMarkdown(
-        createTemplate('template-nested', 'Nested', deletedCategoryId)
+      [`${TEMPLATE_ROOT_PATH}/Categorized.template.md`]: serializePromptTemplateMarkdown(
+        createTemplate('template-categorized', 'Categorized', deletedCategoryId)
       ),
       [TEMPLATE_CATEGORY_ORDER_PATH]: JSON.stringify({
         categories: [
@@ -204,11 +204,11 @@ describe('FolderOrderV2 repair', () => {
           },
           {
             categoryId: deletedCategoryId,
-            entries: [{ kind: 'template', id: 'template-nested' }]
+            entries: [{ kind: 'template', id: 'template-categorized' }]
           },
           {
             categoryId: retainedCategoryId,
-            entries: [{ kind: 'template', id: 'template-nested' }]
+            entries: [{ kind: 'template', id: 'template-categorized' }]
           }
         ]
       })
@@ -220,7 +220,7 @@ describe('FolderOrderV2 repair', () => {
           categoryId: null,
           entries: [
             { kind: 'template', id: 'template-direct' },
-            { kind: 'template', id: 'template-nested' }
+            { kind: 'template', id: 'template-categorized' }
           ]
         },
         { categoryId: retainedCategoryId, entries: [] }
@@ -231,10 +231,10 @@ describe('FolderOrderV2 repair', () => {
       vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Direct.template.md`, 'utf8').toString()
     )!
     /** Second template repaired after its deleted category group redirects to Uncategorized. */
-    const nestedTemplate = parsePromptTemplateMarkdown(
-      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Nested.template.md`, 'utf8').toString()
+    const categorizedTemplate = parsePromptTemplateMarkdown(
+      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Categorized.template.md`, 'utf8').toString()
     )!
     expect(directTemplate).not.toHaveProperty('category')
-    expect(nestedTemplate).not.toHaveProperty('category')
+    expect(categorizedTemplate).not.toHaveProperty('category')
   })
 })

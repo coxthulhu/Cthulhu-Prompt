@@ -8,7 +8,7 @@
 
 <div class="promptDragGhost">
   <div class="sidebarPromptTreeSettingsButton promptDragGhostButton" data-row-state="idle">
-    {#if kind === 'folder'}
+    {#if kind === 'category'}
       <Folder
         class="promptDragGhostIcon"
         size={16}

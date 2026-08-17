@@ -1,5 +1,5 @@
 import {
-  cloneWorkspacePromptFolderPromptTreeEntries,
+  cloneWorkspacePromptFolderViewEntries,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
 import {
@@ -18,8 +18,8 @@ export const upsertWorkspacePersistenceDraft = (
       selectedScreen: workspacePersistence.selectedScreen,
       selectedScreenData: workspacePersistence.selectedScreenData,
       lastPromptFolderId: workspacePersistence.lastPromptFolderId,
-      promptFolderPromptTreeEntries: cloneWorkspacePromptFolderPromptTreeEntries(
-        workspacePersistence.promptFolderPromptTreeEntries
+      promptFolderViewEntries: cloneWorkspacePromptFolderViewEntries(
+        workspacePersistence.promptFolderViewEntries
       )
     } as WorkspacePersistenceDraftRecord)
     return
@@ -31,8 +31,8 @@ export const upsertWorkspacePersistenceDraft = (
       selectedScreenData: workspacePersistence.selectedScreenData,
       lastPromptFolderId: workspacePersistence.lastPromptFolderId
     })
-    draftRecord.promptFolderPromptTreeEntries = cloneWorkspacePromptFolderPromptTreeEntries(
-      workspacePersistence.promptFolderPromptTreeEntries
+    draftRecord.promptFolderViewEntries = cloneWorkspacePromptFolderViewEntries(
+      workspacePersistence.promptFolderViewEntries
     )
   })
 }

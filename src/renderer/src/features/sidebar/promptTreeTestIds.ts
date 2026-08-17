@@ -1,18 +1,28 @@
-/** Minimal folder-style identity shared by roots and category rows. */
+/** Minimal display identity used by category selectors. */
+type PromptTreeCategoryIdentity = { displayName: string }
+
+/** Minimal root-folder identity used by prompt visibility selectors. */
 type PromptTreeFolderIdentity = { displayName: string; folderName?: string }
 
 /** Produces the stable readable key used by existing prompt-tree selectors. */
 const getFolderTestKey = (folder: PromptTreeFolderIdentity): string =>
   (folder.folderName ?? folder.displayName).replace(/\s+/g, '')
 
-export const folderSettingsTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-folder-settings-menu-item-${getFolderTestKey(folder)}`
+/** Produces the stable readable key used by category selectors. */
+const getCategoryTestKey = (category: PromptTreeCategoryIdentity): string =>
+  category.displayName.replace(/\s+/g, '')
 
-export const folderToggleTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-folder-toggle-button-${getFolderTestKey(folder)}`
+/** Returns the settings-menu test ID for one category. */
+export const categorySettingsTestId = (category: PromptTreeCategoryIdentity): string =>
+  `prompt-tree-category-settings-menu-item-${getCategoryTestKey(category)}`
 
-export const folderOpenTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-folder-open-button-${getFolderTestKey(folder)}`
+/** Returns the expansion-toggle test ID for one category. */
+export const categoryToggleTestId = (category: PromptTreeCategoryIdentity): string =>
+  `prompt-tree-category-toggle-button-${getCategoryTestKey(category)}`
+
+/** Returns the open-button test ID for one category. */
+export const categoryOpenTestId = (category: PromptTreeCategoryIdentity): string =>
+  `prompt-tree-category-open-button-${getCategoryTestKey(category)}`
 
 export const folderPromptTestId = (promptId: string): string => `prompt-tree-prompt-${promptId}`
 
@@ -31,8 +41,9 @@ export const folderPromptMenuShowLessTestId = (folder: PromptTreeFolderIdentity)
 export const folderPromptDropIndicatorTestId = (promptId: string): string =>
   `prompt-tree-drop-indicator-prompt-${promptId}`
 
-export const folderDropIndicatorTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-drop-indicator-folder-${getFolderTestKey(folder)}`
+/** Returns the reorder drop-indicator test ID for one category. */
+export const categoryDropIndicatorTestId = (category: PromptTreeCategoryIdentity): string =>
+  `prompt-tree-drop-indicator-category-${getCategoryTestKey(category)}`
 
 export const promptTreeBottomSpacerDropTargetTestId = 'prompt-tree-bottom-spacer-drop-target'
 

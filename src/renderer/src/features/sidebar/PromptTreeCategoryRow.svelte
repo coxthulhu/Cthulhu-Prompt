@@ -10,19 +10,20 @@
   import type { Action } from 'svelte/action'
   import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
-    PromptFolderEntryDragPayload,
+    CategoryDragPayload,
     PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import {
-    folderOpenTestId,
-    folderSettingsTestId,
-    folderToggleTestId
+    categoryOpenTestId,
+    categorySettingsTestId,
+    categoryToggleTestId
   } from './promptTreeTestIds'
   import type { PromptRowDropOptions } from './promptTreeRowOptions'
 
+  /** Inputs and callbacks for one category in the prompt sidebar tree. */
   type Props = {
-    folder: Category
+    category: Category
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
@@ -33,15 +34,15 @@
     showActions?: boolean
     // Gives picker reuse rounded rows without changing the sidebar tree.
     roundedCorners?: boolean
-    getFolderPromptDroppableOptions?: () => PromptRowDropOptions
-    folderDragOptions?: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
-    onFolderExpandedChange: (folderId: string, isExpanded: boolean) => void
-    onPromptFolderOpen: (folderId: string) => void
-    onFolderSettingsOpen: (folderId: string) => void
+    getCategoryContentDroppableOptions?: () => PromptRowDropOptions
+    categoryDragOptions?: DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
+    onCategoryExpandedChange: (categoryId: string, isExpanded: boolean) => void
+    onCategoryOpen: (categoryId: string) => void
+    onCategorySettingsOpen: (categoryId: string) => void
   }
 
   let {
-    folder,
+    category,
     isActive,
     isDragging,
     isPromptDragActive,
@@ -51,18 +52,21 @@
     endsVisibleBranch = false,
     showActions = true,
     roundedCorners = false,
-    getFolderPromptDroppableOptions,
-    folderDragOptions,
-    onFolderExpandedChange,
-    onPromptFolderOpen,
-    onFolderSettingsOpen
+    getCategoryContentDroppableOptions,
+    categoryDragOptions,
+    onCategoryExpandedChange,
+    onCategoryOpen,
+    onCategorySettingsOpen
   }: Props = $props()
 
+  /** Width of one prompt-tree indentation level. */
   const PROMPT_TREE_INDENT_WIDTH_PX = 12
+  /** Inline indentation variables for this category row. */
   const rowStyle = $derived(
     `--prompt-tree-indent-count:${indentCount}; --prompt-tree-indent-width:${PROMPT_TREE_INDENT_WIDTH_PX}px;`
   )
 
+  /** Removes mouse focus after category actions while preserving keyboard focus. */
   const blurButtonAfterMouseClick = (event: MouseEvent) => {
     // Side effect: keep action-slot visibility stable by defocusing only real mouse clicks.
     const button = event.currentTarget
@@ -71,18 +75,20 @@
     }
   }
 
-  const handleFolderToggleClick = (event: MouseEvent) => {
-    onFolderExpandedChange(folder.id, !isExpanded)
+  /** Toggles the category's content rows. */
+  const handleCategoryToggleClick = (event: MouseEvent) => {
+    onCategoryExpandedChange(category.id, !isExpanded)
     blurButtonAfterMouseClick(event)
   }
 
-  const handlePromptFolderOpen = (event: MouseEvent) => {
-    onPromptFolderOpen(folder.id)
+  /** Opens the category card without automatically expanding its details. */
+  const handleCategoryOpen = (event: MouseEvent) => {
+    onCategoryOpen(category.id)
     blurButtonAfterMouseClick(event)
   }
 
-  // Replaces the native browser context menu with this folder's options at the cursor.
-  const handleFolderContextMenu = (
+  // Replaces the native browser context menu with this category's options at the cursor.
+  const handleCategoryContextMenu = (
     event: MouseEvent,
     openAt: (event: MouseEvent) => void
   ): void => {
@@ -95,53 +101,56 @@
     openAt(event)
   }
 
+  /** Context-menu actions available for this category. */
   const dropdownItems = $derived.by((): DropdownPopupItem[] => [
     {
-      id: 'folder-settings',
-      label: 'Open Folder Settings',
+      id: 'category-settings',
+      label: 'Open Category Settings',
       icon: Settings,
-      testId: folderSettingsTestId(folder)
+      testId: categorySettingsTestId(category)
     }
     /*
     Show more/show less remains disabled for category rows.
-    ...(isExpanded && folder.promptCount > visiblePromptLimit
+    ...(isExpanded && category.promptCount > visiblePromptLimit
       ? [
           isShowingAllPrompts
             ? {
                 id: 'show-less-prompts',
                 label: 'Show less prompts',
                 icon: ChevronsUp,
-                testId: folderPromptMenuShowLessTestId(folder)
+                testId: categoryPromptMenuShowLessTestId(category)
               }
             : {
                 id: 'show-all-prompts',
                 label: 'Show all prompts',
                 icon: ChevronsDown,
-                testId: folderPromptMenuShowAllTestId(folder)
+                testId: categoryPromptMenuShowAllTestId(category)
               }
         ]
       : [])
     */
   ])
 
-  const handleFolderOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
-    if (item.id === 'folder-settings') {
-      onFolderSettingsOpen(folder.id)
+  /** Handles a category context-menu selection. */
+  const handleCategoryOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
+    if (item.id === 'category-settings') {
+      onCategorySettingsOpen(category.id)
       blurButtonAfterMouseClick(event)
       return
     }
 
     /*
     if (item.id === 'show-all-prompts' || item.id === 'show-less-prompts') {
-      onPromptVisibilityChange?.(folder.id, item.id === 'show-all-prompts')
+      onPromptVisibilityChange?.(category.id, item.id === 'show-all-prompts')
       blurButtonAfterMouseClick(event)
     }
     */
   }
 
-  const optionalFolderDraggable: Action<
+  /** Enables category dragging only when drag options are supplied. */
+  const optionalCategoryDraggable: Action<
     HTMLButtonElement,
-    DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload> | undefined
+    DraggableOptions<CategoryDragPayload, PromptHandleDropPayload> | undefined
   > = (node, initialOptions) => {
     let action = initialOptions ? draggable(node, initialOptions) : null
     return {
@@ -162,14 +171,14 @@
   }
 </script>
 
-{#snippet folderRowChildren()}
+{#snippet categoryRowChildren()}
   <button
-    use:optionalFolderDraggable={folderDragOptions}
+    use:optionalCategoryDraggable={categoryDragOptions}
     type="button"
-    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.displayName}`}
+    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} category ${category.displayName}`}
     aria-expanded={isExpanded}
-    onclick={handleFolderToggleClick}
-    data-testid={folderToggleTestId(folder)}
+    onclick={handleCategoryToggleClick}
+    data-testid={categoryToggleTestId(category)}
     class="sidebarPromptTreeToggleButton"
   >
     {#if indentCount > 0}
@@ -181,20 +190,20 @@
       iconSize={20}
       class="sidebarPromptTreeChevronWrap"
     />
-    <Folder class="sidebarPromptTreeFolderIcon" size={16} aria-hidden="true" />
-    <span class="sidebarPromptTreeFolderLabel">{folder.displayName}</span>
+    <Folder class="sidebarPromptTreeCategoryIcon" size={16} aria-hidden="true" />
+    <span class="sidebarPromptTreeCategoryLabel">{category.displayName}</span>
   </button>
 
   {#if showActions}
     <div class="sidebarPromptTreeActionSlot">
-      <div class="sidebarPromptTreeFolderActions">
+      <div class="sidebarPromptTreeCategoryActions">
         <IconButton
           icon={ArrowRight}
-          label={`Open ${folder.displayName}`}
+          label={`Open category ${category.displayName}`}
           size="compact"
           borderless
-          onclick={handlePromptFolderOpen}
-          testId={folderOpenTestId(folder)}
+          onclick={handleCategoryOpen}
+          testId={categoryOpenTestId(category)}
           active={isActive}
           class="sidebarPromptTreeActionButton"
         />
@@ -203,7 +212,7 @@
   {/if}
 {/snippet}
 
-{#snippet folderRowContent(isOver: boolean)}
+{#snippet categoryRowContent(isOver: boolean)}
   {@const rowState = isDragging
     ? 'dragging'
     : isOver && showDropOverHighlight
@@ -217,10 +226,10 @@
           : 'idle'}
   {#if showActions}
     <DropdownPopupSimple
-      label={`Folder options for ${folder.displayName}`}
+      label={`Category options for ${category.displayName}`}
       items={dropdownItems}
       menuWidth="196px"
-      onselect={handleFolderOptionsSelect}
+      onselect={handleCategoryOptionsSelect}
     >
       {#snippet trigger(dropdown)}
         <div
@@ -229,9 +238,9 @@
           class="sidebarPromptTreeRow group"
           data-row-state={rowState}
           data-rounded-corners={roundedCorners ? 'true' : undefined}
-          oncontextmenu={(event) => handleFolderContextMenu(event, dropdown.openAt)}
+          oncontextmenu={(event) => handleCategoryContextMenu(event, dropdown.openAt)}
         >
-          {@render folderRowChildren()}
+          {@render categoryRowChildren()}
         </div>
       {/snippet}
     </DropdownPopupSimple>
@@ -241,29 +250,29 @@
       data-row-state={rowState}
       data-rounded-corners={roundedCorners ? 'true' : undefined}
     >
-      {@render folderRowChildren()}
+      {@render categoryRowChildren()}
     </div>
   {/if}
 {/snippet}
 
-{#if getFolderPromptDroppableOptions}
+{#if getCategoryContentDroppableOptions}
   <PromptDropTarget
-    getOptions={getFolderPromptDroppableOptions}
-    class="sidebarPromptTreeFolderRow"
+    getOptions={getCategoryContentDroppableOptions}
+    class="sidebarPromptTreeCategoryRow"
     style={rowStyle}
     data-indented={indentCount > 0 ? 'true' : undefined}
   >
     {#snippet children({ isOver })}
-      {@render folderRowContent(isOver)}
+      {@render categoryRowContent(isOver)}
     {/snippet}
   </PromptDropTarget>
 {:else}
   <div
-    class="sidebarPromptTreeFolderRow"
+    class="sidebarPromptTreeCategoryRow"
     style={rowStyle}
     data-indented={indentCount > 0 ? 'true' : undefined}
   >
-    {@render folderRowContent(false)}
+    {@render categoryRowContent(false)}
   </div>
 {/if}
 

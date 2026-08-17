@@ -57,7 +57,7 @@
   } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
-  import { setPromptFolderPromptTreeEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import {
     isWorkspaceScreenSelectionSame,
     type WorkspaceScreenSelection
@@ -351,15 +351,15 @@
 
   const persistPromptNavigationSelection = () => {
     const workspaceId = getSelectedWorkspaceId()
-    const rowOwnerFolderId = promptNavigation.rowOwnerFolderId
+    const contentOwnerId = promptNavigation.contentOwnerId
     const selectedRow = promptNavigation.selectedRow
-    if (!workspaceId || !rowOwnerFolderId || !selectedRow) {
+    if (!workspaceId || !contentOwnerId || !selectedRow) {
       return
     }
 
-    setPromptFolderPromptTreeEntryIdWithAutosave(
+    setPromptFolderSelectedEntryIdWithAutosave(
       workspaceId,
-      rowOwnerFolderId,
+      contentOwnerId,
       promptNavigationRowToPersistedEntryId(selectedRow)
     )
   }

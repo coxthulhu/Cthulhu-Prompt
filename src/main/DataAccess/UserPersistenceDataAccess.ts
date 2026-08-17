@@ -1,8 +1,6 @@
 import {
   DEFAULT_USER_PERSISTENCE,
-  copyPromptFolderSettingsEditorViewStates,
   createDefaultWorkspacePersistence,
-  createEmptyPromptFolderSettingsEditorViewStates,
   parseWorkspaceScreenSelection,
   parseWorkspacePersistence,
   toSerializableWorkspacePersistence,
@@ -10,7 +8,6 @@ import {
   type UserPersistence,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
-import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/PromptFolder'
 import { SqliteDataAccess } from './SqliteDataAccess'
 
 const APP_PERSISTENCE_ID = 1
@@ -35,18 +32,19 @@ type WorkspaceUiStateRow = {
   lastPromptFolderId: string | null
 }
 
-type PromptFolderUiStateRow = {
-  promptFolderId: string
-  promptTreeEntryId: string
-  promptTreeIsExpanded: number
-  folderSettingsSectionIsExpanded: number
-  promptsSectionIsExpanded: number
+/** Persisted prompt-folder screen state for one root or category content owner. */
+type PromptFolderViewRow = {
+  contentOwnerId: string
+  selectedEntryId: string
+  treeIsExpanded: number
+  detailsSectionIsExpanded: number
+  contentSectionIsExpanded: number
 }
 
-type PromptFolderSettingsEditorViewStateRow = {
-  promptFolderId: string
-  settingsField: PromptFolderSettingsField
-  editorViewStateJson: string
+/** Persisted category description editor state. */
+type CategoryDescriptionEditorViewStateRow = {
+  contentOwnerId: string
+  categoryDescriptionEditorViewStateJson: string
 }
 
 export type WindowPersistence = {
@@ -221,61 +219,51 @@ export class UserPersistenceDataAccess {
       return createDefaultWorkspacePersistence(workspaceId)
     }
 
-    const promptFolderUiStateRows = db
+    const promptFolderViewRows = db
       .prepare(
         `
         SELECT
-          prompt_folder_id AS promptFolderId,
-          prompt_tree_entry_id AS promptTreeEntryId,
-          prompt_tree_is_expanded AS promptTreeIsExpanded,
-          folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
-          prompts_section_is_expanded AS promptsSectionIsExpanded
-        FROM prompt_folder_ui_state
+          content_owner_id AS contentOwnerId,
+          selected_entry_id AS selectedEntryId,
+          tree_is_expanded AS treeIsExpanded,
+          details_section_is_expanded AS detailsSectionIsExpanded,
+          content_section_is_expanded AS contentSectionIsExpanded
+        FROM prompt_folder_view_state
         WHERE workspace_id = ?
         `
       )
-      .all(workspaceId) as PromptFolderUiStateRow[]
+      .all(workspaceId) as PromptFolderViewRow[]
 
-    const settingsEditorViewStateRows = db
+    const categoryDescriptionEditorViewStateRows = db
       .prepare(
         `
         SELECT
-          prompt_folder_id AS promptFolderId,
-          settings_field AS settingsField,
-          editor_view_state_json AS editorViewStateJson
-        FROM prompt_folder_settings_editor_view_state
+          category_id AS contentOwnerId,
+          editor_view_state_json AS categoryDescriptionEditorViewStateJson
+        FROM category_description_editor_view_state
         WHERE workspace_id = ?
         `
       )
-      .all(workspaceId) as PromptFolderSettingsEditorViewStateRow[]
+      .all(workspaceId) as CategoryDescriptionEditorViewStateRow[]
 
-    const settingsEditorViewStatesByFolderId = new Map<
-      string,
-      Record<PromptFolderSettingsField, string | null>
-    >()
-
-    for (const row of settingsEditorViewStateRows) {
-      if (!PROMPT_FOLDER_SETTINGS_FIELDS.includes(row.settingsField)) {
-        continue
-      }
-
-      const viewStates =
-        settingsEditorViewStatesByFolderId.get(row.promptFolderId) ??
-        createEmptyPromptFolderSettingsEditorViewStates()
-      viewStates[row.settingsField] = row.editorViewStateJson
-      settingsEditorViewStatesByFolderId.set(row.promptFolderId, viewStates)
+    /** Category description editor state keyed by category ID. */
+    const categoryDescriptionEditorViewStateByCategoryId = new Map<string, string>()
+    for (const row of categoryDescriptionEditorViewStateRows) {
+      categoryDescriptionEditorViewStateByCategoryId.set(
+        row.contentOwnerId,
+        row.categoryDescriptionEditorViewStateJson
+      )
     }
 
-    const serializablePromptFolderUiStateRows = promptFolderUiStateRows.map((row) => ({
-      promptFolderId: row.promptFolderId,
-      promptTreeEntryId: row.promptTreeEntryId,
-      promptTreeIsExpanded: row.promptTreeIsExpanded !== 0,
-      folderSettingsSectionIsExpanded: row.folderSettingsSectionIsExpanded !== 0,
-      promptsSectionIsExpanded: row.promptsSectionIsExpanded !== 0,
-      settingsEditorViewStates: copyPromptFolderSettingsEditorViewStates(
-        settingsEditorViewStatesByFolderId.get(row.promptFolderId) ??
-          createEmptyPromptFolderSettingsEditorViewStates()
-      )
+    /** Serializable prompt-folder screen state loaded from SQLite. */
+    const serializablePromptFolderViewEntries = promptFolderViewRows.map((row) => ({
+      contentOwnerId: row.contentOwnerId,
+      selectedEntryId: row.selectedEntryId,
+      treeIsExpanded: row.treeIsExpanded !== 0,
+      detailsSectionIsExpanded: row.detailsSectionIsExpanded !== 0,
+      contentSectionIsExpanded: row.contentSectionIsExpanded !== 0,
+      categoryDescriptionEditorViewStateJson:
+        categoryDescriptionEditorViewStateByCategoryId.get(row.contentOwnerId) ?? null
     }))
 
     const selectedScreenData = parseSelectedScreenDataJson(workspaceUiState.selectedScreenDataJson)
@@ -284,7 +272,7 @@ export class UserPersistenceDataAccess {
         selectedScreen: workspaceUiState.selectedScreen,
         selectedScreenData,
         lastPromptFolderId: workspaceUiState.lastPromptFolderId,
-        promptFolderPromptTreeEntries: serializablePromptFolderUiStateRows
+        promptFolderViewEntries: serializablePromptFolderViewEntries
       },
       workspaceId
     )
@@ -296,7 +284,7 @@ export class UserPersistenceDataAccess {
     this.resetWorkspaceScreenSelection(workspaceId)
     return {
       ...createDefaultWorkspacePersistence(workspaceId),
-      promptFolderPromptTreeEntries: serializablePromptFolderUiStateRows
+      promptFolderViewEntries: serializablePromptFolderViewEntries
     }
   }
 
@@ -331,59 +319,54 @@ export class UserPersistenceDataAccess {
         serializableWorkspacePersistence.lastPromptFolderId
       )
 
-      db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(
+      db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(
         serializableWorkspacePersistence.workspaceId
       )
-      db.prepare('DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?').run(
+      db.prepare('DELETE FROM category_description_editor_view_state WHERE workspace_id = ?').run(
         serializableWorkspacePersistence.workspaceId
       )
 
-      const insertPromptFolderUiState = db.prepare(
+      /** Inserts one prompt-folder screen view entry. */
+      const insertPromptFolderView = db.prepare(
         `
-        INSERT INTO prompt_folder_ui_state (
+        INSERT INTO prompt_folder_view_state (
           workspace_id,
-          prompt_folder_id,
-          prompt_tree_entry_id,
-          prompt_tree_is_expanded,
-          folder_settings_section_is_expanded,
-          prompts_section_is_expanded
+          content_owner_id,
+          selected_entry_id,
+          tree_is_expanded,
+          details_section_is_expanded,
+          content_section_is_expanded
         )
         VALUES (?, ?, ?, ?, ?, ?)
         `
       )
-      const insertSettingsEditorViewState = db.prepare(
+      /** Inserts one category description editor view state. */
+      const insertCategoryDescriptionEditorViewState = db.prepare(
         `
-        INSERT INTO prompt_folder_settings_editor_view_state (
+        INSERT INTO category_description_editor_view_state (
           workspace_id,
-          prompt_folder_id,
-          settings_field,
+          category_id,
           editor_view_state_json
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?)
         `
       )
 
-      for (const entry of serializableWorkspacePersistence.promptFolderPromptTreeEntries) {
-        insertPromptFolderUiState.run(
+      for (const entry of serializableWorkspacePersistence.promptFolderViewEntries) {
+        insertPromptFolderView.run(
           serializableWorkspacePersistence.workspaceId,
-          entry.promptFolderId,
-          entry.promptTreeEntryId,
-          entry.promptTreeIsExpanded ? 1 : 0,
-          entry.folderSettingsSectionIsExpanded ? 1 : 0,
-          entry.promptsSectionIsExpanded ? 1 : 0
+          entry.contentOwnerId,
+          entry.selectedEntryId,
+          entry.treeIsExpanded ? 1 : 0,
+          entry.detailsSectionIsExpanded ? 1 : 0,
+          entry.contentSectionIsExpanded ? 1 : 0
         )
 
-        for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-          const viewStateJson = entry.settingsEditorViewStates[field]
-          if (viewStateJson === null) {
-            continue
-          }
-
-          insertSettingsEditorViewState.run(
+        if (entry.categoryDescriptionEditorViewStateJson !== null) {
+          insertCategoryDescriptionEditorViewState.run(
             serializableWorkspacePersistence.workspaceId,
-            entry.promptFolderId,
-            field,
-            viewStateJson
+            entry.contentOwnerId,
+            entry.categoryDescriptionEditorViewStateJson
           )
         }
       }
@@ -394,97 +377,102 @@ export class UserPersistenceDataAccess {
     return serializableWorkspacePersistence
   }
 
-  static cleanupWorkspacePromptFolderUiState(
+  /** Removes workspace view state whose root-folder or category owner no longer exists. */
+  static cleanupWorkspacePromptFolderViewState(
     workspaceId: string,
-    workspacePromptFolderIds: string[]
+    workspacePromptFolderIds: string[],
+    workspaceCategoryIds: string[]
   ): void {
     const db = SqliteDataAccess.getDatabase()
     const validPromptFolderIds = new Set(workspacePromptFolderIds)
+    /** Valid root-folder and category owners for prompt-folder screen view entries. */
+    const validContentOwnerIds = new Set([...workspacePromptFolderIds, ...workspaceCategoryIds])
 
     const cleanupWorkspaceState = db.transaction(() => {
-      const existingPromptFolderUiState = db
+      /** Existing prompt-folder view entries retained for valid content owners. */
+      const existingPromptFolderViewEntries = db
         .prepare(
           `
           SELECT
-            prompt_folder_id AS promptFolderId,
-            prompt_tree_entry_id AS promptTreeEntryId,
-            prompt_tree_is_expanded AS promptTreeIsExpanded,
-            folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
-            prompts_section_is_expanded AS promptsSectionIsExpanded
-          FROM prompt_folder_ui_state
+            content_owner_id AS contentOwnerId,
+            selected_entry_id AS selectedEntryId,
+            tree_is_expanded AS treeIsExpanded,
+            details_section_is_expanded AS detailsSectionIsExpanded,
+            content_section_is_expanded AS contentSectionIsExpanded
+          FROM prompt_folder_view_state
           WHERE workspace_id = ?
           `
         )
-        .all(workspaceId) as PromptFolderUiStateRow[]
+        .all(workspaceId) as PromptFolderViewRow[]
 
-      const existingSettingsEditorViewStates = db
+      /** Existing category description editor states retained for valid categories. */
+      const existingCategoryDescriptionEditorViewStates = db
         .prepare(
           `
           SELECT
-            prompt_folder_id AS promptFolderId,
-            settings_field AS settingsField,
-            editor_view_state_json AS editorViewStateJson
-          FROM prompt_folder_settings_editor_view_state
+            category_id AS contentOwnerId,
+            editor_view_state_json AS categoryDescriptionEditorViewStateJson
+          FROM category_description_editor_view_state
           WHERE workspace_id = ?
           `
         )
-        .all(workspaceId) as PromptFolderSettingsEditorViewStateRow[]
+        .all(workspaceId) as CategoryDescriptionEditorViewStateRow[]
 
-      db.prepare('DELETE FROM prompt_folder_ui_state WHERE workspace_id = ?').run(workspaceId)
-      db.prepare('DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ?').run(
+      db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(workspaceId)
+      db.prepare('DELETE FROM category_description_editor_view_state WHERE workspace_id = ?').run(
         workspaceId
       )
 
-      const insertPromptFolderUiState = db.prepare(
+      /** Reinserts one retained prompt-folder view entry. */
+      const insertPromptFolderView = db.prepare(
         `
-        INSERT INTO prompt_folder_ui_state (
+        INSERT INTO prompt_folder_view_state (
           workspace_id,
-          prompt_folder_id,
-          prompt_tree_entry_id,
-          prompt_tree_is_expanded,
-          folder_settings_section_is_expanded,
-          prompts_section_is_expanded
+          content_owner_id,
+          selected_entry_id,
+          tree_is_expanded,
+          details_section_is_expanded,
+          content_section_is_expanded
         )
         VALUES (?, ?, ?, ?, ?, ?)
         `
       )
-      const insertSettingsEditorViewState = db.prepare(
+      /** Reinserts one retained category description editor state. */
+      const insertCategoryDescriptionEditorViewState = db.prepare(
         `
-        INSERT INTO prompt_folder_settings_editor_view_state (
+        INSERT INTO category_description_editor_view_state (
           workspace_id,
-          prompt_folder_id,
-          settings_field,
+          category_id,
           editor_view_state_json
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?)
         `
       )
 
-      for (const entry of existingPromptFolderUiState) {
-        if (!validPromptFolderIds.has(entry.promptFolderId)) {
+      for (const entry of existingPromptFolderViewEntries) {
+        if (!validContentOwnerIds.has(entry.contentOwnerId)) {
           continue
         }
 
-        insertPromptFolderUiState.run(
+        insertPromptFolderView.run(
           workspaceId,
-          entry.promptFolderId,
-          entry.promptTreeEntryId,
-          entry.promptTreeIsExpanded,
-          entry.folderSettingsSectionIsExpanded,
-          entry.promptsSectionIsExpanded
+          entry.contentOwnerId,
+          entry.selectedEntryId,
+          entry.treeIsExpanded,
+          entry.detailsSectionIsExpanded,
+          entry.contentSectionIsExpanded
         )
       }
 
-      for (const entry of existingSettingsEditorViewStates) {
-        if (!validPromptFolderIds.has(entry.promptFolderId)) {
+      for (const entry of existingCategoryDescriptionEditorViewStates) {
+        if (!validContentOwnerIds.has(entry.contentOwnerId)) {
           continue
         }
 
-        insertSettingsEditorViewState.run(
+        insertCategoryDescriptionEditorViewState.run(
           workspaceId,
-          entry.promptFolderId,
-          entry.settingsField,
-          entry.editorViewStateJson
+          entry.contentOwnerId,
+          entry.categoryDescriptionEditorViewStateJson
         )
       }
 

@@ -1,24 +1,28 @@
 import { createTestRequestId } from './PlaywrightTestFramework'
 
+/** Seed values for one root-folder or category view-state entry. */
 export type WorkspacePersistenceSeedEntry = {
-  promptFolderId: string
-  promptTreeEntryId: string
-  promptTreeIsExpanded?: boolean
-  folderSettingsSectionIsExpanded?: boolean
-  promptsSectionIsExpanded?: boolean
+  contentOwnerId: string
+  selectedEntryId: string
+  treeIsExpanded?: boolean
+  detailsSectionIsExpanded?: boolean
+  contentSectionIsExpanded?: boolean
+  categoryDescriptionEditorViewStateJson?: string | null
 }
 
+/** Persisted workspace state read directly from the test SQLite database. */
 export type WorkspacePersistenceSnapshot = {
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
   selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
   lastPromptFolderId: string | null
-  promptFolderPromptTreeEntries: Array<{
-    promptFolderId: string
-    promptTreeEntryId: string
-    promptTreeIsExpanded: boolean
-    folderSettingsSectionIsExpanded: boolean
-    promptsSectionIsExpanded: boolean
+  promptFolderViewEntries: Array<{
+    contentOwnerId: string
+    selectedEntryId: string
+    treeIsExpanded: boolean
+    detailsSectionIsExpanded: boolean
+    contentSectionIsExpanded: boolean
+    categoryDescriptionEditorViewStateJson: string | null
   }>
 }
 
@@ -141,7 +145,7 @@ export const seedWorkspacePersistence = async (
     selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
     selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
     lastPromptFolderId?: string | null
-    promptFolderPromptTreeEntries: WorkspacePersistenceSeedEntry[]
+    promptFolderViewEntries: WorkspacePersistenceSeedEntry[]
   }
 ): Promise<void> => {
   await runSqlStatement(
@@ -168,35 +172,54 @@ export const seedWorkspacePersistence = async (
 
   await runSqlStatement(
     electronApp,
-    `DELETE FROM prompt_folder_ui_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
+    `DELETE FROM prompt_folder_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
   await runSqlStatement(
     electronApp,
-    `DELETE FROM prompt_folder_settings_editor_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
+    `DELETE FROM category_description_editor_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
 
-  for (const entry of data.promptFolderPromptTreeEntries) {
+  for (const entry of data.promptFolderViewEntries) {
     await runSqlStatement(
       electronApp,
       `
-      INSERT INTO prompt_folder_ui_state (
+      INSERT INTO prompt_folder_view_state (
         workspace_id,
-        prompt_folder_id,
-        prompt_tree_entry_id,
-        prompt_tree_is_expanded,
-        folder_settings_section_is_expanded,
-        prompts_section_is_expanded
+        content_owner_id,
+        selected_entry_id,
+        tree_is_expanded,
+        details_section_is_expanded,
+        content_section_is_expanded
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
-        ${toSqlText(entry.promptFolderId)},
-        ${toSqlText(entry.promptTreeEntryId)},
-        ${entry.promptTreeIsExpanded === false ? 0 : 1},
-        ${entry.folderSettingsSectionIsExpanded === true ? 1 : 0},
-        ${entry.promptsSectionIsExpanded === false ? 0 : 1}
+        ${toSqlText(entry.contentOwnerId)},
+        ${toSqlText(entry.selectedEntryId)},
+        ${entry.treeIsExpanded === false ? 0 : 1},
+        ${entry.detailsSectionIsExpanded === true ? 1 : 0},
+        ${entry.contentSectionIsExpanded === false ? 0 : 1}
       )
       `
     )
+
+    if (entry.categoryDescriptionEditorViewStateJson !== null &&
+        entry.categoryDescriptionEditorViewStateJson !== undefined) {
+      await runSqlStatement(
+        electronApp,
+        `
+        INSERT INTO category_description_editor_view_state (
+          workspace_id,
+          category_id,
+          editor_view_state_json
+        )
+        VALUES (
+          ${toSqlText(data.workspaceId)},
+          ${toSqlText(entry.contentOwnerId)},
+          ${toSqlText(entry.categoryDescriptionEditorViewStateJson)}
+        )
+        `
+      )
+    }
   }
 }
 
@@ -247,23 +270,50 @@ export const readWorkspacePersistence = async (
     throw new Error(workspaceStateResult.error ?? 'Failed to read workspace state')
   }
 
-  const promptFolderStateResult = await runSqlQuery(
+  const promptFolderViewResult = await runSqlQuery(
     electronApp,
     `
     SELECT
-      prompt_folder_id AS promptFolderId,
-      prompt_tree_entry_id AS promptTreeEntryId,
-      prompt_tree_is_expanded AS promptTreeIsExpanded,
-      folder_settings_section_is_expanded AS folderSettingsSectionIsExpanded,
-      prompts_section_is_expanded AS promptsSectionIsExpanded
-    FROM prompt_folder_ui_state
+      content_owner_id AS contentOwnerId,
+      selected_entry_id AS selectedEntryId,
+      tree_is_expanded AS treeIsExpanded,
+      details_section_is_expanded AS detailsSectionIsExpanded,
+      content_section_is_expanded AS contentSectionIsExpanded
+    FROM prompt_folder_view_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
   )
 
-  if (!promptFolderStateResult.success) {
-    throw new Error(promptFolderStateResult.error ?? 'Failed to read prompt folder state')
+  if (!promptFolderViewResult.success) {
+    throw new Error(promptFolderViewResult.error ?? 'Failed to read prompt folder view state')
   }
+
+  /** Category description editor states keyed by category ID. */
+  const categoryDescriptionViewStateResult = await runSqlQuery(
+    electronApp,
+    `
+    SELECT
+      category_id AS categoryId,
+      editor_view_state_json AS editorViewStateJson
+    FROM category_description_editor_view_state
+    WHERE workspace_id = ${toSqlText(workspaceId)}
+    `
+  )
+
+  if (!categoryDescriptionViewStateResult.success) {
+    throw new Error(
+      categoryDescriptionViewStateResult.error ??
+        'Failed to read category description editor view state'
+    )
+  }
+
+  /** Category description view-state JSON keyed by category ID. */
+  const categoryDescriptionViewStateByCategoryId = new Map(
+    (categoryDescriptionViewStateResult.rows ?? []).map((entry) => [
+      String(entry.categoryId),
+      String(entry.editorViewStateJson)
+    ])
+  )
 
   const workspaceRow = workspaceStateResult.rows?.[0] as
     | {
@@ -280,12 +330,14 @@ export const readWorkspacePersistence = async (
       ? JSON.parse(workspaceRow.selectedScreenDataJson)
       : null,
     lastPromptFolderId: workspaceRow?.lastPromptFolderId ?? null,
-    promptFolderPromptTreeEntries: (promptFolderStateResult.rows ?? []).map((entry) => ({
-      promptFolderId: String(entry.promptFolderId),
-      promptTreeEntryId: String(entry.promptTreeEntryId),
-      promptTreeIsExpanded: entry.promptTreeIsExpanded !== 0,
-      folderSettingsSectionIsExpanded: entry.folderSettingsSectionIsExpanded !== 0,
-      promptsSectionIsExpanded: entry.promptsSectionIsExpanded !== 0
+    promptFolderViewEntries: (promptFolderViewResult.rows ?? []).map((entry) => ({
+      contentOwnerId: String(entry.contentOwnerId),
+      selectedEntryId: String(entry.selectedEntryId),
+      treeIsExpanded: entry.treeIsExpanded !== 0,
+      detailsSectionIsExpanded: entry.detailsSectionIsExpanded !== 0,
+      contentSectionIsExpanded: entry.contentSectionIsExpanded !== 0,
+      categoryDescriptionEditorViewStateJson:
+        categoryDescriptionViewStateByCategoryId.get(String(entry.contentOwnerId)) ?? null
     }))
   }
 }

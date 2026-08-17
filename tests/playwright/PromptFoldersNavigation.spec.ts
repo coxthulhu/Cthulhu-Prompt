@@ -14,7 +14,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-tree-prompt-simple-1"]'
 const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
-const TOGGLE_ALL_PROMPT_FOLDERS_BUTTON = '[data-testid="toggle-all-prompt-folders-button"]'
+const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
 const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM =
@@ -32,7 +32,7 @@ const SIDEBAR_FOLDER_ROOT_BUTTON = '[data-testid="sidebar-folder-root-button"]'
 const PROMPT_TREE_EMPTY_STATE = '[data-testid="prompt-tree-empty-state"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
-const SUBFOLDERS_WORKSPACE_PATH = '/ws/subfolders'
+const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
 const TEMPLATE_WORKSPACE_PATH = '/ws/templates'
 
 const createDeterministicId = (seed: string): string => {
@@ -60,16 +60,16 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
               templateText: 'Review {{diff}}.'
             }
           ],
-          subfolders: [
+          categories: [
             {
-              folderName: 'Nested',
-              displayName: 'Nested Templates',
-              folderId: 'template-folder-nested',
+              categoryName: 'Category',
+              displayName: 'Category Templates',
+              categoryId: 'template-category',
               templates: [
                 {
-                  id: 'nested-template',
-                  fallbackTitle: 'Nested Template',
-                  templateText: 'Use {{nested}}.'
+                  id: 'category-template',
+                  fallbackTitle: 'Category Template',
+                  templateText: 'Use {{category}}.'
                 }
               ]
             }
@@ -113,45 +113,45 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(templateEditor.locator('[data-testid="prompt-move-down"]')).toBeVisible()
     await expect(templateEditor.locator('[data-testid="prompt-modified-time"]')).toBeVisible()
     await expect(templateEditor.locator('[data-testid="prompt-token-count"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-template"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-editor-category-template"]')).toBeVisible()
     await expect(
       mainWindow
-        .locator('[data-testid="prompt-folder-editor-template-folder-nested"]')
-        .getByText('Nested Templates', { exact: true })
+        .locator('[data-testid="category-editor-template-category"]')
+        .getByText('Category Templates', { exact: true })
     ).toBeVisible()
     await expect(
       mainWindow
-        .locator('[data-testid="prompt-editor-nested-template"]')
+        .locator('[data-testid="prompt-editor-category-template"]')
         .locator('[data-testid="prompt-title"]')
-    ).toHaveAttribute('placeholder', 'Nested Template...')
+    ).toHaveAttribute('placeholder', 'Category Template...')
     await expect(mainWindow.locator('.prompt-editor-metadata-folder')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-status-pill"]')).toHaveCount(0)
 
-    const nestedFolderEditor = mainWindow.locator(
-      '[data-testid="prompt-folder-editor-template-folder-nested"]'
+    const categoryEditor = mainWindow.locator(
+      '[data-testid="category-editor-template-category"]'
     )
-    await expect(nestedFolderEditor).toContainText('1 template')
-    await expect(nestedFolderEditor).not.toContainText('completed prompt')
+    await expect(categoryEditor).toContainText('1 template')
+    await expect(categoryEditor).not.toContainText('completed prompt')
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-drag-handle"]')
+      categoryEditor.locator('[data-testid="category-drag-handle"]')
     ).toBeVisible()
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-toggle"]')
+      categoryEditor.locator('[data-testid="category-editor-content-toggle"]')
     ).toHaveAttribute('aria-expanded', 'true')
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]')
+      categoryEditor.locator('[data-testid="category-editor-delete-button"]')
     ).toBeVisible()
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-drag-handle"]')
+      categoryEditor.locator('[data-testid="category-drag-handle"]')
     ).toHaveAttribute('aria-label', 'Drag category')
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]')
+      categoryEditor.locator('[data-testid="category-editor-title-edit"]')
     ).toHaveAttribute('aria-label', 'Rename category')
     await expect(
-      nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]')
+      categoryEditor.locator('[data-testid="category-editor-delete-button"]')
     ).toHaveAttribute('aria-label', 'Delete category')
 
-    await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]').click()
+    await categoryEditor.locator('[data-testid="category-editor-title-edit"]').click()
     const renameCategoryDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Rename Category"]'
     )
@@ -165,7 +165,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(renameCategoryDialog.getByLabel('Category Name')).toBeVisible()
     await renameCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
 
-    await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]').click()
+    await categoryEditor.locator('[data-testid="category-editor-delete-button"]').click()
     const deleteCategoryDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Delete Category"]'
     )
@@ -214,9 +214,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(deleteTemplateFolderDialog).toBeVisible()
     await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
 
-    await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+    await categoryEditor.locator('[data-testid="category-editor-settings-toggle"]').click()
     await expect(
-      nestedFolderEditor.locator('[data-testid^="prompt-folder-settings-toggle-"]')
+      categoryEditor.locator('[data-testid^="category-settings-toggle-"]')
     ).toHaveCount(1)
   })
 
@@ -242,7 +242,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
@@ -257,15 +257,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     const screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.promptCount).toBe(3)
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
+    await expect(mainWindow.locator('[data-testid="prompt-editor-category-prompt"]')).toBeAttached()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toBeVisible()
-    // Stable category identity connects the flattened fixture to its folder-style row.
-    const nestedCategoryId = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
+    // Stable category identity connects the flattened fixture to its category row.
+    const categoryId = createDeterministicId(`${CATEGORIES_WORKSPACE_PATH}:Main/Category`)
     await expect(
-      mainWindow.locator(`[data-testid="prompt-folder-editor-${nestedCategoryId}"]`)
-    ).toContainText('Nested')
+      mainWindow.locator(`[data-testid="category-editor-${categoryId}"]`)
+    ).toContainText('Category')
   })
 
   test('restores prompt content when revisiting folders', async ({ testSetup }) => {
@@ -505,48 +505,48 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toHaveCount(0)
   })
 
-  test('collapses and expands all prompt folders from the sidebar action', async ({
+  test('collapses and expands all categories from the sidebar action', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Main')
 
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeEnabled()
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeEnabled()
+    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toHaveAttribute(
       'aria-label',
-      'Collapse All Prompt Folders'
+      'Collapse All Categories'
     )
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-Category"]')
     ).toHaveAttribute('aria-expanded', 'true')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
 
-    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
+    await mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).click()
 
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toHaveAttribute(
       'aria-label',
-      'Expand All Prompt Folders'
+      'Expand All Categories'
     )
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
 
-    await mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON).click()
+    await mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).click()
 
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toHaveAttribute(
       'aria-label',
-      'Collapse All Prompt Folders'
+      'Collapse All Categories'
     )
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toBeVisible()
   })
 
@@ -574,7 +574,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       )
       .toBeLessThanOrEqual(1)
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(0)
   })
 
@@ -602,7 +602,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await expect(mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON)).toBeDisabled()
-    await expect(mainWindow.locator(TOGGLE_ALL_PROMPT_FOLDERS_BUTTON)).toBeDisabled()
+    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeDisabled()
   })
 
   test('creates and navigates to a new folder', async ({ electronApp, testSetup }) => {
@@ -678,8 +678,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator(PROMPT_FOLDER_HOST)).toBeVisible()
     await expect(mainWindow.locator(PROMPT_TREE_HOST)).toBeVisible()
+    // The selected root folder is represented by the root action, not a duplicate category row.
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-folder-toggle-button-TestFolder"]')
+      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-TestFolder"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toContainText(
       'Test Folder'
@@ -993,7 +994,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid^="prompt-folder-settings-section-"]')
+      mainWindow.locator('[data-testid^="category-description-section"]')
     ).toHaveCount(0)
   })
 

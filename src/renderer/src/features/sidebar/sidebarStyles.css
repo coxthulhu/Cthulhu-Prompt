@@ -39,7 +39,7 @@
   overflow: hidden;
 }
 
-.sidebarPromptTreeFolderRow {
+.sidebarPromptTreeCategoryRow {
   width: 100%;
   padding-block: 1px;
 }
@@ -102,7 +102,7 @@
   text-align: left;
 }
 
-.sidebarPromptTreeFolderRow[data-indented='true'] .sidebarPromptTreeToggleButton {
+.sidebarPromptTreeCategoryRow[data-indented='true'] .sidebarPromptTreeToggleButton {
   grid-template-columns:
     calc(1px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
     24px 18px minmax(0, 1fr);
@@ -114,11 +114,12 @@
   color: var(--ui-hoverable-icon-glyph);
 }
 
-.sidebarPromptTreeFolderIcon {
+.sidebarPromptTreeFolderIcon,
+.sidebarPromptTreeCategoryIcon {
   color: var(--ui-secondary-icon-glyph);
 }
 
-.sidebarPromptTreeFolderLabel {
+.sidebarPromptTreeCategoryLabel {
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -160,7 +161,7 @@
   pointer-events: none;
 }
 
-.sidebarPromptTreeFolderActions {
+.sidebarPromptTreeCategoryActions {
   display: none;
   gap: 2px;
   pointer-events: auto;
@@ -189,9 +190,9 @@
     color var(--ui-animation-duration-fast) ease-out;
 }
 
-.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeFolderActions,
-.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeFolderActions,
-.sidebarPromptTreeRow:focus-within .sidebarPromptTreeFolderActions {
+.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeCategoryActions,
+.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeCategoryActions,
+.sidebarPromptTreeRow:focus-within .sidebarPromptTreeCategoryActions {
   display: flex;
 }
 

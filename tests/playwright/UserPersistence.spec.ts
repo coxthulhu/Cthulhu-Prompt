@@ -268,7 +268,7 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: persistedPromptFolderId },
-      promptFolderPromptTreeEntries: []
+      promptFolderViewEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -295,7 +295,7 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: 'missing-folder-id' },
-      promptFolderPromptTreeEntries: []
+      promptFolderViewEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -326,7 +326,7 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'mockups',
       selectedScreenData: { mockupId: 'missing-mockup-id' },
-      promptFolderPromptTreeEntries: []
+      promptFolderViewEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -439,7 +439,7 @@ describe('User Persistence', () => {
       selectedScreen: 'home',
       selectedScreenData: null,
       lastPromptFolderId: developmentPromptFolderId,
-      promptFolderPromptTreeEntries: []
+      promptFolderViewEntries: []
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -480,11 +480,11 @@ describe('User Persistence', () => {
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const entries = persisted.promptFolderPromptTreeEntries
-          const promptTreeEntry = entries.find(
-            (entry) => entry.promptFolderId === developmentPromptFolderId
+          const entries = persisted.promptFolderViewEntries
+          const viewEntry = entries.find(
+            (entry) => entry.contentOwnerId === developmentPromptFolderId
           )
-          return promptTreeEntry?.promptTreeEntryId ?? null
+          return viewEntry?.selectedEntryId ?? null
         },
         { timeout: 15000 }
       )
@@ -515,14 +515,14 @@ describe('User Persistence', () => {
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const entries = persisted.promptFolderPromptTreeEntries
+          const entries = persisted.promptFolderViewEntries
           const examplesEntry = entries.find(
-            (entry) => entry.promptFolderId === examplesPromptFolderId
+            (entry) => entry.contentOwnerId === examplesPromptFolderId
           )
           const developmentEntry = entries.find(
-            (entry) => entry.promptFolderId === developmentPromptFolderId
+            (entry) => entry.contentOwnerId === developmentPromptFolderId
           )
-          return `${examplesEntry?.promptTreeEntryId ?? 'none'}:${developmentEntry?.promptTreeEntryId ?? 'none'}:${entries.length}`
+          return `${examplesEntry?.selectedEntryId ?? 'none'}:${developmentEntry?.selectedEntryId ?? 'none'}:${entries.length}`
         },
         { timeout: 15000 }
       )
@@ -533,33 +533,33 @@ describe('User Persistence', () => {
     electronApp,
     testSetup
   }) => {
-    const workspacePath = '/ws/subfolders'
+    const workspacePath = '/ws/categories'
     const workspaceId = createDeterministicId(workspacePath)
-    const nestedPromptFolderId = createDeterministicId(`${workspacePath}:Main/Nested`)
+    const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     await testHelpers.navigateToPromptFolders('Main')
-    const folderEditorToggle = mainWindow.locator(
-      `[data-testid="prompt-folder-editor-${nestedPromptFolderId}"] [data-testid="prompt-folder-editor-title-toggle"]`
+    const categoryContentToggle = mainWindow.locator(
+      `[data-testid="category-editor-${categoryId}"] [data-testid="category-editor-content-toggle"]`
     )
-    await expect(folderEditorToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'true')
 
-    await folderEditorToggle.click()
-    await expect(folderEditorToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toHaveCount(0)
+    await categoryContentToggle.click()
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(mainWindow.locator('[data-testid="prompt-editor-category-prompt"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-editor-base-before"]')).toBeVisible()
 
     await expect
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const entry = persisted.promptFolderPromptTreeEntries.find(
-            (promptTreeEntry) => promptTreeEntry.promptFolderId === nestedPromptFolderId
+          const entry = persisted.promptFolderViewEntries.find(
+            (viewEntry) => viewEntry.contentOwnerId === categoryId
           )
-          const settingsExpanded = entry?.folderSettingsSectionIsExpanded ?? null
-          const promptsExpanded = entry?.promptsSectionIsExpanded ?? null
+          const settingsExpanded = entry?.detailsSectionIsExpanded ?? null
+          const promptsExpanded = entry?.contentSectionIsExpanded ?? null
           return `${settingsExpanded}:${promptsExpanded}`
         },
         { timeout: 15000 }
@@ -571,17 +571,17 @@ describe('User Persistence', () => {
     electronApp,
     testSetup
   }) => {
-    const workspacePath = '/ws/subfolders'
+    const workspacePath = '/ws/categories'
     const workspaceId = createDeterministicId(workspacePath)
-    const nestedPromptFolderId = createDeterministicId(`${workspacePath}:Main/Nested`)
+    const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders' }
+      workspace: { scenario: 'categories' }
     })
 
     await testHelpers.navigateToPromptFolders('Main')
 
     const settingsToggle = mainWindow.locator(
-      `[data-testid="prompt-folder-editor-${nestedPromptFolderId}"] [data-testid="prompt-folder-editor-settings-toggle"]`
+      `[data-testid="category-editor-${categoryId}"] [data-testid="category-editor-settings-toggle"]`
     )
     await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
 
@@ -592,10 +592,10 @@ describe('User Persistence', () => {
       .poll(
         async () => {
           const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          const entry = persisted.promptFolderPromptTreeEntries.find(
-            (promptTreeEntry) => promptTreeEntry.promptFolderId === nestedPromptFolderId
+          const entry = persisted.promptFolderViewEntries.find(
+            (viewEntry) => viewEntry.contentOwnerId === categoryId
           )
-          return entry?.folderSettingsSectionIsExpanded ?? null
+          return entry?.detailsSectionIsExpanded ?? null
         },
         { timeout: 15000 }
       )
@@ -614,10 +614,10 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: developmentPromptFolderId },
-      promptFolderPromptTreeEntries: [
+      promptFolderViewEntries: [
         {
-          promptFolderId: developmentPromptFolderId,
-          promptTreeEntryId: 'dev-2'
+          contentOwnerId: developmentPromptFolderId,
+          selectedEntryId: 'dev-2'
         }
       ]
     })
@@ -649,10 +649,10 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: longPromptFolderId },
-      promptFolderPromptTreeEntries: [
+      promptFolderViewEntries: [
         {
-          promptFolderId: longPromptFolderId,
-          promptTreeEntryId: persistedPromptId
+          contentOwnerId: longPromptFolderId,
+          selectedEntryId: persistedPromptId
         }
       ]
     })
@@ -683,10 +683,10 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: developmentPromptFolderId },
-      promptFolderPromptTreeEntries: [
+      promptFolderViewEntries: [
         {
-          promptFolderId: developmentPromptFolderId,
-          promptTreeEntryId: 'missing-prompt-id'
+          contentOwnerId: developmentPromptFolderId,
+          selectedEntryId: 'missing-prompt-id'
         }
       ]
     })

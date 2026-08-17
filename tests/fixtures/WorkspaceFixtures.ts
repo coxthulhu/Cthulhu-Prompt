@@ -94,29 +94,34 @@ export interface PromptFolderConfig {
   }>
 }
 
+/** Template content owned by a fixture root folder or category. */
+export interface PromptTemplateFixture {
+  id: string
+  title?: string
+  fallbackTitle?: string
+  templateText: string
+  createdAt?: string
+  category?: string
+}
+
+/** Category fixture owned directly by a template root folder. */
+export interface PromptTemplateCategoryConfig {
+  categoryName: string
+  displayName: string
+  categoryId?: string
+  description?: string
+  templates?: PromptTemplateFixture[]
+}
+
+/** Root prompt-template folder fixture. */
 export interface PromptTemplateFolderConfig {
   folderName: string
   displayName: string
   folderId?: string
   description?: string
-  subfolders?: PromptTemplateFolderConfig[]
-  templates?: Array<{
-    id: string
-    title?: string
-    fallbackTitle?: string
-    templateText: string
-    createdAt?: string
-    category?: string
-  }>
+  categories?: PromptTemplateCategoryConfig[]
+  templates?: PromptTemplateFixture[]
 }
-
-/** Collects every template recursively owned by one template-root fixture. */
-const collectPromptTemplateFolderTemplates = (
-  folder: PromptTemplateFolderConfig
-): NonNullable<PromptTemplateFolderConfig['templates']> => [
-  ...(folder.templates ?? []),
-  ...(folder.subfolders ?? []).flatMap(collectPromptTemplateFolderTemplates)
-]
 
 type PromptTemplate = NonNullable<PromptFolderConfig['prompts']>[number]
 
@@ -280,10 +285,10 @@ export type WorkspaceScenario =
   | 'minimal' // Basic workspace structure with settings
   | 'sample' // Workspace with Examples and Development prompt folders
   | 'height' // Workspace with folders for height tests
-  | 'subfolders' // Workspace with a prompt folder containing one nested subfolder
-  | 'subfolders-ui' // Dedicated recursive prompt-folder screen rendering fixture
-  | 'subfolders-controls' // Dedicated nested two-prompt movement-control fixture
-  | 'subfolders-depth-limit' // Dedicated eight-level subfolder depth fixture
+  | 'categories' // Workspace with a prompt folder containing one category
+  | 'categories-ui' // Dedicated category screen rendering fixture
+  | 'categories-controls' // Dedicated category two-prompt movement-control fixture
+  | 'categories-single-level' // Dedicated single-level category fixture
   | 'virtual' // Workspace with folders for virtualization/overscan tests
   | 'long-wrapped-lines' // Workspace with wrapped prompts that overflow default estimations
   | 'virtual-placeholder' // Workspace with prompts tailored for placeholder hydration tests
@@ -296,10 +301,10 @@ export const DEFAULT_WORKSPACES: Record<
   minimal: '/ws/minimal',
   sample: '/ws/sample',
   height: '/ws/height',
-  subfolders: '/ws/subfolders',
-  'subfolders-ui': '/ws/subfolders-ui',
-  'subfolders-controls': '/ws/subfolders-controls',
-  'subfolders-depth-limit': '/ws/subfolders-depth-limit',
+  categories: '/ws/categories',
+  'categories-ui': '/ws/categories-ui',
+  'categories-controls': '/ws/categories-controls',
+  'categories-single-level': '/ws/categories-single-level',
   virtual: '/ws/virtual',
   'long-wrapped-lines': '/ws/long-wrapped-lines',
   'virtual-placeholder': '/ws/virtual-placeholder'
@@ -423,21 +428,21 @@ export function createWorkspaceWithTemplateFolders(
   folderConfigs: PromptTemplateFolderConfig[]
 ): Record<string, string | null> {
   const structure = createBasicWorkspace(workspacePath)
-  /** Creates one flat template root, treating its first nested fixture layer as categories. */
+  /** Creates one flat template root with direct category fixtures. */
   const addFolder = (folder: PromptTemplateFolderConfig): string => {
     const folderPath = `${workspacePath}/Templates/${folder.folderName}`
     const folderId =
       folder.folderId ?? createDeterministicId(`${workspacePath}:template:${folderPath}`)
     /** Root-owned templates that remain Uncategorized. */
     const rootTemplates = folder.templates ?? []
-    /** Category fixtures created from the former first nested layer. */
-    const categoryFixtures = (folder.subfolders ?? []).map((subfolder) => ({
+    /** Category fixtures owned by this template root. */
+    const categoryFixtures = (folder.categories ?? []).map((category) => ({
       categoryId:
-        subfolder.folderId ??
-        createDeterministicId(`${workspacePath}:template:${folderPath}/${subfolder.folderName}`),
-      displayName: subfolder.displayName,
-      description: subfolder.description ?? null,
-      templates: collectPromptTemplateFolderTemplates(subfolder)
+        category.categoryId ??
+        createDeterministicId(`${workspacePath}:template:${folderPath}/${category.categoryName}`),
+      displayName: category.displayName,
+      description: category.description ?? null,
+      templates: category.templates ?? []
     }))
 
     structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
@@ -551,9 +556,9 @@ export function setupWorkspaceScenario(
       return createWorkspaceWithFolders(workspacePath, heightPromptFolders)
     }
 
-    case 'subfolders': {
-      /** Former first-level folder represented as a category fixture. */
-      const categoryId = createDeterministicId(`${workspacePath}:Main/Nested`)
+    case 'categories': {
+      /** Category fixture owned directly by the Main root folder. */
+      const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
       const structure = createWorkspaceWithFolders(workspacePath, [
         {
           folderName: 'Main',
@@ -562,24 +567,24 @@ export function setupWorkspaceScenario(
             {
               id: 'base-before',
               title: 'Base Before',
-              promptText: 'Visible base prompt before the subfolder.'
+              promptText: 'Visible base prompt before the category.'
             },
             {
               id: 'base-after',
               title: 'Base After',
-              promptText: 'Visible base prompt after the subfolder.'
+              promptText: 'Visible base prompt after the category.'
             },
             {
-              id: 'nested-prompt',
-              title: 'Nested Prompt',
+              id: 'category-prompt',
+              title: 'Category Prompt',
               promptText: 'Prompt text from a categorized prompt.',
               category: categoryId
             }
           ]
         }
       ])
-      structure[`${workspacePath}/Prompts/Main/Categories/Nested.category.json`] = JSON.stringify(
-        { id: categoryId, displayName: 'Nested', description: '' },
+      structure[`${workspacePath}/Prompts/Main/Categories/Category.category.json`] = JSON.stringify(
+        { id: categoryId, displayName: 'Category', description: '' },
         null,
         2
       )
@@ -587,10 +592,10 @@ export function setupWorkspaceScenario(
       return structure
     }
 
-    case 'subfolders-ui': {
-      /** Category IDs retain the deterministic identities used by hierarchy UI tests. */
-      const nestedCategoryId = createDeterministicId(`${workspacePath}:Hierarchy/Nested`)
-      const emptyCategoryId = createDeterministicId(`${workspacePath}:Hierarchy/EmptyNested`)
+    case 'categories-ui': {
+      /** Category IDs provide deterministic identities for category UI tests. */
+      const primaryCategoryId = createDeterministicId(`${workspacePath}:Hierarchy/Primary`)
+      const emptyCategoryId = createDeterministicId(`${workspacePath}:Hierarchy/Empty`)
       const structure = createWorkspaceWithFolders(workspacePath, [
         {
           folderName: 'Hierarchy',
@@ -600,67 +605,67 @@ export function setupWorkspaceScenario(
           },
           prompts: [
             {
-              id: 'subfolders-ui-root-before',
+              id: 'categories-ui-root-before',
               title: 'Root Before',
               promptText: 'Root prompt before the categories.'
             },
             {
-              id: 'subfolders-ui-root-after',
+              id: 'categories-ui-root-after',
               title: 'Root After',
               promptText: 'Root prompt after the categories.'
             },
             {
-              id: 'subfolders-ui-nested-prompt',
-              title: 'Nested Prompt',
+              id: 'categories-ui-category-prompt',
+              title: 'Category Prompt',
               promptText: 'Prompt text inside the category.',
-              category: nestedCategoryId
+              category: primaryCategoryId
             },
             {
-              id: 'subfolders-ui-grandchild-prompt',
-              title: 'Grandchild Prompt',
-              promptText: 'Former descendant flattened into its first-layer category.',
-              category: nestedCategoryId
+              id: 'categories-ui-second-category-prompt',
+              title: 'Second Category Prompt',
+              promptText: 'Second prompt inside the category.',
+              category: primaryCategoryId
             },
             {
-              id: 'subfolders-ui-root-completed',
+              id: 'categories-ui-root-completed',
               title: 'Root Completed',
               promptText: 'Completed prompt directly inside the root folder.',
               status: PromptStatus.Completed,
               completedAt: '2026-07-09T10:00:00.000Z'
             },
             {
-              id: 'subfolders-ui-nested-completed-1',
-              title: 'Nested Completed One',
+              id: 'categories-ui-category-completed-1',
+              title: 'Category Completed One',
               promptText: 'First completed prompt owned by the category.',
               status: PromptStatus.Completed,
               completedAt: '2026-07-09T11:00:00.000Z',
-              category: nestedCategoryId
+              category: primaryCategoryId
             },
             {
-              id: 'subfolders-ui-nested-completed-2',
-              title: 'Nested Completed Two',
+              id: 'categories-ui-category-completed-2',
+              title: 'Category Completed Two',
               promptText: 'Second completed prompt owned by the category.',
               status: PromptStatus.Completed,
               completedAt: '2026-07-09T12:00:00.000Z',
-              category: nestedCategoryId
+              category: primaryCategoryId
             }
           ]
         },
         { folderName: 'EmptyRoot', displayName: 'Empty Root' }
       ])
-      structure[`${workspacePath}/Prompts/Hierarchy/Categories/Nested.category.json`] =
+      structure[`${workspacePath}/Prompts/Hierarchy/Categories/Primary.category.json`] =
         JSON.stringify(
           {
-            id: nestedCategoryId,
-            displayName: 'Nested',
-            description: 'Nested folder description.'
+            id: primaryCategoryId,
+            displayName: 'Primary',
+            description: 'Primary category description.'
           },
           null,
           2
         )
-      structure[`${workspacePath}/Prompts/Hierarchy/Categories/Empty Nested.category.json`] =
+      structure[`${workspacePath}/Prompts/Hierarchy/Categories/Empty.category.json`] =
         JSON.stringify(
-          { id: emptyCategoryId, displayName: 'Empty Nested', description: null },
+          { id: emptyCategoryId, displayName: 'Empty', description: null },
           null,
           2
         )
@@ -671,15 +676,15 @@ export function setupWorkspaceScenario(
               {
                 categoryId: null,
                 entries: [
-                  { kind: 'prompt', id: 'subfolders-ui-root-before' },
-                  { kind: 'prompt', id: 'subfolders-ui-root-after' }
+                  { kind: 'prompt', id: 'categories-ui-root-before' },
+                  { kind: 'prompt', id: 'categories-ui-root-after' }
                 ]
               },
               {
-                categoryId: nestedCategoryId,
+                categoryId: primaryCategoryId,
                 entries: [
-                  { kind: 'prompt', id: 'subfolders-ui-nested-prompt' },
-                  { kind: 'prompt', id: 'subfolders-ui-grandchild-prompt' }
+                  { kind: 'prompt', id: 'categories-ui-category-prompt' },
+                  { kind: 'prompt', id: 'categories-ui-second-category-prompt' }
                 ]
               },
               { categoryId: emptyCategoryId, entries: [] }
@@ -692,16 +697,16 @@ export function setupWorkspaceScenario(
       return structure
     }
 
-    case 'subfolders-depth-limit': {
-      const rootName = 'DepthRoot'
-      /** Single supported category replacing the obsolete recursive depth fixture. */
-      const categoryId = createDeterministicId(`${workspacePath}:${rootName}/Level1`)
+    case 'categories-single-level': {
+      const rootName = 'CategoryRoot'
+      /** Single supported category used to verify the flat category model. */
+      const categoryId = createDeterministicId(`${workspacePath}:${rootName}/Category`)
       const structure = createWorkspaceWithFolders(workspacePath, [
-        { folderName: rootName, displayName: 'Depth Root' }
+        { folderName: rootName, displayName: 'Category Root' }
       ])
-      structure[`${workspacePath}/Prompts/${rootName}/Categories/Level 1.category.json`] =
+      structure[`${workspacePath}/Prompts/${rootName}/Categories/Category.category.json`] =
         JSON.stringify(
-          { id: categoryId, displayName: 'Level 1', description: null },
+          { id: categoryId, displayName: 'Category', description: null },
           null,
           2
         )
@@ -720,39 +725,39 @@ export function setupWorkspaceScenario(
       return structure
     }
 
-    case 'subfolders-controls': {
-      /** Categories replacing the former sibling folders in the movement fixture. */
-      const nestedCategoryId = createDeterministicId(`${workspacePath}:Controls/Nested`)
-      const siblingCategoryId = createDeterministicId(`${workspacePath}:Controls/Sibling`)
+    case 'categories-controls': {
+      /** Two categories used by the prompt movement fixture. */
+      const primaryCategoryId = createDeterministicId(`${workspacePath}:Controls/Primary`)
+      const secondaryCategoryId = createDeterministicId(`${workspacePath}:Controls/Secondary`)
       const structure = createWorkspaceWithFolders(workspacePath, [
         {
           folderName: 'Controls',
           displayName: 'Controls',
           prompts: [
             {
-              id: 'subfolders-controls-first',
-              title: 'First Nested Prompt',
+              id: 'categories-controls-first',
+              title: 'First Category Prompt',
               promptText: 'First categorized prompt for movement controls.',
-              category: nestedCategoryId
+              category: primaryCategoryId
             },
             {
-              id: 'subfolders-controls-second',
-              title: 'Second Nested Prompt',
+              id: 'categories-controls-second',
+              title: 'Second Category Prompt',
               promptText: 'Second categorized prompt for movement controls.',
-              category: nestedCategoryId
+              category: primaryCategoryId
             }
           ]
         }
       ])
-      structure[`${workspacePath}/Prompts/Controls/Categories/Nested.category.json`] =
+      structure[`${workspacePath}/Prompts/Controls/Categories/Primary.category.json`] =
         JSON.stringify(
-          { id: nestedCategoryId, displayName: 'Nested', description: null },
+          { id: primaryCategoryId, displayName: 'Primary', description: null },
           null,
           2
         )
-      structure[`${workspacePath}/Prompts/Controls/Categories/Sibling.category.json`] =
+      structure[`${workspacePath}/Prompts/Controls/Categories/Secondary.category.json`] =
         JSON.stringify(
-          { id: siblingCategoryId, displayName: 'Sibling', description: null },
+          { id: secondaryCategoryId, displayName: 'Secondary', description: null },
           null,
           2
         )
@@ -762,13 +767,13 @@ export function setupWorkspaceScenario(
             categories: [
               { categoryId: null, entries: [] },
               {
-                categoryId: nestedCategoryId,
+                categoryId: primaryCategoryId,
                 entries: [
-                  { kind: 'prompt', id: 'subfolders-controls-first' },
-                  { kind: 'prompt', id: 'subfolders-controls-second' }
+                  { kind: 'prompt', id: 'categories-controls-first' },
+                  { kind: 'prompt', id: 'categories-controls-second' }
                 ]
               },
-              { categoryId: siblingCategoryId, entries: [] }
+              { categoryId: secondaryCategoryId, entries: [] }
             ]
           },
           null,

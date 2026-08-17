@@ -1,17 +1,19 @@
 import type { PromptHandleDragPayload } from './promptHandleDrag'
 
-type DraggedPromptEntry =
+/** Prompt-tree entry currently participating in a drag gesture. */
+type DraggedPromptTreeEntry =
   | {
       kind: 'content'
       folderId: string
       contentId: string
     }
   | {
-      kind: 'folder'
-      folderId: string
+      kind: 'category'
+      categoryId: string
     }
 
-let draggedEntry = $state<DraggedPromptEntry | null>(null)
+/** Shared transient drag state used by category and content rows. */
+let draggedEntry = $state<DraggedPromptTreeEntry | null>(null)
 
 export const startPromptDrag = (payload: PromptHandleDragPayload): void => {
   draggedEntry = {
@@ -21,8 +23,9 @@ export const startPromptDrag = (payload: PromptHandleDragPayload): void => {
   }
 }
 
-export const startPromptFolderDrag = (promptFolderId: string): void => {
-  draggedEntry = { kind: 'folder', folderId: promptFolderId }
+/** Starts tracking a category reorder gesture. */
+export const startCategoryDrag = (categoryId: string): void => {
+  draggedEntry = { kind: 'category', categoryId }
 }
 
 export const clearPromptEntryDrag = (): void => {
