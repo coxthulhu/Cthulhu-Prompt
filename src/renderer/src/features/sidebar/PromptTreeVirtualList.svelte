@@ -24,11 +24,6 @@
         isLastRow: boolean
       }
     | {
-        kind: 'special'
-        id: string
-        label: string
-      }
-    | {
         kind: 'empty-state'
       }
     | {
@@ -44,9 +39,6 @@
   >
   export type PromptTreePromptRowProps = VirtualWindowRowComponentProps<
     Extract<PromptTreeRow, { kind: 'prompt' }>
-  >
-  export type PromptTreeSpecialRowProps = VirtualWindowRowComponentProps<
-    Extract<PromptTreeRow, { kind: 'special' }>
   >
   export type PromptTreeEmptyStateRowProps = VirtualWindowRowComponentProps<
     Extract<PromptTreeRow, { kind: 'empty-state' }>
@@ -78,7 +70,6 @@
     promptTreeCategoryRowOverlay?: Snippet<[PromptTreeCategoryRowProps]>
     promptRow: Snippet<[PromptTreePromptRowProps]>
     promptTreeRowOverlay?: Snippet<[PromptTreePromptRowProps]>
-    specialRow: Snippet<[PromptTreeSpecialRowProps]>
     emptyStateRow: Snippet<[PromptTreeEmptyStateRowProps]>
     bottomSpacerRow: Snippet<[PromptTreeBottomSpacerRowProps]>
     promptTreeBottomSpacerRowOverlay?: Snippet<[PromptTreeBottomSpacerRowProps]>
@@ -96,7 +87,6 @@
     promptTreeCategoryRowOverlay,
     promptRow,
     promptTreeRowOverlay,
-    specialRow,
     emptyStateRow,
     bottomSpacerRow,
     promptTreeBottomSpacerRowOverlay
@@ -121,10 +111,6 @@
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
         overlayRow: { snippet: promptTreeRowOverlay },
         snippet: promptRow
-      },
-      special: {
-        estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
-        snippet: specialRow
       },
       'empty-state': {
         estimateHeight: () => 86,

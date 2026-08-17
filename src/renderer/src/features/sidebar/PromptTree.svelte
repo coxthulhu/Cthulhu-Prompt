@@ -63,7 +63,6 @@
     type PromptTreeRow
   } from './PromptTreeVirtualList.svelte'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
-  import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import PromptTreeCategoryRow from './PromptTreeCategoryRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import {
@@ -492,8 +491,6 @@
     return draggedEntry?.kind === 'category' && draggedEntry.categoryId === categoryId
   }
   const isPromptDragActive = $derived(promptEntryDragState.draggedEntry !== null)
-  /** Whether a content drag needs an explicit empty Uncategorized target. */
-  const isContentDragActive = $derived(promptEntryDragState.draggedEntry?.kind === 'content')
 
   const handlePromptTreeEntrySelect = (
     contentOwnerId: string,
@@ -646,9 +643,6 @@
               isLastRow: entryIndex === uncategorizedEntries.length - 1
             }
           })
-        }
-        if (uncategorizedEntries.length === 0 && isContentDragActive && groups.length > 1) {
-          items.push({ id: 'uncategorized-drop', row: { kind: 'special', id: 'uncategorized-drop', label: '' } })
         }
         for (const [groupIndex, group] of groups.slice(1).entries()) {
           if (!group.categoryId) continue
@@ -855,24 +849,6 @@
       </p>
     {/if}
   </div>
-{/snippet}
-
-{#snippet specialRow()}
-  {#if screenRootFolder && isContentDragActive}
-    <PromptDropTarget
-      getOptions={() =>
-        getPromptTreeDroppableOptions('uncategorized-drop', 'none', () => ({
-          folderId: screenRootFolder.id,
-          categoryId: null,
-          targetEntryId: null,
-          position: 'after'
-        }))}
-      class="h-full"
-      data-testid="prompt-tree-uncategorized-drop-target"
-    >
-      <div class="h-full" aria-hidden="true"></div>
-    </PromptDropTarget>
-  {/if}
 {/snippet}
 
 {#snippet promptTreeCategoryRowOverlay({ row, rowId }: PromptTreeCategoryRowProps)}

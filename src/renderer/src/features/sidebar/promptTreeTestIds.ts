@@ -26,12 +26,6 @@ export const categoryOpenTestId = (category: PromptTreeCategoryIdentity): string
 
 export const folderPromptTestId = (promptId: string): string => `prompt-tree-prompt-${promptId}`
 
-export const folderPromptShowAllTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-folder-show-all-prompts-${getFolderTestKey(folder)}`
-
-export const folderPromptShowLessTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-folder-show-less-prompts-${getFolderTestKey(folder)}`
-
 export const folderPromptMenuShowAllTestId = (folder: PromptTreeFolderIdentity): string =>
   `prompt-tree-folder-menu-show-all-prompts-${getFolderTestKey(folder)}`
 
@@ -48,6 +42,3 @@ export const categoryDropIndicatorTestId = (category: PromptTreeCategoryIdentity
 export const promptTreeBottomSpacerDropTargetTestId = 'prompt-tree-bottom-spacer-drop-target'
 
 export const promptTreeBottomSpacerDropIndicatorTestId = 'prompt-tree-bottom-spacer-drop-indicator'
-
-export const folderPromptVisibilityDropIndicatorTestId = (folder: PromptTreeFolderIdentity): string =>
-  `prompt-tree-drop-indicator-prompt-visibility-${getFolderTestKey(folder)}`
