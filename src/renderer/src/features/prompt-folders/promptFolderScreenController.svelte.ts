@@ -108,6 +108,8 @@ export type ActivePromptScreenRow =
 
 // Leaves navigated folder headers comfortably below the virtual viewport edge.
 const NAVIGATED_FOLDER_TOP_OFFSET_PX = 80
+/** Samples breadcrumb ownership just below align-top placement so navigation updates immediately. */
+const BREADCRUMB_SAMPLE_OFFSET_PX = NAVIGATED_FOLDER_TOP_OFFSET_PX + 4
 
 type PromptMetadata = {
   status: PromptStatus
@@ -355,6 +357,8 @@ export const createPromptFolderScreenController = ({
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
   let latestCenteredPromptScreenRow = $state<ActivePromptScreenRow | null>(null)
   let scrollTopPx = $state(getRestoredPromptFolderScrollTop())
+  /** Category currently owning the breadcrumb's padded viewport sample point. */
+  let breadcrumbCategoryId = $state<string | null>(null)
   const TOP_SCROLL_EPSILON_PX = 1
 
   let detailsSectionExpandedStates = $state<Record<string, boolean>>({})
@@ -1380,8 +1384,19 @@ export const createPromptFolderScreenController = ({
   }
 
   const activeHeaderRowId = 'prompt-header' as const
+  /** Sampled category constrained to categories owned by the current root folder. */
+  const activeBreadcrumbCategory = $derived(
+    isCompletedMode
+      ? null
+      : (categories.find((category) => category.id === breadcrumbCategoryId) ?? null)
+  )
+  /** Root-level content label shown when the sample point is outside a category. */
+  const rootContentBreadcrumbLabel = $derived(
+    isTemplateFolder ? 'Templates' : isCompletedMode ? 'Completed' : 'Prompts'
+  )
+  /** Current category or root-content label shown after the folder breadcrumb. */
   const activeHeaderSection = $derived(
-    isTemplateFolder ? 'Templates' : isCompletedMode ? 'Completed Prompts' : 'Prompts'
+    activeBreadcrumbCategory?.displayName ?? rootContentBreadcrumbLabel
   )
 
   const findRenderedPromptRow = (promptId: string): PromptFolderScreenPromptEditorRow | undefined =>
@@ -1390,39 +1405,47 @@ export const createPromptFolderScreenController = ({
         row.kind === 'prompt-editor' && row.promptId === promptId
     )
 
-  const resolveHeaderSelectionRow = (): ActivePromptScreenRow => {
-    const firstPromptId = visiblePromptIds[0]
-    if (firstPromptId) {
-      const promptRow = findRenderedPromptRow(firstPromptId)
-      return {
-        kind: 'prompt',
-        contentOwnerId: promptRow?.contentOwnerId ?? screenRootFolderId,
-        promptId: firstPromptId
-      }
-    }
-
-    return { kind: 'root-header', contentOwnerId: screenRootFolderId }
-  }
-
+  /** Aligns the active content breadcrumb without expanding categories or selecting an editor. */
   const handleHeaderSegmentClick = () => {
     if (!scrollToWithinWindowBand) return
-    const targetRow = resolveHeaderSelectionRow()
-    expandSectionForRow(targetRow)
+    /** Navigation selection representing the category or root content segment. */
+    const targetRow: ActivePromptScreenRow = activeBreadcrumbCategory
+      ? { kind: 'category-details', contentOwnerId: activeBreadcrumbCategory.id }
+      : { kind: 'root-header', contentOwnerId: screenRootFolderId }
     setCurrentFolderSelection(targetRow, 'header', {
       forceRequest: true
     })
-    // Header navigation should land directly on the target section.
-    scrollToWithinWindowBand(toPromptFolderRowId(targetRow), 0, 'minimal', 0)
+    /** Virtual row aligned for the selected breadcrumb segment. */
+    const targetRowId = activeBreadcrumbCategory
+      ? categoryEditorRowId(activeBreadcrumbCategory.id)
+      : promptFolderDividerRowId(screenRootFolderId, screenRootFolderId, null)
+    scrollToWithinWindowBand(
+      targetRowId,
+      0,
+      'align-top',
+      NAVIGATED_FOLDER_TOP_OFFSET_PX
+    )
   }
 
+  /** Aligns the root-folder breadcrumb at the top without changing category expansion state. */
   const handleHeaderFolderClick = () => {
-    if (!scrollApi) return
+    if (!scrollToWithinWindowBand) return
     setCurrentFolderSelection(
       { kind: 'root-header', contentOwnerId: screenRootFolderId },
       'header',
       { forceRequest: true }
     )
-    scrollApi.scrollTo(0)
+    scrollToWithinWindowBand(
+      PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
+      0,
+      'align-top',
+      NAVIGATED_FOLDER_TOP_OFFSET_PX
+    )
+  }
+
+  /** Updates the category owning the breadcrumb's padded viewport sample point. */
+  const handleBreadcrumbCategoryChange = (categoryId: string | null): void => {
+    breadcrumbCategoryId = categoryId
   }
 
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
@@ -1560,8 +1583,11 @@ export const createPromptFolderScreenController = ({
     get activeHeaderRowId(): 'prompt-header' {
       return activeHeaderRowId
     },
-    get activeHeaderSection(): 'Prompts' | 'Completed Prompts' | 'Templates' {
+    get activeHeaderSection(): string {
       return activeHeaderSection
+    },
+    get breadcrumbSampleOffsetPx(): number {
+      return BREADCRUMB_SAMPLE_OFFSET_PX
     },
     get loadingOverlay() {
       return loadingOverlay
@@ -1575,6 +1601,7 @@ export const createPromptFolderScreenController = ({
     toggleContentSectionExpanded,
     handleHeaderSegmentClick,
     handleHeaderFolderClick,
+    handleBreadcrumbCategoryChange,
     handleFindMatchReveal,
     handleAddPrompt,
     handleDeletePrompt,

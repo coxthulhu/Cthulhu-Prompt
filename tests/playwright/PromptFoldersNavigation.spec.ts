@@ -97,6 +97,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
       'Code Review Templates'
     )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
+      'Templates'
+    )
     await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
       'Templates 2'
     )
@@ -266,6 +269,133 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator(`[data-testid="category-editor-${categoryId}"]`)
     ).toContainText('Category')
+  })
+
+  test('tracks and navigates the category breadcrumb from the padded viewport edge', async ({
+    testSetup
+  }) => {
+    /** Running category workspace and its browser helpers. */
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'categories-ui' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+
+    /** Path used to derive both stable category identities in the hierarchy fixture. */
+    const categoryWorkspacePath = '/ws/categories-ui'
+    /** Primary category identity used for the first breadcrumb transition. */
+    const categoryId = createDeterministicId(`${categoryWorkspacePath}:Hierarchy/Primary`)
+    /** Empty category identity used for the following breadcrumb transition. */
+    const emptyCategoryId = createDeterministicId(`${categoryWorkspacePath}:Hierarchy/Empty`)
+    /** Primary category row whose measured position drives the breadcrumb transition. */
+    const categorySelector = `[data-testid="category-editor-${categoryId}"]`
+    /** Next category row used to verify ownership across the inter-category separator. */
+    const emptyCategorySelector = `[data-testid="category-editor-${emptyCategoryId}"]`
+    /** Separator row retaining the preceding category breadcrumb. */
+    const categorySeparatorSelector =
+      `[data-testid="prompt-folder-category-separator-${categoryId}"]`
+    /** Fixed breadcrumb segment displaying the sampled content owner. */
+    const headerSection = mainWindow.locator('[data-testid="prompt-folder-header-section"]')
+    await expect(mainWindow.locator(categorySelector)).toBeAttached()
+    await expect(headerSection).toHaveText('Prompts')
+
+    /** Reads a rendered row's top edge relative to the virtual viewport. */
+    const readRowTopInset = async (selector: string): Promise<number | null> => {
+      /** Virtual viewport bounds used as the local coordinate origin. */
+      const viewportBox = await mainWindow.locator(PROMPT_FOLDER_HOST).boundingBox()
+      /** Requested row bounds in page coordinates. */
+      const rowBox = await mainWindow.locator(selector).first().boundingBox()
+      return viewportBox && rowBox ? rowBox.y - viewportBox.y : null
+    }
+
+    /** Reads a rendered row's absolute offset within the virtual content. */
+    const readRowContentOffset = async (selector: string): Promise<number | null> => {
+      /** Current virtual scroll position preceding the viewport-relative row inset. */
+      const currentScrollTopPx = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)
+      /** Requested row inset relative to the virtual viewport. */
+      const rowTopInset = await readRowTopInset(selector)
+      return rowTopInset === null ? null : currentScrollTopPx + rowTopInset
+    }
+
+    /** Initial measured category offset within the complete virtual content. */
+    const categoryOffsetPx = await readRowContentOffset(categorySelector)
+    expect(categoryOffsetPx).not.toBeNull()
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, categoryOffsetPx! - 86)
+    await expect(headerSection).toHaveText('Prompts')
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, categoryOffsetPx! - 82)
+    await expect(headerSection).toHaveText('Primary')
+
+    /** Separator offset used to verify the preceding category remains active through the gap. */
+    const categorySeparatorOffsetPx = await readRowContentOffset(categorySeparatorSelector)
+    expect(categorySeparatorOffsetPx).not.toBeNull()
+    await testHelpers.scrollVirtualWindowTo(
+      PROMPT_FOLDER_HOST,
+      categorySeparatorOffsetPx! - 80
+    )
+    await expect(headerSection).toHaveText('Primary')
+
+    /** Following category offset used to verify the breadcrumb changes only at its header. */
+    const emptyCategoryOffsetPx = await readRowContentOffset(emptyCategorySelector)
+    expect(emptyCategoryOffsetPx).not.toBeNull()
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, emptyCategoryOffsetPx! - 86)
+    await expect(headerSection).toHaveText('Primary')
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, emptyCategoryOffsetPx! - 82)
+    await expect(headerSection).toHaveText('Empty')
+
+    /** Full virtual height used to place the sample point in final trailing category space. */
+    const virtualHeightPx = await testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST)
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, virtualHeightPx)
+    await expect(headerSection).toHaveText('Empty')
+
+    await mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-Primary"]').hover()
+    await mainWindow.locator('[data-testid="prompt-tree-category-open-button-Primary"]').click()
+    await expect(headerSection).toHaveText('Primary')
+
+    /** Category content toggle used to verify breadcrumb clicks preserve expansion state. */
+    const categoryContentToggle = mainWindow
+      .locator(categorySelector)
+      .locator('[data-testid="category-editor-content-toggle"]')
+    /** Category settings toggle used to verify details expansion remains independent. */
+    const categorySettingsToggle = mainWindow
+      .locator(categorySelector)
+      .locator('[data-testid="category-editor-settings-toggle"]')
+    await categorySettingsToggle.click()
+    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await categoryContentToggle.click()
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST, 100)
+    await expect(headerSection).toHaveText('Primary')
+
+    await headerSection.click()
+    await expect
+      .poll(async () => Math.abs((await readRowTopInset(categorySelector))! - 80))
+      .toBeLessThanOrEqual(2)
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(mainWindow.locator('.monaco-editor textarea:focus')).toHaveCount(0)
+
+    await mainWindow.locator('[data-testid="prompt-folder-header-folder"]').click()
+    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
+    await expect(headerSection).toHaveText('Prompts')
+
+    await headerSection.click()
+    await expect
+      .poll(async () => {
+        /** First root-level divider marks the beginning of Uncategorized prompts. */
+        const dividerTopInset = await readRowTopInset(
+          '[data-testid^="prompt-folder-divider-"][data-testid$="-initial"]'
+        )
+        return Math.abs(dividerTopInset! - 80)
+      })
+      .toBeLessThanOrEqual(2)
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect(mainWindow.locator('.monaco-editor textarea:focus')).toHaveCount(0)
   })
 
   test('restores prompt content when revisiting folders', async ({ testSetup }) => {
@@ -1013,9 +1143,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
 
     await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+      'data-active',
+      'true'
+    )
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toHaveAttribute(
       'data-row-state',
-      'active'
+      'idle'
     )
   })
 

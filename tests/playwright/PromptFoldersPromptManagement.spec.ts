@@ -1931,7 +1931,7 @@ describe('Prompt folder prompt management', () => {
     ])
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
-      'Completed Prompts'
+      'Completed'
     )
     const completedFolderTitle = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
     await expect(completedFolderTitle).toBeVisible()

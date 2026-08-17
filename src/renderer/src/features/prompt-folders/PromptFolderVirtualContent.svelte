@@ -171,6 +171,10 @@
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
     onCenterRowChange: (row: ActivePromptScreenRow | null) => void
+    /** Pixel offset below the viewport top used to resolve the breadcrumb category. */
+    breadcrumbSampleOffsetPx: number
+    /** Reports the category owning the row at the breadcrumb sample point. */
+    onBreadcrumbCategoryChange: (categoryId: string | null) => void
     onUserScroll: () => void
     onDetailsSectionToggle: (contentOwnerId: string) => void
     onContentSectionToggle: (contentOwnerId: string) => void
@@ -219,6 +223,8 @@
     onViewportMetricsChange,
     onScrollTopChange,
     onCenterRowChange,
+    breadcrumbSampleOffsetPx,
+    onBreadcrumbCategoryChange,
     onUserScroll,
     onDetailsSectionToggle,
     onContentSectionToggle
@@ -595,6 +601,16 @@
     onCenterRowChange(null)
   }
 
+  /** Reports the category at the breadcrumb sample point while retaining the final category in trailing space. */
+  const handleBreadcrumbSampleRowChange = (row: PromptFolderRow | null): void => {
+    if (isCompletedMode) {
+      onBreadcrumbCategoryChange(null)
+      return
+    }
+    if (!row || row.kind === 'bottom-spacer') return
+    onBreadcrumbCategoryChange('categoryId' in row ? row.categoryId : null)
+  }
+
   const getPromptDividerDropPayload = (
     categoryId: string | null,
     previousEntryId: string | null
@@ -737,6 +753,10 @@
   {onScrollTopChange}
   onCenterRowChange={(row) => {
     handleCenterRowChange(row)
+  }}
+  sampleRowOffsetPx={breadcrumbSampleOffsetPx}
+  onSampleRowChange={(row) => {
+    handleBreadcrumbSampleRowChange(row)
   }}
   onUserScroll={() => {
     onUserScroll()

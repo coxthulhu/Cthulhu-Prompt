@@ -18,6 +18,7 @@
   import { createVirtualWindowRowsState } from './virtualWindowRowsState.svelte.ts'
   import { createVirtualWindowScrollState } from './virtualWindowScrollState.svelte.ts'
   import { useVirtualWindowTestScroller } from './virtualWindowTestScroller.svelte.ts'
+  import { findIndexAtOffset } from './virtualWindowRowUtils'
 
   type VirtualWindowProps = {
     items: VirtualWindowItem<TRow>[]
@@ -27,6 +28,10 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
     scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
+    /** Offset below the viewport top used to sample the current virtual row. */
+    sampleRowOffsetPx?: number
+    /** Notifies the consumer when the configured sample point enters another row. */
+    onSampleRowChange?: (row: TRow | null, rowId: string | null) => void
     onUserScroll?: (scrollTopPx: number) => void
     onScrollTopChange?: (scrollTopPx: number) => void
     scrollApi?: VirtualWindowScrollApi | null
@@ -54,6 +59,8 @@
     scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
     scrollToAndTrackRowCentered = $bindable<ScrollToAndTrackRowCentered | null>(null),
     onCenterRowChange,
+    sampleRowOffsetPx = 0,
+    onSampleRowChange,
     onUserScroll,
     onScrollTopChange,
     scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
@@ -142,6 +149,21 @@
   const scrollTopPx = $derived(getScrollTopPx())
   const clampedAnchoredScrollTopPx = $derived(getClampedAnchoredScrollTopPx())
   const visibleRows = $derived(getVisibleRows())
+  /** Virtual row containing the configured viewport-relative sample point. */
+  const sampleRow = $derived.by(() => {
+    /** Current measured virtual rows searched by absolute content offset. */
+    const rowStates = getRowStates()
+    /** Index containing the viewport top plus the configured sample padding. */
+    const sampleIndex = findIndexAtOffset(
+      rowStates,
+      getClampedAnchoredScrollTopPx() + sampleRowOffsetPx
+    )
+    return rowStates[sampleIndex] ?? null
+  })
+  /** Stable identity of the row containing the configured sample point. */
+  const sampleRowId = $derived(sampleRow?.id ?? null)
+  /** Row data containing the configured sample point. */
+  const sampleRowData = $derived(sampleRow?.rowData ?? null)
   const scrollShadowActive = $derived(getScrollShadowActive())
   const scrollbarRevealVersion = $derived(getScrollbarRevealVersion())
   const hydrationPriorityByRowId = $derived(getHydrationPriorityByRowId())
@@ -165,6 +187,9 @@
     getOnCenterRowChange: () => onCenterRowChange,
     getCenterRowId,
     getCenterRowData,
+    getOnSampleRowChange: () => onSampleRowChange,
+    getSampleRowId: () => sampleRowId,
+    getSampleRowData: () => sampleRowData,
     setViewportMetrics: (metrics) => {
       viewportMetrics = metrics
     },

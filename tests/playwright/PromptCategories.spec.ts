@@ -226,6 +226,9 @@ describe('Prompt categories', () => {
     })
 
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
+      'Completed'
+    )
     await mainWindow
       .locator(
         `${promptEditorSelector('categorized-prompt')} [data-testid="prompt-uncomplete-button"]`

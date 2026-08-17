@@ -328,6 +328,8 @@
             onViewportMetricsChange={controller.setViewportMetrics}
             onScrollTopChange={controller.handleVirtualScrollTopChange}
             onCenterRowChange={controller.handleVirtualCenterRowChange}
+            breadcrumbSampleOffsetPx={controller.breadcrumbSampleOffsetPx}
+            onBreadcrumbCategoryChange={controller.handleBreadcrumbCategoryChange}
             onUserScroll={controller.handleVirtualUserScroll}
             onDetailsSectionToggle={controller.toggleDetailsSectionExpanded}
             onContentSectionToggle={controller.toggleContentSectionExpanded}
